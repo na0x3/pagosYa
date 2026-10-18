@@ -1566,8 +1566,6 @@
     if (link && hosted && /^https?:/i.test(link.getAttribute('href') || '')) { event.preventDefault(); parent.postMessage({ type: 'pagosya:source-external', url: link.href }, '*'); }
   });
   const infoText = value => (typeof value === 'string' ? value.trim() : '');
-  // Spec 2026-10-14 store voice: the sentence of the store's own voice a page with nothing to show says, instead of placeholder text.
-  const VOICE_LINE = typeof config.voiceLine === 'string' && config.voiceLine.trim() && config.voiceLine.trim().length <= 200 ? config.voiceLine.trim() : '';
   const infoParagraphs = text => text.split(/\n{2,}/).map(paragraph => `<p>${escape(paragraph).replace(/\n/g, '<br>')}</p>`).join('');
   const policyText = key => infoText(storePolicies()[key]);
   const WEEKDAYS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -1594,7 +1592,9 @@
     // Only questions the store can answer (spec 2026-10-14): pickup needs a place that offers it, not only the switch.
     if (pickup.length) entries.push(['¿Puedo retirar mi pedido?', `Sí, puedes retirarlo en: ${placeNames(pickup)}.`]);
     if (places.length) entries.push(['¿Dónde están?', `<ul class="pagosya-info__list">${places.map(place => `<li><strong>${escape(place.name)}</strong>${place.address ? ` — ${escape(place.address)}` : ''}</li>`).join('')}</ul>`]);
-    // How to pay is always answerable.
+    // How to order and how to pay are always answerable in a store that sells something (2026-10-18: a new store's FAQ had
+    // fewer than two answers and showed nothing but the voice sheet's line).
+    if (products().length) entries.push(['¿Cómo hago mi pedido?', store.checkoutMode === 'whatsapp' ? 'Eliges tu producto, lo sumas a tu pedido y lo confirmas por WhatsApp.' : store.checkoutMode === 'payment' ? 'Eliges tu producto, lo sumas a tu pedido y pagas desde la tienda.' : 'Eliges tu producto, lo sumas a tu pedido y lo confirmas desde la tienda.']);
     entries.push(['¿Cómo pago?', store.checkoutMode === 'payment' ? 'Pagas con QR o tarjeta desde la tienda, con pago seguro procesado por pagosYa.' : store.checkoutMode === 'whatsapp' ? 'Confirmas tu pedido por WhatsApp y acuerdas el pago con la tienda.' : 'Acuerdas el pago con la tienda al confirmar tu pedido.']);
     const contact = [phoneLink(), emailLink()].filter(Boolean);
     if (contact.length) entries.push(['¿Cómo los contacto?', contact.join(' · ')]);
@@ -1663,8 +1663,9 @@
       if (kind === 'cookies') { mount.innerHTML = `<div class="pagosya-info">${COOKIES_BODY}</div>`; return; }
       if (!live) return;
       const html = infoBody(kind);
-      // A page with nothing to show says one sentence of the store's voice and links home, never a placeholder (spec 2026-10-14).
-      mount.innerHTML = html ? `<div class="pagosya-info">${html}</div>` : `${VOICE_LINE ? `<p class="pagosya-info__voice">${escape(VOICE_LINE)}</p>` : ''}<p><a href="index.html">Volver al inicio</a></p>`;
+      // A page with nothing to show links home, never a placeholder (spec 2026-10-14). It no longer prints the voice sheet's line:
+      // that line tells YAPI's writers how the store talks and was never meant for customers (live 2026-10-18, Batido Ya's FAQ).
+      mount.innerHTML = html ? `<div class="pagosya-info">${html}</div>` : '<p><a href="index.html">Volver al inicio</a></p>';
       if (!html) unavailable = true;
     });
     // A failed live fetch (`force`) says nothing about the page, so it never asks search engines to drop it.

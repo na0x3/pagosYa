@@ -91,8 +91,13 @@ describe('information pages in the storefront runtime', () => {
   });
 
   it('builds the FAQ only from stated facts, and needs at least two answers', async () => {
-    const one = await shop('faq', {});
+    const one = await shop('faq', { items: [] });
     expect(emptyPage(one)).toBe(true);
+    // A store that sells something can always say how to order and how to pay (Batido Ya 2026-10-18).
+    const fresh = await shop('faq', { checkoutMode: 'payment' });
+    expect(Array.from(mount(fresh).querySelectorAll('h2'), h => h.textContent)).toEqual(['¿Cómo hago mi pedido?', '¿Cómo pago?']);
+    expect(mount(fresh).textContent).toContain('lo sumas a tu pedido y pagas desde la tienda');
+    fresh.close();
     const w = await shop('faq', { checkoutMode: 'payment', shippingEnabled: true, contactEmail: 'hola@marca.bo', locations: [{ id: 'l1', name: 'Centro', address: 'Av. 6', pickupEnabled: true, deliveryEnabled: false, openingHours: [] }] });
     const text = mount(w).textContent!;
     for (const question of ['¿Hacen envíos?', '¿Puedo retirar mi pedido?', '¿Dónde están?', '¿Cómo pago?', '¿Cómo los contacto?']) expect(text).toContain(question);
@@ -124,15 +129,12 @@ describe('information pages in the storefront runtime', () => {
     w.close();
   });
 
-  it('with nothing to show, says one sentence of the store voice and links home (spec 2026-10-14)', async () => {
-    const w = await shop('about', {}, undefined, undefined, '', false, { voiceLine: 'Hablamos de tú, <despacio>.' });
-    expect(mount(w).querySelector('.pagosya-info__voice')!.textContent).toBe('Hablamos de tú, <despacio>.');
-    expect(mount(w).innerHTML).toContain('&lt;despacio&gt;');
+  it("never prints the voice sheet's line to customers: it is an instruction for YAPI's writers (2026-10-18)", async () => {
+    const w = await shop('about', {}, undefined, undefined, '', false, { voiceLine: 'Hablamos de tú, sin prometer entregas.' });
+    expect(mount(w).textContent).not.toContain('Hablamos de tú');
     expect(emptyPage(w)).toBe(true);
     expect(noindex(w)).not.toBeNull();
-    const long = await shop('about', {}, undefined, undefined, '', false, { voiceLine: 'x'.repeat(201) });
-    expect(long.document.querySelector('.pagosya-info__voice')).toBeNull();
-    w.close(); long.close();
+    w.close();
   });
 
   it('asks about pickup only when a place offers it, and always says how to pay', async () => {
