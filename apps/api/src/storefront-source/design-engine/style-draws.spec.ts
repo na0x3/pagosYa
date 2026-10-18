@@ -229,3 +229,39 @@ describe('frameForRun keeps a saved commerce draw on an edit', () => {
     expect(frameForRun({ ...run, fresh: true, previous: [] }).commerce).toMatchObject({ fresh: true, draw: { checkout: expect.any(String) } });
   });
 });
+
+// Owner 2026-10-18, after comparing today's POKEATE redo with the Sep-8 one: «do whatever you think will bring me back to
+// those design choices by yapi … colors before had more to do and sections fit in perfectly». The bold card is YAPI's own.
+describe('the authored bold card (authoredBold)', () => {
+  const photoPalettes = { calm: PALETTES[0], bold: PALETTES[1] };
+  it('draws only the platform-owned frame for the bold card: header and cart, no hero, footer, palette, design, device', () => {
+    for (const seed of [1, 7, 42]) {
+      const [calm, bold] = styleDraws({ ...base, photoPalettes, authoredBold: true, random: seeded(seed) });
+      expect(bold).toMatchObject({ mode: 'bold', authored: true });
+      expect(bold.palette).toBeUndefined();
+      expect(bold.device).toBeUndefined();
+      expect(bold.dna).toBeUndefined();
+      expect(boldIds('header')).toContain(bold.draw.header);
+      for (const part of ['hero', 'footer', 'palette', 'angle', 'structure', 'photos', 'button', 'hover', 'trust']) expect(bold.draw).not.toHaveProperty(part);
+      expect(JSON.parse(bold.file.content)).not.toHaveProperty('hero');
+      // The calm card is unchanged: the professional option keeps its draw and the photos' light palette.
+      expect(calm.authored).toBeUndefined();
+      expect(calm.palette).toBe(PALETTES[0]);
+      expect(calm.draw.hero).toBeTruthy();
+    }
+  });
+  it('hands YAPI the whole design in the bold card\'s direction', () => {
+    const [, bold] = styleDraws({ ...base, authoredBold: true, random: seeded(3) });
+    const direction = styleSlotDirection(bold, '', { lane: true });
+    expect(direction).toMatch(/^CONCEPT 2 of 2 \(bold: YAPI's own design/);
+    expect(direction).toContain("YAPI'S OWN DESIGN");
+    expect(direction).toMatch(/business's own world/);
+    expect(direction).not.toContain('Signature device');
+    expect(direction).not.toMatch(/^- Hero:/m);
+  });
+  it('is off unless asked, so the drawn bold card is unchanged', () => {
+    const [, bold] = styleDraws({ ...base, random: seeded(3) });
+    expect(bold.authored).toBeUndefined();
+    expect(bold.device).toBeDefined();
+  });
+});

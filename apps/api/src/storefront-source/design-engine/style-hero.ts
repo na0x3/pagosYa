@@ -14,6 +14,9 @@ import { checkSourceProviderQuota, isProviderRejection, providerRetryPause } fro
 import type { SignatureDevice } from './style-draws';
 
 export type HeroFacts = { storeName: string; logoPath?: string; photoPath?: string; headline: string; line: string; action: string; palette: { paper: string; ink: string; accent: string; accent2: string }; fonts: { display: string; text: string }; mode: 'calm' | 'bold';
+  /** YAPI's own bold card (AUTHORED_DESIGN_DIRECTION): no drawn hero, device or checklist; `freeColours`: it picks the colours
+   *  too (no confirmed brand colours), and `palette` only paints the template placeholder. */
+  authored?: boolean; freeColours?: boolean;
   /** The concept's eyebrow (story.eyebrow), shown uppercase and tracked above the intense card's headline. */
   eyebrow?: string;
   /** The calm card's playbook family: its button shapes (first = the template's) and its corner radius. */
@@ -500,6 +503,12 @@ function intenseDirection(facts: HeroFacts): string {
   ].join('\n');
 }
 
+/** YAPI's own bold card (2026-10-18): the direction (styleSlotDirection) carries AUTHORED_DESIGN_DIRECTION; this adds only what a
+ *  first screen needs. No required eyebrow, size, device or button: the Sep-8 POKEATE had none of them prescribed. */
+const AUTHORED_HERO = "This card is YAPI's own design, the bold option shown next to a calm one. Open with the strongest image of this business's world at poster scale: the merchant's photo, an object of the business drawn in HTML, CSS or inline SVG, or both, with the headline set large in the display font (a single word of it may take another colour). Never break a word; everything readable at 1280px and 390px; no emoji as decoration; never invent a fact, a number or a place.";
+/** The lettered name on YAPI's own card: the header the platform draws shows it (source-wordmark.ts). */
+const AUTHORED_LETTERING = 'There is no logo: letter the store name as part of the identity, the way a sign painter would. In the header write <span class="pyh-wordmark" data-pagosya-wordmark data-store-name>…</span> holding the exact letters of the store name, split into <span class="…"> where colour, weight, size or case changes (e.g. POKE<span class="wm-red">ATE</span>), optionally with one symbol character from the business (♠, ★, ✿), and style those classes in your <style> under .pyh-wordmark.';
+
 /** The calm card: a professional page, still with its family's own button shape and radius. */
 function calmDirection(facts: HeroFacts): string {
   const shapes = facts.buttons?.length ? `from this family's buttons (${facts.buttons.join(', ')})${facts.radius ? ` with the family's ${facts.radius} radius` : ''}` : '(pill, block, outline or split)';
@@ -512,12 +521,12 @@ export async function writeStyleHero(input: { facts: HeroFacts; concept: SourceD
   const prompt = [
     'Write ONLY the header and the first screen (hero) of this storefront as one self-contained HTML fragment: a <style> block followed by markup. No <script>, no external URLs, no event handlers. It is a preview card, so nothing needs to work; it must look like the real store.',
     `Put the whole store name inside one [data-store-name] element. Load fonts exactly like this: ${heroFontFaces(facts.fonts)}`,
-    `Use these colours: background ${facts.palette.paper}, text ${facts.palette.ink}, accent ${facts.palette.accent}, panels ${facts.palette.accent2}.`,
+    facts.freeColours ? "Choose the colours yourself, from the business's own world and its photo (see YAPI'S OWN DESIGN below)." : `Use these colours: background ${facts.palette.paper}, text ${facts.palette.ink}, accent ${facts.palette.accent}, panels ${facts.palette.accent2}.`,
     facts.photoPath ? `Use this real photo where the hero needs one: ${facts.photoPath}` : 'There is no photo: make the hero typographic or drawn, never a placeholder image.',
-    facts.logoPath ? `The logo image is ${facts.logoPath}.` : 'There is no logo: set the store name in the display font as the logo.',
+    facts.logoPath ? `The logo image is ${facts.logoPath}.` : facts.authored ? AUTHORED_LETTERING : 'There is no logo: set the store name in the display font as the logo.',
     `Real copy: store "${facts.storeName}", headline "${facts.headline}", line "${facts.line}", action "${facts.action}". The header shows navigation, Buscar, Mi cuenta and a cart.`,
     'It must work at 1280px and at 390px wide.',
-    facts.mode === 'bold' ? intenseDirection(facts) : calmDirection(facts),
+    facts.authored ? AUTHORED_HERO : facts.mode === 'bold' ? intenseDirection(facts) : calmDirection(facts),
     input.direction,
     `Concept (reference data): ${JSON.stringify({ name: input.concept.name, opening: input.concept.opening, typography: input.concept.typography, imagery: input.concept.imagery, signature: input.concept.signature, story: input.concept.story && { eyebrow: input.concept.story.eyebrow, headline: input.concept.story.headline, primaryAction: input.concept.story.primaryAction } })}`,
   ].join('\n');

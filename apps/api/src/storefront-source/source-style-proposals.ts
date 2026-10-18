@@ -29,11 +29,14 @@ export type ProposeStylesInput = { runId: string; storeId: string; dto: Generate
  * is tried once more; any other failure costs only its card. Two cards wait for the pick; one card or none come back to
  * the caller, which builds that card or replans as before.
  */
+/** The template hero's colours when a card has none of its own (and what a card without a drawn palette always used). */
+const NEUTRAL_HERO_PALETTE = { paper: '#ffffff', ink: '#111111', accent: '#111111', accent2: '#f2f2f2' };
+
 export async function runStyleProposal(deps: StyleProposalDeps, input: ProposeStylesInput): Promise<StyleProposalResult | { design?: SourceDesign }> {
   // Lanes finish out of order, so everything is kept by drawn slot and compacted, in slot order, on each save.
   const slotConcepts: Array<SourceDesignConcept | undefined> = [];
   const slotHeroes: StyleProposal['heroes'] = [];
-  const slotPalettes: Array<HeroFacts['palette']> = [];
+  const slotPalettes: Array<HeroFacts['palette'] | undefined> = [];
   const slotPending: boolean[] = [];
   // Both cards planned: choosable while their heroes are still being drawn (spec 2026-10-12 faster generation).
   let pickable = false;
@@ -51,7 +54,7 @@ export async function runStyleProposal(deps: StyleProposalDeps, input: ProposeSt
   // Real numbers for the numbers device come from the merchant's own business text only.
   const businessText = (input.dto.brief as { businessInformation?: unknown } | undefined)?.businessInformation;
   const briefNumbers = typeof businessText === 'string' ? numbersIn(businessText) : [];
-  const factsFor = (concept: SourceDesignConcept, slot: StyleSlot): HeroFacts => ({ storeName: input.storeName, logoPath, photoPath, eyebrow: concept.story?.eyebrow || undefined, headline: concept.story?.headline || concept.name, line: concept.story?.support || concept.premise, action: concept.story?.primaryAction || 'Ver productos', palette: slotPalettes[slot.slot], fonts: { display: concept.dna?.type?.display ?? 'bricolage', text: concept.dna?.type?.text ?? 'instrument' }, mode: slot.mode, buttons: slot.family.buttons, radius: slot.family.radius,
+  const factsFor = (concept: SourceDesignConcept, slot: StyleSlot): HeroFacts => ({ storeName: input.storeName, logoPath, photoPath, eyebrow: concept.story?.eyebrow || undefined, headline: concept.story?.headline || concept.name, line: concept.story?.support || concept.premise, action: concept.story?.primaryAction || 'Ver productos', palette: slotPalettes[slot.slot] ?? NEUTRAL_HERO_PALETTE, ...(slot.authored ? { authored: true, ...(slotPalettes[slot.slot] ? {} : { freeColours: true }) } : {}), fonts: { display: concept.dna?.type?.display ?? 'bricolage', text: concept.dna?.type?.text ?? 'instrument' }, mode: slot.mode, buttons: slot.family.buttons, radius: slot.family.radius,
     frame: { header: slot.draw.header, hero: slot.draw.hero }, ...(slot.device ? { device: slot.device } : {}), ...(briefNumbers.length ? { numbers: briefNumbers } : {}) });
   const live = () => input.styleSlots.filter(slot => slotConcepts[slot.slot]);
   const proposal = (status: StyleProposalStatus): StyleProposal => {
@@ -87,7 +90,8 @@ export async function runStyleProposal(deps: StyleProposalDeps, input: ProposeSt
         // A bold lane moves off another bold card's display font before its hero is drawn (a no-op with one bold card).
         const others = input.styleSlots.flatMap(other => other.slot !== slot.slot && slotConcepts[other.slot] ? [slotConcepts[other.slot]!] : []);
         slotConcepts[slot.slot] = distinctBoldDisplay({ ...concept, card: { ...concept.card, slot: slot.slot, mode: slot.mode } }, others);
-        slotPalettes[slot.slot] = slot.palette ?? input.brandPalette ?? { paper: '#ffffff', ink: '#111111', accent: '#111111', accent2: '#f2f2f2' };
+        // YAPI's own bold card chooses its colours in its hero, unless the merchant confirmed brand colours.
+        slotPalettes[slot.slot] = slot.palette ?? input.brandPalette ?? (slot.authored ? undefined : NEUTRAL_HERO_PALETTE);
         slotHeroes[slot.slot] = { html: templateHero(factsFor(slotConcepts[slot.slot]!, slot)), source: 'template' };
         slotPending[slot.slot] = true;
       } catch (error) {

@@ -11,6 +11,7 @@ import type { SourceSitePurpose } from './source-site-purpose';
 import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
 import type { IconSlot, StoreControls } from './store-controls';
 import { patchConfigFile, readConfigFile } from './store-look';
+import { readWordmark, sanitizeWordmark, withWordmarkTemplate } from './source-wordmark';
 
 // bottom-pill is retired (owner 2026-10-17); kit/headers keeps its template and CSS for pages saved with it.
 export const HEADER_SHAPES = ['centered-split', 'menu-button', 'info-bar', 'stacked', 'shrinking', 'wordmark-band', 'side-rail', 'overlay', 'reveal'] as const;
@@ -21,6 +22,8 @@ export type HeaderLink = { href: string; label: string };
 export type RenderHeaderInput = {
   shape: HeaderShape; purpose: SourceSitePurpose; storeName: string; links: HeaderLink[];
   logoPath?: string; action?: PrimaryAction; fact?: string;
+  /** YAPI's lettered store name (source-wordmark.ts), already sanitized; shown in place of the plain name when there is no logo. */
+  wordmark?: string;
   /** False when the store has no buscar.html to link. */
   search?: boolean;
   /** '../' per folder level of the page the header goes on. */
@@ -65,8 +68,12 @@ const controlAttributes = (controls: StoreControls) => {
   return ` data-controls-outline="${shape.outline}" data-controls-border="${shape.border}" data-controls-fill="${shape.fill}" data-controls-colour="${shape.colour}" data-controls-badge="${controls.badge}" style="--ctl-corner:${shape.corner}px;--ctl-notch:${shape.notch}px;--ctl-tilt:${shape.tilt}deg;--ctl-weight:${shape.weight}px"`;
 };
 
+/** Only on a header that shows YAPI's lettered name, so every other header keeps its bytes. */
+const WORDMARK_CSS = '\n.pyh .pyh-wordmark{display:inline-block;min-width:0;white-space:nowrap}\n.pyh .pyh-name{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}';
+
 export function renderSourceHeader(input: RenderHeaderInput): string {
   const prefix = input.prefix ?? '';
+  const lettered = !input.logoPath && Boolean(input.wordmark);
   const showcase = input.purpose !== 'shop';
   const account = showcase && input.account === true;
   const accountLink = (className: string) => `<a class="${className}" href="#" data-pagosya-account="login">Mi cuenta</a>`;
@@ -81,7 +88,8 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
     : `${search ? `<a class="pyh-menu-link" href="${escape(prefix)}buscar.html">Buscar</a>` : ''}<a class="pyh-menu-link" href="#" data-pagosya-account="login">Mi cuenta</a>`;
   const menu = (close: string) => `<div class="pyh-menu" id="pyh-menu" data-pagosya-header-menu hidden><div class="pyh-menu-panel" role="dialog" aria-modal="true" aria-label="Menú">${close}${input.links.length ? `<nav class="pyh-menu-nav" aria-label="Menú">${input.links.map(anchor).join('')}</nav>` : ''}<div class="pyh-menu-tools">${menuTools}</div></div></div>`;
   const parts: Record<string, string> = {
-    brand: `<a class="pyh-brand" href="${escape(prefix)}index.html">${input.logoPath ? `<img class="pyh-logo" src="${escape(local(input.logoPath, prefix))}" alt="">` : ''}<span data-store-name>${escape(input.storeName)}</span></a>`,
+    // A lettered name is seen, the plain name is heard (and kept current by the runtime's [data-store-name]).
+    brand: `<a class="pyh-brand" href="${escape(prefix)}index.html">${input.logoPath ? `<img class="pyh-logo" src="${escape(local(input.logoPath, prefix))}" alt="">` : ''}${lettered ? `<span class="pyh-wordmark" aria-hidden="true">${input.wordmark}</span><span class="pyh-name" data-store-name>${escape(input.storeName)}</span>` : `<span data-store-name>${escape(input.storeName)}</span>`}</a>`,
     nav: nav(input.links, 'Principal'),
     navStart: nav(input.links.slice(0, half), 'Principal'),
     navEnd: nav(input.links.slice(half), 'Más secciones'),
@@ -118,7 +126,7 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
   // A callback, never a replacement string: a store name containing "$&" must stay literal.
   const body = kitText(`${input.shape}.html`).replace(/\{\{(\w+)\}\}/g, (_match, key: string) => parts[key] ?? '');
   const railAccount = account && input.shape === 'side-rail' ? `<style data-pagosya-header-account-style>${RAIL_ACCOUNT_CSS}</style>` : '';
-  return `<header data-pagosya-header data-shape="${input.shape}" data-purpose="${showcase ? 'showcase' : 'shop'}" class="pyh pyh--${input.shape}"${controls ? controlAttributes(controls) : ''}><style data-pagosya-header-style>${kitText('headers.css')}</style>${controls ? `<style data-pagosya-controls-style>${controlsStyle()}</style>` : ''}${railAccount}${body}</header>`;
+  return `<header data-pagosya-header data-shape="${input.shape}" data-purpose="${showcase ? 'showcase' : 'shop'}" class="pyh pyh--${input.shape}"${controls ? controlAttributes(controls) : ''}><style data-pagosya-header-style>${kitText('headers.css')}${lettered ? WORDMARK_CSS : ''}</style>${controls ? `<style data-pagosya-controls-style>${controlsStyle()}</style>` : ''}${railAccount}${body}</header>`;
 }
 
 const SLOT = /<header\b[^>]*\bdata-pagosya-header(?=[\s=>\/])[^>]*>/i;
@@ -206,6 +214,8 @@ export type SourceHeaderInput = {
   controls?: StoreControls;
   /** The showcase account button; by default config.js header.account, this save's or else the saved one. */
   account?: boolean;
+  /** A picked style card's lettered name (2026-10-18), written into index.html when the page carries none of its own. */
+  wordmark?: string;
 };
 
 /** The slot in place of the page's own top header (the first <header> before <main>), or first in <body> when it has none. */
@@ -233,6 +243,9 @@ export function withSourceHeader<F extends { path: string; content: string; enco
   if (!index || !(SLOT.test(index.content) || input.claim || hadSlot('index.html'))) return { files, rendered: false, shape, fallback: !known, missing: [] };
   const savedLogo = input.previous?.find(saved => saved.path === 'index.html')?.content.match(/<img class="pyh-logo" src="([^"]+)"/)?.[1];
   const logoPath = input.logoPath ?? (savedLogo ? decodeEntities(savedLogo) : undefined);
+  // YAPI's lettered name (2026-10-18): this save's template, else the picked card's, else the saved one. It lives in index.html.
+  const savedIndex = input.previous?.find(saved => saved.path === 'index.html')?.content;
+  const wordmark = logoPath ? undefined : readWordmark(index.content, input.storeName) ?? sanitizeWordmark(input.wordmark, input.storeName) ?? readWordmark(savedIndex, input.storeName);
   const sections = navSections(SLOT.test(index.content) ? index.content : claimSlot(index.content));
   const exists = new Set([...files.map(file => file.path), ...(input.platformPages ?? [])]);
   const pages: Array<[string, string]> = input.purpose === 'shop' ? [['productos.html', 'Productos'], ['nosotros.html', 'Nosotros'], ['contacto.html', 'Contacto']] : [['nosotros.html', 'Nosotros'], ['contacto.html', 'Contacto']];
@@ -253,7 +266,8 @@ export function withSourceHeader<F extends { path: string; content: string; enco
     const pageLabels = new Set(pageLinks.map(link => menuKey(link.label)));
     const sectionLinks = sections.filter(section => !pageLabels.has(menuKey(section.label))).map(section => ({ href: home ? `#${section.id}` : `index.html#${section.id}`, label: section.label }));
     const links = [...pageLinks, ...sectionLinks].slice(0, 6);
-    const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1), ...(input.controls ? { controls: input.controls } : {}), ...(account ? { account } : {}) });
+    if (home && wordmark) content = withWordmarkTemplate(content, wordmark);
+    const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, ...(wordmark ? { wordmark } : {}), action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1), ...(input.controls ? { controls: input.controls } : {}), ...(account ? { account } : {}) });
     const drawn = replaceElement(content, SLOT, header);
     if (drawn === null) { missing.push(file.path); return file; }
     return drawn === file.content ? file : { ...file, content: drawn };

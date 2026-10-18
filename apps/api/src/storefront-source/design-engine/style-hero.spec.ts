@@ -257,6 +257,23 @@ describe('two cards: one calm, one intense (spec amendment "two cards")', () => 
     expect(prompt).not.toContain('This card is calm');
   });
 
+  // 2026-10-18: YAPI's own bold card (authoredBold) gets no checklist, no drawn device and, without brand colours, no palette.
+  it('asks YAPI\'s own bold card for its own colours and lettered name, with none of the intense checklist', async () => {
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
+    await writeStyleHero(base({ ...bold, authored: true, freeColours: true }));
+    const prompt = promptOf(fetchMock);
+    expect(prompt).toContain("This card is YAPI's own design");
+    expect(prompt).toMatch(/Choose the colours yourself/);
+    expect(prompt).not.toContain('Use these colours');
+    expect(prompt).toContain('data-pagosya-wordmark');
+    expect(prompt).not.toMatch(/INTENSE|SIGNATURE DEVICE|\(required\)/);
+    expect(prompt).toMatch(/never invent/i);
+    // Confirmed brand colours still win on YAPI's own card.
+    const again = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify(okBody)));
+    await writeStyleHero(base({ ...bold, authored: true }));
+    expect(sent(again).at(-1).input[0].content[0].text).toContain(`Use these colours: background ${bold.palette.paper}`);
+  });
+
   it('names each drawn device in the bold prompt; the stamp device keeps its textPath recipe in the store\'s words', async () => {
     const lines: string[] = [];
     for (const device of Object.keys(SIGNATURE_DEVICES) as SignatureDevice[]) {

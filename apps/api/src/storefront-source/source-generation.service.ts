@@ -73,6 +73,7 @@ import { withSourceFonts } from './source-fonts';
 import { catalogueDigest } from './sketch/sketch-catalogue-digest';
 import { countSubstance, assembleSketch, carryEditorFields, ensureAllPhotosUsed, ensureBandRhythm, repairSketch, repairPhotoPairing, sketchFromResponse, sketchPrompt, sketchEditPrompt, sketchPhotoAllowlist, SKETCH_JSON_SCHEMA, type PhotoFact, type SketchContext } from './sketch';
 import { SourceDesignPlanner, type DesignPlanningAttempt } from './source-design-planner';
+import { readWordmark } from './source-wordmark';
 import { SHOWN_CARDS_TIMEOUT_MS, styleDraws, styleSlotDirection, withinOr, type ShownStyleCard, type StyleSlot } from './design-engine/style-draws';
 import { numbersIn } from './design-engine/style-hero';
 import { SourceReviewRegistry, SOURCE_REVIEW_HEARTBEAT_MS, SOURCE_REVIEW_STATUS, reviewPendingWhere } from './source-background-review';
@@ -603,8 +604,9 @@ export class SourceGenerationService {
     // Never blocks the run: a failed lookup only loses that history.
     // Bounded: a slow lookup costs only the history, never the proposal.
     const shownCards = styleOn ? await withinOr(() => this.projects.recentStyleCards(merchantId, styleKind, new Date(), 20), SHOWN_CARDS_TIMEOUT_MS, [] as ShownStyleCard[]).then(cards => Array.isArray(cards) ? cards : []) : [];
-    const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, recentFamilies: recentForKind(recentDraws, styleKind).families, available: frameFacts.available, request: frameFacts.request, shown: shownCards, briefNumbers: numbersIn(businessInfo).length, ...(storePhotoPalettes ? { photoPalettes: storePhotoPalettes } : {}) })
-      .map(slot => ({ ...slot, playbook: playbookDirection(PLAYBOOK[slot.kind], slot.family, { bold: slot.mode === 'bold', palette: slot.palette, button: slot.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence, freeFonts: slot.mode === 'bold', ...(slot.mode === 'calm' && slot.fonts ? { fonts: slot.fonts } : {}) }) })) : [];
+    const styleSlots = styleOn ? styleDraws({ kind: styleKind, brandColours: brandHasColours(brand?.data), category: designCategory(dto.brief), previous: previousFiles, recent: recentForKind(recentDraws, styleKind).dice, recentFamilies: recentForKind(recentDraws, styleKind).families, available: frameFacts.available, request: frameFacts.request, shown: shownCards, briefNumbers: numbersIn(businessInfo).length, authoredBold: this.config.get<boolean>('app.yapiAuthoredBold') !== false, ...(storePhotoPalettes ? { photoPalettes: storePhotoPalettes } : {}) })
+      // YAPI's own bold card takes no playbook: its kind's families, palettes and craft profile are exactly what it leaves behind.
+      .map(slot => ({ ...slot, playbook: slot.authored ? '' : playbookDirection(PLAYBOOK[slot.kind], slot.family, { bold: slot.mode === 'bold', palette: slot.palette, button: slot.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence, freeFonts: slot.mode === 'bold', ...(slot.mode === 'calm' && slot.fonts ? { fonts: slot.fonts } : {}) }) })) : [];
     // A built style card: the Sep-5 author makes a bold card bold even though the merchant's words did not ask.
     let styleBold = false;
     const useSlot = (slot: StyleSlot & { playbook: string }) => {
@@ -622,6 +624,8 @@ export class SourceGenerationService {
     // being drawn, or whose lane failed, builds from the card's design instead.
     const pickedEntry = picked ? picked.proposal.heroes[picked.index] : null;
     const pickedHero = pickedEntry?.source === 'model' ? pickedEntry.html : '';
+    // The lettered name the picked hero drew (2026-10-18): the platform header shows it on every page of the built store.
+    const pickedWordmark = pickedHero ? readWordmark(pickedHero, data.storeName) : undefined;
     const pickedCard = picked && !pickedHero && pickedConcept?.card && pickedSlot ? sep5CardLook({
       name: pickedConcept.card.name, fonts: { display: pickedConcept.dna?.type?.display ?? 'bricolage', text: pickedConcept.dna?.type?.text ?? 'instrument' },
       palette: pickedSlot.palette ?? picked.proposal.heroPalettes?.[picked.index] ?? undefined, header: pickedSlot.draw.header, hero: pickedSlot.draw.hero,
@@ -901,7 +905,7 @@ export class SourceGenerationService {
       const headerNotes = new Set<string>();
       const platformHeader = (files: SourceProjectFileDto[], platformPages: string[], controls?: StoreControls) => {
         const drawn = parseFrameDraw((frame.file ?? previousFiles.find(file => file.path === FRAME_DRAW_FILE))?.content).header;
-        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles, claim: sep5Author, ...(controls ? { controls } : {}), ...(headerAccountAsk !== undefined ? { account: headerAccountAsk } : {}) });
+        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles, claim: sep5Author, ...(pickedWordmark ? { wordmark: pickedWordmark } : {}), ...(controls ? { controls } : {}), ...(headerAccountAsk !== undefined ? { account: headerAccountAsk } : {}) });
         if (result.rendered && result.fallback && !headerNotes.has('shape')) { headerNotes.add('shape'); this.logger.warn(JSON.stringify({ event: 'source_header_shape_fallback', generationId: run.id, drawn: drawn ?? null, shape: result.shape })); }
         if (result.missing.length && !headerNotes.has('slot')) { headerNotes.add('slot'); this.logger.warn(JSON.stringify({ event: 'source_header_slot_missing', generationId: run.id, pages: result.missing })); }
         return result.files;

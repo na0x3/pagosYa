@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { WORDMARK_DIRECTION } from '../source-wordmark';
 import { asksForBold } from './frame-draw';
 import { extractSep5 } from './sep5-extract';
 import { sep5CreativePlan, type Sep5Translation } from './sep5-plan';
@@ -59,7 +60,7 @@ export function sep5Products(value: unknown, instruction: string, allowedImages:
 /** The style card the merchant picked (spec 2026-10-11): the store keeps this header and hero. */
 export const SEP5_KEEP_HERO = (html: string) => `PICKED HEADER AND HERO: The merchant chose this design from the styles YAPI offered. Keep this header and first screen exactly as given (markup and CSS), move its CSS into styles.css, keep [data-store-name], and build the rest of the store in the same fonts, colours and language. Replace preview-only links with real ones (index.html, buscar.html, the catalog, Mi cuenta with data-pagosya-account="login", the cart button with [data-cart-count]).\n${html}`;
 /** The picked card for a Sep-5 store, whose header the platform draws (spec 2026-10-13): keep its first screen, drop its header. */
-export const SEP5_KEEP_PICKED_HERO = (html: string) => `PICKED HERO: The merchant chose this design from the styles YAPI offered. Keep its first screen exactly as given (markup and CSS), move its CSS into styles.css, and build the rest of the store in the same fonts, colours and language. Its header was only a preview of the platform header: leave it out and start the page with the empty <header data-pagosya-header></header>, where the platform draws the store's header. Replace preview-only links with real ones (index.html, the catalog, the sections of this page).\n${html}`;
+export const SEP5_KEEP_PICKED_HERO = (html: string) => `PICKED HERO: The merchant chose this design from the styles YAPI offered. Keep its first screen exactly as given (markup and CSS), move its CSS into styles.css, and build the rest of the store in the same fonts, colours and language. Its header was only a preview of the platform header: leave it out and start the page with the empty <header data-pagosya-header></header>, where the platform draws the store's header, with the card's lettered store name when it has one: keep the CSS of that lettering (the .pyh-wordmark rules) in styles.css. Replace preview-only links with real ones (index.html, the catalog, the sections of this page).\n${html}`;
 /** The picked style card when its model hero was not finished (spec 2026-10-12 faster generation): the author draws the
  *  header and first screen itself in the card's look. The template hero the card showed is a placeholder, never a design. */
 export function sep5CardLook(card: { name: string; fonts: { display: string; text: string }; palette?: { paper: string; ink: string; accent: string; accent2: string }; header?: string; hero?: string; eyebrow?: string; headline: string; support?: string; action?: string }): string {
@@ -118,6 +119,8 @@ export function sep5AuthorPrompt(input: {
   voice?: string;
   /** SEP5_NO_PHOTO_GROUPS unless the merchant asked for a gallery (owner 2026-10-18). Absent or blank, byte-identical. */
   photos?: string;
+  /** Appends WORDMARK_DIRECTION: a store with no logo image gets a lettered name (2026-10-18). Absent, byte-identical. */
+  wordmark?: boolean;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -142,6 +145,7 @@ export function sep5AuthorPrompt(input: {
     ...(input.photos?.trim() ? [input.photos.trim()] : []),
     ...(input.signature?.trim() ? [input.signature.trim()] : []),
     ...(input.boldDefault ? [SEP5_BOLD_DEFAULT] : []),
+    ...(input.wordmark ? [WORDMARK_DIRECTION] : []),
     ...(input.fonts?.trim() ? [input.fonts.trim()] : []),
     // Last, so it is the most specific instruction the model reads. The pinned contract above warns against
     // "unnecessary motion", which read alone is why nine authored stores produced one @keyframes rule between

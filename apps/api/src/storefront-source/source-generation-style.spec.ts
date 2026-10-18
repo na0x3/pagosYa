@@ -64,7 +64,7 @@ function setup() {
   const stores: any = { getStorePublic: jest.fn().mockResolvedValue({ storeName: 'Café', checkoutMode: 'PAYMENT', items: [], categories: [], locations: [] }) };
   const projects: any = { prepare: jest.fn(async value => sourceProjectSnapshot(value)), current: jest.fn().mockResolvedValue({ revision: 0, slug: 'cafe' }), save: jest.fn().mockImplementation(async (_m, _s, value) => ({ revision: 1, snapshot: sourceProjectSnapshot(value) })), version: jest.fn(), recentFrameDraws: jest.fn().mockResolvedValue([]), recentDesignFingerprints: jest.fn().mockResolvedValue([]), recentCompositionFingerprints: jest.fn().mockResolvedValue([]) };
   const values = new Map<string, unknown>(Object.entries({ 'app.openAi.apiKey': 'test-server-key', 'app.openAi.enabled': true, 'app.checkoutOrigin': 'http://localhost:5174', 'app.environment': 'test', 'app.sourceFramework': 'static',
-    'app.yapiStylePick': true, 'app.sep5Author': true, 'app.yapiPlaybook': true, 'app.yapiFrameDraw': true, 'app.yapiDesignDraw': true }));
+    'app.yapiStylePick': true, 'app.sep5Author': true, 'app.yapiPlaybook': true, 'app.yapiFrameDraw': true, 'app.yapiDesignDraw': true, 'app.yapiAuthoredBold': false }));
   const config: any = { get: jest.fn((key: string) => values.get(key)), set: (key: string, value: unknown) => values.set(key, value) };
   const uploads: any = { getBuffer: jest.fn(), contentTypeFor: jest.fn().mockReturnValue('image/png') };
   const metering: any = { record: jest.fn().mockResolvedValue(undefined) };
@@ -170,6 +170,23 @@ describe('style proposal mode', () => {
     expect(await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true })).toEqual({ styleProposal: { generationId: expect.any(String), cards: 2 } });
     expect(Date.now() - started).toBeGreaterThanOrEqual(1400);
     expect(draws.mock.calls.at(-1)![0].shown).toEqual([]);
+  });
+
+  // 2026-10-18: with YAPI_AUTHORED_BOLD on (the default), the bold card is YAPI's own: nothing drawn but the header and cart,
+  // no playbook, and without confirmed brand colours its hero picks the colours (no saved palette).
+  it('makes the bold card YAPI\'s own design when authored bold is on', async () => {
+    config.set('app.yapiAuthoredBold', true);
+    lanes();
+    await service.generate('m1', 's1', dto, budget, [], progress, { styleProposal: true });
+    const final = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0]).find((c: any) => c.data.status === 'AWAITING_STYLE');
+    const saved: StyleProposal = final.data.proposal;
+    const bold = saved.slots.find(slot => slot.mode === 'bold')!;
+    expect(bold).toMatchObject({ authored: true, playbook: '' });
+    expect(bold.palette).toBeUndefined();
+    expect(bold.draw).not.toHaveProperty('hero');
+    const boldHero = writeStyleHero.mock.calls.map(c => c[0]).find(args => args.facts.mode === 'bold')!;
+    expect(boldHero.facts).toMatchObject({ authored: true, freeColours: true });
+    expect(boldHero.direction).toContain("YAPI'S OWN DESIGN");
   });
 
   it('saves the palette each hero was drawn with, also for a slot without one', async () => {

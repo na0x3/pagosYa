@@ -97,6 +97,25 @@ describe('withSourceHeader: the save step that draws the header on every page (s
   const input = { shape: 'stacked', purpose: 'shop' as const, storeName: 'deff', platformPages: ['buscar.html'] };
   const file = (files: Array<{ path: string; content: string }>, path: string) => files.find(entry => entry.path === path)!.content;
 
+  // 2026-10-18 (POKEATE, Sep 8): YAPI lettered the name itself; the platform header printed it as plain text.
+  it('shows YAPI\'s lettered name on every page, keeps the plain name for screen readers, and keeps it across edits', () => {
+    const lettered = '<span class="wm-a">de</span>ff<span class="wm-suit">♠</span>';
+    const withTemplate = site().map(entry => entry.path === 'index.html' ? { ...entry, content: entry.content.replace('</body>', `<template data-pagosya-wordmark>${lettered}</template></body>`) } : entry);
+    const out = withSourceHeader(withTemplate, input);
+    for (const path of ['index.html', 'nosotros.html', 'pages/equipo.html']) {
+      expect(file(out.files, path)).toContain(`<span class="pyh-wordmark" aria-hidden="true">${lettered}</span><span class="pyh-name" data-store-name>deff</span>`);
+    }
+    // An edit whose index.html lost the template keeps the saved lettering; a picked card's lettering is written in.
+    const edited = withSourceHeader(site(), { ...input, previous: out.files });
+    expect(file(edited.files, 'index.html')).toContain(`<template data-pagosya-wordmark>${lettered}</template>`);
+    expect(file(edited.files, 'nosotros.html')).toContain('class="pyh-wordmark"');
+    const picked = withSourceHeader(site(), { ...input, wordmark: lettered });
+    expect(file(picked.files, 'index.html')).toContain(`<template data-pagosya-wordmark>${lettered}</template>`);
+    // A logo image wins; a lettering that no longer spells the name (a renamed store) is ignored.
+    expect(file(withSourceHeader(withTemplate, { ...input, logoPath: 'assets/logo.png' }).files, 'index.html')).not.toContain('pyh-wordmark"');
+    expect(file(withSourceHeader(withTemplate, { ...input, storeName: 'Otra' }).files, 'index.html')).toContain('<span data-store-name>Otra</span>');
+  });
+
   it('draws the drawn shape into every page slot, linking the sections the home page marks', () => {
     const out = withSourceHeader(site(), input);
     expect(out).toMatchObject({ rendered: true, shape: 'stacked', fallback: false, missing: ['pages/viejo.html'] });

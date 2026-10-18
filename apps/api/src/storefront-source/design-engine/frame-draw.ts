@@ -185,7 +185,20 @@ export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw
 
 /** What one generation gets. Fresh designs draw and save; edits carry the saved file without re-sending the
  *  paragraph (the saved code already embodies it); the flag off changes nothing. */
-export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw & CommerceDraw & ProductDraw> & { category?: string }>; available: FrameAvailable; request: string; /** Where the merchant asked the menu to live; defaults to headerPlace(request). */ headerAsk?: 'side' | 'top'; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number; /** false: the caller draws commerce itself and the concept keeps its product surfaces (style cards). */ commerce?: false; /** The store's photo colours (photo-palette.ts): they replace the drawn colour world unless brand colours are confirmed. */ photoPalettes?: { calm: Palette; bold: Palette }; /** A look edit with the merchant's own brand material (spec 2026-10-16): replaces the kept palette unless brand colours are confirmed. */ paletteOverride?: Palette }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette; commerce?: { draw: Partial<CommerceDraw>; fresh: boolean; cartWord?: string }; product?: { draw: Partial<ProductDraw>; fresh: true } } {
+/**
+ * The bold style card is YAPI's own design (owner 2026-10-18, comparing today's POKEATE with the Sep-8 one: «do whatever you
+ * think will bring me back to those design choices by yapi … colors before had more to do and sections fit in perfectly»).
+ * The Sep-8 store came from one authored prompt with nothing drawn; this gives the bold card that authority back. Capability,
+ * not a grammar: it names what YAPI may decide and where to look, never a section, a colour or a device.
+ */
+export const AUTHORED_DESIGN_DIRECTION = [
+  "YAPI'S OWN DESIGN: Nothing on this card was drawn for you. The concept, the colours, the type, the first screen and the order and shape of every section are yours, as one idea taken from this business's own world. Find that world first: its objects, rituals, vocabulary and places, and what its customers need to know (for a poker shop: the felt, the chips, the cards and their suits, the deal, how a hand is played and ranked).",
+  '- Colours come from that world and the photos together: several colours with real jobs (fields and bands, a single word of a headline in another colour, the lettered name), chosen as the business would paint its own sign, never a palette averaged from the photos and never one neutral page.',
+  "- Draw the business's own objects in HTML, CSS or inline SVG wherever they tell the story better than a photo (cards, a table, a cup, a ticket, a tool), and use the merchant's photos where they are the best proof.",
+  '- Each section follows from the one before, like pages of one story told in that world\'s language; what a customer of this kind of business needs to know (how it works, how to choose, how to buy) can be its own designed section.',
+].join('\n');
+
+export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; /** YAPI's own design (AUTHORED_DESIGN_DIRECTION): only the platform-drawn header and cart. */ authored?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw & CommerceDraw & ProductDraw> & { category?: string }>; available: FrameAvailable; request: string; /** Where the merchant asked the menu to live; defaults to headerPlace(request). */ headerAsk?: 'side' | 'top'; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number; /** false: the caller draws commerce itself and the concept keeps its product surfaces (style cards). */ commerce?: false; /** The store's photo colours (photo-palette.ts): they replace the drawn colour world unless brand colours are confirmed. */ photoPalettes?: { calm: Palette; bold: Palette }; /** A look edit with the merchant's own brand material (spec 2026-10-16): replaces the kept palette unless brand colours are confirmed. */ paletteOverride?: Palette }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette; commerce?: { draw: Partial<CommerceDraw>; fresh: boolean; cartWord?: string }; product?: { draw: Partial<ProductDraw>; fresh: true } } {
   if (!input.enabled) return { paragraph: '' };
   if (!input.fresh) {
     const stored = input.previous.find(file => file.path === FRAME_DRAW_FILE);
@@ -243,6 +256,12 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const product = productDrawn && Object.keys(productDrawn).length ? { product: { draw: productDrawn, fresh: true as const } } : {};
   const productLine = productDrawn ? productDirection(productDrawn) : '';
   const extraLines = [cartLine, productLine ? `\n${productLine}` : ''].join('');
+  if (input.authored) {
+    // YAPI's own design (2026-10-18): the platform draws the header and the cart, everything else is the author's.
+    const platformParts = { header: frame.header, cart: frame.cart };
+    const lines = frameDirection(platformParts, frameOmit).split('\n').filter(line => line.startsWith('- '));
+    return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ ...platformParts, ...playbookFields, ...commerceDrawn, ...productDrawn }, null, 2) + '\n' }, paragraph: [AUTHORED_DESIGN_DIRECTION, ...lines].join('\n') + extraLines, ...commerce, ...product };
+  }
   if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ ...frame, ...playbookFields, ...commerceDrawn, ...productDrawn }, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) + extraLines, ...commerce, ...product };
   const category = input.playbook?.kind ?? input.category ?? '';
   const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.boldStyle ? undefined : input.playbook?.family.palettes, button: input.playbook?.family.buttons, ...(conventional ? { parts: { angle: PLAYBOOK[input.playbook!.kind as keyof typeof PLAYBOOK]?.angles ?? calm(DESIGN_CATALOGUE.angle), structure: calm(DESIGN_CATALOGUE.structure), photos: calm(DESIGN_CATALOGUE.photos), hover: calm(DESIGN_CATALOGUE.hover), trust: calm(DESIGN_CATALOGUE.trust), reviews: calm(DESIGN_CATALOGUE.reviews) } } : {}) }, input.spread ?? 0);

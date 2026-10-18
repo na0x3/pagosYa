@@ -39,7 +39,9 @@ export type StyleSlot = { slot: number; mode: StyleMode; kind: PlaybookKind; fam
   /** Account, checkout, fields and cart path drawn for this card (spec 2026-10-11 commerce surfaces). Saved in file and draw. */
   commerce?: CommerceDraw;
   /** The cart's word for this kind of business. */
-  cartWord?: string };
+  cartWord?: string;
+  /** YAPI's own design (StyleDrawsInput.authoredBold): nothing but the header and cart was drawn for this card. */
+  authored?: true };
 
 /** One card a recent proposal showed (built or not): what `SourceProjectsService.recentStyleCards` reads back. */
 export type ShownStyleCard = { kind?: string; mode: StyleMode; draw: ReturnType<typeof parseFrameDraw>; device?: string; display?: string;
@@ -54,7 +56,10 @@ export type StyleDrawsInput = { kind: PlaybookKind; brandColours: boolean; categ
   /** How many real numbers the brief gives (`numbersIn`): the numbers device needs two. */
   briefNumbers?: number;
   /** The store's photo colours (photo-palette.ts): the calm card takes the light one, the bold card the dark one. */
-  photoPalettes?: { calm: Palette; bold: Palette } };
+  photoPalettes?: { calm: Palette; bold: Palette };
+  /** The bold card is YAPI's own design (AUTHORED_DESIGN_DIRECTION, 2026-10-18): only the platform's header and cart are
+   *  drawn for it; no palette, hero, footer, design parts or device. Off: the drawn bold card. */
+  authoredBold?: boolean };
 
 /** How long a proposal waits for the shown-cards history before drawing without it. */
 export const SHOWN_CARDS_TIMEOUT_MS = 1500;
@@ -100,7 +105,8 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
   const taken: ReturnType<typeof parseFrameDraw>[] = [];
   const slots: StyleSlot[] = plan.map(({ mode, family }, slot) => {
     const recent = [...Array.from({ length: TAKEN_WEIGHT }, () => taken).flat(), ...history];
-    const run = frameForRun({ enabled: true, designEnabled: true, fresh: true, brandColours: input.brandColours, category: input.category, previous: input.previous, recent, available: input.available, request: input.request, random, playbook: { kind: input.kind, family, bold: mode === 'bold' }, boldStyle: mode === 'bold', spread: STYLE_SPREAD, commerce: false, ...(input.photoPalettes ? { photoPalettes: input.photoPalettes } : {}) });
+    const authored = mode === 'bold' && input.authoredBold === true;
+    const run = frameForRun({ enabled: true, designEnabled: !authored, ...(authored ? { authored: true } : {}), fresh: true, brandColours: input.brandColours, category: input.category, previous: input.previous, recent, available: input.available, request: input.request, random, playbook: { kind: input.kind, family, bold: mode === 'bold' }, boldStyle: mode === 'bold', spread: STYLE_SPREAD, commerce: false, ...(input.photoPalettes && !authored ? { photoPalettes: input.photoPalettes } : {}) });
     const draw = parseFrameDraw(run.file?.content);
     taken.push(draw);
     const used = displaysShown(mode);
@@ -109,13 +115,15 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
       // The family's font pairs rotate like the frame: the pair the latest cards of this kind showed least.
       const fonts = family.fonts.length ? rotate(family.fonts, pair => used.filter(id => id === pair.display).length, random, STYLE_SPREAD) : undefined;
       extra = { ...(fonts ? { fonts: { display: fonts.display, text: fonts.text } } : {}), avoidDisplay: [...new Set(used)].filter(id => id !== fonts?.display).slice(0, AVOID_FONTS) };
+    } else if (authored) {
+      extra = { avoidDisplay: [...new Set(used)].slice(0, AVOID_FONTS) };
     } else {
       // The device avoids every recent one while a fresh one fits; ties are random.
       const devices = (Object.keys(SIGNATURE_DEVICES) as SignatureDevice[]).filter(id => { const needs = (SIGNATURE_DEVICES[id] as { needs?: (a: FrameAvailable, n: number) => boolean }).needs; return !needs || needs(input.available, input.briefNumbers ?? 0); });
       const recentDevices = weighted(shown, card => card.device);
       extra = { device: rotate(devices, id => recentDevices.filter(device => device === id).length, random, 0), avoidDisplay: [...new Set(used)].slice(0, AVOID_FONTS) };
     }
-    return { slot, mode, kind: input.kind, family, file: run.file!, paragraph: run.paragraph, ...(run.dna ? { dna: run.dna } : {}), ...(run.palette ? { palette: run.palette } : {}), draw, ...extra };
+    return { slot, mode, kind: input.kind, family, file: run.file!, paragraph: run.paragraph, ...(authored ? { authored: true as const } : {}), ...(run.dna ? { dna: run.dna } : {}), ...(run.palette ? { palette: run.palette } : {}), draw, ...extra };
   });
   // Commerce draws after every frame, so the header, hero and design each slot drew are unchanged by it.
   const commerceTaken: Array<Partial<CommerceDraw>> = [];
@@ -133,7 +141,7 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
 /** What the planner reads for one card: its slot, its mode, its drawn frame and design, and its playbook paragraph. */
 /** `lane`: the slot is planned alone (spec 2026-10-11 speed-up), so its concept is the only one returned. */
 export function styleSlotDirection(slot: StyleSlot, playbook: string, options: { lane?: boolean } = {}): string {
-  const mode = slot.mode === 'calm' ? 'calm: a normal, professionally made website of this kind' : 'bold: poster type, colour fields and one memorable device';
+  const mode = slot.mode === 'calm' ? 'calm: a normal, professionally made website of this kind' : slot.authored ? "bold: YAPI's own design, taken from this business's world" : 'bold: poster type, colour fields and one memorable device';
   const build = options.lane ? 'Build the one concept you return on exactly this; the other card is planned separately:' : `Build concepts[${slot.slot}] on exactly this; no other concept uses it:`;
   const device = slot.mode === 'bold' && slot.device ? `- Signature device of this card (its one memorable move, drawn for it): ${SIGNATURE_DEVICES[slot.device].label}.` : '';
   const fonts = [

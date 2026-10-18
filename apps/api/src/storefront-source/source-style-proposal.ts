@@ -1,5 +1,6 @@
 /** "Elige tu estilo" proposal (spec 2026-10-11): what the generation row saves and what Studio's cards read. */
 import type { StyleSlot } from './design-engine/style-draws';
+import { readWordmark } from './source-wordmark';
 import type { SourceDesign } from './source-design';
 import type { GenerateSourceProjectDto } from './dto/generate-source-project.dto';
 import type { SourceImageUse } from './source-setup';
@@ -46,7 +47,9 @@ export function styleProposalView(generationId: string, proposal: StyleProposal,
     const shape = (HEADER_SHAPES as readonly string[]).includes(drawn) ? drawn as HeaderShape : FALLBACK_HEADER_SHAPE;
     const name = storeName || decodeEntities(heroHtml.match(/data-store-name[^>]*>([^<]{1,80})</)?.[1]?.trim() ?? '');
     const links = PREVIEW_LINKS[purpose === 'shop' ? 'shop' : 'showcase'].map(label => ({ href: '#', label }));
-    return renderSourceHeader({ shape, purpose, storeName: name, links, fact: headerFact(brief.businessInformation), search: true });
+    // The card shows the lettered name its hero drew (2026-10-18), as the built store will.
+    const wordmark = readWordmark(heroHtml, name);
+    return renderSourceHeader({ shape, purpose, storeName: name, links, fact: headerFact(brief.businessInformation), search: true, ...(wordmark ? { wordmark } : {}) });
   };
   const cards: StyleCardView[] = (proposal.design?.concepts ?? []).map((concept, index) => {
     const slot = concept.card!.slot;
