@@ -127,6 +127,16 @@ describe('account gates the runtime fills', () => {
     expect(() => validateGeneratedSource(files, 'shop')).toThrow('acceso-registro.html puso <aside>, <div>');
     expect(staticAccountGateProblems(withRegister('<section class="signup"><h1>Crea tu cuenta</h1></section>'))).toEqual([expect.stringContaining('acceso-registro.html perdió <section data-account-gate="register">')]);
   });
+  // 2026-10-18, florart: a side panel beside the drawn login form carried its own heading and «Crear cuenta» /
+  // «Recuperar contraseña» links, which the drawn form already shows.
+  it('refuses decoration that repeats the drawn form: a second heading or links to the other account pages', () => {
+    const files = withRegister('<section class="ui-account-gate" data-account-gate="register"><aside class="mast"><p class="kicker">Mi cuenta</p><h1>Tu historia, en un solo lugar.</h1><nav><a href="acceso-ingresar.html">Ingresar</a><a href="acceso-olvide-mi-contrasena.html">Recuperar contraseña</a></nav></aside><div class="ui-container"><h1>Crea tu cuenta</h1><p>Hola</p><a class="ui-button" href="#" data-pagosya-account="register">Crear cuenta</a></div></section>');
+    expect(staticAccountGateProblems(files)).toEqual([expect.stringMatching(/^acceso-registro\.html repite lo que el formulario ya muestra: un segundo <h1>, enlaces a acceso-ingresar\.html, acceso-olvide-mi-contrasena\.html/)]);
+  });
+  it('asks for a full-screen account page that never repeats the form', () => {
+    expect(SOURCE_STATIC_ACCOUNT_PAGES).toMatch(/full width of the screen/);
+    expect(SOURCE_STATIC_ACCOUNT_PAGES).toMatch(/never repeat/);
+  });
   it('tells a static generation how to restyle the drawn form', () => {
     expect(SOURCE_STATIC_ACCOUNT_PAGES).toContain('acceso-registro.html');
     expect(SOURCE_STATIC_ACCOUNT_PAGES).toContain('[data-account-gate] [data-part=account|media|card|title|lead|notice|form|field|label|input|hint|error|submit|link]');

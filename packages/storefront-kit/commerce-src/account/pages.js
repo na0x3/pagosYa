@@ -44,33 +44,36 @@
   const ACCOUNT_CADENCE = { WEEKLY: 'cada semana', BIWEEKLY: 'cada dos semanas', MONTHLY: 'cada mes' };
   const accountDay = iso => { try { return iso ? new Date(iso).toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' }) : ''; } catch { return ''; } };
   // Unlayered on purpose: the store's own generic rules (h1, input) must not undo the form; YAPI's theme comes after and wins.
+  // Each rule weighs one attribute ([data-account-gate] :where(…)), so a store rule on a part ([data-account-gate]
+  // [data-part=input] in styles.css) wins although this sheet is appended later (2026-10-18, florart: the kit's later
+  // copy of the same selector overrode the store's title, and its fields went dark).
   const ACCOUNT_CSS = `
-[data-account-gate] [data-part=account]{--acc-bg:var(--account-background,var(--ui-paper,#fff));--acc-ink:var(--account-foreground,var(--ui-ink,#111));--acc-accent:var(--account-accent,var(--ui-accent,#111));--acc-radius:var(--account-radius,var(--ui-radius-control,10px));display:grid;gap:var(--ui-s5,24px);color:var(--acc-ink)}
-[data-account-gate] [data-part=card]{display:grid;gap:var(--ui-s3,12px)}
-[data-account-gate] [data-layout=card] [data-part=card]{width:100%;max-width:440px;margin-inline:auto;box-sizing:border-box;padding:clamp(24px,4vw,40px);background:var(--ui-surface,var(--acc-bg));border:1px solid var(--ui-line,#0002);border-radius:calc(var(--acc-radius) * 1.6)}
-[data-account-gate] [data-layout=split]{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch}
-[data-account-gate] [data-layout=split] [data-part=media]{margin:0}
-[data-account-gate] [data-layout=split] [data-part=media] img{display:block;width:100%;height:100%;min-height:320px;object-fit:cover;border-radius:var(--ui-radius-media,12px)}
-[data-account-gate] [data-layout=minimal] [data-part=card]{max-width:560px}
-[data-account-gate] [data-layout=panel]{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
-[data-account-gate] [data-part=title]{margin:0;font-family:var(--ui-display-font,var(--store-heading-font,inherit));font-size:clamp(28px,3vw,40px);line-height:1.1}
-[data-account-gate] [data-part=lead]{margin:0;opacity:.8}
-[data-account-gate] [data-part=form]{display:grid;gap:var(--ui-s4,16px)}
-[data-account-gate] [data-part=field]{display:grid;gap:6px}
-[data-account-gate] [data-part=label]{font-size:.85em;font-weight:600}
-[data-account-gate] [data-part=input]{box-sizing:border-box;width:100%;min-height:48px;padding:0 14px;border:1px solid var(--ui-line,#0003);border-radius:var(--acc-radius);background:var(--acc-bg);color:var(--acc-ink);font:inherit}
-[data-account-gate] [data-part=submit]{min-height:48px;font:inherit;font-weight:700;cursor:pointer}
-:root:not([data-dna-fields]) [data-account-gate] [data-part=submit]{background:var(--acc-accent);color:var(--ui-on-accent,#fff);border-radius:var(--acc-radius);border:0}
-[data-account-gate] [data-part=link]{color:inherit;text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;font:inherit;cursor:pointer;justify-self:start}
-[data-account-gate] [data-part=error]:empty{display:none}
-[data-account-gate] [data-part=error]{margin:0;color:#b42318;font-weight:600}
-[data-account-gate] [data-part=notice]{margin:0;padding:10px 12px;border-radius:var(--acc-radius);background:color-mix(in srgb,var(--acc-accent) 10%,transparent)}
-[data-account-gate] [data-part=nav]{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
-[data-account-gate] [data-part=nav-item][aria-current=page]{font-weight:700;text-decoration:underline}
-[data-account-gate] [data-part=list]{display:grid;gap:12px;margin:0;padding:0;list-style:none}
-[data-account-gate] :is([data-part=order],[data-part=address]){display:grid;gap:4px;padding:14px 16px;border:1px solid var(--ui-line,#0002);border-radius:var(--acc-radius)}
-[data-account-gate] [data-part=danger]{display:grid;gap:12px;padding-top:16px;border-top:1px solid var(--ui-line,#0002)}
-@media (max-width:720px){[data-account-gate] :is([data-layout=split],[data-layout=panel]){grid-template-columns:1fr}[data-account-gate] [data-layout=split] [data-part=media] img{min-height:0;max-height:220px}}
+[data-account-gate] :where([data-part=account]){--acc-bg:var(--account-background,var(--ui-paper,#fff));--acc-ink:var(--account-foreground,var(--ui-ink,#111));--acc-accent:var(--account-accent,var(--ui-accent,#111));--acc-radius:var(--account-radius,var(--ui-radius-control,10px));display:grid;gap:var(--ui-s5,24px);color:var(--acc-ink)}
+[data-account-gate] :where([data-part=card]){display:grid;gap:var(--ui-s3,12px)}
+[data-account-gate] :where([data-layout=card] [data-part=card]){width:100%;max-width:440px;margin-inline:auto;box-sizing:border-box;padding:clamp(24px,4vw,40px);background:var(--ui-surface,var(--acc-bg));border:1px solid var(--ui-line,#0002);border-radius:calc(var(--acc-radius) * 1.6)}
+[data-account-gate] :where([data-layout=split]){grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch}
+[data-account-gate] :where([data-layout=split] [data-part=media]){margin:0}
+[data-account-gate] :where([data-layout=split] [data-part=media] img){display:block;width:100%;height:100%;min-height:320px;object-fit:cover;border-radius:var(--ui-radius-media,12px)}
+[data-account-gate] :where([data-layout=minimal] [data-part=card]){max-width:560px}
+[data-account-gate] :where([data-layout=panel]){grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
+[data-account-gate] :where([data-part=title]){margin:0;font-family:var(--ui-display-font,var(--store-heading-font,inherit));font-size:clamp(28px,3vw,40px);line-height:1.1}
+[data-account-gate] :where([data-part=lead]){margin:0;opacity:.8}
+[data-account-gate] :where([data-part=form]){display:grid;gap:var(--ui-s4,16px)}
+[data-account-gate] :where([data-part=field]){display:grid;gap:6px}
+[data-account-gate] :where([data-part=label]){font-size:.85em;font-weight:600}
+[data-account-gate] :where([data-part=input]){box-sizing:border-box;width:100%;min-height:48px;padding:0 14px;border:1px solid var(--ui-line,#0003);border-radius:var(--acc-radius);background:var(--acc-bg);color:var(--acc-ink);font:inherit}
+[data-account-gate] :where([data-part=submit]){min-height:48px;font:inherit;font-weight:700;cursor:pointer}
+:where(:root:not([data-dna-fields])) [data-account-gate] :where([data-part=submit]){background:var(--acc-accent);color:var(--ui-on-accent,#fff);border-radius:var(--acc-radius);border:0}
+[data-account-gate] :where([data-part=link]){color:inherit;text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;font:inherit;cursor:pointer;justify-self:start}
+[data-account-gate] :where([data-part=error]:empty){display:none}
+[data-account-gate] :where([data-part=error]){margin:0;color:#b42318;font-weight:600}
+[data-account-gate] :where([data-part=notice]){margin:0;padding:10px 12px;border-radius:var(--acc-radius);background:color-mix(in srgb,var(--acc-accent) 10%,transparent)}
+[data-account-gate] :where([data-part=nav]){display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+[data-account-gate] :where([data-part=nav-item][aria-current=page]){font-weight:700;text-decoration:underline}
+[data-account-gate] :where([data-part=list]){display:grid;gap:12px;margin:0;padding:0;list-style:none}
+[data-account-gate] :where(:is([data-part=order],[data-part=address])){display:grid;gap:4px;padding:14px 16px;border:1px solid var(--ui-line,#0002);border-radius:var(--acc-radius)}
+[data-account-gate] :where([data-part=danger]){display:grid;gap:12px;padding-top:16px;border-top:1px solid var(--ui-line,#0002)}
+@media (max-width:720px){[data-account-gate] :where([data-layout=split],[data-layout=panel]){grid-template-columns:1fr}[data-account-gate] :where([data-layout=split] [data-part=media] img){min-height:0;max-height:220px}}
 `;
   function accountFrame(slot, inner) {
     const { layout, photo } = accountTheme();
@@ -145,6 +148,10 @@
     if (!gates.length || accountDrawn) return;
     accountDrawn = true;
     const kit = document.createElement('style'); kit.dataset.pagosyaKit = 'account'; kit.textContent = ACCOUNT_CSS; document.head.append(kit);
+    // The gate's fallback CSS, saved in the page, styled every h1, p and .ui-button in the gate: the drawn submit (a
+    // .ui-button) took color:inherit over the store's own button colour. Pages saved before 2026-10-18 get it narrowed
+    // to the fallback (the .ui-container's own children), as source-static-pages.ts writes it now.
+    document.querySelectorAll('[data-account-gate] style[data-pagosya-standard-pages]').forEach(style => { style.textContent = style.textContent.replace(/\.ui-account-gate (h1|p|\.ui-button)(?=[\s{[:])/g, '.ui-account-gate>.ui-container>$1'); });
     const theme = accountTheme();
     // Defence in depth: the API sanitized this CSS (account-theme.ts); this only refuses what the sanitizer never emits.
     if (theme.css && theme.css.length <= 8000 && !/@\s*import|url\s*\(|expression\s*\(|<|\\|position\s*:\s*fixed|!\s*important/i.test(theme.css)) {
