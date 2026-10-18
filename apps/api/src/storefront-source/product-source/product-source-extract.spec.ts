@@ -1,4 +1,4 @@
-import { extractProductListing, listingCurrency, listingPrice, productPageBlock } from './product-source-extract';
+import { extractProductListing, listingCurrency, listingPrice, listingVideos, productPageBlock } from './product-source-extract';
 
 const ld = (data: unknown) => `<script type="application/ld+json">${JSON.stringify(data)}</script>`;
 
@@ -8,7 +8,7 @@ describe('extractProductListing (spec 2026-10-18 product link store)', () => {
       image: ['//s.alicdn.com/a.jpg', { '@type': 'ImageObject', url: 'https://s.alicdn.com/b.jpg' }, 'https://s.alicdn.com/a.jpg'], offers: { '@type': 'AggregateOffer', lowPrice: '18.30', priceCurrency: 'USD' } })}</head></html>`;
     expect(extractProductListing(html, 'https://www.alibaba.com/product-detail/x_1.html')).toEqual({
       url: 'https://www.alibaba.com/product-detail/x_1.html', name: 'Licuadora Portátil Recargable', description: 'USB, 6 cuchillas',
-      price: 18.3, currency: 'USD', images: ['https://s.alicdn.com/a.jpg', 'https://s.alicdn.com/b.jpg'], options: [],
+      price: 18.3, currency: 'USD', images: ['https://s.alicdn.com/a.jpg', 'https://s.alicdn.com/b.jpg'], options: [], videos: [],
     });
   });
 
@@ -43,6 +43,17 @@ describe('extractProductListing (spec 2026-10-18 product link store)', () => {
   });
 });
 
+describe('listingVideos (spec 2026-10-18 A2)', () => {
+  it("reads AliExpress's VideoObject, Amazon's 480p file and Taobao's CDN, MP4 only, at most two", () => {
+    expect(listingVideos(ld({ '@type': 'VideoObject', contentUrl: 'https://video.aliexpress-media.com/play/u/1.mp4' }), 'https://es.aliexpress.com/item/1.html')).toEqual(['https://video.aliexpress-media.com/play/u/1.mp4']);
+    expect(listingVideos(ld({ '@type': 'Product', name: 'x', video: { '@type': 'VideoObject', contentUrl: 'https://cdn.shop.com/v.mp4?x=1' } }), 'https://shop.com/p/1')).toEqual(['https://cdn.shop.com/v.mp4?x=1']);
+    expect(listingVideos('{"videoUrl":"https://m.media-amazon.com/a/default.jobtemplate.mp4.480.mp4"},{"videoUrl":"https://m.media-amazon.com/a/default.jobtemplate.hls.m3u8"}', 'https://www.amazon.com/dp/1')).toEqual(['https://m.media-amazon.com/a/default.jobtemplate.mp4.480.mp4']);
+    expect(listingVideos('"https://cloud.video.taobao.com/play/u/null/p/1/e/6/t/1/387079422182.mp4?SBizCode=xiaoer"', 'https://www.alibaba.com/product-detail/x.html')).toEqual(['https://cloud.video.taobao.com/play/u/null/p/1/e/6/t/1/387079422182.mp4?SBizCode=xiaoer']);
+    expect(listingVideos('<meta property="og:video" content="https://cdn.x.com/a.mp4"><meta property="og:video:url" content="https://cdn.x.com/b.mp4"><meta property="og:video:secure_url" content="https://cdn.x.com/c.mp4">', 'https://x.com/p/1')).toHaveLength(2);
+    expect(listingVideos('<meta property="og:video" content="https://youtube.com/embed/abc">', 'https://x.com/p/1')).toEqual([]);
+  });
+});
+
 describe('listingPrice / listingCurrency', () => {
   it('reads common price shapes', () => {
     expect(listingPrice('18.30')).toBe(18.3);
@@ -68,6 +79,7 @@ describe('productPageBlock', () => {
     expect(productPageBlock('<title>Mercado Libre</title>', 'https://www.mercadolibre.com.co/gz/account-verification?go=x', 200)).toBe('blocked');
     expect(productPageBlock('<title>Just a moment...</title>', 'https://shop.co.uk/product/x', 403)).toBe('blocked');
     expect(productPageBlock('<title></title><script>var _____tmd_____ = 1</script>', 'https://es.aliexpress.com/item/1.html', 200)).toBe('blocked');
+    expect(productPageBlock('<title>Amazon.com</title><form action="/errors/validateCaptcha">', 'https://www.amazon.com/dp/1', 200)).toBe('blocked');
     expect(productPageBlock('<title>Licuadora</title>', 'https://blendjet.com/products/x', 200)).toBeNull();
   });
 });

@@ -27,6 +27,7 @@
   }`;
   document.head.appendChild(carouselStyle);
   const carouselTimers = new WeakMap();
+  const carouselWatchers = new WeakMap();
   function mountCarousels() { document.querySelectorAll('[data-pagosya-carousel]').forEach(mountCarousel); }
   /** Mounts one track; the reviews slot mounts again once the store's reviews arrive. */
   function mountCarousel(track) {
@@ -47,7 +48,34 @@
     const dots = Array.from(controls.querySelectorAll('.pagosya-carousel__dot'));
     const offset = slide => slide.getBoundingClientRect().left - track.getBoundingClientRect().left;
     const current = () => slides.reduce((best, slide, index) => Math.abs(offset(slide)) < Math.abs(offset(slides[best])) ? index : best, 0);
-    const mark = () => { const at = current(); dots.forEach((dot, index) => dot.setAttribute('aria-current', String(index === at))); };
+    // Video slides (spec 2026-10-18 A2): muted and inline; only the slide on screen plays, and only while the carousel is in
+    // view. Under reduced motion nothing plays by itself and the video's own controls show.
+    const videos = slides.map(slide => slide.querySelector('video'));
+    videos.forEach(video => {
+      if (!video) return;
+      video.muted = true; video.defaultMuted = true; video.loop = true; video.autoplay = false;
+      video.setAttribute('playsinline', ''); video.removeAttribute('autoplay');
+      if (reduced) video.controls = true;
+    });
+    let inView = false;
+    const syncVideos = () => {
+      const at = current();
+      videos.forEach((video, index) => {
+        if (!video) return;
+        if (!reduced && inView && !document.hidden && index === at) { const playing = video.play?.(); if (playing?.catch) playing.catch(() => {}); }
+        else video.pause?.();
+      });
+    };
+    if (videos.some(Boolean)) {
+      carouselWatchers.get(track)?.disconnect();
+      if (typeof IntersectionObserver === 'function') {
+        const watcher = new IntersectionObserver(entries => { inView = entries.some(entry => entry.isIntersecting); syncVideos(); }, { threshold: 0.35 });
+        watcher.observe(track);
+        carouselWatchers.set(track, watcher);
+      }
+      document.addEventListener('visibilitychange', syncVideos);
+    }
+    const mark = () => { const at = current(); dots.forEach((dot, index) => dot.setAttribute('aria-current', String(index === at))); syncVideos(); };
     const go = index => { const next = (index + slides.length) % slides.length; track.scrollTo({ left: track.scrollLeft + offset(slides[next]), behavior: reduced ? 'auto' : 'smooth' }); };
     controls.querySelector('[data-carousel-prev]').addEventListener('click', () => go(current() - 1));
     controls.querySelector('[data-carousel-next]').addEventListener('click', () => go(current() + 1));
@@ -67,5 +95,6 @@
       element.addEventListener('pointerenter', pause(true)); element.addEventListener('pointerleave', pause(false));
       element.addEventListener('focusin', pause(true)); element.addEventListener('focusout', pause(false));
     }
-    carouselTimers.set(track, setInterval(() => { if (!paused && !document.hidden) go(current() + 1); }, 7000));
+    // The auto-turn waits while a video slide is on screen: the visitor moves on when they want.
+    carouselTimers.set(track, setInterval(() => { if (!paused && !document.hidden && !videos[current()]) go(current() + 1); }, 7000));
   }

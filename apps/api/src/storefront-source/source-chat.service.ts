@@ -46,6 +46,7 @@ import type { ProductListing } from './product-source/product-source-extract';
 import { productFromListing, type ProductCopy, type ProductSourceProduct } from './product-source/product-source-catalog';
 import { productSourceFailureReply, productSourceNoPhotosReply, productSourcePrompt, productSourceReplyNote } from './product-source/product-source-prompt';
 import { PRODUCT_SOURCE_USER_AGENT } from './product-source/product-source-render';
+import { MAX_SOURCE_VIDEO_BYTES } from './source-media';
 import { normalizeProductVariants } from '../payment-links/product-variants';
 import type { BrandSourceInput } from './brand-source-types';
 import { rankTemplates, type TemplateChoice } from './source-template-ranking';
@@ -134,7 +135,7 @@ const answersKindQuestion = (text: string) => !STORE_EDIT_REQUEST.test(text.norm
 
 /** A product created from a link (spec 2026-10-18 product link store), kept on the merchant's message: a retry of the same link
  *  reuses it instead of creating the product twice. */
-type ProductImport = { url: string; site: string; productId: string; product: ProductSourceProduct; listingDescription: string };
+type ProductImport = { url: string; site: string; productId: string; product: ProductSourceProduct; listingDescription: string; videoUrls?: string[] };
 type ProductRead = { link: ProductLink; site: string; earlier?: ProductImport; listing?: ProductListing; failure?: ProductSourceFailure };
 
 @Injectable()
@@ -560,16 +561,17 @@ export class SourceChatService {
           decision.reply = productSourceNoPhotosReply(productListing!.name, productRead.site);
           decision.generationInstruction = '';
         } else {
-          for (const url of productImport.product.imageUrls) {
+          const videoUrls = productImport.videoUrls ?? [];
+          for (const url of [...productImport.product.imageUrls, ...videoUrls]) {
             if (!allAssets.includes(url)) allAssets.push(url);
-            if (!decision.imageUses.some(use => use.url === url)) decision.imageUses.push({ url, role: 'product', description: `Foto de ${productImport.product.name}.` });
+            if (!decision.imageUses.some(use => use.url === url)) decision.imageUses.push({ url, role: 'product', description: `${videoUrls.includes(url) ? 'Video' : 'Foto'} de ${productImport.product.name}.` });
           }
           // A retry reuses the decision it saved, which already carries the block.
-          if (!decision.generationInstruction.includes('PRODUCT SOURCE (')) decision.generationInstruction = `${decision.generationInstruction}\n\n${productSourcePrompt(productImport.product, productImport.listingDescription)}`;
+          if (!decision.generationInstruction.includes('PRODUCT SOURCE (')) decision.generationInstruction = `${decision.generationInstruction}\n\n${productSourcePrompt(productImport.product, productImport.listingDescription, videoUrls.length)}`;
           await this.prisma.storeAgentMessage.update({ where: { id: userMessage.id }, data: { metadata: { ...(userMessage.metadata as Record<string, unknown>), productImport } as unknown as Prisma.InputJsonValue } });
         }
       }
-      const productNote = productImport ? `${productSourceReplyNote(productImport.product, productImport.site)} ` : '';
+      const productNote = productImport ? `${productSourceReplyNote(productImport.product, productImport.site, productImport.videoUrls?.length ?? 0)} ` : '';
       if (decision.action === 'reply') {
         await workflow.finish('completed');
         const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
@@ -670,10 +672,29 @@ export class SourceChatService {
     const imageUrls = imported.length ? imported : attached.filter(url => /\.(?:png|jpe?g|webp)$/i.test(url));
     if (!imageUrls.length) return undefined;
     const product = productFromListing(listing, copy?.name || copy?.description ? copy : undefined, words, imageUrls);
+    // The listing's own videos (spec 2026-10-18 A2), after the photos and only in the room they left; a failed video never
+    // fails the store.
+    const videoUrls = await this.importListingVideos(merchantId, listing.videos, Math.max(0, room - imported.length));
     const variants = normalizeProductVariants(product.variants);
     const created = await this.prisma.paymentLink.create({ data: { storeId, name: product.name, description: product.description, amount: product.amount, currency: product.currency, imageUrls: product.imageUrls,
       priceToConfirm: product.priceToConfirm, ...(variants.length ? { variants: variants as unknown as Prisma.InputJsonValue } : {}) } });
-    return { url: read.link.url, site: read.site, productId: created.id, product, listingDescription: listing.description.slice(0, 1500) };
+    return { url: read.link.url, site: read.site, productId: created.id, product, listingDescription: listing.description.slice(0, 1500), ...(videoUrls.length ? { videoUrls } : {}) };
+  }
+
+  /** Up to two listing videos into the merchant's uploads: MP4 by its bytes, at most 20 MB each. */
+  private async importListingVideos(merchantId: string, urls: string[], room: number): Promise<string[]> {
+    if (!this.uploads || !room) return [];
+    const saved: string[] = [];
+    for (const url of urls.slice(0, Math.min(2, room))) {
+      try {
+        const { body } = await readSourceReferenceResource(url, 'video', AbortSignal.timeout(45_000), undefined, MAX_SOURCE_VIDEO_BYTES, PRODUCT_SOURCE_USER_AGENT);
+        if (detectedMediaMime(body) !== 'video/mp4') continue;
+        const stored = await this.uploads.saveBuffer(body, 'video/mp4');
+        await this.prisma.mediaAsset.create({ data: { merchantId, url: stored.url, storageKey: stored.filename, mimeType: stored.mimeType, byteSize: stored.byteSize } });
+        saved.push(stored.url);
+      } catch { /* The photos still build the store. */ }
+    }
+    return saved;
   }
 
   /** The reply after a saved revision; the same text for a chat build and a build from a picked style. */

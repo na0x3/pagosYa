@@ -1,6 +1,6 @@
 import { listingVariants, merchantPrice, productFromListing } from './product-source-catalog';
 
-const listing = { url: 'https://x.com/p/1', name: 'Portable Blender USB Rechargeable 380ml 6 Blades Smoothie Maker For Travel Gym Office 2000mAh Juicer Cup Mini Mixer Personal Size Fresh', description: 'Supplier text', price: 18.3, currency: 'USD', images: [], options: [] };
+const listing = { url: 'https://x.com/p/1', name: 'Portable Blender USB Rechargeable 380ml 6 Blades Smoothie Maker For Travel Gym Office 2000mAh Juicer Cup Mini Mixer Personal Size Fresh', description: 'Supplier text', price: 18.3, currency: 'USD', images: [], options: [], videos: [] };
 
 describe('merchantPrice (spec 2026-10-18 product link store)', () => {
   it('reads the price the merchant wrote, either way round', () => {

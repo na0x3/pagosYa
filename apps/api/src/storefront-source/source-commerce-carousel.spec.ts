@@ -9,7 +9,7 @@ const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checko
 const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
 
 const windows: any[] = [];
-async function open(body: string, content: Record<string, unknown> = { articles: [], reviews: [], bundles: [] }, reduced = false) {
+async function open(body: string, content: Record<string, unknown> = { articles: [], reviews: [], bundles: [] }, reduced = false, before?: (w: any) => void) {
   const dom = new JSDOM(`<html><head></head><body>${body}<section data-pagosya-catalog></section></body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: new VirtualConsole() });
   const w = dom.window; windows.push(w);
   w.HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
@@ -22,6 +22,7 @@ async function open(body: string, content: Record<string, unknown> = { articles:
   const intervals: number[] = []; const realInterval = w.setInterval.bind(w);
   w.setInterval = (fn: () => void, ms: number) => { intervals.push(ms); return realInterval(fn, ms); };
   w.__intervals = intervals;
+  before?.(w);
   w.eval(commerce);
   await new Promise(resolve => setTimeout(resolve, 20));
   return w;
@@ -87,5 +88,34 @@ describe('the kit reviews', () => {
     const w = await live('<section data-pagosya-reviews-section><h2>Lo que dicen</h2><div data-pagosya-reviews></div></section>', []);
     await until(() => w.document.querySelector('[data-pagosya-reviews-section]').hidden);
     expect(w.document.querySelector('[data-pagosya-reviews-section]').hidden).toBe(true);
+  });
+});
+
+describe('video slides (spec 2026-10-18 A2)', () => {
+  /** jsdom has no media playback or IntersectionObserver: both are recorded so the test can drive them. */
+  const media = (w: any) => {
+    w.__played = []; w.__observers = [];
+    w.HTMLMediaElement.prototype.play = function () { w.__played.push(this.getAttribute('src')); return Promise.resolve(); };
+    w.HTMLMediaElement.prototype.pause = function () { w.__played = w.__played.filter((src: string) => src !== this.getAttribute('src')); };
+    w.IntersectionObserver = class { constructor(public callback: (entries: Array<{ isIntersecting: boolean }>) => void) { w.__observers.push(this); } observe() {} disconnect() {} };
+  };
+  const track = `<div data-pagosya-carousel data-carousel-auto aria-label="Fotos"><figure><video src="a.mp4" autoplay></video></figure><figure><img src="1.jpg" alt="Foto"></figure><figure><video src="b.mp4"></video></figure></div>`;
+
+  it('mutes every slide video, plays only the slide on screen while the carousel is in view, and waits on a video', async () => {
+    const w = await open(track, undefined, false, media);
+    const videos = Array.from(w.document.querySelectorAll('video')) as any[];
+    expect(videos.every(video => video.muted && video.hasAttribute('playsinline') && !video.hasAttribute('autoplay'))).toBe(true);
+    expect(w.__played).toEqual([]);
+    w.__observers.at(-1).callback([{ isIntersecting: true }]);
+    expect(w.__played).toEqual(['a.mp4']);
+    w.__observers.at(-1).callback([{ isIntersecting: false }]);
+    expect(w.__played).toEqual([]);
+  });
+
+  it('under reduced motion never plays by itself and shows the controls', async () => {
+    const w = await open(track, undefined, true, media);
+    w.__observers.at(-1)?.callback([{ isIntersecting: true }]);
+    expect(w.__played).toEqual([]);
+    expect((w.document.querySelector('video') as any).controls).toBe(true);
   });
 });

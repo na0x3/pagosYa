@@ -4,11 +4,13 @@
 import { parseFragment } from 'parse5';
 
 export type ProductListingOption = { name: string; values: string[] };
-export type ProductListing = { url: string; name: string; description: string; price: number | null; currency: string | null; images: string[]; options: ProductListingOption[] };
+export type ProductListing = { url: string; name: string; description: string; price: number | null; currency: string | null; images: string[]; options: ProductListingOption[]; videos: string[] };
 export type ProductPageBlock = 'blocked' | 'login';
 
 const MAX_IMAGES = 12;
 const MAX_VALUES = 24;
+const MAX_VIDEOS = 2;
+const MP4 = /\.mp4(?:[?#]|$)/i;
 
 /** Entities and tags out, spaces folded: listing titles arrive as «Licuadora Port&aacute;til». */
 function text(value: unknown, max: number): string {
@@ -54,18 +56,24 @@ export function listingCurrency(raw: unknown): string | null {
 }
 
 type LdNode = Record<string, unknown>;
-function ldProducts(html: string): LdNode[] {
+function ldNodes(html: string, wanted: string[]): LdNode[] {
   const found: LdNode[] = [];
   const walk = (node: unknown) => {
     if (!node || typeof node !== 'object') return;
     if (Array.isArray(node)) { node.forEach(walk); return; }
     const types = ([] as unknown[]).concat((node as LdNode)['@type'] ?? []);
-    if (types.includes('Product') || types.includes('ProductGroup')) found.push(node as LdNode);
+    if (wanted.some(type => types.includes(type))) found.push(node as LdNode);
     walk((node as LdNode)['@graph']);
+    walk((node as LdNode).video);
   };
   for (const match of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
     try { walk(JSON.parse(match[1].trim())); } catch { /* A broken block is skipped; another may still be whole. */ }
   }
+  return found;
+}
+
+function ldProducts(html: string): LdNode[] {
+  const found = ldNodes(html, ['Product', 'ProductGroup']);
   // A ProductGroup carries the options; a lone Product is the usual case.
   return found.sort((a, b) => Number(([] as unknown[]).concat(b['@type']).includes('ProductGroup')) - Number(([] as unknown[]).concat(a['@type']).includes('ProductGroup')));
 }
@@ -92,7 +100,7 @@ function ldOptions(product: LdNode): ProductListingOption[] {
   return [...groups].filter(([, values]) => values.size > 1).map(([name, values]) => ({ name, values: [...values].slice(0, MAX_VALUES) }));
 }
 
-function fromLd(product: LdNode, page: string): Omit<ProductListing, 'url'> {
+function fromLd(product: LdNode, page: string): Omit<ProductListing, 'url' | 'videos'> {
   const variants = Array.isArray(product.hasVariant) ? product.hasVariant as LdNode[] : [];
   const offers = ([] as unknown[]).concat(product.offers ?? [], ...variants.map(variant => variant?.offers ?? [])).filter((offer): offer is LdNode => Boolean(offer) && typeof offer === 'object');
   const offer = offers.find(item => listingPrice(item.price ?? item.lowPrice) !== null);
@@ -116,7 +124,7 @@ function metas(html: string, name: string): string[] {
   return values;
 }
 
-function fromAmazon(html: string, page: string): Omit<ProductListing, 'url'> | null {
+function fromAmazon(html: string, page: string): Omit<ProductListing, 'url' | 'videos'> | null {
   const title = /id="productTitle"[^>]*>([\s\S]*?)<\/span>/i.exec(html)?.[1];
   if (!title) return null;
   const core = html.slice(Math.max(0, html.search(/id="(?:corePrice_feature_div|corePriceDisplay_desktop_feature_div|apex_desktop)"/i)));
@@ -132,6 +140,19 @@ function fromAmazon(html: string, page: string): Omit<ProductListing, 'url'> | n
   };
 }
 
+/** The listing's own product videos, MP4 only (spec 2026-10-18 A2 §1): JSON-LD VideoObject, og:video, Amazon's 480p file,
+ *  Taobao's video CDN. Streaming playlists (m3u8) are never used. */
+export function listingVideos(html: string, page: string): string[] {
+  const found = [
+    ...ldNodes(html, ['VideoObject']).map(video => video.contentUrl),
+    ...metas(html, 'og:video:secure_url'), ...metas(html, 'og:video:url'), ...metas(html, 'og:video'),
+    ...[...html.matchAll(/"videoUrl"\s*:\s*"(https:[^"]+?\.mp4)"/g)].map(match => match[1]),
+    ...[...html.matchAll(/https:\/\/cloud\.video\.taobao\.com\/[^"'\s\\]+?\.mp4(?:\?[^"'\s\\]*)?/g)].map(match => match[0]),
+  ];
+  const urls = found.map(value => absolute(typeof value === 'string' ? value.replace(/\\\//g, '/') : value, page)).filter((url): url is string => Boolean(url && MP4.test(url)));
+  return [...new Set(urls)].slice(0, MAX_VIDEOS);
+}
+
 /** The listing on this page, or null when the page shows no product (a name and at least one photo). */
 export function extractProductListing(html: string, page: string): ProductListing | null {
   const ld = ldProducts(html)[0];
@@ -144,6 +165,7 @@ export function extractProductListing(html: string, page: string): ProductListin
     currency: listing?.currency ?? listingCurrency(metas(html, 'product:price:currency')[0] ?? metas(html, 'og:price:currency')[0]),
     images: listing?.images.length ? listing.images : metaImages,
     options: listing?.options ?? [],
+    videos: listingVideos(html, page),
   };
   return merged.name && merged.images.length ? { url: page, ...merged } : null;
 }
@@ -157,6 +179,6 @@ export function productPageBlock(html: string, finalUrl: string, status: number)
   if ([401, 403, 429, 503].includes(status) || /verification|captcha|punish|challenge/.test(path)
     || /captcha|security verification|just a moment|un momento|robot|access denied|attention required|verificaci[oó]n/.test(title)
     // AliExpress's robot check keeps the shop's own page around it: only its markers show (call this on a page with no listing).
-    || /_____tmd_____|punish-component|x5secdata|cf-chl-|g-recaptcha/.test(html)) return 'blocked';
+    || /_____tmd_____|punish-component|x5secdata|cf-chl-|g-recaptcha|\/errors\/validateCaptcha/.test(html)) return 'blocked';
   return null;
 }

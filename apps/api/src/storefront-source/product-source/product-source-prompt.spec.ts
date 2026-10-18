@@ -11,12 +11,18 @@ describe('product source prompt and replies (spec 2026-10-18 product link store)
     expect(block).toContain('Never mention the supplier');
     expect(block).toContain('never print a price in the page copy');
     expect(productSourcePrompt({ ...product, priceToConfirm: false }, '')).not.toContain('placeholder');
+    // Two photos and no video: no carousel line; three photos or a video: one carousel, video slides described.
+    expect(productSourcePrompt(product, '')).not.toContain('data-pagosya-carousel');
+    expect(productSourcePrompt({ ...product, imageUrls: ['/a', '/b', '/c'] }, '')).toContain('<div data-pagosya-carousel aria-label="Fotos de Licuadora portátil">');
+    expect(productSourcePrompt(product, '', 1)).toContain('Its 2 photos and its video are among the attached product media');
+    expect(productSourcePrompt(product, '', 1)).toContain('a video slide is <figure><video');
   });
 
   it('says where the product came from and what to confirm', () => {
     expect(productSourceReplyNote(product, 'Alibaba')).toBe('Traje «Licuadora portátil» de Alibaba con 2 fotos. Puse USD 18.30, el precio del anuncio: confirma tu precio de venta en Productos antes de publicar.');
     expect(productSourceReplyNote({ ...product, amount: 0, currency: 'BOB' }, 'Take App')).toContain('no tenía un precio en Bs o USD');
     expect(productSourceReplyNote({ ...product, priceToConfirm: false, imageUrls: ['/v1/uploads/a.jpg'] }, 'Amazon')).toBe('Traje «Licuadora portátil» de Amazon con 1 foto.');
+    expect(productSourceReplyNote({ ...product, priceToConfirm: false }, 'AliExpress', 2)).toBe('Traje «Licuadora portátil» de AliExpress con 2 fotos y 2 videos.');
   });
 
   it('asks for screenshots or photos, naming why', () => {

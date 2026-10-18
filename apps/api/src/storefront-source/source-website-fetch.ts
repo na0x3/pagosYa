@@ -11,9 +11,9 @@ function withinDeadline<T>(task: Promise<T>, signal: AbortSignal): Promise<T> {
 }
 
 /** Every redirect and stylesheet gets its own URL/DNS validation and pinned connection. */
-export type SourceReferenceResourceKind = 'html' | 'css' | 'script' | 'image' | 'font' | 'data';
-const resourceTypes: Record<SourceReferenceResourceKind, RegExp> = { html: /^text\/html\b/i, css: /^text\/css\b/i, script: /^(?:text|application)\/(?:javascript|ecmascript)\b/i, image: /^image\/(?:png|jpeg|webp|avif|gif|svg\+xml)\b/i, font: /^(?:font\/(?:woff2?|ttf|otf)|application\/(?:font-woff|x-font-ttf|vnd.ms-fontobject|octet-stream))\b/i, data: /^(?:application\/(?:json|[a-z.+-]+\+json|javascript)|text\/(?:plain|javascript))\b/i };
-const resourceLimits: Record<SourceReferenceResourceKind, number> = { html: 3_000_000, css: 600_000, script: 1_000_000, image: 2_000_000, font: 500_000, data: 1_500_000 };
+export type SourceReferenceResourceKind = 'html' | 'css' | 'script' | 'image' | 'font' | 'data' | 'video';
+const resourceTypes: Record<SourceReferenceResourceKind, RegExp> = { html: /^text\/html\b/i, css: /^text\/css\b/i, script: /^(?:text|application)\/(?:javascript|ecmascript)\b/i, image: /^image\/(?:png|jpeg|webp|avif|gif|svg\+xml)\b/i, font: /^(?:font\/(?:woff2?|ttf|otf)|application\/(?:font-woff|x-font-ttf|vnd.ms-fontobject|octet-stream))\b/i, data: /^(?:application\/(?:json|[a-z.+-]+\+json|javascript)|text\/(?:plain|javascript))\b/i, video: /^(?:video\/mp4|application\/octet-stream|binary\/octet-stream)\b/i };
+const resourceLimits: Record<SourceReferenceResourceKind, number> = { html: 3_000_000, css: 600_000, script: 1_000_000, image: 2_000_000, font: 500_000, data: 1_500_000, video: 20_000_000 };
 
 /** `maxBytes` overrides the kind's limit for one caller (the brand-source photo import takes full-size photos). `userAgent`: the
  *  product-link reader (spec 2026-10-18) reads shops that answer a browser and refuse an unknown agent. */
