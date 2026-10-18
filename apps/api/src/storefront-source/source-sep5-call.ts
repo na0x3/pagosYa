@@ -54,6 +54,9 @@ export function sep5Caller(context: Sep5CallContext) {
     // response" reached the merchant with nothing for anyone to act on.
     if (typeof body?.status === 'string') attempt.responseStatus = body.status;
     if (typeof body?.incomplete_details?.reason === 'string') attempt.incompleteReason = body.incomplete_details.reason;
+    // The ChatGPT bridge answers an incomplete or failed upstream response with its own error code (2026-10-18: two redesigns
+    // failed as a bare «Incomplete response» because the code was dropped here).
+    if (!attempt.failureReason && typeof body?.error?.code === 'string') attempt.failureReason = body.error.code.slice(0, 120);
     if (typeof body?.usage?.output_tokens === 'number') attempt.reasoningTokens = body.usage.output_tokens_details?.reasoning_tokens;
     await metering?.record(storeId, 'source-generation', context.model(), body, attempt.durationMs, attempt.status);
     return { attempt, body };
