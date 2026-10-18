@@ -13,7 +13,7 @@ textarea.wt-input { resize: vertical; }
 .wt-drop:focus-within { border-color: var(--pg-ink, #18181b); box-shadow: 0 0 0 4px var(--pg-focus-ring, rgb(24 24 27 / .14)); }
 .wt-thumbs { display: flex; flex-wrap: wrap; gap: 14px; padding-top: 8px; } .wt-thumbs :is(img, video) { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; }
 .wt-pending { position: relative; margin: 0; width: 72px; display: grid; gap: 4px; } .wt-pending figcaption { font-size: 12px; color: var(--muted, #555); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wt-products { display: grid; gap: 8px; } .wt-product { display: grid; grid-template-columns: 1fr 120px; gap: 8px; } .wt-product input { min-height: 52px; font: inherit; font-size: 16px; padding: 10px 14px; color: var(--pg-text, #18181b); background: var(--pg-surface, #fff); border: 1px solid var(--pg-border-strong, #d6d3d1); border-radius: 12px; box-sizing: border-box; box-shadow: var(--calm-shadow, 0 1px 2px rgb(24 24 27 / .04)); transition: border-color .15s ease, box-shadow .15s ease; }
+.wt-products { display: grid; gap: 8px; } .wt-product { display: grid; grid-template-columns: 52px 1fr 120px; gap: 8px; } .wt-product input { min-height: 52px; font: inherit; font-size: 16px; padding: 10px 14px; color: var(--pg-text, #18181b); background: var(--pg-surface, #fff); border: 1px solid var(--pg-border-strong, #d6d3d1); border-radius: 12px; box-sizing: border-box; box-shadow: var(--calm-shadow, 0 1px 2px rgb(24 24 27 / .04)); transition: border-color .15s ease, box-shadow .15s ease; }
 .wt-product input:hover { border-color: var(--pg-text-faint, #a8a29e); }
 .wt-product input:focus { outline: none; border-color: var(--pg-ink, #18181b); box-shadow: 0 0 0 4px var(--pg-focus-ring, rgb(24 24 27 / .14)); }
 .wt-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; } .wt-actions > span { display: flex; gap: 8px; }
@@ -42,3 +42,20 @@ textarea.wt-input { resize: vertical; }
 /* Logged in, the walkthrough fills the page area beside the sidebar and sits above the top bar and the YAPI bar, so its Salir
    is never hidden; the sidebar stays usable and leaving through it closes the walkthrough (dashboard.js). */
 body.is-logged-in .wt-overlay { left: var(--sidebar-w, 0px); z-index: 115; }
+
+/* One photo per product row: a 52px square, the same height as the row's fields. */
+.wt-product-photo { position: relative; display: grid; place-items: center; width: 52px; height: 52px; margin: 0; border: 1.5px dashed var(--pg-border-strong, #d6d3d1); border-radius: 12px; background: var(--pg-surface-raised, #f5f5f4); color: var(--pg-text-muted, #57575e); font-size: 11px; font-weight: 600; text-align: center; line-height: 1.1; cursor: pointer; }
+label.wt-product-photo:hover { border-color: var(--pg-ink, #18181b); }
+label.wt-product-photo:focus-within { border-color: var(--pg-ink, #18181b); box-shadow: 0 0 0 4px var(--pg-focus-ring, rgb(24 24 27 / .14)); }
+figure.wt-product-photo { border-style: solid; cursor: default; }
+.wt-product-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+.wt-product-photo .wt-remove { top: -8px; right: -8px; width: 24px; height: 24px; font-size: 14px; }
+.wt-product input { min-width: 0; }
+@media (max-width: 480px) { .wt-product { grid-template-columns: 52px minmax(0, 1fr) 92px; } }
+/* «¿Cómo quieres crear tu tienda?»: guided or YAPI's chat, two large choices like .wt-choice (2026-10-18). */
+.wt-modes { display: grid; gap: 12px; }
+.wt-mode { display: grid; gap: 6px; padding: 20px; text-align: left; font: inherit; color: var(--pg-text, #18181b); background: var(--pg-surface, #fff); border: 1px solid var(--pg-border-strong, #d6d3d1); border-radius: 16px; cursor: pointer; box-shadow: var(--calm-shadow, 0 1px 2px rgb(24 24 27 / .04)); transition: border-color .15s ease, box-shadow .15s ease; }
+.wt-mode strong { font-size: 19px; }
+.wt-mode span { font-size: 15px; line-height: 1.5; color: var(--pg-text-muted, #57575e); }
+.wt-mode:hover { border-color: var(--pg-ink, #18181b); }
+.wt-mode:focus-visible { outline: none; border-color: var(--pg-ink, #18181b); box-shadow: 0 0 0 4px var(--pg-focus-ring, rgb(24 24 27 / .14)); }

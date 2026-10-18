@@ -107,6 +107,14 @@ const removeButton = (key, label) => `<button class="wt-remove" type="button" da
 // Videos (MP4, as the Studio chat takes them) preview as a still first frame, never autoplaying.
 const isVideoFile = file => file?.type === 'video/mp4' || (!file?.type && /\.mp4$/i.test(file?.name || ''));
 const mediaThumb = (url, video) => video ? `<video src="${escapeHtml(url)}" muted playsinline preload="metadata"></video>` : `<img src="${escapeHtml(url)}" alt="">`;
+// One photo per product row (owner 2026-10-17: «no deja poner las fotos de los productos»): picked, it waits in
+// pending.products until Siguiente; saved, its upload path sits in values[`p${i}-image`].
+const productPhoto = (i, values, pending) => {
+  const picked = pending.products?.[i];
+  const url = picked ? picked.url : values[`p${i}-image`];
+  if (picked || url) return `<figure class="wt-product-photo">${url ? mediaThumb(url, false) : ''}${removeButton(`product:${i}`, `Quitar la foto del producto ${i + 1}`)}</figure>`;
+  return `<label class="wt-product-photo" title="Foto del producto"><input type="file" name="p${i}-photo" accept="image/png,image/jpeg,image/webp" hidden><span aria-hidden="true">+ Foto</span><span class="sr-only">Foto del producto ${i + 1}</span></label>`;
+};
 const pendingView = (files, name = 'photos') => (files || []).map(({ file, url }, index) => `<figure class="wt-pending">${url ? mediaThumb(url, isVideoFile(file)) : ''}<figcaption>${escapeHtml(file.name || '')}</figcaption>${removeButton(`pending:${name}:${index}`, `Quitar ${file.name || 'foto'}`)}</figure>`).join('');
 const savedPhotosView = urls => (urls || []).map((url, index) => `<figure class="wt-pending">${mediaThumb(url, /\.mp4$/i.test(url))}<figcaption>${/\.mp4$/i.test(url) ? 'Video' : 'Foto'} ${index + 1}</figcaption>${removeButton(`saved:${index}`, `Quitar foto ${index + 1}`)}</figure>`).join('');
 
@@ -117,7 +125,7 @@ const field = (step, values, pending = {}, questions = []) => {
     case 'what': return `<textarea class="wt-input" name="what" maxlength="300" rows="3" placeholder="Café de especialidad tostado en Sopocachi" autofocus>${v('what')}</textarea>`;
     case 'logo': return `<label class="wt-drop"><input type="file" name="logo" accept="image/png,image/jpeg,image/webp" hidden><span>Arrastra tu logo o toca para elegir</span></label><div class="wt-thumbs">${pendingView(pending.logo, 'logo')}</div><button class="wt-ghost" type="button" data-wt-skip>No tengo, YAPI te hace uno</button>`;
     case 'photos': return `<label class="wt-drop" data-wt-dropzone><input type="file" name="photos" accept="image/png,image/jpeg,image/webp,video/mp4,.mp4" multiple hidden><span>Arrastra tus fotos o videos o toca para elegir</span></label><div class="wt-thumbs">${savedPhotosView(values.photos)}${pendingView(pending.photos)}</div>`;
-    case 'products': return `<div class="wt-products">${[0, 1, 2, 3, 4].map(i => `<div class="wt-product"><input name="p${i}-name" placeholder="Producto" value="${v(`p${i}-name`)}"><input name="p${i}-price" inputmode="decimal" placeholder="Bs 45" value="${v(`p${i}-price`)}"></div>`).join('')}</div><p class="wt-aside"><button class="link" type="button" data-open-shopify-import>Tengo muchos: importar desde Shopify o CSV</button> · <button class="link" type="button" data-wt-skip>Los agrego después</button></p>`;
+    case 'products': return `<div class="wt-products">${[0, 1, 2, 3, 4].map(i => `<div class="wt-product">${productPhoto(i, values, pending)}<input name="p${i}-name" placeholder="Producto" value="${v(`p${i}-name`)}"><input name="p${i}-price" inputmode="decimal" placeholder="Bs 45" value="${v(`p${i}-price`)}"></div>`).join('')}</div><p class="wt-aside"><button class="link" type="button" data-open-shopify-import>Tengo muchos: importar desde Shopify o CSV</button> · <button class="link" type="button" data-wt-skip>Los agrego después</button></p>`;
     case 'story': {
       // Owner 2026-10-16: one box for everything the merchant wants YAPI to know, never the three kind questions.
       const story = escapeHtml(storyText(values, questions));
@@ -173,6 +181,31 @@ export function showWalkthroughChoice(root, { store, onContinue, onFresh, onExit
   }, { signal: abort.signal });
 }
 
+// A new store starts guided (the walkthrough's questions) or by talking to YAPI directly: the short create dialog, then
+// the workspace with YAPI's chat, where the merchant describes the store in their own words (owner 2026-10-18).
+export function walkthroughModeView() {
+  return `<div class="wt" data-wt-mode>
+    <button class="wt-ghost wt-exit" type="button" data-wt-exit>Salir</button>
+    <h1 class="wt-title">¿Cómo quieres crear tu tienda?</h1>
+    <div class="wt-modes">
+      <button class="wt-mode" type="button" data-wt-guided><strong>Paso a paso</strong><span>Te hacemos unas preguntas cortas sobre tu negocio, tus fotos y tus productos, y YAPI arma la tienda con eso.</span></button>
+      <button class="wt-mode" type="button" data-wt-chat><strong>Hablar con YAPI</strong><span>Pones el nombre y le cuentas a YAPI con tus palabras y tus fotos cómo la imaginas.</span></button>
+    </div>
+  </div>`;
+}
+
+export function showWalkthroughMode(root, { onGuided, onChat, onExit }) {
+  root._wtAbort?.abort();
+  const abort = new AbortController();
+  root._wtAbort = abort;
+  root.innerHTML = walkthroughModeView();
+  root.addEventListener('click', event => {
+    if (event.target.closest('[data-wt-guided]')) onGuided();
+    else if (event.target.closest('[data-wt-chat]')) onChat();
+    else if (event.target.closest('[data-wt-exit]')) onExit?.();
+  }, { signal: abort.signal });
+}
+
 export function walkthroughView(state) {
   const step = WALKTHROUGH_STEPS[state.step];
   const total = WALKTHROUGH_STEPS.length;
@@ -196,7 +229,7 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
   const resume = resumeStore !== undefined ? { store: resumeStore } : await api('/stores/onboarding').catch(() => ({ store: null }));
   const saved = resume.store?.onboarding;
   const resumedQuestions = Array.isArray(resume.store?.questions) ? resume.store.questions : [];
-  let state = { ...{ step: 0, values: {}, storeId: null, busy: false, error: null, pending: { logo: [], photos: [] }, questions: [] },
+  let state = { ...{ step: 0, values: {}, storeId: null, busy: false, error: null, pending: { logo: [], photos: [], products: {} }, questions: [] },
     ...(resume.store ? { storeId: resume.store.id, step: Math.min(LAST, saved?.step ?? 1), questions: resumedQuestions, values: { name: resume.store.name, what: saved?.what, story: saved?.story, ...answerValues(resumedQuestions, saved?.answers), photos: saved?.photos, whatsapp: saved?.contact?.whatsapp, city: saved?.contact?.city, sell: saved?.purpose, action: saved?.primaryAction?.kind, booking: saved?.primaryAction?.kind === 'booking' ? saved.primaryAction.value : undefined, phone: saved?.primaryAction?.kind === 'phone' ? saved.primaryAction.value : undefined } } : {}) };
   const paint = () => { root.innerHTML = walkthroughView(state); root.querySelector('[autofocus]')?.focus(); };
   const patch = body => api(`/stores/${state.storeId}/onboarding`, { method: 'PATCH', body: JSON.stringify(body) });
@@ -227,9 +260,22 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     state = { ...state, pending: { ...state.pending, [name]: kept.map(file => ({ file, url: previous.get(file) ?? objectUrl(file) })) } };
     paint();
   }
+  // A product row keeps one image; picking again replaces it.
+  function chooseProduct(i, files) {
+    const file = [...(files || [])].find(isImage);
+    if (!file) { paint(); return; }
+    const old = state.pending.products[i];
+    if (old?.url) URL.revokeObjectURL(old.url);
+    state = { ...state, pending: { ...state.pending, products: { ...state.pending.products, [i]: { file, url: objectUrl(file) } } } };
+    paint();
+  }
   function removePhoto(key) {
     const [kind, a, b] = key.split(':');
-    if (kind === 'saved') {
+    if (kind === 'product') {
+      const { [a]: gone, ...rest } = state.pending.products;
+      if (gone?.url) URL.revokeObjectURL(gone.url);
+      state = { ...state, pending: { ...state.pending, products: rest }, values: gone ? state.values : { ...state.values, [`p${a}-image`]: '' } };
+    } else if (kind === 'saved') {
       state = { ...state, values: { ...state.values, photos: (state.values.photos || []).filter((_, index) => index !== Number(a)) } };
       photosRemoved = true;
     } else if (kind === 'pending' && (a === 'logo' || a === 'photos')) {
@@ -271,17 +317,27 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
     }
     if (id === 'products') {
       for (let i = 0; i < 5; i++) {
-        const [draft] = productDrafts([{ name: state.values[`p${i}-name`], price: state.values[`p${i}-price`] }]);
-        if (!draft) continue;
+        if (!productDrafts([{ name: state.values[`p${i}-name`], price: state.values[`p${i}-price`] }]).length) continue;
+        // The row's photo uploads with its product, once: a retry after a failure reuses the saved path.
+        const picked = state.pending.products[i];
+        if (picked) {
+          const url = await uploadFile(picked.file);
+          if (picked.url) URL.revokeObjectURL(picked.url);
+          const { [i]: _, ...rest } = state.pending.products;
+          state = { ...state, values: { ...state.values, [`p${i}-image`]: url }, pending: { ...state.pending, products: rest } };
+        }
+        const [draft] = productDrafts([{ name: state.values[`p${i}-name`], price: state.values[`p${i}-price`], imageUrl: state.values[`p${i}-image`] }]);
+        const imageUrl = draft.imageUrls[0] || '';
         const made = created[i];
         // An edited row updates the product it created; a second POST would leave the old price in the brief.
         if (made) {
-          if (made.id && (made.name !== draft.name || made.amount !== draft.amount)) await api(`/stores/${state.storeId}/payment_links/${made.id}`, { method: 'PATCH', body: JSON.stringify({ name: draft.name, amount: draft.amount }) });
-          created[i] = { ...made, name: draft.name, amount: draft.amount };
+          const photoChanged = made.imageUrl !== imageUrl;
+          if (made.id && (made.name !== draft.name || made.amount !== draft.amount || photoChanged)) await api(`/stores/${state.storeId}/payment_links/${made.id}`, { method: 'PATCH', body: JSON.stringify({ name: draft.name, amount: draft.amount, ...(photoChanged ? { imageUrls: draft.imageUrls } : {}) }) });
+          created[i] = { ...made, name: draft.name, amount: draft.amount, imageUrl };
           continue;
         }
         const product = await api(`/stores/${state.storeId}/payment_links`, { method: 'POST', body: JSON.stringify({ ...draft, currency: 'BOB' }) });
-        created[i] = { id: product?.id, name: draft.name, amount: draft.amount };
+        created[i] = { id: product?.id, name: draft.name, amount: draft.amount, imageUrl };
       }
     }
     if (id === 'story') {
@@ -320,7 +376,12 @@ export async function runWalkthrough(root, { api, uploadFile, onDone, onExit, re
 
   // Choosing the main button repaints, so the booking link or phone field it needs appears.
   listen('input', event => { if (event.target.name && event.target.type !== 'file') { touched.add(event.target.name); state = nextState(state, { type: 'field', name: event.target.name, value: event.target.value }); if (event.target.name === 'action') paint(); } });
-  listen('change', event => { if (event.target.type === 'file' && ['logo', 'photos'].includes(event.target.name)) choose(event.target.name, event.target.files); });
+  listen('change', event => {
+    if (event.target.type !== 'file') return;
+    if (['logo', 'photos'].includes(event.target.name)) choose(event.target.name, event.target.files);
+    const row = /^p([0-4])-photo$/.exec(event.target.name || '');
+    if (row) chooseProduct(row[1], event.target.files);
+  });
   // A file dropped anywhere on the overlay must never navigate the browser away; only the logo and photos steps take it.
   listen('dragover', event => event.preventDefault());
   listen('drop', event => {

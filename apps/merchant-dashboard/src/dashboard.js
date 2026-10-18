@@ -1,6 +1,6 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
 import { createStoreBody } from "/src/create-store.mjs";
-import { runWalkthrough, showWalkthroughChoice, walkthroughEntry } from "/src/onboarding-walkthrough.mjs";
+import { runWalkthrough, showWalkthroughChoice, showWalkthroughMode, walkthroughEntry } from "/src/onboarding-walkthrough.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
@@ -722,13 +722,20 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
       history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace");
     } });
   }
+  // A fresh store starts with the choice: the guided walkthrough, or the short create dialog and YAPI's chat (2026-10-18).
+  function openFreshStart() {
+    const root = document.getElementById("onboardingWalkthrough");
+    root.hidden = false;
+    const close = () => { root._wtAbort?.abort(); root.hidden = true; root.innerHTML = ""; };
+    showWalkthroughMode(root, { onGuided: () => openWalkthrough(null), onChat: () => { close(); openCreateStoreDialog(); }, onExit: close });
+  }
   // "Crear otra tienda" with a half-built walkthrough store: offer to continue it before starting a new one.
   async function offerUnfinishedOrFresh() {
     const unfinished = (await api("/stores/onboarding").catch(() => ({ store: null }))).store || null;
-    if (!unfinished) return openWalkthrough(null);
+    if (!unfinished) return openFreshStart();
     const root = document.getElementById("onboardingWalkthrough");
     root.hidden = false;
-    showWalkthroughChoice(root, { store: unfinished, onContinue: store => openWalkthrough(store), onFresh: () => openWalkthrough(null), onExit: () => { root.hidden = true; root.innerHTML = ""; } });
+    showWalkthroughChoice(root, { store: unfinished, onContinue: store => openWalkthrough(store), onFresh: openFreshStart, onExit: () => { root.hidden = true; root.innerHTML = ""; } });
   }
   // The sidebar stays usable beside the walkthrough (onboarding-walkthrough.css): opening another page or store through it
   // closes the walkthrough. Every step is already saved, so "Crear otra tienda" offers to continue (owner report 2026-10-15).
@@ -757,11 +764,14 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
     onboardingResumable = onboarding.store || null;
     const entry = walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, resumable: Boolean(onboardingResumable), intent: "boot" });
     if (entry === "resume") openWalkthrough(onboardingResumable);
-    else if (entry === "fresh") openWalkthrough(null);
+    else if (entry === "fresh") openFreshStart();
   }
 
   function openCreateStore() {
     if (walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, intent: "create" }) === "fresh") return void offerUnfinishedOrFresh();
+    openCreateStoreDialog();
+  }
+  function openCreateStoreDialog() {
     document.getElementById("createStoreTitle").textContent = lastStores.length ? "Crea otra tienda" : "Crea tu primera tienda";
     document.getElementById("createStoreError").hidden = true;
     document.getElementById("createStoreDialog").showModal();

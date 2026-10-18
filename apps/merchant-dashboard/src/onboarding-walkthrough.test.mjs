@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { WALKTHROUGH_STEPS, answerValues, answersFor, withKindQuestions, guessSitePurpose, isUnfinishedStore, mainAction, showWalkthroughChoice, walkthroughChoiceView, nextState, storyText, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
+import { WALKTHROUGH_STEPS, answerValues, answersFor, withKindQuestions, guessSitePurpose, isUnfinishedStore, mainAction, showWalkthroughChoice, showWalkthroughMode, walkthroughChoiceView, walkthroughModeView, nextState, storyText, productDrafts, runWalkthrough, walkthroughEntry, walkthroughView } from './onboarding-walkthrough.mjs';
 
 const start = { step: 0, values: {}, storeId: null, busy: false, error: null };
 
@@ -118,6 +118,39 @@ test('a failing finish PATCH is retried alone and never re-posts the job', async
 });
 
 const image = name => ({ name, type: 'image/jpeg' });
+
+test('each product row takes one photo: shown before Siguiente, uploaded once, saved on the product (owner 2026-10-17)', async () => {
+  const w = await drive(5);
+  assert.match(w.root.innerHTML, /name="p0-photo"/);
+  await w.type('p0-name', 'Café'); await w.type('p0-price', '45'); await w.type('p1-name', 'Taza'); await w.type('p1-price', '30');
+  w.pick('p0-photo', [image('cafe.jpg')]);
+  assert.match(w.root.innerHTML, /data-wt-remove="product:0"/);
+  await w.submit();
+  assert.deepEqual(w.uploads, ['cafe.jpg']);
+  assert.deepEqual(posts(w.calls, '/payment_links').map(c => [c.body.name, c.body.imageUrls]), [['Café', ['/v1/uploads/cafe.jpg']], ['Taza', []]]);
+  // Atrás shows the saved photo; a photo added to a product already created updates it, never a second product.
+  await w.back();
+  assert.match(w.root.innerHTML, /\/v1\/uploads\/cafe\.jpg/);
+  w.pick('p1-photo', [image('taza.jpg')]);
+  await w.submit();
+  assert.equal(posts(w.calls, '/payment_links').length, 2);
+  const patches = w.calls.filter(c => c.method === 'PATCH' && c.path.includes('/payment_links/'));
+  assert.deepEqual(patches.map(c => [c.path, c.body]), [['/stores/s1/payment_links/p3', { name: 'Taza', amount: 3000, imageUrls: ['/v1/uploads/taza.jpg'] }]]);
+  assert.deepEqual(w.uploads, ['cafe.jpg', 'taza.jpg']);
+});
+
+test('a product photo can be taken out before Siguiente and is never uploaded; a non-image is ignored', async () => {
+  const w = await drive(5);
+  await w.type('p0-name', 'Café'); await w.type('p0-price', '45');
+  w.pick('p0-photo', [{ name: 'notas.pdf', type: 'application/pdf' }]);
+  assert.doesNotMatch(w.root.innerHTML, /data-wt-remove="product:0"/);
+  w.pick('p0-photo', [image('borrosa.jpg')]);
+  w.remove('product:0');
+  assert.doesNotMatch(w.root.innerHTML, /data-wt-remove="product:0"/);
+  await w.submit();
+  assert.deepEqual(w.uploads, []);
+  assert.deepEqual(posts(w.calls, '/payment_links')[0].body.imageUrls, []);
+});
 
 test('dropping photos keeps image files only, shows them before Siguiente, and survives a failed upload', async () => {
   let failOnce = true;
@@ -266,6 +299,28 @@ test('choice screen: Continuar resumes that store, Empezar una nueva starts fres
   const click = attr => handler({ target: { closest: sel => (sel === attr ? {} : null) } });
   click('[data-wt-continue]'); click('[data-wt-fresh]'); click('[data-wt-exit]');
   assert.deepEqual(log, [['continue', 's1'], ['fresh'], ['exit']]);
+});
+
+// Owner 2026-10-18: «make available speak directly with yapi for creation so users choose guided or not».
+test('mode screen: a new store starts guided (the walkthrough) or by talking to YAPI directly', () => {
+  const html = walkthroughModeView();
+  assert.match(html, /data-wt-mode/);
+  assert.match(html, /¿Cómo quieres crear tu tienda\?/);
+  assert.match(html, /Paso a paso/);
+  assert.match(html, /Hablar con YAPI/);
+  let handler; const root = { innerHTML: '', addEventListener: (_t, fn) => { handler = fn; } };
+  const log = [];
+  showWalkthroughMode(root, { onGuided: () => log.push('guided'), onChat: () => log.push('chat'), onExit: () => log.push('exit') });
+  assert.match(root.innerHTML, /data-wt-mode/);
+  const click = attr => handler({ target: { closest: sel => (sel === attr ? {} : null) } });
+  click('[data-wt-guided]'); click('[data-wt-chat]'); click('[data-wt-exit]');
+  assert.deepEqual(log, ['guided', 'chat', 'exit']);
+});
+
+test('dashboard wiring: every fresh start asks guided or YAPI first; YAPI opens the short create dialog', () => {
+  const src = readFileSync(new URL('./dashboard.js', import.meta.url), 'utf8');
+  assert.match(src, /showWalkthroughMode\(root, \{ onGuided: \(\) => openWalkthrough\(null\), onChat:/);
+  assert.doesNotMatch(src, /openWalkthrough\(null\)(?![^\n]*onChat)/, 'a fresh walkthrough opens only from the mode screen');
 });
 
 test('list badge only for non-null, unfinished onboarding', () => {
