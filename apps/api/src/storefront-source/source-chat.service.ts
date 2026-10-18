@@ -6,7 +6,7 @@ import { DESIGN_DIRECTIONS, directionBrief, type DesignDirection } from './sourc
 import { loadStoreKnowledge } from '../store-knowledge/store-knowledge';
 import { continuedCatalogRequest, pendingCatalogRequest } from './source-catalog-request';
 import { SourceConversationFailure, safeConversationDiagnostic } from './source-conversation-failure';
-import { BadRequestException, ConflictException, HttpException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SourceProjectsService } from './source-projects.service';
 import { SourceGenerationService, type StyleProposalResult } from './source-generation.service';
@@ -39,6 +39,14 @@ import { readSourceReferenceResource, readSourceWebsite } from './source-website
 import { BRAND_SOURCE_QUESTION, brandSourceAnswer, brandSourceIntent, brandSourceOther, brandSourceOwnSite, brandSourcePointsAtSite, brandSourceTouchesLook } from './brand-source-intent';
 import { brandWebsiteNotes, extractBrandWebsite, type BrandQuote } from './brand-source-website';
 import { importBrandImages } from './brand-source-import';
+import type { BrandImageCandidate } from './brand-source-website';
+import { productLinkIn, productSiteName, type ProductLink } from './product-source/product-source-links';
+import { readProductSource, type ProductSourceFailure } from './product-source/product-source-read';
+import type { ProductListing } from './product-source/product-source-extract';
+import { productFromListing, type ProductCopy, type ProductSourceProduct } from './product-source/product-source-catalog';
+import { productSourceFailureReply, productSourceNoPhotosReply, productSourcePrompt, productSourceReplyNote } from './product-source/product-source-prompt';
+import { PRODUCT_SOURCE_USER_AGENT } from './product-source/product-source-render';
+import { normalizeProductVariants } from '../payment-links/product-variants';
 import type { BrandSourceInput } from './brand-source-types';
 import { rankTemplates, type TemplateChoice } from './source-template-ranking';
 import { countTemplateVersions, FREE_TEMPLATE_ADAPTATIONS, templateReferenceRequested, templateUntouched } from './source-template-state';
@@ -124,8 +132,16 @@ const pendingKindQuestion = (messages: ReadonlyArray<{ role: string; metadata?: 
 const STORE_EDIT_REQUEST = /^\s*(?:por favor,?\s+)?(?:cambia\w*|pon|ponle|ponme|agrega\w*|anade|anadir|quita\w*|elimina\w*|borra\w*|haz|hazme|hazla|hazlo|crea\w*|sube|mueve|reemplaza|usa|redisena\w*|arregla|corrige|muestra|oculta|traduce|empieza|vuelve)\b/;
 const answersKindQuestion = (text: string) => !STORE_EDIT_REQUEST.test(text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
 
+/** A product created from a link (spec 2026-10-18 product link store), kept on the merchant's message: a retry of the same link
+ *  reuses it instead of creating the product twice. */
+type ProductImport = { url: string; site: string; productId: string; product: ProductSourceProduct; listingDescription: string };
+type ProductRead = { link: ProductLink; site: string; earlier?: ProductImport; listing?: ProductListing; failure?: ProductSourceFailure };
+
 @Injectable()
 export class SourceChatService {
+  /** The product-link reader; a spec replaces it to stay off the network. */
+  productReader = readProductSource;
+  private readonly productLogger = new Logger('ProductSource');
   constructor(private readonly prisma: PrismaService, private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly dialogue: SourceConversationService, private readonly templates: SourceTemplatesService, private readonly config: ConfigService, @Optional() private readonly uploads?: UploadsService) {}
   /** Spec 2026-10-12: how long a pick or a new request waits for a style run that is stopping to let go of the store. */
   /** Computed on first use from the deadlines the style run awaits (source-style-release.ts); tests set it directly. */
@@ -398,7 +414,11 @@ export class SourceChatService {
       const origin = originBrief?.templateId ? templateManifest(originBrief.templateId) : undefined;
       const startedFromTemplate = origin ? { id: origin.id, name: origin.name, description: origin.description, untouched: templateUntouched(originBrief, current.revision) } : null;
       const catalogInstruction = continuedCatalogRequest(setupDraft.pendingCatalogRequest, input.instruction, !current.revision);
-      const referenceUrls = sourceWebsiteReferenceUrls(input.instruction, setupDraft.prompt);
+      // Product link (spec 2026-10-18): a new store is built around the product the merchant pasted; that link is not a design reference.
+      const productLink = !current.revision && input.setupAction !== 'product-photo' ? productLinkIn(input.instruction.split('Pedido actual del comercio:').at(-1)!) : null;
+      const productRead = productLink ? await this.readProductLink(storeId, productLink, history.messages) : undefined;
+      const productListing = productRead?.earlier ? undefined : productRead?.listing;
+      const referenceUrls = sourceWebsiteReferenceUrls(input.instruction, setupDraft.prompt).filter(url => url !== productLink?.url);
       const websiteReferences = referenceUrls.length ? await Promise.all(referenceUrls.map(async url => {
         const saved = setupDraft.websiteReferences?.find(ref => ref.url === url && ref.status === 'inspected' && ref.rendered?.captures.length);
         return saved || inspectSourceWebsite(url);
@@ -411,8 +431,13 @@ export class SourceChatService {
       const savedRetry = ((resumed ?? last)?.metadata as any)?.sourceRetry;
       const reusable = Boolean(resumed) || (last?.metadata as any)?.failed && savedRetry?.fingerprint === retryFingerprint
         && Date.now() - new Date(last!.createdAt).getTime() < 10 * 60_000;
-      const decision: SourceConversationDecision = { ...(reusable ? savedRetry.decision : await this.dialogue.decide(merchantId, {
-        storeId, model: input.model, instruction: input.instruction, productPhoto, buildNow: ['generate', 'quick'].includes(input.setupAction || ''),
+      // A link that could not be read, with no photos to build from, asks for screenshots or photos instead (spec 2026-10-18 §10).
+      const productFailure = productRead?.failure && !input.assetUrls?.length ? productSourceFailureReply(productRead.failure, productRead.site) : undefined;
+      const productSource = productRead?.earlier
+        ? { site: productRead.site, name: productRead.earlier.product.name, description: productRead.earlier.listingDescription, price: productRead.earlier.product.amount / 100, currency: productRead.earlier.product.currency, options: [] }
+        : productListing ? { site: productRead!.site, name: productListing.name, description: productListing.description.slice(0, 1500), price: productListing.price, currency: productListing.currency, options: productListing.options } : undefined;
+      const decision: SourceConversationDecision = productFailure ? { action: 'reply', reply: productFailure, summary: setupDraft.answers.context ?? '', generationInstruction: '', imageUses: [] } : { ...(reusable ? savedRetry.decision : await this.dialogue.decide(merchantId, {
+        storeId, model: input.model, instruction: input.instruction, productPhoto, ...(productSource ? { productSource } : {}), buildNow: ['generate', 'quick'].includes(input.setupAction || '') || Boolean(productSource),
         revision: current.revision, store, draft: setupDraft, site, budget, catalog: store.paymentLinks || [], knowledge: await loadStoreKnowledge(this.prisma, merchantId, storeId).catch(() => null),
         messages: [...history.messages, userMessage], assetUrls: allAssets, browserReview: input.browserReview,
         offeredTemplates: offeredTemplates(history.messages).map(({ id, name }) => ({ id, name })),
@@ -505,17 +530,7 @@ export class SourceChatService {
               const alive = saved.length ? new Set((await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: saved.map(image => image.url) } }, select: { url: true } })).map(asset => asset.url)) : new Set<string>();
               imported = saved.filter(image => alive.has(image.url));
             } else if (this.uploads) {
-              const uploads = this.uploads;
-              const result = await importBrandImages(extracted.images, {
-                fetch: (url, signal, maxBytes) => readSourceReferenceResource(url, 'image', signal, undefined, maxBytes),
-                size: body => { const mime = detectedMediaMime(body); return mime ? detectedImageDimensions(body, mime) : null; },
-                sniff: detectedMediaMime,
-                save: async (body, mimeType) => {
-                  const stored = await uploads.saveBuffer(body, mimeType);
-                  await this.prisma.mediaAsset.create({ data: { merchantId, url: stored.url, storageKey: stored.filename, mimeType: stored.mimeType, byteSize: stored.byteSize } });
-                  return stored;
-                },
-              }, AbortSignal.timeout(30_000), Math.max(0, 24 - allAssets.length));
+              const result = await this.importImages(merchantId, extracted.images, Math.max(0, 24 - allAssets.length));
               imported = result.images; notes.push(...result.notes);
               brandDraft = { ...brandDraft, brandImport: { page: ownLinks[0].url, images: imported } };
             }
@@ -536,6 +551,25 @@ export class SourceChatService {
         brandDraft = { ...brandDraft, brandSource: 'own' };
       } else if (intent === 'other' && sharedNow) brandDraft = { ...brandDraft, brandSource: 'other' };
       setupDraft = { sitePurpose, ...(setupDraft.designReady || newShop && decision.action === 'generate' && startFrom === 'scratch' ? { designReady: true } : {}), pendingCatalogRequest: pendingCatalogRequest(catalogInstruction, !current.revision, setupDraft.pendingCatalogRequest), discoveryReplies: !current.revision && decision.action === 'reply' && decision.reply.includes('?') ? Math.min(2, discoveryReplies + 1) : discoveryReplies, step: 'conversation', answers: { context: decision.summary }, assetUrls: allAssets, imageUses: decision.imageUses, websiteReferences, prompt: decision.reply || undefined, ...(startFrom ? { startFrom } : {}), ...(chosenDirection ? { directionId: chosenDirection.id, directionOrigin: 'merchant' as const } : {}), ...brandDraft };
+      // Spec 2026-10-18 §5–9: the listing's photos and the catalog product, created before the build so it designs around them.
+      let productImport: ProductImport | undefined;
+      if (productRead && (productRead.earlier || productListing) && decision.action === 'generate') {
+        productImport = productRead.earlier ?? await this.createListingProduct(merchantId, storeId, productRead, productListing!, decision.productCopy, ownWords, Math.max(0, 24 - allAssets.length), input.assetUrls ?? []);
+        if (!productImport) {
+          decision.action = 'reply';
+          decision.reply = productSourceNoPhotosReply(productListing!.name, productRead.site);
+          decision.generationInstruction = '';
+        } else {
+          for (const url of productImport.product.imageUrls) {
+            if (!allAssets.includes(url)) allAssets.push(url);
+            if (!decision.imageUses.some(use => use.url === url)) decision.imageUses.push({ url, role: 'product', description: `Foto de ${productImport.product.name}.` });
+          }
+          // A retry reuses the decision it saved, which already carries the block.
+          if (!decision.generationInstruction.includes('PRODUCT SOURCE (')) decision.generationInstruction = `${decision.generationInstruction}\n\n${productSourcePrompt(productImport.product, productImport.listingDescription)}`;
+          await this.prisma.storeAgentMessage.update({ where: { id: userMessage.id }, data: { metadata: { ...(userMessage.metadata as Record<string, unknown>), productImport } as unknown as Prisma.InputJsonValue } });
+        }
+      }
+      const productNote = productImport ? `${productSourceReplyNote(productImport.product, productImport.site)} ` : '';
       if (decision.action === 'reply') {
         await workflow.finish('completed');
         const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
@@ -579,12 +613,12 @@ export class SourceChatService {
         await workflow.finish('completed');
         const cards = revision.styleProposal.cards;
         const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT',
-          content: cards === 2 ? `Te preparo 2 estilos para ${store.name}: uno tranquilo y uno atrevido. Elige uno para construir tu tienda.` : `Te preparo ${cards} estilos para ${store.name}: tranquilos y atrevidos. Elige uno para construir tu tienda.`,
+          content: productNote + (cards === 2 ? `Te preparo 2 estilos para ${store.name}: uno tranquilo y uno atrevido. Elige uno para construir tu tienda.` : `Te preparo ${cards} estilos para ${store.name}: tranquilos y atrevidos. Elige uno para construir tu tienda.`),
           metadata: { progress: workflow.value, sourceSetup: { ...setupDraft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, styleProposal: { generationId: revision.styleProposal.generationId } } } });
         return { userMessage, assistantMessage, setup: null };
       }
       // An ineligible run (sketch-first, a draw flag off) never tried, so it has nothing to apologise for.
-      return await this.revisionReply(thread, userMessage, workflow, revision, setupDraft, decision.imageUses, input.assetUrls || [], proposeStyle && revision.generation?.styleAttempted ? 'No pude preparar los estilos, armé uno por ti. ' : '');
+      return await this.revisionReply(thread, userMessage, workflow, revision, setupDraft, decision.imageUses, input.assetUrls || [], `${productNote}${proposeStyle && revision.generation?.styleAttempted ? 'No pude preparar los estilos, armé uno por ti. ' : ''}`);
     } catch (error) {
       await workflow.finish('failed');
       // The same default-deny gate the generation path uses. Chat also wraps the
@@ -600,6 +634,46 @@ export class SourceChatService {
       // catch them by type still work.
       throw shown;
     }
+  }
+
+  /** The product link read once (spec 2026-10-18 §1–4), or the product an earlier message of this store already made from it. */
+  private async readProductLink(storeId: string, link: ProductLink, messages: Array<{ metadata?: unknown }>): Promise<ProductRead> {
+    const site = productSiteName(link.host);
+    const earlier = [...messages].reverse().map(message => (message.metadata as { productImport?: ProductImport } | null)?.productImport).find(item => item?.url === link.url);
+    if (earlier && await this.prisma.paymentLink.findFirst({ where: { id: earlier.productId, storeId }, select: { id: true } })) return { link, site, earlier };
+    const started = Date.now();
+    const result = await this.productReader(link);
+    this.productLogger.log(JSON.stringify({ event: 'product_source_read', storeId, host: link.host, ok: result.ok, ...(result.ok ? { tier: result.tier, images: result.listing.images.length, price: result.listing.price !== null } : { reason: result.reason }), durationMs: Date.now() - started }));
+    return result.ok ? { link, site, listing: result.listing } : { link, site, failure: result.reason };
+  }
+
+  /** Images from the web into this merchant's uploads, one by one; a failed one is skipped (brand source and product links). */
+  private async importImages(merchantId: string, candidates: BrandImageCandidate[], room: number, userAgent?: string) {
+    if (!this.uploads) return { images: [], notes: [] };
+    const uploads = this.uploads;
+    return importBrandImages(candidates, {
+      fetch: (url, signal, maxBytes) => readSourceReferenceResource(url, 'image', signal, undefined, maxBytes, userAgent),
+      size: body => { const mime = detectedMediaMime(body); return mime ? detectedImageDimensions(body, mime) : null; },
+      sniff: detectedMediaMime,
+      save: async (body, mimeType) => {
+        const stored = await uploads.saveBuffer(body, mimeType);
+        await this.prisma.mediaAsset.create({ data: { merchantId, url: stored.url, storageKey: stored.filename, mimeType: stored.mimeType, byteSize: stored.byteSize } });
+        return stored;
+      },
+    }, AbortSignal.timeout(30_000), room);
+  }
+
+  /** The catalog product from the listing, with up to 8 of its photos; the merchant's attached photos when none came through.
+   *  Undefined when there is no photo at all: YAPI then asks for them (spec 2026-10-18 §5–8). */
+  private async createListingProduct(merchantId: string, storeId: string, read: ProductRead, listing: ProductListing, copy: ProductCopy | undefined, words: string, room: number, attached: string[]): Promise<ProductImport | undefined> {
+    const imported = room ? (await this.importImages(merchantId, listing.images.map(url => ({ url, kind: 'photo' as const })), Math.min(8, room), PRODUCT_SOURCE_USER_AGENT)).images.map(image => image.url) : [];
+    const imageUrls = imported.length ? imported : attached.filter(url => /\.(?:png|jpe?g|webp)$/i.test(url));
+    if (!imageUrls.length) return undefined;
+    const product = productFromListing(listing, copy?.name || copy?.description ? copy : undefined, words, imageUrls);
+    const variants = normalizeProductVariants(product.variants);
+    const created = await this.prisma.paymentLink.create({ data: { storeId, name: product.name, description: product.description, amount: product.amount, currency: product.currency, imageUrls: product.imageUrls,
+      priceToConfirm: product.priceToConfirm, ...(variants.length ? { variants: variants as unknown as Prisma.InputJsonValue } : {}) } });
+    return { url: read.link.url, site: read.site, productId: created.id, product, listingDescription: listing.description.slice(0, 1500) };
   }
 
   /** The reply after a saved revision; the same text for a chat build and a build from a picked style. */

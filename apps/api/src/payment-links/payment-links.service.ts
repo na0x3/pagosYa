@@ -976,6 +976,8 @@ export class PaymentLinksService {
           : dto.amount !== undefined
             ? { amount: dto.amount }
             : {}),
+        // Spec 2026-10-18 product link store: the merchant setting a price confirms it.
+        ...((dto.amount !== undefined || variants?.length) && { priceToConfirm: false }),
         ...(dto.currency !== undefined && { currency: dto.currency }),
         ...discount,
         ...(dto.codigoProducto !== undefined && { codigoProducto: dto.codigoProducto?.trim() || null }),

@@ -455,6 +455,8 @@ export class SourceProjectsService {
             ...(changes.stock !== undefined && { stock: changes.stock }),
             ...(changes.color !== undefined && { color: changes.color }),
             ...(changes.amount !== undefined && { amount: changes.amount }),
+            // Spec 2026-10-18 product link store: a price from the merchant's words confirms a listing price.
+            ...((changes.amount !== undefined || operation.variantOperations?.some(variant => variant.changes?.amount !== undefined && variant.changes.amount !== null)) && { priceToConfirm: false }),
             ...(changes.currency !== undefined && { currency: changes.currency }),
             ...(variants ? { variants: variants as unknown as Prisma.InputJsonValue,
               amount: Math.min(...variants.map(variant=>variant.amount)),

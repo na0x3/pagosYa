@@ -1566,6 +1566,9 @@ model CollectionProduct {
 
 // A product within a Store's catalog.
 model PaymentLink {
+  // Spec 2026-10-18 product link store: a price YAPI took from a shop listing, not one the merchant gave. The store cannot be
+  // published while an active product waits; any price change by the merchant clears it.
+  priceToConfirm        Boolean                     @default(false)
   subscriptionOptions   ProductSubscriptionOption[]
   membershipPeriods     MembershipPeriod[]
   // PHYSICAL | DIGITAL | MEMBERSHIP (spec 2026-10-09-sellable-memberships-design).

@@ -13,7 +13,7 @@ describe('experiment evidence', () => {
   });
 });
 
-import { SourcePublishingService } from './source-publishing.service';
+import { SourcePublishingService, priceToConfirmMessage } from './source-publishing.service';
 it('serves merchant MP4 video bytes from the asset route while omitting private export tools', async () => {
   const prisma: any = { store: { findFirst: jest.fn().mockResolvedValue({ id: 's', publishedSourceRevision: 1 }) }, storeSourceExperiment: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceVersion: { findUnique: jest.fn().mockResolvedValue({ digest: 'a'.repeat(64) }) } };
   const service = new SourcePublishingService(prisma);
@@ -396,5 +396,26 @@ describe('assumed facts block publishing, never the checks or previews (spec 202
     const harness = checkedPublishing();
     withVoice(harness, 'assumed');
     await expect(harness.service.snapshot('s', 2)).resolves.toMatchObject({ files: expect.arrayContaining([expect.objectContaining({ path: 'voice.json' })]) });
+  });
+});
+
+describe('a listing price waiting for the merchant blocks publishing (spec 2026-10-18 product link store)', () => {
+  it('refuses to publish, naming the products', async () => {
+    const harness = checkedPublishing();
+    harness.prisma.paymentLink = { findMany: jest.fn(async ({ where }) => where.priceToConfirm && where.status === 'ACTIVE' && where.storeId === 's' ? [{ name: 'Licuadora portátil' }] : []) };
+    await harness.record();
+    await expect(harness.service.publish('m', 's', 2, 0)).rejects.toMatchObject({ status: 409, message: 'Antes de publicar, confirma el precio de «Licuadora portátil»: YAPI lo tomó del anuncio. Edítalo en Productos.' });
+    expect(harness.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('publishes when no price waits, and when the column is not migrated yet', async () => {
+    const harness = checkedPublishing();
+    harness.prisma.paymentLink = { findMany: jest.fn(async () => { throw new Error('column "priceToConfirm" does not exist'); }) };
+    await harness.record();
+    await expect(harness.service.publish('m', 's', 2, 0)).resolves.toBeDefined();
+  });
+
+  it('names several products in one sentence', () => {
+    expect(priceToConfirmMessage(['A', 'B'])).toBe('Antes de publicar, confirma los precios de «A», «B»: YAPI los tomó de los anuncios. Edítalos en Productos.');
   });
 });

@@ -11,12 +11,13 @@ function withinDeadline<T>(task: Promise<T>, signal: AbortSignal): Promise<T> {
 }
 
 /** Every redirect and stylesheet gets its own URL/DNS validation and pinned connection. */
-export type SourceReferenceResourceKind = 'html' | 'css' | 'script' | 'image' | 'font';
-const resourceTypes: Record<SourceReferenceResourceKind, RegExp> = { html: /^text\/html\b/i, css: /^text\/css\b/i, script: /^(?:text|application)\/(?:javascript|ecmascript)\b/i, image: /^image\/(?:png|jpeg|webp|avif|gif|svg\+xml)\b/i, font: /^(?:font\/(?:woff2?|ttf|otf)|application\/(?:font-woff|x-font-ttf|vnd.ms-fontobject|octet-stream))\b/i };
-const resourceLimits: Record<SourceReferenceResourceKind, number> = { html: 3_000_000, css: 600_000, script: 1_000_000, image: 2_000_000, font: 500_000 };
+export type SourceReferenceResourceKind = 'html' | 'css' | 'script' | 'image' | 'font' | 'data';
+const resourceTypes: Record<SourceReferenceResourceKind, RegExp> = { html: /^text\/html\b/i, css: /^text\/css\b/i, script: /^(?:text|application)\/(?:javascript|ecmascript)\b/i, image: /^image\/(?:png|jpeg|webp|avif|gif|svg\+xml)\b/i, font: /^(?:font\/(?:woff2?|ttf|otf)|application\/(?:font-woff|x-font-ttf|vnd.ms-fontobject|octet-stream))\b/i, data: /^(?:application\/(?:json|[a-z.+-]+\+json|javascript)|text\/(?:plain|javascript))\b/i };
+const resourceLimits: Record<SourceReferenceResourceKind, number> = { html: 3_000_000, css: 600_000, script: 1_000_000, image: 2_000_000, font: 500_000, data: 1_500_000 };
 
-/** `maxBytes` overrides the kind's limit for one caller (the brand-source photo import takes full-size photos). */
-export async function readSourceReferenceResource(raw: string, kind: SourceReferenceResourceKind, signal: AbortSignal, consume?: (bytes: number) => void, maxBytes = resourceLimits[kind]): Promise<{ url: string; body: Buffer; contentType: string }> {
+/** `maxBytes` overrides the kind's limit for one caller (the brand-source photo import takes full-size photos). `userAgent`: the
+ *  product-link reader (spec 2026-10-18) reads shops that answer a browser and refuse an unknown agent. */
+export async function readSourceReferenceResource(raw: string, kind: SourceReferenceResourceKind, signal: AbortSignal, consume?: (bytes: number) => void, maxBytes = resourceLimits[kind], userAgent = 'PagosYa-WebsiteReference/1.0'): Promise<{ url: string; body: Buffer; contentType: string }> {
   let url = publicBrandUrl(raw);
   for (let redirects = 0; redirects <= 3; redirects++) {
     if (signal.aborted) throw new Error('Reference timeout');
@@ -25,7 +26,7 @@ export async function readSourceReferenceResource(raw: string, kind: SourceRefer
     const result = await new Promise<{ body?: Buffer; contentType?: string; location?: string }>((resolve, reject) => {
       const fail = () => new Error('Reference page unavailable');
       const req = request(url, { method: 'GET', family: 4, signal, agent: false,
-        headers: { 'User-Agent': 'PagosYa-WebsiteReference/1.0', Accept: kind === 'html' ? 'text/html' : kind === 'css' ? 'text/css' : '*/*', 'Accept-Encoding': 'identity' },
+        headers: { 'User-Agent': userAgent, 'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8', Accept: kind === 'html' ? 'text/html' : kind === 'css' ? 'text/css' : '*/*', 'Accept-Encoding': 'identity' },
         lookup: ((_host: string, _options: unknown, callback: any) => callback(null, addresses[0].address, 4)) as any,
       }, res => {
         if ([301, 302, 303, 307, 308].includes(res.statusCode || 0) && res.headers.location) {

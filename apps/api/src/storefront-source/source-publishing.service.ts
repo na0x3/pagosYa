@@ -81,6 +81,12 @@ export async function publicationState(prisma: PrismaService, storeId: string) {
   return { contactFormEnabled: store.contactFormEnabled, payments: store.checkoutMode === 'payment' ? store.merchant.status === 'ACTIVE' ? 'live' : 'test' : 'contact', revision: store.publishedSourceRevision, runtimeDigest: store.publishedRuntimeDigest, version: store.sourcePublicationVersion, publishedAt: store.sourcePublishedAt, active: isPublicStore(store), slug: store.slug, experiment: test };
 }
 
+/** The publish refusal while listing prices wait for the merchant (spec 2026-10-18 product link store, decision 7). */
+export function priceToConfirmMessage(names: string[]): string {
+  const one = names.length === 1;
+  return `Antes de publicar, confirma ${one ? 'el precio' : 'los precios'} de ${names.map(name => `«${name}»`).join(', ')}: YAPI ${one ? 'lo tomó del anuncio' : 'los tomó de los anuncios'}. ${one ? 'Edítalo' : 'Edítalos'} en Productos.`;
+}
+
 @Injectable()
 export class SourcePublishingService {
   constructor(private readonly prisma: PrismaService) {}
@@ -105,6 +111,13 @@ export class SourcePublishingService {
   private assertNoPendingAssumptions(snapshot: SourceProjectSnapshot) {
     const pending = pendingAssumptions(readVoice(snapshot.files));
     if (pending.length) throw new ConflictException(assumedFactsBlockMessage(pending));
+  }
+  /** Spec 2026-10-18 product link store: a price YAPI took from a shop listing never goes live unconfirmed. */
+  private async assertNoPriceToConfirm(storeId: string) {
+    let waiting: Array<{ name: string }> = [];
+    // Before the column's migration is applied no product can carry the mark, so a failed read blocks nothing.
+    try { waiting = await this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE', priceToConfirm: true }, select: { name: true }, orderBy: { createdAt: 'asc' }, take: 5 }); } catch { waiting = []; }
+    if (waiting.length) throw new ConflictException(priceToConfirmMessage(waiting.map(product => product.name)));
   }
   async recordChecks(merchantId: string, storeId: string, revision: number, body: SourceCheckResultDto) {
     await this.owner(merchantId, storeId);
@@ -155,6 +168,7 @@ export class SourcePublishingService {
     const snapshot = await this.snapshot(storeId, revision);
     assertSourceCommerceContract(snapshot);
     this.assertNoPendingAssumptions(snapshot);
+    await this.assertNoPriceToConfirm(storeId);
     const runtime = await currentSourceRuntimeBundle();
     await requireSourceChecks(this.prisma, storeId, revision, snapshot, runtime.digest);
     return this.change(merchantId, storeId, expected, async tx => {
