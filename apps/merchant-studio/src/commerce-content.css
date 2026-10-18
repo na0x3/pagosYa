@@ -43,3 +43,4 @@
 .bundle-product[data-checked] strong { font-weight: 600; }
 .bundle-form .button--publish { width: 100%; }
 @media (max-width: 520px) { .bundle-grid { grid-template-columns: 1fr; } .bundle-card { align-items: flex-start; flex-direction: column; } }
+.brand-dialog .commerce-confirm { display: flex; align-items: center; gap: 8px; margin: 8px 0 12px; }

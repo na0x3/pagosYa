@@ -36,7 +36,7 @@ import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
 import { UploadsService, detectedImageDimensions, detectedMediaMime } from '../uploads/uploads.service';
 import { readSourceReferenceResource, readSourceWebsite } from './source-website-fetch';
-import { BRAND_SOURCE_QUESTION, brandSourceAnswer, brandSourceIntent, brandSourceOther, brandSourceOwnSite, brandSourceTouchesLook } from './brand-source-intent';
+import { BRAND_SOURCE_QUESTION, brandSourceAnswer, brandSourceIntent, brandSourceOther, brandSourceOwnSite, brandSourcePointsAtSite, brandSourceTouchesLook } from './brand-source-intent';
 import { brandWebsiteNotes, extractBrandWebsite, type BrandQuote } from './brand-source-website';
 import { importBrandImages } from './brand-source-import';
 import type { BrandSourceInput } from './brand-source-types';
@@ -473,8 +473,9 @@ export class SourceChatService {
       const intent = answered ?? brandSourceIntent(ownWords);
       // Only inspiration material raises the question: a reference link, or images the conversation took as reference
       // (photos meant to be shown on the site, and the product-photo flow, never ask).
+      // On an existing store, images sent with words naming a part of it («el carrito», «el menú») are screenshots of it.
       const sharedNow = input.setupAction !== 'product-photo' && (referenceUrls.length > 0
-        || (input.assetUrls ?? []).some(url => ['reference', 'unknown'].includes(decision.imageUses.find(use => use.url === url)?.role ?? 'business')));
+        || (!(current.revision && brandSourcePointsAtSite(ownWords)) && (input.assetUrls ?? []).some(url => ['reference', 'unknown'].includes(decision.imageUses.find(use => use.url === url)?.role ?? 'business'))));
       let brandSource: BrandSourceInput | undefined;
       let brandDraft: Pick<SourceSetupDraft, 'brandSource' | 'brandAssetUrls' | 'brandLook' | 'brandImport'> = setupDraft.brandImport ? { brandImport: setupDraft.brandImport } : {};
       // Own links: only this message's URLs, and only when the merchant names one as their own old site and does not also

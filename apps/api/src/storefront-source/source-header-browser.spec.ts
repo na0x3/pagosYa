@@ -114,7 +114,7 @@ describe('store controls in the platform header (spec 2026-10-14, part 3)', () =
   it.each([...CONTROL_OUTLINES])('«%s»: upright 44px targets, the tilt on the face, nothing covered or wider than the screen, the menu gives the page back', async outline => {
     const base = libraryRecord(CONTROL_LANGUAGES[0], 'crafts-home', 'frame');
     const controls: StoreControls = { ...base, shape: { ...base.shape, outline, tilt: -3, notch: 6 }, words: { cart: 'Tu portafolios', account: 'Mi cuenta' } };
-    for (const shape of ['menu-button', 'side-rail', 'bottom-pill', 'centered-split'] as const) for (const width of [1440, 390]) {
+    for (const shape of ['menu-button', 'side-rail', 'centered-split'] as const) for (const width of [1440, 390]) {
       const page = await open(shape, 'shop', width, 'Marca', controls);
       try {
         const facts = await page.evaluate(() => Array.from(document.querySelectorAll('header [data-ctl]')).filter(el => (el as any).checkVisibility()).map(el => {

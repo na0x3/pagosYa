@@ -155,9 +155,11 @@ describe('focus ring', () => {
 
 describe('cart placement', () => {
   const drawerRule = (css: string, cart: string) => rules(css).find(rule => rule.selector.split(',').some(part => part.trim() === `:root[data-dna-cart=${cart}] .cart-drawer`));
-  it('gives the sheet a grab handle, and adds nothing without DNA', () => {
-    expect(boot({ ...DNA, cart: 'sheet' }).doc.querySelector('.cart-drawer .cart-drawer__grip[aria-hidden="true"]')).not.toBeNull();
-    expect(boot(undefined).doc.querySelector('.cart-drawer__grip')).toBeNull();
+  // Owner 2026-10-17: «the cart in half of screen, then confirmation, then payment». Every saved cart value opens the same panel.
+  it.each(['drawer', 'sheet', 'page', 'overlay'])('draws a saved %s cart as the half-screen side panel', cart => {
+    const { doc } = boot({ ...DNA, cart });
+    expect(doc.documentElement.dataset.dnaCart).toBe('drawer');
+    expect(doc.querySelector('.cart-drawer__grip')).toBeNull();
   });
   it.each(['drawer', 'sheet', 'page', 'overlay'])('opens %s as a native modal dialog that closes back to its trigger', cart => {
     const { w, doc } = boot({ ...DNA, cart });
@@ -169,21 +171,17 @@ describe('cart placement', () => {
     expect(drawer.hasAttribute('open')).toBe(false);
     expect(doc.activeElement).toBe(trigger);
   });
-  it('defines placement, entry and phone behaviour for every cart value', () => {
+  it('places the panel at the right, half the screen wide, full width on a phone', () => {
     const css = dnaCss(boot(DNA).doc);
-    for (const cart of DNA_VALUES.cart) {
-      expect({ cart, rule: !!drawerRule(css, cart) }).toEqual({ cart, rule: true });
-      expect(css).toContain(`:root[data-dna-cart=${cart}] .cart-drawer:not([open])`);
-      expect(css).toMatch(new RegExp(`@starting-style\\{[^}]*:root\\[data-dna-cart=${cart}\\] \\.cart-drawer\\[open\\]`));
-    }
-    const phone = css.match(/@media\(max-width:700px\)\{([\s\S]*?)\}\}/)?.[1] ?? '';
-    for (const cart of ['sheet', 'page']) expect(phone).toMatch(new RegExp(`:root\\[data-dna-cart=${cart}\\] \\.cart-drawer[^{]*\\{[^}]*width:100vw`));
-    expect(drawerRule(css, 'sheet')?.body).toMatch(/bottom|inset:auto 0 0/);
-    expect(drawerRule(css, 'overlay')?.body).toContain('margin:auto');
+    expect(drawerRule(css, 'drawer')?.body).toMatch(/inset:0 0 0 auto;width:min\(760px,max\(420px,50vw\)\)/);
+    expect(css).toContain(':root[data-dna-cart=drawer] .cart-drawer:not([open])');
+    expect(css).toMatch(/@starting-style\{[^}]*:root\[data-dna-cart=drawer\] \.cart-drawer\[open\]/);
+    expect(css.match(/@media\(max-width:700px\)\{([\s\S]*?)\}\}/)?.[1] ?? '').toMatch(/:root\[data-dna-cart=drawer\] \.cart-drawer\{width:100vw/);
+    for (const cart of ['sheet', 'page', 'overlay']) expect(css).not.toContain(`[data-dna-cart=${cart}]`);
   });
-  it('the page cart and the stacked review draw the DNA border weight and shape', () => {
+  it('the cart panel and the stacked review draw the DNA border weight and shape', () => {
     const css = dnaCss(boot(DNA).doc);
-    expect(rules(css).find(rule => rule.selector === ':root[data-dna-cart=page] .cart-drawer')?.body).toContain('border-top:var(--kit-border) solid var(--kit-accent)');
+    expect(drawerRule(css, 'drawer')?.body).toContain('border-left-width:var(--kit-border)');
     // The stacked summary keeps the DNA panel (radius, tint, border), so the store's shape reaches it.
     expect(rules(css).filter(rule => rule.selector.includes('[data-dna-review=stacked] .checkout-review__summary')).map(rule => rule.body).join(';')).not.toMatch(/background:transparent|border-radius:0/);
     expect(css).toContain(':root[data-dna-frame=bleed]{--kit-photo-radius:min(var(--kit-radius),28px)');

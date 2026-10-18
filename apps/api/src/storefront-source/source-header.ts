@@ -12,7 +12,8 @@ import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
 import type { IconSlot, StoreControls } from './store-controls';
 import { patchConfigFile, readConfigFile } from './store-look';
 
-export const HEADER_SHAPES = ['centered-split', 'menu-button', 'info-bar', 'stacked', 'shrinking', 'wordmark-band', 'side-rail', 'bottom-pill', 'overlay', 'reveal'] as const;
+// bottom-pill is retired (owner 2026-10-17); kit/headers keeps its template and CSS for pages saved with it.
+export const HEADER_SHAPES = ['centered-split', 'menu-button', 'info-bar', 'stacked', 'shrinking', 'wordmark-band', 'side-rail', 'overlay', 'reveal'] as const;
 export type HeaderShape = typeof HEADER_SHAPES[number];
 /** The calm, safe shape for a store whose drawn shape is missing or unknown. */
 export const FALLBACK_HEADER_SHAPE: HeaderShape = 'menu-button';

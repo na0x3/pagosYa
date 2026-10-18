@@ -8,6 +8,11 @@
     container.classList.remove('cart-drawer'); container.hidden = true;
     container.append(...slot.childNodes); slot.replaceWith(container);
   });
+  // Only the runtime dialog below is the drawer. An authored wrapper named .cart-drawer would wear its fixed styles
+  // while closed: with the "page" cart DNA that is an invisible full-screen layer that swallows scrolling and clicks.
+  // The design meant it as the drawer, though, so it never shows in the page either (The Bake Lab 2026-10-17: the
+  // mount itself was the aside, and its cart sat full width above the footer); openCart lends the mount to the dialog.
+  document.querySelectorAll('.cart-drawer').forEach(wrapper => { wrapper.classList.remove('cart-drawer'); wrapper.style.setProperty('display', 'none', 'important'); });
   // An empty mount is reserved for the drawer. Preserve deliberately authored
   // inline cart content, but do not append a second empty order below the footer.
   // Every control that opens the cart (source-commerce-contract accepts these); the click handler, the drawer mount
@@ -20,17 +25,17 @@
   });
   const cartDrawer = document.createElement('dialog');
   cartDrawer.className = 'cart-drawer';
+  // The store's CSS may describe its own hidden panel as .cart-drawer; this attribute names the platform's (overlay.js).
+  cartDrawer.setAttribute('data-pagosya-drawer', '');
   cartDrawer.setAttribute('aria-labelledby', 'cart-drawer-title');
   cartDrawer.innerHTML = `<header class="cart-drawer__header" data-part="cart-head"><h2 id="cart-drawer-title">${escape(CART_WORD || 'Tu pedido')}</h2><button type="button" data-cart-close aria-label="Cerrar pedido">×</button></header><div class="cart-drawer__body"></div><button type="button" class="cart-drawer__continue" data-cart-close>Seguir comprando</button>`;
   document.body.append(cartDrawer);
-  // A bottom-sheet cart shows a grab handle; the element only exists for stores with a DNA.
-  if (hasDna) cartDrawer.querySelector('.cart-drawer__header').insertAdjacentHTML('afterbegin', '<span class="cart-drawer__grip" aria-hidden="true"></span>');
   function renderPolicyLinks() {
     cartDrawer.querySelector(':scope > .pagosya-policies')?.remove();
     const drawerPolicies = policyLinks(['returns', 'delivery', 'terms', 'privacy']);
     if (drawerPolicies) cartDrawer.insertAdjacentHTML('beforeend', drawerPolicies);
     document.querySelectorAll('[data-pagosya-policies]').forEach(slot => { slot.innerHTML = policyLinks(); slot.hidden = !slot.innerHTML; });
-    renderInfoPages();
+    renderInfoPages(); renderTrust();
   }
   renderPolicyLinks();
   let drawerSlot, drawerPlaceholder, drawerWasHidden, drawerDisplay, drawerHadStyle, drawerOverflow, drawerTrigger;
@@ -117,8 +122,9 @@
     const covers = triggers.some(el => { const r = el.getBoundingClientRect(); return r.left < box.right && r.right > box.left && r.top < box.bottom && r.bottom > box.top; });
     if (covers) addedNotice.dataset.flip = box.top + box.bottom < innerHeight ? 'bottom' : 'top';
   }
+  /** Shows the added notice; false when it does not show (a button inside the cart), so the page status line speaks instead. */
   function addedFeedback(product, button, keyboard) {
-    if (button.closest('[data-pagosya-cart]')) return;
+    if (button.closest('[data-pagosya-cart]')) return false;
     addedNotice.dataset.instant = String(keyboard || config.motion === 'off');
     const template = addedTemplate();
     if (template && !addedNotice.hasAttribute('data-template')) { addedNotice.replaceChildren(template.make()); addedNotice.setAttribute('data-template', ''); }
@@ -146,4 +152,5 @@
         target.animate([{ opacity: .65 }, { opacity: 1 }], { duration, easing: settle });
       }
     }
+    return true;
   }

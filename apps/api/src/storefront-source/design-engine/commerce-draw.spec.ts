@@ -17,14 +17,15 @@ describe('drawCommerce', () => {
       for (const part of Object.keys(COMMERCE_OPTIONS)) expect(seen[part].size).toBe(COMMERCE_LEAN[mode][part as keyof typeof COMMERCE_LEAN.calm].length);
     }
   });
-  it('calm leans quiet and bold leans loud, sharing no account, checkout, fields or cart surface', () => {
+  it('calm leans quiet and bold leans loud, sharing no account, checkout or fields; both open the side-panel cart', () => {
     expect(COMMERCE_LEAN.calm.account).toEqual(['card', 'minimal']);
     expect(COMMERCE_LEAN.bold.checkout).toEqual(['ticket', 'brand']);
-    for (const part of ['account', 'checkout', 'fields', 'cartSurface'] as const) expect(COMMERCE_LEAN.calm[part].filter(id => COMMERCE_LEAN.bold[part].includes(id))).toEqual([]);
+    expect([COMMERCE_LEAN.calm.cartSurface, COMMERCE_LEAN.bold.cartSurface]).toEqual([['drawer'], ['drawer']]);
+    for (const part of ['account', 'checkout', 'fields'] as const) expect(COMMERCE_LEAN.calm[part].filter(id => COMMERCE_LEAN.bold[part].includes(id))).toEqual([]);
   });
   it('avoids history beyond the spread', () => {
     const recent = Array.from({ length: 3 }, () => ({ account: 'card' as const, checkout: 'columns' as const, fields: 'boxed' as const, cartSurface: 'drawer' as const, added: 'toast' as const }));
-    for (let s = 0; s < 20; s++) expect(drawCommerce(seq([s / 20]), recent, 'calm', 1)).toEqual({ account: 'minimal', checkout: 'steps', fields: 'underline', cartSurface: 'page', added: 'inline' });
+    for (let s = 0; s < 20; s++) expect(drawCommerce(seq([s / 20]), recent, 'calm', 1)).toEqual({ account: 'minimal', checkout: 'steps', fields: 'underline', cartSurface: 'drawer', added: 'inline' });
   });
   it('falls back to every option when a narrowing is empty', () => {
     const seen = new Set<string>();
@@ -49,12 +50,12 @@ describe('cart words, runtime DNA and summary', () => {
     expect(cartWordFor(undefined)).toBeUndefined();
   });
   it('maps a draw to runtime DNA, the checkout picking the review it builds on', () => {
-    expect(commerceRuntimeDna({ account: 'split', checkout: 'steps', fields: 'pill', cartSurface: 'sheet', added: 'stamp' })).toEqual({ cart: 'sheet', added: 'stamp', review: 'stacked', checkout: 'steps', fields: 'pill' });
+    expect(commerceRuntimeDna({ account: 'split', checkout: 'steps', fields: 'pill', cartSurface: 'drawer', added: 'stamp' })).toEqual({ cart: 'drawer', added: 'stamp', review: 'stacked', checkout: 'steps', fields: 'pill' });
     expect(commerceRuntimeDna({ checkout: 'brand' })).toEqual({ review: 'stacked', checkout: 'brand' });
     expect(commerceRuntimeDna({})).toEqual({});
   });
   it('writes the preview line in Spanish', () => {
-    expect(commerceSummary({ account: 'split', checkout: 'ticket', cartSurface: 'sheet' })).toBe('Cuenta: dividida · Pago: ticket · Carrito: hoja');
+    expect(commerceSummary({ account: 'split', checkout: 'ticket', cartSurface: 'sheet' })).toBe('Cuenta: dividida · Pago: ticket · Carrito: lateral');
     expect(commerceSummary({})).toBe('');
   });
 });

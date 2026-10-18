@@ -9,13 +9,13 @@ import { merchantAsksForPhotoGroup } from '../source-media-design';
 import { drawProduct, parseProductDraw, productDirection, productOverrides, type ProductDraw } from './product-draw';
 import { decodePhotoPalette, isPhotoPalette } from './photo-palette';
 
-export type FrameNeed = 'photos1' | 'photos2' | 'photos3' | 'photoGroup' | 'product' | 'facts';
+export type FrameNeed = 'photos1' | 'photos2' | 'photos3' | 'photoGroup' | 'product' | 'facts' | 'reviews';
 /** photoless: an opening with no photo, drawn only for a store that has none (2026-10-16: baek's 11 photos got type-only). */
 export type FrameEntry = { id: string; bold: boolean; desktop: string; phone: string; needs?: FrameNeed; photoless?: true };
 export type FramePart = 'header' | 'cart' | 'footer' | 'hero';
 export type FrameDraw = Record<FramePart, string>;
 /** photoGroups: the merchant's own words asked for a gallery, collage or lookbook (merchantAsksForPhotoGroup). */
-export type FrameAvailable = { photos: number; products: number; facts: boolean; photoGroups?: boolean; /** product-draw.ts: what the catalog card may use. */ variants?: boolean; altPhotos?: boolean };
+export type FrameAvailable = { photos: number; products: number; facts: boolean; photoGroups?: boolean; /** Published reviews: two or more let the draw place a reviews section. */ reviews?: number; /** product-draw.ts: what the catalog card may use. */ variants?: boolean; altPhotos?: boolean };
 
 export const FRAME_DRAW_FILE = 'frame-draw.json';
 const PARTS: FramePart[] = ['header', 'cart', 'footer', 'hero'];
@@ -29,7 +29,7 @@ export const FRAME_CATALOGUE: Record<FramePart, readonly FrameEntry[]> = {
     { id: 'shrinking', bold: false, desktop: 'Header: a tall bar with a large store name that tightens into a compact sticky bar once the shopper scrolls; the navigation, Buscar, Mi cuenta and the cart stay in it.', phone: 'On phones: start compact; a menu button holds the navigation, Buscar and Mi cuenta, and the cart stays visible while scrolling.' },
     { id: 'wordmark-band', bold: true, desktop: 'Header: the store name set as a giant wordmark spanning the full page width, with the navigation, Buscar, Mi cuenta and the cart on one thin line directly above or below it.', phone: 'On phones: the wordmark fills the width on one line; a menu button (navigation, Buscar, Mi cuenta) and the cart sit on the thin line.' },
     { id: 'side-rail', bold: true, desktop: 'Header: a narrow vertical rail fixed to the left edge holding the store name (rotated or stacked), a menu button and the cart; the navigation, Buscar and Mi cuenta open from the menu button, and the page content sits to the right of the rail.', phone: 'On phones: the rail becomes a slim top bar with the name, the menu button and the cart.' },
-    { id: 'bottom-pill', bold: true, desktop: 'Header: only the store name at the top; the navigation lives in a floating pill fixed at the bottom centre of the screen with the menu, a shop link and the cart, and Buscar and Mi cuenta open from the menu.', phone: 'On phones: the same floating pill with the menu and the cart at the bottom, thumb-reachable; leave bottom padding so it never covers add-to-cart buttons.' },
+    // bottom-pill (a floating pill at the bottom of the screen) is no longer drawn: owner 2026-10-17 «menus sideways or on top».
     { id: 'overlay', bold: true, desktop: 'Header: just the store name, a menu button and the cart; the menu button opens a full-screen overlay with the navigation set very large, plus Buscar and Mi cuenta.', phone: 'On phones: the same; the overlay menu closes with a visible close button and Escape, and the cart stays in the bar.' },
     { id: 'reveal', bold: true, desktop: 'Header: a header that slides away when the shopper scrolls down and slides back when they scroll up, carrying the store name, the navigation, Buscar, Mi cuenta and the cart; at the top of the page it sits over the hero.', phone: 'On phones: the same behaviour with a menu button (navigation, Buscar, Mi cuenta) and the cart; it is visible at load and on any upward scroll.' },
   ],
@@ -76,6 +76,7 @@ const fits = (entry: FrameEntry, available: FrameAvailable) => {
     case 'photoGroup': return available.photos >= 3 && Boolean(available.photoGroups);
     case 'product': return available.products >= 1;
     case 'facts': return available.facts;
+    case 'reviews': return (available.reviews ?? 0) >= 2;
     default: return true;
   }
 };
@@ -106,7 +107,7 @@ export function frameDirection(draw: Partial<FrameDraw & DesignDraw>, omit: Part
   const palette = !omit.palette && paletteById(draw.palette);
   const designLines = [
     ...(palette ? [`- ${paletteLine(palette)}`] : []),
-    ...(['angle', 'structure', 'photos', 'button', 'hover'] as const).flatMap(part => {
+    ...(['angle', 'structure', 'photos', 'button', 'hover', 'trust', 'reviews'] as const).flatMap(part => {
       const entry = !omit[part] && DESIGN_CATALOGUE[part].find(item => item.id === draw[part]);
       return entry ? [`- ${entry.desktop}${entry.phone ? ` ${entry.phone}` : ''}`] : [];
     }),
@@ -114,7 +115,7 @@ export function frameDirection(draw: Partial<FrameDraw & DesignDraw>, omit: Part
   if (!frameLines.length && !designLines.length) return '';
   if (!designLines.length) return ["FRAME AND HERO: This store's frame was drawn for it so stores never repeat each other. Build exactly this structure and style it entirely in the store's own language; type, colour, spacing and motion are yours.", ...frameLines, 'Before finishing, compare your desktop and phone screenshots with this list and fix any part that does not match.'].join('\n');
   return [`DESIGN DRAW: This store's design was drawn for it so stores never repeat each other, even two in the same business. Build exactly this and style it in the store's own language; ${playbook ? 'fonts and spacing follow the PLAYBOOK below, motion is yours' : 'fonts, spacing and motion are yours'}.`, ...frameLines, ...designLines,
-    '- Quality: circular text only with an inline SVG <textPath>, never a rotated span; never use emoji as decoration; text never overlaps other text. Photo treatments apply to your own images, never to the platform\'s catalog cards or product page, so shoppers see the real product colours.',
+    '- Quality: circular text only with an inline SVG <textPath>, never a rotated span; never use emoji as decoration (one emoji leading a point beside its title and text is not decoration); text never overlaps other text. Photo treatments apply to your own images, never to the platform\'s catalog cards or product page, so shoppers see the real product colours.',
     'Before finishing, compare your desktop and phone screenshots with this list and fix any part that does not match.'].join('\n');
 }
 
@@ -139,18 +140,38 @@ export function frameOverrides(text: string): { header: boolean; hero: boolean }
   return { header: HEADER_WORDS.test(text) && PLACE_WORDS.test(text), hero: HERO_WORDS.test(text) && HERO_CHOICE.test(text) };
 }
 
+const NAV_WORDS = String.raw`(?:men[uú]s?|navbar|navegaci[oó]n|barra de navegaci[oó]n|header|cabecera|encabezado)`;
+const SIDE_ASK = new RegExp(String.raw`(?<!\p{L})${NAV_WORDS}(?!\p{L}).{0,50}(?<!\p{L})(?:izquier\p{L}*|lateral(?:es)?|al lado|al costado|costado|sidebar|vertical)(?!\p{L})|(?<!\p{L})(?:lateral|sidebar|vertical)(?!\p{L}).{0,20}(?<!\p{L})${NAV_WORDS}(?!\p{L})`, 'iu');
+const TOP_ASK = new RegExp(String.raw`(?<!\p{L})${NAV_WORDS}(?!\p{L}).{0,50}(?<!\p{L})(?:arriba|superior|horizontal(?:es)?|top)(?!\p{L})`, 'iu');
+/** Headers whose navigation sits visibly across the top. */
+export const TOP_HEADERS = ['centered-split', 'info-bar', 'stacked', 'shrinking', 'wordmark-band', 'reveal'] as const;
+/** Where the merchant asked the menu to live (The Bake Lab 2026-10-17: «el menu y el navbar esten a la izquierda al lado»
+ *  was turned into «alineado a la izquierda» and the drawn header never changed: YAPI cannot change the platform's header). */
+export function headerPlace(text: string): 'side' | 'top' | undefined {
+  if (SIDE_ASK.test(text)) return 'side';
+  if (TOP_ASK.test(text)) return 'top';
+  return undefined;
+}
+/** The drawn header for that place: the side rail, or the store's own top header, else a centred split. */
+export function headerForPlace(place: 'side' | 'top', current?: string): string {
+  if (place === 'side') return 'side-rail';
+  return current && (TOP_HEADERS as readonly string[]).includes(current) ? current : 'centered-split';
+}
+
 export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw & CommerceDraw & ProductDraw> & { category?: string; kind?: string; family?: string } {
   let value: unknown;
   try { value = typeof content === 'string' ? JSON.parse(content) : undefined; } catch { return {}; }
   if (!value || typeof value !== 'object') return {};
   const out: Partial<FrameDraw & DesignDraw & CommerceDraw & ProductDraw> & { category?: string; kind?: string; family?: string } = {};
   for (const part of PARTS) {
-    const id = (value as Record<string, unknown>)[part];
+    const raw = (value as Record<string, unknown>)[part];
+    // A store that saved the retired bottom pill keeps its menu at the side.
+    const id = part === 'header' && raw === 'bottom-pill' ? 'side-rail' : raw;
     if (typeof id === 'string' && FRAME_CATALOGUE[part].some(entry => entry.id === id)) out[part] = id;
   }
   for (const part of DESIGN_PARTS) {
     const id = (value as Record<string, unknown>)[part];
-    const known = part === 'palette' ? allPalettes() : designOptions(part, { photos: 99, products: 99, facts: true });
+    const known = part === 'palette' ? allPalettes() : designOptions(part, { photos: 99, products: 99, facts: true, reviews: 99 });
     if (typeof id === 'string' && (known.some(option => option.id === id) || (part === 'palette' && decodePhotoPalette(id)))) (out as Record<string, string>)[part] = id;
   }
   for (const key of ['category', 'kind', 'family'] as const) {
@@ -164,11 +185,19 @@ export function parseFrameDraw(content: unknown): Partial<FrameDraw & DesignDraw
 
 /** What one generation gets. Fresh designs draw and save; edits carry the saved file without re-sending the
  *  paragraph (the saved code already embodies it); the flag off changes nothing. */
-export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw & CommerceDraw & ProductDraw> & { category?: string }>; available: FrameAvailable; request: string; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number; /** false: the caller draws commerce itself and the concept keeps its product surfaces (style cards). */ commerce?: false; /** The store's photo colours (photo-palette.ts): they replace the drawn colour world unless brand colours are confirmed. */ photoPalettes?: { calm: Palette; bold: Palette }; /** A look edit with the merchant's own brand material (spec 2026-10-16): replaces the kept palette unless brand colours are confirmed. */ paletteOverride?: Palette }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette; commerce?: { draw: Partial<CommerceDraw>; fresh: boolean; cartWord?: string }; product?: { draw: Partial<ProductDraw>; fresh: true } } {
+export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; brandColours?: boolean; category?: string; fresh: boolean; previous: Array<{ path: string; content: string }>; recent: Array<Partial<FrameDraw & DesignDraw & CommerceDraw & ProductDraw> & { category?: string }>; available: FrameAvailable; request: string; /** Where the merchant asked the menu to live; defaults to headerPlace(request). */ headerAsk?: 'side' | 'top'; random?: () => number; playbook?: { kind: string; family: StyleFamily; bold: boolean }; boldStyle?: boolean; /** Style cards only: see drawFrame. */ spread?: number; /** false: the caller draws commerce itself and the concept keeps its product surfaces (style cards). */ commerce?: false; /** The store's photo colours (photo-palette.ts): they replace the drawn colour world unless brand colours are confirmed. */ photoPalettes?: { calm: Palette; bold: Palette }; /** A look edit with the merchant's own brand material (spec 2026-10-16): replaces the kept palette unless brand colours are confirmed. */ paletteOverride?: Palette }): { file?: { path: string; content: string }; paragraph: string; planner?: string; dna?: { button: string; hover: string }; palette?: Palette; commerce?: { draw: Partial<CommerceDraw>; fresh: boolean; cartWord?: string }; product?: { draw: Partial<ProductDraw>; fresh: true } } {
   if (!input.enabled) return { paragraph: '' };
   if (!input.fresh) {
-    const saved = input.previous.find(file => file.path === FRAME_DRAW_FILE);
-    if (!saved) return { paragraph: '' };
+    const stored = input.previous.find(file => file.path === FRAME_DRAW_FILE);
+    if (!stored) return { paragraph: '' };
+    // The header is the platform's, so a request to move the menu changes the drawn shape itself.
+    const ask = input.headerAsk ?? headerPlace(input.request);
+    const storedHeader = parseFrameDraw(stored.content).header;
+    const wanted = ask ? headerForPlace(ask, storedHeader) : undefined;
+    let saved = stored;
+    if (wanted && wanted !== storedHeader) {
+      try { saved = { ...stored, content: JSON.stringify({ ...JSON.parse(stored.content), header: wanted }, null, 2) + '\n' }; } catch { /* unreadable: kept as it is */ }
+    }
     const kept = parseFrameDraw(saved.content);
     // A small edit keeps what the picked card drew for account, checkout and the cart path (spec 2026-10-11 commerce surfaces).
     const keptCommerce = parseCommerceDraw(kept);
@@ -192,6 +221,8 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const headerAllowed: Partial<Record<FramePart, readonly string[]>> = conventional
     ? { header: CONVENTIONAL_HEADERS, cart: calm(FRAME_CATALOGUE.cart), footer: ['directory', 'contact-card', 'statement-band', 'wordmark-signoff'], hero: calm(FRAME_CATALOGUE.hero) }
     : input.boldStyle ? { header: loud(FRAME_CATALOGUE.header), hero: loud(FRAME_CATALOGUE.hero) } : {};
+  const freshAsk = input.headerAsk ?? headerPlace(input.request);
+  if (freshAsk) headerAllowed.header = freshAsk === 'side' ? ['side-rail'] : TOP_HEADERS;
   const frame = drawFrame(input.random ?? Math.random, recent, input.available, headerAllowed, input.spread ?? 0);
   const frameOmit = frameOverrides(input.request);
   const playbookFields: Record<string, string> = input.playbook ? { kind: input.playbook.kind, family: input.playbook.family.id } : {};
@@ -214,7 +245,7 @@ export function frameForRun(input: { enabled: boolean; designEnabled?: boolean; 
   const extraLines = [cartLine, productLine ? `\n${productLine}` : ''].join('');
   if (!input.designEnabled) return { file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ ...frame, ...playbookFields, ...commerceDrawn, ...productDrawn }, null, 2) + '\n' }, paragraph: frameDirection(frame, frameOmit) + extraLines, ...commerce, ...product };
   const category = input.playbook?.kind ?? input.category ?? '';
-  const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.boldStyle ? undefined : input.playbook?.family.palettes, button: input.playbook?.family.buttons, ...(conventional ? { parts: { angle: PLAYBOOK[input.playbook!.kind as keyof typeof PLAYBOOK]?.angles ?? calm(DESIGN_CATALOGUE.angle), structure: calm(DESIGN_CATALOGUE.structure), photos: calm(DESIGN_CATALOGUE.photos), hover: calm(DESIGN_CATALOGUE.hover) } } : {}) }, input.spread ?? 0);
+  const design = drawDesign(input.random ?? Math.random, recent as Array<Partial<DesignDraw> & { category?: string }>, input.available, category, { palettes: input.boldStyle ? undefined : input.playbook?.family.palettes, button: input.playbook?.family.buttons, ...(conventional ? { parts: { angle: PLAYBOOK[input.playbook!.kind as keyof typeof PLAYBOOK]?.angles ?? calm(DESIGN_CATALOGUE.angle), structure: calm(DESIGN_CATALOGUE.structure), photos: calm(DESIGN_CATALOGUE.photos), hover: calm(DESIGN_CATALOGUE.hover), trust: calm(DESIGN_CATALOGUE.trust), reviews: calm(DESIGN_CATALOGUE.reviews) } } : {}) }, input.spread ?? 0);
   // Confirmed brand colours win over the drawn colour world in the prompts too, not only in brand.css.
   const designOmit = { ...designOverrides(input.request), ...(input.brandColours ? { palette: true } : {}) };
   // The store's own photo colours replace the drawn colour world: the light one for a calm build, the dark one for a bold card.
@@ -248,13 +279,17 @@ const FACT = /(horario|abrimos|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]b
 export function frameInputs(input: {
   composedInstruction: string; merchantInstruction?: string;
   assetLegend: Array<{ original: string; path: string }>; imageUses: Array<{ url: string; role?: string }>; logoUrl?: string | null;
-  items: Array<{ imageUrls?: string[]; variants?: unknown[] }>; locations?: unknown[]; businessInformation?: unknown;
-}): { request: string; available: FrameAvailable } {
+  items: Array<{ imageUrls?: string[]; variants?: unknown[] }>; locations?: unknown[]; businessInformation?: unknown; reviews?: number;
+}): { request: string; available: FrameAvailable; headerAsk?: 'side' | 'top' } {
   const request = input.merchantInstruction?.trim() || input.composedInstruction.split(MERCHANT_MARKER).at(-1) || '';
+  // A reply such as «si usa» carries no placement; the conversation's agreed context then holds the merchant's ask.
+  const agreed = /Contexto acordado:\n([\s\S]*?)(?:\nUso de las im[aá]genes|$)/.exec(input.composedInstruction)?.[1] ?? '';
+  const headerAsk = headerPlace(request) ?? headerPlace(agreed);
 
   const info = typeof input.businessInformation === 'string' ? input.businessInformation : '';
   return {
     request,
+    ...(headerAsk ? { headerAsk } : {}),
     available: {
       photos: storePhotoPaths(input).length,
       products: input.items.filter(item => item.imageUrls?.length).length,
@@ -262,6 +297,7 @@ export function frameInputs(input: {
       photoGroups: merchantAsksForPhotoGroup(request),
       variants: input.items.some(item => (item.variants?.length ?? 0) > 1),
       altPhotos: input.items.length > 0 && input.items.every(item => (item.imageUrls?.length ?? 0) >= 2),
+      reviews: input.reviews ?? 0,
     },
   };
 }
@@ -281,10 +317,11 @@ export function frameFresh(input: { sep5Author: boolean; agentEngine: boolean; s
   return (input.sep5Author || (input.agentEngine && !input.sketchFirst)) && (!input.hasPrevious || input.redesign);
 }
 
-export type DesignPart = 'palette' | 'angle' | 'structure' | 'photos' | 'button' | 'hover';
+/** trust and reviews (spec 2026-10-18-trust-draw-design.md): how this store earns trust; reviews only when it has some. */
+export type DesignPart = 'palette' | 'angle' | 'structure' | 'photos' | 'button' | 'hover' | 'trust' | 'reviews';
 export type DesignDraw = Record<DesignPart, string>;
 export type Palette = { id: string; name: string; ink: string; paper: string; accent: string; accent2: string; dark: boolean };
-const DESIGN_PARTS: DesignPart[] = ['palette', 'angle', 'structure', 'photos', 'button', 'hover'];
+const DESIGN_PARTS: DesignPart[] = ['palette', 'angle', 'structure', 'photos', 'button', 'hover', 'trust', 'reviews'];
 
 /** Colour worlds, deliberately not taken from the photos: the photos are styled to fit them. Ink on paper ≥ 7.6:1. */
 export const PALETTES: readonly Palette[] = [
@@ -357,9 +394,26 @@ export const DESIGN_CATALOGUE: Record<Exclude<DesignPart, 'palette'>, readonly F
     { id: 'tilt', bold: true, desktop: 'Button hover: tilts a couple of degrees.', phone: '' },
     { id: 'shine', bold: true, desktop: 'Button hover: a light sweep crosses it.', phone: '' },
   ],
+  // Owner 2026-10-18: trust is the main factor, in a different form on every store; never a cramped photo grid.
+  trust: [
+    { id: 'photo-carousel', bold: false, needs: 'photos3', desktop: "Trust: a photo carousel, never a wall of photos; the store's own photos one at a time, large, each slide a <figure> with a one-line caption of what it shows (from the photo descriptions, never invented). Build it as <div data-pagosya-carousel> with one child per slide; the platform adds swiping, the .pagosya-carousel__button arrows and the .pagosya-carousel__dot dots, which you style in the store's language. Beside or under it, two or three lines on why to buy here.", phone: 'On phones: one photo per screen width, swiped sideways.' },
+    { id: 'emoji-editorial', bold: false, desktop: 'Trust: an editorial section of three to five points answering why buy here (what arrives, how it is made, how to receive it, how to pay, how to ask); each point led by one emoji beside a short title and one line, set as an editorial list with generous type, never a row of identical boxes. Only facts the business data states.', phone: 'On phones: the points stack, each emoji beside its title.' },
+    { id: 'how-we-make-it', bold: false, desktop: 'Trust: how it is made or prepared, in three or four numbered steps taken from the business data (choosing, preparing, packing, handing over), with at most one photo beside the steps.', phone: 'On phones: the steps stack with their numbers; the photo above them.' },
+    { id: 'promises-band', bold: false, desktop: "Trust: a band of the store's real promises: place <div data-pagosya-trust><h2>a short heading in the store's voice</h2></div>; the platform fills it with points from the live settings (payment, pickup or delivery, WhatsApp, returns) as .pagosya-trust__card items with an emoji each. Restyle the band and its cards completely in the store's language (layout, borders, type, colour); never leave them as plain boxes.", phone: 'On phones: the points in one column or a sideways row.' },
+    { id: 'owner-note', bold: false, desktop: "Trust: a short signed note from the people behind the store (who they are, what they care about, how to reach them), written only from the brief, with at most one photo; signed with the business name, never an invented person's name.", phone: 'On phones: the note full width, the photo above it.' },
+    { id: 'doubts-answered', bold: false, desktop: "Trust: the shopper's doubts answered before they ask: four to six real questions (pickup or delivery, payment, timing, personalising, care) as an accordion or two columns, each answer from the business data, ending with a way to ask on WhatsApp or the contact page.", phone: 'On phones: one column of questions.' },
+    { id: 'facts-ledger', bold: true, needs: 'facts', desktop: 'Trust: the real facts set large like a printed receipt or ledger: where, when, how to receive, how to pay, how to ask, as label and value rows; nothing the data does not state (no invented years, counts or ratings).', phone: 'On phones: the rows stay full width.' },
+    { id: 'occasions', bold: true, desktop: 'Trust: the moments this store is for: three to five occasions taken from the catalog and the brief, each with one emoji, a short title, one line and a link to the catalog, laid out with uneven sizes like a magazine spread.', phone: 'On phones: the occasions stack or scroll sideways.' },
+  ],
+  // Real reviews only (merchant-entered from real customers, or verified purchases); drawn when the store has two or more.
+  reviews: [
+    { id: 'reviews-carousel', bold: false, needs: 'reviews', desktop: "Customer reviews: a section marked data-pagosya-reviews-section with a short heading and <div data-pagosya-reviews data-pagosya-carousel></div>; the platform fills it with the store's real reviews, one per slide (.pagosya-review with stars, text, name and a source label), and adds the arrows and dots. Style them in the store's language. Never write a review yourself.", phone: 'On phones: one review per screen width, swiped.' },
+    { id: 'big-quote', bold: true, needs: 'reviews', desktop: "Customer reviews: one review at a time set as a very large quote: a section marked data-pagosya-reviews-section with <div data-pagosya-reviews data-pagosya-carousel data-carousel-auto></div>; the platform fills it with the store's real reviews and turns them slowly (paused on hover and under reduced motion). Style .pagosya-review__body as the big quote. Never write a review yourself.", phone: 'On phones: the quote stays large but readable, swiped.' },
+    { id: 'review-cards', bold: false, needs: 'reviews', desktop: "Customer reviews: a section marked data-pagosya-reviews-section with a short heading and <div data-pagosya-reviews></div> laid out as a row or a staggered set of cards; the platform fills it with the store's real reviews (.pagosya-review). Style them in the store's language. Never write a review yourself.", phone: 'On phones: the cards stack or scroll sideways.' },
+  ],
 };
 
-type DesignAllowed = { palettes?: Palette[]; button?: readonly string[]; parts?: Partial<Record<'angle' | 'structure' | 'photos' | 'hover', readonly string[]>> };
+type DesignAllowed = { palettes?: Palette[]; button?: readonly string[]; parts?: Partial<Record<'angle' | 'structure' | 'photos' | 'hover' | 'trust' | 'reviews', readonly string[]>> };
 const designOptions = (part: DesignPart, available: FrameAvailable, allowed: DesignAllowed = {}): Array<{ id: string }> => {
   if (part === 'palette') return allowed.palettes?.length ? [...allowed.palettes] : [...PALETTES];
   const fitting = DESIGN_CATALOGUE[part].filter(entry => fits(entry, available));
@@ -371,13 +425,15 @@ const designOptions = (part: DesignPart, available: FrameAvailable, allowed: Des
 /** A catalogue palette by id, or the photo palette the id carries (photo-palette.ts). */
 export const paletteById = (id: string | undefined): Palette | undefined => !id ? undefined : allPalettes().find(entry => entry.id === id) ?? decodePhotoPalette(id);
 const allPalettes = (): Palette[] => [...PALETTES, ...Object.values(PLAYBOOK).flatMap(entry => entry.families.flatMap(family => family.palettes))];
-const DESIGN_AVOID = new Set<DesignPart>(['palette', 'angle', 'structure', 'button']);
+const DESIGN_AVOID = new Set<DesignPart>(['palette', 'angle', 'structure', 'button', 'trust', 'reviews']);
 
 export function drawDesign(random: () => number, recent: Array<Partial<DesignDraw> & { category?: string }>, available: FrameAvailable, category: string, allowed: DesignAllowed = {}, spread = 0): DesignDraw {
   const pick = <T>(items: readonly T[]): T => items[Math.min(items.length - 1, Math.floor(random() * items.length))];
   const draw = {} as DesignDraw;
   for (const part of DESIGN_PARTS) {
     const options = designOptions(part, available, allowed);
+    // Nothing fits (no reviews yet): the part is not drawn and the store gets no section for it.
+    if (!options.length) continue;
     if (!DESIGN_AVOID.has(part)) { draw[part] = pick(options).id; continue; }
     // The same kind of business counts double: two cafés must not share a colour world while another is free.
     const weight = (item: { category?: string }) => (category && item.category === category ? 2 : 1);

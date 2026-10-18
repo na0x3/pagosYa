@@ -1,4 +1,4 @@
-import { SURFACE_PARTS, composeTemplatesFile, readTemplatesFile, templatesMarkup, validateSurfaceTemplate, type SurfaceTemplate } from './surface-parts';
+import { SURFACE_PARTS, composeTemplatesFile, definedTokens, readTemplatesFile, templatesMarkup, validateSurfaceTemplate, type SurfaceTemplate } from './surface-parts';
 
 const CART: SurfaceTemplate = { part: 'cart', css: '.canasta{display:grid;gap:12px}', html: '<template data-pagosya-cart-template><div class="canasta"><button data-cart-close>×</button><div data-cart-slot="lines"></div><div data-cart-slot="total"></div><div data-cart-slot="action"></div></div></template>' };
 const CARD: SurfaceTemplate = { part: 'card', css: '', html: '<template data-pagosya-product-template><article><img data-product-field="image" alt=""><h3 data-product-field="name"></h3><p data-product-field="price"></p><a data-product-link href="#">Ver</a><button data-product-add>Agregar</button></article></template>' };
@@ -60,5 +60,17 @@ describe('surface parts (spec 2026-10-15)', () => {
   it('reads the rules inside @starting-style like @media (live run 2: round 0 lost five parts to it)', () => {
     expect(validateSurfaceTemplate({ ...CART, css: '@starting-style{.canasta{opacity:0}}.canasta{transition:opacity .3s}' })).toEqual([]);
     expect(validateSurfaceTemplate({ ...CART, css: '@starting-style{body{opacity:0}}' })).toContain('El CSS de carrito solo puede usar las clases de su plantilla: «body».');
+  });
+  // Live 2026-10-17 (baek nje0ay4a): the product page used --brand-space, --brand-radius-soft … that no file defines, so every
+  // gap, padding and corner was zero and the page read as plain HTML. A template uses the store's tokens or defines its own.
+  it('rejects --store-* and --brand-* tokens the store never defines, and accepts its own, a fallback or other names', () => {
+    const defined = definedTokens([{ path: 'brand.css', content: ':root{--brand-accent:#836345}' }, { path: 'styles.css', content: ':root{--store-foreground:#fff;--space-4:16px}' }, { path: 'index.html', content: '<style>:root{--brand-space:9px}</style>' }]);
+    const css = (rules: string) => validateSurfaceTemplate({ ...CART, css: rules }, defined);
+    expect(css('.canasta{color:var(--store-foreground);border-color:var(--brand-accent)}')).toEqual([]);
+    expect(css('.canasta{--brand-gap:12px;gap:var(--brand-gap);padding:var(--brand-space, 16px);margin:var(--space-4);color:var(--pd-ink)}')).toEqual([]);
+    expect(css('.canasta{gap:var(--brand-space-wide);border-radius:var( --brand-radius-soft );background:var(--store-surface)}'))
+      .toContain('El CSS usa variables que la tienda no tiene: «--brand-space-wide», «--brand-radius-soft», «--store-surface». Escribe valores reales (px, rem, %) o define la variable en tu propia clase.');
+    // Without the store's files (older callers) the check does not run.
+    expect(validateSurfaceTemplate({ ...CART, css: '.canasta{gap:var(--brand-space)}' })).toEqual([]);
   });
 });

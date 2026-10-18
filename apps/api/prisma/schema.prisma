@@ -708,6 +708,7 @@ model Store {
   digitalAssets                DigitalAsset[]
   redirects                    StoreRedirect[]
   reviews                      StoreReview[]
+  testimonials StoreTestimonial[]
   customers                    StoreCustomer[]
   articles                     StoreArticle[]
   bundles                      StoreBundle[]
@@ -2414,6 +2415,23 @@ model StoreReview {
   createdAt   DateTime @default(now())
 
   @@unique([orderId, productId])
+  @@index([storeId, status, createdAt])
+}
+
+/// A real customer's words the merchant entered (spec 2026-10-18-trust-draw-design.md): «Reseña de cliente», never
+/// «Compra verificada». A separate table, so no StoreReview query changes before its migration is applied.
+model StoreTestimonial {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  displayName String
+  rating      Int
+  body        String
+  /// Where the merchant got it, e.g. «por WhatsApp».
+  sourceNote  String?
+  status      String   @default("PUBLISHED")
+  createdAt   DateTime @default(now())
+
   @@index([storeId, status, createdAt])
 }
 

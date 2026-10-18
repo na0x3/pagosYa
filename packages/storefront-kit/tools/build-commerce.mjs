@@ -49,6 +49,7 @@ export const PARTS = [
   'checkout/shipping.js',
   'checkout/submit.js',
   'shared/click-actions.js',
+  'content/carousel.js',
   'content/load.js',
   'header/platform-header.js',
   'controls/decorate.js',

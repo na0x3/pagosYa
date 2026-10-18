@@ -25,7 +25,9 @@ import { currentSourceRuntime } from './source-runtime';
 import { MERCHANT_MARKER, type KitTouchCss } from './kit-touch';
 import { BRAND_ANALYSIS_PROMPT, ART_DIRECTION_PROMPT, creativeContext } from './design-engine/design-prompts';
 import { preferFreshComposition } from './source-composition-selection';
-import { sourceMediaPolicy } from './source-media-design';
+import { merchantAsksForPhotoGroup, sourceMediaPolicy } from './source-media-design';
+import { recoverStorePhotos } from './source-redesign-photos';
+import { repairSourcePhotoGroups } from './source-photo-groups';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
 import { asksForBold, designCategory, frameForRun, frameFresh, frameInputs, parseFrameDraw, FRAME_DRAW_FILE } from './design-engine/frame-draw';
 import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
@@ -93,6 +95,7 @@ import { platformSuppliedPages, repairSourceContracts } from './source-autorepai
 import { merchantFacingSourceFailure, repairDiagnostic } from './source-validation-error';
 import { applySourceLayoutBaseline } from './source-layout-baseline';
 import { applySourceKitCss, SOURCE_KIT_CSS_PATH } from './source-kit-css';
+import { stripLegacyStyleImports, validateLegacySources } from './source-legacy';
 import { applyOrderEmailTemplate } from './source-email-html';
 import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
 import { extractSourceMotifs, isSourceMotifFile, sourceMotifPaths, sourceMotifPrompt } from './source-motifs';
@@ -331,6 +334,20 @@ export class SourceGenerationService {
     const withLogo = withSavedLogo({ assetUrls: [...new Set(dto.assetUrls || [])], imageUses, logoUrl: savedLogo, fromScratch, owned: logoUsable });
     dto = { ...dto, assetUrls: withLogo.assetUrls };
     imageUses = withLogo.imageUses;
+    // A redesign with no photo attached starts from the store's own photos (baek 2026-10-16, florart 2026-10-18: it ran as a
+    // store without photos and drew photoless openings). The style proposal saves this dto, so the picked build keeps them too.
+    if (fromScratch && dto.revision > 0 && !execution?.candidate && !dto.assetUrls!.some(url => url !== savedLogo && !sourceVideo(url))) {
+      const saved = await Promise.resolve().then(() => this.projects.version(merchantId, storeId, dto.baseRevision ?? dto.revision)).catch(() => null);
+      const jobs = await Promise.resolve().then(() => this.prisma.storeSourceChatJob.findMany({ where: { storeId }, orderBy: { createdAt: 'desc' }, take: 30, select: { input: true } })).catch(() => []);
+      const attached = jobs.flatMap(job => { const urls = (job.input as { assetUrls?: unknown } | null)?.assetUrls; return Array.isArray(urls) ? urls.filter((url): url is string => typeof url === 'string') : []; });
+      const library = await Promise.resolve().then(() => this.prisma.mediaAsset.findMany({ where: { merchantId, mimeType: { in: ['image/jpeg', 'image/png', 'image/webp'] } }, orderBy: { createdAt: 'desc' }, take: 200, select: { url: true } })).catch(() => []);
+      const kept = await recoverStorePhotos({ files: (saved?.snapshot as any)?.files || [], candidates: [...attached, ...library.map(asset => asset.url)], read: async url => this.uploads.getBuffer(url.split('/').at(-1)!), limit: 24 - dto.assetUrls!.length });
+      if (kept.assetUrls.length) {
+        dto = { ...dto, assetUrls: [...dto.assetUrls!, ...kept.assetUrls] };
+        imageUses = [...imageUses, ...kept.imageUses.filter(use => !imageUses.some(known => known.url === use.url))];
+        this.logger.log(JSON.stringify({ event: 'redesign_photos_kept', storeId, photos: kept.assetUrls.length }));
+      }
+    }
     const provider = sourceProvider(this.config, claude ? CLAUDE_COMPANION_MODEL : plan.model);
     const { apiKey } = provider;
     const brand = await this.brands?.get(merchantId, storeId);
@@ -485,8 +502,14 @@ export class SourceGenerationService {
     // Spec 2026-10-10: the platform rolls the frame and hero; the model alone always lands on one header.
     // Each decision below lives in design-engine/frame-draw.ts, where it is tested; this only passes values through.
     const frameNow = frameFresh({ sep5Author, agentEngine, sketchFirst, hasPrevious: Boolean(previous), redesign });
+    // Spec 2026-10-18: two or more published reviews let the draw place a reviews section; a failed count is none.
+    // Merchant-entered reviews count too; their table may not be migrated yet.
+    const publishedReviewCount = frameNow ? (await Promise.all([
+      Promise.resolve().then(() => this.prisma.storeReview.count({ where: { storeId, status: 'PUBLISHED' } })).catch(() => 0),
+      Promise.resolve().then(() => this.prisma.storeTestimonial.count({ where: { storeId, status: 'PUBLISHED' } })).catch(() => 0),
+    ])).reduce((sum, count) => sum + (count || 0), 0) : 0;
     const frameFacts = frameInputs({
-      composedInstruction: dto.instruction,
+      composedInstruction: dto.instruction, reviews: publishedReviewCount,
       merchantInstruction: sourceRequestContext.getStore()?.request.instruction,
       assetLegend, imageUses, logoUrl: (data as { logoUrl?: string | null }).logoUrl,
       items: data.items, locations: (data as { locations?: unknown[] }).locations,
@@ -562,6 +585,7 @@ export class SourceGenerationService {
       ...(playbookEntry && playbookFamily ? { playbook: { kind: playbookEntry.kind, family: playbookFamily, bold: boldAsked } } : {}),
       available: frameFacts.available,
       request: frameFacts.request,
+      ...(frameFacts.headerAsk ? { headerAsk: frameFacts.headerAsk } : {}),
       ...(storePhotoPalettes ? { photoPalettes: storePhotoPalettes } : {}),
       ...(brandSourcePalettes && brandSource?.look ? { paletteOverride: boldAsked ? brandSourcePalettes.bold : brandSourcePalettes.calm } : {}),
     });
@@ -950,6 +974,19 @@ export class SourceGenerationService {
         const kitCss = applySourceKitCss(generated.files, { next: useNext });
         generated.files = kitCss.files;
         autoRepairs.push(...kitCss.repairs);
+        // The save refuses an @import outright; dropping it here keeps a finished run from dying at «Guardando».
+        if (!useNext) {
+          const imports = stripLegacyStyleImports(generated.files);
+          generated.files = imports.files;
+          autoRepairs.push(...imports.repairs);
+        }
+        // No photo groups (owner 2026-10-15, 2026-10-18): a new wall of the store's own photos becomes a carousel of those photos
+        // on every path, the one-call Sep-5 author included, which never meets the browser check.
+        if (!useNext) {
+          const photoGroups = repairSourcePhotoGroups(generated.files, { previousFiles: editExisting && !redesign ? oldFiles : [], allowPhotoGroups: merchantAsksForPhotoGroup(sourceRequestContext.getStore()?.request.instruction || dto.instruction) });
+          generated.files = photoGroups.files;
+          autoRepairs.push(...photoGroups.repairs);
+        }
         // The authored confirmation email is hardened the same way: stripped and reported, never failed.
         const orderEmail = applyOrderEmailTemplate(generated.files);
         generated.files = orderEmail.files;
@@ -969,6 +1006,8 @@ export class SourceGenerationService {
           () => { if (!lenient) validateSourcePresentation(generated.files, editExisting ? oldFiles : []); },
           () => { if (!lenient && (!editExisting || redesign || migrating)) { validateSourceVisualSystem(generated.files); validateSourceStyleTokens(generated.files, brand?.revision ? brandStyles(brand.data, fontPaths) : ''); } },
           () => { if (useNext) validateNextSources(generated.files, sitePurpose); },
+          // The save's own refusals, met here while the bounded repair can still fix them.
+          () => { if (!useNext) validateLegacySources(generated.files); },
         ]) {
           try { check(); } catch (error) { validationErrors.push(error instanceof Error ? error.message : 'Invalid source'); }
         }

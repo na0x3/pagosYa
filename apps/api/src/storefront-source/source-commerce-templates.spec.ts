@@ -191,7 +191,8 @@ describe('added notice template', () => {
     await shop.tick();
     shop.$('[data-pagosya-catalog] [data-add="lamp"]').click();
     expect(shop.$('.cart-added [data-added-field="message"]').textContent).toBe('Lámpara Luna añadido a tu reserva.');
-    expect(shop.$('[data-pagosya-status]').textContent).toBe('Lámpara Luna añadido a tu reserva.');
+    // The notice is the one voice; the page status line no longer repeats it (The Bake Lab 2026-10-17).
+    expect(shop.$('[data-pagosya-status]').textContent).toBe('');
     // A word without «tu»/«mi» («Canasta») reads as «a tu canasta».
     const other = boot(ADDED, { beforeKit: w => { w.PAGOSYA_CONFIG.cartWord = 'Canasta'; } });
     await other.tick();

@@ -25,6 +25,48 @@
     const present = keys.filter(key => typeof storePolicies()[key] === 'string' && storePolicies()[key].trim());
     return present.length ? `<nav class="pagosya-policies" aria-label="Políticas de la tienda">${present.map(key => `<button type="button" data-pagosya-policy="${key}">${escape(POLICY_TITLES[key])}</button>`).join('')}</nav>` : '';
   }
+  // Trust block (owner 2026-10-18: «instead [of photo groups] write structured sections with emojis, and things for the
+  // customers to trust»). A `data-pagosya-trust` mount lists what is true of this store now, from its live settings, one
+  // emoji per point; nothing here is a marketing claim. Authored children (a heading) stay; with under two points it hides.
+  function trustPoints() {
+    const locations = store.locations || [];
+    const pickupPlaces = locations.filter(l => l.pickupEnabled).length;
+    const phone = String(store.contactPhone || '').replace(/\D/g, '');
+    const email = typeof store.contactEmail === 'string' && /^[^\s@<>"]+@[^\s@<>"]+$/.test(store.contactEmail.trim()) ? store.contactEmail.trim() : '';
+    const points = [];
+    if (!SHOWCASE) {
+      if (store.checkoutMode === 'whatsapp') points.push(['💬', 'Pedido por WhatsApp', 'Confirmas los detalles con la tienda']);
+      else if (store.checkoutMode !== 'external') points.push(['🔒', 'Pago seguro', 'Procesado por pagosYa']);
+      points.push(['🧾', 'Sin sorpresas', 'Revisas tu pedido y el total antes de pagar']);
+      if (store.shippingPickupEnabled || pickupPlaces) points.push(['🛍️', 'Retiro en tienda', pickupPlaces > 1 ? `${pickupPlaces} sucursales disponibles` : 'Lo eliges al revisar tu pedido']);
+      if (store.shippingEnabled || locations.some(l => l.deliveryEnabled)) points.push(['🚚', 'Entrega a domicilio', 'El costo se confirma al pagar']);
+      if (store.digitalGoodsEnabled) points.push(['📩', 'Entrega digital', 'Descarga segura después del pago']);
+      if (typeof storePolicies().returns === 'string' && storePolicies().returns.trim()) points.push(['↩️', POLICY_TITLES.returns, 'Lee la política antes de comprar', { policy: 'returns' }]);
+    }
+    if (phone.length >= 7 && store.checkoutMode !== 'whatsapp') points.push(['💬', 'Escríbenos por WhatsApp', String(store.contactPhone).trim(), { href: `https://wa.me/${phone}` }]);
+    // A shop already has enough to say; a showcase lists every way to reach it.
+    if (email && (SHOWCASE || points.length < 3)) points.push(['✉️', 'Escríbenos', email, { href: `mailto:${email}` }]);
+    const place = locations.find(l => typeof l.address === 'string' && l.address.trim());
+    if (SHOWCASE && place) points.push(['📍', typeof place.name === 'string' && place.name.trim() ? place.name.trim() : 'Visítanos', place.address.trim()]);
+    return points;
+  }
+  function renderTrust() {
+    const points = trustPoints();
+    document.querySelectorAll('[data-pagosya-trust]').forEach(mount => {
+      mount.querySelector(':scope > .pagosya-trust__list')?.remove();
+      mount.hidden = points.length < 2;
+      // A section the save turned into this block (source-photo-groups.ts) has nothing else to show either.
+      const section = mount.closest('[data-pagosya-trust-section]');
+      if (section) section.hidden = mount.hidden;
+      if (mount.hidden) return;
+      mount.insertAdjacentHTML('beforeend', `<ul class="pagosya-trust__list" role="list">${points.map(([emoji, title, detail, link]) => {
+        const body = `<span class="pagosya-trust__emoji" aria-hidden="true">${emoji}</span><strong>${escape(title)}</strong><span class="pagosya-trust__detail">${escape(detail)}</span>`;
+        const card = link?.href ? `<a class="pagosya-trust__card" href="${escape(link.href)}" target="_blank" rel="noopener">${body}</a>`
+          : link?.policy ? `<button class="pagosya-trust__card" type="button" data-pagosya-policy="${link.policy}">${body}</button>` : `<div class="pagosya-trust__card">${body}</div>`;
+        return `<li class="pagosya-trust__item">${card}</li>`;
+      }).join('')}</ul>`);
+    });
+  }
   // Information pages (spec 2026-09-30-store-content-pages-design): each `data-pagosya-page` mount is filled from the
   // live store with escaped text, and `data-pagosya-pages` links only the pages that have something to show.
   const INFO_LINKS = [

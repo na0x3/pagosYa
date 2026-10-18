@@ -17,6 +17,15 @@ export class ReviewDto {
   @IsInt() @Min(1) @Max(5) rating!: number;
   @IsString() @MinLength(3) @MaxLength(2000) body!: string;
 }
+/** A real customer's words the merchant entered (spec 2026-10-18): they confirm it is real; YAPI never writes one. */
+export class TestimonialDto {
+  @IsString() @MinLength(1) @MaxLength(80) displayName!: string;
+  @IsInt() @Min(1) @Max(5) rating!: number;
+  @IsString() @MinLength(3) @MaxLength(2000) body!: string;
+  @IsOptional() @IsString() @MaxLength(60) sourceNote?: string;
+  @IsBoolean() confirmedReal!: boolean;
+}
+export class TestimonialStatusDto { @IsIn(['PUBLISHED', 'HIDDEN']) status!: string; }
 export class ReviewStatusDto { @IsIn(['PUBLISHED', 'REJECTED', 'PENDING']) status!: string; }
 export class ReviewQueryDto {
   @IsOptional() @IsIn(['PUBLISHED', 'REJECTED', 'PENDING']) status?: string;

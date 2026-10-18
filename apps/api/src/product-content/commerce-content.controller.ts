@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
-import { ArticleDto, BundleDto, BundleStatusDto, ReviewDto, ReviewQueryDto, ReviewStatusDto } from './commerce-content.dto';
+import { ArticleDto, BundleDto, BundleStatusDto, ReviewDto, ReviewQueryDto, ReviewStatusDto, TestimonialDto, TestimonialStatusDto } from './commerce-content.dto';
 import { CommerceContentService } from './commerce-content.service';
 import { PublicStoresService } from "../stores/public-stores.service";
 
@@ -15,6 +15,9 @@ export class CommerceContentController {
   @Put('articles') save(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() dto: ArticleDto) { return this.content.saveArticle(m.id, id, dto); }
   @Post('bundles') bundle(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() dto: BundleDto) { return this.content.createBundle(m.id, id, dto); }
   @Patch('bundles/:bundleId') bundleStatus(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Param('bundleId') bundle: string, @Body() dto: BundleStatusDto) { return this.content.bundleStatus(m.id, id, bundle, dto.active); }
+  @Post('testimonials') testimonial(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() dto: TestimonialDto) { return this.content.createTestimonial(m.id, id, dto); }
+  @Patch('testimonials/:testimonialId') testimonialStatus(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Param('testimonialId') testimonial: string, @Body() dto: TestimonialStatusDto) { return this.content.testimonialStatus(m.id, id, testimonial, dto.status); }
+  @Delete('testimonials/:testimonialId') deleteTestimonial(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Param('testimonialId') testimonial: string) { return this.content.deleteTestimonial(m.id, id, testimonial); }
   @Patch('reviews/:reviewId') moderate(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Param('reviewId') review: string, @Body() dto: ReviewStatusDto) { return this.content.moderate(m.id, id, review, dto.status); }
 }
 @Controller('v1/stores/public/:slug/content')

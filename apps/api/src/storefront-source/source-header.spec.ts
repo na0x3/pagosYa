@@ -223,10 +223,10 @@ describe('store controls in the header (spec 2026-10-14, part 3)', () => {
   const hasTools = (shape: HeaderShape) => readFileSync(kitPath('headers', `${shape}.html`), 'utf8').includes('{{tools}}');
 
   // Computed on 2026-10-14 from the unmodified renderSourceHeader. If it fails before your change, recompute it on the
-  // unmodified code (git stash) with the same 20 headers and pin that value: it guards "no record, no change".
+  // unmodified code (git stash) with the same 18 headers and pin that value: it guards "no record, no change". Re-pinned 2026-10-17 when bottom-pill left HEADER_SHAPES (renderer unchanged).
   it("draws today's header byte for byte when the store has no record", () => {
     const all = HEADER_SHAPES.flatMap(shape => (['shop', 'service'] as const).map(purpose => render(shape, purpose)));
-    expect(createHash('sha256').update(all.join('\n')).digest('hex')).toBe('5617e18c2b27a30604a6f008efd4edb0aef8226b1eb5699344bb329db027f480');
+    expect(createHash('sha256').update(all.join('\n')).digest('hex')).toBe('ffd0eb31af51d3fef33eb48b96d4a1d2c1b409cddd3172a6b28974a601b124e8');
   });
 
   it.each([...HEADER_SHAPES])('«%s» shop: the record on the header, icons and words on the controls, the locked hooks kept', shape => {

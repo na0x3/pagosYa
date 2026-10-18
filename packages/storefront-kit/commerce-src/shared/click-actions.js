@@ -93,7 +93,9 @@
       track('add_to_cart', undefined, { value: line.amount, currency: line.p.currency });
       analytics('add_to_cart', { productId: p.id });
       const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : 1;
-      cart.set(key, quantity + units); renderCart(); message(`${name} añadido a ${ADDED_TO}.`); addedFeedback({ ...p, name }, button, event.detail === 0);
+      cart.set(key, quantity + units); renderCart();
+      // The added notice is its own live region: the page status line repeats it only when no notice shows (The Bake Lab 2026-10-17).
+      message(addedFeedback({ ...p, name }, button, event.detail === 0) ? '' : `${name} añadido a ${ADDED_TO}.`);
       if (MOTIFS.length) playMotifs(p);
       if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${name} añadido a ${ADDED_TO}.`;
     }

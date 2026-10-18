@@ -72,8 +72,23 @@ function unscopedSelectors(css: string, classes: Set<string>): string[] {
   return out;
 }
 
-/** Static checks before any browser runs: the template, its required slots and controls, nothing executable, no typed price. */
-export function validateSurfaceTemplate(t: SurfaceTemplate): string[] {
+/** Every custom property the store declares, in its stylesheets or in a page's <style>: what a template's var() may read. */
+export function definedTokens(files: ReadonlyArray<{ path: string; content: string }>): Set<string> {
+  const names = new Set<string>();
+  for (const file of files) if (/\.(?:css|html)$/.test(file.path)) for (const m of file.content.matchAll(/(--[\w-]+)\s*:/g)) names.add(m[1]);
+  return names;
+}
+/** --store-* and --brand-* tokens read without a fallback that neither the store nor the template declares (live 2026-10-17:
+ *  invented --brand-space tokens resolved to nothing, so baek's product page had no spacing at all). Other names are the kit's. */
+function missingTokens(css: string, defined: ReadonlySet<string>): string[] {
+  const own = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map(m => m[1]));
+  const used = [...css.matchAll(/var\(\s*(--(?:store|brand)-[\w-]+)\s*\)/g)].map(m => m[1]);
+  return [...new Set(used)].filter(name => !own.has(name) && !defined.has(name));
+}
+
+/** Static checks before any browser runs: the template, its required slots and controls, nothing executable, no typed price,
+ *  and (given the store's declared tokens) no token the store does not have. */
+export function validateSurfaceTemplate(t: SurfaceTemplate, defined?: ReadonlySet<string>): string[] {
   const contract = SURFACE_CONTRACT[t.part];
   const label = SURFACE_LABELS[t.part];
   const roots = parseFragment(t.html).childNodes.filter(isElement);
@@ -123,6 +138,8 @@ export function validateSurfaceTemplate(t: SurfaceTemplate): string[] {
   const outside = unscopedSelectors(t.css, classes);
   if (outside.length) reasons.push(`El CSS de ${label} solo puede usar las clases de su plantilla: «${outside.slice(0, 3).join('», «')}».`);
   if (unsafeCss(t.css)) reasons.push('El CSS no puede importar hojas ni cargar URLs externas.');
+  const missing = defined ? missingTokens(t.css, defined) : [];
+  if (missing.length) reasons.push(`El CSS usa variables que la tienda no tiene: «${missing.slice(0, 6).join('», «')}». Escribe valores reales (px, rem, %) o define la variable en tu propia clase.`);
   return reasons;
 }
 

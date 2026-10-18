@@ -17,9 +17,11 @@ export type CommerceDraw = { -readonly [P in CommercePart]: (typeof COMMERCE_OPT
 const PARTS = Object.keys(COMMERCE_OPTIONS) as CommercePart[];
 
 /** "Leans to": the calm card stays sober, the bold card goes loud. An empty narrowing falls back to every option. */
+// Owner 2026-10-17: the cart is always the half-screen side panel, so both cards draw it; the kit draws a saved sheet,
+// page or overlay the same way, and the summary names it for what it is.
 export const COMMERCE_LEAN: Record<'calm' | 'bold', Record<CommercePart, readonly string[]>> = {
-  calm: { account: ['card', 'minimal'], checkout: ['columns', 'steps'], fields: ['boxed', 'underline'], cartSurface: ['drawer', 'page'], added: ['toast', 'inline'] },
-  bold: { account: ['split', 'panel'], checkout: ['ticket', 'brand'], fields: ['filled', 'pill'], cartSurface: ['sheet', 'overlay'], added: ['ribbon', 'bubble', 'stamp'] },
+  calm: { account: ['card', 'minimal'], checkout: ['columns', 'steps'], fields: ['boxed', 'underline'], cartSurface: ['drawer'], added: ['toast', 'inline'] },
+  bold: { account: ['split', 'panel'], checkout: ['ticket', 'brand'], fields: ['filled', 'pill'], cartSurface: ['drawer'], added: ['ribbon', 'bubble', 'stamp'] },
 };
 
 /** Uniform among the options used at most `spread` more than the least used, like the frame draw. */
@@ -72,7 +74,7 @@ export function commerceRuntimeDna(draw: Partial<CommerceDraw>): Record<string, 
 const LABELS = {
   account: { card: 'tarjeta', split: 'dividida', minimal: 'mínima', panel: 'panel' },
   checkout: { columns: 'dos columnas', steps: 'por pasos', ticket: 'ticket', brand: 'con marca' },
-  cartSurface: { drawer: 'lateral', sheet: 'hoja', page: 'página', overlay: 'pantalla completa' },
+  cartSurface: { drawer: 'lateral', sheet: 'lateral', page: 'lateral', overlay: 'lateral' },
 } as const;
 /** The preview's one line: the merchant sees that the choice carries through to payment. */
 export function commerceSummary(draw: Partial<CommerceDraw>): string {

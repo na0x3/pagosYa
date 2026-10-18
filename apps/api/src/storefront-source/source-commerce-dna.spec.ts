@@ -28,7 +28,8 @@ function boot(dna: unknown, settings: Record<string, unknown> = {}, items: unkno
 describe('design DNA in the storefront runtime', () => {
   it('writes each DNA enum onto <html> as a data-dna-* attribute', () => {
     const { version: _version, ...enums } = dnaRuntimeConfig(validDna());
-    expect(boot(dnaRuntimeConfig(validDna()), { productPageStyle: enums.product })).toEqual(enums);
+    // The cart is always the half-screen side panel (owner 2026-10-17), whatever the DNA saved.
+    expect(boot(dnaRuntimeConfig(validDna()), { productPageStyle: enums.product })).toEqual({ ...enums, cart: 'drawer' });
   });
   it('allows exactly the runtime enums the API declares, no more and no fewer', () => {
     const literal = commerce.match(/const DNA_VALUES = (\{[\s\S]*?\n {2}\});/)![1];
@@ -38,7 +39,7 @@ describe('design DNA in the storefront runtime', () => {
     const longest = Math.max(...Object.values(SOURCE_DNA_RUNTIME_ENUMS).map(values => values.length));
     for (let i = 0; i < longest; i++) {
       const dna = Object.fromEntries(Object.entries(SOURCE_DNA_RUNTIME_ENUMS).map(([name, values]) => [name, values[i % values.length]]));
-      expect(boot(dna, { productPageStyle: dna.product })).toEqual(dna);
+      expect(boot(dna, { productPageStyle: dna.product })).toEqual({ ...dna, cart: 'drawer' });
     }
   });
   it('takes data-dna-product from the product page the kit renders, not from the DNA', () => {
@@ -50,7 +51,7 @@ describe('design DNA in the storefront runtime', () => {
   });
   it('ignores unknown values, unknown keys and a missing DNA', () => {
     expect(boot({ ...dnaRuntimeConfig(validDna()), button: 'sparkle', cart: '"><script>', evil: 'pill' })).not.toHaveProperty('button');
-    expect(boot({ button: 'sparkle', evil: 'pill', cart: 'sheet' })).toEqual({ cart: 'sheet', product: 'editorial' });
+    expect(boot({ button: 'sparkle', evil: 'pill', cart: 'sheet' })).toEqual({ cart: 'drawer', product: 'editorial' });
     expect(boot(undefined)).toEqual({});
     expect(boot('pill')).toEqual({});
   });

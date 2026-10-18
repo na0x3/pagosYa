@@ -2,8 +2,23 @@
   // Kit defaults for the cart, the added notice and the order review: low priority, so the store's own CSS
   // (and its DNA) restyle them. Layered !important declarations still outrank authored ones.
   shoppingStyle.textContent = `@layer pagosya-commerce {
-    .cart-drawer{box-sizing:border-box;position:fixed;inset:0 0 0 auto;width:min(600px,48vw);max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font:inherit;overflow:auto;overscroll-behavior:contain;transform:translateX(0);transition:transform var(--motion-base,250ms) var(--ease-drawer,cubic-bezier(.32,.72,0,1)),opacity var(--motion-fast,200ms) var(--ease-out,cubic-bezier(.23,1,.32,1)),display var(--motion-base,250ms) allow-discrete,overlay var(--motion-base,250ms) allow-discrete}
+    .cart-drawer{box-sizing:border-box;position:fixed;inset:0 0 0 auto;width:min(760px,max(420px,50vw));max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font:inherit;overflow:auto;overscroll-behavior:contain;transform:translateX(0);transition:transform var(--motion-base,250ms) var(--ease-drawer,cubic-bezier(.32,.72,0,1)),opacity var(--motion-fast,200ms) var(--ease-out,cubic-bezier(.23,1,.32,1)),display var(--motion-base,250ms) allow-discrete,overlay var(--motion-base,250ms) allow-discrete}
     .cart-drawer:not([open]){transform:translateX(100%);opacity:0}
+    /* The kit's own dialog keeps its place, size and visibility whatever a design says about .cart-drawer: florart
+       2026-10-18 hid its own panel off-screen until its script added body.cart-open, so the kit's cart opened as an
+       invisible modal and the page froze. Layered !important outranks every store rule; colours, borders, padding and
+       motion stay the store's. Half the screen, the whole width on a phone (owner 2026-10-17). */
+    dialog[data-pagosya-drawer]{position:fixed!important;inset:0 0 0 auto!important;box-sizing:border-box!important;width:min(760px,max(420px,50vw))!important;max-width:100vw!important;height:100dvh!important;max-height:100dvh!important;margin:0!important;overflow:auto!important;visibility:visible!important;clip-path:none!important;pointer-events:auto!important}
+    dialog[data-pagosya-drawer][open]{display:block!important;opacity:1!important;transform:none!important}
+    dialog[data-pagosya-drawer]:not([open]){display:none!important;opacity:0!important;transform:translateX(100%)!important}
+    @starting-style{dialog[data-pagosya-drawer][open]{opacity:0!important;transform:translateX(100%)!important}}
+    @media(max-width:700px){dialog[data-pagosya-drawer]{width:100vw!important}}
+    /* The cart is a half-screen panel, so it reads in one column (owner 2026-10-17): a store template drawn as a page with a
+       side summary stacks inside it. Each declaration is inert on an element that is not a grid or flex container. */
+    .cart-drawer :is([data-cart-panel],[data-cart-panel] *):has([data-cart-slot=lines]):has([data-cart-slot=total]){grid-template-columns:minmax(0,1fr)!important;grid-template-rows:none!important;grid-template-areas:none!important;flex-direction:column!important}
+    /* A money figure never breaks mid-number («Bs 20,0 / 0» on a phone, FLORZ 2026-10-17). */
+    .cart-drawer :is([data-cart-field=line-total],[data-cart-field=unit]){white-space:nowrap!important}
+    .cart-drawer :is([data-cart-panel],[data-cart-panel] *):has([data-cart-slot=lines]):has([data-cart-slot=total])>*{grid-column:auto!important;grid-row:auto!important;order:0!important}
     /* The contrast guard's colour: the first layer's !important outranks every stylesheet, and yields while the control is
        hovered or focused so the store's own interactive colours (an inverted hover…) still apply. */
     [data-pagosya-contrast-guard=fixed]:not(:hover):not(:where(:focus-visible)),[data-pagosya-contrast-guard=fixed]:not(:hover):not(:where(:focus-visible)) [data-pagosya-contrast-guard=text]{color:var(--pagosya-contrast-color)!important;-webkit-text-fill-color:var(--pagosya-contrast-color)!important}
@@ -56,9 +71,24 @@
     .cart-drawer .quantity button{width:44px;border:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)));background:transparent}
     .cart-drawer .order-total{padding:24px 0;font-size:20px}.cart-drawer .order-empty{padding:40px 0;line-height:1.6}
     .cart-drawer .order-note{font-size:14px;line-height:1.5}
+    /* Small kit text keeps normal spacing: a heading's em tracking is inherited as pixels (FLORZ 2026-10-17: -.04em at 66px
+       reached the 12px «Vista previa · Sin cobros» as -2.64px and fused the words). A store's own rule still wins. */
+    .order-note,[data-pagosya-status],[data-pagosya-checkout-status]{letter-spacing:normal}
     .cart-drawer .checkout-button{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:52px;padding:16px 20px;border:0;background:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,#20211d))));color:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,#fff)))}
     .cart-drawer button:disabled{opacity:.5;cursor:default}.cart-drawer>.cart-drawer__continue{display:block!important;position:static!important;float:none!important;box-sizing:border-box!important;width:calc(100% - 64px)!important;max-width:none!important;margin:0 32px 32px!important;padding:10px 0;border:0;background:transparent;text-align:center!important;text-decoration:underline;text-underline-offset:4px}.cart-drawer[data-template]>:is(.cart-drawer__header,.cart-drawer__continue,.pagosya-policies){display:none!important}.cart-drawer[data-template] .cart-drawer__body{padding:0}
     .cart-drawer :focus-visible,.cart-added :focus-visible{outline:3px solid currentColor;outline-offset:3px}
+    /* Trust block (pages/policy-links.js renderTrust): emoji points on cards that take the section's own colours and type. */
+    :is([data-pagosya-trust],[data-pagosya-trust-section])[hidden]{display:none!important}
+    [data-pagosya-trust]{box-sizing:border-box;grid-column:1/-1;flex:1 1 100%;width:100%}
+    .pagosya-trust__list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:16px;margin:28px 0 0;padding:0;list-style:none}
+    .pagosya-trust__item{display:flex;margin:0;padding:0}
+    .pagosya-trust__card{box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;margin:0;padding:22px 20px;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:var(--kit-radius-panel,16px);background:color-mix(in srgb,currentColor 4%,transparent);color:inherit;font:inherit;text-align:left;text-decoration:none}
+    :is(a,button).pagosya-trust__card{cursor:pointer;transition:border-color var(--motion-fast,200ms) ease,transform var(--motion-fast,200ms) ease}
+    @media(hover:hover){:is(a,button).pagosya-trust__card:hover{border-color:color-mix(in srgb,currentColor 40%,transparent);transform:translateY(-2px)}}
+    .pagosya-trust__emoji{font-size:30px;line-height:1;margin-bottom:8px}
+    .pagosya-trust__card strong{font-size:1.05em;line-height:1.3}
+    .pagosya-trust__detail{font-size:.95em;line-height:1.5;opacity:.78;overflow-wrap:anywhere}
+    .pagosya-trust__card:focus-visible{outline:3px solid currentColor;outline-offset:3px}
     .cart-added{position:fixed;inset:auto 24px 24px auto;z-index:2147483001;display:flex;align-items:center;gap:20px;max-width:min(480px,calc(100vw - 48px));padding:12px 16px;background:var(--store-foreground,var(--brand-foreground,var(--ink,#20211d)));color:var(--store-background,var(--brand-background,var(--paper,#fff)));font:inherit;box-shadow:0 8px 24px #0002;opacity:0;transform:translateY(12px);visibility:hidden;transition:opacity var(--motion-fast,200ms) var(--ease-out,cubic-bezier(.23,1,.32,1)),transform var(--motion-fast,200ms) var(--motion-ease,var(--ease-out,cubic-bezier(.23,1,.32,1))),visibility var(--motion-fast,200ms)}
     .cart-added[data-visible=true]{opacity:1;transform:translateY(0);visibility:visible}.cart-added span{overflow-wrap:anywhere}.cart-added button{flex-shrink:0;min-height:44px;background:transparent;border:0;color:inherit;font:inherit;text-decoration:underline;text-underline-offset:4px}
     @media(max-width:700px){.cart-drawer{width:100vw}.cart-drawer__header{padding:20px}.cart-drawer__body{padding:8px 20px 24px}.cart-drawer>.cart-drawer__continue{width:calc(100% - 40px)!important;margin:0 20px 24px!important}.cart-added{inset:auto 12px 12px;max-width:none;gap:12px}}

@@ -106,6 +106,10 @@ const html = (body: string) => new JSDOM(`<body>${body}</body>`).window.document
 it('counts emoji used as decoration, not emoji inside a sentence', () => {
   expect(decorativeEmojiCount(html('<div class="roundel"><span>YUNGAS · LA PAZ ·</span><strong>☕</strong></div>'))).toBe(1);
   expect(decorativeEmojiCount(html('<p>Nos encanta el café ☕ de la mañana.</p>'))).toBe(0);
+  // Owner 2026-10-18: a structured point led by one emoji is copy, and so is the kit's trust block.
+  expect(decorativeEmojiCount(html('<ul><li><span>🚚</span><strong>Entrega</strong><p>A tu puerta</p></li></ul>'))).toBe(0);
+  expect(decorativeEmojiCount(html('<div data-pagosya-trust><ul><li><div><span aria-hidden="true">🔒</span></div></li></ul></div>'))).toBe(0);
+  expect(decorativeEmojiCount(html('<section><span>🌸</span></section>'))).toBe(1);
 });
 
 it('flags circular stamp text written without an SVG textPath, not round icon buttons', () => {

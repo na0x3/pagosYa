@@ -2,7 +2,7 @@ import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import type { SourceInputImage } from '../source-generation-types';
 import { storeTokens } from '../store-controls-design';
 import { readConfigFile } from '../store-look';
-import { COMMERCE_TEMPLATES_FILE, composeTemplatesFile, validateSurfaceTemplate, type SurfacePart, type SurfaceTemplate } from './surface-parts';
+import { COMMERCE_TEMPLATES_FILE, composeTemplatesFile, definedTokens, validateSurfaceTemplate, type SurfacePart, type SurfaceTemplate } from './surface-parts';
 import type { SurfaceCheckResult, SurfaceFailure } from './surface-checks';
 import { parseSurfacesAnswer, surfacesPrompt, type SurfacesCall } from './surface-design';
 
@@ -66,6 +66,7 @@ export async function runCommerceSurfaces(deps: {
   try {
     const images = await deps.capture(deps.files, deps.signal);
     const dna = (readConfigFile(deps.files).dna as Record<string, unknown> | undefined) ?? {};
+    const tokens = definedTokens(deps.files);
     for (let round = 0; round <= REPAIR_ROUNDS && pending.length; round++) {
       deps.signal.throwIfAborted();
       const text = surfacesPrompt({ storeName: deps.storeName, kind: deps.kind, cartWord: deps.cartWord, tokens: storeTokens(deps.files), dna, parts: pending, keep: approved(), ...(repair ? { repair } : {}), ...(deps.instruction ? { instruction: deps.instruction } : {}) });
@@ -75,7 +76,7 @@ export async function runCommerceSurfaces(deps: {
       for (const t of answered) designedIn.set(t.part, round);
       const failures: SurfaceFailure[] = pending.filter(p => !answered.some(t => t.part === p)).map(part => ({ part, check: 'missing', detail: 'No llegó la plantilla.' }));
       const designed = answered.filter(t => {
-        const reasons = validateSurfaceTemplate(t);
+        const reasons = validateSurfaceTemplate(t, tokens);
         if (reasons.length) failures.push({ part: t.part, check: 'static', detail: reasons.join(' ') });
         return !reasons.length;
       });

@@ -133,3 +133,23 @@ describe('cascade: kit defaults < DNA < authored store CSS', () => {
     } finally { await page.close(); }
   });
 });
+
+// FLORZ 2026-10-17: the checkout heading's -.04em at 66px reached the 12px «Vista previa · Sin cobros» as -2.64px.
+describe('small kit text under a tracked heading', () => {
+  const body = (css = '') => ({ css: `.heading{font-size:66px;letter-spacing:-.04em}${css}`, body: `${CATALOG}<div class="heading">Revisa tu pedido<p class="order-note">Vista previa · Sin cobros</p></div>` });
+  it('keeps normal letter spacing instead of inheriting the heading\'s pixels', async () => {
+    const page = await open(body());
+    try {
+      await page.waitForSelector('.menu-add');
+      expect(await computed(page, '.heading', ['letter-spacing'])).toEqual({ 'letter-spacing': '-2.64px' });
+      expect(await computed(page, '.order-note', ['letter-spacing'])).toEqual({ 'letter-spacing': 'normal' });
+    } finally { await page.close(); }
+  });
+  it('still yields to the store\'s own spacing for the note', async () => {
+    const page = await open(body('.order-note{letter-spacing:2px}'));
+    try {
+      await page.waitForSelector('.menu-add');
+      expect(await computed(page, '.order-note', ['letter-spacing'])).toEqual({ 'letter-spacing': '2px' });
+    } finally { await page.close(); }
+  });
+});

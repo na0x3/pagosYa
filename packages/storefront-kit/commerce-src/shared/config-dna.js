@@ -57,7 +57,8 @@
   // product is the one exception: render() sets it from productPageStyle(), the page this kit actually draws.
   const hasDna = Boolean(config.dna && typeof config.dna === 'object');
   if (hasDna) {
-    for (const name of Object.keys(DNA_VALUES)) if (name !== 'product' && DNA_VALUES[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, config.dna[name]);
+    // Every cart opens as the half-screen side panel (owner 2026-10-17); a saved sheet, page or overlay is drawn as one too.
+    for (const name of Object.keys(DNA_VALUES)) if (name !== 'product' && DNA_VALUES[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, name === 'cart' ? 'drawer' : config.dna[name]);
   }
   // Account, checkout and the cart path drawn per store (spec 2026-10-11 commerce surfaces). Runtime-only values, never in
   // DNA_VALUES (the API's planner and seed must not see them); a test pins them to COMMERCE_RUNTIME_ENUMS.

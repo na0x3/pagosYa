@@ -46,6 +46,17 @@ it('unknown: asks once, then «sí, es mía» builds with the first message\'s i
   expect(execution(generation).brandSource.imageUrls).toEqual([a]);
 });
 
+// The Bake Lab 2026-10-17: a screenshot of the store's own empty cart with «haz que esa parte de tu pedido … sea más bonita y
+// haz que el menú … a la izquierda» was asked about as brand material; «si usa» then took the store's own copy as brand quotes.
+it('a screenshot pointing at a part of the store builds without the brand question', async () => {
+  const { service, dialogue, generation, messages } = setup();
+  dialogue.decide.mockResolvedValue(generate([{ url: a, role: 'reference', description: 'captura del estado actual' }]));
+  await service.send('m', 's', { ...request, instruction: 'haz que esa parte de tu pedido esta vacio sea mas bonita y haz que el menu y el navbar esten a la izquierda', assetUrls: [a] });
+  expect(messages.some(message => message.content === BRAND_SOURCE_QUESTION)).toBe(false);
+  expect(generation.generate).toHaveBeenCalledTimes(1);
+  expect(execution(generation)?.brandSource).toBeUndefined();
+});
+
 it('other: no brand source, today\'s behaviour', async () => {
   jest.spyOn(websiteReference, 'inspectSourceWebsite').mockResolvedValue({ url: 'https://otra.com', status: 'inspected', evidence: '{}' });
   const { service, dialogue, generation } = setup();

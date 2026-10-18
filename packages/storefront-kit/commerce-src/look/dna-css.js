@@ -96,23 +96,13 @@
     ':root[data-dna-button=split] .checkout-button>svg{box-sizing:content-box;padding-left:1em;margin-left:1em;border-left:1px solid color-mix(in srgb,currentColor 45%,transparent)}',
     ...dnaButtonRules(KIT_BUTTONS, KIT_STEPPERS), ...dnaIdentityButtonRules(KIT_BUTTONS),
     ':root[data-dna-press=squash]{--kit-press:scale(.97,.9)}:root[data-dna-press=sink]{--kit-press:translateY(2px)}:root[data-dna-press=pop]{--kit-press:scale(1.06)}:root[data-dna-press=none]{--kit-press:translate(0)}',
-    /* Cart: right drawer (today's place, restyled), bottom sheet, full page or centred card. */
-    ':root[data-dna-cart] .cart-drawer{border:0 solid var(--kit-line)}:root[data-dna-cart] .cart-drawer__grip{display:none}',
-    ':root[data-dna-cart=drawer] .cart-drawer{inset:0 0 0 auto;width:min(440px,92vw);border-left-width:var(--kit-border);border-radius:var(--kit-radius-panel) 0 0 var(--kit-radius-panel);background:color-mix(in srgb,var(--kit-ink) 3%,var(--kit-paper))}',
+    /* Cart: always the right-hand panel, half the screen (owner 2026-10-17: «the cart in half of screen, then confirmation,
+       then payment»). Older DNA values (sheet, page, overlay) are drawn the same way; config-dna.js sets drawer for all. */
+    ':root[data-dna-cart] .cart-drawer{border:0 solid var(--kit-line)}',
+    ':root[data-dna-cart=drawer] .cart-drawer{inset:0 0 0 auto;width:min(760px,max(420px,50vw));max-width:100vw;border-left-width:var(--kit-border);border-radius:var(--kit-radius-panel) 0 0 var(--kit-radius-panel);background:color-mix(in srgb,var(--kit-ink) 3%,var(--kit-paper))}',
     ':root[data-dna-cart=drawer] .cart-drawer:not([open]){transform:translateX(100%);opacity:0}',
     '@starting-style{:root[data-dna-cart=drawer] .cart-drawer[open]{transform:translateX(100%);opacity:0}}',
-    ':root[data-dna-cart=sheet] .cart-drawer{inset:auto 0 0 0;margin:0 auto;width:min(760px,100vw);height:auto;max-height:min(88dvh,900px);border-top-width:var(--kit-border);border-radius:var(--kit-radius-panel) var(--kit-radius-panel) 0 0;background:var(--kit-surface);transform:translateY(0)}',
-    ':root[data-dna-cart=sheet] .cart-drawer:not([open]){transform:translateY(100%);opacity:0}',
-    '@starting-style{:root[data-dna-cart=sheet] .cart-drawer[open]{transform:translateY(100%);opacity:0}}',
-    ':root[data-dna-cart=sheet] .cart-drawer__header{position:relative;padding-top:32px}:root[data-dna-cart=sheet] .cart-drawer__grip{display:block;position:absolute;top:12px;left:50%;width:44px;height:5px;border-radius:3px;background:currentColor;opacity:.3;transform:translateX(-50%)}',
-    ':root[data-dna-cart=page] .cart-drawer{inset:0;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;border-top:var(--kit-border) solid var(--kit-accent);background:var(--kit-surface)}',
-    ':root[data-dna-cart=page] .cart-drawer:not([open]){transform:translateY(28px);opacity:0}',
-    '@starting-style{:root[data-dna-cart=page] .cart-drawer[open]{transform:translateY(28px);opacity:0}}',
-    ':root[data-dna-cart=page] .cart-drawer :is(.cart-drawer__header,.cart-drawer__body),:root[data-dna-cart=page] .cart-drawer>.pagosya-policies{box-sizing:border-box;width:100%;max-width:880px;margin-inline:auto}:root[data-dna-cart=page] .cart-drawer__header{border-bottom-width:max(var(--kit-border),1px)}:root[data-dna-cart=page] .cart-drawer::backdrop{background:var(--kit-surface)}',
-    ':root[data-dna-cart=overlay] .cart-drawer{inset:0;margin:auto;width:min(620px,calc(100vw - 32px));height:auto;max-height:min(86dvh,820px);border-width:var(--kit-border);border-radius:var(--kit-radius-panel);background:var(--kit-paper);box-shadow:0 24px 80px -24px #0009}',
-    ':root[data-dna-cart=overlay] .cart-drawer:not([open]){transform:scale(.96);opacity:0}',
-    '@starting-style{:root[data-dna-cart=overlay] .cart-drawer[open]{transform:scale(.96);opacity:0}}',
-    '@media(max-width:700px){:root[data-dna-cart=drawer] .cart-drawer{width:100vw;border-radius:0}:root[data-dna-cart=sheet] .cart-drawer{width:100vw;max-height:92dvh}:root[data-dna-cart=page] .cart-drawer{width:100vw}:root[data-dna-cart=overlay] .cart-drawer{width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}}',
+    '@media(max-width:700px){:root[data-dna-cart=drawer] .cart-drawer{width:100vw;border-radius:0}}',
     ':root[data-dna-frame] .order-item__photo{box-sizing:border-box;border-radius:var(--kit-photo-radius);padding:var(--kit-photo-pad);background:var(--kit-photo-bg);box-shadow:var(--kit-photo-shadow)}',
     /* Added to cart: corner toast (restyled), ribbon, bubble under the cart button, inline note, centred stamp. */
     ':root[data-dna-added] .cart-added{box-sizing:border-box;border:var(--kit-border) solid var(--kit-line);flex-wrap:wrap;gap:6px 16px}',
@@ -190,8 +180,8 @@
     `@media(prefers-reduced-motion:no-preference){@keyframes pd-enter-fade-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}@keyframes pd-enter-slide{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}@keyframes pd-enter-pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}`
       + [['fade-up'], ['slide'], ['pop']].map(([name]) => `:root[data-dna-enter=${name}] ${PC} :is([data-part=gallery],[data-part=eyebrow],[data-part=title],[data-part=intro],[data-part=highlights],[data-part=blocks]){animation:pd-enter-${name} var(--motion-slow,520ms) var(--motion-ease-settle,ease) both}`).join('') + '}',
   ];
-  // Fields: checkout's .order-field controls and the account inputs; checkboxes and radios (terms, delivery choice) keep their look.
-  const DRAWN_FIELD = ':is([data-pagosya-checkout] .order-field :is(input,select,textarea),[data-pagosya-cart][data-checkout-review] .order-field :is(input,select,textarea),[data-account-gate] [data-part=input])';
+  // Fields: checkout's .order-field controls; checkboxes and radios (terms, delivery choice) keep their look.
+  const DRAWN_FIELD = ':is([data-pagosya-checkout] .order-field :is(input,select,textarea),[data-pagosya-cart][data-checkout-review] .order-field :is(input,select,textarea))';
   const DRAWN_TEXT_FIELD = `${DRAWN_FIELD}:not([type=checkbox],[type=radio])`;
   const COMMERCE_DRAW_CSS = [
     `:root[data-dna-fields] ${DRAWN_TEXT_FIELD}{box-sizing:border-box;min-height:48px;font:inherit;color:var(--kit-ink)}`,
@@ -202,6 +192,16 @@
     `:root[data-dna-fields=filled] ${DRAWN_TEXT_FIELD}:focus{border-bottom-color:var(--kit-accent)}`,
     `:root[data-dna-fields=pill] ${DRAWN_TEXT_FIELD}{border:1.5px solid var(--kit-line);border-radius:999px;background:var(--kit-paper);padding:0 18px}`,
     `:root[data-dna-fields] ${DRAWN_FIELD}:is(textarea){min-height:96px;padding-block:12px}:root[data-dna-fields=pill] ${DRAWN_FIELD}:is(textarea){border-radius:22px}`,
+    /* The account form's fields (2026-10-18, florart): the store usually sets the form on its own panel, so a field takes its
+     * colours from that panel (currentColor), never the page's paper, which drew black pills on a cream card. One attribute
+     * and one element of weight: above the kit's account sheet, below a store rule on [data-account-gate] [data-part=input]. */
+    `:where(:root[data-dna-fields]) [data-account-gate] input:where([data-part=input]){box-sizing:border-box;min-height:48px;font:inherit;color:inherit}`,
+    `:where(:root[data-dna-fields]) [data-account-gate] input:where([data-part=input]):focus-visible{outline:2px solid var(--kit-accent);outline-offset:2px}`,
+    `:where(:root[data-dna-fields=boxed]) [data-account-gate] input:where([data-part=input]){border:1px solid color-mix(in srgb,currentColor 40%,transparent);border-radius:var(--kit-radius);background:transparent;padding:0 14px}`,
+    `:where(:root[data-dna-fields=underline]) [data-account-gate] input:where([data-part=input]){border:0;border-bottom:2px solid color-mix(in srgb,currentColor 55%,transparent);border-radius:0;background:transparent;padding:0 2px}`,
+    `:where(:root[data-dna-fields=filled]) [data-account-gate] input:where([data-part=input]){border:0;border-bottom:2px solid color-mix(in srgb,currentColor 40%,transparent);border-radius:var(--kit-radius) var(--kit-radius) 0 0;background:color-mix(in srgb,currentColor 7%,transparent);padding:0 14px}`,
+    `:where(:root[data-dna-fields=filled]) [data-account-gate] input:where([data-part=input]):focus{border-bottom-color:var(--kit-accent)}`,
+    `:where(:root[data-dna-fields=pill]) [data-account-gate] input:where([data-part=input]){border:1.5px solid color-mix(in srgb,currentColor 40%,transparent);border-radius:999px;background:transparent;padding:0 18px}`,
     // Steps numbers the review's sections; ticket tears the summary's bottom edge; brand sets a panel beside the page.
     ':root[data-dna-checkout=steps] .checkout-review{counter-reset:checkout-step}',
     ':root[data-dna-checkout=steps] :is(.checkout-review__summary,.checkout-review__fields)>h2::before{counter-increment:checkout-step;content:counter(checkout-step);display:inline-grid;place-items:center;width:1.7em;height:1.7em;margin-right:.5em;border-radius:50%;background:var(--kit-accent);color:var(--kit-on-accent);font-size:.8em;vertical-align:.1em}',

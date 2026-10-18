@@ -17,6 +17,7 @@
     if (launcher.getAttribute('aria-expanded') !== 'true') launcher.click();
   });
 
+  mountCarousels();
   void loadCommerceContent();
   void load();
 })();

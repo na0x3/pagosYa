@@ -211,7 +211,7 @@ describe('style cards draw the commerce surfaces', () => {
     const shown = Array.from({ length: 3 }, () => ({ kind: 'cafe-food', mode: 'calm' as const, draw: { account: 'card', checkout: 'columns', fields: 'boxed', cartSurface: 'drawer', added: 'toast' } as any }));
     for (let seed = 1; seed < 10; seed++) {
       const [calm] = styleDraws({ ...base, shown, random: seeded(seed) });
-      expect(calm.commerce).toEqual({ account: 'minimal', checkout: 'steps', fields: 'underline', cartSurface: 'page', added: 'inline' });
+      expect(calm.commerce).toEqual({ account: 'minimal', checkout: 'steps', fields: 'underline', cartSurface: 'drawer', added: 'inline' });
     }
   });
 });

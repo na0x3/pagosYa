@@ -40,4 +40,14 @@ describe('surfaces call (spec 2026-10-15)', () => {
     expect(parseSurfacesAnswer(reply('no es json'), ['cart'])).toBeNull();
     expect(SURFACES_SCHEMA.properties.parts.items.properties.part.enum).toEqual(['card', 'productPage', 'cart', 'cartLine', 'added', 'checkout']);
   });
+  // Live 2026-10-17: «no digits in CSS content» was read as «no numbers in the CSS»: thin, small, xxx-large, aspect-ratio:portrait
+  // and invented --brand-space tokens left baek's product page with no spacing at all.
+  it('limits the no-digits rule to content: and asks for real CSS values and only the listed tokens', () => {
+    const text = surfacesPrompt({ storeName: 'x', kind: 'general', tokens: 'accent: #836345', dna: {}, parts: ['productPage'] });
+    expect(text).not.toContain('no digits in CSS content');
+    expect(text).toMatch(/never a digit inside a CSS content: property/i);
+    expect(text).toMatch(/real CSS values[^.]*px/);
+    expect(text).toMatch(/only the var\(\) tokens listed under Store tokens/i);
+    expect(text).toMatch(/max-width and side padding/);
+  });
 });

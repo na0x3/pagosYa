@@ -11,6 +11,12 @@
       render(); message("");
     } catch (error) { ready = false; renderInfoPages(true); render(); message(error.message); }
   }
+  // Real reviews only: a verified purchase, or the merchant's entry of a real customer's words with where it came from.
+  function reviewMarkup(review) {
+    const rating = Math.max(1, Math.min(5, Math.round(Number(review.rating) || 0)));
+    const source = review.source === 'MERCHANT' ? `Reseña de cliente${review.sourceNote ? ` · ${escape(review.sourceNote)}` : ''}` : 'Compra verificada';
+    return `<article class="pagosya-review"><p class="pagosya-review__stars" role="img" aria-label="${rating} de 5">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</p><blockquote class="pagosya-review__body"><p>${escape(review.body)}</p></blockquote><p class="pagosya-review__by"><strong>${escape(review.displayName)}</strong> · <span class="pagosya-review__source">${source}</span></p></article>`;
+  }
   async function loadCommerceContent() {
     const slots = document.querySelectorAll('[data-pagosya-blog],[data-pagosya-reviews],[data-pagosya-bundles]');
     if (!slots.length && !fullProductPage) return;
@@ -22,7 +28,15 @@
       commerceData = data; decorateProductReviews();
       slots.forEach(slot => {
         if (slot.hasAttribute('data-pagosya-blog')) slot.innerHTML = data.articles.map(article => `<article id="articulo-${escape(article.slug)}"><h2>${escape(article.title)}</h2><p>${escape(article.author)} · ${new Date(article.publishedAt).toLocaleDateString('es-BO')}</p><p>${escape(article.excerpt)}</p><p><a data-article-url href="${escape(new URL(config.apiBaseUrl, config.checkoutOrigin).href.replace(/\/$/, ''))}/stores/public/${encodeURIComponent(config.slug)}/pages/${encodeURIComponent(article.locale)}/${encodeURIComponent(article.slug)}">Abrir artículo</a></p><details><summary>Leer aquí</summary>${article.body.split(/\n\s*\n/).map(paragraph => `<p>${escape(paragraph)}</p>`).join('')}</details></article>`).join('') || '<p>Todavía no hay artículos publicados.</p>';
-        if (slot.hasAttribute('data-pagosya-reviews')) slot.innerHTML = data.reviews.filter(review => !fullProductPage || review.productId === selectedProduct?.id).map(review => `<article><strong>${escape(review.displayName)}</strong><p>${review.rating} de 5 · Compra verificada</p><p>${escape(review.body)}</p></article>`).join('') || '<p>Todavía no hay reseñas publicadas.</p>';
+        if (slot.hasAttribute('data-pagosya-reviews')) {
+          const reviews = data.reviews.filter(review => !fullProductPage || review.productId === selectedProduct?.id);
+          slot.innerHTML = reviews.map(reviewMarkup).join('') || (fullProductPage ? '<p>Todavía no hay reseñas publicadas.</p>' : '');
+          // Away from the product page a store without reviews shows no empty reviews section (spec 2026-10-18).
+          const section = slot.closest('[data-pagosya-reviews-section]');
+          slot.hidden = !reviews.length && !fullProductPage;
+          if (section) section.hidden = slot.hidden;
+          if (slot.hasAttribute('data-pagosya-carousel')) mountCarousel(slot);
+        }
         if (slot.hasAttribute('data-pagosya-bundles')) slot.innerHTML = data.bundles.map(bundle => `<article><h3>${escape(bundle.name)}</h3><p>${bundle.kind === 'BOGO' ? 'Lleva dos; el de menor precio es gratis.' : `${bundle.discountPercent}% de descuento ${bundle.kind === 'FIXED' ? 'al completar el paquete' : 'desde ' + bundle.minimumQuantity + ' unidades'}.`}</p><ul>${bundle.items.map(item => `<li>${escape(products().find(p => p.id === item.productId)?.name || 'Producto del paquete')}${bundle.kind === 'FIXED' ? ' × ' + item.quantity : ''}</li>`).join('')}</ul><p>Añade los productos al carrito. La mejor oferta se aplica automáticamente al pagar; no se acumula con otros códigos.</p></article>`).join('') || '<p>No hay paquetes activos.</p>';
       });
     } catch { slots.forEach(slot => { slot.textContent = 'No pudimos cargar esta sección. Recarga la página para intentar de nuevo.'; }); }

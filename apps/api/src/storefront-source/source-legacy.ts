@@ -124,6 +124,27 @@ function styleProblems(path: string, css: string, problems: Problem[]) {
   }
 }
 
+/**
+ * A generated stylesheet's @import (usually a web font) has one right answer: drop it, the store's fonts are local.
+ * Left in, validateLegacySources refuses the whole save after the run has finished (baek 2026-10-17).
+ */
+export function stripLegacyStyleImports(files: SourceProjectFileDto[]): { files: SourceProjectFileDto[]; repairs: string[] } {
+  const repairs: string[] = [];
+  const next = files.map(file => {
+    if (!file || file.encoding === 'base64' || typeof file.content !== 'string' || !/\.css$/i.test(file.path) || !legacyAuthoredFile(file.path)) return file;
+    let root: postcss.Root;
+    try { root = postcss.parse(file.content); } catch { return file; }
+    let removed = 0;
+    root.walkAtRules(rule => {
+      if (['import', 'plugin', 'config'].includes(rule.name.toLowerCase())) { rule.remove(); removed++; }
+    });
+    if (!removed) return file;
+    repairs.push(`${file.path}: removed ${removed} @import rule(s); stylesheets and fonts must be local`);
+    return { ...file, content: root.toString().replace(/^\s+/, '') };
+  });
+  return { files: next, repairs };
+}
+
 export function validateLegacySources(files: SourceProjectFileDto[]) {
   const problems: Problem[] = [];
   for (const file of files) {

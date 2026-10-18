@@ -1,7 +1,7 @@
 import { SOURCE_RHYTHM_DIRECTION } from '../source-design';
 import { PLAYBOOK } from './playbook';
 import { COMMERCE_LEAN, COMMERCE_OPTIONS } from './commerce-draw';
-import { asksForBold, designBrandCss, drawDesign, designCategory, designOverrides, drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, paletteBrandCss, parseFrameDraw, framePlatformHeader, plannerDirection, DESIGN_CATALOGUE, FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, type FrameAvailable } from './frame-draw';
+import { headerPlace, asksForBold, designBrandCss, drawDesign, designCategory, designOverrides, drawFrame, frameDirection, frameForRun, frameFresh, frameInputs, frameOverrides, paletteBrandCss, parseFrameDraw, framePlatformHeader, plannerDirection, DESIGN_CATALOGUE, FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, type FrameAvailable } from './frame-draw';
 
 const seeded = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 const rich: FrameAvailable = { photos: 9, products: 9, facts: true };
@@ -9,12 +9,12 @@ const bare = { composedInstruction: 'x', assetLegend: [], imageUses: [], items: 
 const ids = (part: keyof typeof FRAME_CATALOGUE) => FRAME_CATALOGUE[part].map(entry => entry.id);
 
 it('has the agreed catalogue sizes and every entry says something for desktop and phone', () => {
-  expect([FRAME_CATALOGUE.header.length, FRAME_CATALOGUE.cart.length, FRAME_CATALOGUE.footer.length, FRAME_CATALOGUE.hero.length]).toEqual([10, 6, 6, 11]);
+  expect([FRAME_CATALOGUE.header.length, FRAME_CATALOGUE.cart.length, FRAME_CATALOGUE.footer.length, FRAME_CATALOGUE.hero.length]).toEqual([9, 6, 6, 11]);
   for (const entry of Object.values(FRAME_CATALOGUE).flat()) {
     expect(entry.desktop.trim().length).toBeGreaterThan(20);
     expect(entry.phone.trim().length).toBeGreaterThan(10);
   }
-  expect(FRAME_CATALOGUE.header.filter(entry => entry.bold)).toHaveLength(5);
+  expect(FRAME_CATALOGUE.header.filter(entry => entry.bold)).toHaveLength(4);
   for (const entry of FRAME_CATALOGUE.header) {
     expect(entry.phone).toMatch(/cart/i);
     expect(entry.phone).toMatch(/menu|navigation/i);
@@ -33,10 +33,10 @@ it('draws one valid id per part and is repeatable with a seed', () => {
 
 it('never repeats a recent header or hero while a free one exists, else takes the least used', () => {
   const headers = ids('header'), heroes = ids('hero');
-  const recent = headers.slice(0, 9).map((header, i) => ({ header, hero: heroes[i % 7] }));
+  const recent = headers.slice(0, 8).map((header, i) => ({ header, hero: heroes[i % 7] }));
   for (let seed = 1; seed < 40; seed++) {
     const draw = drawFrame(seeded(seed), recent, rich);
-    expect(draw.header).toBe(headers[9]);
+    expect(draw.header).toBe(headers[8]);
     expect(heroes.slice(7)).toContain(draw.hero);
   }
   const all = [...headers, headers[0], headers[1]].map(header => ({ header }));
@@ -462,5 +462,67 @@ describe('product surfaces on every fresh build (sub-project 2)', () => {
     const base = { composedInstruction: 'x', assetLegend: [], imageUses: [] };
     expect(frameInputs({ ...base, items: [{ imageUrls: ['a', 'b'], variants: [{}, {}] }] }).available).toMatchObject({ variants: true, altPhotos: true });
     expect(frameInputs({ ...base, items: [{ imageUrls: ['a', 'b'] }, { imageUrls: ['c'] }] }).available).toMatchObject({ variants: false, altPhotos: false });
+  });
+});
+
+// Owner 2026-10-17: «i prefer when the menus are sideways or on top»; The Bake Lab asked for its menu on the left and kept the pill.
+describe('menu placement the merchant asks for', () => {
+  const saved = (header: string) => ({ path: FRAME_DRAW_FILE, content: JSON.stringify({ header, cart: 'icon-dot', footer: 'quiet-line', hero: 'split' }) });
+  it('never draws the bottom pill, and reads a saved one as the side rail', () => {
+    for (let s = 0; s < 40; s++) expect(frameForRun({ enabled: true, fresh: true, previous: [], recent: [], available: rich, request: 'Hazme la tienda', random: seeded(s + 1) }).file!.content).not.toContain('bottom-pill');
+    expect(parseFrameDraw(JSON.stringify({ header: 'bottom-pill' })).header).toBe('side-rail');
+  });
+  it('hears the side and the top, typos and all', () => {
+    expect(headerPlace('haz que el menu y el navbar esten a la izquiera al lado')).toBe('side');
+    expect(headerPlace('quiero un menú lateral')).toBe('side');
+    expect(headerPlace('pon la navegación arriba')).toBe('top');
+    expect(headerPlace('cambia el título del menú del día')).toBeUndefined();
+  });
+  it('an edit moves the menu: the side rail, or a top header, keeping a top header the store already has', () => {
+    const edit = (header: string, request: string) => parseFrameDraw(frameForRun({ enabled: true, fresh: false, previous: [saved(header)], recent: [], available: rich, request }).file!.content).header;
+    expect(edit('stacked', 'pon el menú a la izquierda')).toBe('side-rail');
+    expect(edit('side-rail', 'el menú arriba por favor')).toBe('centered-split');
+    expect(edit('stacked', 'el menú arriba por favor')).toBe('stacked');
+    expect(frameForRun({ enabled: true, fresh: false, previous: [saved('overlay')], recent: [], available: rich, request: 'cambia el título' }).file).toEqual(saved('overlay'));
+  });
+  it('a fresh build draws the asked place, and a reply like «si usa» finds it in the agreed context', () => {
+    expect(parseFrameDraw(frameForRun({ enabled: true, fresh: true, previous: [], recent: [], available: rich, request: 'tienda con menú lateral', random: seeded(1) }).file!.content).header).toBe('side-rail');
+    const facts = frameInputs({ composedInstruction: 'X\n\nContexto acordado:\nreorganizar el menú/navbar hacia la izquierda.\nUso de las imágenes (respetar estos roles):\n[]\n\nPedido actual del comercio:\nsi usa', merchantInstruction: 'si usa', assetLegend: [], imageUses: [], items: [] });
+    expect(facts.headerAsk).toBe('side');
+  });
+});
+
+
+describe('trust and reviews are drawn per store (spec 2026-10-18)', () => {
+  it('draws a trust device for every store, avoiding the ones recent stores got', () => {
+    const recent = DESIGN_CATALOGUE.trust.filter(entry => entry.id !== 'owner-note').map(entry => ({ trust: entry.id }));
+    for (let seed = 1; seed < 20; seed++) expect(drawDesign(seeded(seed), recent, rich, '').trust).toBe('owner-note');
+    const seen = new Set(Array.from({ length: 60 }, (_, seed) => drawDesign(seeded(seed + 1), [], rich, '').trust));
+    expect(seen.size).toBeGreaterThan(4);
+  });
+
+  it('draws a reviews section only with two or more published reviews, and a carousel only with three photos', () => {
+    for (let seed = 1; seed < 30; seed++) {
+      expect(drawDesign(seeded(seed), [], { ...rich, reviews: 1 }, '').reviews).toBeUndefined();
+      expect(DESIGN_CATALOGUE.reviews.map(entry => entry.id)).toContain(drawDesign(seeded(seed), [], { ...rich, reviews: 2 }, '').reviews);
+      expect(drawDesign(seeded(seed), [], { photos: 2, products: 0, facts: false }, '').trust).not.toBe('photo-carousel');
+    }
+    expect(frameInputs({ ...bare, reviews: 3 }).available.reviews).toBe(3);
+  });
+
+  it('tells YAPI the drawn trust and reviews parts, and reads them back from a saved draw', () => {
+    const paragraph = frameDirection({ trust: 'photo-carousel', reviews: 'big-quote' });
+    expect(paragraph).toContain('data-pagosya-carousel');
+    expect(paragraph).toContain('Never write a review yourself');
+    expect(parseFrameDraw(JSON.stringify({ trust: 'photo-carousel', reviews: 'big-quote' }))).toEqual({ trust: 'photo-carousel', reviews: 'big-quote' });
+    expect(parseFrameDraw(JSON.stringify({ trust: 'nonsense' }))).toEqual({});
+  });
+
+  it('never asks for a photo grid or an invented review', () => {
+    for (const entry of [...DESIGN_CATALOGUE.trust, ...DESIGN_CATALOGUE.reviews]) {
+      expect(entry.desktop).not.toMatch(/\b(grid|gallery|collage|mosaic)\b/i);
+      expect(entry.phone).toBeTruthy();
+    }
+    expect(DESIGN_CATALOGUE.reviews.every(entry => entry.needs === 'reviews')).toBe(true);
   });
 });

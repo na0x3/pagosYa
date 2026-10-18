@@ -2,12 +2,18 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { readOrderTrackingToken } from '../consumer/order-tracking-token';
-import { ArticleDto, BundleDto, ReviewDto, ReviewQueryDto } from './commerce-content.dto';
+import { ArticleDto, BundleDto, ReviewDto, ReviewQueryDto, TestimonialDto } from './commerce-content.dto';
 
 @Injectable()
 export class CommerceContentService {
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
   private readonly reviewSelect = { id: true, productId: true, displayName: true, rating: true, body: true, status: true, createdAt: true } as const;
+  private readonly testimonialSelect = { id: true, displayName: true, rating: true, body: true, sourceNote: true, status: true, createdAt: true } as const;
+  /** Merchant-entered reviews (spec 2026-10-18). Read as none until the StoreTestimonial migration is applied. */
+  private async testimonials(storeId: string, published: boolean) {
+    try { return await this.prisma.storeTestimonial.findMany({ where: { storeId, ...(published ? { status: 'PUBLISHED' } : {}) }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 100, select: this.testimonialSelect }); }
+    catch { return []; }
+  }
   async owner(merchantId: string, storeId: string) {
     if (!await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true } })) throw new NotFoundException('Store not found');
   }
@@ -18,7 +24,9 @@ export class CommerceContentService {
       this.prisma.storeReview.findMany({ where: { storeId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 31, select: this.reviewSelect }),
       this.prisma.storeBundle.findMany({ where: { storeId }, orderBy: { createdAt: 'desc' }, take: 100 }),
       this.prisma.storeReview.groupBy({ by: ['status'], where: { storeId }, _count: true }),
-    ]); return { articles, reviews: reviews.slice(0, 30), reviewNextBefore: reviews.length > 30 ? reviews[29].id : null, reviewCounts: Object.fromEntries(reviewCounts.map((row: any) => [row.status, row._count])), bundles };
+    ]);
+    const testimonials = await this.testimonials(storeId, false);
+    return { articles, reviews: reviews.slice(0, 30), reviewNextBefore: reviews.length > 30 ? reviews[29].id : null, reviewCounts: Object.fromEntries(reviewCounts.map((row: any) => [row.status, row._count])), bundles, testimonials };
   }
   async reviews(merchantId: string, storeId: string, query: ReviewQueryDto) {
     await this.owner(merchantId, storeId);
@@ -58,6 +66,23 @@ export class CommerceContentService {
     if (!(await this.prisma.storeReview.updateMany({ where: { id, storeId }, data: { status } })).count) throw new NotFoundException('Reseña no encontrada');
     return { status };
   }
+  async createTestimonial(merchantId: string, storeId: string, dto: TestimonialDto) {
+    await this.owner(merchantId, storeId);
+    if (dto.confirmedReal !== true) throw new BadRequestException('Confirma que son palabras reales de un cliente.');
+    const [displayName, body, sourceNote] = [dto.displayName.trim(), dto.body.trim(), dto.sourceNote?.trim() || null];
+    if (!displayName || body.length < 3) throw new BadRequestException('Completa el nombre y la reseña.');
+    return this.prisma.storeTestimonial.create({ data: { storeId, displayName, body, sourceNote, rating: dto.rating }, select: this.testimonialSelect });
+  }
+  async testimonialStatus(merchantId: string, storeId: string, id: string, status: string) {
+    await this.owner(merchantId, storeId);
+    if (!(await this.prisma.storeTestimonial.updateMany({ where: { id, storeId }, data: { status } })).count) throw new NotFoundException('Reseña no encontrada');
+    return { status };
+  }
+  async deleteTestimonial(merchantId: string, storeId: string, id: string) {
+    await this.owner(merchantId, storeId);
+    if (!(await this.prisma.storeTestimonial.deleteMany({ where: { id, storeId } })).count) throw new NotFoundException('Reseña no encontrada');
+    return { deleted: true };
+  }
   async bundleStatus(merchantId: string, storeId: string, id: string, active: boolean) {
     await this.owner(merchantId, storeId);
     if (!(await this.prisma.storeBundle.updateMany({ where: { id, storeId }, data: { active } })).count) throw new NotFoundException('Paquete no encontrado');
@@ -84,6 +109,12 @@ export class CommerceContentService {
     ]);
     const reviewSummary = Object.fromEntries((ratings as any[]).filter(row => row.productId && row._count._all > 0 && row._avg.rating !== null)
       .map(row => [row.productId, { count: row._count._all, average: Math.round(row._avg.rating * 10) / 10 }]));
-    return { articles, reviews, bundles, reviewSummary };
+    // Both sources, newest first, each labelled so the store says honestly where it came from.
+    const testimonials = await this.testimonials(storeId, true);
+    const all = [
+      ...reviews.map(review => ({ ...review, source: 'ORDER' as const, sourceNote: null })),
+      ...testimonials.map(({ status: _status, ...testimonial }) => ({ ...testimonial, productId: null, source: 'MERCHANT' as const })),
+    ].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    return { articles, reviews: all, bundles, reviewSummary };
   }
 }

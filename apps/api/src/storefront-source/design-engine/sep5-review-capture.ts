@@ -10,9 +10,11 @@ export type Sep5HeaderFacts = { width: number; pageWidth: number; missingImages:
 // Emoji presentation only: arrows, ticks and close glyphs (↗ ✔ ✖) are functional symbols, and a glyph inside a
 // button or a labelled control is an icon.
 const EMOJI = /\p{Emoji_Presentation}/u;
-/** Elements whose whole text is emoji: decoration, the clearest AI-site tell. Emoji inside a sentence is copy. */
+/** Elements whose whole text is emoji: decoration, the clearest AI-site tell. Emoji inside a sentence is copy, and so is
+ *  one emoji leading a point beside its own title and text (owner 2026-10-18: «structured sections with emojis»), the kit's
+ *  trust block included. */
 export function decorativeEmojiCount(doc: Document): number {
-  return Array.from(doc.body.querySelectorAll('*')).filter(el => el.children.length === 0 && !el.closest('button,[aria-label]') && EMOJI.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '')).length;
+  return Array.from(doc.body.querySelectorAll('*')).filter(el => el.children.length === 0 && !el.closest('button,[aria-label],[data-pagosya-trust]') && EMOJI.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '') && !(el.parentElement?.firstElementChild === el && /[\p{L}]{3}/u.test(el.parentElement.textContent || ''))).length;
 }
 /** Circular stamp text (several "·" separators) in a round box without an SVG textPath: HTML cannot bend it. */
 export function fakeCircularTextCount(doc: Document, styleOf: (el: Element) => { radius: number; width: number; height: number }): number {
@@ -95,7 +97,7 @@ export async function captureSep5Draft(snapshot: SourceProjectSnapshot, signal?:
           bodySize: (() => { const sizes = Array.from(document.querySelectorAll('main p')).filter(node => (node.textContent || '').trim().length > 40 && node.getBoundingClientRect().width > 0).map(node => Math.round(parseFloat(getComputedStyle(node).fontSize))).sort((a, b) => a - b); return sizes.length ? sizes[Math.floor(sizes.length / 2)] : 0; })(),
           pageText: (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 20000),
           // Design draw round 2 quality floor (inlined: the page cannot import the helpers above).
-          decorEmoji: Array.from(document.body.querySelectorAll('*')).filter(el => el.children.length === 0 && !el.closest('button,[aria-label]') && /\p{Emoji_Presentation}/u.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '') && el.getBoundingClientRect().width > 0).length,
+          decorEmoji: Array.from(document.body.querySelectorAll('*')).filter(el => el.children.length === 0 && !el.closest('button,[aria-label],[data-pagosya-trust]') && /\p{Emoji_Presentation}/u.test(el.textContent || '') && !/[\p{L}\p{N}]/u.test(el.textContent || '') && !(el.parentElement?.firstElementChild === el && /[\p{L}]{3}/u.test(el.parentElement.textContent || '')) && el.getBoundingClientRect().width > 0).length,
           // The kit renders the price beside .menu-item__copy, not inside it: padding only the copy leaves the price on the card edge.
           priceOffset: Array.from(document.querySelectorAll('.menu-item')).filter(card => { const name = card.querySelector('.menu-item__copy h3, .menu-item__copy h2'), price = card.querySelector('.menu-item__price'); if (!name || !price || !price.getBoundingClientRect().width) return false; return Math.abs(name.getBoundingClientRect().left - price.getBoundingClientRect().left) > 6; }).length,
           // An icon-only card add button (the kit's "+") that the store's CSS decorates with a symbol of its own.

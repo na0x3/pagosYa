@@ -53,7 +53,7 @@ it('marks each card whose model hero is still being written as pending', () => {
 it('each card carries its commerce line, empty for a slot drawn before commerce draws', () => {
   const value = proposal();
   value.slots[2] = { ...value.slots[2], commerce: { account: 'split', checkout: 'ticket', fields: 'pill', cartSurface: 'sheet', added: 'stamp' } };
-  expect(styleProposalView('g1', value).cards.map(card => [card.slot, card.commerce])).toEqual([[0, ''], [2, 'Cuenta: dividida · Pago: ticket · Carrito: hoja']]);
+  expect(styleProposalView('g1', value).cards.map(card => [card.slot, card.commerce])).toEqual([[0, ''], [2, 'Cuenta: dividida · Pago: ticket · Carrito: lateral']]);
 });
 
 // Spec 2026-10-12 faster generation: cards are choosable while their heroes are still being drawn.

@@ -17,6 +17,11 @@ export const brandSourceOwnSite = (words: string) => OWN_SITE.test(words);
 /** Style-only wording about another site («como esta tienda», «me gusta este estilo»). */
 export const brandSourceOther = (words: string) => OTHER.test(words);
 
+const SITE_PART = /(?<!\p{L})(carrito|pedido|men[uú]|navbar|navegaci[oó]n|header|cabecera|encabezado|footer|pie de p[aá]gina|bot[oó]n|botones|secci[oó]n|tarjetas?|checkout|ficha|p[aá]gina de producto)(?!\p{L})/iu;
+/** The merchant names a part of their store (The Bake Lab 2026-10-17: a screenshot of their own empty cart): a screenshot
+ *  then points at that part, it is not brand material, so an existing store's edit never asks BRAND_SOURCE_QUESTION. */
+export const brandSourcePointsAtSite = (words: string) => SITE_PART.test(words);
+
 export const BRAND_SOURCE_QUESTION = '¿Es material de tu marca (uso sus colores, frases y fotos) o solo una inspiración de estilo?';
 
 const ANSWER_OWN = /^(s[ií]|claro)(?!\p{L})|(?<!\p{L})(es m[ií][oa]|son m[ií]os|de mi marca|mi marca|mi negocio)(?!\p{L})/iu;

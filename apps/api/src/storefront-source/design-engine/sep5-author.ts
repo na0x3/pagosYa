@@ -116,6 +116,8 @@ export function sep5AuthorPrompt(input: {
   brain?: string;
   /** The voice sheet and the writing rules (storeVoiceDirection, spec 2026-10-14 store voice). Absent or blank, byte-identical. */
   voice?: string;
+  /** SEP5_NO_PHOTO_GROUPS unless the merchant asked for a gallery (owner 2026-10-18). Absent or blank, byte-identical. */
+  photos?: string;
 }): string {
   return [
     'Create a bespoke professional Spanish-language storefront as complete static HTML, CSS and classic browser JavaScript source files. This is code generation, not a section-schema or a theme preset. Use the business brief to decide the entire information architecture, typography, palette, composition, navigation and interactions. The resulting business should have an individual identity.',
@@ -137,6 +139,7 @@ export function sep5AuthorPrompt(input: {
     ...(input.voice?.trim() ? [input.voice.trim()] : []),
     ...(input.brand?.trim() ? [input.brand.trim()] : []),
     ...(input.products ? [SEP5_PRODUCTS] : []),
+    ...(input.photos?.trim() ? [input.photos.trim()] : []),
     ...(input.signature?.trim() ? [input.signature.trim()] : []),
     ...(input.boldDefault ? [SEP5_BOLD_DEFAULT] : []),
     ...(input.fonts?.trim() ? [input.fonts.trim()] : []),
@@ -154,6 +157,12 @@ export function sep5AuthorPrompt(input: {
  * the pinned contract asked for more, and calm is the safe reading of most briefs. Bold is now the default; a
  * merchant who asks for minimal, sober or quiet does not get this paragraph.
  */
+/** Owner 2026-10-15 and 2026-10-18 («those pictures all together … its not good, instead write structured sections with emojis,
+ *  and things for the customers to trust»; «i dont want any websites looking the same»). How a store earns trust is drawn per
+ *  store (frame-draw.ts trust and reviews), so this names no section. The save enforces it too (source-photo-groups.ts): a photo
+ *  wall becomes a carousel of the same photos. */
+export const SEP5_NO_PHOTO_GROUPS = 'NO PHOTO GROUPS, SEEK TRUST: Never place three or more photos side by side in one section: no gallery, collage, mosaic, photo strip, lookbook or wall of photos, however many photos were uploaded and however bold the design. A section shows at most two of the store\'s own photos at once, each beside useful text. To show more, put them in a carousel that shows one at a time (<div data-pagosya-carousel> with one child per slide; the platform adds swiping, arrows and dots), or leave them unused. The platform turns any photo wall into such a carousel. Trust is the main thing the home page must build: build the trust and reviews parts the DESIGN DRAW names, in this store\'s own way; structured points may lead with one emoji beside a short title and one line of text. Only facts the business data confirms; never an invented review, number or promise, never an emoji alone as decoration.';
+
 export const SEP5_BOLD_DEFAULT = 'BOLD BY DEFAULT: Make this store visually bold. Build the page from colour fields: alternate section backgrounds drawn from the palette and include at least one strong or dark full-width band, not one pale paper colour throughout. Set display type large and heavy where the font allows. Give the page one memorable device taken from this business, such as a rotated sticker or badge, photographs that overlap, a marquee band of its own words or an oversized row of real numbers. A photograph beside a text block is one section shape among many; a page made only of image | text splits reads as a template, so mix in other shapes: a full-colour band with giant type, a marquee, an overlapping collage, a horizontal image strip, a row of figures. Large type still wraps between words: no heading may break a word in the middle, and nothing overflows at 320px.';
 
 /**

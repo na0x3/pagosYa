@@ -37,11 +37,11 @@ const computed = (page: Page, selector: string, properties: string[]) => page.ev
 describe('cascade: kit defaults < DNA < store kit CSS < the store\'s own unlayered CSS', () => {
   it('store kit CSS outranks the kit defaults (shoppingStyle) and every DNA cart placement', async () => {
     for (const dna of [undefined, { ...DNA, cart: 'drawer' }, { ...DNA, cart: 'sheet' }]) {
-      const page = await open({ dna, kit: '.cart-drawer{background:rgb(9, 8, 7)}html[data-dna-cart=sheet] .cart-drawer{border-top-left-radius:3px}' });
+      const page = await open({ dna, kit: '.cart-drawer{background:rgb(9, 8, 7)}html[data-dna-cart=drawer] .cart-drawer{border-top-left-radius:3px}' });
       try {
         await page.waitForSelector('.menu-add');
         expect(await computed(page, '.cart-drawer', ['background-color'])).toEqual({ 'background-color': 'rgb(9, 8, 7)' });
-        if (dna?.cart === 'sheet') expect(await computed(page, '.cart-drawer', ['border-top-left-radius'])).toEqual({ 'border-top-left-radius': '3px' });
+        if (dna) expect(await computed(page, '.cart-drawer', ['border-top-left-radius'])).toEqual({ 'border-top-left-radius': '3px' });
       } finally { await page.close(); }
     }
   });

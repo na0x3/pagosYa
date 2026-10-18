@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { kitPath } from '@pagosya/storefront-kit';
-import { legacyAuthoredFile, validateLegacySources } from './source-legacy';
+import { legacyAuthoredFile, stripLegacyStyleImports, validateLegacySources } from './source-legacy';
 import { SourceValidationError } from './source-validation-error';
 
 const file = (path: string, content: string) => ({ path, content });
@@ -113,5 +113,26 @@ describe('legacy source validation', () => {
 
   it('never fails a page it cannot parse as a whole document', () => {
     expect(() => validateLegacySources([file('index.html', '<h1>Casa<')] as any)).not.toThrow();
+  });
+
+  // baek 2026-10-17: «modifica el carrito» built for two minutes, then the save refused styles.css over one @import.
+  it('drops a YAPI stylesheet @import before the save would refuse it, and reports the repair', () => {
+    const css = '@import url("https://fonts.googleapis.com/css2?family=Fraunces");\n@import "cart.css";\n.cart{color:#222}\n@media (min-width:600px){.cart{padding:2rem}}';
+    const { files, repairs } = stripLegacyStyleImports([file('styles.css', css), file('brand.css', '@import "x.css";'), file('index.html', '<h1>Casa</h1>')] as any);
+    const styles = files.find(entry => entry.path === 'styles.css')!.content;
+    expect(styles).not.toMatch(/@import/);
+    expect(styles).toMatch(/\.cart\{color:#222\}/);
+    expect(styles).toMatch(/@media/);
+    expect(() => validateLegacySources(files.filter(entry => entry.path !== 'brand.css'))).not.toThrow();
+    // Runtime files are replaced on render and never authored, so they are left alone.
+    expect(files.find(entry => entry.path === 'brand.css')!.content).toBe('@import "x.css";');
+    expect(repairs).toEqual(['styles.css: removed 2 @import rule(s); stylesheets and fonts must be local']);
+  });
+
+  it('leaves stylesheets without imports byte-identical', () => {
+    const input = [file('styles.css', '.a{color:red}')];
+    const { files, repairs } = stripLegacyStyleImports(input as any);
+    expect(files[0]).toBe(input[0]);
+    expect(repairs).toEqual([]);
   });
 });

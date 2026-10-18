@@ -404,7 +404,13 @@ export class SourceProjectsService {
         if (contactFormEnabled !== undefined) await tx.store.update({ where: { id: storeId }, data: { contactFormEnabled } });
         const createdProducts: PaymentLink[] = [];
         const optionChanges: Array<{ productName: string; count: number }> = [];
+        // A listed product the store already sells is kept, never copied (FLORZ 2026-10-17: the walkthrough created
+        // both flowers with photos, then the build re-read «Productos: …» from the same request and made photo-less twins).
+        const productKey = (name: string, currency?: string | null) => `${currency || 'BOB'}:${name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()}`;
+        const sold = new Set(generation?.products?.length ? (await tx.paymentLink.findMany({ where: { storeId }, select: { name: true, currency: true } })).map(item => productKey(item.name, item.currency)) : []);
         for (const product of generation?.products || []) {
+          if (sold.has(productKey(product.name, product.currency))) continue;
+          sold.add(productKey(product.name, product.currency));
           const variants = normalizeProductVariants(product.variants);
           if (variants.length) optionChanges.push({ productName: product.name, count: variants.length });
           createdProducts.push(await tx.paymentLink.create({ data: { storeId, name: product.name, description: product.description,

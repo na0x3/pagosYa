@@ -57,7 +57,8 @@
   // product is the one exception: render() sets it from productPageStyle(), the page this kit actually draws.
   const hasDna = Boolean(config.dna && typeof config.dna === 'object');
   if (hasDna) {
-    for (const name of Object.keys(DNA_VALUES)) if (name !== 'product' && DNA_VALUES[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, config.dna[name]);
+    // Every cart opens as the half-screen side panel (owner 2026-10-17); a saved sheet, page or overlay is drawn as one too.
+    for (const name of Object.keys(DNA_VALUES)) if (name !== 'product' && DNA_VALUES[name].includes(config.dna[name])) document.documentElement.setAttribute(`data-dna-${name}`, name === 'cart' ? 'drawer' : config.dna[name]);
   }
   // Account, checkout and the cart path drawn per store (spec 2026-10-11 commerce surfaces). Runtime-only values, never in
   // DNA_VALUES (the API's planner and seed must not see them); a test pins them to COMMERCE_RUNTIME_ENUMS.
@@ -1330,6 +1331,48 @@
     const present = keys.filter(key => typeof storePolicies()[key] === 'string' && storePolicies()[key].trim());
     return present.length ? `<nav class="pagosya-policies" aria-label="Políticas de la tienda">${present.map(key => `<button type="button" data-pagosya-policy="${key}">${escape(POLICY_TITLES[key])}</button>`).join('')}</nav>` : '';
   }
+  // Trust block (owner 2026-10-18: «instead [of photo groups] write structured sections with emojis, and things for the
+  // customers to trust»). A `data-pagosya-trust` mount lists what is true of this store now, from its live settings, one
+  // emoji per point; nothing here is a marketing claim. Authored children (a heading) stay; with under two points it hides.
+  function trustPoints() {
+    const locations = store.locations || [];
+    const pickupPlaces = locations.filter(l => l.pickupEnabled).length;
+    const phone = String(store.contactPhone || '').replace(/\D/g, '');
+    const email = typeof store.contactEmail === 'string' && /^[^\s@<>"]+@[^\s@<>"]+$/.test(store.contactEmail.trim()) ? store.contactEmail.trim() : '';
+    const points = [];
+    if (!SHOWCASE) {
+      if (store.checkoutMode === 'whatsapp') points.push(['💬', 'Pedido por WhatsApp', 'Confirmas los detalles con la tienda']);
+      else if (store.checkoutMode !== 'external') points.push(['🔒', 'Pago seguro', 'Procesado por pagosYa']);
+      points.push(['🧾', 'Sin sorpresas', 'Revisas tu pedido y el total antes de pagar']);
+      if (store.shippingPickupEnabled || pickupPlaces) points.push(['🛍️', 'Retiro en tienda', pickupPlaces > 1 ? `${pickupPlaces} sucursales disponibles` : 'Lo eliges al revisar tu pedido']);
+      if (store.shippingEnabled || locations.some(l => l.deliveryEnabled)) points.push(['🚚', 'Entrega a domicilio', 'El costo se confirma al pagar']);
+      if (store.digitalGoodsEnabled) points.push(['📩', 'Entrega digital', 'Descarga segura después del pago']);
+      if (typeof storePolicies().returns === 'string' && storePolicies().returns.trim()) points.push(['↩️', POLICY_TITLES.returns, 'Lee la política antes de comprar', { policy: 'returns' }]);
+    }
+    if (phone.length >= 7 && store.checkoutMode !== 'whatsapp') points.push(['💬', 'Escríbenos por WhatsApp', String(store.contactPhone).trim(), { href: `https://wa.me/${phone}` }]);
+    // A shop already has enough to say; a showcase lists every way to reach it.
+    if (email && (SHOWCASE || points.length < 3)) points.push(['✉️', 'Escríbenos', email, { href: `mailto:${email}` }]);
+    const place = locations.find(l => typeof l.address === 'string' && l.address.trim());
+    if (SHOWCASE && place) points.push(['📍', typeof place.name === 'string' && place.name.trim() ? place.name.trim() : 'Visítanos', place.address.trim()]);
+    return points;
+  }
+  function renderTrust() {
+    const points = trustPoints();
+    document.querySelectorAll('[data-pagosya-trust]').forEach(mount => {
+      mount.querySelector(':scope > .pagosya-trust__list')?.remove();
+      mount.hidden = points.length < 2;
+      // A section the save turned into this block (source-photo-groups.ts) has nothing else to show either.
+      const section = mount.closest('[data-pagosya-trust-section]');
+      if (section) section.hidden = mount.hidden;
+      if (mount.hidden) return;
+      mount.insertAdjacentHTML('beforeend', `<ul class="pagosya-trust__list" role="list">${points.map(([emoji, title, detail, link]) => {
+        const body = `<span class="pagosya-trust__emoji" aria-hidden="true">${emoji}</span><strong>${escape(title)}</strong><span class="pagosya-trust__detail">${escape(detail)}</span>`;
+        const card = link?.href ? `<a class="pagosya-trust__card" href="${escape(link.href)}" target="_blank" rel="noopener">${body}</a>`
+          : link?.policy ? `<button class="pagosya-trust__card" type="button" data-pagosya-policy="${link.policy}">${body}</button>` : `<div class="pagosya-trust__card">${body}</div>`;
+        return `<li class="pagosya-trust__item">${card}</li>`;
+      }).join('')}</ul>`);
+    });
+  }
   // Information pages (spec 2026-09-30-store-content-pages-design): each `data-pagosya-page` mount is filled from the
   // live store with escaped text, and `data-pagosya-pages` links only the pages that have something to show.
   const INFO_LINKS = [
@@ -1390,33 +1433,36 @@
   const ACCOUNT_CADENCE = { WEEKLY: 'cada semana', BIWEEKLY: 'cada dos semanas', MONTHLY: 'cada mes' };
   const accountDay = iso => { try { return iso ? new Date(iso).toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' }) : ''; } catch { return ''; } };
   // Unlayered on purpose: the store's own generic rules (h1, input) must not undo the form; YAPI's theme comes after and wins.
+  // Each rule weighs one attribute ([data-account-gate] :where(…)), so a store rule on a part ([data-account-gate]
+  // [data-part=input] in styles.css) wins although this sheet is appended later (2026-10-18, florart: the kit's later
+  // copy of the same selector overrode the store's title, and its fields went dark).
   const ACCOUNT_CSS = `
-[data-account-gate] [data-part=account]{--acc-bg:var(--account-background,var(--ui-paper,#fff));--acc-ink:var(--account-foreground,var(--ui-ink,#111));--acc-accent:var(--account-accent,var(--ui-accent,#111));--acc-radius:var(--account-radius,var(--ui-radius-control,10px));display:grid;gap:var(--ui-s5,24px);color:var(--acc-ink)}
-[data-account-gate] [data-part=card]{display:grid;gap:var(--ui-s3,12px)}
-[data-account-gate] [data-layout=card] [data-part=card]{width:100%;max-width:440px;margin-inline:auto;box-sizing:border-box;padding:clamp(24px,4vw,40px);background:var(--ui-surface,var(--acc-bg));border:1px solid var(--ui-line,#0002);border-radius:calc(var(--acc-radius) * 1.6)}
-[data-account-gate] [data-layout=split]{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch}
-[data-account-gate] [data-layout=split] [data-part=media]{margin:0}
-[data-account-gate] [data-layout=split] [data-part=media] img{display:block;width:100%;height:100%;min-height:320px;object-fit:cover;border-radius:var(--ui-radius-media,12px)}
-[data-account-gate] [data-layout=minimal] [data-part=card]{max-width:560px}
-[data-account-gate] [data-layout=panel]{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
-[data-account-gate] [data-part=title]{margin:0;font-family:var(--ui-display-font,var(--store-heading-font,inherit));font-size:clamp(28px,3vw,40px);line-height:1.1}
-[data-account-gate] [data-part=lead]{margin:0;opacity:.8}
-[data-account-gate] [data-part=form]{display:grid;gap:var(--ui-s4,16px)}
-[data-account-gate] [data-part=field]{display:grid;gap:6px}
-[data-account-gate] [data-part=label]{font-size:.85em;font-weight:600}
-[data-account-gate] [data-part=input]{box-sizing:border-box;width:100%;min-height:48px;padding:0 14px;border:1px solid var(--ui-line,#0003);border-radius:var(--acc-radius);background:var(--acc-bg);color:var(--acc-ink);font:inherit}
-[data-account-gate] [data-part=submit]{min-height:48px;font:inherit;font-weight:700;cursor:pointer}
-:root:not([data-dna-fields]) [data-account-gate] [data-part=submit]{background:var(--acc-accent);color:var(--ui-on-accent,#fff);border-radius:var(--acc-radius);border:0}
-[data-account-gate] [data-part=link]{color:inherit;text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;font:inherit;cursor:pointer;justify-self:start}
-[data-account-gate] [data-part=error]:empty{display:none}
-[data-account-gate] [data-part=error]{margin:0;color:#b42318;font-weight:600}
-[data-account-gate] [data-part=notice]{margin:0;padding:10px 12px;border-radius:var(--acc-radius);background:color-mix(in srgb,var(--acc-accent) 10%,transparent)}
-[data-account-gate] [data-part=nav]{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
-[data-account-gate] [data-part=nav-item][aria-current=page]{font-weight:700;text-decoration:underline}
-[data-account-gate] [data-part=list]{display:grid;gap:12px;margin:0;padding:0;list-style:none}
-[data-account-gate] :is([data-part=order],[data-part=address]){display:grid;gap:4px;padding:14px 16px;border:1px solid var(--ui-line,#0002);border-radius:var(--acc-radius)}
-[data-account-gate] [data-part=danger]{display:grid;gap:12px;padding-top:16px;border-top:1px solid var(--ui-line,#0002)}
-@media (max-width:720px){[data-account-gate] :is([data-layout=split],[data-layout=panel]){grid-template-columns:1fr}[data-account-gate] [data-layout=split] [data-part=media] img{min-height:0;max-height:220px}}
+[data-account-gate] :where([data-part=account]){--acc-bg:var(--account-background,var(--ui-paper,#fff));--acc-ink:var(--account-foreground,var(--ui-ink,#111));--acc-accent:var(--account-accent,var(--ui-accent,#111));--acc-radius:var(--account-radius,var(--ui-radius-control,10px));display:grid;gap:var(--ui-s5,24px);color:var(--acc-ink)}
+[data-account-gate] :where([data-part=card]){display:grid;gap:var(--ui-s3,12px)}
+[data-account-gate] :where([data-layout=card] [data-part=card]){width:100%;max-width:440px;margin-inline:auto;box-sizing:border-box;padding:clamp(24px,4vw,40px);background:var(--ui-surface,var(--acc-bg));border:1px solid var(--ui-line,#0002);border-radius:calc(var(--acc-radius) * 1.6)}
+[data-account-gate] :where([data-layout=split]){grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch}
+[data-account-gate] :where([data-layout=split] [data-part=media]){margin:0}
+[data-account-gate] :where([data-layout=split] [data-part=media] img){display:block;width:100%;height:100%;min-height:320px;object-fit:cover;border-radius:var(--ui-radius-media,12px)}
+[data-account-gate] :where([data-layout=minimal] [data-part=card]){max-width:560px}
+[data-account-gate] :where([data-layout=panel]){grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
+[data-account-gate] :where([data-part=title]){margin:0;font-family:var(--ui-display-font,var(--store-heading-font,inherit));font-size:clamp(28px,3vw,40px);line-height:1.1}
+[data-account-gate] :where([data-part=lead]){margin:0;opacity:.8}
+[data-account-gate] :where([data-part=form]){display:grid;gap:var(--ui-s4,16px)}
+[data-account-gate] :where([data-part=field]){display:grid;gap:6px}
+[data-account-gate] :where([data-part=label]){font-size:.85em;font-weight:600}
+[data-account-gate] :where([data-part=input]){box-sizing:border-box;width:100%;min-height:48px;padding:0 14px;border:1px solid var(--ui-line,#0003);border-radius:var(--acc-radius);background:var(--acc-bg);color:var(--acc-ink);font:inherit}
+[data-account-gate] :where([data-part=submit]){min-height:48px;font:inherit;font-weight:700;cursor:pointer}
+:where(:root:not([data-dna-fields])) [data-account-gate] :where([data-part=submit]){background:var(--acc-accent);color:var(--ui-on-accent,#fff);border-radius:var(--acc-radius);border:0}
+[data-account-gate] :where([data-part=link]){color:inherit;text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;font:inherit;cursor:pointer;justify-self:start}
+[data-account-gate] :where([data-part=error]:empty){display:none}
+[data-account-gate] :where([data-part=error]){margin:0;color:#b42318;font-weight:600}
+[data-account-gate] :where([data-part=notice]){margin:0;padding:10px 12px;border-radius:var(--acc-radius);background:color-mix(in srgb,var(--acc-accent) 10%,transparent)}
+[data-account-gate] :where([data-part=nav]){display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+[data-account-gate] :where([data-part=nav-item][aria-current=page]){font-weight:700;text-decoration:underline}
+[data-account-gate] :where([data-part=list]){display:grid;gap:12px;margin:0;padding:0;list-style:none}
+[data-account-gate] :where(:is([data-part=order],[data-part=address])){display:grid;gap:4px;padding:14px 16px;border:1px solid var(--ui-line,#0002);border-radius:var(--acc-radius)}
+[data-account-gate] :where([data-part=danger]){display:grid;gap:12px;padding-top:16px;border-top:1px solid var(--ui-line,#0002)}
+@media (max-width:720px){[data-account-gate] :where([data-layout=split],[data-layout=panel]){grid-template-columns:1fr}[data-account-gate] :where([data-layout=split] [data-part=media] img){min-height:0;max-height:220px}}
 `;
   function accountFrame(slot, inner) {
     const { layout, photo } = accountTheme();
@@ -1491,6 +1537,10 @@
     if (!gates.length || accountDrawn) return;
     accountDrawn = true;
     const kit = document.createElement('style'); kit.dataset.pagosyaKit = 'account'; kit.textContent = ACCOUNT_CSS; document.head.append(kit);
+    // The gate's fallback CSS, saved in the page, styled every h1, p and .ui-button in the gate: the drawn submit (a
+    // .ui-button) took color:inherit over the store's own button colour. Pages saved before 2026-10-18 get it narrowed
+    // to the fallback (the .ui-container's own children), as source-static-pages.ts writes it now.
+    document.querySelectorAll('[data-account-gate] style[data-pagosya-standard-pages]').forEach(style => { style.textContent = style.textContent.replace(/\.ui-account-gate (h1|p|\.ui-button)(?=[\s{[:])/g, '.ui-account-gate>.ui-container>$1'); });
     const theme = accountTheme();
     // Defence in depth: the API sanitized this CSS (account-theme.ts); this only refuses what the sanitizer never emits.
     if (theme.css && theme.css.length <= 8000 && !/@\s*import|url\s*\(|expression\s*\(|<|\\|position\s*:\s*fixed|!\s*important/i.test(theme.css)) {
@@ -2095,6 +2145,11 @@
     container.classList.remove('cart-drawer'); container.hidden = true;
     container.append(...slot.childNodes); slot.replaceWith(container);
   });
+  // Only the runtime dialog below is the drawer. An authored wrapper named .cart-drawer would wear its fixed styles
+  // while closed: with the "page" cart DNA that is an invisible full-screen layer that swallows scrolling and clicks.
+  // The design meant it as the drawer, though, so it never shows in the page either (The Bake Lab 2026-10-17: the
+  // mount itself was the aside, and its cart sat full width above the footer); openCart lends the mount to the dialog.
+  document.querySelectorAll('.cart-drawer').forEach(wrapper => { wrapper.classList.remove('cart-drawer'); wrapper.style.setProperty('display', 'none', 'important'); });
   // An empty mount is reserved for the drawer. Preserve deliberately authored
   // inline cart content, but do not append a second empty order below the footer.
   // Every control that opens the cart (source-commerce-contract accepts these); the click handler, the drawer mount
@@ -2107,17 +2162,17 @@
   });
   const cartDrawer = document.createElement('dialog');
   cartDrawer.className = 'cart-drawer';
+  // The store's CSS may describe its own hidden panel as .cart-drawer; this attribute names the platform's (overlay.js).
+  cartDrawer.setAttribute('data-pagosya-drawer', '');
   cartDrawer.setAttribute('aria-labelledby', 'cart-drawer-title');
   cartDrawer.innerHTML = `<header class="cart-drawer__header" data-part="cart-head"><h2 id="cart-drawer-title">${escape(CART_WORD || 'Tu pedido')}</h2><button type="button" data-cart-close aria-label="Cerrar pedido">×</button></header><div class="cart-drawer__body"></div><button type="button" class="cart-drawer__continue" data-cart-close>Seguir comprando</button>`;
   document.body.append(cartDrawer);
-  // A bottom-sheet cart shows a grab handle; the element only exists for stores with a DNA.
-  if (hasDna) cartDrawer.querySelector('.cart-drawer__header').insertAdjacentHTML('afterbegin', '<span class="cart-drawer__grip" aria-hidden="true"></span>');
   function renderPolicyLinks() {
     cartDrawer.querySelector(':scope > .pagosya-policies')?.remove();
     const drawerPolicies = policyLinks(['returns', 'delivery', 'terms', 'privacy']);
     if (drawerPolicies) cartDrawer.insertAdjacentHTML('beforeend', drawerPolicies);
     document.querySelectorAll('[data-pagosya-policies]').forEach(slot => { slot.innerHTML = policyLinks(); slot.hidden = !slot.innerHTML; });
-    renderInfoPages();
+    renderInfoPages(); renderTrust();
   }
   renderPolicyLinks();
   let drawerSlot, drawerPlaceholder, drawerWasHidden, drawerDisplay, drawerHadStyle, drawerOverflow, drawerTrigger;
@@ -2204,8 +2259,9 @@
     const covers = triggers.some(el => { const r = el.getBoundingClientRect(); return r.left < box.right && r.right > box.left && r.top < box.bottom && r.bottom > box.top; });
     if (covers) addedNotice.dataset.flip = box.top + box.bottom < innerHeight ? 'bottom' : 'top';
   }
+  /** Shows the added notice; false when it does not show (a button inside the cart), so the page status line speaks instead. */
   function addedFeedback(product, button, keyboard) {
-    if (button.closest('[data-pagosya-cart]')) return;
+    if (button.closest('[data-pagosya-cart]')) return false;
     addedNotice.dataset.instant = String(keyboard || config.motion === 'off');
     const template = addedTemplate();
     if (template && !addedNotice.hasAttribute('data-template')) { addedNotice.replaceChildren(template.make()); addedNotice.setAttribute('data-template', ''); }
@@ -2233,6 +2289,7 @@
         target.animate([{ opacity: .65 }, { opacity: 1 }], { duration, easing: settle });
       }
     }
+    return true;
   }
   /* DNA motifs: verification, slots, triggers. Every animation is finite, ends at rest and starts only when motion is
    * allowed; the kit's reduced-motion rule also switches it off in CSS. */
@@ -2680,8 +2737,23 @@
   // Kit defaults for the cart, the added notice and the order review: low priority, so the store's own CSS
   // (and its DNA) restyle them. Layered !important declarations still outrank authored ones.
   shoppingStyle.textContent = `@layer pagosya-commerce {
-    .cart-drawer{box-sizing:border-box;position:fixed;inset:0 0 0 auto;width:min(600px,48vw);max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font:inherit;overflow:auto;overscroll-behavior:contain;transform:translateX(0);transition:transform var(--motion-base,250ms) var(--ease-drawer,cubic-bezier(.32,.72,0,1)),opacity var(--motion-fast,200ms) var(--ease-out,cubic-bezier(.23,1,.32,1)),display var(--motion-base,250ms) allow-discrete,overlay var(--motion-base,250ms) allow-discrete}
+    .cart-drawer{box-sizing:border-box;position:fixed;inset:0 0 0 auto;width:min(760px,max(420px,50vw));max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:0;border:0;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font:inherit;overflow:auto;overscroll-behavior:contain;transform:translateX(0);transition:transform var(--motion-base,250ms) var(--ease-drawer,cubic-bezier(.32,.72,0,1)),opacity var(--motion-fast,200ms) var(--ease-out,cubic-bezier(.23,1,.32,1)),display var(--motion-base,250ms) allow-discrete,overlay var(--motion-base,250ms) allow-discrete}
     .cart-drawer:not([open]){transform:translateX(100%);opacity:0}
+    /* The kit's own dialog keeps its place, size and visibility whatever a design says about .cart-drawer: florart
+       2026-10-18 hid its own panel off-screen until its script added body.cart-open, so the kit's cart opened as an
+       invisible modal and the page froze. Layered !important outranks every store rule; colours, borders, padding and
+       motion stay the store's. Half the screen, the whole width on a phone (owner 2026-10-17). */
+    dialog[data-pagosya-drawer]{position:fixed!important;inset:0 0 0 auto!important;box-sizing:border-box!important;width:min(760px,max(420px,50vw))!important;max-width:100vw!important;height:100dvh!important;max-height:100dvh!important;margin:0!important;overflow:auto!important;visibility:visible!important;clip-path:none!important;pointer-events:auto!important}
+    dialog[data-pagosya-drawer][open]{display:block!important;opacity:1!important;transform:none!important}
+    dialog[data-pagosya-drawer]:not([open]){display:none!important;opacity:0!important;transform:translateX(100%)!important}
+    @starting-style{dialog[data-pagosya-drawer][open]{opacity:0!important;transform:translateX(100%)!important}}
+    @media(max-width:700px){dialog[data-pagosya-drawer]{width:100vw!important}}
+    /* The cart is a half-screen panel, so it reads in one column (owner 2026-10-17): a store template drawn as a page with a
+       side summary stacks inside it. Each declaration is inert on an element that is not a grid or flex container. */
+    .cart-drawer :is([data-cart-panel],[data-cart-panel] *):has([data-cart-slot=lines]):has([data-cart-slot=total]){grid-template-columns:minmax(0,1fr)!important;grid-template-rows:none!important;grid-template-areas:none!important;flex-direction:column!important}
+    /* A money figure never breaks mid-number («Bs 20,0 / 0» on a phone, FLORZ 2026-10-17). */
+    .cart-drawer :is([data-cart-field=line-total],[data-cart-field=unit]){white-space:nowrap!important}
+    .cart-drawer :is([data-cart-panel],[data-cart-panel] *):has([data-cart-slot=lines]):has([data-cart-slot=total])>*{grid-column:auto!important;grid-row:auto!important;order:0!important}
     /* The contrast guard's colour: the first layer's !important outranks every stylesheet, and yields while the control is
        hovered or focused so the store's own interactive colours (an inverted hover…) still apply. */
     [data-pagosya-contrast-guard=fixed]:not(:hover):not(:where(:focus-visible)),[data-pagosya-contrast-guard=fixed]:not(:hover):not(:where(:focus-visible)) [data-pagosya-contrast-guard=text]{color:var(--pagosya-contrast-color)!important;-webkit-text-fill-color:var(--pagosya-contrast-color)!important}
@@ -2734,9 +2806,24 @@
     .cart-drawer .quantity button{width:44px;border:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)));background:transparent}
     .cart-drawer .order-total{padding:24px 0;font-size:20px}.cart-drawer .order-empty{padding:40px 0;line-height:1.6}
     .cart-drawer .order-note{font-size:14px;line-height:1.5}
+    /* Small kit text keeps normal spacing: a heading's em tracking is inherited as pixels (FLORZ 2026-10-17: -.04em at 66px
+       reached the 12px «Vista previa · Sin cobros» as -2.64px and fused the words). A store's own rule still wins. */
+    .order-note,[data-pagosya-status],[data-pagosya-checkout-status]{letter-spacing:normal}
     .cart-drawer .checkout-button{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:52px;padding:16px 20px;border:0;background:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,#20211d))));color:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,#fff)))}
     .cart-drawer button:disabled{opacity:.5;cursor:default}.cart-drawer>.cart-drawer__continue{display:block!important;position:static!important;float:none!important;box-sizing:border-box!important;width:calc(100% - 64px)!important;max-width:none!important;margin:0 32px 32px!important;padding:10px 0;border:0;background:transparent;text-align:center!important;text-decoration:underline;text-underline-offset:4px}.cart-drawer[data-template]>:is(.cart-drawer__header,.cart-drawer__continue,.pagosya-policies){display:none!important}.cart-drawer[data-template] .cart-drawer__body{padding:0}
     .cart-drawer :focus-visible,.cart-added :focus-visible{outline:3px solid currentColor;outline-offset:3px}
+    /* Trust block (pages/policy-links.js renderTrust): emoji points on cards that take the section's own colours and type. */
+    :is([data-pagosya-trust],[data-pagosya-trust-section])[hidden]{display:none!important}
+    [data-pagosya-trust]{box-sizing:border-box;grid-column:1/-1;flex:1 1 100%;width:100%}
+    .pagosya-trust__list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:16px;margin:28px 0 0;padding:0;list-style:none}
+    .pagosya-trust__item{display:flex;margin:0;padding:0}
+    .pagosya-trust__card{box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;margin:0;padding:22px 20px;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:var(--kit-radius-panel,16px);background:color-mix(in srgb,currentColor 4%,transparent);color:inherit;font:inherit;text-align:left;text-decoration:none}
+    :is(a,button).pagosya-trust__card{cursor:pointer;transition:border-color var(--motion-fast,200ms) ease,transform var(--motion-fast,200ms) ease}
+    @media(hover:hover){:is(a,button).pagosya-trust__card:hover{border-color:color-mix(in srgb,currentColor 40%,transparent);transform:translateY(-2px)}}
+    .pagosya-trust__emoji{font-size:30px;line-height:1;margin-bottom:8px}
+    .pagosya-trust__card strong{font-size:1.05em;line-height:1.3}
+    .pagosya-trust__detail{font-size:.95em;line-height:1.5;opacity:.78;overflow-wrap:anywhere}
+    .pagosya-trust__card:focus-visible{outline:3px solid currentColor;outline-offset:3px}
     .cart-added{position:fixed;inset:auto 24px 24px auto;z-index:2147483001;display:flex;align-items:center;gap:20px;max-width:min(480px,calc(100vw - 48px));padding:12px 16px;background:var(--store-foreground,var(--brand-foreground,var(--ink,#20211d)));color:var(--store-background,var(--brand-background,var(--paper,#fff)));font:inherit;box-shadow:0 8px 24px #0002;opacity:0;transform:translateY(12px);visibility:hidden;transition:opacity var(--motion-fast,200ms) var(--ease-out,cubic-bezier(.23,1,.32,1)),transform var(--motion-fast,200ms) var(--motion-ease,var(--ease-out,cubic-bezier(.23,1,.32,1))),visibility var(--motion-fast,200ms)}
     .cart-added[data-visible=true]{opacity:1;transform:translateY(0);visibility:visible}.cart-added span{overflow-wrap:anywhere}.cart-added button{flex-shrink:0;min-height:44px;background:transparent;border:0;color:inherit;font:inherit;text-decoration:underline;text-underline-offset:4px}
     @media(max-width:700px){.cart-drawer{width:100vw}.cart-drawer__header{padding:20px}.cart-drawer__body{padding:8px 20px 24px}.cart-drawer>.cart-drawer__continue{width:calc(100% - 40px)!important;margin:0 20px 24px!important}.cart-added{inset:auto 12px 12px;max-width:none;gap:12px}}
@@ -3803,23 +3890,13 @@
     ':root[data-dna-button=split] .checkout-button>svg{box-sizing:content-box;padding-left:1em;margin-left:1em;border-left:1px solid color-mix(in srgb,currentColor 45%,transparent)}',
     ...dnaButtonRules(KIT_BUTTONS, KIT_STEPPERS), ...dnaIdentityButtonRules(KIT_BUTTONS),
     ':root[data-dna-press=squash]{--kit-press:scale(.97,.9)}:root[data-dna-press=sink]{--kit-press:translateY(2px)}:root[data-dna-press=pop]{--kit-press:scale(1.06)}:root[data-dna-press=none]{--kit-press:translate(0)}',
-    /* Cart: right drawer (today's place, restyled), bottom sheet, full page or centred card. */
-    ':root[data-dna-cart] .cart-drawer{border:0 solid var(--kit-line)}:root[data-dna-cart] .cart-drawer__grip{display:none}',
-    ':root[data-dna-cart=drawer] .cart-drawer{inset:0 0 0 auto;width:min(440px,92vw);border-left-width:var(--kit-border);border-radius:var(--kit-radius-panel) 0 0 var(--kit-radius-panel);background:color-mix(in srgb,var(--kit-ink) 3%,var(--kit-paper))}',
+    /* Cart: always the right-hand panel, half the screen (owner 2026-10-17: «the cart in half of screen, then confirmation,
+       then payment»). Older DNA values (sheet, page, overlay) are drawn the same way; config-dna.js sets drawer for all. */
+    ':root[data-dna-cart] .cart-drawer{border:0 solid var(--kit-line)}',
+    ':root[data-dna-cart=drawer] .cart-drawer{inset:0 0 0 auto;width:min(760px,max(420px,50vw));max-width:100vw;border-left-width:var(--kit-border);border-radius:var(--kit-radius-panel) 0 0 var(--kit-radius-panel);background:color-mix(in srgb,var(--kit-ink) 3%,var(--kit-paper))}',
     ':root[data-dna-cart=drawer] .cart-drawer:not([open]){transform:translateX(100%);opacity:0}',
     '@starting-style{:root[data-dna-cart=drawer] .cart-drawer[open]{transform:translateX(100%);opacity:0}}',
-    ':root[data-dna-cart=sheet] .cart-drawer{inset:auto 0 0 0;margin:0 auto;width:min(760px,100vw);height:auto;max-height:min(88dvh,900px);border-top-width:var(--kit-border);border-radius:var(--kit-radius-panel) var(--kit-radius-panel) 0 0;background:var(--kit-surface);transform:translateY(0)}',
-    ':root[data-dna-cart=sheet] .cart-drawer:not([open]){transform:translateY(100%);opacity:0}',
-    '@starting-style{:root[data-dna-cart=sheet] .cart-drawer[open]{transform:translateY(100%);opacity:0}}',
-    ':root[data-dna-cart=sheet] .cart-drawer__header{position:relative;padding-top:32px}:root[data-dna-cart=sheet] .cart-drawer__grip{display:block;position:absolute;top:12px;left:50%;width:44px;height:5px;border-radius:3px;background:currentColor;opacity:.3;transform:translateX(-50%)}',
-    ':root[data-dna-cart=page] .cart-drawer{inset:0;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;border-top:var(--kit-border) solid var(--kit-accent);background:var(--kit-surface)}',
-    ':root[data-dna-cart=page] .cart-drawer:not([open]){transform:translateY(28px);opacity:0}',
-    '@starting-style{:root[data-dna-cart=page] .cart-drawer[open]{transform:translateY(28px);opacity:0}}',
-    ':root[data-dna-cart=page] .cart-drawer :is(.cart-drawer__header,.cart-drawer__body),:root[data-dna-cart=page] .cart-drawer>.pagosya-policies{box-sizing:border-box;width:100%;max-width:880px;margin-inline:auto}:root[data-dna-cart=page] .cart-drawer__header{border-bottom-width:max(var(--kit-border),1px)}:root[data-dna-cart=page] .cart-drawer::backdrop{background:var(--kit-surface)}',
-    ':root[data-dna-cart=overlay] .cart-drawer{inset:0;margin:auto;width:min(620px,calc(100vw - 32px));height:auto;max-height:min(86dvh,820px);border-width:var(--kit-border);border-radius:var(--kit-radius-panel);background:var(--kit-paper);box-shadow:0 24px 80px -24px #0009}',
-    ':root[data-dna-cart=overlay] .cart-drawer:not([open]){transform:scale(.96);opacity:0}',
-    '@starting-style{:root[data-dna-cart=overlay] .cart-drawer[open]{transform:scale(.96);opacity:0}}',
-    '@media(max-width:700px){:root[data-dna-cart=drawer] .cart-drawer{width:100vw;border-radius:0}:root[data-dna-cart=sheet] .cart-drawer{width:100vw;max-height:92dvh}:root[data-dna-cart=page] .cart-drawer{width:100vw}:root[data-dna-cart=overlay] .cart-drawer{width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}}',
+    '@media(max-width:700px){:root[data-dna-cart=drawer] .cart-drawer{width:100vw;border-radius:0}}',
     ':root[data-dna-frame] .order-item__photo{box-sizing:border-box;border-radius:var(--kit-photo-radius);padding:var(--kit-photo-pad);background:var(--kit-photo-bg);box-shadow:var(--kit-photo-shadow)}',
     /* Added to cart: corner toast (restyled), ribbon, bubble under the cart button, inline note, centred stamp. */
     ':root[data-dna-added] .cart-added{box-sizing:border-box;border:var(--kit-border) solid var(--kit-line);flex-wrap:wrap;gap:6px 16px}',
@@ -3897,8 +3974,8 @@
     `@media(prefers-reduced-motion:no-preference){@keyframes pd-enter-fade-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}@keyframes pd-enter-slide{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}@keyframes pd-enter-pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}`
       + [['fade-up'], ['slide'], ['pop']].map(([name]) => `:root[data-dna-enter=${name}] ${PC} :is([data-part=gallery],[data-part=eyebrow],[data-part=title],[data-part=intro],[data-part=highlights],[data-part=blocks]){animation:pd-enter-${name} var(--motion-slow,520ms) var(--motion-ease-settle,ease) both}`).join('') + '}',
   ];
-  // Fields: checkout's .order-field controls and the account inputs; checkboxes and radios (terms, delivery choice) keep their look.
-  const DRAWN_FIELD = ':is([data-pagosya-checkout] .order-field :is(input,select,textarea),[data-pagosya-cart][data-checkout-review] .order-field :is(input,select,textarea),[data-account-gate] [data-part=input])';
+  // Fields: checkout's .order-field controls; checkboxes and radios (terms, delivery choice) keep their look.
+  const DRAWN_FIELD = ':is([data-pagosya-checkout] .order-field :is(input,select,textarea),[data-pagosya-cart][data-checkout-review] .order-field :is(input,select,textarea))';
   const DRAWN_TEXT_FIELD = `${DRAWN_FIELD}:not([type=checkbox],[type=radio])`;
   const COMMERCE_DRAW_CSS = [
     `:root[data-dna-fields] ${DRAWN_TEXT_FIELD}{box-sizing:border-box;min-height:48px;font:inherit;color:var(--kit-ink)}`,
@@ -3909,6 +3986,16 @@
     `:root[data-dna-fields=filled] ${DRAWN_TEXT_FIELD}:focus{border-bottom-color:var(--kit-accent)}`,
     `:root[data-dna-fields=pill] ${DRAWN_TEXT_FIELD}{border:1.5px solid var(--kit-line);border-radius:999px;background:var(--kit-paper);padding:0 18px}`,
     `:root[data-dna-fields] ${DRAWN_FIELD}:is(textarea){min-height:96px;padding-block:12px}:root[data-dna-fields=pill] ${DRAWN_FIELD}:is(textarea){border-radius:22px}`,
+    /* The account form's fields (2026-10-18, florart): the store usually sets the form on its own panel, so a field takes its
+     * colours from that panel (currentColor), never the page's paper, which drew black pills on a cream card. One attribute
+     * and one element of weight: above the kit's account sheet, below a store rule on [data-account-gate] [data-part=input]. */
+    `:where(:root[data-dna-fields]) [data-account-gate] input:where([data-part=input]){box-sizing:border-box;min-height:48px;font:inherit;color:inherit}`,
+    `:where(:root[data-dna-fields]) [data-account-gate] input:where([data-part=input]):focus-visible{outline:2px solid var(--kit-accent);outline-offset:2px}`,
+    `:where(:root[data-dna-fields=boxed]) [data-account-gate] input:where([data-part=input]){border:1px solid color-mix(in srgb,currentColor 40%,transparent);border-radius:var(--kit-radius);background:transparent;padding:0 14px}`,
+    `:where(:root[data-dna-fields=underline]) [data-account-gate] input:where([data-part=input]){border:0;border-bottom:2px solid color-mix(in srgb,currentColor 55%,transparent);border-radius:0;background:transparent;padding:0 2px}`,
+    `:where(:root[data-dna-fields=filled]) [data-account-gate] input:where([data-part=input]){border:0;border-bottom:2px solid color-mix(in srgb,currentColor 40%,transparent);border-radius:var(--kit-radius) var(--kit-radius) 0 0;background:color-mix(in srgb,currentColor 7%,transparent);padding:0 14px}`,
+    `:where(:root[data-dna-fields=filled]) [data-account-gate] input:where([data-part=input]):focus{border-bottom-color:var(--kit-accent)}`,
+    `:where(:root[data-dna-fields=pill]) [data-account-gate] input:where([data-part=input]){border:1.5px solid color-mix(in srgb,currentColor 40%,transparent);border-radius:999px;background:transparent;padding:0 18px}`,
     // Steps numbers the review's sections; ticket tears the summary's bottom edge; brand sets a panel beside the page.
     ':root[data-dna-checkout=steps] .checkout-review{counter-reset:checkout-step}',
     ':root[data-dna-checkout=steps] :is(.checkout-review__summary,.checkout-review__fields)>h2::before{counter-increment:checkout-step;content:counter(checkout-step);display:inline-grid;place-items:center;width:1.7em;height:1.7em;margin-right:.5em;border-radius:50%;background:var(--kit-accent);color:var(--kit-on-accent);font-size:.8em;vertical-align:.1em}',
@@ -4456,7 +4543,9 @@
       track('add_to_cart', undefined, { value: line.amount, currency: line.p.currency });
       analytics('add_to_cart', { productId: p.id });
       const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : 1;
-      cart.set(key, quantity + units); renderCart(); message(`${name} añadido a ${ADDED_TO}.`); addedFeedback({ ...p, name }, button, event.detail === 0);
+      cart.set(key, quantity + units); renderCart();
+      // The added notice is its own live region: the page status line repeats it only when no notice shows (The Bake Lab 2026-10-17).
+      message(addedFeedback({ ...p, name }, button, event.detail === 0) ? '' : `${name} añadido a ${ADDED_TO}.`);
       if (MOTIFS.length) playMotifs(p);
       if (detail.open || fullProductPage && selectedProduct) detail.querySelector(".product-detail__status").textContent = `${name} añadido a ${ADDED_TO}.`;
     }
@@ -4467,6 +4556,77 @@
     if (button.hasAttribute("data-pay")) void checkout(button);
     if (button.hasAttribute("data-retry")) void load();
   });
+  // Carousels (spec 2026-10-18-trust-draw-design.md): [data-pagosya-carousel] shows one slide at a time, so a store with many
+  // photos or reviews never stacks them into a wall. The store designs the slides; the kit adds swiping (scroll-snap), the
+  // arrows and dots after the track, the keyboard, and a slow turn for data-carousel-auto (never under reduced motion).
+  const carouselStyle = document.createElement('style');
+  carouselStyle.textContent = `@layer pagosya-commerce {
+    [data-pagosya-carousel]{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden;scroll-snap-type:x mandatory!important;scrollbar-width:none;overscroll-behavior-x:contain}
+    [data-pagosya-carousel]::-webkit-scrollbar{display:none}
+    [data-pagosya-carousel]>*{flex:0 0 100%;box-sizing:border-box;min-width:0;margin:0;scroll-snap-align:start}
+    [data-pagosya-carousel] img{display:block;max-width:100%}
+    /* A wall the save turned into a carousel (source-photo-groups.ts) keeps its slides a readable photo height. */
+    [data-carousel-repaired]{grid-column:1/-1!important;width:100%!important;min-width:0}
+    [data-carousel-repaired] img{width:100%!important;height:min(78vh,680px)!important;max-height:none!important;object-fit:cover}
+    [data-pagosya-carousel]:focus-visible{outline:3px solid currentColor;outline-offset:4px}
+    .pagosya-carousel__controls{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:16px}
+    .pagosya-carousel__controls[hidden]{display:none!important}
+    .pagosya-carousel__button{display:inline-grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid color-mix(in srgb,currentColor 30%,transparent);border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+    .pagosya-carousel__dots{display:flex;flex-wrap:wrap;justify-content:center}
+    .pagosya-carousel__dot{position:relative;width:24px;height:44px;padding:0;border:0;background:transparent;color:inherit;cursor:pointer}
+    .pagosya-carousel__dot::after{content:"";position:absolute;inset:18px 8px;border-radius:999px;background:currentColor;opacity:.3}
+    .pagosya-carousel__dot[aria-current=true]::after{opacity:1}
+    :is(.pagosya-carousel__button,.pagosya-carousel__dot):focus-visible{outline:3px solid currentColor;outline-offset:2px}
+    /* Reviews (content/load.js reviewMarkup): bare defaults, the store's design restyles them. */
+    .pagosya-review{display:flex;flex-direction:column;gap:10px}
+    .pagosya-review__stars,.pagosya-review__body,.pagosya-review__body p,.pagosya-review__by{margin:0}
+    .pagosya-review__stars{letter-spacing:.12em}
+    .pagosya-review__by{font-size:.9em}.pagosya-review__source{opacity:.75}
+  }`;
+  document.head.appendChild(carouselStyle);
+  const carouselTimers = new WeakMap();
+  function mountCarousels() { document.querySelectorAll('[data-pagosya-carousel]').forEach(mountCarousel); }
+  /** Mounts one track; the reviews slot mounts again once the store's reviews arrive. */
+  function mountCarousel(track) {
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    clearInterval(carouselTimers.get(track));
+    if (track.nextElementSibling?.classList.contains('pagosya-carousel__controls')) track.nextElementSibling.remove();
+    const slides = Array.from(track.children).filter(slide => !slide.hidden);
+    if (slides.length < 2) return;
+    track.setAttribute('role', 'region');
+    track.setAttribute('aria-roledescription', 'carrusel');
+    if (!track.hasAttribute('aria-label')) track.setAttribute('aria-label', 'Carrusel');
+    if (!track.hasAttribute('tabindex')) track.tabIndex = 0;
+    slides.forEach((slide, index) => { slide.setAttribute('role', 'group'); slide.setAttribute('aria-roledescription', 'diapositiva'); slide.setAttribute('aria-label', `${index + 1} de ${slides.length}`); });
+    const controls = document.createElement('div');
+    controls.className = 'pagosya-carousel__controls';
+    controls.innerHTML = `<button type="button" class="pagosya-carousel__button" data-carousel-prev aria-label="Anterior"><span aria-hidden="true">←</span></button><span class="pagosya-carousel__dots">${slides.map((_, index) => `<button type="button" class="pagosya-carousel__dot" aria-label="Ir a ${index + 1} de ${slides.length}"></button>`).join('')}</span><button type="button" class="pagosya-carousel__button" data-carousel-next aria-label="Siguiente"><span aria-hidden="true">→</span></button>`;
+    track.after(controls);
+    const dots = Array.from(controls.querySelectorAll('.pagosya-carousel__dot'));
+    const offset = slide => slide.getBoundingClientRect().left - track.getBoundingClientRect().left;
+    const current = () => slides.reduce((best, slide, index) => Math.abs(offset(slide)) < Math.abs(offset(slides[best])) ? index : best, 0);
+    const mark = () => { const at = current(); dots.forEach((dot, index) => dot.setAttribute('aria-current', String(index === at))); };
+    const go = index => { const next = (index + slides.length) % slides.length; track.scrollTo({ left: track.scrollLeft + offset(slides[next]), behavior: reduced ? 'auto' : 'smooth' }); };
+    controls.querySelector('[data-carousel-prev]').addEventListener('click', () => go(current() - 1));
+    controls.querySelector('[data-carousel-next]').addEventListener('click', () => go(current() + 1));
+    dots.forEach((dot, index) => dot.addEventListener('click', () => go(index)));
+    track.addEventListener('keydown', event => {
+      if (event.target !== track || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault();
+      go(current() + (event.key === 'ArrowRight' ? 1 : -1));
+    });
+    let frame = 0;
+    track.addEventListener('scroll', () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(mark); }, { passive: true });
+    mark();
+    if (!track.hasAttribute('data-carousel-auto') || reduced) return;
+    let paused = false;
+    const pause = value => () => { paused = value; };
+    for (const element of [track, controls]) {
+      element.addEventListener('pointerenter', pause(true)); element.addEventListener('pointerleave', pause(false));
+      element.addEventListener('focusin', pause(true)); element.addEventListener('focusout', pause(false));
+    }
+    carouselTimers.set(track, setInterval(() => { if (!paused && !document.hidden) go(current() + 1); }, 7000));
+  }
   async function load() {
     render();
     if (preview || config.demo || hosted) return;
@@ -4480,6 +4640,12 @@
       render(); message("");
     } catch (error) { ready = false; renderInfoPages(true); render(); message(error.message); }
   }
+  // Real reviews only: a verified purchase, or the merchant's entry of a real customer's words with where it came from.
+  function reviewMarkup(review) {
+    const rating = Math.max(1, Math.min(5, Math.round(Number(review.rating) || 0)));
+    const source = review.source === 'MERCHANT' ? `Reseña de cliente${review.sourceNote ? ` · ${escape(review.sourceNote)}` : ''}` : 'Compra verificada';
+    return `<article class="pagosya-review"><p class="pagosya-review__stars" role="img" aria-label="${rating} de 5">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</p><blockquote class="pagosya-review__body"><p>${escape(review.body)}</p></blockquote><p class="pagosya-review__by"><strong>${escape(review.displayName)}</strong> · <span class="pagosya-review__source">${source}</span></p></article>`;
+  }
   async function loadCommerceContent() {
     const slots = document.querySelectorAll('[data-pagosya-blog],[data-pagosya-reviews],[data-pagosya-bundles]');
     if (!slots.length && !fullProductPage) return;
@@ -4491,7 +4657,15 @@
       commerceData = data; decorateProductReviews();
       slots.forEach(slot => {
         if (slot.hasAttribute('data-pagosya-blog')) slot.innerHTML = data.articles.map(article => `<article id="articulo-${escape(article.slug)}"><h2>${escape(article.title)}</h2><p>${escape(article.author)} · ${new Date(article.publishedAt).toLocaleDateString('es-BO')}</p><p>${escape(article.excerpt)}</p><p><a data-article-url href="${escape(new URL(config.apiBaseUrl, config.checkoutOrigin).href.replace(/\/$/, ''))}/stores/public/${encodeURIComponent(config.slug)}/pages/${encodeURIComponent(article.locale)}/${encodeURIComponent(article.slug)}">Abrir artículo</a></p><details><summary>Leer aquí</summary>${article.body.split(/\n\s*\n/).map(paragraph => `<p>${escape(paragraph)}</p>`).join('')}</details></article>`).join('') || '<p>Todavía no hay artículos publicados.</p>';
-        if (slot.hasAttribute('data-pagosya-reviews')) slot.innerHTML = data.reviews.filter(review => !fullProductPage || review.productId === selectedProduct?.id).map(review => `<article><strong>${escape(review.displayName)}</strong><p>${review.rating} de 5 · Compra verificada</p><p>${escape(review.body)}</p></article>`).join('') || '<p>Todavía no hay reseñas publicadas.</p>';
+        if (slot.hasAttribute('data-pagosya-reviews')) {
+          const reviews = data.reviews.filter(review => !fullProductPage || review.productId === selectedProduct?.id);
+          slot.innerHTML = reviews.map(reviewMarkup).join('') || (fullProductPage ? '<p>Todavía no hay reseñas publicadas.</p>' : '');
+          // Away from the product page a store without reviews shows no empty reviews section (spec 2026-10-18).
+          const section = slot.closest('[data-pagosya-reviews-section]');
+          slot.hidden = !reviews.length && !fullProductPage;
+          if (section) section.hidden = slot.hidden;
+          if (slot.hasAttribute('data-pagosya-carousel')) mountCarousel(slot);
+        }
         if (slot.hasAttribute('data-pagosya-bundles')) slot.innerHTML = data.bundles.map(bundle => `<article><h3>${escape(bundle.name)}</h3><p>${bundle.kind === 'BOGO' ? 'Lleva dos; el de menor precio es gratis.' : `${bundle.discountPercent}% de descuento ${bundle.kind === 'FIXED' ? 'al completar el paquete' : 'desde ' + bundle.minimumQuantity + ' unidades'}.`}</p><ul>${bundle.items.map(item => `<li>${escape(products().find(p => p.id === item.productId)?.name || 'Producto del paquete')}${bundle.kind === 'FIXED' ? ' × ' + item.quantity : ''}</li>`).join('')}</ul><p>Añade los productos al carrito. La mejor oferta se aplica automáticamente al pagar; no se acumula con otros códigos.</p></article>`).join('') || '<p>No hay paquetes activos.</p>';
       });
     } catch { slots.forEach(slot => { slot.textContent = 'No pudimos cargar esta sección. Recarga la página para intentar de nuevo.'; }); }
@@ -4658,6 +4832,7 @@
     if (launcher.getAttribute('aria-expanded') !== 'true') launcher.click();
   });
 
+  mountCarousels();
   void loadCommerceContent();
   void load();
 })();
