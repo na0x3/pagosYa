@@ -1,4 +1,5 @@
 /** Which link in the merchant's message is a product to sell (spec 2026-10-18 product link store, decisions 2 and 4). Pure. */
+import { websiteCopyAsked } from '../website-copy/copy-intent';
 
 const URLS = /https?:\/\/[^\s<>"'`]+|\bwww\.[^\s<>"'`]+/gi;
 /** Shops whose links are products whatever their path. */
@@ -23,7 +24,8 @@ function hostOf(raw: string): string | null {
 export function productLinkIn(words: string): ProductLink | null {
   const text = words.replace(/<iframe\b[\s\S]*?<\/iframe\s*>/gi, '');
   const withoutUrls = text.replace(URLS, ' ');
-  if (LOOK_WORDS.test(withoutUrls) && !SELL_WORDS.test(withoutUrls)) return null;
+  // Another site's look or a copy of it (sub-project B), unless the merchant says they sell what the link shows.
+  if ((LOOK_WORDS.test(withoutUrls) || websiteCopyAsked(withoutUrls)) && !SELL_WORDS.test(withoutUrls)) return null;
   for (const match of text.match(URLS) || []) {
     const raw = match.replace(/[.,;!?\])}]+$/, '');
     const host = hostOf(raw);

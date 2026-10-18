@@ -359,7 +359,8 @@ export class SourceGenerationService {
     const assetLegend: LegendEntry[] = [];
     const images: Array<{ type: "input_image"; image_url: string; detail: "auto" }> = [];
     const visionAssetPaths: string[] = [];
-    for (const capture of (execution?.referenceCaptures || []).slice(0, 4)) {
+    // A website copy sends one screenshot per section, up to 8 (spec 2026-10-18 B §3).
+    for (const capture of (execution?.referenceCaptures || []).slice(0, execution?.websiteCopy ? 8 : 4)) {
       images.push({ type: "input_image", image_url: capture.image, detail: "auto" });
       visionAssetPaths.push(`READ-ONLY ${capture.url ? 'untrusted design reference ' + capture.url : 'baseline'} screenshot ${capture.viewport} at y=${capture.y}; never embed this screenshot as artwork`);
     }
@@ -516,9 +517,10 @@ export class SourceGenerationService {
       items: data.items, locations: (data as { locations?: unknown[] }).locations,
       businessInformation: (dto.brief as { businessInformation?: unknown } | undefined)?.businessInformation,
     });
-    const frameEnabled = this.config.get<boolean>('app.yapiFrameDraw') === true;
+    // A website copy follows its blueprint: no drawn frame, hero or structure (spec 2026-10-18 B §3).
+    const frameEnabled = this.config.get<boolean>('app.yapiFrameDraw') === true && !execution?.websiteCopy;
     // Playbook (spec 2026-10-11): the kind of business from the merchant's words, brief and catalogue, then one style family.
-    const playbookOn = this.config.get<boolean>('app.yapiPlaybook') === true;
+    const playbookOn = this.config.get<boolean>('app.yapiPlaybook') === true && !execution?.websiteCopy;
     // The merchant's own words only (the chat composes YAPI's summary and interpretation before them).
     const merchantWords = (sourceRequestContext.getStore()?.request.instruction || dto.instruction).split('Pedido actual del comercio:').at(-1)!;
     const briefFacts = dto.brief as { businessType?: unknown; businessInformation?: unknown } | undefined;

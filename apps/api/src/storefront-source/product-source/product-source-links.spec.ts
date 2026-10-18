@@ -20,6 +20,7 @@ describe('productLinkIn (spec 2026-10-18 product link store)', () => {
   it("leaves another site's look to the website reference", () => {
     expect(productLinkIn('quiero mi tienda como esta https://blendjet.com/products/blendjet-2')).toBeNull();
     expect(productLinkIn('inspírate en https://www.alibaba.com/product-detail/x_1.html')).toBeNull();
+    expect(productLinkIn('clona esta página https://blendjet.com/products/blendjet-2')).toBeNull();
   });
 
   it('lets selling words win over look words', () => {

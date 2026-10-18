@@ -11,6 +11,8 @@ export type SourceSetupDraft = {
   prompt?: string;
   discoveryReplies?: number;
   websiteReferences?: SourceWebsiteReference[];
+  /** Spec 2026-10-18 website copy: the page the merchant asked to copy, kept until a build uses it. */
+  websiteCopyUrl?: string;
   /** Spec 2026-10-16 brand source: the merchant's answer about shared material, and the images YAPI asked about. */
   brandSource?: 'own' | 'other' | 'asked';
   brandAssetUrls?: string[];

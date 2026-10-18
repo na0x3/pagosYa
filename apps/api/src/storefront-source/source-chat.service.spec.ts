@@ -92,7 +92,8 @@ describe('Website design references in chat', () => {
   it('inspects a reference before interpretation, forwards evidence to generation and remembers it on follow-ups', async () => {
     const inspect = jest.spyOn(websiteReference, 'inspectSourceWebsite').mockResolvedValue(reference);
     const { service, dialogue, generation, messages } = setup();
-    const instruction = 'I want my website like this one https://example.com';
+    // «like this one» now asks for a copy (spec 2026-10-18 website copy); inspiration wording keeps this reference flow.
+    const instruction = 'I want my website inspired by this one https://example.com';
     await service.send('m', 's', { ...request, instruction });
     expect(inspect).toHaveBeenCalledWith(reference.url);
     expect(dialogue.decide.mock.calls[0][1].draft.websiteReferences).toEqual([reference]);
@@ -106,7 +107,7 @@ describe('Website design references in chat', () => {
     const inspect = jest.spyOn(websiteReference, 'inspectSourceWebsite').mockResolvedValue(reference);
     const { service, projects, generation, dialogue } = setup();
     projects.current.mockResolvedValue({ revision: 0 });
-    const initial = { ...request, revision: 0, instruction: 'Quiero mi sitio como https://example.com' };
+    const initial = { ...request, revision: 0, instruction: 'Quiero mi sitio inspirado en https://example.com' };
     await service.send('m', 's', initial);
     await service.send('m', 's', { ...initial, instruction: 'Vendo café a vecinos' });
     generation.generate.mockRejectedValueOnce(new Error('generation failed'));

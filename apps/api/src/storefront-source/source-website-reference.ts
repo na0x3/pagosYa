@@ -22,7 +22,8 @@ export function sourceWebsiteReferenceUrls(instruction: string, previousReply = 
   // Map embeds, hyperlinks requested for a footer, and ordinary contact URLs are separate actions.
   const text = instruction.replace(/<iframe\b[\s\S]*?<\/iframe\s*>/gi, '');
   const withoutUrls = text.replace(/https?:\/\/[^\s<>"'`]+|www\.[^\s<>"'`]+/gi, '').trim();
-  const referenceIntent = /\b(like|similar|match|inspir\w*|referenc\w*|parec\w*|como|igual|estilo)\b/i;
+  // «copia / clona esta estructura» (spec 2026-10-18 website copy) is a reference too, read as a copy.
+  const referenceIntent = /\b(like|similar|match|inspir\w*|referenc\w*|parec\w*|como|igual|estilo|cop\w+|clon\w*|estructura)\b/i;
   // A merchant's own old site (spec 2026-10-16 brand source) is inspected too: «mi página anterior https://…».
   if (withoutUrls && !referenceIntent.test(withoutUrls) && !referenceIntent.test(previousReply) && !brandSourceOwnSite(withoutUrls)) return [];
   if (/\b(?:do not|don't|no)\s+(?:use|us[ae]s?|anal\w*|inspec\w*)\b/i.test(withoutUrls)) return [];

@@ -15,7 +15,7 @@ import { createSep5Review, type AssembleSave, type ReviewControls } from './sour
 import type { GenerationLive, GenerationRunFacts } from './source-generation-types';
 
 export type Sep5StageContext = {
-  facts: Pick<GenerationRunFacts, 'config' | 'logger' | 'runId' | 'slug' | 'dto' | 'progress' | 'apiUrl' | 'data' | 'assetLegend' | 'images' | 'ownedUrls' | 'sitePurpose' | 'scrollFeel' | 'motion' | 'primaryAction' | 'oldFiles' | 'creative' | 'autoRepairs' | 'signatureOn' | 'voice'>;
+  facts: Pick<GenerationRunFacts, 'config' | 'logger' | 'runId' | 'slug' | 'dto' | 'progress' | 'apiUrl' | 'data' | 'assetLegend' | 'images' | 'ownedUrls' | 'sitePurpose' | 'scrollFeel' | 'motion' | 'primaryAction' | 'oldFiles' | 'creative' | 'autoRepairs' | 'signatureOn' | 'voice' | 'execution'>;
   live: GenerationLive;
   sep5SelfReview: boolean; playbookOn: boolean;
   playbookEntry: PlaybookEntry | undefined; playbookEvidence: Record<Evidence, boolean>;
@@ -37,6 +37,9 @@ export async function runSep5AuthorStage(context: Sep5StageContext): Promise<voi
   // came from. The prompt is pinned verbatim and the request matches the measured run exactly: one
   // attempt, high effort, 18k output tokens. What it writes is the store; nothing re-renders it.
   await progress?.('building');
+  // A website copy (spec 2026-10-18 B) follows its blueprint's type and look: YAPI's bold default and signature look would
+  // compete with it (live 2026-10-18, Velas Luz: Allbirds' light 24 px headings came out as a huge serif).
+  const copying = facts.execution?.websiteCopy === true;
   // The authored files ARE the store here, so the choreography is actionable: Sep-5 writes its own CSS
   // and site.js. The engine's own motion plan is reused rather than reinvented, in its non-React form.
   // Not passed on the translation branch below, where only palette, copy and section order survive and
@@ -47,7 +50,7 @@ export async function runSep5AuthorStage(context: Sep5StageContext): Promise<voi
   const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
   // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
   // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-  const authorInput = { products: sitePurpose === 'shop', purpose: sitePurpose, action: primaryAction, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: (live.styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn }), playbook: live.playbookText, fonts: sep5FontDirection(live.committedDesign), signature: sourceSignatureAuthorDirection(live.committedDesign?.concepts[live.committedDesign.selected], signatureOn), frame: framePlatformHeader(live.frame.paragraph), hero: pickedHero, card: pickedCard, ...voiceAuthorInput(facts.voice), ...(live.brandBlock ? { brand: live.brandBlock } : {}), ...(merchantAsksForPhotoGroup(dto.instruction) ? {} : { photos: SEP5_NO_PHOTO_GROUPS }), ...((data as { logoUrl?: string | null }).logoUrl ? {} : { wordmark: true }) };
+  const authorInput = { products: sitePurpose === 'shop', purpose: sitePurpose, action: primaryAction, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: sep5PreviousSource(oldFiles), motionPlan, storeShell: true, boldDefault: !copying && ((live.styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn })), playbook: live.playbookText, fonts: sep5FontDirection(live.committedDesign), signature: copying ? '' : sourceSignatureAuthorDirection(live.committedDesign?.concepts[live.committedDesign.selected], signatureOn), frame: framePlatformHeader(live.frame.paragraph), hero: pickedHero, card: pickedCard, ...voiceAuthorInput(facts.voice), ...(live.brandBlock ? { brand: live.brandBlock } : {}), ...(merchantAsksForPhotoGroup(dto.instruction) ? {} : { photos: SEP5_NO_PHOTO_GROUPS }), ...((data as { logoUrl?: string | null }).logoUrl ? {} : { wordmark: true }) };
   const prompt = sep5AuthorPrompt(authorInput);
   const { attempt, body } = await sep5Call('author', prompt, images, 'independent_storefront', sep5ResponseSchema(sitePurpose === 'shop'), SEP5_CLIENT_TIMEOUT_MS);
   const authored = sep5FilesSchema.safeParse(sourceResponseJson(body));
