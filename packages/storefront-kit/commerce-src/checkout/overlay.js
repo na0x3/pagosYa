@@ -13,6 +13,20 @@
     dialog[data-pagosya-drawer]:not([open]){display:none!important;opacity:0!important;transform:translateX(100%)!important}
     @starting-style{dialog[data-pagosya-drawer][open]{opacity:0!important;transform:translateX(100%)!important}}
     @media(max-width:700px){dialog[data-pagosya-drawer]{width:100vw!important}}
+    /* Inside the dialog, the store's cart mount and a template's panel are its content, never a second drawer: Pokeate
+       2026-10-18 kept a fixed 440px .cart-runtime panel in styles.css and its cart template was a fixed 50vw aside, so the
+       cart drew as two overlapping columns with the text across both. A template is the whole design, so the mount around
+       it also gives up its own padding and paint. */
+    dialog[data-pagosya-drawer] :is([data-pagosya-cart],[data-cart-panel]){position:relative!important;inset:auto!important;z-index:auto!important;box-sizing:border-box!important;width:auto!important;min-width:0!important;max-width:none!important;height:auto!important;max-height:none!important;margin:0!important;transform:none!important;overflow:visible!important}
+    dialog[data-pagosya-drawer][data-template] :is([data-pagosya-cart],[data-cart-panel]){min-height:100dvh!important}
+    dialog[data-pagosya-drawer][data-template] [data-pagosya-cart]{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+    /* An added template that positions itself (fixed, absolute) keeps its own place: the DNA notice (a ribbon, a bubble, a
+       stamp…) only carries it, with no box, paint or transform of its own, since a transformed carrier re-anchors the
+       template's position:fixed to itself (Pokeate 2026-10-18: the card drew 164px above the screen under an empty 29px
+       ribbon). The carrier lets clicks through. A template in the flow still sits in the DNA notice and wears its paint. */
+    .cart-added[data-template-placed]{padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;transform:none!important;filter:none!important;pointer-events:none!important}
+    .cart-added[data-template-placed]::before{content:none!important}
+    .cart-added[data-template-placed]>*{pointer-events:auto}
     /* The cart is a half-screen panel, so it reads in one column (owner 2026-10-17): a store template drawn as a page with a
        side summary stacks inside it. Each declaration is inert on an element that is not a grid or flex container. */
     .cart-drawer :is([data-cart-panel],[data-cart-panel] *):has([data-cart-slot=lines]):has([data-cart-slot=total]){grid-template-columns:minmax(0,1fr)!important;grid-template-rows:none!important;grid-template-areas:none!important;flex-direction:column!important}
@@ -97,6 +111,9 @@
   `;
   shoppingStyle.textContent += `
     [data-pagosya-checkout] .checkout-page__inner{max-width:1200px;min-width:0;container-type:inline-size}
+    /* A checkout template can hold the review in a narrow column (Pokeate's 652px ticket split it 320 + 260px and broke
+       product names mid-word): the review measures its own slot, so the one-column rules below follow the space it has. */
+    [data-pagosya-checkout] [data-checkout-slot=review]{min-width:0;container-type:inline-size}
     /* Under the store's own intro, the review lines up with that intro instead of adding a second inset. */
     [data-pagosya-checkout-page][data-authored-intro]:not([hidden]){padding:0 0 clamp(40px,6vw,80px)}
     [data-pagosya-checkout-page][data-authored-intro] .checkout-page__inner{margin:0}

@@ -57,6 +57,11 @@ describe('surface purchase check (spec 2026-10-15)', () => {
     const result = await onShop(GOOD.replace('<div class="caja">', '<div class="caja" style="width:900px">'), 390);
     expect(result.failures).toEqual(expect.arrayContaining([expect.objectContaining({ part: 'checkout', check: 'overflow' })]));
   });
+  // Pokeate 2026-10-18: the added card sat above the screen, and «visible» alone (a box of any size) never saw it.
+  it('fails an added notice drawn off the screen', async () => {
+    const result = await onShop(GOOD.replace('<div class="aviso">', '<div class="aviso" style="position:fixed;left:0;bottom:120vh">'), 1280);
+    expect(result.failures).toEqual(expect.arrayContaining([expect.objectContaining({ part: 'added', check: 'offscreen' })]));
+  });
   it('skips the purchase on an empty catalog and keeps the parts (Review Focus 1)', async () => {
     expect(await onShop(GOOD, 1280, [])).toEqual({ failures: [], reached: [], skipped: 'empty catalog' });
   });

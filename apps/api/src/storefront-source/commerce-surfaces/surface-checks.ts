@@ -21,6 +21,8 @@ function readPart(selector: string) {
   // A part inside its own scroller (the checkout overlay) overflows that scroller, not the document: measure the part too.
   // The part's own box, never the page's width: an overflow the main design caused is not this part's (review minor, live run).
   const overflow = roots.some(el => { const r = el.getBoundingClientRect(); return r.right > innerWidth + 2 || r.left < -2; });
+  // Above or below the screen (Pokeate 2026-10-18: the added card drew 164px above it). Only a part on screen by design reads it.
+  const offscreen = roots.some(el => { const r = el.getBoundingClientRect(); return r.bottom <= 0 || r.top >= innerHeight; });
   const texts: Array<{ el: HTMLElement; r: DOMRect; t: DOMRect }> = [];
   const low: string[] = [];
   const cut: string[] = [];
@@ -73,12 +75,13 @@ function readPart(selector: string) {
   // A button or link on screen with nothing in it (live 2026-10-15: blank pills where «Ver» and «Sumar» belonged).
   const drawn = (c: HTMLElement) => ['::before', '::after'].some(p => !['none', 'normal', '""', "''"].includes(getComputedStyle(c, p).content));
   const empty = controls.filter(c => { const b = c.getBoundingClientRect(); return b.width > 2 && b.height > 2 && !(c.innerText || '').trim() && !c.querySelector('img,svg,picture,video') && !drawn(c); }).length;
-  return { present: roots.length > 0, overflow, low: low.slice(0, 3), overlaps, cut: cut.slice(0, 3), empty };
+  return { present: roots.length > 0, overflow, offscreen, low: low.slice(0, 3), overlaps, cut: cut.slice(0, 3), empty };
 }
 async function layout(page: Page, part: SurfacePart, failures: SurfaceFailure[]) {
   const read = await page.evaluate(readPart, ROOTS[part]);
   if (!read.present) return;
   if (read.overflow) failures.push({ part, check: 'overflow', detail: 'La página se desplaza hacia el costado.' });
+  if (read.offscreen && part === 'added') failures.push({ part, check: 'offscreen', detail: 'El aviso al agregar queda fuera de la pantalla.' });
   if (read.overlaps) failures.push({ part, check: 'overlap', detail: `${read.overlaps} textos se superponen.` });
   if (read.empty) failures.push({ part, check: 'empty-control', detail: `${read.empty} botones o enlaces sin texto ni ícono.` });
   if (read.cut.length) failures.push({ part, check: 'cut-off', detail: `Texto cortado: «${read.cut.join('», «')}».` });

@@ -136,7 +136,12 @@
       const photo = addedNotice.querySelector('[data-added-field="photo"]'), image = galleryImages(product)[0];
       if (photo) { photo.hidden = !image; if (image) { photo.src = image; photo.alt = ''; } else photo.removeAttribute('src'); }
     } else addedNotice.querySelector('span').textContent = text;
+    // A template that positions itself keeps its own place; the DNA notice then only carries it (overlay.js).
+    const templateRoot = addedNotice.hasAttribute('data-template') ? addedNotice.firstElementChild : null;
+    addedNotice.toggleAttribute('data-template-placed', Boolean(templateRoot) && ['fixed', 'absolute'].includes(getComputedStyle(templateRoot).position));
     addedNotice.dataset.visible = 'true';
+    // A template's own entrance runs when it is first inserted; every later add plays it again.
+    if (templateRoot) for (const animation of addedNotice.getAnimations?.({ subtree: true }) || []) if (animation instanceof CSSAnimation) { animation.cancel(); animation.play(); }
     placeAddedNotice(button);
     clearTimeout(addedTimer);
     addedTimer = setTimeout(() => { if (!addedNotice.contains(document.activeElement)) delete addedNotice.dataset.visible; }, 4000);

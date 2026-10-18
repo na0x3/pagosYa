@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { parseFragment, type DefaultTreeAdapterMap } from 'parse5';
+import { kitPath } from '@pagosya/storefront-kit';
 
 /** Spec 2026-10-15 free commerce surfaces: the six parts YAPI designs, each a kit template (T1 + the checkout template). */
 export const SURFACE_PARTS = ['card', 'productPage', 'cart', 'cartLine', 'added', 'checkout'] as const;
@@ -78,12 +80,26 @@ export function definedTokens(files: ReadonlyArray<{ path: string; content: stri
   for (const file of files) if (/\.(?:css|html)$/.test(file.path)) for (const m of file.content.matchAll(/(--[\w-]+)\s*:/g)) names.add(m[1]);
   return names;
 }
-/** --store-* and --brand-* tokens read without a fallback that neither the store nor the template declares (live 2026-10-17:
- *  invented --brand-space tokens resolved to nothing, so baek's product page had no spacing at all). Other names are the kit's. */
+let kitTokenNames: { names: Set<string>; prefixes: string[] } | undefined;
+/** Every custom property the kit runtime and its stylesheets declare or set (--kit-*, --pd-*, --added-top …); a name built
+ *  at run time («--lk-» + a key) counts as a prefix. */
+function kitTokens() {
+  if (!kitTokenNames) {
+    const text = ['commerce.js', 'commerce-pages.css', 'controls.css'].map(file => readFileSync(kitPath(file), 'utf8')).join('\n');
+    const all = new Set([...text.matchAll(/(--[a-zA-Z][\w-]*)\s*:/g), ...text.matchAll(/setProperty\(\s*['"`](--[\w-]+)/g)].map(m => m[1]));
+    kitTokenNames = { names: all, prefixes: [...all].filter(name => name.endsWith('-')) };
+  }
+  return kitTokenNames;
+}
+/** Tokens read without a fallback that neither the store, the template nor the kit declares. Live 2026-10-17: invented
+ *  --brand-space tokens resolved to nothing, so baek's product page had no spacing at all. Live 2026-10-18: Pokeate's cart,
+ *  added card and checkout read --background, --foreground, --accent, --heading-font and --body-font, which nothing
+ *  defines, so their panels, buttons and ticket drew transparent: «very empty». */
 function missingTokens(css: string, defined: ReadonlySet<string>): string[] {
   const own = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map(m => m[1]));
-  const used = [...css.matchAll(/var\(\s*(--(?:store|brand)-[\w-]+)\s*\)/g)].map(m => m[1]);
-  return [...new Set(used)].filter(name => !own.has(name) && !defined.has(name));
+  const used = [...css.matchAll(/var\(\s*(--[\w-]+)\s*\)/g)].map(m => m[1]);
+  const kit = kitTokens();
+  return [...new Set(used)].filter(name => !own.has(name) && !defined.has(name) && !kit.names.has(name) && !kit.prefixes.some(prefix => name.startsWith(prefix)));
 }
 
 /** Static checks before any browser runs: the template, its required slots and controls, nothing executable, no typed price,
@@ -139,7 +155,9 @@ export function validateSurfaceTemplate(t: SurfaceTemplate, defined?: ReadonlySe
   if (outside.length) reasons.push(`El CSS de ${label} solo puede usar las clases de su plantilla: «${outside.slice(0, 3).join('», «')}».`);
   if (unsafeCss(t.css)) reasons.push('El CSS no puede importar hojas ni cargar URLs externas.');
   const missing = defined ? missingTokens(t.css, defined) : [];
-  if (missing.length) reasons.push(`El CSS usa variables que la tienda no tiene: «${missing.slice(0, 6).join('», «')}». Escribe valores reales (px, rem, %) o define la variable en tu propia clase.`);
+  // Pokeate's templates wrote --background for the store's --store-background: name the store's own token when it has one.
+  const near = missing.filter(name => defined?.has(`--store-${name.slice(2)}`)).map(name => `«--store-${name.slice(2)}»`);
+  if (missing.length) reasons.push(`El CSS usa variables que la tienda no tiene: «${missing.slice(0, 6).join('», «')}». Escribe valores reales (px, rem, %) o define la variable en tu propia clase.${near.length ? ` La tienda sí tiene ${near.slice(0, 6).join(', ')}.` : ''}`);
   return reasons;
 }
 
