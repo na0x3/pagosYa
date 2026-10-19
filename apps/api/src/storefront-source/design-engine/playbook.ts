@@ -30,23 +30,25 @@ const FAQ: PlaybookSection = { kitPage: true, id: 'faq', label: 'preguntas frecu
 const CONTACT: PlaybookSection = { kitPage: true, id: 'contact', label: 'contacto', must: 'how to reach a person: phone, email or form', detect: /(contacto|cont[aá]ctanos|escr[ií]benos|whatsapp|tel[eé]fono|correo|@)/i };
 const LEGAL = 'a multi-column footer (shop, information pages, contact and hours) with a legal row: store name, NIT when set, address, and the information pages';
 
-export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
+export // Premium pairs first (2026-10-19, the owner's Amboras references): the calm card rotates to the pair shown least, so they
+// lead; the older pairs stay after them for variety.
+const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
   'cafe-food': { kind: 'cafe-food', angles: ['origin-place', 'ritual-time', 'the-maker', 'senses', 'neighbourhood', 'field-guide'], name: 'café and food', profile: 'shop', references: ['buna.mx', 'pukupuku.pe'], sections: [ABOUT, HOURS, LOCATION, DELIVERY], footer: LEGAL,
     tone: 'warm and concrete: origin, process and taste in real words from the brief; no poetry about pauses or moments',
     questions: ['¿Qué pide todo el mundo?', '¿Qué tiene tu local que no tenga otro?', '¿De dónde viene tu café o tus ingredientes?'], avoid: ['momento perfecto', 'tu pausa', 'cada taza cuenta', 'aroma que enamora', 'el mejor café', 'sabor inigualable'],
     families: [
-      { id: 'cafe-shop', name: 'clean roaster shop', radius: 'square', photoShape: 'plain', buttons: ['block', 'outline', 'underline'], fonts: [{ display: 'outfit', text: 'outfit' }, { display: 'manrope', text: 'manrope' }, { display: 'familjen-grotesk', text: 'figtree' }],
+      { id: 'cafe-shop', name: 'clean roaster shop', radius: 'square', photoShape: 'plain', buttons: ['block', 'outline', 'underline'], fonts: [{ display: 'archivo', text: 'inter' }, { display: 'plus-jakarta-sans', text: 'dm-sans' }, { display: 'outfit', text: 'outfit' }, { display: 'manrope', text: 'manrope' }, { display: 'familjen-grotesk', text: 'figtree' }],
         palettes: [p('cafe-white-red', 'white and deep red', '#ffffff', '#161616', '#8f1d14', '#f4efe9'), p('cafe-white-green', 'white and forest green', '#ffffff', '#141a17', '#1f5c4a', '#eef2ee')] },
-      { id: 'cafe-editorial', name: 'editorial café', radius: 'soft', photoShape: 'rounded-corner', buttons: ['outline', 'split', 'pill'], fonts: [{ display: 'young-serif', text: 'instrument' }, { display: 'newsreader', text: 'manrope' }],
+      { id: 'cafe-editorial', name: 'editorial café', radius: 'soft', photoShape: 'rounded-corner', buttons: ['outline', 'split', 'pill'], fonts: [{ display: 'cormorant-garamond', text: 'dm-sans' }, { display: 'lora', text: 'archivo' }, { display: 'young-serif', text: 'instrument' }, { display: 'newsreader', text: 'manrope' }],
         palettes: [p('cafe-paper-blue', 'warm paper and ink blue', '#f7f4ef', '#1a1f2b', '#2f4bb8', '#ebe5db'), p('cafe-paper-olive', 'warm paper and olive', '#f6f4ee', '#1c1d17', '#56602a', '#e9e6db')] },
     ] },
   'bakery-sweets': { kind: 'bakery-sweets', angles: ['ritual-time', 'the-maker', 'senses', 'neighbourhood'], name: 'bakery and sweets', profile: 'shop', references: ['panio.mx', 'rapanui.com.ar', 'pumpstreetchocolate.com'], sections: [ABOUT, HOURS, LOCATION, DELIVERY, FAQ], footer: LEGAL,
     tone: 'generous and specific: ingredients, baking times and real flavours; gifts and occasions when the brief has them',
     questions: ['¿Qué sale primero del horno cada día?', '¿Qué receta es la de la casa?', '¿Para qué ocasiones te piden más?'], avoid: ['hecho con cariño', 'como en casa', 'dulce tentación', 'sabor inigualable', 'irresistible'],
     families: [
-      { id: 'bakery-editorial', name: 'calm editorial bakery', radius: 'soft', photoShape: 'plain', buttons: ['pill', 'outline'], fonts: [{ display: 'libre-caslon-text', text: 'figtree' }, { display: 'dm-serif-display', text: 'manrope' }],
+      { id: 'bakery-editorial', name: 'calm editorial bakery', radius: 'soft', photoShape: 'plain', buttons: ['pill', 'outline'], fonts: [{ display: 'cormorant-garamond', text: 'dm-sans' }, { display: 'lora', text: 'inter' }, { display: 'libre-caslon-text', text: 'figtree' }, { display: 'dm-serif-display', text: 'manrope' }],
         palettes: [p('bakery-cream-rose', 'cream and rose', '#fbf7f2', '#221a17', '#b0475a', '#f1e6e1'), p('bakery-cream-plum', 'cream and plum', '#faf6f1', '#20161f', '#5b2a52', '#ece3e8')] },
-      { id: 'bakery-shop', name: 'chocolate counter', radius: 'square', photoShape: 'plain', buttons: ['block', 'outline'], fonts: [{ display: 'epilogue', text: 'epilogue' }, { display: 'sora', text: 'manrope' }],
+      { id: 'bakery-shop', name: 'chocolate counter', radius: 'square', photoShape: 'plain', buttons: ['block', 'outline'], fonts: [{ display: 'plus-jakarta-sans', text: 'dm-sans' }, { display: 'archivo-black', text: 'inter' }, { display: 'epilogue', text: 'epilogue' }, { display: 'sora', text: 'manrope' }],
         palettes: [p('bakery-white-blush', 'white and blush', '#ffffff', '#1a1515', '#c1543f', '#f0d3c9'), p('bakery-white-navy', 'white and navy', '#ffffff', '#121826', '#23365f', '#e7ebf2')] },
     ] },
   clothing: { kind: 'clothing', angles: ['the-maker', 'origin-place', 'field-guide', 'neighbourhood'], name: 'clothing and accessories', profile: 'shop', references: ['carlafernandez.com', 'juanadearco.net', 'solalpaca.com', 'thinkingmu.com'], footer: LEGAL,
@@ -54,9 +56,9 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
     tone: 'short and confident: collections, materials and fit; never hype',
     questions: ['¿Con qué telas trabajas?', '¿Quién diseña o cose cada prenda?', '¿Cómo eligen su talla tus clientes?'], avoid: ['tendencia', 'look perfecto', 'estilo único', 'para cada ocasión', 'imprescindible'],
     families: [
-      { id: 'clothing-minimal', name: 'minimal boutique', radius: 'square', photoShape: 'plain', buttons: ['block', 'underline', 'outline'], fonts: [{ display: 'instrument', text: 'instrument' }, { display: 'manrope', text: 'manrope' }],
+      { id: 'clothing-minimal', name: 'minimal boutique', radius: 'square', photoShape: 'plain', buttons: ['block', 'underline', 'outline'], fonts: [{ display: 'archivo-black', text: 'inter' }, { display: 'lora', text: 'archivo' }, { display: 'instrument', text: 'instrument' }, { display: 'manrope', text: 'manrope' }],
         palettes: [p('clothing-white-black', 'white and black', '#ffffff', '#111111', '#111111', '#efefef'), p('clothing-white-orange', 'white and burnt orange', '#ffffff', '#151515', '#c2410c', '#ecf0f1')] },
-      { id: 'clothing-crafted', name: 'crafted label', radius: 'square', photoShape: 'tall', buttons: ['outline', 'pill'], fonts: [{ display: 'bodoni-moda', text: 'figtree' }, { display: 'instrument-serif', text: 'instrument' }],
+      { id: 'clothing-crafted', name: 'crafted label', radius: 'square', photoShape: 'tall', buttons: ['outline', 'pill'], fonts: [{ display: 'cormorant-garamond', text: 'inter' }, { display: 'lora', text: 'archivo' }, { display: 'bodoni-moda', text: 'figtree' }, { display: 'instrument-serif', text: 'instrument' }],
         palettes: [p('clothing-sand-ink', 'sand and ink', '#f5f1ea', '#161616', '#7a3e1d', '#e8e1d5'), p('clothing-stone-teal', 'stone and teal', '#f2f2ee', '#141816', '#1d5b5b', '#e2e4df')] },
     ] },
   beauty: { kind: 'beauty', angles: ['ritual-time', 'the-maker', 'origin-place', 'field-guide'], name: 'beauty and personal care', profile: 'shop', references: ['xinu.mx', 'matarrania.com'], footer: LEGAL,
@@ -64,9 +66,9 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
     tone: 'calm and exact: ingredients, routines and results the brief supports; never medical claims',
     questions: ['¿Qué ingrediente o servicio es el de la casa?', '¿Cómo es una primera visita contigo?', '¿Qué te preguntan siempre tus clientes?'], avoid: ['resultados visibles', 'piel perfecta', 'mímate', 'belleza natural', 'te mereces'],
     families: [
-      { id: 'beauty-quiet', name: 'quiet luxury', radius: 'square', photoShape: 'plain', buttons: ['outline', 'block'], fonts: [{ display: 'newsreader', text: 'figtree' }, { display: 'libre-caslon-text', text: 'manrope' }],
+      { id: 'beauty-quiet', name: 'quiet luxury', radius: 'square', photoShape: 'plain', buttons: ['outline', 'block'], fonts: [{ display: 'cormorant-garamond', text: 'inter' }, { display: 'cormorant-garamond', text: 'dm-sans' }, { display: 'newsreader', text: 'figtree' }, { display: 'libre-caslon-text', text: 'manrope' }],
         palettes: [p('beauty-ivory-taupe', 'ivory and taupe', '#f6f4ec', '#1b1a17', '#7d6a55', '#ebe7dc'), p('beauty-white-sage', 'white and sage', '#ffffff', '#16201b', '#4f6b5a', '#eef1ec')] },
-      { id: 'beauty-fresh', name: 'fresh natural', radius: 'round', photoShape: 'rounded-corner', buttons: ['pill', 'outline'], fonts: [{ display: 'nunito', text: 'nunito' }, { display: 'sora', text: 'figtree' }],
+      { id: 'beauty-fresh', name: 'fresh natural', radius: 'round', photoShape: 'rounded-corner', buttons: ['pill', 'outline'], fonts: [{ display: 'plus-jakarta-sans', text: 'dm-sans' }, { display: 'cormorant-garamond', text: 'dm-sans' }, { display: 'nunito', text: 'nunito' }, { display: 'sora', text: 'figtree' }],
         palettes: [p('beauty-white-leaf', 'white and leaf green', '#ffffff', '#132017', '#2e7d4f', '#e8f2ec'), p('beauty-white-coral', 'white and coral', '#ffffff', '#1e1716', '#c84d3f', '#f6e6e2')] },
     ] },
   services: { kind: 'services', angles: ['field-guide', 'the-maker', 'neighbourhood'], name: 'professional services and finance', profile: 'story', references: ['kambista.com', 'p-narayan-and-associates-15999.boosterpack.xyz', 'pagosya.boosterpack.xyz'], footer: LEGAL,
@@ -74,9 +76,9 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
     tone: 'clear and trustworthy: what you get, what it costs and what happens next; no jargon',
     questions: ['¿Qué problema resuelves primero?', '¿Cómo es una primera reunión contigo?', '¿A qué tipo de cliente ayudas más?'], avoid: ['soluciones integrales', 'llevamos tu negocio', 'siguiente nivel', 'de la mano', 'aliado estratégico', 'potencia tu'],
     families: [
-      { id: 'services-editorial', name: 'editorial trust', radius: 'square', photoShape: 'rounded-corner', buttons: ['outline', 'split', 'block'], fonts: [{ display: 'young-serif', text: 'instrument' }, { display: 'playfair-display', text: 'lora' }, { display: 'newsreader', text: 'manrope' }],
+      { id: 'services-editorial', name: 'editorial trust', radius: 'square', photoShape: 'rounded-corner', buttons: ['outline', 'split', 'block'], fonts: [{ display: 'cormorant-garamond', text: 'inter' }, { display: 'lora', text: 'archivo' }, { display: 'young-serif', text: 'instrument' }, { display: 'playfair-display', text: 'lora' }, { display: 'newsreader', text: 'manrope' }],
         palettes: [p('services-cream-terracotta', 'cream and terracotta', '#f8f5ef', '#262b24', '#9e4a3a', '#ede5d8'), p('services-stone-navy', 'stone and navy', '#f5f5f0', '#1c2133', '#4d5471', '#eaeae4')] },
-      { id: 'services-clear', name: 'clear modern', radius: 'soft', photoShape: 'plain', buttons: ['block', 'pill'], fonts: [{ display: 'manrope', text: 'manrope' }, { display: 'sora', text: 'figtree' }],
+      { id: 'services-clear', name: 'clear modern', radius: 'soft', photoShape: 'plain', buttons: ['block', 'pill'], fonts: [{ display: 'plus-jakarta-sans', text: 'inter' }, { display: 'archivo', text: 'inter' }, { display: 'manrope', text: 'manrope' }, { display: 'sora', text: 'figtree' }],
         palettes: [p('services-white-blue', 'white and trust blue', '#ffffff', '#111827', '#1d4ed8', '#eef2fb'), p('services-white-teal', 'white and teal', '#ffffff', '#10201f', '#0f766e', '#e7f3f1')] },
     ] },
   'fitness-wellness': { kind: 'fitness-wellness', angles: ['ritual-time', 'the-maker', 'neighbourhood', 'field-guide'], name: 'fitness and wellness', profile: 'story', references: ['yoko-studio-gent-19475.boosterpack.xyz', 'moonpilates.mx'], footer: LEGAL,
@@ -84,9 +86,9 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
     tone: 'encouraging and practical: who it is for, what a class feels like, how to start',
     questions: ['¿Cómo es una primera clase?', '¿Para quién es tu estudio?', '¿Qué hace distinta tu forma de entrenar?'], avoid: ['mejor versión', 'sin excusas', 'transforma tu cuerpo', 'cuerpo y mente', 'supera tus límites'],
     families: [
-      { id: 'fitness-studio', name: 'studio warm', radius: 'pill', photoShape: 'arch', buttons: ['pill', 'outline'], fonts: [{ display: 'outfit', text: 'figtree' }, { display: 'bricolage', text: 'manrope' }],
+      { id: 'fitness-studio', name: 'studio warm', radius: 'pill', photoShape: 'arch', buttons: ['pill', 'outline'], fonts: [{ display: 'archivo', text: 'inter' }, { display: 'plus-jakarta-sans', text: 'dm-sans' }, { display: 'outfit', text: 'figtree' }, { display: 'bricolage', text: 'manrope' }],
         palettes: [p('fitness-cream-forest', 'cream and forest', '#fdf8e8', '#13221a', '#024526', '#f3e5ab'), p('fitness-cream-clay', 'cream and clay', '#fbf6ee', '#211813', '#a4502f', '#efe1cf')] },
-      { id: 'fitness-clean', name: 'clean performance', radius: 'soft', photoShape: 'plain', buttons: ['block', 'outline'], fonts: [{ display: 'sora', text: 'manrope' }, { display: 'epilogue', text: 'epilogue' }],
+      { id: 'fitness-clean', name: 'clean performance', radius: 'soft', photoShape: 'plain', buttons: ['block', 'outline'], fonts: [{ display: 'archivo-black', text: 'inter' }, { display: 'archivo', text: 'dm-sans' }, { display: 'sora', text: 'manrope' }, { display: 'epilogue', text: 'epilogue' }],
         palettes: [p('fitness-white-black', 'white and black', '#ffffff', '#0f0f0f', '#0f0f0f', '#f0f0f0'), p('fitness-white-violet', 'white and violet', '#ffffff', '#16131f', '#5b3fd1', '#efecfb')] },
     ] },
   'crafts-home': { kind: 'crafts-home', angles: ['the-maker', 'origin-place', 'field-guide', 'neighbourhood'], name: 'crafts and home', profile: 'shop', references: ['onoracasa.com', 'utilitariomexicano.com'], footer: LEGAL,
@@ -94,9 +96,9 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
     tone: 'honest and tactile: materials, makers and care; each piece is real',
     questions: ['¿Qué te inspira?', '¿En qué papel o material trabajas?', '¿Cómo se hace cada pieza?'], avoid: ['piezas únicas', 'con alma', 'hecho a mano con amor', 'llena de vida', 'cada pieza cuenta una historia'],
     families: [
-      { id: 'crafts-gallery', name: 'gallery shop', radius: 'square', photoShape: 'plain', buttons: ['outline', 'block', 'underline'], fonts: [{ display: 'dm-serif-display', text: 'manrope' }, { display: 'instrument-serif', text: 'instrument' }],
+      { id: 'crafts-gallery', name: 'gallery shop', radius: 'square', photoShape: 'plain', buttons: ['outline', 'block', 'underline'], fonts: [{ display: 'cormorant-garamond', text: 'dm-sans' }, { display: 'lora', text: 'archivo' }, { display: 'dm-serif-display', text: 'manrope' }, { display: 'instrument-serif', text: 'instrument' }],
         palettes: [p('crafts-white-charcoal', 'white and charcoal', '#ffffff', '#1b1a19', '#393634', '#efede9'), p('crafts-white-clay', 'white and clay', '#ffffff', '#1d1714', '#a2512e', '#f2e8e1')] },
-      { id: 'crafts-market', name: 'market catalogue', radius: 'soft', photoShape: 'plain', buttons: ['block', 'pill'], fonts: [{ display: 'figtree', text: 'figtree' }, { display: 'chivo', text: 'manrope' }],
+      { id: 'crafts-market', name: 'market catalogue', radius: 'soft', photoShape: 'plain', buttons: ['block', 'pill'], fonts: [{ display: 'plus-jakarta-sans', text: 'dm-sans' }, { display: 'archivo', text: 'inter' }, { display: 'figtree', text: 'figtree' }, { display: 'chivo', text: 'manrope' }],
         palettes: [p('crafts-bone-cobalt', 'bone and cobalt', '#f6f3ec', '#141823', '#2846a8', '#e9e5da'), p('crafts-bone-green', 'bone and green', '#f5f3ec', '#151c16', '#2f6b3a', '#e7e8de')] },
     ] },
   'flowers-gifts': { kind: 'flowers-gifts', angles: ['ritual-time', 'the-maker', 'senses', 'neighbourhood'], name: 'flowers and gifts', profile: 'shop', references: ['margaritasellamamiamor.com'], footer: LEGAL,
@@ -104,18 +106,18 @@ export const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
     tone: 'kind and helpful: occasions, delivery times and care, without clichés',
     questions: ['¿Qué flor o regalo te piden más?', '¿Cada cuánto entregan y dónde?', '¿Qué ocasión te gusta más preparar?'], avoid: ['momentos especiales', 'sorprende a quien más quieres', 'detalles que enamoran', 'el regalo perfecto'],
     families: [
-      { id: 'flowers-classic', name: 'classic florist', radius: 'soft', photoShape: 'plain', buttons: ['outline', 'block'], fonts: [{ display: 'libre-caslon-text', text: 'figtree' }, { display: 'newsreader', text: 'manrope' }],
+      { id: 'flowers-classic', name: 'classic florist', radius: 'soft', photoShape: 'plain', buttons: ['outline', 'block'], fonts: [{ display: 'cormorant-garamond', text: 'dm-sans' }, { display: 'lora', text: 'inter' }, { display: 'libre-caslon-text', text: 'figtree' }, { display: 'newsreader', text: 'manrope' }],
         palettes: [p('flowers-white-black', 'white and black', '#ffffff', '#111111', '#111111', '#f3f3f3'), p('flowers-white-rose', 'white and rose', '#ffffff', '#1f1416', '#b23a5b', '#f8e8ec')] },
-      { id: 'flowers-garden', name: 'garden fresh', radius: 'round', photoShape: 'rounded-corner', buttons: ['pill', 'outline'], fonts: [{ display: 'fraunces', text: 'figtree' }, { display: 'dm-serif-display', text: 'nunito' }],
+      { id: 'flowers-garden', name: 'garden fresh', radius: 'round', photoShape: 'rounded-corner', buttons: ['pill', 'outline'], fonts: [{ display: 'plus-jakarta-sans', text: 'dm-sans' }, { display: 'cormorant-garamond', text: 'inter' }, { display: 'fraunces', text: 'figtree' }, { display: 'dm-serif-display', text: 'nunito' }],
         palettes: [p('flowers-cream-green', 'cream and leaf green', '#fbf8f1', '#152017', '#2f6b3a', '#ebe9dc'), p('flowers-cream-coral', 'cream and coral', '#fbf7f2', '#1f1715', '#c4553d', '#efe2d9')] },
     ] },
   general: { kind: 'general', angles: ['the-maker', 'field-guide', 'neighbourhood', 'origin-place'], name: 'professional store', profile: 'shop', references: ['pagosya.boosterpack.xyz'], sections: [ABOUT, DELIVERY, CONTACT], footer: LEGAL,
     tone: 'plain and specific: what is sold, for whom and how to buy it',
     questions: ['¿Qué es lo que más te piden?', '¿De dónde viene lo que vendes?', '¿Cada cuánto entregan?'], avoid: ['la mejor calidad', 'al mejor precio', 'todo lo que necesitas', 'para toda la familia'],
     families: [
-      { id: 'general-clean', name: 'clean shop', radius: 'soft', photoShape: 'plain', buttons: ['block', 'outline'], fonts: [{ display: 'manrope', text: 'manrope' }, { display: 'figtree', text: 'figtree' }],
+      { id: 'general-clean', name: 'clean shop', radius: 'soft', photoShape: 'plain', buttons: ['block', 'outline'], fonts: [{ display: 'plus-jakarta-sans', text: 'dm-sans' }, { display: 'archivo-black', text: 'inter' }, { display: 'manrope', text: 'manrope' }, { display: 'figtree', text: 'figtree' }],
         palettes: [p('general-white-blue', 'white and blue', '#ffffff', '#111827', '#1d4ed8', '#eef2fb'), p('general-white-green', 'white and green', '#ffffff', '#132017', '#2f6b3a', '#e8f2ec')] },
-      { id: 'general-editorial', name: 'editorial shop', radius: 'square', photoShape: 'rounded-corner', buttons: ['outline', 'split'], fonts: [{ display: 'young-serif', text: 'instrument' }, { display: 'newsreader', text: 'figtree' }],
+      { id: 'general-editorial', name: 'editorial shop', radius: 'square', photoShape: 'rounded-corner', buttons: ['outline', 'split'], fonts: [{ display: 'cormorant-garamond', text: 'inter' }, { display: 'lora', text: 'archivo' }, { display: 'young-serif', text: 'instrument' }, { display: 'newsreader', text: 'figtree' }],
         palettes: [p('general-paper-terracotta', 'paper and terracotta', '#f8f5ef', '#262b24', '#9e4a3a', '#ede5d8'), p('general-paper-navy', 'paper and navy', '#f6f5f0', '#1c2133', '#3a4a8a', '#e9e8e1')] },
     ] },
 };

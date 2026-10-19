@@ -129,7 +129,8 @@ describe('variety across proposals (2026-10-11: "always the same two templates")
       // The playbook names the drawn pair alone, so the planner cannot fall back to the family's first font.
       expect(direction).toContain(`fonts ${calm.fonts!.display} + ${calm.fonts!.text},`);
     }
-    expect(displays.size).toBe(2);
+    // cafe-shop's pairs minus the outfit one just shown (2026-10-19: two premium pairs joined the family).
+    expect(displays.size).toBe(new Set(PLAYBOOK['cafe-food'].families.find(family => family.id === 'cafe-shop')!.fonts.map(pair => pair.display).filter(display => display !== 'outfit')).size);
     // Without history the pair still rotates across seeds.
     const fresh = new Set(Array.from({ length: 30 }, (_, seed) => styleDraws({ ...base, recentFamilies: ['cafe-editorial'], random: seeded(seed + 1) })[0].fonts!.display));
     expect(fresh.size).toBeGreaterThanOrEqual(2);

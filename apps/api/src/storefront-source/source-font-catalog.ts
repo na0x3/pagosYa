@@ -28,7 +28,8 @@ const FONTS = [
   { id: 'bebas-neue', family: 'Bebas Neue', role: 'display', personality: ['condensed', 'all-caps', 'poster'], weights: '400' },
   { id: 'anton', family: 'Anton', role: 'display', personality: ['condensed', 'heavy', 'impact'], weights: '400' },
   { id: 'chivo', family: 'Chivo', role: 'both', personality: ['grotesk', 'sturdy', 'newsy'], weights: '100–900' },
-  { id: 'lora', family: 'Lora', role: 'text', personality: ['serif', 'calligraphic', 'reading'], weights: '400–700' },
+  // Also a display face since 2026-10-19: Leverage sets its wordmark and menu in Lora.
+  { id: 'lora', family: 'Lora', role: 'both', personality: ['serif', 'calligraphic', 'reading'], weights: '400–700' },
   { id: 'libre-caslon-text', family: 'Libre Caslon Text', role: 'text', personality: ['serif', 'classic', 'bookish'], weights: '400–700' },
   { id: 'outfit', family: 'Outfit', role: 'both', personality: ['geometric', 'minimal', 'round-dotted'], weights: '100–900' },
   { id: 'figtree', family: 'Figtree', role: 'text', personality: ['humanist', 'geometric', 'friendly'], weights: '300–900' },

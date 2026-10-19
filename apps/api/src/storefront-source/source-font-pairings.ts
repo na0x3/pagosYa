@@ -34,6 +34,13 @@ export const SOURCE_FONT_PAIRINGS: readonly SourceFontPairing[] = [
   pair('sora', 'manrope', ['tech']),
   pair('fraunces', 'nunito', ['handmade', 'warm', 'playful']),
   pair('dm-serif-display', 'figtree', ['luxury', 'warm']),
+  // Premium (2026-10-19): the pairs of the owner's Amboras references.
+  pair('archivo-black', 'inter', ['pop', 'editorial']),
+  pair('lora', 'archivo', ['classic', 'editorial']),
+  pair('plus-jakarta-sans', 'dm-sans', ['tech', 'warm']),
+  pair('cormorant-garamond', 'inter', ['luxury', 'classic']),
+  pair('cormorant-garamond', 'dm-sans', ['luxury', 'warm']),
+  pair('archivo', 'inter', ['tech', 'pop']),
 ];
 
 export const sourceFontPairing = (id: string) => SOURCE_FONT_PAIRINGS.find(pairing => pairing.id === id);
