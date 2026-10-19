@@ -4,7 +4,7 @@ import { Interval } from '@nestjs/schedule';
 import { createHash, randomUUID } from 'node:crypto';
 import { Prisma, StoreSourceChatJob } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { SourceChatService } from './source-chat.service';
+import { PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SendSourceMessageDto } from './dto/send-source-message.dto';
 import { sourceRequestContext } from './source-request-context';
 import { merchantFacingSourceFailure } from './source-validation-error';
@@ -34,7 +34,10 @@ export class SourceChatJobsService implements OnModuleDestroy {
   private busy = false;
   private controller?: AbortController;
   private readonly logger = new Logger(SourceChatJobsService.name);
-  constructor(private readonly prisma: PrismaService, private readonly chat: SourceChatService) {}
+  constructor(private readonly prisma: PrismaService, private readonly chat: SourceChatService) {
+    // Variety spec §5: the chat service queues the personal touch through this service (it cannot inject it back).
+    chat.followUp = (merchantId, storeId, input) => this.create(merchantId, storeId, input);
+  }
   onModuleDestroy() { this.controller?.abort(); }
   private async owner(merchantId: string, storeId: string) {
     if (!await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true } })) throw new NotFoundException('Tienda no encontrada.');
@@ -49,6 +52,11 @@ export class SourceChatJobsService implements OnModuleDestroy {
       return chatJobView(existing);
     }
     await this.expire();
+    // Variety spec §5: the merchant's own request wins — a queued or running personal touch on the store is cancelled.
+    if (!input.personalTouch) {
+      const active = await this.prisma.storeSourceChatJob.findMany({ where: { storeId, status: { in: ['QUEUED', 'RUNNING'] } }, select: { id: true, input: true } });
+      for (const job of active) if ((job.input as { personalTouch?: boolean } | null)?.personalTouch) await this.cancel(merchantId, storeId, job.id).catch(() => undefined);
+    }
     const history = await this.prisma.storeAgentMessage.findMany({ where: { thread: { storeId }, channel: 'source', role: 'ASSISTANT' }, orderBy: { createdAt: 'desc' }, take: 30, select: { id: true, metadata: true } });
     const contextAnchor = history.find(message => !(message.metadata as any)?.failed && !(message.metadata as any)?.adaptationFailed)?.id;
     try {
@@ -128,9 +136,10 @@ export class SourceChatJobsService implements OnModuleDestroy {
         // The row lock fences cancellation and competing workers in the same transaction as the revision.
         const held = await tx.storeSourceChatJob.updateMany({ where: this.fence(job), data: { lastCommittedRevision: revision, sequence: { increment: 1 } } });
         if (!held.count) throw new ConflictException('Este pedido perdió su turno; el diseño anterior se conserva.');
-      } }, () => this.chat.send(job.merchantId, job.storeId, job.input as unknown as SendSourceMessageDto));
+      } }, () => this.chat.send(job.merchantId, job.storeId, job.input as unknown as SendSourceMessageDto)
+        .catch(error => { if (error instanceof PersonalTouchSkipped) return { skipped: true as const }; throw error; }));
       const failed = (result as any).assistantMessage?.metadata?.failed || (result as any).assistantMessage?.metadata?.adaptationFailed;
-      await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: failed ? 'FAILED' : 'revision' in result && result.revision ? 'COMPLETED' : 'AWAITING_INPUT', result: json(result), activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 } } });
+      await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: failed ? 'FAILED' : 'skipped' in result || 'revision' in result && result.revision ? 'COMPLETED' : 'AWAITING_INPUT', result: json(result), activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 } } });
     } catch (error) {
       const generation = await this.prisma.storeSourceGeneration.findFirst({ where: { requestJobId: job.id }, orderBy: { createdAt: 'desc' }, select: { status: true } }).catch(() => null);
       const outcome = generation && ['PARTIAL', 'BLOCKED'].includes(generation.status) ? generation.status : 'FAILED';

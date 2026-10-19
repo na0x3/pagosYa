@@ -1,6 +1,6 @@
 import { randomUUID as uuid } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { SourceChatService } from './source-chat.service';
+import { PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
 import { sourceRequestContext } from './source-request-context';
 import { sourceMerchantRequest } from './source-merchant-request';
@@ -16,7 +16,7 @@ beforeEach(() => {
   prisma = {
     store: { findFirst: jest.fn().mockResolvedValue({ name: 'Café Buna', logoUrl: null, onboarding: { what: 'Café de especialidad', story: 'Tostamos en casa', contact: { city: 'La Paz' }, photos: ['https://x/u1.jpg'] }, _count: { paymentLinks: 0 }, paymentLinks: [] }), update: jest.fn() },
     storeAgentThread: { findUnique: jest.fn().mockImplementation(async () => ({ id: 't1', messages: [...messages].reverse() })), upsert: jest.fn().mockResolvedValue({ id: 't1' }) },
-    storeAgentMessage: { create: jest.fn().mockImplementation(async ({ data }) => { const message = { ...data, id: String(messages.length), createdAt: new Date() }; messages.push(message); return message; }), update: jest.fn() },
+    storeAgentMessage: { create: jest.fn().mockImplementation(async ({ data }) => { const message = { ...data, id: String(messages.length), createdAt: new Date() }; messages.push(message); return message; }), update: jest.fn(), delete: jest.fn().mockResolvedValue({}) },
     storeSourceVersion: { count: jest.fn().mockResolvedValue(1) },
     storeSourceGeneration: { findFirst: jest.fn().mockResolvedValue(null), updateMany: jest.fn() },
     storeSourceChatJob: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -94,6 +94,25 @@ it('the flag off returns to today’s flow', async () => {
   expect(generate).toHaveBeenCalled();
 });
 
+it('queues one personal touch after a new master store (variety spec §5)', async () => {
+  config.set('app.yapiPersonalTouch', true);
+  const enqueue = jest.fn().mockResolvedValue({});
+  chat.followUp = enqueue;
+  const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+  expect(enqueue).toHaveBeenCalledTimes(1);
+  expect(enqueue).toHaveBeenCalledWith('m1', 's1', expect.objectContaining({ personalTouch: true, revision: 1, instruction: PERSONAL_TOUCH_BRIEF }));
+  expect(out.assistantMessage.content).toContain('toque personal');
+});
+
+it('no personal touch when the flag is off', async () => {
+  config.set('app.yapiPersonalTouch', false);
+  const enqueue = jest.fn().mockResolvedValue({});
+  chat.followUp = enqueue;
+  const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+  expect(enqueue).not.toHaveBeenCalled();
+  expect(out.assistantMessage.content).not.toContain('toque personal');
+});
+
 describe('edits on a master store', () => {
   let refill: jest.Mock;
   const storeData = 'export const store = {"name":"Café Buna","tagline":"","city":"","logo":"","phone":""} as const;\nexport const photos: Record<string, string> = {"hero":"https://x/h.jpg","story":""};\nexport const copy = {"headline":"Hecho con cuidado"} as const;\nexport const look = {"palette":"terracotta","fonts":"classic","colors":{}} as const;\n';
@@ -154,6 +173,30 @@ describe('edits on a master store', () => {
     generate.mockResolvedValueOnce({ revision: 3, label: 'Reseñas arriba' });
     await edit('Mueve las reseñas arriba de los productos');
     expect(generate.mock.calls[0][2].instruction).toContain('Edita el componente que ya existe');
+  });
+
+  const touch = () => chat.send('m1', 's1', { revision: 2, instruction: PERSONAL_TOUCH_BRIEF, personalTouch: true, requestId: uuid() }) as Promise<any>;
+
+  it('a personal touch runs as a design edit with the touch brief, without the conversation step', async () => {
+    generate.mockResolvedValueOnce({ revision: 3, label: 'Toque personal' });
+    await touch();
+    expect(decide).not.toHaveBeenCalled();
+    expect(generate.mock.calls[0][2].instruction).toContain('Edita el componente que ya existe');
+    expect(generate.mock.calls[0][2].instruction).toContain('Toque personal');
+    expect(messages.find(message => message.role === 'USER')?.content).toBe('Toque personal');
+  });
+
+  it('a personal touch is skipped when the store moved on', async () => {
+    await expect(chat.send('m1', 's1', { revision: 1, instruction: PERSONAL_TOUCH_BRIEF, personalTouch: true, requestId: uuid() })).rejects.toBeInstanceOf(PersonalTouchSkipped);
+    expect(generate).not.toHaveBeenCalled();
+    expect(messages).toHaveLength(0);
+  });
+
+  it('a failed personal touch keeps the first version and says nothing', async () => {
+    generate.mockRejectedValueOnce(new Error('model down'));
+    await expect(touch()).rejects.toBeInstanceOf(PersonalTouchSkipped);
+    expect(messages.filter(message => message.role === 'ASSISTANT')).toHaveLength(0);
+    expect(prisma.storeAgentMessage.delete).toHaveBeenCalled();
   });
 
   it('tells the conversation step the store is a master store', async () => {

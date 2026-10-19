@@ -14,6 +14,8 @@ export class SourceStylePickDto {
 export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @IsIn(['shop', 'service', 'portfolio', 'editorial']) sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial';
   @IsOptional() @IsUUID() requestId?: string;
+  /** Variety spec §5: the background personal touch YAPI queues after a new master store. */
+  @IsOptional() @IsBoolean() personalTouch?: boolean;
   /** @deprecated Accepted only for older clients; never used for generation. */
   @IsOptional() @IsString() @Matches(/^[a-zA-Z0-9_-]{1,160}$/) designSeed?: string;
   @IsOptional() @IsString() @MaxLength(80) themeId?: string;

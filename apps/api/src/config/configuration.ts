@@ -107,6 +107,8 @@ export interface AppConfig {
   yapiMasterTemplate: boolean;
   /** Variety spec 2026-10-19 §3: the platform rolls Esencial's variants per store. Default on; YAPI_ESENCIAL_DICE=off disables. */
   yapiEsencialDice: boolean;
+  /** Variety spec 2026-10-19 §5: a background personal touch after each new master store. Default on; YAPI_PERSONAL_TOUCH=off disables. */
+  yapiPersonalTouch: boolean;
   /** The bold style card is YAPI's own design (2026-10-18): only the platform's header and cart are drawn for it. Default on;
    *  YAPI_AUTHORED_BOLD=off returns to the drawn bold card (palette, hero, design parts, signature device). */
   yapiAuthoredBold: boolean;
@@ -458,6 +460,7 @@ export default (): { app: AppConfig } => {
     yapiStylePick: process.env.YAPI_STYLE_PICK === '1',
     yapiMasterTemplate: process.env.YAPI_MASTER_TEMPLATE !== 'off',
     yapiEsencialDice: process.env.YAPI_ESENCIAL_DICE !== 'off',
+    yapiPersonalTouch: process.env.YAPI_PERSONAL_TOUCH !== 'off',
     yapiAuthoredBold: process.env.YAPI_AUTHORED_BOLD !== 'off',
     yapiCommerceSurfaces: process.env.YAPI_COMMERCE_SURFACES === '1',
     onboardingWalkthrough: process.env.ONBOARDING_WALKTHROUGH === '1',

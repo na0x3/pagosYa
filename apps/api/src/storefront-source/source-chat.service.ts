@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { sourceRequestContext } from './source-request-context';
 import { styleReleaseWaitMs } from './source-style-release';
 import { sourceMerchantRequest, type SourceMerchantRequest } from './source-merchant-request';
@@ -71,6 +72,12 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
 
 /** The merchant's own words asking for a store designed from nothing (spec 2026-10-19 §2.1). */
 /** Spec 2026-10-19 §3.2: how the agent edits a master store — the Amboras rule set, in YAPI's words. */
+/** Variety spec §5: the brief of the background personal touch that follows a new master store. */
+export const PERSONAL_TOUCH_BRIEF = 'Toque personal para este negocio: agrega UNA sección que las variantes no tienen y que nazca de sus datos reales (por ejemplo «Lo que nos hace distintos» o una guía breve de uso), UN detalle de firma (un sello con la ciudad o la idea del negocio, un subrayado dibujado en el titular o un separador propio) y, si una sección suena genérica, reescribe solo esa. No quites secciones, no cambies la estructura de store-data, no inventes datos, precios ni reseñas, no toques carrito ni pago.';
+
+/** A personal touch that was dropped (the store moved on, or the edit failed): the job ends quietly, with no message. */
+export class PersonalTouchSkipped extends Error {}
+
 export const MASTER_EDIT_RULES = 'Esta tienda usa la plantilla base «Esencial». Edita el componente que ya existe; cambia solo lo que el comercio pidió; nunca reescribas una página completa ni cambies secciones que no nombró. Los textos visibles viven en components/store-data.tsx (copy): úsalos, no los copies dentro de los componentes. No toques el bloque /* pagosya:master-theme */ de styles/globals.css. Íconos: solo los de components/icons.tsx. Sin emojis.';
 const MASTER_SCRATCH = /\b(?:diseñ\w*|crea\w*|cré\w*|arm\w*|haz|hacer|hagas|constru\w*)\b[^.!?\n]{0,30}\bdesde (?:cero|0)\b|\b(?:tienda|página|pagina|web|sitio|diseño)\b[^.!?\n]{0,20}\bdesde (?:cero|0)\b|from scratch|diseño propio|sin (?:usar )?plantillas?/i;
 /** A master store's home still reads its words from store-data (spec 2026-10-19 §3): after a redesign it no longer does. */
@@ -173,6 +180,8 @@ export class SourceChatService {
   /** Computed on first use from the deadlines the style run awaits (source-style-release.ts); tests set it directly. */
   protected styleReleaseWaitMs?: number;
   protected styleReleasePollMs = 500;
+  /** Queues a follow-up request for the store (set by SourceChatJobsService, which depends on this service). */
+  followUp?: (merchantId: string, storeId: string, input: SendSourceMessageDto) => Promise<unknown>;
 
   private async owner(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { name: true, logoUrl: true, _count: { select: { paymentLinks: true } }, paymentLinks: { where: { status: 'ACTIVE' }, take: 50, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, amount: true, currency: true, variants: true, stock: true, imageUrls: true } } } });
@@ -257,9 +266,12 @@ export class SourceChatService {
       return read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: (onboarding.what ?? '').slice(0, 160) } };
     });
     await workflow.finish('completed');
+    // Variety spec §5: one background personal touch per new master store; a failure to queue never fails the store.
+    const touching = this.config.get<boolean>('app.yapiPersonalTouch') === true && Boolean(this.followUp)
+      && await this.followUp!(merchantId, storeId, { instruction: PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, requestId: randomUUID(), model: 'auto' } as SendSourceMessageDto).then(() => true, () => false);
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId, channel: 'source', role: 'ASSISTANT',
-      content: `Tu tienda ${store?.name ?? ''} está lista. Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
+      content: `Tu tienda ${store?.name ?? ''} está lista.${touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
       metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
     } });
     return { userMessage, assistantMessage, revision: saved };
@@ -375,6 +387,8 @@ export class SourceChatService {
 
   async send(merchantId: string, storeId: string, input: SendSourceMessageDto) {
     const [store, current] = await Promise.all([this.owner(merchantId, storeId), this.projects.current(merchantId, storeId)]);
+    // Variety spec §5: the personal touch never collides with the merchant — once the store moved on, it is dropped silently.
+    if (input.personalTouch && current.revision !== input.revision) throw new PersonalTouchSkipped('the store moved on');
     if (current.revision !== input.revision) throw new ConflictException('El sitio cambió en otra sesión. Actualiza antes de enviar.');
     const productPhoto = input.setupAction === 'product-photo';
     if (productPhoto && (input.assetUrls?.length !== 1 || !/^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(input.assetUrls[0]))) {
@@ -416,7 +430,7 @@ export class SourceChatService {
     if (input.directionId && (!tappedDirection || current.revision)) throw new BadRequestException('Elige una de las direcciones sugeridas en el último mensaje de YAPI.');
     const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: { updatedAt: new Date() } });
     const userMessage = await this.prisma.storeAgentMessage.create({ data: {
-      threadId: thread.id, channel: 'source', role: 'USER', content: input.instruction.trim(),
+      threadId: thread.id, channel: 'source', role: 'USER', content: input.personalTouch ? 'Toque personal' : input.instruction.trim(),
       metadata: { assetUrls: input.assetUrls || [], revision: input.revision, ...(input.requestId ? { requestId: input.requestId } : {}) },
     } });
     // Store voice (spec 2026-10-14): the message right after YAPI's kind question is its answer. It is kept word for word on the
@@ -527,7 +541,7 @@ export class SourceChatService {
       const productSource = productRead?.earlier
         ? { site: productRead.site, name: productRead.earlier.product.name, description: productRead.earlier.listingDescription, price: productRead.earlier.product.amount / 100, currency: productRead.earlier.product.currency, options: [] }
         : productListing ? { site: productRead!.site, name: productListing.name, description: productListing.description.slice(0, 1500), price: productListing.price, currency: productListing.currency, options: productListing.options } : undefined;
-      const decision: SourceConversationDecision = productFailure ? { action: 'reply', reply: productFailure, summary: setupDraft.answers.context ?? '', generationInstruction: '', imageUses: [] } : { ...(reusable ? savedRetry.decision : await this.dialogue.decide(merchantId, {
+      const decision: SourceConversationDecision = input.personalTouch ? { action: 'generate', reply: '', summary: 'Toque personal', generationInstruction: input.instruction, imageUses: [], startFrom: 'unknown', editKind: 'design' } : productFailure ? { action: 'reply', reply: productFailure, summary: setupDraft.answers.context ?? '', generationInstruction: '', imageUses: [] } : { ...(reusable ? savedRetry.decision : await this.dialogue.decide(merchantId, {
         storeId, model: input.model, instruction: input.instruction, productPhoto, ...(productSource ? { productSource } : {}), buildNow: ['generate', 'quick'].includes(input.setupAction || '') || Boolean(productSource),
         revision: current.revision, store, draft: setupDraft, site, budget, catalog: store.paymentLinks || [], knowledge: await loadStoreKnowledge(this.prisma, merchantId, storeId).catch(() => null),
         messages: [...history.messages, userMessage], assetUrls: allAssets, browserReview: input.browserReview,
@@ -728,6 +742,7 @@ export class SourceChatService {
         decision.editKind = 'design';
       }
       const masterDesign = masterStore && decision.editKind === 'design';
+      if (input.personalTouch && !masterDesign) throw new Error('personal touch on a store that is no longer Esencial');
       // A full redesign or «más única» leaves Esencial: later edits are ordinary edits, not data refills.
       const leavesMaster = previousBrief?.templateId === MASTER_TEMPLATE_ID && !masterDesign && (decision.editKind === 'redesign' || decision.rework === true || sourceRedesignRequested(input.instruction));
       const brief = { ...(previousBrief || {
@@ -808,6 +823,11 @@ export class SourceChatService {
       return await this.revisionReply(thread, userMessage, workflow, finalRevision, setupDraft, decision.imageUses, input.assetUrls || [], `${productNote}${copyNote}${copyMissed}${proposeStyle && revision.generation?.styleAttempted ? 'No pude preparar los estilos, armé uno por ti. ' : ''}`);
     } catch (error) {
       await workflow.finish('failed');
+      // Variety spec §5: a failed personal touch keeps the first version and says nothing.
+      if (input.personalTouch) {
+        await this.prisma.storeAgentMessage.delete({ where: { id: userMessage.id } }).catch(() => undefined);
+        throw new PersonalTouchSkipped('the personal touch failed');
+      }
       // The same default-deny gate the generation path uses. Chat also wraps the
       // conversation step, the catalog request and the save path, whose validators
       // never had their diagnostics rewritten for a merchant.

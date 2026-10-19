@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { BadGatewayException, ConflictException, InternalServerErrorException, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { SourceProviderQuotaException, checkSourceProviderQuota } from './source-provider-error';
 import { SourceChatJobsService, chatRequestDigest } from './source-chat-jobs.service';
+import { PersonalTouchSkipped } from './source-chat.service';
 import { sourceRequestContext } from './source-request-context';
 function setup() {
   const updateMany = jest.fn().mockResolvedValue({ count: 1 });
@@ -31,6 +32,27 @@ it('fences a stale worker before any revision can commit', async () => {
   expect(commit).not.toHaveBeenCalled();
   expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ leaseToken: 'lease', status: 'RUNNING' }), data: expect.objectContaining({ status: 'FAILED' }) }));
 });
+describe('personal touch (variety spec §5)', () => {
+  it('the chat service can queue a follow-up through the jobs service', () => {
+    const { chat } = setup();
+    expect(typeof chat.followUp).toBe('function');
+  });
+  it('a merchant request cancels a queued personal touch on the store', async () => {
+    const { service, prisma } = setup();
+    prisma.storeSourceChatJob.findMany.mockImplementation(async ({ where }: any) => where.status?.in ? [{ id: 'touch', input: { personalTouch: true } }, { id: 'other', input: {} }] : []);
+    prisma.storeSourceChatJob.findFirst = jest.fn().mockResolvedValue({ ...job, id: 'touch', status: 'CANCELLED' });
+    await service.create('m', 's', input).catch(() => undefined);
+    expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: 'touch' }), data: expect.objectContaining({ status: 'CANCELLED' }) }));
+    expect(prisma.storeSourceChatJob.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: 'other' }) }));
+  });
+  it('a skipped personal touch completes quietly', async () => {
+    const { service, prisma, chat } = setup();
+    chat.send.mockRejectedValue(new PersonalTouchSkipped('moved on'));
+    await service.run({ ...job, input: { ...input, personalTouch: true } });
+    expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'COMPLETED' }) }));
+  });
+});
+
 it('does not label a template adaptation failure as completed', async () => {
   const { service, prisma, chat } = setup();
   chat.send.mockResolvedValue({ assistantMessage: { metadata: { adaptationFailed: true } }, revision: { revision: 2 } });
