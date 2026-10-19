@@ -72,3 +72,23 @@ it('an over-eager exclusion list still leaves at least half of each part (live c
 it('review fix: counts a photo once whatever its URL form', () => {
   expect(distinctPhotoCount(['/v1/uploads/a.jpg', 'http://localhost:3001/v1/uploads/a.jpg', '/v1/uploads/b.jpg', undefined, ''])).toBe(2);
 });
+
+it('an exclusion names its part: ruling out compact density leaves compact cards in the roll (live 2026-10-19: no store got compact cards)', () => {
+  const cards = new Set<string>(), density = new Set<string>();
+  for (const seed of 'abcdefghijklmnopqrstuvwxyz') {
+    const r = roll(seed, { character: { ...calm, exclude: ['density:compact'] } });
+    cards.add(r.variants.cards); density.add(r.variants.density);
+  }
+  expect(cards).toContain('compact');
+  expect(density).not.toContain('compact');
+});
+
+it('a bare id two parts share rules out neither; a bare id one part owns still counts', () => {
+  const cards = new Set<string>();
+  for (const seed of 'abcdefghijklmnopqrstuvwxyz') {
+    const r = roll(seed, { character: { ...calm, exclude: ['compact', 'type'] } });
+    cards.add(r.variants.cards);
+    expect(r.variants.hero).not.toBe('type');
+  }
+  expect(cards).toContain('compact');
+});

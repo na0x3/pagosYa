@@ -58,6 +58,13 @@ describe('fillMaster', () => {
     expect(sent.text.format.schema.properties.tone.enum).toEqual(['calm', 'bold']);
     expect(sent.text.format.schema.properties.sections.items.properties.id.enum).toContain('process');
   });
+  it('asks for exclusions by part, so an id two parts share (compact density, compact cards) rules out only the one meant', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 200, json: async () => body(read()) } as any);
+    await service().fillMaster('m1', { ...input, variantCatalogue: { density: ['airy', 'compact'], cards: ['showcase', 'compact'] } });
+    const sent = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
+    expect(sent.text.format.schema.properties.exclude.items.enum).toEqual(['density:airy', 'density:compact', 'cards:showcase', 'cards:compact']);
+    expect(sent.instructions).toMatch(/part:id/);
+  });
   it('labels every image with its index and sends the current photo choices (review fix 6)', async () => {
     const svc = new SourceConversationService({ mediaAsset: { findMany: jest.fn().mockResolvedValue([{ url: 'https://x/u/a.jpg' }, { url: 'https://x/u/c.jpg' }]) } } as any,
       { getBuffer: jest.fn().mockResolvedValue(Buffer.from('px')), contentTypeFor: () => 'image/jpeg' } as any, config);

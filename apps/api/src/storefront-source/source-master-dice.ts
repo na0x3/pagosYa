@@ -30,9 +30,13 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   const catalogue = (input.settings.variants ?? {}) as Record<string, readonly string[]>;
   // The fill call's exclusions are honoured for at most half of a part: a model that rules out nearly everything would
   // otherwise make every store the same (live check 2026-10-19: the feature grid on 4 of 6 stores).
+  // Exclusions name their part («density:compact»): an id two parts share would otherwise rule out both (live 2026-10-19:
+  // calm stores ruled out compact density and lost compact cards). A bare id counts only when one part owns it.
+  const owners = (id: string) => Object.keys(catalogue).filter(part => catalogue[part].includes(id)).length;
+  const excluded = (part: string, id: string) => input.character.exclude.includes(`${part}:${id}`) || (input.character.exclude.includes(id) && owners(id) === 1);
   const allowed = (part: string) => {
     const fits = catalogue[part].filter(id => (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
-    const honoured = fits.filter(id => input.character.exclude.includes(id)).slice(0, Math.floor(fits.length / 2));
+    const honoured = fits.filter(id => excluded(part, id)).slice(0, Math.floor(fits.length / 2));
     const list = fits.filter(id => !honoured.includes(id));
     return list.length ? list : [catalogue[part][0]];
   };
