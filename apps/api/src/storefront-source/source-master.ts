@@ -38,6 +38,12 @@ export function masterCopy(settings: MasterSettings, partial: Partial<MasterCopy
   return { ...text, values };
 }
 
+/** A merchant upload saved as a path (`/v1/uploads/…`) as the full API URL: a published store on its own domain must still load it. */
+export function masterPhotoUrl(url: string | null | undefined, apiUrl?: URL): string {
+  if (!url) return '';
+  return apiUrl && url.startsWith('/') && !url.startsWith('//') ? new URL(url, apiUrl.origin).href : url;
+}
+
 export function masterLook(settings: MasterSettings, partial: Partial<MasterLook> = {}): MasterLook {
   const palette = settings.palettes.some(p => p.id === partial.palette) ? partial.palette! : settings.palettes[0].id;
   const fonts = settings.fonts.some(f => f.id === partial.fonts) ? partial.fonts! : settings.fonts[0].id;

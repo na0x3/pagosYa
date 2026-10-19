@@ -62,7 +62,7 @@ export class SourceTemplatesService {
     const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
     const manifest = snapshot.brief?.templateId ? this.registry.templateManifest(snapshot.brief.templateId) : undefined;
     if (!manifest?.master) throw new BadRequestException('Esta tienda no usa la plantilla base.');
-    return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: refillMasterFiles(snapshot.files, manifest, change) });
+    return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: refillMasterFiles(snapshot.files, manifest, change, sourcePublicApiUrl(this.config)) });
   }
 
   private readonly demos = new Map<string, Promise<SourceProjectSnapshot>>();

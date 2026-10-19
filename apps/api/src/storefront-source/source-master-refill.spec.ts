@@ -56,4 +56,9 @@ describe('master store data', () => {
     const back = refillMasterFiles(custom, manifest, { look: { palette: 'sage', fonts: 'classic', colors: {} } });
     expect(readMasterState(back).look).toEqual({ palette: 'sage', fonts: 'classic', colors: {} });
   });
+
+  it('a photo change given as an upload path is saved as a full API URL (live check fix)', () => {
+    const out = refillMasterFiles(storeFiles(), manifest, { heroPhoto: '/v1/uploads/new.jpg' }, new URL('https://api.pagosya.test/v1'));
+    expect(readMasterState(out).photos.hero).toBe('https://api.pagosya.test/v1/uploads/new.jpg');
+  });
 });

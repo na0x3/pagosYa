@@ -2,7 +2,7 @@
  * authored source never contains merchant text; it imports `./store-data`, which this module writes with every value
  * JSON-encoded, so no store name or photo URL is ever pasted into JSX. */
 import type { MasterCopy } from '@pagosya/store-templates';
-import { masterCopy, masterDnaFonts, masterLook, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook } from './source-master';
+import { masterCopy, masterDnaFonts, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook } from './source-master';
 import { readFile } from 'node:fs/promises';
 import { templateDemoPhoto, type TemplateManifest } from '@pagosya/store-templates';
 import { kitPath } from '@pagosya/storefront-kit';
@@ -74,14 +74,14 @@ export function readMasterState(files: readonly SourceProjectFileDto[]) {
 }
 
 /** A content edit: new store-data, theme block and DNA fonts; components and every other file untouched. */
-export function refillMasterFiles(files: SourceProjectFileDto[], manifest: TemplateManifest, change: MasterFill): SourceProjectFileDto[] {
+export function refillMasterFiles(files: SourceProjectFileDto[], manifest: TemplateManifest, change: MasterFill, apiUrl?: URL): SourceProjectFileDto[] {
   const settings = manifest.master;
   if (!settings) throw new TypeError(`Plantilla ${manifest.id}: no es una plantilla base.`);
   const state = readMasterState(files);
   const copy = masterCopy(settings, { ...(state.copy ?? {}), ...(change.copy ?? {}) });
   // A changed look carries its whole colour set (the fill call copies the colours it keeps), so earlier custom colours can go.
   const look = masterLook(settings, { ...(state.look ?? {}), ...(change.look ?? {}), colors: change.look?.colors ?? state.look?.colors ?? {} });
-  const photos = { ...state.photos, ...(change.heroPhoto !== undefined ? { hero: change.heroPhoto ?? '' } : {}), ...(change.storyPhoto !== undefined ? { story: change.storyPhoto ?? '' } : {}) };
+  const photos = { ...state.photos, ...(change.heroPhoto !== undefined ? { hero: masterPhotoUrl(change.heroPhoto, apiUrl) } : {}), ...(change.storyPhoto !== undefined ? { story: masterPhotoUrl(change.storyPhoto, apiUrl) } : {}) };
   const theme = masterThemeCss(settings, look);
   return files.map(file => {
     if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look });
@@ -136,8 +136,8 @@ export async function assembleTemplateRevision(input: {
   const settings = manifest.master;
   const filled = fillTemplatePhotos(manifest, data.items, input.demoPhotos !== false);
   const photos: Record<string, string> = { ...filled.photos,
-    ...(settings && input.fill?.heroPhoto !== undefined ? { hero: input.fill.heroPhoto ?? '' } : {}),
-    ...(settings && input.fill?.storyPhoto !== undefined ? { story: input.fill.storyPhoto ?? '' } : {}) };
+    ...(settings && input.fill?.heroPhoto !== undefined ? { hero: masterPhotoUrl(input.fill.heroPhoto, input.apiUrl) } : {}),
+    ...(settings && input.fill?.storyPhoto !== undefined ? { story: masterPhotoUrl(input.fill.storyPhoto, input.apiUrl) } : {}) };
   const demoSlots = filled.demoSlots.filter(slot => photos[slot] === templateDemoPath(manifest, slot));
   const copy = settings ? masterCopy(settings, input.fill?.copy) : undefined;
   const look = settings ? masterLook(settings, input.fill?.look) : undefined;

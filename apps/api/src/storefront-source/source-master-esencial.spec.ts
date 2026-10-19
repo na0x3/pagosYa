@@ -38,6 +38,13 @@ describe('Esencial', () => {
     for (const width of [390, 768, 1280]) expect((await readAt(snapshot, width)).overflow).toBeLessThanOrEqual(0);
   });
 
+  it('stores merchant upload paths as full API URLs, so a published store on its own domain still shows them (live check fix)', async () => {
+    const assembled = await assemble(templateDemoPublicStore(), { demoPhotos: false, fill: { heroPhoto: '/v1/uploads/a.jpg', storyPhoto: '/v1/uploads/b.jpg' } });
+    const data = assembled.files.find(f => f.path === 'components/store-data.tsx')!.content;
+    expect(data).toContain('"hero":"https://api.pagosya.test/v1/uploads/a.jpg"');
+    expect(data).toContain('"story":"https://api.pagosya.test/v1/uploads/b.jpg"');
+  });
+
   it('carries the chosen pair into the theme block and the kit DNA', async () => {
     const assembled = await templateDemoRevision(manifest, templateSourceFiles('esencial'), { look: { palette: 'sage', fonts: 'literary' } });
     const snapshot = await prepare(assembled);
