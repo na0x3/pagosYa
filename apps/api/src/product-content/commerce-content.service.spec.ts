@@ -96,3 +96,22 @@ describe('merchant-entered reviews (spec 2026-10-18)', () => {
     expect(prisma.storeTestimonial.create).toHaveBeenCalledWith(expect.objectContaining({ data: { storeId: 'store_1', displayName: 'Ana', body: 'Perfecto', sourceNote: null, rating: 5 } }));
   });
 });
+
+describe('pack labels (showcase commerce 2026-10-19)', () => {
+  it('stores a trimmed label on a new pack and rejects one longer than 24 characters', async () => {
+    const tx: any = { storeBundle: { create: jest.fn(async ({ data }: any) => ({ id: 'b1', ...data })) }, store: { update: jest.fn() } };
+    const prisma: any = {
+      store: { findFirst: jest.fn().mockResolvedValue({ id: 'store_1' }) },
+      paymentLink: { findMany: jest.fn().mockResolvedValue([{ id: 'p', currency: 'BOB' }]) },
+      $transaction: jest.fn((callback: any) => callback(tx)),
+    };
+    const service = new CommerceContentService(prisma, {} as any);
+    const dto = { name: 'Lleva 2', kind: 'FIXED', items: [{ productId: 'p', quantity: 2 }], minimumQuantity: 2, discountPercent: 10, label: '  Recomendado  ' };
+    await service.createBundle('m1', 'store_1', dto);
+    expect(tx.storeBundle.create.mock.calls[0][0].data.label).toBe('Recomendado');
+    const { plainToInstance } = await import('class-transformer');
+    const { validateSync } = await import('class-validator');
+    const { BundleDto } = await import('./commerce-content.dto');
+    expect(validateSync(plainToInstance(BundleDto, { ...dto, label: 'x'.repeat(25) })).map(error => error.property)).toEqual(['label']);
+  });
+});

@@ -1,7 +1,7 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { ProductSubscriptionCadence } from "@prisma/client";
 import { Type } from "class-transformer";
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsEnum, IsInt, Max, Min, ValidateNested } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, ValidateNested } from "class-validator";
 
 export class ProductSubscriptionOptionDto {
   @ApiProperty({ enum: ProductSubscriptionCadence, description: "WEEKLY: 7 days; BIWEEKLY: 14 days; MONTHLY: one calendar month." })
@@ -13,6 +13,12 @@ export class ProductSubscriptionOptionDto {
   @Min(0)
   @Max(99)
   discountPercent!: number;
+
+  @ApiPropertyOptional({ description: "Showcase commerce 2026-10-19: label on the offer square, e.g. «La favorita». Omit to keep, empty string to clear.", maxLength: 24 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(24)
+  label?: string;
 }
 
 export class UpdateProductSubscriptionsDto {

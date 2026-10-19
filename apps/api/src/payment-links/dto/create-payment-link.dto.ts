@@ -249,6 +249,14 @@ export class CreatePaymentLinkDto {
   @MaxLength(500)
   description?: string | null;
 
+  @ApiPropertyOptional({ example: "Elige tu tueste", description: "Showcase commerce 2026-10-19: short phrase above the name on the product card. Omit to keep, null or empty to clear.", nullable: true, maxLength: 28 })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @IsSafeText()
+  @MaxLength(28)
+  cardEyebrow?: string | null;
+
   @ApiPropertyOptional({
     description: "Paths returned by POST /v1/uploads for product photos (JPEG/PNG/WEBP). First entry is the cover photo.",
     type: [String],

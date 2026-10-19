@@ -38,5 +38,7 @@ export class BundleDto {
   @IsArray() @ArrayMinSize(1) @ArrayMaxSize(20) @ValidateNested({ each: true }) @Type(() => BundleItemDto) items!: BundleItemDto[];
   @IsInt() @Min(2) @Max(99) minimumQuantity!: number;
   @IsInt() @Min(1) @Max(99) discountPercent!: number;
+  /** Showcase commerce 2026-10-19: the label on the pack's square, e.g. «Recomendado». */
+  @IsOptional() @IsString() @MaxLength(24) label?: string;
 }
 export class BundleStatusDto { @IsBoolean() active!: boolean; }

@@ -78,3 +78,25 @@ describe('ProductPageWriterService', () => {
     expect(developer).toContain('Hablamos de tú, sin vueltas.');
   });
 });
+
+describe('card eyebrow (showcase commerce 2026-10-19)', () => {
+  const withEyebrow = (eyebrow: string) => jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ output: [{ content: [{ type: 'output_text', text: JSON.stringify({ ...answer, eyebrow }) }] }] }), { status: 200 }));
+  it('writes the eyebrow onto a product without one', async () => {
+    const { service, prisma } = setup(product({ cardEyebrow: null }));
+    withEyebrow('Para el trabajo');
+    expect(await service.fill('s1', 'p1', 'auto')).toBe('written');
+    expect(prisma.paymentLink.updateMany.mock.calls[0][0].data.cardEyebrow).toBe('Para el trabajo');
+  });
+  it("never replaces the merchant's eyebrow", async () => {
+    const { service, prisma } = setup(product({ cardEyebrow: 'Mi frase' }));
+    withEyebrow('Para el trabajo');
+    await service.fill('s1', 'p1', 'auto');
+    expect(prisma.paymentLink.updateMany.mock.calls[0][0].data).not.toHaveProperty('cardEyebrow');
+  });
+  it('an answer with only an eyebrow still saves the eyebrow', async () => {
+    const { service, prisma } = setup(product({ cardEyebrow: null }));
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ output: [{ content: [{ type: 'output_text', text: JSON.stringify({ highlights: [], features: null, story: null, versus: null, faq: null, details: [], eyebrow: 'Para el trabajo' }) }] }] }), { status: 200 }));
+    expect(await service.fill('s1', 'p1', 'auto')).toBe('written');
+    expect(prisma.paymentLink.updateMany.mock.calls[0][0].data).toEqual({ cardEyebrow: 'Para el trabajo' });
+  });
+});

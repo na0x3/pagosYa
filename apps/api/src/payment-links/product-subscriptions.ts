@@ -5,7 +5,7 @@ import { validateSync } from "class-validator";
 import { ProductSubscriptionOptionDto, RemoveProductSubscriptionsDto, UpdateProductSubscriptionsDto } from "./dto/update-product-subscriptions.dto";
 
 export type ProductSubscriptionOperation =
-  | { action: "upsert"; cadence: ProductSubscriptionCadence; discountPercent: number }
+  | { action: "upsert"; cadence: ProductSubscriptionCadence; discountPercent: number; label?: string }
   | { action: "delete"; cadence: ProductSubscriptionCadence };
 
 export function validateProductSubscriptions(value: UpdateProductSubscriptionsDto): ProductSubscriptionOptionDto[] {
@@ -33,7 +33,7 @@ export async function applyProductSubscriptionOperations(
   }
   const upserts = operations.filter(option => option.action === "upsert");
   const deletes = operations.filter(option => option.action === "delete");
-  if (upserts.length) validateProductSubscriptions({ options: upserts.map(({ cadence, discountPercent }) => ({ cadence, discountPercent })) });
+  if (upserts.length) validateProductSubscriptions({ options: upserts.map(({ cadence, discountPercent, label }) => ({ cadence, discountPercent, ...(label !== undefined ? { label } : {}) })) });
   if (deletes.length) validateRemovedSubscriptions({ cadences: deletes.map(option => option.cadence) });
   const product = await tx.paymentLink.updateMany({
     where: { id: paymentLinkId, storeId, ...(upserts.length ? { status: PaymentLinkStatus.ACTIVE } : {}) },
@@ -46,8 +46,8 @@ export async function applyProductSubscriptionOperations(
     } else {
       await tx.productSubscriptionOption.upsert({
         where: { paymentLinkId_cadence: { paymentLinkId, cadence: option.cadence } },
-        create: { paymentLinkId, cadence: option.cadence, discountPercent: option.discountPercent },
-        update: { discountPercent: option.discountPercent },
+        create: { paymentLinkId, cadence: option.cadence, discountPercent: option.discountPercent, ...(option.label?.trim() ? { label: option.label.trim() } : {}) },
+        update: { discountPercent: option.discountPercent, ...(option.label !== undefined ? { label: option.label.trim() || null } : {}) },
       });
     }
   }

@@ -192,7 +192,7 @@ export class PublicStoresService implements OnModuleDestroy {
         where: { storeId: store.id, status: PaymentLinkStatus.ACTIVE },
         orderBy: { createdAt: "asc" },
         include: {
-          subscriptionOptions: { orderBy: { cadence: "asc" }, select: { cadence: true, discountPercent: true } },
+          subscriptionOptions: { orderBy: { cadence: "asc" }, select: { cadence: true, discountPercent: true, label: true } },
           membershipPeriods: { where: { archivedAt: null }, orderBy: { position: "asc" }, select: { id: true, months: true, amount: true } },
         },
       }),
@@ -222,7 +222,7 @@ export class PublicStoresService implements OnModuleDestroy {
     const itemsById = new Map(items.map((item) => [item.id, item]));
     const bundles = store.bundlesEnabled
       ? (await this.prisma.storeBundle.findMany({ where: { storeId: store.id, active: true }, orderBy: { createdAt: "asc" } }))
-          .map(({ id, name, kind, items: bundleItems, minimumQuantity, discountPercent }) => ({ id, name, kind, items: bundleItems as Array<{ productId: string; quantity: number }>, minimumQuantity, discountPercent }))
+          .map(({ id, name, kind, items: bundleItems, minimumQuantity, discountPercent, label }) => ({ id, name, kind, items: bundleItems as Array<{ productId: string; quantity: number }>, minimumQuantity, discountPercent, label: label ?? null }))
       : [];
     const sharedExtraStock = new Map<string, number>();
     for (const item of items) {
@@ -398,6 +398,7 @@ export class PublicStoresService implements OnModuleDestroy {
         amount: item.amount,
         currency: item.currency,
         discountPercent: item.discountPercent,
+        cardEyebrow: item.cardEyebrow ?? null,
         discountStartsAt: item.discountStartsAt?.toISOString() ?? null,
         discountEndsAt: item.discountEndsAt?.toISOString() ?? null,
         soldCount: soldByProduct.get(item.id) ?? 0,

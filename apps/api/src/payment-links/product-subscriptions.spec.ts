@@ -159,3 +159,15 @@ describe("Product subscription offers", () => {
     expect(await merchant.removeSubscriptions({ id: "m1" }, "s1", "p1", { cadences: [weekly.cadence] })).toEqual([]);
   });
 });
+
+describe("Subscription labels (showcase commerce 2026-10-19)", () => {
+  it("writes a label, keeps it when omitted and clears it with an empty string", async () => {
+    const { service, prisma } = setup();
+    await service.updateSubscriptions("m1", "s1", "p1", { options: [{ ...monthly, label: " La favorita " }] });
+    expect(prisma.productSubscriptionOption.upsert.mock.calls[0][0].create.label).toBe("La favorita");
+    await service.updateSubscriptions("m1", "s1", "p1", { options: [monthly] });
+    expect(prisma.productSubscriptionOption.upsert.mock.calls[1][0].update).toEqual({ discountPercent: 20 });
+    await service.updateSubscriptions("m1", "s1", "p1", { options: [{ ...monthly, label: "" }] });
+    expect(prisma.productSubscriptionOption.upsert.mock.calls[2][0].update).toEqual({ discountPercent: 20, label: null });
+  });
+});

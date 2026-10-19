@@ -168,3 +168,17 @@ describe('assistant in the public payload', () => {
     expect((await service.getStorePublic('cafe', { trackView: false })).assistant).toEqual({ name: 'Asistente de Café', greeting: 'Hola', avatarUrl: '/v1/uploads/me.png', handoff: 'form', suggestions: ['¿Qué me recomiendas?'] });
   });
 });
+
+describe('showcase labels (2026-10-19)', () => {
+  it('serves the card eyebrow, subscription labels and pack labels', async () => {
+    const { service, prisma } = setup();
+    prisma.store.findUnique.mockResolvedValue({ ...storeRow, subscriptionsEnabled: true, bundlesEnabled: true });
+    prisma.paymentLink.findMany.mockResolvedValue([{ ...productRow, id: 'p1', cardEyebrow: 'Elige tu tueste', subscriptionOptions: [{ cadence: 'MONTHLY', discountPercent: 10, label: 'La favorita' }] }, { ...productRow, id: 'p2' }]);
+    prisma.storeBundle.findMany.mockResolvedValue([{ id: 'b1', name: 'Lleva 3', kind: 'FIXED', items: [{ productId: 'p1', quantity: 3 }], minimumQuantity: 3, discountPercent: 15, label: 'Recomendado' }]);
+    const result = await service.getStorePublic(storeRow.slug);
+    expect(result.items[0]).toMatchObject({ cardEyebrow: 'Elige tu tueste', subscriptionOptions: [{ cadence: 'MONTHLY', discountPercent: 10, label: 'La favorita' }] });
+    expect(result.items[1].cardEyebrow).toBeNull();
+    expect(result.bundles[0].label).toBe('Recomendado');
+    expect(prisma.paymentLink.findMany.mock.calls[0][0].include.subscriptionOptions.select).toEqual(expect.objectContaining({ label: true }));
+  });
+});

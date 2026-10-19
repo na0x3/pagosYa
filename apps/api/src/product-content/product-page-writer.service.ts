@@ -18,7 +18,7 @@ export class ProductPageWriterService {
   async fill(storeId: string, productId: string, mode: 'auto' | 'regenerate', merchantId?: string): Promise<'written' | 'skipped'> {
     const product = await this.prisma.paymentLink.findFirst({
       where: { id: productId, storeId, ...(merchantId ? { store: { merchantId } } : {}) },
-      select: { id: true, updatedAt: true, name: true, description: true, specifications: true, tags: true, imageUrls: true, highlights: true, contentBlocks: true, category: { select: { name: true } }, store: { select: { name: true } } },
+      select: { id: true, updatedAt: true, cardEyebrow: true, name: true, description: true, specifications: true, tags: true, imageUrls: true, highlights: true, contentBlocks: true, category: { select: { name: true } }, store: { select: { name: true } } },
     });
     if (!product) throw new NotFoundException('Producto no encontrado.');
     if (mode === 'auto' && !autoFillable(product)) return 'skipped';
@@ -48,10 +48,13 @@ export class ProductPageWriterService {
     if (!response.ok) throw new BadGatewayException('YAPI no pudo escribir la página de este producto.');
     let raw: unknown = null;
     try { raw = JSON.parse(body.output?.flatMap(item => item.content ?? []).find(item => item.type === 'output_text')?.text ?? 'null'); } catch { raw = null; }
-    const merged = mergeWrittenPage(product, writtenPage(raw, facts, photoUrls), mode);
-    if (!merged) return 'skipped';
+    const written = writtenPage(raw, facts, photoUrls);
+    const merged = mergeWrittenPage(product, written, mode);
+    // Showcase commerce: YAPI's card phrase fills an empty eyebrow only; the merchant's own phrase always stays.
+    const eyebrow = product.cardEyebrow == null && written.eyebrow ? { cardEyebrow: written.eyebrow } : {};
+    if (!merged && !eyebrow.cardEyebrow) return 'skipped';
     // Only if nobody saved the product while YAPI was writing: a merchant's edit always wins over a stale merge.
-    const saved = await this.prisma.paymentLink.updateMany({ where: { id: product.id, updatedAt: product.updatedAt }, data: { highlights: merged.highlights as unknown as Prisma.InputJsonValue, contentBlocks: merged.contentBlocks as unknown as Prisma.InputJsonValue } });
+    const saved = await this.prisma.paymentLink.updateMany({ where: { id: product.id, updatedAt: product.updatedAt }, data: { ...(merged ? { highlights: merged.highlights as unknown as Prisma.InputJsonValue, contentBlocks: merged.contentBlocks as unknown as Prisma.InputJsonValue } : {}), ...eyebrow } });
     return saved.count ? 'written' : 'skipped';
   }
 

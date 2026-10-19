@@ -475,6 +475,7 @@ export class PaymentLinksService {
         categoryId: dto.categoryId,
         name: dto.name,
         description: dto.description,
+        cardEyebrow: dto.cardEyebrow?.trim() || null,
         imageUrls: dto.imageUrls ?? [],
         imagePositions: this.normalizeImagePositions(dto.imageUrls ?? [], dto.imagePositions),
         tags: dto.tags ?? [],
@@ -953,6 +954,7 @@ export class PaymentLinksService {
     const data: Prisma.PaymentLinkUncheckedUpdateInput = {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.cardEyebrow !== undefined && { cardEyebrow: dto.cardEyebrow?.trim() || null }),
         ...(dto.imageUrls !== undefined && { imageUrls: dto.imageUrls }),
         ...(imagePositions !== undefined && { imagePositions }),
         ...(dto.tags !== undefined && { tags: dto.tags }),

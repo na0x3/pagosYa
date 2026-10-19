@@ -57,7 +57,7 @@ export class CommerceContentService {
     const products = await this.prisma.paymentLink.findMany({ where: { id: { in: ids }, storeId, status: 'ACTIVE' }, select: { id: true, currency: true } });
     if (products.length !== ids.length || new Set(products.map(p => p.currency)).size !== 1) throw new BadRequestException('Usa productos activos de esta tienda con la misma moneda.');
     return this.prisma.$transaction(async tx => {
-      const bundle = await tx.storeBundle.create({ data: { storeId, name: dto.name.trim(), kind: dto.kind, items: dto.items.map(i => ({ productId: i.productId, quantity: i.quantity })), minimumQuantity: dto.minimumQuantity, discountPercent: dto.discountPercent } });
+      const bundle = await tx.storeBundle.create({ data: { storeId, name: dto.name.trim(), kind: dto.kind, items: dto.items.map(i => ({ productId: i.productId, quantity: i.quantity })), minimumQuantity: dto.minimumQuantity, discountPercent: dto.discountPercent, label: dto.label?.trim() || null } });
       await tx.store.update({ where: { id: storeId }, data: { bundlesEnabled: true } }); return bundle;
     });
   }

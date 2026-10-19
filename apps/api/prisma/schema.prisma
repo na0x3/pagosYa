@@ -708,7 +708,7 @@ model Store {
   digitalAssets                DigitalAsset[]
   redirects                    StoreRedirect[]
   reviews                      StoreReview[]
-  testimonials StoreTestimonial[]
+  testimonials                 StoreTestimonial[]
   customers                    StoreCustomer[]
   articles                     StoreArticle[]
   bundles                      StoreBundle[]
@@ -1569,6 +1569,8 @@ model PaymentLink {
   // Spec 2026-10-18 product link store: a price YAPI took from a shop listing, not one the merchant gave. The store cannot be
   // published while an active product waits; any price change by the merchant clears it.
   priceToConfirm        Boolean                     @default(false)
+  // Showcase commerce 2026-10-19: a short phrase above the name on the product card (≤ 28 chars, validated in the DTO).
+  cardEyebrow           String?
   subscriptionOptions   ProductSubscriptionOption[]
   membershipPeriods     MembershipPeriod[]
   // PHYSICAL | DIGITAL | MEMBERSHIP (spec 2026-10-09-sellable-memberships-design).
@@ -1667,6 +1669,8 @@ model ProductSubscriptionOption {
   // Integer percent off the one-time product/variant price, from 0 through 99.
   // No default: the merchant must confirm even a zero discount.
   discountPercent Int
+  // Showcase commerce 2026-10-19: merchant label on the offer square, e.g. «La favorita» (≤ 24 chars).
+  label           String?
   createdAt       DateTime                   @default(now())
   updatedAt       DateTime                   @updatedAt
 
@@ -2466,6 +2470,8 @@ model StoreBundle {
   items           Json
   minimumQuantity Int      @default(2)
   discountPercent Int
+  // Showcase commerce 2026-10-19: merchant label on the pack square, e.g. «Recomendado» (≤ 24 chars).
+  label           String?
   active          Boolean  @default(true)
   createdAt       DateTime @default(now())
 

@@ -40,8 +40,8 @@ describe('product page writer', () => {
     expect(page.blocks.every(block => block.origin === 'yapi')).toBe(true);
   });
   it('writes nothing when the model returns nothing usable', () => {
-    expect(writtenPage({ highlights: [], features: null, story: null, versus: null, faq: null, details: [] }, facts, [])).toEqual({ highlights: [], blocks: [] });
-    expect(writtenPage('not json', facts, [])).toEqual({ highlights: [], blocks: [] });
+    expect(writtenPage({ highlights: [], features: null, story: null, versus: null, faq: null, details: [] }, facts, [])).toEqual({ highlights: [], blocks: [], eyebrow: null });
+    expect(writtenPage('not json', facts, [])).toEqual({ highlights: [], blocks: [], eyebrow: null });
   });
   it('fills an empty product, skips a filled one automatically, and on regenerate keeps every merchant row', () => {
     const page = writtenPage(raw, facts, [photo]);
@@ -74,5 +74,17 @@ describe('the product page in the store voice (spec 2026-10-14)', () => {
     expect(prompt).toContain('"calidad que se nota"');
     expect(prompt.indexOf('Hablamos de tú')).toBeLessThan(prompt.indexOf('Hechos del producto (datos):'));
     expect(productPagePrompt(facts, 'Dacho', undefined)).toBe(productPagePrompt(facts, 'Dacho'));
+  });
+});
+
+describe('card eyebrow (showcase commerce 2026-10-19)', () => {
+  it('asks for a short card phrase and keeps it only when it sticks to the facts', async () => {
+    const { PRODUCT_PAGE_SCHEMA } = await import('./product-page-writer');
+    expect((PRODUCT_PAGE_SCHEMA.properties as any).eyebrow).toEqual({ type: ['string', 'null'], maxLength: 28 });
+    expect(PRODUCT_PAGE_SCHEMA.required).toContain('eyebrow');
+    expect(productPagePrompt(facts, 'Dacho')).toContain('eyebrow');
+    expect(writtenPage({ eyebrow: ' Para el trabajo ', highlights: [] }, facts, []).eyebrow).toBe('Para el trabajo');
+    expect(writtenPage({ eyebrow: 'Frío 48 horas', highlights: [] }, facts, []).eyebrow).toBeNull();
+    expect(writtenPage({ highlights: [] }, facts, []).eyebrow).toBeNull();
   });
 });
