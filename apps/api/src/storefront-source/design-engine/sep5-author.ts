@@ -144,6 +144,8 @@ export function sep5AuthorPrompt(input: {
     ...(input.products ? [SEP5_PRODUCTS] : []),
     ...(input.photos?.trim() ? [input.photos.trim()] : []),
     ...(input.signature?.trim() ? [input.signature.trim()] : []),
+    // Real store runs only (storeShell): the bare September 5 text stays byte for byte.
+    ...(input.storeShell ? [SEP5_PREMIUM] : []),
     ...(input.boldDefault ? [SEP5_BOLD_DEFAULT] : []),
     ...(input.wordmark ? [WORDMARK_DIRECTION] : []),
     ...(input.fonts?.trim() ? [input.fonts.trim()] : []),
@@ -199,6 +201,18 @@ export function sep5BoldDefault(input: { creative: boolean; motion: SourceMotion
  * app and renders `buscar.html` (added with the other standard pages at save), so the markup is all that is
  * missing. The footer slot is where the runtime lists the information pages that have content.
  */
+/** The owner's premium bar (2026-10-19, the Amboras references NI'MAH, Leverage, Furlow, L'Duchen): type, buttons, motion,
+ *  one brand world and forms the store designs itself. Sent with every authored store. */
+export const SEP5_PREMIUM = [
+  'PREMIUM FINISH, the level of the best independent stores:',
+  '- Type: two fonts only, from the fonts given. Titles large and tight (letter-spacing -0.02em to -0.03em, line-height about 1); body 15–17px at 1.6. Eyebrows, labels, menu items and every button in tiny tracked uppercase (11–13px, letter-spacing 0.15–0.3em, weight 600–800).',
+  '- Buttons: one shape for the whole store (square corners or a full pill), generous padding (about 16px 32px), the store accent or ink filled, a 1px outline for the second action, a small arrow or icon where it helps. A buying button carries the price when it has one («Agregar — Bs 120»).',
+  '- Lines and space: 1px hairline rules instead of boxes and shadows, wide margins, a strict grid; never a card on a card.',
+  '- Motion: hover changes 0.15–0.2s cubic-bezier(0.4,0,0.2,1); photos may ease in scale 1.03 over 0.5s; sections may fade up 12px once as they enter. At most one moving band (a marquee of real facts). Nothing bounces, wobbles, spins or loops for attention.',
+  '- Brand world: settle one concrete world for this store from the brief (a place, a material, a craft, a ritual) and let it drive the announcement facts, the eyebrows, a small repeated inline-SVG ornament and the copy. Specific beats adjectives: «Hecho a mano en La Paz · entrega en 48 h», never «calidad premium». Never invent a fact; without one, name what the product visibly is.',
+  '- Forms are yours to design: draw the newsletter or community section in the store language (heading, one line, composition) with a real button carrying data-pagosya-subscribe-open in the store button style, and the contact section around <div data-pagosya-contact data-contact-inline></div>. The platform owns the fields and sends them (the email is typed only in its form); style them through .pagosya-signup-dialog, .signup-field, .signup-submit, .signup-consent and [data-pagosya-contact] input, textarea, button: underlined or 1px fields, tracked uppercase labels, the store button.',
+].join('\n');
+
 export const SEP5_STORE_SHELL = 'STORE SHELL: The platform draws the header on every page, so do not write one. Make <header data-pagosya-header></header> the first element inside <body> of every page, empty, exactly like that: the platform fills it at save time with the store name, the menu, the search and account links and the cart, in the header shape drawn for this store. Put data-nav-label="…" (a short Spanish menu label) and an id on each top-level section of index.html that belongs in the menu, at most six. Declare --store-background, --store-foreground, --store-accent, --store-accent-foreground, --store-heading-font and --store-body-font in :root of styles.css; the header takes its colours and fonts from them. Never wrap the header in another element and never let page content sit above it (no z-index over 999 near the top of the page). The footer contains <nav data-pagosya-pages aria-label="Información" hidden></nav>, which the runtime fills with the store\'s information pages. pages/ paths use ../ for these links too.';
 
 /** Kept for callers that still name it: with the platform header there is one shell, framed or not (spec 2026-10-13). */

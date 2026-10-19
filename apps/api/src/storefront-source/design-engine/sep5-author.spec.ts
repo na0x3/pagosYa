@@ -1,4 +1,4 @@
-import { sep5AuthorPrompt, SEP5_SHOWCASE_SHELL, sep5MainAction, sep5CardLook, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection, sep5ResponseSchema, sep5Products, SEP5_RESPONSE_SCHEMA } from './sep5-author';
+import { SEP5_PREMIUM, sep5AuthorPrompt, SEP5_SHOWCASE_SHELL, sep5MainAction, sep5CardLook, sep5AuthoredPlan, sep5ProjectIsUsable, sep5FilesSchema, sep5ReviewPrompt, sep5ReviewSchema, applySep5Edits, SEP5_REVIEW_RESPONSE_SCHEMA, SEP5_AUTHOR_VERSION, SEP5_STORE_SHELL, SEP5_STORE_SHELL_FRAMED, SEP5_BOLD_DEFAULT, sep5BoldDefault, sep5FontDirection, sep5ResponseSchema, sep5Products, SEP5_RESPONSE_SCHEMA } from './sep5-author';
 import { creativePlanSchema } from './design-schemas';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -384,4 +384,10 @@ describe('store voice in the Sep-5 prompts (spec 2026-10-14, part 3)', () => {
     expect(review).toContain('- línea: «En La Paz, sin apuro» (index.html)');
     expect(sep5ReviewPrompt({ ...base, draft, measured: [], copyFindings: [] })).toBe(sep5ReviewPrompt({ ...base, draft, measured: [] }));
   });
+});
+
+it('sends the premium finish with every real store run (2026-10-19), never in the bare September 5 text', () => {
+  expect(sep5AuthorPrompt({ brief: {}, instruction: '', data: {}, assetLegend: [], storeShell: true } as any)).toContain(SEP5_PREMIUM);
+  expect(sep5AuthorPrompt({ brief: {}, instruction: '', data: {}, assetLegend: [] })).not.toContain('PREMIUM FINISH');
+  expect(SEP5_PREMIUM).toContain('data-pagosya-subscribe-open');
 });
