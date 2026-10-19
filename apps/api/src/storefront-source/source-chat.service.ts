@@ -46,6 +46,7 @@ import type { ProductListing } from './product-source/product-source-extract';
 import { productFromListing, type ProductCopy, type ProductSourceProduct } from './product-source/product-source-catalog';
 import { productSourceFailureReply, productSourceNoPhotosReply, productSourcePrompt, productSourceReplyNote } from './product-source/product-source-prompt';
 import { PRODUCT_SOURCE_USER_AGENT } from './product-source/product-source-render';
+import { cropListingPhoto, parseListingRead } from './product-source/product-screenshot';
 import { MAX_SOURCE_VIDEO_BYTES } from './source-media';
 import { normalizeProductVariants } from '../payment-links/product-variants';
 import { websiteCopyAsked, websiteCopyWording } from './website-copy/copy-intent';
@@ -593,6 +594,30 @@ export class SourceChatService {
           await this.prisma.storeAgentMessage.update({ where: { id: userMessage.id }, data: { metadata: { ...(userMessage.metadata as Record<string, unknown>), productImport } as unknown as Prisma.InputJsonValue } });
         }
       }
+      // A screenshot of a product card or listing on a new store (2026-10-18): the product comes from it, its photo cropped out.
+      const listingShot = !current.revision && !productImport && !productRead && decision.action === 'generate'
+        ? decision.imageUses.find(use => use.role === 'listing' && (input.assetUrls ?? []).includes(use.url)) : undefined;
+      if (listingShot) {
+        const photos = decision.imageUses.filter(use => use.role === 'product' && (input.assetUrls ?? []).includes(use.url)).map(use => use.url);
+        const made = await this.productFromScreenshot(merchantId, storeId, listingShot.url, { model: input.model, words: ownWords, photos, messages: history.messages });
+        if (made && 'noPhoto' in made) {
+          decision.action = 'reply';
+          decision.reply = `Leí «${made.noPhoto.slice(0, 80)}» en tu captura, pero su foto es muy pequeña para la tienda. Mándame las fotos del producto y armo toda tu tienda con ellas.`;
+          decision.generationInstruction = '';
+        } else if (made) {
+          productImport = made;
+          // The screenshot is someone else's page: never shown on the store.
+          listingShot.role = 'unused';
+          for (const url of made.product.imageUrls) {
+            if (!allAssets.includes(url)) allAssets.push(url);
+            if (!decision.imageUses.some(use => use.url === url)) decision.imageUses.push({ url, role: 'product', description: `Foto de ${made.product.name}.` });
+          }
+          if (!decision.generationInstruction.includes('PRODUCT SOURCE (')) decision.generationInstruction = `${decision.generationInstruction}\n\n${productSourcePrompt(made.product, made.listingDescription)}`;
+          await this.prisma.storeAgentMessage.update({ where: { id: userMessage.id }, data: { metadata: { ...(userMessage.metadata as Record<string, unknown>), productImport: made } as unknown as Prisma.InputJsonValue } });
+        }
+      }
+      // The build has no «listing» role: a screenshot that did not become a product is evidence, never artwork.
+      for (const use of decision.imageUses) if (use.role === 'listing') use.role = 'reference';
       const productNote = productImport ? `${productSourceReplyNote(productImport.product, productImport.site, productImport.videoUrls?.length ?? 0)} ` : '';
       // Only a build reads the page (about 30–60 s); a reply that asks something first does not.
       const copyRead = copyUrl && decision.action === 'generate' ? await this.blueprintReader(copyUrl).catch(() => ({ ok: false as const, reason: 'unavailable' as const })) : undefined;
@@ -724,14 +749,42 @@ export class SourceChatService {
     const imported = room ? (await this.importImages(merchantId, listing.images.map(url => ({ url, kind: 'photo' as const })), Math.min(8, room), PRODUCT_SOURCE_USER_AGENT)).images.map(image => image.url) : [];
     const imageUrls = imported.length ? imported : attached.filter(url => /\.(?:png|jpe?g|webp)$/i.test(url));
     if (!imageUrls.length) return undefined;
-    const product = productFromListing(listing, copy?.name || copy?.description ? copy : undefined, words, imageUrls);
     // The listing's own videos (spec 2026-10-18 A2), after the photos and only in the room they left; a failed video never
     // fails the store.
     const videoUrls = await this.importListingVideos(merchantId, listing.videos, Math.max(0, room - imported.length));
+    return this.createSourceProduct(storeId, listing, copy, words, imageUrls, videoUrls, read.link.url, read.site);
+  }
+
+  /** The catalog product from a listing (link or screenshot), recorded so a retry reuses it (spec 2026-10-18 §6–8). */
+  private async createSourceProduct(storeId: string, listing: ProductListing, copy: ProductCopy | undefined, words: string, imageUrls: string[], videoUrls: string[], url: string, site: string): Promise<ProductImport> {
+    const product = productFromListing(listing, copy?.name || copy?.description ? copy : undefined, words, imageUrls);
     const variants = normalizeProductVariants(product.variants);
     const created = await this.prisma.paymentLink.create({ data: { storeId, name: product.name, description: product.description, amount: product.amount, currency: product.currency, imageUrls: product.imageUrls,
       priceToConfirm: product.priceToConfirm, ...(variants.length ? { variants: variants as unknown as Prisma.InputJsonValue } : {}) } });
-    return { url: read.link.url, site: read.site, productId: created.id, product, listingDescription: listing.description.slice(0, 1500), ...(videoUrls.length ? { videoUrls } : {}) };
+    return { url, site, productId: created.id, product, listingDescription: listing.description.slice(0, 1500), ...(videoUrls.length ? { videoUrls } : {}) };
+  }
+
+  /** A product screenshot on a new store (2026-10-18): read once, its photo cropped into the uploads, the product created. The
+   *  same screenshot sent again (a retry) reuses the product. `noPhoto` when the crop was too small and no photo came with it. */
+  private async productFromScreenshot(merchantId: string, storeId: string, url: string, input: { model?: SendSourceMessageDto['model']; words: string; photos: string[]; messages: Array<{ metadata?: unknown }> }): Promise<ProductImport | { noPhoto: string } | undefined> {
+    const key = `screenshot:${url}`;
+    const earlier = [...input.messages].reverse().map(message => (message.metadata as { productImport?: ProductImport } | null)?.productImport).find(item => item?.url === key);
+    if (earlier && await this.prisma.paymentLink.findFirst({ where: { id: earlier.productId, storeId }, select: { id: true } })) return earlier;
+    const read = parseListingRead(await this.dialogue.readListing(merchantId, { storeId, model: input.model, url }), key);
+    this.productLogger.log(JSON.stringify({ event: 'product_screenshot_read', storeId, ok: Boolean(read), photo: Boolean(read?.box) }));
+    if (!read) return undefined;
+    let cropped: string | undefined;
+    const bytes = read.box && this.uploads ? await this.uploads.getBuffer(url.split('/').at(-1)!) : null;
+    const crop = bytes && read.box ? await cropListingPhoto(bytes, read.box) : null;
+    if (crop && this.uploads) {
+      const stored = await this.uploads.saveBuffer(crop, 'image/jpeg');
+      await this.prisma.mediaAsset.create({ data: { merchantId, url: stored.url, storageKey: stored.filename, mimeType: stored.mimeType, byteSize: stored.byteSize } });
+      cropped = stored.url;
+    }
+    // The merchant's own photos win over a crop of someone else's screenshot.
+    const imageUrls = input.photos.length ? input.photos : cropped ? [cropped] : [];
+    if (!imageUrls.length) return { noPhoto: read.listing.name };
+    return this.createSourceProduct(storeId, read.listing, read.copy, input.words, imageUrls, [], key, 'tu captura');
   }
 
   /** Up to two listing videos into the merchant's uploads: MP4 by its bytes, at most 20 MB each. */

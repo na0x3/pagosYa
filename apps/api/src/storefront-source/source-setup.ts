@@ -1,6 +1,7 @@
 import type { SourceWebsiteReference } from './source-website-reference';
 
-export type SourceImageRole = 'logo' | 'product' | 'business' | 'background' | 'team' | 'reference' | 'unknown' | 'unused';
+/** `listing`: a screenshot of a product card or listing (2026-10-18); the chat turns it into a product or a reference. */
+export type SourceImageRole = 'logo' | 'product' | 'business' | 'background' | 'team' | 'reference' | 'listing' | 'unknown' | 'unused';
 export type SourceImageUse = { url: string; role: SourceImageRole; description: string };
 export type SourceSetupDraft = {
   sitePurpose?: import('./source-site-purpose').SourceSitePurpose;

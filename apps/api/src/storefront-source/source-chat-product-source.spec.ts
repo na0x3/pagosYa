@@ -2,6 +2,7 @@
 import { SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
 import * as websiteFetch from './source-website-fetch';
+import sharp from 'sharp';
 
 const png = (w: number, h: number) => { const buffer = Buffer.alloc(33); buffer.write('\x89PNG\r\n\x1a\n', 0, 'latin1'); buffer.writeUInt32BE(13, 8); buffer.write('IHDR', 12, 'latin1'); buffer.writeUInt32BE(w, 16); buffer.writeUInt32BE(h, 20); return buffer; };
 const listing = { url: 'https://www.alibaba.com/product-detail/x_1.html', name: '200W USB Rechargeable Portable Blender With 6 Blades', description: 'High quality juicer cup', price: 18.3, currency: 'USD',
@@ -76,6 +77,53 @@ it('a video that does not come through never stops the store', async () => {
   await service.send('m', 's', { ...request, instruction: `quiero vender esto ${link}` });
   expect(execution(generation).assetUrls.some((url: string) => url.endsWith('.mp4'))).toBe(false);
   expect(generation.generate).toHaveBeenCalledTimes(1);
+});
+
+describe('a screenshot of a product card (2026-10-18)', () => {
+  const shot = '/v1/uploads/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.png', photo = '/v1/uploads/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.jpg';
+  const read = { isListing: true, name: 'Portable Blender 380ml', description: 'USB', priceText: 'US$ 18.30', currency: 'USD', options: [], photo: { x: 100, y: 100, width: 800, height: 500 }, catalogName: 'Licuadora portátil', catalogDescription: 'Batidos donde estés.' };
+  const withShot = async (uses: any[], readAnswer: unknown = read) => {
+    const harness = setup();
+    harness.dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Una licuadora.', generationInstruction: 'Crea la tienda.', imageUses: uses, startFrom: 'scratch' });
+    harness.dialogue.readListing = jest.fn().mockResolvedValue(readAnswer);
+    const screenshot = await sharp({ create: { width: 1000, height: 1600, channels: 3, background: '#ffffff' } }).png().toBuffer();
+    harness.uploads.getBuffer = jest.fn().mockResolvedValue(screenshot);
+    return harness;
+  };
+
+  it('reads it, crops its photo, creates the product and keeps the screenshot off the store', async () => {
+    const { service, generation, products, messages, dialogue } = await withShot([{ url: shot, role: 'listing', description: 'captura' }]);
+    await service.send('m', 's', { ...request, instruction: 'quiero vender esto', assetUrls: [shot] });
+    expect(dialogue.readListing).toHaveBeenCalledWith('m', expect.objectContaining({ storeId: 's', url: shot }));
+    expect(products[0]).toMatchObject({ name: 'Licuadora portátil', description: 'Batidos donde estés.', amount: 1830, currency: 'USD', priceToConfirm: true });
+    expect(products[0].imageUrls).toHaveLength(1);
+    expect(products[0].imageUrls[0]).not.toBe(shot);
+    const uses = generation.generate.mock.calls[0][4];
+    expect(uses).toEqual(expect.arrayContaining([expect.objectContaining({ url: shot, role: 'unused' }), expect.objectContaining({ url: products[0].imageUrls[0], role: 'product' })]));
+    expect(execution(generation).instruction).toContain('already in the catalog as «Licuadora portátil»');
+    expect(messages.at(-1).content).toMatch(/^Leí «Licuadora portátil» en tu captura y usé 1 foto\. Puse USD 18\.30/);
+  });
+
+  it("uses the merchant's own photos over the crop", async () => {
+    const { service, products } = await withShot([{ url: shot, role: 'listing', description: 'captura' }, { url: photo, role: 'product', description: 'foto' }]);
+    await service.send('m', 's', { ...request, instruction: 'vendo esto a Bs 150', assetUrls: [shot, photo] });
+    expect(products[0]).toMatchObject({ imageUrls: [photo], amount: 15000, currency: 'BOB', priceToConfirm: false });
+  });
+
+  it('asks for photos when the crop is too small and none came with it', async () => {
+    const { service, generation, products, messages } = await withShot([{ url: shot, role: 'listing', description: 'captura' }], { ...read, photo: { x: 0, y: 0, width: 100, height: 100 } });
+    await service.send('m', 's', { ...request, instruction: 'quiero vender esto', assetUrls: [shot] });
+    expect(generation.generate).not.toHaveBeenCalled();
+    expect(products).toHaveLength(0);
+    expect(messages.at(-1).content).toMatch(/^Leí «Portable Blender 380ml» en tu captura, pero su foto es muy pequeña/);
+  });
+
+  it('a screenshot that cannot be read stays a reference, never artwork', async () => {
+    const { service, generation, products } = await withShot([{ url: shot, role: 'listing', description: 'captura' }], { isListing: false });
+    await service.send('m', 's', { ...request, instruction: 'mira esto', assetUrls: [shot] });
+    expect(products).toHaveLength(0);
+    expect(generation.generate.mock.calls[0][4]).toEqual(expect.arrayContaining([expect.objectContaining({ url: shot, role: 'reference' })]));
+  });
 });
 
 it("uses the merchant's own price and confirms it", async () => {

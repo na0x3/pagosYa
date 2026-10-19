@@ -23,6 +23,7 @@ describe('product source prompt and replies (spec 2026-10-18 product link store)
     expect(productSourceReplyNote({ ...product, amount: 0, currency: 'BOB' }, 'Take App')).toContain('no tenía un precio en Bs o USD');
     expect(productSourceReplyNote({ ...product, priceToConfirm: false, imageUrls: ['/v1/uploads/a.jpg'] }, 'Amazon')).toBe('Traje «Licuadora portátil» de Amazon con 1 foto.');
     expect(productSourceReplyNote({ ...product, priceToConfirm: false }, 'AliExpress', 2)).toBe('Traje «Licuadora portátil» de AliExpress con 2 fotos y 2 videos.');
+    expect(productSourceReplyNote({ ...product, priceToConfirm: false, imageUrls: ['/a'] }, 'tu captura')).toBe('Leí «Licuadora portátil» en tu captura y usé 1 foto.');
   });
 
   it('asks for screenshots or photos, naming why', () => {

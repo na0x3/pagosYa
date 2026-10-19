@@ -22,7 +22,8 @@ export function productSourcePrompt(product: ProductSourceProduct, listingDescri
 /** The line added to YAPI's reply after the build. */
 export function productSourceReplyNote(product: ProductSourceProduct, site: string, videos = 0): string {
   const media = `${product.imageUrls.length} ${product.imageUrls.length === 1 ? 'foto' : 'fotos'}${videos ? ` y ${videos} ${videos === 1 ? 'video' : 'videos'}` : ''}`;
-  const where = `Traje «${product.name}» de ${site} con ${media}.`;
+  // A screenshot (2026-10-18) was read, not fetched.
+  const where = site === 'tu captura' ? `Leí «${product.name}» en tu captura y usé ${media}.` : `Traje «${product.name}» de ${site} con ${media}.`;
   if (!product.priceToConfirm) return where;
   return product.amount
     ? `${where} Puse ${money(product.amount, product.currency)}, el precio del anuncio: confirma tu precio de venta en Productos antes de publicar.`
