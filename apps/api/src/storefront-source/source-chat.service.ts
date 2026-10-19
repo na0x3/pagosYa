@@ -32,7 +32,9 @@ import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { galleryTemplates, templateManifest, type TemplateManifest } from '@pagosya/store-templates';
-import { MASTER_TEMPLATE_ID, masterFillFromRead } from './source-master';
+import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook } from './source-master';
+import { masterLayoutFindings } from './source-master-check';
+import { readMasterState } from './source-templates';
 import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
 import { UploadsService, detectedImageDimensions, detectedMediaMime } from '../uploads/uploads.service';
@@ -68,6 +70,8 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
 }
 
 /** The merchant's own words asking for a store designed from nothing (spec 2026-10-19 §2.1). */
+/** Spec 2026-10-19 §3.2: how the agent edits a master store — the Amboras rule set, in YAPI's words. */
+export const MASTER_EDIT_RULES = 'Esta tienda usa la plantilla base «Esencial». Edita el componente que ya existe; cambia solo lo que el comercio pidió; nunca reescribas una página completa ni cambies secciones que no nombró. Los textos visibles viven en components/store-data.tsx (copy): úsalos, no los copies dentro de los componentes. No toques el bloque /* pagosya:master-theme */ de styles/globals.css. Íconos: solo los de components/icons.tsx. Sin emojis.';
 const MASTER_SCRATCH = /desde (?:cero|0)|from scratch|diseño propio|algo (?:propio|único)|sin (?:usar )?plantillas?/i;
 export const TEMPLATE_QUESTION = '¿Quieres que parta de una de nuestras plantillas o prefieres que diseñe desde cero?';
 export const TEMPLATE_ADAPTATION_MAX_CREDITS = 20;
@@ -256,6 +260,31 @@ export class SourceChatService {
       content: `Tu tienda ${store?.name ?? ''} está lista. Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
       metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
     } });
+    return { userMessage, assistantMessage, revision: saved };
+  }
+
+  /** Spec 2026-10-19 §3.1: a words/colours/fonts/photos change on a master store — one fill call, data only, seconds. */
+  private async masterContentEdit(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, request: string, revision: number, previous: { snapshot: unknown }) {
+    const state = readMasterState((previous.snapshot as SourceProjectSnapshot).files);
+    const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
+    const recent = await Promise.resolve(this.prisma.mediaAsset.findMany({ where: { merchantId }, orderBy: { createdAt: 'desc' }, take: 8, select: { url: true } })).catch(() => [] as Array<{ url: string }>);
+    const photos = [...new Set([...Object.values(state.photos).filter(Boolean), ...(recent ?? []).map(asset => asset.url)])].slice(0, 8);
+    const read = await this.dialogue.fillMaster(merchantId, { storeId, storeName: state.store?.name ?? '', what: '', story: '', city: state.store?.city ?? '', products: [], photos,
+      palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })),
+      current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}) }, request });
+    const change = read ? masterFillFromRead(read, photos, true) : null;
+    if (!change || !Object.keys(change).length) {
+      await workflow.finish(change ? 'completed' : 'failed');
+      const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+        content: change ? 'No encontré qué cambiar con ese pedido. Dime qué texto, color, fuente o foto quieres distinto.' : 'No pude aplicar el cambio en este momento. Inténtalo de nuevo en un momento.',
+        metadata: { progress: workflow.value, ...(change ? {} : { failed: true }) } } });
+      return { userMessage, assistantMessage, setup: null };
+    }
+    await workflow.report('saving');
+    const saved = await this.templates.refill(merchantId, storeId, revision, change, 'Textos y estilo actualizados');
+    await workflow.finish('completed');
+    const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+      content: 'Listo, ya está aplicado. Revisa la vista previa.', metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label } } });
     return { userMessage, assistantMessage, revision: saved };
   }
 
@@ -491,6 +520,7 @@ export class SourceChatService {
         messages: [...history.messages, userMessage], assetUrls: allAssets, browserReview: input.browserReview,
         offeredTemplates: offeredTemplates(history.messages).map(({ id, name }) => ({ id, name })),
         startedFromTemplate,
+        masterTemplate: originBrief?.templateId === MASTER_TEMPLATE_ID,
       })) };
       const correctedUses = honorImageContent(input.instruction, input.assetUrls?.length ? input.assetUrls : allAssets, decision.imageUses);
       if (JSON.stringify(correctedUses) !== JSON.stringify(decision.imageUses)) {
@@ -675,6 +705,10 @@ export class SourceChatService {
       }
       retryDecision = decision;
       const previousBrief = previous ? (previous.snapshot as unknown as SourceProjectSnapshot).brief : null;
+      // Master template (spec 2026-10-19 §3): words, colours, fonts and photos change the store's data; design changes stay minimal.
+      const masterStore = this.config.get<boolean>('app.yapiMasterTemplate') === true && Boolean(current.revision) && previousBrief?.templateId === MASTER_TEMPLATE_ID;
+      if (masterStore && decision.editKind === 'content') return await this.masterContentEdit(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous!);
+      const masterDesign = masterStore && decision.editKind === 'design';
       const brief = { ...(previousBrief || {
         businessType: store.name.slice(0, 120), audience: 'Clientes del negocio descrito en la conversación',
         primaryAction: sitePurpose === 'shop' ? 'Explorar productos y completar un pedido con pagosYa' : sitePurpose === 'service' ? 'Conocer los servicios y consultar' : sitePurpose === 'portfolio' ? 'Explorar proyectos y contactar' : 'Leer los artículos publicados', visualDirection: decision.summary.slice(0, 2000),
@@ -683,11 +717,11 @@ export class SourceChatService {
       const assetUrls = allAssets.filter(url => !decision.imageUses.some(use => use.url === url && use.role === 'unused'));
       const reworkTemplate = Boolean(current.revision && decision.rework && previousBrief?.templateId && templateManifest(previousBrief.templateId));
       // A store that started from a template keeps it as its base while it is untouched, or whenever the merchant asks to.
-      const keepTemplate = Boolean(current.revision && !reworkTemplate && previousBrief?.templateId && templateManifest(previousBrief.templateId)
+      const keepTemplate = masterDesign || Boolean(current.revision && !reworkTemplate && previousBrief?.templateId && templateManifest(previousBrief.templateId)
         && (templateReferenceRequested(input.instruction) || startedFromTemplate?.untouched && !sourceRedesignRequested(input.instruction)));
       const templateBrief = reworkTemplate ? TEMPLATE_REWORK_BRIEF : keepTemplate ? TEMPLATE_KEEP_BRIEF : '';
       const demoPhotoNote = keepTemplate ? templateDemoPhotoNote(templateManifest(previousBrief!.templateId!)!, (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.files || []) : '';
-      const requested = templateBrief ? `${templateBrief}\n\nPedido del comercio: ${input.instruction}` : input.instruction;
+      const requested = masterDesign ? `${MASTER_EDIT_RULES}\n\nPedido del comercio: ${input.instruction}` : templateBrief ? `${templateBrief}\n\nPedido del comercio: ${input.instruction}` : input.instruction;
       // A queued request carries a profile read from the merchant's words alone; a kept template is read with its brief.
       const requestContext = sourceRequestContext.getStore();
       const withTemplateProfile = <T>(work: () => Promise<T>) => keepTemplate && requestContext
@@ -723,13 +757,27 @@ export class SourceChatService {
       // Spec 2026-10-18 B §6: how close the copy came, said honestly. No automatic repair run: on the ChatGPT plan it timed out as a
       // single-call edit carrying the whole blueprint and cut off the background polish (Mezcla Ya 2026-10-18); the reply names
       // the sections that differ so the merchant can ask for exactly those.
-      const finalRevision = revision;
-      let copyNote = '';
+      // Spec 2026-10-19 §3.2: a design edit on a master store is measured; one repair round when it overflows or overlaps.
+      let layoutNote = '';
+      let checkedRevision = revision;
+      if (masterDesign) {
+        const saved = await this.projects.version(merchantId, storeId, revision.revision);
+        const findings = await masterLayoutFindings(saved.snapshot as unknown as SourceProjectSnapshot).catch(() => [] as string[]);
+        if (findings.length) {
+          const repaired = await this.generation.generate(merchantId, storeId, { revision: revision.revision, brief, instruction: `${MASTER_EDIT_RULES}\n\nCorrige solo esto, sin ningún otro cambio:\n- ${findings.join('\n- ')}`, model: input.model, maxCredits: input.maxCredits },
+            this.generation.newBudget(input.maxCredits), [], workflow.report, {}).catch(() => null);
+          if (repaired && !('styleProposal' in repaired)) checkedRevision = repaired;
+          const after = checkedRevision !== revision ? await masterLayoutFindings((await this.projects.version(merchantId, storeId, checkedRevision.revision)).snapshot as unknown as SourceProjectSnapshot).catch(() => findings) : findings;
+          layoutNote = after.length ? ` Revisé la página y queda esto por mejorar: ${after.join(' ')}` : '';
+        }
+      }
+      const finalRevision = checkedRevision;
+      let copyNote = layoutNote;
       if (websiteCopy) {
         const final = await this.copyCheck(merchantId, storeId, websiteCopy, revision.revision);
         // «hazme la web como esta» could also mean inspiration: the reply says how to get that instead.
         const softWording = websiteCopyWording(merchantWords) === 'plain' ? 'Si solo querías inspirarte en su estilo, dime «solo inspiración» y lo ajusto. ' : '';
-        copyNote = final ? `${copyReplyNote(websiteCopy, final)} ${softWording}` : softWording;
+        copyNote = (final ? `${copyReplyNote(websiteCopy, final)} ${softWording}` : softWording) + layoutNote;
       }
       return await this.revisionReply(thread, userMessage, workflow, finalRevision, setupDraft, decision.imageUses, input.assetUrls || [], `${productNote}${copyNote}${copyMissed}${proposeStyle && revision.generation?.styleAttempted ? 'No pude preparar los estilos, armé uno por ti. ' : ''}`);
     } catch (error) {

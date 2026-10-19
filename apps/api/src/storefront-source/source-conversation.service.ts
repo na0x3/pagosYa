@@ -43,6 +43,8 @@ export type SourceConversationDecision = {
   templates?: Array<{ id: string; reason: string }>;
   chosenTemplateId?: string;
   rework?: boolean;
+  /** Spec 2026-10-19 §3: how a change on a master-template store is carried out. */
+  editKind?: 'content' | 'design' | 'redesign' | 'none';
   /** Spec 2026-10-18 product link store: the catalog name and description written from the listing; empty without one. */
   productCopy?: { name: string; description: string };
 };
@@ -57,6 +59,8 @@ type ConversationInput = {
   site?: ReturnType<typeof sourceSiteContext>;
   /** The Plantilla the store's design came from, its look, and whether the merchant has changed it since. */
   startedFromTemplate?: { id: string; name: string; description: string; untouched: boolean } | null;
+  /** The store started from the master template «Esencial» (spec 2026-10-19): the decision then says how to edit it. */
+  masterTemplate?: boolean;
   instruction: string;
   buildNow: boolean;
   productPhoto?: boolean;
@@ -80,10 +84,11 @@ ${galleryTemplates().map(template => `- ${template.id}: ${template.name} (${temp
 startFrom: for a new shop, "template" only when the merchant explicitly wants a template, "scratch" when they ask for a design from scratch ("desde cero", "algo propio") or delegate the design to you, including a usable creation brief with its own visual direction, otherwise "unknown". Preserve their previous choice; never silently replace a from-scratch choice with a template.
 templates: only when the merchant explicitly requested a template and action=generate for a new shop, the three Plantillas that best fit this business, best first, each with a one-sentence reason in the merchant's language about why it fits; otherwise [].
 chosenTemplateId: when the merchant picks one of offeredTemplates (by name, by position such as "la segunda", or by description), its id; otherwise "".
-rework: true when the merchant asks an existing store to look more unique, more different or less like its template ("hazla más única", "que no parezca plantilla"), and also when a store that started from a template (startedFromTemplate in the context, with that template's look) settles on a visual direction or style different from that look (for example "moderna y clínica" on Pausa, a warm natural pilates template); otherwise false. Keeping the template is not a rework: a merchant who asks to use it as a reference or base, keep its style or adapt it to their business ("usa la plantilla como referencia", "mantén el estilo de la plantilla", "adáptala a mi panadería") gets rework false, even when they rename the business or ask for new copy; only an explicitly different look makes it true.`;
+rework: true when the merchant asks an existing store to look more unique, more different or less like its template ("hazla más única", "que no parezca plantilla"), and also when a store that started from a template (startedFromTemplate in the context, with that template's look) settles on a visual direction or style different from that look (for example "moderna y clínica" on Pausa, a warm natural pilates template); otherwise false. Keeping the template is not a rework: a merchant who asks to use it as a reference or base, keep its style or adapt it to their business ("usa la plantilla como referencia", "mantén el estilo de la plantilla", "adáptala a mi panadería") gets rework false, even when they rename the business or ask for new copy; only an explicitly different look makes it true.
+editKind: for an existing store whose context has masterTemplate=true — "content" when the request only changes words, colours, fonts, the announcement bar or which photo goes where; "design" when it changes layout, sections, components or adds a feature (a bundle offer, moving reviews, a shorter hero); "redesign" only when the merchant explicitly asks to redesign everything or for something unique ("rediseña todo", "quiero algo único"); otherwise "none". For new stores always "none".`;
 const decisionSchema = {
   type: 'object', additionalProperties: false,
-  required: ['action', 'reply', 'summary', 'generationInstruction', 'imageUses', 'startFrom', 'templates', 'chosenTemplateId', 'rework', 'productCopy'],
+  required: ['action', 'reply', 'summary', 'generationInstruction', 'imageUses', 'startFrom', 'templates', 'chosenTemplateId', 'rework', 'editKind', 'productCopy'],
   properties: {
     action: { type: 'string', enum: ['reply', 'generate'] },
     reply: { type: 'string' }, summary: { type: 'string' }, generationInstruction: { type: 'string' },
@@ -98,6 +103,7 @@ const decisionSchema = {
     } },
     chosenTemplateId: { type: 'string', enum: [...templateIds, ''] },
     rework: { type: 'boolean' },
+    editKind: { type: 'string', enum: ['content', 'design', 'redesign', 'none'] },
     productCopy: { type: 'object', additionalProperties: false, required: ['name', 'description'], properties: { name: { type: 'string', maxLength: 120 }, description: { type: 'string', maxLength: 500 } } },
   },
 };
@@ -265,6 +271,7 @@ export class SourceConversationService {
       websiteReferences: sourceWebsiteReferenceContext(input.draft.websiteReferences || []),
       existingSite: input.site || null,
       startedFromTemplate: input.startedFromTemplate || null,
+      masterTemplate: input.masterTemplate === true,
       browserReview: input.browserReview || [],
       offeredTemplates: input.offeredTemplates || [],
     };
@@ -339,6 +346,7 @@ export class SourceConversationService {
           .filter(item => item && typeof item.id === 'string' && typeof item.reason === 'string').slice(0, 3) : [];
         decision.chosenTemplateId = typeof decision.chosenTemplateId === 'string' ? decision.chosenTemplateId : '';
         decision.rework = decision.rework === true;
+        decision.editKind = decision.editKind === 'content' || decision.editKind === 'design' || decision.editKind === 'redesign' ? decision.editKind : 'none';
         // Older answers (and recorded tapes) have no productCopy: it is optional, never a failed decision.
         const copy = decision.productCopy as { name?: unknown; description?: unknown } | undefined;
         decision.productCopy = { name: typeof copy?.name === 'string' ? copy.name.trim().slice(0, 120) : '', description: typeof copy?.description === 'string' ? copy.description.trim().slice(0, 500) : '' };
