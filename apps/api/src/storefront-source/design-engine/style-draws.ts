@@ -14,6 +14,8 @@ import { PLAYBOOK, pickFamily, type PlaybookKind, type StyleFamily } from './pla
 import { decodePhotoPalette, isPhotoPalette, paperLightness, washedPalette } from './photo-palette';
 
 export type StyleMode = 'calm' | 'bold';
+/** The faces of the owner's Amboras references (2026-10-19): a calm card's pair includes one of them. */
+export const PREMIUM_FONTS: ReadonlySet<string> = new Set(['inter', 'archivo', 'plus-jakarta-sans', 'dm-sans', 'cormorant-garamond']);
 
 /** The bold card's one memorable device, drawn per card so bold heroes stop looking alike. */
 export const SIGNATURE_DEVICES = {
@@ -119,7 +121,9 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
     let extra: Pick<StyleSlot, 'device' | 'fonts' | 'avoidDisplay'>;
     if (mode === 'calm') {
       // The family's font pairs rotate like the frame: the pair the latest cards of this kind showed least.
-      const fonts = family.fonts.length ? rotate(family.fonts, pair => used.filter(id => id === pair.display).length, random, STYLE_SPREAD) : undefined;
+      // 2026-10-19 (Pulso Studio drew Figtree · Figtree): the premium pairs win; the older ones only for a family without any.
+      const premium = family.fonts.filter(pair => PREMIUM_FONTS.has(pair.display) || PREMIUM_FONTS.has(pair.text));
+      const fonts = family.fonts.length ? rotate(premium.length ? premium : family.fonts, pair => used.filter(id => id === pair.display).length, random, STYLE_SPREAD) : undefined;
       extra = { ...(fonts ? { fonts: { display: fonts.display, text: fonts.text } } : {}), avoidDisplay: [...new Set(used)].filter(id => id !== fonts?.display).slice(0, AVOID_FONTS) };
     } else if (authored) {
       extra = { avoidDisplay: [...new Set(used)].slice(0, AVOID_FONTS) };

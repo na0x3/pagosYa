@@ -1,4 +1,5 @@
 import { photoPalettes, washedPalette } from './photo-palette';
+import { PREMIUM_FONTS } from './style-draws';
 import { SHOWN_CARDS_TIMEOUT_MS, SIGNATURE_DEVICES, styleDraws, styleSlotDirection, withinOr } from './style-draws';
 import { FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, frameForRun, parseFrameDraw, type FrameAvailable } from './frame-draw';
 import { COMMERCE_LEAN } from './commerce-draw';
@@ -130,7 +131,9 @@ describe('variety across proposals (2026-10-11: "always the same two templates")
       expect(direction).toContain(`fonts ${calm.fonts!.display} + ${calm.fonts!.text},`);
     }
     // cafe-shop's pairs minus the outfit one just shown (2026-10-19: two premium pairs joined the family).
-    expect(displays.size).toBe(new Set(PLAYBOOK['cafe-food'].families.find(family => family.id === 'cafe-shop')!.fonts.map(pair => pair.display).filter(display => display !== 'outfit')).size);
+    // Only the family's premium pairs are drawn (2026-10-19), and they rotate.
+    const premium = PLAYBOOK['cafe-food'].families.find(family => family.id === 'cafe-shop')!.fonts.filter(pair => PREMIUM_FONTS.has(pair.display) || PREMIUM_FONTS.has(pair.text)).map(pair => pair.display);
+    expect([...displays].sort()).toEqual([...new Set(premium)].sort());
     // Without history the pair still rotates across seeds.
     const fresh = new Set(Array.from({ length: 30 }, (_, seed) => styleDraws({ ...base, recentFamilies: ['cafe-editorial'], random: seeded(seed + 1) })[0].fonts!.display));
     expect(fresh.size).toBeGreaterThanOrEqual(2);
