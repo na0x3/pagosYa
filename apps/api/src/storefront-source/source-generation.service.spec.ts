@@ -104,7 +104,8 @@ describe('Independent source generation',()=>{
     jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ label: 'Menu', files: files() }) }] }] })));
     await service.generate('m', 's', input);
     const config = configOf(projects.save.mock.calls[0][2]);
-    expect(config.dna).toEqual(sourceRuntimeDna(undefined, 's', 'editorial'));
+    // A first build gets the atelier page (2026-10-19).
+    expect(config.dna).toEqual(sourceRuntimeDna(undefined, 's', 'atelier'));
     expect(config.dna.product).toBe(config.productPageStyle);
   });
   it('designs the email look after a site is saved, without waiting for it', async () => {
@@ -153,8 +154,9 @@ describe('Independent source generation',()=>{
     if ('styleProposal' in result) throw new Error('unexpected style proposal');
     expect(jest.mocked(SourceDesignPlanner.prototype.explore).mock.calls[0][0].dnaSeed).toBe('s');
     const config = configOf(projects.save.mock.calls[0][2]);
-    expect(config.dna).toEqual(dnaRuntimeConfig(validDna()));
-    expect(config.productPageStyle).toBe('story-led');
+    // The concept's DNA is kept; on a first build its product page gives way to the atelier page (2026-10-19).
+    expect(config.dna).toEqual({ ...dnaRuntimeConfig(validDna()), product: 'atelier' });
+    expect(config.productPageStyle).toBe('atelier');
     expect(result.generation.autoRepairs).toContain('concepts[0].dna.buttons.hover: invalid');
   });
   it('tells the build to author the purchase control in the chosen DNA button form, so authored CSS and the DNA agree', async () => {

@@ -79,7 +79,10 @@ export async function assembleSourceSave(context: SaveAssemblyContext, assembleS
   const previousConfigMatch = previousConfigFile?.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
   const previousConfig = previousConfigMatch ? JSON.parse(previousConfigMatch[1]) : {};
   // A fresh build's drawn product page (design-engine/product-draw.ts) wins over the planner's; a sketch still wins below.
-  let productPageStyle = live.frame.product?.draw.productPage ?? sourceProductPageStyle(live.visualSystem, previousConfig);
+  // A first build without a drawn page (a style card's build: the frame draws nothing for those) gets the atelier page, the
+  // Amboras layout every new store gets; the planner's pick only counts once the store has a page (Pulso Studio, 2026-10-19).
+  const firstBuild = !previousConfigFile;
+  let productPageStyle = live.frame.product?.draw.productPage ?? (firstBuild ? 'atelier' : sourceProductPageStyle(live.visualSystem, previousConfig));
   // Every store carries a DNA: the chosen concept's, else one seeded by the store id (stable, differs per store).
   // The agent's theme also wins over a store that has no saved design (its DNA is seeded), so it always reaches the runtime.
   // A sketch-born save instead carries the sketch's chosen product skin and composition (sketch.product, model-picked by sector).
