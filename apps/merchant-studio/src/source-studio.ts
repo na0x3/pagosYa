@@ -424,7 +424,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (storeId) {
       const selectedStore = storeId;
       const latest = await api.latestSourceChatJob(selectedStore).catch(() => ({ job: null }));
-      if (latest.job && ['QUEUED', 'RUNNING'].includes(latest.job.status)) {
+      // A background personal touch is followed quietly: the merchant keeps the chat, and a message they send cancels it.
+      if (latest.job && ['QUEUED', 'RUNNING'].includes(latest.job.status) && latest.job.background) void followBackgroundJob(selectedStore, '');
+      else if (latest.job && ['QUEUED', 'RUNNING'].includes(latest.job.status)) {
         const job = latest.job;
         // Boot's action finishes first, then the restored job owns the editor state.
         window.setTimeout(() => { if (storeId !== selectedStore) return; void action(async () => {

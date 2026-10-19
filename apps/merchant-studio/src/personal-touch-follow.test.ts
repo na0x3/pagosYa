@@ -15,3 +15,11 @@ describe('personal touch follow-up', () => {
     expect(body).toContain('building()');
   });
 });
+
+describe('review fix: reopening the Studio during a personal touch', () => {
+  const source = readFileSync(new URL('./source-studio.ts', import.meta.url), 'utf8');
+  it('a background job found at boot is followed without the build lock', () => {
+    const boot = source.slice(source.indexOf('async function boot()'), source.indexOf('async function boot()') + 1600);
+    expect(boot).toMatch(/latest\.job\.background\) void followBackgroundJob\(selectedStore, ''\)/);
+  });
+});

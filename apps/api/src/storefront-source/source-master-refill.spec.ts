@@ -1,3 +1,4 @@
+import { sameAsBundled } from './source-templates';
 import type { MasterSettings, TemplateManifest } from '@pagosya/store-templates';
 import { fillTemplatePhotos, readMasterState, refillMasterFiles, templateStoreDataFile, TEMPLATE_STORE_DATA_PATH } from './source-templates';
 import { MASTER_THEME_START, MASTER_THEME_END, masterCopy, masterLook } from './source-master';
@@ -79,4 +80,12 @@ describe('master store data', () => {
     expect(readMasterState(out).variants).toEqual(variants);
     expect(readMasterState(out).sections).toEqual(sections);
   });
+});
+
+describe('review fix: a product photo that is the bundled hero or story points at the same asset', () => {
+  it('maps product slots holding the hero/story upload to the bundled asset', () => {
+    const photos = { hero: 'assets/image-1.jpg', story: 'assets/image-2.jpg', p1: 'http://localhost:3001/v1/uploads/aaaa-0001.jpg', p2: '/v1/uploads/aaaa-0002.jpg', p3: '/v1/uploads/aaaa-0003.jpg' };
+    expect(sameAsBundled(photos, { hero: '/v1/uploads/aaaa-0001.jpg', story: '/v1/uploads/aaaa-0002.jpg' })).toEqual({ ...photos, p1: 'assets/image-1.jpg', p2: 'assets/image-2.jpg' });
+  });
+  it('leaves photos alone without sources', () => expect(sameAsBundled({ hero: 'h', p1: 'x' }, undefined)).toEqual({ hero: 'h', p1: 'x' }));
 });

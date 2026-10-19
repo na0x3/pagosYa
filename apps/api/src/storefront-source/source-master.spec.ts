@@ -1,3 +1,5 @@
+import { templateManifest } from '@pagosya/store-templates';
+import { paletteForBrand } from './source-master';
 import type { MasterSettings } from '@pagosya/store-templates';
 import { masterDnaLook, masterColours, masterCopy, masterDnaFonts, masterLook, masterThemeCss, withMasterTheme, MASTER_THEME_START, MASTER_THEME_END } from './source-master';
 import { contrastRatio } from './sketch/sketch-schema';
@@ -80,4 +82,15 @@ describe('masterDnaLook (variety spec §2 look details)', () => {
     expect(masterDnaLook({ button: 'soft', sections: [] } as any)).toEqual({ button: 'block' });
   });
   it('adds nothing for a store without rolled variants', () => expect(masterDnaLook(undefined)).toEqual({}));
+});
+
+describe('review fix: a brand accent is readable on the rolled palette', () => {
+  const esencial = templateManifest('esencial')!.master!;
+  const paper = (id: string) => esencial.palettes.find(p => p.id === id)!.paper;
+  it('keeps the roll when the brand accent reads on its paper', () => expect(paletteForBrand(esencial, 'terracotta', { accent: '#1f2a44' })).toBe('terracotta'));
+  it('moves off a dark palette when a dark brand accent would vanish on it', () => {
+    const id = paletteForBrand(esencial, 'ink', { accent: '#1f2a44' });
+    expect(contrastRatio('#1f2a44', paper(id))).toBeGreaterThanOrEqual(3);
+  });
+  it('a brand paper is the brand\'s own choice: the roll stays', () => expect(paletteForBrand(esencial, 'ink', { accent: '#1f2a44', paper: '#ffffff' })).toBe('ink'));
 });

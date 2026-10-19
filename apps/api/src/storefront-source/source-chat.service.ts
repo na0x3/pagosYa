@@ -21,7 +21,7 @@ import { sourceSiteContext } from './source-context';
 import { SourceProviderQuotaException } from './source-provider-error';
 import { merchantFacingSourceFailure } from './source-validation-error';
 import { sourceRequestExecutionPrompt, sourceRequestProfile } from './source-request-profile';
-import { SendSourceMessageDto } from './dto/send-source-message.dto';
+import { SendSourceMessageDto, type SourceMessageInput } from './dto/send-source-message.dto';
 import { sourceSitePurpose } from './source-site-purpose';
 import { sourceRedesignRequested } from './source-context';
 import { newSourceSetup, sourceSetupPrompt, type SourceImageUse, type SourceSetupDraft } from './source-setup';
@@ -267,7 +267,7 @@ export class SourceChatService {
     // Variety spec §5: one background personal touch per new master store. The reply carries it; the job runner queues it
     // once this request's job is closed (a store has one active job at a time).
     const touching = this.config.get<boolean>('app.yapiPersonalTouch') === true;
-    const followUp: SendSourceMessageDto | undefined = touching ? { instruction: PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, requestId: randomUUID(), model: 'auto' } : undefined;
+    const followUp: SourceMessageInput | undefined = touching ? { instruction: PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, requestId: randomUUID(), model: 'auto' } : undefined;
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId, channel: 'source', role: 'ASSISTANT',
       content: `Tu tienda ${store?.name ?? ''} está lista.${touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
@@ -384,7 +384,7 @@ export class SourceChatService {
     return { proposal: shown ? styleProposalView(row!.id, proposal, store.name) : null };
   }
 
-  async send(merchantId: string, storeId: string, input: SendSourceMessageDto) {
+  async send(merchantId: string, storeId: string, input: SourceMessageInput) {
     const [store, current] = await Promise.all([this.owner(merchantId, storeId), this.projects.current(merchantId, storeId)]);
     // Variety spec §5: the personal touch never collides with the merchant — once the store moved on, it is dropped silently.
     if (input.personalTouch && current.revision !== input.revision) throw new PersonalTouchSkipped('the store moved on');

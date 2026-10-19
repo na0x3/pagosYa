@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { BadGatewayException, ConflictException, InternalServerErrorException, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { SourceProviderQuotaException, checkSourceProviderQuota } from './source-provider-error';
-import { SourceChatJobsService, chatRequestDigest } from './source-chat-jobs.service';
+import { SourceChatJobsService, chatJobView, chatRequestDigest } from './source-chat-jobs.service';
 import { PersonalTouchSkipped } from './source-chat.service';
 import { sourceRequestContext } from './source-request-context';
 function setup() {
@@ -167,5 +167,23 @@ describe('queue position on a waiting request', () => {
     expect(prisma.store.findUnique).not.toHaveBeenCalled();
     prisma.storeSourceChatJob.findFirst = jest.fn().mockResolvedValueOnce({ ...queued, status: 'RUNNING' });
     expect((await service.get('m', 's', 'q')).queue).toBeUndefined();
+  });
+});
+
+describe('review fixes: background jobs', () => {
+  it('the worker takes a merchant request before an older personal touch', async () => {
+    const { service, prisma } = setup();
+    const touch = { ...job, id: 'touch', status: 'QUEUED', input: { ...input, personalTouch: true } };
+    const merchant = { ...job, id: 'merchant', status: 'QUEUED', input };
+    prisma.storeSourceChatJob.findMany.mockImplementation(async ({ where }: any) => where.status === 'QUEUED' ? [touch, merchant] : []);
+    prisma.storeSourceChatJob.findFirst = jest.fn().mockResolvedValue(touch);
+    const claimed: string[] = [];
+    prisma.storeSourceChatJob.updateMany.mockImplementation(async ({ where }: any) => { if (where.status === 'QUEUED') claimed.push(where.id); return { count: 0 }; });
+    await service.tick();
+    expect(claimed[0]).toBe('merchant');
+  });
+  it('a personal touch job says it runs in the background', () => {
+    expect((chatJobView({ ...job, status: 'QUEUED', input: { ...input, personalTouch: true } }) as any).background).toBe(true);
+    expect((chatJobView({ ...job, status: 'QUEUED', input }) as any).background).toBe(false);
   });
 });

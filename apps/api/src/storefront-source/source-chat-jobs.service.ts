@@ -5,7 +5,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Prisma, StoreSourceChatJob } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PersonalTouchSkipped, SourceChatService } from './source-chat.service';
-import { SendSourceMessageDto } from './dto/send-source-message.dto';
+import { SendSourceMessageDto, type SourceMessageInput } from './dto/send-source-message.dto';
 import { sourceRequestContext } from './source-request-context';
 import { merchantFacingSourceFailure } from './source-validation-error';
 
@@ -27,7 +27,7 @@ const isAbort = (error: unknown) => ['AbortError', 'TimeoutError'].includes((err
 /** Where a waiting request stands: requests running or queued before it, and the running store when it is the merchant's own. */
 export type ChatJobQueue = { ahead: number; runningStore?: string };
 export function chatJobView(job: StoreSourceChatJob, queue?: ChatJobQueue) {
-  return { ...(queue ? { queue } : {}), id: job.id, requestId: job.requestId, status: job.status, sequence: job.sequence, progress: job.progress, attempt: job.attempt, result: job.result, error: job.error, lastCommittedRevision: job.lastCommittedRevision, createdAt: job.createdAt, updatedAt: job.updatedAt };
+  return { ...(queue ? { queue } : {}), background: Boolean((job.input as { personalTouch?: boolean } | null)?.personalTouch), id: job.id, requestId: job.requestId, status: job.status, sequence: job.sequence, progress: job.progress, attempt: job.attempt, result: job.result, error: job.error, lastCommittedRevision: job.lastCommittedRevision, createdAt: job.createdAt, updatedAt: job.updatedAt };
 }
 @Injectable()
 export class SourceChatJobsService implements OnModuleDestroy {
@@ -39,7 +39,7 @@ export class SourceChatJobsService implements OnModuleDestroy {
   private async owner(merchantId: string, storeId: string) {
     if (!await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true } })) throw new NotFoundException('Tienda no encontrada.');
   }
-  async create(merchantId: string, storeId: string, input: SendSourceMessageDto) {
+  async create(merchantId: string, storeId: string, input: SourceMessageInput) {
     await this.owner(merchantId, storeId);
     if (!input.requestId) throw new BadRequestException('La solicitud necesita un requestId.');
     const inputDigest = chatRequestDigest(input);
@@ -109,7 +109,9 @@ export class SourceChatJobsService implements OnModuleDestroy {
     this.busy = true;
     try {
       await this.expire();
-      const queued = await this.prisma.storeSourceChatJob.findFirst({ where: { status: 'QUEUED' }, orderBy: { createdAt: 'asc' } });
+      // A merchant's request goes before any background personal touch (review fix): touches run when nothing else waits.
+      const waiting = await this.prisma.storeSourceChatJob.findMany({ where: { status: 'QUEUED' }, orderBy: { createdAt: 'asc' }, take: 25 });
+      const queued = waiting.find(candidate => !(candidate.input as { personalTouch?: boolean } | null)?.personalTouch) ?? waiting[0];
       if (!queued) return;
       const leaseToken = randomUUID();
       const claim = await this.prisma.storeSourceChatJob.updateMany({ where: { id: queued.id, status: 'QUEUED' }, data: { status: 'RUNNING', leaseToken, leaseUntil: new Date(Date.now() + LEASE_MS), attempt: { increment: 1 }, sequence: { increment: 1 } } });
@@ -139,7 +141,7 @@ export class SourceChatJobsService implements OnModuleDestroy {
       await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: failed ? 'FAILED' : 'skipped' in result || 'revision' in result && result.revision ? 'COMPLETED' : 'AWAITING_INPUT', result: json(result), activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 } } });
       // Variety spec §5: a reply can carry a follow-up request (the personal touch). A store has one active job at a time,
       // so it is queued only now that this job is closed; failing to queue it never fails the merchant's request.
-      const followUp = !failed && 'followUp' in result ? result.followUp as SendSourceMessageDto | undefined : undefined;
+      const followUp = !failed && 'followUp' in result ? result.followUp as SourceMessageInput | undefined : undefined;
       if (followUp) await this.create(job.merchantId, job.storeId, followUp).catch(error => this.logger.warn(`follow-up not queued for ${job.storeId}: ${String(error).slice(0, 200)}`));
     } catch (error) {
       const generation = await this.prisma.storeSourceGeneration.findFirst({ where: { requestJobId: job.id }, orderBy: { createdAt: 'desc' }, select: { status: true } }).catch(() => null);

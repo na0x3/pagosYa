@@ -1,5 +1,5 @@
 import { templateManifest } from '@pagosya/store-templates';
-import { rollVariants } from './source-master-dice';
+import { distinctPhotoCount, rollVariants } from './source-master-dice';
 
 const settings = templateManifest('esencial')!.master!;
 const calm = { tone: 'calm', temperature: 'warm', lead: 'photo', exclude: [] as string[] } as const;
@@ -67,4 +67,8 @@ it('an over-eager exclusion list still leaves at least half of each part (live c
   const grids = new Set<string>();
   for (const seed of 'abcdefghijklmnopqrst') grids.add(roll(seed, { character: { ...calm, exclude: ['grid4', 'grid3', 'strip', 'list', 'masonry'] } }).variants.grid);
   expect(grids.size).toBeGreaterThanOrEqual(3);
+});
+
+it('review fix: counts a photo once whatever its URL form', () => {
+  expect(distinctPhotoCount(['/v1/uploads/a.jpg', 'http://localhost:3001/v1/uploads/a.jpg', '/v1/uploads/b.jpg', undefined, ''])).toBe(2);
 });

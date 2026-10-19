@@ -166,6 +166,14 @@ describe('SourceTemplatesService', () => {
     });
   });
 
+  it('review fix: recent rolls read only store-data, in SQL, not 40 whole snapshots', async () => {
+    const { templates, prisma } = service(0) as any;
+    prisma.$queryRaw = jest.fn().mockResolvedValue([{ data: 'export const look = {"palette":"ink","fonts":"poster","colors":{}} as const;\nexport const variants: Record<string, string | string[]> = {"hero":"arch","sections":[]};\n' }]);
+    prisma.storeSourceVersion = { ...(prisma.storeSourceVersion ?? {}), findMany: jest.fn() };
+    expect(await templates.recentMasterRolls('s')).toEqual([{ hero: 'arch', palette: 'ink', fonts: 'poster' }]);
+    expect(prisma.storeSourceVersion.findMany).not.toHaveBeenCalled();
+  });
+
   it('saves the template as the next revision and switches a first site to payment checkout', async () => {
     const { templates, projects, prisma } = service(0);
     const saved = await templates.apply('m1', 'store-1', 'prueba', 0);

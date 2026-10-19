@@ -4,6 +4,10 @@
 import { createHash } from 'node:crypto';
 import type { MasterSettings } from '@pagosya/store-templates';
 import type { MasterCharacter, MasterVariants } from './source-master';
+import { uploadPath } from './source-product-photos';
+
+/** Review fix: one photo is counted once, whether it is a relative upload path or an absolute API URL. */
+export const distinctPhotoCount = (urls: Array<string | null | undefined>) => new Set(urls.filter((url): url is string => Boolean(url)).map(uploadPath)).size;
 
 /** Variants that need more than one photo to look right. */
 const PHOTO_NEEDS: Record<string, number> = { collage: 3, strip: 3, pair: 2 };

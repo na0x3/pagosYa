@@ -1,3 +1,4 @@
+import { uploadPath } from './source-product-photos';
 /** Plantillas (spec 2026-09-25-plantillas-design.md): the per-store pieces a template needs at apply time. A template's
  * authored source never contains merchant text; it imports `./store-data`, which this module writes with every value
  * JSON-encoded, so no store name or photo URL is ever pasted into JSX. */
@@ -46,6 +47,17 @@ export function fillTemplatePhotos(manifest: Pick<TemplateManifest, 'id' | 'phot
   return { photos, demoSlots };
 }
 
+/** Review fix: a product slot holding the same upload as the bundled hero or story photo points at that bundle, so the page
+ *  can tell they are one photo (the store shows it once per block). */
+export function sameAsBundled(photos: Record<string, string>, sources: MasterFill['photoSources']): Record<string, string> {
+  if (!sources) return photos;
+  return Object.fromEntries(Object.entries(photos).map(([slot, src]) => {
+    if (slot === 'hero' || slot === 'story' || !src) return [slot, src];
+    const path = uploadPath(src);
+    return [slot, sources.hero && path === sources.hero && photos.hero ? photos.hero : sources.story && path === sources.story && photos.story ? photos.story : src];
+  }));
+}
+
 export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[] }): SourceProjectFileDto {
   const data = { name: store.name, tagline: store.tagline ?? '', city: store.city ?? '', logo: store.logo ?? '', phone: store.phone ?? '' };
   return {
@@ -85,7 +97,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   const copy = masterCopy(settings, { ...(state.copy ?? {}), ...(change.copy ?? {}) });
   // A changed look carries its whole colour set (the fill call copies the colours it keeps), so earlier custom colours can go.
   const look = masterLook(settings, { ...(state.look ?? {}), ...(change.look ?? {}), colors: change.look?.colors ?? state.look?.colors ?? {} });
-  const photos = { ...state.photos, ...(change.heroPhoto !== undefined ? { hero: masterPhotoUrl(change.heroPhoto, apiUrl) } : {}), ...(change.storyPhoto !== undefined ? { story: masterPhotoUrl(change.storyPhoto, apiUrl) } : {}) };
+  const photos = sameAsBundled({ ...state.photos, ...(change.heroPhoto !== undefined ? { hero: masterPhotoUrl(change.heroPhoto, apiUrl) } : {}), ...(change.storyPhoto !== undefined ? { story: masterPhotoUrl(change.storyPhoto, apiUrl) } : {}) }, change.photoSources);
   const theme = masterThemeCss(settings, look);
   return files.map(file => {
     if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants: { ...(state.variants ?? { sections: [] }), ...Object.fromEntries(Object.entries(change.variants ?? {}).filter(([part, id]) => part !== 'sections' && (settings.variants?.[part] ?? []).includes(String(id)))) } as MasterVariants, sections: change.sections ?? state.sections ?? [] });
@@ -143,9 +155,9 @@ export async function assembleTemplateRevision(input: {
   const data = sourceStoreConfigData(input.publicStore, input.apiUrl, input.firstRevision);
   const settings = manifest.master;
   const filled = fillTemplatePhotos(manifest, data.items, input.demoPhotos !== false);
-  const photos: Record<string, string> = { ...filled.photos,
+  const photos: Record<string, string> = sameAsBundled({ ...filled.photos,
     ...(settings && input.fill?.heroPhoto !== undefined ? { hero: masterPhotoUrl(input.fill.heroPhoto, input.apiUrl) } : {}),
-    ...(settings && input.fill?.storyPhoto !== undefined ? { story: masterPhotoUrl(input.fill.storyPhoto, input.apiUrl) } : {}) };
+    ...(settings && input.fill?.storyPhoto !== undefined ? { story: masterPhotoUrl(input.fill.storyPhoto, input.apiUrl) } : {}) }, input.fill?.photoSources);
   const demoSlots = filled.demoSlots.filter(slot => photos[slot] === templateDemoPath(manifest, slot));
   const copy = settings ? masterCopy(settings, input.fill?.copy) : undefined;
   const look = settings ? masterLook(settings, input.fill?.look) : undefined;

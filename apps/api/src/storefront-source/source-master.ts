@@ -18,7 +18,9 @@ export const MASTER_COLOURS: readonly MasterColour[] = ['paper', 'ink', 'muted',
 export type MasterLook = { palette: string; fonts: string; colors: Partial<Record<MasterColour, string>> };
 export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null;
   /** Variety spec: the business's character, its sections and any variant the merchant named. */
-  character?: MasterCharacter; sections?: MasterSection[]; variants?: Partial<MasterVariants> };
+  character?: MasterCharacter; sections?: MasterSection[]; variants?: Partial<MasterVariants>;
+  /** The uploads the bundled hero/story photos came from, so product slots holding the same photo can point at the bundle. */
+  photoSources?: { hero?: string; story?: string } };
 
 /** a → b by t (0..1), both #rrggbb. */
 const mixHex = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
@@ -55,6 +57,14 @@ export function masterLook(settings: MasterSettings, partial: Partial<MasterLook
 }
 
 /** The palette with the merchant's own colours over it; text is always readable on paper, accent and deep. */
+/** Review fix: a brand accent (with no brand paper) must stay readable on the rolled palette's paper; otherwise the first
+ *  catalogue palette it reads on (3:1, the large-text and UI floor) replaces the roll. A brand paper is the brand's choice. */
+export function paletteForBrand(settings: MasterSettings, rolled: string, colours: Partial<Record<'paper' | 'ink' | 'accent' | 'muted', string>>): string {
+  if (!colours.accent || colours.paper) return rolled;
+  const reads = (id: string) => { const paper = settings.palettes.find(p => p.id === id)?.paper; return Boolean(paper) && contrastRatio(colours.accent!, paper!) >= 3; };
+  return reads(rolled) ? rolled : settings.palettes.find(p => reads(p.id))?.id ?? rolled;
+}
+
 export function masterColours(settings: MasterSettings, look: MasterLook) {
   const base = settings.palettes.find(p => p.id === look.palette) ?? settings.palettes[0];
   const merged = { paper: base.paper, ink: base.ink, muted: base.muted, accent: base.accent, deep: base.deep, ...look.colors };

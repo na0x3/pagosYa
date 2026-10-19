@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import sharp from 'sharp';
 import { UploadsService } from '../uploads/uploads.service';
@@ -12,9 +13,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PublicStoresService } from '../stores/public-stores.service';
 import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectSnapshot } from './source-project';
-import { assembleTemplateRevision, readMasterState, refillMasterFiles, templateDemoRevision } from './source-templates';
-import { MASTER_TEMPLATE_ID, type MasterFill, type MasterVariants } from './source-master';
-import { rollVariants, type RecentRoll } from './source-master-dice';
+import { assembleTemplateRevision, readMasterState, refillMasterFiles, templateDemoRevision, TEMPLATE_STORE_DATA_PATH } from './source-templates';
+import { MASTER_TEMPLATE_ID, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
+import { distinctPhotoCount, rollVariants, type RecentRoll } from './source-master-dice';
 
 /** What the master template's filler is told about a store (spec 2026-10-19 §2.3). */
 export type MasterFacts = { storeName: string; products: string[]; photos: string[]; brand?: { voice?: string; headlineExamples?: string; avoid?: string } };
@@ -78,7 +79,8 @@ export class SourceTemplatesService {
     // Variety spec §3: the platform rolls the store's variants, palette and fonts within the business's character.
     let variants: MasterVariants | undefined;
     if (this.config.get<boolean>('app.yapiEsencialDice') !== false) {
-      const photoCount = new Set([...facts.photos, fill?.heroPhoto, fill?.storyPhoto].filter(Boolean)).size;
+      // Counted before bundling: a bundled hero is an asset path and would count its product photo twice (review fix).
+      const photoCount = distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]);
       const rolled = rollVariants({ seed: storeId, settings: manifest.master, character: fill?.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] },
         photoCount, sections: (fill?.sections ?? []).map(section => section.id), recent: await this.recentMasterRolls(storeId) });
       variants = rolled.variants;
@@ -88,7 +90,7 @@ export class SourceTemplatesService {
       .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
     const logo = Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
     const colours = Object.keys(brandColours).length ? brandColours : logo ? { paper: logo.paper, ink: logo.ink, accent: logo.accent, muted: logo.surface } : undefined;
-    if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours } };
+    if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours, ...(fill?.look?.palette ? { palette: paletteForBrand(manifest.master, fill.look.palette, colours) } : {}) } };
     const { assembled } = await this.assemble(merchantId, storeId, MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files, variants);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
@@ -111,11 +113,15 @@ export class SourceTemplatesService {
   /** Variety spec §3: hero + palette + fonts of the last 6 master stores (other stores), so a new roll avoids them. */
   private async recentMasterRolls(storeId: string): Promise<RecentRoll[]> {
     try {
-      const rows = await this.prisma.storeSourceVersion.findMany({ where: { revision: 1, storeId: { not: storeId } }, orderBy: { createdAt: 'desc' }, take: 40, select: { snapshot: true } });
+      // Only store-data is read, in SQL: a whole snapshot carries the kit, fonts and photos (review fix).
+      const rows = await this.prisma.$queryRaw<Array<{ data: string | null }>>(Prisma.sql`
+        SELECT (SELECT f->>'content' FROM jsonb_array_elements(v.snapshot->'files') f WHERE f->>'path' = ${TEMPLATE_STORE_DATA_PATH} LIMIT 1) AS data
+        FROM "StoreSourceVersion" v
+        WHERE v.revision = 1 AND v."storeId" <> ${storeId} AND v.snapshot->'brief'->>'templateId' = ${MASTER_TEMPLATE_ID}
+        ORDER BY v."createdAt" DESC LIMIT 6`);
       return rows.flatMap(row => {
-        const snapshot = row.snapshot as unknown as SourceProjectSnapshot;
-        if (snapshot?.brief?.templateId !== MASTER_TEMPLATE_ID) return [];
-        const state = readMasterState(snapshot.files ?? []);
+        if (!row.data) return [];
+        const state = readMasterState([{ path: TEMPLATE_STORE_DATA_PATH, content: row.data }]);
         return state.variants?.hero && state.look ? [{ hero: String(state.variants.hero), palette: state.look.palette, fonts: state.look.fonts }] : [];
       }).slice(0, 6);
     } catch { return []; }
@@ -138,6 +144,7 @@ export class SourceTemplatesService {
       let name = path;
       if (bytes && bytes.length > 2_000_000) { bytes = await sharp(bytes).resize({ width: 1800, withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer().catch(() => null); name = path.replace(/\.[a-z]+$/i, '.jpg'); }
       if (!bytes) { out[key] = ''; continue; }
+      out.photoSources = { ...(out.photoSources ?? {}), [key === 'heroPhoto' ? 'hero' : 'story']: path };
       const asset = bundledPhotoPath(bytes, name);
       if (!files.some(file => file.path === asset)) files.push({ path: asset, content: bytes.toString('base64'), encoding: 'base64' });
       out[key] = asset;
