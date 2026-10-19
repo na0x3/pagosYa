@@ -1,0 +1,60 @@
+{
+  "id": "esencial",
+  "name": "Esencial",
+  "category": "general",
+  "description": "La tienda base de pagosYa: foto a pantalla completa, catálogo claro, historia y valores. Tranquila y profesional.",
+  "tags": ["base", "profesional", "tranquilo"],
+  "sitePurpose": "shop",
+  "order": 0,
+  "hidden": true,
+  "dna": { "case": "none", "radius": "soft", "border": "hairline", "button": "pill", "hover": "lift", "press": "sink", "motion": "calm", "cart": "drawer", "added": "toast", "card": "second-photo", "frame": "bleed" },
+  "photos": [
+    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
+    { "slot": "story", "role": "lifestyle", "demo": "story.jpg" },
+    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
+    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
+    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
+    { "slot": "p4", "role": "product", "demo": "p4.jpg" }
+  ],
+  "master": {
+    "copy": {
+      "announcement": "",
+      "eyebrow": "Nueva colección",
+      "headline": "Hecho con cuidado, pensado para ti",
+      "subcopy": "Descubre nuestra selección y pide en pocos minutos.",
+      "primaryCta": "Ver la colección",
+      "secondaryCta": "Nuestra historia",
+      "productsTitle": "Nuestros productos",
+      "storyTitle": "Nuestra historia",
+      "storyBody": "Somos un emprendimiento que elige con cuidado cada producto que ofrece.",
+      "values": [
+        { "title": "Selección propia", "text": "Elegimos uno por uno lo que ofrecemos." },
+        { "title": "Compra simple", "text": "Agrega al carrito y paga en pocos minutos." },
+        { "title": "Pago seguro", "text": "Paga con QR o tarjeta, protegido por pagosYa." }
+      ],
+      "closingLine": "Encuentra lo que buscas",
+      "closingCta": "Ver todos los productos",
+      "tagline": ""
+    },
+    "palettes": [
+      { "id": "terracotta", "name": "Crema y terracota", "paper": "#f6f1ea", "ink": "#1f1a17", "muted": "#ede6dc", "accent": "#b8553a", "deep": "#2b211c" },
+      { "id": "olive", "name": "Crema y oliva", "paper": "#f4f1e8", "ink": "#1e1f1a", "muted": "#e7e3d6", "accent": "#5f6b3a", "deep": "#2a2e22" },
+      { "id": "mono", "name": "Blanco y negro", "paper": "#ffffff", "ink": "#111111", "muted": "#f2f2f0", "accent": "#111111", "deep": "#111111" },
+      { "id": "sand", "name": "Arena y óxido", "paper": "#f3ece3", "ink": "#241c17", "muted": "#e8ded2", "accent": "#9a4a2a", "deep": "#3a2a20" },
+      { "id": "sage", "name": "Salvia y bosque", "paper": "#eef0ea", "ink": "#1a211c", "muted": "#e1e6dd", "accent": "#2f5d46", "deep": "#1f3a2e" },
+      { "id": "plum", "name": "Rubor y ciruela", "paper": "#f8f0ee", "ink": "#261a21", "muted": "#efe2df", "accent": "#7a3b5c", "deep": "#3b2230" },
+      { "id": "navy", "name": "Piedra y azul marino", "paper": "#f2f1ee", "ink": "#161b26", "muted": "#e5e4df", "accent": "#23395b", "deep": "#1a2436" },
+      { "id": "noir", "name": "Noche y oro", "paper": "#141210", "ink": "#f2ece2", "muted": "#1e1b18", "accent": "#c9a45c", "deep": "#0b0a09" }
+    ],
+    "fonts": [
+      { "id": "classic", "name": "Clásica", "heading": "cormorant-garamond", "body": "dm-sans" },
+      { "id": "modern", "name": "Moderna", "heading": "fraunces", "body": "geist" },
+      { "id": "editorial", "name": "Editorial", "heading": "instrument-serif", "body": "instrument" },
+      { "id": "literary", "name": "Literaria", "heading": "newsreader", "body": "hanken-grotesk" },
+      { "id": "luxury", "name": "Lujo", "heading": "bodoni-moda", "body": "mona-sans" },
+      { "id": "gallery", "name": "Galería", "heading": "gloock", "body": "schibsted-grotesk" },
+      { "id": "heritage", "name": "Tradición", "heading": "crimson-pro", "body": "manrope" },
+      { "id": "caslon", "name": "Caslon", "heading": "libre-caslon-text", "body": "figtree" }
+    ]
+  }
+}
