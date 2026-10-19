@@ -28,6 +28,15 @@
       (again && !again.disabled ? again : detail.querySelector('[data-box-add]:not(:disabled)') || detail.querySelector('[data-box-progress]'))?.focus?.();
       return;
     }
+    if (button.hasAttribute('data-offer-square') && button.closest('[data-pagosya-spotlight]')) {
+      // A spotlight's squares choose how many its add button adds (subscriptions are chosen on the product page).
+      const spot = button.closest('[data-pagosya-spotlight]'), [kind, value] = button.dataset.offerSquare.split(':');
+      spot.querySelectorAll('[data-offer-square]').forEach(square => square.setAttribute('aria-checked', String(square === button)));
+      const add = spot.querySelector('.spotlight [data-add]');
+      if (kind === 'sub') { const id = spot.getAttribute('data-pagosya-spotlight'); if (id) openProduct(id, button); return; }
+      if (add) add.dataset.quantity = kind === 'pack' ? value : '1';
+      return;
+    }
     if (button.hasAttribute('data-offer-square') && selectedProduct && button.closest('[data-pagosya-product]') === detail) {
       // Showcase commerce: a square picks the purchase mode and quantity; the buy box keeps its own state and totals.
       const [kind, value] = button.dataset.offerSquare.split(':');
@@ -104,7 +113,7 @@
       if (remaining(p, variant, line.picks) <= 0) { message("Ya añadiste la cantidad disponible."); return; }
       track('add_to_cart', undefined, { value: line.amount, currency: line.p.currency });
       analytics('add_to_cart', { productId: p.id });
-      const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : 1;
+      const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : Math.min(Math.max(1, Number(button.dataset.quantity) || 1), remaining(p, variant, line.picks));
       cart.set(key, quantity + units); renderCart();
       // The added notice is its own live region: the page status line repeats it only when no notice shows (The Bake Lab 2026-10-17).
       message(addedFeedback({ ...p, name }, button, event.detail === 0) ? '' : `${name} añadido a ${ADDED_TO}.`);

@@ -62,6 +62,20 @@
     document.querySelectorAll("[data-pagosya-catalog]").forEach((el) => {
       // Inventory is live. An empty-at-generation catalog must not stay permanently hidden.
       el.hidden = false;
+      // Chosen set (showcase commerce §3): only the named products in the merchant's order, a category, or a collection.
+      // A deleted product is skipped; a set left empty hides itself.
+      const named = (el.getAttribute('data-products') || '').split(',').map(id => id.trim()).filter(Boolean);
+      const byCategory = el.getAttribute('data-category'), byCollection = el.getAttribute('data-collection');
+      if (named.length || byCategory || byCollection) {
+        const set = named.length ? named.map(id => products().find(item => item.id === id)).filter(Boolean)
+          : byCategory ? products().filter(item => item.categoryId === byCategory)
+          : products().filter(item => (collections().find(c => c.slug === byCollection)?.productIds || []).includes(item.id));
+        el.hidden = !set.length;
+        el.innerHTML = set.map(productCard).join('');
+        structureCatalog(el);
+        markCardDesign(el);
+        return;
+      }
       const priorities = (el.getAttribute('data-design-product-ids') || '').split(',').filter(Boolean);
       const priority = new Map(priorities.map((id, index) => [id, index]));
       const selected = products().filter((p) => category === "all" || p.categoryId === category);
@@ -94,6 +108,7 @@
       markCardDesign(el);
       if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
+    renderSpotlights();
     observeCards();
     markKitParts();
     fitCards();
@@ -141,4 +156,28 @@
     // clears its flag and discards the clone; their lazy use at the real render site is unchanged.
     cartLineTemplate(); cartTemplate(); addedTemplate(); reviewTemplate(); productPageTemplate(); checkoutTemplate();
     document.dispatchEvent(new CustomEvent("pagosya:ready", { detail: { store, preview, demo: Boolean(config.demo) } }));
+  }
+  /* Product spotlight (showcase commerce §3): a live buy card beside the merchant's text or video. A product that no longer
+   * exists hides the block. Videos stay muted, inline and looping, and load only near the screen. */
+  function renderSpotlights() {
+    document.querySelectorAll('[data-pagosya-spotlight]').forEach(el => {
+      const p = products().find(item => item.id === el.getAttribute('data-pagosya-spotlight'));
+      el.hidden = !p;
+      el.querySelector(':scope > .spotlight')?.remove();
+      if (!p) return;
+      const inside = cardInsidesMarkup(p), image = galleryImages(p)[0], complex = p.variants?.length || p.extras?.length;
+      const add = isMembership(p) || complex ? `<button type="button" class="menu-add spotlight__add" data-product="${escape(p.id)}">Elegir opciones</button>`
+        : `<button type="button" class="menu-add spotlight__add" data-add="${escape(p.id)}" data-quantity="1"${!ready || limit(p) === 0 ? ' disabled' : ''}>Agregar</button>`;
+      const card = `<div class="spotlight" data-pagosya-product>${image ? `<img class="spotlight__image" src="${escape(image)}" alt="${escape(p.name)}" loading="lazy" decoding="async">` : ''}${inside.eyebrow}<h3 class="spotlight__name">${escape(p.name)}</h3><p class="spotlight__price">${isMembership(p) ? escape(membershipPriceText(p)) : money(price(p), p.currency)}${inside.save}</p>${inside.points}${complex ? '' : offerSquaresMarkup(p, undefined)}${add}</div>`;
+      el.insertAdjacentHTML(el.getAttribute('data-side') === 'right' ? 'beforeend' : 'afterbegin', card);
+      el.querySelectorAll('video[data-spotlight-video]').forEach(video => {
+        video.muted = true; video.loop = true; video.playsInline = true; video.setAttribute('playsinline', ''); video.setAttribute('preload', 'none');
+        if (video.dataset.spotlightWatched || typeof IntersectionObserver !== 'function') return;
+        video.dataset.spotlightWatched = '';
+        new IntersectionObserver(([entry]) => {
+          if (entry.isIntersecting) { video.preload = 'auto'; video.play?.()?.catch?.(() => {}); } else video.pause?.();
+        }, { rootMargin: '200px' }).observe(video);
+        video.addEventListener('click', () => { video.muted = !video.muted; });
+      });
+    });
   }

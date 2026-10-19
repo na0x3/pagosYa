@@ -3751,6 +3751,20 @@
     document.querySelectorAll("[data-pagosya-catalog]").forEach((el) => {
       // Inventory is live. An empty-at-generation catalog must not stay permanently hidden.
       el.hidden = false;
+      // Chosen set (showcase commerce §3): only the named products in the merchant's order, a category, or a collection.
+      // A deleted product is skipped; a set left empty hides itself.
+      const named = (el.getAttribute('data-products') || '').split(',').map(id => id.trim()).filter(Boolean);
+      const byCategory = el.getAttribute('data-category'), byCollection = el.getAttribute('data-collection');
+      if (named.length || byCategory || byCollection) {
+        const set = named.length ? named.map(id => products().find(item => item.id === id)).filter(Boolean)
+          : byCategory ? products().filter(item => item.categoryId === byCategory)
+          : products().filter(item => (collections().find(c => c.slug === byCollection)?.productIds || []).includes(item.id));
+        el.hidden = !set.length;
+        el.innerHTML = set.map(productCard).join('');
+        structureCatalog(el);
+        markCardDesign(el);
+        return;
+      }
       const priorities = (el.getAttribute('data-design-product-ids') || '').split(',').filter(Boolean);
       const priority = new Map(priorities.map((id, index) => [id, index]));
       const selected = products().filter((p) => category === "all" || p.categoryId === category);
@@ -3783,6 +3797,7 @@
       markCardDesign(el);
       if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
+    renderSpotlights();
     observeCards();
     markKitParts();
     fitCards();
@@ -3830,6 +3845,30 @@
     // clears its flag and discards the clone; their lazy use at the real render site is unchanged.
     cartLineTemplate(); cartTemplate(); addedTemplate(); reviewTemplate(); productPageTemplate(); checkoutTemplate();
     document.dispatchEvent(new CustomEvent("pagosya:ready", { detail: { store, preview, demo: Boolean(config.demo) } }));
+  }
+  /* Product spotlight (showcase commerce §3): a live buy card beside the merchant's text or video. A product that no longer
+   * exists hides the block. Videos stay muted, inline and looping, and load only near the screen. */
+  function renderSpotlights() {
+    document.querySelectorAll('[data-pagosya-spotlight]').forEach(el => {
+      const p = products().find(item => item.id === el.getAttribute('data-pagosya-spotlight'));
+      el.hidden = !p;
+      el.querySelector(':scope > .spotlight')?.remove();
+      if (!p) return;
+      const inside = cardInsidesMarkup(p), image = galleryImages(p)[0], complex = p.variants?.length || p.extras?.length;
+      const add = isMembership(p) || complex ? `<button type="button" class="menu-add spotlight__add" data-product="${escape(p.id)}">Elegir opciones</button>`
+        : `<button type="button" class="menu-add spotlight__add" data-add="${escape(p.id)}" data-quantity="1"${!ready || limit(p) === 0 ? ' disabled' : ''}>Agregar</button>`;
+      const card = `<div class="spotlight" data-pagosya-product>${image ? `<img class="spotlight__image" src="${escape(image)}" alt="${escape(p.name)}" loading="lazy" decoding="async">` : ''}${inside.eyebrow}<h3 class="spotlight__name">${escape(p.name)}</h3><p class="spotlight__price">${isMembership(p) ? escape(membershipPriceText(p)) : money(price(p), p.currency)}${inside.save}</p>${inside.points}${complex ? '' : offerSquaresMarkup(p, undefined)}${add}</div>`;
+      el.insertAdjacentHTML(el.getAttribute('data-side') === 'right' ? 'beforeend' : 'afterbegin', card);
+      el.querySelectorAll('video[data-spotlight-video]').forEach(video => {
+        video.muted = true; video.loop = true; video.playsInline = true; video.setAttribute('playsinline', ''); video.setAttribute('preload', 'none');
+        if (video.dataset.spotlightWatched || typeof IntersectionObserver !== 'function') return;
+        video.dataset.spotlightWatched = '';
+        new IntersectionObserver(([entry]) => {
+          if (entry.isIntersecting) { video.preload = 'auto'; video.play?.()?.catch?.(() => {}); } else video.pause?.();
+        }, { rootMargin: '200px' }).observe(video);
+        video.addEventListener('click', () => { video.muted = !video.muted; });
+      });
+    });
   }
   /* T1 templates: a store may author the markup of a kit surface. Read at use time (React may render the
    * <template> after this script, and puts its children on the element instead of .content). */
@@ -4523,6 +4562,14 @@
     '[data-pagosya-catalog][data-card-design=showcase] .menu-item:not([data-custom-product]) .menu-add{width:100%;justify-content:center;border-radius:99px}',
     '[data-pagosya-catalog][data-card-design=split] .menu-item:not([data-custom-product]){display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:14px;align-items:center}',
     '@media(max-width:640px){[data-pagosya-catalog][data-card-design=split] .menu-item:not([data-custom-product]){grid-template-columns:1fr}}',
+    '[data-pagosya-spotlight]{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:center}',
+    '[data-pagosya-spotlight] .spotlight{display:grid;gap:8px;padding:16px;border-radius:var(--store-radius,16px);background:var(--store-surface,#fff);border:1px solid rgba(0,0,0,.08)}',
+    '[data-pagosya-spotlight] .spotlight__image{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:var(--store-radius,12px)}',
+    '[data-pagosya-spotlight] .spotlight__name{margin:0;font-family:var(--store-heading-font,inherit)}',
+    '[data-pagosya-spotlight] .spotlight__price{margin:0;font-weight:700}',
+    '[data-pagosya-spotlight] .spotlight__add{width:100%;justify-content:center}',
+    '[data-pagosya-spotlight] video{width:100%;border-radius:var(--store-radius,16px);background:#111}',
+    '@media(max-width:760px){[data-pagosya-spotlight]{grid-template-columns:1fr}}',
   ];
   const showcaseStyle = document.createElement('style');
   showcaseStyle.dataset.pagosyaKit = 'showcase';
@@ -4898,6 +4945,15 @@
       (again && !again.disabled ? again : detail.querySelector('[data-box-add]:not(:disabled)') || detail.querySelector('[data-box-progress]'))?.focus?.();
       return;
     }
+    if (button.hasAttribute('data-offer-square') && button.closest('[data-pagosya-spotlight]')) {
+      // A spotlight's squares choose how many its add button adds (subscriptions are chosen on the product page).
+      const spot = button.closest('[data-pagosya-spotlight]'), [kind, value] = button.dataset.offerSquare.split(':');
+      spot.querySelectorAll('[data-offer-square]').forEach(square => square.setAttribute('aria-checked', String(square === button)));
+      const add = spot.querySelector('.spotlight [data-add]');
+      if (kind === 'sub') { const id = spot.getAttribute('data-pagosya-spotlight'); if (id) openProduct(id, button); return; }
+      if (add) add.dataset.quantity = kind === 'pack' ? value : '1';
+      return;
+    }
     if (button.hasAttribute('data-offer-square') && selectedProduct && button.closest('[data-pagosya-product]') === detail) {
       // Showcase commerce: a square picks the purchase mode and quantity; the buy box keeps its own state and totals.
       const [kind, value] = button.dataset.offerSquare.split(':');
@@ -4974,7 +5030,7 @@
       if (remaining(p, variant, line.picks) <= 0) { message("Ya añadiste la cantidad disponible."); return; }
       track('add_to_cart', undefined, { value: line.amount, currency: line.p.currency });
       analytics('add_to_cart', { productId: p.id });
-      const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : 1;
+      const units = button.classList.contains('product-detail__buy') ? Math.min(selectedQuantity, remaining(p, variant, line.picks)) : Math.min(Math.max(1, Number(button.dataset.quantity) || 1), remaining(p, variant, line.picks));
       cart.set(key, quantity + units); renderCart();
       // The added notice is its own live region: the page status line repeats it only when no notice shows (The Bake Lab 2026-10-17).
       message(addedFeedback({ ...p, name }, button, event.detail === 0) ? '' : `${name} añadido a ${ADDED_TO}.`);
