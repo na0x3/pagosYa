@@ -150,7 +150,7 @@ export async function assembleTemplateRevision(input: {
   const copy = settings ? masterCopy(settings, input.fill?.copy) : undefined;
   const look = settings ? masterLook(settings, input.fill?.look) : undefined;
   const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city: (data.locations as Array<{ city?: string | null }> | undefined)?.[0]?.city ?? '',
-    logo: data.logoUrl ?? '', phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: input.variants, sections: input.sections ?? input.fill?.sections } : undefined);
+    logo: data.logoUrl ?? '', phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: input.variants ?? (input.fill?.variants as MasterVariants | undefined), sections: input.sections ?? input.fill?.sections } : undefined);
   const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withMasterTheme(file.content, masterThemeCss(settings, look!)) } : file;
   const authored = [...input.source.filter(file => file.path !== TEMPLATE_STORE_DATA_PATH).map(themed), ...contentPagesFor(input.source), storeData];
   const compiled = await compileNextPreview(authored, 'shop');

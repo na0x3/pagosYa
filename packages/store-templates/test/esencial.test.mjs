@@ -49,3 +49,14 @@ test('on a phone the hero text sits on an even shade, not on the light side of t
   const phone = css.slice(css.indexOf('@media (max-width:760px)'));
   assert.match(phone, /\.es-hero::after\{background:linear-gradient\(0deg/);
 });
+
+const variantRules = part => test(`every catalogued ${part} variant has its own styles`, () => {
+  const css = file('styles/globals.css');
+  for (const id of esencial.master.variants[part]) assert.match(css, new RegExp(`data-es-${part}="${id}"`), `${part} ${id} has no styles`);
+});
+for (const part of ['header', 'announce', 'hero']) variantRules(part);
+
+test('every header variant keeps the login link (login comes with every store)', () => {
+  const css = file('styles/globals.css');
+  assert.doesNotMatch(css, /data-es-header="[a-z]+"\][^{]*\.es-header__end a\{display:none/);
+});

@@ -1,6 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store, copy } from './store-data';
+import { store, copy, variants } from './store-data';
+
+/** The rolled variant of a part (variety spec §2); the first catalogue id when the store has none. */
+export const variant = (part: string, fallback: string) => { const value = variants[part]; return typeof value === 'string' && value ? value : fallback; };
 import { IconLogIn, IconMapPin, IconMenu, IconMessageCircle, IconSearch, IconShoppingBag, IconX } from './icons';
 
 const links = [{ label: 'Inicio', href: 'index.html' }, { label: 'Productos', href: 'productos.html' }, { label: 'Nuestra historia', href: 'index.html#historia' }];
@@ -8,12 +11,16 @@ const links = [{ label: 'Inicio', href: 'index.html' }, { label: 'Productos', hr
 export function Header() {
   const [open, setOpen] = useState(false);
   return <>
-    {copy.announcement ? <p className="es-announce">{copy.announcement}</p> : null}
-    <header className="es-header">
+    {copy.announcement ? <div className="es-announce" data-es-announce={variant('announce', 'plain')}>
+      <p className="es-announce__text">{copy.announcement}</p>
+      {variant('announce', 'plain') === 'ticker' ? <p className="es-announce__track" aria-hidden="true">{[1, 2, 3, 4].map(n => <span key={n}>{copy.announcement}</span>)}</p> : null}
+    </div> : null}
+    <header className="es-header" data-es-header={variant('header', 'classic')}>
       <div className="es-header__start">
         <button type="button" className="es-icon-btn" aria-controls="es-menu" aria-expanded={open} aria-label="Abrir menú" onClick={() => setOpen(true)}><IconMenu /></button>
         <a className="es-logo" href="index.html">{store.logo ? <img src={store.logo} alt={store.name} /> : store.name}</a>
       </div>
+      <nav className="es-header__links" aria-label="Principal">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
       <div className="es-header__end">
         <a className="es-icon-btn" href="buscar.html" aria-label="Buscar"><IconSearch /></a>
         <a className="es-icon-btn" data-pagosya-account="login" href="acceso-ingresar.html" aria-label="Mi cuenta"><IconLogIn /></a>

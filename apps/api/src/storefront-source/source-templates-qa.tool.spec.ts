@@ -60,10 +60,13 @@ run('QA of the Plantillas at 390 and 1280', async () => {
   for (const manifest of listTemplates().filter(t => !wanted || wanted.includes(t.id))) {
     const source = templateSourceFiles(manifest.id);
     // Master templates (spec 2026-10-19): one pass per palette:fonts pair in MASTER_LOOKS (default terracotta:classic).
-    const looks = manifest.master ? (process.env.MASTER_LOOKS || 'terracotta:classic').split(',').map(pair => { const [palette, fonts] = pair.split(':'); return { palette, fonts }; }) : [undefined];
+    // MASTER_VARIANT=hero:full,split-left,… renders one store per listed variant of that part (variety spec QA).
+    const [variantPart, variantIds] = (process.env.MASTER_VARIANT || '').split(':');
+    const looks: Array<Record<string, any> | undefined> = manifest.master && variantPart ? variantIds.split(',').map(id => ({ palette: 'terracotta', fonts: 'classic', variants: { [variantPart]: id, sections: [] }, tag: `${variantPart}-${id}` }))
+      : manifest.master ? (process.env.MASTER_LOOKS || 'terracotta:classic').split(',').map(pair => { const [palette, fonts] = pair.split(':'); return { palette, fonts }; }) : [undefined];
     for (const look of looks) {
-      const demo = await templateDemoRevision(manifest, source, look ? { look } : undefined);
-      const prefix = `${manifest.id}${look ? `-${look.palette}-${look.fonts}` : ''}`;
+      const demo = await templateDemoRevision(manifest, source, look ? { look: { palette: look.palette, fonts: look.fonts }, ...(look.variants ? { variants: look.variants } : {}) } : undefined);
+      const prefix = `${manifest.id}${look ? `-${look.tag ?? `${look.palette}-${look.fonts}`}` : ''}`;
       const product = demo.files.find(f => f.path === `assets/template-${manifest.id}-p1.jpg`);
       if (!product) throw new Error(`${manifest.id}: no p1 demo photo`);
       const portrait = await sharp(Buffer.from(product.content, 'base64')).resize(600, 1200, { fit: 'cover' }).jpeg({ quality: 80 }).toBuffer();

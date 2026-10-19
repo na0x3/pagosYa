@@ -1,14 +1,23 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { copy, photos } from './store-data';
+import { copy, photos, store } from './store-data';
+import { variant } from './Shell';
 import { IconArrowRight, IconArrowUpRight, IconPlus } from './icons';
 
 export default function Home() {
+  // Variety spec §2: the rolled hero; photo-led variants fall back to the type hero when the photos are missing.
+  const rolled = variant('hero', 'full');
+  const heroPhotos = [photos.hero, photos.p1, photos.p2].filter(Boolean);
+  const multi = rolled === 'collage' || rolled === 'strip';
+  const hero = !photos.hero || (multi && heroPhotos.length < 3) ? 'type' : rolled;
+  const layered = hero === 'full' || hero === 'poster';
   return <Shell>
     <main id="contenido">
-      <section id="inicio" className={photos.hero ? 'es-hero' : 'es-hero es-hero--plain'} aria-labelledby="es-hero-title">
-        {photos.hero ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}><img src={photos.hero} alt="" aria-hidden="true" /></Parallax> : null}
+      <section id="inicio" className={hero === 'type' ? 'es-hero es-hero--plain' : 'es-hero'} data-es-hero={hero} aria-labelledby="es-hero-title">
+        {layered ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}><img src={photos.hero} alt="" aria-hidden="true" /></Parallax>
+          : hero !== 'type' ? <div className="es-hero__media">{(multi ? heroPhotos.slice(0, 3) : [photos.hero]).map(src => <img key={src} src={src} alt="" aria-hidden="true" />)}</div> : null}
         <div className="es-hero__copy">
+          {hero === 'poster' && store.logo ? <img className="es-hero__logo" src={store.logo} alt="" aria-hidden="true" /> : null}
           {copy.eyebrow ? <p className="es-eyebrow">{copy.eyebrow}</p> : null}
           <h1 id="es-hero-title" className="es-display">{copy.headline}</h1>
           {copy.subcopy ? <p className="es-hero__sub">{copy.subcopy}</p> : null}
