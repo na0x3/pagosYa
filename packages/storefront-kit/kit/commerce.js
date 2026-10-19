@@ -1113,9 +1113,12 @@
     [data-pagosya-product][data-style=atelier] [data-reveal]{transition:opacity .6s cubic-bezier(.4,0,.2,1),transform .6s cubic-bezier(.4,0,.2,1)}
     /* Atelier long page: features as a hairline list, the FAQ with a drawn +, one quiet repeated buy. */
     [data-pagosya-product][data-style=atelier] .product-long h2{letter-spacing:-.02em}
-    [data-pagosya-product][data-style=atelier] .product-long__features ul{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;border-top:1px solid var(--pd-line,rgba(0,0,0,.12))}
-    [data-pagosya-product][data-style=atelier] .product-long__features li{gap:10px;padding:28px 28px 28px 0;border:0;border-radius:0;align-content:start}
-    [data-pagosya-product][data-style=atelier] .product-long__features li+li{padding-left:28px;border-left:1px solid var(--pd-line,rgba(0,0,0,.12))}
+    /* Even rows (Lana Andina's six features wrapped five and one): two or four per row when that is the count, else three. */
+    [data-pagosya-product][data-style=atelier] .product-long__features ul{--cols:3;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:0;border-top:1px solid var(--pd-line,rgba(0,0,0,.12))}
+    [data-pagosya-product][data-style=atelier] .product-long__features ul[data-count="2"]{--cols:2}
+    [data-pagosya-product][data-style=atelier] .product-long__features ul[data-count="4"]{--cols:4}
+    [data-pagosya-product][data-style=atelier] .product-long__features li{gap:10px;padding:28px;border:0;border-left:1px solid var(--pd-line,rgba(0,0,0,.12));border-bottom:1px solid var(--pd-line,rgba(0,0,0,.12));border-radius:0;align-content:start}
+    [data-pagosya-product][data-style=atelier] .product-long__features ul:not([data-count="2"],[data-count="4"]) li:nth-child(3n+1),[data-pagosya-product][data-style=atelier] .product-long__features ul[data-count="2"] li:nth-child(2n+1),[data-pagosya-product][data-style=atelier] .product-long__features ul[data-count="4"] li:first-child{padding-left:0;border-left:0}
     [data-pagosya-product][data-style=atelier] .product-long__features svg{width:26px;height:26px;margin-bottom:6px}
     [data-pagosya-product][data-style=atelier] .product-long__features strong{font-family:var(--pd-heading,inherit);font-size:18px;letter-spacing:-.01em}
     [data-pagosya-product][data-style=atelier] .product-long__features span{color:var(--pd-muted);line-height:1.6}
@@ -1130,7 +1133,8 @@
     [data-pagosya-product][data-style=atelier] .product-long__faq details p{max-width:64ch;margin:0;padding:0 0 22px;color:var(--pd-muted);line-height:1.65}
     [data-pagosya-product][data-style=atelier] .product-long__buy .checkout-button{width:auto;min-width:min(100%,320px);min-height:56px;padding:0 40px;font-size:12px;letter-spacing:.16em;text-transform:uppercase}
     [data-pagosya-product][data-style=atelier] .product-long__buy p{color:var(--pd-muted);font-size:13px}
-    @media(max-width:640px){[data-pagosya-product][data-style=atelier] .product-long__features li,[data-pagosya-product][data-style=atelier] .product-long__features li+li{padding:22px 0;border-left:0;border-bottom:1px solid var(--pd-line,rgba(0,0,0,.12))}}
+    @media(max-width:900px){[data-pagosya-product][data-style=atelier] .product-long__features ul[data-count]{--cols:2}[data-pagosya-product][data-style=atelier] .product-long__features ul[data-count] li{padding:24px 20px 24px 0;border-left:0}}
+    @media(max-width:640px){[data-pagosya-product][data-style=atelier] .product-long__features ul[data-count]{--cols:1}[data-pagosya-product][data-style=atelier] .product-long__features ul[data-count] li{padding:22px 0}}
     @media(max-width:640px){[data-pagosya-product][data-style=atelier] .product-detail__copy{padding:20px}[data-pagosya-product][data-style=atelier] .product-detail__assurances{grid-template-columns:minmax(0,1fr)}[data-pagosya-product][data-style=atelier] .product-detail__assurances li{flex-direction:row;text-align:left}}
     @media(prefers-reduced-motion:reduce){[data-pagosya-product] .pd-icon *{animation:none!important}}
     @media(prefers-reduced-motion:reduce){[data-pagosya-product] *,[data-pagosya-product] *::before{transition:none!important;scroll-behavior:auto!important}}
@@ -2126,7 +2130,7 @@
     const parts = [];
     const features = pageBlock(p, 'features');
     const featureItems = (features?.items || []).filter(item => item && highlightIcons[item.icon] && nonEmpty(item.label));
-    if (featureItems.length >= 3) parts.push(`<section class="product-long__features" data-part="features"><h2>${escape(nonEmpty(features.title) || 'Lo que lo hace especial')}</h2><ul>${featureItems.map(item => { const icon = highlightIcons[item.icon]; return `<li data-part="feature"><svg class="pd-icon pd-${escape(icon.motion)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon.paths}</svg><strong>${escape(item.label)}</strong>${nonEmpty(item.detail) ? `<span>${escape(item.detail)}</span>` : ''}</li>`; }).join('')}</ul></section>`);
+    if (featureItems.length >= 3) parts.push(`<section class="product-long__features" data-part="features"><h2>${escape(nonEmpty(features.title) || 'Lo que lo hace especial')}</h2><ul data-count="${featureItems.length}">${featureItems.map(item => { const icon = highlightIcons[item.icon]; return `<li data-part="feature"><svg class="pd-icon pd-${escape(icon.motion)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon.paths}</svg><strong>${escape(item.label)}</strong>${nonEmpty(item.detail) ? `<span>${escape(item.detail)}</span>` : ''}</li>`; }).join('')}</ul></section>`);
     const story = pageBlock(p, 'story');
     if (story && nonEmpty(story.problem) && nonEmpty(story.tried) && nonEmpty(story.solution)) parts.push(`<section class="product-long__story" data-part="story">${nonEmpty(story.title) ? `<h2>${escape(story.title)}</h2>` : ''}<p data-part="story-problem">${escape(story.problem)}</p><p data-part="story-tried">${escape(story.tried)}</p><p data-part="story-solution">${escape(story.solution)}</p></section>`);
     const details = (pageBlock(p, 'details')?.items || []).map(item => ({ ...item, url: safeUrl(item?.imageUrl) })).filter(item => item.url && nonEmpty(item.title) && nonEmpty(item.alt));
