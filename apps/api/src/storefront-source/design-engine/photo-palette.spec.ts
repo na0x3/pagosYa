@@ -1,5 +1,5 @@
 import { contrastRatio } from '../source-scorecard';
-import { decodePhotoPalette, isPhotoPalette, photoPalettes } from './photo-palette';
+import { decodePhotoPalette, isPhotoPalette, paperLightness, photoPalettes, washedPalette } from './photo-palette';
 import { frameForRun, paletteById, parseFrameDraw, drawFrame, frameDirection } from './frame-draw';
 
 // baek (tholhejh), 2026-10-16: eleven warm bakery photos (crust browns, cream, terracotta) and the bold card drew teal and orange.
@@ -111,4 +111,16 @@ it('brand graphics never take Instagram\'s own interface blue, unless it is the 
   expect(hue(photoPalettes({ photos: [blueBrand] }, { graphics: true })!.calm.accent)).toBeGreaterThan(190);
   const { withoutAppColours } = require('./photo-palette');
   expect(withoutAppColours(screenshot).dominant).toEqual(['#ffffff', '#c2185b', '#262626']);
+});
+
+describe('washedPalette (2026-10-18, «the calm style is always the same»)', () => {
+  const calm = { id: 'photo:faf6f5.2b1d17.bb9483.63acc4.l', name: 'light', paper: '#faf6f5', ink: '#2b1d17', accent: '#bb9483', accent2: '#63acc4', dark: false };
+  it('washes the page in the accent, keeps the colours and readable text, and is a photo palette id', () => {
+    const washed = washedPalette(calm);
+    expect(washed.paper).toBe('#f0e6e3');
+    expect(paperLightness(washed)).toBeLessThan(.95);
+    expect(paperLightness(calm)).toBeGreaterThanOrEqual(.95);
+    expect(washed).toMatchObject({ accent: '#bb9483', ink: '#2b1d17', dark: false });
+    expect(decodePhotoPalette(washed.id)).toEqual(washed);
+  });
 });

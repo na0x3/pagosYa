@@ -82,6 +82,23 @@ const appColour = (hex: string) => { const colour = rgb(hex); return APP_COLOURS
 export const withoutAppColours = (sample: PhotoSample): PhotoSample => ({ ...sample, dominant: (sample.dominant ?? []).filter((value, index) => index === 0 || !HEX.test(value) || !appColour(value)) });
 
 /** A light palette for a calm card and a dark one for a bold card, both from the same photos; undefined without a usable colour. */
+/** The calm page washed in the photos' own accent (2026-10-18, owner: «the calm style is always the same»: every calm card since
+ *  2026-10-16 was a 97 % near-white page with near-black text). Same colours as the light palette, a real tinted page. */
+export function washedPalette(calm: Palette): Palette {
+  const paper = mix(calm.paper, calm.accent, .16);
+  // The text stays at least 7:1 on the washed page; the near-black of the store's hue, else plain near-black.
+  const ink = contrastRatio(rgb(calm.ink), rgb(paper)) >= 7 ? calm.ink : '#141414';
+  const accent2 = mix(paper, calm.accent, .22);
+  return photoPalette({ paper, ink, accent: calm.accent, accent2 }, false);
+}
+
+/** How light a palette's page is (0–1): near-white pages are ≥ .95. */
+export function paperLightness(palette: Pick<Palette, 'paper'> | undefined): number {
+  if (!palette || !HEX.test(palette.paper)) return 1;
+  const [r, g, b] = rgb(palette.paper).map(value => value / 255);
+  return (Math.max(r, g, b) + Math.min(r, g, b)) / 2;
+}
+
 export function photoPalettes(raw: { logo?: PhotoSample; photos: PhotoSample[] }, options: { graphics?: boolean } = {}): { calm: Palette; bold: Palette } | undefined {
   // Brand graphics (Instagram posts, banners): their background IS a brand colour, not the table a product sits on.
   const input = options.graphics ? { ...raw, photos: raw.photos.map(({ backdropHex: _backdrop, ...sample }) => withoutAppColours(sample)) } : raw;

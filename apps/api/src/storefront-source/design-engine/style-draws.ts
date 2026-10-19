@@ -11,6 +11,7 @@
 import { frameForRun, parseFrameDraw, type FrameAvailable, type Palette } from './frame-draw';
 import { cartWordFor, drawCommerce, parseCommerceDraw, type CommerceDraw } from './commerce-draw';
 import { PLAYBOOK, pickFamily, type PlaybookKind, type StyleFamily } from './playbook';
+import { decodePhotoPalette, isPhotoPalette, paperLightness, washedPalette } from './photo-palette';
 
 export type StyleMode = 'calm' | 'bold';
 
@@ -90,6 +91,11 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
   const entry = PLAYBOOK[input.kind];
   const random = input.random ?? Math.random;
   const shown = input.shown ?? [];
+  // The calm card's colour world (2026-10-18, «the calm style is always the same»): the photos' light page and the same colours
+  // washed into the page take turns: whichever the latest calm card shown did not use, else a coin.
+  const lastCalm = shown.find(card => card.mode === 'calm' && isPhotoPalette(card.draw.palette));
+  const lastWasLight = lastCalm ? paperLightness(decodePhotoPalette(lastCalm.draw.palette!)) >= .95 : random() < .5;
+  const calmPhotoPalettes = input.photoPalettes && lastWasLight ? { ...input.photoPalettes, calm: washedPalette(input.photoPalettes.calm) } : input.photoPalettes;
   const sameKind = shown.filter(card => card.kind === input.kind);
   // A shown card counts like a built store; one this merchant saw counts past the spread, like a redesign's own last draw.
   const weighted = <T>(cards: ShownStyleCard[], value: (card: ShownStyleCard) => T): T[] => cards.flatMap(card => Array.from({ length: card.mine ? 1 + STYLE_SPREAD : 1 }, () => value(card)));
@@ -106,7 +112,7 @@ export function styleDraws(input: StyleDrawsInput): StyleSlot[] {
   const slots: StyleSlot[] = plan.map(({ mode, family }, slot) => {
     const recent = [...Array.from({ length: TAKEN_WEIGHT }, () => taken).flat(), ...history];
     const authored = mode === 'bold' && input.authoredBold === true;
-    const run = frameForRun({ enabled: true, designEnabled: !authored, ...(authored ? { authored: true } : {}), fresh: true, brandColours: input.brandColours, category: input.category, previous: input.previous, recent, available: input.available, request: input.request, random, playbook: { kind: input.kind, family, bold: mode === 'bold' }, boldStyle: mode === 'bold', spread: STYLE_SPREAD, commerce: false, ...(input.photoPalettes && !authored ? { photoPalettes: input.photoPalettes } : {}) });
+    const run = frameForRun({ enabled: true, designEnabled: !authored, ...(authored ? { authored: true } : {}), fresh: true, brandColours: input.brandColours, category: input.category, previous: input.previous, recent, available: input.available, request: input.request, random, playbook: { kind: input.kind, family, bold: mode === 'bold' }, boldStyle: mode === 'bold', spread: STYLE_SPREAD, commerce: false, ...(input.photoPalettes && !authored ? { photoPalettes: calmPhotoPalettes } : {}) });
     const draw = parseFrameDraw(run.file?.content);
     taken.push(draw);
     const used = displaysShown(mode);

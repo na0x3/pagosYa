@@ -1,3 +1,4 @@
+import { photoPalettes, washedPalette } from './photo-palette';
 import { SHOWN_CARDS_TIMEOUT_MS, SIGNATURE_DEVICES, styleDraws, styleSlotDirection, withinOr } from './style-draws';
 import { FRAME_CATALOGUE, FRAME_DRAW_FILE, PALETTES, frameForRun, parseFrameDraw, type FrameAvailable } from './frame-draw';
 import { COMMERCE_LEAN } from './commerce-draw';
@@ -244,9 +245,9 @@ describe('the authored bold card (authoredBold)', () => {
       expect(boldIds('header')).toContain(bold.draw.header);
       for (const part of ['hero', 'footer', 'palette', 'angle', 'structure', 'photos', 'button', 'hover', 'trust']) expect(bold.draw).not.toHaveProperty(part);
       expect(JSON.parse(bold.file.content)).not.toHaveProperty('hero');
-      // The calm card is unchanged: the professional option keeps its draw and the photos' light palette.
+      // The calm card is unchanged: the professional option keeps its draw and the photos' colours (light or washed, 2026-10-18).
       expect(calm.authored).toBeUndefined();
-      expect(calm.palette).toBe(PALETTES[0]);
+      expect([PALETTES[0].id, washedPalette(PALETTES[0]).id]).toContain(calm.palette!.id);
       expect(calm.draw.hero).toBeTruthy();
     }
   });
@@ -263,5 +264,16 @@ describe('the authored bold card (authoredBold)', () => {
     const [, bold] = styleDraws({ ...base, random: seeded(3) });
     expect(bold.authored).toBeUndefined();
     expect(bold.device).toBeDefined();
+  });
+});
+
+describe('the calm card takes turns between the light and the washed photo page (2026-10-18)', () => {
+  const light = photoPalettes({ photos: [{ dominant: ['#bb9483', '#63acc4'], uniformity: 0.2 } as any] })!;
+  const shownWith = (palette: string) => [{ mode: 'calm' as const, draw: { palette } as any, mine: true }];
+  it('follows a light calm card with a washed one, and a washed one with a light one', () => {
+    const afterLight = styleDraws({ ...base, photoPalettes: light, shown: shownWith(light.calm.id), random: seeded(3) })[0];
+    expect(afterLight.palette!.id).toBe(washedPalette(light.calm).id);
+    const afterWashed = styleDraws({ ...base, photoPalettes: light, shown: shownWith(washedPalette(light.calm).id), random: seeded(3) })[0];
+    expect(afterWashed.palette!.id).toBe(light.calm.id);
   });
 });
