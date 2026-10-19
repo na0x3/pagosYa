@@ -167,6 +167,7 @@
     if (MOTIFS.length) { placeProductMotif(p); placeButtonMotifs(detail); }
     watchHighlights();
     watchSteps();
+    watchReveal();
     watchStickyBar();
     decorateProductReviews();
     renderCart();
@@ -376,6 +377,20 @@
       const top = section.getBoundingClientRect().top + scrollY - 96 + (index + .5) / count * travel();
       scrollTo({ top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }));
+  }
+  let revealObserver = null;
+  /** Atelier sections below the purchase box rise 12px and fade in once as they enter (the premium references' only motion
+   *  besides hovers). Nothing is hidden without IntersectionObserver or under reduced motion. */
+  function watchReveal() {
+    revealObserver?.disconnect(); revealObserver = null;
+    // Automated browsers (the build's checks and screenshots) see every section at once.
+    if (detail.dataset.style !== 'atelier' || typeof IntersectionObserver !== 'function' || navigator.webdriver || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const sections = [...detail.querySelectorAll('.product-long > section, .product-long > .product-long__buy, .product-detail__reviews')];
+    revealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.setAttribute('data-revealed', ''); revealObserver?.unobserve(entry.target);
+    }), { rootMargin: '0px 0px -10% 0px' });
+    sections.forEach(section => { section.setAttribute('data-reveal', ''); revealObserver.observe(section); });
   }
   function longPageBottom(p) {
     const faq = pageBlock(p, 'faq');

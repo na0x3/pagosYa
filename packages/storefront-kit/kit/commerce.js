@@ -1109,6 +1109,8 @@
     [data-pagosya-product][data-style=atelier] .product-detail__review-list article:last-child{border-bottom:1px solid var(--pd-line,rgba(0,0,0,.12))}
     [data-pagosya-product][data-style=atelier] .product-detail__review-list p:not(.product-detail__review-meta){max-width:68ch;color:var(--pd-muted);line-height:1.65}
     [data-pagosya-product][data-style=atelier] .product-detail__review-verified{margin-left:auto;color:var(--pd-muted);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+    [data-pagosya-product][data-style=atelier] [data-reveal]:not([data-revealed]){opacity:0;transform:translateY(12px)}
+    [data-pagosya-product][data-style=atelier] [data-reveal]{transition:opacity .6s cubic-bezier(.4,0,.2,1),transform .6s cubic-bezier(.4,0,.2,1)}
     /* Atelier long page: features as a hairline list, the FAQ with a drawn +, one quiet repeated buy. */
     [data-pagosya-product][data-style=atelier] .product-long h2{letter-spacing:-.02em}
     [data-pagosya-product][data-style=atelier] .product-long__features ul{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;border-top:1px solid var(--pd-line,rgba(0,0,0,.12))}
@@ -1979,6 +1981,7 @@
     if (MOTIFS.length) { placeProductMotif(p); placeButtonMotifs(detail); }
     watchHighlights();
     watchSteps();
+    watchReveal();
     watchStickyBar();
     decorateProductReviews();
     renderCart();
@@ -2188,6 +2191,20 @@
       const top = section.getBoundingClientRect().top + scrollY - 96 + (index + .5) / count * travel();
       scrollTo({ top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }));
+  }
+  let revealObserver = null;
+  /** Atelier sections below the purchase box rise 12px and fade in once as they enter (the premium references' only motion
+   *  besides hovers). Nothing is hidden without IntersectionObserver or under reduced motion. */
+  function watchReveal() {
+    revealObserver?.disconnect(); revealObserver = null;
+    // Automated browsers (the build's checks and screenshots) see every section at once.
+    if (detail.dataset.style !== 'atelier' || typeof IntersectionObserver !== 'function' || navigator.webdriver || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const sections = [...detail.querySelectorAll('.product-long > section, .product-long > .product-long__buy, .product-detail__reviews')];
+    revealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.setAttribute('data-revealed', ''); revealObserver?.unobserve(entry.target);
+    }), { rootMargin: '0px 0px -10% 0px' });
+    sections.forEach(section => { section.setAttribute('data-reveal', ''); revealObserver.observe(section); });
   }
   function longPageBottom(p) {
     const faq = pageBlock(p, 'faq');
