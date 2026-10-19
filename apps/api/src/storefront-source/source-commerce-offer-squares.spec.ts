@@ -134,3 +134,24 @@ describe('offer squares', () => {
     expect(css).toMatch(/\.offer-square\{[^}]*overflow-wrap:anywhere/);
   });
 });
+
+describe('the cart prices a picked pack the way the server will (live 2026-10-19: square Bs 242,25, cart Bs 285)', () => {
+  const addCoffee = async (q: (s: string) => any, times: number) => { for (let i = 0; i < times; i++) { q('[data-pagosya-catalog] [data-add="coffee"]').click(); await tick(); } };
+  it('three units with a 3-pack show the pack saving and the square total', async () => {
+    const { q } = await page({ settings: { bundles: [pack(3, 15), pack(2, 10)] }, fullPage: false });
+    await addCoffee(q, 3);
+    expect(q('[data-pagosya-cart] .order-savings').textContent).toMatch(/33,75/);
+    expect(q('[data-pagosya-cart] .order-total strong').textContent).toMatch(/191,25/);
+  });
+  it('the best single pack wins, as on the server (4 units: one 3-pack beats two 2-packs)', async () => {
+    const { q } = await page({ settings: { bundles: [pack(3, 15), pack(2, 10)] }, fullPage: false });
+    await addCoffee(q, 4);
+    expect(q('[data-pagosya-cart] .order-total strong').textContent).toMatch(/266,25/);
+  });
+  it('fewer units than any pack show plain prices', async () => {
+    const { q } = await page({ settings: { bundles: [pack(3, 15)] }, fullPage: false });
+    await addCoffee(q, 2);
+    expect(q('[data-pagosya-cart] .order-savings')).toBeNull();
+    expect(q('[data-pagosya-cart] .order-total strong').textContent).toMatch(/150,00/);
+  });
+});

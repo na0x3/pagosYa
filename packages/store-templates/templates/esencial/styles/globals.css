@@ -238,6 +238,8 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
   .es-grid[data-es-grid="feature"]{grid-template-columns:repeat(4,minmax(0,1fr))}
   .es-grid[data-es-grid="feature"]:has(>:nth-child(5))>:first-child{grid-column:span 2;grid-row:span 2}
   .es-grid[data-es-grid="feature"]:has(>:nth-child(5))>:first-child .es-card__name{font-size:24px}
+  /* One large card and four small fill two rows; a sixth would sit alone on a third (live 2026-10-19). The shop page lists all. */
+  .es-grid[data-es-grid="feature"]>:nth-child(n+6){display:none}
 }
 .es-grid[data-es-grid="strip"]{display:grid;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:280px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:12px}
 .es-grid[data-es-grid="strip"]>*{scroll-snap-align:start}

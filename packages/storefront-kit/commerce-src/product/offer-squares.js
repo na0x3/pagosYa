@@ -15,6 +15,26 @@
     }
     return Math.min(best, Math.max(0, unitAmount * quantity - 1));
   }
+  /** The cart's pack saving, priced as the server's bestBundleDiscount prices one-product packs: each product's units across
+   *  its lines, cheapest first, and the single best pack in the cart. Other offers are confirmed at checkout. */
+  function cartPackSaving(lines) {
+    const units = new Map();
+    for (const line of lines) {
+      if (line.cadence || !line.p) continue;
+      const entry = units.get(line.p.id) || { p: line.p, prices: [] };
+      for (let i = 0; i < line.quantity; i++) entry.prices.push(line.amount);
+      units.set(line.p.id, entry);
+    }
+    let best = 0;
+    for (const { p, prices } of units.values()) {
+      prices.sort((a, b) => a - b);
+      for (const offer of packOffers(p)) {
+        const cycles = Math.floor(prices.length / offer.quantity);
+        if (cycles > 0) best = Math.max(best, Math.floor(prices.slice(0, cycles * offer.quantity).reduce((sum, amount) => sum + amount, 0) * offer.percent / 100));
+      }
+    }
+    return best;
+  }
   function offerOptions(p, variant) {
     if (!p || isMembership(p) || boxGroup(p)) return [];
     const unit = price(variant ? { ...p, amount: variant.amount } : p);

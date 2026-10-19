@@ -13,12 +13,14 @@
     });
     let total = 0, count = 0, savings = 0;
     const rows = [];
+    const packLines = [];
     const lineViews = [];
     for (const [id, quantity] of cart) {
       const line = cartLine(id);
       if (!line) continue;
       const { p, variant, name, amount } = line;
       total += amount * quantity; count += quantity;
+      packLines.push({ p, amount, quantity, cadence: line.cadence });
       // Each line shows its photo, chosen option, unit price and any active discount.
       const image = safeUrl(variant?.imageUrl) || galleryImages(p)[0];
       const option = [variant ? variant.name : line.extras ? pickLabel(line.extras) : '', line.cadence ? `Suscripción · ${CADENCE_TEXT[line.cadence]}` : ''].filter(Boolean).join(' · ');
@@ -34,6 +36,9 @@
         unit: quantity > 1 || saved || later ? `${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
         stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
     }
+    // Showcase commerce: a pack the shopper picked shows its saving here, as the checkout will price it.
+    const packSaving = cartPackSaving(packLines);
+    savings += packSaving; total -= packSaving;
     document.querySelectorAll("[data-cart-count]").forEach((el) => {
       el.textContent = String(count);
       if (!CONTROLS) return;

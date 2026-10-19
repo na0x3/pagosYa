@@ -1434,6 +1434,26 @@
     }
     return Math.min(best, Math.max(0, unitAmount * quantity - 1));
   }
+  /** The cart's pack saving, priced as the server's bestBundleDiscount prices one-product packs: each product's units across
+   *  its lines, cheapest first, and the single best pack in the cart. Other offers are confirmed at checkout. */
+  function cartPackSaving(lines) {
+    const units = new Map();
+    for (const line of lines) {
+      if (line.cadence || !line.p) continue;
+      const entry = units.get(line.p.id) || { p: line.p, prices: [] };
+      for (let i = 0; i < line.quantity; i++) entry.prices.push(line.amount);
+      units.set(line.p.id, entry);
+    }
+    let best = 0;
+    for (const { p, prices } of units.values()) {
+      prices.sort((a, b) => a - b);
+      for (const offer of packOffers(p)) {
+        const cycles = Math.floor(prices.length / offer.quantity);
+        if (cycles > 0) best = Math.max(best, Math.floor(prices.slice(0, cycles * offer.quantity).reduce((sum, amount) => sum + amount, 0) * offer.percent / 100));
+      }
+    }
+    return best;
+  }
   function offerOptions(p, variant) {
     if (!p || isMembership(p) || boxGroup(p)) return [];
     const unit = price(variant ? { ...p, amount: variant.amount } : p);
@@ -4130,12 +4150,14 @@
     });
     let total = 0, count = 0, savings = 0;
     const rows = [];
+    const packLines = [];
     const lineViews = [];
     for (const [id, quantity] of cart) {
       const line = cartLine(id);
       if (!line) continue;
       const { p, variant, name, amount } = line;
       total += amount * quantity; count += quantity;
+      packLines.push({ p, amount, quantity, cadence: line.cadence });
       // Each line shows its photo, chosen option, unit price and any active discount.
       const image = safeUrl(variant?.imageUrl) || galleryImages(p)[0];
       const option = [variant ? variant.name : line.extras ? pickLabel(line.extras) : '', line.cadence ? `Suscripción · ${CADENCE_TEXT[line.cadence]}` : ''].filter(Boolean).join(' · ');
@@ -4151,6 +4173,9 @@
         unit: quantity > 1 || saved || later ? `${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
         stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
     }
+    // Showcase commerce: a pack the shopper picked shows its saving here, as the checkout will price it.
+    const packSaving = cartPackSaving(packLines);
+    savings += packSaving; total -= packSaving;
     document.querySelectorAll("[data-cart-count]").forEach((el) => {
       el.textContent = String(count);
       if (!CONTROLS) return;
