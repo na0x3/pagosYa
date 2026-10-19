@@ -60,6 +60,12 @@ const FONTS = [
   { id: 'righteous', family: 'Righteous', role: 'display', personality: ['neon', 'retro', 'deco'], weights: '400' },
   { id: 'abril-fatface', family: 'Abril Fatface', role: 'display', personality: ['fashion', 'didone', 'heavy'], weights: '400' },
   { id: 'archivo-black', family: 'Archivo Black', role: 'display', personality: ['brutal', 'grotesk', 'heavy'], weights: '400' },
+  // Premium faces (2026-10-19, the owner's Amboras references: NI'MAH, Leverage, Furlow, L'Duchen). Latin subsets, see provenance.json.
+  { id: 'inter', family: 'Inter', role: 'text', personality: ['grotesk', 'neutral', 'precise', 'premium'], weights: '100–900' },
+  { id: 'archivo', family: 'Archivo', role: 'both', personality: ['grotesk', 'sturdy', 'athletic', 'premium'], weights: '100–900' },
+  { id: 'plus-jakarta-sans', family: 'Plus Jakarta Sans', role: 'both', personality: ['geometric', 'confident', 'modern', 'premium'], weights: '200–800' },
+  { id: 'dm-sans', family: 'DM Sans', role: 'text', personality: ['geometric', 'calm', 'clear', 'premium'], weights: '100–1000' },
+  { id: 'cormorant-garamond', family: 'Cormorant Garamond', role: 'display', personality: ['serif', 'luxury', 'classic', 'premium'], weights: '300–700' },
 ] as const satisfies readonly Entry[];
 
 export type SourceFontId = typeof FONTS[number]['id'];

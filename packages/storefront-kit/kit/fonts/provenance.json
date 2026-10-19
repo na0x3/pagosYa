@@ -618,5 +618,68 @@
     "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/archivoblack/OFL.txt",
     "gitBlob": "8894736938f94c6c7a81f27501f26151c412fcbc",
     "sha256": "3173acd82f8c6159b5b1037b539fcbd4edff68e65c2ea8b9412b5a5ca97b08ff"
+  },
+  {
+    "file": "plus-jakarta-sans.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/plusjakartasans/PlusJakartaSans%5Bwght%5D.ttf",
+    "gitBlob": "0cb13a998ed525ba226d911b10d6c4c4f923a961",
+    "sha256": "89b3fb38aa0d275d7a731d0d817a4f1622b316b4d7fbdedcf02ee9099ff68bc8"
+  },
+  {
+    "file": "plus-jakarta-sans-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/plusjakartasans/OFL.txt",
+    "gitBlob": "ea69b0ca12a02556c436680ea0a159efb7a748fa",
+    "sha256": "995c7199cab65954f545996326755daee7b63cc6b42b06c13da1f9502ab08a99"
+  },
+  {
+    "file": "dm-sans.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmsans/DMSans%5Bopsz%2Cwght%5D.ttf",
+    "gitBlob": "c672f98060af9b2c85fca704ebd5ad9a8717c1df",
+    "sha256": "8cd08d97e89c24d0aa92edd2f0f4c8ee6195eee9b7c9f154865a58b02f0c1c0d"
+  },
+  {
+    "file": "dm-sans-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmsans/OFL.txt",
+    "gitBlob": "4430b85ac62998e2edb914360f9ebdfe43f4deaa",
+    "sha256": "9af36190332437f5ecd09974de43c1f7c77a310a996cdd8ceb25628b458840e1"
+  },
+  {
+    "file": "inter.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf",
+    "gitBlob": "c8492f44aa3b9f0312807704d3d9ec58b366f945",
+    "sha256": "11aedb5a606319fb1334706055e84b1e9463cf4a1f1dbbf98c1a5c8b0d72d908",
+    "derived": "pinned opsz=14; subset to Latin and Latin-1 with fontTools 4.60.2"
+  },
+  {
+    "file": "inter-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/OFL.txt",
+    "gitBlob": "21f6aff961064c2e429f570995e446bcdd555422",
+    "sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57"
+  },
+  {
+    "file": "archivo.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/archivo/Archivo%5Bwdth%2Cwght%5D.ttf",
+    "gitBlob": "4e18ac116c58737afc086baad95f5237bcc60635",
+    "sha256": "e4e82b725784a79f90b87c9e100953e1e6016537f6a9a8fdae0636d3ee94453d",
+    "derived": "pinned wdth=100; subset to Latin and Latin-1 with fontTools 4.60.2"
+  },
+  {
+    "file": "archivo-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/archivo/OFL.txt",
+    "gitBlob": "8597481ebc941863ab228e79ea4305507cd73cc6",
+    "sha256": "108b4e57c9c796d3d38d0428ca7ee39de47ad93187302718d9b2d8864b9b716b"
+  },
+  {
+    "file": "cormorant-garamond.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf",
+    "gitBlob": "87fc322c169b6f5edf8eacf5370a107be9e36d92",
+    "sha256": "95b653e16b4e165f72bf8b2fc5d8e69f07e1e34159f26468fa3e88c0889f89cf",
+    "derived": "pinned no axes; subset to Latin and Latin-1 with fontTools 4.60.2"
+  },
+  {
+    "file": "cormorant-garamond-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/OFL.txt",
+    "gitBlob": "507d70f4565352dbfcf2dfc9b42eb092b57c0be8",
+    "sha256": "60700d351cac4650c51f3f9db318d2a420f8b45052dba2715eb5fec41f0f6956"
   }
 ]
