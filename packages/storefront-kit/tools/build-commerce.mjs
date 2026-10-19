@@ -42,6 +42,7 @@ export const PARTS = [
   'checkout/overlay.js',
   'catalog/cards.js',
   'look/contrast-guard.js',
+  'catalog/filters.js',
   'catalog/render.js',
   'templates/kit-templates.js',
   'cart/render.js',

@@ -99,6 +99,10 @@
       } else if (layout === 'page' || layout === 'tabs') {
         const tabs = layout === 'tabs' && collections().length ? catalogTabs() : '';
         el.innerHTML = tabs + selected.slice(0, HOME_PREVIEW).map(productCard).join("") + catalogMore(layout);
+      } else if ((el.hasAttribute('data-pagosya-filters') || el.hasAttribute('data-catalog-full')) && selected.length >= 6) {
+        // Showcase commerce §4: the full catalog of a store with 6+ products can be sorted and filtered.
+        const state = readFilterState(), shown = sortItems(applyFilters(selected, state), state.orden);
+        el.innerHTML = filtersMarkup(selected, state, shown.length) + (shown.length ? shown.map(productCard).join('') : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear>Borrar filtros</button></p>');
       } else {
         // Also covers `sections` with no collections yet: a single "Más productos" group holding
         // the whole catalog isn't an arrangement, so it falls back to the same flat grid as `all`.
