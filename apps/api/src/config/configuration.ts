@@ -103,6 +103,8 @@ export interface AppConfig {
   yapiPlaybook: boolean;
   /** "Elige tu estilo" (spec 2026-10-11): four drawn concepts shown as heroes before a new store or full redesign. Default off; YAPI_STYLE_PICK=1. */
   yapiStylePick: boolean;
+  /** Master template (spec 2026-10-19): new shops start from «Esencial», filled by one call. Default on; YAPI_MASTER_TEMPLATE=off disables. */
+  yapiMasterTemplate: boolean;
   /** The bold style card is YAPI's own design (2026-10-18): only the platform's header and cart are drawn for it. Default on;
    *  YAPI_AUTHORED_BOLD=off returns to the drawn bold card (palette, hero, design parts, signature device). */
   yapiAuthoredBold: boolean;
@@ -452,6 +454,7 @@ export default (): { app: AppConfig } => {
     yapiDesignDraw: process.env.YAPI_DESIGN_DRAW !== 'off',
     yapiPlaybook: process.env.YAPI_PLAYBOOK !== 'off',
     yapiStylePick: process.env.YAPI_STYLE_PICK === '1',
+    yapiMasterTemplate: process.env.YAPI_MASTER_TEMPLATE !== 'off',
     yapiAuthoredBold: process.env.YAPI_AUTHORED_BOLD !== 'off',
     yapiCommerceSurfaces: process.env.YAPI_COMMERCE_SURFACES === '1',
     onboardingWalkthrough: process.env.ONBOARDING_WALKTHROUGH === '1',

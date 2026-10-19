@@ -32,6 +32,7 @@ import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { galleryTemplates, templateManifest, type TemplateManifest } from '@pagosya/store-templates';
+import { MASTER_TEMPLATE_ID, masterFillFromRead } from './source-master';
 import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
 import { UploadsService, detectedImageDimensions, detectedMediaMime } from '../uploads/uploads.service';
@@ -66,6 +67,8 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
   return ` ${all ? (count === 1 ? 'Usé tu foto' : `Usé tus ${count} fotos`) : count === 1 ? 'Usé 1 de tus fotos' : `Usé ${count} de tus fotos`} solo como referencia de estilo, así que no ${count === 1 ? 'aparece' : 'aparecen'} en la tienda (por ejemplo, porque ${count === 1 ? 'muestra' : 'muestran'} otra marca). Si quieres mostrarlas, dime «usa estas fotos en la tienda»; para tus productos, añádelos con su foto en Productos.`;
 }
 
+/** The merchant's own words asking for a store designed from nothing (spec 2026-10-19 §2.1). */
+const MASTER_SCRATCH = /desde (?:cero|0)|from scratch|diseño propio|algo (?:propio|único)|sin (?:usar )?plantillas?/i;
 export const TEMPLATE_QUESTION = '¿Quieres que parta de una de nuestras plantillas o prefieres que diseñe desde cero?';
 export const TEMPLATE_ADAPTATION_MAX_CREDITS = 20;
 export const TEMPLATE_UNIQUE_OFFER = 'Si quieres que se vea más única, dímelo y la rediseño.';
@@ -233,6 +236,29 @@ export class SourceChatService {
   }
 
   /** Spec 2026-09-26 §1.3: v1 is the template as applied today; v2 is a free adaptation. A failed adaptation keeps v1. */
+  /** Spec 2026-10-19 §2: Esencial applied and filled in one call; the store is saved even when the call fails. */
+  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number) {
+    await workflow.report('saving');
+    const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true } });
+    const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; contact?: { city?: string }; photos?: string[] };
+    const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
+    const saved = await this.templates.applyMaster(merchantId, storeId, revision, async facts => {
+      const photos = [...new Set([...(onboarding.photos ?? []), ...facts.photos])].slice(0, 8);
+      const read = await this.dialogue.fillMaster(merchantId, {
+        storeId, storeName: facts.storeName, what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '', city: onboarding.contact?.city ?? '',
+        products: facts.products, photos, palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })),
+      });
+      return read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: (onboarding.what ?? '').slice(0, 160) } };
+    });
+    await workflow.finish('completed');
+    const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
+      threadId, channel: 'source', role: 'ASSISTANT',
+      content: `Tu tienda ${store?.name ?? ''} está lista. Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
+      metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
+    } });
+    return { userMessage, assistantMessage, revision: saved };
+  }
+
   private async useTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, choice: TemplateChoice, draft: SourceSetupDraft, assetUrls: string[], revision: number) {
     await workflow.report('saving');
     const applied = await this.templates.apply(merchantId, storeId, choice.id, revision);
@@ -666,6 +692,12 @@ export class SourceChatService {
       const requestContext = sourceRequestContext.getStore();
       const withTemplateProfile = <T>(work: () => Promise<T>) => keepTemplate && requestContext
         ? sourceRequestContext.run({ ...requestContext, request: { ...requestContext.request, profile: sourceRequestProfile(requested, true) } }, work) : work();
+      // Master template (spec 2026-10-19): a new shop starts from Esencial unless the merchant asked, in their own words, for a design
+      // from scratch. A website copy, a product link and a listing screenshot keep their own flows.
+      const askedScratch = [input.instruction, ...history.messages.filter(message => message.role === 'USER').map(message => message.content)].some(text => MASTER_SCRATCH.test(text));
+      if (this.config.get<boolean>('app.yapiMasterTemplate') === true && newShop && !askedScratch && !websiteCopy && !productLink && !productImport) {
+        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision);
+      }
       // "Elige tu estilo": new stores and full redesigns get two styles to pick from (one calm, one bold); a kept template stays its own style.
       // A copy follows its blueprint: no style cards (spec 2026-10-18 B §3).
       const proposeStyle = styleOn && !keepTemplate && !websiteCopy && (!current.revision || reworkTemplate || sourceRedesignRequested(input.instruction));
