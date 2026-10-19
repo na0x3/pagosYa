@@ -1,3 +1,4 @@
+import { MAX_COMMERCE_RUNTIME } from './source-project';
 import { currentSourceRuntime, currentSourceRuntimeBundle, sourceRuntimeBundleDigest, withSourceRuntime } from './source-runtime';
 
 describe('current source runtime hardening', () => {
@@ -69,5 +70,15 @@ describe('runtime bundle integrity', () => {
     const commerce = out.files.find(file => file.path === 'commerce.js')!.content;
     expect(commerce.startsWith([get('privacy.js'), get('commerce.js'), get('retention.js')].join('\n'))).toBe(true);
     expect(commerce).not.toContain('PAGOSYA_ASSISTANT');
+  });
+});
+
+// 2026-10-19: Lana Andina's first save failed because the bundled runtime outgrew the commerce.js cap. This fails first.
+describe('runtime size headroom', () => {
+  it('keeps the bundled commerce runtime under 80 % of the commerce.js cap', async () => {
+    const bundle = await currentSourceRuntimeBundle();
+    const content = (path: string) => bundle.files.find(file => file.path === path)?.content ?? '';
+    const bundled = ['privacy.js', 'commerce.js', 'retention.js', 'chat.js'].map(content).join('\n');
+    expect(bundled.length).toBeLessThan(MAX_COMMERCE_RUNTIME * 0.8);
   });
 });
