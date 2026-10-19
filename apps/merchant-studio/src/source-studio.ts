@@ -437,6 +437,17 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     }
     if (storeId) void loadStyleProposal();
   }
+  // Variety spec §5: a new store's background personal touch saves a newer revision. The open Studio follows it quietly
+  // (no build lock, the merchant keeps chatting; a request they send cancels the touch on the server) and reloads when it lands.
+  async function followBackgroundJob(selectedStore: string, finishedRequestId: string) {
+    const latest = await api.latestSourceChatJob(selectedStore).catch(() => ({ job: null }));
+    const job = latest.job;
+    if (!job || job.requestId === finishedRequestId || !['QUEUED', 'RUNNING'].includes(job.status)) return;
+    await api.waitSourceChatJob(selectedStore, job).catch(() => undefined);
+    if (storeId !== selectedStore || building()) return;
+    await load().catch(() => {});
+    render();
+  }
   // A request waiting behind another store's run says so instead of looking frozen (owner report 2026-10-15).
   function showQueue(job: SourceChatJob) {
     const waiting = queueStatus(job);
@@ -619,6 +630,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         render();
         if (result.revision) {
           mode = 'preview'; await load(result.revision.revision);
+          void followBackgroundJob(storeId, requestId);
           // The merchant keeps chatting and browsing while the checks run; publishing waits for them.
           const checkedRevision = version?.revision;
           void checksRun.then(() => {
