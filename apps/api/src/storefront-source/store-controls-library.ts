@@ -81,16 +81,16 @@ export function cartIconFor(kind: PlaybookKind, words = ''): CartIcon {
 export type ControlLanguage = { id: string; mode: 'calm' | 'bold' | 'both'; icons: IconStyle; shape: StoreControls['shape']; layout: StoreControls['layout']; badge: ControlBadge };
 /** One hand-designed language per outline, with tuned numbers and a badge style. */
 export const CONTROL_LANGUAGES: ControlLanguage[] = [
-  { id: 'quiet-rounded', mode: 'calm', icons: 'line', shape: { outline: 'rounded', corner: 10, notch: 0, tilt: 0, border: 'hairline', weight: 1, fill: 'outline', colour: 'ink' }, layout: { cart: 'icon+word', account: 'icon' }, badge: 'circle' },
-  { id: 'soft-pill', mode: 'calm', icons: 'line', shape: { outline: 'pill', corner: 24, notch: 0, tilt: 0, border: 'none', weight: 1, fill: 'solid', colour: 'accent' }, layout: { cart: 'icon+word', account: 'word' }, badge: 'inline' },
-  { id: 'ledger-square', mode: 'calm', icons: 'line', shape: { outline: 'square', corner: 0, notch: 0, tilt: 0, border: 'solid', weight: 1.5, fill: 'ghost', colour: 'ink' }, layout: { cart: 'word', account: 'word' }, badge: 'inline' },
+  { id: 'quiet-rounded', mode: 'both', icons: 'line', shape: { outline: 'rounded', corner: 10, notch: 0, tilt: 0, border: 'hairline', weight: 1, fill: 'outline', colour: 'ink' }, layout: { cart: 'icon+word', account: 'icon' }, badge: 'circle' },
+  { id: 'soft-pill', mode: 'both', icons: 'line', shape: { outline: 'pill', corner: 24, notch: 0, tilt: 0, border: 'none', weight: 1, fill: 'solid', colour: 'accent' }, layout: { cart: 'icon+word', account: 'word' }, badge: 'inline' },
+  { id: 'ledger-square', mode: 'both', icons: 'line', shape: { outline: 'square', corner: 0, notch: 0, tilt: 0, border: 'solid', weight: 1.5, fill: 'ghost', colour: 'ink' }, layout: { cart: 'word', account: 'word' }, badge: 'inline' },
   { id: 'ticket-stub', mode: 'bold', icons: 'solid', shape: { outline: 'ticket', corner: 4, notch: 5, tilt: 0, border: 'none', weight: 2, fill: 'solid', colour: 'accent' }, layout: { cart: 'icon+word', account: 'icon' }, badge: 'stamp' },
   { id: 'price-tag', mode: 'both', icons: 'line', shape: { outline: 'tag', corner: 4, notch: 6, tilt: 0, border: 'solid', weight: 1.5, fill: 'outline', colour: 'accent' }, layout: { cart: 'icon+word', account: 'icon' }, badge: 'corner' },
   { id: 'sticker', mode: 'bold', icons: 'solid', shape: { outline: 'sticker', corner: 14, notch: 0, tilt: -3, border: 'none', weight: 2, fill: 'solid', colour: 'accent' }, layout: { cart: 'icon', account: 'icon' }, badge: 'circle' },
   { id: 'folder-tab', mode: 'calm', icons: 'line', shape: { outline: 'tab', corner: 8, notch: 0, tilt: 0, border: 'solid', weight: 1, fill: 'inverted', colour: 'ink' }, layout: { cart: 'icon+word', account: 'icon' }, badge: 'inline' },
   { id: 'postage-stamp', mode: 'bold', icons: 'solid', shape: { outline: 'stamp', corner: 0, notch: 6, tilt: 2, border: 'none', weight: 2, fill: 'solid', colour: 'ink' }, layout: { cart: 'icon', account: 'icon' }, badge: 'dot' },
   { id: 'corner-brackets', mode: 'calm', icons: 'line', shape: { outline: 'bracket', corner: 0, notch: 0, tilt: 0, border: 'none', weight: 2, fill: 'ghost', colour: 'ink' }, layout: { cart: 'icon+word', account: 'icon' }, badge: 'inline' },
-  { id: 'underlined', mode: 'calm', icons: 'line', shape: { outline: 'underline', corner: 0, notch: 0, tilt: 0, border: 'none', weight: 2, fill: 'ghost', colour: 'accent' }, layout: { cart: 'word', account: 'word' }, badge: 'inline' },
+  { id: 'underlined', mode: 'both', icons: 'line', shape: { outline: 'underline', corner: 0, notch: 0, tilt: 0, border: 'none', weight: 2, fill: 'ghost', colour: 'accent' }, layout: { cart: 'word', account: 'word' }, badge: 'inline' },
   { id: 'pebble', mode: 'bold', icons: 'solid', shape: { outline: 'blob', corner: 20, notch: 0, tilt: -2, border: 'none', weight: 2, fill: 'solid', colour: 'accent' }, layout: { cart: 'icon', account: 'icon' }, badge: 'dot' },
 ];
 
@@ -172,6 +172,9 @@ function lookAffinity(language: ControlLanguage, look?: StoreLook): number {
   return score;
 }
 
+/** Outlines the premium references never use (2026-10-19, Pulso Studio got postage stamps): drawn only when nothing plain is
+ *  left. The plain languages (rounded, pill, square, underline) serve calm and bold stores alike. */
+const NOVELTY_OUTLINES: ReadonlySet<string> = new Set(['ticket', 'tag', 'sticker', 'stamp', 'bracket', 'blob']);
 export type LibraryPickInput = { kind: PlaybookKind; mode: 'calm' | 'bold'; seed: string; look?: StoreLook; avoid?: StoreControls[]; words?: string; palette?: StorePalette };
 /**
  * Revision N's language (spec part 4): a pure function of the kind, calm or bold, the measured look and a seed. It never takes an
@@ -188,7 +191,7 @@ export function pickLibraryControls(input: LibraryPickInput): StoreControls {
   for (const pool of [inMode, readable, CONTROL_LANGUAGES]) {
     const options = pool.map(language => ({ language, record: libraryRecord(language, input.kind, cartIcon, input.look) })).filter(option => !taken.has(controlsKey(option.record)));
     if (!options.length) continue;
-    const scored = options.map(option => ({ ...option, score: lookAffinity(option.language, input.look) - (usedOutlines.has(option.language.shape.outline) ? 2 : 0) }));
+    const scored = options.map(option => ({ ...option, score: lookAffinity(option.language, input.look) - (usedOutlines.has(option.language.shape.outline) ? 2 : 0) - (NOVELTY_OUTLINES.has(option.language.shape.outline) ? 3 : 0) }));
     const best = Math.max(...scored.map(option => option.score));
     const top = scored.filter(option => option.score >= best - 1);
     return top[seededIndex(input.seed, top.length)].record;

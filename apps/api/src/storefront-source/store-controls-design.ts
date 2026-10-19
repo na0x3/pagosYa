@@ -62,6 +62,9 @@ export function storeTokens(files: ReadonlyArray<{ path: string; content: string
 
 const languageOf = (controls: StoreControls) => ({ outline: controls.shape.outline, fill: controls.shape.fill, colour: controls.shape.colour, badge: controls.badge, cart: controls.icons.cart ?? '' });
 export type ControlsPromptInput = { storeName: string; kind: PlaybookKind; brief: unknown; products: string[]; tokens: string; look?: StoreLook; avoid: StoreControls[]; previous?: StoreControls; current?: StoreControls; instruction?: string; cartWord?: string };
+/** The owner's premium bar for YAPI's own control designs; a merchant's request still wins. */
+export const CONTROLS_PREMIUM = 'Premium finish, the bar of the best independent stores: thin line icons (about 1.5px strokes drawn as outlines) in a plain shape (rounded, pill, square or underline, or ghost with no shape at all), no tilt, a 1px border or none. Ticket, tag, sticker, stamp, bracket and blob outlines, and the stamp badge, only when the business brief itself asks for that kind of craft or play.';
+
 export function controlsPrompt(input: ControlsPromptInput): string {
   const { version: _version, source: _source, ...example } = pickLibraryControls({ kind: input.kind, mode: 'calm', seed: 'example' });
   return [
@@ -75,6 +78,8 @@ export function controlsPrompt(input: ControlsPromptInput): string {
     input.instruction ? `The merchant asked now: «${input.instruction}». Follow it for the controls.` : '',
     // A chat request names its own words; the sheet's order word applies only to YAPI's own designs (final review 2026-10-15).
     input.cartWord && !input.instruction ? `This store calls an order «${input.cartWord}» (its voice sheet): that is the cart word.` : '',
+    // 2026-10-19: Pulso Studio's header and steppers came out as postage stamps. The premium references use thin line icons.
+    input.instruction ? '' : CONTROLS_PREMIUM,
     'Rules:',
     '- shape: outline is one of the listed outlines; corner 0-24 px; notch 0-10 px (ticket notches, tag cut, stamp scallop depth); tilt -6 to 6 degrees (drawn on the face, never the tap target); weight 1-3 px. fill: solid, outline, ghost (no fill, the header text colour) or inverted. colour: accent, ink or paper.',
     '- icons: SVG path data only (the d attribute) for a 24x24 box, every point between 0 and 24, at most 1,500 characters each. They are FILLED with the text colour using fill-rule evenodd, so a line icon must be drawn as its outline (an outer shape and an inner shape). No other SVG elements, attributes, URLs or text. The cart icon shows what this store sells (a cup, a bag, a basket, a frame, a scoop, a briefcase, a leaf, a paw, or anything that fits it better); the others are account, menu, search, plus, minus and close. An empty string keeps the platform icon.',

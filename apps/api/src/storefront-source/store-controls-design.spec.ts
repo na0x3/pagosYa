@@ -1,6 +1,6 @@
 import type { StoreControls } from './store-controls';
 import { CART_ICONS, SHARED_ICONS } from './store-controls-library';
-import { CONTROLS_SCHEMA, controlsRequestBudgetMs, instructionConcernsControls, reviewControlsGuardBudgetMs, runControlsDesign, storeTokens } from './store-controls-design';
+import { CONTROLS_PREMIUM, CONTROLS_SCHEMA, controlsPrompt, controlsRequestBudgetMs, instructionConcernsControls, reviewControlsGuardBudgetMs, runControlsDesign, storeTokens } from './store-controls-design';
 
 const ANSWER = {
   shape: { outline: 'stamp', corner: 0, notch: 8, tilt: 2, border: 'dashed', weight: 2, fill: 'solid', colour: 'ink' },
@@ -67,6 +67,12 @@ describe('runControlsDesign (spec 2026-10-14, part 4)', () => {
   it('asks for strict JSON with every slot', () => {
     expect(CONTROLS_SCHEMA.required).toEqual(['shape', 'layout', 'icons', 'words', 'badge', 'note']);
     expect(CONTROLS_SCHEMA.properties.icons.required).toEqual(['cart', 'account', 'menu', 'search', 'plus', 'minus', 'close']);
+  });
+
+  it('holds YAPI\'s own controls to plain shapes and line icons, unless the merchant asks (2026-10-19)', () => {
+    const base = { storeName: 'Pulso', kind: 'general' as any, brief: {}, products: [], tokens: '', avoid: [] };
+    expect(controlsPrompt(base)).toContain(CONTROLS_PREMIUM);
+    expect(controlsPrompt({ ...base, instruction: 'botones como estampillas' })).not.toContain(CONTROLS_PREMIUM);
   });
 
   it('reads the store tokens from brand.css and styles.css', () => {

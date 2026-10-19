@@ -106,3 +106,14 @@ describe('controlsUniqueness', () => {
       .toEqual({ unique: false, duplicates: [['c', 'a']], without: ['d'] });
   });
 });
+
+// 2026-10-19 (Pulso Studio got postage stamps): bold stores and offset looks still get a plain outline from the library.
+describe('premium library pick', () => {
+  it('draws a plain outline for a bold store with an offset look, across many seeds', () => {
+    const plain = new Set(['rounded', 'pill', 'square', 'underline', 'tab']);
+    for (let i = 0; i < 40; i++) {
+      const picked = pickLibraryControls({ kind: 'general' as any, mode: 'bold', seed: `s${i}`, look: { version: 1, edge: 'offset', shape: { button: 0 } } as any });
+      expect(plain.has(picked.shape.outline)).toBe(true);
+    }
+  });
+});
