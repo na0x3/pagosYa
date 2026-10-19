@@ -2,6 +2,8 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException, 
 import sharp from 'sharp';
 import { UploadsService } from '../uploads/uploads.service';
 import { ProductPageWriterService } from '../product-content/product-page-writer.service';
+import { BrandProfileService } from '../brand/brand-profile.service';
+import { proposeStorePalette, type SourcePalette } from './source-palette';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { BUNDLED_PHOTO, bundledPhotoPath, uploadPath } from './source-product-photos';
 import { ConfigService } from '@nestjs/config';
@@ -15,7 +17,8 @@ import { MASTER_TEMPLATE_ID, type MasterFill, type MasterVariants } from './sour
 import { rollVariants, type RecentRoll } from './source-master-dice';
 
 /** What the master template's filler is told about a store (spec 2026-10-19 §2.3). */
-export type MasterFacts = { storeName: string; products: string[]; photos: string[] };
+export type MasterFacts = { storeName: string; products: string[]; photos: string[]; brand?: { voice?: string; headlineExamples?: string; avoid?: string } };
+const HEX = /^#[0-9a-f]{6}$/i;
 import { sourcePublicApiUrl } from './source-store-config';
 
 /** Plantillas: apply a designer-made store as the next revision (free, no AI call). */
@@ -24,7 +27,17 @@ export class SourceTemplatesService {
   /** The template registry; replaceable in tests. */
   registry: Pick<typeof registry, 'galleryTemplates' | 'templateManifest' | 'templateSourceFiles'> = registry;
 
-  constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly config: ConfigService, @Optional() private readonly uploads?: UploadsService, @Optional() private readonly pageWriter?: ProductPageWriterService) {}
+  constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly config: ConfigService, @Optional() private readonly uploads?: UploadsService, @Optional() private readonly pageWriter?: ProductPageWriterService, @Optional() private readonly brands?: BrandProfileService) {}
+
+  /** The logo's colours as a palette (variety spec §4); replaceable in tests. */
+  logoPalette = async (merchantId: string, url: string): Promise<SourcePalette | undefined> => {
+    const path = uploadPath(url);
+    const match = /^\/v1\/uploads\/([a-f0-9-]+\.(png|jpe?g|webp))$/i.exec(path);
+    if (!match || !this.uploads) return undefined;
+    const owned = (await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: [path] } }, select: { url: true } })).length > 0;
+    const bytes = owned ? await this.uploads.getBuffer(match[1]).catch(() => null) : null;
+    return bytes ? proposeStorePalette({ logo: { url: path, path, bytes } }).catch(() => undefined) : undefined;
+  };
 
   list() {
     return this.registry.galleryTemplates().map(({ id, name, category, description, tags, order }) => ({ id, name, category, description, tags, order }));
@@ -54,7 +67,11 @@ export class SourceTemplatesService {
     if (!manifest?.master) throw new NotFoundException('La plantilla base no está disponible.');
     const current = await this.projects.current(merchantId, storeId);
     const publicStore = await this.publicStores.getStorePublic(current.slug, { trackView: false, ownerMerchantId: merchantId });
-    const facts: MasterFacts = { storeName: publicStore.storeName, products: publicStore.items.map(item => item.name), photos: [...new Set(publicStore.items.flatMap(item => item.imageUrls ?? []))] };
+    // Variety spec §4: the merchant's confirmed brand comes before the dice.
+    const brand = await Promise.resolve(this.brands?.get(merchantId, storeId)).catch(() => undefined);
+    const confirmed = new Map((brand?.data.confirmed ?? []).map(fact => [String(fact.field), String(fact.value)]));
+    const facts: MasterFacts = { storeName: publicStore.storeName, products: publicStore.items.map(item => item.name), photos: [...new Set(publicStore.items.flatMap(item => item.imageUrls ?? []))],
+      ...(confirmed.get('voice') || confirmed.get('avoid') || confirmed.get('headlineExamples') ? { brand: { voice: confirmed.get('voice'), headlineExamples: confirmed.get('headlineExamples'), avoid: confirmed.get('avoid') } } : {}) };
     const filled = await filler(facts).catch(() => null);
     const bundled = filled ? await this.bundleMasterPhotos(merchantId, filled) : { change: undefined, files: [] };
     let fill = bundled.change ?? null;
@@ -67,6 +84,11 @@ export class SourceTemplatesService {
       variants = rolled.variants;
       fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), palette: rolled.palette, fonts: rolled.fonts } };
     }
+    const brandColours = Object.fromEntries(([['paper', 'background'], ['ink', 'foreground'], ['accent', 'accent'], ['muted', 'surface']] as const)
+      .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
+    const logo = Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
+    const colours = Object.keys(brandColours).length ? brandColours : logo ? { paper: logo.paper, ink: logo.ink, accent: logo.accent, muted: logo.surface } : undefined;
+    if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours } };
     const { assembled } = await this.assemble(merchantId, storeId, MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files, variants);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });

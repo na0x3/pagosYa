@@ -251,7 +251,7 @@ export class SourceChatService {
     const saved = await this.templates.applyMaster(merchantId, storeId, revision, async facts => {
       const photos = [...new Set([...(onboarding.photos ?? []), ...chatPhotos, ...facts.photos])].slice(0, 8);
       const read = await this.dialogue.fillMaster(merchantId, {
-        storeId, storeName: facts.storeName, what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '', city: onboarding.contact?.city ?? '',
+        storeId, storeName: facts.storeName, ...(facts.brand ? { brand: facts.brand } : {}), what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '', city: onboarding.contact?.city ?? '',
         products: facts.products, photos, palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: manifest.master!.sections,
       });
       return read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: (onboarding.what ?? '').slice(0, 160) } };

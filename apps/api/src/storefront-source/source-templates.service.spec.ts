@@ -125,6 +125,47 @@ describe('SourceTemplatesService', () => {
     expect(data).toContain('"title":"Preguntas"');
   });
 
+  describe('the merchant\'s brand first (variety spec §4)', () => {
+    const real = jest.requireActual('@pagosya/store-templates');
+    const build = (confirmed: Array<{ field: string; value: string }>, logo?: string) => {
+      const { templates: base, projects, prisma } = service(0);
+      const publicStores = { getStorePublic: jest.fn(async () => ({ ...publicStore([item]), logoUrl: logo ?? null })) };
+      const brands = { get: jest.fn(async () => ({ data: { confirmed: confirmed.map(f => ({ ...f, evidence: '', source: 'merchant' })), suggested: [] } })) };
+      const templates = new SourceTemplatesService(prisma as any, publicStores as any, projects as any, (base as any).config, undefined, undefined, brands as any);
+      templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+      return { templates, projects };
+    };
+    const savedLook = (projects: any) => JSON.parse(/export const look = (.*) as const;/.exec(((projects.save.mock.calls[0] as any[])[2].files as any[]).find(f => f.path === 'components/store-data.tsx').content)![1]);
+
+    it('confirmed brand colours become the store\'s colours', async () => {
+      const { templates, projects } = build([{ field: 'background', value: '#FAF7F2' }, { field: 'foreground', value: '#1A1A1A' }, { field: 'accent', value: '#2F6B4F' }]);
+      await templates.applyMaster('m1', 'store-1', 0, async () => ({}));
+      expect(savedLook(projects).colors).toEqual({ paper: '#faf7f2', ink: '#1a1a1a', accent: '#2f6b4f' });
+    });
+
+    it('a partial brand palette fills the rest from the roll', async () => {
+      const { templates, projects } = build([{ field: 'accent', value: '#2F6B4F' }]);
+      await templates.applyMaster('m1', 'store-1', 0, async () => ({}));
+      const look = savedLook(projects);
+      expect(look.colors).toEqual({ accent: '#2f6b4f' });
+      expect(real.templateManifest('esencial').master.palettes.map((p: any) => p.id)).toContain(look.palette);
+    });
+
+    it('with no brand colours, the logo\'s colours become the palette', async () => {
+      const { templates, projects } = build([], '/v1/uploads/aaaaaaaa-0000-0000-0000-000000000009.png');
+      (templates as any).logoPalette = jest.fn(async () => ({ paper: '#ffffff', ink: '#101010', accent: '#c0392b', surface: '#f4f4f4', onAccent: '#ffffff' }));
+      await templates.applyMaster('m1', 'store-1', 0, async () => ({}));
+      expect(savedLook(projects).colors).toEqual({ paper: '#ffffff', ink: '#101010', accent: '#c0392b', muted: '#f4f4f4' });
+    });
+
+    it('hands the brand\'s voice to the filler', async () => {
+      const { templates } = build([{ field: 'voice', value: 'Cercana y alegre' }, { field: 'avoid', value: 'Jerga técnica' }]);
+      const filler = jest.fn(async () => ({}));
+      await templates.applyMaster('m1', 'store-1', 0, filler);
+      expect((filler.mock.calls[0] as any[])[0].brand).toMatchObject({ voice: 'Cercana y alegre', avoid: 'Jerga técnica' });
+    });
+  });
+
   it('saves the template as the next revision and switches a first site to payment checkout', async () => {
     const { templates, projects, prisma } = service(0);
     const saved = await templates.apply('m1', 'store-1', 'prueba', 0);
