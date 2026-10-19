@@ -180,3 +180,22 @@ patches); stores keep their copy.
    entered with the flag on; `editKind` routing; a content edit changes `store-data` only.
 5. Live check (owner approval, ChatGPT plan via `pnpm dev:chatgpt`): three stores through the walkthrough (café,
    clothing, beauty) — time and screenshots each; then one content edit and one design edit on one of them.
+
+## 5. Amendments (owner, 2026-10-19, during planning)
+
+1. **The Plantillas section is removed for now.** Replaces "Unchanged: … the 61 Plantillas in the Mi tienda gallery":
+   the dashboard menu entry «Plantillas» and the Studio button «Plantillas» are taken out. The 61 templates, their
+   API routes and the MCP tools stay in the code so the section can come back. The chat no longer offers templates
+   already (`startChoices = false`, no `templateChoices`), so nothing changes there.
+2. **Only premium fonts in stores.** The owner chose "premium-grade, free licence". Fontshare (ITF) was the first
+   candidate and is **excluded**: its ITF Free Font License v2.0 (17 Aug 2026), §02, forbids serving the fonts "for use by
+   third parties through any … SaaS platform … template editor … including making the Font Software available as a
+   selectable font for third-party users" — pagosYa is exactly that. Only SIL Open Font License families qualify (the
+   OFL allows bundling with software and serving them). Six foundry-grade OFL families are added — Geist, Mona Sans,
+   Hanken Grotesk, Schibsted Grotesk, Gloock, EB Garamond — and Esencial's eight pairs use only these plus the
+   catalogue's most refined serifs (Cormorant Garamond, Fraunces, Instrument Serif, Newsreader, Bodoni Moda, Libre
+   Caslon Text) and quiet sans (DM Sans, Instrument Sans, Manrope, Figtree). §1.5's "catalogue fonts only" reads as this list.
+3. **The theme lives in a platform-written block of `styles/globals.css`** (between `/* pagosya:master-theme */` and
+   `/* pagosya:master-theme:end */`), not only in `store-data`: authored source may not use `dangerouslySetInnerHTML`
+   (source-next.ts) and fonts are bundled only when a CSS file references `assets/<id>.ttf` (source-fonts.ts).
+   `store-data` keeps `copy` and `look` (palette id, font-pair id, custom colours) as the record the content edits read.
