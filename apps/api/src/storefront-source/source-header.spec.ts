@@ -196,6 +196,9 @@ describe('withSourceHeader: the save step that draws the header on every page (s
   it('takes the info bar from one real fact in the brief, else the first address, else nothing', () => {
     expect(headerFact('Diseñamos casas. Atendemos de lunes a viernes de 9:00 a 18:00. Llámanos.')).toBe('Atendemos de lunes a viernes de 9:00 a 18:00.');
     expect(headerFact(`Hacemos envíos a toda Bolivia ${'con mucho cuidado '.repeat(10)}`).length).toBeLessThanOrEqual(90);
+    // Velas Luz 2026-10-18: YAPI's own note about missing data is never the bar's fact.
+    expect(headerFact('Velas de soya hechas a mano en La Paz. No hay logo, productos, precios, contacto visible ni sucursal de retiro cargados.')).toBe('');
+    expect(headerFact('El comercio no confirmó envíos. Hacemos entregas en La Paz los sábados.')).toBe('Hacemos entregas en La Paz los sábados.');
     expect(headerFact('Diseñamos casas.', [{ name: 'Estudio', address: 'Av. Arce 2020, La Paz' }])).toBe('Estamos en Av. Arce 2020, La Paz');
     expect(headerFact(undefined, [])).toBe('');
   });

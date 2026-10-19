@@ -137,6 +137,7 @@ const SHARED_PANEL = /<([a-z][\w-]*)\b[^>]*\bdata-pagosya-shared-shell\s*=\s*["'
 const KIT_PAGE = /data-pagosya-(?:product|checkout)-page|data-catalog-full/;
 /** The words frameInputs counts as a fact (design-engine/frame-draw.ts): hours, days, delivery and pickup. */
 const FACT_WORDS = /(horario|abrimos|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d{1,2}:\d{2}|env[ií]o|delivery|entrega|recojo|retiro|pickup)/i;
+const NOT_A_FACT = /(?<!\p{L})(no hay|no tiene|no tienen|no se|sin|ni|falta|faltan|pendiente|pendientes|cargad[oa]s?|por confirmar|no confirmad[oa]s?|supuest[oa]s?|el comercio|la tienda no|yapi|merchant|todav[ií]a no|a[uú]n no)(?!\p{L})/iu;
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", apos: "'" };
 export const decodeEntities = (value: string) => value.replace(/&(amp|lt|gt|quot|#39|apos);/g, (_match, name: string) => ENTITIES[name]);
@@ -179,7 +180,10 @@ function navSections(html: string): Array<{ id: string; label: string }> {
 /** The info bar's one real fact (spec: "one real fact from the brief"): a sentence naming hours or delivery, else the address. */
 export function headerFact(businessInformation: unknown, locations: unknown[] = []): string {
   const text = typeof businessInformation === 'string' ? businessInformation : '';
-  const sentence = text.split(/(?<=[.!?])\s+|\n+/).map(part => part.trim()).find(part => part && FACT_WORDS.test(part));
+  // Velas Luz 2026-10-18: the bar showed YAPI's own note «No hay logo, productos, precios, contacto visible ni sucursal de retiro
+  // cargados» because it names pickup. A sentence about missing or pending data, or about the business in the third person, is
+  // never a fact a customer reads.
+  const sentence = text.split(/(?<=[.!?])\s+|\n+/).map(part => part.trim()).find(part => part && FACT_WORDS.test(part) && !NOT_A_FACT.test(part));
   if (sentence) return sentence.length > 90 ? `${sentence.slice(0, 88).replace(/\s+\S*$/, '')}…` : sentence;
   const place = locations.find((entry): entry is { address?: unknown } => Boolean(entry) && typeof entry === 'object');
   const address = typeof place?.address === 'string' ? place.address.trim() : '';
