@@ -1,4 +1,4 @@
-import { SURFACES_SCHEMA, parseSurfacesAnswer, surfacesPrompt } from './surface-design';
+import { PREMIUM_CARD, PREMIUM_PRODUCT_PAGE, PREMIUM_TYPE_AND_MOTION, SURFACES_SCHEMA, parseSurfacesAnswer, surfacesPrompt } from './surface-design';
 
 /** Same fake model body as store-controls-design.spec.ts. */
 const reply = (value: unknown) => ({ status: 'completed', output: [{ content: [{ type: 'output_text', text: typeof value === 'string' ? value : JSON.stringify(value) }] }] });
@@ -49,5 +49,18 @@ describe('surfaces call (spec 2026-10-15)', () => {
     expect(text).toMatch(/real CSS values[^.]*px/);
     expect(text).toMatch(/only the var\(\) tokens listed under Store tokens/i);
     expect(text).toMatch(/max-width and side padding/);
+  });
+});
+
+describe('premium anatomy (2026-10-19, the Amboras references)', () => {
+  it('asks for the atelier product page, the premium card and the type and motion rules only when those parts are drawn', () => {
+    const base = { storeName: 'Mezcla Ya', kind: 'general', tokens: '', dna: {} };
+    const page = surfacesPrompt({ ...base, parts: ['productPage', 'card'] });
+    expect(page).toContain(PREMIUM_PRODUCT_PAGE);
+    expect(page).toContain(PREMIUM_CARD);
+    expect(page).toContain(PREMIUM_TYPE_AND_MOTION);
+    const cart = surfacesPrompt({ ...base, parts: ['cart'] });
+    expect(cart).not.toContain(PREMIUM_PRODUCT_PAGE);
+    expect(cart).not.toContain(PREMIUM_TYPE_AND_MOTION);
   });
 });
