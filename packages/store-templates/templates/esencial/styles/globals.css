@@ -322,7 +322,7 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 /* ---- footer ---- */
 .es-footer[data-es-footer="columns"]{}
 .es-footer__big{margin:0 0 48px;font:400 clamp(40px,11vw,200px)/.95 var(--es-heading);letter-spacing:-.02em}
-.es-footer[data-es-footer="bigname"]{}
+.es-footer[data-es-footer="bigname"] .es-footer__name{display:none}
 .es-footer[data-es-footer="minimal"] .es-footer__grid{display:flex;flex-wrap:wrap;align-items:center;gap:16px 32px}
 .es-footer[data-es-footer="minimal"] .es-footer__grid h2,.es-footer[data-es-footer="minimal"] .es-footer__brand p:not(.es-footer__name){display:none}
 .es-footer[data-es-footer="minimal"] .es-footer__grid nav,.es-footer[data-es-footer="minimal"] .es-footer__grid>div{display:flex;flex-wrap:wrap;gap:12px 24px}
