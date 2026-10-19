@@ -29,6 +29,7 @@ export const PARTS = [
   'cart/lines.js',
   'product/dialog-style.js',
   'product/setup.js',
+  'product/offer-squares.js',
   'product/bundles-related.js',
   'pages/policy-links.js',
   'account/pages.js',

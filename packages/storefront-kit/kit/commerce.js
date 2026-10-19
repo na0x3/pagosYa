@@ -1136,6 +1136,24 @@
     @media(max-width:900px){[data-pagosya-product][data-style=atelier] .product-long__features ul[data-count]{--cols:2}[data-pagosya-product][data-style=atelier] .product-long__features ul[data-count] li{padding:24px 20px 24px 0;border-left:0}}
     @media(max-width:640px){[data-pagosya-product][data-style=atelier] .product-long__features ul[data-count]{--cols:1}[data-pagosya-product][data-style=atelier] .product-long__features ul[data-count] li{padding:22px 0}}
     @media(max-width:640px){[data-pagosya-product][data-style=atelier] .product-detail__copy{padding:20px}[data-pagosya-product][data-style=atelier] .product-detail__assurances{grid-template-columns:minmax(0,1fr)}[data-pagosya-product][data-style=atelier] .product-detail__assurances li{flex-direction:row;text-align:left}}
+    [data-pagosya-product] .offer-squares{display:grid;gap:8px;margin:4px 0 8px}
+    [data-pagosya-product] .offer-squares__label{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--pd-muted)}
+    [data-pagosya-product] .offer-squares__group{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,104px),1fr));gap:12px 8px;padding-top:6px}
+    [data-pagosya-product] .offer-squares[data-offer-layout=rows] .offer-squares__group{grid-template-columns:1fr}
+    [data-pagosya-product] .offer-square{position:relative;display:grid;gap:2px;justify-items:center;align-content:start;min-width:0;overflow-wrap:anywhere;padding:14px 8px 10px;border:1.5px solid var(--pd-line);border-radius:var(--pd-radius,12px);background:var(--pd-surface);color:var(--pd-ink);font:inherit;text-align:center;cursor:pointer}
+    [data-pagosya-product] .offer-squares[data-offer-layout=rows] .offer-square{grid-template-columns:minmax(0,1fr) auto;justify-items:start;text-align:left;padding:14px}
+    [data-pagosya-product] .offer-squares[data-offer-layout=rows] .offer-square__total{grid-column:2;grid-row:1;justify-self:end}
+    [data-pagosya-product] .offer-square[aria-checked=true]{border-color:var(--pd-accent);box-shadow:inset 0 0 0 1.5px var(--pd-accent)}
+    [data-pagosya-product] .offer-squares[data-offer-layout=grid] .offer-square[aria-checked=true]{background:var(--pd-accent);color:var(--pd-on-accent)}
+    [data-pagosya-product] .offer-square:focus-visible{outline:2px solid var(--pd-accent);outline-offset:2px}
+    [data-pagosya-product] .offer-square__title{font-weight:700}
+    [data-pagosya-product] .offer-square__total{font-size:1.15em;font-weight:800}
+    [data-pagosya-product] .offer-square__regular,[data-pagosya-product] .offer-square__line{font-size:12px;opacity:.75}
+    [data-pagosya-product] .offer-square__save{font-size:11px;font-weight:700;color:var(--pd-accent)}
+    [data-pagosya-product] .offer-square[aria-checked=true] .offer-square__save{color:inherit}
+    [data-pagosya-product] .offer-square__tag{position:absolute;top:-9px;left:50%;transform:translateX(-50%);max-width:calc(100% - 8px);padding:2px 8px;border-radius:99px;background:var(--pd-accent);color:var(--pd-on-accent);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    [data-pagosya-product] .offer-squares[data-offer-layout=rows] .offer-square__tag{left:auto;right:12px;transform:none}
+    [data-pagosya-product] [data-subscription-choice][data-offer-driven]>:is(legend,label,select){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
     @media(prefers-reduced-motion:reduce){[data-pagosya-product] .pd-icon *{animation:none!important}}
     @media(prefers-reduced-motion:reduce){[data-pagosya-product] *,[data-pagosya-product] *::before{transition:none!important;scroll-behavior:auto!important}}
   `;
@@ -1306,10 +1324,17 @@
     const amount = boxLine ? boxLine.amount : cadence && !(groups && !variant) ? subscriptionPrice(selectedProduct, variant || undefined, cadence) : price(variant ? { ...selectedProduct, amount: variant.amount } : selectedProduct);
     const pending = groups && !variant || box && !boxLine;
     const startingAt = pending && !box ? selectedProduct.variants.filter(v => remaining(selectedProduct, v) > 0 && variantValues(v).every((value, i) => selectedOptions[i] === undefined || selectedOptions[i] === value)).map(v => price({ ...selectedProduct, amount: v.amount })) : [];
-    const total = pending ? startingAt.length ? `desde ${money(Math.min(...startingAt), selectedProduct.currency)}` : '' : available ? money(amount * selectedQuantity, selectedProduct.currency) : '';
+    // Showcase commerce: a quantity that matches a one-product pack is priced the way the cart quote will price it.
+    const packSaving = pending || cadence || boxLine ? 0 : packDiscount(selectedProduct, amount, selectedQuantity);
+    const total = pending ? startingAt.length ? `desde ${money(Math.min(...startingAt), selectedProduct.currency)}` : '' : available ? money(amount * selectedQuantity - packSaving, selectedProduct.currency) : '';
     // The action carries the live total; the subtotal line only adds information for several units.
     detail.querySelector('[data-product-subtotal]').textContent = !pending && total && selectedQuantity > 1 ? `Subtotal ${total}` : '';
     detail.querySelectorAll('[data-product-total]').forEach(el => { el.textContent = total; });
+    const offers = detail.querySelector('.product-detail__offers');
+    const key = cadence ? `sub:${cadence}` : `${packOffers(selectedProduct).some(o => o.quantity === selectedQuantity) ? 'pack' : 'once'}:${selectedQuantity}`;
+    const fresh = offers ? offerSquaresMarkup(selectedProduct, variant || undefined, key) : '';
+    if (offers) { if (fresh) offers.outerHTML = fresh; else offers.replaceChildren(); }
+    detail.querySelector('[data-subscription-choice]')?.toggleAttribute('data-offer-driven', Boolean(detail.querySelector('.product-detail__offers [data-offer-square]')));
     updateStickyBar();
   }
   let stickyObserver = null, buyPassed = false, commerceData = null;
@@ -1336,6 +1361,81 @@
     section.hidden = !showSection;
     section.innerHTML = showSection ? `<h2 id="product-reviews-title">Reseñas verificadas${sample ? ' · ejemplo' : ''}</h2><p class="product-detail__reviews-summary">${detail.dataset.style === 'atelier' ? `<strong class="product-detail__reviews-average" aria-hidden="true">${summary.average.toLocaleString('es-BO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong>` : ''}${starsMarkup(summary.average)}<span>${label}</span></p><div class="product-detail__review-list">${list.map(review => `<article><p class="product-detail__review-meta">${starsMarkup(review.rating)}<span class="product-detail__review-score">${review.rating} de 5</span> <strong>${escape(review.displayName)}</strong>${detail.dataset.style === 'atelier' && !sample ? '<span class="product-detail__review-verified">Compra verificada</span>' : ''}</p><p>${escape(review.body)}</p></article>`).join('')}</div>` : '';
   }
+  /* Offer squares (spec 2026-10-19 showcase commerce §1): 1 unidad, one-product packs and subscription cadences, with the
+   * server's own math (bundle-pricing.ts: best single FIXED offer, floor(eligible × % / 100)). Never a figure checkout won't charge. */
+  function packOffers(p) {
+    if (!p || !store.bundlesEnabled || !Array.isArray(store.bundles) || isMembership(p) || boxGroup(p) || p.fulfillmentType === 'DIGITAL') return [];
+    return store.bundles
+      .filter(b => b.kind === 'FIXED' && Array.isArray(b.items) && b.items.length === 1 && b.items[0]?.productId === p.id && Number(b.items[0].quantity) >= 2)
+      .map(b => ({ id: b.id, quantity: Number(b.items[0].quantity), percent: Math.max(0, Math.min(99, Number(b.discountPercent) || 0)), ...(typeof b.label === 'string' && b.label.trim() ? { label: b.label.trim().slice(0, 24) } : {}) }))
+      .sort((a, b) => a.quantity - b.quantity).slice(0, 3);
+  }
+  function packDiscount(p, unitAmount, quantity) {
+    let best = 0;
+    for (const offer of packOffers(p)) {
+      const cycles = Math.floor(quantity / offer.quantity);
+      if (cycles > 0) best = Math.max(best, Math.floor(cycles * offer.quantity * unitAmount * offer.percent / 100));
+    }
+    return Math.min(best, Math.max(0, unitAmount * quantity - 1));
+  }
+  function offerOptions(p, variant) {
+    if (!p || isMembership(p) || boxGroup(p)) return [];
+    const unit = price(variant ? { ...p, amount: variant.amount } : p);
+    const left = remaining(p, variant || undefined);
+    const packs = packOffers(p).filter(offer => left >= offer.quantity);
+    const subs = subscriptionsAvailable() && p.fulfillmentType !== 'DIGITAL' && !p.extras?.length ? (p.subscriptionOptions || []) : [];
+    if (!packs.length && !subs.length) return [];
+    const rows = [{ key: 'once:1', kind: 'once', quantity: 1, total: unit, regular: unit, perUnit: unit, saving: 0 }];
+    for (const offer of packs) {
+      const regular = unit * offer.quantity, saving = packDiscount(p, unit, offer.quantity);
+      rows.push({ key: `pack:${offer.quantity}`, kind: 'pack', quantity: offer.quantity, total: regular - saving, regular, perUnit: Math.round((regular - saving) / offer.quantity), saving, ...(offer.label ? { label: offer.label } : {}) });
+    }
+    for (const option of subs) {
+      const total = subscriptionPrice(p, variant || undefined, option.cadence);
+      rows.push({ key: `sub:${option.cadence}`, kind: 'sub', quantity: 1, cadence: option.cadence, total, regular: unit, perUnit: total, saving: unit - total, ...(typeof option.label === 'string' && option.label.trim() ? { label: option.label.trim().slice(0, 24) } : {}) });
+    }
+    const cheapest = Math.min(...rows.map(row => row.perUnit));
+    const unique = rows.filter(row => row.perUnit === cheapest).length === 1;
+    return rows.map(row => ({ ...row, best: row.kind !== 'once' && unique && row.perUnit === cheapest && cheapest < unit }));
+  }
+  function offerLayout(options) {
+    const wanted = ['steps', 'grid', 'rows'].includes(config.showcase?.offers) ? config.showcase.offers : 'grid';
+    const kinds = new Set(options.filter(o => o.kind !== 'once').map(o => o.kind));
+    if (options.length > (kinds.size > 1 ? 5 : 4)) return 'rows';
+    if (kinds.size > 1) return wanted === 'rows' ? 'rows' : 'steps';
+    return wanted === 'steps' ? 'grid' : wanted;
+  }
+  function offerSquareMarkup(p, option, selected) {
+    const tag = option.label || (option.best ? 'Mejor precio' : '');
+    const title = option.kind === 'once' ? '1 unidad' : option.kind === 'pack' ? `Pack x${option.quantity}` : (CADENCE_TEXT[option.cadence] || 'Suscripción').replace(/^./, c => c.toUpperCase());
+    const line = option.kind === 'pack' ? `${money(option.perUnit, p.currency)} c/u` : option.kind === 'sub' ? 'Suscripción · cancela cuando quieras' : '';
+    return `<button type="button" role="radio" class="offer-square" data-offer-square="${escape(option.key)}" aria-checked="${selected}">`
+      + (tag ? `<span class="offer-square__tag">${escape(tag)}</span>` : '')
+      + `<span class="offer-square__title">${escape(title)}</span><span class="offer-square__total">${money(option.total, p.currency)}</span>`
+      + (option.kind === 'pack' && option.saving > 0 ? `<del class="offer-square__regular" aria-label="Precio sin pack">${money(option.regular, p.currency)}</del>` : '')
+      + (line ? `<span class="offer-square__line">${escape(line)}</span>` : '')
+      + (option.saving > 0 ? `<span class="offer-square__save">Ahorras ${money(option.saving, p.currency)}</span>` : '')
+      + '</button>';
+  }
+  /** The squares of the selected product/variant; '' when there is nothing to choose. */
+  function offerSquaresMarkup(p, variant, selectedKey = 'once:1') {
+    const options = offerOptions(p, variant);
+    if (options.length < 2) return '';
+    const layout = offerLayout(options);
+    const quantities = options.filter(o => o.kind !== 'sub'), subs = options.filter(o => o.kind === 'sub');
+    const group = (rows, label) => `<div class="offer-squares__group" role="radiogroup" aria-label="${escape(label)}">${rows.map(o => offerSquareMarkup(p, o, o.key === selectedKey)).join('')}</div>`;
+    const body = layout === 'steps' && subs.length && quantities.length > 1
+      ? group(quantities, '¿Cuántos?') + `<p class="offer-squares__label">O suscríbete</p>` + group(subs, 'Suscríbete')
+      : group(options, 'Elige tu opción');
+    return `<div class="product-detail__offers offer-squares" data-offer-layout="${layout}"><p class="offer-squares__label">${layout === 'rows' ? 'Elige tu opción' : '¿Cuántos?'}</p>${body}</div>`;
+  }
+  /** One short best-deal line for cards: «Desde Bs X c/u» and/or «Suscríbete −N%». */
+  function bestDealLine(p) {
+    const options = offerOptions(p, undefined);
+    const best = options.filter(o => o.kind === 'pack').sort((a, b) => a.perUnit - b.perUnit)[0];
+    const sub = options.some(o => o.kind === 'sub') ? (p.subscriptionOptions || []).reduce((max, o) => Math.max(max, Number(o.discountPercent) || 0), 0) : 0;
+    return [best ? `Desde ${money(best.perUnit, p.currency)} c/u` : '', sub ? `Suscríbete −${sub}%` : ''].filter(Boolean).join(' · ');
+  }
   const simpleProduct = (item) => !item.variants?.length && !item.extras?.length;
   const productHref = (item) => pageHref(config.productPage || 'product.html', '?id=' + encodeURIComponent(item.id));
   const bundleEntries = (bundle) => (Array.isArray(bundle?.items) ? bundle.items : []).map(item => ({ p: products().find(candidate => candidate.id === item?.productId), quantity: Math.max(1, Math.min(99, Number(item?.quantity) || 1)) }));
@@ -1343,6 +1443,8 @@
   function bundleOffersMarkup(p) {
     if (!store.bundlesEnabled || !Array.isArray(store.bundles)) return '';
     const offers = store.bundles.flatMap(bundle => {
+      // Showcase commerce: a one-product pack shown as an offer square is not repeated here.
+      if (packOffers(p).some(offer => offer.id === bundle.id)) return [];
       const entries = bundleEntries(bundle);
       if (!entries.some(entry => entry.p?.id === p.id) || entries.some(entry => !entry.p)) return [];
       const names = entries.map(entry => entry.p.name), list = names.length > 1 ? `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}` : names[0];
@@ -1968,14 +2070,14 @@
     let authoredTrail = false;
     for (let node = fullProductPage ? detail.previousElementSibling : null; node && !node.matches('header,[role=banner]'); node = node.previousElementSibling) if (node.matches('a[href]') || node.querySelector('a[href]')) { authoredTrail = true; break; }
     const breadcrumb = authoredTrail ? '' : `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('productos.html'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>`;
-    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" data-part="gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${galleryMarkup(images, p)}</section><section class="product-detail__copy"><span class="product-detail__decor" data-part="decor-b" aria-hidden="true"></span>${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow" data-part="eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p>${style === 'conversion' || style === 'atelier' ? rating : ''}<${fullProductPage ? "h1" : "h2"} id="pagosya-product-title" data-part="title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${lead ? `<p class="product-detail__subtitle" data-part="subtitle">${escape(lead.lead)}</p>` : ''}${style !== 'conversion' && style !== 'atelier' ? rating : ''}<div class="product-detail__pricing" data-product-pricing>${isMembership(p) ? `<strong class="product-detail__price">${escape(membershipPriceText(p))}</strong>` : priceMarkup(p)}</div>${style === 'conversion' ? checksMarkup(conversionHighlights(p).checks) : ''}${p.description ? `<p class="product-detail__intro" data-part="intro">${escape(lead ? lead.rest : p.description)}</p>` : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' && style !== 'conversion' ? highlightsMarkup(p) : ''}${isMembership(p) ? membershipMarkup(p) : groups ? `${optionsMarkup(groups)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${contentBlocksMarkup(p)}${fullProductPage ? longPageTop(p) : ''}${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section>${longPageBottom(p)}<div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>${isMembership(p) ? 'Hacerme miembro' : 'Añadir'}</button></div>` : ''}`;
+    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" data-part="gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${galleryMarkup(images, p)}</section><section class="product-detail__copy"><span class="product-detail__decor" data-part="decor-b" aria-hidden="true"></span>${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow" data-part="eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p>${style === 'conversion' || style === 'atelier' ? rating : ''}<${fullProductPage ? "h1" : "h2"} id="pagosya-product-title" data-part="title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${lead ? `<p class="product-detail__subtitle" data-part="subtitle">${escape(lead.lead)}</p>` : ''}${style !== 'conversion' && style !== 'atelier' ? rating : ''}<div class="product-detail__pricing" data-product-pricing>${isMembership(p) ? `<strong class="product-detail__price">${escape(membershipPriceText(p))}</strong>` : priceMarkup(p)}</div>${style === 'conversion' ? checksMarkup(conversionHighlights(p).checks) : ''}${p.description ? `<p class="product-detail__intro" data-part="intro">${escape(lead ? lead.rest : p.description)}</p>` : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' && style !== 'conversion' ? highlightsMarkup(p) : ''}${isMembership(p) ? membershipMarkup(p) : groups ? `${optionsMarkup(groups)}${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${contentBlocksMarkup(p)}${fullProductPage ? longPageTop(p) : ''}${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section>${longPageBottom(p)}<div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>${isMembership(p) ? 'Hacerme miembro' : 'Añadir'}</button></div>` : ''}`;
     detail.removeAttribute('data-page-template');
     applyProductPageTemplate();
     showImage(0);
     if (fullProductPage && (!images.length || style === 'dense' || style === 'story-led') && !detail.hasAttribute('data-page-template')) {
       // Mobile reads identity, purchase, then details; desktop places the purchase panel beside both.
       const copy = detail.querySelector('.product-detail__copy'), [summary, buybox, details] = ['summary', 'buybox', 'details'].map(name => Object.assign(document.createElement('div'), { className: 'product-detail__' + name }));
-      for (const child of [...copy.children]) (child.matches('.product-detail__pricing,.product-detail__checks,.product-detail__options,.product-detail__box,.product-detail__subscription,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
+      for (const child of [...copy.children]) (child.matches('.product-detail__pricing,.product-detail__checks,.product-detail__options,.product-detail__box,.product-detail__offers,.product-detail__subscription,.product-detail__purchase,.product-detail__buy,.product-detail__status,.product-detail__assurances,p:not([class])') ? buybox : child.matches('.product-tabs,[role=tabpanel]') ? details : summary).append(child);
       copy.append(summary, buybox, ...(details.children.length ? [details] : [])); copy.dataset.split = '';
       if (style === 'story-led') {
         detail.querySelector('.product-detail__layout').prepend(summary);
@@ -4703,6 +4805,18 @@
       // The clicked control can become disabled (box full, none left); keep keyboard users in the picker.
       const again = detail.querySelector(`[data-box-pick="${CSS.escape(id)}"][data-step="${button.dataset.step}"]`);
       (again && !again.disabled ? again : detail.querySelector('[data-box-add]:not(:disabled)') || detail.querySelector('[data-box-progress]'))?.focus?.();
+      return;
+    }
+    if (button.hasAttribute('data-offer-square') && selectedProduct && button.closest('[data-pagosya-product]') === detail) {
+      // Showcase commerce: a square picks the purchase mode and quantity; the buy box keeps its own state and totals.
+      const [kind, value] = button.dataset.offerSquare.split(':');
+      const choice = detail.querySelector('[data-subscription-choice]');
+      if (choice) {
+        const mode = choice.querySelector(`[name=purchaseMode][value="${kind === 'sub' ? 'subscribe' : 'once'}"]`); if (mode) mode.checked = true;
+        const cadence = choice.querySelector('[name=subscriptionCadence]'); if (kind === 'sub' && cadence) { cadence.disabled = false; cadence.value = value; }
+      }
+      selectedQuantity = kind === 'pack' ? Number(value) : 1;
+      updateQuantity();
       return;
     }
     if (button.hasAttribute('data-product-option')) {

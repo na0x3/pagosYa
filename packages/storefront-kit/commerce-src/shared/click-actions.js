@@ -28,6 +28,18 @@
       (again && !again.disabled ? again : detail.querySelector('[data-box-add]:not(:disabled)') || detail.querySelector('[data-box-progress]'))?.focus?.();
       return;
     }
+    if (button.hasAttribute('data-offer-square') && selectedProduct && button.closest('[data-pagosya-product]') === detail) {
+      // Showcase commerce: a square picks the purchase mode and quantity; the buy box keeps its own state and totals.
+      const [kind, value] = button.dataset.offerSquare.split(':');
+      const choice = detail.querySelector('[data-subscription-choice]');
+      if (choice) {
+        const mode = choice.querySelector(`[name=purchaseMode][value="${kind === 'sub' ? 'subscribe' : 'once'}"]`); if (mode) mode.checked = true;
+        const cadence = choice.querySelector('[name=subscriptionCadence]'); if (kind === 'sub' && cadence) { cadence.disabled = false; cadence.value = value; }
+      }
+      selectedQuantity = kind === 'pack' ? Number(value) : 1;
+      updateQuantity();
+      return;
+    }
     if (button.hasAttribute('data-product-option')) {
       const index = Number(button.dataset.productOption), groups = optionGroups(selectedProduct);
       if (!groups) return;

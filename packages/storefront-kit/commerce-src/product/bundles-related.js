@@ -5,6 +5,8 @@
   function bundleOffersMarkup(p) {
     if (!store.bundlesEnabled || !Array.isArray(store.bundles)) return '';
     const offers = store.bundles.flatMap(bundle => {
+      // Showcase commerce: a one-product pack shown as an offer square is not repeated here.
+      if (packOffers(p).some(offer => offer.id === bundle.id)) return [];
       const entries = bundleEntries(bundle);
       if (!entries.some(entry => entry.p?.id === p.id) || entries.some(entry => !entry.p)) return [];
       const names = entries.map(entry => entry.p.name), list = names.length > 1 ? `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}` : names[0];

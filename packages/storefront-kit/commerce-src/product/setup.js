@@ -164,10 +164,17 @@
     const amount = boxLine ? boxLine.amount : cadence && !(groups && !variant) ? subscriptionPrice(selectedProduct, variant || undefined, cadence) : price(variant ? { ...selectedProduct, amount: variant.amount } : selectedProduct);
     const pending = groups && !variant || box && !boxLine;
     const startingAt = pending && !box ? selectedProduct.variants.filter(v => remaining(selectedProduct, v) > 0 && variantValues(v).every((value, i) => selectedOptions[i] === undefined || selectedOptions[i] === value)).map(v => price({ ...selectedProduct, amount: v.amount })) : [];
-    const total = pending ? startingAt.length ? `desde ${money(Math.min(...startingAt), selectedProduct.currency)}` : '' : available ? money(amount * selectedQuantity, selectedProduct.currency) : '';
+    // Showcase commerce: a quantity that matches a one-product pack is priced the way the cart quote will price it.
+    const packSaving = pending || cadence || boxLine ? 0 : packDiscount(selectedProduct, amount, selectedQuantity);
+    const total = pending ? startingAt.length ? `desde ${money(Math.min(...startingAt), selectedProduct.currency)}` : '' : available ? money(amount * selectedQuantity - packSaving, selectedProduct.currency) : '';
     // The action carries the live total; the subtotal line only adds information for several units.
     detail.querySelector('[data-product-subtotal]').textContent = !pending && total && selectedQuantity > 1 ? `Subtotal ${total}` : '';
     detail.querySelectorAll('[data-product-total]').forEach(el => { el.textContent = total; });
+    const offers = detail.querySelector('.product-detail__offers');
+    const key = cadence ? `sub:${cadence}` : `${packOffers(selectedProduct).some(o => o.quantity === selectedQuantity) ? 'pack' : 'once'}:${selectedQuantity}`;
+    const fresh = offers ? offerSquaresMarkup(selectedProduct, variant || undefined, key) : '';
+    if (offers) { if (fresh) offers.outerHTML = fresh; else offers.replaceChildren(); }
+    detail.querySelector('[data-subscription-choice]')?.toggleAttribute('data-offer-driven', Boolean(detail.querySelector('.product-detail__offers [data-offer-square]')));
     updateStickyBar();
   }
   let stickyObserver = null, buyPassed = false, commerceData = null;
