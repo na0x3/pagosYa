@@ -55,3 +55,15 @@ Not now: 3D models (needs a GLB per product: an image-to-3D service with balance
 
 Kit specs in apps/api (jsdom harness like source-commerce-atelier.spec.ts) for each kit change; rebuild commerce.js and
 the Studio; look at Pulso Studio's product page in the browser at desktop and phone width.
+
+## Progress (overnight 2026-10-19)
+
+Done and committed: the surfaces' token names (dbca0853); story steps with a sticky stage (046d6f9f, 8be97b0f); first builds
+get atelier on the style card path too (654bf95a); the touch keeps the premium bar (38e24cb5); the header keeps at most
+four links (2c2e57d9, af36c8c2); plain controls (b155696f); atelier reviews and empty template slots (f25edd05); the atelier
+catalog card (d1fbd115); the one-time reveal (10fe53fb); the commerce.js cap raised to 900 000 characters with a headroom
+test (226390d5): every new store's first save was failing.
+
+Seen while testing and still open: the bold style card's drawn hero squeezes its copy into a narrow column before the
+polish lands; on Lana Andina the YAPI product page failed «overlap» and the cart failed «open», so they fell back to the
+platform design.
