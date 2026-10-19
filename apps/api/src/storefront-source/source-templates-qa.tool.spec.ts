@@ -62,10 +62,11 @@ run('QA of the Plantillas at 390 and 1280', async () => {
     // Master templates (spec 2026-10-19): one pass per palette:fonts pair in MASTER_LOOKS (default terracotta:classic).
     // MASTER_VARIANT=hero:full,split-left,… renders one store per listed variant of that part (variety spec QA).
     const [variantPart, variantIds] = (process.env.MASTER_VARIANT || '').split(':');
-    const looks: Array<Record<string, any> | undefined> = manifest.master && variantPart ? variantIds.split(',').map(id => ({ palette: 'terracotta', fonts: 'classic', variants: { [variantPart]: id, sections: [] }, tag: `${variantPart}-${id}` }))
+    const looks: Array<Record<string, any> | undefined> = manifest.master && variantPart ? variantIds.split(',').map(id => ({ palette: 'terracotta', fonts: 'classic', variants: variantPart === 'sections' ? { sections: [id] } : { [variantPart]: id, sections: [] }, tag: `${variantPart}-${id}`,
+      ...(variantPart === 'sections' ? { sections: [{ id, title: 'Así trabajamos', items: [{ title: 'Elegimos', text: 'Cada pieza la elegimos a mano, una por una.' }, { title: 'Preparamos', text: 'Empacamos tu pedido con cuidado el mismo día.' }, { title: 'Te llega', text: 'En La Paz entregamos en 24 horas.' }] }] } : {}) }))
       : manifest.master ? (process.env.MASTER_LOOKS || 'terracotta:classic').split(',').map(pair => { const [palette, fonts] = pair.split(':'); return { palette, fonts }; }) : [undefined];
     for (const look of looks) {
-      const demo = await templateDemoRevision(manifest, source, look ? { look: { palette: look.palette, fonts: look.fonts }, ...(look.variants ? { variants: look.variants } : {}) } : undefined);
+      const demo = await templateDemoRevision(manifest, source, look ? { look: { palette: look.palette, fonts: look.fonts }, ...(look.variants ? { variants: look.variants } : {}), ...(look.sections ? { sections: look.sections } : {}) } : undefined);
       const prefix = `${manifest.id}${look ? `-${look.tag ?? `${look.palette}-${look.fonts}`}` : ''}`;
       const product = demo.files.find(f => f.path === `assets/template-${manifest.id}-p1.jpg`);
       if (!product) throw new Error(`${manifest.id}: no p1 demo photo`);

@@ -77,3 +77,26 @@ test('the product page reads its layout and section order from the roll, and kee
   const css = file('styles/globals.css');
   for (const order of esencial.master.variants.pdpOrder) assert.match(css, new RegExp(`data-es-pdp-order="${order}"`), order);
 });
+
+test('every catalogued business section and look detail has its own styles', () => {
+  const css = file('styles/globals.css');
+  for (const id of esencial.master.sections) assert.match(css, new RegExp(`data-es-section="${id}"`), `section ${id}`);
+  for (const part of ['button', 'corners', 'density', 'texture', 'photos']) for (const id of esencial.master.variants[part]) assert.match(css, new RegExp(`data-es-${part}="${id}"`), `${part} ${id}`);
+});
+
+test('the home renders the business sections from store-data and the shell carries the look details', () => {
+  assert.match(file('components/home.tsx'), /sections\.map\(/);
+  assert.match(file('components/home.tsx'), /data-es-section=\{/);
+  const shell = file('components/Shell.tsx');
+  for (const part of ['button', 'corners', 'density', 'texture', 'photos']) assert.match(shell, new RegExp(`data-es-${part}=\\{`), part);
+});
+
+test('duotone never touches the product page gallery', () => {
+  assert.doesNotMatch(file('styles/globals.css'), /data-es-photos="duotone"\][^{]*es-pdp/);
+});
+
+test('product photos keep their true colours and the underline button stays readable on photos', () => {
+  const css = file('styles/globals.css');
+  assert.doesNotMatch(css, /data-es-photos="duotone"\][^{]*es-card/);
+  assert.doesNotMatch(css, /data-es-button="underline"\][^{]*es-btn--accent\{color:var\(--es-accent\)/);
+});

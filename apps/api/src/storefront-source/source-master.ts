@@ -87,6 +87,15 @@ export function withMasterTheme(css: string, block: string): string {
   return `${block}\n${css}`;
 }
 
+/** The rolled button shape and corners, as the kit's DNA, so kit-drawn parts (cart, checkout, product buy box) match. */
+const DNA_BUTTON: Record<string, string> = { pill: 'pill', soft: 'block', square: 'block', underline: 'underline' };
+const DNA_RADIUS: Record<string, string> = { round: 'round', soft: 'soft', sharp: 'none' };
+export function masterDnaLook(variants: Partial<MasterVariants> | undefined): Record<string, string> {
+  const button = DNA_BUTTON[String(variants?.button)];
+  const radius = DNA_RADIUS[String(variants?.corners)];
+  return { ...(button ? { button } : {}), ...(radius ? { radius } : {}) };
+}
+
 export function masterDnaFonts(settings: MasterSettings, look: MasterLook) {
   const pair = settings.fonts.find(f => f.id === look.fonts) ?? settings.fonts[0];
   return { display: pair.heading, text: pair.body };

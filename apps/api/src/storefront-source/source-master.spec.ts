@@ -1,5 +1,5 @@
 import type { MasterSettings } from '@pagosya/store-templates';
-import { masterColours, masterCopy, masterDnaFonts, masterLook, masterThemeCss, withMasterTheme, MASTER_THEME_START, MASTER_THEME_END } from './source-master';
+import { masterDnaLook, masterColours, masterCopy, masterDnaFonts, masterLook, masterThemeCss, withMasterTheme, MASTER_THEME_START, MASTER_THEME_END } from './source-master';
 import { contrastRatio } from './sketch/sketch-schema';
 
 const values = [{ title: 'Uno', text: 'Primero' }, { title: 'Dos', text: 'Segundo' }, { title: 'Tres', text: 'Tercero' }];
@@ -70,4 +70,14 @@ describe('withMasterTheme', () => {
     expect(withMasterTheme(once, block)).toBe(once);
     expect(withMasterTheme(once, block.replace('#000000', '#ffffff'))).toContain('--es-paper:#ffffff');
   });
+});
+
+describe('masterDnaLook (variety spec §2 look details)', () => {
+  it('maps the rolled button and corners to the kit DNA', () => {
+    expect(masterDnaLook({ button: 'pill', corners: 'round', sections: [] } as any)).toEqual({ button: 'pill', radius: 'round' });
+    expect(masterDnaLook({ button: 'square', corners: 'sharp', sections: [] } as any)).toEqual({ button: 'block', radius: 'none' });
+    expect(masterDnaLook({ button: 'underline', corners: 'soft', sections: [] } as any)).toEqual({ button: 'underline', radius: 'soft' });
+    expect(masterDnaLook({ button: 'soft', sections: [] } as any)).toEqual({ button: 'block' });
+  });
+  it('adds nothing for a store without rolled variants', () => expect(masterDnaLook(undefined)).toEqual({}));
 });
