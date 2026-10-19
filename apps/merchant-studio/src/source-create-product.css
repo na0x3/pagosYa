@@ -84,3 +84,5 @@
 .product-create-panel .product-badge [data-badge-text], .product-create-panel .product-badge .product-step-help { grid-column: 1 / -1; }
 .product-create-panel .product-badge .product-step-help { margin: 4px 0 0; }
 .product-create-panel [data-badge-count] { justify-self: end; margin-top: -4px; font-size: 12px; font-weight: 400; color: #737373; }
+/* Showcase commerce 2026-10-19: the card phrase field under the highlights. */
+.product-create-panel .product-card-eyebrow { margin-top: 18px; }

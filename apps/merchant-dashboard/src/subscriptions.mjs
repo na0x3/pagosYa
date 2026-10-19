@@ -31,7 +31,7 @@ export function validateOffers(offers) {
 /** Form rows ({ cadence, checked, discountPercent }) and the cadences saved today → what to PATCH and what to DELETE. */
 export function offersPayload(rows, savedCadences) {
   return {
-    upsert: rows.filter(row => row.checked).map(row => ({ cadence: row.cadence, discountPercent: row.discountPercent })),
+    upsert: rows.filter(row => row.checked).map(row => ({ cadence: row.cadence, discountPercent: row.discountPercent, ...(row.label !== undefined ? { label: row.label } : {}) })),
     remove: rows.filter(row => !row.checked && savedCadences.includes(row.cadence)).map(row => row.cadence),
   };
 }

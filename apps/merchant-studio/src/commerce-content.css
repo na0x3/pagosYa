@@ -44,3 +44,10 @@
 .bundle-form .button--publish { width: 100%; }
 @media (max-width: 520px) { .bundle-grid { grid-template-columns: 1fr; } .bundle-card { align-items: flex-start; flex-direction: column; } }
 .brand-dialog .commerce-confirm { display: flex; align-items: center; gap: 8px; margin: 8px 0 12px; }
+/* Showcase commerce 2026-10-19: quantity-discount rows and the merchant's label pill. */
+.bundle-pill--label { background: #e3f1e6; color: #2f5a3a; }
+.bundle-tiers { display: grid; gap: 10px; margin: 0 0 14px; }
+.bundle-tiers[hidden] { display: none; }
+.bundle-tier { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 10px; }
+.brand-dialog .bundle-tier label { margin: 0; }
+@media (max-width: 560px) { .bundle-tier { grid-template-columns: 1fr 1fr; } .bundle-tier label:last-child { grid-column: 1 / -1; } }

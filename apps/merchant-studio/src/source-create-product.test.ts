@@ -504,3 +504,33 @@ it('refuses a custom badge made only of spaces', () => {
   text.value = 'Nuevo';
   expect(text.checkValidity()).toBe(true);
 });
+
+describe('card phrase (showcase commerce 2026-10-19)', () => {
+  const editWith = (record: Record<string, unknown>) => {
+    const api = { updateProduct: vi.fn().mockResolvedValue({ id: 'p1' }), createProduct: vi.fn(), upload: vi.fn(), suggestProductHighlights: vi.fn().mockResolvedValue({ highlights: [] }) }, saved = vi.fn();
+    const guide = createProductForm(api as unknown as MerchantStudioApi, 'store-b', saved, () => {}, { id: 'p1', name: 'Café', amount: 3799, stock: null, imageUrls: [], ...record } as any);
+    document.body.append(guide.element);
+    const field = guide.element.querySelector<HTMLInputElement>('input[name="cardEyebrow"]')!;
+    const save = async () => {
+      for (let i = 0; i < 8; i++) guide.element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce());
+      return api.updateProduct.mock.calls[0][2];
+    };
+    return { field, save };
+  };
+  it('sits in the Destacados step, capped at 28 characters, and saves the trimmed phrase', async () => {
+    const t = editWith({});
+    expect(t.field.maxLength).toBe(28);
+    expect(t.field.closest('[data-guide-step="4"]')).not.toBeNull();
+    t.field.value = ' Elige tu tueste ';
+    expect(await t.save()).toMatchObject({ cardEyebrow: 'Elige tu tueste' });
+  });
+  it('an edit that never had a phrase and leaves it empty sends no cardEyebrow key; clearing a saved one sends null', async () => {
+    expect(await editWith({}).save()).not.toHaveProperty('cardEyebrow');
+    document.body.replaceChildren();
+    const saved = editWith({ cardEyebrow: 'Mi frase' });
+    expect(saved.field.value).toBe('Mi frase');
+    saved.field.value = '';
+    expect(await saved.save()).toMatchObject({ cardEyebrow: null });
+  });
+});

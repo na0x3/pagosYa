@@ -218,7 +218,8 @@ export function mountSubscriptionsPanel(deps) {
     const line = CADENCES.map((cadence) => {
       const saved = offers.find((offer) => offer.cadence === cadence);
       return `<div class="subs-offer-row">${uiSwitch({ label: CADENCE_LABEL[cadence], attrs: `name="offer-${cadence}"`, checked: Boolean(saved) })}
-        <label>Descuento <input type="number" name="discount-${cadence}" min="0" max="99" step="1" value="${saved ? esc(saved.discountPercent) : 0}"> %</label></div>`;
+        <label>Descuento <input type="number" name="discount-${cadence}" min="0" max="99" step="1" value="${saved ? esc(saved.discountPercent) : 0}"> %</label>
+        <label>Etiqueta <input name="label-${cadence}" maxlength="24" placeholder="Ej.: La favorita" value="${esc(saved?.label || "")}"></label></div>`;
     }).join("");
     return `<div class="subs-offer-form">${line}<div class="subs-offer-actions"><button type="button" class="primary" data-save-offers>Guardar</button><button type="button" class="subs-quiet" data-cancel-edit>Cancelar</button></div></div>`;
   }
@@ -291,7 +292,7 @@ export function mountSubscriptionsPanel(deps) {
       if (target.hasAttribute("data-cancel-edit")) { state.editing = null; render(); return; }
       if (target.hasAttribute("data-save-offers")) {
         const productId = state.editing;
-        const rows = CADENCES.map((cadence) => ({ cadence, checked: root.querySelector(`[name="offer-${cadence}"]`).checked, discountPercent: Number(root.querySelector(`[name="discount-${cadence}"]`).value) }));
+        const rows = CADENCES.map((cadence) => ({ cadence, checked: root.querySelector(`[name="offer-${cadence}"]`).checked, discountPercent: Number(root.querySelector(`[name="discount-${cadence}"]`).value), label: root.querySelector(`[name="label-${cadence}"]`).value.trim() }));
         const saved = (state.offers.get(productId) || []).map((offer) => offer.cadence);
         const { upsert, remove } = offersPayload(rows, saved);
         // Removing every frequency is allowed when some were saved; an empty form on a product with none is not.

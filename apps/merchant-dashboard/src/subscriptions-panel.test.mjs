@@ -44,3 +44,27 @@ test('Configuración offers subscriptions with a switch and frequencies with sec
   assert.equal(cadence.getAttribute('role'), 'switch');
   assert.equal(cadence.closest('label').className, 'ui-inline-switch');
 });
+
+test('each frequency takes an optional label of up to 24 characters, sent with the offer (showcase commerce 2026-10-19)', async () => {
+  const { window } = new JSDOM('<div id="subscriptionsRoot"></div>');
+  globalThis.document = window.document;
+  const calls = [];
+  const api = async (path, init) => {
+    if (init?.method) { calls.push({ path, init }); return []; }
+    if (path.endsWith('/summary')) return structuredClone(SUMMARY);
+    if (path.includes('/payment_links/')) return [{ cadence: 'MONTHLY', discountPercent: 10, label: 'La favorita' }];
+    return { items: [], nextCursor: null };
+  };
+  const panel = mountSubscriptionsPanel({ api, signedIn: () => true, storeId: () => 'store_1', products: () => [{ id: 'p1', name: 'Café', fulfillmentType: 'PHYSICAL' }] });
+  const root = window.document.getElementById('subscriptionsRoot');
+  panel.show(); await settle();
+  root.querySelector('[data-tab="settings"]').click(); await settle();
+  root.querySelector('[data-edit="p1"]').click(); await settle();
+  const label = root.querySelector('input[name="label-MONTHLY"]');
+  assert.equal(label.maxLength, 24);
+  assert.equal(label.value, 'La favorita');
+  label.value = ' Ahorra más ';
+  root.querySelector('[data-save-offers]').click(); await settle();
+  const patch = calls.find(call => call.init.method === 'PATCH');
+  assert.deepEqual(JSON.parse(patch.init.body).options, [{ cadence: 'MONTHLY', discountPercent: 10, label: 'Ahorra más' }]);
+});
