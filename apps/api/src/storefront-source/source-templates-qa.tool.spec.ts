@@ -32,10 +32,25 @@ function withCatalog(files: { path: string; content: string; encoding?: string }
     config.demo = true; // simulated checkout, and add-to-cart without a backend
     if (variant !== 'demo') config.data.items = config.data.items.slice(0, 1);
     if (variant === 'long') config.data.items[0] = { ...config.data.items[0], name: LONG_NAME, amount: 1_250_000, imageUrls: [PORTRAIT] };
+    if (process.env.QA_SHOWCASE === '1') withShowcaseData(config.data);
     return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` };
   });
   if (variant === 'long') out.push({ path: PORTRAIT, content: portrait.toString('base64'), encoding: 'base64' });
   return out;
+}
+
+/** QA_SHOWCASE=1 (showcase commerce 2026-10-19): packs, a labelled subscription, a card phrase, points and colour/size options
+ *  on the first products, and 6+ products so the shop page shows its filters. Default QA stays as it was. */
+function withShowcaseData(data: any) {
+  const base = data.items;
+  while (data.items.length < 6) data.items.push({ ...base[data.items.length % base.length], id: `qa-extra-${data.items.length}`, name: `${base[data.items.length % base.length].name} · ${data.items.length + 1}` });
+  const [first, second] = data.items;
+  Object.assign(data, { bundlesEnabled: true, subscriptionsEnabled: true, bundles: [
+    { id: 'qa-pack-2', name: 'Lleva 2', kind: 'FIXED', items: [{ productId: first.id, quantity: 2 }], minimumQuantity: 2, discountPercent: 10 },
+    { id: 'qa-pack-3', name: 'Lleva 3', kind: 'FIXED', items: [{ productId: first.id, quantity: 3 }], minimumQuantity: 2, discountPercent: 15, label: 'Recomendado' },
+  ] });
+  Object.assign(first, { cardEyebrow: 'Elige tu favorito', highlights: [{ icon: 'leaf', label: 'Hecho a mano' }, { icon: 'truck', label: 'Envío en 24 h' }, { icon: 'heart', label: 'Para regalar' }], subscriptionOptions: [{ cadence: 'MONTHLY', discountPercent: 10, label: 'La favorita' }] });
+  if (second) Object.assign(second, { variants: ['Rojo', 'Azul', 'Negro'].flatMap((colour, c) => ['S', 'M'].map((size, s) => ({ id: `qa-v-${c}-${s}`, name: `${colour} / ${size}`, amount: second.amount, stock: 5, options: [{ name: 'Color', value: colour }, { name: 'Talla', value: size }] }))) });
 }
 
 const settle = async (page: Page) => {

@@ -320,7 +320,7 @@
     '[data-pagosya-catalog] .menu-item__eyebrow{margin:6px 0 0;font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.7}',
     '[data-pagosya-catalog] .menu-item__points{list-style:none;margin:6px 0;padding:0;display:grid;gap:3px;font-size:13px}',
     '[data-pagosya-catalog] .menu-item__points li::before{content:"✓";margin-right:6px;color:var(--store-accent,currentColor)}',
-    '[data-pagosya-catalog] .menu-item__chips{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}',
+    '[data-pagosya-catalog] .menu-item__chips{display:flex;flex-wrap:wrap;align-items:center;align-content:flex-start;gap:4px;margin:6px 0}',
     '[data-pagosya-catalog] .menu-item__chips span{font-size:10px;font-weight:700;letter-spacing:.06em;border:1px solid currentColor;border-radius:99px;padding:3px 8px;opacity:.85}',
     '[data-pagosya-catalog] .menu-item__chips [data-swatch]{width:14px;height:14px;padding:0;border-radius:50%;background:var(--swatch);border-color:rgba(0,0,0,.2)}',
     '[data-pagosya-catalog] .menu-item__deal{margin:4px 0;font-size:12px;font-weight:700;color:#2e7d4f}',
