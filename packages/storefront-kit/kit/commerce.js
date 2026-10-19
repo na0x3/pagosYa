@@ -1053,7 +1053,7 @@
     [data-pagosya-product][data-style=atelier] .product-detail__assurances li div{display:grid;gap:2px}
     [data-pagosya-product][data-style=atelier] .product-detail__assurances strong{font-size:12px;font-weight:600}
     [data-pagosya-product][data-style=atelier] .product-detail__assurances span{font-size:11px;color:var(--pd-muted)}
-    [data-pagosya-product][data-style=atelier] [data-product-count]{position:absolute;right:16px;bottom:14px;padding:4px 8px;font:500 12px/1 var(--pd-body);letter-spacing:.08em;color:var(--pd-muted);background:color-mix(in srgb,var(--pd-paper) 82%,transparent)}
+    [data-pagosya-product][data-style=atelier] [data-product-count]{position:static;font:500 12px/1 var(--pd-body);letter-spacing:.08em}
     [data-pagosya-product][data-style=atelier] .product-detail__thumbnails button[aria-pressed=true]{outline:1px solid var(--pd-ink);outline-offset:2px}
     /* The atelier card (2026-10-19, the Amboras references): a clean photo that zooms inside its own frame, the name in the
      * heading font, a quiet price, and one tracked full-width «Agregar» with a bag. Inside the DNA layer, more specific than
