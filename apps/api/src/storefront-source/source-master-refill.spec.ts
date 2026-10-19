@@ -61,4 +61,15 @@ describe('master store data', () => {
     const out = refillMasterFiles(storeFiles(), manifest, { heroPhoto: '/v1/uploads/new.jpg' }, new URL('https://api.pagosya.test/v1'));
     expect(readMasterState(out).photos.hero).toBe('https://api.pagosya.test/v1/uploads/new.jpg');
   });
+
+  it('round-trips the rolled variants and business sections, and a refill keeps them (variety spec §2)', () => {
+    const variants = { hero: 'arch', grid: 'feature', sections: ['process'] } as any;
+    const sections = [{ id: 'process', title: 'Del cafetal a tu taza', items: [{ title: 'Cosecha', text: 'A mano.' }] }];
+    const files = [templateStoreDataFile({ name: 'Café' }, { hero: '' }, { copy: masterCopy(master), look: masterLook(master), variants, sections }), ...storeFiles().slice(1)];
+    expect(readMasterState(files).variants).toEqual(variants);
+    expect(readMasterState(files).sections).toEqual(sections);
+    const out = refillMasterFiles(files, manifest, { copy: { headline: 'Otro' } });
+    expect(readMasterState(out).variants).toEqual(variants);
+    expect(readMasterState(out).sections).toEqual(sections);
+  });
 });

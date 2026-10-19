@@ -2,7 +2,7 @@
  * authored source never contains merchant text; it imports `./store-data`, which this module writes with every value
  * JSON-encoded, so no store name or photo URL is ever pasted into JSX. */
 import type { MasterCopy } from '@pagosya/store-templates';
-import { masterCopy, masterDnaFonts, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook } from './source-master';
+import { masterCopy, masterDnaFonts, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
 import { readFile } from 'node:fs/promises';
 import { templateDemoPhoto, type TemplateManifest } from '@pagosya/store-templates';
 import { kitPath } from '@pagosya/storefront-kit';
@@ -46,14 +46,16 @@ export function fillTemplatePhotos(manifest: Pick<TemplateManifest, 'id' | 'phot
   return { photos, demoSlots };
 }
 
-export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook }): SourceProjectFileDto {
+export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[] }): SourceProjectFileDto {
   const data = { name: store.name, tagline: store.tagline ?? '', city: store.city ?? '', logo: store.logo ?? '', phone: store.phone ?? '' };
   return {
     path: TEMPLATE_STORE_DATA_PATH,
     content: `// Written by pagosYa when the template is applied. Edit the store's name and photos in the Studio.\n`
       + `export const store = ${JSON.stringify(data)} as const;\n`
       + `export const photos: Record<string, string> = ${JSON.stringify(photos)};\n`
-      + (master ? `export const copy = ${JSON.stringify(master.copy)} as const;\nexport const look = ${JSON.stringify(master.look)} as const;\n` : ''),
+      + (master ? `export const copy = ${JSON.stringify(master.copy)} as const;\nexport const look = ${JSON.stringify(master.look)} as const;\n`
+        + `export const variants: Record<string, string | string[]> = ${JSON.stringify(master.variants ?? { sections: [] })};\n`
+        + `export const sections: Array<{ id: string; title: string; items: Array<{ title: string; text: string }> }> = ${JSON.stringify(master.sections ?? [])};\n` : ''),
   };
 }
 
@@ -70,6 +72,8 @@ export function readMasterState(files: readonly SourceProjectFileDto[]) {
     photos: (dataLine(content, 'photos') ?? {}) as Record<string, string>,
     copy: dataLine(content, 'copy') as MasterCopy | undefined,
     look: dataLine(content, 'look') as MasterLook | undefined,
+    variants: dataLine(content, 'variants') as MasterVariants | undefined,
+    sections: dataLine(content, 'sections') as MasterSection[] | undefined,
   };
 }
 
@@ -84,7 +88,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   const photos = { ...state.photos, ...(change.heroPhoto !== undefined ? { hero: masterPhotoUrl(change.heroPhoto, apiUrl) } : {}), ...(change.storyPhoto !== undefined ? { story: masterPhotoUrl(change.storyPhoto, apiUrl) } : {}) };
   const theme = masterThemeCss(settings, look);
   return files.map(file => {
-    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look });
+    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants: { ...(state.variants ?? { sections: [] }), ...(change.variants ?? {}) } as MasterVariants, sections: change.sections ?? state.sections ?? [] });
     if (file.path === 'styles/globals.css') return { ...file, content: withMasterTheme(file.content, theme) };
     if (file.path === 'config.js') {
       const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);

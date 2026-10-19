@@ -22,13 +22,18 @@ function validateMaster(id, master) {
   const copy = master.copy || {};
   for (const key of MASTER_COPY_KEYS) if (typeof copy[key] !== 'string') fail(id, `master.copy.${key}`, 'must be text');
   if (!Array.isArray(copy.values) || copy.values.length !== 3 || copy.values.some(v => !v || typeof v.title !== 'string' || typeof v.text !== 'string')) fail(id, 'master.copy.values', 'must be three { title, text }');
-  if (!Array.isArray(master.palettes) || master.palettes.length !== 8) fail(id, 'master.palettes', 'must list eight palettes');
+  if (!Array.isArray(master.palettes) || master.palettes.length < 8) fail(id, 'master.palettes', 'must list at least eight palettes');
   for (const p of master.palettes) {
     if (!p || !SLOT.test(p.id) || typeof p.name !== 'string') fail(id, 'master.palettes', 'need an id and a name');
     for (const key of ['paper', 'ink', 'muted', 'accent', 'deep']) if (!HEX.test(p[key])) fail(id, `master palette ${p.id}`, `${key} must be #rrggbb`);
   }
-  if (!Array.isArray(master.fonts) || master.fonts.length !== 8) fail(id, 'master.fonts', 'must list eight font pairs');
+  if (!Array.isArray(master.fonts) || master.fonts.length < 8) fail(id, 'master.fonts', 'must list at least eight font pairs');
   for (const f of master.fonts) if (!f || !SLOT.test(f.id) || typeof f.name !== 'string' || !SLOT.test(f.heading) || !SLOT.test(f.body)) fail(id, 'master.fonts', 'need id, name, heading and body font ids');
+  if (master.variants !== undefined) {
+    if (!master.variants || typeof master.variants !== 'object') fail(id, 'master.variants', 'must map parts to variant ids');
+    for (const [part, ids] of Object.entries(master.variants)) if (!Array.isArray(ids) || !ids.length || ids.some(v => !SLOT.test(v))) fail(id, `master.variants.${part}`, 'must list variant ids');
+  }
+  if (master.sections !== undefined && (!Array.isArray(master.sections) || master.sections.some(v => !SLOT.test(v)))) fail(id, 'master.sections', 'must list section ids');
 }
 
 function validate(dir, id) {

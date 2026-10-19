@@ -10,8 +10,10 @@ const file = path => source.find(f => f.path === path)?.content ?? '';
 
 test('esencial is the hidden master template', () => {
   assert.equal(esencial.hidden, true);
-  assert.equal(esencial.master.palettes.length, 8);
-  assert.equal(esencial.master.fonts.length, 8);
+  assert.equal(esencial.master.palettes.length, 16);
+  assert.equal(esencial.master.fonts.length, 14);
+  assert.equal(esencial.master.variants.hero.length, 10);
+  assert.equal(esencial.master.sections.length, 10);
   assert.deepEqual(esencial.photos.map(p => p.slot), ['hero', 'story', 'p1', 'p2', 'p3', 'p4']);
   assert.ok(!templates.galleryTemplates().some(t => t.id === 'esencial'));
 });

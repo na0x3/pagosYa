@@ -1,0 +1,45 @@
+/** Variety spec §3: the platform's dice over Esencial's finished variants, seeded by the store. The fill call only says
+ *  the business's character and what does not fit; the roll chooses everything else, and never repeats the hero +
+ *  palette + font pair of the last master stores. */
+import { createHash } from 'node:crypto';
+import type { MasterSettings } from '@pagosya/store-templates';
+import type { MasterCharacter, MasterVariants } from './source-master';
+
+/** Variants that need more than one photo to look right. */
+const PHOTO_NEEDS: Record<string, number> = { collage: 3, strip: 3, pair: 2 };
+const PALETTE_TONE: Record<string, 'bold' | 'calm'> = { ember: 'bold', cobalt: 'bold', citrus: 'bold', ink: 'bold', wine: 'bold', noir: 'bold' };
+const PALETTE_TEMP: Record<string, 'warm' | 'cool' | 'neutral'> = {
+  terracotta: 'warm', olive: 'warm', sand: 'warm', plum: 'warm', ember: 'warm', blush: 'warm', moss: 'warm', citrus: 'warm', wine: 'warm', noir: 'warm',
+  sage: 'cool', navy: 'cool', cobalt: 'cool', ink: 'cool', mono: 'neutral', linen: 'neutral',
+};
+
+function rng(seed: string) {
+  let counter = 0;
+  return () => createHash('sha256').update(`${seed}:${counter++}`).digest().readUInt32BE(0) / 0x100000000;
+}
+const pick = <T>(next: () => number, list: readonly T[]): T => list[Math.floor(next() * list.length)];
+
+export type RecentRoll = { hero: string; palette: string; fonts: string };
+
+export function rollVariants(input: { seed: string; settings: MasterSettings; character: MasterCharacter; photoCount: number; sections: string[]; recent: RecentRoll[] }): { variants: MasterVariants; palette: string; fonts: string } {
+  const catalogue = (input.settings.variants ?? {}) as Record<string, readonly string[]>;
+  const allowed = (part: string) => {
+    const list = catalogue[part].filter(id => !input.character.exclude.includes(id) && (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
+    return list.length ? list : [catalogue[part][0]];
+  };
+  const palettes = input.settings.palettes.map(p => p.id);
+  const sameTone = palettes.filter(id => (PALETTE_TONE[id] ?? 'calm') === input.character.tone);
+  const fitting = sameTone.filter(id => input.character.temperature === 'neutral' || [input.character.temperature, 'neutral'].includes(PALETTE_TEMP[id] ?? 'neutral'));
+  const palettePool = fitting.length >= 2 ? fitting : sameTone.length ? sameTone : palettes;
+  const fonts = input.settings.fonts.map(f => f.id);
+  const taken = new Set(input.recent.map(r => `${r.hero}|${r.palette}|${r.fonts}`));
+  const sections = input.sections.filter(id => (input.settings.sections ?? []).includes(id)).slice(0, 2);
+  let last: { variants: MasterVariants; palette: string; fonts: string } | undefined;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const next = rng(`${input.seed}#${attempt}`);
+    const variants = Object.fromEntries(Object.keys(catalogue).map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
+    last = { variants: { ...variants, sections } as MasterVariants, palette: pick(next, palettePool), fonts: pick(next, fonts) };
+    if (!taken.has(`${last.variants.hero}|${last.palette}|${last.fonts}`)) return last;
+  }
+  return last!;
+}

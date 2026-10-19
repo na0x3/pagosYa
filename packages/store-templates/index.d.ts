@@ -6,7 +6,7 @@ export interface MasterCopy { readonly announcement: string; readonly eyebrow: s
 export interface MasterPalette { readonly id: string; readonly name: string; readonly paper: string; readonly ink: string; readonly muted: string; readonly accent: string; readonly deep: string }
 export interface MasterFontPair { readonly id: string; readonly name: string; readonly heading: string; readonly body: string }
 /** Spec 2026-10-19 master template: default copy, eight palettes and eight font pairs (kit font catalogue ids). */
-export interface MasterSettings { readonly copy: MasterCopy; readonly palettes: readonly MasterPalette[]; readonly fonts: readonly MasterFontPair[] }
+export interface MasterSettings { readonly copy: MasterCopy; readonly palettes: readonly MasterPalette[]; readonly fonts: readonly MasterFontPair[]; readonly variants?: Readonly<Record<string, readonly string[]>>; readonly sections?: readonly string[] }
 export interface TemplateManifest {
   readonly id: string; readonly name: string; readonly category: TemplateCategory; readonly description: string;
   readonly tags: readonly string[]; readonly sitePurpose: 'shop'; readonly order: number; readonly photos: readonly TemplatePhotoSlot[];

@@ -3,18 +3,58 @@
   "name": "Esencial",
   "category": "general",
   "description": "La tienda base de pagosYa: foto a pantalla completa, catálogo claro, historia y valores. Tranquila y profesional.",
-  "tags": ["base", "profesional", "tranquilo"],
+  "tags": [
+    "base",
+    "profesional",
+    "tranquilo"
+  ],
   "sitePurpose": "shop",
   "order": 0,
   "hidden": true,
-  "dna": { "case": "none", "radius": "soft", "border": "hairline", "button": "pill", "hover": "lift", "press": "sink", "motion": "calm", "cart": "drawer", "added": "toast", "card": "second-photo", "frame": "bleed" },
+  "dna": {
+    "case": "none",
+    "radius": "soft",
+    "border": "hairline",
+    "button": "pill",
+    "hover": "lift",
+    "press": "sink",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "second-photo",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
-    { "slot": "story", "role": "lifestyle", "demo": "story.jpg" },
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" }
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
   ],
   "master": {
     "copy": {
@@ -28,33 +68,375 @@
       "storyTitle": "Nuestra historia",
       "storyBody": "Somos un emprendimiento que elige con cuidado cada producto que ofrece.",
       "values": [
-        { "title": "Selección propia", "text": "Elegimos uno por uno lo que ofrecemos." },
-        { "title": "Compra simple", "text": "Agrega al carrito y paga en pocos minutos." },
-        { "title": "Pago seguro", "text": "Paga con QR o tarjeta, protegido por pagosYa." }
+        {
+          "title": "Selección propia",
+          "text": "Elegimos uno por uno lo que ofrecemos."
+        },
+        {
+          "title": "Compra simple",
+          "text": "Agrega al carrito y paga en pocos minutos."
+        },
+        {
+          "title": "Pago seguro",
+          "text": "Paga con QR o tarjeta, protegido por pagosYa."
+        }
       ],
       "closingLine": "Encuentra lo que buscas",
       "closingCta": "Ver todos los productos",
       "tagline": ""
     },
     "palettes": [
-      { "id": "terracotta", "name": "Crema y terracota", "paper": "#f6f1ea", "ink": "#1f1a17", "muted": "#ede6dc", "accent": "#b8553a", "deep": "#2b211c" },
-      { "id": "olive", "name": "Crema y oliva", "paper": "#f4f1e8", "ink": "#1e1f1a", "muted": "#e7e3d6", "accent": "#5f6b3a", "deep": "#2a2e22" },
-      { "id": "mono", "name": "Blanco y negro", "paper": "#ffffff", "ink": "#111111", "muted": "#f2f2f0", "accent": "#111111", "deep": "#111111" },
-      { "id": "sand", "name": "Arena y óxido", "paper": "#f3ece3", "ink": "#241c17", "muted": "#e8ded2", "accent": "#9a4a2a", "deep": "#3a2a20" },
-      { "id": "sage", "name": "Salvia y bosque", "paper": "#eef0ea", "ink": "#1a211c", "muted": "#e1e6dd", "accent": "#2f5d46", "deep": "#1f3a2e" },
-      { "id": "plum", "name": "Rubor y ciruela", "paper": "#f8f0ee", "ink": "#261a21", "muted": "#efe2df", "accent": "#7a3b5c", "deep": "#3b2230" },
-      { "id": "navy", "name": "Piedra y azul marino", "paper": "#f2f1ee", "ink": "#161b26", "muted": "#e5e4df", "accent": "#23395b", "deep": "#1a2436" },
-      { "id": "noir", "name": "Noche y oro", "paper": "#141210", "ink": "#f2ece2", "muted": "#1e1b18", "accent": "#c9a45c", "deep": "#0b0a09" }
+      {
+        "id": "terracotta",
+        "name": "Crema y terracota",
+        "paper": "#f6f1ea",
+        "ink": "#1f1a17",
+        "muted": "#ede6dc",
+        "accent": "#b8553a",
+        "deep": "#2b211c"
+      },
+      {
+        "id": "olive",
+        "name": "Crema y oliva",
+        "paper": "#f4f1e8",
+        "ink": "#1e1f1a",
+        "muted": "#e7e3d6",
+        "accent": "#5f6b3a",
+        "deep": "#2a2e22"
+      },
+      {
+        "id": "mono",
+        "name": "Blanco y negro",
+        "paper": "#ffffff",
+        "ink": "#111111",
+        "muted": "#f2f2f0",
+        "accent": "#111111",
+        "deep": "#111111"
+      },
+      {
+        "id": "sand",
+        "name": "Arena y óxido",
+        "paper": "#f3ece3",
+        "ink": "#241c17",
+        "muted": "#e8ded2",
+        "accent": "#9a4a2a",
+        "deep": "#3a2a20"
+      },
+      {
+        "id": "sage",
+        "name": "Salvia y bosque",
+        "paper": "#eef0ea",
+        "ink": "#1a211c",
+        "muted": "#e1e6dd",
+        "accent": "#2f5d46",
+        "deep": "#1f3a2e"
+      },
+      {
+        "id": "plum",
+        "name": "Rubor y ciruela",
+        "paper": "#f8f0ee",
+        "ink": "#261a21",
+        "muted": "#efe2df",
+        "accent": "#7a3b5c",
+        "deep": "#3b2230"
+      },
+      {
+        "id": "navy",
+        "name": "Piedra y azul marino",
+        "paper": "#f2f1ee",
+        "ink": "#161b26",
+        "muted": "#e5e4df",
+        "accent": "#23395b",
+        "deep": "#1a2436"
+      },
+      {
+        "id": "noir",
+        "name": "Noche y oro",
+        "paper": "#141210",
+        "ink": "#f2ece2",
+        "muted": "#1e1b18",
+        "accent": "#c9a45c",
+        "deep": "#0b0a09"
+      },
+      {
+        "id": "ember",
+        "name": "Brasa",
+        "paper": "#fff4ec",
+        "ink": "#1d120c",
+        "muted": "#fde3d0",
+        "accent": "#e2541b",
+        "deep": "#3a1a0c"
+      },
+      {
+        "id": "cobalt",
+        "name": "Cobalto",
+        "paper": "#f3f5ff",
+        "ink": "#0f1730",
+        "muted": "#e1e6fb",
+        "accent": "#2346d8",
+        "deep": "#0f1730"
+      },
+      {
+        "id": "blush",
+        "name": "Rubor suave",
+        "paper": "#fdf3f4",
+        "ink": "#2b1c20",
+        "muted": "#f6e2e5",
+        "accent": "#c45c78",
+        "deep": "#4a2633"
+      },
+      {
+        "id": "moss",
+        "name": "Musgo",
+        "paper": "#f1efe6",
+        "ink": "#1f2419",
+        "muted": "#e3e1d2",
+        "accent": "#6b7a3a",
+        "deep": "#2d3322"
+      },
+      {
+        "id": "linen",
+        "name": "Lino",
+        "paper": "#f7f3ee",
+        "ink": "#22201d",
+        "muted": "#ebe5dc",
+        "accent": "#22201d",
+        "deep": "#22201d"
+      },
+      {
+        "id": "ink",
+        "name": "Tinta",
+        "paper": "#101418",
+        "ink": "#eef1f4",
+        "muted": "#1a2027",
+        "accent": "#7fb2d9",
+        "deep": "#05080b"
+      },
+      {
+        "id": "wine",
+        "name": "Vino",
+        "paper": "#1a0f12",
+        "ink": "#f4e9ea",
+        "muted": "#28181c",
+        "accent": "#d8a0ad",
+        "deep": "#0e0709"
+      },
+      {
+        "id": "citrus",
+        "name": "Cítrico",
+        "paper": "#fffdf2",
+        "ink": "#1b1b14",
+        "muted": "#fbf5d6",
+        "accent": "#e8a400",
+        "deep": "#2c2a12"
+      }
     ],
     "fonts": [
-      { "id": "classic", "name": "Clásica", "heading": "cormorant-garamond", "body": "dm-sans" },
-      { "id": "modern", "name": "Moderna", "heading": "fraunces", "body": "geist" },
-      { "id": "editorial", "name": "Editorial", "heading": "instrument-serif", "body": "instrument" },
-      { "id": "literary", "name": "Literaria", "heading": "newsreader", "body": "hanken-grotesk" },
-      { "id": "luxury", "name": "Lujo", "heading": "bodoni-moda", "body": "mona-sans" },
-      { "id": "gallery", "name": "Galería", "heading": "gloock", "body": "schibsted-grotesk" },
-      { "id": "heritage", "name": "Tradición", "heading": "crimson-pro", "body": "manrope" },
-      { "id": "caslon", "name": "Caslon", "heading": "libre-caslon-text", "body": "figtree" }
+      {
+        "id": "classic",
+        "name": "Clásica",
+        "heading": "cormorant-garamond",
+        "body": "dm-sans"
+      },
+      {
+        "id": "modern",
+        "name": "Moderna",
+        "heading": "fraunces",
+        "body": "geist"
+      },
+      {
+        "id": "editorial",
+        "name": "Editorial",
+        "heading": "instrument-serif",
+        "body": "instrument"
+      },
+      {
+        "id": "literary",
+        "name": "Literaria",
+        "heading": "newsreader",
+        "body": "hanken-grotesk"
+      },
+      {
+        "id": "luxury",
+        "name": "Lujo",
+        "heading": "bodoni-moda",
+        "body": "mona-sans"
+      },
+      {
+        "id": "gallery",
+        "name": "Galería",
+        "heading": "gloock",
+        "body": "schibsted-grotesk"
+      },
+      {
+        "id": "heritage",
+        "name": "Tradición",
+        "heading": "crimson-pro",
+        "body": "manrope"
+      },
+      {
+        "id": "caslon",
+        "name": "Caslon",
+        "heading": "libre-caslon-text",
+        "body": "figtree"
+      },
+      {
+        "id": "geometric",
+        "name": "Geométrica",
+        "heading": "space-grotesk",
+        "body": "dm-sans"
+      },
+      {
+        "id": "soft",
+        "name": "Suave",
+        "heading": "young-serif",
+        "body": "figtree"
+      },
+      {
+        "id": "poster",
+        "name": "Afiche",
+        "heading": "bebas-neue",
+        "body": "manrope"
+      },
+      {
+        "id": "condensed",
+        "name": "Condensada",
+        "heading": "oswald",
+        "body": "hanken-grotesk"
+      },
+      {
+        "id": "bookish",
+        "name": "Libro",
+        "heading": "newsreader",
+        "body": "newsreader"
+      },
+      {
+        "id": "gallery-sans",
+        "name": "Galería sans",
+        "heading": "syne",
+        "body": "instrument"
+      }
+    ],
+    "variants": {
+      "header": [
+        "classic",
+        "centered",
+        "links",
+        "split",
+        "minimal"
+      ],
+      "announce": [
+        "plain",
+        "ticker",
+        "chip"
+      ],
+      "hero": [
+        "full",
+        "split-left",
+        "split-right",
+        "framed",
+        "collage",
+        "type",
+        "strip",
+        "poster",
+        "arch",
+        "stack"
+      ],
+      "grid": [
+        "grid4",
+        "grid3",
+        "feature",
+        "strip",
+        "list",
+        "masonry"
+      ],
+      "card": [
+        "plain",
+        "framed",
+        "overlay",
+        "hover2",
+        "bar"
+      ],
+      "story": [
+        "split",
+        "quote",
+        "overlay",
+        "pair",
+        "timeline",
+        "note"
+      ],
+      "values": [
+        "numbered",
+        "icons",
+        "cards",
+        "line",
+        "checklist"
+      ],
+      "closing": [
+        "dark",
+        "accent",
+        "photo",
+        "newsletter"
+      ],
+      "footer": [
+        "columns",
+        "bigname",
+        "minimal",
+        "twotone"
+      ],
+      "pdp": [
+        "gallery-left",
+        "gallery-right",
+        "stacked",
+        "sticky-thumbs",
+        "editorial",
+        "split-scroll"
+      ],
+      "pdpOrder": [
+        "story-first",
+        "details-first",
+        "reviews-first"
+      ],
+      "button": [
+        "pill",
+        "soft",
+        "square",
+        "underline"
+      ],
+      "corners": [
+        "round",
+        "soft",
+        "sharp"
+      ],
+      "density": [
+        "airy",
+        "regular",
+        "compact"
+      ],
+      "texture": [
+        "none",
+        "paper",
+        "grain",
+        "lines"
+      ],
+      "photos": [
+        "natural",
+        "rounded",
+        "framed",
+        "duotone"
+      ]
+    },
+    "sections": [
+      "process",
+      "pick",
+      "sizes",
+      "gallery",
+      "faq",
+      "visit",
+      "materials",
+      "howto",
+      "team",
+      "quotes"
     ]
   }
 }

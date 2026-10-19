@@ -16,7 +16,9 @@ const HEX = /^#[0-9a-f]{6}$/i;
 export type MasterColour = 'paper' | 'ink' | 'muted' | 'accent' | 'deep';
 export const MASTER_COLOURS: readonly MasterColour[] = ['paper', 'ink', 'muted', 'accent', 'deep'];
 export type MasterLook = { palette: string; fonts: string; colors: Partial<Record<MasterColour, string>> };
-export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null };
+export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null;
+  /** Variety spec: the business's character, its sections and any variant the merchant named. */
+  character?: MasterCharacter; sections?: MasterSection[]; variants?: Partial<MasterVariants> };
 
 /** a → b by t (0..1), both #rrggbb. */
 const mixHex = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
@@ -107,3 +109,9 @@ export function masterFillFromRead(read: MasterRead, photos: readonly string[], 
     ...(keep('storyPhoto') ? { storyPhoto: photo(read.storyPhoto) } : {}),
   };
 }
+
+/** Variety spec §2–3: the rolled variant per part (header, hero, grid…) plus the chosen business sections. */
+export type MasterVariants = Record<string, string> & { sections: string[] };
+/** What the fill call says about the business; the dice choose within it. */
+export type MasterCharacter = { tone: 'calm' | 'bold'; temperature: 'warm' | 'cool' | 'neutral'; lead: 'photo' | 'text'; exclude: string[] };
+export type MasterSection = { id: string; title: string; items: Array<{ title: string; text: string }> };
