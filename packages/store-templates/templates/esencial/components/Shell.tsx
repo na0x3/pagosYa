@@ -96,7 +96,9 @@ export function Footer() {
   const tagline = copy.tagline || store.tagline;
   // store-data is `as const`: widen so an empty value still type-checks as text.
   const phone: string = store.phone;
-  return <footer className="es-footer">
+  const footer = variant('footer', 'columns');
+  return <footer className="es-footer" data-es-footer={footer}>
+    {footer === 'bigname' ? <p className="es-footer__big" aria-hidden="true">{store.name}</p> : null}
     <div className="es-footer__grid">
       <div className="es-footer__brand"><p className="es-footer__name">{store.name}</p>{tagline ? <p>{tagline}</p> : null}</div>
       <div><h2>Tienda</h2><nav aria-label="Tienda"><a href="productos.html">Todos los productos</a><a href="index.html#historia">Nuestra historia</a></nav></div>

@@ -60,3 +60,10 @@ test('every header variant keeps the login link (login comes with every store)',
   const css = file('styles/globals.css');
   assert.doesNotMatch(css, /data-es-header="[a-z]+"\][^{]*\.es-header__end a\{display:none/);
 });
+for (const part of ['grid', 'card', 'story', 'values', 'closing', 'footer']) variantRules(part);
+
+test('every card variant keeps the kit hooks', () => {
+  const home = file('components/home.tsx');
+  for (const hook of ['data-product-link', 'data-product-field="name"', 'data-product-field="price"', 'data-product-add']) assert.ok(home.includes(hook), hook);
+  assert.match(home, /data-es-card=\{/);
+});
