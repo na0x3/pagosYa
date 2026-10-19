@@ -73,7 +73,12 @@ export async function runSep5AuthorStage(context: Sep5StageContext): Promise<voi
   logger.log(JSON.stringify({ event: 'sep5_author_published', generationId: runId, files: authored.data.files.length, version: SEP5_AUTHOR_VERSION, motion: motionPlan ? motion : 'none', bold: authorInput.boldDefault }));
   const authorable = sep5AuthorableFiles(authored.data.files);
   if (authorable.dropped.length) autoRepairs.push(`dropped platform files the author returned: ${authorable.dropped.join(', ')}`);
-  live.generated = { label: authored.data.label.slice(0, 120) || `Tienda de ${slug}`, files: authorable.files };
+  // A store whose author left out only site.js (Licua Mini 2, 2026-10-19: a finished 6-minute build failed «Faltan archivos:
+  // site.js») gets an empty one: that file only carries the store's own extra page behaviour, the commerce runtime is the
+  // platform's. A missing page or stylesheet still fails the build.
+  const authoredFiles = withSiteScript(authorable.files);
+  if (authoredFiles !== authorable.files) { autoRepairs.push('site.js: the author returned none; an empty one was added.'); logger.warn(JSON.stringify({ event: 'sep5_site_js_added', generationId: runId })); }
+  live.generated = { label: authored.data.label.slice(0, 120) || `Tienda de ${slug}`, files: authoredFiles };
   // The Sep-5 run validated only the project contract (apps/api/sep5-run.mjs). The presentation and
   // visual-system contracts were written later, against engine output; holding authored source to them
   // would reject the designs this path exists to reproduce. The project contract still applies.
@@ -107,4 +112,10 @@ export async function runSep5AuthorStage(context: Sep5StageContext): Promise<voi
     live.sep5Review = createSep5Review({ facts, live, sep5SelfReview, kitTouchOn, playbookEntry, playbookEvidence, authorInput, draftFiles, draftPreview, addSep5StandardPages, acceptCandidate, sep5Call, touchCall, controls, assembleSave });
   }
   await addSep5StandardPages();
+}
+
+/** The authored files with an empty site.js when the author returned none; the same array when it did. */
+export function withSiteScript<F extends { path: string; content: string }>(files: F[]): F[] {
+  if (files.some(file => file.path === 'site.js')) return files;
+  return [...files, { path: 'site.js', content: '/* Esta tienda no necesita código propio en site.js. */\n' } as F];
 }
