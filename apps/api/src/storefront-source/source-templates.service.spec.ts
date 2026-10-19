@@ -83,6 +83,22 @@ describe('SourceTemplatesService', () => {
     return { templates, projects, prisma };
   }
 
+  it('bundles the master hero and story photos into the store, so its pages never load them from the API (live check fix)', async () => {
+    const { templates: base, projects, prisma } = service(0);
+    const real = jest.requireActual('@pagosya/store-templates');
+    const uploads = { getBuffer: jest.fn(async () => Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])) };
+    (prisma as any).mediaAsset = { findMany: jest.fn(async () => [{ url: '/v1/uploads/aaaaaaaa-0000-0000-0000-000000000002.jpg' }]) };
+    const templates = new SourceTemplatesService(prisma as any, (base as any).publicStores, projects as any, (base as any).config, uploads as any);
+    templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ heroPhoto: '/v1/uploads/aaaaaaaa-0000-0000-0000-000000000002.jpg', storyPhoto: 'https://elsewhere.test/x.jpg' }));
+    const files = (projects.save.mock.calls[0] as any[])[2].files as Array<{ path: string; content: string }>;
+    const data = files.find(f => f.path === 'components/store-data.tsx')!.content;
+    const hero = /"hero":"(assets\/image-[a-f0-9]{12}\.jpg)"/.exec(data)?.[1];
+    expect(hero).toBeDefined();
+    expect(files.some(f => f.path === hero)).toBe(true);
+    expect(data).toContain('"story":""');
+  });
+
   it('saves the template as the next revision and switches a first site to payment checkout', async () => {
     const { templates, projects, prisma } = service(0);
     const saved = await templates.apply('m1', 'store-1', 'prueba', 0);

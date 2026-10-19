@@ -130,6 +130,8 @@ export async function assembleTemplateRevision(input: {
   apiUrl: URL; checkoutOrigin?: string; firstRevision: boolean; previousBrief?: SourceProjectBriefDto;
   /** Master templates only (spec 2026-10-19): the filled copy, look and photo choices; and false keeps demo photos out. */
   fill?: MasterFill; demoPhotos?: boolean;
+  /** Bundled photo assets the fill points at (assets/image-…). */
+  extraFiles?: SourceProjectFileDto[];
 }): Promise<{ label: string; brief: SourceProjectBriefDto; files: SourceProjectFileDto[] }> {
   const { manifest } = input;
   const data = sourceStoreConfigData(input.publicStore, input.apiUrl, input.firstRevision);
@@ -157,7 +159,7 @@ export async function assembleTemplateRevision(input: {
   };
   const visualSystem = buildSourceVisualSystem('auto', sourceAssetInventory(demoAssets));
   const files = await withSourceMotion(await withSourceCommerceDesign(await withSourceFonts(await withSourceAssets([
-    ...authored, ...scaffold, ...kitFiles, ...demoAssets,
+    ...authored, ...scaffold, ...kitFiles, ...demoAssets, ...(input.extraFiles ?? []),
     { path: 'brand.css', content: '/* No confirmed brand tokens. */' },
     { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(visualSystem, authored), null, 2) + '\n' },
     { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};\n` },

@@ -1,4 +1,8 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import sharp from 'sharp';
+import { UploadsService } from '../uploads/uploads.service';
+import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import { BUNDLED_PHOTO, bundledPhotoPath, uploadPath } from './source-product-photos';
 import { ConfigService } from '@nestjs/config';
 import * as registry from '@pagosya/store-templates';
 import { PrismaService } from '../prisma/prisma.service';
@@ -18,14 +22,14 @@ export class SourceTemplatesService {
   /** The template registry; replaceable in tests. */
   registry: Pick<typeof registry, 'galleryTemplates' | 'templateManifest' | 'templateSourceFiles'> = registry;
 
-  constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly config: ConfigService) {}
+  constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly config: ConfigService, @Optional() private readonly uploads?: UploadsService) {}
 
   list() {
     return this.registry.galleryTemplates().map(({ id, name, category, description, tags, order }) => ({ id, name, category, description, tags, order }));
   }
 
   /** The pieces `apply` saves and `preview` shows: the template filled with this store's name, products and photos. */
-  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill) {
+  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[]) {
     const manifest = this.registry.templateManifest(templateId);
     if (!manifest) throw new NotFoundException('Esa plantilla no existe.');
     const current = await this.projects.current(merchantId, storeId);
@@ -36,7 +40,7 @@ export class SourceTemplatesService {
       manifest, source: this.registry.templateSourceFiles(manifest.id), storeId, slug: current.slug, publicStore,
       apiUrl: sourcePublicApiUrl(this.config), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), firstRevision: current.revision === 0,
       previousBrief: (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.brief,
-      fill, demoPhotos: !manifest.master,
+      fill, demoPhotos: !manifest.master, extraFiles,
     });
     return { current, assembled };
   }
@@ -49,8 +53,10 @@ export class SourceTemplatesService {
     const current = await this.projects.current(merchantId, storeId);
     const publicStore = await this.publicStores.getStorePublic(current.slug, { trackView: false, ownerMerchantId: merchantId });
     const facts: MasterFacts = { storeName: publicStore.storeName, products: publicStore.items.map(item => item.name), photos: [...new Set(publicStore.items.flatMap(item => item.imageUrls ?? []))] };
-    const fill = await filler(facts).catch(() => null);
-    const { assembled } = await this.assemble(merchantId, storeId, MASTER_TEMPLATE_ID, revision, fill ?? undefined);
+    const filled = await filler(facts).catch(() => null);
+    const bundled = filled ? await this.bundleMasterPhotos(merchantId, filled) : { change: undefined, files: [] };
+    const fill = bundled.change ?? null;
+    const { assembled } = await this.assemble(merchantId, storeId, MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
     return { ...saved, filled: Boolean(fill) };
@@ -62,7 +68,33 @@ export class SourceTemplatesService {
     const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
     const manifest = snapshot.brief?.templateId ? this.registry.templateManifest(snapshot.brief.templateId) : undefined;
     if (!manifest?.master) throw new BadRequestException('Esta tienda no usa la plantilla base.');
-    return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: refillMasterFiles(snapshot.files, manifest, change, sourcePublicApiUrl(this.config)) });
+    const bundled = await this.bundleMasterPhotos(merchantId, change);
+    const files = refillMasterFiles(snapshot.files, manifest, bundled.change, sourcePublicApiUrl(this.config));
+    return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: [...files, ...bundled.files.filter(asset => !files.some(file => file.path === asset.path))] });
+  }
+
+  /** Live check 2026-10-19: the master hero and story photos are bundled into the store like any authored photo (the
+   *  preview and the agent's checks cannot load images from the API). Only the merchant's own uploads; anything else is
+   *  dropped. Over 2 MB is scaled down. Without the uploads service (tests) the value is left as it is. */
+  private async bundleMasterPhotos(merchantId: string, change: MasterFill): Promise<{ change: MasterFill; files: SourceProjectFileDto[] }> {
+    const out: MasterFill = { ...change };
+    const files: SourceProjectFileDto[] = [];
+    if (!this.uploads) return { change: out, files };
+    for (const key of ['heroPhoto', 'storyPhoto'] as const) {
+      const value = change[key];
+      if (!value || BUNDLED_PHOTO.test(value)) continue;
+      const path = uploadPath(value);
+      const match = /^\/v1\/uploads\/([a-f0-9-]+\.(png|jpe?g|webp))$/i.exec(path);
+      const owned = match ? (await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: [path] } }, select: { url: true } })).length > 0 : false;
+      let bytes: Buffer | null = owned ? await this.uploads.getBuffer(match![1]).catch(() => null) : null;
+      let name = path;
+      if (bytes && bytes.length > 2_000_000) { bytes = await sharp(bytes).resize({ width: 1800, withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer().catch(() => null); name = path.replace(/\.[a-z]+$/i, '.jpg'); }
+      if (!bytes) { out[key] = ''; continue; }
+      const asset = bundledPhotoPath(bytes, name);
+      if (!files.some(file => file.path === asset)) files.push({ path: asset, content: bytes.toString('base64'), encoding: 'base64' });
+      out[key] = asset;
+    }
+    return { change: out, files };
   }
 
   private readonly demos = new Map<string, Promise<SourceProjectSnapshot>>();
