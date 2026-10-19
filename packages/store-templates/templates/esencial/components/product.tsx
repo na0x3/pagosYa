@@ -1,26 +1,28 @@
-import Shell from './Shell';
+import Shell, { variant } from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
 export default function Product() {
   return <Shell>
     <ProductPageTemplate>
-      <article className="es-pdp">
+      <article className="es-pdp" data-es-pdp={variant('pdp', 'gallery-left')} data-es-pdp-order={variant('pdpOrder', 'story-first')}>
         <KitSlot kind="product" name="breadcrumb" className="es-pdp__crumbs" />
         <div className="es-pdp__grid">
           <KitSlot kind="product" name="gallery" className="es-pdp__gallery" />
           <div className="es-pdp__info">
             <KitSlot kind="product" name="title" className="es-pdp__title" />
-            <KitSlot kind="product" name="rating" />
+            <KitSlot kind="product" name="rating" className="es-pdp__rating" />
             <KitSlot kind="product" name="pricing" className="es-pdp__price" />
             <KitSlot kind="product" name="description" className="es-pdp__desc" />
-            <KitSlot kind="product" name="buy" />
-            <KitSlot kind="product" name="highlights" />
-            <KitSlot kind="product" name="delivery" />
-            <KitSlot kind="product" name="info" />
+            <KitSlot kind="product" name="buy" className="es-pdp__buy" />
+            <KitSlot kind="product" name="highlights" className="es-pdp__highlights" />
+            <KitSlot kind="product" name="delivery" className="es-pdp__delivery" />
+            <KitSlot kind="product" name="info" className="es-pdp__more" />
           </div>
         </div>
-        <KitSlot kind="product" name="reviews" />
-        <KitSlot kind="product" name="related" />
+        <div className="es-pdp__below">
+          <KitSlot kind="product" name="reviews" className="es-pdp__reviews" />
+          <KitSlot kind="product" name="related" className="es-pdp__related" />
+        </div>
       </article>
     </ProductPageTemplate>
     <main id="contenido" className="es-page" data-pagosya-product-page />

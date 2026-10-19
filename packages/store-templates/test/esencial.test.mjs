@@ -67,3 +67,13 @@ test('every card variant keeps the kit hooks', () => {
   for (const hook of ['data-product-link', 'data-product-field="name"', 'data-product-field="price"', 'data-product-add']) assert.ok(home.includes(hook), hook);
   assert.match(home, /data-es-card=\{/);
 });
+for (const part of ['pdp']) variantRules(part);
+
+test('the product page reads its layout and section order from the roll, and keeps every kit slot', () => {
+  const page = file('components/product.tsx');
+  assert.match(page, /data-es-pdp=\{/);
+  assert.match(page, /data-es-pdp-order=\{/);
+  for (const slot of ['breadcrumb', 'gallery', 'title', 'rating', 'pricing', 'description', 'buy', 'highlights', 'delivery', 'info', 'reviews', 'related']) assert.match(page, new RegExp(`name="${slot}"`), slot);
+  const css = file('styles/globals.css');
+  for (const order of esencial.master.variants.pdpOrder) assert.match(css, new RegExp(`data-es-pdp-order="${order}"`), order);
+});
