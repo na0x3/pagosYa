@@ -95,3 +95,26 @@ test('the real gallery is the full list minus hidden ones, and hidden ones still
   assert.deepEqual(templates.galleryTemplates().map(t => t.id), all.filter(t => !t.hidden).map(t => t.id));
   for (const t of all.filter(t => t.hidden)) assert.equal(templates.templateManifest(t.id).id, t.id);
 });
+
+// Spec 2026-10-19 master template: a manifest may carry a `master` block (default copy, eight palettes, eight font pairs).
+const masterManifest = master => ({ id: 'base', name: 'Base', category: 'general', description: 'x', tags: [], sitePurpose: 'shop', order: 1, hidden: true, photos: [], master });
+const palette = id => ({ id, name: id, paper: '#ffffff', ink: '#111111', muted: '#eeeeee', accent: '#aa3300', deep: '#222222' });
+const pair = id => ({ id, name: id, heading: 'fraunces', body: 'geist' });
+const eight = make => [1, 2, 3, 4, 5, 6, 7, 8].map(n => make(`p${n}`));
+const masterCopy = { announcement: '', eyebrow: 'e', headline: 'h', subcopy: 's', primaryCta: 'p', secondaryCta: 's', productsTitle: 't', storyTitle: 't', storyBody: 'b', values: [{ title: 'a', text: 'b' }, { title: 'a', text: 'b' }, { title: 'a', text: 'b' }], closingLine: 'c', closingCta: 'c', tagline: '' };
+const writeManifest = manifest => { const root = mkdtempSync(join(tmpdir(), 'tpl-')); mkdirSync(join(root, 'base'), { recursive: true }); writeFileSync(join(root, 'base', 'template.json'), JSON.stringify(manifest)); return root; };
+
+test('a master manifest with copy, eight palettes and eight font pairs loads', () => {
+  const [{ manifest }] = templates.loadTemplates(writeManifest(masterManifest({ copy: masterCopy, palettes: eight(palette), fonts: eight(pair) })));
+  assert.equal(manifest.master.palettes.length, 8);
+  assert.equal(manifest.category, 'general');
+});
+
+test('a master palette with a colour that is not #rrggbb is rejected', () => {
+  const palettes = eight(palette); palettes[3] = { ...palettes[3], accent: 'red' };
+  assert.throws(() => templates.loadTemplates(writeManifest(masterManifest({ copy: masterCopy, palettes, fonts: eight(pair) }))), /base.*master palette p4/);
+});
+
+test('a master copy without three values is rejected', () => {
+  assert.throws(() => templates.loadTemplates(writeManifest(masterManifest({ copy: { ...masterCopy, values: [] }, palettes: eight(palette), fonts: eight(pair) }))), /base.*master\.copy\.values/);
+});

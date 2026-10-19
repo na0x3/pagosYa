@@ -1,0 +1,52 @@
+import type { MasterSettings, TemplateManifest } from '@pagosya/store-templates';
+import { fillTemplatePhotos, readMasterState, refillMasterFiles, templateStoreDataFile, TEMPLATE_STORE_DATA_PATH } from './source-templates';
+import { MASTER_THEME_START, MASTER_THEME_END, masterCopy, masterLook } from './source-master';
+
+const values = [{ title: 'Uno', text: 'Primero' }, { title: 'Dos', text: 'Segundo' }, { title: 'Tres', text: 'Tercero' }];
+const master: MasterSettings = {
+  copy: { announcement: '', eyebrow: 'Nueva', headline: 'Hecho con cuidado', subcopy: 'Sub', primaryCta: 'Ver', secondaryCta: 'Historia', productsTitle: 'Productos', storyTitle: 'Historia', storyBody: 'Cuerpo', values, closingLine: 'Cierre', closingCta: 'Ver todo', tagline: '' },
+  palettes: [{ id: 'terracotta', name: 'Terracota', paper: '#f6f1ea', ink: '#1f1a17', muted: '#ede6dc', accent: '#b8553a', deep: '#2b211c' }, { id: 'sage', name: 'Salvia', paper: '#eef0ea', ink: '#1a211c', muted: '#e1e6dd', accent: '#2f5d46', deep: '#1f3a2e' }],
+  fonts: [{ id: 'classic', name: 'Clásica', heading: 'cormorant-garamond', body: 'dm-sans' }, { id: 'modern', name: 'Moderna', heading: 'fraunces', body: 'geist' }],
+};
+const manifest = { id: 'esencial', name: 'Esencial', category: 'general', description: 'x', tags: [], sitePurpose: 'shop', order: 0, hidden: true, master,
+  photos: [{ slot: 'hero', role: 'hero', demo: 'hero.jpg' }, { slot: 'story', role: 'lifestyle', demo: 'story.jpg' }] } as unknown as TemplateManifest;
+
+const storeFiles = () => [
+  templateStoreDataFile({ name: 'Café Buna', tagline: '', city: 'La Paz' }, { hero: 'https://x/h.jpg', story: '' }, { copy: masterCopy(master), look: masterLook(master) }),
+  { path: 'styles/globals.css', content: `${MASTER_THEME_START}\n:root{}\n${MASTER_THEME_END}\nbody{margin:0}` },
+  { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ dna: { display: 'cormorant-garamond', text: 'dm-sans', button: 'pill' }, data: {} })};\n` },
+];
+
+describe('master store data', () => {
+  it('no demo photo reaches a store without photos', () => {
+    const { photos, demoSlots } = fillTemplatePhotos(manifest, [], false);
+    expect(photos).toEqual({ hero: '', story: '' });
+    expect(demoSlots).toEqual([]);
+  });
+
+  it('round-trips copy, look and photos through store-data', () => {
+    const state = readMasterState(storeFiles());
+    expect(state.copy?.headline).toBe('Hecho con cuidado');
+    expect(state.look).toEqual({ palette: 'terracotta', fonts: 'classic', colors: {} });
+    expect(state.photos.hero).toBe('https://x/h.jpg');
+  });
+
+  it('refill changes only what was asked and moves the kit DNA fonts with the pair', () => {
+    const files = refillMasterFiles(storeFiles(), manifest, { copy: { headline: 'Café de altura' }, look: { fonts: 'modern' } });
+    const state = readMasterState(files);
+    expect(state.copy?.headline).toBe('Café de altura');
+    expect(state.copy?.subcopy).toBe('Sub');
+    expect(state.look?.palette).toBe('terracotta');
+    expect(files.find(f => f.path === 'styles/globals.css')!.content).toContain('assets/geist.ttf');
+    expect(files.find(f => f.path === 'config.js')!.content).toContain('"display":"fraunces"');
+    expect(files.find(f => f.path === 'config.js')!.content).toContain('"button":"pill"');
+  });
+
+  it('refill restores a deleted theme block and survives a missing copy line', () => {
+    const files = storeFiles().map(f => f.path === 'styles/globals.css' ? { ...f, content: 'body{margin:0}' }
+      : f.path === TEMPLATE_STORE_DATA_PATH ? { ...f, content: f.content.replace(/^export const copy = .*$/m, '') } : f);
+    const out = refillMasterFiles(files, manifest, { look: { palette: 'sage' } });
+    expect(out.find(f => f.path === 'styles/globals.css')!.content.startsWith(MASTER_THEME_START)).toBe(true);
+    expect(readMasterState(out).copy?.headline).toBe('Hecho con cuidado');
+  });
+});

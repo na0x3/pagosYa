@@ -1,6 +1,8 @@
 /** Plantillas (spec 2026-09-25-plantillas-design.md): the per-store pieces a template needs at apply time. A template's
  * authored source never contains merchant text; it imports `./store-data`, which this module writes with every value
  * JSON-encoded, so no store name or photo URL is ever pasted into JSX. */
+import type { MasterCopy } from '@pagosya/store-templates';
+import { masterCopy, masterDnaFonts, masterLook, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook } from './source-master';
 import { readFile } from 'node:fs/promises';
 import { templateDemoPhoto, type TemplateManifest } from '@pagosya/store-templates';
 import { kitPath } from '@pagosya/storefront-kit';
@@ -28,7 +30,7 @@ export const templateDemoPath = (manifest: Pick<TemplateManifest, 'id' | 'photos
  * photos left over (second photos, then any first photo not used yet). A photo is used once. Whatever stays empty
  * keeps the template's demo photo, or '' when the template has none for that slot.
  */
-export function fillTemplatePhotos(manifest: Pick<TemplateManifest, 'id' | 'photos'>, items: ReadonlyArray<{ imageUrls?: readonly string[] }>) {
+export function fillTemplatePhotos(manifest: Pick<TemplateManifest, 'id' | 'photos'>, items: ReadonlyArray<{ imageUrls?: readonly string[] }>, allowDemo = true) {
   const used = new Set<string>();
   const firsts = items.map(item => item.imageUrls?.[0]).filter((url): url is string => Boolean(url));
   const rest = items.flatMap(item => item.imageUrls?.slice(1) ?? []);
@@ -38,20 +40,59 @@ export function fillTemplatePhotos(manifest: Pick<TemplateManifest, 'id' | 'phot
   for (const { slot, role } of manifest.photos) {
     const url = role === 'hero' || role === 'product' ? take(firsts) : take([...rest, ...firsts]);
     if (url) { photos[slot] = url; continue; }
-    photos[slot] = templateDemoPath(manifest, slot);
+    photos[slot] = allowDemo ? templateDemoPath(manifest, slot) : '';
     if (photos[slot]) demoSlots.push(slot);
   }
   return { photos, demoSlots };
 }
 
-export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string }, photos: Record<string, string>): SourceProjectFileDto {
-  const data = { name: store.name, tagline: store.tagline ?? '', city: store.city ?? '' };
+export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook }): SourceProjectFileDto {
+  const data = { name: store.name, tagline: store.tagline ?? '', city: store.city ?? '', logo: store.logo ?? '', phone: store.phone ?? '' };
   return {
     path: TEMPLATE_STORE_DATA_PATH,
     content: `// Written by pagosYa when the template is applied. Edit the store's name and photos in the Studio.\n`
       + `export const store = ${JSON.stringify(data)} as const;\n`
-      + `export const photos: Record<string, string> = ${JSON.stringify(photos)};\n`,
+      + `export const photos: Record<string, string> = ${JSON.stringify(photos)};\n`
+      + (master ? `export const copy = ${JSON.stringify(master.copy)} as const;\nexport const look = ${JSON.stringify(master.look)} as const;\n` : ''),
   };
+}
+
+const dataLine = (content: string, name: string) => {
+  const match = content.match(new RegExp(`^export const ${name}(?:: [^=]+)? = (.*?)(?: as const)?;$`, 'm'));
+  try { return match ? JSON.parse(match[1]) : undefined; } catch { return undefined; }
+};
+
+/** What a master store's store-data says now (spec 2026-10-19 §3.1): the content edits start from it. */
+export function readMasterState(files: readonly SourceProjectFileDto[]) {
+  const content = files.find(file => file.path === TEMPLATE_STORE_DATA_PATH)?.content ?? '';
+  return {
+    store: dataLine(content, 'store') as { name: string; tagline?: string; city?: string; logo?: string; phone?: string } | undefined,
+    photos: (dataLine(content, 'photos') ?? {}) as Record<string, string>,
+    copy: dataLine(content, 'copy') as MasterCopy | undefined,
+    look: dataLine(content, 'look') as MasterLook | undefined,
+  };
+}
+
+/** A content edit: new store-data, theme block and DNA fonts; components and every other file untouched. */
+export function refillMasterFiles(files: SourceProjectFileDto[], manifest: TemplateManifest, change: MasterFill): SourceProjectFileDto[] {
+  const settings = manifest.master;
+  if (!settings) throw new TypeError(`Plantilla ${manifest.id}: no es una plantilla base.`);
+  const state = readMasterState(files);
+  const copy = masterCopy(settings, { ...(state.copy ?? {}), ...(change.copy ?? {}) });
+  const look = masterLook(settings, { ...(state.look ?? {}), ...(change.look ?? {}), colors: { ...(state.look?.colors ?? {}), ...(change.look?.colors ?? {}) } });
+  const photos = { ...state.photos, ...(change.heroPhoto !== undefined ? { hero: change.heroPhoto ?? '' } : {}), ...(change.storyPhoto !== undefined ? { story: change.storyPhoto ?? '' } : {}) };
+  const theme = masterThemeCss(settings, look);
+  return files.map(file => {
+    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look });
+    if (file.path === 'styles/globals.css') return { ...file, content: withMasterTheme(file.content, theme) };
+    if (file.path === 'config.js') {
+      const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
+      if (!match) return file;
+      const config = JSON.parse(match[1]);
+      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, dna: { ...config.dna, ...masterDnaFonts(settings, look) } })};\n` };
+    }
+    return file;
+  });
 }
 
 export function templateDemoAssets(manifest: TemplateManifest, demoSlots: readonly string[]): SourceProjectFileDto[] {
@@ -74,7 +115,7 @@ export function templateDna(manifest: Pick<TemplateManifest, 'id' | 'dna'>, stor
 const TEMPLATE_KIT_FILES = ['build.mjs', 'server.mjs', 'commerce.js', 'product.html', 'checkout.html', 'productos.html', 'coleccion.html', 'commerce-pages.css'];
 const CATEGORY_BUSINESS: Record<TemplateManifest['category'], string> = {
   comida: 'Comida y bebidas', moda: 'Moda', belleza: 'Belleza y cuidado personal', hogar: 'Hogar y decoración', arte: 'Arte y artesanía',
-  tecnologia: 'Tecnología', mascotas: 'Mascotas', ninos: 'Niños y juguetes', deporte: 'Deporte y aire libre', servicios: 'Servicios', libros: 'Libros y papelería', 'producto-unico': 'Un producto estrella', motor: 'Autopartes y motor', construccion: 'Construcción y obras',
+  tecnologia: 'Tecnología', mascotas: 'Mascotas', ninos: 'Niños y juguetes', deporte: 'Deporte y aire libre', servicios: 'Servicios', libros: 'Libros y papelería', 'producto-unico': 'Un producto estrella', motor: 'Autopartes y motor', construccion: 'Construcción y obras', general: 'Tienda en línea',
 };
 
 /**
@@ -86,19 +127,30 @@ const CATEGORY_BUSINESS: Record<TemplateManifest['category'], string> = {
 export async function assembleTemplateRevision(input: {
   manifest: TemplateManifest; source: SourceProjectFileDto[]; storeId: string; slug: string; publicStore: SourcePublicStore;
   apiUrl: URL; checkoutOrigin?: string; firstRevision: boolean; previousBrief?: SourceProjectBriefDto;
+  /** Master templates only (spec 2026-10-19): the filled copy, look and photo choices; and false keeps demo photos out. */
+  fill?: MasterFill; demoPhotos?: boolean;
 }): Promise<{ label: string; brief: SourceProjectBriefDto; files: SourceProjectFileDto[] }> {
   const { manifest } = input;
   const data = sourceStoreConfigData(input.publicStore, input.apiUrl, input.firstRevision);
-  const { photos, demoSlots } = fillTemplatePhotos(manifest, data.items);
-  const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city: (data.locations as Array<{ city?: string | null }> | undefined)?.[0]?.city ?? '' }, photos);
-  const authored = [...input.source.filter(file => file.path !== TEMPLATE_STORE_DATA_PATH), ...contentPagesFor(input.source), storeData];
+  const settings = manifest.master;
+  const filled = fillTemplatePhotos(manifest, data.items, input.demoPhotos !== false);
+  const photos: Record<string, string> = { ...filled.photos,
+    ...(settings && input.fill?.heroPhoto !== undefined ? { hero: input.fill.heroPhoto ?? '' } : {}),
+    ...(settings && input.fill?.storyPhoto !== undefined ? { story: input.fill.storyPhoto ?? '' } : {}) };
+  const demoSlots = filled.demoSlots.filter(slot => photos[slot] === templateDemoPath(manifest, slot));
+  const copy = settings ? masterCopy(settings, input.fill?.copy) : undefined;
+  const look = settings ? masterLook(settings, input.fill?.look) : undefined;
+  const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city: (data.locations as Array<{ city?: string | null }> | undefined)?.[0]?.city ?? '',
+    logo: data.logoUrl ?? '', phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look! } : undefined);
+  const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withMasterTheme(file.content, masterThemeCss(settings, look!)) } : file;
+  const authored = [...input.source.filter(file => file.path !== TEMPLATE_STORE_DATA_PATH).map(themed), ...contentPagesFor(input.source), storeData];
   const compiled = await compileNextPreview(authored, 'shop');
   const scaffold = [...compiled, ...nextProjectScaffold(input.slug, nextContentPages(authored, 'shop'))];
   const kitFiles = await Promise.all(TEMPLATE_KIT_FILES.filter(path => !scaffold.some(file => file.path === path))
     .map(async path => ({ path, content: await readFile(kitPath(path), 'utf8') })));
   const demoAssets = templateDemoAssets(manifest, demoSlots);
   const config = {
-    ...sourceCommerceRoutes([...authored, ...scaffold, ...kitFiles], {}), dna: templateDna(manifest, input.storeId),
+    ...sourceCommerceRoutes([...authored, ...scaffold, ...kitFiles], {}), dna: { ...templateDna(manifest, input.storeId), ...(settings ? masterDnaFonts(settings, look!) : {}) },
     productPage: 'product.html', checkoutPage: 'checkout.html', sitePurpose: 'shop', demo: false, slug: input.slug,
     apiBaseUrl: input.apiUrl.href.replace(/\/$/, ''), checkoutOrigin: input.checkoutOrigin, data,
   };
@@ -136,8 +188,8 @@ export function templateDemoPublicStore(): SourcePublicStore {
 }
 
 /** A template applied to the demo store, with the demo catalog's cards showing the template's product demo photos. */
-export async function templateDemoRevision(manifest: TemplateManifest, source: SourceProjectFileDto[]) {
-  const assembled = await assembleTemplateRevision({ manifest, source, storeId: `template-${manifest.id}`, slug: manifest.id, publicStore: templateDemoPublicStore(), apiUrl: new URL('https://api.pagosya.test/v1'), checkoutOrigin: 'https://pagar.pagosya.test', firstRevision: true });
+export async function templateDemoRevision(manifest: TemplateManifest, source: SourceProjectFileDto[], fill?: MasterFill) {
+  const assembled = await assembleTemplateRevision({ manifest, source, storeId: `template-${manifest.id}`, slug: manifest.id, publicStore: templateDemoPublicStore(), apiUrl: new URL('https://api.pagosya.test/v1'), checkoutOrigin: 'https://pagar.pagosya.test', firstRevision: true, fill });
   const productPhotos = manifest.photos.filter(photo => photo.role === 'product' && photo.demo).map(photo => templateDemoPath(manifest, photo.slot));
   const files = assembled.files.map(file => {
     if (file.path !== 'config.js' || !productPhotos.length) return file;

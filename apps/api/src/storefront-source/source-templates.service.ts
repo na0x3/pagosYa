@@ -1,11 +1,15 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as registry from '@pagosya/store-templates';
 import { PrismaService } from '../prisma/prisma.service';
 import { PublicStoresService } from '../stores/public-stores.service';
 import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectSnapshot } from './source-project';
-import { assembleTemplateRevision, templateDemoRevision } from './source-templates';
+import { assembleTemplateRevision, refillMasterFiles, templateDemoRevision } from './source-templates';
+import { MASTER_TEMPLATE_ID, type MasterFill } from './source-master';
+
+/** What the master template's filler is told about a store (spec 2026-10-19 §2.3). */
+export type MasterFacts = { storeName: string; products: string[]; photos: string[] };
 import { sourcePublicApiUrl } from './source-store-config';
 
 /** Plantillas: apply a designer-made store as the next revision (free, no AI call). */
@@ -21,7 +25,7 @@ export class SourceTemplatesService {
   }
 
   /** The pieces `apply` saves and `preview` shows: the template filled with this store's name, products and photos. */
-  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number) {
+  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill) {
     const manifest = this.registry.templateManifest(templateId);
     if (!manifest) throw new NotFoundException('Esa plantilla no existe.');
     const current = await this.projects.current(merchantId, storeId);
@@ -32,8 +36,33 @@ export class SourceTemplatesService {
       manifest, source: this.registry.templateSourceFiles(manifest.id), storeId, slug: current.slug, publicStore,
       apiUrl: sourcePublicApiUrl(this.config), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), firstRevision: current.revision === 0,
       previousBrief: (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.brief,
+      fill, demoPhotos: !manifest.master,
     });
     return { current, assembled };
+  }
+
+  /** Spec 2026-10-19 §2: the master template applied to a new store and filled in one call; the store is saved even when
+   *  the filler fails. The filler sees what the apply sees: the store's name, product names and photos. */
+  async applyMaster(merchantId: string, storeId: string, revision: number, filler: (facts: MasterFacts) => Promise<MasterFill | null>) {
+    const manifest = this.registry.templateManifest(MASTER_TEMPLATE_ID);
+    if (!manifest?.master) throw new NotFoundException('La plantilla base no está disponible.');
+    const current = await this.projects.current(merchantId, storeId);
+    const publicStore = await this.publicStores.getStorePublic(current.slug, { trackView: false, ownerMerchantId: merchantId });
+    const facts: MasterFacts = { storeName: publicStore.storeName, products: publicStore.items.map(item => item.name), photos: [...new Set(publicStore.items.flatMap(item => item.imageUrls ?? []))] };
+    const fill = await filler(facts).catch(() => null);
+    const { assembled } = await this.assemble(merchantId, storeId, MASTER_TEMPLATE_ID, revision, fill ?? undefined);
+    const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
+    if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
+    return { ...saved, filled: Boolean(fill) };
+  }
+
+  /** Spec 2026-10-19 §3.1: a content edit on a master store — data and theme only, as a new revision. */
+  async refill(merchantId: string, storeId: string, revision: number, change: MasterFill, label: string) {
+    const previous = await this.projects.version(merchantId, storeId, revision);
+    const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
+    const manifest = snapshot.brief?.templateId ? this.registry.templateManifest(snapshot.brief.templateId) : undefined;
+    if (!manifest?.master) throw new BadRequestException('Esta tienda no usa la plantilla base.');
+    return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: refillMasterFiles(snapshot.files, manifest, change) });
   }
 
   private readonly demos = new Map<string, Promise<SourceProjectSnapshot>>();

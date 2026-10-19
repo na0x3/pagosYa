@@ -4,7 +4,7 @@
 const { readdirSync, readFileSync, statSync, existsSync } = require('node:fs');
 const { join, extname } = require('node:path');
 
-const TEMPLATE_CATEGORIES = Object.freeze(['comida', 'moda', 'belleza', 'hogar', 'arte', 'tecnologia', 'mascotas', 'ninos', 'deporte', 'servicios', 'libros', 'producto-unico', 'motor', 'construccion']);
+const TEMPLATE_CATEGORIES = Object.freeze(['comida', 'moda', 'belleza', 'hogar', 'arte', 'tecnologia', 'mascotas', 'ninos', 'deporte', 'servicios', 'libros', 'producto-unico', 'motor', 'construccion', 'general']);
 const PHOTO_ROLES = Object.freeze(['hero', 'product', 'lifestyle', 'detail']);
 const DEMO_MAX_BYTES = 600 * 1024;
 const ID = /^[a-z0-9-]{2,40}$/;
@@ -13,6 +13,23 @@ const DEMO_FILE = /^[a-z0-9-]+\.(jpg|png|webp)$/;
 const templatesDir = join(__dirname, 'templates');
 
 function fail(id, field, detail) { throw new TypeError(`Plantilla ${id}: ${field} ${detail}`); }
+
+const HEX = /^#[0-9a-f]{6}$/i;
+const MASTER_COPY_KEYS = ['announcement', 'eyebrow', 'headline', 'subcopy', 'primaryCta', 'secondaryCta', 'productsTitle', 'storyTitle', 'storyBody', 'closingLine', 'closingCta', 'tagline'];
+/** Spec 2026-10-19 master template: default copy, eight palettes and eight font pairs a store is filled from. */
+function validateMaster(id, master) {
+  if (!master || typeof master !== 'object') fail(id, 'master', 'must be an object');
+  const copy = master.copy || {};
+  for (const key of MASTER_COPY_KEYS) if (typeof copy[key] !== 'string') fail(id, `master.copy.${key}`, 'must be text');
+  if (!Array.isArray(copy.values) || copy.values.length !== 3 || copy.values.some(v => !v || typeof v.title !== 'string' || typeof v.text !== 'string')) fail(id, 'master.copy.values', 'must be three { title, text }');
+  if (!Array.isArray(master.palettes) || master.palettes.length !== 8) fail(id, 'master.palettes', 'must list eight palettes');
+  for (const p of master.palettes) {
+    if (!p || !SLOT.test(p.id) || typeof p.name !== 'string') fail(id, 'master.palettes', 'need an id and a name');
+    for (const key of ['paper', 'ink', 'muted', 'accent', 'deep']) if (!HEX.test(p[key])) fail(id, `master palette ${p.id}`, `${key} must be #rrggbb`);
+  }
+  if (!Array.isArray(master.fonts) || master.fonts.length !== 8) fail(id, 'master.fonts', 'must list eight font pairs');
+  for (const f of master.fonts) if (!f || !SLOT.test(f.id) || typeof f.name !== 'string' || !SLOT.test(f.heading) || !SLOT.test(f.body)) fail(id, 'master.fonts', 'need id, name, heading and body font ids');
+}
 
 function validate(dir, id) {
   const manifest = JSON.parse(readFileSync(join(dir, 'template.json'), 'utf8'));
@@ -25,6 +42,7 @@ function validate(dir, id) {
   if (!Number.isInteger(manifest.order)) fail(id, 'order', 'must be an integer');
   if (manifest.hidden !== undefined && typeof manifest.hidden !== 'boolean') fail(id, 'hidden', 'must be true or false');
   if (manifest.dna !== undefined && (!manifest.dna || typeof manifest.dna !== 'object' || Array.isArray(manifest.dna) || Object.entries(manifest.dna).some(([key, value]) => !/^[a-z]+$/.test(key) || typeof value !== 'string'))) fail(id, 'dna', 'must map kit surface names to values');
+  if (manifest.master !== undefined) validateMaster(id, manifest.master);
   if (!Array.isArray(manifest.photos)) fail(id, 'photos', 'must be a list');
   const slots = new Set();
   for (const photo of manifest.photos) {
@@ -38,7 +56,7 @@ function validate(dir, id) {
       if (statSync(path).size > DEMO_MAX_BYTES) fail(id, `demo ${photo.demo}`, 'is larger than 600 KB');
     }
   }
-  return Object.freeze({ ...manifest, ...(manifest.dna ? { dna: Object.freeze({ ...manifest.dna }) } : {}), tags: Object.freeze([...manifest.tags]), photos: Object.freeze(manifest.photos.map(photo => Object.freeze({ ...photo }))) });
+  return Object.freeze({ ...manifest, ...(manifest.dna ? { dna: Object.freeze({ ...manifest.dna }) } : {}), ...(manifest.master ? { master: Object.freeze(manifest.master) } : {}), tags: Object.freeze([...manifest.tags]), photos: Object.freeze(manifest.photos.map(photo => Object.freeze({ ...photo }))) });
 }
 
 /** Reads and validates every template under `root`. Throws on the first invalid manifest (a build error, never input). */
