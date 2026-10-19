@@ -29,7 +29,7 @@ import { merchantAsksForPhotoGroup, sourceMediaPolicy } from './source-media-des
 import { recoverStorePhotos } from './source-redesign-photos';
 import { repairSourcePhotoGroups } from './source-photo-groups';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
-import { asksForBold, designCategory, frameForRun, frameFresh, frameInputs, parseFrameDraw, FRAME_DRAW_FILE } from './design-engine/frame-draw';
+import { asksForBold, designCategory, frameForRun, frameFresh, frameInputs, parseFrameDraw, FRAME_CATALOGUE, FRAME_DRAW_FILE } from './design-engine/frame-draw';
 import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import { readControls, withControlsConfig, type StoreControls } from './store-controls';
 import { controlsToAvoid, libraryIconFallback, pickLibraryControls, storePalette, type RecentControls } from './store-controls-library';
@@ -592,6 +592,9 @@ export class SourceGenerationService {
       ...(storePhotoPalettes ? { photoPalettes: storePhotoPalettes } : {}),
       ...(brandSourcePalettes && brandSource?.look ? { paletteOverride: boldAsked ? brandSourcePalettes.bold : brandSourcePalettes.calm } : {}),
     });
+    // A website copy draws no frame, but its header is the platform header closest to the copied page's (polish 2026-10-18).
+    const copiedHeader = execution?.websiteCopy && execution.copyHeader ? FRAME_CATALOGUE.header.find(entry => entry.id === execution.copyHeader) : undefined;
+    if (copiedHeader) frame = { ...frame, file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ header: copiedHeader.id }) }, paragraph: `${copiedHeader.desktop} ${copiedHeader.phone}` };
     let playbookText = playbookEntry && playbookFamily && frameNow ? playbookDirection(playbookEntry, playbookFamily, { bold: boldAsked, palette: frame.palette, button: frame.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence }) : '';
     const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
     // "Elige tu estilo" (spec 2026-10-11, amendment "two cards"): a fresh design shows a calm and a bold drawn concept before anything is built.

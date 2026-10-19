@@ -10,7 +10,8 @@ export type CopySection = {
   index: number; role: CopySectionRole; height: number; background: string | null; columns: number; mobileColumns: number | null;
   images: number; placement: CopyPlacement; headings: CopyHeading[]; buttons: number; textChars: number; align: 'left' | 'center'; carousel: boolean;
 };
-export type CopyLook = { background: string | null; text: string | null; accent: string | null; surfaces: string[]; headingFont: string; bodyFont: string; radius: number; contentWidth: number; button: 'filled' | 'outline' | 'pill' | 'text' };
+export type CopyHeader = { logo: 'left' | 'center'; links: number; split: boolean; below: boolean; menu: boolean; topBar: boolean; overlay: boolean };
+export type CopyLook = { background: string | null; text: string | null; accent: string | null; surfaces: string[]; headingFont: string; bodyFont: string; radius: number; contentWidth: number; button: 'filled' | 'outline' | 'pill' | 'text'; header: CopyHeader | null };
 export type WebsiteBlueprint = { url: string; host: string; sections: CopySection[]; look: CopyLook; crops: Array<{ index: number; image: string }> };
 
 const MAX_SECTIONS = 14;
@@ -25,6 +26,22 @@ const family = (value: unknown) => {
   return GENERIC_FONT.test(name) ? '' : name;
 };
 const ROLES: CopySectionRole[] = ['header', 'hero', 'section', 'footer'];
+function normalizeHeader(raw: unknown): CopyHeader | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const value = raw as Record<string, unknown>;
+  return { logo: value.logo === 'center' ? 'center' : 'left', links: num(value.links, 0, 40), split: value.split === true, below: value.below === true, menu: value.menu === true, topBar: value.topBar === true, overlay: value.overlay === true };
+}
+
+/** The platform header closest to the reference's (polish 2026-10-18: the copy always got the default menu button). Only the
+ *  calm shapes plus «reveal», which is the one that sits over the hero. */
+export function copyHeaderShape(blueprint: WebsiteBlueprint): 'menu-button' | 'centered-split' | 'stacked' | 'reveal' | 'info-bar' | undefined {
+  const header = blueprint.look.header;
+  if (!header) return undefined;
+  if (header.menu && header.links < 4) return 'menu-button';
+  if (header.logo === 'center') return header.below ? 'stacked' : header.split ? 'centered-split' : 'stacked';
+  if (header.overlay) return 'reveal';
+  return 'info-bar';
+}
 const PLACEMENTS: CopyPlacement[] = ['none', 'left', 'right', 'full', 'background', 'grid'];
 
 /** The browser's raw measures, kept only where they are sane. Null when no section came through. */
@@ -56,6 +73,7 @@ export function normalizeBlueprint(raw: unknown, url: string, crops: Array<{ ind
       surfaces: (Array.isArray(look.surfaces) ? look.surfaces : []).map(colour).filter((item): item is string => Boolean(item)).slice(0, 6),
       headingFont: family(look.headingFont), bodyFont: family(look.bodyFont), radius: num(look.radius, 0, 60), contentWidth: num(look.contentWidth, 320, 2400, 1200),
       button: (['filled', 'outline', 'pill', 'text'] as const).includes(look.button as never) ? look.button as CopyLook['button'] : 'filled',
+      header: normalizeHeader(look.header),
     },
     crops: crops.filter(crop => crop.index < sections.length && /^data:image\/jpeg;base64,/.test(crop.image)).slice(0, 8),
   };
@@ -115,23 +133,52 @@ export function homeBlocks(html: string): CopySectionRole[] {
   return roles;
 }
 
-export type CopyCheck = { expected: number; built: number; ratio: number; missing: number };
-/** How close the saved home page came (decision 6): body sections built against body sections measured. */
+/** `measured`: the layout was compared section by section; otherwise only the number of sections was. */
+export type CopyCheck = { expected: number; built: number; matched: number; ratio: number; missing: number; differing: number[]; measured: boolean };
+const body = (sections: CopySection[]) => sections.filter(section => section.role === 'hero' || section.role === 'section');
+/** How close the saved home page came (decision 6), by count only: the fallback when the page could not be rendered. */
 export function copyStructureCheck(blueprint: WebsiteBlueprint, html: string): CopyCheck {
-  const expected = blueprint.sections.filter(section => section.role === 'hero' || section.role === 'section').length;
+  const expected = body(blueprint.sections).length;
   const built = homeBlocks(html).filter(role => role === 'hero' || role === 'section').length;
   const matched = Math.min(expected, built);
-  return { expected, built, ratio: expected ? matched / expected : 1, missing: Math.max(0, expected - built) };
+  return { expected, built, matched, ratio: expected ? matched / expected : 1, missing: Math.max(0, expected - built), differing: [], measured: false };
+}
+
+/** One reference section against the built one at the same place: columns, images and heading size, two of three. */
+function sameLayout(reference: CopySection, built: CopySection): boolean {
+  const columns = reference.columns === built.columns || (reference.columns > 1 && built.columns > 1 && Math.abs(reference.columns - built.columns) <= 1);
+  const images = (reference.images > 0) === (built.images > 0) && (reference.placement === 'none' || built.placement !== 'none');
+  const a = reference.headings[0]?.size, b = built.headings[0]?.size;
+  const type = !a || !b || (b / a >= 0.6 && b / a <= 1.6);
+  return [columns, images, type].filter(Boolean).length >= 2;
+}
+
+/** The built home page measured like the reference and compared section by section, in order (polish 2026-10-18). */
+export function copyLayoutCheck(blueprint: WebsiteBlueprint, built: WebsiteBlueprint): CopyCheck {
+  const reference = body(blueprint.sections), mine = body(built.sections);
+  const differing = reference.flatMap((section, index) => mine[index] && sameLayout(section, mine[index]) ? [] : [index + 1]);
+  const matched = reference.length - differing.length;
+  return { expected: reference.length, built: mine.length, matched, ratio: reference.length ? matched / reference.length : 1, missing: Math.max(0, reference.length - mine.length), differing, measured: true };
 }
 
 /** The repair run's request when the first build came out far from the blueprint. */
 export function copyRepairInstruction(blueprint: WebsiteBlueprint, check: CopyCheck): string {
-  return `La página de inicio tiene ${check.built} secciones y la estructura de ${blueprint.host} tiene ${check.expected}. Completa la página de inicio para que siga el COPY BLUEPRINT sección por sección, en el mismo orden, con el contenido y la marca de este comercio. No cambies el encabezado, los colores ni las secciones que ya coinciden.`;
+  const reference = body(blueprint.sections);
+  const fixes = check.differing.slice(0, 6).map(number => { const section = reference[number - 1]; return section ? `la sección ${number} debe ser: ${sectionLine({ ...section, index: number - 1 }).replace(/^\d+\. /, '')}` : ''; }).filter(Boolean);
+  return [
+    `La página de inicio tiene ${check.built} secciones y la estructura de ${blueprint.host} tiene ${check.expected}${check.measured ? `; ${check.matched} coinciden` : ''}.`,
+    fixes.length ? `Corrige solo estas: ${fixes.join('; ')}` : 'Completa la página de inicio para que siga el COPY BLUEPRINT sección por sección, en el mismo orden.',
+    'Usa el contenido y la marca de este comercio. No cambies el encabezado, los colores ni las secciones que ya coinciden.',
+  ].join(' ');
 }
 
 /** The reply line (decision 6): how close it came and what could not be read. */
 export function copyReplyNote(blueprint: WebsiteBlueprint, check: CopyCheck): string {
-  const matched = Math.min(check.expected, check.built);
-  if (matched >= check.expected) return `Copié la estructura de ${blueprint.host}: ${check.expected} de ${check.expected} secciones, con tu marca y tu contenido.`;
-  return `Copié la estructura de ${blueprint.host}: ${matched} de ${check.expected} secciones; ${check.expected - matched === 1 ? 'una quedó' : `${check.expected - matched} quedaron`} fuera. Pídeme «agrega las secciones que faltan» si las quieres.`;
+  // Without a render only the count is known, so the reply says no more than that.
+  if (!check.measured) return check.built >= check.expected
+    ? `Seguí las ${check.expected} secciones de ${blueprint.host} con tu marca y tu contenido.`
+    : `Seguí ${check.built} de las ${check.expected} secciones de ${blueprint.host}; pídeme «agrega las secciones que faltan» si las quieres.`;
+  if (!check.differing.length) return `Copié la estructura de ${blueprint.host}: las ${check.expected} secciones con el mismo diseño, con tu marca y tu contenido.`;
+  const list = check.differing.length === 1 ? `la sección ${check.differing[0]} quedó distinta` : `las secciones ${check.differing.slice(0, -1).join(', ')} y ${check.differing.at(-1)} quedaron distintas`;
+  return `Copié la estructura de ${blueprint.host}: ${check.matched} de ${check.expected} secciones con el mismo diseño; ${list}. Pídeme «iguala la sección ${check.differing[0]}» si la quieres más parecida.`;
 }

@@ -1,4 +1,4 @@
-import { copyBlueprintPrompt, copyReplyNote, copyStructureCheck, homeBlocks, normalizeBlueprint } from './copy-blueprint';
+import { copyBlueprintPrompt, copyHeaderShape, copyLayoutCheck, copyRepairInstruction, copyReplyNote, copyStructureCheck, homeBlocks, normalizeBlueprint, type WebsiteBlueprint } from './copy-blueprint';
 
 const raw = {
   sections: [
@@ -51,12 +51,39 @@ describe('homeBlocks / copyStructureCheck / copyReplyNote', () => {
     expect(homeBlocks(page(3))).toEqual(['header', 'hero', 'section', 'section', 'footer']);
     expect(homeBlocks('<body><nav>n</nav><section>a</section><section>b</section></body>')).toEqual(['header', 'hero', 'section']);
   });
-  it('counts body sections against the blueprint and says how close it came', () => {
-    expect(copyStructureCheck(blueprint, page(3))).toEqual({ expected: 3, built: 3, ratio: 1, missing: 0 });
+  it('counts body sections when the page could not be rendered, and says no more than that', () => {
+    expect(copyStructureCheck(blueprint, page(3))).toEqual({ expected: 3, built: 3, matched: 3, ratio: 1, missing: 0, differing: [], measured: false });
     const short = copyStructureCheck(blueprint, page(1));
     expect(short).toMatchObject({ expected: 3, built: 1, missing: 2 });
     expect(short.ratio).toBeCloseTo(1 / 3);
-    expect(copyReplyNote(blueprint, copyStructureCheck(blueprint, page(4)))).toBe('Copié la estructura de otra.com: 3 de 3 secciones, con tu marca y tu contenido.');
-    expect(copyReplyNote(blueprint, short)).toBe('Copié la estructura de otra.com: 1 de 3 secciones; 2 quedaron fuera. Pídeme «agrega las secciones que faltan» si las quieres.');
+    expect(copyReplyNote(blueprint, copyStructureCheck(blueprint, page(4)))).toBe('Seguí las 3 secciones de otra.com con tu marca y tu contenido.');
+    expect(copyReplyNote(blueprint, short)).toBe('Seguí 1 de las 3 secciones de otra.com; pídeme «agrega las secciones que faltan» si las quieres.');
+  });
+});
+
+describe('copyLayoutCheck (polish 2026-10-18)', () => {
+  const reference = normalizeBlueprint(raw, 'https://www.otra.com/')!;
+  const built = (sections: unknown[]) => normalizeBlueprint({ sections }, 'https://store.local/')!;
+  it('compares each section in order by columns, images and heading size, and names the ones that differ', () => {
+    const same = built([{ role: 'hero', height: 700, columns: 2, images: 1, placement: 'left', headings: [{ level: 1, size: 56 }] }, { role: 'section', height: 500, columns: 4, images: 4, placement: 'grid', headings: [{ level: 2, size: 32 }] }, { role: 'section', height: 300, columns: 5 }]);
+    expect(copyLayoutCheck(reference, same)).toMatchObject({ expected: 3, built: 3, matched: 3, differing: [], measured: true });
+    expect(copyReplyNote(reference, copyLayoutCheck(reference, same))).toBe('Copié la estructura de otra.com: las 3 secciones con el mismo diseño, con tu marca y tu contenido.');
+    const off = built([{ role: 'hero', height: 700, columns: 1, images: 0, headings: [{ level: 1, size: 120 }] }, { role: 'section', height: 500, columns: 4, images: 4, placement: 'grid' }]);
+    const check = copyLayoutCheck(reference, off);
+    expect(check).toMatchObject({ matched: 1, differing: [1, 3], missing: 1 });
+    expect(copyReplyNote(reference, check)).toBe('Copié la estructura de otra.com: 1 de 3 secciones con el mismo diseño; las secciones 1 y 3 quedaron distintas. Pídeme «iguala la sección 1» si la quieres más parecida.');
+    expect(copyRepairInstruction(reference, check)).toContain('Corrige solo estas: la sección 1 debe ser: hero: 2 columns (phone: 1), image on the right');
+  });
+});
+
+describe('copyHeaderShape (polish 2026-10-18)', () => {
+  const withHeader = (header: Record<string, unknown> | null) => normalizeBlueprint({ ...raw, look: { ...raw.look, header } }, 'https://www.otra.com/') as WebsiteBlueprint;
+  it('maps the reference header onto the closest platform header', () => {
+    expect(copyHeaderShape(withHeader({ logo: 'left', links: 1, menu: true }))).toBe('menu-button');
+    expect(copyHeaderShape(withHeader({ logo: 'center', links: 6, split: true }))).toBe('centered-split');
+    expect(copyHeaderShape(withHeader({ logo: 'center', links: 6, below: true }))).toBe('stacked');
+    expect(copyHeaderShape(withHeader({ logo: 'left', links: 5, overlay: true }))).toBe('reveal');
+    expect(copyHeaderShape(withHeader({ logo: 'left', links: 5, topBar: true }))).toBe('info-bar');
+    expect(copyHeaderShape(withHeader(null))).toBeUndefined();
   });
 });

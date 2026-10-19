@@ -5,6 +5,11 @@ const PLAIN = /(?<!\p{L})((?:haz(?:me)?|quiero|arma(?:me)?|crea(?:me)?|dise[nñ]
 const INSPIRE = /(?<!\p{L})(insp[ií]r\w*|parecid[oa]|algo como|estilo de|referencia)(?!\p{L})/iu;
 
 export function websiteCopyAsked(words: string): boolean {
-  if (STRONG.test(words)) return true;
-  return PLAIN.test(words) && !INSPIRE.test(words);
+  return websiteCopyWording(words) !== null;
+}
+
+/** «strong» names the copy outright; «plain» («hazme la web como esta») could also mean inspiration, so the reply offers it. */
+export function websiteCopyWording(words: string): 'strong' | 'plain' | null {
+  if (STRONG.test(words)) return 'strong';
+  return PLAIN.test(words) && !INSPIRE.test(words) ? 'plain' : null;
 }

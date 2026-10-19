@@ -25,6 +25,11 @@ function setup(revisionSections: number[] = [3]) {
   const dialogue: any = { decide: jest.fn().mockResolvedValue({ action: 'generate', reply: '', summary: 'Velas artesanales.', generationInstruction: 'Crea la tienda.', imageUses: [], startFrom: 'scratch' }) };
   const service = new SourceChatService(prisma, projects, generation, dialogue, {} as any, { get: (key: string) => key === 'app.yapiStylePick' } as any, {} as any);
   service.blueprintReader = jest.fn().mockResolvedValue({ ok: true, blueprint });
+  // The rendered home page: by default the same layout as the reference, section by section.
+  service.homeMeasurer = jest.fn().mockImplementation(async (files: Array<{ path: string; content: string }>) => {
+    const count = (files.find(file => file.path === 'index.html')?.content.match(/<section>/g) || []).length;
+    return normalizeBlueprint({ sections: blueprint.sections.filter(section => section.role !== 'header' && section.role !== 'footer').slice(0, count) }, 'https://store.local/');
+  });
   return { service, generation, dialogue, messages };
 }
 const request = { revision: 0, assetUrls: [] as string[] };
@@ -38,7 +43,7 @@ it('builds from the blueprint, with its section screenshots and no style cards, 
   expect(execution).toMatchObject({ websiteCopy: true, referenceCaptures: [{ url: 'https://www.otra.com/', viewport: 'desktop', y: 80, image: 'data:image/jpeg;base64,AAA' }] });
   expect(execution.styleProposal).toBeUndefined();
   expect(generation.generate).toHaveBeenCalledTimes(1);
-  expect(messages.at(-1).content).toMatch(/^Copié la estructura de otra\.com: 3 de 3 secciones, con tu marca y tu contenido\./);
+  expect(messages.at(-1).content).toMatch(/^Copié la estructura de otra\.com: las 3 secciones con el mismo diseño, con tu marca y tu contenido\. (?!Si solo)/);
 });
 
 it('a build far from the blueprint gets one repair run', async () => {
@@ -46,8 +51,10 @@ it('a build far from the blueprint gets one repair run', async () => {
   await service.send('m', 's', { ...request, instruction: 'hazme la web como esta https://www.otra.com/' });
   expect(generation.generate).toHaveBeenCalledTimes(2);
   expect(generation.generate.mock.calls[1][2]).toMatchObject({ revision: 1 });
-  expect(generation.generate.mock.calls[1][2].instruction).toMatch(/^La página de inicio tiene 1 secciones y la estructura de otra\.com tiene 3/);
-  expect(messages.at(-1).content).toMatch(/^Copié la estructura de otra\.com: 3 de 3 secciones/);
+  expect(generation.generate.mock.calls[1][2].instruction).toMatch(/^La página de inicio tiene 1 secciones y la estructura de otra\.com tiene 3; 1 coinciden\. Corrige solo estas: la sección 2 debe ser/);
+  expect(messages.at(-1).content).toMatch(/^Copié la estructura de otra\.com: las 3 secciones con el mismo diseño/);
+  // «hazme la web como esta» could mean inspiration: the reply says how to ask for that.
+  expect(messages.at(-1).content).toContain('Si solo querías inspirarte en su estilo, dime «solo inspiración»');
 });
 
 it('a question first keeps the copy for the next message, and the page is read only when the store is built', async () => {
@@ -67,6 +74,20 @@ it('a page that cannot be read builds the store anyway and says so', async () =>
   await service.send('m', 's', { ...request, instruction: 'clona esta página https://www.otra.com/' });
   expect(generation.generate.mock.calls[0][2].instruction).not.toContain('COPY BLUEPRINT (');
   expect(messages.at(-1).content).toMatch(/^No pude leer esa página para copiarla/);
+});
+
+it('hands the build the platform header closest to the reference header', async () => {
+  const { service, generation } = setup([3]);
+  (service.blueprintReader as jest.Mock).mockResolvedValue({ ok: true, blueprint: { ...blueprint, look: { ...blueprint.look, header: { logo: 'center', links: 6, split: true, below: false, menu: false, topBar: false, overlay: false } } } });
+  await service.send('m', 's', { ...request, instruction: 'vendo velas, copia esta estructura https://www.otra.com/' });
+  expect(generation.generate.mock.calls[0][6]).toMatchObject({ websiteCopy: true, copyHeader: 'centered-split' });
+});
+
+it('without a render, the reply only claims the number of sections', async () => {
+  const { service, messages } = setup([3]);
+  (service.homeMeasurer as jest.Mock).mockResolvedValue(null);
+  await service.send('m', 's', { ...request, instruction: 'vendo velas, copia esta estructura https://www.otra.com/' });
+  expect(messages.at(-1).content).toMatch(/^Seguí las 3 secciones de otra\.com con tu marca y tu contenido\./);
 });
 
 it('inspiration wording keeps today\'s reference and never reads a blueprint', async () => {

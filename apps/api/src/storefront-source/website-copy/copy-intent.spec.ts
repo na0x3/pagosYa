@@ -1,4 +1,4 @@
-import { websiteCopyAsked } from './copy-intent';
+import { websiteCopyAsked, websiteCopyWording } from './copy-intent';
 
 describe('websiteCopyAsked (spec 2026-10-18 website copy)', () => {
   it.each([
@@ -18,4 +18,12 @@ describe('websiteCopyAsked (spec 2026-10-18 website copy)', () => {
     'quiero vender esta licuadora https://blendjet.com/products/x',
     'cambia el color del botón',
   ])('does not copy: %s', words => expect(websiteCopyAsked(words)).toBe(false));
+});
+
+describe('websiteCopyWording', () => {
+  it('tells a named copy from wording that could be inspiration', () => {
+    expect(websiteCopyWording('copia esta estructura https://otra.com')).toBe('strong');
+    expect(websiteCopyWording('hazme la web como esta https://otra.com')).toBe('plain');
+    expect(websiteCopyWording('inspírate en https://otra.com')).toBeNull();
+  });
 });
