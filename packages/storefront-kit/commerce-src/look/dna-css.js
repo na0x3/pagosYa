@@ -314,3 +314,27 @@
       document.head.append(themeStyle);
     }
   }
+  /* Showcase commerce (spec 2026-10-19): card insides, product spotlights and catalog filters, for every store. One layer below
+   * the store's own CSS, so an authored card or a YAPI theme always wins. */
+  const SHOWCASE_CSS = [
+    '[data-pagosya-catalog] .menu-item__eyebrow{margin:6px 0 0;font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.7}',
+    '[data-pagosya-catalog] .menu-item__points{list-style:none;margin:6px 0;padding:0;display:grid;gap:3px;font-size:13px}',
+    '[data-pagosya-catalog] .menu-item__points li::before{content:"✓";margin-right:6px;color:var(--store-accent,currentColor)}',
+    '[data-pagosya-catalog] .menu-item__chips{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}',
+    '[data-pagosya-catalog] .menu-item__chips span{font-size:10px;font-weight:700;letter-spacing:.06em;border:1px solid currentColor;border-radius:99px;padding:3px 8px;opacity:.85}',
+    '[data-pagosya-catalog] .menu-item__chips [data-swatch]{width:14px;height:14px;padding:0;border-radius:50%;background:var(--swatch);border-color:rgba(0,0,0,.2)}',
+    '[data-pagosya-catalog] .menu-item__deal{margin:4px 0;font-size:12px;font-weight:700;color:#2e7d4f}',
+    '[data-pagosya-catalog] .menu-item__save{display:inline-block;margin:4px 0 0 6px;padding:2px 8px;border-radius:99px;background:var(--store-accent,#c0392b);color:var(--store-on-accent,#fff);font-size:10px;font-weight:800;letter-spacing:.04em;vertical-align:middle}',
+    '[data-pagosya-catalog] .menu-item[data-card-best]{position:relative}',
+    '[data-pagosya-catalog] .menu-item__best{position:absolute;top:10px;right:10px;z-index:2;padding:3px 9px;border-radius:99px;background:var(--store-accent,#c0392b);color:var(--store-on-accent,#fff);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}',
+    '[data-pagosya-catalog][data-card-design=showcase]{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:20px}',
+    '[data-pagosya-catalog][data-card-design=showcase] .menu-item:not([data-custom-product]){position:relative;padding:16px;border-radius:var(--store-radius,18px);background:var(--store-surface,#fbf6ea)}',
+    '[data-pagosya-catalog][data-card-design=showcase] .menu-item[data-card-best]:not([data-custom-product]){background:var(--store-foreground,#1d2b4f);color:var(--store-background,#fff)}',
+    '[data-pagosya-catalog][data-card-design=showcase] .menu-item:not([data-custom-product]) .menu-add{width:100%;justify-content:center;border-radius:99px}',
+    '[data-pagosya-catalog][data-card-design=split] .menu-item:not([data-custom-product]){display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:14px;align-items:center}',
+    '@media(max-width:640px){[data-pagosya-catalog][data-card-design=split] .menu-item:not([data-custom-product]){grid-template-columns:1fr}}',
+  ];
+  const showcaseStyle = document.createElement('style');
+  showcaseStyle.dataset.pagosyaKit = 'showcase';
+  showcaseStyle.textContent = `@layer pagosya-showcase {\n${SHOWCASE_CSS.join('\n')}\n}`;
+  document.head.append(showcaseStyle);

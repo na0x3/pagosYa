@@ -26,6 +26,7 @@ export const PARTS = [
   'shared/analytics.js',
   'shared/state.js',
   'catalog/offers.js',
+  'catalog/card-insides.js',
   'cart/lines.js',
   'product/dialog-style.js',
   'product/setup.js',

@@ -91,6 +91,7 @@
         el.innerHTML = selected.length ? selected.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
+      markCardDesign(el);
       if (MOTIFS.length) { placeCardMotifs(el); placeButtonMotifs(el); }
     });
     observeCards();
