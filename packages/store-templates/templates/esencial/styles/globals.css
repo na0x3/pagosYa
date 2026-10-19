@@ -445,3 +445,25 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 /* Product photos keep their true colours (a shopper buys the colour they see): duotone is for mood photos only. */
 .es[data-es-photos="duotone"] :is(.es-story__media,.es-biz__gallery){background:color-mix(in srgb,var(--es-accent) 40%,var(--es-paper))}
 .es[data-es-photos="duotone"] :is(.es-story__media img,.es-biz__gallery img){filter:grayscale(1) contrast(1.05);mix-blend-mode:multiply}
+
+/* ---- Showcase commerce (2026-10-19): the kit reads the store's colours from these, and the three card designs ---- */
+.es{--store-foreground:var(--es-ink);--store-background:var(--es-paper);--store-surface:var(--es-muted);--store-accent:var(--es-accent);--store-on-accent:var(--es-on-accent);--store-radius:var(--es-radius,6px);--store-heading-font:var(--es-heading)}
+.es-card [hidden]{display:none!important}
+.es-card__eyebrow{margin:0;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:color-mix(in srgb,currentColor 65%,transparent)}
+.es-card__points{list-style:none;margin:0;padding:0;display:grid;gap:3px;font-size:13px}
+.es-card__points li::before{content:"✓";margin-right:6px;color:var(--es-accent)}
+.es-card__chips{display:flex;flex-wrap:wrap;gap:4px;margin:0}
+.es-card__chips span{font-size:10px;font-weight:600;letter-spacing:.06em;border:1px solid currentColor;border-radius:99px;padding:2px 8px}
+.es-card__chips [data-swatch]{width:14px;height:14px;padding:0;border-radius:50%;background:var(--swatch)}
+.es-card__deal{margin:0;font-size:12px;font-weight:600;color:var(--es-accent)}
+.es-card__save{padding:2px 8px;border-radius:99px;background:var(--es-accent);color:var(--es-on-accent);font-size:10px;font-weight:700;white-space:nowrap}
+.es-grid[data-es-cards="compact"] .es-card__points{display:none}
+.es-grid[data-es-cards="showcase"]{grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))!important;gap:20px!important}
+.es-grid[data-es-cards="showcase"] .es-card{position:relative;padding:16px;border-radius:calc(var(--es-radius,6px) * 2);background:var(--es-muted)}
+.es-grid[data-es-cards="showcase"] .es-card[data-card-best]{background:var(--es-deep);color:var(--es-on-deep)}
+.es-grid[data-es-cards="showcase"] .es-card__name{font:400 24px/1.2 var(--es-heading)}
+.es-grid[data-es-cards="showcase"] .menu-item__best{position:absolute;top:24px;right:24px;z-index:2;padding:3px 9px;border-radius:99px;background:var(--es-accent);color:var(--es-on-accent);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.es-grid[data-es-cards="split"]{grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr))!important}
+.es-grid[data-es-cards="split"] .es-card{grid-template-columns:minmax(0,2fr) minmax(0,3fr);column-gap:16px;align-items:center}
+.es-grid[data-es-cards="split"] .es-card__media{grid-row:span 7}
+@media (max-width:760px){.es-grid[data-es-cards="split"] .es-card{grid-template-columns:1fr}.es-grid[data-es-cards="split"] .es-card__media{grid-row:auto}}

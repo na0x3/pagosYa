@@ -3,7 +3,7 @@ import { uploadPath } from './source-product-photos';
  * authored source never contains merchant text; it imports `./store-data`, which this module writes with every value
  * JSON-encoded, so no store name or photo URL is ever pasted into JSX. */
 import type { MasterCopy } from '@pagosya/store-templates';
-import { masterCopy, masterDnaFonts, masterDnaLook, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
+import { masterCopy, masterDnaFonts, masterDnaLook, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
 import { readFile } from 'node:fs/promises';
 import { templateDemoPhoto, type TemplateManifest } from '@pagosya/store-templates';
 import { kitPath } from '@pagosya/storefront-kit';
@@ -106,7 +106,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
       const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
       if (!match) return file;
       const config = JSON.parse(match[1]);
-      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }) } })};\n` };
+      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }) }, showcase: { ...(config.showcase ?? {}), ...masterShowcase({ ...(state.variants ?? {}), ...(change.variants ?? {}) }) } })};\n` };
     }
     return file;
   });
@@ -172,6 +172,7 @@ export async function assembleTemplateRevision(input: {
   const demoAssets = templateDemoAssets(manifest, demoSlots);
   const config = {
     ...sourceCommerceRoutes([...authored, ...scaffold, ...kitFiles], {}), dna: { ...templateDna(manifest, input.storeId), ...(settings ? { ...masterDnaFonts(settings, look!), ...masterDnaLook(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) } : {}) },
+    ...(settings ? { showcase: masterShowcase(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) } : {}),
     productPage: 'product.html', checkoutPage: 'checkout.html', sitePurpose: 'shop', demo: false, slug: input.slug,
     apiBaseUrl: input.apiUrl.href.replace(/\/$/, ''), checkoutOrigin: input.checkoutOrigin, data,
   };

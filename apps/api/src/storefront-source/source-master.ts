@@ -106,6 +106,13 @@ export function masterDnaLook(variants: Partial<MasterVariants> | undefined): Re
   return { ...(button ? { button } : {}), ...(radius ? { radius } : {}) };
 }
 
+/** Showcase commerce: the rolled card design and offer-square layout, read by the kit from config.showcase. */
+export function masterShowcase(variants: Partial<MasterVariants> | undefined): { cards?: string; offers?: string } {
+  const cards = ['showcase', 'compact', 'split'].includes(String(variants?.cards)) ? String(variants!.cards) : undefined;
+  const offers = ['steps', 'grid', 'rows'].includes(String(variants?.offers)) ? String(variants!.offers) : undefined;
+  return { ...(cards ? { cards } : {}), ...(offers ? { offers } : {}) };
+}
+
 export function masterDnaFonts(settings: MasterSettings, look: MasterLook) {
   const pair = settings.fonts.find(f => f.id === look.fonts) ?? settings.fonts[0];
   return { display: pair.heading, text: pair.body };

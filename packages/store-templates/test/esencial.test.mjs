@@ -118,3 +118,14 @@ test('review fix: the centered header falls back to the classic layout on phones
   assert.doesNotMatch(css, /^\.es-header\[data-es-header="centered"\]/m);
   assert.match(css, /@media \(min-width:761px\)\{\s*\.es-header\[data-es-header="centered"\]/);
 });
+
+test('Esencial rolls card and offer styles, and its card fills the kit fields (showcase commerce)', () => {
+  assert.deepEqual(esencial.master.variants.cards, ['showcase', 'compact', 'split']);
+  assert.deepEqual(esencial.master.variants.offers, ['steps', 'grid', 'rows']);
+  const home = file('components/home.tsx');
+  for (const field of ['eyebrow', 'points', 'chips', 'deal', 'save']) assert.match(home, new RegExp(`data-product-field="${field}"`), field);
+  assert.match(home, /data-es-cards=\{/);
+  const css = file('styles/globals.css');
+  for (const id of esencial.master.variants.cards) assert.match(css, new RegExp(`data-es-cards="${id}"`), id);
+  assert.match(css, /--store-foreground:var\(--es-ink\)/);
+});

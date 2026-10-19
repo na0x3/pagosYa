@@ -1,3 +1,4 @@
+import { masterShowcase } from './source-master';
 import { templateManifest } from '@pagosya/store-templates';
 import { paletteForBrand } from './source-master';
 import type { MasterSettings } from '@pagosya/store-templates';
@@ -93,4 +94,12 @@ describe('review fix: a brand accent is readable on the rolled palette', () => {
     expect(contrastRatio('#1f2a44', paper(id))).toBeGreaterThanOrEqual(3);
   });
   it('a brand paper is the brand\'s own choice: the roll stays', () => expect(paletteForBrand(esencial, 'ink', { accent: '#1f2a44', paper: '#ffffff' })).toBe('ink'));
+});
+
+describe('masterShowcase (showcase commerce)', () => {
+  it('passes the rolled card and offer styles to the kit config', () => {
+    expect(masterShowcase({ cards: 'showcase', offers: 'rows', sections: [] } as any)).toEqual({ cards: 'showcase', offers: 'rows' });
+    expect(masterShowcase({ cards: 'nope', sections: [] } as any)).toEqual({});
+    expect(masterShowcase(undefined)).toEqual({});
+  });
 });

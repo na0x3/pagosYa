@@ -424,6 +424,16 @@
         "rounded",
         "framed",
         "duotone"
+      ],
+      "cards": [
+        "showcase",
+        "compact",
+        "split"
+      ],
+      "offers": [
+        "steps",
+        "grid",
+        "rows"
       ]
     },
     "sections": [

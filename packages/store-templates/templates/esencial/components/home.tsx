@@ -37,7 +37,9 @@ export default function Home() {
   const multi = rolled === 'collage' || rolled === 'strip';
   const hero = !photos.hero || (multi && heroPhotos.length < 3) ? 'type' : rolled;
   const layered = hero === 'full' || hero === 'poster';
-  const card = variant('card', 'plain');
+  // Showcase commerce: the card design (showcase | compact | split); the older card looks apply to compact cards only.
+  const cards = variant('cards', 'compact');
+  const card = cards === 'compact' ? variant('card', 'plain') : 'plain';
   const sentences = copy.storyBody.split(/(?<=[.!?])\s+/).map(text => text.trim()).filter(Boolean);
   const rolledStory = variant('story', 'split');
   const story = ['split', 'overlay', 'pair'].includes(rolledStory) && !photos.story ? 'note'
@@ -71,15 +73,20 @@ export default function Home() {
         <template data-pagosya-product-template>
           <article className="es-card" data-es-card={card}>
             <a className="es-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
+            <p className="es-card__eyebrow" data-product-field="eyebrow" hidden />
             <h3 className="es-card__name" data-product-field="name">Producto</h3>
+            <ul className="es-card__points" data-product-field="points" hidden />
+            <p className="es-card__chips" data-product-field="chips" hidden />
+            <p className="es-card__deal" data-product-field="deal" hidden />
             <div className="es-card__row">
               <p className="es-card__price" data-product-field="price" />
+              <span className="es-card__save" data-product-field="save" hidden />
               {card === 'bar' ? null : <button type="button" className="es-card__add" data-product-add aria-label="Agregar al carrito"><IconPlus /></button>}
             </div>
             {card === 'bar' ? <button type="button" className="es-card__bar" data-product-add>Agregar</button> : null}
           </article>
         </template>
-        <div className="es-grid" data-es-grid={variant('grid', 'grid4')} data-pagosya-catalog />
+        <div className="es-grid" data-es-grid={variant('grid', 'grid4')} data-es-cards={cards} data-pagosya-catalog />
       </section>
 
       <section id="historia" className={story === 'split' && !photos.story ? 'es-section es-story es-story--text' : 'es-section es-story'} data-es-story={story} aria-labelledby="es-story-title">
