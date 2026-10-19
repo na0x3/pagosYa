@@ -99,6 +99,17 @@ describe('SourceTemplatesService', () => {
     expect(data).toContain('"story":""');
   });
 
+  it('writes every product\'s own page content after a master build, in the background (variety spec §2b)', async () => {
+    const { templates: base, projects, prisma } = service(0);
+    const real = jest.requireActual('@pagosya/store-templates');
+    const pageWriter = { fillStore: jest.fn(async () => undefined) };
+    const templates = new SourceTemplatesService(prisma as any, (base as any).publicStores, projects as any, (base as any).config, undefined, pageWriter as any);
+    templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+    await templates.applyMaster('m1', 'store-1', 0, async () => null);
+    await new Promise(resolve => setImmediate(resolve));
+    expect(pageWriter.fillStore).toHaveBeenCalledWith('store-1');
+  });
+
   it('saves the template as the next revision and switches a first site to payment checkout', async () => {
     const { templates, projects, prisma } = service(0);
     const saved = await templates.apply('m1', 'store-1', 'prueba', 0);
