@@ -17,6 +17,11 @@ describe('agent capture', () => {
     expect((await captureAgentDraft(snapshot('Consulta precios y disponibilidad en cada producto.'), 390)).errors).toEqual([]);
     expect((await captureAgentDraft(snapshot('Diseño de una composición visual contenida.', false), 390)).errors).toEqual([]);
   });
+  it('does not report the store\'s own uploaded photos the sandbox cannot fetch, but still reports a missing bundled file (live 2026-10-19)', async () => {
+    const snapshot = (src: string) => ({ brief: {}, files: [{ path: 'index.html', content: `<html><head><meta charset="utf-8"></head><body><h1>Tienda</h1><img src="${src}" alt="" width="200" height="200" style="display:block;width:200px;height:200px"><div data-pagosya-catalog></div></body></html>` }] } as any);
+    expect((await captureAgentDraft(snapshot('http://localhost:3001/v1/uploads/5205e16c-fbba-4bfb-bee5-f2fcd0fc61d8.jpg'), 390)).errors.filter(e => e.startsWith('Imagen no disponible'))).toEqual([]);
+    expect((await captureAgentDraft(snapshot('assets/no-existe.jpg'), 390)).errors).toContain('Imagen no disponible: assets/no-existe.jpg');
+  });
   it('rejects a CSS-hidden catalog even when no products exist yet', async () => {
     const snapshot = { brief: {}, files: [{ path: 'index.html', content: '<html><head><style>[data-pagosya-catalog]{display:none}</style></head><body><h1>Tienda</h1><div data-pagosya-catalog></div></body></html>' }] } as any;
     expect((await captureAgentDraft(snapshot, 390)).errors).toContain('El catálogo está oculto. Mantén visible data-pagosya-catalog incluso sin productos; el runtime controla su estado vacío y los productos futuros.');

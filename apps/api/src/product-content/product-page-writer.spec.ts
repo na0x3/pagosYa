@@ -88,3 +88,12 @@ describe('card eyebrow (showcase commerce 2026-10-19)', () => {
     expect(writtenPage({ highlights: [] }, facts, []).eyebrow).toBeNull();
   });
 });
+
+describe('cut phrases (live 2026-10-19)', () => {
+  it('drops a highlight or card phrase the length cap cut mid-way, keeps whole ones', () => {
+    const page = writtenPage({ highlights: [{ icon: 'snowflake', label: 'Conversaciones de los', detail: null }, { icon: 'snowflake', label: 'Libro corto', detail: null }], eyebrow: 'Para leer con' }, facts, []);
+    expect(page.highlights.map(row => row.label)).toEqual(['Libro corto']);
+    expect(page.eyebrow).toBeNull();
+    expect(writtenPage({ highlights: [], eyebrow: 'Para el trabajo' }, facts, []).eyebrow).toBe('Para el trabajo');
+  });
+});

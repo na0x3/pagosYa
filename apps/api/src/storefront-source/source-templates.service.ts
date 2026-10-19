@@ -14,7 +14,7 @@ import { PublicStoresService } from '../stores/public-stores.service';
 import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectSnapshot } from './source-project';
 import { assembleTemplateRevision, readMasterState, refillMasterFiles, templateDemoRevision, TEMPLATE_STORE_DATA_PATH } from './source-templates';
-import { MASTER_TEMPLATE_ID, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
+import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
 import { distinctPhotoCount, rollVariants, type RecentRoll } from './source-master-dice';
 
 /** What the master template's filler is told about a store (spec 2026-10-19 §2.3). */
@@ -74,7 +74,10 @@ export class SourceTemplatesService {
     const facts: MasterFacts = { storeName: publicStore.storeName, products: publicStore.items.map(item => item.name), photos: [...new Set(publicStore.items.flatMap(item => item.imageUrls ?? []))],
       ...(confirmed.get('voice') || confirmed.get('avoid') || confirmed.get('headlineExamples') ? { brand: { voice: confirmed.get('voice'), headlineExamples: confirmed.get('headlineExamples'), avoid: confirmed.get('avoid') } } : {}) };
     const filled = await filler(facts).catch(() => null);
-    const bundled = filled ? await this.bundleMasterPhotos(merchantId, filled) : { change: undefined, files: [] };
+    // Live 2026-10-19: a fill that timed out left the template's placeholder story and an API-hosted hero, and that hero then
+    // failed every later design edit's checks («Imagen no disponible»). The merchant's own words and photos stand in.
+    const fallback = filled ? null : await this.masterFallback(storeId, facts);
+    const bundled = filled || fallback ? await this.bundleMasterPhotos(merchantId, filled ?? fallback!) : { change: undefined, files: [] };
     let fill = bundled.change ?? null;
     // Variety spec §3: the platform rolls the store's variants, palette and fonts within the business's character.
     let variants: MasterVariants | undefined;
@@ -130,6 +133,16 @@ export class SourceTemplatesService {
   /** Live check 2026-10-19: the master hero and story photos are bundled into the store like any authored photo (the
    *  preview and the agent's checks cannot load images from the API). Only the merchant's own uploads; anything else is
    *  dropped. Over 2 MB is scaled down. Without the uploads service (tests) the value is left as it is. */
+  /** What a failed fill still knows: the walkthrough story and the merchant's photos (brand photos first, then products). */
+  private async masterFallback(storeId: string, facts: MasterFacts): Promise<MasterFill> {
+    type Onboarding = { story?: unknown; photos?: unknown } | null;
+    const onboarding = await Promise.resolve().then(() => this.prisma.store.findUnique({ where: { id: storeId }, select: { onboarding: true } }))
+      .then(store => (store?.onboarding ?? null) as Onboarding, () => null as Onboarding);
+    const story = typeof onboarding?.story === 'string' ? onboarding.story.trim().slice(0, MASTER_COPY_CAPS.storyBody) : '';
+    const photos = [...new Set([...(Array.isArray(onboarding?.photos) ? onboarding!.photos.filter((url): url is string => typeof url === 'string') : []), ...facts.photos])];
+    return { ...(story ? { copy: { storyBody: story } } : {}), ...(photos[0] ? { heroPhoto: photos[0] } : {}), ...(photos[1] ? { storyPhoto: photos[1] } : {}) };
+  }
+
   private async bundleMasterPhotos(merchantId: string, change: MasterFill): Promise<{ change: MasterFill; files: SourceProjectFileDto[] }> {
     const out: MasterFill = { ...change };
     const files: SourceProjectFileDto[] = [];

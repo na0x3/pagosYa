@@ -92,3 +92,13 @@ it('a bare id two parts share rules out neither; a bare id one part owns still c
   }
   expect(cards).toContain('compact');
 });
+
+it('card designs and offer layouts are the dice\'s alone: the fill call cannot rule them out (live: 5 of 6 stores got grid offers)', () => {
+  const offers = new Set<string>(), cards = new Set<string>();
+  for (const seed of 'abcdefghijklmnopqrstuvwxyz') {
+    const r = roll(seed, { character: { ...calm, exclude: ['offers:steps', 'offers:rows', 'cards:compact'] } });
+    offers.add(r.variants.offers); cards.add(r.variants.cards);
+  }
+  expect([...offers].sort()).toEqual(['grid', 'rows', 'steps']);
+  expect(cards).toContain('compact');
+});

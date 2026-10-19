@@ -99,6 +99,22 @@ describe('SourceTemplatesService', () => {
     expect(data).toContain('"story":""');
   });
 
+  it('a failed fill keeps the merchant\'s own story and a bundled hero, never the placeholder and an API photo (live 2026-10-19)', async () => {
+    const { templates: base, projects, prisma } = service(0);
+    const real = jest.requireActual('@pagosya/store-templates');
+    const uploads = { getBuffer: jest.fn(async () => Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])) };
+    (prisma as any).mediaAsset = { findMany: jest.fn(async () => [{ url: '/v1/uploads/aaaaaaaa-0000-0000-0000-000000000003.jpg' }]) };
+    (prisma as any).store.findUnique = jest.fn(async () => ({ onboarding: { story: 'Horneamos cada madrugada con masa madre.', photos: ['/v1/uploads/aaaaaaaa-0000-0000-0000-000000000003.jpg'] } }));
+    const templates = new SourceTemplatesService(prisma as any, (base as any).publicStores, projects as any, (base as any).config, uploads as any);
+    templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+    await templates.applyMaster('m1', 'store-1', 0, async () => null);
+    const files = (projects.save.mock.calls[0] as any[])[2].files as Array<{ path: string; content: string }>;
+    const data = files.find(f => f.path === 'components/store-data.tsx')!.content;
+    expect(data).toContain('Horneamos cada madrugada con masa madre.');
+    expect(data).not.toContain('Somos un emprendimiento');
+    expect(/"hero":"assets\/image-[a-f0-9]{12}\.jpg"/.test(data)).toBe(true);
+  });
+
   it('writes every product\'s own page content after a master build, in the background (variety spec §2b)', async () => {
     const { templates: base, projects, prisma } = service(0);
     const real = jest.requireActual('@pagosya/store-templates');

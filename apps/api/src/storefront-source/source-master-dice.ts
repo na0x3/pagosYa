@@ -23,6 +23,9 @@ function rng(seed: string) {
 }
 const pick = <T>(next: () => number, list: readonly T[]): T => list[Math.floor(next() * list.length)];
 
+/** Commerce displays fit any business; the fill call's exclusions skipped them every time (live 2026-10-19: offers «steps» never rolled). */
+const DICE_ONLY = new Set(['cards', 'offers']);
+
 /** Most recent first. */
 export type RecentRoll = { hero: string; palette: string; fonts: string };
 
@@ -36,7 +39,7 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   const excluded = (part: string, id: string) => input.character.exclude.includes(`${part}:${id}`) || (input.character.exclude.includes(id) && owners(id) === 1);
   const allowed = (part: string) => {
     const fits = catalogue[part].filter(id => (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
-    const honoured = fits.filter(id => excluded(part, id)).slice(0, Math.floor(fits.length / 2));
+    const honoured = DICE_ONLY.has(part) ? [] : fits.filter(id => excluded(part, id)).slice(0, Math.floor(fits.length / 2));
     const list = fits.filter(id => !honoured.includes(id));
     return list.length ? list : [catalogue[part][0]];
   };

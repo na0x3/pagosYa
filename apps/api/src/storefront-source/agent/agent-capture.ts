@@ -11,6 +11,9 @@ import { withVisualSandbox } from '../source-visual-capture';
 import { sourceVisualState } from '../source-visual-state';
 import { withSourceAssets } from '../source-asset-library';
 
+/** The merchant's own uploaded photos: served by the API on the live store, unreachable from the sandbox (live 2026-10-19). */
+const STORE_UPLOAD = /^https?:\/\/[^/]+\/(?:api\/)?v1\/uploads\/[0-9a-f-]{36}\.(?:jpe?g|png|webp|gif)$/i;
+
 export type AgentPreviewBase = { brief: SourceProjectBriefDto; files: SourceProjectFileDto[] };
 export type AgentShot = { width: 1280 | 820 | 390; image: string; thumbnail: string; errors: string[]; evidence: RequirementEvidence[] };
 
@@ -99,7 +102,7 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
       }),
     }));
     if (mediaPolicy && !['product.html', 'checkout.html', 'productos.html'].includes(entry)) errors.push(...await page.evaluate(evaluateSourceMediaDesign, { ...mediaPolicy, page: entry }));
-    errors.push(...health.missing.map(path => 'Imagen no disponible: ' + path));
+    errors.push(...health.missing.filter(path => !STORE_UPLOAD.test(path)).map(path => 'Imagen no disponible: ' + path));
     // A store-colour illustration is a CSS mask: a wrong path draws nothing and raises no image error.
     errors.push(...[...new Set(health.illustrations)].filter(src => !snapshot.files.some(file => '/' + file.path === src || file.path === src)).slice(0, 8).map(src => 'Ilustración no disponible: ' + src));
     // A tone such as var(--butter) on a store without that variable paints the mask transparent.

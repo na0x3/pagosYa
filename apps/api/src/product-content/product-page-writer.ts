@@ -57,11 +57,16 @@ export function productPagePrompt(facts: ProductPageFacts, storeName: string, vo
   ].join('\n');
 }
 
+/** Strict schemas stop the model at maxLength, mid-phrase (live 2026-10-19: «Conversaciones de los»): a phrase that ends on a
+ *  word that needs a following one is cut, and is dropped rather than shown. */
+const DANGLING = /\s(?:de|del|la|las|el|los|lo|con|y|e|o|u|para|en|a|al|un|una|unos|unas|por|sin|su|sus|que|se|tu|tus|mi|mis|muy|más|entre|sobre|hasta|desde)$/i;
+const whole = (text: string | null | undefined) => !DANGLING.test(` ${String(text ?? '').trim()}`);
+
 /** The model's answer made safe: invented numbers and photos dropped, every row marked as YAPI's, stored shapes only. */
 export function writtenPage(raw: unknown, facts: ProductPageFacts, photoUrls: string[]): WrittenPage {
   const value: any = raw && typeof raw === 'object' ? raw : {};
   const numbers = factNumbers(facts), claims = factClaims(facts);
-  const ok = (...texts: Array<string | null | undefined>) => texts.every(text => keepsToFacts(text || '', numbers, claims));
+  const ok = (...texts: Array<string | null | undefined>) => texts.every(text => keepsToFacts(text || '', numbers, claims) && whole(text));
   const highlights = normalizeProductHighlights((Array.isArray(value.highlights) ? value.highlights : []).filter((row: any) => row && ok(row.label, row.detail)).map((row: any) => ({ ...row, origin: 'yapi' })));
   const candidates: object[] = [];
   const title = (block: any) => (typeof block?.title === 'string' && block.title.trim() && ok(block.title) ? { title: block.title } : {});
