@@ -46,6 +46,9 @@ export function distinctiveCss(files: ReadonlyArray<{ path: string; content: str
   return text.trim();
 }
 
+/** The owner's premium bar on the kit surfaces, even when the home page uses louder devices. */
+export const KIT_TOUCH_PREMIUM = 'Premium finish, the bar of the best independent stores: carry the home\'s colours, type, 1px rules and corner radius. Never an offset solid shadow (only none or a soft blur), never clip-path cut corners, never a gradient ring or stripe behind a photo; hover changes a colour, an underline or a photo\'s scale (at most 1.04), and never moves a card, a thumbnail or a photo frame. Calm, exact and quiet beats loud.';
+
 export function kitTouchPrompt(input: { storeName: string; look?: StoreLook; signature?: unknown; distinctive: string; instruction?: string }): string {
   return [
     `You designed the home page of «${input.storeName}» (screenshots attached: the first screens at 1280px). The platform draws four more surfaces itself: the product page, the catalog pages, the product cards and the cart drawer. They already follow the home's measured look below. Carry the home page's OWN distinctive devices onto those surfaces with guarded CSS, so a shopper never feels they left the store. Never invent a new style: use only devices the home already shows (its shadows, frames, rotations, cut edges, stamps, rules, label style). Leave a surface empty when the measured look already carries it.`,
@@ -53,6 +56,9 @@ export function kitTouchPrompt(input: { storeName: string; look?: StoreLook; sig
     input.signature ? `The store's signature: ${JSON.stringify(input.signature)}` : '',
     `The home page's distinctive CSS (excerpt):\n${input.distinctive || '(none)'}`,
     input.instruction ? `The merchant asked now: «${input.instruction}». Apply it to these surfaces only.` : '',
+    // 2026-10-19: Pulso Studio's touch carried offset coral shadows and cut corners onto the cards and product page. Bold is
+    // colour, type and scale; the premium references (Amboras, pawfectt.com) never move a card or stamp a hard shadow on it.
+    KIT_TOUCH_PREMIUM,
     'Guarded CSS, for every surface:',
     '- Selectors are only [data-part="name"] compounds (at most 3 per selector) with :hover, :focus-visible, ::before or ::after. No tags, classes or ids. The platform adds the scope.',
     '- Allowed: literal colours or var(--store-*), var(--brand-*), var(--kit-*) (and var(--pd-*) on the product page); borders, border-radius, box-shadow, outline, backgrounds (colours and gradients), filter (grayscale/sepia 0-1, saturate 0-2, contrast/brightness 0.5-1.5, hue-rotate up to 45deg), transform, clip-path (not on buttons), aspect-ratio, object-fit, letter-spacing, text-transform, font-style, @keyframes. No url(), no !important, no custom properties, no position:fixed.',

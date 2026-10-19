@@ -1,5 +1,5 @@
 // apps/api/src/storefront-source/kit-touch.spec.ts
-import { carriedTouch, chatTouchKept, distinctiveCss, instructionConcernsKitSurfaces, kitTouchPrompt, pickTouch, runKitTouch, touchBudgetMs, TOUCH_KEYS } from './kit-touch';
+import { carriedTouch, chatTouchKept, distinctiveCss, instructionConcernsKitSurfaces, KIT_TOUCH_PREMIUM, kitTouchPrompt, pickTouch, runKitTouch, touchBudgetMs, TOUCH_KEYS } from './kit-touch';
 import { readConfigFile } from './store-look';
 
 const files = [
@@ -27,6 +27,11 @@ describe('distinctiveCss', () => {
 });
 
 describe('kitTouchPrompt', () => {
+  it('holds the kit surfaces to the premium bar (2026-10-19): no offset solid shadows, cut corners or moving cards', () => {
+    expect(kitTouchPrompt({ storeName: 'Café', distinctive: '' })).toContain(KIT_TOUCH_PREMIUM);
+    expect(KIT_TOUCH_PREMIUM).toMatch(/offset solid shadow/);
+    expect(KIT_TOUCH_PREMIUM).toMatch(/clip-path/);
+  });
   it("names every surface's parts, the protected controls and the merchant request", () => {
     const text = kitTouchPrompt({ storeName: 'Café', look: { version: 1, edge: 'offset' }, distinctive: '.stamp{}', instruction: 'fotos inclinadas' });
     for (const word of ['card-media', 'cart-line', 'page-title', 'gallery', 'protected', 'transform', 'fotos inclinadas', '"edge":"offset"']) expect(text).toContain(word);
