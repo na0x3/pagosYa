@@ -30,9 +30,11 @@ YAPI rebuilds that page's structure and look section by section with the merchan
    self-hosted font are used.
 5. **Never copied**: the other company's text, logo, photos, product names, claims or code; nothing is loaded from its site.
    Their images become the merchant's photos or YAPI drawings.
-6. **Check**: the saved home page's top-level sections are compared with the blueprint (count and order of roles). Below 60%,
-   one repair run adds what is missing. The reply says how close it came: «Copié la estructura de midominio.com: 7 de 9
-   secciones.» and names what could not be read.
+6. **Check**: the saved home page is rendered offline from its own files and measured like the reference; each section is
+   compared in order (columns, images, heading size). The reply says how close it came and names the sections that differ:
+   «Copié la estructura de midominio.com: 4 de 5 secciones con el mismo diseño; la sección 3 quedó distinta.» Without a render
+   it only claims the count. *Amended 2026-10-18 (live, Mezcla Ya):* no automatic repair run — on the ChatGPT plan it timed out
+   as a single-call edit and cut off the background polish; the merchant asks for the named sections instead.
 7. **Scope**: the linked page becomes the home page, on a new store or as a redesign. Other pages stay standard in the same look.
    A product-link store (A) with a copy link uses both.
 

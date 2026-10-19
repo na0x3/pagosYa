@@ -1,4 +1,4 @@
-import { copyBlueprintPrompt, copyHeaderShape, copyLayoutCheck, copyRepairInstruction, copyReplyNote, copyStructureCheck, homeBlocks, normalizeBlueprint, type WebsiteBlueprint } from './copy-blueprint';
+import { copyBlueprintPrompt, copyHeaderShape, copyLayoutCheck, copyReplyNote, copyStructureCheck, homeBlocks, normalizeBlueprint, type WebsiteBlueprint } from './copy-blueprint';
 
 const raw = {
   sections: [
@@ -72,7 +72,6 @@ describe('copyLayoutCheck (polish 2026-10-18)', () => {
     const check = copyLayoutCheck(reference, off);
     expect(check).toMatchObject({ matched: 1, differing: [1, 3], missing: 1 });
     expect(copyReplyNote(reference, check)).toBe('Copié la estructura de otra.com: 1 de 3 secciones con el mismo diseño; las secciones 1 y 3 quedaron distintas. Pídeme «iguala la sección 1» si la quieres más parecida.');
-    expect(copyRepairInstruction(reference, check)).toContain('Corrige solo estas: la sección 1 debe ser: hero: 2 columns (phone: 1), image on the right');
   });
 });
 

@@ -50,7 +50,7 @@ import { MAX_SOURCE_VIDEO_BYTES } from './source-media';
 import { normalizeProductVariants } from '../payment-links/product-variants';
 import { websiteCopyAsked, websiteCopyWording } from './website-copy/copy-intent';
 import { captureWebsiteBlueprint, measureBuiltHome } from './website-copy/copy-capture';
-import { copyBlueprintPrompt, copyHeaderShape, copyLayoutCheck, copyRepairInstruction, copyReplyNote, copyStructureCheck, type WebsiteBlueprint } from './website-copy/copy-blueprint';
+import { copyBlueprintPrompt, copyHeaderShape, copyLayoutCheck, copyReplyNote, copyStructureCheck, type WebsiteBlueprint } from './website-copy/copy-blueprint';
 import type { SourceReferenceCapture } from './source-reference-capture';
 import type { BrandSourceInput } from './brand-source-types';
 import { rankTemplates, type TemplateChoice } from './source-template-ranking';
@@ -650,17 +650,13 @@ export class SourceChatService {
         return { userMessage, assistantMessage, setup: null };
       }
       // An ineligible run (sketch-first, a draw flag off) never tried, so it has nothing to apologise for.
-      // Spec 2026-10-18 B §6: how close the copy came; far off, one repair run adds what is missing.
-      let finalRevision = revision;
+      // Spec 2026-10-18 B §6: how close the copy came, said honestly. No automatic repair run: on the ChatGPT plan it timed out as a
+      // single-call edit carrying the whole blueprint and cut off the background polish (Mezcla Ya 2026-10-18); the reply names
+      // the sections that differ so the merchant can ask for exactly those.
+      const finalRevision = revision;
       let copyNote = '';
       if (websiteCopy) {
-        const copied = await this.copyCheck(merchantId, storeId, websiteCopy, revision.revision);
-        if (copied && copied.ratio < 0.6) {
-          const repaired = await this.generation.generate(merchantId, storeId, { revision: revision.revision, brief, instruction: `${copyRepairInstruction(websiteCopy, copied)}\n\n${copyBlueprintPrompt(websiteCopy)}`, assetUrls, model: input.model, maxCredits: input.maxCredits },
-            budget, decision.imageUses, workflow.report, { referenceCaptures: copyCaptures, websiteCopy: true, ...(copyHeaderShape(websiteCopy) ? { copyHeader: copyHeaderShape(websiteCopy) } : {}) }).catch(() => undefined);
-          if (repaired && !('styleProposal' in repaired)) finalRevision = repaired;
-        }
-        const final = finalRevision === revision ? copied : await this.copyCheck(merchantId, storeId, websiteCopy, finalRevision.revision);
+        const final = await this.copyCheck(merchantId, storeId, websiteCopy, revision.revision);
         // «hazme la web como esta» could also mean inspiration: the reply says how to get that instead.
         const softWording = websiteCopyWording(merchantWords) === 'plain' ? 'Si solo querías inspirarte en su estilo, dime «solo inspiración» y lo ajusto. ' : '';
         copyNote = final ? `${copyReplyNote(websiteCopy, final)} ${softWording}` : softWording;

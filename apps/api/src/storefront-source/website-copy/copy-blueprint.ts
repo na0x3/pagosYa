@@ -161,17 +161,6 @@ export function copyLayoutCheck(blueprint: WebsiteBlueprint, built: WebsiteBluep
   return { expected: reference.length, built: mine.length, matched, ratio: reference.length ? matched / reference.length : 1, missing: Math.max(0, reference.length - mine.length), differing, measured: true };
 }
 
-/** The repair run's request when the first build came out far from the blueprint. */
-export function copyRepairInstruction(blueprint: WebsiteBlueprint, check: CopyCheck): string {
-  const reference = body(blueprint.sections);
-  const fixes = check.differing.slice(0, 6).map(number => { const section = reference[number - 1]; return section ? `la sección ${number} debe ser: ${sectionLine({ ...section, index: number - 1 }).replace(/^\d+\. /, '')}` : ''; }).filter(Boolean);
-  return [
-    `La página de inicio tiene ${check.built} secciones y la estructura de ${blueprint.host} tiene ${check.expected}${check.measured ? `; ${check.matched} coinciden` : ''}.`,
-    fixes.length ? `Corrige solo estas: ${fixes.join('; ')}` : 'Completa la página de inicio para que siga el COPY BLUEPRINT sección por sección, en el mismo orden.',
-    'Usa el contenido y la marca de este comercio. No cambies el encabezado, los colores ni las secciones que ya coinciden.',
-  ].join(' ');
-}
-
 /** The reply line (decision 6): how close it came and what could not be read. */
 export function copyReplyNote(blueprint: WebsiteBlueprint, check: CopyCheck): string {
   // Without a render only the count is known, so the reply says no more than that.

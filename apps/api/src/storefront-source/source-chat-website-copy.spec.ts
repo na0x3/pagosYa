@@ -46,13 +46,11 @@ it('builds from the blueprint, with its section screenshots and no style cards, 
   expect(messages.at(-1).content).toMatch(/^Copié la estructura de otra\.com: las 3 secciones con el mismo diseño, con tu marca y tu contenido\. (?!Si solo)/);
 });
 
-it('a build far from the blueprint gets one repair run', async () => {
-  const { service, generation, messages } = setup([1, 3]);
+it('a build far from the blueprint is reported honestly, with no automatic repair run', async () => {
+  const { service, generation, messages } = setup([1]);
   await service.send('m', 's', { ...request, instruction: 'hazme la web como esta https://www.otra.com/' });
-  expect(generation.generate).toHaveBeenCalledTimes(2);
-  expect(generation.generate.mock.calls[1][2]).toMatchObject({ revision: 1 });
-  expect(generation.generate.mock.calls[1][2].instruction).toMatch(/^La página de inicio tiene 1 secciones y la estructura de otra\.com tiene 3; 1 coinciden\. Corrige solo estas: la sección 2 debe ser/);
-  expect(messages.at(-1).content).toMatch(/^Copié la estructura de otra\.com: las 3 secciones con el mismo diseño/);
+  expect(generation.generate).toHaveBeenCalledTimes(1);
+  expect(messages.at(-1).content).toMatch(/^Copié la estructura de otra\.com: 1 de 3 secciones con el mismo diseño; las secciones 2 y 3 quedaron distintas\. Pídeme «iguala la sección 2»/);
   // «hazme la web como esta» could mean inspiration: the reply says how to ask for that.
   expect(messages.at(-1).content).toContain('Si solo querías inspirarte en su estilo, dime «solo inspiración»');
 });
