@@ -111,3 +111,13 @@ it('gives a fresh design the drawn frame and leaves everything else untouched', 
   expect(agentInstructions('STABLE', 'shop', true, true, 6, true, '')).toBe(agentInstructions('STABLE', 'shop', true, true, 6, true));
   expect(agentInstructions('STABLE', 'shop', false, false, 6, true, frame)).not.toContain(frame);
 });
+
+describe('products anywhere (showcase commerce; live 2026-10-19: YAPI typed «Bs 30,00» and its own add button beside a video)', () => {
+  it('tells shop edits to place real products with the runtime mounts, never typed prices or hand-made buttons', () => {
+    const shop = agentInstructions('CONTRATOS', 'shop', false, false);
+    expect(shop).toContain('data-pagosya-spotlight');
+    expect(shop).toContain('find_products');
+    expect(shop).toContain('Never type a price');
+    expect(agentInstructions('CONTRATOS', 'service', false, false)).not.toContain('PRODUCTS ANYWHERE');
+  });
+});
