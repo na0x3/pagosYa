@@ -128,6 +128,7 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 @media (max-width:760px){
   .es-header{min-height:60px;padding:0 8px}
   .es-hero{min-height:78vh}
+  .es-hero::after{background:linear-gradient(0deg,rgba(0,0,0,.62),rgba(0,0,0,.42) 60%,rgba(0,0,0,.3))}
   .es-hero__copy{padding:72px 16px 56px}
   .es-section{padding:48px 16px}
   .es-closing{padding:56px 16px}

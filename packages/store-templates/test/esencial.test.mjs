@@ -41,3 +41,9 @@ test('the product card carries every hook the kit needs (else the catalog falls 
   const card = file('components/home.tsx').match(/<template data-pagosya-product-template>([\s\S]*?)<\/template>/)?.[1] ?? '';
   for (const hook of ['data-product-field="name"', 'data-product-field="price"', 'data-product-link', 'data-product-add']) assert.ok(card.includes(hook), `card misses ${hook}`);
 });
+
+test('on a phone the hero text sits on an even shade, not on the light side of the photo (live check)', () => {
+  const css = file('styles/globals.css');
+  const phone = css.slice(css.indexOf('@media (max-width:760px)'));
+  assert.match(phone, /\.es-hero::after\{background:linear-gradient\(0deg/);
+});
