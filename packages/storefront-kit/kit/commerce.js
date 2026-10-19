@@ -1055,9 +1055,10 @@
     [data-pagosya-product][data-style=atelier] .product-detail__assurances span{font-size:11px;color:var(--pd-muted)}
     [data-pagosya-product][data-style=atelier] [data-product-count]{position:absolute;right:16px;bottom:14px;padding:4px 8px;font:500 12px/1 var(--pd-body);letter-spacing:.08em;color:var(--pd-muted);background:color-mix(in srgb,var(--pd-paper) 82%,transparent)}
     [data-pagosya-product][data-style=atelier] .product-detail__thumbnails button[aria-pressed=true]{outline:1px solid var(--pd-ink);outline-offset:2px}
-    /* Story steps (2026-10-19, pawfectt.com): a sticky frame whose photo follows the step being read. */
-    [data-pagosya-product] .product-steps{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(32px,6vw,96px);align-items:start}
-    [data-pagosya-product] .product-steps__frame{position:sticky;top:96px}
+    /* Story steps (2026-10-19, pawfectt.com): a tall section whose stage sticks; the photo and the copy swap as it travels. */
+    [data-pagosya-product] .product-steps{position:relative;height:calc(var(--steps,3) * 64vh + 40vh)}
+    [data-pagosya-product] .product-steps__stage{position:sticky;top:96px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(32px,6vw,96px);align-items:center}
+    [data-pagosya-product] .product-steps__frame{width:min(100%,calc((100vh - 220px) * .8));justify-self:end}
     [data-pagosya-product] .product-steps__media{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:var(--pd-radius,4px);background:var(--pd-surface,transparent)}
     [data-pagosya-product] .product-steps__media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.04);transition:opacity .5s cubic-bezier(.4,0,.2,1),transform .9s cubic-bezier(.4,0,.2,1)}
     [data-pagosya-product] .product-steps__media img[data-active]{opacity:1;transform:none}
@@ -1065,18 +1066,18 @@
     [data-pagosya-product] .product-steps__caption span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     [data-pagosya-product] .product-steps__progress{display:block;height:1px;background:var(--pd-line,rgba(0,0,0,.14))}
     [data-pagosya-product] .product-steps__progress span{display:block;width:var(--step-progress,0);height:100%;background:var(--pd-accent,currentColor);transition:width .5s cubic-bezier(.4,0,.2,1)}
-    [data-pagosya-product] .product-steps__pills{position:sticky;top:96px;z-index:1;display:flex;gap:8px;padding:0 0 24px;background:var(--pd-paper,transparent)}
+    [data-pagosya-product] .product-steps__pills{display:flex;gap:8px;margin:0 0 clamp(28px,4vw,44px)}
     [data-pagosya-product] .product-steps__pills button{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--pd-line,rgba(0,0,0,.18));border-radius:999px;background:transparent;color:var(--pd-muted);font:600 12px/1 var(--pd-body,inherit);letter-spacing:.04em;cursor:pointer;transition:background-color .18s cubic-bezier(.4,0,.2,1),color .18s cubic-bezier(.4,0,.2,1),border-color .18s cubic-bezier(.4,0,.2,1)}
     [data-pagosya-product] .product-steps__pills button[aria-pressed=true]{border-color:var(--pd-accent,currentColor);background:var(--pd-accent,currentColor);color:var(--pd-on-accent,#fff)}
     [data-pagosya-product] .product-steps__pills button:focus-visible{outline:2px solid var(--pd-accent,currentColor);outline-offset:3px}
     [data-pagosya-product] .product-steps__list{display:grid;margin:0;padding:0;list-style:none}
-    [data-pagosya-product] .product-steps__step{display:flex;flex-direction:column;justify-content:center;min-height:62vh;padding:24px 0;border-top:1px solid var(--pd-line,rgba(0,0,0,.12));opacity:.32;transition:opacity .5s cubic-bezier(.4,0,.2,1)}
-    [data-pagosya-product] .product-steps__step[data-active]{opacity:1}
+    [data-pagosya-product] .product-steps__step{grid-area:1/1;opacity:0;visibility:hidden;transform:translateY(12px);transition:opacity .45s cubic-bezier(.4,0,.2,1),transform .45s cubic-bezier(.4,0,.2,1),visibility 0s .45s}
+    [data-pagosya-product] .product-steps__step[data-active]{opacity:1;visibility:visible;transform:none;transition-delay:0s}
     [data-pagosya-product] .product-steps__photo{display:none}
-    [data-pagosya-product] .product-steps__eyebrow{margin:0 0 14px;color:var(--pd-accent,currentColor);font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase}
-    [data-pagosya-product] .product-steps__step h3{margin:0 0 16px;font-family:var(--pd-heading,inherit);font-size:clamp(26px,3vw,40px);line-height:1.08;letter-spacing:-.02em}
-    [data-pagosya-product] .product-steps__step p:not(.product-steps__eyebrow){max-width:46ch;margin:0;color:var(--pd-muted);font-size:16px;line-height:1.65}
-    @media(max-width:760px){[data-pagosya-product] .product-steps{grid-template-columns:1fr}[data-pagosya-product] .product-steps__frame,[data-pagosya-product] .product-steps__pills{display:none}[data-pagosya-product] .product-steps__step{min-height:0;padding:32px 0;opacity:1}[data-pagosya-product] .product-steps__photo{display:block;width:100%;aspect-ratio:4/5;margin:0 0 20px;object-fit:cover;border-radius:var(--pd-radius,4px)}}
+    [data-pagosya-product] .product-steps .product-steps__eyebrow{margin:0 0 14px;color:var(--pd-accent,currentColor);font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase}
+    [data-pagosya-product] .product-steps__step h3{margin:0 0 18px;font-family:var(--pd-heading,inherit);font-size:clamp(28px,3.2vw,44px);line-height:1.06;letter-spacing:-.02em}
+    [data-pagosya-product] .product-steps__step p:not(.product-steps__eyebrow){max-width:44ch;margin:0;padding-top:18px;border-top:1px solid var(--pd-line,rgba(0,0,0,.12));color:var(--pd-muted);font-size:16px;line-height:1.65}
+    @media(max-width:760px){[data-pagosya-product] .product-steps{height:auto}[data-pagosya-product] .product-steps__stage{position:static;grid-template-columns:1fr}[data-pagosya-product] .product-steps__frame,[data-pagosya-product] .product-steps__pills{display:none}[data-pagosya-product] .product-steps__list{gap:44px}[data-pagosya-product] .product-steps__step{grid-area:auto;opacity:1;visibility:visible;transform:none}[data-pagosya-product] .product-steps__photo{display:block;width:100%;aspect-ratio:4/5;margin:0 0 20px;object-fit:cover;border-radius:var(--pd-radius,4px)}}
     /* Atelier long page: features as a hairline list, the FAQ with a drawn +, one quiet repeated buy. */
     [data-pagosya-product][data-style=atelier] .product-long h2{letter-spacing:-.02em}
     [data-pagosya-product][data-style=atelier] .product-long__features ul{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;border-top:1px solid var(--pd-line,rgba(0,0,0,.12))}
@@ -2117,9 +2118,9 @@
     const media = items.map((item, i) => `<img src="${escape(item.url)}" alt="${escape(item.alt)}" loading="lazy" data-step-media="${i}"${i ? '' : ' data-active'}>`).join('');
     const pills = items.map((item, i) => `<button type="button" data-step-pill="${i}" aria-label="Paso ${i + 1}: ${escape(item.title)}" aria-pressed="${i === 0}">${twoDigits(i + 1)}</button>`).join('');
     const steps = items.map((item, i) => `<li class="product-steps__step" data-step="${i}"${i ? '' : ' data-active'}><img class="product-steps__photo" src="${escape(item.url)}" alt="${escape(item.alt)}" loading="lazy"><p class="product-steps__eyebrow">${twoDigits(i + 1)}${nonEmpty(item.kicker) ? ` / ${escape(item.kicker)}` : ''}</p><h3>${escape(item.title)}</h3>${nonEmpty(item.text) ? `<p>${escape(item.text)}</p>` : ''}</li>`).join('');
-    return `<section class="product-steps" data-part="steps" aria-label="${escape(p.name || 'Producto')} paso a paso"><div class="product-steps__frame" aria-hidden="true"><div class="product-steps__media">${media}</div><p class="product-steps__caption"><span>${escape(p.name || '')}</span><span data-step-count>01 / ${total}</span></p><span class="product-steps__progress"><span data-step-progress style="--step-progress:${100 / items.length}%"></span></span></div><div class="product-steps__copy"><div class="product-steps__pills">${pills}</div><ol class="product-steps__list">${steps}</ol></div></section>`;
+    return `<section class="product-steps" data-part="steps" style="--steps:${items.length}" aria-label="${escape(p.name || 'Producto')} paso a paso"><div class="product-steps__stage"><div class="product-steps__frame" aria-hidden="true"><div class="product-steps__media">${media}</div><p class="product-steps__caption"><span>${escape(p.name || '')}</span><span data-step-count>01 / ${total}</span></p><span class="product-steps__progress"><span data-step-progress style="--step-progress:${100 / items.length}%"></span></span></div><div class="product-steps__copy"><div class="product-steps__pills">${pills}</div><ol class="product-steps__list">${steps}</ol></div></div></section>`;
   }
-  let stepsObserver = null;
+  let stepsScroll = null;
   function showStep(section, index) {
     const steps = [...section.querySelectorAll('[data-step]')];
     if (!steps[index]) return;
@@ -2130,22 +2131,32 @@
     if (count) count.textContent = `${twoDigits(index + 1)} / ${twoDigits(steps.length)}`;
     section.querySelector('[data-step-progress]')?.style.setProperty('--step-progress', `${(index + 1) * 100 / steps.length}%`);
   }
-  /** The step crossing the middle of the screen is the one shown; a pill scrolls its step there. */
+  /** The section is tall and its stage sticks (pawfectt.com): how far the stage has travelled picks the step. A pill scrolls
+   *  to its step's share of that travel. On a phone the steps simply stack, so nothing is computed there. */
   function watchSteps() {
-    stepsObserver?.disconnect(); stepsObserver = null;
+    if (stepsScroll) { removeEventListener('scroll', stepsScroll); stepsScroll = null; }
     const section = detail.querySelector('.product-steps');
     if (!section) return;
+    const count = section.querySelectorAll('[data-step]').length;
+    const travel = () => { const stage = section.querySelector('.product-steps__stage'); return Math.max(1, section.offsetHeight - (stage?.offsetHeight || 0)); };
+    const stacked = () => matchMedia('(max-width: 760px)').matches;
+    let frame = 0;
+    stepsScroll = () => {
+      if (frame || stacked()) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const progress = Math.min(.999, Math.max(0, (96 - section.getBoundingClientRect().top) / travel()));
+        showStep(section, Math.floor(progress * count));
+      });
+    };
+    addEventListener('scroll', stepsScroll, { passive: true });
     section.querySelectorAll('[data-step-pill]').forEach(pill => pill.addEventListener('click', () => {
       const index = Number(pill.dataset.stepPill);
       showStep(section, index);
-      section.querySelector(`[data-step="${index}"]`)?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      if (stacked()) return;
+      const top = section.getBoundingClientRect().top + scrollY - 96 + (index + .5) / count * travel();
+      scrollTo({ top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }));
-    if (typeof IntersectionObserver !== 'function') return;
-    stepsObserver = new IntersectionObserver(entries => {
-      const seen = entries.filter(entry => entry.isIntersecting).pop();
-      if (seen) showStep(section, Number(seen.target.dataset.step));
-    }, { rootMargin: '-45% 0px -45% 0px' });
-    section.querySelectorAll('[data-step]').forEach(step => stepsObserver.observe(step));
   }
   function longPageBottom(p) {
     const faq = pageBlock(p, 'faq');

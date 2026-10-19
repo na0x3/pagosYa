@@ -337,9 +337,9 @@
     const media = items.map((item, i) => `<img src="${escape(item.url)}" alt="${escape(item.alt)}" loading="lazy" data-step-media="${i}"${i ? '' : ' data-active'}>`).join('');
     const pills = items.map((item, i) => `<button type="button" data-step-pill="${i}" aria-label="Paso ${i + 1}: ${escape(item.title)}" aria-pressed="${i === 0}">${twoDigits(i + 1)}</button>`).join('');
     const steps = items.map((item, i) => `<li class="product-steps__step" data-step="${i}"${i ? '' : ' data-active'}><img class="product-steps__photo" src="${escape(item.url)}" alt="${escape(item.alt)}" loading="lazy"><p class="product-steps__eyebrow">${twoDigits(i + 1)}${nonEmpty(item.kicker) ? ` / ${escape(item.kicker)}` : ''}</p><h3>${escape(item.title)}</h3>${nonEmpty(item.text) ? `<p>${escape(item.text)}</p>` : ''}</li>`).join('');
-    return `<section class="product-steps" data-part="steps" aria-label="${escape(p.name || 'Producto')} paso a paso"><div class="product-steps__frame" aria-hidden="true"><div class="product-steps__media">${media}</div><p class="product-steps__caption"><span>${escape(p.name || '')}</span><span data-step-count>01 / ${total}</span></p><span class="product-steps__progress"><span data-step-progress style="--step-progress:${100 / items.length}%"></span></span></div><div class="product-steps__copy"><div class="product-steps__pills">${pills}</div><ol class="product-steps__list">${steps}</ol></div></section>`;
+    return `<section class="product-steps" data-part="steps" style="--steps:${items.length}" aria-label="${escape(p.name || 'Producto')} paso a paso"><div class="product-steps__stage"><div class="product-steps__frame" aria-hidden="true"><div class="product-steps__media">${media}</div><p class="product-steps__caption"><span>${escape(p.name || '')}</span><span data-step-count>01 / ${total}</span></p><span class="product-steps__progress"><span data-step-progress style="--step-progress:${100 / items.length}%"></span></span></div><div class="product-steps__copy"><div class="product-steps__pills">${pills}</div><ol class="product-steps__list">${steps}</ol></div></div></section>`;
   }
-  let stepsObserver = null;
+  let stepsScroll = null;
   function showStep(section, index) {
     const steps = [...section.querySelectorAll('[data-step]')];
     if (!steps[index]) return;
@@ -350,22 +350,32 @@
     if (count) count.textContent = `${twoDigits(index + 1)} / ${twoDigits(steps.length)}`;
     section.querySelector('[data-step-progress]')?.style.setProperty('--step-progress', `${(index + 1) * 100 / steps.length}%`);
   }
-  /** The step crossing the middle of the screen is the one shown; a pill scrolls its step there. */
+  /** The section is tall and its stage sticks (pawfectt.com): how far the stage has travelled picks the step. A pill scrolls
+   *  to its step's share of that travel. On a phone the steps simply stack, so nothing is computed there. */
   function watchSteps() {
-    stepsObserver?.disconnect(); stepsObserver = null;
+    if (stepsScroll) { removeEventListener('scroll', stepsScroll); stepsScroll = null; }
     const section = detail.querySelector('.product-steps');
     if (!section) return;
+    const count = section.querySelectorAll('[data-step]').length;
+    const travel = () => { const stage = section.querySelector('.product-steps__stage'); return Math.max(1, section.offsetHeight - (stage?.offsetHeight || 0)); };
+    const stacked = () => matchMedia('(max-width: 760px)').matches;
+    let frame = 0;
+    stepsScroll = () => {
+      if (frame || stacked()) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const progress = Math.min(.999, Math.max(0, (96 - section.getBoundingClientRect().top) / travel()));
+        showStep(section, Math.floor(progress * count));
+      });
+    };
+    addEventListener('scroll', stepsScroll, { passive: true });
     section.querySelectorAll('[data-step-pill]').forEach(pill => pill.addEventListener('click', () => {
       const index = Number(pill.dataset.stepPill);
       showStep(section, index);
-      section.querySelector(`[data-step="${index}"]`)?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      if (stacked()) return;
+      const top = section.getBoundingClientRect().top + scrollY - 96 + (index + .5) / count * travel();
+      scrollTo({ top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     }));
-    if (typeof IntersectionObserver !== 'function') return;
-    stepsObserver = new IntersectionObserver(entries => {
-      const seen = entries.filter(entry => entry.isIntersecting).pop();
-      if (seen) showStep(section, Number(seen.target.dataset.step));
-    }, { rootMargin: '-45% 0px -45% 0px' });
-    section.querySelectorAll('[data-step]').forEach(step => stepsObserver.observe(step));
   }
   function longPageBottom(p) {
     const faq = pageBlock(p, 'faq');
