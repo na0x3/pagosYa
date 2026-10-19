@@ -94,7 +94,10 @@ export function masterDnaFonts(settings: MasterSettings, look: MasterLook) {
 
 /** What the fill call returns (spec 2026-10-19 §2.3): every copy field, the look, photo indexes (-1 = none) and, for an
  *  edit, the field names it changed ('look' = palette/fonts/colors; heroPhoto and storyPhoto each by name). */
-export type MasterRead = MasterCopy & { palette: string; fonts: string; colors: Record<MasterColour, string>; heroPhoto: number; storyPhoto: number; changed: string[] };
+export type MasterRead = MasterCopy & { palette: string; fonts: string; colors: Record<MasterColour, string>; heroPhoto: number; storyPhoto: number; changed: string[];
+  tone?: 'calm' | 'bold'; temperature?: 'warm' | 'cool' | 'neutral'; lead?: 'photo' | 'text'; exclude?: string[]; sections?: MasterSection[];
+  /** A layout the merchant named in an edit («hero con la foto a la izquierda» → hero: split-left). */
+  variantChoices?: Array<{ part: string; id: string }> };
 const COPY_FIELDS = [...Object.keys(MASTER_COPY_CAPS), 'values'];
 
 export function masterFillFromRead(read: MasterRead, photos: readonly string[], edit: boolean): MasterFill {
@@ -105,6 +108,9 @@ export function masterFillFromRead(read: MasterRead, photos: readonly string[], 
   return {
     ...(Object.keys(copy).length ? { copy } : {}),
     ...(keep('look') ? { look: { palette: read.palette, fonts: read.fonts, colors } } : {}),
+    ...(read.tone ? { character: { tone: read.tone, temperature: read.temperature ?? 'neutral', lead: read.lead ?? 'photo', exclude: Array.isArray(read.exclude) ? read.exclude : [] } } : {}),
+    ...(Array.isArray(read.sections) && keep('sections') ? { sections: read.sections.slice(0, 2) } : {}),
+    ...(Array.isArray(read.variantChoices) && read.variantChoices.length && keep('variants') ? { variants: Object.fromEntries(read.variantChoices.map(choice => [choice.part, choice.id])) } : {}),
     ...(keep('heroPhoto') ? { heroPhoto: photo(read.heroPhoto) } : {}),
     ...(keep('storyPhoto') ? { storyPhoto: photo(read.storyPhoto) } : {}),
   };

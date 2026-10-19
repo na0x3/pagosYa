@@ -62,6 +62,13 @@ describe('master store data', () => {
     expect(readMasterState(out).photos.hero).toBe('https://api.pagosya.test/v1/uploads/new.jpg');
   });
 
+  it('a named variant replaces only its part, and an unknown id is ignored', () => {
+    const files = [templateStoreDataFile({ name: 'Café' }, { hero: '' }, { copy: masterCopy(master), look: masterLook(master), variants: { hero: 'full', grid: 'grid4', sections: [] } as any }), ...storeFiles().slice(1)];
+    const m = { ...manifest, master: { ...master, variants: { hero: ['full', 'split-left'], grid: ['grid4'] } } } as any;
+    const out = refillMasterFiles(files, m, { variants: { hero: 'split-left', grid: 'nope' } });
+    expect(readMasterState(out).variants).toMatchObject({ hero: 'split-left', grid: 'grid4' });
+  });
+
   it('round-trips the rolled variants and business sections, and a refill keeps them (variety spec §2)', () => {
     const variants = { hero: 'arch', grid: 'feature', sections: ['process'] } as any;
     const sections = [{ id: 'process', title: 'Del cafetal a tu taza', items: [{ title: 'Cosecha', text: 'A mano.' }] }];

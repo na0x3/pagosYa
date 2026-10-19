@@ -88,7 +88,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   const photos = { ...state.photos, ...(change.heroPhoto !== undefined ? { hero: masterPhotoUrl(change.heroPhoto, apiUrl) } : {}), ...(change.storyPhoto !== undefined ? { story: masterPhotoUrl(change.storyPhoto, apiUrl) } : {}) };
   const theme = masterThemeCss(settings, look);
   return files.map(file => {
-    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants: { ...(state.variants ?? { sections: [] }), ...(change.variants ?? {}) } as MasterVariants, sections: change.sections ?? state.sections ?? [] });
+    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants: { ...(state.variants ?? { sections: [] }), ...Object.fromEntries(Object.entries(change.variants ?? {}).filter(([part, id]) => part !== 'sections' && (settings.variants?.[part] ?? []).includes(String(id)))) } as MasterVariants, sections: change.sections ?? state.sections ?? [] });
     if (file.path === 'styles/globals.css') return { ...file, content: withMasterTheme(file.content, theme) };
     if (file.path === 'config.js') {
       const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
@@ -136,6 +136,8 @@ export async function assembleTemplateRevision(input: {
   fill?: MasterFill; demoPhotos?: boolean;
   /** Bundled photo assets the fill points at (assets/image-…). */
   extraFiles?: SourceProjectFileDto[];
+  /** Variety spec: the rolled variants and the business sections' content. */
+  variants?: MasterVariants; sections?: MasterSection[];
 }): Promise<{ label: string; brief: SourceProjectBriefDto; files: SourceProjectFileDto[] }> {
   const { manifest } = input;
   const data = sourceStoreConfigData(input.publicStore, input.apiUrl, input.firstRevision);
@@ -148,7 +150,7 @@ export async function assembleTemplateRevision(input: {
   const copy = settings ? masterCopy(settings, input.fill?.copy) : undefined;
   const look = settings ? masterLook(settings, input.fill?.look) : undefined;
   const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city: (data.locations as Array<{ city?: string | null }> | undefined)?.[0]?.city ?? '',
-    logo: data.logoUrl ?? '', phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look! } : undefined);
+    logo: data.logoUrl ?? '', phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: input.variants, sections: input.sections ?? input.fill?.sections } : undefined);
   const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withMasterTheme(file.content, masterThemeCss(settings, look!)) } : file;
   const authored = [...input.source.filter(file => file.path !== TEMPLATE_STORE_DATA_PATH).map(themed), ...contentPagesFor(input.source), storeData];
   const compiled = await compileNextPreview(authored, 'shop');

@@ -110,6 +110,21 @@ describe('SourceTemplatesService', () => {
     expect(pageWriter.fillStore).toHaveBeenCalledWith('store-1');
   });
 
+  it('rolls the store\'s variants and a palette that fits a bold character (variety spec §3)', async () => {
+    const { templates: base, projects, prisma } = service(0);
+    const real = jest.requireActual('@pagosya/store-templates');
+    const templates = new SourceTemplatesService(prisma as any, (base as any).publicStores, projects as any, (base as any).config);
+    templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ character: { tone: 'bold', temperature: 'warm', lead: 'photo', exclude: [] }, sections: [{ id: 'faq', title: 'Preguntas', items: [{ title: '¿Envían?', text: 'Sí.' }, { title: '¿Pago?', text: 'QR.' }] }] }));
+    const data = ((projects.save.mock.calls[0] as any[])[2].files as any[]).find(f => f.path === 'components/store-data.tsx').content as string;
+    const variants = JSON.parse(/export const variants[^=]*= (.*);/.exec(data)![1]);
+    const look = JSON.parse(/export const look = (.*) as const;/.exec(data)![1]);
+    expect(real.templateManifest('esencial').master.variants.hero).toContain(variants.hero);
+    expect(variants.sections).toEqual(['faq']);
+    expect(['ember', 'cobalt', 'citrus', 'ink', 'wine', 'noir']).toContain(look.palette);
+    expect(data).toContain('"title":"Preguntas"');
+  });
+
   it('saves the template as the next revision and switches a first site to payment checkout', async () => {
     const { templates, projects, prisma } = service(0);
     const saved = await templates.apply('m1', 'store-1', 'prueba', 0);

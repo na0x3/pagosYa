@@ -24,6 +24,18 @@ describe('masterFillFromRead', () => {
   });
 });
 
+describe('character and sections (variety spec §3)', () => {
+  it('a layout the merchant names becomes that part\'s variant', () => {
+    const fill = masterFillFromRead({ ...read(), changed: ['variants'], variantChoices: [{ part: 'hero', id: 'split-left' }] } as any, [], true);
+    expect(fill.variants).toEqual({ hero: 'split-left' });
+  });
+  it('maps the character and business sections from the read', () => {
+    const fill = masterFillFromRead({ ...read(), tone: 'bold', temperature: 'cool', lead: 'text', exclude: ['type'], sections: [{ id: 'process', title: 'Del cafetal', items: [{ title: 'Cosecha', text: 'A mano' }, { title: 'Tueste', text: 'Cada semana' }] }] } as any, [], false);
+    expect(fill.character).toEqual({ tone: 'bold', temperature: 'cool', lead: 'text', exclude: ['type'] });
+    expect(fill.sections?.[0].id).toBe('process');
+  });
+});
+
 describe('fillMaster', () => {
   const input = { storeId: 's1', storeName: 'Café Buna', what: 'Café de especialidad', story: '', city: 'La Paz', products: ['Coroico 250 g'], photos: [], palettes: [{ id: 'sand', name: 'Arena' }], fonts: [{ id: 'literary', name: 'Literaria' }] };
   const config: any = { get: jest.fn((key: string) => key === 'app.openAi.apiKey' ? 'test-key' : key === 'app.openAi.enabled' ? true : 'gpt-5.6-sol') };
@@ -38,11 +50,13 @@ describe('fillMaster', () => {
   });
   it('sends the strict schema with the store\'s palette and font ids', async () => {
     const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 200, json: async () => body(read()) } as any);
-    await service().fillMaster('m1', input);
+    await service().fillMaster('m1', { ...input, sectionCatalogue: ['process', 'faq'] });
     const sent = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
     expect(sent.text.format).toMatchObject({ type: 'json_schema', strict: true, name: 'master_fill' });
     expect(sent.text.format.schema.properties.palette.enum).toEqual(['sand']);
     expect(sent.instructions).toMatch(/Never invent reviews/);
+    expect(sent.text.format.schema.properties.tone.enum).toEqual(['calm', 'bold']);
+    expect(sent.text.format.schema.properties.sections.items.properties.id.enum).toContain('process');
   });
   it('labels every image with its index and sends the current photo choices (review fix 6)', async () => {
     const svc = new SourceConversationService({ mediaAsset: { findMany: jest.fn().mockResolvedValue([{ url: 'https://x/u/a.jpg' }, { url: 'https://x/u/c.jpg' }]) } } as any,

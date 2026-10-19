@@ -10,8 +10,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PublicStoresService } from '../stores/public-stores.service';
 import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectSnapshot } from './source-project';
-import { assembleTemplateRevision, refillMasterFiles, templateDemoRevision } from './source-templates';
-import { MASTER_TEMPLATE_ID, type MasterFill } from './source-master';
+import { assembleTemplateRevision, readMasterState, refillMasterFiles, templateDemoRevision } from './source-templates';
+import { MASTER_TEMPLATE_ID, type MasterFill, type MasterVariants } from './source-master';
+import { rollVariants, type RecentRoll } from './source-master-dice';
 
 /** What the master template's filler is told about a store (spec 2026-10-19 §2.3). */
 export type MasterFacts = { storeName: string; products: string[]; photos: string[] };
@@ -30,7 +31,7 @@ export class SourceTemplatesService {
   }
 
   /** The pieces `apply` saves and `preview` shows: the template filled with this store's name, products and photos. */
-  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[]) {
+  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[], variants?: MasterVariants) {
     const manifest = this.registry.templateManifest(templateId);
     if (!manifest) throw new NotFoundException('Esa plantilla no existe.');
     const current = await this.projects.current(merchantId, storeId);
@@ -41,7 +42,7 @@ export class SourceTemplatesService {
       manifest, source: this.registry.templateSourceFiles(manifest.id), storeId, slug: current.slug, publicStore,
       apiUrl: sourcePublicApiUrl(this.config), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), firstRevision: current.revision === 0,
       previousBrief: (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.brief,
-      fill, demoPhotos: !manifest.master, extraFiles,
+      fill, demoPhotos: !manifest.master, extraFiles, variants,
     });
     return { current, assembled };
   }
@@ -56,8 +57,17 @@ export class SourceTemplatesService {
     const facts: MasterFacts = { storeName: publicStore.storeName, products: publicStore.items.map(item => item.name), photos: [...new Set(publicStore.items.flatMap(item => item.imageUrls ?? []))] };
     const filled = await filler(facts).catch(() => null);
     const bundled = filled ? await this.bundleMasterPhotos(merchantId, filled) : { change: undefined, files: [] };
-    const fill = bundled.change ?? null;
-    const { assembled } = await this.assemble(merchantId, storeId, MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files);
+    let fill = bundled.change ?? null;
+    // Variety spec §3: the platform rolls the store's variants, palette and fonts within the business's character.
+    let variants: MasterVariants | undefined;
+    if (this.config.get<boolean>('app.yapiEsencialDice') !== false) {
+      const photoCount = new Set([...facts.photos, fill?.heroPhoto, fill?.storyPhoto].filter(Boolean)).size;
+      const rolled = rollVariants({ seed: storeId, settings: manifest.master, character: fill?.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] },
+        photoCount, sections: (fill?.sections ?? []).map(section => section.id), recent: await this.recentMasterRolls(storeId) });
+      variants = rolled.variants;
+      fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), palette: rolled.palette, fonts: rolled.fonts } };
+    }
+    const { assembled } = await this.assemble(merchantId, storeId, MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files, variants);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
     // Variety spec §2b: every product's own page content (highlights, story, faq…), written in the background.
@@ -74,6 +84,19 @@ export class SourceTemplatesService {
     const bundled = await this.bundleMasterPhotos(merchantId, change);
     const files = refillMasterFiles(snapshot.files, manifest, bundled.change, sourcePublicApiUrl(this.config));
     return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: [...files, ...bundled.files.filter(asset => !files.some(file => file.path === asset.path))] });
+  }
+
+  /** Variety spec §3: hero + palette + fonts of the last 6 master stores (other stores), so a new roll avoids them. */
+  private async recentMasterRolls(storeId: string): Promise<RecentRoll[]> {
+    try {
+      const rows = await this.prisma.storeSourceVersion.findMany({ where: { revision: 1, storeId: { not: storeId } }, orderBy: { createdAt: 'desc' }, take: 40, select: { snapshot: true } });
+      return rows.flatMap(row => {
+        const snapshot = row.snapshot as unknown as SourceProjectSnapshot;
+        if (snapshot?.brief?.templateId !== MASTER_TEMPLATE_ID) return [];
+        const state = readMasterState(snapshot.files ?? []);
+        return state.variants?.hero && state.look ? [{ hero: String(state.variants.hero), palette: state.look.palette, fonts: state.look.fonts }] : [];
+      }).slice(0, 6);
+    } catch { return []; }
   }
 
   /** Live check 2026-10-19: the master hero and story photos are bundled into the store like any authored photo (the

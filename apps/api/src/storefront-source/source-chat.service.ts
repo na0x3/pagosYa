@@ -252,7 +252,7 @@ export class SourceChatService {
       const photos = [...new Set([...(onboarding.photos ?? []), ...chatPhotos, ...facts.photos])].slice(0, 8);
       const read = await this.dialogue.fillMaster(merchantId, {
         storeId, storeName: facts.storeName, what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '', city: onboarding.contact?.city ?? '',
-        products: facts.products, photos, palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })),
+        products: facts.products, photos, palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: manifest.master!.sections,
       });
       return read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: (onboarding.what ?? '').slice(0, 160) } };
     });
@@ -272,7 +272,7 @@ export class SourceChatService {
     const recent = await Promise.resolve(this.prisma.mediaAsset.findMany({ where: { merchantId }, orderBy: { createdAt: 'desc' }, take: 8, select: { url: true } })).catch(() => [] as Array<{ url: string }>);
     const photos = [...new Set([...Object.values(state.photos).filter(Boolean), ...(recent ?? []).map(asset => asset.url)])].slice(0, 8);
     const read = await this.dialogue.fillMaster(merchantId, { storeId, storeName: state.store?.name ?? '', what: '', story: '', city: state.store?.city ?? '', products: [], photos,
-      palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })),
+      palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: manifest.master!.sections,
       current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? '') }, request });
     const change = read ? masterFillFromRead(read, photos, true) : null;
     // Nothing in the data to change: the caller turns the request into a minimal design edit.
