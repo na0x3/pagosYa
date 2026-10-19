@@ -100,3 +100,19 @@ describe('card eyebrow (showcase commerce 2026-10-19)', () => {
     expect(prisma.paymentLink.updateMany.mock.calls[0][0].data).toEqual({ cardEyebrow: 'Para el trabajo' });
   });
 });
+
+describe('automatic writes queue (live 2026-10-19: 40 products created at once flooded the ChatGPT bridge and stopped it)', () => {
+  it('runs at most two automatic writes at once and the rest after them', async () => {
+    const { service } = setup();
+    let open = 0, peak = 0;
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      open++; peak = Math.max(peak, open);
+      await new Promise(resolve => setTimeout(resolve, 20));
+      open--;
+      return new Response(JSON.stringify({ output: [{ content: [{ type: 'output_text', text: JSON.stringify(answer) }] }] }), { status: 200 });
+    });
+    const results = await Promise.all([1, 2, 3, 4, 5].map(() => service.fill('s1', 'p1', 'auto')));
+    expect(results).toHaveLength(5);
+    expect(peak).toBe(2);
+  });
+});

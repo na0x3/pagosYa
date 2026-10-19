@@ -9,13 +9,26 @@ import { AiUsageService } from '../ai-usage/ai-usage.service';
 import { chatgptPlanProvider } from '../ai/chatgpt-plan-provider';
 import { autoFillable, mergeWrittenPage, PRODUCT_PAGE_SCHEMA, productPagePrompt, writtenPage, type ProductPageFacts } from './product-page-writer';
 
+const MAX_AUTO_WRITES = 2;
+
 @Injectable()
 export class ProductPageWriterService {
   private readonly logger = new Logger(ProductPageWriterService.name);
   constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly uploads: UploadsService, @Optional() private readonly usage?: AiUsageService) {}
 
+  // Automatic writes (each new product, each new store) wait their turn, two at a time: 40 products created at once flooded the
+  // ChatGPT bridge and stopped it (live 2026-10-19). A merchant's own «Regenerar» never waits.
+  private running = 0;
+  private readonly waiting: Array<() => void> = [];
   /** Writes one product's long page. 'auto' fills only an empty product; 'regenerate' replaces YAPI's own rows. */
   async fill(storeId: string, productId: string, mode: 'auto' | 'regenerate', merchantId?: string): Promise<'written' | 'skipped'> {
+    if (mode !== 'auto') return this.write(storeId, productId, mode, merchantId);
+    if (this.running >= MAX_AUTO_WRITES) await new Promise<void>(resolve => this.waiting.push(resolve));
+    this.running++;
+    try { return await this.write(storeId, productId, mode, merchantId); } finally { this.running--; this.waiting.shift()?.(); }
+  }
+
+  private async write(storeId: string, productId: string, mode: 'auto' | 'regenerate', merchantId?: string): Promise<'written' | 'skipped'> {
     const product = await this.prisma.paymentLink.findFirst({
       where: { id: productId, storeId, ...(merchantId ? { store: { merchantId } } : {}) },
       select: { id: true, updatedAt: true, cardEyebrow: true, name: true, description: true, specifications: true, tags: true, imageUrls: true, highlights: true, contentBlocks: true, category: { select: { name: true } }, store: { select: { name: true } } },
