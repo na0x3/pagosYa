@@ -70,7 +70,8 @@ describe('the platform header on a Sep-5 store', () => {
     expect(result.revision).toBe(1);
     expect(file('index.html')).toContain('<header data-pagosya-header data-shape="menu-button" data-purpose="shop"');
     expect(file('index.html')).toContain('<a href="#menu">Menú</a>');
-    expect(file('index.html')).toContain('<a href="#historia">Nuestra historia</a>');
+    // Four links at most (2026-10-19): the three standard pages and the first home section; «Nuestra historia» is the fifth.
+    expect(file('index.html')).not.toContain('<a href="#historia">Nuestra historia</a>');
     expect(file('index.html')).toContain('data-cart-open');
     expect(file('index.html')).toContain('<span data-store-name>Café</span>');
     expect(file('nosotros.html')).toContain('<a href="index.html#menu">Menú</a>');
