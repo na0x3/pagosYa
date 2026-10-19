@@ -164,6 +164,12 @@ function replaceElement(html: string, pattern: RegExp, replacement: string): str
 
 /** A menu label compared without case or accents («Contáctanos» is not «Contacto», but «CONTACTO» is). */
 const menuKey = (label: string) => label.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+/** Section labels a clean menu never repeats (2026-10-19, Pulso Studio's «Productos Nosotros Contacto Inicio Catálogo
+ *  Funciones»): the logo already goes home, and the products page already is the catalog. */
+const HOME_LABELS = new Set(['inicio', 'home', 'portada']);
+const CATALOG_LABELS = new Set(['productos', 'producto', 'catalogo', 'tienda', 'shop', 'coleccion', 'colecciones', 'comprar']);
+/** The premium references show three or four links at most. */
+export const HEADER_MAX_LINKS = 4;
 
 /** The sections index.html marks for the menu: data-nav-label with an id, in page order, at most six. */
 function navSections(html: string): Array<{ id: string; label: string }> {
@@ -268,8 +274,10 @@ export function withSourceHeader<F extends { path: string; content: string; enco
     const home = file.path === 'index.html';
     // The standard pages come first so every page reaches them; a home section named like one of them is not repeated.
     const pageLabels = new Set(pageLinks.map(link => menuKey(link.label)));
-    const sectionLinks = sections.filter(section => !pageLabels.has(menuKey(section.label))).map(section => ({ href: home ? `#${section.id}` : `index.html#${section.id}`, label: section.label }));
-    const links = [...pageLinks, ...sectionLinks].slice(0, 6);
+    const hasCatalog = pageLinks.some(link => link.href === 'productos.html');
+    const sectionLinks = sections.filter(section => { const key = menuKey(section.label); return !pageLabels.has(key) && !HOME_LABELS.has(key) && !(hasCatalog && CATALOG_LABELS.has(key)); })
+      .map(section => ({ href: home ? `#${section.id}` : `index.html#${section.id}`, label: section.label }));
+    const links = [...pageLinks, ...sectionLinks].slice(0, HEADER_MAX_LINKS);
     if (home && wordmark) content = withWordmarkTemplate(content, wordmark);
     const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, ...(wordmark ? { wordmark } : {}), action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1), ...(input.controls ? { controls: input.controls } : {}), ...(account ? { account } : {}) });
     const drawn = replaceElement(content, SLOT, header);
