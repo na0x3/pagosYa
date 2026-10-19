@@ -100,3 +100,11 @@ test('product photos keep their true colours and the underline button stays read
   assert.doesNotMatch(css, /data-es-photos="duotone"\][^{]*es-card/);
   assert.doesNotMatch(css, /data-es-button="underline"\][^{]*es-btn--accent\{color:var\(--es-accent\)/);
 });
+
+test('no photo shows twice in one block (live check 2026-10-19: the same photo in the pair story, the pick and the gallery)', () => {
+  const home = file('components/home.tsx');
+  assert.match(home, /const unique = /);
+  assert.match(home, /rolledStory === 'pair' && \(!photos\.p1 \|\| photos\.p1 === photos\.story\)/);
+  assert.match(home, /const gallery = unique\(/);
+  assert.match(home, /const heroPhotos = unique\(/);
+});

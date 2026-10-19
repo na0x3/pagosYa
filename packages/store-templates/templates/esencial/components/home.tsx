@@ -6,12 +6,16 @@ import { IconArrowRight, IconArrowUpRight, IconCheck, IconMessageCircle, IconPlu
 
 const VALUE_ICONS = [IconStar, IconTruck, IconShieldCheck];
 
+/** Each photo once: merchants often use the same upload for the story and a product. */
+const unique = (list: Array<string | undefined>) => [...new Set(list.filter((src): src is string => Boolean(src)))];
+
 type Section = { id: string; title: string; items: Array<{ title: string; text: string }> };
 
 /** Variety spec §2: the business sections the fill call wrote (at most two), each from the merchant's own facts. */
 function BusinessSection({ section, phone }: { section: Section; phone: string }) {
   const { id, title, items } = section;
-  const gallery = [photos.p1, photos.p2, photos.p3, photos.p4, photos.story].filter(Boolean).slice(0, 4);
+  const gallery = unique([photos.p1, photos.p2, photos.p3, photos.p4, photos.story]).filter(src => src !== photos.hero).slice(0, 4);
+  const pickPhoto = unique([photos.p1, photos.p2, photos.p3]).find(src => src !== photos.story && src !== photos.hero) ?? photos.p1;
   if (id === 'gallery' && gallery.length < 2) return null;
   return <section id={id} className="es-section es-biz" data-es-section={id} aria-labelledby={`es-${id}-title`}>
     <Reveal className="es-biz__head"><h2 id={`es-${id}-title`} className="es-h2">{title}</h2></Reveal>
@@ -19,7 +23,7 @@ function BusinessSection({ section, phone }: { section: Section; phone: string }
       : id === 'sizes' ? <table className="es-biz__table"><tbody>{items.map((item, index) => <tr key={index}><th scope="row">{item.title}</th><td>{item.text}</td></tr>)}</tbody></table>
       : id === 'faq' ? <div className="es-biz__faq">{items.map((item, index) => <details key={index}><summary>{item.title}</summary><p>{item.text}</p></details>)}</div>
       : id === 'gallery' ? <div className="es-biz__gallery">{gallery.map(src => <img key={src} src={src} alt="" aria-hidden="true" loading="lazy" />)}</div>
-      : id === 'pick' ? <div className="es-biz__pick">{photos.p1 ? <img src={photos.p1} alt="" aria-hidden="true" loading="lazy" /> : null}<div>{items.map((item, index) => <div key={index}><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></div>)}<a className="es-btn es-btn--accent" href="productos.html">{copy.primaryCta}</a></div></div>
+      : id === 'pick' ? <div className="es-biz__pick">{pickPhoto ? <img src={pickPhoto} alt="" aria-hidden="true" loading="lazy" /> : null}<div>{items.map((item, index) => <div key={index}><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></div>)}<a className="es-btn es-btn--accent" href="productos.html">{copy.primaryCta}</a></div></div>
       : id === 'visit' ? <div className="es-biz__visit">{store.city ? <p className="es-biz__city">{store.city}</p> : null}<dl>{items.map((item, index) => <div key={index}><dt>{item.title}</dt><dd>{item.text}</dd></div>)}</dl>{phone ? <a className="es-btn es-btn--accent" href={`https://wa.me/${phone.replace(/\D/g, '')}`}><IconMessageCircle /> WhatsApp</a> : null}</div>
       : id === 'quotes' ? <div className="es-biz__quotes">{items.map((item, index) => <blockquote key={index}><p>{item.text}</p><cite>{item.title}</cite></blockquote>)}</div>
       : <ul className="es-biz__list">{items.map((item, index) => <li key={index}>{id === 'materials' ? <IconCheck className="es-biz__icon" /> : null}<div><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></div></li>)}</ul>}
@@ -29,7 +33,7 @@ function BusinessSection({ section, phone }: { section: Section; phone: string }
 export default function Home() {
   // Variety spec §2: the rolled hero; photo-led variants fall back to the type hero when the photos are missing.
   const rolled = variant('hero', 'full');
-  const heroPhotos = [photos.hero, photos.p1, photos.p2].filter(Boolean);
+  const heroPhotos = unique([photos.hero, photos.p1, photos.p2, photos.p3]);
   const multi = rolled === 'collage' || rolled === 'strip';
   const hero = !photos.hero || (multi && heroPhotos.length < 3) ? 'type' : rolled;
   const layered = hero === 'full' || hero === 'poster';
@@ -37,7 +41,7 @@ export default function Home() {
   const sentences = copy.storyBody.split(/(?<=[.!?])\s+/).map(text => text.trim()).filter(Boolean);
   const rolledStory = variant('story', 'split');
   const story = ['split', 'overlay', 'pair'].includes(rolledStory) && !photos.story ? 'note'
-    : rolledStory === 'pair' && !photos.p1 ? 'split' : rolledStory === 'timeline' && sentences.length < 2 ? 'note' : rolledStory;
+    : rolledStory === 'pair' && (!photos.p1 || photos.p1 === photos.story) ? 'split' : rolledStory === 'timeline' && sentences.length < 2 ? 'note' : rolledStory;
   const values = variant('values', 'numbered');
   const rolledClosing = variant('closing', 'dark');
   const closing = rolledClosing === 'photo' && !photos.hero ? 'dark' : rolledClosing;
