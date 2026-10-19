@@ -472,6 +472,16 @@ export class SourceChatService {
       } });
       return { userMessage, assistantMessage, setup: current.revision ? null : setup };
     }
+    // Variety spec §1: a walkthrough store's answers are already known, so it skips the conversation step.
+    if (this.config.get<boolean>('app.yapiMasterTemplate') === true && input.setupAction === 'generate' && !current.revision
+      && ![input.instruction, ...history.messages.filter(message => message.role === 'USER').map(message => message.content)].some(text => MASTER_SCRATCH.test(text))) {
+      const walkthrough = await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } });
+      const onboarding = walkthrough?.onboarding as { purpose?: string } | null | undefined;
+      if (onboarding && onboarding.purpose !== 'showcase') {
+        await workflow.report('interpreting');
+        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, (input.assetUrls || []).slice(0, 8));
+      }
+    }
     let retryDecision: SourceConversationDecision | undefined;
     let retryFingerprint = '';
     try {

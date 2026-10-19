@@ -75,6 +75,18 @@ it('photos attached in chat reach the fill call after the walkthrough ones (revi
   expect(fillMaster.mock.calls[0][1].photos).toEqual(['https://x/u1.jpg', 'https://x/chat.jpg', 'https://x/p1.jpg']);
 });
 
+it('a walkthrough store goes straight to Esencial without the conversation step (variety spec §1)', async () => {
+  await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+  expect(decide).not.toHaveBeenCalled();
+  expect(applyMaster).toHaveBeenCalled();
+});
+
+it('a chat-only new store still goes through the conversation step', async () => {
+  prisma.store.findFirst.mockResolvedValue({ name: 'Café Buna', logoUrl: null, onboarding: null, _count: { paymentLinks: 0 }, paymentLinks: [] });
+  await send('Quiero una tienda para mi café');
+  expect(decide).toHaveBeenCalled();
+});
+
 it('the flag off returns to today’s flow', async () => {
   config.set('app.yapiMasterTemplate', false);
   await send('Crea mi tienda.');
