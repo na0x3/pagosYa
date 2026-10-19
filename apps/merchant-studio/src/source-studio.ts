@@ -496,8 +496,12 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   /** `showPicker`: the stage just turned to styles, so the canvas must switch to the picker even before any card exists. */
   async function loadStyleProposal(showPicker = false) {
     const selectedStore = storeId, base = new URL(API_BASE_URL, location.href).href;
-    const proposal = (await api.styleProposal(selectedStore).catch(() => ({ proposal: null }))).proposal;
+    // A failed request (the API restarting, a dropped connection) is no answer: the cards on screen stay and the poll goes on.
+    // Treating it as «no proposal» blanked the picker until a reload (Pulso Studio, 2026-10-19).
+    const answer = await api.styleProposal(selectedStore).catch(() => undefined);
     if (storeId !== selectedStore) return;
+    if (!answer) { if (styleView?.status === 'RUNNING' && !stylePoll) watchStyleProposal(); return; }
+    const proposal = answer.proposal;
     const next = proposal && { ...proposal, cards: proposal.cards.map(card => ({ ...card, html: card.html && apiHeroUrls(card.html, base) })) };
     // Re-rendering reloads every card iframe, so a poll that brings nothing new leaves them alone.
     const changed = JSON.stringify(next) !== JSON.stringify(styleView);

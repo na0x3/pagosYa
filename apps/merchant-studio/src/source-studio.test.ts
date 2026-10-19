@@ -521,6 +521,18 @@ it('shows the proposed styles in the preview area and sends the picked one as a 
   expect(sent.mock.calls[0][1]).toBe('Usar el estilo «Estilo 1»');
   expect(sendOptions(sent.mock.calls[0])).toEqual({ stylePick: { generationId: 'g1', index: 1 } });
 });
+it('keeps the choosable cards on screen when a poll fails (the API restarting), and goes on polling', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    const running = { proposal: { generationId: 'g1', status: 'RUNNING', pickable: true, recommended: 0, cards: [0, 1].map(styleCard) } } as any;
+    const poll = vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValueOnce(running).mockResolvedValueOnce(running)
+      .mockRejectedValueOnce(new Error('Failed to fetch')).mockResolvedValue(running);
+    await mountSourceStudio(app);
+    await vi.waitFor(() => expect(app.querySelectorAll('[data-style-card]')).toHaveLength(2));
+    await vi.waitFor(() => expect(poll.mock.calls.length).toBeGreaterThanOrEqual(4), { timeout: 8000 });
+    expect(app.querySelectorAll('[data-style-card]')).toHaveLength(2);
+  } finally { vi.useRealTimers(); }
+});
 it('sends Elige tú as an automatic pick and retries a failed build with the same pick', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'styleProposal').mockResolvedValue({ proposal: { generationId: 'g1', status: 'AWAITING_STYLE', recommended: 1, cards: [0, 1].map(styleCard) } } as any);
   const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockRejectedValueOnce(new Error('Falló la construcción'))
