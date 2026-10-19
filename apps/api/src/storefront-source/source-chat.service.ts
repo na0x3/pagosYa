@@ -486,7 +486,9 @@ export class SourceChatService {
       return { userMessage, assistantMessage, setup: current.revision ? null : setup };
     }
     // Variety spec §1: a walkthrough store's answers are already known, so it skips the conversation step.
+    // A pasted link (a site to copy, a product link) keeps its own flow, which the conversation step reads (craverly test).
     if (this.config.get<boolean>('app.yapiMasterTemplate') === true && input.setupAction === 'generate' && !current.revision
+      && !/https?:\/\/|www\./i.test(input.instruction) && !setupDraft.websiteCopyUrl
       && ![input.instruction, ...history.messages.filter(message => message.role === 'USER').map(message => message.content)].some(text => MASTER_SCRATCH.test(text))) {
       const walkthrough = await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } });
       const onboarding = walkthrough?.onboarding as { purpose?: string } | null | undefined;

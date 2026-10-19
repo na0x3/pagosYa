@@ -81,6 +81,14 @@ it('a walkthrough store goes straight to Esencial without the conversation step 
   expect(applyMaster).toHaveBeenCalled();
 });
 
+it('a walkthrough store that pastes a site to copy keeps the website-copy flow (craverly test 2026-10-19)', async () => {
+  // The conversation step answers with a question, so the test ends before the page would be read in a browser.
+  decide.mockResolvedValueOnce({ action: 'reply', reply: '¿Qué vendes?', summary: '', generationInstruction: '', imageUses: [] });
+  await send('Mi negocio se llama Café Buna.\nHazme la tienda como esta: https://craverly.co/\nCrea mi tienda.');
+  expect(decide).toHaveBeenCalled();
+  expect(applyMaster).not.toHaveBeenCalled();
+});
+
 it('a chat-only new store still goes through the conversation step', async () => {
   prisma.store.findFirst.mockResolvedValue({ name: 'Café Buna', logoUrl: null, onboarding: null, _count: { paymentLinks: 0 }, paymentLinks: [] });
   await send('Quiero una tienda para mi café');
