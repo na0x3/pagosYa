@@ -53,9 +53,11 @@ export function storeTokens(files: ReadonlyArray<{ path: string; content: string
   const found = new Map<string, string>();
   for (const path of ['brand.css', 'styles.css']) {
     const css = files.find(file => file.path === path)?.content ?? '';
-    for (const match of css.matchAll(/--(?:store|brand)-([\w-]+)\s*:\s*([^;{}]+)/g)) if (!found.has(match[1])) found.set(match[1], match[2].trim().slice(0, 60));
+    for (const match of css.matchAll(/--((?:store|brand)-[\w-]+)\s*:\s*([^;{}]+)/g)) if (!found.has(match[1])) found.set(match[1], match[2].trim().slice(0, 60));
   }
-  return [...found].slice(0, 16).map(([name, value]) => `${name}: ${value}`).join('; ');
+  // The full custom property name, as the CSS must write it: «background: …» made Pulso Studio's surfaces write
+  // var(--background), which the store does not define, and fail their first round (2026-10-19).
+  return [...found].slice(0, 16).map(([name, value]) => `--${name}: ${value}`).join('; ');
 }
 
 const languageOf = (controls: StoreControls) => ({ outline: controls.shape.outline, fill: controls.shape.fill, colour: controls.shape.colour, badge: controls.badge, cart: controls.icons.cart ?? '' });

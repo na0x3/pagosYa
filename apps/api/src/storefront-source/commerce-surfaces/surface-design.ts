@@ -34,7 +34,7 @@ export function surfacesPrompt(input: SurfacesPromptInput): string {
     input.parts.includes('productPage') ? PREMIUM_PRODUCT_PAGE : '',
     input.parts.includes('card') ? PREMIUM_CARD : '',
     input.parts.some(part => part === 'productPage' || part === 'card') ? PREMIUM_TYPE_AND_MOTION : '',
-    `Store tokens: ${input.tokens || 'none'}`,
+    `Store tokens, the custom properties the store defines (write them exactly as named, e.g. var(--store-accent); no other variable exists): ${input.tokens || 'none'}`,
     `Store DNA (keep consistent): ${JSON.stringify(input.dna).slice(0, 1500)}`,
     'Parts to design now:', ...input.parts.map(contract),
     input.keep?.length ? `Already approved (do not return): ${input.keep.map(t => t.part).join(', ')}. Match their look:\n${asSource(input.keep).slice(0, 12_000)}` : '',

@@ -70,7 +70,7 @@ describe('runControlsDesign (spec 2026-10-14, part 4)', () => {
   });
 
   it('reads the store tokens from brand.css and styles.css', () => {
-    expect(storeTokens(files)).toBe('background: #f7f4ef; accent: #2f4bb8');
+    expect(storeTokens(files)).toBe('--brand-background: #f7f4ef; --brand-accent: #2f4bb8');
   });
 });
 
