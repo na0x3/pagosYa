@@ -49,4 +49,11 @@ describe('master store data', () => {
     expect(out.find(f => f.path === 'styles/globals.css')!.content.startsWith(MASTER_THEME_START)).toBe(true);
     expect(readMasterState(out).copy?.headline).toBe('Hecho con cuidado');
   });
+
+  it('a new look replaces earlier custom colours instead of keeping them (review fix 5)', () => {
+    const custom = refillMasterFiles(storeFiles(), manifest, { look: { colors: { paper: '#ffff33' } } });
+    expect(readMasterState(custom).look?.colors).toEqual({ paper: '#ffff33' });
+    const back = refillMasterFiles(custom, manifest, { look: { palette: 'sage', fonts: 'classic', colors: {} } });
+    expect(readMasterState(back).look).toEqual({ palette: 'sage', fonts: 'classic', colors: {} });
+  });
 });

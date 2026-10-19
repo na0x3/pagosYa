@@ -35,6 +35,12 @@ describe('masterColours', () => {
     const colours = masterColours(settings, { palette: 'terracotta', fonts: 'classic', colors: { paper: '#ffff33', ink: '#ffffff' } });
     expect(contrastRatio(colours.paper, colours.ink)).toBeGreaterThanOrEqual(4.5);
   });
+  it('keeps text readable on the muted surfaces when the merchant inverts the colours (review fix 4)', () => {
+    const dark = masterColours(settings, { palette: 'terracotta', fonts: 'classic', colors: { paper: '#000000', ink: '#ffffff' } });
+    expect(contrastRatio(dark.muted, dark.ink)).toBeGreaterThanOrEqual(4.5);
+    const light = masterColours(settings, { palette: 'gold', fonts: 'classic', colors: { paper: '#ffffff' } });
+    expect(contrastRatio(light.muted, light.ink)).toBeGreaterThanOrEqual(4.5);
+  });
   it('picks a readable text colour on the accent', () => {
     const colours = masterColours(settings, { palette: 'gold', fonts: 'classic', colors: {} });
     expect(contrastRatio(colours.accent, colours.onAccent)).toBeGreaterThanOrEqual(4.5);

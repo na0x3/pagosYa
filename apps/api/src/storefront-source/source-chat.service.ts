@@ -4,7 +4,7 @@ import { sourceMerchantRequest, type SourceMerchantRequest } from './source-merc
 import { agentDraftPreviews } from './agent/agent-draft-previews';
 import { DESIGN_DIRECTIONS, directionBrief, type DesignDirection } from './source-directions';
 import { loadStoreKnowledge } from '../store-knowledge/store-knowledge';
-import { continuedCatalogRequest, pendingCatalogRequest } from './source-catalog-request';
+import { continuedCatalogRequest, pendingCatalogRequest, statesPrices } from './source-catalog-request';
 import { SourceConversationFailure, safeConversationDiagnostic } from './source-conversation-failure';
 import { BadRequestException, ConflictException, HttpException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -72,7 +72,9 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
 /** The merchant's own words asking for a store designed from nothing (spec 2026-10-19 §2.1). */
 /** Spec 2026-10-19 §3.2: how the agent edits a master store — the Amboras rule set, in YAPI's words. */
 export const MASTER_EDIT_RULES = 'Esta tienda usa la plantilla base «Esencial». Edita el componente que ya existe; cambia solo lo que el comercio pidió; nunca reescribas una página completa ni cambies secciones que no nombró. Los textos visibles viven en components/store-data.tsx (copy): úsalos, no los copies dentro de los componentes. No toques el bloque /* pagosya:master-theme */ de styles/globals.css. Íconos: solo los de components/icons.tsx. Sin emojis.';
-const MASTER_SCRATCH = /desde (?:cero|0)|from scratch|diseño propio|algo (?:propio|único)|sin (?:usar )?plantillas?/i;
+const MASTER_SCRATCH = /\b(?:diseñ\w*|crea\w*|cré\w*|arm\w*|haz|hacer|hagas|constru\w*)\b[^.!?\n]{0,30}\bdesde (?:cero|0)\b|\b(?:tienda|página|pagina|web|sitio|diseño)\b[^.!?\n]{0,20}\bdesde (?:cero|0)\b|from scratch|diseño propio|sin (?:usar )?plantillas?/i;
+/** A master store's home still reads its words from store-data (spec 2026-10-19 §3): after a redesign it no longer does. */
+const readsMasterData = (files: readonly { path: string; content: string }[]) => /import\s*\{[^}]*\bcopy\b[^}]*\}\s*from\s*'\.\/store-data'/.test(files.find(file => file.path === 'components/home.tsx')?.content ?? '');
 export const TEMPLATE_QUESTION = '¿Quieres que parta de una de nuestras plantillas o prefieres que diseñe desde cero?';
 export const TEMPLATE_ADAPTATION_MAX_CREDITS = 20;
 export const TEMPLATE_UNIQUE_OFFER = 'Si quieres que se vea más única, dímelo y la rediseño.';
@@ -241,13 +243,13 @@ export class SourceChatService {
 
   /** Spec 2026-09-26 §1.3: v1 is the template as applied today; v2 is a free adaptation. A failed adaptation keeps v1. */
   /** Spec 2026-10-19 §2: Esencial applied and filled in one call; the store is saved even when the call fails. */
-  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number) {
+  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[] = []) {
     await workflow.report('saving');
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true } });
     const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; contact?: { city?: string }; photos?: string[] };
     const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
     const saved = await this.templates.applyMaster(merchantId, storeId, revision, async facts => {
-      const photos = [...new Set([...(onboarding.photos ?? []), ...facts.photos])].slice(0, 8);
+      const photos = [...new Set([...(onboarding.photos ?? []), ...chatPhotos, ...facts.photos])].slice(0, 8);
       const read = await this.dialogue.fillMaster(merchantId, {
         storeId, storeName: facts.storeName, what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '', city: onboarding.contact?.city ?? '',
         products: facts.products, photos, palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })),
@@ -271,13 +273,14 @@ export class SourceChatService {
     const photos = [...new Set([...Object.values(state.photos).filter(Boolean), ...(recent ?? []).map(asset => asset.url)])].slice(0, 8);
     const read = await this.dialogue.fillMaster(merchantId, { storeId, storeName: state.store?.name ?? '', what: '', story: '', city: state.store?.city ?? '', products: [], photos,
       palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })),
-      current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}) }, request });
+      current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? '') }, request });
     const change = read ? masterFillFromRead(read, photos, true) : null;
-    if (!change || !Object.keys(change).length) {
-      await workflow.finish(change ? 'completed' : 'failed');
+    // Nothing in the data to change: the caller turns the request into a minimal design edit.
+    if (change && !Object.keys(change).length) return null;
+    if (!change) {
+      await workflow.finish('failed');
       const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
-        content: change ? 'No encontré qué cambiar con ese pedido. Dime qué texto, color, fuente o foto quieres distinto.' : 'No pude aplicar el cambio en este momento. Inténtalo de nuevo en un momento.',
-        metadata: { progress: workflow.value, ...(change ? {} : { failed: true }) } } });
+        content: 'No pude aplicar el cambio en este momento. Inténtalo de nuevo en un momento.', metadata: { progress: workflow.value, failed: true } } });
       return { userMessage, assistantMessage, setup: null };
     }
     await workflow.report('saving');
@@ -706,31 +709,44 @@ export class SourceChatService {
       retryDecision = decision;
       const previousBrief = previous ? (previous.snapshot as unknown as SourceProjectSnapshot).brief : null;
       // Master template (spec 2026-10-19 §3): words, colours, fonts and photos change the store's data; design changes stay minimal.
-      const masterStore = this.config.get<boolean>('app.yapiMasterTemplate') === true && Boolean(current.revision) && previousBrief?.templateId === MASTER_TEMPLATE_ID;
-      if (masterStore && decision.editKind === 'content') return await this.masterContentEdit(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous!);
+      const masterStore = this.config.get<boolean>('app.yapiMasterTemplate') === true && Boolean(current.revision) && previousBrief?.templateId === MASTER_TEMPLATE_ID
+        && readsMasterData((previous!.snapshot as unknown as SourceProjectSnapshot).files);
+      if (masterStore && decision.editKind === 'content') {
+        const done = await this.masterContentEdit(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous!);
+        if (done) return done;
+        // Words Esencial has no field for (a heading a design edit added, «Lo que dicen nuestros clientes»): a minimal design edit.
+        decision.editKind = 'design';
+      }
       const masterDesign = masterStore && decision.editKind === 'design';
+      // A full redesign or «más única» leaves Esencial: later edits are ordinary edits, not data refills.
+      const leavesMaster = previousBrief?.templateId === MASTER_TEMPLATE_ID && !masterDesign && (decision.editKind === 'redesign' || decision.rework === true || sourceRedesignRequested(input.instruction));
       const brief = { ...(previousBrief || {
         businessType: store.name.slice(0, 120), audience: 'Clientes del negocio descrito en la conversación',
         primaryAction: sitePurpose === 'shop' ? 'Explorar productos y completar un pedido con pagosYa' : sitePurpose === 'service' ? 'Conocer los servicios y consultar' : sitePurpose === 'portfolio' ? 'Explorar proyectos y contactar' : 'Leer los artículos publicados', visualDirection: decision.summary.slice(0, 2000),
         businessInformation: decision.summary,
       }), sitePurpose };
+      if (leavesMaster) delete (brief as { templateId?: string }).templateId;
       const assetUrls = allAssets.filter(url => !decision.imageUses.some(use => use.url === url && use.role === 'unused'));
       const reworkTemplate = Boolean(current.revision && decision.rework && previousBrief?.templateId && templateManifest(previousBrief.templateId));
       // A store that started from a template keeps it as its base while it is untouched, or whenever the merchant asks to.
       const keepTemplate = masterDesign || Boolean(current.revision && !reworkTemplate && previousBrief?.templateId && templateManifest(previousBrief.templateId)
         && (templateReferenceRequested(input.instruction) || startedFromTemplate?.untouched && !sourceRedesignRequested(input.instruction)));
-      const templateBrief = reworkTemplate ? TEMPLATE_REWORK_BRIEF : keepTemplate ? TEMPLATE_KEEP_BRIEF : '';
-      const demoPhotoNote = keepTemplate ? templateDemoPhotoNote(templateManifest(previousBrief!.templateId!)!, (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.files || []) : '';
+      const templateBrief = masterDesign ? '' : reworkTemplate ? TEMPLATE_REWORK_BRIEF : keepTemplate ? TEMPLATE_KEEP_BRIEF : '';
+      const demoPhotoNote = keepTemplate && !masterDesign ? templateDemoPhotoNote(templateManifest(previousBrief!.templateId!)!, (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.files || []) : '';
       const requested = masterDesign ? `${MASTER_EDIT_RULES}\n\nPedido del comercio: ${input.instruction}` : templateBrief ? `${templateBrief}\n\nPedido del comercio: ${input.instruction}` : input.instruction;
       // A queued request carries a profile read from the merchant's words alone; a kept template is read with its brief.
       const requestContext = sourceRequestContext.getStore();
       const withTemplateProfile = <T>(work: () => Promise<T>) => keepTemplate && requestContext
-        ? sourceRequestContext.run({ ...requestContext, request: { ...requestContext.request, profile: sourceRequestProfile(requested, true) } }, work) : work();
+        ? sourceRequestContext.run({ ...requestContext, request: { ...requestContext.request, profile: sourceRequestProfile(masterDesign ? input.instruction : requested, true) } }, work) : work();
       // Master template (spec 2026-10-19): a new shop starts from Esencial unless the merchant asked, in their own words, for a design
       // from scratch. A website copy, a product link and a listing screenshot keep their own flows.
       const askedScratch = [input.instruction, ...history.messages.filter(message => message.role === 'USER').map(message => message.content)].some(text => MASTER_SCRATCH.test(text));
-      if (this.config.get<boolean>('app.yapiMasterTemplate') === true && newShop && !askedScratch && !websiteCopy && !productLink && !productImport) {
-        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision);
+      // Products typed with prices in a chat-only setup are created by the designer's catalog step; that flow keeps them.
+      const chatCatalog = this.config.get<boolean>('app.yapiMasterTemplate') === true && newShop && statesPrices(catalogInstruction)
+        && !(await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } }))?.onboarding;
+      if (this.config.get<boolean>('app.yapiMasterTemplate') === true && newShop && !askedScratch && !websiteCopy && !productLink && !productImport && !chatCatalog) {
+        const chatPhotos = assetUrls.filter(url => ['product', 'business', 'team', 'background'].includes(decision.imageUses.find(use => use.url === url)?.role ?? ''));
+        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos);
       }
       // "Elige tu estilo": new stores and full redesigns get two styles to pick from (one calm, one bold); a kept template stays its own style.
       // A copy follows its blueprint: no style cards (spec 2026-10-18 B §3).
@@ -764,8 +780,8 @@ export class SourceChatService {
         const saved = await this.projects.version(merchantId, storeId, revision.revision);
         const findings = await masterLayoutFindings(saved.snapshot as unknown as SourceProjectSnapshot).catch(() => [] as string[]);
         if (findings.length) {
-          const repaired = await this.generation.generate(merchantId, storeId, { revision: revision.revision, brief, instruction: `${MASTER_EDIT_RULES}\n\nCorrige solo esto, sin ningún otro cambio:\n- ${findings.join('\n- ')}`, model: input.model, maxCredits: input.maxCredits },
-            this.generation.newBudget(input.maxCredits), [], workflow.report, {}).catch(() => null);
+          const repaired = await withTemplateProfile(() => this.generation.generate(merchantId, storeId, { revision: revision.revision, brief, instruction: `${MASTER_EDIT_RULES}\n\nCorrige solo esto, sin ningún otro cambio:\n- ${findings.join('\n- ')}`, model: input.model, maxCredits: input.maxCredits },
+            this.generation.newBudget(input.maxCredits), [], workflow.report, {})).catch(() => null);
           if (repaired && !('styleProposal' in repaired)) checkedRevision = repaired;
           const after = checkedRevision !== revision ? await masterLayoutFindings((await this.projects.version(merchantId, storeId, checkedRevision.revision)).snapshot as unknown as SourceProjectSnapshot).catch(() => findings) : findings;
           layoutNote = after.length ? ` Revisé la página y queda esto por mejorar: ${after.join(' ')}` : '';

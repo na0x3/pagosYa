@@ -79,7 +79,8 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   if (!settings) throw new TypeError(`Plantilla ${manifest.id}: no es una plantilla base.`);
   const state = readMasterState(files);
   const copy = masterCopy(settings, { ...(state.copy ?? {}), ...(change.copy ?? {}) });
-  const look = masterLook(settings, { ...(state.look ?? {}), ...(change.look ?? {}), colors: { ...(state.look?.colors ?? {}), ...(change.look?.colors ?? {}) } });
+  // A changed look carries its whole colour set (the fill call copies the colours it keeps), so earlier custom colours can go.
+  const look = masterLook(settings, { ...(state.look ?? {}), ...(change.look ?? {}), colors: change.look?.colors ?? state.look?.colors ?? {} });
   const photos = { ...state.photos, ...(change.heroPhoto !== undefined ? { hero: change.heroPhoto ?? '' } : {}), ...(change.storyPhoto !== undefined ? { story: change.storyPhoto ?? '' } : {}) };
   const theme = masterThemeCss(settings, look);
   return files.map(file => {

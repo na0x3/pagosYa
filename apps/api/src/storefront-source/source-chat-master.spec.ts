@@ -2,6 +2,9 @@ import { randomUUID as uuid } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
+import { sourceRequestContext } from './source-request-context';
+import { sourceMerchantRequest } from './source-merchant-request';
+import { sourceRequestProfile } from './source-request-profile';
 
 jest.mock('./source-master-check', () => ({ masterLayoutFindings: jest.fn().mockResolvedValue([]) }));
 
@@ -54,6 +57,24 @@ it('an earlier «desde cero» keeps the scratch flow', async () => {
   expect(applyMaster).not.toHaveBeenCalled();
 });
 
+it('a story that bakes «desde cero» still gets Esencial (review fix 1)', async () => {
+  await send('Mi negocio se llama Café Buna.\nLo que quiero que sepas de mi negocio:\nHorneamos todo desde cero y queremos ofrecer algo único.\nCrea mi tienda.');
+  expect(applyMaster).toHaveBeenCalled();
+});
+
+it('products typed with prices in a chat-only setup keep the flow that creates them (review fix 7)', async () => {
+  prisma.store.findFirst.mockResolvedValue({ name: 'Café Buna', logoUrl: null, onboarding: null, _count: { paymentLinks: 0 }, paymentLinks: [] });
+  await send('Vendo tortas: chocolate 80 Bs y vainilla 70 Bs. Créala.');
+  expect(applyMaster).not.toHaveBeenCalled();
+  expect(generate).toHaveBeenCalled();
+});
+
+it('photos attached in chat reach the fill call after the walkthrough ones (review fix 7)', async () => {
+  decide.mockResolvedValueOnce({ action: 'generate', reply: '', summary: 's', generationInstruction: 'x', imageUses: [{ url: 'https://x/chat.jpg', role: 'product', description: 'torta' }], startFrom: 'scratch', editKind: 'none' });
+  await chat.send('m1', 's1', { revision: 0, instruction: 'Crea mi tienda.', assetUrls: ['https://x/chat.jpg'], setupAction: 'generate', requestId: uuid() });
+  expect(fillMaster.mock.calls[0][1].photos).toEqual(['https://x/u1.jpg', 'https://x/chat.jpg', 'https://x/p1.jpg']);
+});
+
 it('the flag off returns to today’s flow', async () => {
   config.set('app.yapiMasterTemplate', false);
   await send('Crea mi tienda.');
@@ -64,9 +85,11 @@ it('the flag off returns to today’s flow', async () => {
 describe('edits on a master store', () => {
   let refill: jest.Mock;
   const storeData = 'export const store = {"name":"Café Buna","tagline":"","city":"","logo":"","phone":""} as const;\nexport const photos: Record<string, string> = {"hero":"https://x/h.jpg","story":""};\nexport const copy = {"headline":"Hecho con cuidado"} as const;\nexport const look = {"palette":"terracotta","fonts":"classic","colors":{}} as const;\n';
+  let homeTsx = "import { copy, photos } from './store-data';\n";
   beforeEach(() => {
+    homeTsx = "import { copy, photos } from './store-data';\n";
     refill = jest.fn().mockResolvedValue({ revision: 3, label: 'Textos y estilo actualizados' });
-    const projects = { current: jest.fn().mockResolvedValue({ revision: 2 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files: [{ path: 'components/store-data.tsx', content: storeData }] } }) };
+    const projects = { current: jest.fn().mockResolvedValue({ revision: 2 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files: [{ path: 'components/store-data.tsx', content: storeData }, { path: 'components/home.tsx', get content() { return homeTsx; } }] } }) };
     chat = new SourceChatService(prisma, projects as any, generation(), { decide, fillMaster } as any, { apply: jest.fn(), applyMaster, refill } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
   });
   const edit = (instruction: string) => chat.send('m1', 's1', { revision: 2, instruction, requestId: uuid() }) as Promise<any>;
@@ -82,12 +105,36 @@ describe('edits on a master store', () => {
     expect(fillMaster.mock.calls[0][1]).toMatchObject({ request: 'Cambia el título a «Café de altura»', current: { copy: { headline: 'Hecho con cuidado' } } });
   });
 
-  it('a content edit that changes nothing saves nothing and says so', async () => {
+  it('a word change Esencial has no field for goes to a design edit instead of a dead end (review fix 8)', async () => {
     decided('content');
     fillMaster.mockResolvedValueOnce({ changed: [], values: [], palette: 'terracotta', fonts: 'classic', colors: {}, heroPhoto: -1, storyPhoto: -1 });
-    const out = await edit('Déjalo bonito');
+    await edit('Cambia «Lo que dicen nuestros clientes» por «Opiniones»');
     expect(refill).not.toHaveBeenCalled();
-    expect(out.assistantMessage.content).toMatch(/qué cambiar/);
+    expect(generate.mock.calls[0][2].instruction).toContain('Edita el componente que ya existe');
+  });
+
+  it('a design edit reads its request profile from the merchant\'s words only (review fix 2)', async () => {
+    decided('design');
+    let profile: unknown;
+    generate.mockImplementationOnce(async () => { profile = sourceRequestContext.getStore()?.request.profile; return { revision: 3, label: 'x' }; });
+    const dto = { revision: 2, instruction: 'Mueve las reseñas arriba de los productos', requestId: uuid() };
+    await sourceRequestContext.run({ signal: new AbortController().signal, jobId: 'j1', request: sourceMerchantRequest(dto), assertLease: jest.fn() } as any, () => chat.send('m1', 's1', dto));
+    expect(profile).toEqual(sourceRequestProfile(dto.instruction, true));
+    expect(generate.mock.calls[0][2].instruction).not.toContain('conservar la plantilla');
+  });
+
+  it('a full redesign leaves Esencial behind, so later edits are not data refills (review fix 3)', async () => {
+    decided('redesign');
+    await edit('Rediseña todo, quiero algo único');
+    expect(generate.mock.calls[0][2].brief.templateId).toBeUndefined();
+  });
+
+  it('a store whose home no longer reads store-data is not refilled (review fix 3)', async () => {
+    homeTsx = 'export default function Home() { return <main />; }';
+    decided('content');
+    await edit('Cambia el título');
+    expect(fillMaster).not.toHaveBeenCalled();
+    expect(refill).not.toHaveBeenCalled();
   });
 
   it('a design edit goes to the agent with the minimal-edit rules', async () => {

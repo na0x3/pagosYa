@@ -18,6 +18,9 @@ export const MASTER_COLOURS: readonly MasterColour[] = ['paper', 'ink', 'muted',
 export type MasterLook = { palette: string; fonts: string; colors: Partial<Record<MasterColour, string>> };
 export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null };
 
+/** a → b by t (0..1), both #rrggbb. */
+const mixHex = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
+
 const clip = (value: unknown, max: number) => typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max).trim() : undefined;
 
 export function masterCopy(settings: MasterSettings, partial: Partial<MasterCopy> = {}): MasterCopy {
@@ -48,7 +51,9 @@ export function masterColours(settings: MasterSettings, look: MasterLook) {
   const base = settings.palettes.find(p => p.id === look.palette) ?? settings.palettes[0];
   const merged = { paper: base.paper, ink: base.ink, muted: base.muted, accent: base.accent, deep: base.deep, ...look.colors };
   const ink = contrastRatio(merged.paper, merged.ink) >= 4.5 ? merged.ink : bestInkFor(merged.paper, merged.ink);
-  return { ...merged, ink, onAccent: bestInkFor(merged.accent, '#ffffff'), onDeep: bestInkFor(merged.deep, '#ffffff') };
+  // The footer, empty cart and hovers put ink on muted: a muted the ink cannot be read on becomes a tint of the paper.
+  const muted = contrastRatio(merged.muted, ink) >= 4.5 ? merged.muted : mixHex(merged.paper, ink, 0.06);
+  return { ...merged, ink, muted, onAccent: bestInkFor(merged.accent, '#ffffff'), onDeep: bestInkFor(merged.deep, '#ffffff') };
 }
 
 const catalogFont = (id: string) => {
@@ -80,7 +85,7 @@ export function masterDnaFonts(settings: MasterSettings, look: MasterLook) {
 }
 
 /** What the fill call returns (spec 2026-10-19 §2.3): every copy field, the look, photo indexes (-1 = none) and, for an
- *  edit, the field names it changed ('look' = palette/fonts/colors, 'photos' = heroPhoto/storyPhoto). */
+ *  edit, the field names it changed ('look' = palette/fonts/colors; heroPhoto and storyPhoto each by name). */
 export type MasterRead = MasterCopy & { palette: string; fonts: string; colors: Record<MasterColour, string>; heroPhoto: number; storyPhoto: number; changed: string[] };
 const COPY_FIELDS = [...Object.keys(MASTER_COPY_CAPS), 'values'];
 
@@ -92,6 +97,7 @@ export function masterFillFromRead(read: MasterRead, photos: readonly string[], 
   return {
     ...(Object.keys(copy).length ? { copy } : {}),
     ...(keep('look') ? { look: { palette: read.palette, fonts: read.fonts, colors } } : {}),
-    ...(keep('photos') ? { heroPhoto: photo(read.heroPhoto), storyPhoto: photo(read.storyPhoto) } : {}),
+    ...(keep('heroPhoto') ? { heroPhoto: photo(read.heroPhoto) } : {}),
+    ...(keep('storyPhoto') ? { storyPhoto: photo(read.storyPhoto) } : {}),
   };
 }

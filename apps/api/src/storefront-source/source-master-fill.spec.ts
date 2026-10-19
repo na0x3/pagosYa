@@ -16,6 +16,9 @@ describe('masterFillFromRead', () => {
   it('an out-of-range photo index is no photo', () => {
     expect(masterFillFromRead(read({ heroPhoto: 7 }), ['a.jpg'], false).heroPhoto).toBeNull();
   });
+  it('a hero-photo edit changes the hero only (review fix 6)', () => {
+    expect(masterFillFromRead(read({ changed: ['heroPhoto'] }), ['a.jpg', 'b.jpg'], true)).toEqual({ heroPhoto: 'b.jpg' });
+  });
   it('an edit keeps only the fields the model says it changed', () => {
     expect(masterFillFromRead(read({ changed: ['headline'] }), ['a.jpg'], true)).toEqual({ copy: { headline: 'Café de Coroico' } });
   });
@@ -40,6 +43,15 @@ describe('fillMaster', () => {
     expect(sent.text.format).toMatchObject({ type: 'json_schema', strict: true, name: 'master_fill' });
     expect(sent.text.format.schema.properties.palette.enum).toEqual(['sand']);
     expect(sent.instructions).toMatch(/Never invent reviews/);
+  });
+  it('labels every image with its index and sends the current photo choices (review fix 6)', async () => {
+    const svc = new SourceConversationService({ mediaAsset: { findMany: jest.fn().mockResolvedValue([{ url: 'https://x/u/a.jpg' }, { url: 'https://x/u/c.jpg' }]) } } as any,
+      { getBuffer: jest.fn().mockResolvedValue(Buffer.from('px')), contentTypeFor: () => 'image/jpeg' } as any, config);
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 200, json: async () => body(read()) } as any);
+    await svc.fillMaster('m1', { ...input, photos: ['https://x/u/a.jpg', 'https://other/b.jpg', 'https://x/u/c.jpg'], current: { copy: {} as any, look: { palette: 'sand', fonts: 'literary', colors: {} }, heroPhoto: 2, storyPhoto: -1 } });
+    const content = JSON.parse((fetchMock.mock.calls[0][1] as any).body).input[0].content;
+    expect(content.filter((part: any) => part.type === 'input_text').map((part: any) => part.text).slice(1)).toEqual(['Foto 0', 'Foto 2']);
+    expect(JSON.parse(content[0].text).current).toMatchObject({ heroPhoto: 2, storyPhoto: -1 });
   });
   it('returns null after a failed call and one retry', async () => {
     const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false, status: 502, json: async () => ({}) } as any);

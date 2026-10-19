@@ -11,7 +11,7 @@ export function continuedCatalogRequest(pending: string | undefined, current: st
   return clarification ? `${pending}\nRespuesta a la aclaración: ${text}`.slice(-12000) : text;
 }
 /** A merchant message that states prices ("Matcha – Bs 22") is catalog content even without the word "crea". */
-const statesPrices = (text: string) => /(?:\b(?:bs\.?|bob|usd)\s*\d|\d+(?:[.,]\d{1,2})?\s*(?:bs\b|bob\b|usd\b))/i.test(text);
+export const statesPrices = (text: string) => /(?:\b(?:bs\.?|bob|usd)\s*\d|\d+(?:[.,]\d{1,2})?\s*(?:bs\b|bob\b|usd\b))/i.test(text);
 
 export function pendingCatalogRequest(instruction: string, setup = false, previous?: string): string | undefined {
   if (setup) return statesPrices(instruction) || previous ? instruction.slice(-12000) : undefined;
