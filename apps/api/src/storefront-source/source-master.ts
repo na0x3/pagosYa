@@ -78,3 +78,20 @@ export function masterDnaFonts(settings: MasterSettings, look: MasterLook) {
   const pair = settings.fonts.find(f => f.id === look.fonts) ?? settings.fonts[0];
   return { display: pair.heading, text: pair.body };
 }
+
+/** What the fill call returns (spec 2026-10-19 §2.3): every copy field, the look, photo indexes (-1 = none) and, for an
+ *  edit, the field names it changed ('look' = palette/fonts/colors, 'photos' = heroPhoto/storyPhoto). */
+export type MasterRead = MasterCopy & { palette: string; fonts: string; colors: Record<MasterColour, string>; heroPhoto: number; storyPhoto: number; changed: string[] };
+const COPY_FIELDS = [...Object.keys(MASTER_COPY_CAPS), 'values'];
+
+export function masterFillFromRead(read: MasterRead, photos: readonly string[], edit: boolean): MasterFill {
+  const keep = (field: string) => !edit || read.changed.includes(field);
+  const copy = Object.fromEntries(COPY_FIELDS.filter(keep).map(field => [field, (read as unknown as Record<string, unknown>)[field]])) as Partial<MasterCopy>;
+  const colors = Object.fromEntries(MASTER_COLOURS.filter(key => read.colors?.[key]).map(key => [key, read.colors[key]]));
+  const photo = (index: number) => Number.isInteger(index) && index >= 0 && index < photos.length ? photos[index] : null;
+  return {
+    ...(Object.keys(copy).length ? { copy } : {}),
+    ...(keep('look') ? { look: { palette: read.palette, fonts: read.fonts, colors } } : {}),
+    ...(keep('photos') ? { heroPhoto: photo(read.heroPhoto), storyPhoto: photo(read.storyPhoto) } : {}),
+  };
+}
