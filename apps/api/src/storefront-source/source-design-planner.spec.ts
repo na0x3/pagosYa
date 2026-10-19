@@ -278,10 +278,11 @@ describe('style slots', () => {
     await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: slots }).catch(() => undefined);
     await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: slots.map((slot, i) => ({ ...slot, slot: i })) }).catch(() => undefined);
     const bodies = fetchMock.mock.calls.map(call => JSON.parse(call[1]!.body as string));
+    // Re-pinned 2026-10-19: the master template's six premium OFL fonts joined the catalogue the planner lists and offers.
     expect(bodies.map(body => [sha(body.input[0].content[0].text), sha(JSON.stringify(body.text)), body.max_output_tokens])).toEqual([
-      ['7dabfe237070abd31949ea395a1c14ca6b03555a972cd7a9541c22afc5888445', 'fdedb28f50dbd7b5c340070546b532b6311f0dc02fa399834af6f5e29e23a013', 7200],
-      ['c63396d1926c6f047adba5c188b4f4804612e49ab914fc5e2d2f7961bf7d3b8d', '6a4c3bed714a4ad0e62e06ad19af5e5d5f6cc92ad9edbbfd2bdc8a7f8a9575e7', 7200],
-      ['c63396d1926c6f047adba5c188b4f4804612e49ab914fc5e2d2f7961bf7d3b8d', '6a4c3bed714a4ad0e62e06ad19af5e5d5f6cc92ad9edbbfd2bdc8a7f8a9575e7', 7200],
+      ['a23410106b851ac5acf3b6e46b1223a939b382f2baf579b3217bb1ee46ad844c', '2fbda661657ed78fe47c4a74bfccc41e53c50f353bb33a58907e817439a185a8', 7200],
+      ['338c3bc9dd1a7bf26919d0c8ca97883f4a4c8984f47a00c0c4321488312a2551', 'eccfcf89561e6d17c3751d1971c3f300416eb45d2f2507a9426242f546259e1e', 7200],
+      ['338c3bc9dd1a7bf26919d0c8ca97883f4a4c8984f47a00c0c4321488312a2551', 'eccfcf89561e6d17c3751d1971c3f300416eb45d2f2507a9426242f546259e1e', 7200],
     ]);
   });
 

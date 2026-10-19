@@ -67,6 +67,13 @@ const FONTS = [
   { id: 'plus-jakarta-sans', family: 'Plus Jakarta Sans', role: 'both', personality: ['geometric', 'confident', 'modern', 'premium'], weights: '200–800' },
   { id: 'dm-sans', family: 'DM Sans', role: 'text', personality: ['geometric', 'calm', 'clear', 'premium'], weights: '100–1000' },
   { id: 'cormorant-garamond', family: 'Cormorant Garamond', role: 'display', personality: ['serif', 'luxury', 'classic', 'premium'], weights: '300–700' },
+  // Spec 2026-10-19 master template: premium-grade OFL families for Esencial's font pairs.
+  { id: 'geist', family: 'Geist', role: 'both', personality: ['grotesk', 'precise', 'premium'], weights: '100–900' },
+  { id: 'mona-sans', family: 'Mona Sans', role: 'both', personality: ['grotesk', 'confident', 'premium'], weights: '200–900' },
+  { id: 'hanken-grotesk', family: 'Hanken Grotesk', role: 'text', personality: ['grotesk', 'calm', 'premium'], weights: '100–900' },
+  { id: 'schibsted-grotesk', family: 'Schibsted Grotesk', role: 'text', personality: ['grotesk', 'editorial', 'premium'], weights: '400–900' },
+  { id: 'gloock', family: 'Gloock', role: 'display', personality: ['serif', 'high-contrast', 'luxury'], weights: '400' },
+  { id: 'crimson-pro', family: 'Crimson Pro', role: 'both', personality: ['serif', 'classic', 'bookish'], weights: '200–900' },
 ] as const satisfies readonly Entry[];
 
 export type SourceFontId = typeof FONTS[number]['id'];

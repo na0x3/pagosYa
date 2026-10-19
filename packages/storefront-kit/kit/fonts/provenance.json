@@ -681,5 +681,77 @@
     "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/cormorantgaramond/OFL.txt",
     "gitBlob": "507d70f4565352dbfcf2dfc9b42eb092b57c0be8",
     "sha256": "60700d351cac4650c51f3f9db318d2a420f8b45052dba2715eb5fec41f0f6956"
+  },
+  {
+    "file": "geist.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/geist/Geist%5Bwght%5D.ttf",
+    "gitBlob": "f63f0afc6390323715972b6645115485f37cc9f4",
+    "sha256": "73894e0448cae90a92b6c2f8732b7bb9acb7b94c418bff559dad4a18e1de9659"
+  },
+  {
+    "file": "geist-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/geist/OFL.txt",
+    "gitBlob": "61f6f4b7853081236aec6407f2dd3c7170997f84",
+    "sha256": "1781d2806a07d91c4edf4740b88449fab7d0eadad53f7c351b94cd4d4eb8c00f"
+  },
+  {
+    "file": "mona-sans.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/monasans/MonaSans%5Bwdth%2Cwght%5D.ttf",
+    "gitBlob": "886bbd95693dca58bc24e9bdbd87d125a64a8277",
+    "sha256": "fd6e79634b5ae804a45aac7e2e3c2a325b41291fba59034f4732b0135b8475b3"
+  },
+  {
+    "file": "mona-sans-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/monasans/OFL.txt",
+    "gitBlob": "ccc02aabb5b4e7bacc17eaac508ac45220c4518c",
+    "sha256": "9261dcb61fb5e3c587d50d7a9fdae12bc7422d8822d7ac06b8f34550479575de"
+  },
+  {
+    "file": "hanken-grotesk.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/hankengrotesk/HankenGrotesk%5Bwght%5D.ttf",
+    "gitBlob": "ed6efac663fab76e550a2c994d95ca143587da18",
+    "sha256": "813b3f8fa0965405669a89b38e51bbefd95eef6b8e20d1cb2d8c10cce062662f"
+  },
+  {
+    "file": "hanken-grotesk-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/hankengrotesk/OFL.txt",
+    "gitBlob": "9c8185d846e13882e03bdd700743e717e67189dc",
+    "sha256": "e02ccb89a86839b22feff7872ff5cc355cc0f58318d29eee20e2cf83a612f16d"
+  },
+  {
+    "file": "schibsted-grotesk.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/schibstedgrotesk/SchibstedGrotesk%5Bwght%5D.ttf",
+    "gitBlob": "78ad61cf65a390c517248f46d325a1e9b88d367d",
+    "sha256": "6ceeadf6be8e1fd7687011c7fa38ed0edd1abe967a0b73d97caec183552e823d"
+  },
+  {
+    "file": "schibsted-grotesk-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/schibstedgrotesk/OFL.txt",
+    "gitBlob": "ba41e1147195c699cf6c9b91cf07d8a0e4f44cdb",
+    "sha256": "3b4f3063b6ac7c1e403e2c4a5e8ef3a58190ff83ed7b15af66511858699139ce"
+  },
+  {
+    "file": "gloock.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/gloock/Gloock-Regular.ttf",
+    "gitBlob": "38b454cafbc8ad6af68a78133d7b505885850b78",
+    "sha256": "c3a67e0212f7da01764796ae721cb9bab3e122d142354f97cf9c63fb763e6d77"
+  },
+  {
+    "file": "gloock-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/gloock/OFL.txt",
+    "gitBlob": "3a6f194de3bd32e31fb8b44b5b440a08ca6acf89",
+    "sha256": "321e28d45a430e017d9d1d6a47ef1fd261aad354723b014cf1933a765036c311"
+  },
+  {
+    "file": "crimson-pro.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/crimsonpro/CrimsonPro%5Bwght%5D.ttf",
+    "gitBlob": "b8c1f6da0acbf2cb6d0af49ce89557288c829daa",
+    "sha256": "16aa9fb7300a93637da51fac03a071b2ff08b6bbf65f99c794c25f040b58af6a"
+  },
+  {
+    "file": "crimson-pro-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/crimsonpro/OFL.txt",
+    "gitBlob": "6a7d97cd277b519a8bd3d38fcc56b5a133ac8354",
+    "sha256": "1820869bd5baa1c2d88fa87c89eea532cf9442d841008acab720654b7f82823d"
   }
 ]

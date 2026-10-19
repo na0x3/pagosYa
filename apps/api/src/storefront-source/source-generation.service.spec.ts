@@ -818,9 +818,10 @@ describe('Independent source generation',()=>{
     // 10-credit ceiling leaves the repair reserve within a few tokens of its 1024 floor and any
     // prompt edit decides the outcome. The subject here is the repair's allowance, not the ceiling.
     // (12 until sub-project 7's kit-CSS guidance, ~330 characters, used up the margin; 13 until
-    // SOURCE_ORDER_EMAIL_DIRECTION, ~1.3k characters, used up the next one. 14 is the measured
-    // floor: 13 throws BadGatewayException here.)
-    const result = await service.generate('m', 's', { ...input, model: 'gpt-5.6-terra', maxCredits: 14 });
+    // SOURCE_ORDER_EMAIL_DIRECTION, ~1.3k characters, used up the next one; 14 until the master template's
+    // six premium fonts joined the catalogue the prompt lists (2026-10-19). 15 is the measured floor: 14 throws
+    // BadGatewayException here.)
+    const result = await service.generate('m', 's', { ...input, model: 'gpt-5.6-terra', maxCredits: 15 });
     if ('styleProposal' in result) throw new Error('unexpected style proposal');
     const first = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
     const repair = JSON.parse(fetchMock.mock.calls[1][1]!.body as string);
