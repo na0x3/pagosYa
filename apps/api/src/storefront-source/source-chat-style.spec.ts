@@ -301,12 +301,28 @@ it('a redesign request retires cards still drawing and waits for their run to le
 });
 
 // Final review: a style run that died while drawing heroes (API restart) stops beating; its cards no longer hold the chat.
-it('lets a message through when the run drawing the cards stopped beating, and refuses a pick on those cards', async () => {
+it('lets a message through when the run drawing the cards stopped beating', async () => {
   const stale = new Date(Date.now() - 5 * 60_000);
   prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', heartbeatAt: stale, proposal: drawingProposal() });
   const out: any = await chat.send('m1', 's1', { revision: 0, instruction: '¿y en azul?', requestId: uuid() });
   expect(out.assistantMessage.content).not.toBe('Primero elige un estilo; después lo ajustamos juntos.');
   expect(conversationDecide).toHaveBeenCalled();
+});
+
+// 2026-10-19 (Pulso Studio): the dead run's cards stay on screen, so a pick on them builds and the dead row lets go of the store.
+it('builds a pick on cards whose run stopped beating, retiring that run first', async () => {
+  const stale = new Date(Date.now() - 5 * 60_000);
   prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', heartbeatAt: stale, proposal: drawingProposal() });
+  prisma.storeSourceGeneration.updateMany.mockResolvedValueOnce({ count: 1 });
+  await chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 1 }, requestId: uuid() });
+  expect(prisma.storeSourceGeneration.updateMany).toHaveBeenCalledWith({ where: { id: 'g1', status: 'RUNNING', heartbeatAt: stale }, data: expect.objectContaining({ status: 'INTERRUPTED', activeStoreId: null, proposal: expect.objectContaining({ status: 'PICKED', picked: 1 }) }) });
+  expect(prisma.storeSourceGeneration.updateMany.mock.invocationCallOrder[0]).toBeLessThan(generate.mock.invocationCallOrder[0]);
+  expect(generate.mock.calls[0][6].style).toMatchObject({ index: 1 });
+});
+it('refuses that pick when the run came back or another tab took it', async () => {
+  const stale = new Date(Date.now() - 5 * 60_000);
+  prisma.storeSourceGeneration.findFirst.mockResolvedValueOnce({ id: 'g1', status: 'RUNNING', heartbeatAt: stale, proposal: drawingProposal() });
+  prisma.storeSourceGeneration.updateMany.mockResolvedValueOnce({ count: 0 });
   await expect(chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 0 }, requestId: uuid() })).rejects.toThrow('Ese estilo ya no está disponible. Pide un nuevo diseño.');
+  expect(generate).not.toHaveBeenCalled();
 });

@@ -865,8 +865,11 @@ export class SourceChatService {
       const proposal = row ? styleProposalFrom(row.proposal) : null;
       // Choosable while its heroes are still drawing (spec 2026-10-12): the row is still RUNNING and the proposal pickable.
       const drawing = row?.status === 'RUNNING' && styleRunBeating(row) && proposal?.status === 'RUNNING' && proposal.pickable === true;
+      // The run drawing them died (an API restart) while its cards were choosable: they stay on screen, so a pick builds from the
+      // design they already hold. Refusing it left the merchant with cards no tap could use (Pulso Studio, 2026-10-19).
+      const orphaned = row?.status === 'RUNNING' && !styleRunBeating(row) && proposal?.status === 'RUNNING' && proposal.pickable === true;
       // A pick builds on the revision the styles were made for; an import or template that landed since makes them stale.
-      if (!proposal?.design || !(drawing || ['AWAITING_STYLE', 'PICKED'].includes(proposal.status)) || proposal.request.dto.revision !== input.revision) throw new BadRequestException('Ese estilo ya no está disponible. Pide un nuevo diseño.');
+      if (!proposal?.design || !(drawing || orphaned || ['AWAITING_STYLE', 'PICKED'].includes(proposal.status)) || proposal.request.dto.revision !== input.revision) throw new BadRequestException('Ese estilo ya no está disponible. Pide un nuevo diseño.');
       const index = input.stylePick!.auto ? proposal.design.selected : input.stylePick!.index ?? proposal.picked ?? proposal.design.selected;
       if (!proposal.design.concepts[index]) throw new BadRequestException('Elige uno de los estilos de la propuesta.');
       let chosen: StyleProposal = proposal;
@@ -883,6 +886,10 @@ export class SourceChatService {
           await this.prisma.storeSourceGeneration.updateMany({ where: { id: row!.id }, data: { proposal: { ...waiting, status: 'PICKED', picked: index } as unknown as Prisma.InputJsonValue } });
           chosen = waiting;
         }
+      } else if (orphaned) {
+        // Only while it is still the dead run's row: it lets go of the store, as a stale run is retired before any build.
+        const retired = await this.prisma.storeSourceGeneration.updateMany({ where: { id: row!.id, status: 'RUNNING', heartbeatAt: row!.heartbeatAt ?? null }, data: { status: 'INTERRUPTED', activeStoreId: null, completedAt: new Date(), proposal: { ...proposal, status: 'PICKED', picked: index } as unknown as Prisma.InputJsonValue } });
+        if (retired.count !== 1) throw new BadRequestException('Ese estilo ya no está disponible. Pide un nuevo diseño.');
       } else await this.prisma.storeSourceGeneration.updateMany({ where: { id: row!.id }, data: { proposal: { ...proposal, status: 'PICKED', picked: index } as unknown as Prisma.InputJsonValue } });
       await workflow.report('interpreting');
       // The pick's job carries only the card tap ("Usar este estilo"); the build is priced, scoped and checked against the
