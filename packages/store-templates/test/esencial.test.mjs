@@ -108,3 +108,13 @@ test('no photo shows twice in one block (live check 2026-10-19: the same photo i
   assert.match(home, /const gallery = unique\(/);
   assert.match(home, /const heroPhotos = unique\(/);
 });
+
+test('review fix: the overlay card stays readable in the list grid', () => {
+  assert.match(file('styles/globals.css'), /\.es-grid\[data-es-grid="list"\] \.es-card\[data-es-card="overlay"\] :is\(\.es-card__name,\.es-card__price/);
+});
+
+test('review fix: the centered header falls back to the classic layout on phones', () => {
+  const css = file('styles/globals.css');
+  assert.doesNotMatch(css, /^\.es-header\[data-es-header="centered"\]/m);
+  assert.match(css, /@media \(min-width:761px\)\{\s*\.es-header\[data-es-header="centered"\]/);
+});
