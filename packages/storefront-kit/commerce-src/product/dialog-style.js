@@ -501,6 +501,23 @@
     [data-pagosya-product][data-style=atelier] .product-detail__assurances span{font-size:11px;color:var(--pd-muted)}
     [data-pagosya-product][data-style=atelier] [data-product-count]{position:absolute;right:16px;bottom:14px;padding:4px 8px;font:500 12px/1 var(--pd-body);letter-spacing:.08em;color:var(--pd-muted);background:color-mix(in srgb,var(--pd-paper) 82%,transparent)}
     [data-pagosya-product][data-style=atelier] .product-detail__thumbnails button[aria-pressed=true]{outline:1px solid var(--pd-ink);outline-offset:2px}
+    /* The atelier card (2026-10-19, the Amboras references): a clean photo that zooms inside its own frame, the name in the
+     * heading font, a quiet price, and one tracked full-width «Agregar» with a bag. Inside the DNA layer, more specific than
+     * its card rules; the store's own CSS still wins. */
+    @layer pagosya-dna {
+      [data-pagosya-catalog] .menu-item[data-anatomy=atelier]:not([data-custom-product]){display:flex;flex-direction:column;gap:0;padding:0;border:0;background:transparent;box-shadow:none}
+      [data-pagosya-catalog] .menu-item[data-anatomy=atelier] .menu-item__image{aspect-ratio:4/5;object-fit:cover;border-radius:var(--store-radius,0px);clip-path:inset(0);transition:transform .5s cubic-bezier(.4,0,.2,1),clip-path .5s cubic-bezier(.4,0,.2,1)}
+      @media(hover:hover){[data-pagosya-catalog] .menu-item[data-anatomy=atelier]:hover .menu-item__image{transform:scale(1.04);clip-path:inset(1.92%)}}
+      [data-pagosya-catalog] .menu-item[data-anatomy=atelier] .menu-item__copy{margin-top:16px}
+      [data-pagosya-catalog] .menu-item[data-anatomy=atelier] .menu-item__copy h3{margin:0;font-family:var(--store-heading-font,inherit);font-size:15px;font-weight:600;line-height:1.3;letter-spacing:-.01em;text-transform:none}
+      [data-pagosya-catalog] .menu-item[data-anatomy=atelier] .menu-item__copy p{display:none}
+      [data-pagosya-catalog] .menu-item[data-anatomy=atelier] .menu-item__price{margin-top:6px;font-size:14px;font-weight:500;opacity:.78}
+      [data-pagosya-catalog] .menu-item[data-anatomy=atelier] .menu-add{display:inline-flex;align-items:center;justify-content:center;gap:10px;align-self:stretch;width:100%;min-height:46px;margin-top:16px;padding:0 16px;border:1px solid currentColor;border-radius:var(--store-radius,0px);background:transparent;color:inherit;font:600 11px/1 var(--store-body-font,inherit);letter-spacing:.16em;text-transform:uppercase;transition:background-color .18s cubic-bezier(.4,0,.2,1),color .18s cubic-bezier(.4,0,.2,1)}
+      [data-pagosya-catalog] .menu-item[data-anatomy=atelier] .menu-add:not(:disabled):hover{background:var(--store-foreground,#111);color:var(--store-background,#fff)}
+      [data-pagosya-catalog] .menu-item[data-anatomy=atelier] .menu-add:disabled{opacity:.45}
+    }
+    /* The badge base rule is unlayered, so this one is too, at the base's own specificity (later wins; store CSS still wins). */
+    :where(.menu-item[data-anatomy=atelier]) .menu-item__badge{top:12px;left:12px;padding:5px 8px;border-radius:0;background:var(--store-background,#fff);color:var(--store-foreground,#111);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
     /* A YAPI page template's slot with nothing visible in it (no related products, no reviews yet) takes no room: its own
      * borders and padding drew an empty band on Pulso Studio (2026-10-19). Reviews that arrive later show it again. */
     [data-pagosya-product] [data-product-page-root] [data-product-slot]:not(:has(> :not([hidden]))){display:none!important}

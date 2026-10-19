@@ -89,4 +89,19 @@ describe('atelier product page (2026-10-19, the Amboras layout)', () => {
     const withTable = await page({ style: 'atelier', items: [longPage([{ type: 'details', items: detailItems(2) }, versus])] });
     expect(withTable.all('[data-buy-again]')).toHaveLength(2);
   });
+
+  // 2026-10-19, the Amboras card: atelier stores get a tracked «Agregar» with a bag across the card; others keep the «+».
+  it('gives atelier catalog cards the anatomy marker and a worded add button that still adds the product', async () => {
+    const atelier = await page({ style: 'atelier', fullPage: false });
+    const card = atelier.q('[data-pagosya-catalog] .menu-item')!;
+    expect(card.getAttribute('data-anatomy')).toBe('atelier');
+    const add = card.querySelector('.menu-add[data-add]')!;
+    expect(add.textContent.trim()).toBe('Agregar');
+    expect(add.getAttribute('aria-label')).toBe('Añadir Café helado proteico');
+    const editorial = await page({ style: 'editorial', fullPage: false });
+    const plain = editorial.q('[data-pagosya-catalog] .menu-item')!;
+    expect(plain.hasAttribute('data-anatomy')).toBe(false);
+    expect(plain.querySelector('.menu-add[data-add]')!.textContent.trim()).toBe('');
+  });
 });
+
