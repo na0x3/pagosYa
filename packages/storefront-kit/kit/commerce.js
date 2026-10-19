@@ -1055,6 +1055,9 @@
     [data-pagosya-product][data-style=atelier] .product-detail__assurances span{font-size:11px;color:var(--pd-muted)}
     [data-pagosya-product][data-style=atelier] [data-product-count]{position:absolute;right:16px;bottom:14px;padding:4px 8px;font:500 12px/1 var(--pd-body);letter-spacing:.08em;color:var(--pd-muted);background:color-mix(in srgb,var(--pd-paper) 82%,transparent)}
     [data-pagosya-product][data-style=atelier] .product-detail__thumbnails button[aria-pressed=true]{outline:1px solid var(--pd-ink);outline-offset:2px}
+    /* A YAPI page template's slot with nothing visible in it (no related products, no reviews yet) takes no room: its own
+     * borders and padding drew an empty band on Pulso Studio (2026-10-19). Reviews that arrive later show it again. */
+    [data-pagosya-product] [data-product-page-root] [data-product-slot]:not(:has(> :not([hidden]))){display:none!important}
     /* Story steps (2026-10-19, pawfectt.com): a tall section whose stage sticks; the photo and the copy swap as it travels. */
     [data-pagosya-product] .product-steps{position:relative;height:calc(var(--steps,3) * 64vh + 40vh)}
     [data-pagosya-product] .product-steps__stage{position:sticky;top:96px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(32px,6vw,96px);align-items:center}
@@ -1078,6 +1081,17 @@
     [data-pagosya-product] .product-steps__step h3{margin:0 0 18px;font-family:var(--pd-heading,inherit);font-size:clamp(28px,3.2vw,44px);line-height:1.06;letter-spacing:-.02em}
     [data-pagosya-product] .product-steps__step p:not(.product-steps__eyebrow){max-width:44ch;margin:0;padding-top:18px;border-top:1px solid var(--pd-line,rgba(0,0,0,.12));color:var(--pd-muted);font-size:16px;line-height:1.65}
     @media(max-width:760px){[data-pagosya-product] .product-steps{height:auto}[data-pagosya-product] .product-steps__stage{position:static;grid-template-columns:1fr}[data-pagosya-product] .product-steps__frame,[data-pagosya-product] .product-steps__pills{display:none}[data-pagosya-product] .product-steps__list{gap:44px}[data-pagosya-product] .product-steps__step{grid-area:auto;opacity:1;visibility:visible;transform:none}[data-pagosya-product] .product-steps__photo{display:block;width:100%;aspect-ratio:4/5;margin:0 0 20px;object-fit:cover;border-radius:var(--pd-radius,4px)}}
+    /* Atelier reviews (pawfectt.com): the score column on the left, the reviews on hairlines on the right. */
+    @media(min-width:900px){[data-pagosya-product][data-style=atelier] .product-detail__reviews:not([hidden]){grid-template-columns:minmax(220px,.75fr) 2fr;column-gap:clamp(40px,7vw,112px);align-items:start}[data-pagosya-product][data-style=atelier] .product-detail__reviews>h2,[data-pagosya-product][data-style=atelier] .product-detail__reviews-summary{grid-column:1}[data-pagosya-product][data-style=atelier] .product-detail__review-list{grid-column:2;grid-row:1/span 3}}
+    [data-pagosya-product][data-style=atelier] .product-detail__reviews>h2{font-weight:600;letter-spacing:-.02em}
+    [data-pagosya-product][data-style=atelier] .product-detail__reviews-summary{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6px 14px}
+    [data-pagosya-product][data-style=atelier] .product-detail__reviews-summary>span:last-child{grid-column:1/-1;color:var(--pd-muted);font-size:13px}
+    [data-pagosya-product][data-style=atelier] .product-detail__reviews-average{font-family:var(--pd-heading,inherit);font-size:clamp(44px,5vw,64px);font-weight:600;line-height:1;letter-spacing:-.03em}
+    [data-pagosya-product][data-style=atelier] .product-detail__review-list{display:grid;grid-template-columns:1fr;gap:0}
+    [data-pagosya-product][data-style=atelier] .product-detail__review-list article{padding:24px 0;border:0;border-top:1px solid var(--pd-line,rgba(0,0,0,.12));border-radius:0;background:transparent}
+    [data-pagosya-product][data-style=atelier] .product-detail__review-list article:last-child{border-bottom:1px solid var(--pd-line,rgba(0,0,0,.12))}
+    [data-pagosya-product][data-style=atelier] .product-detail__review-list p:not(.product-detail__review-meta){max-width:68ch;color:var(--pd-muted);line-height:1.65}
+    [data-pagosya-product][data-style=atelier] .product-detail__review-verified{margin-left:auto;color:var(--pd-muted);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
     /* Atelier long page: features as a hairline list, the FAQ with a drawn +, one quiet repeated buy. */
     [data-pagosya-product][data-style=atelier] .product-long h2{letter-spacing:-.02em}
     [data-pagosya-product][data-style=atelier] .product-long__features ul{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;border-top:1px solid var(--pd-line,rgba(0,0,0,.12))}
@@ -1297,7 +1311,7 @@
     line.hidden = false;
     if (!section) return;
     section.hidden = !showSection;
-    section.innerHTML = showSection ? `<h2 id="product-reviews-title">Reseñas verificadas${sample ? ' · ejemplo' : ''}</h2><p class="product-detail__reviews-summary">${starsMarkup(summary.average)}<span>${label}</span></p><div class="product-detail__review-list">${list.map(review => `<article><p class="product-detail__review-meta">${starsMarkup(review.rating)}<span class="product-detail__review-score">${review.rating} de 5</span> <strong>${escape(review.displayName)}</strong></p><p>${escape(review.body)}</p></article>`).join('')}</div>` : '';
+    section.innerHTML = showSection ? `<h2 id="product-reviews-title">Reseñas verificadas${sample ? ' · ejemplo' : ''}</h2><p class="product-detail__reviews-summary">${detail.dataset.style === 'atelier' ? `<strong class="product-detail__reviews-average" aria-hidden="true">${summary.average.toLocaleString('es-BO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong>` : ''}${starsMarkup(summary.average)}<span>${label}</span></p><div class="product-detail__review-list">${list.map(review => `<article><p class="product-detail__review-meta">${starsMarkup(review.rating)}<span class="product-detail__review-score">${review.rating} de 5</span> <strong>${escape(review.displayName)}</strong>${detail.dataset.style === 'atelier' && !sample ? '<span class="product-detail__review-verified">Compra verificada</span>' : ''}</p><p>${escape(review.body)}</p></article>`).join('')}</div>` : '';
   }
   const simpleProduct = (item) => !item.variants?.length && !item.extras?.length;
   const productHref = (item) => pageHref(config.productPage || 'product.html', '?id=' + encodeURIComponent(item.id));
