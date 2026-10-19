@@ -33,9 +33,16 @@ it('fences a stale worker before any revision can commit', async () => {
   expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ leaseToken: 'lease', status: 'RUNNING' }), data: expect.objectContaining({ status: 'FAILED' }) }));
 });
 describe('personal touch (variety spec §5)', () => {
-  it('the chat service can queue a follow-up through the jobs service', () => {
-    const { chat } = setup();
-    expect(typeof chat.followUp).toBe('function');
+  it('queues the follow-up a reply carries only after the store\'s job is closed (live check: one active job per store)', async () => {
+    const { service, prisma, chat } = setup();
+    const order: string[] = [];
+    prisma.storeSourceChatJob.updateMany.mockImplementation(async ({ data }: any) => { if (data.status) order.push(data.status); return { count: 1 }; });
+    prisma.storeSourceChatJob.create.mockImplementation(async ({ data }: any) => { order.push('create'); return { ...job, ...data, id: 'touch' }; });
+    prisma.storeAgentMessage = { findMany: jest.fn().mockResolvedValue([]) };
+    chat.send.mockResolvedValue({ assistantMessage: { metadata: {} }, revision: { revision: 1 }, followUp: { instruction: 'Toque personal', revision: 1, personalTouch: true, requestId: '00000000-0000-4000-8000-000000000001' } });
+    await service.run(job);
+    expect(order).toEqual(['COMPLETED', 'create']);
+    expect(prisma.storeSourceChatJob.create.mock.calls[0][0].data.input).toMatchObject({ personalTouch: true });
   });
   it('a merchant request cancels a queued personal touch on the store', async () => {
     const { service, prisma } = setup();

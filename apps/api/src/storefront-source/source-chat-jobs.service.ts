@@ -34,10 +34,7 @@ export class SourceChatJobsService implements OnModuleDestroy {
   private busy = false;
   private controller?: AbortController;
   private readonly logger = new Logger(SourceChatJobsService.name);
-  constructor(private readonly prisma: PrismaService, private readonly chat: SourceChatService) {
-    // Variety spec §5: the chat service queues the personal touch through this service (it cannot inject it back).
-    chat.followUp = (merchantId, storeId, input) => this.create(merchantId, storeId, input);
-  }
+  constructor(private readonly prisma: PrismaService, private readonly chat: SourceChatService) {}
   onModuleDestroy() { this.controller?.abort(); }
   private async owner(merchantId: string, storeId: string) {
     if (!await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true } })) throw new NotFoundException('Tienda no encontrada.');
@@ -140,6 +137,10 @@ export class SourceChatJobsService implements OnModuleDestroy {
         .catch(error => { if (error instanceof PersonalTouchSkipped) return { skipped: true as const }; throw error; }));
       const failed = (result as any).assistantMessage?.metadata?.failed || (result as any).assistantMessage?.metadata?.adaptationFailed;
       await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: failed ? 'FAILED' : 'skipped' in result || 'revision' in result && result.revision ? 'COMPLETED' : 'AWAITING_INPUT', result: json(result), activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 } } });
+      // Variety spec §5: a reply can carry a follow-up request (the personal touch). A store has one active job at a time,
+      // so it is queued only now that this job is closed; failing to queue it never fails the merchant's request.
+      const followUp = !failed && 'followUp' in result ? result.followUp as SendSourceMessageDto | undefined : undefined;
+      if (followUp) await this.create(job.merchantId, job.storeId, followUp).catch(error => this.logger.warn(`follow-up not queued for ${job.storeId}: ${String(error).slice(0, 200)}`));
     } catch (error) {
       const generation = await this.prisma.storeSourceGeneration.findFirst({ where: { requestJobId: job.id }, orderBy: { createdAt: 'desc' }, select: { status: true } }).catch(() => null);
       const outcome = generation && ['PARTIAL', 'BLOCKED'].includes(generation.status) ? generation.status : 'FAILED';

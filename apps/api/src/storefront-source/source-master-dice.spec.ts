@@ -52,3 +52,19 @@ it('over many stores every palette, font pair and hero gets used', () => {
   expect(new Set(rolls.map(r => r.variants.hero)).size).toBe(10);
   expect(new Set(rolls.map(r => r.palette)).size).toBeGreaterThanOrEqual(14);
 });
+
+it('consecutive stores avoid the last stores\' font pairs and the last two palettes (live check 2026-10-19: 4 of 6 stores got «modern»)', () => {
+  const recent: Array<{ hero: string; palette: string; fonts: string }> = [];
+  for (let i = 0; i < 12; i++) {
+    const r = roll(`cmvfhgi${i}00${i}yg6g`, { recent: [...recent] });
+    expect(recent.slice(0, 6).map(x => x.fonts)).not.toContain(r.fonts);
+    expect(recent.slice(0, 2).map(x => x.palette)).not.toContain(r.palette);
+    recent.unshift({ hero: r.variants.hero, palette: r.palette, fonts: r.fonts });
+  }
+});
+
+it('an over-eager exclusion list still leaves at least half of each part (live check: 4 of 6 stores got the feature grid)', () => {
+  const grids = new Set<string>();
+  for (const seed of 'abcdefghijklmnopqrst') grids.add(roll(seed, { character: { ...calm, exclude: ['grid4', 'grid3', 'strip', 'list', 'masonry'] } }).variants.grid);
+  expect(grids.size).toBeGreaterThanOrEqual(3);
+});

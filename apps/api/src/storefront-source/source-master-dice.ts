@@ -19,19 +19,26 @@ function rng(seed: string) {
 }
 const pick = <T>(next: () => number, list: readonly T[]): T => list[Math.floor(next() * list.length)];
 
+/** Most recent first. */
 export type RecentRoll = { hero: string; palette: string; fonts: string };
 
 export function rollVariants(input: { seed: string; settings: MasterSettings; character: MasterCharacter; photoCount: number; sections: string[]; recent: RecentRoll[] }): { variants: MasterVariants; palette: string; fonts: string } {
   const catalogue = (input.settings.variants ?? {}) as Record<string, readonly string[]>;
+  // The fill call's exclusions are honoured for at most half of a part: a model that rules out nearly everything would
+  // otherwise make every store the same (live check 2026-10-19: the feature grid on 4 of 6 stores).
   const allowed = (part: string) => {
-    const list = catalogue[part].filter(id => !input.character.exclude.includes(id) && (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
+    const fits = catalogue[part].filter(id => (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
+    const honoured = fits.filter(id => input.character.exclude.includes(id)).slice(0, Math.floor(fits.length / 2));
+    const list = fits.filter(id => !honoured.includes(id));
     return list.length ? list : [catalogue[part][0]];
   };
+  // Stores made one after another never share a font pair with the last six or a palette with the last two.
+  const without = (list: string[], taken: string[]) => { const left = list.filter(id => !taken.includes(id)); return left.length ? left : list; };
   const palettes = input.settings.palettes.map(p => p.id);
   const sameTone = palettes.filter(id => (PALETTE_TONE[id] ?? 'calm') === input.character.tone);
   const fitting = sameTone.filter(id => input.character.temperature === 'neutral' || [input.character.temperature, 'neutral'].includes(PALETTE_TEMP[id] ?? 'neutral'));
-  const palettePool = fitting.length >= 2 ? fitting : sameTone.length ? sameTone : palettes;
-  const fonts = input.settings.fonts.map(f => f.id);
+  const palettePool = without(fitting.length >= 2 ? fitting : sameTone.length ? sameTone : palettes, input.recent.slice(0, 2).map(r => r.palette));
+  const fonts = without(input.settings.fonts.map(f => f.id), input.recent.slice(0, 6).map(r => r.fonts));
   const taken = new Set(input.recent.map(r => `${r.hero}|${r.palette}|${r.fonts}`));
   const sections = input.sections.filter(id => (input.settings.sections ?? []).includes(id)).slice(0, 2);
   let last: { variants: MasterVariants; palette: string; fonts: string } | undefined;

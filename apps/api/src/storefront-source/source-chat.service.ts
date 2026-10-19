@@ -180,8 +180,6 @@ export class SourceChatService {
   /** Computed on first use from the deadlines the style run awaits (source-style-release.ts); tests set it directly. */
   protected styleReleaseWaitMs?: number;
   protected styleReleasePollMs = 500;
-  /** Queues a follow-up request for the store (set by SourceChatJobsService, which depends on this service). */
-  followUp?: (merchantId: string, storeId: string, input: SendSourceMessageDto) => Promise<unknown>;
 
   private async owner(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { name: true, logoUrl: true, _count: { select: { paymentLinks: true } }, paymentLinks: { where: { status: 'ACTIVE' }, take: 50, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, amount: true, currency: true, variants: true, stock: true, imageUrls: true } } } });
@@ -266,15 +264,16 @@ export class SourceChatService {
       return read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: (onboarding.what ?? '').slice(0, 160) } };
     });
     await workflow.finish('completed');
-    // Variety spec §5: one background personal touch per new master store; a failure to queue never fails the store.
-    const touching = this.config.get<boolean>('app.yapiPersonalTouch') === true && Boolean(this.followUp)
-      && await this.followUp!(merchantId, storeId, { instruction: PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, requestId: randomUUID(), model: 'auto' } as SendSourceMessageDto).then(() => true, () => false);
+    // Variety spec §5: one background personal touch per new master store. The reply carries it; the job runner queues it
+    // once this request's job is closed (a store has one active job at a time).
+    const touching = this.config.get<boolean>('app.yapiPersonalTouch') === true;
+    const followUp: SendSourceMessageDto | undefined = touching ? { instruction: PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, requestId: randomUUID(), model: 'auto' } : undefined;
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId, channel: 'source', role: 'ASSISTANT',
       content: `Tu tienda ${store?.name ?? ''} está lista.${touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
       metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
     } });
-    return { userMessage, assistantMessage, revision: saved };
+    return { userMessage, assistantMessage, revision: saved, ...(followUp ? { followUp } : {}) };
   }
 
   /** Spec 2026-10-19 §3.1: a words/colours/fonts/photos change on a master store — one fill call, data only, seconds. */

@@ -96,20 +96,16 @@ it('the flag off returns to today’s flow', async () => {
 
 it('queues one personal touch after a new master store (variety spec §5)', async () => {
   config.set('app.yapiPersonalTouch', true);
-  const enqueue = jest.fn().mockResolvedValue({});
-  chat.followUp = enqueue;
   const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
-  expect(enqueue).toHaveBeenCalledTimes(1);
-  expect(enqueue).toHaveBeenCalledWith('m1', 's1', expect.objectContaining({ personalTouch: true, revision: 1, instruction: PERSONAL_TOUCH_BRIEF }));
+  // The store's job is still active here (one active job per store): the job runner queues the touch once it closes it.
+  expect(out.followUp).toMatchObject({ personalTouch: true, revision: 1, instruction: PERSONAL_TOUCH_BRIEF });
   expect(out.assistantMessage.content).toContain('toque personal');
 });
 
 it('no personal touch when the flag is off', async () => {
   config.set('app.yapiPersonalTouch', false);
-  const enqueue = jest.fn().mockResolvedValue({});
-  chat.followUp = enqueue;
   const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
-  expect(enqueue).not.toHaveBeenCalled();
+  expect(out.followUp).toBeUndefined();
   expect(out.assistantMessage.content).not.toContain('toque personal');
 });
 
