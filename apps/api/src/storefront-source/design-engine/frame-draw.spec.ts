@@ -449,7 +449,8 @@ describe('product surfaces on every fresh build (sub-project 2)', () => {
   });
   it('avoids what recent stores of the kind got, and respects what the products support', () => {
     const recent = [{ productPage: 'conversion' as const }, { productPage: 'story-led' as const }, { productPage: 'editorial' as const }];
-    expect(run({ recent }).product!.draw.productPage).toBe('image-led');
+    // 2026-10-19: every kind draws the atelier page whatever recent stores got.
+    expect(run({ recent }).product!.draw.productPage).toBe('atelier');
     expect(['swatch-swap', 'second-photo']).not.toContain(run({ available: { ...rich, variants: false, altPhotos: false } }).product!.draw.card);
   });
   it('leaves named parts to the planner, and draws nothing for a style card or an edit', () => {
