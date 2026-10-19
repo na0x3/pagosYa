@@ -501,6 +501,48 @@
     [data-pagosya-product][data-style=atelier] .product-detail__assurances span{font-size:11px;color:var(--pd-muted)}
     [data-pagosya-product][data-style=atelier] [data-product-count]{position:absolute;right:16px;bottom:14px;padding:4px 8px;font:500 12px/1 var(--pd-body);letter-spacing:.08em;color:var(--pd-muted);background:color-mix(in srgb,var(--pd-paper) 82%,transparent)}
     [data-pagosya-product][data-style=atelier] .product-detail__thumbnails button[aria-pressed=true]{outline:1px solid var(--pd-ink);outline-offset:2px}
+    /* Story steps (2026-10-19, pawfectt.com): a sticky frame whose photo follows the step being read. */
+    [data-pagosya-product] .product-steps{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(32px,6vw,96px);align-items:start}
+    [data-pagosya-product] .product-steps__frame{position:sticky;top:96px}
+    [data-pagosya-product] .product-steps__media{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:var(--pd-radius,4px);background:var(--pd-surface,transparent)}
+    [data-pagosya-product] .product-steps__media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.04);transition:opacity .5s cubic-bezier(.4,0,.2,1),transform .9s cubic-bezier(.4,0,.2,1)}
+    [data-pagosya-product] .product-steps__media img[data-active]{opacity:1;transform:none}
+    [data-pagosya-product] .product-steps__caption{display:flex;justify-content:space-between;gap:16px;margin:16px 0 10px;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--pd-muted)}
+    [data-pagosya-product] .product-steps__caption span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    [data-pagosya-product] .product-steps__progress{display:block;height:1px;background:var(--pd-line,rgba(0,0,0,.14))}
+    [data-pagosya-product] .product-steps__progress span{display:block;width:var(--step-progress,0);height:100%;background:var(--pd-accent,currentColor);transition:width .5s cubic-bezier(.4,0,.2,1)}
+    [data-pagosya-product] .product-steps__pills{position:sticky;top:96px;z-index:1;display:flex;gap:8px;padding:0 0 24px;background:var(--pd-paper,transparent)}
+    [data-pagosya-product] .product-steps__pills button{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--pd-line,rgba(0,0,0,.18));border-radius:999px;background:transparent;color:var(--pd-muted);font:600 12px/1 var(--pd-body,inherit);letter-spacing:.04em;cursor:pointer;transition:background-color .18s cubic-bezier(.4,0,.2,1),color .18s cubic-bezier(.4,0,.2,1),border-color .18s cubic-bezier(.4,0,.2,1)}
+    [data-pagosya-product] .product-steps__pills button[aria-pressed=true]{border-color:var(--pd-accent,currentColor);background:var(--pd-accent,currentColor);color:var(--pd-on-accent,#fff)}
+    [data-pagosya-product] .product-steps__pills button:focus-visible{outline:2px solid var(--pd-accent,currentColor);outline-offset:3px}
+    [data-pagosya-product] .product-steps__list{display:grid;margin:0;padding:0;list-style:none}
+    [data-pagosya-product] .product-steps__step{display:flex;flex-direction:column;justify-content:center;min-height:62vh;padding:24px 0;border-top:1px solid var(--pd-line,rgba(0,0,0,.12));opacity:.32;transition:opacity .5s cubic-bezier(.4,0,.2,1)}
+    [data-pagosya-product] .product-steps__step[data-active]{opacity:1}
+    [data-pagosya-product] .product-steps__photo{display:none}
+    [data-pagosya-product] .product-steps__eyebrow{margin:0 0 14px;color:var(--pd-accent,currentColor);font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase}
+    [data-pagosya-product] .product-steps__step h3{margin:0 0 16px;font-family:var(--pd-heading,inherit);font-size:clamp(26px,3vw,40px);line-height:1.08;letter-spacing:-.02em}
+    [data-pagosya-product] .product-steps__step p:not(.product-steps__eyebrow){max-width:46ch;margin:0;color:var(--pd-muted);font-size:16px;line-height:1.65}
+    @media(max-width:760px){[data-pagosya-product] .product-steps{grid-template-columns:1fr}[data-pagosya-product] .product-steps__frame,[data-pagosya-product] .product-steps__pills{display:none}[data-pagosya-product] .product-steps__step{min-height:0;padding:32px 0;opacity:1}[data-pagosya-product] .product-steps__photo{display:block;width:100%;aspect-ratio:4/5;margin:0 0 20px;object-fit:cover;border-radius:var(--pd-radius,4px)}}
+    /* Atelier long page: features as a hairline list, the FAQ with a drawn +, one quiet repeated buy. */
+    [data-pagosya-product][data-style=atelier] .product-long h2{letter-spacing:-.02em}
+    [data-pagosya-product][data-style=atelier] .product-long__features ul{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;border-top:1px solid var(--pd-line,rgba(0,0,0,.12))}
+    [data-pagosya-product][data-style=atelier] .product-long__features li{gap:10px;padding:28px 28px 28px 0;border:0;border-radius:0;align-content:start}
+    [data-pagosya-product][data-style=atelier] .product-long__features li+li{padding-left:28px;border-left:1px solid var(--pd-line,rgba(0,0,0,.12))}
+    [data-pagosya-product][data-style=atelier] .product-long__features svg{width:26px;height:26px;margin-bottom:6px}
+    [data-pagosya-product][data-style=atelier] .product-long__features strong{font-family:var(--pd-heading,inherit);font-size:18px;letter-spacing:-.01em}
+    [data-pagosya-product][data-style=atelier] .product-long__features span{color:var(--pd-muted);line-height:1.6}
+    [data-pagosya-product][data-style=atelier] .product-long__faq{max-width:880px}
+    [data-pagosya-product][data-style=atelier] .product-long__faq details{padding:0;border-bottom:1px solid var(--pd-line,rgba(0,0,0,.12))}
+    [data-pagosya-product][data-style=atelier] .product-long__faq details:first-of-type{border-top:1px solid var(--pd-line,rgba(0,0,0,.12))}
+    [data-pagosya-product][data-style=atelier] .product-long__faq summary{position:relative;display:block;padding:22px 44px 22px 0;font-family:var(--pd-heading,inherit);font-size:18px;font-weight:600;list-style:none}
+    [data-pagosya-product][data-style=atelier] .product-long__faq summary::-webkit-details-marker{display:none}
+    [data-pagosya-product][data-style=atelier] .product-long__faq summary::before,[data-pagosya-product][data-style=atelier] .product-long__faq summary::after{content:"";position:absolute;top:50%;right:4px;width:14px;height:1.5px;background:currentColor;transition:transform .2s cubic-bezier(.4,0,.2,1)}
+    [data-pagosya-product][data-style=atelier] .product-long__faq summary::after{transform:rotate(90deg)}
+    [data-pagosya-product][data-style=atelier] .product-long__faq details[open] summary::after{transform:rotate(0)}
+    [data-pagosya-product][data-style=atelier] .product-long__faq details p{max-width:64ch;margin:0;padding:0 0 22px;color:var(--pd-muted);line-height:1.65}
+    [data-pagosya-product][data-style=atelier] .product-long__buy .checkout-button{width:auto;min-width:min(100%,320px);min-height:56px;padding:0 40px;font-size:12px;letter-spacing:.16em;text-transform:uppercase}
+    [data-pagosya-product][data-style=atelier] .product-long__buy p{color:var(--pd-muted);font-size:13px}
+    @media(max-width:640px){[data-pagosya-product][data-style=atelier] .product-long__features li,[data-pagosya-product][data-style=atelier] .product-long__features li+li{padding:22px 0;border-left:0;border-bottom:1px solid var(--pd-line,rgba(0,0,0,.12))}}
     @media(max-width:640px){[data-pagosya-product][data-style=atelier] .product-detail__copy{padding:20px}[data-pagosya-product][data-style=atelier] .product-detail__assurances{grid-template-columns:minmax(0,1fr)}[data-pagosya-product][data-style=atelier] .product-detail__assurances li{flex-direction:row;text-align:left}}
     @media(prefers-reduced-motion:reduce){[data-pagosya-product] .pd-icon *{animation:none!important}}
     @media(prefers-reduced-motion:reduce){[data-pagosya-product] *,[data-pagosya-product] *::before{transition:none!important;scroll-behavior:auto!important}}

@@ -62,4 +62,31 @@ describe('atelier product page (2026-10-19, the Amboras layout)', () => {
     const editorial = await page({ style: 'editorial', items: [product({ description: 'Frío, cremoso y sin azúcar. Lo preparamos con café de altura.' })] });
     expect(editorial.q('.product-detail__subtitle')).toBeNull();
   });
+
+  // 2026-10-19, pawfectt.com: photographed details become story steps on the atelier page.
+  const detailItems = (n: number) => Array.from({ length: n }, (_, i) => ({ title: `Detalle ${i + 1}`, text: `Texto ${i + 1}`, alt: `Foto ${i + 1}`, imageUrl: `https://shop.test/d${i}.jpg` }));
+  const longPage = (blocks: unknown[]) => product({ contentBlocks: blocks });
+  it('draws photographed details as story steps whose pills move the frame, with one repeated buy', async () => {
+    const { q, all } = await page({ style: 'atelier', items: [longPage([{ type: 'details', items: detailItems(3) }, { type: 'faq', items: [{ q: '¿Uno?', a: 'Sí.' }, { q: '¿Dos?', a: 'Sí.' }] }])] });
+    expect(q('.product-long__details')).toBeNull();
+    expect(all('.product-steps [data-step]')).toHaveLength(3);
+    expect(all('[data-step-media]').map(img => img.hasAttribute('data-active'))).toEqual([true, false, false]);
+    expect(q('[data-step-count]')?.textContent).toBe('01 / 03');
+    all('[data-step-pill]')[1].click();
+    expect(all('[data-step-pill]').map(pill => pill.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
+    expect(all('[data-step-media]').map(img => img.hasAttribute('data-active'))).toEqual([false, true, false]);
+    expect(q('[data-step-count]')?.textContent).toBe('02 / 03');
+    expect(q('.product-steps__eyebrow')?.textContent).toBe('01');
+    expect(all('[data-buy-again]')).toHaveLength(1);
+  });
+  it('keeps the photo row for one detail or another style, and two buys only around a compare table', async () => {
+    const one = await page({ style: 'atelier', items: [longPage([{ type: 'details', items: detailItems(1) }])] });
+    expect(one.q('.product-steps')).toBeNull();
+    expect(one.all('.product-long__details [data-part=detail]')).toHaveLength(1);
+    const editorial = await page({ style: 'editorial', items: [longPage([{ type: 'details', items: detailItems(3) }])] });
+    expect(editorial.q('.product-steps')).toBeNull();
+    const versus = { type: 'versus', ours: 'Nuestra', theirs: 'Otras', rows: [{ label: 'A', ours: true, theirs: false }, { label: 'B', ours: true, theirs: false }] };
+    const withTable = await page({ style: 'atelier', items: [longPage([{ type: 'details', items: detailItems(2) }, versus])] });
+    expect(withTable.all('[data-buy-again]')).toHaveLength(2);
+  });
 });

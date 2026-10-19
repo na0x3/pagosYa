@@ -166,6 +166,7 @@
     }
     if (MOTIFS.length) { placeProductMotif(p); placeButtonMotifs(detail); }
     watchHighlights();
+    watchSteps();
     watchStickyBar();
     decorateProductReviews();
     renderCart();
@@ -314,15 +315,57 @@
     const story = pageBlock(p, 'story');
     if (story && nonEmpty(story.problem) && nonEmpty(story.tried) && nonEmpty(story.solution)) parts.push(`<section class="product-long__story" data-part="story">${nonEmpty(story.title) ? `<h2>${escape(story.title)}</h2>` : ''}<p data-part="story-problem">${escape(story.problem)}</p><p data-part="story-tried">${escape(story.tried)}</p><p data-part="story-solution">${escape(story.solution)}</p></section>`);
     const details = (pageBlock(p, 'details')?.items || []).map(item => ({ ...item, url: safeUrl(item?.imageUrl) })).filter(item => item.url && nonEmpty(item.title) && nonEmpty(item.alt));
-    if (details.length) parts.push(`<section class="product-long__details" data-part="details">${details.map(item => `<figure data-part="detail"><img src="${escape(item.url)}" alt="${escape(item.alt)}" loading="lazy"><figcaption><strong>${escape(item.title)}</strong>${nonEmpty(item.text) ? `<span>${escape(item.text)}</span>` : ''}</figcaption></figure>`).join('')}</section>`);
-    if (parts.length) parts.push(buyAgainMarkup());
+    // Atelier (2026-10-19, pawfectt.com): two or more photographed details become story steps, a sticky frame whose photo
+    // follows the step being read, instead of a row of small photos.
+    if (details.length >= 2 && productPageStyle() === 'atelier') parts.push(storyStepsMarkup(p, details.slice(0, 6)));
+    else if (details.length) parts.push(`<section class="product-long__details" data-part="details">${details.map(item => `<figure data-part="detail"><img src="${escape(item.url)}" alt="${escape(item.alt)}" loading="lazy"><figcaption><strong>${escape(item.title)}</strong>${nonEmpty(item.text) ? `<span>${escape(item.text)}</span>` : ''}</figcaption></figure>`).join('')}</section>`);
     const versus = pageBlock(p, 'versus');
     const rows = (versus?.rows || []).filter(row => row && nonEmpty(row.label) && typeof row.ours === 'boolean' && typeof row.theirs === 'boolean');
-    if (versus && rows.length >= 2 && nonEmpty(versus.ours) && nonEmpty(versus.theirs)) {
+    const hasVersus = Boolean(versus && rows.length >= 2 && nonEmpty(versus.ours) && nonEmpty(versus.theirs));
+    // The bottom half opens with its own «Comprar ahora»: this one only when the compare table stands between them, or the
+    // two buttons met back to back (Pulso Studio, 2026-10-19).
+    if (parts.length && hasVersus) parts.push(buyAgainMarkup());
+    if (hasVersus) {
       const mark = yes => `<span class="product-long__mark" data-yes="${yes}" aria-label="${yes ? 'Sí' : 'No'}">${yes ? '✓' : '✕'}</span>`;
       parts.push(`<section class="product-long__versus" data-part="versus">${nonEmpty(versus.title) ? `<h2>${escape(versus.title)}</h2>` : ''}<table><thead><tr><th scope="col"><span class="product-detail__sr">Característica</span></th><th scope="col">${escape(versus.ours)}</th><th scope="col">${escape(versus.theirs)}</th></tr></thead><tbody>${rows.map(row => `<tr><th scope="row">${escape(row.label)}</th><td>${mark(row.ours)}</td><td>${mark(row.theirs)}</td></tr>`).join('')}</tbody></table></section>`);
     }
     return parts.length ? `<div class="product-long" data-part="long-page">${parts.join('')}</div>` : '';
+  }
+  const twoDigits = n => String(n).padStart(2, '0');
+  function storyStepsMarkup(p, items) {
+    const total = twoDigits(items.length);
+    const media = items.map((item, i) => `<img src="${escape(item.url)}" alt="${escape(item.alt)}" loading="lazy" data-step-media="${i}"${i ? '' : ' data-active'}>`).join('');
+    const pills = items.map((item, i) => `<button type="button" data-step-pill="${i}" aria-label="Paso ${i + 1}: ${escape(item.title)}" aria-pressed="${i === 0}">${twoDigits(i + 1)}</button>`).join('');
+    const steps = items.map((item, i) => `<li class="product-steps__step" data-step="${i}"${i ? '' : ' data-active'}><img class="product-steps__photo" src="${escape(item.url)}" alt="${escape(item.alt)}" loading="lazy"><p class="product-steps__eyebrow">${twoDigits(i + 1)}${nonEmpty(item.kicker) ? ` / ${escape(item.kicker)}` : ''}</p><h3>${escape(item.title)}</h3>${nonEmpty(item.text) ? `<p>${escape(item.text)}</p>` : ''}</li>`).join('');
+    return `<section class="product-steps" data-part="steps" aria-label="${escape(p.name || 'Producto')} paso a paso"><div class="product-steps__frame" aria-hidden="true"><div class="product-steps__media">${media}</div><p class="product-steps__caption"><span>${escape(p.name || '')}</span><span data-step-count>01 / ${total}</span></p><span class="product-steps__progress"><span data-step-progress style="--step-progress:${100 / items.length}%"></span></span></div><div class="product-steps__copy"><div class="product-steps__pills">${pills}</div><ol class="product-steps__list">${steps}</ol></div></section>`;
+  }
+  let stepsObserver = null;
+  function showStep(section, index) {
+    const steps = [...section.querySelectorAll('[data-step]')];
+    if (!steps[index]) return;
+    steps.forEach((step, i) => step.toggleAttribute('data-active', i === index));
+    section.querySelectorAll('[data-step-media]').forEach((img, i) => img.toggleAttribute('data-active', i === index));
+    section.querySelectorAll('[data-step-pill]').forEach((pill, i) => pill.setAttribute('aria-pressed', String(i === index)));
+    const count = section.querySelector('[data-step-count]');
+    if (count) count.textContent = `${twoDigits(index + 1)} / ${twoDigits(steps.length)}`;
+    section.querySelector('[data-step-progress]')?.style.setProperty('--step-progress', `${(index + 1) * 100 / steps.length}%`);
+  }
+  /** The step crossing the middle of the screen is the one shown; a pill scrolls its step there. */
+  function watchSteps() {
+    stepsObserver?.disconnect(); stepsObserver = null;
+    const section = detail.querySelector('.product-steps');
+    if (!section) return;
+    section.querySelectorAll('[data-step-pill]').forEach(pill => pill.addEventListener('click', () => {
+      const index = Number(pill.dataset.stepPill);
+      showStep(section, index);
+      section.querySelector(`[data-step="${index}"]`)?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }));
+    if (typeof IntersectionObserver !== 'function') return;
+    stepsObserver = new IntersectionObserver(entries => {
+      const seen = entries.filter(entry => entry.isIntersecting).pop();
+      if (seen) showStep(section, Number(seen.target.dataset.step));
+    }, { rootMargin: '-45% 0px -45% 0px' });
+    section.querySelectorAll('[data-step]').forEach(step => stepsObserver.observe(step));
   }
   function longPageBottom(p) {
     const faq = pageBlock(p, 'faq');
