@@ -94,11 +94,10 @@ export function Footer() {
       <div className="es-footer__brand"><p className="es-footer__name">{store.name}</p>{tagline ? <p>{tagline}</p> : null}</div>
       <div><h2>Tienda</h2><nav aria-label="Tienda"><a href="productos.html">Todos los productos</a><a href="index.html#historia">Nuestra historia</a></nav></div>
       <div><h2>Ayuda</h2><nav data-pagosya-pages className="pagosya-info-nav es-footer__pages" aria-label="Información" /></div>
-      <div><h2>Contacto</h2>
+      {store.city || phone ? <div><h2>Contacto</h2>
         {store.city ? <p className="es-footer__line"><IconMapPin /> {store.city}</p> : null}
         {phone ? <a className="es-footer__line" href={`https://wa.me/${phone.replace(/\D/g, '')}`}><IconMessageCircle /> WhatsApp</a> : null}
-        <a className="es-footer__line" data-pagosya-account="login" href="acceso-ingresar.html">Mi cuenta</a>
-      </div>
+      </div> : null}
     </div>
     <p className="es-footer__legal">{'\u00a9'} {new Date().getFullYear()} {store.name} · Pagos seguros con pagosYa</p>
   </footer>;

@@ -36,3 +36,8 @@ test('headings never break words anywhere and the theme block is platform-writte
   assert.doesNotMatch(css, /pagosya:master-theme/);
   for (const name of ['paper', 'ink', 'muted', 'accent', 'deep', 'on-accent', 'heading', 'body']) assert.match(css, new RegExp(`var\\(--es-${name}\\)`));
 });
+
+test('the product card carries every hook the kit needs (else the catalog falls back to its plain card)', () => {
+  const card = file('components/home.tsx').match(/<template data-pagosya-product-template>([\s\S]*?)<\/template>/)?.[1] ?? '';
+  for (const hook of ['data-product-field="name"', 'data-product-field="price"', 'data-product-link', 'data-product-add']) assert.ok(card.includes(hook), `card misses ${hook}`);
+});

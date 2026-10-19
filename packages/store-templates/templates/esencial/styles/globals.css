@@ -25,6 +25,7 @@ a{color:inherit}
 .es-menu__panel a{padding:12px 0;font:400 28px/1.2 var(--es-heading);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--es-ink) 10%,transparent)}
 .es-hero{position:relative;display:grid;align-items:center;min-height:min(88vh,860px);overflow:hidden;color:#fff;background:var(--es-deep)}
 .es-hero__media{position:absolute;inset:-60px 0;z-index:0}
+.es-hero__media>div{height:100%}
 .es-hero__media img{width:100%;height:100%;object-fit:cover}
 .es-hero::after{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,.15) 70%),linear-gradient(0deg,rgba(0,0,0,.35),transparent 45%)}
 .es-hero--plain{color:var(--es-on-deep)}
@@ -54,6 +55,10 @@ a{color:inherit}
 .es-card:hover .es-card__media{transform:translateY(-4px)}
 .es-card__name{font:400 18px/1.35 var(--es-body);margin:0}
 .es-card__price{margin:0;font-weight:500}
+.es-card__row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.es-card__add{display:inline-grid;place-items:center;flex:none;width:40px;height:40px;border:1px solid color-mix(in srgb,var(--es-ink) 22%,transparent);border-radius:999px;background:transparent;color:var(--es-ink);cursor:pointer;transition:background-color .2s ease,color .2s ease}
+.es-card__add:hover{background:var(--es-accent);border-color:var(--es-accent);color:var(--es-on-accent)}
+.es-card__add svg{width:18px;height:18px}
 .catalog-empty{grid-column:1/-1;margin:0;padding:48px 0;text-align:center;color:color-mix(in srgb,var(--es-ink) 70%,transparent)}
 .es-story{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
 .es-story--text{grid-template-columns:minmax(0,760px);justify-content:center;text-align:center}
@@ -74,16 +79,20 @@ a{color:inherit}
 .es-footer a:hover{text-decoration:underline}
 .es-footer__name{margin:0;font:400 28px/1.1 var(--es-heading)}
 .es-footer__brand p{margin:0}
+.es-footer .pagosya-info-nav{display:grid;gap:10px;margin:0;padding:0;font:inherit}
+.es-footer .pagosya-info-nav a{font:inherit;color:inherit}
 .es-footer__line{display:inline-flex;align-items:center;gap:8px;margin:0}
 .es-footer__line svg{width:18px;height:18px}
 .es-footer__legal{margin:56px 0 0;padding-top:24px;border-top:1px solid color-mix(in srgb,var(--es-ink) 12%,transparent);font-size:14px;color:color-mix(in srgb,var(--es-ink) 70%,transparent)}
 .es-page{width:min(1280px,100%);margin:0 auto;padding:40px 24px 96px;min-height:60vh}
+.es-pdp{width:min(1280px,100%);margin:0 auto;padding:40px 24px 96px}
 .es-pdp__crumbs{font-size:14px;margin-bottom:20px}
 .es-pdp__grid{display:grid;grid-template-columns:1.15fr 1fr;gap:64px;align-items:start}
 .es-pdp__gallery{border-radius:6px;overflow:hidden;background:var(--es-muted)}
 .es-pdp__info{display:grid;gap:18px;position:sticky;top:96px}
-.es-pdp__title h1,.es-pdp__title h2{font-size:clamp(32px,3.6vw,48px);line-height:1.15}
+.es-pdp__title h1,.es-pdp__title h2{font-family:var(--es-heading);font-weight:400;letter-spacing:0;font-size:clamp(32px,3.6vw,48px);line-height:1.15}
 .es-pdp__price{font-size:22px;font-weight:500}
+body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);font-weight:400;letter-spacing:0}
 .es-cart{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;background:var(--es-paper);color:var(--es-ink);font:400 16px/1.55 var(--es-body)}
 .es-cart__head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 24px;border-bottom:1px solid color-mix(in srgb,var(--es-ink) 10%,transparent)}
 .es-cart__title{font-size:28px;line-height:1.2}
@@ -129,5 +138,6 @@ a{color:inherit}
   .es-footer__brand{grid-column:1/-1}
   .es-pdp__info{position:static}
   .es-page{padding:24px 16px 56px}
+  .es-pdp{padding:24px 16px 56px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}

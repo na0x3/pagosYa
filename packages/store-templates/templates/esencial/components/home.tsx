@@ -1,7 +1,7 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { copy, photos } from './store-data';
-import { IconArrowRight, IconArrowUpRight } from './icons';
+import { IconArrowRight, IconArrowUpRight, IconPlus } from './icons';
 
 export default function Home() {
   return <Shell>
@@ -28,7 +28,10 @@ export default function Home() {
           <article className="es-card">
             <a className="es-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
             <h3 className="es-card__name" data-product-field="name">Producto</h3>
-            <p className="es-card__price" data-product-field="price" />
+            <div className="es-card__row">
+              <p className="es-card__price" data-product-field="price" />
+              <button type="button" className="es-card__add" data-product-add aria-label="Agregar al carrito"><IconPlus /></button>
+            </div>
           </article>
         </template>
         <div className="es-grid" data-pagosya-catalog />

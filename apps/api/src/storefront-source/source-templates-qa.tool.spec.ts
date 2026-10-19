@@ -59,85 +59,90 @@ run('QA of the Plantillas at 390 and 1280', async () => {
   const log: string[] = [];
   for (const manifest of listTemplates().filter(t => !wanted || wanted.includes(t.id))) {
     const source = templateSourceFiles(manifest.id);
-    const demo = await templateDemoRevision(manifest, source);
-    const product = demo.files.find(f => f.path === `assets/template-${manifest.id}-p1.jpg`);
-    if (!product) throw new Error(`${manifest.id}: no p1 demo photo`);
-    const portrait = await sharp(Buffer.from(product.content, 'base64')).resize(600, 1200, { fit: 'cover' }).jpeg({ quality: 80 }).toBuffer();
-    for (const variant of VARIANTS) {
-      const snapshot = await new SourceProjectsService({} as any).prepare({ revision: 0, ...demo, files: withCatalog(demo.files, variant, portrait) as any });
-      const dir = join(OUT);
-      mkdirSync(dir, { recursive: true });
-      await withVisualSandbox(snapshot, '', undefined, true, async context => {
-        for (const width of [1280, 390]) {
-          const tag = `${manifest.id}-${variant}-${width}`;
-          const problems: string[] = [];
-          const page = await context.newPage();
-          page.on('dialog', d => { void d.dismiss(); });
-          const errors: string[] = [];
-          page.on('pageerror', e => errors.push(e.message));
-          page.setDefaultTimeout(6000);
-          await page.setViewportSize({ width, height: 900 });
-          const check = async (where: string) => {
-            const m = await measure(page);
-            if (m.scrollWidth !== width) problems.push(`${where}: scrollWidth ${m.scrollWidth} != ${width}`);
-            if (m.missingImages.length) problems.push(`${where}: missing images ${m.missingImages.join(', ')}`);
-            if (m.invalid.length) problems.push(`${where}: invalid flags ${m.invalid.join(', ')}`);
-          };
-          const shot = (name: string, fullPage: boolean) => page.screenshot({ path: join(dir, `${name}.png`), fullPage, animations: 'disabled' });
-          try {
-            // Home
-            await page.goto('https://preview.invalid/index.html', { waitUntil: 'load' });
-            await settle(page);
-            await check('index');
-            await shot(tag, true);
-            // Empty cart
-            const openCart = async () => {
-              const trigger = page.locator('[data-cart-open]:visible').first();
-              if (await trigger.count()) await trigger.click(); else await page.evaluate(() => (document.querySelector('[data-cart-open]') as HTMLElement | null)?.click());
-              await page.locator('dialog.cart-drawer[open]').waitFor();
-              await page.waitForTimeout(500);
+    // Master templates (spec 2026-10-19): one pass per palette:fonts pair in MASTER_LOOKS (default terracotta:classic).
+    const looks = manifest.master ? (process.env.MASTER_LOOKS || 'terracotta:classic').split(',').map(pair => { const [palette, fonts] = pair.split(':'); return { palette, fonts }; }) : [undefined];
+    for (const look of looks) {
+      const demo = await templateDemoRevision(manifest, source, look ? { look } : undefined);
+      const prefix = `${manifest.id}${look ? `-${look.palette}-${look.fonts}` : ''}`;
+      const product = demo.files.find(f => f.path === `assets/template-${manifest.id}-p1.jpg`);
+      if (!product) throw new Error(`${manifest.id}: no p1 demo photo`);
+      const portrait = await sharp(Buffer.from(product.content, 'base64')).resize(600, 1200, { fit: 'cover' }).jpeg({ quality: 80 }).toBuffer();
+      for (const variant of VARIANTS) {
+        const snapshot = await new SourceProjectsService({} as any).prepare({ revision: 0, ...demo, files: withCatalog(demo.files, variant, portrait) as any });
+        const dir = join(OUT);
+        mkdirSync(dir, { recursive: true });
+        await withVisualSandbox(snapshot, '', undefined, true, async context => {
+          for (const width of [1280, 390]) {
+            const tag = `${prefix}-${variant}-${width}`;
+            const problems: string[] = [];
+            const page = await context.newPage();
+            page.on('dialog', d => { void d.dismiss(); });
+            const errors: string[] = [];
+            page.on('pageerror', e => errors.push(e.message));
+            page.setDefaultTimeout(6000);
+            await page.setViewportSize({ width, height: 900 });
+            const check = async (where: string) => {
+              const m = await measure(page);
+              if (m.scrollWidth !== width) problems.push(`${where}: scrollWidth ${m.scrollWidth} != ${width}`);
+              if (m.missingImages.length) problems.push(`${where}: missing images ${m.missingImages.join(', ')}`);
+              if (m.invalid.length) problems.push(`${where}: invalid flags ${m.invalid.join(', ')}`);
             };
-            const cartState = () => page.evaluate(() => {
-              const drawer = document.querySelector('dialog.cart-drawer');
-              const panel = drawer?.querySelector('[data-cart-panel]');
-              const visibleText = (root: Element) => Array.from(root.querySelectorAll('*')).filter(el => { const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return s.display !== 'none' && s.visibility !== 'hidden' && r.width > 0 && r.height > 0 && !el.children.length && (el.textContent || '').trim().length > 6; }).map(el => (el.textContent || '').trim().replace(/\s+/g, ' '));
-              const texts = panel ? visibleText(panel) : [];
-              const all = (panel?.textContent || '').replace(/\s+/g, ' ').trim();
-              return { templated: Boolean(panel), kitDefault: Boolean(drawer?.querySelector('.cart-drawer__header') && !panel), texts, dup: texts.filter((t, i) => texts.indexOf(t) !== i), all, invalid: Object.keys(document.documentElement.dataset).filter(k => /invalid/i.test(k)) };
-            });
-            await openCart();
-            let state = await cartState();
-            if (!state.templated) problems.push('empty cart: the kit default cart opened, not the template panel');
-            if (state.dup.length) problems.push(`empty cart: duplicated text ${JSON.stringify(state.dup)}`);
-            if (state.invalid.length) problems.push(`empty cart: invalid flags ${state.invalid.join(', ')}`);
-            log.push(`${tag} empty-cart text: ${state.all}`);
-            await check('empty cart');
-            await shot(`${tag}-cart-empty`, false);
-            await page.keyboard.press('Escape');
-            // Product page
-            await page.goto('https://preview.invalid/product.html?id=demo-1', { waitUntil: 'load' });
-            await page.locator('#pagosya-product-title').waitFor();
-            await settle(page);
-            await check('product');
-            await shot(`${tag}-product`, true);
-            await page.locator('.product-detail__buy[data-add]').first().scrollIntoViewIfNeeded();
-            await page.locator('.product-detail__buy[data-add]').first().click();
-            await page.waitForTimeout(600);
-            await check('product after add');
-            await shot(`${tag}-added`, false);
-            await openCart();
-            state = await cartState();
-            if (!state.templated) problems.push('cart with item: the kit default cart opened, not the template panel');
-            if (state.invalid.length) problems.push(`cart with item: invalid flags ${state.invalid.join(', ')}`);
-            await check('cart');
-            await shot(`${tag}-cart`, false);
-          } catch (error) { problems.push(`error: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`); }
-          if (errors.length) problems.push(`page errors: ${errors.join(' | ')}`);
-          await page.close();
-          log.push(`${problems.length ? 'FAIL' : 'PASS'} ${tag}${problems.length ? ' — ' + problems.join('; ') : ''}`);
-          for (const problem of problems) failures.push(`${tag}: ${problem}`);
-        }
-      });
+            const shot = (name: string, fullPage: boolean) => page.screenshot({ path: join(dir, `${name}.png`), fullPage, animations: 'disabled' });
+            try {
+              // Home
+              await page.goto('https://preview.invalid/index.html', { waitUntil: 'load' });
+              await settle(page);
+              await check('index');
+              await shot(tag, true);
+              // Empty cart
+              const openCart = async () => {
+                const trigger = page.locator('[data-cart-open]:visible').first();
+                if (await trigger.count()) await trigger.click(); else await page.evaluate(() => (document.querySelector('[data-cart-open]') as HTMLElement | null)?.click());
+                await page.locator('dialog.cart-drawer[open]').waitFor();
+                await page.waitForTimeout(500);
+              };
+              const cartState = () => page.evaluate(() => {
+                const drawer = document.querySelector('dialog.cart-drawer');
+                const panel = drawer?.querySelector('[data-cart-panel]');
+                const visibleText = (root: Element) => Array.from(root.querySelectorAll('*')).filter(el => { const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return s.display !== 'none' && s.visibility !== 'hidden' && r.width > 0 && r.height > 0 && !el.children.length && (el.textContent || '').trim().length > 6; }).map(el => (el.textContent || '').trim().replace(/\s+/g, ' '));
+                const texts = panel ? visibleText(panel) : [];
+                const all = (panel?.textContent || '').replace(/\s+/g, ' ').trim();
+                return { templated: Boolean(panel), kitDefault: Boolean(drawer?.querySelector('.cart-drawer__header') && !panel), texts, dup: texts.filter((t, i) => texts.indexOf(t) !== i), all, invalid: Object.keys(document.documentElement.dataset).filter(k => /invalid/i.test(k)) };
+              });
+              await openCart();
+              let state = await cartState();
+              if (!state.templated) problems.push('empty cart: the kit default cart opened, not the template panel');
+              if (state.dup.length) problems.push(`empty cart: duplicated text ${JSON.stringify(state.dup)}`);
+              if (state.invalid.length) problems.push(`empty cart: invalid flags ${state.invalid.join(', ')}`);
+              log.push(`${tag} empty-cart text: ${state.all}`);
+              await check('empty cart');
+              await shot(`${tag}-cart-empty`, false);
+              await page.keyboard.press('Escape');
+              // Product page
+              await page.goto('https://preview.invalid/product.html?id=demo-1', { waitUntil: 'load' });
+              await page.locator('#pagosya-product-title').waitFor();
+              await settle(page);
+              await check('product');
+              await shot(`${tag}-product`, true);
+              await page.locator('.product-detail__buy[data-add]').first().scrollIntoViewIfNeeded();
+              await page.locator('.product-detail__buy[data-add]').first().click();
+              await page.waitForTimeout(600);
+              await check('product after add');
+              await shot(`${tag}-added`, false);
+              await openCart();
+              state = await cartState();
+              if (!state.templated) problems.push('cart with item: the kit default cart opened, not the template panel');
+              if (state.invalid.length) problems.push(`cart with item: invalid flags ${state.invalid.join(', ')}`);
+              await check('cart');
+              await shot(`${tag}-cart`, false);
+            } catch (error) { problems.push(`error: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`); }
+            if (errors.length) problems.push(`page errors: ${errors.join(' | ')}`);
+            await page.close();
+            log.push(`${problems.length ? 'FAIL' : 'PASS'} ${tag}${problems.length ? ' — ' + problems.join('; ') : ''}`);
+            for (const problem of problems) failures.push(`${tag}: ${problem}`);
+          }
+        });
+      }
     }
   }
   // eslint-disable-next-line no-console
