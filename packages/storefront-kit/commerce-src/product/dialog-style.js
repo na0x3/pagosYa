@@ -457,6 +457,51 @@
     [data-pagosya-product][data-style] .pd-steam .pd-steam{animation:pd-steam 2.6s ease-in-out infinite}
     [data-pagosya-product][data-style] :is(.pd-draw) :is(.pd-check){pathLength:1;animation:pd-draw 3.2s ease-in-out infinite}
     [data-pagosya-product][data-style][data-highlights-paused] .pd-icon,[data-pagosya-product][data-style][data-highlights-paused] .pd-icon *{animation-play-state:paused}
+    /* Atelier (2026-10-19): the product page of the owner's Amboras references. Breadcrumb and stars, a provenance eyebrow
+       on a hairline, a large tight title with an italic subtitle, the price on a rule, options as hairline pills named in
+       tracked small caps, purchase choices as cards, a wide tracked call to action carrying the total, a centred trust row.
+       Motion is one 0.18 s standard ease on hover; nothing bounces. */
+    [data-pagosya-product][data-style=atelier] .product-detail__copy{display:flex;flex-direction:column;gap:14px;padding:clamp(24px,4vw,56px)}
+    [data-pagosya-product][data-style=atelier] .product-detail__copy>.product-detail__breadcrumb{order:-3;margin:0;font-size:12px;font-style:italic;letter-spacing:.02em;color:var(--pd-muted)}
+    [data-pagosya-product][data-style=atelier] .product-detail__copy>.product-detail__rating{order:-2;margin:0;font-size:13px}
+    [data-pagosya-product][data-style=atelier] .product-detail__copy>.product-detail__eyebrow{order:-1}
+    [data-pagosya-product][data-style=atelier] .product-detail__stars{color:var(--pd-accent);letter-spacing:.12em}
+    [data-pagosya-product][data-style=atelier] .product-detail__eyebrow{display:flex;align-items:center;gap:12px;margin:0;font:600 11px/1.4 var(--pd-body);letter-spacing:.22em;text-transform:uppercase;color:var(--pd-accent)}
+    [data-pagosya-product][data-style=atelier] .product-detail__eyebrow::before{content:"";flex:0 0 28px;height:1px;background:currentColor;opacity:.6}
+    [data-pagosya-product][data-style=atelier] [data-part=title]{margin:0;font-family:var(--pd-heading);font-size:clamp(34px,4.4vw,58px);line-height:1.02;letter-spacing:-.02em;text-wrap:balance}
+    [data-pagosya-product][data-style=atelier] [data-part=title][data-length=long]{font-size:clamp(28px,3.4vw,44px)}
+    [data-pagosya-product][data-style=atelier] .product-detail__subtitle{margin:-4px 0 0;font-family:var(--pd-heading);font-style:italic;font-size:18px;line-height:1.4;color:var(--pd-muted)}
+    [data-pagosya-product][data-style=atelier] .product-detail__pricing{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--pd-line)}
+    [data-pagosya-product][data-style=atelier] .product-detail__price{font-family:var(--pd-heading);font-size:clamp(24px,2.4vw,32px);font-weight:700;letter-spacing:-.01em}
+    [data-pagosya-product][data-style=atelier] .product-detail__original{font-size:15px;color:var(--pd-muted)}
+    [data-pagosya-product][data-style=atelier] .product-detail__intro{margin:0;font-size:15px;line-height:1.65;color:var(--pd-muted)}
+    [data-pagosya-product][data-style=atelier] :is(.product-detail__options fieldset,.product-detail__subscription){margin:0 0 4px;padding:0;border:0}
+    [data-pagosya-product][data-style=atelier] :is(.product-detail__options,.product-detail__subscription) legend{margin-bottom:10px;padding:0;font:600 11px/1.4 var(--pd-body);letter-spacing:.18em;text-transform:uppercase;color:var(--pd-ink)}
+    [data-pagosya-product][data-style=atelier] .product-detail__options legend span{font-weight:400;letter-spacing:.04em;text-transform:none;color:var(--pd-muted)}
+    [data-pagosya-product][data-style=atelier] .product-detail__options legend span:not(:empty)::before{content:"— "}
+    [data-pagosya-product][data-style=atelier] .product-detail__values{display:flex;flex-wrap:wrap;gap:8px}
+    [data-pagosya-product][data-style=atelier] .product-detail__values:not([data-kind=swatch]) button{min-height:40px;padding:8px 18px;border:1px solid var(--pd-line);border-radius:999px;background:transparent;color:var(--pd-ink);font-size:13px;letter-spacing:.02em;transition:border-color .18s cubic-bezier(.4,0,.2,1),background-color .18s cubic-bezier(.4,0,.2,1),color .18s cubic-bezier(.4,0,.2,1)}
+    [data-pagosya-product][data-style=atelier] .product-detail__values:not([data-kind=swatch]) button:hover{border-color:var(--pd-ink)}
+    [data-pagosya-product][data-style=atelier] .product-detail__values:not([data-kind=swatch]) button[aria-pressed=true]{border-color:var(--pd-accent);background:var(--pd-accent);color:var(--pd-on-accent)}
+    [data-pagosya-product][data-style=atelier] .product-detail__values[data-kind=swatch] button[aria-pressed=true]{box-shadow:0 0 0 2px var(--pd-paper),0 0 0 3px var(--pd-accent)}
+    [data-pagosya-product][data-style=atelier] .product-detail__subscription label{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--pd-line);border-radius:var(--pd-radius);cursor:pointer;transition:border-color .18s cubic-bezier(.4,0,.2,1)}
+    [data-pagosya-product][data-style=atelier] .product-detail__subscription label:has(input:checked){border-color:var(--pd-accent);box-shadow:inset 0 0 0 1px var(--pd-accent)}
+    [data-pagosya-product][data-style=atelier] .product-detail__purchase{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;margin-top:6px}
+    [data-pagosya-product][data-style=atelier] .product-detail__quantity{min-height:56px;border:1px solid var(--pd-line);border-radius:var(--pd-radius)}
+    [data-pagosya-product][data-style=atelier] .product-detail__buy{width:100%;min-height:56px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font:700 13px/1.2 var(--pd-body);letter-spacing:.16em;text-transform:uppercase;white-space:normal;text-wrap:balance;transition:filter .18s cubic-bezier(.4,0,.2,1),transform .18s cubic-bezier(.4,0,.2,1)}
+    [data-pagosya-product][data-style=atelier] .product-detail__buy:hover:not(:disabled){filter:brightness(1.08)}
+    [data-pagosya-product][data-style=atelier] .product-detail__buy:active:not(:disabled){transform:translateY(1px)}
+    [data-pagosya-product][data-style=atelier] .product-detail__buy-total{display:inline}
+    [data-pagosya-product][data-style=atelier] .product-detail__buy-total:not(:empty)::before{content:"—";margin:0 10px}
+    [data-pagosya-product][data-style=atelier] .product-detail__assurances{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:8px 0 0;padding:18px 0 0;border-top:1px solid var(--pd-line);list-style:none}
+    [data-pagosya-product][data-style=atelier] .product-detail__assurances li{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+    [data-pagosya-product][data-style=atelier] .product-detail__assurances li>button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none;color:inherit;text-align:center}
+    [data-pagosya-product][data-style=atelier] .product-detail__assurances li div{display:grid;gap:2px}
+    [data-pagosya-product][data-style=atelier] .product-detail__assurances strong{font-size:12px;font-weight:600}
+    [data-pagosya-product][data-style=atelier] .product-detail__assurances span{font-size:11px;color:var(--pd-muted)}
+    [data-pagosya-product][data-style=atelier] [data-product-count]{position:absolute;right:16px;bottom:14px;padding:4px 8px;font:500 12px/1 var(--pd-body);letter-spacing:.08em;color:var(--pd-muted);background:color-mix(in srgb,var(--pd-paper) 82%,transparent)}
+    [data-pagosya-product][data-style=atelier] .product-detail__thumbnails button[aria-pressed=true]{outline:1px solid var(--pd-ink);outline-offset:2px}
+    @media(max-width:640px){[data-pagosya-product][data-style=atelier] .product-detail__copy{padding:20px}[data-pagosya-product][data-style=atelier] .product-detail__assurances{grid-template-columns:minmax(0,1fr)}[data-pagosya-product][data-style=atelier] .product-detail__assurances li{flex-direction:row;text-align:left}}
     @media(prefers-reduced-motion:reduce){[data-pagosya-product] .pd-icon *{animation:none!important}}
     @media(prefers-reduced-motion:reduce){[data-pagosya-product] *,[data-pagosya-product] *::before{transition:none!important;scroll-behavior:auto!important}}
   `;

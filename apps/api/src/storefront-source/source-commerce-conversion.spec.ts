@@ -21,7 +21,8 @@ afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splic
 
 async function page({ items = [product()] as any[], style, settings = {}, fullPage = true, template = '', gallery }: { items?: any[]; style?: string; settings?: Record<string, unknown>; fullPage?: boolean; template?: string; gallery?: string } = {}) {
   const virtualConsole = new VirtualConsole();
-  virtualConsole.on('jsdomError', (error: Error) => { if (!error.message.includes('Could not parse CSS stylesheet')) errors.push(error); });
+  // jsdom implements neither CSS parsing of every rule nor getComputedStyle with a pseudo-element; browsers do both.
+  virtualConsole.on('jsdomError', (error: Error) => { if (!error.message.includes('Could not parse CSS stylesheet') && !error.message.includes('getComputedStyle(elt, pseudoElt)')) errors.push(error); });
   const dom = new JSDOM(`<html><head></head><body>${template}<button data-cart-open>Pedido <span data-cart-count></span></button><section data-pagosya-catalog></section><section data-pagosya-cart></section>${fullPage ? '<main data-pagosya-product-page></main>' : ''}<p data-pagosya-status></p></body></html>`,
     { url: `https://shop.test/product.html?id=${items[0]?.id ?? 'cafe'}`, runScripts: 'outside-only', virtualConsole });
   const w = dom.window; windows.push(w);

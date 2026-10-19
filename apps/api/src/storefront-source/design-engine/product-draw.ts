@@ -17,15 +17,10 @@ export type ProductFacts = { variants?: boolean; altPhotos?: boolean };
 
 /** Fitting product page styles per kind of business, the owner's choice: variety inside what suits the business. */
 export const PRODUCT_PAGE_FIT: Record<PlaybookKind, readonly SourceProductPageStyle[]> = {
-  'cafe-food': ['conversion', 'story-led', 'editorial', 'image-led'],
-  'bakery-sweets': ['story-led', 'conversion', 'image-led', 'editorial'],
-  clothing: ['image-led', 'editorial', 'story-led'],
-  beauty: ['conversion', 'editorial', 'image-led', 'story-led'],
-  services: ['editorial', 'dense', 'story-led'],
-  'fitness-wellness': ['conversion', 'editorial', 'dense', 'story-led'],
-  'crafts-home': ['story-led', 'image-led', 'dense', 'editorial'],
-  'flowers-gifts': ['image-led', 'story-led', 'editorial', 'conversion'],
-  general: SOURCE_PRODUCT_PAGE_STYLES,
+  // 2026-10-19, owner: «I want exactly layouts like those from Amboras». Every kind gets the atelier page; what makes two stores
+  // differ is their type, colours, buttons and words, as in the Amboras examples. Stores drawn before keep their style.
+  'cafe-food': ['atelier'], 'bakery-sweets': ['atelier'], clothing: ['atelier'], beauty: ['atelier'], services: ['atelier'],
+  'fitness-wellness': ['atelier'], 'crafts-home': ['atelier'], 'flowers-gifts': ['atelier'], general: ['atelier'],
 };
 /** Fitting product page presets (swatch, gallery, blocks, divider, entrance, media side) per kind. */
 export const PRESET_FIT: Record<PlaybookKind, readonly PresetId[]> = {

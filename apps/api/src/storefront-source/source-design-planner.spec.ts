@@ -279,9 +279,9 @@ describe('style slots', () => {
     await new SourceDesignPlanner().explore({ ...input(), selected: undefined, styleSlots: slots.map((slot, i) => ({ ...slot, slot: i })) }).catch(() => undefined);
     const bodies = fetchMock.mock.calls.map(call => JSON.parse(call[1]!.body as string));
     expect(bodies.map(body => [sha(body.input[0].content[0].text), sha(JSON.stringify(body.text)), body.max_output_tokens])).toEqual([
-      ['a739da39437bd77c7d98e8ad50bbc5ab155bef7cc3e302eca61b4cb8a9c9f31b', 'b70412e40c2da447e53ee27f5cebe9357c81849bfb3a9ea715c3dece87360e76', 7200],
-      ['5935e80c29d01cd810e1e891c7b98886ab82f572dde35664e2813c7031c79f04', '183e41cfbde35ed4188270f003284fbe15d4deeca0a3e1301ed55b8f253c6a3a', 7200],
-      ['5935e80c29d01cd810e1e891c7b98886ab82f572dde35664e2813c7031c79f04', '183e41cfbde35ed4188270f003284fbe15d4deeca0a3e1301ed55b8f253c6a3a', 7200],
+      ['7dabfe237070abd31949ea395a1c14ca6b03555a972cd7a9541c22afc5888445', 'fdedb28f50dbd7b5c340070546b532b6311f0dc02fa399834af6f5e29e23a013', 7200],
+      ['c63396d1926c6f047adba5c188b4f4804612e49ab914fc5e2d2f7961bf7d3b8d', '6a4c3bed714a4ad0e62e06ad19af5e5d5f6cc92ad9edbbfd2bdc8a7f8a9575e7', 7200],
+      ['c63396d1926c6f047adba5c188b4f4804612e49ab914fc5e2d2f7961bf7d3b8d', '6a4c3bed714a4ad0e62e06ad19af5e5d5f6cc92ad9edbbfd2bdc8a7f8a9575e7', 7200],
     ]);
   });
 

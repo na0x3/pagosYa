@@ -17,8 +17,9 @@ describe('product surfaces draw (sub-project 2, 2026-10-15)', () => {
 
   it('never draws a style outside the kind, and an unknown kind may draw any', () => {
     for (let seed = 1; seed <= 30; seed++) expect(PRODUCT_PAGE_FIT.clothing).toContain(drawProduct(seeded(seed), [], 'clothing', {}).productPage);
+    // 2026-10-19: every kind, known or not, draws the atelier page (the Amboras layout).
     const any = new Set(Array.from({ length: 60 }, (_, seed) => drawProduct(seeded(seed + 1), [], 'unknown-kind', {}).productPage));
-    expect(any.size).toBe(5);
+    expect([...any]).toEqual(['atelier']);
   });
 
   it('draws only catalog cards the products can support', () => {
