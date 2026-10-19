@@ -595,11 +595,24 @@ export class SourceChatService {
         }
       }
       // A screenshot of a product card or listing on a new store (2026-10-18): the product comes from it, its photo cropped out.
-      const listingShot = !current.revision && !productImport && !productRead && decision.action === 'generate'
-        ? decision.imageUses.find(use => use.role === 'listing' && (input.assetUrls ?? []).includes(use.url)) : undefined;
+      // The conversation step's label is not trusted alone (live 2026-10-18, Licua Mini: it described «un listado» and still
+      // marked it «product», so the whole screenshot became the store's photo): on a new store with no product yet, the first
+      // two attached images are read, and the read itself says whether one is a listing.
+      // A retry of the same screenshot still finds the product it made.
+      const earlierShot = history.messages.some(message => String((message.metadata as { productImport?: { url?: unknown } } | null)?.productImport?.url ?? '').startsWith('screenshot:'));
+      const shotCandidates = !current.revision && !productImport && !productRead && decision.action === 'generate' && (!store._count?.paymentLinks || earlierShot)
+        ? [...decision.imageUses.filter(use => use.role === 'listing'), ...decision.imageUses.filter(use => ['product', 'reference', 'unknown', 'business'].includes(use.role))]
+          .filter(use => (input.assetUrls ?? []).includes(use.url) && /\.(?:png|jpe?g|webp)$/i.test(use.url)).slice(0, 2)
+        : [];
+      let listingShot: SourceImageUse | undefined;
+      let shotProduct: Awaited<ReturnType<SourceChatService['productFromScreenshot']>>;
+      for (const candidate of shotCandidates) {
+        const photos = decision.imageUses.filter(use => use.url !== candidate.url && use.role === 'product' && (input.assetUrls ?? []).includes(use.url)).map(use => use.url);
+        shotProduct = await this.productFromScreenshot(merchantId, storeId, candidate.url, { model: input.model, words: ownWords, photos, messages: history.messages });
+        if (shotProduct) { listingShot = candidate; break; }
+      }
       if (listingShot) {
-        const photos = decision.imageUses.filter(use => use.role === 'product' && (input.assetUrls ?? []).includes(use.url)).map(use => use.url);
-        const made = await this.productFromScreenshot(merchantId, storeId, listingShot.url, { model: input.model, words: ownWords, photos, messages: history.messages });
+        const made = shotProduct;
         if (made && 'noPhoto' in made) {
           decision.action = 'reply';
           decision.reply = `Leí «${made.noPhoto.slice(0, 80)}» en tu captura, pero su foto es muy pequeña para la tienda. Mándame las fotos del producto y armo toda tu tienda con ellas.`;
@@ -770,7 +783,9 @@ export class SourceChatService {
     const key = `screenshot:${url}`;
     const earlier = [...input.messages].reverse().map(message => (message.metadata as { productImport?: ProductImport } | null)?.productImport).find(item => item?.url === key);
     if (earlier && await this.prisma.paymentLink.findFirst({ where: { id: earlier.productId, storeId }, select: { id: true } })) return earlier;
-    const read = parseListingRead(await this.dialogue.readListing(merchantId, { storeId, model: input.model, url }), key);
+    // A failed read is «not a listing»: the store then builds from the photos as before.
+    const raw = await Promise.resolve().then(() => this.dialogue.readListing(merchantId, { storeId, model: input.model, url })).catch(() => null);
+    const read = parseListingRead(raw, key);
     this.productLogger.log(JSON.stringify({ event: 'product_screenshot_read', storeId, ok: Boolean(read), photo: Boolean(read?.box) }));
     if (!read) return undefined;
     let cropped: string | undefined;

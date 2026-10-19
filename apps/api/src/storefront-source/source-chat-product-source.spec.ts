@@ -104,6 +104,21 @@ describe('a screenshot of a product card (2026-10-18)', () => {
     expect(messages.at(-1).content).toMatch(/^Leí «Licuadora portátil» en tu captura y usé 1 foto\. Puse USD 18\.30/);
   });
 
+  it('reads a screenshot the conversation step marked «product» (Licua Mini 2026-10-18)', async () => {
+    const { service, products, generation } = await withShot([{ url: shot, role: 'product', description: 'Imagen adjunta de un listado; usar como foto del producto' }]);
+    await service.send('m', 's', { ...request, instruction: 'quiero vender este producto', assetUrls: [shot] });
+    expect(products[0]).toMatchObject({ name: 'Licuadora portátil' });
+    expect(products[0].imageUrls[0]).not.toBe(shot);
+    expect(generation.generate.mock.calls[0][4]).toEqual(expect.arrayContaining([expect.objectContaining({ url: shot, role: 'unused' })]));
+  });
+
+  it('a plain product photo builds as before', async () => {
+    const { service, products, generation } = await withShot([{ url: photo, role: 'product', description: 'foto' }], { isListing: false });
+    await service.send('m', 's', { ...request, instruction: 'vendo esto', assetUrls: [photo] });
+    expect(products).toHaveLength(0);
+    expect(generation.generate.mock.calls[0][4]).toEqual(expect.arrayContaining([expect.objectContaining({ url: photo, role: 'product' })]));
+  });
+
   it("uses the merchant's own photos over the crop", async () => {
     const { service, products } = await withShot([{ url: shot, role: 'listing', description: 'captura' }, { url: photo, role: 'product', description: 'foto' }]);
     await service.send('m', 's', { ...request, instruction: 'vendo esto a Bs 150', assetUrls: [shot, photo] });
