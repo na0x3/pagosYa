@@ -16,8 +16,15 @@ const edit = (search: string, replacement: string) => JSON.stringify({ path: 'co
 const finish = JSON.stringify({ summary: 'Cambié el título', sections: ['Portada'] });
 
 describe('AgentToolbox', () => {
+  it('find_products returns the store\'s real products by name (showcase commerce)', async () => {
+    const result = await toolbox().run('find_products', JSON.stringify({ query: 'estrella' }));
+    const found = JSON.parse(result.output);
+    expect(found[0]).toEqual(expect.objectContaining({ name: 'Producto estrella' }));
+    expect(typeof found[0].id).toBe('string');
+  });
+
   it('declares every tool with a strict JSON schema', () => {
-    expect(AGENT_TOOLS.map(t => t.name)).toEqual(['inspect_asset', 'search_illustrations', 'inspect_project', 'plan_task', 'set_account_theme', 'set_motif_pack', 'set_store_policy', 'create_page', 'list_files', 'read_file', 'edit_file', 'edit_file_batch', 'write_file', 'screenshot', 'verify', 'set_product_card_theme', 'finish']);
+    expect(AGENT_TOOLS.map(t => t.name)).toEqual(['inspect_asset', 'search_illustrations', 'inspect_project', 'find_products', 'plan_task', 'set_account_theme', 'set_motif_pack', 'set_store_policy', 'create_page', 'list_files', 'read_file', 'edit_file', 'edit_file_batch', 'write_file', 'screenshot', 'verify', 'set_product_card_theme', 'finish']);
     for (const tool of AGENT_TOOLS) expect(tool.strict).toBe(true);
   });
   it('reads and edits, recording merchant-facing steps without source code', async () => {

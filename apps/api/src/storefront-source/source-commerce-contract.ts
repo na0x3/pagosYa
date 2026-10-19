@@ -4,6 +4,7 @@ import { isNextSource, nextSourceFile, nextPageMarkup, validateNextSources } fro
 import { BadRequestException } from '@nestjs/common';
 import type { SourceProjectSnapshot } from './source-project';
 import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
+import { productPlacementFindings } from './source-product-placements';
 
 /** Structural publishing gate. The isolated browser checker verifies actual behavior. */
 export function assertSourceCommerceContract(snapshot: SourceProjectSnapshot) {
@@ -15,6 +16,9 @@ export function assertSourceCommerceContract(snapshot: SourceProjectSnapshot) {
     if (!config || typeof config !== 'object') throw new Error();
   } catch { throw new BadRequestException('Corrige config.js antes de publicar.'); }
   if (!files.has('commerce.js')) throw new BadRequestException('El sitio necesita el componente compartido commerce.js.');
+  // Showcase commerce: a block that places products must name real ones (never a made-up id).
+  const placements = Array.isArray(config.data?.items) ? productPlacementFindings(snapshot.files, { items: config.data.items, categories: config.data.categories, collections: config.data.collections }) : [];
+  if (placements.length) throw new BadRequestException(placements[0]);
   const clean = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '').replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, tag => tag.replace(/>[\s\S]*<\//, '></'));
   const next = isNextSource(snapshot.files);
   const purpose = sourceSitePurpose(snapshot.brief);

@@ -1,3 +1,4 @@
+import { configCatalog, findProducts } from '../source-product-placements';
 import type { SourceMediaPolicy } from '../source-media-design';
 import { CARD_PARTS, CART_PARTS, CATALOG_PARTS, COSMETIC_PARTS } from '../product-theme-css';
 import sharp from 'sharp';
@@ -20,7 +21,7 @@ import { ASSURANCE_ICONS } from '../product-theme';
 import { PRESET_IDS, type ProductCardParams } from '../source-product-card-presets';
 import { resolveProductTheme, snapshotWithProductTheme, type ProductThemeInput, type ProductThemeResult } from '../product-theme';
 
-export type AgentToolName = 'inspect_asset' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_theme' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme' | 'search_illustrations' | 'set_motif_pack' | 'set_store_policy';
+export type AgentToolName = 'inspect_asset' | 'find_products' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_theme' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme' | 'search_illustrations' | 'set_motif_pack' | 'set_store_policy';
 export type AgentStep = { kind: AgentToolName; label: string; at: number; thumbnail?: string };
 export type AgentCompositionFinding = { id: string; page: string; section: string; severity: 'major' | 'minor'; observation: string; correction: string };
 export type AgentCompositionReview = { findings: AgentCompositionFinding[]; summary: string };
@@ -61,6 +62,7 @@ export const AGENT_TOOLS = [
   tool('inspect_asset', 'Inspecciona los bytes de una imagen local: dimensiones, formato y vista reducida. No inventes rutas.', { path: text }),
   tool('search_illustrations', 'Busca dibujos profesionales (ilustraciones de objetos, comida, animales, caras, plantas, símbolos) por tema, en español o inglés, ANTES de dibujar una figura a mano. Devuelve hasta 12 temas numerados con sus rutas y una hoja con las imágenes. tone: colour (a color), store (línea de un color que toma la paleta de la tienda) o null (ambos). No sirve para formas de diseño (bordes, sombras, bloques, ondas).', { query: text, tone: nullableEnum(['colour', 'store']) }),
   tool('inspect_project', 'Rutas, propietarios, operaciones y archivos de imágenes disponibles en este borrador.', {}),
+  tool('find_products', 'Busca productos reales de la tienda por nombre o categoría; devuelve id, nombre, categoría y precio. Úsala antes de colocar productos con data-products o data-pagosya-spotlight; nunca inventes ids.', { query: text }),
   tool('plan_task', 'Registra entre 1 y 12 requisitos del pedido original, sin añadir decoraciones opcionales como obligaciones. El plan no se puede reducir después de editar; solo corregir selectores conservando cada resultado esperado.', { requirements: { type: 'array', minItems: 1, maxItems: 12, items: object({ id: { ...text, description: 'ID único r1, r2, etc.' }, description: text, page: { ...text, description: 'Ruta HTML local, por ejemplo index.html o product.html.' }, check: { type: 'string', enum: ['text','absent_text','image','element','style','navigation','video','video-paused','layout'] }, selector: text, expected: { ...text, description: 'text/absent_text: texto literal; element: entero positivo; style: propiedad:valor; image: assets/foto.webp (varias rutas separadas por comas, TODAS visibles), nunca una descripción, un selector ni una data URL; navigation: pagina.html; video/video-paused: assets/video.mp4; layout: viewport-cover o no-overflow.' }, profile: { type: ['string','null'], enum: ['normal','reduced-motion',null] } }) } }),
   tool('set_account_theme', 'Diseña las páginas de cuenta (ingresar, registro, pedidos, perfil): layout card|split|minimal|panel, photo (una ruta assets/ de la tienda, solo para split) y CSS opcional sobre [data-part=…] (account, card, media, title, lead, form, field, label, input, hint, submit, link, error, notice, nav, nav-item, list, order, order-status, address, empty, danger). Los campos, el botón, los errores y los enlaces nunca se pueden ocultar. null conserva el valor.', { layout: { type: ['string','null'] }, photo: { type: ['string','null'] }, css: { type: ['string','null'] } }),
   tool('set_motif_pack', `Activa para toda la tienda un paquete de motivos dibujados por pagosYa (botones, separadores, patrón, estados vacíos), pintados con la paleta de la tienda, o null para quitarlo. Solo si el tema de la tienda coincide con el paquete y la identidad es lúdica; nunca en una identidad seria o minimalista. Paquetes: ${listMotifPacks().map(pack => `${pack.id} (${pack.name})`).join(', ')}.`, { id: nullableEnum(listMotifPacks().map(pack => pack.id)) }),
@@ -238,6 +240,11 @@ export class AgentToolbox {
     const step = (kind: AgentToolName, label: string, thumbnail?: string) => { this.steps.push({ kind, label, at: Date.now(), ...(thumbnail ? { thumbnail } : {}) }); };
     if (this.ctx.taskRequired && !this.requirements.length && ['create_page','edit_file','edit_file_batch','write_file','set_account_theme','set_product_card_theme','set_motif_pack','set_store_policy'].includes(name)) return { output: 'Primero llama plan_task con todos los requisitos del pedido.' };
     switch (name) {
+      case 'find_products': {
+        const found = findProducts(configCatalog(this.ctx.base.files.find(file => file.path === 'config.js')?.content), String(args.query || ''));
+        step('find_products', `Buscó productos: ${String(args.query || '').slice(0, 40)}`);
+        return { output: JSON.stringify(found) };
+      }
       case 'create_page': {
         const slug = String(args.slug || '');
         if (!/^[a-z][a-z0-9-]{0,47}$/.test(slug) || ['index','product','checkout','home'].includes(slug)) return { output: 'Usa una dirección como servicios o galeria, sin rutas ni extensión.' };
