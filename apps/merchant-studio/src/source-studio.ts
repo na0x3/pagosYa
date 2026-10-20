@@ -37,6 +37,7 @@ import { queueStatus } from './source-queue-status';
 import { QUICK_ACTIONS, createSelectionState, matchEditableText } from './source-selection';
 import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewSelection, receivePreviewContact, openPreviewContact, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
 import { escapeHtml as escape, icon, renderStudioLogin, renderStudioComposer, studioModeNav } from './studio-ui';
+import { applySuggestion, dismissSuggestions, renderSuggestions, suggestionCards, type SuggestionCard } from './source-suggestions';
 import './source-studio.css';
 import './source-browser.css';
 import './source-workspace-design.css';
@@ -377,6 +378,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   }
   // Snapshots are kept internally for recovery, but the merchant always edits the current draft.
   const historical = () => false;
+  // YAPI's next-step cards (spec 2026-10-19 §2): hidden for good after «No, gracias»; a popup card answers with a note.
+  let suggestionsHidden = false, suggestionNote = '';
+  const suggestionIndex = new Map<string, SuggestionCard>();
   const disabled = (condition: boolean) => condition ? 'disabled' : '';
   const clearAssets = () => { productPhoto = false; assets.forEach(a => URL.revokeObjectURL(a.src)); assets = []; };
   window.addEventListener('beforeunload', event => { if (dirty() || busy && buildSession.phase !== 'running' || instruction.trim() || assets.length) { event.preventDefault(); event.returnValue = ''; } });
@@ -421,6 +425,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     stores = await api.listStores();
     storeId = embedded ? stores.find(s => s.id === params.get('store'))?.id || '' : stores.find(s => s.id === sessionStorage.getItem('pagosya_current_store_id'))?.id || stores[0]?.id || '';
     if (storeId) await load();
+    if (storeId) void api.retention(storeId).then(r => { if (r?.settings?.suggestionsDismissedAt) { suggestionsHidden = true; render(); } }).catch(() => undefined);
     if (storeId) {
       const selectedStore = storeId;
       const latest = await api.latestSourceChatJob(selectedStore).catch(() => ({ job: null }));
@@ -787,6 +792,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     return `<article class="${user ? 'message message--remote-user' : 'agent-note remote-agent-note'}"><div class="${user ? 'message-meta' : 'agent-note__meta'}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? 'Tú' : 'YAPI'}</strong></div>${user ? sentAttachments(metadata) : ''}<p>${escape(visibleContent)}</p>
       ${!user ? renderBuildProgress(metadata.progress, false, metadata.sourceRevision ? 'saved' : 'reply') : ''}
       ${clarification?.options ? `<div class="clarification-options">${clarification.options.map(o => `<button type="button" data-clarification="${escape(o.value)}" ${disabled(busy || dirty() || historical())}>${escape(o.label)}</button>`).join('')}</div>` : ''}
+      ${!user && !suggestionsHidden ? (() => { const cards = suggestionCards(metadata); cards.forEach(card => suggestionIndex.set(card.id, card)); return renderSuggestions(cards, busy || dirty() || historical()) + (cards.length && suggestionNote ? `<p class="source-suggestions__note" role="status">${escape(suggestionNote)}</p>` : ''); })() : ''}
       ${!user && (metadata.startChoices || Array.isArray(metadata.templateChoices)) && !state.revision ? `<div class="source-empty-actions"><button type="button" class="button" data-start-scratch ${disabled(busy || dirty())}>Crear desde cero</button>${metadata.startChoices ? `<button type="button" class="button button--secondary" data-choose-template ${disabled(busy || dirty())}>Usar una plantilla</button>` : ''}</div>` : ''}
       ${!user && Array.isArray(metadata.templateChoices) ? renderTemplateChoices(metadata.templateChoices as TemplateChoice[], import.meta.env.BASE_URL, busy || dirty() || historical() || (state.revision > 0 && !templateUntouched()) || message.id !== latestTemplateChoicesId()) : ''}
       ${metadata.generation ? `<p class="source-chat-hint">${escape(String((metadata.generation as JsonRecord).model))} · ${escape(String((metadata.generation as JsonRecord).credits))} créditos</p>` : ''}
@@ -1182,6 +1188,11 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
       instruction = button.dataset.suggestion || ''; const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); if (field) field.value = instruction; scheduleEstimate(); focusComposer();
     }));
     app.querySelectorAll<HTMLButtonElement>('[data-clarification]').forEach(button => button.addEventListener('click', () => void send(button.dataset.clarification || '')));
+    app.querySelectorAll<HTMLButtonElement>('[data-suggestion-card]').forEach(button => button.addEventListener('click', () => {
+      const card = suggestionIndex.get(button.dataset.suggestionCard || ''); if (!card || busy) return;
+      void applySuggestion(card, { send: text => send(text), api, storeId }).then(note => { if (note) { suggestionNote = note; render(); } }).catch(error => { suggestionNote = error instanceof Error ? error.message : 'No se pudo completar.'; render(); });
+    }));
+    app.querySelector<HTMLButtonElement>('[data-suggestions-dismiss]')?.addEventListener('click', () => { suggestionsHidden = true; render(); void dismissSuggestions(api, storeId).catch(() => undefined); });
     app.querySelectorAll<HTMLButtonElement>('[data-template-choice]').forEach(button => button.addEventListener('click', () => void send(`Usar ${button.dataset.templateName || ''}`, undefined, undefined, button.dataset.templateChoice)));
     app.querySelector('[data-action="open-upload"]')?.addEventListener('click', () => app.querySelector<HTMLInputElement>('[data-image-input]')?.click());
     app.querySelector('[data-image-input]')?.addEventListener('change', event => {
