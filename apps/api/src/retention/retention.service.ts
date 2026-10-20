@@ -11,7 +11,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EMAIL_PROVIDER } from '../dashboard/tokens';
 import { EmailProvider } from '../dashboard/interfaces/email-provider.interface';
-import { DEFAULT_RETENTION, RetentionSettingsDto, RetentionCartDto, RetentionCampaignDto, RetentionSubscribeDto } from './retention.dto';
+import { DEFAULT_RETENTION, RetentionSettings, RetentionSettingsDto, RetentionCartDto, RetentionCampaignDto, RetentionSubscribeDto } from './retention.dto';
 import { comebackCode, qualifyingDays, unusedDays } from './retention-policy';
 import { reminderCart } from './reminder-cart';
 const token = () => randomBytes(32).toString('hex');
@@ -22,6 +22,10 @@ const safeDeliveryError = (error: unknown) => {
   return message.replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '[correo oculto]').slice(0, 500);
 };
 type Db = Prisma.TransactionClient;
+/** What a store page may know about its signup and popup: the timing and whether a code exists, never the code. */
+export function publicRetentionSettings(s: RetentionSettings) {
+  return { comebackEnabled: s.comebackEnabled, visitsRequired: s.visitsRequired, rewardLabel: s.rewardLabel, signupEnabled: s.signupEnabled, signupTitle: s.signupTitle, signupBody: s.signupBody, signupButton: s.signupButton, recoveryEnabled: s.recoveryEnabled, popupTrigger: s.popupTrigger, popupDelaySeconds: s.popupDelaySeconds, popupHasCode: Boolean(s.popupPromoCodeId) };
+}
 @Injectable()
 export class RetentionService {
   private working = false;
@@ -54,6 +58,7 @@ export class RetentionService {
     await this.owner(merchantId, storeId);
     try { new Intl.DateTimeFormat('en', { timeZone: dto.timezone }); } catch { throw new BadRequestException('Zona horaria inválida.'); }
     for (const field of ['rewardLabel', 'signupTitle', 'signupButton', 'welcomeSubject', 'welcomeBody'] as const) if (!dto[field].trim()) throw new BadRequestException('Completa los textos de la configuración.');
+    if (dto.popupPromoCodeId && !(await this.prisma.promoCode.findFirst({ where: { id: dto.popupPromoCodeId, storeId, isActive: true } }))) throw new BadRequestException('Elige un código activo de esta tienda.');
     const { revision, ...settings } = dto;
     try {
       return await this.prisma.$transaction(async tx => {
@@ -77,7 +82,7 @@ export class RetentionService {
     ]);
     return { brand: comebackBrand(store), imageUrl: products.flatMap(p => p.imageUrls).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || store.bannerUrl || null, interests: categories.map(c => c.name) };
   }
-  async subscribe(store: { id: string; slug: string; name: string }, rawEmail: string, profile: Pick<RetentionSubscribeDto, 'name' | 'phone' | 'interests'> = {}) {
+  async subscribe(store: { id: string; slug: string; name: string }, rawEmail: string, profile: Pick<RetentionSubscribeDto, 'name' | 'phone' | 'interests' | 'source'> = {}) {
     const settings = await this.settings(store.id);
     if (!settings.signupEnabled) throw new BadRequestException('Las suscripciones están desactivadas.');
     const email = normalized(rawEmail);
@@ -90,7 +95,9 @@ export class RetentionService {
       const subscriber = await tx.storeNewsletterSubscriber.upsert({ where: { storeId_email: { storeId: store.id, email } }, create: { storeId: store.id, email, ...details }, update: { isActive: true, ...details } });
       if (settings.welcomeEnabled) await this.enqueue(tx, { storeId: store.id, email, kind: 'WELCOME', sourceId: subscriber.id, dedupeKey: `welcome:${subscriber.id}`, subject: settings.welcomeSubject.replaceAll('{{store}}', () => store.name), body: settings.welcomeBody.replaceAll('{{store}}', () => store.name) });
     });
-    return { subscribed: true };
+    // Only a popup signup, only this store's active code: the code never sits in a page or the public settings.
+    const code = profile.source === 'popup' && settings.popupPromoCodeId ? await this.prisma.promoCode.findFirst({ where: { id: settings.popupPromoCodeId, storeId: store.id, isActive: true } }) : null;
+    return { subscribed: true, ...(code ? { code: code.code } : {}) };
   }
   async unsubscribe(storeId: string, value: string) {
     const subscriber = await this.prisma.storeNewsletterSubscriber.findFirst({ where: { storeId, unsubscribeToken: value } });

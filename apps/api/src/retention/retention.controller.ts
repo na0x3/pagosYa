@@ -2,7 +2,7 @@ import { Body, Controller, Get, Header, Param, Post, Put, UseGuards } from '@nes
 import { Throttle } from '@nestjs/throttler';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
-import { RetentionService } from './retention.service';
+import { RetentionService, publicRetentionSettings } from './retention.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { findActiveStoreBySlug } from '../stores/active-store';
 import { RedeemComebackDto, RetentionCampaignDto, RetentionCartDto, RetentionEmailDto, RetentionPaymentCardDto, RetentionSettingsDto, RetentionSubscribeDto } from './retention.dto';
@@ -30,7 +30,7 @@ export class RetentionPublicController {
   @Get() async settings(@Param('slug') slug: string) {
     const store = await findActiveStoreBySlug(this.prisma, slug);
     const s = await this.retention.settings(store.id);
-    return { comebackEnabled: s.comebackEnabled, visitsRequired: s.visitsRequired, rewardLabel: s.rewardLabel, signupEnabled: s.signupEnabled, signupTitle: s.signupTitle, signupBody: s.signupBody, signupButton: s.signupButton, recoveryEnabled: s.recoveryEnabled, ...(s.signupEnabled ? { signupVisual: await this.retention.signupVisual(store.id) } : {}) };
+    return { ...publicRetentionSettings(s), ...(s.signupEnabled ? { signupVisual: await this.retention.signupVisual(store.id) } : {}) };
   }
   @Post('subscribe') @Throttle({ default: { limit: 5, ttl: 60000 } })
   async subscribe(@Param('slug') slug: string, @Body() dto: RetentionSubscribeDto) { return this.retention.subscribe(await findActiveStoreBySlug(this.prisma, slug), dto.email, dto); }
