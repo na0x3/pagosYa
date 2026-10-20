@@ -4445,6 +4445,10 @@
     + ':root[data-dna-button] [data-pagosya-contact] :is(input,textarea){border-radius:var(--kit-radius);border-color:var(--kit-line)}:root[data-dna-button] [data-pagosya-contact] .pagosya-contact-close{border-radius:var(--kit-radius)}'
     + ':root[data-dna-button] [data-pagosya-contact] h2{font-family:var(--store-heading-font,var(--brand-heading-font,inherit))}';
   contactStyle.textContent = '@layer pagosya-contact-base {' + contactStyle.textContent + '}';
+  // A store's CSS reset (Tailwind preflight: *{border-width:0}, input{padding:0}, button{background:transparent}) is unlayered
+  // and beat the layer above: fields with no line, «Enviar consulta» with no fill (PEPPA please 2026-10-20). This floor is as
+  // weak as the reset and comes after it, handing those properties back to the layers; a store rule with a class still wins.
+  contactStyle.textContent += ':where([data-pagosya-contact]) :is(input,textarea),:where([data-pagosya-contact] form)>button:where([type="submit"]){border:revert-layer;border-radius:revert-layer;padding:revert-layer;background:revert-layer;color:revert-layer}';
   document.head.append(contactStyle);
   // Design DNA variants (sub-project 5): form becomes per store, behaviour stays platform-owned. Every
   // variant is keyed on :root[data-dna-*] and this element exists only when the store has a DNA, so a

@@ -254,7 +254,10 @@
         .pagosya-retention .retention-consent{display:flex;align-items:flex-start;gap:12px;line-height:1.5;font-size:14px}.pagosya-retention input[type=checkbox]{width:20px;height:20px;flex:0 0 20px;margin:2px 0;accent-color:var(--brand-accent,var(--accent,auto))}.retention-stamps{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0;list-style:none;padding:0}.retention-stamps li{display:grid;place-items:center;width:44px;height:44px;border:1px solid currentColor;border-radius:50%;font:inherit}.retention-stamps [data-earned=true]{background:var(--brand-accent,var(--accent,var(--ink,CanvasText)));color:var(--brand-accent-foreground,var(--paper,Canvas))}.retention-code{display:block;padding:16px 0;overflow-wrap:anywhere;font:inherit;font-weight:700;user-select:all}
         [data-pagosya-subscribe-block][hidden],[data-pagosya-subscribe-open][hidden]{display:none!important}[data-retention-recovery]{width:auto;margin:24px 0;padding:20px 0}.pagosya-retention [role=status]:empty{display:none}
         @media(max-width:480px){.pagosya-retention{width:calc(100% - 32px);margin:32px auto;padding:24px 0}[data-retention-recovery]{width:100%;margin:20px 0}}
-      }`;
+      }
+      :where(.pagosya-retention) input:where([type=email]),:where(.pagosya-retention) button{border:revert-layer;border-radius:revert-layer;padding:revert-layer;background:revert-layer;color:revert-layer}`;
+      // The last rule sits outside the layer: a store's unlayered CSS reset (Tailwind preflight) beat the layered field and
+      // button above (PEPPA please 2026-10-20); as weak as the reset, it hands them back to the layer, a store class still wins.
       document.head.append(style);
     }
     function slot(attribute) {
