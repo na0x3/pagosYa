@@ -234,22 +234,28 @@ export class SourceConversationService {
   async suggestNext(storeId: string, input: SuggestionInput): Promise<Array<Record<string, unknown>> | null> {
     const model = sourceConversationModel(undefined, this.config.get<string>('app.openAi.conversationModel'));
     const provider = sourceProvider(this.config, model);
-    const started = Date.now(); let body: any = null; let status = 'FAILED';
-    try {
-      const response = await fetch(provider.endpoint, {
-        method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(60_000),
-        body: JSON.stringify({ model, store: false, instructions: SUGGESTIONS_PROMPT,
-          input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(input) }] }],
-          text: { format: { type: 'json_schema', name: 'next_steps', strict: true, schema: SUGGESTIONS_SCHEMA } },
-          reasoning: { effort: 'low' }, max_output_tokens: 1200 }),
-      });
-      body = await response.json().catch(() => null);
-      checkSourceProviderQuota(response.status, body, provider.name);
-      if (!response.ok) return null;
-      status = 'COMPLETED';
-      return ((sourceResponseJson(body) as { suggestions?: Array<Record<string, unknown>> } | null)?.suggestions ?? []);
-    } catch { return null; }
-    finally { await this.metering?.record(storeId, 'source-suggestions', model, body, Date.now() - started, status); }
+    // Two attempts like the master fill: the ChatGPT-plan bridge can sit on a request while it finishes another one
+    // (live check 2026-10-20: the first call got no answer in 60 s). Each attempt stays under the bridge's 240 s cap.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const started = Date.now(); let body: any = null; let status = 'FAILED';
+      try {
+        const response = await fetch(provider.endpoint, {
+          method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(120_000),
+          body: JSON.stringify({ model, store: false, instructions: SUGGESTIONS_PROMPT,
+            input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(input) }] }],
+            text: { format: { type: 'json_schema', name: 'next_steps', strict: true, schema: SUGGESTIONS_SCHEMA } },
+            reasoning: { effort: 'low' }, max_output_tokens: 1200 }),
+        });
+        body = await response.json().catch(() => null);
+        checkSourceProviderQuota(response.status, body, provider.name);
+        if (response.ok) { status = 'COMPLETED'; return ((sourceResponseJson(body) as { suggestions?: Array<Record<string, unknown>> } | null)?.suggestions ?? []); }
+      } catch (error) {
+        if (error instanceof SourceProviderQuotaException) return null;
+        this.logger.warn(JSON.stringify({ stage: 'suggestions', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
+      } finally { await this.metering?.record(storeId, 'source-suggestions', model, body, Date.now() - started, status); }
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    return null;
   }
 
   async decide(merchantId: string, input: ConversationInput): Promise<SourceConversationDecision> {
