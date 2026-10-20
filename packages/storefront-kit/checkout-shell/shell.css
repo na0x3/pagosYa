@@ -36,6 +36,11 @@
 .pya-checkout .pya-co__note{margin-top:4px;color:var(--pya-muted);font-size:13px}
 .pya-checkout .pya-co__status{margin-top:14px;padding:12px 14px;border-radius:6px;background:var(--pya-soft);font-size:14px}
 .pya-checkout .pya-co__status:empty{display:none}
+/* message() writes the same line at the top and beside the pay button: one shows — beside the button while it has text,
+   at the top on the confirmation, where the order can no longer change. */
+.pya-checkout:has([data-pagosya-checkout-status]:not([hidden]):not(:empty)):not([data-mode=done]) .pya-co__status{display:none}
+.pya-checkout[data-mode=done] [data-pagosya-checkout-status],.pya-checkout[data-mode=done] .pya-co__stepper{display:none}
+.pya-checkout [data-pagosya-checkout-status]:not([hidden]){margin-top:12px;padding:12px 14px;border-radius:6px;background:var(--pya-soft);font-size:14px}
 .pya-checkout .pya-co__section{display:grid;gap:12px;padding:26px 0 0}
 .pya-checkout .pya-co__title{font-size:17px;font-weight:600;line-height:1.3}
 .pya-checkout .pya-co__hint{color:var(--pya-muted);font-size:13px}
