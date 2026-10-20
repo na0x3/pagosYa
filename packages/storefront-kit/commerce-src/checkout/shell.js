@@ -73,3 +73,69 @@
     toggle.setAttribute('aria-expanded', String(open));
     toggle.querySelector('[data-shell-summary-label]').textContent = open ? 'Ocultar resumen del pedido' : 'Ver resumen del pedido';
   });
+  function checkoutPhoto(firstLineImage) { return storeAssetUrl(store.bannerUrl) || firstLineImage || ''; }
+  function shellLineMarkup({ id, p, name, amount, quantity, image, option, unit, stock, canAdd }) {
+    return `<li class="pya-co__line" data-part="cart-line">${image ? `<span class="pya-co__thumb"><img src="${escape(image)}" alt="" loading="lazy"><b class="pya-co__qty" aria-label="Cantidad ${quantity}">${quantity}</b></span>` : ''}<span class="pya-co__line-text"><strong>${escape(p.name)}</strong>${option ? `<small>${escape(option)}</small>` : ''}${unit ? `<small>${escape(unit)}</small>` : ''}${stock ? `<small class="order-item__stock">${escape(stock)}</small>` : ''}<span class="pya-co__stepper"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}"${canAdd ? '' : ' disabled'}>+</button></span></span><span class="pya-co__line-price">${money(amount * quantity, p.currency)}</span></li>`;
+  }
+  // The review's controls keep their names and listeners; this only moves them into the shell's two columns.
+  function shapeShellReview(el, { mode, count, photo }) {
+    const take = selector => [...el.children].filter(child => child.matches(selector));
+    const aside = document.createElement('aside');
+    aside.className = 'pya-co__summary'; aside.id = 'pya-co-summary'; aside.setAttribute('aria-label', 'Resumen del pedido');
+    const inner = document.createElement('div'); inner.className = 'pya-co__summary-inner';
+    inner.innerHTML = `${photo ? `<img class="pya-co__photo" src="${escape(photo)}" alt="">` : ''}<h2 class="pya-co__title">${escape(CART_WORD || 'Tu pedido')}${count ? ` <span class="pya-co__count">· ${count} ${count === 1 ? 'producto' : 'productos'}</span>` : ''}</h2>`;
+    inner.append(...take('.pya-co__lines,.order-recommendations'));
+    const credit = el.querySelector('[name=creditCode]')?.closest('label');
+    if (credit) { const code = document.createElement('div'); code.className = 'pya-co__code'; code.append(credit, ...[el.querySelector('[data-credit-apply]'), el.querySelector('[data-credit-status]')].filter(Boolean)); inner.append(code); }
+    const totals = document.createElement('div'); totals.className = 'pya-co__totals';
+    totals.append(...take('.pagosya-secure-note,.order-savings,.order-total,.order-note,[data-bundle-quote-status]'));
+    inner.append(totals); aside.append(inner);
+    const main = document.createElement('div'); main.className = 'pya-co__main';
+    const delivery = take('label.order-field,fieldset[data-delivery-address],fieldset[data-shipping]');
+    if (delivery.length) {
+      const section = document.createElement('section'); section.className = 'pya-co__section'; section.setAttribute('aria-labelledby', 'pya-co-delivery');
+      section.innerHTML = '<h2 class="pya-co__title" id="pya-co-delivery">Entrega</h2>';
+      section.append(...delivery);
+      main.append(section);
+      if (mode !== 'review') {
+        section.hidden = true;
+        const chosen = checkoutAnswers.get('method') === 'delivery' ? 'Envío a domicilio' : checkoutAnswers.get('method') === 'pickup' ? 'Recoger en tienda' : '';
+        if (chosen && mode === 'payment') main.insertAdjacentHTML('beforeend', `<section class="pya-co__section"><h2 class="pya-co__title">Entrega</h2><div class="pya-co__delivery-row"><span>${escape(chosen)}</span><button type="button" data-checkout-back>Cambiar</button></div></section>`);
+      }
+    }
+    const paying = store.checkoutMode !== 'whatsapp' && store.checkoutMode !== 'external';
+    if (mode === 'review' && paying) main.insertAdjacentHTML('beforeend', `<section class="pya-co__section" data-pya-pay-preview><h2 class="pya-co__title">Pago</h2><p class="pya-co__hint">Eliges cómo pagar en el siguiente paso.</p>${paymentMethodsList(false)}</section>`);
+    if (mode === 'payment') main.insertAdjacentHTML('beforeend', `<section class="pya-co__section"><h2 class="pya-co__title">Pago</h2>${paymentMethodsList(true, checkoutAnswers.get('demoPaymentMethod') || undefined)}</section>`);
+    if (mode === 'done') main.insertAdjacentHTML('beforeend', `<div class="pya-co__done"><span class="pya-co__check">${CHECK_ICON}</span><p><strong>Pedido de prueba</strong></p><ol class="pya-co__next"><li>El comercio confirma tu pago.</li><li>Prepara tu pedido.</li><li>Te avisa cuando sale o está listo para recoger.</li></ol></div>`);
+    const button = take('.pya-co__pay')[0];
+    main.append(...take('.commerce-consent'));
+    if (button) { main.append(button); if (mode !== 'done' && paying) main.insertAdjacentHTML('beforeend', trustStrip()); }
+    const feedback = document.createElement('p'); feedback.setAttribute('data-pagosya-checkout-status', ''); feedback.hidden = true;
+    main.append(feedback, ...[...el.children].filter(child => child !== aside && child !== main));
+    el.replaceChildren(main, aside);
+    el.classList.add('checkout-review');
+  }
+  // Delivery reads as radio cards; the select stays the one source the shipping and submit code read.
+  function mirrorChoices(el) {
+    const select = el.querySelector('select[name=method]');
+    const label = select?.closest('label');
+    el.querySelector('.pya-co__choices')?.remove();
+    if (!select || !label) return;
+    label.classList.add('pya-co__mirrored'); label.setAttribute('aria-hidden', 'true'); select.tabIndex = -1;
+    const group = document.createElement('div');
+    group.className = 'pya-co__choices'; group.setAttribute('role', 'radiogroup'); group.setAttribute('aria-label', 'Entrega');
+    group.innerHTML = [...select.options].map(option => `<label class="pya-co__choice"><input type="radio" name="pyaDeliveryChoice" value="${escape(option.value)}"${option.value === select.value ? ' checked' : ''}><span class="pya-co__method-name">${escape(option.textContent)}</span></label>`).join('');
+    group.addEventListener('change', event => { select.value = event.target.value; select.dispatchEvent(new Event('change', { bubbles: true })); });
+    label.after(group);
+  }
+  // Shipping and pack quotes rewrite .order-total; the pay button and the phone bar repeat whatever it says.
+  function syncShellTotals(el) {
+    const root = el.closest('.pya-checkout');
+    const total = el.querySelector('.order-total strong');
+    if (!root || !total) return;
+    const copy = () => { const text = total.textContent.trim(); const bar = root.querySelector('[data-shell-total]'); if (bar) bar.textContent = text; const pay = el.querySelector('.pya-co__pay-total'); if (pay) pay.textContent = text ? `· ${text}` : ''; };
+    el._shellTotals?.disconnect();
+    if (typeof MutationObserver === 'function') { el._shellTotals = new MutationObserver(copy); el._shellTotals.observe(total, { childList: true, characterData: true, subtree: true }); }
+    copy();
+  }
+  document.addEventListener('change', event => { if (event.target.name === 'demoPaymentMethod') { checkoutAnswers.set('demoPaymentMethod', event.target.value); renderCart(); } });

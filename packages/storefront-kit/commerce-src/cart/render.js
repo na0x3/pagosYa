@@ -13,6 +13,7 @@
     });
     let total = 0, count = 0, savings = 0;
     const rows = [];
+    const shellRows = [];
     const packLines = [];
     const lineViews = [];
     for (const [id, quantity] of cart) {
@@ -35,6 +36,8 @@
       lineViews.push({ id, p, name, amount, quantity, image, option,
         unit: quantity > 1 || saved || later ? `${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
         stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
+      const view = lineViews[lineViews.length - 1];
+      shellRows.push(shellLineMarkup({ id, p, name, amount, quantity, image, option, unit: view.unit, stock: view.stock, canAdd: !checkingOut && remaining(p, variant, line.picks) > 0 }));
     }
     // Showcase commerce: a pack the shopper picked shows its saving here, as the checkout will price it.
     const packSaving = cartPackSaving(packLines);
@@ -65,15 +68,16 @@
       // unsupported variant carts to that calculator (or any real checkout).
       const previewOptions = preview && review && cartItems().some(item => item.variantId || item.extraIds);
       if (review && cart.size && ready) { track('checkout_started'); analytics('checkout_step', { step: 'review' }, 'step:review'); }
-      const payment = el.dataset.checkoutReview === "payment";
-      const action = review ? payment ? "data-finish-demo" : "data-pay" : "data-checkout";
-      const actionLabel = review ? payment ? "Completar prueba" : preview || config.demo ? "Continuar al pago de prueba" : store.checkoutMode === "whatsapp" ? "Pedir por WhatsApp" : store.checkoutMode === "external" ? "Continuar al contacto" : "Pagar con pagosYa" : "Continuar con mi pedido";
-      el.innerHTML = `<ul class="order-items">${rows.join("") || '<li class="order-empty">Tu pedido está vacío.<br>Explora los productos para comenzar.</li>'}</ul>${cartSuggestionsMarkup()}${review && !digitalOnlyCart() && store.locations?.length ? `<label class="order-field">Sucursal<select name="location">${store.locations.map((l) => `<option value="${escape(l.id)}">${escape(l.name)}</option>`).join("")}</select></label><label class="order-field">Entrega<select name="method"></select></label>` : review && !digitalOnlyCart() && store.shippingEnabled ? '<label class="order-field">Entrega<select name="method"></select></label>' : ""}${review && !digitalOnlyCart() && !store.shippingEnabled && store.locations?.length ? '<fieldset data-delivery-address hidden><legend>Entrega a domicilio</legend><label class="order-field">Dirección y referencia<textarea name="shippingAddress" rows="3" maxlength="300" autocomplete="street-address" placeholder="Zona, calle, número y una referencia"></textarea></label><p class="order-note">Podrás compartir tu ubicación actual al completar tus datos en el pago.</p></fieldset>' : ''}${!digitalOnlyCart() && store.shippingEnabled && review ? `<fieldset data-shipping><legend>Envío</legend>${store.shippingCarriersEnabled ? `${hosted ? departmentMarkup(checkoutAnswers) : destinationMarkup(checkoutAnswers)}<input type="hidden" name="shippingAddress" value="${escape(previousAddress)}">` : `<label class="order-field">Dirección<input name="shippingAddress" maxlength="300" autocomplete="street-address" value="${escape(previousAddress)}"></label>`}<label class="order-field">País de entrega (código de dos letras)<input name="shippingCountry" maxlength="2" placeholder="BO" autocomplete="country"></label><label class="order-field">Código postal<input name="shippingPostalCode" maxlength="20" autocomplete="postal-code"></label><button type="button" data-shipping-quote>Calcular envío</button><label class="order-field">Opción de envío<select name="shippingZoneId"><option value="">Calcula las opciones disponibles</option></select></label><p data-shipping-status role="status" aria-live="polite"></p></fieldset>` : ''}${review && store.creditsEnabled ? `<label class="order-field">Tarjeta de regalo o saldo<input name="creditCode" maxlength="39" autocomplete="off" spellcheck="false" value="${escape(previousCredit)}"></label><button type="button" data-credit-apply>Aplicar saldo</button><p data-credit-status role="status"></p>` : ''}${savings > 0 ? `<div class="order-savings"><span>Ahorras</span><strong>${money(savings, products()[0]?.currency)}</strong></div>` : ''}<div class="order-total"><span>Subtotal</span><strong>${money(total, products()[0]?.currency)}</strong></div><p class="order-note">${review ? 'El total final se confirma al pagar.' : 'El total final se confirma en el checkout.'}</p>${review && (store.bundlesEnabled || store.creditsEnabled) ? '<p data-bundle-quote-status role="status"></p>' : ''}${review && !payment && subscriptionLineInCart() ? `<label class="commerce-consent"><input type="checkbox" name="subscriptionConsent"${consentChecked ? ' checked' : ''}> ${escape(consentText(subscriptionLineInCart().cadence))}</label>` : ''}<button class="checkout-button" ${action} type="button" ${!ready || !count || checkingOut || previewOptions ? "disabled" : ""}>${actionLabel}<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button>`;
+      const mode = review ? (["payment", "done"].includes(el.dataset.checkoutReview) ? el.dataset.checkoutReview : "review") : null;
+      const payment = mode === "payment", done = mode === "done";
+      const action = review ? done ? "data-shell-close" : payment ? "data-finish-demo" : "data-pay" : "data-checkout";
+      const actionLabel = review ? done ? "Volver a la tienda" : payment ? "Completar prueba" : preview || config.demo ? "Continuar al pago de prueba" : store.checkoutMode === "whatsapp" ? "Pedir por WhatsApp" : store.checkoutMode === "external" ? "Continuar al contacto" : "Pagar con pagosYa" : "Continuar con mi pedido";
+      el.innerHTML = `<ul class="${review ? "pya-co__lines order-items" : "order-items"}">${(review ? shellRows : rows).join("") || '<li class="order-empty">Tu pedido está vacío.<br>Explora los productos para comenzar.</li>'}</ul>${cartSuggestionsMarkup()}${review && !digitalOnlyCart() && store.locations?.length ? `<label class="order-field">Sucursal<select name="location">${store.locations.map((l) => `<option value="${escape(l.id)}">${escape(l.name)}</option>`).join("")}</select></label><label class="order-field">Entrega<select name="method"></select></label>` : review && !digitalOnlyCart() && store.shippingEnabled ? '<label class="order-field">Entrega<select name="method"></select></label>' : ""}${review && !digitalOnlyCart() && !store.shippingEnabled && store.locations?.length ? '<fieldset data-delivery-address hidden><legend>Entrega a domicilio</legend><label class="order-field">Dirección y referencia<textarea name="shippingAddress" rows="3" maxlength="300" autocomplete="street-address" placeholder="Zona, calle, número y una referencia"></textarea></label><p class="order-note">Podrás compartir tu ubicación actual al completar tus datos en el pago.</p></fieldset>' : ''}${!digitalOnlyCart() && store.shippingEnabled && review ? `<fieldset data-shipping><legend>Envío</legend>${store.shippingCarriersEnabled ? `${hosted ? departmentMarkup(checkoutAnswers) : destinationMarkup(checkoutAnswers)}<input type="hidden" name="shippingAddress" value="${escape(previousAddress)}">` : `<label class="order-field">Dirección<input name="shippingAddress" maxlength="300" autocomplete="street-address" value="${escape(previousAddress)}"></label>`}<label class="order-field">País de entrega (código de dos letras)<input name="shippingCountry" maxlength="2" placeholder="BO" autocomplete="country"></label><label class="order-field">Código postal<input name="shippingPostalCode" maxlength="20" autocomplete="postal-code"></label><button type="button" data-shipping-quote>Calcular envío</button><label class="order-field">Opción de envío<select name="shippingZoneId"><option value="">Calcula las opciones disponibles</option></select></label><p data-shipping-status role="status" aria-live="polite"></p></fieldset>` : ''}${review && store.creditsEnabled ? `<label class="order-field">Tarjeta de regalo o saldo<input name="creditCode" maxlength="39" autocomplete="off" spellcheck="false" value="${escape(previousCredit)}"></label><button type="button" data-credit-apply>Aplicar saldo</button><p data-credit-status role="status"></p>` : ''}${savings > 0 ? `<div class="order-savings"><span>Ahorras</span><strong>${money(savings, products()[0]?.currency)}</strong></div>` : ''}<div class="order-total"><span>Subtotal</span><strong>${money(total, products()[0]?.currency)}</strong></div><p class="order-note">${review ? 'El total final se confirma al pagar.' : 'El total final se confirma en el checkout.'}</p>${review && (store.bundlesEnabled || store.creditsEnabled) ? '<p data-bundle-quote-status role="status"></p>' : ''}${review && !payment && subscriptionLineInCart() ? `<label class="commerce-consent"><input type="checkbox" name="subscriptionConsent"${consentChecked ? ' checked' : ''}> ${escape(consentText(subscriptionLineInCart().cadence))}</label>` : ''}${review ? `<button class="pya-co__pay" ${action} type="button" ${!done && (!ready || !count || checkingOut || previewOptions) ? "disabled" : ""}>${actionLabel}${done ? "" : `<span class="pya-co__pay-total" aria-hidden="true"></span>`}</button>` : `<button class="checkout-button" ${action} type="button" ${!ready || !count || checkingOut || previewOptions ? "disabled" : ""}>${actionLabel}<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button>`}`;
       const lineTemplate = cartLineTemplate();
-      if (lineTemplate) applyLineTemplate(el, lineViews, lineTemplate);
+      if (lineTemplate && !review) applyLineTemplate(el, lineViews, lineTemplate);
       const panelTemplate = review ? null : cartTemplate();
       if (panelTemplate) applyCartTemplate(el, !count, panelTemplate);
-      if (!count && PACK_MOTIFS.length) placeEmptyMotif(el);
+      if (!count && PACK_MOTIFS.length && !review) placeEmptyMotif(el);
       if (hosted) secureFields(el, ['shippingAddress', 'creditCode'], 'Tu dirección y tu saldo se piden en el formulario seguro de pagosYa al continuar.');
       if (previewOptions) {
         const note = document.createElement('p'); note.className = 'order-note';
@@ -81,37 +85,14 @@
         el.append(note);
       }
       for (const [name, value] of answers) { const field = [...el.querySelectorAll('input,textarea')].find(field => field.name === name); if (field) field.value = value; }
-      const reviewLayout = review ? reviewTemplate() : null;
-      if (reviewLayout) {
-        const root = reviewLayout.make();
-        root.setAttribute('data-review-root', '');
-        const summary = root.querySelector('[data-review-slot="summary"]'), fields = root.querySelector('[data-review-slot="fields"]');
-        summary.replaceChildren(); fields.replaceChildren();
-        for (const child of [...el.children]) (child.matches('.order-items,.order-recommendations,.order-savings,.order-total,.order-note') ? summary : fields).append(child);
-        const feedback = document.createElement('p');
-        feedback.setAttribute('data-pagosya-checkout-status', ''); feedback.hidden = true;
-        fields.append(feedback);
-        el.replaceChildren(root);
-        el.classList.add('checkout-review'); el.setAttribute('data-review-template', '');
-      } else if (review) {
-        const summary = document.createElement('aside'); summary.className = 'checkout-review__summary';
-        summary.innerHTML = `<h2>${escape(CART_WORD || 'Tu pedido')}</h2>${count ? `<p class="checkout-review__count">${count} ${count === 1 ? 'producto' : 'productos'}</p>` : ''}`;
-        for (const child of [...el.children]) if (child.matches('.order-items,.order-recommendations,.order-savings,.order-total,.order-note')) summary.append(child);
-        const fields = document.createElement('section'); fields.className = 'checkout-review__fields';
-        // With nothing to choose, the action button already says what happens next; a heading repeating it is noise.
-        fields.innerHTML = digitalOnlyCart() || !(store.locations?.length || store.shippingEnabled) ? '' : '<h2>¿Cómo quieres recibir tu pedido?</h2>';
-        fields.append(...el.children); el.append(summary, fields);
-        const feedback = document.createElement('p');
-        feedback.setAttribute('data-pagosya-checkout-status', ''); feedback.hidden = true;
-        fields.append(feedback);
-        el.classList.add('checkout-review');
-      }
+      if (review) shapeShellReview(el, { mode, count, photo: checkoutPhoto(lineViews.find(view => view.image)?.image) });
       const select = el.querySelector("[name=location]");
       if (select && previousLocation && Array.from(select.options).some((o) => o.value === previousLocation)) select.value = previousLocation;
       updateMethods(el, previousMethod);
+      if (review) mirrorChoices(el);
       const branchInfo = document.createElement('p'); branchInfo.className = 'order-note'; branchInfo.setAttribute('data-branch-address', '');
       el.querySelector('[name=method]')?.closest('label')?.after(branchInfo);
-      select?.addEventListener("change", () => { updateMethods(el); updateShipping(el); });
+      select?.addEventListener("change", () => { updateMethods(el); if (review) mirrorChoices(el); updateShipping(el); });
       el.querySelector('[name=method]')?.addEventListener('change', () => { updateShipping(el); track('delivery_selected', el.querySelector('[name=method]')?.value); analytics('checkout_step', { step: 'delivery' }, 'step:delivery'); if (el.querySelector('[name=method]')?.value === 'delivery') void mountDestinationMap(el); });
       el.querySelector('[name=shippingZoneId]')?.addEventListener('change', () => void shippingQuote(el));
       // Re-quote only with a complete destination; a partial one would be rejected by the API.
@@ -122,6 +103,7 @@
       updateShipping(el);
       if (el.querySelector('[name=method]')?.value === 'delivery') void mountDestinationMap(el);
       if (review && ready && count && store.bundlesEnabled) void bundleQuote(el);
+      if (review) syncShellTotals(el);
       if (focusedAction) {
         const buttons = [...el.querySelectorAll('button')];
         const replacement = buttons.find(button => button.getAttribute(focusedAction) === focusedId && !button.disabled)

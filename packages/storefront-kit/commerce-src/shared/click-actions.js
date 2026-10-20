@@ -88,12 +88,17 @@
     if (button.hasAttribute("data-product-next")) { showImage(selectedImage + 1); return; }
     if (checkingOut) return;
     if (button.hasAttribute("data-checkout-back")) { location.hash = location.hash === "#pago-de-prueba" ? "checkout" : checkoutPreviousHash; return; }
+    // The test payment ends on the calm checkout's confirmation; «Volver a la tienda» (data-shell-close) leaves it.
     if (button.hasAttribute("data-finish-demo") && (preview || config.demo)) {
-      if (fullCheckoutPage) showCheckout(); else closeCheckout();
-      const completed = () => message("Prueba completada. No se creó ningún pedido ni se realizó ningún cobro.");
-      // hashchange can rebuild the review after this click; retain its confirmation.
-      if (location.hash !== checkoutPreviousHash) window.addEventListener('hashchange', completed, { once: true });
-      location.hash = checkoutPreviousHash; completed(); return;
+      showCheckout("done"); location.hash = "pedido-de-prueba";
+      message("Prueba completada. No se creó ningún pedido ni se realizó ningún cobro.");
+      return;
+    }
+    if (button.hasAttribute("data-shell-close")) {
+      if (fullCheckoutPage) { location.href = "index.html"; return; }
+      closeCheckout(); location.hash = checkoutPreviousHash;
+      message("Prueba completada. No se creó ningún pedido ni se realizó ningún cobro.");
+      return;
     }
     if (button.hasAttribute("data-category")) { category = button.dataset.category; render(); }
     if (button.hasAttribute("data-bundle-add") && ready) {

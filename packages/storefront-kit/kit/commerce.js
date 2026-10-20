@@ -3168,6 +3168,72 @@
     toggle.setAttribute('aria-expanded', String(open));
     toggle.querySelector('[data-shell-summary-label]').textContent = open ? 'Ocultar resumen del pedido' : 'Ver resumen del pedido';
   });
+  function checkoutPhoto(firstLineImage) { return storeAssetUrl(store.bannerUrl) || firstLineImage || ''; }
+  function shellLineMarkup({ id, p, name, amount, quantity, image, option, unit, stock, canAdd }) {
+    return `<li class="pya-co__line" data-part="cart-line">${image ? `<span class="pya-co__thumb"><img src="${escape(image)}" alt="" loading="lazy"><b class="pya-co__qty" aria-label="Cantidad ${quantity}">${quantity}</b></span>` : ''}<span class="pya-co__line-text"><strong>${escape(p.name)}</strong>${option ? `<small>${escape(option)}</small>` : ''}${unit ? `<small>${escape(unit)}</small>` : ''}${stock ? `<small class="order-item__stock">${escape(stock)}</small>` : ''}<span class="pya-co__stepper"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}"${canAdd ? '' : ' disabled'}>+</button></span></span><span class="pya-co__line-price">${money(amount * quantity, p.currency)}</span></li>`;
+  }
+  // The review's controls keep their names and listeners; this only moves them into the shell's two columns.
+  function shapeShellReview(el, { mode, count, photo }) {
+    const take = selector => [...el.children].filter(child => child.matches(selector));
+    const aside = document.createElement('aside');
+    aside.className = 'pya-co__summary'; aside.id = 'pya-co-summary'; aside.setAttribute('aria-label', 'Resumen del pedido');
+    const inner = document.createElement('div'); inner.className = 'pya-co__summary-inner';
+    inner.innerHTML = `${photo ? `<img class="pya-co__photo" src="${escape(photo)}" alt="">` : ''}<h2 class="pya-co__title">${escape(CART_WORD || 'Tu pedido')}${count ? ` <span class="pya-co__count">· ${count} ${count === 1 ? 'producto' : 'productos'}</span>` : ''}</h2>`;
+    inner.append(...take('.pya-co__lines,.order-recommendations'));
+    const credit = el.querySelector('[name=creditCode]')?.closest('label');
+    if (credit) { const code = document.createElement('div'); code.className = 'pya-co__code'; code.append(credit, ...[el.querySelector('[data-credit-apply]'), el.querySelector('[data-credit-status]')].filter(Boolean)); inner.append(code); }
+    const totals = document.createElement('div'); totals.className = 'pya-co__totals';
+    totals.append(...take('.pagosya-secure-note,.order-savings,.order-total,.order-note,[data-bundle-quote-status]'));
+    inner.append(totals); aside.append(inner);
+    const main = document.createElement('div'); main.className = 'pya-co__main';
+    const delivery = take('label.order-field,fieldset[data-delivery-address],fieldset[data-shipping]');
+    if (delivery.length) {
+      const section = document.createElement('section'); section.className = 'pya-co__section'; section.setAttribute('aria-labelledby', 'pya-co-delivery');
+      section.innerHTML = '<h2 class="pya-co__title" id="pya-co-delivery">Entrega</h2>';
+      section.append(...delivery);
+      main.append(section);
+      if (mode !== 'review') {
+        section.hidden = true;
+        const chosen = checkoutAnswers.get('method') === 'delivery' ? 'Envío a domicilio' : checkoutAnswers.get('method') === 'pickup' ? 'Recoger en tienda' : '';
+        if (chosen && mode === 'payment') main.insertAdjacentHTML('beforeend', `<section class="pya-co__section"><h2 class="pya-co__title">Entrega</h2><div class="pya-co__delivery-row"><span>${escape(chosen)}</span><button type="button" data-checkout-back>Cambiar</button></div></section>`);
+      }
+    }
+    const paying = store.checkoutMode !== 'whatsapp' && store.checkoutMode !== 'external';
+    if (mode === 'review' && paying) main.insertAdjacentHTML('beforeend', `<section class="pya-co__section" data-pya-pay-preview><h2 class="pya-co__title">Pago</h2><p class="pya-co__hint">Eliges cómo pagar en el siguiente paso.</p>${paymentMethodsList(false)}</section>`);
+    if (mode === 'payment') main.insertAdjacentHTML('beforeend', `<section class="pya-co__section"><h2 class="pya-co__title">Pago</h2>${paymentMethodsList(true, checkoutAnswers.get('demoPaymentMethod') || undefined)}</section>`);
+    if (mode === 'done') main.insertAdjacentHTML('beforeend', `<div class="pya-co__done"><span class="pya-co__check">${CHECK_ICON}</span><p><strong>Pedido de prueba</strong></p><ol class="pya-co__next"><li>El comercio confirma tu pago.</li><li>Prepara tu pedido.</li><li>Te avisa cuando sale o está listo para recoger.</li></ol></div>`);
+    const button = take('.pya-co__pay')[0];
+    main.append(...take('.commerce-consent'));
+    if (button) { main.append(button); if (mode !== 'done' && paying) main.insertAdjacentHTML('beforeend', trustStrip()); }
+    const feedback = document.createElement('p'); feedback.setAttribute('data-pagosya-checkout-status', ''); feedback.hidden = true;
+    main.append(feedback, ...[...el.children].filter(child => child !== aside && child !== main));
+    el.replaceChildren(main, aside);
+    el.classList.add('checkout-review');
+  }
+  // Delivery reads as radio cards; the select stays the one source the shipping and submit code read.
+  function mirrorChoices(el) {
+    const select = el.querySelector('select[name=method]');
+    const label = select?.closest('label');
+    el.querySelector('.pya-co__choices')?.remove();
+    if (!select || !label) return;
+    label.classList.add('pya-co__mirrored'); label.setAttribute('aria-hidden', 'true'); select.tabIndex = -1;
+    const group = document.createElement('div');
+    group.className = 'pya-co__choices'; group.setAttribute('role', 'radiogroup'); group.setAttribute('aria-label', 'Entrega');
+    group.innerHTML = [...select.options].map(option => `<label class="pya-co__choice"><input type="radio" name="pyaDeliveryChoice" value="${escape(option.value)}"${option.value === select.value ? ' checked' : ''}><span class="pya-co__method-name">${escape(option.textContent)}</span></label>`).join('');
+    group.addEventListener('change', event => { select.value = event.target.value; select.dispatchEvent(new Event('change', { bubbles: true })); });
+    label.after(group);
+  }
+  // Shipping and pack quotes rewrite .order-total; the pay button and the phone bar repeat whatever it says.
+  function syncShellTotals(el) {
+    const root = el.closest('.pya-checkout');
+    const total = el.querySelector('.order-total strong');
+    if (!root || !total) return;
+    const copy = () => { const text = total.textContent.trim(); const bar = root.querySelector('[data-shell-total]'); if (bar) bar.textContent = text; const pay = el.querySelector('.pya-co__pay-total'); if (pay) pay.textContent = text ? `· ${text}` : ''; };
+    el._shellTotals?.disconnect();
+    if (typeof MutationObserver === 'function') { el._shellTotals = new MutationObserver(copy); el._shellTotals.observe(total, { childList: true, characterData: true, subtree: true }); }
+    copy();
+  }
+  document.addEventListener('change', event => { if (event.target.name === 'demoPaymentMethod') { checkoutAnswers.set('demoPaymentMethod', event.target.value); renderCart(); } });
   const shoppingStyle = document.createElement('style');
   // Kit defaults for the cart, the added notice and the order review: low priority, so the store's own CSS
   // (and its DNA) restyle them. Layered !important declarations still outrank authored ones.
@@ -4174,6 +4240,7 @@
     });
     let total = 0, count = 0, savings = 0;
     const rows = [];
+    const shellRows = [];
     const packLines = [];
     const lineViews = [];
     for (const [id, quantity] of cart) {
@@ -4196,6 +4263,8 @@
       lineViews.push({ id, p, name, amount, quantity, image, option,
         unit: quantity > 1 || saved || later ? `${money(amount, p.currency)} ${later || 'c/u'}${saved ? ` · antes ${money(listUnit, p.currency)}` : ''}` : '',
         stock: Number.isInteger(p.stock) && p.stock > 0 && p.stock <= 5 ? (p.stock === 1 ? 'Última unidad' : `Últimas ${p.stock} unidades`) : '' });
+      const view = lineViews[lineViews.length - 1];
+      shellRows.push(shellLineMarkup({ id, p, name, amount, quantity, image, option, unit: view.unit, stock: view.stock, canAdd: !checkingOut && remaining(p, variant, line.picks) > 0 }));
     }
     // Showcase commerce: a pack the shopper picked shows its saving here, as the checkout will price it.
     const packSaving = cartPackSaving(packLines);
@@ -4226,15 +4295,16 @@
       // unsupported variant carts to that calculator (or any real checkout).
       const previewOptions = preview && review && cartItems().some(item => item.variantId || item.extraIds);
       if (review && cart.size && ready) { track('checkout_started'); analytics('checkout_step', { step: 'review' }, 'step:review'); }
-      const payment = el.dataset.checkoutReview === "payment";
-      const action = review ? payment ? "data-finish-demo" : "data-pay" : "data-checkout";
-      const actionLabel = review ? payment ? "Completar prueba" : preview || config.demo ? "Continuar al pago de prueba" : store.checkoutMode === "whatsapp" ? "Pedir por WhatsApp" : store.checkoutMode === "external" ? "Continuar al contacto" : "Pagar con pagosYa" : "Continuar con mi pedido";
-      el.innerHTML = `<ul class="order-items">${rows.join("") || '<li class="order-empty">Tu pedido está vacío.<br>Explora los productos para comenzar.</li>'}</ul>${cartSuggestionsMarkup()}${review && !digitalOnlyCart() && store.locations?.length ? `<label class="order-field">Sucursal<select name="location">${store.locations.map((l) => `<option value="${escape(l.id)}">${escape(l.name)}</option>`).join("")}</select></label><label class="order-field">Entrega<select name="method"></select></label>` : review && !digitalOnlyCart() && store.shippingEnabled ? '<label class="order-field">Entrega<select name="method"></select></label>' : ""}${review && !digitalOnlyCart() && !store.shippingEnabled && store.locations?.length ? '<fieldset data-delivery-address hidden><legend>Entrega a domicilio</legend><label class="order-field">Dirección y referencia<textarea name="shippingAddress" rows="3" maxlength="300" autocomplete="street-address" placeholder="Zona, calle, número y una referencia"></textarea></label><p class="order-note">Podrás compartir tu ubicación actual al completar tus datos en el pago.</p></fieldset>' : ''}${!digitalOnlyCart() && store.shippingEnabled && review ? `<fieldset data-shipping><legend>Envío</legend>${store.shippingCarriersEnabled ? `${hosted ? departmentMarkup(checkoutAnswers) : destinationMarkup(checkoutAnswers)}<input type="hidden" name="shippingAddress" value="${escape(previousAddress)}">` : `<label class="order-field">Dirección<input name="shippingAddress" maxlength="300" autocomplete="street-address" value="${escape(previousAddress)}"></label>`}<label class="order-field">País de entrega (código de dos letras)<input name="shippingCountry" maxlength="2" placeholder="BO" autocomplete="country"></label><label class="order-field">Código postal<input name="shippingPostalCode" maxlength="20" autocomplete="postal-code"></label><button type="button" data-shipping-quote>Calcular envío</button><label class="order-field">Opción de envío<select name="shippingZoneId"><option value="">Calcula las opciones disponibles</option></select></label><p data-shipping-status role="status" aria-live="polite"></p></fieldset>` : ''}${review && store.creditsEnabled ? `<label class="order-field">Tarjeta de regalo o saldo<input name="creditCode" maxlength="39" autocomplete="off" spellcheck="false" value="${escape(previousCredit)}"></label><button type="button" data-credit-apply>Aplicar saldo</button><p data-credit-status role="status"></p>` : ''}${savings > 0 ? `<div class="order-savings"><span>Ahorras</span><strong>${money(savings, products()[0]?.currency)}</strong></div>` : ''}<div class="order-total"><span>Subtotal</span><strong>${money(total, products()[0]?.currency)}</strong></div><p class="order-note">${review ? 'El total final se confirma al pagar.' : 'El total final se confirma en el checkout.'}</p>${review && (store.bundlesEnabled || store.creditsEnabled) ? '<p data-bundle-quote-status role="status"></p>' : ''}${review && !payment && subscriptionLineInCart() ? `<label class="commerce-consent"><input type="checkbox" name="subscriptionConsent"${consentChecked ? ' checked' : ''}> ${escape(consentText(subscriptionLineInCart().cadence))}</label>` : ''}<button class="checkout-button" ${action} type="button" ${!ready || !count || checkingOut || previewOptions ? "disabled" : ""}>${actionLabel}<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button>`;
+      const mode = review ? (["payment", "done"].includes(el.dataset.checkoutReview) ? el.dataset.checkoutReview : "review") : null;
+      const payment = mode === "payment", done = mode === "done";
+      const action = review ? done ? "data-shell-close" : payment ? "data-finish-demo" : "data-pay" : "data-checkout";
+      const actionLabel = review ? done ? "Volver a la tienda" : payment ? "Completar prueba" : preview || config.demo ? "Continuar al pago de prueba" : store.checkoutMode === "whatsapp" ? "Pedir por WhatsApp" : store.checkoutMode === "external" ? "Continuar al contacto" : "Pagar con pagosYa" : "Continuar con mi pedido";
+      el.innerHTML = `<ul class="${review ? "pya-co__lines order-items" : "order-items"}">${(review ? shellRows : rows).join("") || '<li class="order-empty">Tu pedido está vacío.<br>Explora los productos para comenzar.</li>'}</ul>${cartSuggestionsMarkup()}${review && !digitalOnlyCart() && store.locations?.length ? `<label class="order-field">Sucursal<select name="location">${store.locations.map((l) => `<option value="${escape(l.id)}">${escape(l.name)}</option>`).join("")}</select></label><label class="order-field">Entrega<select name="method"></select></label>` : review && !digitalOnlyCart() && store.shippingEnabled ? '<label class="order-field">Entrega<select name="method"></select></label>' : ""}${review && !digitalOnlyCart() && !store.shippingEnabled && store.locations?.length ? '<fieldset data-delivery-address hidden><legend>Entrega a domicilio</legend><label class="order-field">Dirección y referencia<textarea name="shippingAddress" rows="3" maxlength="300" autocomplete="street-address" placeholder="Zona, calle, número y una referencia"></textarea></label><p class="order-note">Podrás compartir tu ubicación actual al completar tus datos en el pago.</p></fieldset>' : ''}${!digitalOnlyCart() && store.shippingEnabled && review ? `<fieldset data-shipping><legend>Envío</legend>${store.shippingCarriersEnabled ? `${hosted ? departmentMarkup(checkoutAnswers) : destinationMarkup(checkoutAnswers)}<input type="hidden" name="shippingAddress" value="${escape(previousAddress)}">` : `<label class="order-field">Dirección<input name="shippingAddress" maxlength="300" autocomplete="street-address" value="${escape(previousAddress)}"></label>`}<label class="order-field">País de entrega (código de dos letras)<input name="shippingCountry" maxlength="2" placeholder="BO" autocomplete="country"></label><label class="order-field">Código postal<input name="shippingPostalCode" maxlength="20" autocomplete="postal-code"></label><button type="button" data-shipping-quote>Calcular envío</button><label class="order-field">Opción de envío<select name="shippingZoneId"><option value="">Calcula las opciones disponibles</option></select></label><p data-shipping-status role="status" aria-live="polite"></p></fieldset>` : ''}${review && store.creditsEnabled ? `<label class="order-field">Tarjeta de regalo o saldo<input name="creditCode" maxlength="39" autocomplete="off" spellcheck="false" value="${escape(previousCredit)}"></label><button type="button" data-credit-apply>Aplicar saldo</button><p data-credit-status role="status"></p>` : ''}${savings > 0 ? `<div class="order-savings"><span>Ahorras</span><strong>${money(savings, products()[0]?.currency)}</strong></div>` : ''}<div class="order-total"><span>Subtotal</span><strong>${money(total, products()[0]?.currency)}</strong></div><p class="order-note">${review ? 'El total final se confirma al pagar.' : 'El total final se confirma en el checkout.'}</p>${review && (store.bundlesEnabled || store.creditsEnabled) ? '<p data-bundle-quote-status role="status"></p>' : ''}${review && !payment && subscriptionLineInCart() ? `<label class="commerce-consent"><input type="checkbox" name="subscriptionConsent"${consentChecked ? ' checked' : ''}> ${escape(consentText(subscriptionLineInCart().cadence))}</label>` : ''}${review ? `<button class="pya-co__pay" ${action} type="button" ${!done && (!ready || !count || checkingOut || previewOptions) ? "disabled" : ""}>${actionLabel}${done ? "" : `<span class="pya-co__pay-total" aria-hidden="true"></span>`}</button>` : `<button class="checkout-button" ${action} type="button" ${!ready || !count || checkingOut || previewOptions ? "disabled" : ""}>${actionLabel}<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12"/></svg></button>`}`;
       const lineTemplate = cartLineTemplate();
-      if (lineTemplate) applyLineTemplate(el, lineViews, lineTemplate);
+      if (lineTemplate && !review) applyLineTemplate(el, lineViews, lineTemplate);
       const panelTemplate = review ? null : cartTemplate();
       if (panelTemplate) applyCartTemplate(el, !count, panelTemplate);
-      if (!count && PACK_MOTIFS.length) placeEmptyMotif(el);
+      if (!count && PACK_MOTIFS.length && !review) placeEmptyMotif(el);
       if (hosted) secureFields(el, ['shippingAddress', 'creditCode'], 'Tu dirección y tu saldo se piden en el formulario seguro de pagosYa al continuar.');
       if (previewOptions) {
         const note = document.createElement('p'); note.className = 'order-note';
@@ -4242,37 +4312,14 @@
         el.append(note);
       }
       for (const [name, value] of answers) { const field = [...el.querySelectorAll('input,textarea')].find(field => field.name === name); if (field) field.value = value; }
-      const reviewLayout = review ? reviewTemplate() : null;
-      if (reviewLayout) {
-        const root = reviewLayout.make();
-        root.setAttribute('data-review-root', '');
-        const summary = root.querySelector('[data-review-slot="summary"]'), fields = root.querySelector('[data-review-slot="fields"]');
-        summary.replaceChildren(); fields.replaceChildren();
-        for (const child of [...el.children]) (child.matches('.order-items,.order-recommendations,.order-savings,.order-total,.order-note') ? summary : fields).append(child);
-        const feedback = document.createElement('p');
-        feedback.setAttribute('data-pagosya-checkout-status', ''); feedback.hidden = true;
-        fields.append(feedback);
-        el.replaceChildren(root);
-        el.classList.add('checkout-review'); el.setAttribute('data-review-template', '');
-      } else if (review) {
-        const summary = document.createElement('aside'); summary.className = 'checkout-review__summary';
-        summary.innerHTML = `<h2>${escape(CART_WORD || 'Tu pedido')}</h2>${count ? `<p class="checkout-review__count">${count} ${count === 1 ? 'producto' : 'productos'}</p>` : ''}`;
-        for (const child of [...el.children]) if (child.matches('.order-items,.order-recommendations,.order-savings,.order-total,.order-note')) summary.append(child);
-        const fields = document.createElement('section'); fields.className = 'checkout-review__fields';
-        // With nothing to choose, the action button already says what happens next; a heading repeating it is noise.
-        fields.innerHTML = digitalOnlyCart() || !(store.locations?.length || store.shippingEnabled) ? '' : '<h2>¿Cómo quieres recibir tu pedido?</h2>';
-        fields.append(...el.children); el.append(summary, fields);
-        const feedback = document.createElement('p');
-        feedback.setAttribute('data-pagosya-checkout-status', ''); feedback.hidden = true;
-        fields.append(feedback);
-        el.classList.add('checkout-review');
-      }
+      if (review) shapeShellReview(el, { mode, count, photo: checkoutPhoto(lineViews.find(view => view.image)?.image) });
       const select = el.querySelector("[name=location]");
       if (select && previousLocation && Array.from(select.options).some((o) => o.value === previousLocation)) select.value = previousLocation;
       updateMethods(el, previousMethod);
+      if (review) mirrorChoices(el);
       const branchInfo = document.createElement('p'); branchInfo.className = 'order-note'; branchInfo.setAttribute('data-branch-address', '');
       el.querySelector('[name=method]')?.closest('label')?.after(branchInfo);
-      select?.addEventListener("change", () => { updateMethods(el); updateShipping(el); });
+      select?.addEventListener("change", () => { updateMethods(el); if (review) mirrorChoices(el); updateShipping(el); });
       el.querySelector('[name=method]')?.addEventListener('change', () => { updateShipping(el); track('delivery_selected', el.querySelector('[name=method]')?.value); analytics('checkout_step', { step: 'delivery' }, 'step:delivery'); if (el.querySelector('[name=method]')?.value === 'delivery') void mountDestinationMap(el); });
       el.querySelector('[name=shippingZoneId]')?.addEventListener('change', () => void shippingQuote(el));
       // Re-quote only with a complete destination; a partial one would be rejected by the API.
@@ -4283,6 +4330,7 @@
       updateShipping(el);
       if (el.querySelector('[name=method]')?.value === 'delivery') void mountDestinationMap(el);
       if (review && ready && count && store.bundlesEnabled) void bundleQuote(el);
+      if (review) syncShellTotals(el);
       if (focusedAction) {
         const buttons = [...el.querySelectorAll('button')];
         const replacement = buttons.find(button => button.getAttribute(focusedAction) === focusedId && !button.disabled)
@@ -5183,12 +5231,17 @@
     if (button.hasAttribute("data-product-next")) { showImage(selectedImage + 1); return; }
     if (checkingOut) return;
     if (button.hasAttribute("data-checkout-back")) { location.hash = location.hash === "#pago-de-prueba" ? "checkout" : checkoutPreviousHash; return; }
+    // The test payment ends on the calm checkout's confirmation; «Volver a la tienda» (data-shell-close) leaves it.
     if (button.hasAttribute("data-finish-demo") && (preview || config.demo)) {
-      if (fullCheckoutPage) showCheckout(); else closeCheckout();
-      const completed = () => message("Prueba completada. No se creó ningún pedido ni se realizó ningún cobro.");
-      // hashchange can rebuild the review after this click; retain its confirmation.
-      if (location.hash !== checkoutPreviousHash) window.addEventListener('hashchange', completed, { once: true });
-      location.hash = checkoutPreviousHash; completed(); return;
+      showCheckout("done"); location.hash = "pedido-de-prueba";
+      message("Prueba completada. No se creó ningún pedido ni se realizó ningún cobro.");
+      return;
+    }
+    if (button.hasAttribute("data-shell-close")) {
+      if (fullCheckoutPage) { location.href = "index.html"; return; }
+      closeCheckout(); location.hash = checkoutPreviousHash;
+      message("Prueba completada. No se creó ningún pedido ni se realizó ningún cobro.");
+      return;
     }
     if (button.hasAttribute("data-category")) { category = button.dataset.category; render(); }
     if (button.hasAttribute("data-bundle-add") && ready) {

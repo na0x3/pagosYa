@@ -57,3 +57,51 @@ describe("kit order review — shell frame", () => {
     expect(w.document.querySelector("#aside").inert).toBe(true);
   });
 });
+
+describe("kit order review — content", () => {
+  it("puts the business photo, the lines with a quantity badge and the totals in the summary", () => {
+    const summary = openReview(runtime()).querySelector(".pya-co__summary");
+    expect(summary.querySelector(".pya-co__photo").getAttribute("src")).toBe("https://api.test/v1/uploads/banner.jpg");
+    const line = summary.querySelector(".pya-co__line");
+    expect(line.querySelector(".pya-co__qty").textContent).toBe("1");
+    expect(line.querySelector(".pya-co__line-text strong").textContent).toBe("Irupana Honey");
+    expect(line.querySelector("[data-add]")).toBeTruthy();
+    expect(summary.querySelector(".order-total strong").textContent).toContain("144");
+  });
+  it("falls back to the first line photo, and shows no photo box without either", () => {
+    expect(openReview(runtime(baseStore({ bannerUrl: null }))).querySelector(".pya-co__photo").getAttribute("src")).toBe("https://cdn.test/honey.jpg");
+    const bare = openReview(runtime(baseStore({ bannerUrl: null, logoUrl: null, items: [product({ imageUrls: [] })] })));
+    expect(bare.querySelector(".pya-co__photo")).toBeNull();
+    expect(bare.querySelector(".pya-co__thumb")).toBeNull();
+  });
+  it("previews the payment methods with their logos and adds the total to the pay button", () => {
+    const root = openReview(runtime());
+    expect([...root.querySelectorAll(".pya-co__methods--preview .pya-co__method-name")].map((n: any) => n.textContent)).toEqual(["Tarjeta", "QR", "Tigo Money", "Transferencia"]);
+    expect(root.querySelector('.pya-co__logos [aria-label="Visa"]')).toBeTruthy();
+    const pay = root.querySelector(".pya-co__main [data-pay]");
+    expect(pay.classList.contains("pya-co__pay")).toBe(true);
+    expect(pay.querySelector(".pya-co__pay-total").getAttribute("aria-hidden")).toBe("true");
+    expect(root.querySelector(".pya-co__main .pya-co__trust")).toBeTruthy();
+  });
+  it("hides the payment preview for WhatsApp stores", () => {
+    expect(openReview(runtime(baseStore({ checkoutMode: "whatsapp" }))).querySelector(".pya-co__methods--preview")).toBeNull();
+  });
+  it("drives the hidden delivery select from the radio cards", () => {
+    const root = openReview(runtime(baseStore({ shippingEnabled: true, shippingPickupEnabled: true })));
+    const select = root.querySelector("select[name=method]");
+    expect(select.closest(".pya-co__mirrored")).toBeTruthy();
+    const radios = [...root.querySelectorAll('.pya-co__choices input[type=radio]')] as any[];
+    expect(radios.map(r => r.value)).toEqual([...select.options].map((o: any) => o.value));
+    radios.find(r => r.value === "pickup").click();
+    expect(select.value).toBe("pickup");
+    radios.find(r => r.value === "delivery").click();
+    expect(select.value).toBe("delivery");
+  });
+  it("mirrors the live total into the pay button and the phone summary bar", async () => {
+    const root = openReview(runtime());
+    root.querySelector(".order-total strong").textContent = "Bs 159,00";
+    await new Promise(r => setTimeout(r, 0));
+    expect(root.querySelector("[data-shell-total]").textContent).toBe("Bs 159,00");
+    expect(root.querySelector(".pya-co__pay-total").textContent).toBe("· Bs 159,00");
+  });
+});
