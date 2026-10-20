@@ -2,6 +2,8 @@
 export interface CheckoutBranding {
   name: string;
   logoUrl: string | null;
+  /** The calm checkout's business photo: the store banner (spec 2026-10-20). */
+  photoUrl?: string | null;
   background: string;
   surface: string;
   foreground: string;
@@ -35,7 +37,7 @@ export function normalizeCheckoutBranding(value: unknown, name: string): Checkou
   // A common foreground must remain legible on both panels.
   const safeSurface = contrast(surface, foreground) >= 4.5 ? surface : background;
   const accent = color(v.accent) || foreground;
-  return { name: name.slice(0, 120), logoUrl: logo(v.logoUrl), background, surface: safeSurface, foreground, accent,
+  return { name: name.slice(0, 120), logoUrl: logo(v.logoUrl), photoUrl: logo(v.photoUrl), background, surface: safeSurface, foreground, accent,
     accentForeground: readable(accent, v.accentForeground), bodyFont: font(v.bodyFont, 'system-ui, sans-serif'), headingFont: font(v.headingFont, 'system-ui, sans-serif'),
     radius: typeof v.radius === 'string' && /^(?:\d|1\d|2[0-4])px$/.test(v.radius) ? v.radius : '0px',
     fonts: Array.isArray(v.fonts) ? v.fonts.slice(0, 2).filter(f => f && typeof f.family === 'string' && /^[\w -]{1,80}$/.test(f.family) && typeof f.source === 'string' && f.source.length <= 800000 && /^data:font\/(?:ttf|woff2?|otf);base64,[A-Za-z0-9+/]+=*$/.test(f.source)).map(f => ({family:f.family,source:f.source,weight:/^\d{3}(?: \d{3})?$/.test(f.weight) ? f.weight : '100 900',style:f.style === 'italic' ? 'italic' : 'normal'})) : [] };

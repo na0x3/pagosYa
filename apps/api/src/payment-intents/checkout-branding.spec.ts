@@ -30,6 +30,13 @@ describe('checkout store identity', () => {
     expect((await service.checkoutBranding({merchantId:'owner'})).name).toBe('Tienda');
     expect(await service.checkoutBranding({merchantId:'no-store'})).toBeNull();expect(prisma.storeSourceVersion.findUnique).not.toHaveBeenCalled();
   });
+  it("hands the store banner to the payment page as its photo", async () => {
+    const prisma = { store: { findMany: jest.fn().mockResolvedValue([{ id: "s1", name: "Tostadero", bannerUrl: "/v1/uploads/banner.jpg", publishedSourceRevision: null }]) }, storeSourceVersion: { findUnique: jest.fn() } };
+    const service = Object.create(PaymentIntentsService.prototype); service.prisma = prisma;
+    const branding = await service.checkoutBranding({ merchantId: "m1", metadata: { storeId: "s1" } });
+    expect(branding?.photoUrl).toBe("/v1/uploads/banner.jpg");
+    expect(prisma.store.findMany.mock.calls[0][0].select.bannerUrl).toBe(true);
+  });
   it('does not borrow another store brand for unscoped or foreign-store payments', async () => {
     const prisma = { store: { findMany: jest.fn().mockResolvedValueOnce([{id:'a'},{id:'b'}]).mockResolvedValueOnce([]) }, storeSourceVersion: { findUnique: jest.fn() } };
     const service = Object.create(PaymentIntentsService.prototype); service.prisma = prisma;

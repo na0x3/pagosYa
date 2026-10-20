@@ -129,6 +129,7 @@ export class StoreCheckoutService {
         variantId?: string;
         name: string;
         variantName?: string;
+        imageUrl?: string;
         extraIds?: string[];
         extras?: ProductExtra[];
         quantity: number;
@@ -179,6 +180,7 @@ export class StoreCheckoutService {
           ...(variant && variant.stock !== undefined && { optionStock: variant.stock }),
           ...(selectedExtraIds.length && { extraIds: selectedExtraIds, extras: selectedExtras }),
           ...(subscription ? { subscription } : {}),
+          ...((variant?.imageUrl || link.imageUrls?.[0]) ? { imageUrl: variant?.imageUrl || link.imageUrls[0] } : {}),
           name: link.name,
           quantity: item.quantity,
           unitAmount,

@@ -12,4 +12,9 @@ describe('the store facts config.js carries', () => {
     const data = sourceStoreConfigData(store, new URL('https://api.test/v1'), false);
     expect(data).toMatchObject({ aboutText: 'Somos de La Paz.', contactEmail: 'hola@marca.bo', policies: { returns: 'Cambios en 7 días.' } });
   });
+  it("carries the banner as an absolute URL for the checkout photo", () => {
+    const apiUrl = new URL("https://api.test/v1");
+    expect(sourceStoreConfigData({ ...store, bannerUrl: "/v1/uploads/banner.jpg" }, apiUrl, false).bannerUrl).toBe("https://api.test/v1/uploads/banner.jpg");
+    expect(sourceStoreConfigData({ ...store, bannerUrl: null }, apiUrl, false).bannerUrl).toBeNull();
+  });
 });

@@ -132,14 +132,15 @@ export class PaymentIntentsService {
       ? intent.metadata as Record<string, unknown> : {};
     const storeId = typeof metadata.storeId === "string" ? metadata.storeId : undefined;
     const matches = await this.prisma.store.findMany({ where: { merchantId: intent.merchantId, ...(storeId !== undefined && { id: storeId }) }, take: 2, select: {
-      id: true, name: true, logoUrl: true, backgroundColor: true, accentColor: true, fontStyle: true, publishedSourceRevision: true,
+      id: true, name: true, logoUrl: true, bannerUrl: true, backgroundColor: true, accentColor: true, fontStyle: true, publishedSourceRevision: true,
     } });
     const store = matches.length === 1 ? matches[0] : null;
     if (!store) return null;
     const version = store.publishedSourceRevision == null ? null : await this.prisma.storeSourceVersion.findUnique({
       where: { storeId_revision: { storeId: store.id, revision: store.publishedSourceRevision } }, select: { snapshot: true },
     });
-    return sourceCheckoutBranding(store, version?.snapshot as Parameters<typeof sourceCheckoutBranding>[1]);
+    // The banner is the calm checkout's business photo (spec 2026-10-20).
+    return { ...sourceCheckoutBranding(store, version?.snapshot as Parameters<typeof sourceCheckoutBranding>[1]), photoUrl: store.bannerUrl ?? null };
   }
 
 

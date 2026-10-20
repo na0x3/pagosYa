@@ -19,7 +19,10 @@ export function sourcePublicApiUrl(config: Pick<ConfigService, 'get'>): URL {
  * takes payments. */
 export function sourceStoreConfigData(publicStore: SourcePublicStore, apiUrl: URL, firstRevision: boolean) {
   return {
-    storeName: publicStore.storeName, creditsEnabled: publicStore.creditsEnabled, digitalGoodsEnabled: publicStore.digitalGoodsEnabled, shippingEnabled: publicStore.shippingEnabled, shippingPickupEnabled: publicStore.shippingPickupEnabled, shippingCarriersEnabled: publicStore.shippingCarriersEnabled, bundlesEnabled: publicStore.bundlesEnabled, subscriptionsEnabled: publicStore.subscriptionsEnabled, logoUrl: publicStore.logoUrl, tagline: publicStore.tagline, checkoutMode: firstRevision ? "payment" : publicStore.checkoutMode,
+    storeName: publicStore.storeName, creditsEnabled: publicStore.creditsEnabled, digitalGoodsEnabled: publicStore.digitalGoodsEnabled, shippingEnabled: publicStore.shippingEnabled, shippingPickupEnabled: publicStore.shippingPickupEnabled, shippingCarriersEnabled: publicStore.shippingCarriersEnabled, bundlesEnabled: publicStore.bundlesEnabled, subscriptionsEnabled: publicStore.subscriptionsEnabled, logoUrl: publicStore.logoUrl,
+    // The calm checkout's business photo (spec 2026-10-20); absolute, since the store is served from another origin.
+    bannerUrl: publicStore.bannerUrl ? new URL(publicStore.bannerUrl, apiUrl).href : null,
+    tagline: publicStore.tagline, checkoutMode: firstRevision ? "payment" : publicStore.checkoutMode,
     contactPhone: publicStore.contactPhone, leadCaptureUrl: publicStore.leadCaptureUrl,
     aboutText: publicStore.aboutText, contactEmail: publicStore.contactEmail, policies: publicStore.policies,
     contactFormEnabled: publicStore.contactFormEnabled, contactTitle: publicStore.contactTitle, contactSubtitle: publicStore.contactSubtitle,
