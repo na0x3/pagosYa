@@ -105,3 +105,29 @@ describe("kit order review — content", () => {
     expect(root.querySelector(".pya-co__pay-total").textContent).toBe("· Bs 159,00");
   });
 });
+
+describe("kit test payment and confirmation", () => {
+  it("lets the shopper pick a method on the test payment", () => {
+    const w = runtime();
+    openReview(w);
+    w.document.querySelector("[data-pay]").click();
+    const root = w.document.querySelector(".pya-checkout");
+    expect(root.querySelector(".pya-co__lead h1").textContent).toBe("Pago de prueba");
+    root.querySelector('input[name=demoPaymentMethod][value="QR"]').click();
+    expect(w.document.querySelector('input[name=demoPaymentMethod]:checked').value).toBe("QR");
+    expect(w.document.querySelector(".pya-co__method-body").textContent).toContain("Escanea");
+    expect(w.document.querySelector("[data-finish-demo]").textContent).toContain("Completar prueba");
+  });
+  it("finishes on a confirmation screen in the same shell, then returns to the store", () => {
+    const w = runtime();
+    openReview(w);
+    w.document.querySelector("[data-pay]").click();
+    w.document.querySelector("[data-finish-demo]").click();
+    const root = w.document.querySelector(".pya-checkout");
+    expect(root.querySelector(".pya-co__lead h1").textContent).toBe("¡Gracias por tu compra!");
+    expect(root.querySelector("[data-pagosya-status]").textContent).toContain("Prueba completada");
+    expect(root.querySelector(".pya-co__summary .pya-co__line")).toBeTruthy();
+    root.querySelector(".pya-co__main [data-shell-close]").click();
+    expect(w.document.querySelector(".pya-checkout")).toBeNull();
+  });
+});
