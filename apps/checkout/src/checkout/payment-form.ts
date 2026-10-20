@@ -11,6 +11,7 @@ import { type DomesticMethodType, state } from "../state";
 import { app } from "../ui/app";
 import { escapeHtml, formatAmount, initials } from "../ui/html";
 import { checkoutRecipientDetails, isStoreCheckout, renderSuccess, contactBlockHtml, backToStoreHtml, renderFailed, closePendingIntlPopup, renderRequiresAction } from "./payment-result";
+import { methodRows, mountShellStyle, shellAccent, shellFrame, shellSummary, trustStripHtml, wireSummaryToggle } from "./shell";
 import { customerContact, contactFieldErrors, EMAIL_PATTERN, PHONE_PATTERN } from "./customer-contact";
 import { reminderConsentHtml } from "./reminder-consent";
 import { ICON_LOCK, ICON_X } from "../ui/icons";
@@ -130,33 +131,29 @@ export function renderForm(session: CheckoutSession, clientSecret: string) {
     }
   }
 
-  const headerHtml = brand ? `
-      <div class="merchant-row">${brand.logoUrl ? `<img class="checkout-store-logo" src="${escapeHtml(brand.logoUrl)}" alt="" referrerpolicy="no-referrer">` : ''}<div class="merchant-name">${escapeHtml(brand.name)}</div></div>
-      <p class="checkout-summary-label">Tu pedido</p>
-      <div class="amount">${formatAmount(session.amount, session.currency)}</div>
-      <div class="description">${escapeHtml(session.description || state.linkHeader?.description || 'Pago a ' + brand.name)}</div>
-    ` : state.linkHeader
-    ? `
-      <div class="merchant-header">${escapeHtml(state.linkHeader.storeName)}</div>
-      <div class="amount">${formatAmount(session.amount, session.currency)}</div>
-      <div class="description">${escapeHtml(state.linkHeader.description)}</div>
-    `
-    : `
-      <div class="merchant-row">
-        <div class="merchant-avatar">${escapeHtml(initials(session.merchantName))}</div>
-        <div class="merchant-name">${escapeHtml(session.merchantName)}</div>
-      </div>
-      <div class="amount">${formatAmount(session.amount, session.currency)}</div>
-      <div class="description">${session.description ? escapeHtml(session.description) : "Pago a comercio"}</div>
-    `;
+  // The calm checkout (spec 2026-10-20): the store lends its name, logo, photo and a readable accent; nothing else.
+  mountShellStyle();
+  const storeName = brand?.name || state.linkHeader?.storeName || session.merchantName;
+  // A cart paid from a link page shows the store name alone, as that page did; a direct charge keeps its avatar row.
+  const brandHtml = !brand && state.linkHeader
+    ? `<span class="pya-co__brand merchant-header"><strong class="pya-co__name">${escapeHtml(storeName)}</strong></span>`
+    : brand?.logoUrl
+    ? `<span class="pya-co__brand merchant-row"><img class="pya-co__logo checkout-store-logo" src="${escapeHtml(brand.logoUrl)}" alt="" referrerpolicy="no-referrer"><strong class="pya-co__name merchant-name">${escapeHtml(storeName)}</strong></span>`
+    : `<span class="pya-co__brand merchant-row"><span class="merchant-avatar">${escapeHtml(initials(storeName))}</span><strong class="pya-co__name merchant-name">${escapeHtml(storeName)}</strong></span>`;
+  const accent = brand ? shellAccent(brand.accent, brand.accentForeground) : { accent: "#1a1a1a", ink: "#ffffff" };
+  const allowed = DOMESTIC_METHOD_TYPES.filter(type => !domainPurchase || type === PaymentMethodType.QR);
+  const methodBody = import.meta.env.DEV && !sourcePaymentPreview
+    ? `<div class="field"><label for="token">Token de prueba (modo test)</label><select id="token">${tokens.map((t) => `<option value="${t.value}">${t.label}</option>`).join("")}</select></div><div class="hint">En producción este campo lo reemplaza el rail real (tokenización de tarjeta, deep link Tigo Money, etc).</div>`
+    : "";
+  const payHtml = state.internationalMode ? "" : `<section class="pya-co__section"><h2 class="pya-co__title">Pago</h2>${methodRows(state.selectedType, allowed, methodBody)}</section>`;
 
   const fieldError = (id: keyof typeof contactFieldErrors) =>
     contactFieldErrors[id] ? `<div class="field-error" id="${id}Error">${escapeHtml(contactFieldErrors[id]!)}</div>` : `<div class="field-error" id="${id}Error"></div>`;
   const invalid = (id: keyof typeof contactFieldErrors) => (contactFieldErrors[id] ? ' aria-invalid="true"' : "");
 
-  app.innerHTML = `
-    <div class="payment-summary-panel">${sourcePaymentPreview ? '<p class="checkout-preview-notice" role="status">Vista previa · Sin cobros ni pedidos reales</p>' : ''}${headerHtml}</div>
-    <div class="payment-form-panel">${storeCheckout || sourcePaymentPreview ? '<h1 class="payment-page-title">Completa tu pedido</h1>' : ''}<form id="payment-form" novalidate>
+  const main = `
+    ${sourcePaymentPreview ? '<p class="checkout-preview-notice" role="status">Vista previa · Sin cobros ni pedidos reales</p>' : ''}
+    <form id="payment-form" novalidate><section class="pya-co__section"><h2 class="pya-co__title">${storeCheckout ? "Contacto" : "Datos del cobro"}</h2>
       ${storeCheckout
         ? `<div class="field">
             <label for="customerName">Nombre completo</label>
@@ -205,6 +202,7 @@ export function renderForm(session: CheckoutSession, clientSecret: string) {
               ${fieldError("customerEmail")}
             </div>` : ""}
           </div>`}
+      </section>
       ${session.international?.available && !domainPurchase && !sourcePaymentPreview ? `
         <div class="intl-entry">
           <label class="intl-toggle"><input type="checkbox" id="intlToggle" ${state.internationalMode ? "checked" : ""}> ¿Pagas desde fuera de Bolivia?</label>
@@ -231,34 +229,18 @@ export function renderForm(session: CheckoutSession, clientSecret: string) {
               <p class="hint">Serás redirigido para completar el pago de forma segura. Allí verás el monto final en tu moneda.</p>` : ""}
           ` : ""}
         </div>` : ""}
-      ${state.internationalMode ? "" : `<div class="tabs">
-        ${DOMESTIC_METHOD_TYPES
-          .filter(type => !domainPurchase || type === PaymentMethodType.QR)
-          .map(
-            (type) =>
-              `<button type="button" class="tab ${type === state.selectedType ? "active" : ""}" data-type="${type}">${TAB_ICONS[type]}<span>${TAB_LABELS[type]}</span></button>`,
-          )
-          .join("")}
-      </div>`}
-      ${
-        state.internationalMode
-          ? ""
-          : import.meta.env.DEV && !sourcePaymentPreview
-          ? `<div class="field">
-              <label for="token">Token de prueba (modo test)</label>
-              <select id="token">
-                ${tokens.map((t) => `<option value="${t.value}">${t.label}</option>`).join("")}
-              </select>
-              <div class="hint">En producción este campo lo reemplaza el rail real (tokenización de tarjeta, deep link Tigo Money, etc).</div>
-            </div>`
-          : ""
-      }
-      <button class="primary" type="submit" id="pay"${state.internationalMode && state.internationalMethods && state.internationalMethods.methods.length === 0 ? " disabled" : ""}>${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${state.internationalMode && state.internationalMethods ? formatUsd(state.internationalMethods.quote.amount) : formatAmount(session.amount, session.currency)}</button>
+      ${payHtml}
+      <button class="primary pya-co__pay" type="submit" id="pay"${state.internationalMode && state.internationalMethods && state.internationalMethods.methods.length === 0 ? " disabled" : ""}>${sourcePaymentPreview ? 'Simular pago de' : 'Pagar'} ${state.internationalMode && state.internationalMethods ? formatUsd(state.internationalMethods.quote.amount) : formatAmount(session.amount, session.currency)}</button>
+      ${trustStripHtml()}
       <div id="legalNoticeSlot">${legalNoticeHtml(buyerLegal)}</div>
-      <button class="secondary" type="button" id="cancel">Cancelar pago</button>
-    </form></div>
-    <div class="secure-note payment-secure-note">${ICON_LOCK}<span>Pago procesado de forma segura por pagosYa</span></div>
+      <button class="secondary pya-co__secondary" type="button" id="cancel">Cancelar pago</button>
+    </form>
   `;
+  app.innerHTML = shellFrame({ brandHtml, step: "payment", heading: "Completa tu pedido", main, summary: shellSummary(session, brand?.photoUrl ?? null, state.linkHeader?.description), total: formatAmount(session.amount, session.currency) });
+  const shellRoot = app.querySelector<HTMLElement>(".pya-checkout")!;
+  shellRoot.style.setProperty("--pya-accent", accent.accent);
+  shellRoot.style.setProperty("--pya-accent-ink", accent.ink);
+  wireSummaryToggle(shellRoot);
   // A store-editor payment preview is a simulation and must not reach the API.
   if (!buyerLegalLoaded && !sourcePaymentPreview) {
     void loadBuyerLegal().then((legal) => {
@@ -319,9 +301,9 @@ export function renderForm(session: CheckoutSession, clientSecret: string) {
     }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
   });
 
-  app.querySelectorAll<HTMLElement>(".tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      state.selectedType = tab.dataset.type as DomesticMethodType;
+  app.querySelectorAll<HTMLInputElement>('input[name="payMethod"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      state.selectedType = radio.value as DomesticMethodType;
       renderForm(session, clientSecret);
     });
   });

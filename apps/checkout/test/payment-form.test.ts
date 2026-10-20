@@ -66,10 +66,11 @@ describe("payment form (?client_secret=...)", () => {
     await loadCheckout("/?client_secret=pi_1_secret_abc");
 
     const tabs = [...document.querySelectorAll<HTMLButtonElement>(".tab")];
-    expect(tabs.map((t) => t.dataset.type)).toEqual(["CARD", "TIGO_MONEY", "BANK_TRANSFER", "QR"]);
+    // The calm checkout lists them as Tarjeta, QR, Tigo Money, Transferencia (spec 2026-10-20).
+    expect(tabs.map((t) => t.dataset.type)).toEqual(["CARD", "QR", "TIGO_MONEY", "BANK_TRANSFER"]);
     expect(tabs[0].classList.contains("active")).toBe(true);
 
-    tabs[3].click();
+    tabs[1].click();
     await vi.waitFor(() => {
       expect(document.querySelector<HTMLButtonElement>('.tab[data-type="QR"]')?.classList.contains("active")).toBe(true);
     });
@@ -314,5 +315,49 @@ describe("«Avísame» reminder box", () => {
     expect(confirmBodies[0]).not.toHaveProperty("reminderConsent");
     expect(confirmBodies[1]).toMatchObject({ customerEmail: "ana@example.com", reminderConsent: true });
     vi.unstubAllGlobals();
+  });
+});
+
+describe("payment form in the calm checkout shell", () => {
+  beforeEach(() => vi.restoreAllMocks());
+  const branding = { name: "Tostadero Yungas", logoUrl: "/v1/uploads/logo.png", photoUrl: "/v1/uploads/banner.jpg", background: "#e9d38a", surface: "#f2e3a6", foreground: "#171717", accent: "#171717", accentForeground: "#ffffff", bodyFont: "Inter", headingFont: "Archivo Black", radius: "8px", fonts: [] };
+  const cartSession = { amount: 14400, branding, metadata: { storeId: "s1", subtotal: 14400, cart: [{ paymentLinkId: "p1", name: "Irupana Honey", variantName: "500 g", quantity: 2, unitAmount: 7200, imageUrl: "/v1/uploads/honey.jpg" }] } };
+
+  it("draws the summary from the cart lines with the business photo", async () => {
+    mockSession(cartSession as never);
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+    const summary = document.querySelector(".pya-checkout .pya-co__summary")!;
+    expect(summary.querySelector(".pya-co__photo")?.getAttribute("src")).toBe("/v1/uploads/banner.jpg");
+    expect(summary.querySelector(".pya-co__qty")?.textContent).toBe("2");
+    expect(summary.querySelector(".pya-co__line-text")?.textContent).toContain("500 g");
+    expect(summary.querySelector(".pya-co__grand")?.textContent).toMatch(/BOB[\s\S]*144/);
+  });
+  it("lists the methods as radio rows with logos, the selected one open", async () => {
+    mockSession(cartSession as never);
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+    const rows = [...document.querySelectorAll<HTMLElement>(".pya-co__methods .tab")];
+    expect(rows.map(r => r.dataset.type)).toEqual(["CARD", "QR", "TIGO_MONEY", "BANK_TRANSFER"]);
+    expect(rows[0].querySelector('[aria-label="Visa"]')).toBeTruthy();
+    expect(rows[0].closest(".pya-co__method")?.querySelector(".pya-co__method-body")).toBeTruthy();
+    expect(document.querySelector("#pay.pya-co__pay")).toBeTruthy();
+    expect(document.querySelector(".pya-co__trust")).toBeTruthy();
+  });
+  it("no longer paints the store background or fonts onto the payment page", async () => {
+    mockSession(cartSession as never);
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+    const app = document.getElementById("app")!;
+    expect(app.style.getPropertyValue("--checkout-background")).toBe("");
+    expect(app.style.getPropertyValue("--checkout-heading-font")).toBe("");
+  });
+  it("falls back to ink when the accent is too pale to read as a button", async () => {
+    mockSession({ ...cartSession, branding: { ...branding, accent: "#f6e7a0", accentForeground: "#171717" } } as never);
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+    expect(document.querySelector<HTMLElement>(".pya-checkout")!.style.getPropertyValue("--pya-accent")).toBe("#1a1a1a");
+  });
+  it("keeps a plain payment link's description and amount without lines", async () => {
+    mockSession({ description: "Corte de cabello" });
+    await loadCheckout("/?client_secret=pi_1_secret_abc");
+    expect(document.querySelector(".pya-co__summary .pya-co__line")).toBeNull();
+    expect(document.querySelector(".pya-co__summary")?.textContent).toContain("Corte de cabello");
   });
 });

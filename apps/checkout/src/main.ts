@@ -34,7 +34,6 @@ import { bindStoreEditorCanvas, listenForStoreEditorMessages } from "./preview-e
 import { storefrontPages } from "./storefront/navigation";
 import { renderProductPage } from "./storefront/product-page";
 import { renderStore } from "./storefront/store-page";
-import { rememberStoreDna } from "./checkout-branding";
 import { rememberConfirmationMotif } from "./checkout-motif";
 
 async function main() {
@@ -163,7 +162,6 @@ async function main() {
   if (linkSlug && !clientSecret) {
     try {
       const store = await fetchStore(linkSlug, { preview: suppressStoreViewForMerchant(linkSlug) });
-      rememberStoreDna(store.dna);
       rememberConfirmationMotif(store.confirmationMotif);
       const proposalPatch = standaloneStorePreviewPatch();
       const renderedStore = proposalPatch ? { ...store, ...proposalPatch } : store;

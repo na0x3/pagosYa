@@ -1,25 +1,18 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
-import { applyCheckoutBranding, rememberStoreDna } from "./checkout-branding";
+import { applyCheckoutBranding } from "./checkout-branding";
 
 const branding = { name: "Marca", background: "#fffaf0", surface: "#f4efe6", foreground: "#1d1b18", accent: "#b4441f", accentForeground: "#ffffff", radius: "8px", bodyFont: "system-ui", headingFont: "Georgia", fonts: [] };
 
-describe("order confirmation takes the store's DNA", () => {
-  afterEach(() => { rememberStoreDna(null); applyCheckoutBranding(document.createElement("div"), null); });
-  it("sets the button form and radius on a branded checkout", () => {
-    rememberStoreDna({ version: 1, button: "stamp", radius: "pill", cart: "sheet" });
-    applyCheckoutBranding(document.createElement("div"), branding as never);
-    expect([document.body.dataset.dnaButton, document.body.dataset.dnaRadius]).toEqual(["stamp", "pill"]);
-  });
-  it("ignores unknown values and clears everything on an unbranded checkout", () => {
-    rememberStoreDna({ button: "sparkle", radius: "round" });
-    applyCheckoutBranding(document.createElement("div"), branding as never);
-    expect([document.body.dataset.dnaButton, document.body.dataset.dnaRadius]).toEqual([undefined, "round"]);
-    applyCheckoutBranding(document.createElement("div"), null);
-    expect([document.body.dataset.dnaButton, document.body.dataset.dnaRadius]).toEqual([undefined, undefined]);
-  });
-  it("adds nothing without a remembered DNA", () => {
-    applyCheckoutBranding(document.createElement("div"), branding as never);
+describe("the calm checkout keeps only the store identity", () => {
+  afterEach(() => { applyCheckoutBranding(document.createElement("div"), null); });
+  it("names the page after the store and paints none of its colours, fonts or button forms", () => {
+    const app = document.createElement("div");
+    const brand = applyCheckoutBranding(app, branding as never);
+    expect(document.title).toBe("Marca · Pago seguro");
+    expect(brand?.name).toBe("Marca");
+    expect(app.style.getPropertyValue("--checkout-background")).toBe("");
+    expect(app.style.getPropertyValue("--checkout-heading-font")).toBe("");
     expect(document.body.hasAttribute("data-dna-button")).toBe(false);
   });
 });
@@ -55,14 +48,6 @@ describe("confirmation DNA styles", () => {
 
 describe("identity button forms (T2b)", () => {
   const css = readFileSync(`${process.cwd()}/src/checkout-branding.css`, "utf8");
-  afterEach(() => { rememberStoreDna(null); applyCheckoutBranding(document.createElement("div"), null); });
-  it("carries the four new forms onto a branded checkout", () => {
-    for (const form of ["sticker", "ticket", "bubbly", "brutal"]) {
-      rememberStoreDna({ version: 1, button: form });
-      applyCheckoutBranding(document.createElement("div"), branding as never);
-      expect(document.body.dataset.dnaButton).toBe(form);
-    }
-  });
   it("fill the pay button with the accent pair, and drop the ticket notches on focus", () => {
     for (const form of ["sticker", "ticket", "bubbly", "brutal"]) {
       const rule = css.match(new RegExp(`body\\.store-branded-checkout\\[data-dna-button=${form}\\] #app\\{([^}]*)\\}`))?.[1] ?? "";
