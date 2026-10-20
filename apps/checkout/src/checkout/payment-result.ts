@@ -1,7 +1,8 @@
 /** What the buyer sees after paying: success with receipt printing, failure, required actions, and international returns. */
 import { mountDigitalDownloads } from "../digital-downloads";
 import { mountComebackCard, mountComebackPreviewCard } from "../comeback-card";
-import { CheckoutSession, simulateRailCallback, fetchSession } from "../api";
+import { CheckoutSession, assetUrl, simulateRailCallback, fetchSession } from "../api";
+import { mountShellStyle, shellAccent, shellFrame, shellSummary, wireSummaryToggle } from "./shell";
 import { isNavigableRedirect, rememberReturn, recallReturn } from "../international";
 import { postToParent } from "../postmessage";
 import { closeSourcePaymentPreview } from "../source-payment-preview";
@@ -21,6 +22,7 @@ export interface CartLine {
   paymentLinkId: string;
   name: string;
   variantName?: string;
+  imageUrl?: string;
   quantity: number;
   unitAmount: number;
 }
@@ -173,14 +175,19 @@ export function renderSuccess(order: OrderSummary, preview = false) {
     </div>
   `;
 
-  app.innerHTML = `
-    <div class="payment-success-panel">
-      <div class="status success">${ICON_CHECK}<span>${preview ? "Prueba completada" : storeCheckout ? "Pedido recibido" : "Pago confirmado"}</span></div>
-      <article class="receipt">${receiptContentHtml}</article>
-      <div class="payment-success-actions">${trackingActionHtml}${printActionHtml}</div>
-      ${preview ? '<p>No se realizó ningún cobro ni se creó un pedido real.</p><button class="secondary" id="preview-back" type="button">Volver al pedido</button>' : backToStoreHtml()}
-    </div>
-  `;
+  // The one calm checkout (spec 2026-10-20): the receipt sits in the shell, with the order beside it.
+  mountShellStyle();
+  const brand = (order as CheckoutSession).branding;
+  const storeName = brand?.name || state.linkHeader?.storeName || "pagosYa";
+  const brandHtml = `<span class="pya-co__brand">${brand?.logoUrl ? `<img class="pya-co__logo" src="${escapeHtml(assetUrl(brand.logoUrl) ?? "")}" alt="">` : ""}<strong class="pya-co__name">${escapeHtml(storeName)}</strong></span>`;
+  const panel = `<div class="payment-success-panel pya-co__done"><div class="status success"><span class="pya-co__check">${ICON_CHECK}</span><span>${preview ? "Prueba completada" : storeCheckout ? "Pedido recibido" : "Pago confirmado"}</span></div><article class="receipt">${receiptContentHtml}</article><div class="payment-success-actions">${trackingActionHtml}${printActionHtml}</div>${preview ? '<p>No se realizó ningún cobro ni se creó un pedido real.</p><button class="secondary pya-co__secondary" id="preview-back" type="button">Volver al pedido</button>' : backToStoreHtml()}</div>`;
+  const summarySession = { ...(order as CheckoutSession), description: (order as CheckoutSession).description ?? null, merchantName: (order as CheckoutSession).merchantName ?? storeName } as CheckoutSession;
+  app.innerHTML = shellFrame({ brandHtml, step: "done", heading: storeCheckout ? "¡Gracias por tu compra!" : "Pago confirmado", main: panel, summary: shellSummary(summarySession, brand?.photoUrl ?? null, state.linkHeader?.description), total: formatAmount(order.amount, order.currency) });
+  const shellRoot = app.querySelector<HTMLElement>(".pya-checkout")!;
+  const accent = brand?.accent && brand?.accentForeground ? shellAccent(brand.accent, brand.accentForeground) : { accent: "#1a1a1a", ink: "#ffffff" };
+  shellRoot.style.setProperty("--pya-accent", accent.accent);
+  shellRoot.style.setProperty("--pya-accent-ink", accent.ink);
+  wireSummaryToggle(shellRoot);
   mountConfirmationMotif(app.querySelector('.payment-success-panel'));
   app.querySelector('#preview-back')?.addEventListener('click', closeSourcePaymentPreview);
   if (!preview && state.activeOrderTrackingToken) void mountDigitalDownloads(app.querySelector('.payment-success-panel')!, state.activeOrderTrackingToken);
