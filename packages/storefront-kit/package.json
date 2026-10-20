@@ -10,7 +10,8 @@
       "types": "./index.d.ts",
       "default": "./index.js"
     },
-    "./kit/*": "./kit/*"
+    "./kit/*": "./kit/*",
+    "./checkout-shell/*": "./checkout-shell/*"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
