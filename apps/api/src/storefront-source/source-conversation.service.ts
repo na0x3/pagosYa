@@ -203,6 +203,8 @@ export class SourceConversationService {
     const images: Array<{ type: 'input_text'; text: string } | { type: 'input_image'; image_url: string; detail: 'low' }> = [];
     for (const [index, url] of photos.entries()) {
       const filename = url.split('/').at(-1)!;
+      // Only images: the bridge answers 400 to a video sent as one, and both attempts failed for every store with an mp4 (PEPPA please 2026-10-20).
+      if (!this.uploads.contentTypeFor(filename).startsWith('image/')) continue;
       const bytes = owned.has(url) ? await this.uploads.getBuffer(filename).catch(() => null) : null;
       if (bytes && bytes.length <= 4_000_000) images.push({ type: 'input_text', text: `Foto ${index}` }, { type: 'input_image', image_url: `data:${this.uploads.contentTypeFor(filename)};base64,${bytes.toString('base64')}`, detail: 'low' });
     }

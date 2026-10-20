@@ -44,6 +44,19 @@ describe('fillMaster', () => {
   beforeEach(() => jest.useFakeTimers({ advanceTimers: true }));
   afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); });
 
+  it('sends only images: a video upload is skipped, the photo labels keep their indexes (PEPPA please 2026-10-20)', async () => {
+    // The ChatGPT-plan bridge answered 400 invalid_value to an mp4 sent as an image, twice, and every store with a video
+    // upload was built without its fill.
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 200, json: async () => body(read()) } as any);
+    const photos = ['https://cdn.test/uploads/clip.mp4', 'https://cdn.test/uploads/a.jpg'];
+    const uploads = { getBuffer: jest.fn(async () => Buffer.from('x')), contentTypeFor: (name: string) => name.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg' };
+    const svc = new SourceConversationService({ mediaAsset: { findMany: jest.fn().mockResolvedValue(photos.map(url => ({ url }))) } } as any, uploads as any, config);
+    await svc.fillMaster('m1', { ...input, photos });
+    const content = JSON.parse((fetchMock.mock.calls[0][1] as any).body).input[0].content;
+    expect(content.filter((part: any) => part.type === 'input_image').map((part: any) => part.image_url.split(';')[0])).toEqual(['data:image/jpeg']);
+    expect(content.filter((part: any) => part.type === 'input_text').map((part: any) => part.text)).toContain('Foto 1');
+    expect(content.some((part: any) => part.text === 'Foto 0')).toBe(false);
+  });
   it('returns the parsed read on success', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 200, json: async () => body(read()) } as any);
     expect((await service().fillMaster('m1', input))?.headline).toBe('Café de Coroico');
