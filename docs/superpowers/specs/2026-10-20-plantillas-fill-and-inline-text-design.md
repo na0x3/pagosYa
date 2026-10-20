@@ -115,9 +115,13 @@ visible literal text is left outside slots. A template that fails stays hidden (
 New template designs; editing product data inline; images by double-click (photos keep their current controls);
 the published store (editing only happens in the Studio).
 
-## 9. Open questions for the owner
+## 9. Owner answers (2026-10-20)
 
-1. Bring back the «Plantillas» menu entry for existing stores (switch template later), or only offer templates
-   when creating a store?
-2. Should double-clicking a product name or price open that product's editor?
-3. Keep all 61, or ship a curated set first (for example the best 24) and hide the rest?
+1. **Yes — the «Plantillas» menu entry comes back** for existing stores. Applying a template to a store that already
+   has a design asks first («Tu diseño actual queda en el historial»), keeps its products, then runs Part B; the old
+   design stays restorable from the history. Only available with `VITE_PLANTILLAS_PICK` on.
+2. **Yes — double-clicking a product name or price opens that product's editor** (the existing Productos form,
+   focused on the clicked field), on every kind of store. Inline editing of product data itself stays out of scope.
+3. **A curated set ships first.** The owner picks from the converted templates (Part A); `template.json` gets
+   `curated: true` and only those show in the gallery and the new card. The rest stay in the code, hidden, and can be
+   added later without code changes.
