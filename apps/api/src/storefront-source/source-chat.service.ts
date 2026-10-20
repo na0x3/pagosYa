@@ -36,6 +36,7 @@ import { galleryTemplates, templateManifest, type TemplateManifest } from '@pago
 import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook } from './source-master';
 import { masterLayoutFindings } from './source-master-check';
 import { readMasterState } from './source-templates';
+import { buildSuggestions } from './source-suggestions';
 import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
 import { UploadsService, detectedImageDimensions, detectedMediaMime } from '../uploads/uploads.service';
@@ -273,6 +274,8 @@ export class SourceChatService {
       content: `Tu tienda ${store?.name ?? ''} está lista.${touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
       metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
     } });
+    // Spec 2026-10-19 §2: with no personal touch coming, the cards ride on this reply; otherwise on the touch's.
+    if (!touching) await this.attachSuggestions(merchantId, storeId, saved.revision, assistantMessage);
     return { userMessage, assistantMessage, revision: saved, ...(followUp ? { followUp } : {}) };
   }
 
@@ -821,7 +824,10 @@ export class SourceChatService {
         const softWording = websiteCopyWording(merchantWords) === 'plain' ? 'Si solo querías inspirarte en su estilo, dime «solo inspiración» y lo ajusto. ' : '';
         copyNote = (final ? `${copyReplyNote(websiteCopy, final)} ${softWording}` : softWording) + layoutNote;
       }
-      return await this.revisionReply(thread, userMessage, workflow, finalRevision, setupDraft, decision.imageUses, input.assetUrls || [], `${productNote}${copyNote}${copyMissed}${proposeStyle && revision.generation?.styleAttempted ? 'No pude preparar los estilos, armé uno por ti. ' : ''}`);
+      const reply = await this.revisionReply(thread, userMessage, workflow, finalRevision, setupDraft, decision.imageUses, input.assetUrls || [], `${productNote}${copyNote}${copyMissed}${proposeStyle && revision.generation?.styleAttempted ? 'No pude preparar los estilos, armé uno por ti. ' : ''}`);
+      // Spec 2026-10-19 §2: a finished personal touch ends with two or three personal next steps.
+      if (input.personalTouch) await this.attachSuggestions(merchantId, storeId, finalRevision.revision, reply.assistantMessage);
+      return reply;
     } catch (error) {
       await workflow.finish('failed');
       // Variety spec §5: a failed personal touch keeps the first version and says nothing.
@@ -842,6 +848,25 @@ export class SourceChatService {
       // catch them by type still work.
       throw shown;
     }
+  }
+
+  /** Spec 2026-10-19 §2: up to three cards on this reply, from the store's saved state; never throws, never blocks the reply. */
+  private async attachSuggestions(merchantId: string, storeId: string, revision: number, message: { id: string; metadata: unknown }) {
+    try {
+      const retention = (await this.prisma.storeRetention.findUnique({ where: { storeId } }))?.settings as Record<string, unknown> | null | undefined;
+      const files = ((await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot).files;
+      const state = readMasterState(files);
+      const products = await this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, select: { id: true, name: true }, orderBy: { createdAt: 'asc' }, take: 12 });
+      const suggestions = await buildSuggestions({
+        dismissed: Boolean(retention?.suggestionsDismissedAt),
+        input: { storeName: state.store?.name ?? '', sections: (state.sections ?? []).map(section => section.id), products, featuredProductIds: [], signupEnabled: Boolean(retention?.signupEnabled) },
+        suggest: input => this.dialogue.suggestNext(storeId, input),
+      });
+      if (!suggestions.length) return;
+      const metadata = { ...((message.metadata as Record<string, unknown> | null) ?? {}), suggestions };
+      await this.prisma.storeAgentMessage.update({ where: { id: message.id }, data: { metadata } });
+      message.metadata = metadata;
+    } catch { /* No cards: the reply stands as it is. */ }
   }
 
   /** The saved home page against the blueprint (spec 2026-10-18 B §6); undefined when the revision cannot be read. */

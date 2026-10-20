@@ -65,7 +65,7 @@ export class RetentionService {
         const prior = await this.settings(storeId, tx);
         if (prior.revision && prior.timezone !== dto.timezone) throw new BadRequestException('La zona horaria de las compras queda fijada al crear el programa.');
         if (!revision) return tx.storeRetention.create({ data: { storeId, settings } });
-        const result = await tx.storeRetention.updateMany({ where: { storeId, revision }, data: { settings: { ...settings, ...((prior as any).emailWorkspace ? { emailWorkspace: (prior as any).emailWorkspace } : {}) }, revision: { increment: 1 } } });
+        const result = await tx.storeRetention.updateMany({ where: { storeId, revision }, data: { settings: { ...settings, ...((prior as any).emailWorkspace ? { emailWorkspace: (prior as any).emailWorkspace } : {}), ...((prior as any).suggestionsDismissedAt ? { suggestionsDismissedAt: (prior as any).suggestionsDismissedAt } : {}) }, revision: { increment: 1 } } });
         if (!result.count) throw new ConflictException('La configuración cambió. Vuelve a abrir esta sección.');
         return { saved: true };
       });
@@ -73,6 +73,16 @@ export class RetentionService {
   }
   private async enqueue(db: Db, data: Prisma.StoreEmailDeliveryUncheckedCreateInput) {
     return db.storeEmailDelivery.upsert({ where: { dedupeKey: data.dedupeKey }, create: data, update: {} });
+  }
+  /** «No, gracias» on YAPI's suggestion cards: they are not offered again for this store (spec 2026-10-19 §2). */
+  async dismissSuggestions(merchantId: string, storeId: string) {
+    await this.owner(merchantId, storeId);
+    const row = await this.prisma.storeRetention.findUnique({ where: { storeId } });
+    const settings = (row?.settings ?? {}) as Record<string, unknown>;
+    if (settings.suggestionsDismissedAt) return { dismissed: true };
+    const next = { ...DEFAULT_RETENTION, ...settings, suggestionsDismissedAt: new Date().toISOString() };
+    await this.prisma.storeRetention.upsert({ where: { storeId }, create: { storeId, settings: next }, update: { settings: next } });
+    return { dismissed: true };
   }
   async signupVisual(storeId: string) {
     const [store, products, categories] = await Promise.all([

@@ -20,6 +20,7 @@ export class RetentionController {
   constructor(private readonly retention: RetentionService) {}
   @Get() overview(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string) { return this.retention.overview(m.id, id); }
   @Put() save(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() dto: RetentionSettingsDto) { return this.retention.save(m.id, id, dto); }
+  @Post('suggestions/dismiss') dismissSuggestions(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string) { return this.retention.dismissSuggestions(m.id, id); }
   @Post('redeem') redeem(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() dto: RedeemComebackDto) { return this.retention.redeem(m.id, id, dto.code); }
   @Post('campaigns') draft(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() dto: RetentionCampaignDto) { return this.retention.draft(m.id, id, dto); }
   @Post('campaigns/:campaignId/send') send(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Param('campaignId') campaign: string) { return this.retention.queueCampaign(m.id, id, campaign); }

@@ -12,6 +12,7 @@ import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
 import { SOURCE_VISUAL_ASSET_DIRECTION } from './source-visual-assets';
 import { sourceResponseJson } from './source-response';
+import { SUGGESTIONS_PROMPT, SUGGESTIONS_SCHEMA, type SuggestionInput } from './source-suggestions';
 import type { MasterCopy } from '@pagosya/store-templates';
 import { MASTER_COLOURS, MASTER_COPY_CAPS, MASTER_VALUE_CAPS, type MasterLook, type MasterRead } from './source-master';
 import { checkSourceProviderQuota, SourceProviderQuotaException } from './source-provider-error';
@@ -227,6 +228,28 @@ export class SourceConversationService {
       if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 3000));
     }
     return null;
+  }
+
+  /** YAPI's next-step cards after a build (spec 2026-10-19 §2): one small structured call; null when it fails. */
+  async suggestNext(storeId: string, input: SuggestionInput): Promise<Array<Record<string, unknown>> | null> {
+    const model = sourceConversationModel(undefined, this.config.get<string>('app.openAi.conversationModel'));
+    const provider = sourceProvider(this.config, model);
+    const started = Date.now(); let body: any = null; let status = 'FAILED';
+    try {
+      const response = await fetch(provider.endpoint, {
+        method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(60_000),
+        body: JSON.stringify({ model, store: false, instructions: SUGGESTIONS_PROMPT,
+          input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(input) }] }],
+          text: { format: { type: 'json_schema', name: 'next_steps', strict: true, schema: SUGGESTIONS_SCHEMA } },
+          reasoning: { effort: 'low' }, max_output_tokens: 1200 }),
+      });
+      body = await response.json().catch(() => null);
+      checkSourceProviderQuota(response.status, body, provider.name);
+      if (!response.ok) return null;
+      status = 'COMPLETED';
+      return ((sourceResponseJson(body) as { suggestions?: Array<Record<string, unknown>> } | null)?.suggestions ?? []);
+    } catch { return null; }
+    finally { await this.metering?.record(storeId, 'source-suggestions', model, body, Date.now() - started, status); }
   }
 
   async decide(merchantId: string, input: ConversationInput): Promise<SourceConversationDecision> {
