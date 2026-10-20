@@ -9,6 +9,10 @@ Date: 2026-10-20 · Branch: `feature/store-page-architecture` · Status: awaitin
 - **Double-click any text in the preview and change it**, instead of asking YAPI.
 - Chosen approach (2026-10-20): **C** — a one-time converter turns every template's text into slots, then every
   template is filled and edited the way Esencial already is.
+- **Owner rule (2026-10-20): today's generations stay exactly as they are.** «Paso a paso» (Esencial) and «Hablar
+  con YAPI» (free design) keep their code, prompts and routing untouched. Templates are an extra choice a merchant
+  may take, nothing more. Every change in this spec is additive and only reached from the new «Elegir una
+  plantilla» card or a store whose `brief.templateId` is a slotted Plantilla.
 
 ## 2. Where things stand
 
@@ -49,8 +53,10 @@ visible literal text is left outside slots. A template that fails stays hidden (
 
 ## 4. Part B — one fill for every template
 
-- `applyMaster` becomes `applyTemplateFilled(templateId)`; Esencial keeps its dice, palettes and fonts. For a
-  Plantilla, **the look stays the template's own** (its DNA, colours, fonts): that is why a merchant picked it.
+- A new, separate `applyPlantillaFilled(templateId)` next to `applyMaster`; **`applyMaster`, the master fill prompt,
+  the dice and Esencial's routing are not edited** (shared pure helpers such as photo bundling are called, not
+  changed). For a Plantilla, **the look stays the template's own** (its DNA, colours, fonts): that is why a merchant
+  picked it.
 - **One model call** (same provider, budget and ChatGPT-plan path as the master fill) receives: the store's name,
   the merchant's words and confirmed brand facts, product names, photo descriptions, and the template's slot list
   (role, default, max). It returns a value for every slot, in the merchant's language and voice, about their
@@ -63,8 +69,10 @@ visible literal text is left outside slots. A template that fails stays hidden (
   demo FAQs and steps dropped). Never the demo business's text.
 - **Content edits** on any slotted template use `refill`: a new revision changing `store-data` only, instant,
   no agent run. Design edits still go to the YAPI agent as today.
-- `brief.templateId` keeps routing: a slotted template counts as a "filled" store for `editKind` routing
-  (today gated on `MASTER_TEMPLATE_ID`; widened to any manifest with `copy`).
+- Routing: a store whose `brief.templateId` is a slotted Plantilla gets its own content-edit branch, added beside
+  the master branch in `source-chat.service.ts`. The existing `MASTER_TEMPLATE_ID` checks are left as they are, so
+  Esencial and free-design stores take exactly today's path. Design requests on a Plantilla store go to the YAPI
+  agent as today.
 
 ## 5. Part C — picking a template when creating a store
 
@@ -98,6 +106,9 @@ visible literal text is left outside slots. A template that fails stays hidden (
   with recorded answers; `refill` slot test; Studio test for double-click → save → revision; fallback-to-direct-edit
   test on a free store.
 - Live check (owner OK, `pnpm dev:chatgpt`): create one store per new card, double-click edit on each, time each fill.
+
+- Regression guard: the existing master, chat and agent test suites must pass unchanged (no edits to their
+  expectations), and one live «Paso a paso» and one «Hablar con YAPI» build are compared with today's before merge.
 
 ## 8. Out of scope
 
