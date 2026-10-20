@@ -130,10 +130,12 @@ test('checkout opens a full review, supports returning with the cart intact and 
   await frame.getByRole('button', { name: 'Continuar con mi pedido', exact: true }).click();
   const checkout = frame.locator('[data-pagosya-checkout]');
   await expect(checkout.getByRole('heading', { name: 'Revisa tu pedido' })).toBeVisible();
-  await expect(checkout.locator('.order-item')).toContainText('Una foto');
+  // At 390px the order summary starts folded under «Ver resumen del pedido».
+  await checkout.locator('[data-shell-summary]').click();
+  await expect(checkout.locator('.pya-co__line')).toContainText('Una foto');
   await checkout.getByRole('button', { name: 'Añadir una unidad de Una foto' }).click();
-  await expect(checkout.locator('.quantity output')).toHaveText('2');
-  await checkout.getByRole('button', { name: 'Volver a la tienda' }).click();
+  await expect(checkout.locator('.pya-co__stepper output')).toHaveText('2');
+  await checkout.getByRole('button', { name: 'Seguir comprando' }).click();
   await expect(checkout).not.toBeVisible();
   await expect(frame.locator('[data-cart-count]')).toHaveText('2');
   await frame.getByRole('button', { name: 'Continuar con mi pedido', exact: true }).click();
@@ -141,10 +143,13 @@ test('checkout opens a full review, supports returning with the cart intact and 
   expect(await checkout.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await checkout.getByRole('button', { name: 'Continuar al pago de prueba' }).click();
   await expect(checkout.getByRole('heading', { name: 'Pago de prueba' })).toBeVisible();
-  await checkout.getByRole('button', { name: 'Volver al resumen' }).click();
+  await checkout.getByRole('button', { name: 'Volver a la entrega' }).click();
   await expect(checkout.getByRole('heading', { name: 'Revisa tu pedido' })).toBeVisible();
   await checkout.getByRole('button', { name: 'Continuar al pago de prueba' }).click();
   await checkout.getByRole('button', { name: 'Completar prueba' }).click();
+  // The calm checkout ends on its confirmation; «Volver a la tienda» leaves it (spec 2026-10-20).
+  await expect(checkout.getByRole('heading', { name: '¡Gracias por tu compra!' })).toBeVisible();
+  await checkout.getByRole('main').getByRole('button', { name: 'Volver a la tienda' }).or(checkout.locator('.pya-co__main [data-shell-close]')).first().click();
   await expect(checkout).not.toBeVisible();
   await expect(frame.locator('[data-pagosya-status]')).toHaveText('Prueba completada. No se creó ningún pedido ni se realizó ningún cobro.');
 });

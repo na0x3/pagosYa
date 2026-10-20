@@ -1,15 +1,16 @@
 /* One calm checkout (docs/superpowers/specs/2026-10-20-calm-checkout-design.md). The same shell in every store and on
-   the hosted payment page. Unlayered and two classes deep, so a store's element and class rules never reach it. */
+   the hosted payment page. Unlayered and two classes deep, so a store's element and class rules never reach it; the
+   resets use :where() so the shell's own component rules (same weight, later) always win over them. */
 .pya-checkout{--pya-ink:#1a1a1a;--pya-muted:#6b6b6b;--pya-line:#d9d9d9;--pya-soft:#f7f7f7;--pya-divider:#ececec;--pya-accent:#1a1a1a;--pya-accent-ink:#ffffff;--pya-gutter:clamp(20px,4vw,56px);position:fixed;inset:0;z-index:2147483000;display:block;margin:0;padding:0;overflow:auto;overscroll-behavior:contain;background:#fff;color:var(--pya-ink);color-scheme:light;font:400 15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;letter-spacing:normal;text-align:left;text-transform:none;-webkit-font-smoothing:antialiased}
 .pya-checkout[hidden]{display:none}
 .pya-checkout.pya-checkout--page{position:static;inset:auto;z-index:auto;min-height:100dvh;overflow:visible}
 .pya-checkout.pya-checkout :is(*,*::before,*::after){box-sizing:border-box}
-.pya-checkout.pya-checkout :is(h1,h2,h3,p,ul,ol,li,dl,dt,dd,fieldset,legend,figure,small,strong,output){margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;letter-spacing:normal;text-transform:none;text-shadow:none;box-shadow:none;transform:none}
-.pya-checkout.pya-checkout strong{font-weight:600}
-.pya-checkout.pya-checkout :is(ul,ol){list-style:none}
-.pya-checkout.pya-checkout :is(button,input,select,textarea){margin:0;font:inherit;color:inherit;letter-spacing:normal;text-transform:none;text-shadow:none;box-shadow:none;transform:none;filter:none;-webkit-text-fill-color:currentColor}
-.pya-checkout.pya-checkout a{color:inherit;text-decoration:underline;text-underline-offset:3px}
-.pya-checkout.pya-checkout img{display:block;max-width:100%;border:0;border-radius:0;filter:none}
+.pya-checkout.pya-checkout :where(h1,h2,h3,p,ul,ol,li,dl,dt,dd,fieldset,legend,figure,small,strong,output){margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;letter-spacing:normal;text-transform:none;text-shadow:none;box-shadow:none;transform:none}
+.pya-checkout.pya-checkout :where(strong){font-weight:600}
+.pya-checkout.pya-checkout :where(ul,ol){list-style:none}
+.pya-checkout.pya-checkout :where(button,input,select,textarea){margin:0;border-radius:0;font:inherit;color:inherit;letter-spacing:normal;text-transform:none;text-shadow:none;box-shadow:none;transform:none;filter:none;-webkit-text-fill-color:currentColor}
+.pya-checkout.pya-checkout :where(a){color:inherit;text-decoration:underline;text-underline-offset:3px}
+.pya-checkout.pya-checkout :where(img){display:block;max-width:100%;border:0;border-radius:0;filter:none}
 .pya-checkout.pya-checkout :focus-visible{outline:2px solid var(--pya-ink);outline-offset:2px}
 .pya-checkout.pya-checkout [hidden]{display:none!important}
 .pya-checkout .pya-co__bar{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px;padding:10px var(--pya-gutter);border-bottom:1px solid var(--pya-divider);background:#fff}
@@ -31,6 +32,7 @@
 .pya-checkout .pya-co__steps [aria-current=step]{color:var(--pya-ink);font-weight:600}
 .pya-checkout .pya-co__steps button{min-height:32px;padding:0;border:0;background:none;color:var(--pya-ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .pya-checkout .pya-co__lead h1{font-size:26px;line-height:1.2;font-weight:600}
+.pya-checkout .pya-co__lead h1:focus{outline:none}
 .pya-checkout .pya-co__note{margin-top:4px;color:var(--pya-muted);font-size:13px}
 .pya-checkout .pya-co__status{margin-top:14px;padding:12px 14px;border-radius:6px;background:var(--pya-soft);font-size:14px}
 .pya-checkout .pya-co__status:empty{display:none}

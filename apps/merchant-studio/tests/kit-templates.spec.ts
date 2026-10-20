@@ -43,23 +43,20 @@ for (const width of [1280, 390]) test(`a fully templated store shops end to end 
   await expect(shop.locator('[data-cart-slot="total"] .order-total')).toBeVisible();
   await browserPage.screenshot({ path: `${SHOTS}/cart-${width}.png` });
   await shop.getByRole('button', { name: 'Continuar con mi pedido' }).click();
-  await expect(shop.locator('.revision [data-review-slot="summary"] .order-total')).toBeVisible();
-  const payButton = shop.locator('.revision [data-review-slot="fields"] .checkout-button');
+  // The one calm checkout (spec 2026-10-20) draws the review whatever review template the store carries.
+  const checkout = shop.locator('.pya-checkout');
+  // On a phone the order summary starts folded under «Ver resumen del pedido».
+  if (width === 390) await checkout.locator('[data-shell-summary]').click();
+  await expect(checkout.locator('.pya-co__summary .order-total')).toBeVisible();
+  await expect(shop.locator('.revision')).toHaveCount(0);
+  const payButton = checkout.locator('.pya-co__main .pya-co__pay');
   await expect(payButton).toBeVisible();
-  if (width === 1280) {
-    // Fix round 2, finding 1: with a single templated child, a plain 2-column .checkout-review
-    // grid squeezed the review root into column 1 instead of spanning the full row.
-    const review = (await shop.locator('[data-checkout-review]').boundingBox())!;
-    const root = (await shop.locator('[data-checkout-review] [data-review-root]').boundingBox())!;
-    expect(root.width).toBeGreaterThan(review.width * 0.95);
-  }
   await browserPage.screenshot({ path: `${SHOTS}/review-${width}.png` });
   expect(await shop.locator('html').evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  // Fix round 2, finding 9 (spec §7 gap): the flow continues past the review into the simulated
-  // pay step and all the way to the preview's own completion, as far as a preview allows.
+  // The flow continues past the review into the simulated pay step and its confirmation.
   await payButton.click();
   await expect(shop.getByRole('heading', { name: 'Pago de prueba' })).toBeVisible();
-  const finishButton = shop.locator('.revision [data-review-slot="fields"] .checkout-button');
+  const finishButton = checkout.locator('.pya-co__main .pya-co__pay');
   await expect(finishButton).toHaveText(/Completar prueba/);
   await finishButton.click();
   await expect(shop.locator('[data-pagosya-status]').filter({ hasText: 'Prueba completada' }).first()).toBeVisible();
@@ -150,34 +147,25 @@ test('a cart-line template with photo not on an <img> fails the checks and menti
 // Spec 2026-10-15 free commerce surfaces: the whole checkout page as a template.
 const CHECKOUT = `<template data-pagosya-checkout-template><div class="caja"><nav data-checkout-slot="back"></nav><header class="caja__head" data-checkout-slot="heading"></header><p data-checkout-slot="status"></p><section class="caja__cuerpo" data-checkout-slot="review"></section></div></template>`;
 
-for (const width of [1280, 390]) test(`the checkout page template owns the page and the purchase completes at ${width}px`, async ({ page: browserPage }) => {
+for (const width of [1280, 390]) test(`the calm checkout draws the checkout over a store checkout template and the purchase completes at ${width}px`, async ({ page: browserPage }) => {
   await browserPage.setViewportSize({ width, height: 900 });
   await browserPage.emulateMedia({ reducedMotion: 'reduce' });
   const shop = await mount(browserPage, TEMPLATES + CHECKOUT);
   await shop.getByRole('button', { name: /Mi canasta/ }).first().click();
   await shop.getByRole('button', { name: 'Continuar con mi pedido' }).click();
-  const root = shop.locator('[data-pagosya-checkout] [data-checkout-root]');
+  const root = shop.locator('.pya-checkout');
   await expect(root).toBeVisible();
-  await expect(root.locator('[data-checkout-slot="heading"] h1')).toHaveText('Revisa tu pedido');
-  await expect(root.locator('[data-checkout-slot="review"] [data-checkout-review] .order-total')).toBeVisible();
-  await expect(root.locator('[data-checkout-slot="status"] [data-pagosya-status]')).toHaveCount(1);
-  expect(await shop.locator('html').evaluate(() => document.documentElement.dataset.checkoutTemplateInvalid)).toBeUndefined();
-  await root.locator('.checkout-button').click();
-  await expect(shop.getByRole('heading', { name: 'Pago de prueba' })).toBeVisible();
-  await expect(shop.locator('[data-checkout-root] [data-checkout-slot="heading"] h1')).toHaveText('Pago de prueba');
-  await shop.locator('[data-checkout-root] .checkout-button').click();
+  await expect(shop.locator('.caja, [data-checkout-root]')).toHaveCount(0);
+  await expect(root.locator('.pya-co__lead h1')).toHaveText('Revisa tu pedido');
+  if (width === 390) await root.locator('[data-shell-summary]').click();
+  await expect(root.locator('.pya-co__summary .order-total')).toBeVisible();
+  await expect(root.locator('[data-pagosya-status]')).toHaveCount(1);
+  await root.locator('.pya-co__pay').click();
+  await expect(root.locator('.pya-co__lead h1')).toHaveText('Pago de prueba');
+  await root.locator('.pya-co__pay').click();
   await expect(shop.locator('[data-pagosya-status]').filter({ hasText: 'Prueba completada' }).first()).toBeVisible();
   expect(await shop.locator('html').evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await browserPage.screenshot({ path: `${SHOTS}/checkout-template-${width}.png` });
-});
-
-test('a checkout template without its review slot falls back to the kit checkout and raises its flag', async ({ page: browserPage }) => {
-  const shop = await mount(browserPage, TEMPLATES + CHECKOUT.replace('<section class="caja__cuerpo" data-checkout-slot="review"></section>', ''));
-  await shop.getByRole('button', { name: /Mi canasta/ }).first().click();
-  await shop.getByRole('button', { name: 'Continuar con mi pedido' }).click();
-  await expect(shop.locator('[data-pagosya-checkout] .checkout-page__summary .order-total')).toBeVisible();
-  await expect(shop.locator('[data-checkout-root]')).toHaveCount(0);
-  expect(await shop.locator('html').evaluate(() => document.documentElement.dataset.checkoutTemplateInvalid)).toBe('true');
 });
 
 test('each part falls back alone: a broken cart line keeps the templated cart panel', async ({ page: browserPage }) => {

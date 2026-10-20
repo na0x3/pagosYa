@@ -53,6 +53,16 @@
       probe.style.color = 'var(--store-accent-foreground,var(--brand-accent-foreground,#ffffff))';
       ink = parseRgb(getComputedStyle(probe).color);
       probe.remove();
+      // Stores without accent tokens often colour their action through .checkout-button (as the product page reads it).
+      const root = getComputedStyle(document.documentElement);
+      if (!['--store-accent', '--brand-accent', '--accent'].some(name => root.getPropertyValue(name).trim())) {
+        const action = Object.assign(document.createElement('button'), { className: 'checkout-button', type: 'button' });
+        action.style.cssText = 'display:block!important;position:absolute;visibility:hidden;pointer-events:none';
+        document.body.append(action);
+        const styles = getComputedStyle(action), background = parseRgb(styles.backgroundColor);
+        if (background) { accent = background; ink = parseRgb(styles.color); }
+        action.remove();
+      }
     } catch { /* No colour to read: ink. */ }
     const readable = accent && ink && contrastRatio(accent, ink) >= 4.5 && contrastRatio(accent, [255, 255, 255]) >= 3;
     root.style.setProperty('--pya-accent', readable ? `rgb(${accent.join(',')})` : '#1a1a1a');

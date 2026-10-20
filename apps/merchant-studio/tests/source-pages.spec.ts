@@ -19,7 +19,7 @@ test('an authored sibling cart does not duplicate the active checkout form', asy
   fixture.find(f => f.path === 'checkout.html')!.content = '<!doctype html><html><head><script src="config.js" defer></script><script src="commerce.js" defer></script></head><body><main><div data-pagosya-checkout-page data-pagosya-checkout></div><div data-pagosya-cart data-checkout-review="review"></div></main></body></html>';
   await page.evaluate(async files => {
     const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
-    const frame = document.createElement('iframe'); frame.title = 'Checkout'; frame.sandbox.add('allow-scripts');
+    const frame = document.createElement('iframe'); frame.title = 'Checkout'; frame.sandbox.add('allow-scripts'); frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:9';
     frame.srcdoc = sourcePreviewDocument({ schemaVersion: 1, brief: { businessType: 'Tienda', audience: 'Clientes', primaryAction: 'Comprar', visualDirection: 'Libre' }, files }, 'checkout.html', { cart: [{ id: 'p1', quantity: 1 }] });
     document.body.append(frame);
   }, fixture);
@@ -86,19 +86,20 @@ for (const width of [1280, 390]) test(`full product tabs and automatic checkout 
   expect(await frame.locator('body').evaluate(el => el.scrollWidth <= window.innerWidth)).toBe(true);
   await frame.getByRole('button', { name: 'Continuar con mi pedido' }).click();
   await expect(frame.getByRole('heading', { name: 'Revisa tu pedido' })).toBeVisible();
-  await expect(frame.locator('.order-item')).toContainText('Bolso de algodón');
+  if (width === 390) await frame.locator('[data-shell-summary]').click();
+  await expect(frame.locator('.pya-co__line')).toContainText('Bolso de algodón');
   const increment = frame.getByRole('button', { name: 'Añadir una unidad de Bolso de algodón' });
   await increment.focus(); await page.keyboard.press('Enter');
   await expect(increment).toBeFocused();
   const decrement = frame.getByRole('button', { name: 'Quitar una unidad de Bolso de algodón' });
   await decrement.focus(); await page.keyboard.press('Enter');
   await expect(decrement).toBeFocused();
-  await frame.getByRole('combobox', { name: 'Entrega', exact: true }).selectOption('delivery');
+  await frame.getByRole('radio', { name: 'Entrega a domicilio' }).check();
   await frame.getByRole('textbox', { name: 'Dirección y referencia' }).fill('Calle 10, puerta azul');
   await page.screenshot({ path: `/tmp/pagosya-checkout-${width}.png`, fullPage: true });
   expect(await frame.locator('body').evaluate(el => el.scrollWidth <= window.innerWidth)).toBe(true);
   await expect(frame.getByRole('button', { name: 'Continuar al pago de prueba' })).toHaveCSS('background-color', 'rgb(7, 80, 164)');
-  await expect(frame.getByRole('button', { name: 'Continuar al pago de prueba' })).toHaveCSS('border-radius', '0px');
+  await expect(frame.getByRole('button', { name: 'Continuar al pago de prueba' })).toHaveCSS('border-radius', '6px');
   await frame.getByRole('button', { name: 'Continuar al pago de prueba' }).click();
   await expect(frame.getByRole('heading', { name: 'Pago de prueba' })).toBeVisible();
   await frame.getByRole('button', { name: 'Completar prueba' }).click();
@@ -120,8 +121,8 @@ test('exported pages refresh the catalog and create a PagosYa checkout with the 
   await page.getByRole('button', { name: 'Añadir al pedido', exact: true }).click();
   await page.getByRole('button', { name: 'Continuar con mi pedido' }).click();
   await expect(page).toHaveURL('https://store.test/checkout.html');
-  await expect(page.locator('.order-item')).toContainText('Bolso de algodón');
-  await page.getByRole('combobox', { name: 'Entrega', exact: true }).selectOption('delivery');
+  await expect(page.locator('.pya-co__line')).toContainText('Bolso de algodón');
+  await page.getByRole('radio', { name: 'Entrega a domicilio' }).check();
   await page.getByRole('textbox', { name: 'Dirección y referencia' }).fill('Calle 10, puerta azul');
   await page.getByRole('button', { name: 'Pagar con pagosYa' }).click();
   await expect(page).toHaveURL('https://store.test/s/alba#client_secret=test-checkout-secret');
