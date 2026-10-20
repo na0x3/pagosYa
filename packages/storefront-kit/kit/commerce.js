@@ -4362,7 +4362,10 @@
     let slot = document.querySelector('[data-pagosya-contact]');
     // The store assistant takes the corner while it is on (spec 2026-10-13-store-assistant-design); a form the page placed in
     // its content stays, shown inline where it was put (2026-10-16: baek's quote page card stood empty with the bot on).
-    const inline = Boolean(store.assistant) && Boolean(slot);
+    // A form the design built a section for (a visible slot inside a section with its own heading) also stays where it
+    // was put, assistant or not (PEPPA please 2026-10-20: «Contáctanos» stood empty while the form floated in the corner).
+    const designed = Boolean(slot) && !slot.hidden && Boolean(slot.parentElement?.closest('section')?.querySelector('h1,h2,h3'));
+    const inline = (Boolean(store.assistant) && Boolean(slot)) || designed;
     if (!store.contactFormEnabled || (store.assistant && !slot)) { if (slot) slot.hidden = true; return; }
     // A slot hidden in the markup is a placeholder (every showcase home has one): with the assistant on it stays hidden;
     // only a form the page shows in its content goes inline (final review 2026-10-16, I4).
