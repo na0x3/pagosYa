@@ -150,7 +150,7 @@
       if (products().some(p => p.id === selectedProduct.id)) openProduct(selectedProduct.id, detailTrigger);
       else detail.close();
     }
-    if (fullCheckoutPage) showCheckout(location.hash === '#pago-de-prueba' && (preview || config.demo));
+    if (fullCheckoutPage) showCheckout(location.hash === '#pago-de-prueba' && (preview || config.demo) ? 'payment' : location.hash === '#pedido-de-prueba' && (preview || config.demo) ? 'done' : 'review');
     renderCart();
     renderContact();
     // Validate every authored template as soon as the store is ready, not only when its surface

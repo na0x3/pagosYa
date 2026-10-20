@@ -2481,37 +2481,10 @@
   checkoutPage.hidden = true;
   if (!fullCheckoutPage) document.body.append(checkoutPage);
   const checkoutStyle = document.createElement("style");
+  // The calm checkout (checkout/shell.js) draws the checkout itself; these only keep hidden mounts hidden.
   checkoutStyle.textContent = `
     [data-pagosya-checkout][hidden]{display:none!important}
     [data-pagosya-redundant-review]{display:none!important}
-    @layer pagosya-commerce {
-    [data-pagosya-checkout]:not([hidden]){display:block;position:fixed;inset:0;z-index:2147483000;overflow:auto;overscroll-behavior:contain;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:var(--store-foreground,var(--brand-foreground,var(--ink,CanvasText)));font-family:inherit;padding:clamp(20px,5vw,64px)}
-    [data-pagosya-checkout] *{box-sizing:border-box}
-    [data-pagosya-checkout] .checkout-page__inner{max-width:1000px;margin:auto}
-    [data-pagosya-checkout] .checkout-page__back{display:inline-flex;align-items:center;min-height:44px;padding:8px 0;margin:0 0 32px;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:4px}
-    [data-pagosya-checkout] h1{margin:0 0 16px;font-size:clamp(30px,5vw,52px);line-height:1.1;font-weight:800}
-    [data-pagosya-checkout] h1[tabindex="-1"]:focus:not(:focus-visible){outline:none}
-    [data-pagosya-checkout] .checkout-page__intro{max-width:60ch;line-height:1.6;margin:0 0 32px}
-    [data-pagosya-checkout] .checkout-page__layout{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:clamp(24px,5vw,64px)}
-    [data-pagosya-checkout] .checkout-page__summary{padding:24px;border:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)));border-radius:12px;align-self:start;background:var(--store-surface,var(--brand-surface,transparent))}
-    [data-pagosya-checkout] .checkout-page__summary h2{margin:0 0 20px;font-size:22px}
-    [data-pagosya-checkout] .order-items{list-style:none;padding:0;margin:0}
-    [data-pagosya-checkout] .order-item{display:block;padding:16px 0;border-bottom:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)))}
-    [data-pagosya-checkout] .order-item>div:first-child:not(.order-item__body){display:flex;justify-content:space-between;gap:16px;line-height:1.5}
-    [data-pagosya-checkout] .quantity{display:flex;align-items:center;gap:12px;margin-top:12px}
-    [data-pagosya-checkout] .quantity button{width:44px;min-height:44px;background:transparent;border:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)));border-radius:50%;font:inherit;color:inherit;cursor:pointer}
-    [data-pagosya-checkout] .order-field{display:grid;gap:8px;margin:20px 0;font:inherit}
-    [data-pagosya-checkout] select{width:100%;min-height:44px;padding:8px;border:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)));background:var(--store-background,var(--brand-background,var(--paper,Canvas)));color:inherit;font:inherit}
-    [data-pagosya-checkout] .order-total{display:flex;justify-content:space-between;gap:16px;margin:24px 0;font-size:20px}
-    [data-pagosya-checkout] .order-note{font-size:14px;line-height:1.6;color:inherit;opacity:.8}
-    [data-pagosya-checkout] .checkout-button{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:48px;padding:12px 20px;border:0;border-radius:var(--store-radius,var(--brand-radius,0px));background:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,CanvasText))));color:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,Canvas)));font:inherit;font-weight:700;cursor:pointer}
-    [data-pagosya-checkout] button:disabled{opacity:.5;cursor:default}
-    [data-pagosya-checkout] [data-pagosya-status]{margin:24px 0;font-size:15px;line-height:1.6}
-    @media(max-width:640px){[data-pagosya-checkout] .checkout-page__layout{grid-template-columns:1fr}[data-pagosya-checkout] .checkout-page__summary{padding:20px}}
-  `;
-  checkoutStyle.textContent += `
-    }
-    :where([data-pagosya-checkout-page]):not([hidden]){position:static;inset:auto;z-index:auto;overflow:visible;background:inherit;color:inherit}
   `;
   document.head.append(checkoutStyle);
   // Native dialog owns modal focus, Escape and the backdrop. Authored cart markup
@@ -3121,6 +3094,80 @@
   const CHECKOUT_SHELL_CSS = "/* One calm checkout (docs/superpowers/specs/2026-10-20-calm-checkout-design.md). The same shell in every store and on\n   the hosted payment page. Unlayered and two classes deep, so a store's element and class rules never reach it. */\n.pya-checkout{--pya-ink:#1a1a1a;--pya-muted:#6b6b6b;--pya-line:#d9d9d9;--pya-soft:#f7f7f7;--pya-divider:#ececec;--pya-accent:#1a1a1a;--pya-accent-ink:#ffffff;--pya-gutter:clamp(20px,4vw,56px);position:fixed;inset:0;z-index:2147483000;display:block;margin:0;padding:0;overflow:auto;overscroll-behavior:contain;background:#fff;color:var(--pya-ink);color-scheme:light;font:400 15px/1.5 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,sans-serif;letter-spacing:normal;text-align:left;text-transform:none;-webkit-font-smoothing:antialiased}\n.pya-checkout[hidden]{display:none}\n.pya-checkout.pya-checkout--page{position:static;inset:auto;z-index:auto;min-height:100dvh;overflow:visible}\n.pya-checkout.pya-checkout :is(*,*::before,*::after){box-sizing:border-box}\n.pya-checkout.pya-checkout :is(h1,h2,h3,p,ul,ol,li,dl,dt,dd,fieldset,legend,figure,small,strong,output){margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;letter-spacing:normal;text-transform:none;text-shadow:none;box-shadow:none;transform:none}\n.pya-checkout.pya-checkout strong{font-weight:600}\n.pya-checkout.pya-checkout :is(ul,ol){list-style:none}\n.pya-checkout.pya-checkout :is(button,input,select,textarea){margin:0;font:inherit;color:inherit;letter-spacing:normal;text-transform:none;text-shadow:none;box-shadow:none;transform:none;filter:none;-webkit-text-fill-color:currentColor}\n.pya-checkout.pya-checkout a{color:inherit;text-decoration:underline;text-underline-offset:3px}\n.pya-checkout.pya-checkout img{display:block;max-width:100%;border:0;border-radius:0;filter:none}\n.pya-checkout.pya-checkout :focus-visible{outline:2px solid var(--pya-ink);outline-offset:2px}\n.pya-checkout.pya-checkout [hidden]{display:none!important}\n.pya-checkout .pya-co__bar{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px;padding:10px var(--pya-gutter);border-bottom:1px solid var(--pya-divider);background:#fff}\n.pya-checkout .pya-co__brand{display:flex;align-items:center;gap:10px;min-width:0;font-size:17px;font-weight:600}\n.pya-checkout .pya-co__logo{width:auto;height:32px;max-width:120px;object-fit:contain}\n.pya-checkout .pya-co__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.pya-checkout .pya-co__back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0;border:0;background:none;color:var(--pya-muted);font-size:14px;text-decoration:none;cursor:pointer}\n.pya-checkout .pya-co__back:hover{color:var(--pya-ink)}\n.pya-checkout .pya-co__secure{display:inline-flex;align-items:center;gap:6px;color:var(--pya-muted);font-size:13px;white-space:nowrap}\n.pya-checkout .pya-co__summary-toggle{display:none}\n.pya-checkout .pya-co__frame{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-rows:auto 1fr;min-height:calc(100dvh - 65px)}\n.pya-checkout [data-pagosya-cart][data-checkout-review]{display:contents!important}\n.pya-checkout .pya-co__lead,.pya-checkout .pya-co__main{grid-column:1;justify-self:end;width:min(100% - 2 * var(--pya-gutter),580px);margin-right:var(--pya-gutter)}\n.pya-checkout .pya-co__lead{grid-row:1;padding-top:32px}\n.pya-checkout .pya-co__main{grid-row:2;display:grid;align-content:start;gap:0;padding:4px 0 56px}\n.pya-checkout .pya-co__steps{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px;font-size:13px;color:var(--pya-muted)}\n.pya-checkout .pya-co__steps li{display:inline-flex;align-items:center;gap:6px}\n.pya-checkout .pya-co__steps li+li::before{content:\"›\";color:var(--pya-line)}\n.pya-checkout .pya-co__steps [aria-current=step]{color:var(--pya-ink);font-weight:600}\n.pya-checkout .pya-co__steps button{min-height:32px;padding:0;border:0;background:none;color:var(--pya-ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}\n.pya-checkout .pya-co__lead h1{font-size:26px;line-height:1.2;font-weight:600}\n.pya-checkout .pya-co__note{margin-top:4px;color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__status{margin-top:14px;padding:12px 14px;border-radius:6px;background:var(--pya-soft);font-size:14px}\n.pya-checkout .pya-co__status:empty{display:none}\n.pya-checkout .pya-co__section{display:grid;gap:12px;padding:26px 0 0}\n.pya-checkout .pya-co__title{font-size:17px;font-weight:600;line-height:1.3}\n.pya-checkout .pya-co__hint{color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__row{display:grid;grid-template-columns:1fr 1fr;gap:12px}\n.pya-checkout :is(.pya-co__field,.order-field,.field){position:relative;display:grid;gap:2px;padding:8px 14px 9px;border:1px solid var(--pya-line);border-radius:6px;background:#fff;color:var(--pya-muted);font-size:12px;line-height:1.3;cursor:text}\n.pya-checkout :is(.pya-co__field,.order-field,.field):focus-within{border-color:var(--pya-ink);box-shadow:0 0 0 1px var(--pya-ink)}\n.pya-checkout :is(.pya-co__field,.order-field,.field) :is(input,select,textarea){display:block;width:100%;min-height:26px;padding:0;border:0;border-radius:0;background:transparent;color:var(--pya-ink);font-size:16px;line-height:1.4;outline:none;appearance:none}\n.pya-checkout :is(.pya-co__field,.order-field,.field) select{padding-right:28px;background:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\") no-repeat right 0 center}\n.pya-checkout :is(.pya-co__field,.order-field,.field) textarea{min-height:56px;resize:vertical}\n.pya-checkout :is(.pya-co__field,.order-field,.field):has([aria-invalid=true]){border-color:#c0392b}\n.pya-checkout .field>label{color:var(--pya-muted);font-size:12px}\n.pya-checkout :is(.field-error,.field-hint,.hint){color:var(--pya-muted);font-size:12px}\n.pya-checkout .field-error{color:#c0392b}\n.pya-checkout .field-error:empty{display:none}\n.pya-checkout :is(fieldset[data-shipping],fieldset[data-delivery-address],fieldset[data-shipping-destination]){display:grid;gap:12px}\n.pya-checkout :is(fieldset[data-shipping],fieldset[data-delivery-address],fieldset[data-shipping-destination])>legend{margin-bottom:12px;font-size:15px;font-weight:600}\n.pya-checkout .pya-co__mirrored{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;border:0!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important}\n.pya-checkout .pya-co__choices,.pya-checkout .pya-co__methods{display:grid;border:1px solid var(--pya-line);border-radius:6px;overflow:hidden;background:#fff}\n.pya-checkout :is(.pya-co__choice,.pya-co__method)+:is(.pya-co__choice,.pya-co__method){border-top:1px solid var(--pya-line)}\n.pya-checkout .pya-co__choice,.pya-checkout .pya-co__method>label{display:flex;align-items:center;gap:12px;min-height:56px;padding:12px 16px;cursor:pointer}\n.pya-checkout .pya-co__methods--preview .pya-co__method{display:flex;align-items:center;gap:12px;min-height:52px;padding:10px 16px}\n.pya-checkout :is(.pya-co__choice,.pya-co__method) input[type=radio]{flex:none;width:18px;height:18px;margin:0;accent-color:var(--pya-accent)}\n.pya-checkout .pya-co__choice:has(input:checked),.pya-checkout .pya-co__method:has(input:checked)>label{background:color-mix(in srgb,var(--pya-accent) 6%,#fff);box-shadow:inset 0 0 0 1px var(--pya-accent)}\n.pya-checkout .pya-co__method-name{flex:1;min-width:0;font-size:15px}\n.pya-checkout .pya-co__method-body{display:grid;gap:10px;padding:16px;border-top:1px solid var(--pya-line);background:var(--pya-soft);font-size:14px;color:var(--pya-muted)}\n@media (prefers-reduced-motion:no-preference){.pya-checkout .pya-co__method-body{animation:pya-co-open .2s cubic-bezier(.23,1,.32,1)}}\n@keyframes pya-co-open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}\n.pya-checkout .pya-co__logos{display:inline-flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}\n.pya-checkout .pya-co__logo-badge{display:inline-flex;flex:none;width:38px;height:24px;border:1px solid var(--pya-line);border-radius:4px;overflow:hidden;background:#fff}\n.pya-checkout .pya-co__logo-badge svg{display:block;width:100%;height:100%}\n.pya-checkout .pya-co__pay{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:56px;margin-top:24px;padding:14px 20px;border:0;border-radius:6px;background:var(--pya-accent);color:var(--pya-accent-ink);font-size:17px;font-weight:600;cursor:pointer;transition:filter .15s ease}\n.pya-checkout .pya-co__pay:hover:not(:disabled){filter:brightness(.92)}\n.pya-checkout .pya-co__pay:disabled{background:#a6a6a6;color:#fff;cursor:default}\n.pya-checkout .pya-co__pay-total{font-weight:400;opacity:.9}\n.pya-checkout .pya-co__secondary{width:100%;min-height:48px;margin-top:10px;padding:10px 16px;border:1px solid var(--pya-line);border-radius:6px;background:#fff;cursor:pointer}\n.pya-checkout .pya-co__trust{display:grid;justify-items:center;gap:8px;margin-top:16px;color:var(--pya-muted);font-size:12px;text-align:center}\n.pya-checkout .pya-co__trust>span:last-child{display:inline-flex;align-items:center;gap:6px}\n.pya-checkout .pya-co__summary{grid-column:2;grid-row:1 / -1;align-self:stretch;padding:32px var(--pya-gutter) 56px;background:var(--pya-soft);border-left:1px solid var(--pya-divider)}\n.pya-checkout .pya-co__summary-inner{position:sticky;top:24px;display:grid;gap:18px;width:min(100%,440px)}\n.pya-checkout .pya-co__photo{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;background:#ececec}\n.pya-checkout .pya-co__count{color:var(--pya-muted);font-weight:400}\n.pya-checkout .pya-co__lines{display:grid;gap:16px}\n.pya-checkout .pya-co__line{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:start}\n.pya-checkout .pya-co__line:not(:has(.pya-co__thumb)){grid-template-columns:minmax(0,1fr) auto}\n.pya-checkout .pya-co__thumb{position:relative;width:64px;height:64px;border:1px solid var(--pya-divider);border-radius:8px;background:#fff}\n.pya-checkout .pya-co__thumb img{width:100%;height:100%;object-fit:cover;border-radius:7px}\n.pya-checkout .pya-co__qty{position:absolute;top:-8px;right:-8px;display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#6b6b6b;color:#fff;font-size:12px;font-weight:600}\n.pya-checkout .pya-co__line-text{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}\n.pya-checkout .pya-co__line-text small{color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__line-price{white-space:nowrap;font-variant-numeric:tabular-nums}\n.pya-checkout .pya-co__stepper{display:inline-flex;align-items:center;gap:4px;margin-top:6px}\n.pya-checkout .pya-co__stepper button{width:32px;min-height:32px;padding:0;border:1px solid var(--pya-line);border-radius:6px;background:#fff;cursor:pointer}\n.pya-checkout .pya-co__stepper button:disabled{opacity:.4;cursor:default}\n.pya-checkout .pya-co__stepper output{min-width:24px;text-align:center}\n.pya-checkout .pya-co__code{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch}\n.pya-checkout .pya-co__code>button{min-height:48px;padding:0 16px;border:1px solid var(--pya-line);border-radius:6px;background:#ececec;color:var(--pya-ink);cursor:pointer}\n.pya-checkout .pya-co__code>p{grid-column:1 / -1;color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__code>p:empty{display:none}\n.pya-checkout .pya-co__totals{display:grid;gap:10px;padding-top:4px}\n.pya-checkout .pya-co__totals :is(.order-savings,.order-total,dl>div){display:flex;justify-content:space-between;gap:16px}\n.pya-checkout .pya-co__totals>div{display:flex;justify-content:space-between;gap:16px}\n.pya-checkout .pya-co__totals .order-total{align-items:baseline;padding-top:12px;border-top:1px solid var(--pya-divider);font-size:17px;font-weight:600}\n.pya-checkout .pya-co__totals .order-total strong{font-size:24px;font-variant-numeric:tabular-nums;white-space:nowrap}\n.pya-checkout .pya-co__totals .order-total small{margin-right:6px;color:var(--pya-muted);font-size:12px;font-weight:400}\n.pya-checkout .pya-co__totals :is(.order-note,[data-bundle-quote-status],.pagosya-secure-note){color:var(--pya-muted);font-size:13px}\n.pya-checkout .pya-co__totals [data-bundle-quote-status]:empty{display:none}\n.pya-checkout .pya-co__delivery-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 16px;border:1px solid var(--pya-line);border-radius:6px;font-size:14px}\n.pya-checkout .pya-co__delivery-row button{min-height:40px;padding:0;border:0;background:none;text-decoration:underline;text-underline-offset:3px;cursor:pointer}\n.pya-checkout .pya-co__done{display:grid;gap:16px;padding-top:12px}\n.pya-checkout .pya-co__check{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--pya-accent);color:var(--pya-accent-ink)}\n.pya-checkout .pya-co__next{display:grid;gap:8px;padding-left:20px;list-style:decimal}\n.pya-checkout :is(.commerce-consent,.reminder-consent){display:flex;gap:10px;align-items:flex-start;font-size:14px}\n@media (max-width:760px){\n  .pya-checkout .pya-co__bar{padding:8px 16px}\n  .pya-checkout .pya-co__secure{font-size:0}\n  .pya-checkout .pya-co__summary-toggle{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:52px;padding:12px 16px;border:0;border-bottom:1px solid var(--pya-divider);background:var(--pya-soft);color:var(--pya-ink);cursor:pointer}\n  .pya-checkout .pya-co__frame{grid-template-columns:minmax(0,1fr);grid-template-rows:none}\n  .pya-checkout .pya-co__summary{grid-column:1;grid-row:auto;order:-1;display:none;padding:20px 16px;border-left:0;border-bottom:1px solid var(--pya-divider)}\n  .pya-checkout[data-summary-open] .pya-co__summary{display:block}\n  .pya-checkout .pya-co__summary-inner{position:static;width:100%}\n  .pya-checkout .pya-co__lead,.pya-checkout .pya-co__main{grid-column:1;grid-row:auto;justify-self:stretch;width:auto;margin:0 16px}\n  .pya-checkout .pya-co__lead{padding-top:20px}\n  .pya-checkout .pya-co__row{grid-template-columns:1fr}\n}\n@media (max-width:760px) and (prefers-reduced-motion:no-preference){.pya-checkout[data-summary-open] .pya-co__summary{animation:pya-co-open .2s cubic-bezier(.23,1,.32,1)}}\n";
   const PAYMENT_LOGOS = {"logos":{"visa":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"Visa\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#fff\"/><text x=\"19\" y=\"16.2\" text-anchor=\"middle\" font-family=\"Arial,Helvetica,sans-serif\" font-size=\"11\" font-weight=\"700\" font-style=\"italic\" letter-spacing=\".4\" fill=\"#1434CB\">VISA</text></svg>","mastercard":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"Mastercard\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#fff\"/><circle cx=\"15\" cy=\"12\" r=\"7\" fill=\"#EB001B\"/><circle cx=\"23\" cy=\"12\" r=\"7\" fill=\"#F79E1B\"/><path d=\"M19 6.1a7 7 0 0 1 0 11.8 7 7 0 0 1 0-11.8z\" fill=\"#FF5F00\"/></svg>","amex":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"American Express\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#2E77BC\"/><text x=\"19\" y=\"15.3\" text-anchor=\"middle\" font-family=\"Arial,Helvetica,sans-serif\" font-size=\"8.5\" font-weight=\"700\" letter-spacing=\".4\" fill=\"#fff\">AMEX</text></svg>","qr":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"QR\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#fff\"/><g fill=\"none\" stroke=\"#1a1a1a\" stroke-width=\"1.4\"><rect x=\"11.7\" y=\"4.7\" width=\"5\" height=\"5\"/><rect x=\"21.3\" y=\"4.7\" width=\"5\" height=\"5\"/><rect x=\"11.7\" y=\"14.3\" width=\"5\" height=\"5\"/></g><g fill=\"#1a1a1a\"><rect x=\"13.5\" y=\"6.5\" width=\"1.4\" height=\"1.4\"/><rect x=\"23.1\" y=\"6.5\" width=\"1.4\" height=\"1.4\"/><rect x=\"13.5\" y=\"16.1\" width=\"1.4\" height=\"1.4\"/><rect x=\"21\" y=\"14\" width=\"2\" height=\"2\"/><rect x=\"24.5\" y=\"16.4\" width=\"2\" height=\"2\"/><rect x=\"21\" y=\"18\" width=\"2\" height=\"1.6\"/></g></svg>","tigo":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"Tigo Money\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#00377B\"/><text x=\"19\" y=\"12.6\" text-anchor=\"middle\" font-family=\"Arial,Helvetica,sans-serif\" font-size=\"9\" font-weight=\"700\" fill=\"#fff\">tigo</text><text x=\"19\" y=\"19.2\" text-anchor=\"middle\" font-family=\"Arial,Helvetica,sans-serif\" font-size=\"5\" font-weight=\"700\" letter-spacing=\".6\" fill=\"#FFD100\">MONEY</text></svg>","bank":"<svg viewBox=\"0 0 38 24\" role=\"img\" aria-label=\"Transferencia bancaria\"><rect width=\"38\" height=\"24\" rx=\"4\" fill=\"#fff\"/><g fill=\"none\" stroke=\"#1a1a1a\" stroke-width=\"1.3\" stroke-linejoin=\"round\" stroke-linecap=\"round\"><path d=\"M12 10l7-4 7 4z\"/><path d=\"M13.6 11v5.6M17.2 11v5.6M20.8 11v5.6M24.4 11v5.6\"/><path d=\"M12 18.4h14\"/></g></svg>"},"methods":[{"type":"CARD","label":"Tarjeta","logos":["visa","mastercard","amex"],"note":"Paga con Visa, Mastercard o American Express."},{"type":"QR","label":"QR","logos":["qr"],"note":"Escanea el código con la app de tu banco."},{"type":"TIGO_MONEY","label":"Tigo Money","logos":["tigo"],"note":"Confirmas el pago desde tu billetera Tigo Money."},{"type":"BANK_TRANSFER","label":"Transferencia","logos":["bank"],"note":"Transfiere desde tu banco; el comercio confirma al recibirla."}]};
   // One calm checkout (spec 2026-10-20): shell pieces shared by the order review, the test payment and its confirmation.
+  // The look is checkout-shell/shell.css, the same file the hosted payment page imports; stores only lend their logo,
+  // name, photo and a readable accent.
+  const shellStyle = document.createElement('style');
+  shellStyle.setAttribute('data-pagosya-checkout-shell', '');
+  shellStyle.textContent = CHECKOUT_SHELL_CSS;
+  document.head.append(shellStyle);
+  const LOCK_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  const CHECK_ICON = '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+  const BACK_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
+  // A store upload path ("/v1/uploads/…") lives on the API, not on the store's own origin.
+  function storeAssetUrl(value) {
+    if (typeof value !== 'string' || !value.trim()) return '';
+    try { return safeUrl(/^\/v1\//.test(value.trim()) && config.apiBaseUrl ? new URL(value.trim(), config.apiBaseUrl).href : value); } catch { return ''; }
+  }
+  function shellBrand() {
+    const logo = storeAssetUrl(store.logoUrl);
+    return `<span class="pya-co__brand">${logo ? `<img class="pya-co__logo" src="${escape(logo)}" alt="">` : ''}<strong class="pya-co__name">${escape(store.storeName || '')}</strong></span>`;
+  }
+  // Carrito › Entrega › Pago: the step just before the current one goes back to it.
+  function shellSteps(current) {
+    const steps = ['Carrito', 'Entrega', 'Pago'];
+    const at = current === 'done' ? steps.length : current === 'payment' ? 2 : 1;
+    return `<ol class="pya-co__steps">${steps.map((label, index) => `<li${index === at ? ' aria-current="step"' : ''}>${index === at - 1 && current !== 'done' ? `<button type="button" data-checkout-back>${label}</button>` : label}</li>`).join('')}</ol>`;
+  }
+  function logoBadges(names) {
+    return names.map(name => PAYMENT_LOGOS.logos[name] ? `<span class="pya-co__logo-badge">${PAYMENT_LOGOS.logos[name]}</span>` : '').join('');
+  }
+  // The review previews how the shopper will pay; the test payment lets them pick one (nothing is charged).
+  function paymentMethodsList(selectable, selected = PAYMENT_LOGOS.methods[0].type) {
+    if (!selectable) return `<ul class="pya-co__methods pya-co__methods--preview">${PAYMENT_LOGOS.methods.map(method => `<li class="pya-co__method"><span class="pya-co__method-name">${escape(method.label)}</span><span class="pya-co__logos">${logoBadges(method.logos)}</span></li>`).join('')}</ul>`;
+    return `<div class="pya-co__methods" role="radiogroup" aria-label="Método de pago">${PAYMENT_LOGOS.methods.map(method => `<div class="pya-co__method"><label><input type="radio" name="demoPaymentMethod" value="${method.type}"${method.type === selected ? ' checked' : ''}><span class="pya-co__method-name">${escape(method.label)}</span><span class="pya-co__logos">${logoBadges(method.logos)}</span></label>${method.type === selected ? `<div class="pya-co__method-body"><p>${escape(method.note)}</p><p>Es una prueba: no se cobra nada.</p></div>` : ''}</div>`).join('')}</div>`;
+  }
+  function trustStrip() {
+    const names = [...new Set(PAYMENT_LOGOS.methods.flatMap(method => method.logos))];
+    return `<div class="pya-co__trust"><span class="pya-co__logos">${logoBadges(names)}</span><span>${LOCK_ICON} Pago seguro procesado por pagosYa</span></div>`;
+  }
+  const parseRgb = text => { const value = String(text), n = value.match(/[\d.]+/g); return /^rgba?\(/.test(value) && n && n.length >= 3 && (n[3] === undefined || Number(n[3]) === 1) ? n.slice(0, 3).map(Number) : null; };
+  function contrastRatio(a, b) {
+    const lum = c => { const [r, g, bl] = c.map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * r + .7152 * g + .0722 * bl; };
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + .05) / (y + .05);
+  }
+  // The store's accent paints the pay button and the chosen radio only when it reads: its text at 4.5:1 and the button
+  // at 3:1 on the white page. Otherwise ink. The browser resolves whatever colour syntax the store used.
+  function shellAccent(root) {
+    let accent = null, ink = null;
+    try {
+      const probe = document.createElement('span');
+      probe.style.cssText = 'position:absolute;visibility:hidden;color:var(--store-accent,var(--brand-accent,var(--accent,#1a1a1a)))';
+      document.body.append(probe);
+      accent = parseRgb(getComputedStyle(probe).color);
+      probe.style.color = 'var(--store-accent-foreground,var(--brand-accent-foreground,#ffffff))';
+      ink = parseRgb(getComputedStyle(probe).color);
+      probe.remove();
+    } catch { /* No colour to read: ink. */ }
+    const readable = accent && ink && contrastRatio(accent, ink) >= 4.5 && contrastRatio(accent, [255, 255, 255]) >= 3;
+    root.style.setProperty('--pya-accent', readable ? `rgb(${accent.join(',')})` : '#1a1a1a');
+    root.style.setProperty('--pya-accent-ink', readable ? `rgb(${ink.join(',')})` : '#ffffff');
+  }
+  // Everything around the open checkout leaves the tab order: its own siblings and those of every ancestor.
+  function inertAround(node, saved) {
+    for (let child = node; child && child !== document.body && child.parentElement; child = child.parentElement) {
+      for (const sibling of child.parentElement.children) if (sibling !== child && !saved.has(sibling) && !sibling.matches('script,style,template')) { saved.set(sibling, sibling.inert); sibling.inert = true; }
+    }
+  }
+  document.addEventListener('click', event => {
+    const toggle = event.target.closest?.('[data-shell-summary]');
+    if (!toggle) return;
+    const root = toggle.closest('.pya-checkout');
+    const open = !root.hasAttribute('data-summary-open');
+    root.toggleAttribute('data-summary-open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.querySelector('[data-shell-summary-label]').textContent = open ? 'Ocultar resumen del pedido' : 'Ver resumen del pedido';
+  });
   const shoppingStyle = document.createElement('style');
   // Kit defaults for the cart, the added notice and the order review: low priority, so the store's own CSS
   // (and its DNA) restyle them. Layered !important declarations still outrank authored ones.
@@ -3233,28 +3280,10 @@
     @media(prefers-reduced-motion:reduce){.cart-drawer,.cart-added{transition:none;transform:none}}
   `;
   shoppingStyle.textContent += `
-    [data-pagosya-checkout] .checkout-page__inner{max-width:1200px;min-width:0;container-type:inline-size}
-    /* A checkout template can hold the review in a narrow column (Pokeate's 652px ticket split it 320 + 260px and broke
-       product names mid-word): the review measures its own slot, so the one-column rules below follow the space it has. */
-    [data-pagosya-checkout] [data-checkout-slot=review]{min-width:0;container-type:inline-size}
-    /* Under the store's own intro, the review lines up with that intro instead of adding a second inset. */
-    [data-pagosya-checkout-page][data-authored-intro]:not([hidden]){padding:0 0 clamp(40px,6vw,80px)}
-    [data-pagosya-checkout-page][data-authored-intro] .checkout-page__inner{margin:0}
-    [data-pagosya-checkout] .checkout-page__summary{padding:0;border:0;border-radius:0;background:transparent}
-    [data-pagosya-checkout] .checkout-review{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1.35fr);gap:clamp(32px,6vw,96px);align-items:start}
-    /* The order review shares cart behavior, but must not inherit an authored
-       fixed drawer's geometry. Keep it in the checkout's own content column. */
+    @layer pagosya-commerce {
+    /* The calm checkout (checkout/shell.js, checkout-shell/shell.css) draws the review; the review must still never take an
+       authored fixed drawer's geometry. */
     [data-pagosya-checkout] [data-pagosya-cart][data-checkout-review]{position:static!important;inset:auto!important;z-index:auto;width:100%!important;min-width:0;max-width:none;height:auto!important;min-height:0;max-height:none;margin:0;padding:0;overflow:visible!important;transform:none;box-shadow:none;border:0;background:transparent;color:inherit;opacity:1;visibility:visible}
-    [data-pagosya-checkout] .checkout-review>[data-retention-recovery]{grid-column:1 / -1;width:100%;min-width:0}
-    [data-pagosya-checkout] .checkout-review>[data-review-root]{grid-column:1 / -1;width:100%;min-width:0}
-    .checkout-review__fields{min-width:0}.checkout-review__summary{min-width:0;border-top:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)));padding-top:24px}
-    [data-pagosya-checkout] input:not([type=checkbox]):not([type=radio]),[data-pagosya-checkout] textarea{box-sizing:border-box;min-height:48px;width:100%;padding:12px;font:inherit;color:inherit;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));border:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)))}
-    [data-pagosya-checkout] fieldset{min-width:0;margin:24px 0;padding:0;border:0}
-    [data-pagosya-checkout] [hidden]{display:none!important}
-    [data-pagosya-checkout] button{min-height:44px;font:inherit}
-    [data-pagosya-checkout] :focus-visible{outline:3px solid currentColor;outline-offset:3px}
-    @media(max-width:700px){[data-pagosya-checkout] .checkout-review{grid-template-columns:1fr;gap:32px}}
-    @container(max-width:700px){[data-pagosya-checkout] .checkout-review{grid-template-columns:minmax(0,1fr);gap:32px}}
   }`;
   document.head.append(shoppingStyle);
   let checkoutTrigger = null, checkoutPreviousHash = "", checkoutOverflow = "";
@@ -3263,39 +3292,28 @@
   const rememberCheckout = panel => panel.querySelectorAll('input[name],textarea[name],select[name]').forEach(field => { if (field.name !== 'shippingZoneId') checkoutAnswers.set(field.name, field.value); });
   document.addEventListener('input', event => { const panel = event.target.closest('[data-checkout-review]'); if (panel) rememberCheckout(panel); });
   document.addEventListener('change', event => { const panel = event.target.closest('[data-checkout-review]'); if (panel) rememberCheckout(panel); });
-  function showCheckout(payment = false) {
-    const mode = payment ? 'payment' : 'review';
+  function showCheckout(mode = 'review') {
     // Opening the review also changes the hash; preserve fields on that second notification.
     if (!checkoutPage.hidden && checkoutPage.dataset.mode === mode) return;
     checkoutPage.dataset.mode = mode;
-    if (checkoutPage.hidden && !fullCheckoutPage) {
-      checkoutOverflow = document.documentElement.style.overflow;
-      document.documentElement.style.overflow = "hidden";
-      for (const child of document.body.children) if (child !== checkoutPage) { inertBeforeCheckout.set(child, child.inert); child.inert = true; }
-    }
+    // The calm checkout covers the whole page, an authored checkout page too: what is around it leaves the tab order.
+    if (checkoutPage.hidden) { checkoutOverflow = document.documentElement.style.overflow; document.documentElement.style.overflow = "hidden"; inertAround(checkoutPage, inertBeforeCheckout); }
     checkoutPage.hidden = false;
-    // A checkout page usually carries the store's own way back and title right above the mount; repeating
-    // them stacks two intros. Only the page mount checks this; the overlay always needs its own.
-    const authored = { back: false, title: false };
-    for (let node = fullCheckoutPage && checkoutPage === fullCheckoutPage ? checkoutPage.previousElementSibling : null; node && !node.matches('header,[role=banner]'); node = node.previousElementSibling) {
-      if (node.matches('a[href]') || node.querySelector('a[href]')) authored.back = true;
-      if (node.matches('h1') || node.querySelector('h1')) authored.title = true;
-    }
-    checkoutPage.toggleAttribute('data-authored-intro', authored.back || authored.title);
-    const back = fullCheckoutPage && !payment ? authored.back ? '' : '<a class="checkout-page__back" href="index.html">Volver a la tienda</a>' : `<button class="checkout-page__back" type="button" data-checkout-back>${payment ? 'Volver al resumen' : 'Volver a la tienda'}</button>`;
-    const heading = payment ? '<h1 tabindex="-1">Pago de prueba</h1><p class="checkout-page__intro">Puedes completar el recorrido de prueba. No se realizará ningún cobro ni se creará un pedido real.</p>' : authored.title ? '' : '<h1 tabindex="-1">Revisa tu pedido</h1>';
-    checkoutPage.innerHTML = `<div class="checkout-page__inner">${back}<div>${heading}${preview || config.demo ? '<p class="order-note">Vista previa · Sin cobros</p>' : ''}<p data-pagosya-status role="status" aria-live="polite"></p></div><div class="checkout-page__summary"><div data-pagosya-cart data-checkout-review="${payment ? 'payment' : 'review'}"></div></div></div>`;
-    checkoutPage.removeAttribute('data-checkout-template');
-    applyCheckoutTemplate();
+    checkoutPage.classList.add('pya-checkout');
+    const back = fullCheckoutPage && mode === 'review' ? `<a class="pya-co__back" href="index.html">${BACK_ICON} Seguir comprando</a>` : `<button class="pya-co__back" type="button" ${mode === 'done' ? 'data-shell-close' : 'data-checkout-back'}>${BACK_ICON} ${mode === 'payment' ? 'Volver a la entrega' : 'Seguir comprando'}</button>`;
+    const heading = mode === 'payment' ? 'Pago de prueba' : mode === 'done' ? '¡Gracias por tu compra!' : 'Revisa tu pedido';
+    const note = mode === 'payment' ? 'Puedes completar el recorrido de prueba. No se realizará ningún cobro ni se creará un pedido real.' : preview || config.demo ? 'Vista previa · Sin cobros' : '';
+    checkoutPage.innerHTML = `<header class="pya-co__bar">${back}${shellBrand()}<span class="pya-co__secure">${LOCK_ICON} Pago seguro</span></header><button type="button" class="pya-co__summary-toggle" aria-expanded="false" aria-controls="pya-co-summary" data-shell-summary><span data-shell-summary-label>Ver resumen del pedido</span><strong data-shell-total></strong></button><div class="pya-co__frame"><div class="pya-co__lead">${shellSteps(mode)}<h1 tabindex="-1">${heading}</h1>${note ? `<p class="pya-co__note order-note">${note}</p>` : ''}<p class="pya-co__status" data-pagosya-status role="status" aria-live="polite"></p></div><div data-pagosya-cart data-checkout-review="${mode}"></div></div>`;
+    shellAccent(checkoutPage);
     renderCart();
     // Moving focus is for the overlay, which opens over the page. A full checkout page is simply loaded, and
     // scripted focus there paints a keyboard ring around the title for mouse and touch users.
-    if (checkoutPage !== fullCheckoutPage || payment) checkoutPage.querySelector("h1")?.focus({ preventScroll: true });
+    if (checkoutPage !== fullCheckoutPage || mode !== 'review') checkoutPage.querySelector("h1")?.focus({ preventScroll: true });
     checkoutPage.scrollTop = 0;
   }
   function closeCheckout() {
     if (checkoutPage.hidden) return;
-    checkoutPage.hidden = true; checkoutPage.innerHTML = "";
+    checkoutPage.hidden = true; checkoutPage.innerHTML = ""; checkoutPage.classList.remove("pya-checkout"); delete checkoutPage.dataset.mode;
     document.documentElement.style.overflow = checkoutOverflow;
     inertBeforeCheckout.forEach((value, element) => { element.inert = value; }); inertBeforeCheckout.clear();
     checkoutTrigger?.focus();
@@ -3311,7 +3329,8 @@
   }
   window.addEventListener("hashchange", () => {
     if (location.hash === "#checkout") showCheckout();
-    else if (location.hash === "#pago-de-prueba" && (preview || config.demo)) showCheckout(true);
+    else if (location.hash === "#pago-de-prueba" && (preview || config.demo)) showCheckout('payment');
+    else if (location.hash === "#pedido-de-prueba" && (preview || config.demo)) showCheckout('done');
     else if (fullCheckoutPage) showCheckout();
     else closeCheckout();
   });
@@ -3590,7 +3609,8 @@
     });
   }
   function guardContrast() {
-    const targets = document.querySelectorAll(CONTRAST_GUARDED);
+    // The checkout shell picks its own readable accent (checkout/shell.js shellAccent); the guard leaves it alone.
+    const targets = [...document.querySelectorAll(CONTRAST_GUARDED)].filter(el => !el.closest('.pya-checkout'));
     if (!targets.length || !document.body) return;
     const parse = value => {
       const text = String(value), n = (text.match(/-?[\d.]+/g) || []).map(Number);
@@ -3968,7 +3988,7 @@
       if (products().some(p => p.id === selectedProduct.id)) openProduct(selectedProduct.id, detailTrigger);
       else detail.close();
     }
-    if (fullCheckoutPage) showCheckout(location.hash === '#pago-de-prueba' && (preview || config.demo));
+    if (fullCheckoutPage) showCheckout(location.hash === '#pago-de-prueba' && (preview || config.demo) ? 'payment' : location.hash === '#pedido-de-prueba' && (preview || config.demo) ? 'done' : 'review');
     renderCart();
     renderContact();
     // Validate every authored template as soon as the store is ready, not only when its surface
@@ -5046,7 +5066,7 @@
     const shippingAddress = panel.querySelector('[name=shippingAddress]')?.value.trim();
     if (!preview && !config.demo && !digitalOnlyCart() && store.shippingEnabled && fulfillmentMethod === 'delivery' && (!shippingZoneId || (!hosted && !shippingAddress))) { message(hosted ? 'Calcula el envío y elige tu zona.' : 'Calcula el envío, elige tu zona y escribe la dirección.'); return; }
     if (!digitalOnlyCart() && (store.locations?.length || store.shippingEnabled) && !fulfillmentMethod) { message("Esta sucursal no tiene un método de entrega disponible."); return; }
-    if (preview || config.demo) { showCheckout(true); location.hash = "pago-de-prueba"; return; }
+    if (preview || config.demo) { showCheckout('payment'); location.hash = "pago-de-prueba"; return; }
     if (store.checkoutMode === "whatsapp") {
       const phone = String(store.contactPhone || "").replace(/\D/g, "");
       if (!phone) { message("El comercio todavía no tiene un número de WhatsApp configurado."); return; }

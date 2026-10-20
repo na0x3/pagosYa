@@ -110,28 +110,10 @@
     @media(prefers-reduced-motion:reduce){.cart-drawer,.cart-added{transition:none;transform:none}}
   `;
   shoppingStyle.textContent += `
-    [data-pagosya-checkout] .checkout-page__inner{max-width:1200px;min-width:0;container-type:inline-size}
-    /* A checkout template can hold the review in a narrow column (Pokeate's 652px ticket split it 320 + 260px and broke
-       product names mid-word): the review measures its own slot, so the one-column rules below follow the space it has. */
-    [data-pagosya-checkout] [data-checkout-slot=review]{min-width:0;container-type:inline-size}
-    /* Under the store's own intro, the review lines up with that intro instead of adding a second inset. */
-    [data-pagosya-checkout-page][data-authored-intro]:not([hidden]){padding:0 0 clamp(40px,6vw,80px)}
-    [data-pagosya-checkout-page][data-authored-intro] .checkout-page__inner{margin:0}
-    [data-pagosya-checkout] .checkout-page__summary{padding:0;border:0;border-radius:0;background:transparent}
-    [data-pagosya-checkout] .checkout-review{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1.35fr);gap:clamp(32px,6vw,96px);align-items:start}
-    /* The order review shares cart behavior, but must not inherit an authored
-       fixed drawer's geometry. Keep it in the checkout's own content column. */
+    @layer pagosya-commerce {
+    /* The calm checkout (checkout/shell.js, checkout-shell/shell.css) draws the review; the review must still never take an
+       authored fixed drawer's geometry. */
     [data-pagosya-checkout] [data-pagosya-cart][data-checkout-review]{position:static!important;inset:auto!important;z-index:auto;width:100%!important;min-width:0;max-width:none;height:auto!important;min-height:0;max-height:none;margin:0;padding:0;overflow:visible!important;transform:none;box-shadow:none;border:0;background:transparent;color:inherit;opacity:1;visibility:visible}
-    [data-pagosya-checkout] .checkout-review>[data-retention-recovery]{grid-column:1 / -1;width:100%;min-width:0}
-    [data-pagosya-checkout] .checkout-review>[data-review-root]{grid-column:1 / -1;width:100%;min-width:0}
-    .checkout-review__fields{min-width:0}.checkout-review__summary{min-width:0;border-top:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)));padding-top:24px}
-    [data-pagosya-checkout] input:not([type=checkbox]):not([type=radio]),[data-pagosya-checkout] textarea{box-sizing:border-box;min-height:48px;width:100%;padding:12px;font:inherit;color:inherit;background:var(--store-background,var(--brand-background,var(--paper,Canvas)));border:1px solid var(--store-border,var(--brand-border,var(--line,#d7d2c7)))}
-    [data-pagosya-checkout] fieldset{min-width:0;margin:24px 0;padding:0;border:0}
-    [data-pagosya-checkout] [hidden]{display:none!important}
-    [data-pagosya-checkout] button{min-height:44px;font:inherit}
-    [data-pagosya-checkout] :focus-visible{outline:3px solid currentColor;outline-offset:3px}
-    @media(max-width:700px){[data-pagosya-checkout] .checkout-review{grid-template-columns:1fr;gap:32px}}
-    @container(max-width:700px){[data-pagosya-checkout] .checkout-review{grid-template-columns:minmax(0,1fr);gap:32px}}
   }`;
   document.head.append(shoppingStyle);
   let checkoutTrigger = null, checkoutPreviousHash = "", checkoutOverflow = "";
@@ -140,39 +122,28 @@
   const rememberCheckout = panel => panel.querySelectorAll('input[name],textarea[name],select[name]').forEach(field => { if (field.name !== 'shippingZoneId') checkoutAnswers.set(field.name, field.value); });
   document.addEventListener('input', event => { const panel = event.target.closest('[data-checkout-review]'); if (panel) rememberCheckout(panel); });
   document.addEventListener('change', event => { const panel = event.target.closest('[data-checkout-review]'); if (panel) rememberCheckout(panel); });
-  function showCheckout(payment = false) {
-    const mode = payment ? 'payment' : 'review';
+  function showCheckout(mode = 'review') {
     // Opening the review also changes the hash; preserve fields on that second notification.
     if (!checkoutPage.hidden && checkoutPage.dataset.mode === mode) return;
     checkoutPage.dataset.mode = mode;
-    if (checkoutPage.hidden && !fullCheckoutPage) {
-      checkoutOverflow = document.documentElement.style.overflow;
-      document.documentElement.style.overflow = "hidden";
-      for (const child of document.body.children) if (child !== checkoutPage) { inertBeforeCheckout.set(child, child.inert); child.inert = true; }
-    }
+    // The calm checkout covers the whole page, an authored checkout page too: what is around it leaves the tab order.
+    if (checkoutPage.hidden) { checkoutOverflow = document.documentElement.style.overflow; document.documentElement.style.overflow = "hidden"; inertAround(checkoutPage, inertBeforeCheckout); }
     checkoutPage.hidden = false;
-    // A checkout page usually carries the store's own way back and title right above the mount; repeating
-    // them stacks two intros. Only the page mount checks this; the overlay always needs its own.
-    const authored = { back: false, title: false };
-    for (let node = fullCheckoutPage && checkoutPage === fullCheckoutPage ? checkoutPage.previousElementSibling : null; node && !node.matches('header,[role=banner]'); node = node.previousElementSibling) {
-      if (node.matches('a[href]') || node.querySelector('a[href]')) authored.back = true;
-      if (node.matches('h1') || node.querySelector('h1')) authored.title = true;
-    }
-    checkoutPage.toggleAttribute('data-authored-intro', authored.back || authored.title);
-    const back = fullCheckoutPage && !payment ? authored.back ? '' : '<a class="checkout-page__back" href="index.html">Volver a la tienda</a>' : `<button class="checkout-page__back" type="button" data-checkout-back>${payment ? 'Volver al resumen' : 'Volver a la tienda'}</button>`;
-    const heading = payment ? '<h1 tabindex="-1">Pago de prueba</h1><p class="checkout-page__intro">Puedes completar el recorrido de prueba. No se realizará ningún cobro ni se creará un pedido real.</p>' : authored.title ? '' : '<h1 tabindex="-1">Revisa tu pedido</h1>';
-    checkoutPage.innerHTML = `<div class="checkout-page__inner">${back}<div>${heading}${preview || config.demo ? '<p class="order-note">Vista previa · Sin cobros</p>' : ''}<p data-pagosya-status role="status" aria-live="polite"></p></div><div class="checkout-page__summary"><div data-pagosya-cart data-checkout-review="${payment ? 'payment' : 'review'}"></div></div></div>`;
-    checkoutPage.removeAttribute('data-checkout-template');
-    applyCheckoutTemplate();
+    checkoutPage.classList.add('pya-checkout');
+    const back = fullCheckoutPage && mode === 'review' ? `<a class="pya-co__back" href="index.html">${BACK_ICON} Seguir comprando</a>` : `<button class="pya-co__back" type="button" ${mode === 'done' ? 'data-shell-close' : 'data-checkout-back'}>${BACK_ICON} ${mode === 'payment' ? 'Volver a la entrega' : 'Seguir comprando'}</button>`;
+    const heading = mode === 'payment' ? 'Pago de prueba' : mode === 'done' ? '¡Gracias por tu compra!' : 'Revisa tu pedido';
+    const note = mode === 'payment' ? 'Puedes completar el recorrido de prueba. No se realizará ningún cobro ni se creará un pedido real.' : preview || config.demo ? 'Vista previa · Sin cobros' : '';
+    checkoutPage.innerHTML = `<header class="pya-co__bar">${back}${shellBrand()}<span class="pya-co__secure">${LOCK_ICON} Pago seguro</span></header><button type="button" class="pya-co__summary-toggle" aria-expanded="false" aria-controls="pya-co-summary" data-shell-summary><span data-shell-summary-label>Ver resumen del pedido</span><strong data-shell-total></strong></button><div class="pya-co__frame"><div class="pya-co__lead">${shellSteps(mode)}<h1 tabindex="-1">${heading}</h1>${note ? `<p class="pya-co__note order-note">${note}</p>` : ''}<p class="pya-co__status" data-pagosya-status role="status" aria-live="polite"></p></div><div data-pagosya-cart data-checkout-review="${mode}"></div></div>`;
+    shellAccent(checkoutPage);
     renderCart();
     // Moving focus is for the overlay, which opens over the page. A full checkout page is simply loaded, and
     // scripted focus there paints a keyboard ring around the title for mouse and touch users.
-    if (checkoutPage !== fullCheckoutPage || payment) checkoutPage.querySelector("h1")?.focus({ preventScroll: true });
+    if (checkoutPage !== fullCheckoutPage || mode !== 'review') checkoutPage.querySelector("h1")?.focus({ preventScroll: true });
     checkoutPage.scrollTop = 0;
   }
   function closeCheckout() {
     if (checkoutPage.hidden) return;
-    checkoutPage.hidden = true; checkoutPage.innerHTML = "";
+    checkoutPage.hidden = true; checkoutPage.innerHTML = ""; checkoutPage.classList.remove("pya-checkout"); delete checkoutPage.dataset.mode;
     document.documentElement.style.overflow = checkoutOverflow;
     inertBeforeCheckout.forEach((value, element) => { element.inert = value; }); inertBeforeCheckout.clear();
     checkoutTrigger?.focus();
@@ -188,7 +159,8 @@
   }
   window.addEventListener("hashchange", () => {
     if (location.hash === "#checkout") showCheckout();
-    else if (location.hash === "#pago-de-prueba" && (preview || config.demo)) showCheckout(true);
+    else if (location.hash === "#pago-de-prueba" && (preview || config.demo)) showCheckout('payment');
+    else if (location.hash === "#pedido-de-prueba" && (preview || config.demo)) showCheckout('done');
     else if (fullCheckoutPage) showCheckout();
     else closeCheckout();
   });

@@ -63,7 +63,8 @@
     });
   }
   function guardContrast() {
-    const targets = document.querySelectorAll(CONTRAST_GUARDED);
+    // The checkout shell picks its own readable accent (checkout/shell.js shellAccent); the guard leaves it alone.
+    const targets = [...document.querySelectorAll(CONTRAST_GUARDED)].filter(el => !el.closest('.pya-checkout'));
     if (!targets.length || !document.body) return;
     const parse = value => {
       const text = String(value), n = (text.match(/-?[\d.]+/g) || []).map(Number);

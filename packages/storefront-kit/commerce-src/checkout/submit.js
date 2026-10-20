@@ -16,7 +16,7 @@
     const shippingAddress = panel.querySelector('[name=shippingAddress]')?.value.trim();
     if (!preview && !config.demo && !digitalOnlyCart() && store.shippingEnabled && fulfillmentMethod === 'delivery' && (!shippingZoneId || (!hosted && !shippingAddress))) { message(hosted ? 'Calcula el envío y elige tu zona.' : 'Calcula el envío, elige tu zona y escribe la dirección.'); return; }
     if (!digitalOnlyCart() && (store.locations?.length || store.shippingEnabled) && !fulfillmentMethod) { message("Esta sucursal no tiene un método de entrega disponible."); return; }
-    if (preview || config.demo) { showCheckout(true); location.hash = "pago-de-prueba"; return; }
+    if (preview || config.demo) { showCheckout('payment'); location.hash = "pago-de-prueba"; return; }
     if (store.checkoutMode === "whatsapp") {
       const phone = String(store.contactPhone || "").replace(/\D/g, "");
       if (!phone) { message("El comercio todavía no tiene un número de WhatsApp configurado."); return; }
