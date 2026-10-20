@@ -195,6 +195,8 @@ export class MerchantStudioApi {
   deleteIntegrationMapping(storeId: string, connectionId: string, mappingId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/integrations/${encodeURIComponent(connectionId)}/mappings/${encodeURIComponent(mappingId)}`, { method: 'DELETE' }); }
   createIntegrationConnection(storeId: string, input: {kind:string;name:string}): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/integrations`, {method:'POST',body:JSON.stringify(input)}); }
   retention(storeId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/retention`); }
+  /** The store's promo codes; «Tu comunidad» offers the active ones as the popup's welcome code. */
+  promoCodes(storeId: string): Promise<Array<{ id: string; code: string; isActive: boolean }>> { return this.request(`/stores/${encodeURIComponent(storeId)}/promo-codes`); }
   writeRetention(storeId: string, path: string, method: string, body: Record<string, any>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/retention${path ? '/' + path : ''}`, { method, body: JSON.stringify(body) }); }
   commercePlatform(storeId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/commerce`); }
   writeCommercePlatform(storeId: string, path: string, method: string, body: Record<string, unknown>): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/commerce/${path}`, { method, body: JSON.stringify(body) }); }

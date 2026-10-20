@@ -17,6 +17,9 @@ export async function openRetention(api: MerchantStudioApi, storeId: string, onC
   dialog.addEventListener('input', () => { dirty = true; });
   dialog.addEventListener('close', () => dialog.remove()); dialog.addEventListener('cancel', e => { if (busy) e.preventDefault(); });
   const toggle = (key: string, label: string, enabled: boolean) => `<label class="retention-toggle"><input type="checkbox" name="${key}" ${enabled ? 'checked' : ''}>${label}</label>`;
+  // The popup's welcome code is one of the store's active codes (plan 2026-10-20-store-popup); none listed, none offered.
+  let codes: Array<{ id: string; code: string }> = [];
+  try { codes = ((await api.promoCodes?.(storeId).catch(() => [])) || []).filter(code => code.isActive); } catch { codes = []; }
   try { state = await api.retention(storeId); render(); if (view === 'program') void loadPreview(); } catch (e) { dialog.innerHTML = `<p role="alert">${esc(e instanceof Error ? e.message : 'No se pudo cargar.')}</p><button>Cerrar</button>`; dialog.querySelector('button')!.onclick = () => dialog.close(); }
   async function run(task: () => Promise<void>) {
     if (busy) return; const restore = preserveDialogForms(dialog); busy = true; failed = false;
@@ -78,6 +81,7 @@ export async function openRetention(api: MerchantStudioApi, storeId: string, onC
         <section class="retention-section"><h3>02 / Tu comunidad</h3>${toggle('signupEnabled', 'Mostrar formulario de suscripción', s.signupEnabled)}
         <p>Se abre como una ventana con una foto de tus productos y los colores de tu tienda. Puede llamarse “Club de beneficios”, “Acceso anticipado” o lo que tenga sentido para tu negocio. Solo anuncia descuentos que hayas configurado.</p>
         <div class="brand-fields"><label>Título<input name="signupTitle" required maxlength="100" value="${esc(s.signupTitle)}"></label><label>Descripción<textarea name="signupBody" maxlength="500">${esc(s.signupBody)}</textarea></label><label>Texto del botón<input name="signupButton" required maxlength="60" value="${esc(s.signupButton)}"></label></div>
+        <div class="brand-fields"><label>Cuándo aparece<select name="popupTrigger">${[['load', 'Al entrar'], ['delay', 'Después de unos segundos'], ['exit', 'Al querer salir'], ['both', 'Ambos']].map(([value, label]) => `<option value="${value}"${(s.popupTrigger || 'both') === value ? ' selected' : ''}>${label}</option>`).join('')}</select></label><label>Segundos<input type="number" name="popupDelaySeconds" min="0" max="60" value="${s.popupDelaySeconds ?? 8}"></label><label>Código de bienvenida<select name="popupPromoCodeId"><option value="">Sin código</option>${codes.map(code => `<option value="${esc(code.id)}"${s.popupPromoCodeId === code.id ? ' selected' : ''}>${esc(code.code)}</option>`).join('')}</select></label></div>
         <p>El correo de bienvenida para quienes se suscriben, el recordatorio de carrito y la solicitud de reseña se configuran en Correos y marketing › Correos.</p></section>
         <button class="button--publish" type="submit">Guardar configuración</button>
       </form>` : view === 'campaigns' ? `<section><h3>Un correo para tu comunidad</h3><p>Escribe el mensaje, guárdalo y revisa el borrador antes de enviarlo a los suscriptores activos.</p>
@@ -95,6 +99,9 @@ export async function openRetention(api: MerchantStudioApi, storeId: string, onC
       for (const key of ['comebackEnabled', 'signupEnabled']) data[key] = form.has(key);
       data.visitsRequired = Number(form.get('visitsRequired'));
       for (const key of ['rewardLabel', 'timezone', 'signupTitle', 'signupBody', 'signupButton']) data[key] = String(form.get(key) || '').trim();
+      data.popupTrigger = String(form.get('popupTrigger') || 'both');
+      data.popupDelaySeconds = Number(form.get('popupDelaySeconds') ?? 8);
+      data.popupPromoCodeId = String(form.get('popupPromoCodeId') || '') || null;
       // The welcome, cart-reminder and review emails are edited in Correos y marketing › Correos. This PUT
       // still replaces every setting at once (RetentionSettingsDto requires them), so they go back as loaded.
       for (const key of ['welcomeEnabled', 'welcomeSubject', 'welcomeBody', 'recoveryEnabled', 'recoveryHours', 'reviewRequestsEnabled']) data[key] = s[key];

@@ -53,6 +53,19 @@ describe('Comeback workspaces', () => {
     await vi.waitFor(() => expect(host.querySelector('.comeback-reward')?.textContent).toBe('Mi premio'));
     expect(host.querySelector<HTMLButtonElement>('[type=submit]')!.disabled).toBe(false);
   });
+  it('lets the merchant choose when the signup popup appears and its welcome code', async () => {
+    (api as any).promoCodes = vi.fn().mockResolvedValue([{ id: 'own', code: 'PEPPA10', isActive: true }, { id: 'off', code: 'OLD', isActive: false }]);
+    await openRetention(api, 's1', undefined, { host, view: 'program' });
+    const trigger = host.querySelector<HTMLSelectElement>('[name=popupTrigger]')!;
+    expect([...trigger.options].map(o => o.value)).toEqual(['load', 'delay', 'exit', 'both']);
+    expect(host.querySelector<HTMLInputElement>('[name=popupDelaySeconds]')!.max).toBe('60');
+    const code = host.querySelector<HTMLSelectElement>('[name=popupPromoCodeId]')!;
+    expect([...code.options].map(o => o.textContent)).toEqual(['Sin código', 'PEPPA10']);
+    trigger.value = 'delay'; input('popupDelaySeconds', '12'); code.value = 'own';
+    host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(api.writeRetention).toHaveBeenCalled());
+    expect(vi.mocked(api.writeRetention).mock.calls[0][3]).toMatchObject({ popupTrigger: 'delay', popupDelaySeconds: 12, popupPromoCodeId: 'own' });
+  });
   it('leaves the welcome, reminder and review emails to Correos y marketing and saves them unchanged', async () => {
     const loaded = state();
     Object.assign(loaded.settings, { welcomeEnabled: true, welcomeSubject: 'Hola {{store}}', welcomeBody: 'Bienvenida', recoveryEnabled: true, recoveryHours: 48, reviewRequestsEnabled: true });
