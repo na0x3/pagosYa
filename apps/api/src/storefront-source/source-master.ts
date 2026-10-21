@@ -3,6 +3,7 @@
 import type { MasterCopy, MasterSettings } from '@pagosya/store-templates';
 import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 import { bestInkFor, contrastRatio } from './sketch/sketch-schema';
+import type { StoreMenuGroup } from './source-store-menu';
 
 export const MASTER_TEMPLATE_ID = 'esencial';
 export const MASTER_THEME_START = '/* pagosya:master-theme */';
@@ -20,7 +21,9 @@ export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook
   /** Variety spec: the business's character, its sections and any variant the merchant named. */
   character?: MasterCharacter; sections?: MasterSection[]; variants?: Partial<MasterVariants>;
   /** The uploads the bundled hero/story photos came from, so product slots holding the same photo can point at the bundle. */
-  photoSources?: { hero?: string; story?: string } };
+  photoSources?: { hero?: string; story?: string };
+  /** Dropdown menu spec 2026-10-21: the menu style (none removes it) and the groups YAPI wrote ([] = built from the categories). */
+  menu?: { style: 'none' | 'panel' | 'dropdowns'; groups: StoreMenuGroup[] } };
 
 /** a → b by t (0..1), both #rrggbb. */
 const mixHex = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
@@ -128,7 +131,10 @@ export function masterDnaFonts(settings: MasterSettings, look: MasterLook) {
 export type MasterRead = MasterCopy & { palette: string; fonts: string; colors: Record<MasterColour, string>; heroPhoto: number; storyPhoto: number; changed: string[];
   tone?: 'calm' | 'bold'; kind?: 'fashion' | 'other'; temperature?: 'warm' | 'cool' | 'neutral'; lead?: 'photo' | 'text'; exclude?: string[]; sections?: MasterSection[];
   /** A layout the merchant named in an edit («hero con la foto a la izquierda» → hero: split-left). */
-  variantChoices?: Array<{ part: string; id: string }> };
+  variantChoices?: Array<{ part: string; id: string }>;
+  /** Dropdown menu spec 2026-10-21: the menu style and the groups YAPI wrote ([] = built from the categories). */
+  menuStyle?: 'none' | 'panel' | 'dropdowns';
+  menuGroups?: Array<{ label: string; links: Array<{ label: string; target: string }>; tilesTitle: string; tiles: Array<{ title: string; photo: number; target: string }>; footerLabel: string; footerTarget: string }> };
 const COPY_FIELDS = [...Object.keys(MASTER_COPY_CAPS), 'values'];
 
 export function masterFillFromRead(read: MasterRead, photos: readonly string[], edit: boolean): MasterFill {
@@ -142,9 +148,24 @@ export function masterFillFromRead(read: MasterRead, photos: readonly string[], 
     ...(read.tone ? { character: { tone: read.tone, temperature: read.temperature ?? 'neutral', lead: read.lead ?? 'photo', exclude: Array.isArray(read.exclude) ? read.exclude : [], ...(read.kind ? { kind: read.kind } : {}) } } : {}),
     ...(Array.isArray(read.sections) && keep('sections') ? { sections: read.sections.slice(0, 2) } : {}),
     ...(Array.isArray(read.variantChoices) && read.variantChoices.length && keep('variants') ? { variants: Object.fromEntries(read.variantChoices.map(choice => [choice.part, choice.id])) } : {}),
+    ...(read.menuStyle && keep('menu') ? { menu: { style: read.menuStyle, groups: menuGroupsFromRead(read.menuGroups, photos) } } : {}),
     ...(keep('heroPhoto') ? { heroPhoto: photo(read.heroPhoto) } : {}),
     ...(keep('storyPhoto') ? { storyPhoto: photo(read.storyPhoto) } : {}),
   };
+}
+
+/** Dropdown menu spec 2026-10-21: the fill read's groups as the menu config; a tile's photo index becomes that photo. Labels
+ *  left empty take the target's own name at the save check. */
+export function menuGroupsFromRead(groups: MasterRead['menuGroups'], photos: readonly string[]): StoreMenuGroup[] {
+  return (groups ?? []).map(group => {
+    const tiles = group.tiles.flatMap(tile => Number.isInteger(tile.photo) && tile.photo >= 0 && tile.photo < photos.length ? [{ title: tile.title, image: photos[tile.photo], to: tile.target }] : []);
+    return {
+      label: group.label,
+      links: group.links.map(link => ({ ...(link.label ? { label: link.label } : {}), to: link.target })),
+      ...(tiles.length ? { ...(group.tilesTitle ? { tilesTitle: group.tilesTitle } : {}), tiles } : {}),
+      ...(group.footerTarget ? { footer: { label: group.footerLabel, to: group.footerTarget } } : {}),
+    };
+  });
 }
 
 /** Variety spec §2–3: the rolled variant per part (header, hero, grid…) plus the chosen business sections. */

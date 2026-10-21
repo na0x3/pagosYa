@@ -91,3 +91,8 @@ export function instructionAsksStoreMenu(text: string): boolean | undefined {
 }
 /** Looser: «agrega Accesorios al menú». Counts only for a store whose menu already exists. */
 export const instructionTouchesStoreMenu = (text: string) => MENU_ASK.test(text) || MENU_TOUCH.test(text);
+
+/** Esencial's dice record (variants.menu) as the config the kit reads; `none` or no record means no menu. */
+export function menuFromVariant(variant: unknown, groups: unknown, ctx: StoreMenuContext): StoreMenu | undefined {
+  return checkStoreMenu({ style: variant, groups }, ctx) ?? undefined;
+}

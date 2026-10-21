@@ -17,10 +17,12 @@ export function Header() {
     </div> : null}
     <header className="es-header" data-es-header={variant('header', 'classic')}>
       <div className="es-header__start">
-        <button type="button" className="es-icon-btn" aria-controls="es-menu" aria-expanded={open} aria-label="Abrir menú" onClick={() => setOpen(true)}><IconMenu /></button>
+        <div className="es-store-menu" data-pagosya-store-menu="toggle" />
+        <button type="button" className="es-icon-btn" data-store-menu-replaces aria-controls="es-menu" aria-expanded={open} aria-label="Abrir menú" onClick={() => setOpen(true)}><IconMenu /></button>
         <a className="es-logo" href="index.html">{store.logo ? <img src={store.logo} alt={store.name} /> : store.name}</a>
+        <div className="es-store-menu-links" data-pagosya-store-menu="links" />
       </div>
-      <nav className="es-header__links" aria-label="Principal">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
+      <nav className="es-header__links" aria-label="Principal" data-store-menu-replaces>{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
       <div className="es-header__end">
         <a className="es-icon-btn" href="buscar.html" aria-label="Buscar"><IconSearch /></a>
         <a className="es-icon-btn" data-pagosya-account="login" href="acceso-ingresar.html" aria-label="Mi cuenta"><IconLogIn /></a>

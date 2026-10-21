@@ -167,6 +167,11 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
   .es-header[data-es-header="split"] .es-header__start>.es-icon-btn{display:none}
   .es-header[data-es-header="split"] .es-header__end{grid-column:3;grid-row:1}
 }
+/* Dropdown menu (2026-10-21): the kit fills these mounts when config.header.menu is on; empty, they take no room. */
+.es-store-menu:empty,.es-store-menu-links:empty{display:none}
+.es-store-menu-links{margin-left:24px}
+.es-header[data-store-menu] .es-header__start{gap:8px}
+/* Dropdown menu end */
 /* ---- announcement ---- */
 .es-announce{background:var(--es-deep);color:var(--es-on-deep);font-size:13px;letter-spacing:.06em;text-align:center;overflow:hidden}
 .es-announce__text{margin:0;padding:8px 16px}

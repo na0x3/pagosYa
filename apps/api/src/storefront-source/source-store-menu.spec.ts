@@ -84,3 +84,13 @@ describe('chat words', () => {
     expect(instructionTouchesStoreMenu('cambia el titular')).toBe(false);
   });
 });
+
+import { menuFromVariant } from './source-store-menu';
+describe('menuFromVariant', () => {
+  it('none or no variant means no menu; a style keeps the checked groups', () => {
+    expect(menuFromVariant('none', [], ctx)).toBeUndefined();
+    expect(menuFromVariant(undefined, [], ctx)).toBeUndefined();
+    expect(menuFromVariant('panel', [], ctx)).toEqual({ style: 'panel' });
+    expect(menuFromVariant('dropdowns', [{ label: 'Mujer', links: [{ to: 'category:c1' }] }], ctx)).toEqual({ style: 'dropdowns', groups: [{ label: 'Mujer', links: [{ label: 'Vestidos', to: 'category:c1' }] }] });
+  });
+});

@@ -66,6 +66,18 @@ describe('Esencial', () => {
     expect(plainCategory).toBe(false);
   });
 
+  it('the menu variant writes config.js header.menu with the fill groups checked, and the Shell carries the mounts (dropdown menu 2026-10-21)', async () => {
+    const variants = { ...Object.fromEntries(Object.entries(manifest.master!.variants!).map(([part, ids]) => [part, (ids as string[])[0]])), menu: 'dropdowns', sections: [] };
+    const demo = { ...templateDemoPublicStore(), categories: [{ id: 'k1', name: 'Velas' }, { id: 'k2', name: 'Jabones' }] } as any;
+    demo.items = demo.items.map((item: any, index: number) => ({ ...item, categoryId: index % 2 ? 'k2' : 'k1' }));
+    const assembled = await assemble(demo, { variants, fill: { menu: { style: 'dropdowns', groups: [{ label: 'Casa', links: [{ to: 'category:k1' }, { to: 'category:inventada' }] }] } } });
+    const config = JSON.parse(assembled.files.find((f: any) => f.path === 'config.js')!.content.match(/= ([\s\S]*);\n$/)![1]);
+    expect(config.header.menu).toEqual({ style: 'dropdowns', groups: [{ label: 'Casa', links: [{ label: 'Velas', to: 'category:k1' }] }] });
+    const none = await assemble(templateDemoPublicStore(), { variants: { ...variants, menu: 'none' } });
+    expect(JSON.parse(none.files.find((f: any) => f.path === 'config.js')!.content.match(/= ([\s\S]*);\n$/)![1]).header).toBeUndefined();
+    expect(templateSourceFiles('esencial').find(f => f.path === 'components/Shell.tsx')!.content).toContain('data-pagosya-store-menu="toggle"');
+  });
+
   it('every font pair uses catalogued OFL fonts', () => {
     for (const pair of manifest.master!.fonts) for (const id of [pair.heading, pair.body]) expect(SOURCE_FONT_CATALOG.some(font => font.id === id)).toBe(true);
   });

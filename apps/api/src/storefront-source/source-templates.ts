@@ -19,6 +19,7 @@ import { withSourceCommerceDesign } from './source-commerce-design';
 import { withSourceMotion } from './source-motion';
 import { buildSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_FILE } from './source-visual-system';
 import { sourceStoreConfigData, type SourcePublicStore } from './source-store-config';
+import { menuFromVariant, storeMenuContext, type StoreMenuGroup } from './source-store-menu';
 
 export const TEMPLATE_STORE_DATA_PATH = 'components/store-data.tsx';
 
@@ -136,6 +137,33 @@ export function withFashionTemplateParts<F extends { path: string; content: stri
   });
 }
 
+/** Dropdown menu spec 2026-10-21: an Esencial store built before the menu gets its two mounts, the replace marks and the
+ *  mounts' CSS. A Shell the store edited (the template lines gone) is left alone; the menu then simply has no host there.
+ *  Doing it twice changes nothing. */
+const SHELL_TOGGLE = '<button type="button" className="es-icon-btn" aria-controls="es-menu"';
+const SHELL_LOGO_END = ': store.name}</a>';
+const SHELL_NAV = '<nav className="es-header__links" aria-label="Principal">';
+const STORE_MENU_CSS_MARK = '/* Dropdown menu (2026-10-21)';
+const STORE_MENU_CSS_END = '/* Dropdown menu end */';
+export function withStoreMenuMounts<F extends { path: string; content: string }>(files: F[]): F[] {
+  const css = templateSourceFiles(MASTER_TEMPLATE_ID).find(file => file.path === 'styles/globals.css')?.content ?? '';
+  const start = css.indexOf(STORE_MENU_CSS_MARK), end = css.indexOf(STORE_MENU_CSS_END);
+  const block = start >= 0 && end > start ? css.slice(start, end + STORE_MENU_CSS_END.length) : '';
+  return files.map(file => {
+    if (file.path === 'styles/globals.css' && block && !file.content.includes(STORE_MENU_CSS_MARK)) return { ...file, content: `${file.content.trimEnd()}\n\n${block}\n` };
+    if (file.path !== 'components/Shell.tsx' || file.content.includes('data-pagosya-store-menu') || ![SHELL_TOGGLE, SHELL_LOGO_END, SHELL_NAV].every(line => file.content.includes(line))) return file;
+    const indent = file.content.slice(file.content.lastIndexOf('\n', file.content.indexOf(SHELL_TOGGLE)) + 1, file.content.indexOf(SHELL_TOGGLE));
+    const content = file.content
+      .replace(SHELL_TOGGLE, () => `<div className="es-store-menu" data-pagosya-store-menu="toggle" />\n${indent}<button type="button" className="es-icon-btn" data-store-menu-replaces aria-controls="es-menu"`)
+      .replace(SHELL_LOGO_END, () => `${SHELL_LOGO_END}\n${indent}<div className="es-store-menu-links" data-pagosya-store-menu="links" />`)
+      .replace(SHELL_NAV, () => '<nav className="es-header__links" aria-label="Principal" data-store-menu-replaces>');
+    return { ...file, content };
+  });
+}
+
+/** A tile photo the fill gave as an upload path (`/v1/uploads/…`) as the full API URL, so the save check can match it. */
+export const absoluteTiles = (groups: StoreMenuGroup[] | undefined, apiUrl?: URL) => groups?.map(group => ({ ...group, ...(group.tiles ? { tiles: group.tiles.map(tile => ({ ...tile, image: masterPhotoUrl(tile.image, apiUrl) })) } : {}) }));
+
 export function refillMasterFiles(files: SourceProjectFileDto[], manifest: TemplateManifest, change: MasterFill, apiUrl?: URL): SourceProjectFileDto[] {
   const settings = manifest.master;
   if (!settings) throw new TypeError(`Plantilla ${manifest.id}: no es una plantilla base.`);
@@ -146,7 +174,13 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   const photos = sameAsBundled({ ...state.photos, ...(change.heroPhoto !== undefined ? { hero: masterPhotoUrl(change.heroPhoto, apiUrl) } : {}), ...(change.storyPhoto !== undefined ? { story: masterPhotoUrl(change.storyPhoto, apiUrl) } : {}) }, change.photoSources);
   const theme = masterThemeCss(settings, look);
   const variants = { ...(state.variants ?? { sections: [] }), ...Object.fromEntries(Object.entries(change.variants ?? {}).filter(([part, id]) => part !== 'sections' && (settings.variants?.[part] ?? []).includes(String(id)))) } as MasterVariants;
-  return withFashionTemplateParts(files.map(file => {
+  // Dropdown menu spec 2026-10-21: a menu change sets the record; a fashion store without one gets the panel.
+  const menuIds = settings.variants?.menu ?? [];
+  if (menuIds.length) {
+    if (change.menu && menuIds.includes(change.menu.style)) variants.menu = change.menu.style;
+    else if (!change.menu && variants.cards === 'fashion' && (!variants.menu || variants.menu === 'none')) variants.menu = 'panel';
+  }
+  const out = withFashionTemplateParts(files.map(file => {
     if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [] });
     if (file.path === 'styles/globals.css') return { ...file, content: withMasterTheme(file.content, theme) };
     if (file.path === 'config.js') {
@@ -156,10 +190,15 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
       // Fashion look spec 2026-10-21: the product-page style follows the pdp variant; a store leaving it drops the fashion style.
       const { productPageStyle, ...rest } = config;
       const style = masterProductStyle(variants).productPageStyle ?? (productPageStyle === 'fashion' ? undefined : productPageStyle);
-      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(style ? { productPageStyle: style } : {}), dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }) }, showcase: { ...(config.showcase ?? {}), ...masterShowcase(variants) } })};\n` };
+      // Dropdown menu spec 2026-10-21: header.menu follows the menu variant; a refill that names no menu keeps its groups.
+      const { menu: savedMenu, ...header } = config.header ?? {};
+      const menu = menuIds.length ? menuFromVariant(variants.menu, change.menu ? absoluteTiles(change.menu.groups, apiUrl) : savedMenu?.groups, storeMenuContext(config.data ?? {}, files)) : savedMenu;
+      const withHeader = config.header || menu ? { header: { ...header, ...(menu ? { menu } : {}) } } : {};
+      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(style ? { productPageStyle: style } : {}), ...withHeader, dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }) }, showcase: { ...(config.showcase ?? {}), ...masterShowcase(variants) } })};\n` };
     }
     return file;
   }), variants);
+  return variants.menu && variants.menu !== 'none' ? withStoreMenuMounts(out) : out;
 }
 
 export function templateDemoAssets(manifest: TemplateManifest, demoSlots: readonly string[]): SourceProjectFileDto[] {
@@ -202,6 +241,8 @@ export async function assembleTemplateRevision(input: {
   variants?: MasterVariants; sections?: MasterSection[];
   /** A converted Plantilla's filled texts (spec 2026-10-20); missing keys keep the template's own words. */
   plantillaCopy?: Record<string, string>;
+  /** Dropdown menu spec 2026-10-21: groups YAPI wrote for the menu; without them the fill's own, else the kit builds the menu. */
+  menuGroups?: StoreMenuGroup[];
 }): Promise<{ label: string; brief: SourceProjectBriefDto; files: SourceProjectFileDto[] }> {
   const { manifest } = input;
   const data = sourceStoreConfigData(input.publicStore, input.apiUrl, input.firstRevision);
@@ -223,6 +264,9 @@ export async function assembleTemplateRevision(input: {
   const authored = [...input.source.filter(file => file.path !== TEMPLATE_STORE_DATA_PATH).map(themed).map(noEmptyPhotos), ...contentPagesFor(input.source), storeData];
   const compiled = await compileNextPreview(authored, 'shop');
   const scaffold = [...compiled, ...nextProjectScaffold(input.slug, nextContentPages(authored, 'shop'))];
+  // Dropdown menu spec 2026-10-21: the rolled menu variant becomes config.js header.menu, its groups checked against this store.
+  const menuVariants = input.variants ?? (input.fill?.variants as MasterVariants | undefined);
+  const menu = settings ? menuFromVariant(menuVariants?.menu, absoluteTiles(input.menuGroups ?? input.fill?.menu?.groups, input.apiUrl), storeMenuContext(data, [...authored, ...scaffold])) : undefined;
   const kitFiles = await Promise.all(TEMPLATE_KIT_FILES.filter(path => !scaffold.some(file => file.path === path))
     .map(async path => ({ path, content: await readFile(kitPath(path), 'utf8') })));
   const demoAssets = templateDemoAssets(manifest, demoSlots);
@@ -230,6 +274,7 @@ export async function assembleTemplateRevision(input: {
     ...sourceCommerceRoutes([...authored, ...scaffold, ...kitFiles], {}), dna: { ...templateDna(manifest, input.storeId), ...(settings ? { ...masterDnaFonts(settings, look!), ...masterDnaLook(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) } : {}) },
     ...(settings ? { showcase: masterShowcase(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) } : {}),
     ...(settings ? masterProductStyle(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) : {}),
+    ...(menu ? { header: { menu } } : {}),
     productPage: 'product.html', checkoutPage: 'checkout.html', sitePurpose: 'shop', demo: false, slug: input.slug,
     apiBaseUrl: input.apiUrl.href.replace(/\/$/, ''), checkoutOrigin: input.checkoutOrigin, data,
   };

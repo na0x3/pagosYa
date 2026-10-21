@@ -133,3 +133,53 @@ describe('fashion look', () => {
     expect(file(refillMasterFiles(edited, withVariants, { variants: { pdp: 'fashion' } as any }), 'components/product.tsx')).toBe('export default function Product() { return null; }');
   });
 });
+
+import { readStoreMenu } from './source-store-menu';
+/** Dropdown menu spec 2026-10-21: the menu variant writes config.js header.menu and gives an older Shell its mounts. */
+const menuManifest = { ...manifest, master: { ...master, variants: { menu: ['none', 'panel', 'dropdowns'], cards: ['showcase', 'fashion'] } } } as unknown as TemplateManifest;
+const shellFile = { path: 'components/Shell.tsx', content: `      <div className="es-header__start">\n        <button type="button" className="es-icon-btn" aria-controls="es-menu" aria-expanded={open} aria-label="Abrir menú" onClick={() => setOpen(true)}><IconMenu /></button>\n        <a className="es-logo" href="index.html">{store.logo ? <img src={store.logo} alt={store.name} /> : store.name}</a>\n      </div>\n      <nav className="es-header__links" aria-label="Principal">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>` };
+const menuStore = () => storeFiles().map(file => file.path === 'config.js' ? { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ dna: {}, header: { account: false }, data: { categories: [{ id: 'c1', name: 'Vestidos' }, { id: 'c2', name: 'Seda' }], items: [{ categoryId: 'c1', imageUrls: ['https://api.test/v1/uploads/p1.jpg'] }, { categoryId: 'c2', imageUrls: [] }] } })};\n` } : file).concat(shellFile);
+const configOf = (files: Array<{ path: string; content: string }>) => JSON.parse(files.find(file => file.path === 'config.js')!.content.match(/= (.*);/)![1]);
+
+describe('menu on a master store', () => {
+  it('a menu style in the change turns the menu on, writes header.menu and gives an older Shell its mounts', () => {
+    const files = refillMasterFiles(menuStore(), menuManifest, { menu: { style: 'panel', groups: [{ label: 'Mujer', links: [{ to: 'category:c1' }] }] } });
+    expect(readStoreMenu(files)).toEqual({ style: 'panel', groups: [{ label: 'Mujer', links: [{ label: 'Vestidos', to: 'category:c1' }] }] });
+    expect(readMasterState(files).variants?.menu).toBe('panel');
+    const shell = files.find(file => file.path === 'components/Shell.tsx')!.content;
+    expect(shell).toContain('data-pagosya-store-menu="toggle"');
+    expect(shell).toContain('data-pagosya-store-menu="links"');
+    expect(shell.match(/data-store-menu-replaces/g)).toHaveLength(2);
+    expect(configOf(files).header.account).toBe(false);
+  });
+  it('a tile given as an upload path is saved as the full API URL and kept when it is a store photo', () => {
+    const files = refillMasterFiles(menuStore(), menuManifest, { menu: { style: 'panel', groups: [{ label: 'Mujer', links: [{ to: 'category:c1' }], tiles: [{ title: 'Vestidos', image: '/v1/uploads/p1.jpg', to: 'category:c1' }] }] } }, new URL('https://api.test/v1'));
+    expect(readStoreMenu(files)?.groups?.[0].tiles).toEqual([{ title: 'Vestidos', image: 'https://api.test/v1/uploads/p1.jpg', to: 'category:c1' }]);
+  });
+  it('a refill that says nothing about the menu keeps it, groups included', () => {
+    const on = refillMasterFiles(menuStore(), menuManifest, { menu: { style: 'dropdowns', groups: [{ label: 'Mujer', links: [{ to: 'category:c1' }] }] } });
+    const again = refillMasterFiles(on, menuManifest, { copy: { headline: 'Otra' } });
+    expect(readStoreMenu(again)).toEqual(readStoreMenu(on));
+  });
+  it('style none removes it; doing the mounts twice changes nothing', () => {
+    const on = refillMasterFiles(menuStore(), menuManifest, { menu: { style: 'panel', groups: [] } });
+    const off = refillMasterFiles(on, menuManifest, { menu: { style: 'none', groups: [] } });
+    expect(readStoreMenu(off)).toBeUndefined();
+    expect(configOf(off).header).toEqual({ account: false });
+    const twice = refillMasterFiles(on, menuManifest, { menu: { style: 'panel', groups: [] } });
+    expect(twice.find(f => f.path === 'components/Shell.tsx')!.content).toBe(on.find(f => f.path === 'components/Shell.tsx')!.content);
+  });
+  it('a fashion store gets the panel at its next refill even without a menu change', () => {
+    const fashion = refillMasterFiles(menuStore(), menuManifest, { variants: { cards: 'fashion' } as never });
+    expect(readStoreMenu(fashion)).toEqual({ style: 'panel' });
+  });
+  it('a store without the menu part in its catalogue never gets a menu', () => {
+    expect(readStoreMenu(refillMasterFiles(menuStore(), manifest, { copy: { headline: 'Otra' } }))).toBeUndefined();
+  });
+  it('an edited Shell without the template lines is left alone, and the menu still saves', () => {
+    const edited = menuStore().map(file => file.path === 'components/Shell.tsx' ? { ...file, content: '<header>propio</header>' } : file);
+    const files = refillMasterFiles(edited, menuManifest, { menu: { style: 'panel', groups: [] } });
+    expect(files.find(f => f.path === 'components/Shell.tsx')!.content).toBe('<header>propio</header>');
+    expect(readStoreMenu(files)).toEqual({ style: 'panel' });
+  });
+});
