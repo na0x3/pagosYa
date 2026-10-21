@@ -156,27 +156,30 @@ describe('Source chat in the existing store conversation infrastructure', () => 
     expect(generation.generate.mock.calls[0][2].instruction).toContain(JSON.stringify(browserReview));
     expect(generation.generate.mock.calls[0][2].instruction).toContain('atiende solo las relacionadas con el pedido actual');
     expect(result.userMessage.content).toBe(request.instruction);
-    expect(result.assistantMessage.content).toContain('Guardé los cambios de tu tienda');
-    expect(result.assistantMessage.content).toContain('comprobará');
+    expect(result.assistantMessage.content).toContain('Listo: guardé «');
+    expect(result.assistantMessage.content).toContain('Ya lo ves a la derecha; publícalo cuando te guste.');
+    expect(result.assistantMessage.content).not.toContain('El editor comprobará');
+    // Browser evidence never turns into a claim of visual success.
+    expect(result.assistantMessage.content).not.toMatch(/verificad|lo revisé/i);
   });
   it("opens the reply with what YAPI did to the store's controls on a request about them (review CD fix 4)", async () => {
     const { service, generation } = setup();
     generation.generate.mockResolvedValueOnce({ revision: 1, label: 'Carrito', generation: { controlsNote: 'Puse una taza en el carrito.' } });
     const result = await service.send('m', 's', request);
-    expect(result.assistantMessage.content).toMatch(/^Puse una taza en el carrito\.\n\nGuardé los cambios de tu tienda «Carrito»/);
+    expect(result.assistantMessage.content).toMatch(/^Puse una taza en el carrito\.\n\nListo: guardé «Carrito»/);
   });
   it('says which commerce part fell back and offers a retry button for it (spec 2026-10-15)', async () => {
     const { service, generation } = setup();
     generation.generate.mockResolvedValueOnce({ revision: 1, label: 'Carrito', generation: { surfacesNote: 'El carrito no pasó la prueba de compra, así que usa el diseño estándar por ahora.', surfacesRetry: [{ label: 'Reintentar el carrito', value: 'Rediseña el carrito de mi tienda.' }] } });
     const result = await service.send('m', 's', request);
-    expect(result.assistantMessage.content).toMatch(/^El carrito no pasó la prueba de compra, así que usa el diseño estándar por ahora\.\n\nGuardé los cambios de tu tienda «Carrito»/);
+    expect(result.assistantMessage.content).toMatch(/^El carrito no pasó la prueba de compra, así que usa el diseño estándar por ahora\.\n\nListo: guardé «Carrito»/);
     expect(result.assistantMessage.metadata).toMatchObject({ clarification: { options: [{ label: 'Reintentar el carrito', value: 'Rediseña el carrito de mi tienda.' }] } });
   });
   it('opens the reply with the agent summary and the sections it built', async () => {
     const { service, generation } = setup();
     generation.generate.mockResolvedValueOnce({ revision: 1, label: 'Portada nueva', agent: { summary: 'Construí tu portada nueva.', sections: ['Portada', 'Productos'], steps: [] } });
     const result = await service.send('m', 's', request);
-    expect(result.assistantMessage.content).toMatch(/^Construí tu portada nueva\.\n\n• Portada\n• Productos\n\nGuardé una revisión verificada/);
+    expect(result.assistantMessage.content).toMatch(/^Construí tu portada nueva\.\n\n• Portada\n• Productos\n\nLo revisé en computadora y celular y lo guardé como «/);
     expect(result.assistantMessage.metadata).toMatchObject({ agentSummary: 'Construí tu portada nueva.', agentSections: ['Portada', 'Productos'] });
   });
   it('passes the selection to chat and generation and reinterprets after switching providers', async () => {
