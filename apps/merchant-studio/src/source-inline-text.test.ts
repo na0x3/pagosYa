@@ -50,3 +50,10 @@ describe('product words in place', () => {
     expect(inlineProductChange(undefined, 'name', 'x')).toMatchObject({ editor: 'description' });
   });
 });
+
+import { keepEdges } from './source-inline-text';
+it('keeps the edge spaces of the replaced text (live check 2026-10-21)', () => {
+  expect(keepEdges('Hecho a mano en ', ' Cortes en Santa Cruz')).toBe('Cortes en Santa Cruz ');
+  expect(keepEdges(' · Hecho en Bolivia', 'Hecho en Santa Cruz')).toBe(' Hecho en Santa Cruz');
+  expect(keepEdges('Fuego', 'Brasa')).toBe('Brasa');
+});

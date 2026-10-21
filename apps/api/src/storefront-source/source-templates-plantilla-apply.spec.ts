@@ -40,6 +40,8 @@ describe('applyPlantillaFilled', () => {
     expect(copy).toMatchObject({ home_1: 'Elegimos', home_2: 'Cada corte lo elegimos en el frigorífico.' });
     expect(Object.keys(copy).sort()).toEqual(tostado.copy.map((slot: { key: string }) => slot.key).sort());
     expect(files.some(file => file.path.startsWith('assets/template-tostado-'))).toBe(false);
+    // Live check 2026-10-21: a photo slot with no photo stays empty, never a broken image showing its description.
+    expect(files.find(file => file.path === 'styles/globals.css')!.content).toContain('img:not([src]),img[src=""]{visibility:hidden}');
     expect(prisma.store.update).toHaveBeenCalledWith({ where: { id: 'store-1' }, data: { checkoutMode: 'payment' } });
   });
 

@@ -234,9 +234,11 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   // catalog) grows the page, so the restore retries for a moment and stops as soon as the merchant scrolls.
   if (navigation.hosted !== true) flag.textContent += `
 (function () {
-  var wanted = ${Math.max(0, Math.round(Number(navigation.scrollY) || 0))}, restoring = wanted > 0, timer = 0;
+  var wanted = ${Math.max(0, Math.round(Number(navigation.scrollY) || 0))}, restoring = wanted > 0, timer = 0, began = Date.now();
   var report = function () { clearTimeout(timer); timer = setTimeout(function () { parent.postMessage({ type: 'pagosya:preview-scroll', y: Math.round(window.scrollY) }, '*'); }, 120); };
-  var stop = function () { restoring = false; };
+  // A wheel turned while the redrawn page is still empty (the merchant was scrolling as it redrew) must not leave it at
+  // the top (live check 2026-10-21): input stops the restore only once the page has had a moment to fill.
+  var stop = function () { if (Date.now() - began > 600) restoring = false; };
   ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(function (name) { window.addEventListener(name, stop, { passive: true, capture: true }); });
   window.addEventListener('scroll', function () { if (!restoring) report(); }, { passive: true });
   if (restoring) {

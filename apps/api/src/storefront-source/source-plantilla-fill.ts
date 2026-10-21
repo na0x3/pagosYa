@@ -33,10 +33,14 @@ const clip = (value: string, max: number) => {
   return (cut.length >= max * 0.5 ? cut : text.slice(0, max)).replace(/[\s,;:–—-]+$/, '');
 };
 
+/** A slot that sits beside a variable («En » + store name) keeps the template's own edge spaces around the new words
+ *  (live check 2026-10-21: «…en Santa Cruz.Parrilla Don Kike» lost its space). */
+const edges = (slot: TemplateCopySlot, words: string) => words ? `${slot.default.match(/^\s*/)![0]}${words}${slot.default.match(/\s*$/)![0]}` : '';
+
 /** The model's answer kept to the template's slots: unknown keys dropped, non-strings and missing keys left out. */
 export function plantillaFillFromRead(read: Record<string, unknown> | null | undefined, slots: readonly TemplateCopySlot[]): Record<string, string> {
   if (!read || typeof read !== 'object') return {};
-  return Object.fromEntries(slots.flatMap(slot => typeof read[slot.key] === 'string' ? [[slot.key, clip(read[slot.key] as string, slot.max)]] : []));
+  return Object.fromEntries(slots.flatMap(slot => typeof read[slot.key] === 'string' ? [[slot.key, edges(slot, clip(read[slot.key] as string, slot.max))]] : []));
 }
 
 /** When the fill fails: the merchant's own words, so no demo sentence ever reaches their store. The shop's own controls in
@@ -52,6 +56,6 @@ export function plantillaFallback(slots: readonly TemplateCopySlot[], facts: { s
       : slot.role === 'title' && !titled ? (titled = true, 'Nuestros productos')
       : slot.role === 'alt' ? `Foto de ${facts.storeName}`
       : '';
-    return [slot.key, clip(value, slot.max)];
+    return [slot.key, edges(slot, clip(value, slot.max))];
   }));
 }

@@ -194,9 +194,28 @@ export async function openTemplateGallery(api: MerchantStudioApi, options: { sto
     about?.addEventListener('input', () => { state.about = about.value; });
     dialog.querySelector('[data-template-about-form]')?.addEventListener('submit', event => { event.preventDefault(); void apply(state.asking || '', about?.value.trim() ?? ''); });
     dialog.querySelector('[data-template-about-cancel]')?.addEventListener('click', () => { state.asking = ''; render(); });
-    if (about) { about.focus({ preventScroll: true }); about.closest('.tpl-about__card')?.scrollIntoView?.({ block: 'center' }); }
+    if (about) { placeAbout(); about.focus({ preventScroll: true }); }
+    // The grey around the card and Escape close it, like any dialog.
+    dialog.querySelector('.tpl-about')?.addEventListener('click', event => { if (event.target === event.currentTarget) { state.asking = ''; render(); } });
+    about?.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); state.asking = ''; render(); } });
     void fillPreview();
   }
+  /** Live check 2026-10-21: in the dashboard the gallery is a frame as tall as its content, so a fixed card near its top was
+   *  off-screen once the merchant had scrolled. The card goes to the middle of the part of the frame on screen. */
+  function placeAbout() {
+    const card = dialog.querySelector<HTMLElement>('.tpl-about__card');
+    if (!card) return;
+    let top = 96;
+    try {
+      const frame = window.frameElement?.getBoundingClientRect();
+      if (frame) {
+        const shownTop = Math.max(0, -frame.top), shown = Math.min(window.parent.innerHeight, frame.bottom) - Math.max(0, frame.top);
+        top = shownTop + Math.max(16, (shown - card.offsetHeight) / 2);
+      }
+    } catch { /* not framed by the dashboard */ }
+    card.style.marginTop = `${Math.round(top)}px`;
+  }
+  try { window.parent.addEventListener('scroll', () => { if (state.asking) placeAbout(); }, { passive: true }); } catch { /* no parent */ }
   function bindCards() {
     const each = (selector: string, run: (button: HTMLButtonElement) => void) => dialog.querySelectorAll<HTMLButtonElement>(selector).forEach(button => button.addEventListener('click', () => run(button)));
     const focusOn = (attribute: string, id: string) => [...dialog.querySelectorAll<HTMLElement>(`[${attribute}]`)].find(button => button.getAttribute(attribute) === id)?.focus();

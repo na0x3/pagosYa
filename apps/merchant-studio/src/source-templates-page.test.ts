@@ -113,3 +113,28 @@ it('search narrows the cards while the field keeps its focus', async () => {
   expect([...app.querySelectorAll('[data-template-card]')].map(card => card.getAttribute('data-template-card'))).toEqual(['miga']);
   expect(document.activeElement).toBe(search);
 });
+
+// Live check 2026-10-21: the gallery frame is as tall as its content; «Cuéntanos de tu negocio» opened 96 px from its top,
+// off-screen after scrolling. It now sits in the middle of the part of the frame on screen, and grey/Escape close it.
+it('Plantillas fill: the about step opens where the merchant is looking, closes on grey or Escape, and applies filled', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceVersion').mockResolvedValue(version(3) as any);
+  vi.spyOn(MerchantStudioApi.prototype, 'templateSettings').mockResolvedValue({ plantillas: true });
+  const applyFilled = vi.spyOn(MerchantStudioApi.prototype, 'applyTemplateFilled').mockResolvedValue({ revision: 4, label: 'Plantilla: Tostado', filled: true } as any);
+  Object.defineProperty(window, 'parent', { value: { postMessage: post, innerHeight: 641, addEventListener: () => {} }, configurable: true });
+  Object.defineProperty(window, 'frameElement', { value: { getBoundingClientRect: () => ({ top: -650, bottom: 1721 }) }, configurable: true });
+  await mountTemplatesPage(app);
+  await vi.waitFor(() => expect(app.querySelector('[data-template-edit="tostado"]')).not.toBeNull());
+  const open = () => app.querySelector<HTMLButtonElement>('[data-template-edit="tostado"]')!.click();
+  open();
+  expect(app.querySelector<HTMLElement>('.tpl-about__card')!.style.marginTop).toBe('971px');
+  app.querySelector<HTMLElement>('.tpl-about')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  expect(app.querySelector('.tpl-about')).toBeNull();
+  open();
+  app.querySelector('[data-template-about]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  expect(app.querySelector('.tpl-about')).toBeNull();
+  open();
+  app.querySelector<HTMLTextAreaElement>('[data-template-about]')!.value = 'Parrilla en Santa Cruz';
+  app.querySelector('[data-template-about-form]')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  await vi.waitFor(() => expect(applyFilled).toHaveBeenCalledWith('s1', 'tostado', { revision: 3, about: 'Parrilla en Santa Cruz' }));
+  Object.defineProperty(window, 'frameElement', { value: null, configurable: true });
+});

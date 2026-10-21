@@ -58,3 +58,10 @@ describe('fillPlantilla', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
+
+// Live check 2026-10-21: a slot beside the store name kept no space («…Santa Cruz.Parrilla Don Kike»).
+it('keeps the template\'s edge spaces around the new words, in a fill and in the fallback', () => {
+  const slots = [{ key: 'home_1', role: 'lead', default: 'Hecho a mano en ', max: 80 }, { key: 'home_2', role: 'body', default: ' cada pieza es única.', max: 80 }] as any;
+  expect(plantillaFillFromRead({ home_1: 'Cortes madurados en Santa Cruz ', home_2: '  y entrega a domicilio. ' }, slots)).toEqual({ home_1: 'Cortes madurados en Santa Cruz ', home_2: ' y entrega a domicilio.' });
+  expect(plantillaFallback(slots, { storeName: 'Kike', tagline: 'Carnes a la brasa', products: [] })).toEqual({ home_1: 'Carnes a la brasa ', home_2: '' });
+});

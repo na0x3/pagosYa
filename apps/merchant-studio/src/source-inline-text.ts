@@ -56,3 +56,8 @@ export function inlineProductChange(item: CatalogItem | undefined, field: Inline
   const amount = parseBolivianPrice(text);
   return amount ? { patch: { amount } } : { editor: 'price', message: 'Escribe el precio como «Bs 150» o «150,50».' };
 }
+
+/** The new words keep the edge spaces of the text they replace: a template text beside the store name («En » + name). */
+export function keepEdges(original: string, words: string): string {
+  return `${original.match(/^\s*/)![0]}${words.trim()}${original.match(/\s*$/)![0]}`;
+}

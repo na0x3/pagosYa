@@ -191,7 +191,11 @@ export async function assembleTemplateRevision(input: {
   const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city: (data.locations as Array<{ city?: string | null }> | undefined)?.[0]?.city ?? '',
     logo: data.logoUrl ?? '', phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: input.variants ?? (input.fill?.variants as MasterVariants | undefined), sections: input.sections ?? input.fill?.sections } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
   const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withMasterTheme(file.content, masterThemeCss(settings, look!)) } : file;
-  const authored = [...input.source.filter(file => file.path !== TEMPLATE_STORE_DATA_PATH).map(themed), ...contentPagesFor(input.source), storeData];
+  // A filled Plantilla never shows the demo business's photos; a slot the merchant has no photo for stays empty instead
+  // of a broken image showing its description (live check 2026-10-21, Alfar's floating photos).
+  const noEmptyPhotos = (file: SourceProjectFileDto) => manifest.copy && input.plantillaCopy && input.demoPhotos === false && file.path === 'styles/globals.css'
+    ? { ...file, content: `${file.content}\n/* pagosYa: a photo slot with no photo stays empty. */\nimg:not([src]),img[src=""]{visibility:hidden}\n` } : file;
+  const authored = [...input.source.filter(file => file.path !== TEMPLATE_STORE_DATA_PATH).map(themed).map(noEmptyPhotos), ...contentPagesFor(input.source), storeData];
   const compiled = await compileNextPreview(authored, 'shop');
   const scaffold = [...compiled, ...nextProjectScaffold(input.slug, nextContentPages(authored, 'shop'))];
   const kitFiles = await Promise.all(TEMPLATE_KIT_FILES.filter(path => !scaffold.some(file => file.path === path))

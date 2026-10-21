@@ -10,7 +10,7 @@ import { bocetoRevealY, createBocetoPanel } from './source-boceto';
 import { closeBocetoMenu } from './boceto-menu';
 import { renderInspiration } from './source-inspiration';
 import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
-import { inlineProductChange, inlineProducts, matchInlineField, type InlineProductField } from './source-inline-text';
+import { inlineProductChange, inlineProducts, keepEdges, matchInlineField, type InlineProductField } from './source-inline-text';
 import { createProductForm } from './source-create-product';
 import { renderBuildProgress, type BuildProgress } from './source-build-progress';
 import { apiHeroUrls, fitStyleFrames, keepStylePolling, renderStylePicker, type StyleProposalView } from './source-style-pick';
@@ -432,7 +432,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     try {
       const field = matchInlineField((await api.sourceVisualFields(storeId, shown.revision)).fields, before);
       if (!field) { revert(); toast = 'Ese texto no se puede cambiar aquí. Pídeselo a YAPI en el chat.'; return; }
-      await api.editSourceVisual(storeId, { revision: shown.revision, fieldId: field.id, value: after });
+      await api.editSourceVisual(storeId, { revision: shown.revision, fieldId: field.id, value: keepEdges(field.value, after) });
       await load(); toast = 'Texto guardado.';
     } catch (cause) { revert(); toast = cause instanceof Error ? cause.message : 'No pudimos guardar el texto.'; }
     finally { visualEditPending = false; render(); }
