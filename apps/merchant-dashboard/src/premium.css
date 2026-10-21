@@ -68,7 +68,7 @@ body.is-logged-in dialog::backdrop { background: rgb(40 36 28 / .18); -webkit-ba
   /* Label size only on the full sidebar: narrower screens use an icon rail that hides labels with font-size: 0. */
   body.is-logged-in .dashboard-nav-button { font: 500 15px/1.2 var(--pg-font-sans); }
   body.is-logged-in .dashboard-nav-button { padding: 0 14px; gap: 12px; }
-  body.is-logged-in .dashboard-sidebar { top: var(--pm-gap); left: var(--pm-gap); width: var(--pm-rail); height: calc(100dvh - 2 * var(--pm-gap)); padding: 18px 12px; border-radius: 28px; }
+  body.is-logged-in:not([data-dashboard-view="workspace"]) .dashboard-sidebar { top: var(--pm-gap); left: var(--pm-gap); width: var(--pm-rail); height: calc(100dvh - 2 * var(--pm-gap)); padding: 18px 12px; border-radius: 28px; }
   body.is-logged-in:not([data-dashboard-view="workspace"]) > .topbar { top: var(--pm-gap); margin: var(--pm-gap) var(--pm-gap) 0 var(--pm-content-left); width: auto; min-height: 60px; height: 60px; padding: 0 10px 0 18px; border-radius: 999px; }
   body.is-logged-in:not([data-dashboard-view="workspace"]) .dashboard-workspace {
     box-sizing: content-box; max-width: var(--pm-column); padding: 56px 48px 200px;

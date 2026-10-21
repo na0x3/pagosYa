@@ -237,7 +237,7 @@ test("Descuentos: a code is marked to show in the store's emails", async ({ page
     return undefined;
   });
   await navigateDashboard(page, "marketing");
-  await page.getByRole("button", { name: "Códigos promocionales" }).click();
+  await openView(page, "marketing", "promotions");
   const row = page.locator('[data-promo-code-id="p2"]');
   await expect(row).toBeVisible();
   await expect(row).not.toContainText("Se muestra en tus correos");

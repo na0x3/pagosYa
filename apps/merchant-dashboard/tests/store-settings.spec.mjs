@@ -774,7 +774,7 @@ test("merchant creates and disables a shareable promo code", async ({ page }) =>
     return undefined;
   });
   await navigateDashboard(page, "marketing");
-  await page.locator('[data-marketing-tab="promotions"]').click();
+  await openView(page, "marketing", "promotions");
   await page.locator("#promoCodeInput").fill("verano20");
   await page.locator("#promoCodeValue").fill("20");
   await page.locator("#promoCodeSubmit").click();

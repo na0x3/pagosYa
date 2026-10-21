@@ -85,3 +85,7 @@ test('motion: pages and cards rise in slowly, staggered, and stay still with red
   assert.match(s, /:nth-child\(5\) \{ animation-delay: 160ms; \}/);
   assert.match(s, /@media \(prefers-reduced-motion: reduce\) \{\n\s+body\.is-logged-in :is\(\.page-entering, \.page-entering \.panel, \.page-entering \.card, \.page-entering \.overview-kpi\) \{ animation: none; \}/);
 });
+
+test('the floating inset never applies to the full-screen Diseño view, where the sidebar slides away', () => {
+  assert.match(css(), /body\.is-logged-in:not\(\[data-dashboard-view="workspace"\]\) \.dashboard-sidebar \{ top: var\(--pm-gap\); left: var\(--pm-gap\);/);
+});
