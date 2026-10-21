@@ -6,44 +6,47 @@
   const VIEWER_MAX = 4, VIEWER_STEP = 2.5;
   const ZOOM_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/></svg>';
   const PHOTO_VIEWER_CSS = `
-    :where(.pagosya-viewer){position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:color-mix(in srgb,var(--store-background,#fff) 97%,transparent);color:var(--store-foreground,#111);overflow:hidden}
+    :where(.pagosya-viewer){position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:var(--store-background,#fff);color:var(--store-foreground,#111);overflow:hidden}
     .pagosya-viewer::backdrop{background:transparent}
     .pagosya-viewer:not([open]){display:none}
-    .pagosya-viewer__stage{position:absolute;inset:0 0 88px;display:grid;place-items:center;overflow:hidden;touch-action:none;cursor:zoom-in}
+    .pagosya-viewer__stage{position:absolute;inset:0 0 88px;overflow:hidden;touch-action:none;cursor:zoom-in}
     .pagosya-viewer[data-single] .pagosya-viewer__stage{bottom:0}
     .pagosya-viewer[data-zoomed] .pagosya-viewer__stage{cursor:grab}
     .pagosya-viewer[data-dragging] .pagosya-viewer__stage{cursor:grabbing}
-    .pagosya-viewer__photo{max-width:100%;max-height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none;transition:transform .25s cubic-bezier(.2,.7,.2,1);will-change:transform}
+    .pagosya-viewer__photo{display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none;transition:transform .25s cubic-bezier(.2,.7,.2,1);will-change:transform}
     .pagosya-viewer[data-dragging] .pagosya-viewer__photo{transition:none}
-    :where(.pagosya-viewer) button{font:inherit;color:inherit;background:var(--store-background,#fff);border:1px solid color-mix(in srgb,currentColor 18%,transparent);cursor:pointer}
-    :where(.pagosya-viewer__close,.pagosya-viewer__nav){position:absolute;z-index:2;display:grid;place-items:center;width:44px;height:44px;padding:0;border-radius:999px;font-size:26px;line-height:1}
+    .pagosya-viewer button{font:inherit;color:inherit;background:var(--store-background,#fff);border:1px solid color-mix(in srgb,currentColor 18%,transparent);cursor:pointer}
+    .pagosya-viewer :is(.pagosya-viewer__close,.pagosya-viewer__nav){position:absolute;z-index:2;display:grid;place-items:center;width:44px;height:44px;padding:0;border-radius:999px;font-size:26px;line-height:1}
     .pagosya-viewer__close{top:16px;right:16px}
     .pagosya-viewer__nav{top:calc(50% - 66px)}
     .pagosya-viewer__nav--prev{left:16px}.pagosya-viewer__nav--next{right:16px}
-    .pagosya-viewer__nav[hidden]{display:none}
+    .pagosya-viewer .pagosya-viewer__nav[hidden]{display:none}
     .pagosya-viewer__count{position:absolute;top:28px;left:20px;margin:0;font-size:13px;letter-spacing:.06em}
     .pagosya-viewer__thumbs{position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:center;gap:8px;padding:0 16px;overflow-x:auto}
-    :where(.pagosya-viewer__thumbs) button{flex:0 0 56px;width:56px;height:56px;padding:0;border-radius:4px;overflow:hidden;opacity:.6}
+    .pagosya-viewer .pagosya-viewer__thumbs button{flex:0 0 56px;width:56px;height:56px;padding:0;border-radius:4px;overflow:hidden;opacity:.6}
     .pagosya-viewer__thumbs button[aria-current=true]{opacity:1;outline:1.5px solid currentColor;outline-offset:2px}
     .pagosya-viewer__thumbs img{display:block;width:100%;height:100%;object-fit:cover}
-    @media(max-width:640px){.pagosya-viewer__nav{display:none}}
-    :where([data-product-zoom]){position:absolute;top:10px;right:10px;z-index:3;display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--store-background,#fff) 88%,transparent);color:var(--store-foreground,#111);cursor:zoom-in;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+    @media(max-width:640px){.pagosya-viewer .pagosya-viewer__nav{display:none}}
+    .menu-item [data-product-zoom]{position:absolute;top:10px;right:10px;z-index:3;display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--store-background,#fff) 88%,transparent);color:var(--store-foreground,#111);cursor:zoom-in;box-shadow:0 1px 3px rgba(0,0,0,.12)}
     [data-product-zoom] svg{width:18px;height:18px}
     :where(:has(>[data-product-zoom])){position:relative}
-    @media(hover:hover){:where([data-product-zoom]){opacity:0;transition:opacity .2s}:where(.menu-item:hover,.menu-item:focus-within) [data-product-zoom]{opacity:1}}
-    @media(hover:none){:where([data-product-zoom]){width:30px;height:30px}}
+    @media(hover:hover){.menu-item [data-product-zoom]{opacity:0;transition:opacity .2s}.menu-item:is(:hover,:focus-within) [data-product-zoom]{opacity:1}}
+    @media(hover:none){.menu-item [data-product-zoom]{width:30px;height:30px}}
     :where([data-photo-zoom]){cursor:zoom-in}
     :where(.product-detail__stage[data-magnify]){overflow:hidden}
     .product-detail__stage[data-magnify] .product-detail__photo{scale:2;transition:scale .2s ease}
-    @media(prefers-reduced-motion:reduce){.pagosya-viewer__photo,.product-detail__stage[data-magnify] .product-detail__photo,:where([data-product-zoom]){transition:none}}
+    @media(prefers-reduced-motion:reduce){.pagosya-viewer__photo,.product-detail__stage[data-magnify] .product-detail__photo,.menu-item [data-product-zoom]{transition:none}}
   `;
   let photoViewer = null;
-  const viewerState = { images: [], index: 0, scale: 1, x: 0, y: 0, title: '', opener: null, lockedFrom: null, moved: false, lastTap: 0 };
+  const viewerState = { images: [], index: 0, scale: 1, x: 0, y: 0, title: '', opener: null, lockedFrom: null, moved: false, pressedPhoto: false, lastTap: 0 };
   const viewerPhotos = list => (Array.isArray(list) ? list : []).filter(url => typeof url === 'string' && url && !VIEWER_VIDEO.test(url));
   function ensurePhotoViewerStyle() {
     if (document.querySelector('style[data-pagosya-photo-viewer]')) return;
     const style = document.createElement('style');
     style.setAttribute('data-pagosya-photo-viewer', '');
+    // A kit sheet: the product-page style release (product/setup.js) strips product-detail rules from every other sheet
+    // (live check 2026-10-21: the magnifier rules vanished on pages that drew a catalog before load).
+    style.setAttribute('data-pagosya-kit', '');
     style.textContent = PHOTO_VIEWER_CSS;
     document.head.append(style);
   }
@@ -152,7 +155,11 @@
       if (button?.hasAttribute('data-viewer-prev')) return viewerGo(-1);
       if (button?.hasAttribute('data-viewer-next')) return viewerGo(1);
       if (button?.hasAttribute('data-viewer-thumb')) return viewerShow(Number(button.dataset.viewerThumb));
-      if (event.target === stage && viewerState.scale === 1 && !viewerState.moved) closePhotoViewer();
+      // Only a press that began on the empty backdrop closes: with pointer capture the browser sends the click to the stage
+      // even when the press was on the photo (live check 2026-10-21: the first click of a double-click closed the viewer).
+      const fromPhoto = viewerState.pressedPhoto;
+      viewerState.pressedPhoto = false;
+      if (event.target === stage && viewerState.scale === 1 && !viewerState.moved && !fromPhoto) closePhotoViewer();
     });
     stage.addEventListener('dblclick', event => { event.preventDefault(); viewerToggleZoom(event); });
     stage.addEventListener('wheel', event => {
@@ -162,8 +169,9 @@
     }, { passive: false });
     stage.addEventListener('pointerdown', event => {
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      stage.setPointerCapture?.(event.pointerId);
+      try { stage.setPointerCapture?.(event.pointerId); } catch { /* a pointer the browser no longer tracks: no capture, the gesture still counts */ }
       viewerState.moved = false;
+      viewerState.pressedPhoto = event.target !== stage;
       start = { x: event.clientX, y: event.clientY, panX: viewerState.x, panY: viewerState.y };
       if (pointers.size === 2) {
         const [a, b] = [...pointers.values()];
@@ -252,9 +260,26 @@
       button.setAttribute('aria-label', `Ampliar foto de ${p.name}`);
       button.innerHTML = ZOOM_ICON;
       holder.append(button);
+      if (holder === card && photo.parentElement !== card) button.setAttribute('data-zoom-float', '');
       added = true;
     });
-    if (added) ensurePhotoViewerStyle();
+    if (added) { ensurePhotoViewerStyle(); placeZoomButtons(root); }
+  }
+  // A button that could not go inside the photo's holder (the holder is the card link) is measured onto the photo's top-right
+  // corner, and kept there when the card changes size (a horizontal card would otherwise show it beside the name).
+  const zoomResize = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => entries.forEach(entry => placeZoomButtons(entry.target))) : null;
+  function placeZoomButtons(root) {
+    const buttons = root?.matches?.('[data-zoom-float]') ? [root] : [...(root?.querySelectorAll?.('[data-zoom-float]') || [])];
+    buttons.forEach(button => {
+      const card = button.closest('.menu-item'), photo = card?.querySelector('img.menu-item__image');
+      if (!card || !photo) return;
+      const box = card.getBoundingClientRect(), shot = photo.getBoundingClientRect();
+      const inset = 10, size = button.offsetWidth || 36;
+      button.style.top = `${Math.round(shot.top - box.top + inset)}px`;
+      button.style.left = `${Math.round(shot.right - box.left - inset - size)}px`;
+      button.style.right = 'auto';
+      if (zoomResize && !card.hasAttribute('data-zoom-watched')) { card.setAttribute('data-zoom-watched', ''); zoomResize.observe(card); }
+    });
   }
   document.addEventListener('click', event => {
     if (event.defaultPrevented) return;
@@ -268,4 +293,4 @@
     openPhotoViewer(galleryImages(p), 0, { title: p.name, opener: button });
   });
   // A public handle so a store's own code can open the same viewer (and the kit's specs can reach it).
-  window.pagosyaPhotos = { open: openPhotoViewer, close: closePhotoViewer, decorate: decorateZoomButtons };
+  window.pagosyaPhotos = { open: openPhotoViewer, close: closePhotoViewer, decorate: decorateZoomButtons, place: placeZoomButtons };

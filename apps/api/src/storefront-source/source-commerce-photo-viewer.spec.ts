@@ -125,6 +125,33 @@ describe('photo viewer', () => {
     expect(viewer.open).toBe(false);
   });
 
+  it('a press that starts on the photo never closes it, even when the browser sends the click to the stage (pointer capture)', async () => {
+    const { w, q } = await open();
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg'], 0, { title: 'X' })`);
+    const viewer = q('[data-pagosya-viewer]'), stage = q('[data-viewer-stage]'), photo = q('[data-viewer-photo]');
+    const down = new w.MouseEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 5 });
+    Object.defineProperty(down, 'pointerId', { value: 1 });
+    photo.dispatchEvent(down);
+    stage.click();
+    expect(viewer.open).toBe(true);
+    stage.click();
+    expect(viewer.open).toBe(false);
+  });
+
+  it('a swipe moves to the next photo even when pointer capture is refused', async () => {
+    const { w, q } = await open();
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg', 'https://shop.test/a2.jpg'], 0, { title: 'X' })`);
+    const viewer = q('[data-pagosya-viewer]'), stage = q('[data-viewer-stage]'), photo = q('[data-viewer-photo]');
+    stage.setPointerCapture = () => { throw new w.DOMException('No active pointer', 'NotFoundError'); };
+    const pointer = (type: string, target: any, x: number) => { const event = new w.MouseEvent(type, { bubbles: true, clientX: x, clientY: 100 }); Object.defineProperties(event, { pointerId: { value: 3 }, pointerType: { value: 'touch' } }); target.dispatchEvent(event); };
+    pointer('pointerdown', photo, 300);
+    pointer('pointermove', photo, 180);
+    pointer('pointerup', stage, 180);
+    stage.click();
+    expect(viewer.dataset.index).toBe('1');
+    expect(viewer.open).toBe(true);
+  });
+
   it('escapes photo URLs and titles', async () => {
     const { w, q } = await open();
     w.eval(`pagosyaPhotos.open(['https://shop.test/a"1.jpg', 'https://shop.test/a2.jpg'], 0, { title: '<b>X</b>' })`);
@@ -171,6 +198,16 @@ describe('photo viewer', () => {
     expect(stage.hasAttribute('data-magnify')).toBe(false);
   });
 
+  it('the viewer stylesheet is a kit sheet, so the product-page style release leaves its magnifier rules alone', async () => {
+    // releaseProductPageStyles (product/setup.js) skips sheets whose owner carries data-pagosya-kit. jsdom runs that release on
+    // load before its sheets expose ownerNode, so the rules themselves are checked in the browser (live check 2026-10-21).
+    const { q } = await open();
+    const style = q('style[data-pagosya-photo-viewer]');
+    expect(style).not.toBeNull();
+    expect(style.hasAttribute('data-pagosya-kit')).toBe(true);
+    expect(style.textContent).toContain('.product-detail__stage[data-magnify] .product-detail__photo');
+  });
+
   const esCard = '<template data-pagosya-product-template><article class="es-card"><a class="es-card__media" data-product-link href="product.html"><img data-product-field="image" alt="" /></a><h3 data-product-field="name">P</h3><p data-product-field="price"></p><button type="button" data-product-add>+</button></article></template>';
 
   it('kit cards with a photo get one zoom button that opens the viewer without opening the product', async () => {
@@ -193,6 +230,19 @@ describe('photo viewer', () => {
     expect(button).not.toBeNull();
     expect(button.closest('a')).toBeNull();
     expect(button.parentElement).toBe(card);
+  });
+
+  it('a button outside the photo holder is placed over the photo\'s top-right corner', async () => {
+    const { w, q } = await open({ template: esCard });
+    const card = q('[data-custom-product][data-product-id="abrigo"]'), photo = card.querySelector('img');
+    // Photo on the left of a horizontal card: 20px from the card's top-left, 120 wide.
+    card.getBoundingClientRect = () => ({ top: 100, left: 50, right: 450, bottom: 300, width: 400, height: 200 });
+    photo.getBoundingClientRect = () => ({ top: 120, left: 70, right: 190, bottom: 270, width: 120, height: 150 });
+    w.eval(`pagosyaPhotos.place(document)`);
+    const button = card.querySelector('[data-product-zoom]');
+    expect(button.style.top).toBe('30px');
+    expect(button.style.left).toBe('94px');
+    expect(button.style.right).toBe('auto');
   });
 
   it('a template that draws its own zoom button keeps it and gets no second one', async () => {
