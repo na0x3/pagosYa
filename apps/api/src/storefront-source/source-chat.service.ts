@@ -32,10 +32,10 @@ import { requestsImageChange } from './source-edit-scope';
 import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
-import { galleryTemplates, templateManifest, type TemplateManifest } from '@pagosya/store-templates';
+import { galleryTemplates, templateManifest, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
 import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook } from './source-master';
 import { masterLayoutFindings } from './source-master-check';
-import { readMasterState } from './source-templates';
+import { readMasterState, readPlantillaCopy } from './source-templates';
 import { buildSuggestions } from './source-suggestions';
 import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
@@ -315,6 +315,28 @@ export class SourceChatService {
     await workflow.finish('completed');
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
       content: 'Listo, ya está aplicado. Revisa la vista previa.', metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label } } });
+    return { userMessage, assistantMessage, revision: saved };
+  }
+
+  /** Spec 2026-10-20 §5: a words change on a filled Plantilla store — one fill call with the current words, copy line only. */
+  private async plantillaContentEdit(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, request: string, revision: number, previous: { snapshot: unknown }, slots: readonly TemplateCopySlot[]) {
+    const files = (previous.snapshot as SourceProjectSnapshot).files;
+    const current = readPlantillaCopy(files);
+    const read = await this.dialogue.fillPlantilla(merchantId, { storeId, storeName: readMasterState(files).store?.name ?? '', about: '', products: [], photos: [], slots, current, request });
+    if (!read) {
+      await workflow.finish('failed');
+      const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+        content: 'No pude aplicar el cambio en este momento. Inténtalo de nuevo en un momento.', metadata: { progress: workflow.value, failed: true } } });
+      return { userMessage, assistantMessage, setup: null };
+    }
+    const change = Object.fromEntries(Object.entries(read).filter(([key, value]) => key in current && current[key] !== value));
+    // Nothing in the words to change (a new section, a colour): the caller makes it an ordinary edit.
+    if (!Object.keys(change).length) return null;
+    await workflow.report('saving');
+    const saved = await this.templates.refillPlantilla(merchantId, storeId, revision, change, 'Textos actualizados');
+    await workflow.finish('completed');
+    const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+      content: 'Listo, ya cambié los textos. Revisa la vista previa.', metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label } } });
     return { userMessage, assistantMessage, revision: saved };
   }
 
@@ -757,6 +779,13 @@ export class SourceChatService {
         if (done) return done;
         // Words Esencial has no field for (a heading a design edit added, «Lo que dicen nuestros clientes»): a minimal design edit.
         decision.editKind = 'design';
+      }
+      // Plantillas fill (spec 2026-10-20 §5): words on a filled Plantilla store change its copy slots in one call; the rest is an ordinary edit.
+      const plantilla = !masterStore && this.config.get<boolean>('app.yapiPlantillasFill') === true && current.revision && previousBrief?.templateId && previousBrief.templateId !== MASTER_TEMPLATE_ID
+        ? templateManifest(previousBrief.templateId) : undefined;
+      if (plantilla?.copy?.length && decision.editKind === 'content' && Object.keys(readPlantillaCopy((previous!.snapshot as unknown as SourceProjectSnapshot).files)).length) {
+        const done = await this.plantillaContentEdit(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous!, plantilla.copy);
+        if (done) return done;
       }
       const masterDesign = masterStore && decision.editKind === 'design';
       if (input.personalTouch && !masterDesign) throw new Error('personal touch on a store that is no longer Esencial');
