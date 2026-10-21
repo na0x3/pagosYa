@@ -17,6 +17,31 @@ import { greetingFor } from "./overview.mjs";
  *   profileSessionsPayload(), setProfileSessionsPayload(payload)
  *                                  the loaded profile sessions, read and written at use time
  */
+export function profileNameFromEmail(email) {
+  const localPart = String(email || "").split("@")[0].replace(/[._-]+/g, " ").trim();
+  if (!localPart) return "Mi perfil";
+  return localPart.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase("es"));
+}
+
+/** The distinct named profiles an account already has; placeholders and repeats left out. */
+export function profileChoices(payload) {
+  const seen = new Set();
+  return (payload?.profiles?.length ? payload.profiles : payload?.sessions || []).filter((session) => {
+    const name = String(session.profileName || "").trim();
+    if (!name || name === "Seleccionar perfil") return false;
+    const key = name.toLocaleLowerCase("es");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Spec 2026-10-21 A5: ask «¿Quién está ingresando?» only when the account already has two or more people. */
+export function autoProfileName(choices, email) {
+  if (choices.length >= 2) return null;
+  return choices.length === 1 ? choices[0].profileName : profileNameFromEmail(email);
+}
+
 export function createProfileSessions(deps) {
   const { api, setButtonBusy, emailEl } = deps;
   const { loggedInAsEl, profileMenuEl, profileMenuTriggerEl, profileTriggerAvatarEl, profileMenuAvatarEl, accountAvatarEl, profileDisplayNameEl, profileSessionsEl, profileSessionCountEl, sessionProfileDialogEl, sessionProfileFormEl, sessionProfileExistingEl, sessionProfileChoicesEl, sessionProfileNameEl, sessionProfileErrorEl, sessionProfileContinueEl } = deps.elements;
@@ -24,12 +49,6 @@ export function createProfileSessions(deps) {
   let pendingLoginSessionId = null;
   let pendingLoginAvatarId = 1;
   let resolveProfileSelection = null;
-
-  function profileNameFromEmail(email) {
-    const localPart = String(email || "").split("@")[0].replace(/[._-]+/g, " ").trim();
-    if (!localPart) return "Mi perfil";
-    return localPart.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase("es"));
-  }
 
   /** A profile's picture is its initials. Where a heading or label already names the person it is decorative. */
   function initialsHtml(name, decorative = true) {
@@ -131,15 +150,7 @@ export function createProfileSessions(deps) {
   }
 
   function renderSessionProfileChoices(payload, currentSession) {
-    const seen = new Set();
-    const choices = (payload?.profiles?.length ? payload.profiles : payload?.sessions || []).filter((session) => {
-      const name = String(session.profileName || "").trim();
-      if (!name || name === "Seleccionar perfil") return false;
-      const key = name.toLocaleLowerCase("es");
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    const choices = profileChoices(payload);
     sessionProfileExistingEl.hidden = choices.length === 0;
     sessionProfileChoicesEl.innerHTML = choices.map((session) => `<button class="session-profile-choice" type="button" data-profile-choice-name="${esc(session.profileName)}" aria-pressed="false">
       <span class="session-profile-choice-avatar">${initialsHtml(session.profileName)}</span><span>${esc(session.profileName)}</span>
@@ -160,6 +171,16 @@ export function createProfileSessions(deps) {
     const currentSession = payload.sessions?.find((session) => session.current) || loginResult.session;
     if (!currentSession?.id) return;
     pendingLoginSessionId = currentSession.id;
+    const automatic = autoProfileName(profileChoices(payload), emailEl.value);
+    if (automatic) {
+      try {
+        await updateProfileSession(currentSession.id, automatic, storedAvatarId(currentSession));
+        deps.setProfileName(automatic);
+        profileDisplayNameEl.textContent = deps.profileName();
+        renderProfileAvatar();
+        return;
+      } catch { /* fall through to the dialog so the merchant can still name the session */ }
+    }
     renderSessionProfileChoices(payload, currentSession);
     sessionProfileErrorEl.hidden = true;
     sessionProfileErrorEl.textContent = "";
