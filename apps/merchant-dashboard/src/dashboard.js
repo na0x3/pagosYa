@@ -22,6 +22,7 @@ import { createAccountPanel } from "/src/account-panel.mjs";
 import { createProfileSessions } from "/src/profile-sessions.mjs";
 import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-sections.mjs";
 import { playImmersiveMove } from "/src/immersive.mjs";
+import { lowStock, renderRestock } from "/src/restock.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -106,7 +107,7 @@ import { playImmersiveMove } from "/src/immersive.mjs";
     storeId: () => currentStoreId,
     categories: () => lastCategories,
     paymentLinks: () => lastPaymentLinks,
-    setPaymentLinks: (links) => { lastPaymentLinks = links; },
+    setPaymentLinks: (links) => { lastPaymentLinks = links; showRestock(links); },
     renderBulkDiscountProducts: (...args) => renderBulkDiscountProducts(...args),
     refreshFinancesInBackground: (...args) => refreshFinancesInBackground(...args),
   });
@@ -177,6 +178,16 @@ import { playImmersiveMove } from "/src/immersive.mjs";
   });
   // Crecimiento (G2): each insight opens the screen that does the work, already filled in; nothing is applied from there.
   /** The product guide open on one product; false when it is no longer in the catalog. */
+  /** Inicio › Por reponer: products about to sell out; «Reponer» opens the product at its stock step. */
+  function showRestock(links) {
+    const card = document.getElementById("overviewRestock");
+    card.innerHTML = renderRestock(lowStock(links));
+    card.hidden = !card.innerHTML;
+  }
+  document.getElementById("overviewRestock").addEventListener("click", event => {
+    const button = event.target.closest("[data-restock-id]"); if (!button) return;
+    void editProductById(button.dataset.restockId, "stock");
+  });
   async function editProductById(productId, step) {
     let link = lastPaymentLinks.find((candidate) => candidate.id === productId);
     if (!link && currentStoreId) {
@@ -840,7 +851,7 @@ import { playImmersiveMove } from "/src/immersive.mjs";
       resetPaymentLinkBrowseState();
       resetDebtCollectionEntry();
       document.getElementById("quickPaymentResult").hidden = true;
-      lastPaymentLinks = [];
+      lastPaymentLinks = []; showRestock([]);
       lastDebtCollectionLinks = [];
       renderDebtCollectionLinks([]);
       resetInventoryImportState();

@@ -168,3 +168,12 @@ body.is-logged-in .workspace-yapi-status:empty { display: none; }
 }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 600ms; animation-timing-function: cubic-bezier(.22,1,.36,1); }
 @media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
+
+/* ── Inicio › Por reponer ── */
+body.is-logged-in .overview-restock { grid-column: 1 / -1; order: 3; }
+body.is-logged-in .overview-restock h2 { margin: 0 0 4px; font: 400 24px/1.2 var(--pm-serif); }
+body.is-logged-in .restock-list { list-style: none; margin: 16px 0 0; padding: 0; }
+body.is-logged-in .restock-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--pg-border); }
+body.is-logged-in .restock-name { font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.is-logged-in .restock-left { color: var(--pg-text-muted); font-size: 14px; }
+body.is-logged-in .restock-left.is-out { color: var(--pg-error); font-weight: 550; }
