@@ -141,3 +141,30 @@ body.is-logged-in #sectionTabs .section-tab { transition: background-color .3s v
   body.is-logged-in :is(#sectionTabs .section-tab, .dashboard-nav-button, .section-tab, button, input, select, textarea, a) { transition: none; }
 }
 @media (max-width: 699px) { body.is-logged-in .panel .section-head h2 { white-space: normal; } body.is-logged-in .panel .section-head > :first-child { flex-shrink: 1; } }
+
+/* ── YAPI: the glass dock, the card that flies into Diseño, a slow dissolve (spec 2026-10-21 C1–C2) ── */
+/* Same weight as workspace-design.css, which places the dock on every page but Diseño, Productos and Ajustes. */
+body.is-logged-in:not([data-dashboard-view="workspace"]):not([data-dashboard-view="products"]):not([data-dashboard-view="store-settings"]) .workspace-yapi {
+  /* Centred in what the sidebar leaves: the floating rail on a desk, the 64px icon rail (--sidebar-w) below 1000px. */
+  --pm-dock-left: var(--pm-content-left, var(--sidebar-w, 0px));
+  left: calc(var(--pm-dock-left) + (100vw - var(--pm-dock-left)) / 2); transform: translateX(-50%);
+  bottom: 22px; width: min(680px, calc(100vw - var(--pm-dock-left) - 32px)); max-width: none;
+  padding: 8px 8px 8px 58px; border: 1px solid var(--pm-glass-edge); border-radius: 999px;
+  background: var(--pm-glass); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); box-shadow: var(--pm-shadow-float);
+}
+body.is-logged-in .workspace-yapi-heading { display: flex; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); margin: 0; }
+body.is-logged-in .workspace-yapi-heading span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+body.is-logged-in .workspace-yapi-star { width: 34px; height: 34px; }
+body.is-logged-in .workspace-yapi form { gap: 8px; }
+body.is-logged-in .workspace-yapi textarea { font-size: 15.5px; min-height: 44px; padding: 11px 0; }
+body.is-logged-in .workspace-yapi button.primary { min-height: 44px; padding: 0 20px; }
+body.is-logged-in .workspace-yapi-status { position: absolute; left: 58px; bottom: -22px; margin: 0; }
+body.is-logged-in .workspace-yapi-status:empty { display: none; }
+.yapi-ghost {
+  position: fixed; z-index: 2147483000; box-sizing: border-box; overflow: hidden; pointer-events: none; transform-origin: top left;
+  padding: 16px 20px; border: 1px solid rgb(255 255 255 / .75); border-radius: 24px; color: #1d1b17;
+  background: rgb(255 255 255 / .7); -webkit-backdrop-filter: saturate(1.6) blur(24px); backdrop-filter: saturate(1.6) blur(24px);
+  box-shadow: 0 30px 70px -30px rgb(40 36 28 / .4); font: italic 400 18px/1.35 "Instrument Serif", ui-serif, Georgia, serif;
+}
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 600ms; animation-timing-function: cubic-bezier(.22,1,.36,1); }
+@media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }

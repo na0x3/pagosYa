@@ -21,6 +21,7 @@ import { createInventoryImportPanel } from "/src/inventory-import-panel.mjs";
 import { createAccountPanel } from "/src/account-panel.mjs";
 import { createProfileSessions } from "/src/profile-sessions.mjs";
 import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-sections.mjs";
+import { playImmersiveMove } from "/src/immersive.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -188,11 +189,17 @@ import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } fr
     return true;
   }
   /** Opens Diseño with the text in YAPI's composer, not sent (Crecimiento insights, «Pídele a YAPI»). */
-  function composeInYapi(text, origin) {
-    pendingStudioAction = { action: "compose", origin, text, storeId: currentStoreId };
-    history.pushState(null, "", "#dashboard-workspace");
-    setDashboardView("workspace");
-    deliverStudioAction();
+  /** Where the dock sits, for the flight into Diseño; a sensible spot when it is hidden. */
+  function dockRect() {
+    const rect = document.querySelector(".workspace-yapi")?.getBoundingClientRect();
+    return rect && rect.width ? rect : { left: innerWidth / 2 - 320, top: innerHeight - 96, width: 640, height: 64 };
+  }
+  /** Opens Diseño with the text for YAPI (the dock sends it; Crecimiento and «Pídele a YAPI» leave it in the composer),
+   *  carried there by the immersive move (spec 2026-10-21 C2). */
+  function composeInYapi(text, origin, from) {
+    pendingStudioAction = { action: "compose", ...(origin ? { origin } : {}), text, storeId: currentStoreId };
+    const go = () => { history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace"); deliverStudioAction(); };
+    void playImmersiveMove({ doc: document, from: from || dockRect(), text, go, duration: 700 });
   }
   const growth = mountGrowthPanel({
     api,
@@ -392,8 +399,7 @@ import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } fr
     const field = document.getElementById("workspaceYapiDraft");
     if (!field.value.trim()) return;
     if (!currentStoreId) { document.getElementById("workspaceYapiStatus").textContent = "Selecciona o crea una tienda para conversar con YAPI."; return; }
-    pendingStudioAction = { action: "compose", text: field.value.trim(), storeId: currentStoreId };
-    history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace"); deliverStudioAction();
+    composeInYapi(field.value.trim(), undefined, field.closest(".workspace-yapi")?.getBoundingClientRect());
   });
   function canLeaveMerchantStudio() {
     try { return ["merchantStudioFrame", "productGuideFrame", "storeMarketingFrame", "storeExperimentsFrame", "storeIntegrationsFrame"].every(id => document.getElementById(id).contentWindow?.pagosyaStudioCanLeave?.() ?? true); } catch { return false; }
@@ -419,7 +425,7 @@ import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } fr
   document.addEventListener("click", event => {
     const ask = event.target.closest("[data-ask-yapi]"); if (!ask) return;
     if (!currentStoreId) return;
-    composeInYapi(ask.dataset.askYapi, "ask");
+    composeInYapi(ask.dataset.askYapi, "ask", ask.getBoundingClientRect());
   });
   document.getElementById("sectionTabs").addEventListener("click", event => {
     const pill = event.target.closest("[data-section-view]"); if (!pill) return;

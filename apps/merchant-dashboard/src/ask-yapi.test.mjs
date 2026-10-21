@@ -15,6 +15,6 @@ test('settings shows the two lines and the dashboard opens YAPI from any of them
   assert.match(settings, /askYapiLine\(\{ text: "Colores, tipografía y estilo los define YAPI\.", request: BRAND_REQUEST \}\)/);
   const js = readFileSync(new URL('./dashboard.js', import.meta.url), 'utf8');
   assert.match(js, /const ask = event\.target\.closest\("\[data-ask-yapi\]"\);/);
-  assert.match(js, /composeInYapi\(ask\.dataset\.askYapi, "ask"\)/);
+  assert.match(js, /composeInYapi\(ask\.dataset\.askYapi, "ask", ask\.getBoundingClientRect\(\)\)/);
   assert.match(js, /composeYapi: \(text\) => composeInYapi\(text, "growth"\)/);
 });

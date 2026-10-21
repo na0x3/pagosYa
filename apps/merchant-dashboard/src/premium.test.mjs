@@ -99,3 +99,11 @@ test('review fixes: the dark MCP dialog keeps its look, fields stay low-specific
   assert.match(s, /@media \(max-width: 699px\) \{ body\.is-logged-in \.panel \.section-head h2 \{ white-space: normal; \} body\.is-logged-in \.panel \.section-head > :first-child \{ flex-shrink: 1; \} \}/);
   assert.match(s, /body\.is-logged-in :is\(#sectionTabs \.section-tab, \.dashboard-nav-button/);
 });
+
+test('YAPI: a glass dock pill, a glass ghost card for the flight, and a slow page dissolve', () => {
+  const s = css();
+  assert.match(s, /:not\(\[data-dashboard-view="store-settings"\]\) \.workspace-yapi \{[^}]*border-radius: 999px;[^}]*backdrop-filter: var\(--pm-blur\)/);
+  assert.match(s, /body\.is-logged-in \.workspace-yapi-heading \{ display: flex;/);
+  assert.match(s, /\.yapi-ghost \{[^}]*position: fixed;[^}]*pointer-events: none;/);
+  assert.match(s, /::view-transition-old\(root\), ::view-transition-new\(root\) \{ animation-duration: 600ms;/);
+});
