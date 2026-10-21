@@ -57,6 +57,27 @@ it('an earlier «desde cero» keeps the scratch flow', async () => {
   expect(applyMaster).not.toHaveBeenCalled();
 });
 
+describe('a merchant who wants their own design or pages (stress test 2026-10-21)', () => {
+  it('«nada de tienda genérica ni plantilla» keeps the scratch flow', async () => {
+    await send('Quiero una casa de moda de lujo, editorial; nada de tienda genérica ni plantilla.');
+    expect(applyMaster).not.toHaveBeenCalled();
+    expect(generate).toHaveBeenCalled();
+  });
+  it('a brief that lists its own pages is built, not filled into Esencial', async () => {
+    await send('Soy diseñadora. Necesito estas páginas: (1) INICIO con 3 piezas, (2) NOVIAS, (3) NOCHE, (4) ACCESORIOS.');
+    expect(applyMaster).not.toHaveBeenCalled();
+    expect(generate).toHaveBeenCalled();
+  });
+  it('the Studio\'s separate-pages choice skips Esencial', async () => {
+    await send('Vendo vestidos de novia en La Paz.\n\nNavegación elegida: enlaces visibles a páginas separadas dentro del mismo sitio, en la misma pestaña del navegador.');
+    expect(applyMaster).not.toHaveBeenCalled();
+  });
+  it('pages named in passing still get Esencial', async () => {
+    await send('Vendemos con nuestras páginas de Facebook e Instagram. Crea mi tienda.');
+    expect(applyMaster).toHaveBeenCalled();
+  });
+});
+
 it('a story that bakes «desde cero» still gets Esencial (review fix 1)', async () => {
   await send('Mi negocio se llama Café Buna.\nLo que quiero que sepas de mi negocio:\nHorneamos todo desde cero y queremos ofrecer algo único.\nCrea mi tienda.');
   expect(applyMaster).toHaveBeenCalled();

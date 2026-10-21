@@ -21,7 +21,7 @@ import { ASSURANCE_ICONS } from '../product-theme';
 import { PRESET_IDS, type ProductCardParams } from '../source-product-card-presets';
 import { resolveProductTheme, snapshotWithProductTheme, type ProductThemeInput, type ProductThemeResult } from '../product-theme';
 
-export type AgentToolName = 'inspect_asset' | 'find_products' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_theme' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme' | 'search_illustrations' | 'set_motif_pack' | 'set_store_policy';
+export type AgentToolName = 'inspect_asset' | 'find_products' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_theme' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'delete_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme' | 'search_illustrations' | 'set_motif_pack' | 'set_store_policy';
 export type AgentStep = { kind: AgentToolName; label: string; at: number; thumbnail?: string };
 export type AgentCompositionFinding = { id: string; page: string; section: string; severity: 'major' | 'minor'; observation: string; correction: string };
 export type AgentCompositionReview = { findings: AgentCompositionFinding[]; summary: string };
@@ -75,6 +75,7 @@ export const AGENT_TOOLS = [
   tool('edit_file', 'Reemplaza un fragmento exacto y único de un archivo. Copia search literalmente del archivo actual.', { path: text, search: text, replacement: text }),
   tool('edit_file_batch', 'Aplica de 1 a 20 reemplazos exactos en un archivo, en orden, en una sola llamada. Si falla uno, no cambia nada. Agrupa los cambios relacionados; conserva el resto del archivo.', { path: text, edits: { type: 'array', minItems: 1, maxItems: 20, items: object({ search: text, replacement: text }) } }),
   tool('write_file', 'Crea un componente nuevo, o reemplaza un archivo solo en un rediseño o si conserva la mayoría de sus líneas.', { path: text, content: text }),
+  tool('delete_file', 'Borra un componente que el borrador ya no usa (quita antes sus imports). No borra home, product, checkout, globals.css ni las páginas estándar. Úsalo para liberar espacio cuando la tienda llega al máximo de archivos de diseño.', { path: text }),
   tool('screenshot', 'Captura la vista previa del borrador actual para mirarla.', { width: { type: 'integer', enum: [1280, 820, 390] }, page: { type: ['string','null'], description: 'Ruta HTML del índice de páginas; null usa index.html.' } }),
   tool('verify', 'Comprueba TypeScript, comercio, requisitos y fotos. En diseños completos añade revisión visual independiente: corrige solo los hallazgos composition; hay como máximo una corrección y segunda revisión.', {}),
   tool('set_product_card_theme', 'Elige la identidad de la ficha de producto (la dibuja la plataforma; no la estilices con tu CSS): un preset, ajustes opcionales y CSS con guardas sobre las partes [data-part=…]. Cada llamada reemplaza el tema completo. Usa null en lo que no cambies.', {
@@ -249,7 +250,7 @@ export class AgentToolbox {
     if (!args || typeof args !== 'object') return { output: 'Herramienta o argumentos inválidos: se esperaba un objeto.' };
     const ws = this.workspace;
     const step = (kind: AgentToolName, label: string, thumbnail?: string) => { this.steps.push({ kind, label, at: Date.now(), ...(thumbnail ? { thumbnail } : {}) }); };
-    if (this.ctx.taskRequired && !this.requirements.length && ['create_page','edit_file','edit_file_batch','write_file','set_account_theme','set_product_card_theme','set_motif_pack','set_store_policy'].includes(name)) return { output: 'Primero llama plan_task con todos los requisitos del pedido.' };
+    if (this.ctx.taskRequired && !this.requirements.length && ['create_page','edit_file','edit_file_batch','write_file','delete_file','set_account_theme','set_product_card_theme','set_motif_pack','set_store_policy'].includes(name)) return { output: 'Primero llama plan_task con todos los requisitos del pedido.' };
     switch (name) {
       case 'find_products': {
         const found = findProducts(configCatalog(this.ctx.base.files.find(file => file.path === 'config.js')?.content), String(args.query || ''));
@@ -281,7 +282,14 @@ export class AgentToolbox {
         step('search_illustrations', `Buscó ilustraciones: ${query}`);
         return searchIllustrations(query, args.tone === 'colour' || args.tone === 'store' ? args.tone : null);
       }
-      case 'inspect_project': return { output: JSON.stringify(agentProjectIndex([...this.ctx.base.files.filter(f => !nextSourceFile(f.path)), ...ws.files()])) };
+      case 'inspect_project': return { output: JSON.stringify({ ...agentProjectIndex([...this.ctx.base.files.filter(f => !nextSourceFile(f.path)), ...ws.files()]), designFiles: ws.designBudget() }) };
+      case 'delete_file': {
+        const result = ws.remove(String(args.path));
+        if (!result.ok) return { output: result.message };
+        step('delete_file', `Borró ${args.path}`);
+        const { used, max } = ws.designBudget();
+        return { output: `Borrado. La tienda usa ${used} de ${max} archivos de diseño propios. Comprueba con verify que nada lo importaba.` };
+      }
       case 'plan_task': {
         const planned = validateTaskRequirements(args.requirements, ws.files());
         assertTaskFeasibility(planned, this.ctx.base.files);

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { BadGatewayException, BadRequestException, ConflictException } from '@nestjs/common';
 import {
   GENERIC_MERCHANT_FAILURE,
+  MODEL_LIMIT_MERCHANT_FAILURE,
   SourceValidationError,
   merchantFacingSourceFailure,
   repairDiagnostic,
@@ -94,5 +95,12 @@ describe('validator diagnostics ratchet', () => {
 
   it('keeps the preflight validator fully converted', () => {
     expect(scan().filter(site => site.file === 'source-preflight.ts')).toEqual([]);
+  });
+});
+
+describe('a model usage limit (stress test 2026-10-21)', () => {
+  it('says so instead of «no pudo completar las comprobaciones»', () => {
+    const shown = merchantFacingSourceFailure(new Error('subscription_sharing_usage_limit_exceeded: ChatGPT plan: subscription_sharing_usage_limit_exceeded. No paid API fallback.')) as Error;
+    expect(shown.message).toBe(MODEL_LIMIT_MERCHANT_FAILURE);
   });
 });

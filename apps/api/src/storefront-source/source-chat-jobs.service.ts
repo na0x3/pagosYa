@@ -7,7 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SendSourceMessageDto, type SourceMessageInput } from './dto/send-source-message.dto';
 import { sourceRequestContext } from './source-request-context';
-import { merchantFacingSourceFailure } from './source-validation-error';
+import { MODEL_LIMIT, MODEL_LIMIT_MERCHANT_FAILURE, merchantFacingSourceFailure } from './source-validation-error';
 
 const LEASE_MS = 45_000;
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -19,6 +19,7 @@ const isPrismaError = (error: unknown) => error instanceof Prisma.PrismaClientKn
 /** What a failed job tells the merchant: an HTTP error written for them (a client error, or any error the merchant-facing
  * gate leaves unchanged, such as a provider quota or ChatGPT-plan 503), never database, internal or diagnostic text. */
 export function merchantJobError(error: unknown): string | null {
+  if (error instanceof Error && MODEL_LIMIT.test(error.message)) return MODEL_LIMIT_MERCHANT_FAILURE;
   if (isPrismaError(error) || !(error instanceof HttpException)) return null;
   return error.getStatus() < 500 || merchantFacingSourceFailure(error) === error ? error.message : null;
 }

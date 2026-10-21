@@ -13,6 +13,11 @@ import { BadGatewayException, HttpException } from '@nestjs/common';
 export const GENERIC_MERCHANT_FAILURE =
   'YAPI no pudo completar las comprobaciones automáticas. Tu revisión guardada sigue intacta. Puedes reintentar para continuar.';
 
+/** Stress test 2026-10-21: the ChatGPT plan's usage limit read as «no pudo completar las comprobaciones». */
+export const MODEL_LIMIT_MERCHANT_FAILURE =
+  'YAPI llegó al límite de uso de su modelo por ahora. Tu tienda sigue como estaba; vuelve a intentarlo en un rato.';
+export const MODEL_LIMIT = /usage_limit_exceeded|insufficient_quota|rate_limit_exceeded/i;
+
 export class SourceValidationError extends BadGatewayException {
   constructor(
     readonly diagnostic: string,
@@ -43,6 +48,7 @@ export function merchantFacingSourceFailure(error: unknown): unknown {
   // Everything else is judged on its text: Spanish authored for merchants passes
   // through unchanged, anything that reads as a diagnostic is replaced.
   const message = error instanceof HttpException ? merchantText(error) : error.message;
+  if (MODEL_LIMIT.test(`${message} ${error.message}`)) return new BadGatewayException(MODEL_LIMIT_MERCHANT_FAILURE);
   if (message && !readsAsDiagnostic(message)) return error;
   return new BadGatewayException(GENERIC_MERCHANT_FAILURE);
 }

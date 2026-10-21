@@ -65,8 +65,15 @@ Before returning source, perform a strict TypeScript scope pass: every uppercase
 Homepage MUST contain exactly one semantic primary h1, either authored directly or supplied by @pagosya/ui Hero, VideoHero, FloatingMedia, ScrollScrubHero or Display with its default as="h1".
 Choose the homepage information architecture for this merchant: a narrative landing page, useful catalog, gallery, playful scene or a combination can work. Keep navigation and the primary customer action easy to find. Use anchors for destinations and buttons for actions/state changes. Additional pages are optional when the content earns them. Keep cart access visible on mobile. Never add password fields (type="password" or autoComplete current-password/new-password) to any file; sign-in forms belong to the platform's secure account pages.`;
 
+/** Design files a store authors itself. The platform's standard pages (an @pagosya-page file in a standard page folder)
+ *  do not count: Esencial ships 19 of them, which left a multi-page store 6 free slots (stress test 2026-10-21). */
+export const MAX_DESIGN_FILES = 32;
+const MAX_PROJECT_FILES = 80;
+export const designFileCount = (files: readonly { path: string; content: string }[]) =>
+  files.filter(file => !(STANDARD_PAGE_MARK.test(file.content) && standardPageRoute(file.path))).length;
+
 export function validateNextSources(files: SourceProjectFileDto[], purpose: SourceSitePurpose = 'shop') {
-  if (!Array.isArray(files) || files.length > 32) throw new BadGatewayException('El proyecto React debe contener como máximo 32 archivos de diseño.');
+  if (!Array.isArray(files) || files.length > MAX_PROJECT_FILES || designFileCount(files.filter(file => typeof file?.content === 'string')) > MAX_DESIGN_FILES) throw new BadGatewayException('El proyecto React debe contener como máximo 32 archivos de diseño propios, sin contar las páginas estándar de la tienda.');
   const seen = new Set<string>();
   const missingAlt: string[] = [];
   for (const file of files) {

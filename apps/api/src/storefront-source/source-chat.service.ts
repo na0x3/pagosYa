@@ -80,7 +80,11 @@ export const PERSONAL_TOUCH_BRIEF = 'Toque personal para este negocio: agrega UN
 export class PersonalTouchSkipped extends Error {}
 
 export const MASTER_EDIT_RULES = 'Esta tienda usa la plantilla base «Esencial». Edita el componente que ya existe; cambia solo lo que el comercio pidió; nunca reescribas una página completa ni cambies secciones que no nombró. Los textos visibles viven en components/store-data.tsx (copy): úsalos, no los copies dentro de los componentes. No toques el bloque /* pagosya:master-theme */ de styles/globals.css. Íconos: solo los de components/icons.tsx. Sin emojis.';
-const MASTER_SCRATCH = /\b(?:diseñ\w*|crea\w*|cré\w*|arm\w*|haz|hacer|hagas|constru\w*)\b[^.!?\n]{0,30}\bdesde (?:cero|0)\b|\b(?:tienda|página|pagina|web|sitio|diseño)\b[^.!?\n]{0,20}\bdesde (?:cero|0)\b|from scratch|diseño propio|sin (?:usar )?plantillas?/i;
+const MASTER_SCRATCH = /\b(?:diseñ\w*|crea\w*|cré\w*|arm\w*|haz|hacer|hagas|constru\w*)\b[^.!?\n]{0,30}\bdesde (?:cero|0)\b|\b(?:tienda|página|pagina|web|sitio|diseño)\b[^.!?\n]{0,20}\bdesde (?:cero|0)\b|from scratch|diseño propio|sin (?:usar )?plantillas?|\b(?:ni|nada de|no (?:quiero|uses|usar|usen))\s+(?:una?\s+)?(?:plantillas?|templates?)\b/i;
+/** Stress test 2026-10-21: a merchant who lays out their own pages (the Studio's «Páginas separadas» choice, or «necesito
+ *  estas páginas: …») gets them built; Esencial's fill writes words only and silently dropped all seven. */
+const OWN_STRUCTURE = /Navegación elegida: enlaces visibles a páginas separadas|\b(?:necesito|quiero|tenga|con)\b[^.!?\n]{0,30}\bp[aá]ginas\b[^.!?\n]{0,25}(?::|\b(?:separadas|aparte|propias)\b)/i;
+const wantsOwnDesign = (text: string) => MASTER_SCRATCH.test(text) || OWN_STRUCTURE.test(text);
 /** A master store's home still reads its words from store-data (spec 2026-10-19 §3): after a redesign it no longer does. */
 const readsMasterData = (files: readonly { path: string; content: string }[]) => /import\s*\{[^}]*\bcopy\b[^}]*\}\s*from\s*'\.\/store-data'/.test(files.find(file => file.path === 'components/home.tsx')?.content ?? '');
 export const TEMPLATE_QUESTION = '¿Quieres que parta de una de nuestras plantillas o prefieres que diseñe desde cero?';
@@ -527,7 +531,7 @@ export class SourceChatService {
     // A pasted link (a site to copy, a product link) keeps its own flow, which the conversation step reads (craverly test).
     if (this.config.get<boolean>('app.yapiMasterTemplate') === true && input.setupAction === 'generate' && !current.revision
       && !/https?:\/\/|www\./i.test(input.instruction) && !setupDraft.websiteCopyUrl
-      && ![input.instruction, ...history.messages.filter(message => message.role === 'USER').map(message => message.content)].some(text => MASTER_SCRATCH.test(text))) {
+      && ![input.instruction, ...history.messages.filter(message => message.role === 'USER').map(message => message.content)].some(wantsOwnDesign)) {
       const walkthrough = await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } });
       const onboarding = walkthrough?.onboarding as { purpose?: string } | null | undefined;
       if (onboarding && onboarding.purpose !== 'showcase') {
@@ -811,7 +815,7 @@ export class SourceChatService {
         ? sourceRequestContext.run({ ...requestContext, request: { ...requestContext.request, profile: sourceRequestProfile(masterDesign ? input.instruction : requested, true) } }, work) : work();
       // Master template (spec 2026-10-19): a new shop starts from Esencial unless the merchant asked, in their own words, for a design
       // from scratch. A website copy, a product link and a listing screenshot keep their own flows.
-      const askedScratch = [input.instruction, ...history.messages.filter(message => message.role === 'USER').map(message => message.content)].some(text => MASTER_SCRATCH.test(text));
+      const askedScratch = [input.instruction, ...history.messages.filter(message => message.role === 'USER').map(message => message.content)].some(wantsOwnDesign);
       // Products typed with prices in a chat-only setup are created by the designer's catalog step; that flow keeps them.
       const chatCatalog = this.config.get<boolean>('app.yapiMasterTemplate') === true && newShop && statesPrices(catalogInstruction)
         && !(await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } }))?.onboarding;

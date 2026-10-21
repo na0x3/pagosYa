@@ -93,7 +93,7 @@ import { buildSourceVisualSystem, savedSourceVisualSystem, SOURCE_VISUAL_SYSTEM_
 import { sourceRequestProfilePrompt, sourceRequestProfile } from './source-request-profile';
 import { validateSourcePreflight } from './source-preflight';
 import { platformSuppliedPages, repairSourceContracts } from './source-autorepair';
-import { merchantFacingSourceFailure, repairDiagnostic } from './source-validation-error';
+import { MODEL_LIMIT, MODEL_LIMIT_MERCHANT_FAILURE, merchantFacingSourceFailure, repairDiagnostic } from './source-validation-error';
 import { applySourceLayoutBaseline } from './source-layout-baseline';
 import { applySourceKitCss, SOURCE_KIT_CSS_PATH } from './source-kit-css';
 import { stripLegacyStyleImports, validateLegacySources } from './source-legacy';
@@ -1639,6 +1639,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
       const lastAttempt = attempts.at(-1);
       if (lastAttempt && !lastAttempt.failureReason) lastAttempt.failureReason = repairDiagnostic(error).slice(0, 300);
       await this.prisma.storeSourceGeneration.updateMany({ where: { id: run.id, status: 'RUNNING' }, data: { status: unfinishedStatus || 'FAILED', activeStoreId: null, credits: 0, model, attempts: attempts as unknown as Prisma.InputJsonValue, durationMs: Date.now() - started, completedAt: new Date() } }).catch(() => { this.logger.warn('No se pudo registrar el resultado de la generación.'); });
+      // Stress test 2026-10-21: the provider's limit code lives only on the attempt; the merchant hears it, not «comprobaciones».
+      if (MODEL_LIMIT.test(lastAttempt?.failureReason ?? '')) throw new BadGatewayException(MODEL_LIMIT_MERCHANT_FAILURE);
       // Validators that run outside the attempt loop (commerce contract, save)
       // would otherwise reach the merchant verbatim. Every exit goes through the gate.
       throw merchantFacingSourceFailure(error);

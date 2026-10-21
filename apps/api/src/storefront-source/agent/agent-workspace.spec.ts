@@ -65,3 +65,37 @@ describe('AgentWorkspace', () => {
     expect(ws.files().map(f => f.path)).toEqual(['components/home.tsx', 'components/store-data.tsx', 'styles/globals.css', 'config.js', 'components/Hero.tsx']);
   });
 });
+
+describe('design file budget and delete_file (stress test 2026-10-21)', () => {
+  const standard = (name: string) => ({ path: `components/pages/${name}.tsx`, content: `// @pagosya-page\nexport default function P() { return null; }` });
+  const component = (i: number) => ({ path: `components/Part${i}.tsx`, content: `export function Part${i}() { return null; }` });
+  it('standard pages do not count, so a template store still has room for its own pages', () => {
+    const ws = new AgentWorkspace([...base, ...['faq', 'about', 'terms', 'privacy', 'shipping', 'contact', 'cookies', 'refund-policy', 'not-found'].map(standard)], { redesign: false });
+    expect(ws.designBudget()).toEqual({ used: 3, max: 32 });
+    for (let i = 0; i < 29; i++) expect(ws.write(`components/Part${i}.tsx`, 'export const x = 1;')).toEqual({ ok: true });
+    expect(ws.write('components/page-extra.tsx', 'export default function E() { return null; }')).toMatchObject({ ok: false, reason: 'budget' });
+  });
+  it('a full draft is told at the write, and frees room by deleting a component', () => {
+    const ws = new AgentWorkspace([...base, ...Array.from({ length: 29 }, (_, i) => component(i))], { redesign: false });
+    expect(ws.write('components/page-novias.tsx', 'export default function N() { return null; }')).toMatchObject({ ok: false, reason: 'budget', message: expect.stringContaining('delete_file') });
+    expect(ws.remove('components/Part0.tsx')).toEqual({ ok: true });
+    expect(ws.write('components/page-novias.tsx', 'export default function N() { return null; }')).toEqual({ ok: true });
+    expect(ws.changedPaths()).toEqual(expect.arrayContaining(['components/Part0.tsx', 'components/page-novias.tsx']));
+  });
+  it('never deletes required files, standard pages or platform data', () => {
+    const ws = new AgentWorkspace([...base, standard('faq')], { redesign: false });
+    expect(ws.remove('components/home.tsx')).toMatchObject({ ok: false, reason: 'protected' });
+    expect(ws.remove('styles/globals.css')).toMatchObject({ ok: false, reason: 'protected' });
+    expect(ws.remove('components/pages/faq.tsx')).toMatchObject({ ok: false, reason: 'protected' });
+    expect(ws.remove('components/store-data.tsx')).toMatchObject({ ok: false, reason: 'path' });
+    expect(ws.remove('config.js')).toMatchObject({ ok: false, reason: 'path' });
+  });
+  it('a resumed checkpoint keeps a deletion', () => {
+    const ws = new AgentWorkspace([...base, component(1)], { redesign: false });
+    ws.restore(base, true);
+    expect(ws.files().map(f => f.path)).not.toContain('components/Part1.tsx');
+    const plain = new AgentWorkspace([...base, component(1)], { redesign: false });
+    plain.restore(base);
+    expect(plain.files().map(f => f.path)).toContain('components/Part1.tsx');
+  });
+});
