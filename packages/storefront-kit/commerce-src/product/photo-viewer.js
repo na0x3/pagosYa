@@ -204,3 +204,34 @@
   }
   // A public handle so a store's own code can open the same viewer (and the kit's specs can reach it).
   window.pagosyaPhotos = { open: openPhotoViewer, close: closePhotoViewer };
+  // Product page: the shown photo (data-photo-zoom="") or a stacked one (its index) opens the viewer. A click an editor already
+  // handled (defaultPrevented) is left alone.
+  function openProductPhoto(target) {
+    const own = target.getAttribute('data-photo-zoom');
+    const index = own === '' ? selectedImage : Number(own);
+    return openPhotoViewer(currentGallery(), Number.isFinite(index) ? index : 0, { title: selectedProduct?.name || '', opener: target });
+  }
+  document.addEventListener('click', event => {
+    if (event.defaultPrevented) return;
+    const target = event.target.closest?.('[data-pagosya-product] [data-photo-zoom]');
+    if (target && openProductPhoto(target)) event.preventDefault();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.defaultPrevented || (event.key !== 'Enter' && event.key !== ' ')) return;
+    const target = event.target.closest?.('[data-pagosya-product] [data-photo-zoom]');
+    if (target && openProductPhoto(target)) event.preventDefault();
+  });
+  // Desktop magnifier: a fine mouse over the stage photo zooms it 2× around the cursor; leaving the stage resets it.
+  document.addEventListener('pointermove', event => {
+    if (event.pointerType && event.pointerType !== 'mouse') return;
+    const photo = event.target.closest?.('[data-pagosya-product] .product-detail__stage .product-detail__photo');
+    if (!photo || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    ensurePhotoViewerStyle();
+    const stage = photo.closest('.product-detail__stage'), rect = photo.getBoundingClientRect();
+    const x = rect.width ? ((event.clientX - rect.left) / rect.width) * 100 : 50, y = rect.height ? ((event.clientY - rect.top) / rect.height) * 100 : 50;
+    photo.style.transformOrigin = `${Math.max(0, Math.min(100, x)).toFixed(1)}% ${Math.max(0, Math.min(100, y)).toFixed(1)}%`;
+    if (!stage.hasAttribute('data-magnify')) {
+      stage.setAttribute('data-magnify', '');
+      stage.addEventListener('pointerleave', () => stage.removeAttribute('data-magnify'), { once: true });
+    }
+  });

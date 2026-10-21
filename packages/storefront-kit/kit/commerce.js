@@ -2200,6 +2200,37 @@
   }
   // A public handle so a store's own code can open the same viewer (and the kit's specs can reach it).
   window.pagosyaPhotos = { open: openPhotoViewer, close: closePhotoViewer };
+  // Product page: the shown photo (data-photo-zoom="") or a stacked one (its index) opens the viewer. A click an editor already
+  // handled (defaultPrevented) is left alone.
+  function openProductPhoto(target) {
+    const own = target.getAttribute('data-photo-zoom');
+    const index = own === '' ? selectedImage : Number(own);
+    return openPhotoViewer(currentGallery(), Number.isFinite(index) ? index : 0, { title: selectedProduct?.name || '', opener: target });
+  }
+  document.addEventListener('click', event => {
+    if (event.defaultPrevented) return;
+    const target = event.target.closest?.('[data-pagosya-product] [data-photo-zoom]');
+    if (target && openProductPhoto(target)) event.preventDefault();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.defaultPrevented || (event.key !== 'Enter' && event.key !== ' ')) return;
+    const target = event.target.closest?.('[data-pagosya-product] [data-photo-zoom]');
+    if (target && openProductPhoto(target)) event.preventDefault();
+  });
+  // Desktop magnifier: a fine mouse over the stage photo zooms it 2× around the cursor; leaving the stage resets it.
+  document.addEventListener('pointermove', event => {
+    if (event.pointerType && event.pointerType !== 'mouse') return;
+    const photo = event.target.closest?.('[data-pagosya-product] .product-detail__stage .product-detail__photo');
+    if (!photo || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    ensurePhotoViewerStyle();
+    const stage = photo.closest('.product-detail__stage'), rect = photo.getBoundingClientRect();
+    const x = rect.width ? ((event.clientX - rect.left) / rect.width) * 100 : 50, y = rect.height ? ((event.clientY - rect.top) / rect.height) * 100 : 50;
+    photo.style.transformOrigin = `${Math.max(0, Math.min(100, x)).toFixed(1)}% ${Math.max(0, Math.min(100, y)).toFixed(1)}%`;
+    if (!stage.hasAttribute('data-magnify')) {
+      stage.setAttribute('data-magnify', '');
+      stage.addEventListener('pointerleave', () => stage.removeAttribute('data-magnify'), { once: true });
+    }
+  });
   // Reassurance comes only from real store settings; nothing here is a marketing claim.
   function deliveryMarkup(p) {
     const locations = store.locations || [];
@@ -2316,13 +2347,13 @@
     html = stacked ? badge + html : html.replace('<div class="product-detail__stage" data-part="stage">', `<div class="product-detail__stage" data-part="stage">${badge}`);
     if (stacked) {
       const at = html.indexOf('<div class="product-detail__thumbnails"');
-      if (at > -1) html = html.slice(0, at) + `<div class="product-detail__stack" data-part="thumbs">${images.map((url, index) => `<img data-part="thumb" src="${escape(url)}"${responsiveAttrs(url, "(max-width: 820px) 100vw, 55vw")} alt="${escape(`${p.name} · imagen ${index + 1} de ${images.length}`)}" loading="${index ? 'lazy' : 'eager'}" />`).join('')}</div>`;
+      if (at > -1) html = html.slice(0, at) + `<div class="product-detail__stack" data-part="thumbs">${images.map((url, index) => `<img data-part="thumb" data-photo-zoom="${index}" src="${escape(url)}"${responsiveAttrs(url, "(max-width: 820px) 100vw, 55vw")} alt="${escape(`${p.name} · imagen ${index + 1} de ${images.length}`)}" loading="${index ? 'lazy' : 'eager'}" />`).join('')}</div>`;
     }
     const tiles = productPageStyle() === 'conversion' && images.length ? tilesMarkup(conversionHighlights(p).tiles) : '';
     return html + tiles + '<span class="product-detail__decor" data-part="decor-a" aria-hidden="true"></span>';
   }
   function plainGalleryMarkup(images, p) {
-    return images.length ? `<div class="product-detail__stage" data-part="stage"><img class="product-detail__photo" src="${escape(images[0])}"${responsiveAttrs(images[0], "(max-width: 820px) 100vw, 55vw")} alt="${escape(p.name)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" data-part="thumbs" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-part="thumb" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}"${responsiveAttrs(url, "56px")} alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>';
+    return images.length ? `<div class="product-detail__stage" data-part="stage"><img class="product-detail__photo" src="${escape(images[0])}"${responsiveAttrs(images[0], "(max-width: 820px) 100vw, 55vw")} alt="${escape(p.name)}" data-photo-zoom="" role="button" tabindex="0" aria-label="${escape(`Ampliar foto de ${p.name}`)}" /><div class="product-detail__navigation"${images.length > 1 ? '' : ' hidden'}>${images.length > 1 ? '<button type="button" data-product-prev aria-label="Foto anterior">←</button>' : ''}<span data-product-count aria-live="polite">1 / ${images.length}</span>${images.length > 1 ? '<button type="button" data-product-next aria-label="Foto siguiente">→</button>' : ''}</div></div>${images.length > 1 ? `<div class="product-detail__thumbnails" data-part="thumbs" aria-label="Elegir foto">${images.map((url, index) => `<button type="button" data-part="thumb" data-product-image="${index}" aria-label="Ver foto ${index + 1}" aria-pressed="${index === 0}"><img src="${escape(url)}"${responsiveAttrs(url, "56px")} alt="" loading="lazy" /></button>`).join('')}</div>` : ''}` : '<p class="product-detail__empty">Sin fotos disponibles</p>';
   }
   function drawGallery(images) {
     const gallery = detail.querySelector('.product-detail__gallery');

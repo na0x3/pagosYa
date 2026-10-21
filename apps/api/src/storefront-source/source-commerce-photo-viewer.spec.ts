@@ -132,4 +132,42 @@ describe('photo viewer', () => {
     expect(q('[data-viewer-thumbs] b')).toBeNull();
     expect(q('[data-viewer-thumb] img').getAttribute('src')).toBe('https://shop.test/a"1.jpg');
   });
+
+  it('the product page photo opens the viewer on the photo shown, by click or Enter', async () => {
+    const { w, q } = await open({ fullPage: true });
+    const photo = q('[data-pagosya-product] .product-detail__photo');
+    expect(photo.getAttribute('data-photo-zoom')).toBe('');
+    expect(photo.getAttribute('role')).toBe('button');
+    expect(photo.getAttribute('tabindex')).toBe('0');
+    expect(photo.getAttribute('aria-label')).toBe('Ampliar foto de Abrigo de lana');
+    q('[data-product-next]').click();
+    q('[data-pagosya-product] .product-detail__photo').click();
+    const viewer = q('[data-pagosya-viewer]');
+    expect(viewer.open).toBe(true);
+    expect(viewer.dataset.index).toBe('1');
+    q('[data-viewer-close]').click();
+    q('[data-pagosya-product] .product-detail__photo').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(viewer.open).toBe(true);
+  });
+
+  it('a stacked gallery opens on the photo tapped', async () => {
+    const { q, all } = await open({ fullPage: true, gallery: 'stack' });
+    const stacked = all('[data-pagosya-product] .product-detail__stack img[data-photo-zoom]');
+    expect(stacked).toHaveLength(3);
+    stacked[2].click();
+    expect(q('[data-pagosya-viewer]').dataset.index).toBe('2');
+  });
+
+  it('a fine mouse over the stage photo magnifies it at the cursor; leaving resets it; touch never does', async () => {
+    const { w, q } = await open({ fullPage: true });
+    const stage = q('[data-pagosya-product] .product-detail__stage'), photo = q('[data-pagosya-product] .product-detail__photo');
+    const move = (pointerType: string) => { const event = new w.MouseEvent('pointermove', { bubbles: true, clientX: 0, clientY: 0 }); Object.defineProperty(event, 'pointerType', { value: pointerType }); photo.dispatchEvent(event); };
+    move('mouse');
+    expect(stage.hasAttribute('data-magnify')).toBe(true);
+    expect(photo.style.transformOrigin).toMatch(/%/);
+    stage.dispatchEvent(new w.MouseEvent('pointerleave'));
+    expect(stage.hasAttribute('data-magnify')).toBe(false);
+    move('touch');
+    expect(stage.hasAttribute('data-magnify')).toBe(false);
+  });
 });
