@@ -20,6 +20,33 @@ it('checks root CSS tokens and colors without corrupting the document or its inl
     expect(await page.locator('html').count()).toBe(1);
   });
 });
+it('meets a min-/max- floor with any value past it, never one short of it', async () => {
+  // PEPPA please 2026-10-20: a 48px button failed «min-height:44px» and the agent stopped on a false problem.
+  const snapshot: any = { schemaVersion: 1, brief: {}, files: [{ path: 'index.html', content: '<style>button{min-height:48px;max-width:300px}</style><button>Crear cuenta</button>' }] };
+  await withVisualSandbox(snapshot, '', undefined, false, async context => {
+    const page = await context.newPage(); await page.goto('https://preview.invalid/index.html');
+    const evidence = await page.evaluate(evaluateRequirements, { entry: 'index.html', width: 1280, profile: 'normal' as const, requirements: [
+      requirement('r1', 'style', 'button', 'min-height:44px'),
+      requirement('r2', 'style', 'button', 'min-height:52px'),
+      requirement('r3', 'style', 'button', 'max-width:320px'),
+      requirement('r4', 'style', 'button', 'max-width:280px'),
+    ] });
+    expect(evidence.map(e => e.passed)).toEqual([true, false, true, false]);
+  });
+});
+it('checks several declarations joined by «;», all of which must hold', async () => {
+  // PEPPA please 2026-10-20: «border-style:none;box-shadow:none» was refused as an invalid check, blocking a correct draft.
+  const snapshot: any = { schemaVersion: 1, brief: {}, files: [{ path: 'index.html', content: '<style>.card{border:0;box-shadow:none;color:#146f3d}</style><div class="card">Crea tu cuenta</div>' }] };
+  await withVisualSandbox(snapshot, '', undefined, false, async context => {
+    const page = await context.newPage(); await page.goto('https://preview.invalid/index.html');
+    const evidence = await page.evaluate(evaluateRequirements, { entry: 'index.html', width: 1280, profile: 'normal' as const, requirements: [
+      requirement('r1', 'style', '.card', 'border-style:none;box-shadow:none'),
+      requirement('r2', 'style', '.card', 'border-style:none; box-shadow:none; color:red;'),
+    ] });
+    expect(evidence.map(e => [e.kind, e.passed])).toEqual([['requirement', true], ['requirement', false]]);
+    expect(evidence[1].observed).toContain('"property":"color"');
+  });
+});
 it('compares semantic CSS values and separates missing content from invalid checks', async () => {
   const snapshot: any = { schemaVersion: 1, brief: {}, files: [{ path: 'index.html', content: '<style>.logo{color:#146f3d}.hidden{display:none}</style><h1 class="logo">MATCHO</h1><p class="hidden">hidden</p>' }] };
   await withVisualSandbox(snapshot, '', undefined, false, async context => {

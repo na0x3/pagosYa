@@ -1,7 +1,7 @@
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
-import { verifyAgentDraft } from './agent-verify';
+import { authoredAccountHooks, authoredAccountPhotos, verifyAgentDraft } from './agent-verify';
 
 jest.setTimeout(60_000);
 let pausa: Array<{ path: string; content: string }>;
@@ -34,5 +34,33 @@ describe('verifyAgentDraft', () => {
   it('does not check scope for a new store', async () => {
     const result = await verifyAgentDraft({ previous: [], draft: pausa, instruction: 'hazme una tienda', purpose: 'shop' });
     expect(result.findings).toEqual([]);
+  });
+});
+
+// PEPPA please 2026-10-20: register.tsx wrapped AccountGatePage in its own columns with the split theme's photo again.
+describe('authoredAccountPhotos', () => {
+  const gate = 'export default function Register() { return <Shell><AccountGatePage view="register" /></Shell>; }';
+  const wrapped = 'export default function Register() { return <Shell><main className="r"><AccountGatePage view="register" /><figure><img src="/assets/p.jpg" alt="" /></figure></main></Shell>; }';
+  it('flags an auth component this edit gave its own photo', () => {
+    const findings = authoredAccountPhotos([{ path: 'components/auth/register.tsx', content: gate }], [{ path: 'components/auth/register.tsx', content: wrapped }]);
+    expect(findings).toEqual([expect.objectContaining({ source: 'contract', message: expect.stringContaining('set_account_theme') })]);
+  });
+  it('leaves an unchanged file, a photo-free edit and photos outside components/auth alone', () => {
+    expect(authoredAccountPhotos([{ path: 'components/auth/register.tsx', content: wrapped }], [{ path: 'components/auth/register.tsx', content: wrapped }])).toEqual([]);
+    expect(authoredAccountPhotos([{ path: 'components/auth/login.tsx', content: gate }], [{ path: 'components/auth/login.tsx', content: gate.replace('Register', 'Login') }])).toEqual([]);
+    expect(authoredAccountPhotos([], [{ path: 'components/home.tsx', content: '<img src="/assets/p.jpg" alt="" />' }])).toEqual([]);
+  });
+});
+
+// PEPPA please 2026-10-20 (rev 16): register.tsx added a class to <html> so globals.css could restyle the card.
+describe('authoredAccountHooks', () => {
+  const gate = 'export default function Register() { return <Shell><AccountGatePage view="register" /></Shell>; }';
+  const hooked = "import { useEffect } from 'react';\nexport default function Register() { useEffect(() => { document.documentElement.classList.add('x'); return () => document.documentElement.classList.remove('x'); }, []); return <Shell><AccountGatePage view=\"register\" /></Shell>; }";
+  it('flags an auth component this edit made mark the document', () => {
+    expect(authoredAccountHooks([{ path: 'components/auth/register.tsx', content: gate }], [{ path: 'components/auth/register.tsx', content: hooked }])).toEqual([expect.objectContaining({ source: 'contract', message: expect.stringContaining('[data-account-gate="register"]') })]);
+  });
+  it('leaves an unchanged file and other components alone', () => {
+    expect(authoredAccountHooks([{ path: 'components/auth/register.tsx', content: hooked }], [{ path: 'components/auth/register.tsx', content: hooked }])).toEqual([]);
+    expect(authoredAccountHooks([], [{ path: 'components/Shell.tsx', content: hooked }])).toEqual([]);
   });
 });

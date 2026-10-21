@@ -33,6 +33,8 @@ export type AgentToolboxContext = { workspace: AgentWorkspace; previous: SourceP
   themeAllowed?: boolean;
   /** set_account_theme only on a new store, a redesign, or a request about the account pages. */
   accountThemeAllowed?: boolean;
+  /** The store's saved account theme on a local edit: null arguments keep it and new CSS is added after its CSS. */
+  accountThemeBase?: AccountTheme;
   /** set_motif_pack only on a new store, a redesign, or a request about decoration; never on an unrelated local edit. */
   motifPackAllowed?: boolean;
   mediaPolicy?: SourceMediaPolicy;
@@ -64,7 +66,7 @@ export const AGENT_TOOLS = [
   tool('inspect_project', 'Rutas, propietarios, operaciones y archivos de imágenes disponibles en este borrador.', {}),
   tool('find_products', 'Busca productos reales de la tienda por nombre o categoría; devuelve id, nombre, categoría y precio. Úsala antes de colocar productos con data-products o data-pagosya-spotlight; nunca inventes ids.', { query: text }),
   tool('plan_task', 'Registra entre 1 y 12 requisitos del pedido original, sin añadir decoraciones opcionales como obligaciones. El plan no se puede reducir después de editar; solo corregir selectores conservando cada resultado esperado.', { requirements: { type: 'array', minItems: 1, maxItems: 12, items: object({ id: { ...text, description: 'ID único r1, r2, etc.' }, description: text, page: { ...text, description: 'Ruta HTML local, por ejemplo index.html o product.html.' }, check: { type: 'string', enum: ['text','absent_text','image','element','style','navigation','video','video-paused','layout'] }, selector: text, expected: { ...text, description: 'text/absent_text: texto literal; element: entero positivo; style: propiedad:valor; image: assets/foto.webp (varias rutas separadas por comas, TODAS visibles), nunca una descripción, un selector ni una data URL; navigation: pagina.html; video/video-paused: assets/video.mp4; layout: viewport-cover o no-overflow.' }, profile: { type: ['string','null'], enum: ['normal','reduced-motion',null] } }) } }),
-  tool('set_account_theme', 'Diseña las páginas de cuenta (ingresar, registro, pedidos, perfil): layout card|split|minimal|panel, photo (una ruta assets/ de la tienda, solo para split) y CSS opcional sobre [data-part=…] (account, card, media, title, lead, form, field, label, input, hint, submit, link, error, notice, nav, nav-item, list, order, order-status, address, empty, danger). Los campos, el botón, los errores y los enlaces nunca se pueden ocultar. null conserva el valor.', { layout: { type: ['string','null'] }, photo: { type: ['string','null'] }, css: { type: ['string','null'] } }),
+  tool('set_account_theme', 'Diseña las páginas de cuenta (ingresar, registro, pedidos, perfil): layout card|split|minimal|panel, photo (una ruta assets/ de la tienda, solo para split) y CSS opcional sobre [data-part=…] (account, card, media, title, lead, form, field, label, input, hint, submit, link, error, notice, nav, nav-item, list, order, order-status, address, empty, danger). En una edición se conserva el tema actual: null mantiene cada valor y tu CSS se añade después del CSS de la tienda (gana el tuyo; para quitar un borde o una sombra, sobrescríbelos con border:0 o box-shadow:none). Para una sola página empieza el selector con [data-account-gate="register"] (login, register, forgot-password, reset-password, orders, addresses, profile, subscriptions); sin él vale para todas. Dibuja la página entera, foto del split incluida: nunca envuelvas AccountGatePage en columnas, rejillas o fotos propias. Los campos, el botón, los errores y los enlaces nunca se pueden ocultar. null conserva el valor.', { layout: { type: ['string','null'] }, photo: { type: ['string','null'] }, css: { type: ['string','null'] } }),
   tool('set_motif_pack', `Activa para toda la tienda un paquete de motivos dibujados por pagosYa (botones, separadores, patrón, estados vacíos), pintados con la paleta de la tienda, o null para quitarlo. Solo si el tema de la tienda coincide con el paquete y la identidad es lúdica; nunca en una identidad seria o minimalista. Paquetes: ${listMotifPacks().map(pack => `${pack.id} (${pack.name})`).join(', ')}.`, { id: nullableEnum(listMotifPacks().map(pack => pack.id)) }),
   tool('set_store_policy', 'Reescribe una política de la tienda guardada en Ajustes (returns: Cambios y devoluciones, delivery: Envíos y entregas, privacy: Privacidad, terms: Términos), que las páginas estándar muestran. Se guarda en Ajustes al terminar. Solo cuando el comercio lo pide; usa sus datos y no inventes plazos, costos ni condiciones. Texto simple; text null o vacío la quita.', { kind: { type: 'string', enum: [...AGENT_POLICY_KINDS] }, text: { type: ['string', 'null'] } }),
   tool('create_page', 'Crea una página independiente con URL propia. Reutiliza el Shell real de la tienda en content; después añade su enlace al menú compartido. No crea secciones de inicio.', { slug: text, content: text }),
@@ -105,6 +107,7 @@ export class AgentToolbox {
   pendingTheme: ProductThemeResult['dna'] | null = null;
   /** The account pages' theme the agent chose (already sanitized); saved as config.accountTheme. */
   pendingAccountTheme: AccountTheme | null = null;
+  private accountRunCss = '';
   /** The motif pack YAPI chose this run: a pack id, null to remove the store's pack, undefined when untouched. */
   pendingMotifPack: string | null | undefined = undefined;
   /** Shopper policies YAPI rewrote this run (null removes one); written to Ajustes when the run saves. */
@@ -175,13 +178,21 @@ export class AgentToolbox {
     const theme = this.pendingAccountTheme!;
     const drop = (messages: string[]): AgentFinding[] => {
       const { css: _removed, ...kept } = theme;
-      this.pendingAccountTheme = kept;
-      return [...messages.map(message => ({ source: 'theme' as const, message })), { source: 'theme' as const, message: 'Se quitó el CSS de las páginas de cuenta; el layout se conserva. Llama de nuevo a set_account_theme con CSS que no oculte, tape ni achique los campos, el botón, los enlaces o los errores.' }];
+      // Only this run's CSS goes; the store's own account CSS stays.
+      const storeCss = this.ctx.accountThemeBase?.css;
+      this.pendingAccountTheme = storeCss ? { ...kept, css: storeCss } : kept;
+      this.accountRunCss = '';
+      return [...messages.map(message => ({ source: 'theme' as const, message })), { source: 'theme' as const, message: `Se quitó ${storeCss ? 'tu CSS nuevo de las páginas de cuenta; el de la tienda se conserva' : 'el CSS de las páginas de cuenta'}; el layout se conserva. Llama de nuevo a set_account_theme con CSS que no oculte, tape ni achique los campos, el botón, los enlaces o los errores.` }];
     };
     try {
       const snapshot = snapshotWithAccountTheme(await agentPreviewSnapshot(this.ctx.base, this.workspace.files().filter(f => nextSourceFile(f.path))), theme);
       const failures = await (this.ctx.checkAccountTheme ?? (snap => checkAccountThemeOnSnapshot(snap as never, { signal: this.ctx.signal })))(snapshot);
-      return failures.length ? drop(failures.map(f => `${f.control} (${f.viewport}): ${f.reason}`)) : [];
+      // A photo twice or a squeezed form comes from the design's own markup around the page, not from the theme's CSS.
+      const layout = failures.filter(f => f.control === 'layout'), css = failures.filter(f => f.control !== 'layout');
+      return [
+        ...layout.map(f => ({ source: 'contract' as const, message: `Páginas de cuenta (${f.viewport}): ${f.reason}. Quita de components/auth/* la foto y las columnas alrededor de AccountGatePage; set_account_theme ya dibuja la página entera.` })),
+        ...(css.length ? drop(css.map(f => `${f.control} (${f.viewport}): ${f.reason}`)) : []),
+      ];
     } catch (error) { return drop([`No se pudo comprobar las páginas de cuenta: ${(error as Error).message.slice(0, 300)}`]); }
   }
 
@@ -292,7 +303,12 @@ export class AgentToolbox {
       case 'set_account_theme': {
         if (!this.ctx.accountThemeAllowed) return { output: 'Este pedido no cambia la cuenta.' };
         const assets = [...ws.files(), ...(this.ctx.base?.files ?? [])].map(file => file.path).filter(path => path.startsWith('assets/'));
-        const merged = { ...(this.pendingAccountTheme ?? {}), ...Object.fromEntries(Object.entries(args).filter(([, value]) => value !== null && value !== undefined)) };
+        // PEPPA please 2026-10-20: a card-only rule replaced the store's whole account CSS and the red button, bold
+        // title and field style were lost. On an edit the store's CSS stays and this run's CSS follows it (it wins).
+        const base = this.ctx.accountThemeBase;
+        const given = Object.fromEntries(Object.entries(args).filter(([, value]) => value !== null && value !== undefined));
+        if (typeof given.css === 'string') this.accountRunCss = given.css;
+        const merged = { ...(base ?? {}), ...(this.pendingAccountTheme ?? {}), ...given, css: [base?.css, this.accountRunCss].filter(Boolean).join('\n') };
         const { theme, dropped } = resolveAccountTheme(merged, assets);
         this.pendingAccountTheme = theme;
         step('set_account_theme', 'Diseñó las páginas de cuenta');
@@ -336,7 +352,7 @@ export class AgentToolbox {
         // The theme is checked in a real browser only on a draft that builds; a theme that hides, covers or shrinks a
         // protected control loses its CSS (the params stay), and the draft is not clean until verified again.
         if (!findings.length && (this.pendingTheme?.productCss || this.pendingTheme?.catalogCss || this.pendingTheme?.cardCss || this.pendingTheme?.cartCss)) findings.push(...await this.checkPendingTheme());
-        if (!findings.length && this.pendingAccountTheme?.css) findings.push(...await this.checkPendingAccountTheme());
+        if (!findings.length && this.pendingAccountTheme) findings.push(...await this.checkPendingAccountTheme());
         if (this.ctx.taskRequired && !this.requirements.length) findings.push({ source: 'scope', message: 'Falta plan_task con los requisitos originales.' });
         if (!findings.length) {
           const blocked = await this.ctx.gate?.(ws.files());

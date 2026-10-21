@@ -13,6 +13,8 @@ const PROFILE: ThemeCssProfile = {
   parts: ACCOUNT_PARTS, sizedParts: ['card', 'media', 'account', 'nav', 'list', 'order', 'address'], scope: '[data-account-gate] ',
   keyframePrefix: 'at-', variables: /^--(?:ui|acc|account|store|brand)-[a-z0-9-]+$/i, variableHint: '--ui-, --acc-, --account-, --store- and --brand-',
   refuse: (part, property) => PROTECTED.has(part) && HIDING.test(property),
+  // A Next store's AccountGatePage names its page in English, an older store in Spanish: one rule reaches both.
+  views: { attribute: 'data-account-gate', names: [['login', 'ingresar'], ['register', 'registro'], ['forgot-password', 'recuperar'], ['reset-password', 'restablecer'], ['orders', 'pedidos'], ['addresses', 'direcciones'], ['profile', 'perfil'], ['subscriptions', 'suscripciones']] },
 };
 
 export function resolveAccountTheme(input: unknown, assetPaths: string[]): { theme: AccountTheme; dropped: string[] } {

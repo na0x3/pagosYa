@@ -142,6 +142,19 @@ describe('set_account_theme', () => {
     expect(tools.pendingAccountTheme?.layout).toBe('panel');
     expect(tools.pendingAccountTheme?.css).toContain('letter-spacing');
   });
+  // PEPPA please 2026-10-20: «quita el borde de la tarjeta» sent only a card rule and wiped the store's account CSS.
+  it('on an edit keeps the store theme and adds this run\'s CSS after its CSS', async () => {
+    const storeTheme = { layout: 'split' as const, photo: 'assets/hero.jpg', css: '[data-account-gate] [data-part="submit"] {\n    background: #d7261e\n}' };
+    const tools = new AgentToolbox({ workspace: new AgentWorkspace([...authored, { path: 'assets/hero.jpg', content: 'x', encoding: 'base64' } as any], { redesign: false }), previous: authored, base, instruction: 'quita el borde de la tarjeta de crear cuenta', purpose: 'shop', maxScreenshots: 8, accountThemeAllowed: true, accountThemeBase: storeTheme } as any);
+    await tools.run('set_account_theme', JSON.stringify({ layout: null, photo: null, css: '[data-part=card]{border:0}' }));
+    await tools.run('set_account_theme', JSON.stringify({ layout: null, photo: null, css: '[data-part=card]{border:0;box-shadow:none}' }));
+    const theme = tools.pendingAccountTheme!;
+    expect([theme.layout, theme.photo]).toEqual(['split', 'assets/hero.jpg']);
+    expect(theme.css).toContain('#d7261e');
+    expect(theme.css!.indexOf('#d7261e')).toBeLessThan(theme.css!.indexOf('box-shadow'));
+    // A second call replaces this run's CSS, never stacks it.
+    expect(theme.css!.match(/border: 0/g)).toHaveLength(1);
+  });
   it('refuses the tool on an edit that is not about the account', async () => {
     const tools = box('cambia el footer', false);
     expect((await tools.run('set_account_theme', JSON.stringify({ layout: 'panel', photo: null, css: null }))).output).toContain('no cambia la cuenta');

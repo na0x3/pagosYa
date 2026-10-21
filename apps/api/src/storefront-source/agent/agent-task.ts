@@ -28,7 +28,7 @@ export function validateTaskRequirements(value: unknown, files: SourceProjectFil
     if (r.check === 'layout' && !['viewport-cover', 'no-overflow'].includes(r.expected)) throw new Error('layout necesita viewport-cover o no-overflow.');
     if (r.check === 'image') agentImagePaths(r.expected);
     if (r.check === 'element' && !/^[1-9][0-9]{0,3}$/.test(r.expected)) throw new Error('element necesita un número entero positivo de elementos visibles.');
-    if (r.check === 'style' && !/^[-a-zA-Z]+\s*:\s*\S/.test(r.expected)) throw new Error('style necesita propiedad:valor-computado, por ejemplo color:rgb(0, 0, 0).');
+    if (r.check === 'style' && !/^[-a-zA-Z]+\s*:\s*\S/.test(r.expected)) throw new Error('style necesita propiedad:valor-computado, por ejemplo color:rgb(0, 0, 0); varias se separan con «;» y deben cumplirse todas.');
     ids.add(r.id);return {id:r.id,description:r.description,page:r.page,check:r.check,selector:r.selector,expected:r.expected,...(r.profile ? {profile:r.profile} : {})};
   });
 }

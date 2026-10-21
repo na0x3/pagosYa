@@ -18,7 +18,9 @@ const keyframeName = (name: string) => name.startsWith(active.keyframePrefix) ? 
 const SIZED_PARTS = new Set(['swatch', 'thumb', 'thumbs', 'frame', 'decor-a', 'decor-b', 'block', 'block-media', 'block-compare', 'blocks', 'gallery', 'stage']);
 /** What one kind of page may restyle: its parts, the scope every selector is prefixed with, the parts that may be sized,
  * the keyframes prefix, the variables values may read, and parts whose declarations a page refuses outright. */
-export type ThemeCssProfile = { parts: readonly string[]; sizedParts: readonly string[]; scope: string; keyframePrefix: string; variables: RegExp; variableHint: string; refuse?: (part: string, property: string) => boolean; refusePseudo?: (property: string) => boolean };
+export type ThemeCssProfile = { parts: readonly string[]; sizedParts: readonly string[]; scope: string; keyframePrefix: string; variables: RegExp; variableHint: string; refuse?: (part: string, property: string) => boolean; refusePseudo?: (property: string) => boolean;
+  /** Pages a selector may narrow to with a leading [attribute="page"]: each page and every value that names it. */
+  views?: { attribute: string; names: ReadonlyArray<readonly string[]> } };
 type ActiveProfile = ThemeCssProfile & { sized: Set<string>; compound: RegExp };
 const activate = (profile: ThemeCssProfile): ActiveProfile => ({ ...profile, sized: new Set(profile.sizedParts), compound: compoundFor(profile.parts) });
 
@@ -237,7 +239,19 @@ function compoundFor(parts: readonly string[]) {
 type ParsedSelector = { selector: string; last: string; pseudo: boolean };
 function parseSelector(raw: string): ParsedSelector | string {
   const refusal = `selector "${raw.trim()}" is not allowed (only [data-part=…] selectors on the cosmetic parts, with :hover, :focus-visible, :active, :first-child, :last-child, :nth-child() and one ::before/::after on the last part)`;
-  const tokens = withoutScope(raw.trim() + ' ').replace(/\s*>\s*/g, ' > ').split(/\s+/).filter(Boolean);
+  // One page only (PEPPA please 2026-10-20: «solo en Crear cuenta» had no way in, so YAPI styled the card from the
+  // page's own CSS): a leading [data-account-gate="register"], or the :is() this function writes for it, is kept as
+  // the scope for every value that names that page.
+  let scope = active.scope, rest = raw.trim();
+  const view = active.views && new RegExp(`^(?::is\\()?\\[${active.views.attribute}=(["']?)([a-z-]+)\\1\\](?:,\\[${active.views.attribute}=(["']?)[a-z-]+\\3\\]\\))*(?=\\s|$)`).exec(rest);
+  if (view) {
+    const names = active.views!.names.find(list => list.includes(view[2]));
+    if (!names) return refusal;
+    const each = names.map(name => `[${active.views!.attribute}="${name}"]`);
+    scope = `${each.length > 1 ? `:is(${each.join(',')})` : each[0]} `;
+    rest = rest.slice(view[0].length);
+  }
+  const tokens = withoutScope(rest + ' ').replace(/\s*>\s*/g, ' > ').split(/\s+/).filter(Boolean);
   const out: string[] = [];
   let compounds = 0, last = '', pseudo = false, expectCompound = true;
   for (let i = 0; i < tokens.length; i++) {
@@ -253,7 +267,7 @@ function parseSelector(raw: string): ParsedSelector | string {
     last = m[1]; pseudo = !!m[4]; expectCompound = false;
   }
   if (!compounds || compounds > MAX_COMPOUNDS || expectCompound) return refusal;
-  return { selector: active.scope + out.join(' '), last, pseudo };
+  return { selector: scope + out.join(' '), last, pseudo };
 }
 
 // ---- the sanitizer ------------------------------------------------------------------------------------------------------

@@ -2,6 +2,7 @@ import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { agentPreviewSnapshot, captureAgentDraft } from './agent-capture';
+import { snapshotWithAccountTheme } from '../account-theme';
 
 jest.setTimeout(120_000);
 
@@ -64,6 +65,29 @@ describe('agent capture', () => {
     </body></html>` }] } as any;
     const shot = await captureAgentDraft(snapshot, 390);
     expect(shot.errors).toEqual(['Enlace a sección inexistente: #contenido']);
+  });
+  // Meathouse 2026-10-20: a sticky buy column slid over the sections below it in the same grid, and a big «01 / MH»
+  // index sat on the «Abrir pedido» button.
+  it('reports a sticky block that slides over what follows it, and a positioned text over a button', async () => {
+    const page = (css: string, body: string) => ({ brief: {}, files: [{ path: 'index.html', content: `<html><head><meta charset="utf-8"><style>${css}</style></head><body><h1>Carne</h1>${body}</body></html>` }] }) as any;
+    const sticky = page('.grid{display:grid;grid-template-columns:1fr 1fr}.buy{position:sticky;top:0;grid-column:2;height:200px}.media{height:400px}.lower{grid-column:1/-1;height:300px}', '<main class="grid"><div class="media"></div><section class="buy">Comprar</section><section class="lower">Reseñas</section></main>');
+    expect((await captureAgentDraft(sticky, 1280)).errors).toEqual(expect.arrayContaining([expect.stringContaining('«buy» es sticky')]));
+    const fine = page('.grid{display:grid;grid-template-columns:1fr 1fr}.buy{position:sticky;top:0;height:200px}.media{height:400px}header{position:sticky;top:0}', '<header><a href="#">Inicio</a></header><main class="grid"><div class="media"></div><section class="buy">Comprar</section></main><section>Reseñas</section>');
+    expect((await captureAgentDraft(fine, 1280)).errors.filter(e => /sticky/.test(e))).toEqual([]);
+    const over = page('.hero{position:relative;height:300px}.index{position:absolute;right:20px;bottom:20px;margin:0;font-size:32px}.cta{position:absolute;right:20px;bottom:20px;padding:12px 24px}', '<section class="hero"><a class="cta" href="#">Abrir pedido</a><p class="index">01 / MH</p></section>');
+    expect((await captureAgentDraft(over, 1280)).errors).toEqual(expect.arrayContaining([expect.stringContaining('«01 / MH» sobre «Abrir pedido»')]));
+  });
+  // PEPPA please 2026-10-20: the older checkout form was pasted over the kit's, so every [data-part] check came back
+  // empty and the account theme being edited never showed in the agent's own screenshots.
+  it('lets the kit draw the themed account form, so [data-part] checks see it', async () => {
+    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
+    const snapshot = snapshotWithAccountTheme(await agentPreviewSnapshot(base, base.files.filter(f => nextSourceFile(f.path))), { layout: 'card', css: '[data-account-gate] [data-part="card"] {\n    border: 0\n}' });
+    expect(snapshot.files.some(f => f.path === 'acceso-registro.html')).toBe(true);
+    const shot = await captureAgentDraft(snapshot, 1280, undefined, 'acceso-registro.html', [
+      { id: 'r1', description: 'El botón del formulario', page: 'acceso-registro.html', check: 'element', selector: '[data-account-gate] [data-part="submit"]', expected: '1' },
+      { id: 'r2', description: 'La tarjeta sin borde', page: 'acceso-registro.html', check: 'style', selector: '[data-account-gate] [data-part="card"]', expected: 'border-top-width:0px' },
+    ]);
+    expect(shot.evidence.map(e => [e.id, e.passed])).toEqual([['r1', true], ['r2', true]]);
   });
   it('compiles an edited draft over the store runtime and screenshots it on a phone', async () => {
     const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));

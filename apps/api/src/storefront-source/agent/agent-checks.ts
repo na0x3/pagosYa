@@ -29,8 +29,15 @@ export function evaluateRequirements(input: { requirements: Array<AgentRequireme
         observed = videos.map(video => `paused=${video.paused}`).join('; ') || 'No existe el video esperado';
       }
       if (r.check === 'style') {
-        const colon = r.expected.indexOf(':'), property = r.expected.slice(0, colon).trim(), expected = r.expected.slice(colon + 1).trim();
-        if (colon < 1 || !CSS.supports(property, expected)) throw new Error('Valor CSS inválido');
+        // One declaration or several joined by «;» (PEPPA please 2026-10-20: «border-style:none;box-shadow:none» was
+        // refused as invalid, so the agent could never verify a correct draft). Every declaration must hold.
+        const declarations = r.expected.split(';').map(part => part.trim()).filter(Boolean).map(part => {
+          const colon = part.indexOf(':'), property = part.slice(0, colon).trim(), expected = part.slice(colon + 1).trim();
+          if (colon < 1 || !CSS.supports(property, expected)) throw new Error('Valor CSS inválido');
+          return { property, expected };
+        });
+        if (!declarations.length) throw new Error('Valor CSS inválido');
+        const checked = declarations.map(({ property, expected }) => {
         const values = shown.map(el => {
           const actual = getComputedStyle(el).getPropertyValue(property).trim();
           // :root has no parentElement. Resolve its expected value in place and
@@ -53,8 +60,11 @@ export function evaluateRequirements(input: { requirements: Array<AgentRequireme
           try { canonical = getComputedStyle(probe).getPropertyValue(property).trim(); } finally { probe.remove(); }
           return { actual, expected: canonical };
         });
-        passed = values.some(v => {
+        return { property, values, passed: values.some(v => {
           if (v.actual === v.expected) return true;
+          // A floor or ceiling is met by any value past it: min-height 48px meets «min-height:44px» (PEPPA please 2026-10-20).
+          const bound = /^(min|max)-/.exec(property)?.[1], px = (value: string) => /^-?[\d.]+px$/.test(value) ? parseFloat(value) : NaN;
+          if (bound && !Number.isNaN(px(v.actual)) && !Number.isNaN(px(v.expected))) return bound === 'min' ? px(v.actual) >= px(v.expected) : px(v.actual) <= px(v.expected);
           if (property !== 'font-family') return false;
           const family = (value: string) => value.split(',')[0].trim().replace(/^['"]|['"]$/g, '').toLowerCase();
           const actual = family(v.actual), expected = family(v.expected);
@@ -62,7 +72,10 @@ export function evaluateRequirements(input: { requirements: Array<AgentRequireme
           let loaded = false;
           document.fonts.forEach(face => { if (family(face.family) === expected && face.status === 'loaded') loaded = true; });
           return actual === expected && (loaded || ['serif','sans-serif','monospace','system-ui','cursive','fantasy'].includes(expected));
-        }); observed = JSON.stringify(values);
+        }) };
+        });
+        passed = checked.every(c => c.passed);
+        observed = JSON.stringify(checked.length === 1 ? checked[0].values : checked.map(c => ({ property: c.property, values: c.values })));
       }
       if (r.check === 'layout') {
         if (r.expected === 'no-overflow') { observed = `${document.documentElement.scrollWidth}/${innerWidth}`; passed = document.documentElement.scrollWidth <= innerWidth + 2; }

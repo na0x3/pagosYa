@@ -19,4 +19,12 @@ describe('account theme', () => {
     expect(normalizeAccountTheme(theme)).toEqual(theme);
     expect(normalizeAccountTheme('nope')).toBeUndefined();
   });
+  // PEPPA please 2026-10-20: «solo en Crear cuenta» had no way into the theme.
+  it('narrows a rule to one page by either of its names, and refuses an unknown page', () => {
+    const { theme, dropped } = resolveAccountTheme({ layout: 'split', css: '[data-account-gate="register"] [data-part=card]{border:0} [data-account-gate=ingresar] [data-part=title]{letter-spacing:1px} [data-account-gate="checkout"] [data-part=card]{border:0}' }, []);
+    expect(theme.css).toContain(':is([data-account-gate="register"],[data-account-gate="registro"]) [data-part="card"]');
+    expect(theme.css).toContain(':is([data-account-gate="login"],[data-account-gate="ingresar"]) [data-part="title"]');
+    expect(dropped).toEqual([expect.stringContaining('checkout')]);
+    expect(normalizeAccountTheme(theme)!.css).toBe(theme.css);
+  });
 });

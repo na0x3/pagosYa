@@ -8,7 +8,7 @@ import { kitPath } from "@pagosya/storefront-kit";
 const retention = readFileSync(kitPath("retention.js"), "utf8");
 const windows: JSDOM[] = [];
 const DAY = 86_400_000;
-type Opts = { settings?: Record<string, unknown>; touch?: boolean; body?: string; search?: string; demo?: boolean; preview?: boolean; stored?: number; subscribe?: Record<string, unknown> };
+type Opts = { settings?: Record<string, unknown>; touch?: boolean; body?: string; search?: string; demo?: boolean; preview?: boolean; stored?: number; subscribe?: Record<string, unknown>; items?: unknown[] };
 
 async function mount(o: Opts = {}) {
   const virtualConsole = new VirtualConsole();
@@ -31,7 +31,7 @@ async function mount(o: Opts = {}) {
   const fetch = vi.fn(async (_url: string, init?: any) => ({ ok: true, json: async () => (init?.method === "POST" ? (o.subscribe || { subscribed: true }) : settings) }));
   w.fetch = fetch;
   w.eval(retention);
-  const config = { slug: "peppa", apiBaseUrl: "https://api.test/v1", ...(o.demo ? { demo: true, data: { storeName: "PEPPA please", retention: settings } } : {}), ...(o.preview ? { preview: true, data: { retention: settings } } : {}) };
+  const config = { slug: "peppa", apiBaseUrl: "https://api.test/v1", ...(o.demo ? { demo: true, data: { storeName: "PEPPA please", retention: settings, ...(o.items ? { items: o.items } : {}) } } : {}), ...(o.preview ? { preview: true, data: { retention: settings } } : {}) };
   await w.PAGOSYA_RETENTION_MOUNT(config);
   const dialog = () => w.document.querySelector("dialog.pagosya-signup-dialog");
   return { w, advance, dialog, fetch, now: () => now };
@@ -110,5 +110,25 @@ describe("demo and preview", () => {
     const { advance, dialog } = await mount({ preview: true });
     advance(60_000);
     expect(dialog()?.open).toBeFalsy();
+  });
+});
+
+// PEPPA please 2026-10-20: the popup showed a blank photo, line-less fields and the kit's cream-and-Georgia look.
+describe("the popup wears the store", () => {
+  it("never leaves its colours undefined, and takes the store's own tokens first", () => {
+    // Without a default an unset --signup-ink voided every border and tint built on it (the fields lost their lines).
+    expect(retention).toMatch(/\.pagosya-signup-host\{--signup-paper:var\(--store-background,#[0-9a-f]+\);--signup-ink:var\(--store-foreground,#[0-9a-f]+\)/);
+    expect(retention).toContain("--signup-accent:var(--store-accent,");
+    expect(retention).toContain("--signup-heading:var(--store-heading-font,");
+  });
+  it("lets the page's tokens beat the API's brand colours", async () => {
+    const { w } = await mount({ settings: { signupVisual: { brand: { background: "#ffffff", foreground: "#000000" } } } });
+    const host = w.document.querySelector(".pagosya-signup-host");
+    expect(host.style.getPropertyValue("--signup-paper")).toBe("var(--store-background,#ffffff)");
+    expect(host.style.getPropertyValue("--signup-ink")).toBe("var(--store-foreground,#000000)");
+  });
+  it("finds a demo's product photo beside its scripts, skipping videos", async () => {
+    const { dialog } = await mount({ demo: true, search: "tiendas/peppa", body: '<script src="/tiendas/peppa/commerce.js"></script>', items: [{ imageUrls: ["assets/clip.mp4", "assets/bottle.jpg"] }] });
+    expect(dialog().querySelector(".pagosya-signup-photo img").getAttribute("src")).toBe("https://tienda.test/tiendas/peppa/assets/bottle.jpg");
   });
 });

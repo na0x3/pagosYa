@@ -75,6 +75,9 @@
       if (image) { const set = responsiveSrcset(image); if (set) { photo.srcset = set; photo.sizes = '(max-width: 820px) 50vw, 33vw'; } photo.src = image; photo.alt = p.name; photo.loading = 'lazy'; photo.decoding = 'async'; photo.style.objectPosition = imagePosition(p, image); }
       else photo.removeAttribute('src');
       photo.classList.add('menu-item__image');
+      // A product without a photo: its frame carries the name's first letter, so a template can draw a tile, not a grey box.
+      if (image) photo.parentElement?.removeAttribute('data-product-initial');
+      else photo.parentElement?.setAttribute('data-product-initial', (p.name || '').trim().charAt(0).toLocaleUpperCase('es'));
     }
     const badgeText = productBadge(p), badgeField = field('badge');
     if (badgeField) { badgeField.textContent = badgeText; badgeField.hidden = !badgeText; }

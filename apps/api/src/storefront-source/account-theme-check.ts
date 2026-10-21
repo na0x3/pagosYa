@@ -15,10 +15,12 @@ const origin = 'https://preview.invalid';
 const MIN_OPACITY = 0.6;
 const SUBMIT_MIN = { width: 120, height: 44 };
 const INPUT_MIN_HEIGHT = 40;
+/** Narrower than this on desktop the form reads as a strip: a layout wrapped around it (PEPPA please 2026-10-20). */
+const FORM_MIN_DESKTOP = 320;
 const PAGES = [['login', 'acceso-ingresar.html'], ['register', 'acceso-registro.html']] as const;
 
 type Rgb = [number, number, number];
-type Facts = { overflow: boolean; controls: Array<{ name: string; width: number; height: number; hidden: boolean; opacity: number; covered: boolean; color: Rgb; bg: Rgb }> } | null;
+type Facts = { overflow: boolean; formWidth: number; repeatedPhoto: string; controls: Array<{ name: string; width: number; height: number; hidden: boolean; opacity: number; covered: boolean; color: Rgb; bg: Rgb }> } | null;
 
 /** Everything measured in the page, in one self-contained function (it is serialized into the browser). */
 function measureAccountControls(): Facts {
@@ -48,7 +50,16 @@ function measureAccountControls(): Facts {
   root.querySelectorAll('[data-part=input]').forEach(element => controls.push(sample('input', element)));
   for (const name of ['submit', 'error'] as const) { const element = root.querySelector(`[data-part=${name}]`); if (element) controls.push(sample(name, element)); }
   root.querySelectorAll('a[data-part=link]').forEach(element => controls.push(sample('link', element)));
-  return { overflow: document.documentElement.scrollWidth > innerWidth + 1, controls };
+  // The same photo twice on the page: the account theme's split photo plus a copy the design drew beside it.
+  const seen = new Map<string, number>();
+  document.querySelectorAll('img').forEach(img => {
+    if (img.closest('header, footer, nav')) return;
+    const rect = img.getBoundingClientRect(), src = img.currentSrc || img.src;
+    if (src && rect.width >= 120 && rect.height >= 120 && !isHidden(img)) seen.set(src, (seen.get(src) || 0) + 1);
+  });
+  const repeatedPhoto = [...seen].find(([, count]) => count > 1)?.[0] || '';
+  const form = root.querySelector('[data-part=form]');
+  return { overflow: document.documentElement.scrollWidth > innerWidth + 1, formWidth: form ? form.getBoundingClientRect().width : 0, repeatedPhoto, controls };
 }
 
 async function checkAccountPage(page: Page): Promise<ThemeCheckFailure[]> {
@@ -60,6 +71,8 @@ async function checkAccountPage(page: Page): Promise<ThemeCheckFailure[]> {
     const add = (control: string, reason: string) => { if (!failures.some(f => f.control === control && f.viewport === viewport && f.reason === reason)) failures.push({ control, viewport, reason }); };
     if (!facts) { add('page', 'the account form did not render'); continue; }
     if (facts.overflow) add('page', 'horizontal overflow: the page scrolls sideways');
+    if (facts.repeatedPhoto) add('layout', `the same photo shows twice (${facts.repeatedPhoto.split('/').pop()}): the design adds a photo beside the account page`);
+    if (viewport === 'desktop' && facts.formWidth > 0 && facts.formWidth < FORM_MIN_DESKTOP) add('layout', `the form is squeezed to ${Math.round(facts.formWidth)}px wide (needs ${FORM_MIN_DESKTOP}): a layout is wrapped around the account page`);
     for (const control of facts.controls) {
       if (control.hidden) { add(control.name, 'hidden or zero-sized'); continue; }
       if (control.opacity < MIN_OPACITY) add(control.name, `too transparent (opacity ${Math.round(control.opacity * 100) / 100})`);

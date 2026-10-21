@@ -25,6 +25,7 @@ import { sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
 import { instructionConcernsProductCard } from './product-theme';
 import { instructionConcernsKitSurfaces } from './kit-touch';
 import { normalizeAccountTheme } from './account-theme';
+import { readConfigFile } from './store-look';
 import { AGENT_POLICY_KINDS } from './source-agent-policies';
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
@@ -111,6 +112,8 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
     // A whole-store design may always set the product page theme; a local edit only when it concerns the product page.
     themeAllowed: isNew || redesign || instructionConcernsProductCard(dto.instruction) || instructionConcernsKitSurfaces(dto.instruction),
     accountThemeAllowed: isNew || redesign || /cuenta|login|ingres|registro|contraseña|perfil|pedidos|acceso/i.test(dto.instruction),
+    // A local edit builds on the account theme the store has; a new store or a redesign starts it fresh.
+    accountThemeBase: isNew || redesign ? undefined : normalizeAccountTheme(readConfigFile(previousFiles).accountTheme),
     motifPackAllowed: isNew || redesign || /motivo|decora|paquete|dibuj|ilustra|sticker|pegatina|tem[aá]tic|divertid|l[uú]dic/i.test(dto.instruction),
     // The store appears in Studio while YAPI works; photos Studio already has from the saved revision are not resent.
     onPreview: files => {
@@ -160,11 +163,12 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
     outcome = await runAgent({ model: agentModel, toolbox, signal, limits: runLimits, instructions: agentInstructions([SOURCE_VISUAL_COHERENCE_CONTRACT, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_NEXT_INSTRUCTIONS, SOURCE_SHOPPING_FLOW, SOURCE_LOCATION_INSTRUCTIONS, SOURCE_FONT_CHOICES.replaceAll('styles.css', 'styles/globals.css')].join('\n\n'), sitePurpose, isNew, isNew || redesign, runLimits.wallMs / 60_000, signatureOn, [live.frame.paragraph, live.playbookText].filter(Boolean).join('\n')), opening: agentOpening(live.taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), [...workspace.files(), ...previewBase.files.filter(f => f.path.startsWith('assets/'))], images), onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); if (['create_page','edit_file','edit_file_batch','write_file','set_product_card_theme','set_account_theme','set_motif_pack','set_store_policy','verify'].includes(step.kind)) await saveCheckpoint(); } });
     accepted = outcome.status === 'finished' && !!toolbox.finished;
     // Soft checks (palette, visual review, template structure, the model's own requirements) must never discard a draft that builds.
-    if (!accepted && outcome.reason !== 'cancelled' && !signal?.aborted && (workspace.changedPaths().length || toolbox.pendingTheme || toolbox.pendingMotifPack !== undefined || Object.keys(toolbox.pendingPolicies).length)) accepted = await toolbox.acceptIfBuildable();
+    if (!accepted && outcome.reason !== 'cancelled' && !signal?.aborted && (workspace.changedPaths().length || toolbox.pendingTheme || toolbox.pendingAccountTheme || toolbox.pendingMotifPack !== undefined || Object.keys(toolbox.pendingPolicies).length)) accepted = await toolbox.acceptIfBuildable();
     live.unfinishedStatus = toolbox.stopped?.status === 'partial' ? 'PARTIAL' : toolbox.stopped?.status === 'blocked' ? 'BLOCKED' : null;
   } finally { agentDraftPreviews.clear(storeId); }
   if (!accepted) throw new BadGatewayException(`YAPI no pudo terminar el trabajo${outcome.reason === 'cancelled' ? (abortedByTimeout(signal) ? ' porque se acabó el tiempo de esta solicitud' : ' porque se canceló') : outcome.status === 'failed' && outcome.reason ? `: ${outcome.reason.replace(/\.+$/, '')}` : outcome.reason === 'credits' ? ' dentro del límite de créditos de esta solicitud; puedes subirlo en Créditos' : outcome.reason === 'loop' ? ' porque se quedó repitiendo la misma acción' : ' dentro del límite de pasos'}. Tu revisión anterior sigue guardada.`);
-  if (editExisting && !workspace.changedPaths().length && !toolbox.pendingTheme && toolbox.pendingMotifPack === undefined && !Object.keys(toolbox.pendingPolicies).length) throw new BadGatewayException('YAPI terminó sin cambiar la tienda. Tu revisión anterior sigue guardada.');
+  // An account-theme-only edit (PEPPA please 2026-10-20: «quita el borde de la tarjeta») changes the store too.
+  if (editExisting && !workspace.changedPaths().length && !toolbox.pendingTheme && !toolbox.pendingAccountTheme && toolbox.pendingMotifPack === undefined && !Object.keys(toolbox.pendingPolicies).length) throw new BadGatewayException('YAPI terminó sin cambiar la tienda. Tu revisión anterior sigue guardada.');
   autoRepairs.push(...toolbox.repairs);
   if (signatureOn) recordTellsKept(attempts, toolbox.tellsKept);
   live.agentTheme = toolbox.pendingTheme;

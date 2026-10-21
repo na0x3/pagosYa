@@ -20,7 +20,19 @@
   async function loadCommerceContent() {
     const slots = document.querySelectorAll('[data-pagosya-blog],[data-pagosya-reviews],[data-pagosya-bundles]');
     if (!slots.length && !fullProductPage) return;
-    if (preview || config.demo) { slots.forEach(slot => { slot.textContent = 'El contenido publicado del comercio aparecerá aquí en la tienda.'; }); return; }
+    if (preview || config.demo) {
+      slots.forEach(slot => {
+        // Reviews cannot load here; the preview shows what a store without reviews shows, no placeholder line (2026-10-19).
+        if (slot.hasAttribute('data-pagosya-reviews') && !fullProductPage) {
+          slot.hidden = true;
+          const section = slot.closest('[data-pagosya-reviews-section]');
+          if (section) section.hidden = true;
+          return;
+        }
+        slot.textContent = 'El contenido publicado del comercio aparecerá aquí en la tienda.';
+      });
+      return;
+    }
     try {
       const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/content?locale=${encodeURIComponent(document.documentElement.lang || 'es')}`, { credentials: 'omit' });
       if (!response.ok) throw new Error('No se pudo cargar el contenido.');

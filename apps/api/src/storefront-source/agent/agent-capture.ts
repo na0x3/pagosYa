@@ -36,9 +36,14 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
     page.on('pageerror', error => { if (errors.length < 5) errors.push(error.message.slice(0, 300)); });
     page.on('dialog', dialog => { void dialog.dismiss(); });
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
-    await page.goto(`https://preview.invalid/${entry}`, { waitUntil: 'load', timeout: 12_000 });
     const accountPage = STOREFRONT_PAGES.find(p => p.url === entry && p.owner === 'account');
-    if (accountPage) {
+    // A kit store draws its own account form, the account theme included, once the trusted parent answers: stand in
+    // for a signed-out shopper, as account-theme-check does. Pasting the older checkout form over it hid every
+    // [data-part] the agent planned on and the theme it was editing (PEPPA please 2026-10-20).
+    if (accountPage) await page.addInitScript(() => { (window as any).PAGOSYA_ACCOUNT_REQUEST = async () => ({ ok: true, body: { signedIn: false } }); });
+    await page.goto(`https://preview.invalid/${entry}`, { waitUntil: 'load', timeout: 12_000 });
+    const kitAccount = accountPage ? await page.waitForSelector('[data-account-gate] [data-part=form]', { timeout: 4000 }).then(() => true, () => false) : false;
+    if (accountPage && !kitAccount) {
       // The same trusted markup and styles as checkout, with no session, API, or form submission.
       // The offline sandbox stays closed to all network and frames.
       const context = { slug: 'preview', storeName: 'Vista previa', signedIn: false, preview: true };
@@ -78,6 +83,33 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
       colourless: Array.from(document.querySelectorAll<HTMLElement>('[data-illustration]')).filter(el => { const colour = getComputedStyle(el).backgroundColor; return colour === 'transparent' || /^rgba\(.*,\s*0\)$/.test(colour); }).map(el => el.dataset.illustration || ''),
       missing: Array.from(document.images).filter(img => img.getBoundingClientRect().width > 0 && !img.naturalWidth && !img.matches('.menu-item__image-alt:not([src])')).map(img => img.getAttribute('src') || '(sin ruta)').slice(0, 8),
       overflow: document.documentElement.scrollWidth > innerWidth + 2,
+      // Meathouse 2026-10-20: a sticky buy column stays stuck for its whole parent, so the reviews and «Combínalo con»
+      // that YAPI put in the same grid scrolled under it. Measured without scrolling: what lies below it in its parent,
+      // in its columns, is what it will slide over.
+      stickyOver: Array.from(document.querySelectorAll<HTMLElement>('body *')).filter(el => getComputedStyle(el).position === 'sticky'
+        // A sticky header is meant to ride over the page; the kit's own product parts are laid out for it.
+        && !el.matches('header, nav, [role=banner], [class*="product-detail__"]') && !el.querySelector('nav') && el.getBoundingClientRect().width < innerWidth * 0.9).flatMap(el => {
+        const parent = el.parentElement, box = el.getBoundingClientRect();
+        if (!parent || !box.width || !box.height) return [];
+        const end = parent.getBoundingClientRect().bottom;
+        const under = Array.from(parent.children).filter(other => other !== el && !el.contains(other) && !other.contains(el)).some(other => {
+          const r = other.getBoundingClientRect();
+          return r.width > 0 && r.height > 24 && r.top >= box.bottom - 1 && r.top < end && r.left < box.right - 8 && r.right > box.left + 8;
+        });
+        return under ? [(el.className || el.tagName).toString().split(/\s+/)[0]] : [];
+      }).slice(0, 4),
+      // A positioned text (a big «01 / MH» index) laid over a button or a text link: the shopper cannot read either.
+      textOverButton: Array.from(document.querySelectorAll<HTMLElement>('body *')).filter(el => ['absolute', 'fixed'].includes(getComputedStyle(el).position) && Array.from(el.childNodes).some(node => node.nodeType === 3 && node.textContent!.trim())).flatMap(el => {
+        const box = el.getBoundingClientRect();
+        if (!box.width || !box.height || getComputedStyle(el).visibility === 'hidden' || Number(getComputedStyle(el).opacity) < 0.2) return [];
+        const hit = Array.from(document.querySelectorAll<HTMLElement>('a, button')).find(control => {
+          if (control.contains(el) || el.contains(control) || !(control.textContent || '').trim()) return false;
+          const r = control.getBoundingClientRect();
+          const w = Math.min(box.right, r.right) - Math.max(box.left, r.left), h = Math.min(box.bottom, r.bottom) - Math.max(box.top, r.top);
+          return w > 0 && h > 0 && w * h > 0.15 * r.width * r.height;
+        });
+        return hit ? [`«${(el.textContent || '').trim().slice(0, 30)}» sobre «${(hit.textContent || '').trim().slice(0, 30)}»`] : [];
+      }).slice(0, 4),
       hiddenCatalog: Array.from(document.querySelectorAll<HTMLElement>('[data-pagosya-catalog]')).some(el => {
         const style = getComputedStyle(el);
         return el.hidden || style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0;
@@ -109,6 +141,8 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
     errors.push(...[...new Set(health.colourless)].slice(0, 8).map(src => 'Ilustración sin color visible: ' + src));
     errors.push(...[...new Set(health.brokenSections)].slice(0, 8).map(hash => 'Enlace a sección inexistente: ' + hash));
     if (health.overflow) errors.push('La página desborda horizontalmente.');
+    errors.push(...health.stickyOver.map(name => `«${name}» es sticky y se desliza sobre las secciones que siguen en su mismo contenedor. Quita el sticky o deja esas secciones fuera de su contenedor.`));
+    errors.push(...health.textOverButton.map(pair => `Texto encima de un botón: ${pair}. Muévelo para que no se toquen.`));
     if (health.staleCatalogCopy) errors.push('Texto permanente de catálogo vacío fuera del runtime. Usa texto de marca que siga siendo válido al añadir productos; el catálogo administra su estado vacío.');
     if (health.designProcessCopy) errors.push('Texto del proceso de diseño visible para compradores. Sustituye explicaciones de composición, runtime o catálogo real/vivo por texto breve sobre los productos o la marca, sin inventar datos.');
     if (health.hiddenCatalog) errors.push('El catálogo está oculto. Mantén visible data-pagosya-catalog incluso sin productos; el runtime controla su estado vacío y los productos futuros.');
