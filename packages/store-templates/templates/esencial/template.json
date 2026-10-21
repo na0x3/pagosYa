@@ -434,6 +434,11 @@
         "steps",
         "grid",
         "rows"
+      ],
+      "bands": [
+        "blocks",
+        "alternate",
+        "calm"
       ]
     },
     "sections": [

@@ -12,12 +12,12 @@ const unique = (list: Array<string | undefined>) => [...new Set(list.filter((src
 type Section = { id: string; title: string; items: Array<{ title: string; text: string }> };
 
 /** Variety spec §2: the business sections the fill call wrote (at most two), each from the merchant's own facts. */
-function BusinessSection({ section, phone }: { section: Section; phone: string }) {
+function BusinessSection({ section, phone, band }: { section: Section; phone: string; band?: string }) {
   const { id, title, items } = section;
   const gallery = unique([photos.p1, photos.p2, photos.p3, photos.p4, photos.story]).filter(src => src !== photos.hero).slice(0, 4);
   const pickPhoto = unique([photos.p1, photos.p2, photos.p3]).find(src => src !== photos.story && src !== photos.hero) ?? photos.p1;
   if (id === 'gallery' && gallery.length < 2) return null;
-  return <section id={id} className="es-section es-biz" data-es-section={id} aria-labelledby={`es-${id}-title`}>
+  return <section id={id} className="es-section es-biz" data-es-section={id} data-es-band={band} aria-labelledby={`es-${id}-title`}>
     <Reveal className="es-biz__head"><h2 id={`es-${id}-title`} className="es-h2">{title}</h2></Reveal>
     {id === 'process' || id === 'howto' ? <ol className="es-biz__steps">{items.map((item, index) => <li key={index}><span className="es-biz__n">{String(index + 1).padStart(2, '0')}</span><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></li>)}</ol>
       : id === 'sizes' ? <table className="es-biz__table"><tbody>{items.map((item, index) => <tr key={index}><th scope="row">{item.title}</th><td>{item.text}</td></tr>)}</tbody></table>
@@ -48,8 +48,19 @@ export default function Home() {
   const rolledClosing = variant('closing', 'dark');
   const closing = rolledClosing === 'photo' && !photos.hero ? 'dark' : rolledClosing;
   const phone: string = store.phone;
+  // Colour bands (2026-10-19): cream-on-cream pages read as wireframes; the sections after the catalog sit on coloured bands.
+  const bands = variant('bands', 'alternate');
+  // Blocks: story deep, then muted and accent; a band never matches its neighbour (QA: mono's accent is its deep colour,
+  // so values in accent ran into the dark closing as one black block).
+  const tones = bands === 'blocks'
+    ? [story === 'overlay' ? 'paper' : 'deep', 'muted', 'accent', 'paper']
+    : bands === 'alternate' ? ['muted', 'paper', 'muted', 'paper'] : [];
+  const band = (index: number): string | undefined => tones[index % 4];
+  const beforeValues = band(sections.length);
+  const valuesTone = bands !== 'blocks' ? band(1 + sections.length)
+    : ['photo', 'newsletter'].includes(closing) && beforeValues !== 'accent' ? 'accent' : beforeValues === 'muted' ? 'paper' : 'muted';
   return <Shell>
-    <main id="contenido">
+    <main id="contenido" data-es-bands={bands}>
       <section id="inicio" className={hero === 'type' ? 'es-hero es-hero--plain' : 'es-hero'} data-es-hero={hero} aria-labelledby="es-hero-title">
         {layered ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}><img src={photos.hero} alt="" aria-hidden="true" /></Parallax>
           : hero !== 'type' ? <div className="es-hero__media">{(multi ? heroPhotos.slice(0, 3) : [photos.hero]).map(src => <img key={src} src={src} alt="" aria-hidden="true" />)}</div> : null}
@@ -64,6 +75,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {bands === 'blocks' && copy.values.length ? <div className={hero === 'type' ? 'es-marquee es-marquee--line' : 'es-marquee'} aria-hidden="true">
+        <p className="es-marquee__track">{[0, 1].map(round => <span key={round}>{[0, 1, 2].flatMap(copyIndex => copy.values.map(value => <span key={`${copyIndex}-${value.title}`}>{value.title}<i>✦</i></span>))}</span>)}</p>
+      </div> : null}
 
       <section id="productos" className="es-section" aria-labelledby="es-products-title">
         <Reveal className="es-section__head">
@@ -89,7 +104,7 @@ export default function Home() {
         <div className="es-grid" data-es-grid={variant('grid', 'grid4')} data-es-cards={cards} data-pagosya-catalog />
       </section>
 
-      <section id="historia" className={story === 'split' && !photos.story ? 'es-section es-story es-story--text' : 'es-section es-story'} data-es-story={story} aria-labelledby="es-story-title">
+      <section id="historia" className={story === 'split' && !photos.story ? 'es-section es-story es-story--text' : 'es-section es-story'} data-es-story={story} data-es-band={story === 'overlay' ? undefined : band(0)} aria-labelledby="es-story-title">
         {['split', 'overlay', 'pair'].includes(story) ? <Reveal className="es-story__media">
           <img src={photos.story} alt="" aria-hidden="true" />{story === 'pair' ? <img src={photos.p1} alt="" aria-hidden="true" /> : null}
         </Reveal> : null}
@@ -102,15 +117,15 @@ export default function Home() {
         </Reveal>
       </section>
 
-      {sections.map(section => <BusinessSection key={section.id} section={section} phone={phone} />)}
+      {sections.map((section, index) => <BusinessSection key={section.id} section={section} phone={phone} band={band(1 + index)} />)}
 
-      <section id="valores" className="es-section es-values" data-es-values={values} aria-label="Lo que nos importa">
+      <section id="valores" className="es-section es-values" data-es-values={values} data-es-band={valuesTone} aria-label="Lo que nos importa">
         {values === 'line' ? <p className="es-values__line" aria-hidden="true">{copy.values.map(value => value.title).join(' · ')}</p> : null}
         <ol>{copy.values.map((value, index) => <li key={value.title}><Reveal delay={index * 90}>{values === 'icons' ? (() => { const Icon = VALUE_ICONS[index % 3]; return <Icon className="es-values__icon" />; })()
           : values === 'checklist' ? <IconCheck className="es-values__icon" /> : <span className="es-values__n">{String(index + 1).padStart(2, '0')}</span>}<h3 className="es-h3">{value.title}</h3><p>{value.text}</p></Reveal></li>)}</ol>
       </section>
 
-      <section id="resenas" className="es-section es-reviews" data-pagosya-reviews-section aria-labelledby="es-reviews-title">
+      <section id="resenas" className="es-section es-reviews" data-pagosya-reviews-section data-es-band={bands === 'blocks' ? (valuesTone === 'muted' ? 'paper' : 'muted') : band(2 + sections.length)} aria-labelledby="es-reviews-title">
         <h2 id="es-reviews-title" className="es-h2">Lo que dicen nuestros clientes</h2>
         <div className="es-reviews__list" data-pagosya-reviews />
       </section>

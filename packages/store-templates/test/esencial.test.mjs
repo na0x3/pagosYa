@@ -56,6 +56,13 @@ const variantRules = part => test(`every catalogued ${part} variant has its own 
 });
 for (const part of ['header', 'announce', 'hero']) variantRules(part);
 
+test('every colour band option has its own styles, and the bands repaint the colour tokens', () => {
+  const css = file('styles/globals.css');
+  for (const id of esencial.master.variants.bands) assert.match(css, new RegExp(`data-es-bands="${id}"`), `bands ${id}`);
+  for (const tone of ['paper', 'muted', 'deep', 'accent']) assert.match(css, new RegExp(`data-es-band="${tone}"\\]\\{--es-band-bg`), tone);
+  assert.match(file('components/home.tsx'), /data-es-bands=\{bands\}/);
+});
+
 test('every header variant keeps the login link (login comes with every store)', () => {
   const css = file('styles/globals.css');
   assert.doesNotMatch(css, /data-es-header="[a-z]+"\][^{]*\.es-header__end a\{display:none/);
