@@ -226,7 +226,8 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
   #productos:has(>[data-es-grid="side-title"]){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,3fr);gap:40px;align-items:start}
   #productos:has(>[data-es-grid="side-title"]) .es-section__head{flex-direction:column;align-items:flex-start;margin:0;padding-top:16px;border-top:1px solid color-mix(in srgb,var(--es-ink) 18%,transparent)}
   #productos:has(>[data-es-grid="side-title"]) .es-h2{font-size:clamp(24px,2.2vw,32px)}
-  #productos .es-grid[data-es-grid="side-title"][data-pagosya-catalog]{grid-template-columns:repeat(3,minmax(0,1fr));gap:32px 24px}
+  /* The fashion card grid is !important (fashion look); the side-title grid keeps its three columns beside the title. */
+  #productos .es-grid[data-es-grid="side-title"][data-pagosya-catalog]{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:32px 24px!important}
   .es-header[data-es-header="boxed"]{top:16px;width:min(680px,calc(100% - 48px));margin:16px auto 0;padding:0 20px;min-height:64px;border:1px solid color-mix(in srgb,var(--es-ink) 14%,transparent)}
   .es:has(#inicio:not(.es-hero--plain)) .es-header[data-es-header="boxed"]{margin-bottom:-80px}
 }
