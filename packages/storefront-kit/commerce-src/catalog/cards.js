@@ -226,9 +226,11 @@
   function productCard(p) {
     const image = galleryImages(p)[0];
     const complex = p.variants?.length || p.extras?.length;
+    // Fashion look: the fashion card wins over an authored card template — a YAPI-edited home keeps the template it had, and a
+    // fashion store still shows the fashion card everywhere (live check 2026-10-21, NOA VARGAS revision 5).
+    if (fashionCards()) return fashionCardMarkup(p, image);
     const custom = customProductCard(p, image, complex);
     if (custom) return custom;
-    if (fashionCards()) return fashionCardMarkup(p, image);
     const cardExtras = cardPreview(p, image);
     // Atelier stores (2026-10-19, the Amboras card): the add button says what it does, with a bag, across the card.
     const atelier = productPageStyle() === 'atelier';

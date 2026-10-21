@@ -1091,6 +1091,8 @@
     [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch] .product-detail__option-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
     [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch] button[aria-pressed=true]{box-shadow:inset 0 -3px 0 var(--pd-ink)}
     [data-pagosya-product][data-style=fashion] .product-detail__buy{width:100%;min-height:56px;border:0;border-radius:0;background:var(--pd-ink);color:var(--pd-paper);font:500 16px/1 var(--pd-body);letter-spacing:0;text-transform:none}
+    [data-pagosya-product][data-style=fashion] .product-detail__buy-total:not(:empty)::before{content:"·";margin:0 10px}
+    [data-pagosya-product][data-style=fashion] .product-detail__buy:disabled .product-detail__buy-total{display:none}
     /* «También te puede gustar»: the kit's related list, dressed like the fashion card (tinted 4:5 panel, name and price). */
     [data-pagosya-product][data-style=fashion] .product-detail__related img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:0;background:color-mix(in srgb,var(--pd-ink) 6%,var(--pd-paper))}
     [data-pagosya-product][data-style=fashion] .product-detail__related h2{font:400 clamp(26px,2.6vw,36px)/1.15 var(--pd-heading);padding-top:18px;border-top:1px solid var(--pd-ink)}
@@ -1159,7 +1161,8 @@
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion]{display:flex;flex-direction:column;gap:0;padding:0;border:0;background:transparent;box-shadow:none}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__panel{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:var(--store-radius,0px);background:color-mix(in srgb,var(--store-foreground,#111) 6%,var(--store-background,#fff))}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__image{width:100%;height:100%;aspect-ratio:auto;object-fit:cover;transition:opacity .3s ease}
-      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__label{position:absolute;top:12px;left:12px;z-index:2;margin:0;font:400 13px/1.3 var(--store-body-font,inherit);color:var(--store-foreground,#111)}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__label{position:absolute;top:12px;left:12px;z-index:2;max-width:calc(100% - 24px);margin:0;padding:4px 8px;border-radius:2px;background:color-mix(in srgb,var(--store-background,#fff) 88%,transparent);font:400 13px/1.3 var(--store-body-font,inherit);color:var(--store-foreground,#111);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      @media(max-width:600px){[data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__label{top:8px;left:8px;max-width:calc(100% - 16px);padding:3px 6px;font-size:11px}}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__bars{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;gap:2px;opacity:0;transition:opacity .2s ease}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__bars button{flex:1;height:12px;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:var(--swatch);cursor:pointer}
       @media(hover:hover){[data-pagosya-catalog] .menu-item[data-anatomy=fashion]:is(:hover,:focus-within) .menu-item__bars{opacity:1}}
@@ -4035,9 +4038,11 @@
   function productCard(p) {
     const image = galleryImages(p)[0];
     const complex = p.variants?.length || p.extras?.length;
+    // Fashion look: the fashion card wins over an authored card template — a YAPI-edited home keeps the template it had, and a
+    // fashion store still shows the fashion card everywhere (live check 2026-10-21, NOA VARGAS revision 5).
+    if (fashionCards()) return fashionCardMarkup(p, image);
     const custom = customProductCard(p, image, complex);
     if (custom) return custom;
-    if (fashionCards()) return fashionCardMarkup(p, image);
     const cardExtras = cardPreview(p, image);
     // Atelier stores (2026-10-19, the Amboras card): the add button says what it does, with a bag, across the card.
     const atelier = productPageStyle() === 'atelier';

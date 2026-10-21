@@ -102,4 +102,34 @@ describe('fashion look', () => {
     expect(configOf(back).showcase.cards).toBe('compact');
     expect(configOf(back).productPageStyle).toBeUndefined();
   });
+
+  const oldProduct = [
+    "import Shell, { variant } from './Shell';",
+    "import { ProductPageTemplate, KitSlot } from '@pagosya/ui';",
+    '            <KitSlot kind="product" name="title" className="es-pdp__title" />',
+    '            <KitSlot kind="product" name="buy" className="es-pdp__buy" />',
+  ].join('\n');
+  const withPages = () => [...storeFiles(), { path: 'components/product.tsx', content: oldProduct }];
+  const file = (files: Array<{ path: string; content: string }>, path: string) => files.find(f => f.path === path)!.content;
+
+  it('a store switched to the fashion look gains the fashion CSS and the product page\'s category line and size guide link', () => {
+    const files = refillMasterFiles(withPages(), withVariants, { variants: { cards: 'fashion', pdp: 'fashion' } as any });
+    expect(file(files, 'styles/globals.css')).toContain('.es-pdp[data-es-pdp="fashion"]');
+    expect(file(files, 'styles/globals.css')).toContain('body{margin:0}');
+    const product = file(files, 'components/product.tsx');
+    expect(product).toContain('name="category"');
+    expect(product).toContain('href="index.html#sizes"');
+    expect(product).toContain("import { sections } from './store-data';");
+    // Twice is the same as once.
+    const again = refillMasterFiles(files, withVariants, { variants: { cards: 'fashion', pdp: 'fashion' } as any });
+    expect(file(again, 'styles/globals.css').split('/* Fashion look (2026-10-21)').length).toBe(2);
+    expect(file(again, 'components/product.tsx').split('name="category"').length).toBe(2);
+  });
+
+  it('other refills leave the product page and CSS as they are; an edited product page without the anchors is left alone', () => {
+    const plain = refillMasterFiles(withPages(), withVariants, { copy: { headline: 'Otra' } });
+    expect(file(plain, 'components/product.tsx')).toBe(oldProduct);
+    const edited = [...storeFiles(), { path: 'components/product.tsx', content: 'export default function Product() { return null; }' }];
+    expect(file(refillMasterFiles(edited, withVariants, { variants: { pdp: 'fashion' } as any }), 'components/product.tsx')).toBe('export default function Product() { return null; }');
+  });
 });

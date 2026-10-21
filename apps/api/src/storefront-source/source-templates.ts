@@ -3,9 +3,9 @@ import { uploadPath } from './source-product-photos';
  * authored source never contains merchant text; it imports `./store-data`, which this module writes with every value
  * JSON-encoded, so no store name or photo URL is ever pasted into JSX. */
 import type { MasterCopy } from '@pagosya/store-templates';
-import { masterCopy, masterDnaFonts, masterDnaLook, masterProductStyle, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
+import { MASTER_TEMPLATE_ID, masterCopy, masterDnaFonts, masterDnaLook, masterProductStyle, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
 import { readFile } from 'node:fs/promises';
-import { templateDemoPhoto, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
+import { templateDemoPhoto, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
 import { plantillaFillFromRead } from './source-plantilla-fill';
 import { kitPath } from '@pagosya/storefront-kit';
 import type { SourceProjectBriefDto, SourceProjectFileDto } from './dto/save-source-project.dto';
@@ -115,6 +115,27 @@ export function readMasterState(files: readonly SourceProjectFileDto[]) {
 }
 
 /** A content edit: new store-data, theme block and DNA fonts; components and every other file untouched. */
+/** Fashion look spec 2026-10-21: a store switched to the fashion card or page after its build gains the template's fashion
+ *  CSS block and, when its product page is still the template's, the category line and size guide link. A product page the
+ *  store edited (anchors missing) is left alone; doing it twice changes nothing. */
+const FASHION_CSS_MARK = '/* Fashion look (2026-10-21)';
+export function withFashionTemplateParts<F extends { path: string; content: string }>(files: F[], variants: Partial<MasterVariants>): F[] {
+  if (variants.cards !== 'fashion' && variants.pdp !== 'fashion') return files;
+  const css = templateSourceFiles(MASTER_TEMPLATE_ID).find(file => file.path === 'styles/globals.css')?.content ?? '';
+  const block = css.includes(FASHION_CSS_MARK) ? css.slice(css.indexOf(FASHION_CSS_MARK)).trim() : '';
+  const title = '<KitSlot kind="product" name="title" className="es-pdp__title" />', buy = '<KitSlot kind="product" name="buy" className="es-pdp__buy" />';
+  return files.map(file => {
+    if (file.path === 'styles/globals.css' && block && !file.content.includes(FASHION_CSS_MARK)) return { ...file, content: `${file.content.trimEnd()}\n\n${block}\n` };
+    if (file.path !== 'components/product.tsx' || file.content.includes('name="category"') || !file.content.includes(title) || !file.content.includes(buy)) return file;
+    const indent = (line: string) => file.content.slice(file.content.lastIndexOf('\n', file.content.indexOf(line)) + 1, file.content.indexOf(line));
+    let content = file.content
+      .replace(title, `${title}\n${indent(title)}<KitSlot kind="product" name="category" className="es-pdp__category" />`)
+      .replace(buy, `{variant('pdp', 'gallery-left') === 'fashion' && sections.some(section => section.id === 'sizes') ? <a className="es-pdp__guide" href="index.html#sizes">Guía de tallas</a> : null}\n${indent(buy)}${buy}`);
+    if (!/import \{[^}]*\bsections\b[^}]*\} from '\.\/store-data'/.test(content)) content = content.replace(/^(import [^\n]*\n)/, `$1import { sections } from './store-data';\n`);
+    return { ...file, content };
+  });
+}
+
 export function refillMasterFiles(files: SourceProjectFileDto[], manifest: TemplateManifest, change: MasterFill, apiUrl?: URL): SourceProjectFileDto[] {
   const settings = manifest.master;
   if (!settings) throw new TypeError(`Plantilla ${manifest.id}: no es una plantilla base.`);
@@ -125,7 +146,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   const photos = sameAsBundled({ ...state.photos, ...(change.heroPhoto !== undefined ? { hero: masterPhotoUrl(change.heroPhoto, apiUrl) } : {}), ...(change.storyPhoto !== undefined ? { story: masterPhotoUrl(change.storyPhoto, apiUrl) } : {}) }, change.photoSources);
   const theme = masterThemeCss(settings, look);
   const variants = { ...(state.variants ?? { sections: [] }), ...Object.fromEntries(Object.entries(change.variants ?? {}).filter(([part, id]) => part !== 'sections' && (settings.variants?.[part] ?? []).includes(String(id)))) } as MasterVariants;
-  return files.map(file => {
+  return withFashionTemplateParts(files.map(file => {
     if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [] });
     if (file.path === 'styles/globals.css') return { ...file, content: withMasterTheme(file.content, theme) };
     if (file.path === 'config.js') {
@@ -138,7 +159,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
       return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(style ? { productPageStyle: style } : {}), dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }) }, showcase: { ...(config.showcase ?? {}), ...masterShowcase(variants) } })};\n` };
     }
     return file;
-  });
+  }), variants);
 }
 
 export function templateDemoAssets(manifest: TemplateManifest, demoSlots: readonly string[]): SourceProjectFileDto[] {

@@ -15,11 +15,11 @@ const windows: any[] = [];
 const errors: Error[] = [];
 afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
 
-async function open({ items = [product()] as any[], fullPage = false, cards = 'fashion', style = 'fashion' }: { items?: any[]; fullPage?: boolean; cards?: string; style?: string } = {}) {
+async function open({ items = [product()] as any[], fullPage = false, cards = 'fashion', style = 'fashion', template = '' }: { items?: any[]; fullPage?: boolean; cards?: string; style?: string; template?: string } = {}) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (error: Error) => { if (!/Could not parse CSS stylesheet|getComputedStyle\(elt, pseudoElt\)/.test(error.message)) errors.push(error); });
   const url = fullPage ? `https://shop.test/product.html?id=${items[0]?.id}` : 'https://shop.test/';
-  const dom = new JSDOM(`<html><head></head><body><button data-cart-open>Pedido <span data-cart-count></span></button><section data-pagosya-catalog data-catalog-full></section><section data-pagosya-cart></section>${fullPage ? '<main data-pagosya-product-page></main>' : ''}<p data-pagosya-status></p></body></html>`,
+  const dom = new JSDOM(`<html><head></head><body>${template}<button data-cart-open>Pedido <span data-cart-count></span></button><section data-pagosya-catalog data-catalog-full></section><section data-pagosya-cart></section>${fullPage ? '<main data-pagosya-product-page></main>' : ''}<p data-pagosya-status></p></body></html>`,
     { url, runScripts: 'outside-only', virtualConsole });
   const w = dom.window; windows.push(w);
   w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
@@ -78,6 +78,14 @@ describe('fashion card', () => {
     const { q } = await open({ items: [product({ variants })] });
     expect(q('[data-product-id="carden"] .menu-item__colors').textContent).toBe('3 colores');
     expect(q('[data-product-id="carden"] .menu-item__bars')).toBeNull();
+  });
+
+  it('the fashion card wins over a card template the store authored earlier (a YAPI-edited home keeps its template)', async () => {
+    const template = '<template data-pagosya-product-template><article class="es-card"><a class="es-card__media" data-product-link href="product.html"><img data-product-field="image" alt="" /></a><h3 data-product-field="name">P</h3><p data-product-field="price"></p><button type="button" data-product-add>+</button></article></template>';
+    const { q } = await open({ template });
+    const card = q('.menu-item[data-product-id="carden"]');
+    expect(card.getAttribute('data-anatomy')).toBe('fashion');
+    expect(card.hasAttribute('data-custom-product')).toBe(false);
   });
 
   it('other stores keep their card', async () => {
