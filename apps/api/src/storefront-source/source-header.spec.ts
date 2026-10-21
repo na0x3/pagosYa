@@ -438,3 +438,29 @@ describe('the account button a showcase merchant asks for (2026-10-16)', () => {
     expect(SOURCE_PLATFORM_HEADER_EDIT).toMatch(/Mi cuenta/);
   });
 });
+
+/** Dropdown menu spec 2026-10-21: the store menu's mounts in the platform header. */
+describe('store menu mounts', () => {
+  const base = { shape: 'centered-split' as const, purpose: 'shop' as const, storeName: 'Noa', links: [{ href: 'productos.html', label: 'Productos' }, { href: 'nosotros.html', label: 'Nosotros' }] };
+  it('without a menu the header keeps its bytes', () => {
+    expect(renderSourceHeader({ ...base, menu: false })).toBe(renderSourceHeader(base));
+  });
+  it.each(HEADER_SHAPES.map(shape => [shape]))('%s: the menu adds the toggle mount, marks what it replaces and offers the menu tools', shape => {
+    const html = renderSourceHeader({ ...base, shape, menu: true });
+    expect(html).toContain('data-pagosya-store-menu="toggle"');
+    expect(html).toContain('data-store-menu-extra');
+    expect(html).toMatch(/<button data-store-menu-replaces type="button" class="pyh-toggle"/);
+    if (/<nav class="pyh-nav"/.test(renderSourceHeader({ ...base, shape }))) {
+      expect(html).toContain('data-pagosya-store-menu="links"');
+      expect(html).not.toMatch(/<nav class="pyh-nav"/);
+    }
+  });
+  it('withSourceHeader draws the mounts when config.js has header.menu, and not without it', () => {
+    const page = { path: 'index.html', content: '<body><header data-pagosya-header></header><main></main></body>' };
+    const on = withSourceHeader([page, { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"header":{"menu":{"style":"panel"}}};\n' }], { purpose: 'shop', storeName: 'Noa' });
+    expect(on.files[0].content).toContain('data-pagosya-store-menu="toggle"');
+    const off = withSourceHeader([page, { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {};\n' }], { purpose: 'shop', storeName: 'Noa' });
+    expect(off.files[0].content).not.toContain('data-pagosya-store-menu');
+  });
+});
+

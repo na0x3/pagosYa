@@ -18,6 +18,7 @@ import { syncDesignSpec } from './design-engine/design-document';
 import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATIVE_RESPONSE_SCHEMA } from './design-engine/design-schemas';
 import { sep5AuthorPrompt, sep5CardLook, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, SEP5_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
 import { emptySourceHeaders, hasPlatformHeader, headerFact, instructionAsksHeaderAccount, SOURCE_PLATFORM_HEADER_EDIT, withHeaderAccountConfig, withSourceHeader } from './source-header';
+import { instructionAsksStoreMenu, readStoreMenu, withStoreMenuConfig } from './source-store-menu';
 import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from './source-primary-action';
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { brokenHeadingProblems, captureBrokenHeadings, introducedBrokenHeadings, type BrokenHeading } from './design-engine/phone-layout';
@@ -541,6 +542,9 @@ export class SourceGenerationService {
     /** A showcase merchant asking for the header's account button, or to take it away (2026-10-16: baek's «pon el icono del login
      *  en el sidebar» got a sidebar of YAPI's own instead). The platform draws it from config.js header.account. */
     const headerAccountAsk = !creative && !useNext && sitePurpose !== 'shop' && hasPlatformHeader(previousFiles) ? instructionAsksHeaderAccount(merchantWords) : undefined;
+    // Dropdown menu spec 2026-10-21: a static store with the platform header gets the store menu (panel, default groups) when the
+    // merchant's words ask for one, and loses it when they ask to remove it; written to config.js at save like header.account.
+    const storeMenuAsk = !creative && !useNext && hasPlatformHeader(previousFiles) ? instructionAsksStoreMenu(merchantWords) : undefined;
     // Spec 2026-10-15 free commerce surfaces: YAPI designs the six shopping parts on new stores and redesigns, one part on request.
     const surfacesOn = this.config.get<boolean>('app.yapiCommerceSurfaces') === true && !useNext && sitePurpose === 'shop' && !claude;
     const surfacesRequest = surfacesOn && !creative ? requestedSurfaceParts(dto.instruction) : [];
@@ -910,7 +914,7 @@ export class SourceGenerationService {
       const headerNotes = new Set<string>();
       const platformHeader = (files: SourceProjectFileDto[], platformPages: string[], controls?: StoreControls) => {
         const drawn = parseFrameDraw((frame.file ?? previousFiles.find(file => file.path === FRAME_DRAW_FILE))?.content).header;
-        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles, claim: sep5Author, ...(pickedWordmark ? { wordmark: pickedWordmark } : {}), ...(controls ? { controls } : {}), ...(headerAccountAsk !== undefined ? { account: headerAccountAsk } : {}) });
+        const result = withSourceHeader(files, { shape: drawn, purpose: sitePurpose, action: primaryAction, storeName: data.storeName, logoPath: assetLegend.find(asset => asset.original === (data as { logoUrl?: string | null }).logoUrl)?.path, fact: headerFact(businessInfo, storeData.locations), platformPages, previous: previousFiles, claim: sep5Author, ...(pickedWordmark ? { wordmark: pickedWordmark } : {}), ...(controls ? { controls } : {}), ...(headerAccountAsk !== undefined ? { account: headerAccountAsk } : {}), ...(storeMenuAsk !== undefined ? { menu: storeMenuAsk } : {}) });
         if (result.rendered && result.fallback && !headerNotes.has('shape')) { headerNotes.add('shape'); this.logger.warn(JSON.stringify({ event: 'source_header_shape_fallback', generationId: run.id, drawn: drawn ?? null, shape: result.shape })); }
         if (result.missing.length && !headerNotes.has('slot')) { headerNotes.add('slot'); this.logger.warn(JSON.stringify({ event: 'source_header_slot_missing', generationId: run.id, pages: result.missing })); }
         return result.files;
@@ -1512,7 +1516,9 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     // The showcase account button the merchant asked for (2026-10-16) lands in config.js here, at save: a model's files never
     // carry config.js (the reserved-file check), so the header is drawn with `account` until then.
     const withHeaderAccount = <T extends { files: SourceProjectFileDto[] }>(input: T): T => headerAccountAsk === undefined ? input : { ...input, files: withHeaderAccountConfig(input.files, previousFiles, headerAccountAsk) };
-    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}, controlsChoice: { use?: StoreControls } = {}) => withHeaderAccount(withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice), controlsChoice));
+    const withStoreMenu = <T extends { files: SourceProjectFileDto[] }>(input: T): T => storeMenuAsk === undefined ? input
+      : { ...input, files: withStoreMenuConfig(input.files, previousFiles, storeMenuAsk ? (readStoreMenu(previousFiles) ?? { style: 'panel' }) : null) };
+    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}, controlsChoice: { use?: StoreControls } = {}) => withStoreMenu(withHeaderAccount(withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice), controlsChoice)));
     // A chat request about the kit pages re-runs only the touch step (source-sep5-review.ts runChatKitTouch).
     await runChatKitTouch({ facts, live, touchCall, assembleSave, skip: surfacesRequest.length > 0 });
     // A chat request about the controls (spec 2026-10-14: «haz el carrito como una taza», «botones más redondos») runs the controls

@@ -158,6 +158,28 @@ describe('a showcase store (spec 2026-10-13)', () => {
     expect(file('index.html')).not.toContain('data-cart-open');
   });
 
+  // Dropdown menu spec 2026-10-21: a static store's menu choice is the save's, like header.account.
+  it('a chat edit asking for a dropdown menu saves header.menu and draws the store menu mounts on every page; asking to remove it takes it away', async () => {
+    await service.generate('m1', 's1', showcaseDto, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
+    const first = projects.save.mock.calls[0][2];
+    projects.current.mockResolvedValue({ revision: 1, slug: 'deff' });
+    projects.version.mockResolvedValue({ revision: 1, snapshot: sourceProjectSnapshot({ ...first, revision: 1, label: 'deff' }) });
+    projects.save.mockClear();
+    fetchMock.mockImplementation(async () => answer({ label: 'Menú', edits: [{ path: 'styles.css', search: 'body { color: #222; }', replacement: 'body { color: #1f1f1f; }' }], files: [] }));
+    await service.generate('m1', 's1', { ...showcaseDto, revision: 1, instruction: 'agrega un menú desplegable con categorías' }, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
+    const config = JSON.parse(file('config.js')!.match(/window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]);
+    expect(config.header.menu).toEqual({ style: 'panel' });
+    for (const path of ['index.html', 'nosotros.html']) expect(file(path)).toContain('data-pagosya-store-menu="toggle"');
+    const second = projects.save.mock.calls[0][2];
+    projects.current.mockResolvedValue({ revision: 2, slug: 'deff' });
+    projects.version.mockResolvedValue({ revision: 2, snapshot: sourceProjectSnapshot({ ...second, revision: 2, label: 'deff' }) });
+    projects.save.mockClear();
+    fetchMock.mockImplementation(async () => answer({ label: 'Sin menú', edits: [{ path: 'styles.css', search: 'body { color: #1f1f1f; }', replacement: 'body { color: #222; }' }], files: [] }));
+    await service.generate('m1', 's1', { ...showcaseDto, revision: 2, instruction: 'quita el menú desplegable' }, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
+    expect(JSON.parse(file('config.js')!.match(/window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]).header?.menu).toBeUndefined();
+    expect(file('index.html')).not.toContain('data-pagosya-store-menu');
+  });
+
   it('falls back to the contact form when the setup answer is unusable', async () => {
     prisma.store.findFirst.mockResolvedValue({ slug: 'deff', onboarding: { version: 1, primaryAction: { kind: 'booking', value: 'http://inseguro.test' } } });
     await service.generate('m1', 's1', showcaseDto, new SourceRequestBudget(25), [], jest.fn(async () => undefined));

@@ -12,6 +12,7 @@ import { ORDER_EMAIL_TEMPLATE_PATH } from '../order-emails/order-email-slots';
 import type { IconSlot, StoreControls } from './store-controls';
 import { patchConfigFile, readConfigFile } from './store-look';
 import { readWordmark, sanitizeWordmark, withWordmarkTemplate } from './source-wordmark';
+import { readStoreMenu } from './source-store-menu';
 
 // bottom-pill is retired (owner 2026-10-17); kit/headers keeps its template and CSS for pages saved with it.
 export const HEADER_SHAPES = ['centered-split', 'menu-button', 'info-bar', 'stacked', 'shrinking', 'wordmark-band', 'side-rail', 'overlay', 'reveal'] as const;
@@ -33,6 +34,8 @@ export type RenderHeaderInput = {
   /** A showcase whose merchant asked for the account button (config.js header.account, 2026-10-16): «Mi cuenta» in the menu,
    *  in the bar of the shapes that have tools and on the side rail. A shop always has it; without it a showcase is as before. */
   account?: boolean;
+  /** Dropdown menu spec 2026-10-21: config.js header.menu is on, so the header carries the store menu's mounts (the kit draws it). */
+  menu?: boolean;
 };
 
 /** The side rail's account button, upright like the rail's main action when it is a word. Only on a rail that has one, so
@@ -122,6 +125,18 @@ export function renderSourceHeader(input: RenderHeaderInput): string {
     if (!link) parts.cta = `<button type="button" class="pyh-cart" data-cart-open data-ctl="cart">${controlFace(cartIcon, cartWord, layout.cart, 'ctl-word pyh-cart-word')}<span class="ctl-sr">${escape(cartName)}, </span><span class="pyh-cart-count ctl-badge" data-cart-count data-empty>0</span><span class="ctl-sr" data-ctl-unit> productos</span></button>`;
     parts.toggle = `<button type="button" class="pyh-toggle" data-pagosya-header-toggle aria-expanded="false" aria-controls="pyh-menu" data-ctl="menu"><span class="ctl-face">${controlIcon(controls, 'menu') || '<span class="pyh-toggle-bars" aria-hidden="true"></span>'}<span class="pyh-toggle-label ctl-word">Menú</span></span></button>`;
     parts.menu = menu(`<button type="button" class="pyh-close" data-pagosya-header-close aria-label="Cerrar" data-ctl="close">${controlFace(controlIcon(controls, 'close'), 'Cerrar', 'icon+word')}</button>`);
+  }
+  // Dropdown menu spec 2026-10-21: the kit draws the store menu into these mounts (commerce-src/header/store-menu.js) and hides
+  // what carries data-store-menu-replaces; the menu's own tools (Buscar, Mi cuenta…) are offered to its panel. Without a menu
+  // every header keeps its bytes.
+  if (input.menu) {
+    const mark = (html: string, tag: string) => html.replace(new RegExp(`^<${tag}\\b`), `<${tag} data-store-menu-replaces`);
+    const linksMount = '<div class="pyh-store-menu-links" data-pagosya-store-menu="links"></div>';
+    if (parts.nav) parts.nav = mark(parts.nav, 'nav') + linksMount;
+    if (parts.navStart) parts.navStart = mark(parts.navStart, 'nav') + linksMount;
+    if (parts.navEnd) parts.navEnd = mark(parts.navEnd, 'nav');
+    parts.toggle = `<div class="pyh-store-menu" data-pagosya-store-menu="toggle"></div>${mark(parts.toggle, 'button')}`;
+    parts.menu = parts.menu.replace('<nav class="pyh-menu-nav"', '<nav data-store-menu-replaces class="pyh-menu-nav"').replace('<div class="pyh-menu-tools">', '<div class="pyh-menu-tools" data-store-menu-extra>');
   }
   // A callback, never a replacement string: a store name containing "$&" must stay literal.
   const body = kitText(`${input.shape}.html`).replace(/\{\{(\w+)\}\}/g, (_match, key: string) => parts[key] ?? '');
@@ -226,6 +241,8 @@ export type SourceHeaderInput = {
   account?: boolean;
   /** A picked style card's lettered name (2026-10-18), written into index.html when the page carries none of its own. */
   wordmark?: string;
+  /** Dropdown menu spec 2026-10-21: the store menu; by default config.js header.menu, this save's or else the saved one. */
+  menu?: boolean;
 };
 
 /** The slot in place of the page's own top header (the first <header> before <main>), or first in <body> when it has none. */
@@ -261,6 +278,7 @@ export function withSourceHeader<F extends { path: string; content: string; enco
   const pages: Array<[string, string]> = input.purpose === 'shop' ? [['productos.html', 'Productos'], ['nosotros.html', 'Nosotros'], ['contacto.html', 'Contacto']] : [['nosotros.html', 'Nosotros'], ['contacto.html', 'Contacto']];
   const pageLinks = pages.filter(([path]) => exists.has(path)).map(([href, label]) => ({ href, label }));
   const account = input.account ?? headerAccountOn(files) ?? headerAccountOn(input.previous ?? []) ?? false;
+  const menu = input.menu ?? Boolean(readStoreMenu(files) ?? readStoreMenu(input.previous ?? []));
   const missing: string[] = [];
   const out = files.map(file => {
     if (file.encoding === 'base64' || !/\.html$/i.test(file.path) || file.path === ORDER_EMAIL_TEMPLATE_PATH) return file;
@@ -279,7 +297,7 @@ export function withSourceHeader<F extends { path: string; content: string; enco
       .map(section => ({ href: home ? `#${section.id}` : `index.html#${section.id}`, label: section.label }));
     const links = [...pageLinks, ...sectionLinks].slice(0, HEADER_MAX_LINKS);
     if (home && wordmark) content = withWordmarkTemplate(content, wordmark);
-    const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, ...(wordmark ? { wordmark } : {}), action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1), ...(input.controls ? { controls: input.controls } : {}), ...(account ? { account } : {}) });
+    const header = renderSourceHeader({ shape, purpose: input.purpose, storeName: input.storeName, links, logoPath, ...(wordmark ? { wordmark } : {}), action: input.action, fact: input.fact, search: exists.has('buscar.html'), prefix: '../'.repeat(file.path.split('/').length - 1), ...(input.controls ? { controls: input.controls } : {}), ...(account ? { account } : {}), ...(menu ? { menu } : {}) });
     const drawn = replaceElement(content, SLOT, header);
     if (drawn === null) { missing.push(file.path); return file; }
     return drawn === file.content ? file : { ...file, content: drawn };

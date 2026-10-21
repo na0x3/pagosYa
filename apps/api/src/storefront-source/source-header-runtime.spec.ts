@@ -10,9 +10,9 @@ const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
 const links = [{ href: '#servicios', label: 'Servicios' }, { href: '#nosotros', label: 'Nosotros' }];
 
 /** A page with the platform header, run by the real kit runtime in preview. */
-async function store(options: { shape?: HeaderShape; purpose?: 'shop' | 'service'; contact?: boolean; overflow?: string } = {}) {
+async function store(options: { shape?: HeaderShape; purpose?: 'shop' | 'service'; contact?: boolean; overflow?: string; menu?: boolean } = {}) {
   const purpose = options.purpose ?? 'shop';
-  const header = renderSourceHeader({ shape: options.shape ?? 'menu-button', purpose, storeName: 'Marca', links, action: { kind: 'form' }, search: true });
+  const header = renderSourceHeader({ shape: options.shape ?? 'menu-button', purpose, storeName: 'Marca', links, action: { kind: 'form' }, search: true, ...(options.menu ? { menu: true } : {}) });
   const dom = new JSDOM(`<html><head></head><body>${header}<main><section id="servicios" data-nav-label="Servicios"><a href="contacto.html" data-pagosya-contact-open>Cotiza tu proyecto</a></section>${options.contact ? '<section data-pagosya-contact hidden></section>' : ''}</main><p data-pagosya-status></p></body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: new VirtualConsole() });
   const w = dom.window;
   w.HTMLElement.prototype.scrollIntoView = () => {};
@@ -21,7 +21,7 @@ async function store(options: { shape?: HeaderShape; purpose?: 'shop' | 'service
   w.matchMedia = () => ({ matches: true });
   if (options.overflow) w.document.documentElement.style.overflow = options.overflow;
   w.PAGOSYA_PREVIEW = true;
-  w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', sitePurpose: purpose, data: { storeName: 'Marca', items: [], contactFormEnabled: Boolean(options.contact) } };
+  w.PAGOSYA_CONFIG = { slug: 'marca', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', sitePurpose: purpose, data: { storeName: 'Marca', items: [], contactFormEnabled: Boolean(options.contact) }, ...(options.menu ? { header: { menu: { style: 'panel' } } } : {}) };
   w.fetch = jest.fn(async () => ({ ok: true, json: async () => ({}) }));
   w.eval(commerce);
   await new Promise(resolve => setTimeout(resolve, 30));
@@ -115,4 +115,16 @@ describe('the platform header in the kit runtime (spec 2026-10-13)', () => {
     expect(click(bare, $(bare, '.pyh-action')).defaultPrevented).toBe(false);
     bare.close();
   });
+});
+
+/** Dropdown menu spec 2026-10-21: the platform header hosts the store menu. */
+it('the store menu replaces the platform menu: its ☰ opens the panel, the platform toggle is marked, Mi cuenta rides in the panel', async () => {
+  const w = await store({ menu: true });
+  const header = $(w, 'header[data-pagosya-header]');
+  expect(header.getAttribute('data-store-menu')).toBe('panel');
+  expect($(w, '.pyh-toggle').hasAttribute('data-store-menu-replaces')).toBe(true);
+  click(w, $(w, '[data-store-menu-toggle]'));
+  expect($(w, '[data-store-menu-panel]').hidden).toBe(false);
+  expect([...w.document.querySelectorAll('.pym-extras a')].map((a: any) => a.textContent)).toContain('Mi cuenta');
+  expect([...w.document.querySelectorAll('.pym-group a')].map((a: any) => a.textContent)).toEqual(expect.arrayContaining(['Servicios', 'Nosotros']));
 });
