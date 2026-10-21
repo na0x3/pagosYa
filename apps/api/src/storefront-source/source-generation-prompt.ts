@@ -16,7 +16,8 @@ export const outputSchema = {
   type: "object", additionalProperties: false, required: ["label", "files", "products", "productOperations"], properties: {
     products: sourceProductsSchema,
     productOperations: sourceProductOperationsSchema,
-    label: { type: "string", minLength: 1, maxLength: 120 },
+    // The merchant reads this (chat reply, YAPI window, version history): plain words, never developer jargon.
+    label: { type: "string", minLength: 1, maxLength: 120, description: "Una frase corta en español para el comercio: qué cambió en su tienda, en palabras simples. Sin términos técnicos (CTA, hero, atributo, selector, componente, clase, rastreo, layout)." },
     files: { type: "array", items: { type: "object", additionalProperties: false, required: ["path", "content"], properties: { path: { type: "string" }, content: { type: "string" } } } },
   },
 };
