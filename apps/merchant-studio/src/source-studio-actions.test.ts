@@ -12,4 +12,7 @@ describe('a message handed over from the dashboard', () => {
     expect(composeActionMode({ text: 'Hazme una tienda' }, { busy: false, blocked: true })).toBe('compose');
     expect(composeActionMode({ text: '   ' }, idle)).toBe('compose');
   });
+  it('waits in the composer when it comes from «Pídele a YAPI», which writes the start and leaves the details to the merchant', () => {
+    expect(composeActionMode({ text: 'Escribe las políticas de mi tienda con estos datos: ', origin: 'ask' }, idle)).toBe('compose');
+  });
 });
