@@ -1,9 +1,12 @@
 import { Body, Controller, Headers, Param, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { InboundStockSyncDto, InboundSubscriptionSyncDto } from "./dto/operations.dto";
 import { IntegrationsService } from "./integrations.service";
 
 @ApiTags("integrations")
+// Every call runs argon2.verify on the connection secret: a cap keeps a known connection id from burning CPU.
+@Throttle({ default: { limit: 60, ttl: 60_000 } })
 @Controller("v1/integrations")
 export class IntegrationsInboundController {
   constructor(private readonly integrations: IntegrationsService) {}
