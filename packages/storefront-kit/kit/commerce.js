@@ -4567,11 +4567,14 @@
       // Chosen set (showcase commerce §3): only the named products in the merchant's order, a category, or a collection.
       // A deleted product is skipped; a set left empty hides itself.
       const named = (el.getAttribute('data-products') || '').split(',').map(id => id.trim()).filter(Boolean);
-      const byCategory = el.getAttribute('data-category'), byCollection = el.getAttribute('data-collection');
-      if (named.length || byCategory || byCollection) {
-        const set = named.length ? named.map(id => products().find(item => item.id === id)).filter(Boolean)
+      const byCategory = el.getAttribute('data-category'), byCollection = el.getAttribute('data-collection'), byColor = el.getAttribute('data-color');
+      if (named.length || byCategory || byCollection || byColor) {
+        const chosen = named.length ? named.map(id => products().find(item => item.id === id)).filter(Boolean)
           : byCategory ? products().filter(item => item.categoryId === byCategory)
-          : products().filter(item => (collections().find(c => c.slug === byCollection)?.productIds || []).includes(item.id));
+          : byCollection ? products().filter(item => (collections().find(c => c.slug === byCollection)?.productIds || []).includes(item.id))
+          : products();
+        // John Smedley sections (spec 2026-10-21): an `explore` rail can also show one colour, accents and case ignored.
+        const set = byColor ? chosen.filter(item => (optionGroups(item) || []).some(g => /^(color|colour|tono|tinte|acabado|finish)$/i.test(g.name) && g.values.some(v => filterFold(v) === filterFold(byColor)))) : chosen;
         el.hidden = !set.length;
         el.innerHTML = set.map(productCard).join('');
         structureCatalog(el);
@@ -4697,6 +4700,17 @@
         video.addEventListener('click', () => { video.muted = !video.muted; });
       });
     });
+  }
+  // ---- Catalogue mounts that change (spec 2026-10-21 John Smedley sections) ----
+  // A page can switch a mount's category or colour after load (the `explore` section's chips): the catalogue redraws once per
+  // change, after the page has finished setting its attributes.
+  if (typeof MutationObserver === 'function') {
+    let mountRedraw = false;
+    new MutationObserver(records => {
+      if (mountRedraw || !records.some(record => record.target.matches?.('[data-pagosya-catalog]'))) return;
+      mountRedraw = true;
+      queueMicrotask(() => { mountRedraw = false; render(); });
+    }).observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ['data-category', 'data-color'] });
   }
   /* T1 templates: a store may author the markup of a kit surface. Read at use time (React may render the
    * <template> after this script, and puts its children on the element instead of .content). */

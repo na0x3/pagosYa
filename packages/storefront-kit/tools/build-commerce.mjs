@@ -47,6 +47,7 @@ export const PARTS = [
   'look/contrast-guard.js',
   'catalog/filters.js',
   'catalog/render.js',
+  'catalog/mount-watch.js',
   'templates/kit-templates.js',
   'cart/render.js',
   'contact/form.js',
