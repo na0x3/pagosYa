@@ -520,3 +520,14 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 @keyframes es-rise{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:none}}
 @keyframes es-settle{from{transform:scale(1.12)}to{transform:none}}
 .es-story[data-es-story="overlay"] .es-story__media{border-radius:0}
+
+/* Fashion look (2026-10-21): the kit's fashion card and page, laid out full width like the John Smedley pages. */
+.es-grid[data-es-cards="fashion"]{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))!important;gap:28px!important}
+.es-pdp[data-es-pdp="fashion"] .es-pdp__grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;align-items:stretch}
+.es-pdp[data-es-pdp="fashion"] .es-pdp__gallery{order:2;min-height:calc(100dvh - 64px)}
+.es-pdp[data-es-pdp="fashion"] .es-pdp__info{display:flex;flex-direction:column;gap:14px;padding:clamp(24px,4vw,56px) clamp(20px,3vw,48px)}
+.es-pdp[data-es-pdp="fashion"] .es-pdp__category{margin-top:-8px}
+.es-pdp[data-es-pdp="fashion"] .es-pdp__guide{align-self:flex-start;margin-top:auto;font-size:15px;text-decoration:underline dashed;text-underline-offset:6px;color:inherit}
+.es-pdp[data-es-pdp="fashion"] .es-pdp__guide+.es-pdp__buy{margin-top:0}
+.es-pdp[data-es-pdp="fashion"] .es-pdp__buy{margin-top:auto}
+@media (max-width:820px){.es-pdp[data-es-pdp="fashion"] .es-pdp__grid{grid-template-columns:1fr}.es-pdp[data-es-pdp="fashion"] .es-pdp__gallery{order:0;min-height:0}.es-pdp[data-es-pdp="fashion"] :is(.es-pdp__buy,.es-pdp__guide){margin-top:0}}

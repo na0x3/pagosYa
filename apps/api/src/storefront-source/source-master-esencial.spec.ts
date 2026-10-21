@@ -19,6 +19,40 @@ const readAt = (snapshot: any, width: number) => withVisualSandbox(snapshot, '',
 const assemble = (publicStore: any, extra: Record<string, unknown> = {}) => assembleTemplateRevision({ manifest, source: templateSourceFiles('esencial'), storeId: 's1', slug: 's1', publicStore, apiUrl: new URL('https://api.pagosya.test/v1'), firstRevision: true, ...extra });
 
 describe('Esencial', () => {
+  it('fashion variants: the kit draws the cards, the product page has the category line and the size guide link', async () => {
+    const variants = { ...Object.fromEntries(Object.entries(manifest.master!.variants!).map(([part, ids]) => [part, (ids as string[])[0]])), cards: 'fashion', pdp: 'fashion', sections: ['sizes'] };
+    const demo = templateDemoPublicStore();
+    const assembled = await assemble(demo, { variants, fill: { sections: [{ id: 'sizes', title: 'Guía de tallas', items: [{ title: 'S', text: '36' }, { title: 'M', text: '38' }] }] } });
+    const config = assembled.files.find((f: any) => f.path === 'config.js')!.content;
+    expect(config).toContain('"productPageStyle":"fashion"');
+    expect(config).toContain('"cards":"fashion"');
+    const snapshot = await prepare(assembled);
+    // Pages are drawn in the browser from the compiled bundles: read them rendered, home first, then a product in the same page.
+    // probe: the sandbox serves product.html?id= documents only to probes.
+    const reads = await withVisualSandbox(snapshot, '', undefined, true, async context => {
+      const page = await context.newPage();
+      await page.setViewportSize({ width: 1280, height: 900 });
+      const found = () => page.evaluate(() => ({
+        template: Boolean(document.querySelector('template[data-pagosya-product-template]')),
+        fashionCards: document.querySelectorAll('.menu-item[data-anatomy=fashion]').length,
+        category: document.querySelector('[data-product-slot=category] .product-detail__eyebrow')?.textContent ?? null,
+        guide: Boolean(document.querySelector('a.es-pdp__guide[href="index.html#sizes"]')),
+      }));
+      await page.goto('https://preview.invalid/index.html', { waitUntil: 'load', timeout: 12000 });
+      await page.waitForTimeout(400);
+      const home = await found();
+      await page.goto(`https://preview.invalid/product.html?id=${encodeURIComponent(demo.items[0].id)}`, { waitUntil: 'load', timeout: 12000 });
+      await page.locator('#pagosya-product-title').waitFor({ timeout: 8000 });
+      const productPage = await found();
+      await page.close();
+      return { home, productPage };
+    });
+    expect(reads.home.template).toBe(false);
+    expect(reads.home.fashionCards).toBeGreaterThan(0);
+    expect(reads.productPage.category).not.toBeNull();
+    expect(reads.productPage.guide).toBe(true);
+  });
+
   it('every font pair uses catalogued OFL fonts', () => {
     for (const pair of manifest.master!.fonts) for (const id of [pair.heading, pair.body]) expect(SOURCE_FONT_CATALOG.some(font => font.id === id)).toBe(true);
   });

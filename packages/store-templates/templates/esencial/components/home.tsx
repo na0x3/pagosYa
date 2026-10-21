@@ -85,7 +85,8 @@ export default function Home() {
           <h2 id="es-products-title" className="es-h2">{copy.productsTitle}</h2>
           <a className="es-link" href="productos.html">Ver todo <IconArrowRight /></a>
         </Reveal>
-        <template data-pagosya-product-template>
+        {/* Fashion look: the kit's fashion card, the same on the home, «Ver todo» and related rows. */}
+        {cards === 'fashion' ? null : <template data-pagosya-product-template>
           <article className="es-card" data-es-card={card}>
             <a className="es-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
             <p className="es-card__eyebrow" data-product-field="eyebrow" hidden />
@@ -100,7 +101,7 @@ export default function Home() {
             </div>
             {card === 'bar' ? <button type="button" className="es-card__bar" data-product-add>Agregar</button> : null}
           </article>
-        </template>
+        </template>}
         <div className="es-grid" data-es-grid={variant('grid', 'grid4')} data-es-cards={cards} data-pagosya-catalog />
       </section>
 
