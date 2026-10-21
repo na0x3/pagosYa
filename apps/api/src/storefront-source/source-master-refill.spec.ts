@@ -210,3 +210,22 @@ describe('filter style on a master store', () => {
   });
 });
 
+import { designFileCount } from './source-next';
+import { templateSourceFiles } from '@pagosya/store-templates';
+/** Deferred minors 2026-10-21: the platform's catalogue pages do not count toward the store's design files, and a page from
+ *  the first version of them is brought up to date. */
+describe('Esencial catalogue pages follow-ups', () => {
+  const template = (path: string) => templateSourceFiles('esencial').find(file => file.path === path)!.content;
+  it('the catalogue pages are marked and not counted as design files', () => {
+    for (const path of ['components/page-productos.tsx', 'components/page-coleccion.tsx']) expect(template(path)).toMatch(/^\/\/ @pagosya-catalog-page/);
+    expect(designFileCount([{ path: 'components/page-productos.tsx', content: template('components/page-productos.tsx') }, { path: 'components/home.tsx', content: '' }])).toBe(1);
+  });
+  it('a first-version collection page (no mark, fixed title) is replaced by the current one; an edited one is kept', () => {
+    const first = template('components/page-coleccion.tsx').replace(/^\/\/ @pagosya-catalog-page[^\n]*\n/, '').replace(' data-collection-title', '');
+    const store = storeFiles().concat({ path: 'components/page-coleccion.tsx', content: first }, { path: 'components/page-productos.tsx', content: 'mine' });
+    const out = refillMasterFiles(store, manifest, { copy: { headline: 'Otra' } });
+    expect(out.find(file => file.path === 'components/page-coleccion.tsx')!.content).toBe(template('components/page-coleccion.tsx'));
+    expect(out.find(file => file.path === 'components/page-productos.tsx')!.content).toBe('mine');
+  });
+});
+

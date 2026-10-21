@@ -35,11 +35,18 @@
       return;
     }
     // «Borrar filtros» (data-filters-clear="filters") keeps the search; «Borrar todo» clears it too (final review 2026-10-21).
-    if (button.hasAttribute('data-filters-clear')) { const now = readFilterState(); writeFilterState({ orden: now.orden, precio: null, sets: {}, toggles: new Set(), q: button.getAttribute('data-filters-clear') === 'filters' ? now.q : '' }); render(); return; }
+    // After a clear the redraw replaces the button that had the focus: keyboard users land back on the filters (2026-10-21).
+    const searchField = () => document.querySelector('.catalog-search input[name=q]');
+    if (button.hasAttribute('data-filters-clear')) { const now = readFilterState(); writeFilterState({ orden: now.orden, precio: null, sets: {}, toggles: new Set(), q: button.getAttribute('data-filters-clear') === 'filters' ? now.q : '' }); render(); searchField()?.focus({ preventScroll: true }); return; }
     if (button.hasAttribute('data-filter-remove')) {
-      const state = readFilterState(), [key, value] = button.dataset.filterRemove.split(':');
+      const state = readFilterState(), raw = button.dataset.filterRemove;
+      const key = button.dataset.key ?? raw.slice(0, raw.indexOf(':')), value = button.dataset.value ?? raw.slice(raw.indexOf(':') + 1);
+      const index = [...document.querySelectorAll('.catalog-filters__active [data-filter-remove]')].indexOf(button);
       if (key === 'q') state.q = ''; else if (key === 'precio') state.precio = null; else if (value) state.sets[key] = (state.sets[key] || []).filter(v => v !== value); else state.toggles.delete(key);
-      writeFilterState(state); render(); return;
+      writeFilterState(state); render();
+      const left = [...document.querySelectorAll('.catalog-filters__active [data-filter-remove]')];
+      (left[Math.min(index, left.length - 1)] || searchField())?.focus({ preventScroll: true });
+      return;
     }
     if (button.hasAttribute('data-offer-square') && button.closest('[data-pagosya-spotlight]')) {
       // A spotlight's squares choose how many its add button adds (subscriptions are chosen on the product page).

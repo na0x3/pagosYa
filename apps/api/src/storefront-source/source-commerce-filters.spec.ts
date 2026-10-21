@@ -15,16 +15,16 @@ const errors: Error[] = [];
 afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-async function open(items: any[], search = '', extra: { filterStyle?: string; categories?: any[]; preview?: string } = {}) {
+async function open(items: any[], search = '', extra: { filterStyle?: string; categories?: any[]; preview?: string; body?: string; collections?: any[] } = {}) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (error: Error) => { if (!/Could not parse CSS stylesheet|getComputedStyle\(elt, pseudoElt\)/.test(error.message)) errors.push(error); });
-  const dom = new JSDOM(`<html><head></head><body><button data-cart-open>Pedido <span data-cart-count></span></button>${shop}<section data-pagosya-cart></section></body></html>`, { url: `https://shop.test/productos.html${search}`, runScripts: 'outside-only', virtualConsole });
+  const dom = new JSDOM(`<html><head></head><body><button data-cart-open>Pedido <span data-cart-count></span></button>${extra.body ?? shop}<section data-pagosya-cart></section></body></html>`, { url: `https://shop.test/productos.html${search}`, runScripts: 'outside-only', virtualConsole });
   const w = dom.window; windows.push(w);
   w.HTMLElement.prototype.scrollIntoView = () => {};
   w.matchMedia = () => ({ matches: true });
   // The Studio preview: a sandboxed srcdoc frame whose address cannot change, with the page's query handed in.
   if (extra.preview !== undefined) { w.PAGOSYA_PREVIEW = true; w.PAGOSYA_PREVIEW_QUERY = extra.preview; w.history.replaceState = () => { throw new w.DOMException('sandboxed', 'SecurityError'); }; }
-  const store = { storeName: 'Antojo', checkoutMode: 'payment', items, ...(extra.categories ? { categories: extra.categories } : {}) };
+  const store = { storeName: 'Antojo', checkoutMode: 'payment', items, ...(extra.categories ? { categories: extra.categories } : {}), ...(extra.collections ? { collections: extra.collections } : {}) };
   w.PAGOSYA_CONFIG = { slug: 'antojo', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', productPage: 'product.html', ...(extra.filterStyle ? { filterStyle: extra.filterStyle } : {}), data: store };
   w.fetch = jest.fn(async () => ({ ok: true, json: async () => store }));
   w.eval(commerce);
@@ -293,5 +293,41 @@ it('chips never shrink or wrap their words', async () => {
   const css = (await open(six)).q('style[data-pagosya-kit="filters"]').textContent;
   expect(css).toMatch(/\.cf-chip\{[^}]*flex:0 0 auto/);
   expect(css).toMatch(/\.cf-chip\{[^}]*white-space:nowrap/);
+});
+
+/** Deferred minors from the final review, fixed 2026-10-21. */
+describe('follow-ups', () => {
+  it('the collection page puts the collection\'s name in the page title instead of a second heading', async () => {
+    const body = '<h1 data-collection-title>Colección</h1><main data-pagosya-catalog data-catalog-full data-collection-page></main>';
+    const e = await open(six, '?c=novias', { body, collections: [{ id: 'k1', slug: 'novias', name: 'Novias', productIds: ['a', 'b'] }] });
+    expect(e.q('[data-collection-title]').textContent).toBe('Novias');
+    expect(e.q('[data-pagosya-catalog] .catalog-group__title')).toBeNull();
+    expect(e.ids()).toEqual(['a', 'b']);
+  });
+  it('clearing the search, removing a chip or «Borrar todo» keeps the keyboard focus on the filters', async () => {
+    const cleared = await open(six, '?q=a');
+    cleared.q('[data-search-clear]').focus(); cleared.q('[data-search-clear]').click(); await tick();
+    expect(cleared.w.document.activeElement).toBe(cleared.q('.catalog-search input[name=q]'));
+    const chips = await open(six, '?descuento=1&precio=10-50');
+    chips.q('[data-filter-remove="descuento:"]').click(); await tick();
+    expect(chips.w.document.activeElement?.matches?.('[data-filter-remove]')).toBe(true);
+    const all = await open(six, '?descuento=1');
+    all.q('.catalog-filters__active [data-filters-clear]').click(); await tick();
+    expect(all.w.document.activeElement).toBe(all.q('.catalog-search input[name=q]'));
+  });
+  it('an option group whose name has a colon filters and clears like any other', async () => {
+    const v = (value: string) => ({ id: value, name: value, amount: 1000, options: [{ name: 'Talla: EU', value }] });
+    const items = [...six, p('x', 1500, { variants: [v('38')] }), p('y', 1500, { variants: [v('40')] })];
+    const e = await open(items, '', { filterStyle: 'chips' });
+    e.q('[data-filter-chip][data-value="38"]').click(); await tick();
+    expect(e.ids()).toEqual(['x']);
+    e.q('.catalog-filters__active [data-filter-remove][data-value="38"]').click(); await tick();
+    expect(e.ids()).toHaveLength(8);
+  });
+  it('both price sliders are drawn the same way', async () => {
+    const css = (await open(six)).q('style[data-pagosya-kit="filters"]').textContent;
+    expect(css).toMatch(/\.cf-range input\[type=range\]\{[^}]*appearance:none/);
+    expect(css).toMatch(/::-webkit-slider-thumb/);
+  });
 });
 

@@ -91,7 +91,7 @@
     const groups = filterGroups(all);
     const style = filterStyleFor(all, groups);
     const chosen = key => state.sets[key] || [];
-    const chip = (g, v) => `<button type="button" class="cf-chip"${v.color ? ' data-swatch-chip' : ''} data-filter-chip="${escape(g.key)}:${escape(v.value)}" aria-pressed="${chosen(g.key).includes(v.value)}">${v.color ? `<span data-swatch style="--swatch:${escape(v.color)}" aria-hidden="true"></span>` : ''}<span>${escape(v.text)}</span></button>`;
+    const chip = (g, v) => `<button type="button" class="cf-chip"${v.color ? ' data-swatch-chip' : ''} data-filter-chip="${escape(g.key)}:${escape(v.value)}" data-key="${escape(g.key)}" data-value="${escape(v.value)}" aria-pressed="${chosen(g.key).includes(v.value)}">${v.color ? `<span data-swatch style="--swatch:${escape(v.color)}" aria-hidden="true"></span>` : ''}<span>${escape(v.text)}</span></button>`;
     const range = g => {
       const lo = Math.floor(g.values[0] / 100), hi = Math.ceil(g.values[1] / 100);
       const a = Math.floor((state.precio?.[0] ?? g.values[0]) / 100), b = Math.ceil((state.precio?.[1] ?? g.values[1]) / 100);
@@ -110,7 +110,7 @@
       + `<ul class="cf-sort__list" id="cf-sort-list" role="listbox" aria-label="Ordenar" hidden>${SORTS.map(([value, text]) => `<li role="option" tabindex="-1" data-sort="${value}" aria-selected="${state.orden === value}">${escape(text)}</li>`).join('')}</ul></div>`;
     const search = `<div class="catalog-search" role="search"><label class="catalog-search__label" for="catalog-q">Buscar productos</label><span class="catalog-search__icon" aria-hidden="true"></span><input id="catalog-q" type="search" name="q" maxlength="80" autocomplete="off" placeholder="Buscar en la tienda" value="${escape(state.q || '')}">${state.q ? '<button type="button" class="catalog-search__clear" data-search-clear aria-label="Borrar búsqueda">✕</button>' : ''}</div>`;
     const count = `<p class="catalog-filters__count" aria-live="polite">${productsWord(shown)}</p>`;
-    const activeRow = active.length ? `<p class="catalog-filters__active">${active.map(([key, value, text]) => `<button type="button" data-filter-remove="${escape(key)}:${escape(value)}" aria-label="Quitar ${escape(text)}">${escape(text)} <span aria-hidden="true">✕</span></button>`).join('')}<button type="button" class="cf-link" data-filters-clear>Borrar todo</button></p>` : '';
+    const activeRow = active.length ? `<p class="catalog-filters__active">${active.map(([key, value, text]) => `<button type="button" data-filter-remove="${escape(key)}:${escape(value)}" data-key="${escape(key)}" data-value="${escape(value)}" aria-label="Quitar ${escape(text)}">${escape(text)} <span aria-hidden="true">✕</span></button>`).join('')}<button type="button" class="cf-link" data-filters-clear>Borrar todo</button></p>` : '';
     const opener = label => `<button type="button" class="cf-open" data-filters-open aria-expanded="${filtersDrawerOpen}" aria-controls="cf-drawer">${escape(label)}${filterCount ? ` (${filterCount})` : ''}</button>`;
     const drawer = (list, label) => list.length ? `<div class="cf-drawer" id="cf-drawer" data-filters-drawer role="dialog" aria-modal="true" aria-label="${escape(label)}"${filtersDrawerOpen ? '' : ' hidden'}><div class="cf-drawer__panel"><div class="cf-drawer__head"><h2>${escape(label)}</h2><button type="button" class="cf-drawer__close" data-filters-close aria-label="Cerrar">✕</button></div><div class="cf-drawer__body">${list.map(section).join('')}</div><div class="cf-drawer__foot"><button type="button" class="cf-link" data-filters-clear>Borrar todo</button><button type="button" class="cf-done" data-filters-done>Ver ${productsWord(shown)}</button></div></div></div>` : '';
     let inner;
@@ -118,7 +118,7 @@
       const cat = groups.find(g => g.key === 'categoria');
       const options = groups.filter(g => g.key !== 'categoria' && (g.kind === 'check' || g.kind === 'swatch'));
       const more = groups.filter(g => g.kind === 'range' || g.kind === 'toggle');
-      const catRow = cat ? `<div class="catalog-filters__row catalog-filters__row--categories" data-filter-group="categoria" role="group" aria-label="${escape(cat.label)}"><button type="button" class="cf-chip cf-chip--plain" data-filter-chip="categoria:" aria-pressed="${!chosen('categoria').length}">Todo</button>${cat.values.map(v => chip(cat, v).replace('class="cf-chip"', 'class="cf-chip cf-chip--plain"')).join('')}</div>` : '';
+      const catRow = cat ? `<div class="catalog-filters__row catalog-filters__row--categories" data-filter-group="categoria" role="group" aria-label="${escape(cat.label)}"><button type="button" class="cf-chip cf-chip--plain" data-filter-chip="categoria:" data-key="categoria" data-value="" aria-pressed="${!chosen('categoria').length}">Todo</button>${cat.values.map(v => chip(cat, v).replace('class="cf-chip"', 'class="cf-chip cf-chip--plain"')).join('')}</div>` : '';
       const optionRow = options.length ? `<div class="catalog-filters__row catalog-filters__row--options">${options.map(g => `<div class="cf-chips" data-filter-group="${escape(g.key)}" role="group" aria-label="${escape(g.label)}">${g.values.map(v => chip(g, v)).join('')}</div>`).join('')}</div>` : '';
       inner = `${search}<div class="catalog-filters__top">${catRow}${sort}</div>${optionRow}<div class="catalog-filters__bar">${count}${more.length ? opener('Más filtros') : ''}</div>${activeRow}${drawer(more, 'Más filtros')}`;
     } else if (style === 'sidebar') {
@@ -135,7 +135,7 @@
   }
   /** The search field filters as the shopper types (150 ms after the last key); Esc and ✕ clear it. */
   let searchTimer = 0;
-  const setSearch = value => { clearTimeout(searchTimer); const state = readFilterState(); state.q = String(value || '').slice(0, 80); writeFilterState(state); render(); };
+  const setSearch = (value, focus = false) => { clearTimeout(searchTimer); const state = readFilterState(); state.q = String(value || '').slice(0, 80); writeFilterState(state); render(); if (focus) document.querySelector('.catalog-search input[name=q]')?.focus({ preventScroll: true }); };
   /** A value inside a double-quoted attribute selector (CSS.escape is missing in some runtimes). */
   const attrValue = value => String(value).replace(/["\\]/g, '\\$&');
   const filterControl = selector => document.querySelector(`.catalog-filters ${selector}`);
@@ -198,10 +198,11 @@
   });
   document.addEventListener('click', event => {
     const target = event.target;
-    if (target?.closest?.('[data-search-clear]')) { setSearch(''); return; }
+    if (target?.closest?.('[data-search-clear]')) { setSearch('', true); return; }
     const chipButton = target?.closest?.('[data-filter-chip]');
     if (chipButton) {
-      const raw = chipButton.dataset.filterChip, at = raw.indexOf(':'), key = raw.slice(0, at), value = raw.slice(at + 1);
+      // The key and value travel in their own attributes: an option group named «Talla: EU» holds a colon (2026-10-21).
+      const raw = chipButton.dataset.filterChip, key = chipButton.dataset.key ?? raw.slice(0, raw.indexOf(':')), value = chipButton.dataset.value ?? raw.slice(raw.indexOf(':') + 1);
       const state = readFilterState(), single = key === 'categoria' && chipButton.closest('.catalog-filters__row--categories');
       const current = state.sets[key] || [];
       state.sets[key] = !value ? [] : single ? (current.length === 1 && current[0] === value ? [] : [value]) : current.includes(value) ? current.filter(v => v !== value) : [...current, value];

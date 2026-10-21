@@ -87,7 +87,10 @@
         const current = currentCollection();
         const items = current ? selected.filter((p) => (current.productIds || []).includes(p.id)) : selected;
         const tabs = collections().length ? catalogTabs(current?.slug) : '';
-        const heading = current ? `<h2 class="catalog-group__title">${escape(current.name)}</h2>` : '';
+        // A page with its own title slot (Esencial's coleccion page) shows the name there, not as a second heading (2026-10-21).
+        const titleSlot = document.querySelector('[data-collection-title]');
+        if (titleSlot && current) titleSlot.textContent = current.name;
+        const heading = current && !titleSlot ? `<h2 class="catalog-group__title">${escape(current.name)}</h2>` : '';
         // The shopper is on a specific collection's page here, not a category filter — "en esta
         // categoría" would describe a page that doesn't exist in this layout.
         el.innerHTML = tabs + (items.length ? heading + items.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta colección.</p>');

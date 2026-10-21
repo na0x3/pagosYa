@@ -4348,7 +4348,7 @@
     const groups = filterGroups(all);
     const style = filterStyleFor(all, groups);
     const chosen = key => state.sets[key] || [];
-    const chip = (g, v) => `<button type="button" class="cf-chip"${v.color ? ' data-swatch-chip' : ''} data-filter-chip="${escape(g.key)}:${escape(v.value)}" aria-pressed="${chosen(g.key).includes(v.value)}">${v.color ? `<span data-swatch style="--swatch:${escape(v.color)}" aria-hidden="true"></span>` : ''}<span>${escape(v.text)}</span></button>`;
+    const chip = (g, v) => `<button type="button" class="cf-chip"${v.color ? ' data-swatch-chip' : ''} data-filter-chip="${escape(g.key)}:${escape(v.value)}" data-key="${escape(g.key)}" data-value="${escape(v.value)}" aria-pressed="${chosen(g.key).includes(v.value)}">${v.color ? `<span data-swatch style="--swatch:${escape(v.color)}" aria-hidden="true"></span>` : ''}<span>${escape(v.text)}</span></button>`;
     const range = g => {
       const lo = Math.floor(g.values[0] / 100), hi = Math.ceil(g.values[1] / 100);
       const a = Math.floor((state.precio?.[0] ?? g.values[0]) / 100), b = Math.ceil((state.precio?.[1] ?? g.values[1]) / 100);
@@ -4367,7 +4367,7 @@
       + `<ul class="cf-sort__list" id="cf-sort-list" role="listbox" aria-label="Ordenar" hidden>${SORTS.map(([value, text]) => `<li role="option" tabindex="-1" data-sort="${value}" aria-selected="${state.orden === value}">${escape(text)}</li>`).join('')}</ul></div>`;
     const search = `<div class="catalog-search" role="search"><label class="catalog-search__label" for="catalog-q">Buscar productos</label><span class="catalog-search__icon" aria-hidden="true"></span><input id="catalog-q" type="search" name="q" maxlength="80" autocomplete="off" placeholder="Buscar en la tienda" value="${escape(state.q || '')}">${state.q ? '<button type="button" class="catalog-search__clear" data-search-clear aria-label="Borrar búsqueda">✕</button>' : ''}</div>`;
     const count = `<p class="catalog-filters__count" aria-live="polite">${productsWord(shown)}</p>`;
-    const activeRow = active.length ? `<p class="catalog-filters__active">${active.map(([key, value, text]) => `<button type="button" data-filter-remove="${escape(key)}:${escape(value)}" aria-label="Quitar ${escape(text)}">${escape(text)} <span aria-hidden="true">✕</span></button>`).join('')}<button type="button" class="cf-link" data-filters-clear>Borrar todo</button></p>` : '';
+    const activeRow = active.length ? `<p class="catalog-filters__active">${active.map(([key, value, text]) => `<button type="button" data-filter-remove="${escape(key)}:${escape(value)}" data-key="${escape(key)}" data-value="${escape(value)}" aria-label="Quitar ${escape(text)}">${escape(text)} <span aria-hidden="true">✕</span></button>`).join('')}<button type="button" class="cf-link" data-filters-clear>Borrar todo</button></p>` : '';
     const opener = label => `<button type="button" class="cf-open" data-filters-open aria-expanded="${filtersDrawerOpen}" aria-controls="cf-drawer">${escape(label)}${filterCount ? ` (${filterCount})` : ''}</button>`;
     const drawer = (list, label) => list.length ? `<div class="cf-drawer" id="cf-drawer" data-filters-drawer role="dialog" aria-modal="true" aria-label="${escape(label)}"${filtersDrawerOpen ? '' : ' hidden'}><div class="cf-drawer__panel"><div class="cf-drawer__head"><h2>${escape(label)}</h2><button type="button" class="cf-drawer__close" data-filters-close aria-label="Cerrar">✕</button></div><div class="cf-drawer__body">${list.map(section).join('')}</div><div class="cf-drawer__foot"><button type="button" class="cf-link" data-filters-clear>Borrar todo</button><button type="button" class="cf-done" data-filters-done>Ver ${productsWord(shown)}</button></div></div></div>` : '';
     let inner;
@@ -4375,7 +4375,7 @@
       const cat = groups.find(g => g.key === 'categoria');
       const options = groups.filter(g => g.key !== 'categoria' && (g.kind === 'check' || g.kind === 'swatch'));
       const more = groups.filter(g => g.kind === 'range' || g.kind === 'toggle');
-      const catRow = cat ? `<div class="catalog-filters__row catalog-filters__row--categories" data-filter-group="categoria" role="group" aria-label="${escape(cat.label)}"><button type="button" class="cf-chip cf-chip--plain" data-filter-chip="categoria:" aria-pressed="${!chosen('categoria').length}">Todo</button>${cat.values.map(v => chip(cat, v).replace('class="cf-chip"', 'class="cf-chip cf-chip--plain"')).join('')}</div>` : '';
+      const catRow = cat ? `<div class="catalog-filters__row catalog-filters__row--categories" data-filter-group="categoria" role="group" aria-label="${escape(cat.label)}"><button type="button" class="cf-chip cf-chip--plain" data-filter-chip="categoria:" data-key="categoria" data-value="" aria-pressed="${!chosen('categoria').length}">Todo</button>${cat.values.map(v => chip(cat, v).replace('class="cf-chip"', 'class="cf-chip cf-chip--plain"')).join('')}</div>` : '';
       const optionRow = options.length ? `<div class="catalog-filters__row catalog-filters__row--options">${options.map(g => `<div class="cf-chips" data-filter-group="${escape(g.key)}" role="group" aria-label="${escape(g.label)}">${g.values.map(v => chip(g, v)).join('')}</div>`).join('')}</div>` : '';
       inner = `${search}<div class="catalog-filters__top">${catRow}${sort}</div>${optionRow}<div class="catalog-filters__bar">${count}${more.length ? opener('Más filtros') : ''}</div>${activeRow}${drawer(more, 'Más filtros')}`;
     } else if (style === 'sidebar') {
@@ -4392,7 +4392,7 @@
   }
   /** The search field filters as the shopper types (150 ms after the last key); Esc and ✕ clear it. */
   let searchTimer = 0;
-  const setSearch = value => { clearTimeout(searchTimer); const state = readFilterState(); state.q = String(value || '').slice(0, 80); writeFilterState(state); render(); };
+  const setSearch = (value, focus = false) => { clearTimeout(searchTimer); const state = readFilterState(); state.q = String(value || '').slice(0, 80); writeFilterState(state); render(); if (focus) document.querySelector('.catalog-search input[name=q]')?.focus({ preventScroll: true }); };
   /** A value inside a double-quoted attribute selector (CSS.escape is missing in some runtimes). */
   const attrValue = value => String(value).replace(/["\\]/g, '\\$&');
   const filterControl = selector => document.querySelector(`.catalog-filters ${selector}`);
@@ -4455,10 +4455,11 @@
   });
   document.addEventListener('click', event => {
     const target = event.target;
-    if (target?.closest?.('[data-search-clear]')) { setSearch(''); return; }
+    if (target?.closest?.('[data-search-clear]')) { setSearch('', true); return; }
     const chipButton = target?.closest?.('[data-filter-chip]');
     if (chipButton) {
-      const raw = chipButton.dataset.filterChip, at = raw.indexOf(':'), key = raw.slice(0, at), value = raw.slice(at + 1);
+      // The key and value travel in their own attributes: an option group named «Talla: EU» holds a colon (2026-10-21).
+      const raw = chipButton.dataset.filterChip, key = chipButton.dataset.key ?? raw.slice(0, raw.indexOf(':')), value = chipButton.dataset.value ?? raw.slice(raw.indexOf(':') + 1);
       const state = readFilterState(), single = key === 'categoria' && chipButton.closest('.catalog-filters__row--categories');
       const current = state.sets[key] || [];
       state.sets[key] = !value ? [] : single ? (current.length === 1 && current[0] === value ? [] : [value]) : current.includes(value) ? current.filter(v => v !== value) : [...current, value];
@@ -4588,7 +4589,10 @@
         const current = currentCollection();
         const items = current ? selected.filter((p) => (current.productIds || []).includes(p.id)) : selected;
         const tabs = collections().length ? catalogTabs(current?.slug) : '';
-        const heading = current ? `<h2 class="catalog-group__title">${escape(current.name)}</h2>` : '';
+        // A page with its own title slot (Esencial's coleccion page) shows the name there, not as a second heading (2026-10-21).
+        const titleSlot = document.querySelector('[data-collection-title]');
+        if (titleSlot && current) titleSlot.textContent = current.name;
+        const heading = current && !titleSlot ? `<h2 class="catalog-group__title">${escape(current.name)}</h2>` : '';
         // The shopper is on a specific collection's page here, not a category filter — "en esta
         // categoría" would describe a page that doesn't exist in this layout.
         el.innerHTML = tabs + (items.length ? heading + items.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta colección.</p>');
@@ -5436,7 +5440,11 @@
     '.cf-switch[aria-checked=true] .cf-switch__track::after{transform:translateX(16px)}',
     '.cf-range{display:grid;gap:6px}',
     '.cf-range__values{display:flex;gap:8px;margin:0;font-size:14px}',
-    '.cf-range input[type=range]{width:100%;accent-color:var(--store-foreground,#111);min-height:28px}',
+    '.cf-range input[type=range]{width:100%;min-height:28px;margin:0;background:none;-webkit-appearance:none;appearance:none}',
+    '.cf-range input[type=range]::-webkit-slider-runnable-track{height:2px;background:color-mix(in srgb,currentColor 30%,transparent)}',
+    '.cf-range input[type=range]::-moz-range-track{height:2px;background:color-mix(in srgb,currentColor 30%,transparent)}',
+    '.cf-range input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-8px;border-radius:50%;background:var(--store-foreground,#111);border:2px solid var(--store-background,#fff)}',
+    '.cf-range input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--store-foreground,#111);border:2px solid var(--store-background,#fff)}',
     '.cf-group{display:grid;gap:10px;margin:0}',
     '.cf-group__title{margin:0;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;opacity:.75}',
     '.catalog-filters__active{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0}',
@@ -5853,11 +5861,18 @@
       return;
     }
     // «Borrar filtros» (data-filters-clear="filters") keeps the search; «Borrar todo» clears it too (final review 2026-10-21).
-    if (button.hasAttribute('data-filters-clear')) { const now = readFilterState(); writeFilterState({ orden: now.orden, precio: null, sets: {}, toggles: new Set(), q: button.getAttribute('data-filters-clear') === 'filters' ? now.q : '' }); render(); return; }
+    // After a clear the redraw replaces the button that had the focus: keyboard users land back on the filters (2026-10-21).
+    const searchField = () => document.querySelector('.catalog-search input[name=q]');
+    if (button.hasAttribute('data-filters-clear')) { const now = readFilterState(); writeFilterState({ orden: now.orden, precio: null, sets: {}, toggles: new Set(), q: button.getAttribute('data-filters-clear') === 'filters' ? now.q : '' }); render(); searchField()?.focus({ preventScroll: true }); return; }
     if (button.hasAttribute('data-filter-remove')) {
-      const state = readFilterState(), [key, value] = button.dataset.filterRemove.split(':');
+      const state = readFilterState(), raw = button.dataset.filterRemove;
+      const key = button.dataset.key ?? raw.slice(0, raw.indexOf(':')), value = button.dataset.value ?? raw.slice(raw.indexOf(':') + 1);
+      const index = [...document.querySelectorAll('.catalog-filters__active [data-filter-remove]')].indexOf(button);
       if (key === 'q') state.q = ''; else if (key === 'precio') state.precio = null; else if (value) state.sets[key] = (state.sets[key] || []).filter(v => v !== value); else state.toggles.delete(key);
-      writeFilterState(state); render(); return;
+      writeFilterState(state); render();
+      const left = [...document.querySelectorAll('.catalog-filters__active [data-filter-remove]')];
+      (left[Math.min(index, left.length - 1)] || searchField())?.focus({ preventScroll: true });
+      return;
     }
     if (button.hasAttribute('data-offer-square') && button.closest('[data-pagosya-spotlight]')) {
       // A spotlight's squares choose how many its add button adds (subscriptions are chosen on the product page).
