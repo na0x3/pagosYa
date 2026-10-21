@@ -58,7 +58,7 @@ export function sameAsBundled(photos: Record<string, string>, sources: MasterFil
   }));
 }
 
-export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[] }): SourceProjectFileDto {
+export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[] }, plantillaCopy?: Record<string, string>): SourceProjectFileDto {
   const data = { name: store.name, tagline: store.tagline ?? '', city: store.city ?? '', logo: store.logo ?? '', phone: store.phone ?? '' };
   return {
     path: TEMPLATE_STORE_DATA_PATH,
@@ -67,7 +67,9 @@ export function templateStoreDataFile(store: { name: string; tagline?: string; c
       + `export const photos: Record<string, string> = ${JSON.stringify(photos)};\n`
       + (master ? `export const copy = ${JSON.stringify(master.copy)} as const;\nexport const look = ${JSON.stringify(master.look)} as const;\n`
         + `export const variants: Record<string, string | string[]> = ${JSON.stringify(master.variants ?? { sections: [] })};\n`
-        + `export const sections: Array<{ id: string; title: string; items: Array<{ title: string; text: string }> }> = ${JSON.stringify(master.sections ?? [])};\n` : ''),
+        + `export const sections: Array<{ id: string; title: string; items: Array<{ title: string; text: string }> }> = ${JSON.stringify(master.sections ?? [])};\n` : '')
+      // A converted Plantilla (spec 2026-10-20): every text it shows, filled for the merchant or the template's own defaults.
+      + (plantillaCopy ? `export const copy: Record<string, string> = ${JSON.stringify(plantillaCopy)};\n` : ''),
   };
 }
 
@@ -75,6 +77,17 @@ const dataLine = (content: string, name: string) => {
   const match = content.match(new RegExp(`^export const ${name}(?:: [^=]+)? = (.*?)(?: as const)?;$`, 'm'));
   try { return match ? JSON.parse(match[1]) : undefined; } catch { return undefined; }
 };
+
+/** A converted Plantilla's texts as its store-data says now; {} for any other store. */
+export function readPlantillaCopy(files: readonly SourceProjectFileDto[]): Record<string, string> {
+  const value = dataLine(files.find(file => file.path === TEMPLATE_STORE_DATA_PATH)?.content ?? '', 'copy');
+  return value && typeof value === 'object' && !Array.isArray(value) && Object.values(value).every(text => typeof text === 'string') ? value as Record<string, string> : {};
+}
+
+/** The template's own words for every slot: the demo store and the gallery preview show exactly what it was designed with. */
+export function plantillaDefaults(manifest: Pick<TemplateManifest, 'copy'>): Record<string, string> {
+  return Object.fromEntries((manifest.copy ?? []).map(slot => [slot.key, slot.default]));
+}
 
 /** What a master store's store-data says now (spec 2026-10-19 §3.1): the content edits start from it. */
 export function readMasterState(files: readonly SourceProjectFileDto[]) {

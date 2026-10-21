@@ -16,7 +16,13 @@ export interface TemplateManifest {
   readonly hidden?: boolean;
   /** Present on the master template only: what a new store is filled from. */
   readonly master?: MasterSettings;
+  /** Spec 2026-10-20 Plantillas fill: every visible text of a converted template, as flat slots in store-data `copy`. */
+  readonly copy?: readonly TemplateCopySlot[];
+  /** Shown in the gallery and «Elegir una plantilla»; only converted templates (with `copy`) may be curated. */
+  readonly curated?: boolean;
 }
+export type TemplateCopyRole = 'headline' | 'title' | 'lead' | 'body' | 'cta' | 'label' | 'item' | 'question' | 'answer' | 'quote' | 'name' | 'alt';
+export interface TemplateCopySlot { readonly key: string; readonly role: TemplateCopyRole; readonly default: string; readonly max: number }
 export declare const TEMPLATE_CATEGORIES: readonly TemplateCategory[];
 export declare const PHOTO_ROLES: readonly PhotoRole[];
 export declare const DEMO_MAX_BYTES: number;
