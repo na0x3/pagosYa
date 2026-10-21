@@ -50,3 +50,8 @@ test('the card keeps its proportions in flight, so its words never squash', () =
     assert.equal(sx, sy);
   }
 });
+
+test('Enter sends from the dock; Shift+Enter keeps a new line', () => {
+  const js = readFileSync(new URL('./dashboard.js', import.meta.url), 'utf8');
+  assert.match(js, /document\.getElementById\("workspaceYapiDraft"\)\.addEventListener\("keydown", event => \{\n\s+if \(event\.key !== "Enter" \|\| event\.shiftKey \|\| event\.isComposing\) return;\n\s+event\.preventDefault\(\);\n\s+document\.getElementById\("workspaceYapiForm"\)\.requestSubmit\(\);/);
+});

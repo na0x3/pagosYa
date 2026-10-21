@@ -394,6 +394,12 @@ import { playImmersiveMove } from "/src/immersive.mjs";
     const frame = document.getElementById("merchantStudioFrame");
     if (pendingStudioAction?.storeId === currentStoreId && frame.dataset.ready === "true") frame.contentWindow?.postMessage({ type: "pagosya:studio-action", storeId: currentStoreId, ...pendingStudioAction }, location.origin);
   }
+  // The dock is one line: Enter sends, Shift+Enter (or an IME composition) keeps typing.
+  document.getElementById("workspaceYapiDraft").addEventListener("keydown", event => {
+    if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    document.getElementById("workspaceYapiForm").requestSubmit();
+  });
   document.getElementById("workspaceYapiForm").addEventListener("submit", event => {
     event.preventDefault();
     const field = document.getElementById("workspaceYapiDraft");
