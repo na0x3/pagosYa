@@ -317,7 +317,7 @@ export class SourceChatService {
     const photos = [...new Set([...Object.values(state.photos).filter(Boolean), ...(recent ?? []).map(asset => asset.url)])].slice(0, 8);
     const read = await this.dialogue.fillMaster(merchantId, { storeId, storeName: state.store?.name ?? '', what: '', story: '', city: state.store?.city ?? '', products: [], photos,
       palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: manifest.master!.sections,
-      current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? ''), menu: currentMenu }, request, menuTargets });
+      current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? ''), menu: currentMenu, featureCopy: ((state.features ?? {}) as { copy?: object }).copy ?? {} }, request, menuTargets });
     // The merchant's clear words win over a read that missed them: «quiero un menú desplegable» turns it on, «quita…» off.
     const asked = instructionAsksStoreMenu(request);
     const filled = read ? masterFillFromRead(read, photos, true) : null;

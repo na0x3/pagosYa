@@ -15,7 +15,8 @@ const sixColours = ['Negro', 'Blanco', 'Rojo', 'Azul', 'Verde', 'Beige'].map(nam
 describe('featureFacts and eligibility', () => {
   it('reads lifestyle photos (hero excluded, each once), categories with products, products and mapped colours', () => {
     const facts = featureFacts(data({ items: [...data().items, item('d', 'c2', ['https://x/hero.jpg'], [...sixColours, variant('Fucsia'), variant('M', 'Talla')])] }), photos, 'La Paz');
-    expect(facts.lifestyle).toEqual(['https://x/story.jpg', 'https://x/a.jpg', 'https://x/b.jpg']);
+    // The story photo goes last: the story section right beside these sections already shows it (final review 2026-10-21).
+    expect(facts.lifestyle).toEqual(['https://x/a.jpg', 'https://x/b.jpg', 'https://x/story.jpg']);
     expect(facts.categories).toEqual([{ id: 'C1', name: 'Vestidos' }, { id: 'c2', name: 'Faldas' }]);
     expect(facts.productIds).toEqual(['a', 'b', 'c', 'd']);
     expect(facts.colours.map(c => c.name)).toEqual(['Negro', 'Blanco', 'Rojo', 'Azul', 'Verde', 'Beige']);
@@ -60,8 +61,8 @@ describe('buildFeatures', () => {
   it('duo: two photos, two categories, the fill words or the fallbacks', () => {
     const built = buildFeatures(['duo'], facts, { duoTitles: ['Novias', ''], duoCtas: ['', 'Ver faldas'] }, fallback) as any;
     expect(built.duo.halves).toEqual([
-      { photo: 'https://x/story.jpg', title: 'Novias', cta: 'Ver ahora', href: 'productos.html?f_categoria=c1' },
-      { photo: 'https://x/a.jpg', title: 'Faldas', cta: 'Ver faldas', href: 'productos.html?f_categoria=c2' },
+      { photo: 'https://x/a.jpg', title: 'Novias', cta: 'Ver ahora', href: 'productos.html?f_categoria=c1' },
+      { photo: 'https://x/b.jpg', title: 'Faldas', cta: 'Ver faldas', href: 'productos.html?f_categoria=c2' },
     ]);
   });
   it('explore, capsule, origin and palette carry their data and never an empty text', () => {
@@ -96,3 +97,15 @@ it('the swatch table is the kit\'s', () => {
   const table = Function(`return ${kit.match(/const swatchColors = (\{[^;]*\});/)![1]}`)();
   expect(FEATURE_SWATCHES).toEqual(table);
 });
+
+it('the same upload as a path and as a full URL counts once (final review 2026-10-21)', () => {
+  const facts = featureFacts(data(), { hero: '', story: '/v1/uploads/aaaaaaaa-0000-0000-0000-000000000001.jpg', p1: 'https://api.test/v1/uploads/aaaaaaaa-0000-0000-0000-000000000001.jpg' }, '');
+  expect(facts.lifestyle).toHaveLength(1);
+});
+
+it('the built sections keep the words they were given, so an edit can show them back (final review 2026-10-21)', () => {
+  const facts = featureFacts(data(), photos, '');
+  const built = buildFeatures(['duo'], facts, { duoTitles: ['Verano', ''] }, { productsTitle: 'P', storyTitle: 'S', subcopy: 'C' }) as any;
+  expect(built.copy).toEqual({ duoTitles: ['Verano', ''] });
+});
+

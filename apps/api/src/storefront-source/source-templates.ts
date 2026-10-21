@@ -223,12 +223,18 @@ export function withFeatureSlots<F extends { path: string; content: string }>(fi
         .replace(FOOTER_ANCHOR, `const band = footer === 'column' && photos.hero ? { ['--es-footer-photo' as string]: \`url("\${photos.hero}")\` } as Record<string, string> : undefined;\n${indent}return <footer className="es-footer" data-es-footer={footer} style={band}>`) };
     }
     if (file.path !== 'components/home.tsx' || file.content.includes('FeatureSlot') || !FEATURE_ANCHORS.every(([anchor]) => file.content.split(anchor).length === 2)) return file;
-    let content = file.content;
+    // The import goes after the home's last import, whatever its quotes or line breaks; a home with none it can follow is left
+    // alone, so slots never land without their import (final review 2026-10-21).
+    const code = file.content.search(/^export\b/m);
+    const imports = [...file.content.matchAll(/^(?:import\b[^\n]*|\}[^\n]*)\bfrom\s+['"][^'"\n]+['"];?[ \t]*$/gm)].filter(match => code < 0 || match.index! < code);
+    const last = imports.at(-1);
+    if (!last) return file;
+    const afterImports = last.index! + last[0].length;
+    let content = `${file.content.slice(0, afterImports)}\nimport { FeatureSlot } from './features';${file.content.slice(afterImports)}`;
     for (const [anchor, slot] of FEATURE_ANCHORS) {
       const at = content.indexOf(anchor), indent = content.slice(content.lastIndexOf('\n', at) + 1, at);
       content = `${content.slice(0, at)}<FeatureSlot at="${slot}" />\n\n${indent}${content.slice(at)}`;
     }
-    content = content.replace(/^(import [^\n]*from '\.\/store-data';\n)/m, `$1import { FeatureSlot } from './features';\n`);
     return { ...file, content };
   });
   return component && !out.some(file => file.path === component.path) && out.some(file => file.path === 'components/home.tsx' && file.content.includes('FeatureSlot'))
@@ -263,13 +269,16 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   if (featureIds.length) {
     const asked = (change.variants as Record<string, unknown> | undefined)?.feature;
     const named = asked === undefined ? undefined : (Array.isArray(asked) ? asked : String(asked).split(',')).map(id => String(id).trim()).filter(id => featureIds.includes(id));
-    if (named || variants.feature === undefined) {
+    // A words-only change rebuilds the rolled sections with the new words over the ones they had (final review 2026-10-21).
+    if (named || variants.feature === undefined || change.featureCopy) {
       const config = readConfigFile(files);
       const facts = featureFacts(config.data ?? {}, photos, state.store?.city ?? '');
       const fashion = variants.cards === 'fashion';
-      const ids = named ?? rollFeatures({ seed: String(config.slug || state.store?.name || ''), eligible: eligibleFeatures(facts, fashion), fashion, exclude: [] });
+      const ids = named ?? (variants.feature !== undefined ? String(variants.feature).split(',').filter(Boolean)
+        : rollFeatures({ seed: String(config.slug || state.store?.name || ''), eligible: eligibleFeatures(facts, fashion), fashion, exclude: [] }));
       variants.feature = ids.join(',');
-      features = buildFeatures(ids, facts, change.featureCopy ?? {}, { productsTitle: copy.productsTitle, storyTitle: copy.storyTitle, subcopy: copy.subcopy });
+      const words = { ...(((state.features ?? {}) as { copy?: object }).copy ?? {}), ...(change.featureCopy ?? {}) };
+      features = buildFeatures(ids, facts, words, { productsTitle: copy.productsTitle, storyTitle: copy.storyTitle, subcopy: copy.subcopy });
     }
   }
   // Sort & filter styles spec 2026-10-21: a fashion store from before the filters part gets the John Smedley chip rows.

@@ -50,3 +50,18 @@ describe('explore rail', () => {
     expect(rail.hidden).toBe(true);
   });
 });
+
+/** Final review 2026-10-21: a section's category link works on a store too small for the filters. */
+it('a catalogue under 6 products still honours a category link', async () => {
+  const { JSDOM: Dom, VirtualConsole: Console } = createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom');
+  const dom = new Dom('<html><head></head><body><main data-pagosya-catalog data-catalog-full></main><section data-pagosya-cart></section></body></html>', { url: 'https://shop.test/productos.html?f_categoria=c2', runScripts: 'outside-only', virtualConsole: new Console() });
+  const w = dom.window; windows.push(w);
+  w.HTMLElement.prototype.scrollIntoView = () => {};
+  w.matchMedia = () => ({ matches: true });
+  const store = { storeName: 'Noa', checkoutMode: 'payment', categories: [{ id: 'c1', name: 'Vestidos' }, { id: 'c2', name: 'Faldas' }], items };
+  w.PAGOSYA_CONFIG = { slug: 'noa', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', productPage: 'product.html', data: store };
+  w.fetch = jest.fn(async () => ({ ok: true, json: async () => store }));
+  w.eval(commerce);
+  await tick();
+  expect([...w.document.querySelectorAll('[data-pagosya-catalog] .menu-item')].map((card: any) => card.dataset.productId)).toEqual(['c', 'd']);
+});

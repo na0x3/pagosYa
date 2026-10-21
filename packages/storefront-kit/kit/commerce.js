@@ -4622,7 +4622,9 @@
       } else {
         // Also covers `sections` with no collections yet: a single "Más productos" group holding
         // the whole catalog isn't an arrangement, so it falls back to the same flat grid as `all`.
-        el.innerHTML = selected.length ? selected.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
+        // A full catalogue too small for the filters still honours a link's category or colour (final review 2026-10-21).
+        const shown = el.hasAttribute('data-catalog-full') ? applyFilters(selected, readFilterState()) : selected;
+        el.innerHTML = shown.length ? shown.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
       markCardDesign(el);

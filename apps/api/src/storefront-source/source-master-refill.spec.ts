@@ -240,8 +240,9 @@ describe('features on a master store', () => {
     const files = refillMasterFiles(withData(), featureManifest, { variants: { feature: 'duo' } as never, featureCopy: { duoTitles: ['Novias', ''] } });
     const state = readMasterState(files);
     expect(state.variants?.feature).toBe('duo');
-    expect((state.features as any).duo.halves[0]).toMatchObject({ title: 'Novias', href: 'productos.html?f_categoria=c1', photo: 'https://x/s.jpg' });
-    expect((state.features as any).duo.halves[1]).toMatchObject({ title: 'Faldas', photo: 'https://x/p1.jpg' });
+    // The story photo is used last (final review 2026-10-21).
+    expect((state.features as any).duo.halves[0]).toMatchObject({ title: 'Novias', href: 'productos.html?f_categoria=c1', photo: 'https://x/p1.jpg' });
+    expect((state.features as any).duo.halves[1]).toMatchObject({ title: 'Faldas', photo: 'https://x/s.jpg' });
   });
   it('a list of sections is taken as given; a refill that names none keeps them', () => {
     const files = refillMasterFiles(withData(), featureManifest, { variants: { feature: ['duo', 'origin'] } as never });
@@ -291,5 +292,35 @@ describe('feature slots on an older home', () => {
     expect(css).toContain('#productos .es-grid[data-es-grid="side-title"][data-pagosya-catalog]');
     expect(css.split('/* John Smedley sections end */')).toHaveLength(2);
   });
+  it('a home whose store-data import is double-quoted or split over lines still gets the import (final review 2026-10-21)', () => {
+    for (const importLine of [`import { copy, photos, sections, store } from "./store-data";\n`, `import {\n  copy,\n  photos,\n  sections,\n} from './store-data'\n`]) {
+      const home = anchors.replace(`import { copy, photos, sections, store } from './store-data';\n`, importLine);
+      const patched = refillMasterFiles(older(home), manifest, { copy: { headline: 'Otra' } }).find(file => file.path === 'components/home.tsx')!.content;
+      expect(patched).toContain("import { FeatureSlot } from './features';");
+      expect(patched.indexOf("import { FeatureSlot }")).toBeLessThan(patched.indexOf('export default'));
+    }
+  });
+  it('a home with no import it can follow is left alone rather than given slots without one', () => {
+    const home = anchors.replace(`import { copy, photos, sections, store } from './store-data';\n`, '');
+    expect(refillMasterFiles(older(home), manifest, { copy: { headline: 'Otra' } }).find(file => file.path === 'components/home.tsx')!.content).toBe(home);
+  });
+});
+
+/** Final review 2026-10-21: an edit of the sections' words reaches the store. */
+it('a words-only change rebuilds the rolled sections with the new words', () => {
+  const featureManifest = { ...manifest, master: { ...master, variants: { feature: ['duo', 'explore', 'capsule', 'origin', 'palette'] } } } as unknown as TemplateManifest;
+  const base = storeFiles().map(file => file.path === 'config.js' ? { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ dna: {}, slug: 'x', data: { categories: [{ id: 'c1', name: 'Vestidos' }, { id: 'c2', name: 'Faldas' }], items: [{ id: 'a', categoryId: 'c1', imageUrls: [] }, { id: 'b', categoryId: 'c2', imageUrls: [] }] } })};\n` } : file)
+    .map(file => file.path === 'components/store-data.tsx' ? { ...file, content: file.content.replace('{"hero":"https://x/h.jpg","story":""}', '{"hero":"https://x/h.jpg","story":"https://x/s.jpg","p1":"https://x/p1.jpg"}') } : file);
+  const rolled = refillMasterFiles(base, featureManifest, { variants: { feature: 'duo' } as never });
+  const edited = refillMasterFiles(rolled, featureManifest, { featureCopy: { duoTitles: ['Verano', ''] } });
+  expect((readMasterState(edited).features as any).duo.halves[0].title).toBe('Verano');
+  expect(readMasterState(edited).variants?.feature).toBe('duo');
+});
+
+/** Final review 2026-10-21: the boxed header keeps the store menu's panels full width, and an empty rail is hidden. */
+it('the sections CSS keeps menu panels full width under the boxed header and hides empty rails', () => {
+  const css = templateSourceFiles('esencial').find(file => file.path === 'styles/globals.css')!.content;
+  expect(css).toMatch(/\.es-header\[data-es-header="boxed"\] \.pym-panel\{[^}]*width:100vw/);
+  expect(css).toContain('.es-explore__rail[hidden],.es-capsule__cards[hidden]{display:none}');
 });
 

@@ -169,7 +169,7 @@ const masterFillSchema = (palettes: string[], fonts: string[], variantIds: strin
   },
 });
 export type MasterFillInput = { storeId: string; model?: SourceModelChoice; storeName: string; brand?: { voice?: string; headlineExamples?: string; avoid?: string }; what: string; story: string; city: string; products: string[]; photos: string[];
-  palettes: Array<{ id: string; name: string }>; fonts: Array<{ id: string; name: string }>; variantCatalogue?: Record<string, readonly string[]>; sectionCatalogue?: readonly string[]; current?: { copy: MasterCopy; look: MasterLook; heroPhoto?: number; storyPhoto?: number; menu?: StoreMenu | null }; request?: string;
+  palettes: Array<{ id: string; name: string }>; fonts: Array<{ id: string; name: string }>; variantCatalogue?: Record<string, readonly string[]>; sectionCatalogue?: readonly string[]; current?: { copy: MasterCopy; look: MasterLook; heroPhoto?: number; storyPhoto?: number; menu?: StoreMenu | null; featureCopy?: object }; request?: string;
   /** Dropdown menu spec 2026-10-21: what the menu may link (the schema's only allowed targets). */
   menuTargets?: Array<{ target: string; label: string }> };
 

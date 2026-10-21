@@ -2,6 +2,7 @@
  *  home sections a store can have, the dice roll (0–2, seeded by the store), and each section's data — photos, links, the
  *  category and colour lists and the words — written to store-data as `features` and drawn by components/features.tsx. */
 import { createHash } from 'node:crypto';
+import { uploadPath } from './source-product-photos';
 
 export const FEATURE_IDS = ['duo', 'explore', 'capsule', 'origin', 'palette'] as const;
 export type FeatureId = typeof FEATURE_IDS[number];
@@ -20,7 +21,14 @@ type StoreData = { categories?: Array<{ id: string; name: string }>; items?: Arr
 
 export function featureFacts(data: StoreData, photos: Record<string, string>, city: string): FeatureFacts {
   const hero = photos.hero || '';
-  const lifestyle = [...new Set([photos.story, photos.p1, photos.p2, photos.p3, photos.p4].filter((src): src is string => Boolean(src) && src !== hero))];
+  // The story photo goes last: the story section beside these sections already shows it; one upload counts once, whether it
+  // is a path or a full URL (final review 2026-10-21).
+  const seen = new Set<string>([hero ? uploadPath(hero) : '']);
+  const lifestyle = [photos.p1, photos.p2, photos.p3, photos.p4, photos.story].filter((src): src is string => {
+    if (!src || seen.has(uploadPath(src))) return false;
+    seen.add(uploadPath(src));
+    return true;
+  });
   const items = data.items ?? [];
   const categories = (data.categories ?? []).filter(category => items.some(item => item.categoryId === category.id)).map(({ id, name }) => ({ id, name }));
   const colours: FeatureFacts['colours'] = [];
@@ -82,7 +90,8 @@ export function buildFeatures(ids: readonly string[], facts: FeatureFacts, copy:
     if (photo) used.add(photo);
     return photo ?? '';
   };
-  const out: Record<string, unknown> = {};
+  // The words it was given ride along, so an edit can show them back to the fill call (final review 2026-10-21).
+  const out: Record<string, unknown> = { copy };
   for (const id of FEATURE_IDS.filter(feature => ids.includes(feature))) {
     if (id === 'duo') out.duo = { halves: [0, 1].map(index => {
       const category = facts.categories[index];
