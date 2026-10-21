@@ -77,3 +77,11 @@ test('the inventory import toggle is a pill', () => {
 test('plain links in the content are ink with a soft underline, not browser blue', () => {
   assert.match(css(), /body\.is-logged-in \.dashboard-workspace a:not\(\[class\]\) \{ color: var\(--pg-text\);/);
 });
+
+test('motion: pages and cards rise in slowly, staggered, and stay still with reduced motion', () => {
+  const s = css();
+  assert.match(s, /@keyframes pm-enter \{ from \{ opacity: 0; transform: translateY\(8px\); \} to \{ opacity: 1; transform: none; \} \}/);
+  assert.match(s, /body\.is-logged-in \.page-entering \{ animation: pm-enter 520ms var\(--pm-ease\) both; \}/);
+  assert.match(s, /:nth-child\(5\) \{ animation-delay: 160ms; \}/);
+  assert.match(s, /@media \(prefers-reduced-motion: reduce\) \{\n\s+body\.is-logged-in :is\(\.page-entering, \.page-entering \.panel, \.page-entering \.card, \.page-entering \.overview-kpi\) \{ animation: none; \}/);
+});
