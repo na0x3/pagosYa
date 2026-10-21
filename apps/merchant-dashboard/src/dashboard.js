@@ -400,6 +400,7 @@ import { sectionOf, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-s
      Studio hasta 2026-10-13: quien todavía las pida (un Studio sin recompilar, un enlace guardado) llega a Correos. */
   function selectMarketingTab(tab) {
     if (tab === "templates" || tab === "flows") tab = "emails";
+    if (tab === "logs" && !fullNavOn()) tab = "emails";
     document.getElementById("marketingTabs").dataset.tab = tab;
     document.querySelectorAll("[data-marketing-tab]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.marketingTab === tab)));
     document.getElementById("marketingPromotions").hidden = tab !== "promotions";
@@ -411,6 +412,17 @@ import { sectionOf, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-s
     const frame = document.getElementById("storeMarketingFrame");
     if (frame.contentWindow?.pagosyaStudioCanLeave && !frame.contentWindow.pagosyaStudioCanLeave()) return;
     selectMarketingTab(button.dataset.marketingTab); syncStoreResourceViews("marketing");
+  });
+  document.getElementById("sectionTabs").addEventListener("click", event => {
+    const pill = event.target.closest("[data-section-view]"); if (!pill) return;
+    const view = pill.dataset.sectionView, tab = pill.dataset.sectionMarketingTab;
+    if (view === "marketing") {
+      const frame = document.getElementById("storeMarketingFrame");
+      if (frame.contentWindow?.pagosyaStudioCanLeave && !frame.contentWindow.pagosyaStudioCanLeave()) return;
+    } else if (document.body.dataset.dashboardView === "workspace" && !canLeaveMerchantStudio()) return;
+    if (tab) selectMarketingTab(tab);
+    history.pushState(null, "", `#dashboard-${view}`);
+    setDashboardView(view);
   });
   function syncStoreResourceViews(view) {
     for (const [kind, id] of [["media", "storeMediaFrame"], ["templates", "storeTemplatesFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
@@ -518,9 +530,10 @@ import { sectionOf, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-s
     }
   });
 
+  let plantillasOn = false;
   function renderSectionPills(section, activeTab) {
     const host = document.getElementById("sectionTabs");
-    host.innerHTML = renderSectionTabs(section, activeTab, { fullNav: fullNavOn() });
+    host.innerHTML = renderSectionTabs(section, activeTab, { fullNav: fullNavOn(), hiddenViews: plantillasOn ? new Set() : new Set(["templates"]) });
     host.hidden = !host.innerHTML;
   }
 
@@ -682,7 +695,6 @@ import { sectionOf, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-s
 
   let onboardingEnabled = false;
   let onboardingChecked = false;
-  let plantillasOn = false;
   let onboardingResumable = null;
   // resume: the unfinished store to continue, or null for a fresh run that creates a new store at step 1.
   function openWalkthrough(resume = null) {
@@ -735,7 +747,7 @@ import { sectionOf, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-s
     const [onboarding, templateSettings] = await Promise.all([api("/stores/onboarding").catch(() => ({ enabled: false, store: null })), api("/store-templates/settings").catch(() => ({ plantillas: false }))]);
     // Spec 2026-10-20 Plantillas fill: the Plantillas menu and «Elegir una plantilla» come back with the API flag.
     plantillasOn = templateSettings?.plantillas === true;
-    document.getElementById("dashboardTemplatesNav").hidden = !plantillasOn;
+    setDashboardView(document.body.dataset.dashboardView, { remember: false });
     onboardingEnabled = Boolean(onboarding.enabled);
     onboardingResumable = onboarding.store || null;
     const entry = walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, resumable: Boolean(onboardingResumable), intent: "boot" });

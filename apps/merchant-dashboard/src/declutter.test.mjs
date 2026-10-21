@@ -33,3 +33,13 @@ test('the router resolves hidden views and titles by section', () => {
   assert.doesNotMatch(js, /DASHBOARD_VIEW_COPY/);
   assert.doesNotMatch(js, /syncNavGroups/);
 });
+
+test('pills switch views and marketing tabs; the old marketing tab bar is hidden', () => {
+  assert.match(js, /const pill = event\.target\.closest\("\[data-section-view\]"\);/);
+  assert.match(js, /if \(tab\) selectMarketingTab\(tab\);/);
+  assert.match(html, /<nav class="marketing-tabs" id="marketingTabs" aria-label="Herramientas de marketing" data-tab="emails" hidden>/);
+});
+
+test('a hidden marketing tab falls back to Correos', () => {
+  assert.match(js, /if \(tab === "logs" && !fullNavOn\(\)\) tab = "emails";/);
+});

@@ -388,3 +388,8 @@ body.is-logged-in[data-dashboard-view="workspace"] .dashboard-sidebar.is-store-n
 /* Spec 2026-10-21 A2: screens and fields YAPI makes redundant stay in the code, hidden unless DASHBOARD_FULL_NAV=1. */
 html:not([data-full-nav]) [data-full-nav-only] { display: none !important; }
 html[data-full-nav] .ask-yapi { display: none !important; }
+.section-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 20px; }
+.section-tab { border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--pg-text-muted); font: inherit; font-size: 14px; padding: 7px 14px; cursor: pointer; transition: background-color .2s ease, color .2s ease; }
+.section-tab:hover { background: var(--pg-surface-raised); color: var(--pg-text); }
+.section-tab[aria-current="page"] { background: var(--pg-surface); border-color: var(--pg-border); color: var(--pg-text); box-shadow: var(--calm-shadow); }
+.section-tab:focus-visible { outline: 2px solid var(--pg-focus-ring); outline-offset: 2px; }
