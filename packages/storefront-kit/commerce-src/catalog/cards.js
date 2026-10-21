@@ -181,7 +181,7 @@
   if (typeof addEventListener === 'function') addEventListener('resize', () => fitCards(), { passive: true });
   const BAG_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8.5h13l-1 11.5h-11z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></svg>';
   // ---- Fashion card (spec 2026-10-21 fashion look, the John Smedley card) ----
-  // A tinted photo panel with the merchant's label, the name and price on one row, «N colores», colour bars on hover. No add
+  // A tinted photo panel with one tag, the name and price on one row, «N colores», colour bars on hover. No add
   // button: clothing needs a size first, so the whole card opens the product.
   const COLOUR_GROUP = /^(colou?r|colores|tono)$/;
   const SIZE_GROUP = /^(tallas?|size|medida)$/;
@@ -199,7 +199,9 @@
     });
   }
   function fashionCardMarkup(p, image) {
-    const colours = fashionColours(p), label = typeof p.cardEyebrow === 'string' ? p.cardEyebrow.trim().slice(0, 28) : '';
+    // Only a tag rides on the photo (owner 2026-10-21): sold out, the merchant's badge, best seller, the sale or «Nuevo» — never a
+    // descriptive phrase.
+    const colours = fashionColours(p), tag = limit(p) === 0 ? 'Agotado' : productBadge(p);
     const line = colours.length > 1 ? `${colours.length} colores` : colours[0]?.value || '';
     const bars = colours.filter(colour => colour.color && colour.photo);
     const details = config.productPage
@@ -208,7 +210,7 @@
     const photo = image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, '(max-width: 820px) 50vw, 33vw')} alt="${escape(p.name)}" loading="lazy" decoding="async" />` : '';
     const barsHtml = bars.length > 1 ? `<div class="menu-item__bars">${bars.map(bar => `<button type="button" data-card-swatch="${escape(bar.photo)}" aria-label="Ver en ${escape(bar.value)}" aria-pressed="false" style="--swatch:${escape(bar.color)}"></button>`).join('')}</div>` : '';
     const priceText = isMembership(p) ? membershipPriceText(p) : money(price(p), p.currency);
-    return `<article class="menu-item" data-product-id="${escape(p.id)}" data-anatomy="fashion">${details}<div class="menu-item__panel">${photo}${label ? `<p class="menu-item__label">${escape(label)}</p>` : ''}${barsHtml}</div><div class="menu-item__row"><h3 class="menu-item__name">${escape(p.name)}</h3><p class="menu-item__price">${escape(priceText)}</p></div>${line ? `<p class="menu-item__colors">${escape(line)}</p>` : ''}</article>`;
+    return `<article class="menu-item" data-product-id="${escape(p.id)}" data-anatomy="fashion">${details}<div class="menu-item__panel">${photo}${tag ? `<p class="menu-item__tag">${escape(tag)}</p>` : ''}${barsHtml}</div><div class="menu-item__row"><h3 class="menu-item__name">${escape(p.name)}</h3><p class="menu-item__price">${escape(priceText)}${cardOriginalMarkup(p)}</p></div>${line ? `<p class="menu-item__colors">${escape(line)}</p>` : ''}</article>`;
   }
   // Hovering a bar shows that colour's photo; leaving the card brings the first photo back.
   document.addEventListener('pointerover', event => {

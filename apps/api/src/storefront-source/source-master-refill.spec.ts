@@ -117,7 +117,7 @@ describe('fashion look', () => {
     expect(file(files, 'styles/globals.css')).toContain('.es-pdp[data-es-pdp="fashion"]');
     expect(file(files, 'styles/globals.css')).toContain('body{margin:0}');
     const product = file(files, 'components/product.tsx');
-    expect(product).toContain('name="category"');
+    expect(product).toContain("{variant('pdp', 'gallery-left') === 'fashion' ? <KitSlot kind=\"product\" name=\"category\"");
     expect(product).toContain('href="index.html#sizes"');
     expect(product).toContain("import { sections } from './store-data';");
     // Twice is the same as once.

@@ -40,8 +40,8 @@ describe('product page writer', () => {
     expect(page.blocks.every(block => block.origin === 'yapi')).toBe(true);
   });
   it('writes nothing when the model returns nothing usable', () => {
-    expect(writtenPage({ highlights: [], features: null, story: null, versus: null, faq: null, details: [] }, facts, [])).toEqual({ highlights: [], blocks: [], eyebrow: null });
-    expect(writtenPage('not json', facts, [])).toEqual({ highlights: [], blocks: [], eyebrow: null });
+    expect(writtenPage({ highlights: [], features: null, story: null, versus: null, faq: null, details: [] }, facts, [])).toEqual({ highlights: [], blocks: [] });
+    expect(writtenPage('not json', facts, [])).toEqual({ highlights: [], blocks: [] });
   });
   it('fills an empty product, skips a filled one automatically, and on regenerate keeps every merchant row', () => {
     const page = writtenPage(raw, facts, [photo]);
@@ -77,36 +77,19 @@ describe('the product page in the store voice (spec 2026-10-14)', () => {
   });
 });
 
-describe('card eyebrow (showcase commerce 2026-10-19)', () => {
-  it('asks for a short card phrase and keeps it only when it sticks to the facts', async () => {
+describe('card phrase (owner 2026-10-21: photos carry tags only)', () => {
+  it('YAPI never writes a card phrase: not in the schema, not in the prompt, and an answer\'s phrase is ignored', async () => {
     const { PRODUCT_PAGE_SCHEMA } = await import('./product-page-writer');
-    expect((PRODUCT_PAGE_SCHEMA.properties as any).eyebrow).toEqual({ type: ['string', 'null'], maxLength: 28 });
-    expect(PRODUCT_PAGE_SCHEMA.required).toContain('eyebrow');
-    expect(productPagePrompt(facts, 'Dacho')).toContain('eyebrow');
-    expect(writtenPage({ eyebrow: ' Para el trabajo ', highlights: [] }, facts, []).eyebrow).toBe('Para el trabajo');
-    expect(writtenPage({ eyebrow: 'Frío 48 horas', highlights: [] }, facts, []).eyebrow).toBeNull();
-    expect(writtenPage({ highlights: [] }, facts, []).eyebrow).toBeNull();
+    expect((PRODUCT_PAGE_SCHEMA.properties as any).eyebrow).toBeUndefined();
+    expect(PRODUCT_PAGE_SCHEMA.required).not.toContain('eyebrow');
+    expect(productPagePrompt(facts, 'Dacho')).not.toContain('eyebrow');
+    expect(writtenPage({ eyebrow: 'Para el trabajo', highlights: [] }, facts, [])).not.toHaveProperty('eyebrow');
   });
 });
 
 describe('cut phrases (live 2026-10-19)', () => {
-  it('drops a highlight or card phrase the length cap cut mid-way, keeps whole ones', () => {
+  it('drops a highlight the length cap cut mid-way, keeps whole ones', () => {
     const page = writtenPage({ highlights: [{ icon: 'snowflake', label: 'Conversaciones de los', detail: null }, { icon: 'snowflake', label: 'Libro corto', detail: null }], eyebrow: 'Para leer con' }, facts, []);
     expect(page.highlights.map(row => row.label)).toEqual(['Libro corto']);
-    expect(page.eyebrow).toBeNull();
-    expect(writtenPage({ highlights: [], eyebrow: 'Para el trabajo' }, facts, []).eyebrow).toBe('Para el trabajo');
   });
-});
-
-it('a fashion store asks for a fit, fabric or edition label of at most 3 words', () => {
-  const prompt = productPagePrompt({ name: 'Carden', description: 'Jersey de cachemira', specifications: [], tags: [], category: 'Jerseys' } as any, 'Noa', undefined, { fashion: true });
-  expect(prompt).toMatch(/máximo 3 palabras/);
-  expect(productPagePrompt({ name: 'Café', description: null, specifications: [], tags: [], category: null } as any, 'Luz')).not.toMatch(/máximo 3 palabras/);
-});
-
-it('a YAPI label over 3 words is dropped for a fashion store, kept for others', () => {
-  const facts = { name: 'Carden', description: 'Jersey', specifications: [], tags: [], category: null } as any;
-  expect(writtenPage({ highlights: [], eyebrow: 'Corte holgado inglés clásico' }, facts, [], { fashion: true }).eyebrow).toBeNull();
-  expect(writtenPage({ highlights: [], eyebrow: 'Corte holgado' }, facts, [], { fashion: true }).eyebrow).toBe('Corte holgado');
-  expect(writtenPage({ highlights: [], eyebrow: 'Corte holgado inglés clásico' }, facts, []).eyebrow).toBe('Corte holgado inglés clásico');
 });

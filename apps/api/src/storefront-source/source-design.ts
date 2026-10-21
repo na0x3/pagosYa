@@ -7,7 +7,7 @@ import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { SOURCE_VISUAL_ASSET_DIRECTION } from './source-visual-assets';
 import { SOURCE_SCROLL_FEELS, type SourceScrollFeel } from './source-motion';
 import { fitProse, normalizeSourceSignature, type SourceSignature } from './source-signature';
-import { normalizeDna, SOURCE_DNA_SCHEMA, SOURCE_PRODUCT_PAGE_STYLES, type SourceDesignDna, type SourceProductPageStyle } from './source-dna';
+import { normalizeDna, SOURCE_DNA_SCHEMA, SOURCE_MODEL_PRODUCT_PAGE_STYLES, SOURCE_PRODUCT_PAGE_STYLES, type SourceDesignDna, type SourceProductPageStyle } from './source-dna';
 
 export const SOURCE_DESIGN_FILE = 'design-direction.json';
 export const SOURCE_PRODUCT_PRESENTATION_DIRECTION = `The platform renders every product page and quick view inside the empty data-pagosya-product-page mount, in the editorial, dense, image-led, story-led or conversion presentation chosen by layout.productPage. Image-led uses a dominant gallery beside a compact purchase column; dense separates specifications from a purchase panel; story-led puts the real product title and introduction above the gallery, with details and purchasing below. Conversion puts icon tiles beside the photo, check-marked benefits and the price in the buy button. Editorial keeps a balanced image/details composition. Choose the structure for the business rather than giving every store the same split. Photo-less pages retain a deliberate title/details and purchase hierarchy. Do not write CSS for [data-pagosya-product], [data-pagosya-product-page] or any .product-detail__ class; the runtime ignores those rules. The product page takes its identity from the tokens in :root (background, foreground, accent, accent-foreground, surface, border, radius, body-font, heading-font), so choose them with the product page in mind: the accent fills the purchase button and must contrast with accent-foreground, and heading-font sets the product title. Keep the header and footer of product.html consistent with the homepage. The page's own identity (swatch shape, gallery layout, block frames, divider, entrance) comes from the concept's dna.productCard and dna.productCss described in the design DNA: never restyle the product page in your own CSS. Header search and cart actions are icon-only buttons with accessible names, and the cart shows its count in a small badge. Never place a second static product configurator beside the mount, and never pad a product with fabricated reviews, certifications, benefits, shipping guarantees or nutrition claims. On local edits apply this guidance only to the requested scope.`;
@@ -37,7 +37,7 @@ export const sourceDesignSchema = {
       type: 'object', additionalProperties: false, required: [...fields, 'layout', 'story', 'motion', 'dna', 'composition'],
       properties: { ...Object.fromEntries(fields.map(field => [field, { type: 'string', minLength: 1, maxLength: field === 'name' ? 80 : 500 }])),
         layout: { type: 'object', additionalProperties: false, required: ['sections', 'catalogSection', 'standaloneIntro', 'productsInOpening', 'productPage'], properties: {
-          productPage: { type: 'string', enum: [...SOURCE_PRODUCT_PAGE_STYLES] },
+          productPage: { type: 'string', enum: [...SOURCE_MODEL_PRODUCT_PAGE_STYLES] },
           sections: { type: 'array', minItems: 1, maxItems: 12, items: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,47}$' } },
           catalogSection: { type: 'string', pattern: '^[a-z][a-z0-9-]{0,47}$' }, standaloneIntro: { type: 'boolean' }, productsInOpening: { type: 'boolean' },
         } },
@@ -81,7 +81,7 @@ export function validateSourceConcept(concept: any, index: number, requireLayout
     // The section order is the composition the model actually planned; a contradicting flag is the slip.
     // An intro before the catalog is by definition a standalone intro, so the flag follows the order.
     const standaloneIntro = layout.standaloneIntro || layout.sections[0] !== layout.catalogSection;
-    if (layout.productPage !== undefined && !SOURCE_PRODUCT_PAGE_STYLES.includes(layout.productPage)) return fail(`concepts[${index}].layout.productPage: usa ${SOURCE_PRODUCT_PAGE_STYLES.join(', ')}.`);
+    if (layout.productPage !== undefined && !SOURCE_MODEL_PRODUCT_PAGE_STYLES.includes(layout.productPage)) return fail(`concepts[${index}].layout.productPage: usa ${SOURCE_PRODUCT_PAGE_STYLES.join(', ')}.`);
     result.layout = { sections: [...layout.sections], catalogSection: layout.catalogSection, standaloneIntro, productsInOpening: layout.productsInOpening, ...(layout.productPage ? { productPage: layout.productPage } : {}) };
   }
   if (dnaOptions.requireComposition || concept.composition !== undefined) {

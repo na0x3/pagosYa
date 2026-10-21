@@ -40,8 +40,12 @@
     const groups = optionGroups(p);
     if (!groups) return [];
     const result = [];
+    // Fashion look: the size stays the shopper's to pick — never filled in, and dropped rather than swapped when a colour rules
+    // it out (review 2026-10-21: picking a colour first chose a size and undid the colour).
+    const open = productPageStyle() === 'fashion' ? sizeGroupIndex(groups) : -1;
     for (let index = 0; index < groups.length; index++) {
-      const available = value => p.variants.some(v => remaining(p, v) > 0 && variantValues(v).every((candidate, i) => i > index || (i === index ? candidate === value : candidate === result[i])));
+      const available = value => p.variants.some(v => remaining(p, v) > 0 && variantValues(v).every((candidate, i) => i > index || (i === index ? candidate === value : result[i] === undefined || candidate === result[i])));
+      if (index === open && (preferred[index] === undefined || !available(preferred[index]))) { result[index] = undefined; continue; }
       const value = preferred[index] !== undefined && available(preferred[index]) ? preferred[index] : groups[index].values.find(available);
       if (value === undefined) return preferred.slice(0, index);
       result[index] = value;
@@ -69,7 +73,9 @@
       } else { delete button.dataset.optionPrice; delete button.dataset.optionDelta; }
       // Earlier groups constrain later ones. Changing an earlier choice clears
       // later choices, so sparse catalogs never trap shoppers in a combination.
-      const matches = p.variants.filter(v => variantValues(v).every((candidate, i) => i === index ? candidate === value : i > index || selectedOptions[i] === undefined || candidate === selectedOptions[i]));
+      // Fashion look: the size is picked last or first, so every chosen group narrows it (a colour picked first greys out its missing sizes).
+      const narrowsAll = productPageStyle() === 'fashion';
+      const matches = p.variants.filter(v => variantValues(v).every((candidate, i) => i === index ? candidate === value : (i > index && !narrowsAll) || selectedOptions[i] === undefined || candidate === selectedOptions[i]));
       const available = matches.some(v => remaining(p, v) > 0);
       button.disabled = !available;
       button.setAttribute('aria-pressed', String(selectedOptions[index] === value));
@@ -147,16 +153,14 @@
     selectedProduct = p; selectedImage = 0; selectedQuantity = 1; detailTrigger = trigger; selectionNote = ''; selectedPicks = [];
     activeGallery = null;
     selectedOptions = completeSelection(p, []);
-    // Fashion look: the shopper picks the size; the page never picks one for them (the John Smedley «Select a size»).
-    if (productPageStyle() === 'fashion') { const size = sizeGroupIndex(optionGroups(p)); if (size >= 0) selectedOptions = selectedOptions.map((value, index) => index === size ? undefined : value); }
     const images = galleryImages(p), box = boxGroup(p), complex = !box && (p.variants?.length || p.extras?.length), groups = optionGroups(p);
     const style = productPageStyle();
     // Atelier (2026-10-19, the Amboras product page): a short first sentence becomes the subtitle under the title.
     const lead = style === 'atelier' ? productLead(p.description) : null;
     const rating = fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : '';
-    // Fashion look: «Categoría • label» under the title, the label being the merchant's card phrase.
+    // Fashion look: the category alone under the title (a store without one shows nothing there).
     const category = (store.categories || []).find(c => c.id === p.categoryId)?.name;
-    const eyebrowText = style === 'fashion' ? [category, typeof p.cardEyebrow === 'string' ? p.cardEyebrow.trim() : ''].filter(Boolean).join(' • ') : (category || store.storeName || 'Tu tienda');
+    const eyebrowText = style === 'fashion' ? category || '' : (category || store.storeName || 'Tu tienda');
     const addText = style === 'fashion' ? 'Agregar al pedido' : 'Añadir al pedido';
     detail.dataset.style = style;
     adoptAuthoredAction();

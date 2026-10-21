@@ -129,7 +129,7 @@ export function withFashionTemplateParts<F extends { path: string; content: stri
     if (file.path !== 'components/product.tsx' || file.content.includes('name="category"') || !file.content.includes(title) || !file.content.includes(buy)) return file;
     const indent = (line: string) => file.content.slice(file.content.lastIndexOf('\n', file.content.indexOf(line)) + 1, file.content.indexOf(line));
     let content = file.content
-      .replace(title, `${title}\n${indent(title)}<KitSlot kind="product" name="category" className="es-pdp__category" />`)
+      .replace(title, `${title}\n${indent(title)}{variant('pdp', 'gallery-left') === 'fashion' ? <KitSlot kind="product" name="category" className="es-pdp__category" /> : null}`)
       .replace(buy, `{variant('pdp', 'gallery-left') === 'fashion' && sections.some(section => section.id === 'sizes') ? <a className="es-pdp__guide" href="index.html#sizes">Guía de tallas</a> : null}\n${indent(buy)}${buy}`);
     if (!/import \{[^}]*\bsections\b[^}]*\} from '\.\/store-data'/.test(content)) content = content.replace(/^(import [^\n]*\n)/, `$1import { sections } from './store-data';\n`);
     return { ...file, content };

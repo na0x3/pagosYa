@@ -1161,15 +1161,16 @@
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion]{display:flex;flex-direction:column;gap:0;padding:0;border:0;background:transparent;box-shadow:none}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__panel{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:var(--store-radius,0px);background:color-mix(in srgb,var(--store-foreground,#111) 6%,var(--store-background,#fff))}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__image{width:100%;height:100%;aspect-ratio:auto;object-fit:cover;transition:opacity .3s ease}
-      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__label{position:absolute;top:12px;left:12px;z-index:2;max-width:calc(100% - 24px);margin:0;padding:4px 8px;border-radius:2px;background:color-mix(in srgb,var(--store-background,#fff) 88%,transparent);font:400 13px/1.3 var(--store-body-font,inherit);color:var(--store-foreground,#111);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      @media(max-width:600px){[data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__label{top:8px;left:8px;max-width:calc(100% - 16px);padding:3px 6px;font-size:11px}}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__tag{position:absolute;top:12px;left:12px;z-index:2;max-width:calc(100% - 24px);margin:0;padding:4px 8px;border-radius:2px;background:color-mix(in srgb,var(--store-background,#fff) 88%,transparent);font:400 13px/1.3 var(--store-body-font,inherit);color:var(--store-foreground,#111);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      @media(max-width:600px){[data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__tag{top:8px;left:8px;max-width:calc(100% - 16px);padding:3px 6px;font-size:11px}}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__bars{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;gap:2px;opacity:0;transition:opacity .2s ease}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__bars button{flex:1;height:12px;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:var(--swatch);cursor:pointer}
       @media(hover:hover){[data-pagosya-catalog] .menu-item[data-anatomy=fashion]:is(:hover,:focus-within) .menu-item__bars{opacity:1}}
       @media(hover:none){[data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__bars{display:none}}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__row{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px;margin-top:14px}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__name{margin:0;font:400 17px/1.3 var(--store-heading-font,inherit);letter-spacing:0;text-transform:none}
-      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__price{margin:0;font:400 15px/1.3 var(--store-body-font,inherit)}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__price{margin:0;font:400 15px/1.3 var(--store-body-font,inherit);white-space:nowrap}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__price del{margin-left:8px;opacity:.6}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__colors{margin:2px 0 0;font:400 14px/1.3 var(--store-body-font,inherit);opacity:.72}
       [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__panel:has([data-product-zoom]) .menu-item__bars{right:56px}
       @media(prefers-reduced-motion:reduce){[data-pagosya-catalog] .menu-item[data-anatomy=fashion] :is(.menu-item__image,.menu-item__bars){transition:none}}
@@ -2415,8 +2416,12 @@
     const groups = optionGroups(p);
     if (!groups) return [];
     const result = [];
+    // Fashion look: the size stays the shopper's to pick — never filled in, and dropped rather than swapped when a colour rules
+    // it out (review 2026-10-21: picking a colour first chose a size and undid the colour).
+    const open = productPageStyle() === 'fashion' ? sizeGroupIndex(groups) : -1;
     for (let index = 0; index < groups.length; index++) {
-      const available = value => p.variants.some(v => remaining(p, v) > 0 && variantValues(v).every((candidate, i) => i > index || (i === index ? candidate === value : candidate === result[i])));
+      const available = value => p.variants.some(v => remaining(p, v) > 0 && variantValues(v).every((candidate, i) => i > index || (i === index ? candidate === value : result[i] === undefined || candidate === result[i])));
+      if (index === open && (preferred[index] === undefined || !available(preferred[index]))) { result[index] = undefined; continue; }
       const value = preferred[index] !== undefined && available(preferred[index]) ? preferred[index] : groups[index].values.find(available);
       if (value === undefined) return preferred.slice(0, index);
       result[index] = value;
@@ -2444,7 +2449,9 @@
       } else { delete button.dataset.optionPrice; delete button.dataset.optionDelta; }
       // Earlier groups constrain later ones. Changing an earlier choice clears
       // later choices, so sparse catalogs never trap shoppers in a combination.
-      const matches = p.variants.filter(v => variantValues(v).every((candidate, i) => i === index ? candidate === value : i > index || selectedOptions[i] === undefined || candidate === selectedOptions[i]));
+      // Fashion look: the size is picked last or first, so every chosen group narrows it (a colour picked first greys out its missing sizes).
+      const narrowsAll = productPageStyle() === 'fashion';
+      const matches = p.variants.filter(v => variantValues(v).every((candidate, i) => i === index ? candidate === value : (i > index && !narrowsAll) || selectedOptions[i] === undefined || candidate === selectedOptions[i]));
       const available = matches.some(v => remaining(p, v) > 0);
       button.disabled = !available;
       button.setAttribute('aria-pressed', String(selectedOptions[index] === value));
@@ -2522,16 +2529,14 @@
     selectedProduct = p; selectedImage = 0; selectedQuantity = 1; detailTrigger = trigger; selectionNote = ''; selectedPicks = [];
     activeGallery = null;
     selectedOptions = completeSelection(p, []);
-    // Fashion look: the shopper picks the size; the page never picks one for them (the John Smedley «Select a size»).
-    if (productPageStyle() === 'fashion') { const size = sizeGroupIndex(optionGroups(p)); if (size >= 0) selectedOptions = selectedOptions.map((value, index) => index === size ? undefined : value); }
     const images = galleryImages(p), box = boxGroup(p), complex = !box && (p.variants?.length || p.extras?.length), groups = optionGroups(p);
     const style = productPageStyle();
     // Atelier (2026-10-19, the Amboras product page): a short first sentence becomes the subtitle under the title.
     const lead = style === 'atelier' ? productLead(p.description) : null;
     const rating = fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : '';
-    // Fashion look: «Categoría • label» under the title, the label being the merchant's card phrase.
+    // Fashion look: the category alone under the title (a store without one shows nothing there).
     const category = (store.categories || []).find(c => c.id === p.categoryId)?.name;
-    const eyebrowText = style === 'fashion' ? [category, typeof p.cardEyebrow === 'string' ? p.cardEyebrow.trim() : ''].filter(Boolean).join(' • ') : (category || store.storeName || 'Tu tienda');
+    const eyebrowText = style === 'fashion' ? category || '' : (category || store.storeName || 'Tu tienda');
     const addText = style === 'fashion' ? 'Agregar al pedido' : 'Añadir al pedido';
     detail.dataset.style = style;
     adoptAuthoredAction();
@@ -3993,7 +3998,7 @@
   if (typeof addEventListener === 'function') addEventListener('resize', () => fitCards(), { passive: true });
   const BAG_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8.5h13l-1 11.5h-11z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></svg>';
   // ---- Fashion card (spec 2026-10-21 fashion look, the John Smedley card) ----
-  // A tinted photo panel with the merchant's label, the name and price on one row, «N colores», colour bars on hover. No add
+  // A tinted photo panel with one tag, the name and price on one row, «N colores», colour bars on hover. No add
   // button: clothing needs a size first, so the whole card opens the product.
   const COLOUR_GROUP = /^(colou?r|colores|tono)$/;
   const SIZE_GROUP = /^(tallas?|size|medida)$/;
@@ -4011,7 +4016,9 @@
     });
   }
   function fashionCardMarkup(p, image) {
-    const colours = fashionColours(p), label = typeof p.cardEyebrow === 'string' ? p.cardEyebrow.trim().slice(0, 28) : '';
+    // Only a tag rides on the photo (owner 2026-10-21): sold out, the merchant's badge, best seller, the sale or «Nuevo» — never a
+    // descriptive phrase.
+    const colours = fashionColours(p), tag = limit(p) === 0 ? 'Agotado' : productBadge(p);
     const line = colours.length > 1 ? `${colours.length} colores` : colours[0]?.value || '';
     const bars = colours.filter(colour => colour.color && colour.photo);
     const details = config.productPage
@@ -4020,7 +4027,7 @@
     const photo = image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, '(max-width: 820px) 50vw, 33vw')} alt="${escape(p.name)}" loading="lazy" decoding="async" />` : '';
     const barsHtml = bars.length > 1 ? `<div class="menu-item__bars">${bars.map(bar => `<button type="button" data-card-swatch="${escape(bar.photo)}" aria-label="Ver en ${escape(bar.value)}" aria-pressed="false" style="--swatch:${escape(bar.color)}"></button>`).join('')}</div>` : '';
     const priceText = isMembership(p) ? membershipPriceText(p) : money(price(p), p.currency);
-    return `<article class="menu-item" data-product-id="${escape(p.id)}" data-anatomy="fashion">${details}<div class="menu-item__panel">${photo}${label ? `<p class="menu-item__label">${escape(label)}</p>` : ''}${barsHtml}</div><div class="menu-item__row"><h3 class="menu-item__name">${escape(p.name)}</h3><p class="menu-item__price">${escape(priceText)}</p></div>${line ? `<p class="menu-item__colors">${escape(line)}</p>` : ''}</article>`;
+    return `<article class="menu-item" data-product-id="${escape(p.id)}" data-anatomy="fashion">${details}<div class="menu-item__panel">${photo}${tag ? `<p class="menu-item__tag">${escape(tag)}</p>` : ''}${barsHtml}</div><div class="menu-item__row"><h3 class="menu-item__name">${escape(p.name)}</h3><p class="menu-item__price">${escape(priceText)}${cardOriginalMarkup(p)}</p></div>${line ? `<p class="menu-item__colors">${escape(line)}</p>` : ''}</article>`;
   }
   // Hovering a bar shows that colour's photo; leaving the card brings the first photo back.
   document.addEventListener('pointerover', event => {
@@ -4643,7 +4650,7 @@
   const PRODUCT_PARTS = [
     ['gallery', '.product-detail__gallery'], ['breadcrumb', '.product-detail__breadcrumb'], ['category', '.product-detail__eyebrow'],
     ['title', '#pagosya-product-title'], ['rating', '.product-detail__rating'], ['pricing', '.product-detail__pricing'],
-    ['description', '.product-detail__intro'], ['highlights', '.product-detail__highlights,.product-detail__chips'],
+    ['description', '.product-detail__intro,.product-detail__more'], ['highlights', '.product-detail__highlights,.product-detail__chips'],
     ['delivery', '.product-detail__assurances'], ['info', '.product-tabs,[role=tabpanel],.product-detail__facts,.product-delivery-list'],
     ['bundles', '.product-detail__bundles,.product-detail__bundle-links'], ['related', '.product-detail__related'], ['reviews', '.product-detail__reviews'],
     ['checks', '.product-detail__checks'],

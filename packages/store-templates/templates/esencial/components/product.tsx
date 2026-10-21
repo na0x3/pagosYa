@@ -11,7 +11,7 @@ export default function Product() {
           <KitSlot kind="product" name="gallery" className="es-pdp__gallery" />
           <div className="es-pdp__info">
             <KitSlot kind="product" name="title" className="es-pdp__title" />
-            <KitSlot kind="product" name="category" className="es-pdp__category" />
+            {variant('pdp', 'gallery-left') === 'fashion' ? <KitSlot kind="product" name="category" className="es-pdp__category" /> : null}
             <KitSlot kind="product" name="rating" className="es-pdp__rating" />
             <KitSlot kind="product" name="pricing" className="es-pdp__price" />
             <KitSlot kind="product" name="description" className="es-pdp__desc" />

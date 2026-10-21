@@ -7,6 +7,8 @@ import { productCardDirection, productCommerceDirection } from './source-product
 /** `atelier` (2026-10-19): the Amboras product page, the style new stores are drawn (design-engine/product-draw.ts). */
 export const SOURCE_PRODUCT_PAGE_STYLES = ['editorial', 'dense', 'image-led', 'story-led', 'conversion', 'atelier', 'fashion'] as const;
 export type SourceProductPageStyle = typeof SOURCE_PRODUCT_PAGE_STYLES[number];
+/** The styles a design model may pick: the fashion page belongs to fashion master stores only (review 2026-10-21). */
+export const SOURCE_MODEL_PRODUCT_PAGE_STYLES = SOURCE_PRODUCT_PAGE_STYLES.filter(style => style !== 'fashion');
 /** The self-hosted fonts in the kit, from the one catalogue (source-font-catalog.ts). */
 export const SOURCE_DNA_FONTS = SOURCE_FONT_IDS;
 

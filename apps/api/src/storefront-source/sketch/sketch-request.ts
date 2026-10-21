@@ -2,7 +2,7 @@ import { sectionCompositions, SKETCH_COMPONENT_REGISTRY } from '@pagosya/shared-
 import { structuredOutputSchema } from '../design-engine/structured-output';
 import { CONTENT_GENERATION_GUIDE } from '../design-engine/design-prompts';
 import { SOURCE_FONT_CATALOG, SOURCE_FONT_IDS } from '../source-font-catalog';
-import { SOURCE_PRODUCT_PAGE_STYLES } from '../source-dna';
+import { SOURCE_MODEL_PRODUCT_PAGE_STYLES } from '../source-dna';
 import { SOURCE_ICON_NAMES } from '../source-asset-library';
 import { sourceResponseJson } from '../source-response';
 import { drawSketchDirection, type SketchDirection } from './sketch-direction';
@@ -43,7 +43,7 @@ export const SKETCH_JSON_SCHEMA = {
       required: Object.keys(SKETCH_STYLE_OPTIONS) },
     product: { type: 'object', additionalProperties: false, properties: {
       preset: { type: 'string', enum: [...PRESET_IDS] },
-      layout: { type: 'string', enum: [...SOURCE_PRODUCT_PAGE_STYLES] },
+      layout: { type: 'string', enum: [...SOURCE_MODEL_PRODUCT_PAGE_STYLES] },
       media: { type: 'string', enum: ['left', 'right'] },
       assurances: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { icon: { type: 'string', enum: [...ASSURANCE_ICONS] }, title: string, detail: string }, required: ['icon', 'title', 'detail'] } },
     }, required: ['preset', 'layout', 'media', 'assurances'] },

@@ -1,4 +1,6 @@
 import { isFashionStore } from './source-master-fashion';
+import { sourceDesignSchema } from './source-design';
+import { SOURCE_MODEL_PRODUCT_PAGE_STYLES } from './source-dna';
 
 describe('isFashionStore', () => {
   it('trusts the read when it says fashion', () => expect(isFashionStore({ kind: 'fashion', storeName: 'Lumen' })).toBe(true));
@@ -15,4 +17,17 @@ describe('isFashionStore', () => {
   });
   it('two weak words together are fashion', () => expect(isFashionStore({ storeName: 'Boutique Punto Fino', what: 'tejidos de alpaca' })).toBe(true));
   it('nothing to go on is not fashion', () => expect(isFashionStore({})).toBe(false));
+  it('food and craft stores with a clothing-sounding word are not fashion when the read says other (review probes)', () => {
+    expect(isFashionStore({ kind: 'other', storeName: 'Atelier Dulce', what: 'Pastelería artesanal y tortas' })).toBe(false);
+    expect(isFashionStore({ kind: 'other', storeName: 'Heladería Sol', products: ['Polos de fruta'] })).toBe(false);
+    expect(isFashionStore({ kind: 'other', storeName: 'Café Altura', what: 'El sabor de moda en La Paz' })).toBe(false);
+    expect(isFashionStore({ kind: 'other', storeName: 'Atelier Cerámica', products: ['Taza', 'Plato'] })).toBe(false);
+    expect(isFashionStore({ kind: 'other', storeName: 'Florería Lis', products: ['Ramo para novias', 'Accesorios florales'] })).toBe(false);
+  });
+  it('Bolivian knitwear words are fashion', () => expect(isFashionStore({ storeName: 'Wari', products: ['Chompa de alpaca', 'Gorro', 'Bufanda'] })).toBe(true));
+});
+
+it('YAPI-coded stores are never offered the fashion page by the design and sketch schemas', () => {
+  expect(SOURCE_MODEL_PRODUCT_PAGE_STYLES).not.toContain('fashion');
+  expect(JSON.stringify(sourceDesignSchema)).not.toContain('"fashion"');
 });

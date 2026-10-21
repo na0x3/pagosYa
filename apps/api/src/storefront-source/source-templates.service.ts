@@ -103,7 +103,7 @@ export class SourceTemplatesService {
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
     // Variety spec §2b: every product's own page content (highlights, story, faq…), written in the background.
-    void Promise.resolve().then(() => this.pageWriter?.fillStore(storeId, 20, { fashion: fill?.character?.kind === 'fashion' })).catch(() => undefined);
+    void Promise.resolve().then(() => this.pageWriter?.fillStore(storeId)).catch(() => undefined);
     return { ...saved, filled: Boolean(fill) };
   }
 

@@ -46,7 +46,6 @@ describe('fashion card', () => {
     const card = q('.menu-item[data-product-id="carden"]');
     expect(card.getAttribute('data-anatomy')).toBe('fashion');
     expect(card.querySelector('.menu-item__panel img.menu-item__image')).not.toBeNull();
-    expect(card.querySelector('.menu-item__panel .menu-item__label').textContent).toBe('Corte holgado');
     expect(card.querySelector('.menu-item__row .menu-item__name').textContent).toBe('Carden');
     expect(card.querySelector('.menu-item__row .menu-item__price').textContent).toMatch(/7\.150/);
     expect(card.querySelector('.menu-item__colors').textContent).toBe('3 colores');
@@ -54,9 +53,8 @@ describe('fashion card', () => {
     expect(card.querySelector('.menu-item__panel [data-product-zoom]')).not.toBeNull();
   });
 
-  it('no label without a written one (never the category); one colour shows its name; no colours, no line', async () => {
+  it('one colour shows its name; no colours, no line', async () => {
     const { q } = await open({ items: [product({ cardEyebrow: null, variants: [variant('a', 'S', 'Negro'), variant('b', 'M', 'Negro')] }), product({ id: 'liso', cardEyebrow: '' })] });
-    expect(q('[data-product-id="carden"] .menu-item__label')).toBeNull();
     expect(q('[data-product-id="carden"] .menu-item__colors').textContent).toBe('Negro');
     expect(q('[data-product-id="liso"] .menu-item__colors')).toBeNull();
   });
@@ -88,6 +86,17 @@ describe('fashion card', () => {
     expect(card.hasAttribute('data-custom-product')).toBe(false);
   });
 
+  it('the photo carries a tag only — never the descriptive card phrase — and the sale price is shown', async () => {
+    const { q } = await open({ items: [product({ cardEyebrow: 'Vestido halter', badge: 'Edición limitada' }), product({ id: 'rebaja', cardEyebrow: 'Flores bordadas a mano', discountPercent: 20 }), product({ id: 'agotado', stock: 0 }), product({ id: 'liso', cardEyebrow: 'Corte holgado' })] });
+    expect(q('[data-product-id="carden"] .menu-item__panel').textContent).not.toContain('Vestido halter');
+    expect(q('[data-product-id="carden"] .menu-item__tag').textContent).toBe('Edición limitada');
+    expect(q('[data-product-id="rebaja"] .menu-item__tag').textContent).toBe('−20%');
+    expect(q('[data-product-id="rebaja"] .menu-item__price del')).not.toBeNull();
+    expect(q('[data-product-id="agotado"] .menu-item__tag').textContent).toBe('Agotado');
+    expect(q('[data-product-id="liso"] .menu-item__tag')).toBeNull();
+    expect(q('.menu-item__label')).toBeNull();
+  });
+
   it('other stores keep their card', async () => {
     const { q } = await open({ cards: 'compact', style: 'editorial' });
     expect(q('.menu-item[data-product-id="carden"]').hasAttribute('data-anatomy')).toBe(false);
@@ -116,6 +125,27 @@ describe('fashion product page', () => {
     expect(legends[1]).toMatch(/^2 colores:/);
   });
 
+  it('picking a colour first never picks a size for the shopper (review: the colour choice was undone)', async () => {
+    const { q, all } = await open({ fullPage: true, items: [sized()] });
+    const groups = all('[data-pagosya-product] .product-detail__values');
+    const gris = [...groups[1].querySelectorAll('[data-product-option]')].find((b: any) => b.textContent.includes('Gris')) as any;
+    gris.click();
+    expect([...groups[0].querySelectorAll('[aria-pressed=true]')]).toHaveLength(0);
+    expect(gris.getAttribute('aria-pressed')).toBe('true');
+    const buy = q('[data-pagosya-product] [data-variant-add]');
+    expect(buy.textContent).toMatch(/^Elige una talla/);
+    expect(buy.disabled).toBe(true);
+    // Only M comes in Gris: XS is now unavailable.
+    expect([...groups[0].querySelectorAll('[data-product-option]')].map((b: any) => b.disabled)).toEqual([true, true, false]);
+  });
+
+  it('«Leer más» stays with the description inside a store\'s product page template', async () => {
+    const template = '<template data-pagosya-product-page-template><article><div data-product-slot="gallery"></div><div data-product-slot="title"></div><div data-product-slot="pricing"></div><div data-product-slot="description"></div><div data-product-slot="buy"></div></article></template>';
+    const description = 'Tejido en Inglaterra con lana merino extrafina y cachemira reciclada. '.repeat(5);
+    const { q } = await open({ fullPage: true, items: [product({ description })], template });
+    expect(q('[data-product-slot="description"] [data-product-more]')).not.toBeNull();
+  });
+
   it('a product without sizes keeps the normal button', async () => {
     const { q } = await open({ fullPage: true, items: [product({ id: 'collar', variants: [] })] });
     const buy = q('[data-pagosya-product] .product-detail__buy');
@@ -123,10 +153,11 @@ describe('fashion product page', () => {
     expect(buy.disabled).toBe(false);
   });
 
-  it('category • label under the title, and a long description gets «Leer más»', async () => {
+  it('the category under the title, and a long description gets «Leer más»', async () => {
     const description = 'Tejido en Inglaterra con lana merino extrafina y cachemira reciclada. '.repeat(5);
     const { q } = await open({ fullPage: true, items: [product({ description })] });
-    expect(q('[data-pagosya-product] .product-detail__eyebrow').textContent).toBe('Vestidos • Corte holgado');
+    // The category only: the card phrase is never shown (owner 2026-10-21: photos and titles carry no YAPI phrases).
+    expect(q('[data-pagosya-product] .product-detail__eyebrow').textContent).toBe('Vestidos');
     const more = q('[data-pagosya-product] [data-product-more]');
     expect(more.textContent).toBe('Leer más');
     more.click();

@@ -51,6 +51,19 @@ describe('Esencial', () => {
     expect(reads.home.fashionCards).toBeGreaterThan(0);
     expect(reads.productPage.category).not.toBeNull();
     expect(reads.productPage.guide).toBe(true);
+    // Other product pages keep their page as before: no category line under the title (review 2026-10-21).
+    const plainVariants = { ...variants, cards: 'compact', pdp: 'gallery-left' };
+    const plain = await prepare(await assemble(demo, { variants: plainVariants }));
+    const plainCategory = await withVisualSandbox(plain, '', undefined, true, async context => {
+      const page = await context.newPage();
+      await page.goto('https://preview.invalid/index.html', { waitUntil: 'load', timeout: 12000 });
+      await page.goto(`https://preview.invalid/product.html?id=${encodeURIComponent(demo.items[0].id)}`, { waitUntil: 'load', timeout: 12000 });
+      await page.locator('#pagosya-product-title').waitFor({ timeout: 8000 });
+      const found = await page.evaluate(() => Boolean(document.querySelector('[data-product-slot=category]')));
+      await page.close();
+      return found;
+    });
+    expect(plainCategory).toBe(false);
   });
 
   it('every font pair uses catalogued OFL fonts', () => {

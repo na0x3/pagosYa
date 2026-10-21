@@ -21,15 +21,14 @@ export class ProductPageWriterService {
   private running = 0;
   private readonly waiting: Array<() => void> = [];
   /** Writes one product's long page. 'auto' fills only an empty product; 'regenerate' replaces YAPI's own rows. */
-  /** options.fashion (spec 2026-10-21): a clothing store's card label is a fit, fabric or edition of at most 3 words. */
-  async fill(storeId: string, productId: string, mode: 'auto' | 'regenerate', merchantId?: string, options: { fashion?: boolean } = {}): Promise<'written' | 'skipped'> {
-    if (mode !== 'auto') return this.write(storeId, productId, mode, merchantId, options);
+  async fill(storeId: string, productId: string, mode: 'auto' | 'regenerate', merchantId?: string): Promise<'written' | 'skipped'> {
+    if (mode !== 'auto') return this.write(storeId, productId, mode, merchantId);
     if (this.running >= MAX_AUTO_WRITES) await new Promise<void>(resolve => this.waiting.push(resolve));
     this.running++;
-    try { return await this.write(storeId, productId, mode, merchantId, options); } finally { this.running--; this.waiting.shift()?.(); }
+    try { return await this.write(storeId, productId, mode, merchantId); } finally { this.running--; this.waiting.shift()?.(); }
   }
 
-  private async write(storeId: string, productId: string, mode: 'auto' | 'regenerate', merchantId?: string, options: { fashion?: boolean } = {}): Promise<'written' | 'skipped'> {
+  private async write(storeId: string, productId: string, mode: 'auto' | 'regenerate', merchantId?: string): Promise<'written' | 'skipped'> {
     const product = await this.prisma.paymentLink.findFirst({
       where: { id: productId, storeId, ...(merchantId ? { store: { merchantId } } : {}) },
       select: { id: true, updatedAt: true, cardEyebrow: true, name: true, description: true, specifications: true, tags: true, imageUrls: true, highlights: true, contentBlocks: true, category: { select: { name: true } }, store: { select: { name: true } } },
@@ -54,7 +53,7 @@ export class ProductPageWriterService {
     // Photos travel in a user message: the API answers invalid_value to an image inside a developer message.
     const response = await fetch(plan?.endpoint ?? 'https://api.openai.com/v1/responses', {
       method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, input: [{ role: 'developer', content: [{ type: 'input_text', text: productPagePrompt(facts, product.store.name, voice, options) }] }, ...(images.length ? [{ role: 'user', content: images }] : [])], text: { format: { type: 'json_schema', name: 'pagosya_product_page', strict: true, schema: PRODUCT_PAGE_SCHEMA } }, max_output_tokens: 4000 }),
+      body: JSON.stringify({ model, input: [{ role: 'developer', content: [{ type: 'input_text', text: productPagePrompt(facts, product.store.name, voice) }] }, ...(images.length ? [{ role: 'user', content: images }] : [])], text: { format: { type: 'json_schema', name: 'pagosya_product_page', strict: true, schema: PRODUCT_PAGE_SCHEMA } }, max_output_tokens: 4000 }),
       signal: AbortSignal.timeout(90_000),
     });
     const body = await response.json().catch(() => ({})) as { output?: Array<{ content?: Array<{ type?: string; text?: string }> }>; usage?: unknown };
@@ -62,23 +61,21 @@ export class ProductPageWriterService {
     if (!response.ok) throw new BadGatewayException('YAPI no pudo escribir la página de este producto.');
     let raw: unknown = null;
     try { raw = JSON.parse(body.output?.flatMap(item => item.content ?? []).find(item => item.type === 'output_text')?.text ?? 'null'); } catch { raw = null; }
-    const written = writtenPage(raw, facts, photoUrls, options);
+    const written = writtenPage(raw, facts, photoUrls);
     const merged = mergeWrittenPage(product, written, mode);
-    // Showcase commerce: YAPI's card phrase fills an empty eyebrow only; the merchant's own phrase always stays.
-    const eyebrow = product.cardEyebrow == null && written.eyebrow ? { cardEyebrow: written.eyebrow } : {};
-    if (!merged && !eyebrow.cardEyebrow) return 'skipped';
+    if (!merged) return 'skipped';
     // Only if nobody saved the product while YAPI was writing: a merchant's edit always wins over a stale merge.
-    const saved = await this.prisma.paymentLink.updateMany({ where: { id: product.id, updatedAt: product.updatedAt }, data: { ...(merged ? { highlights: merged.highlights as unknown as Prisma.InputJsonValue, contentBlocks: merged.contentBlocks as unknown as Prisma.InputJsonValue } : {}), ...eyebrow } });
+    const saved = await this.prisma.paymentLink.updateMany({ where: { id: product.id, updatedAt: product.updatedAt }, data: { ...(merged ? { highlights: merged.highlights as unknown as Prisma.InputJsonValue, contentBlocks: merged.contentBlocks as unknown as Prisma.InputJsonValue } : {}) } });
     return saved.count ? 'written' : 'skipped';
   }
 
   /** After YAPI builds or redesigns a store: fill its empty products, one at a time, never failing the caller. */
-  async fillStore(storeId: string, limit = 20, options: { fashion?: boolean } = {}): Promise<void> {
+  async fillStore(storeId: string, limit = 20): Promise<void> {
     // The cap counts products that still need a page, so a store with many filled products still reaches the rest.
     const products = (await this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, select: { id: true, contentBlocks: true }, orderBy: { createdAt: 'asc' } }))
       .filter(product => autoFillable(product)).slice(0, limit);
     for (const product of products) {
-      try { await this.fill(storeId, product.id, 'auto', undefined, options); }
+      try { await this.fill(storeId, product.id, 'auto'); }
       catch (error) { this.logger.warn(JSON.stringify({ event: 'product_page_failed', storeId, productId: product.id, reason: (error as Error).message.slice(0, 200) })); }
     }
   }
