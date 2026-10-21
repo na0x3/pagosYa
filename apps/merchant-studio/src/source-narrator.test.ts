@@ -75,7 +75,8 @@ describe('YAPI glass window', () => {
     bridge.progress(p('Diseñando'));
     bridge.completed('Listo, hice tu tienda.');
     bridge.interrupted();
-    expect(shown).toEqual(['open:Hazme una tienda', 'work', 'done', 'stopped']);
+    // An interruption after the reply is ignored (review fix): the summary stays.
+    expect(shown).toEqual(['open:Hazme una tienda', 'work', 'done']);
   });
 });
 
@@ -84,10 +85,61 @@ describe('the Studio feeds the window', () => {
     const { readFileSync } = await import('node:fs');
     const studio = readFileSync(`${process.cwd()}/src/source-studio.ts`, 'utf8');
     expect(studio).toMatch(/const narrator = narratorBridge\(mountNarrator\(document\)\);/);
-    expect(studio).toMatch(/if \(event\.type === 'interrupt' && wasBuilding\) narrator\.interrupted\(\);/);
+    expect(studio).toMatch(/if \(event\.type === 'interrupt' && wasBuilding\) narrator\.interrupted\(error\);/);
     expect(studio).toMatch(/transitionBuild\(\{ type: 'submit' \}\); narrator\.submitted\(text\);/);
     expect(studio).toMatch(/function updateBuildProgress\(\) \{\n\s+narrator\.progress\(buildProgress\);/);
     expect(studio).toMatch(/narrator\.completed\(result\.assistantMessage \?\? ''\);/);
     expect(studio).toMatch(/narrator\.completed\(\[\.\.\.messages\]\.reverse\(\)\.find\(m => m\.role === 'ASSISTANT'\) \?\? ''\);/);
+  });
+});
+
+describe('review fixes (2026-10-21)', () => {
+  beforeEach(() => { vi.useFakeTimers(); document.body.innerHTML = ''; });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('a new stage replaces only the «Ahora» line; the plan is not typed again', () => {
+    const n = mountNarrator(document, { reducedMotion: () => true });
+    n.open('x');
+    n.show({ phase: 'work', lines: ['Plan:', 'A.', 'Ahora: comprobando…'] });
+    const first = document.querySelector('[data-narrator-text] p');
+    n.show({ phase: 'work', lines: ['Plan:', 'A.', 'Ahora: guardando…'] });
+    expect(document.querySelector('[data-narrator-text] p')).toBe(first);
+    expect(text()).toBe('Plan: A. Ahora: guardando…');
+  });
+
+  it('an empty reply still settles into the pill', () => {
+    const n = mountNarrator(document, { reducedMotion: () => false });
+    n.open('x');
+    n.show({ phase: 'done', lines: [''] });
+    vi.advanceTimersByTime(4000);
+    expect((document.querySelector('[data-narrator-pill]') as HTMLElement).hidden).toBe(false);
+  });
+
+  it('Escape dismisses like the close button, and leaves an open dialog alone', () => {
+    const n = mountNarrator(document, { reducedMotion: () => true });
+    n.open('x');
+    n.show({ phase: 'done', lines: ['Listo.'] });
+    const dialog = document.createElement('dialog'); dialog.setAttribute('open', ''); document.body.append(dialog);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(n.element.hidden).toBe(false);
+    dialog.remove();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(n.element.hidden).toBe(true);
+    expect((document.querySelector('[data-narrator-pill]') as HTMLElement).hidden).toBe(false);
+  });
+
+  it('an interruption after the summary does not replace it; the request line drops internal instructions', () => {
+    const shown: string[] = [];
+    const bridge = narratorBridge({ open: (r: string) => shown.push(`open:${r}`), show: (n: { phase: string }) => shown.push(n.phase) });
+    bridge.submitted('Haz mi tienda\n\nNavegación elegida: menú Tienda desplegable…');
+    bridge.completed('Listo, hice tu tienda.');
+    bridge.interrupted();
+    expect(shown).toEqual(['open:Haz mi tienda', 'done']);
+  });
+
+  it('the summary lists what YAPI built, and a failed request says why', async () => {
+    const { narrationFromMessage, stoppedNarration } = await import('./source-narration');
+    expect(narrationFromMessage({ content: 'x', metadata: { sourceRevision: 2, agentSummary: 'Hice tu portada.', agentSections: ['Portada', 'Productos'] } }).lines).toEqual(['Listo.', 'Hice tu portada.', 'Incluye: Portada, Productos.', 'Ya está en tu vista previa. Publícalo cuando te guste.']);
+    expect(stoppedNarration('No te quedan créditos este mes.').lines).toEqual(['No pude terminar: no te quedan créditos este mes.', 'Tu tienda sigue como estaba.']);
   });
 });

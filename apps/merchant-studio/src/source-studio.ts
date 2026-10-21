@@ -296,7 +296,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const transitionBuild = (event: SourceBuildEvent) => {
     const wasBuilding = buildIsActive(buildSession);
     buildSession = sourceBuildTransition(buildSession, event);
-    if (event.type === 'interrupt' && wasBuilding) narrator.interrupted();
+    if (event.type === 'interrupt' && wasBuilding) narrator.interrupted(error);
   };
   const building = () => buildIsActive(buildSession);
   let busy = false, loading = true, error = '', toast = '', instruction = '';
@@ -492,7 +492,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const job = latest.job;
         // Boot's action finishes first, then the restored job owns the editor state.
         window.setTimeout(() => { if (storeId !== selectedStore) return; void action(async () => {
-          transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); narrator.submitted('Tu pedido en curso'); buildStatus = 'YAPI sigue trabajando en tu pedido…'; render();
+          transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); narrator.submitted(''); buildStatus = 'YAPI sigue trabajando en tu pedido…'; render();
           const stop = watchBuildProgress(selectedStore, job.requestId);
           try { await api.waitSourceChatJob(selectedStore, job, showQueue); transitionBuild({ type: 'complete' }); await load(); narrator.completed([...messages].reverse().find(m => m.role === 'ASSISTANT') ?? ''); }
           finally { stop(); stopStylePoll(); if (building()) transitionBuild({ type: 'interrupt' }); await refreshInterruptedDraft().catch(() => {}); void loadStyleProposal(); }

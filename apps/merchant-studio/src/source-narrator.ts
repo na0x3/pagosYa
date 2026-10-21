@@ -53,12 +53,15 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
     win.clearTimeout(pillTimer);
     pillTimer = win.setTimeout(() => { element.hidden = true; pill.hidden = false; }, PILL_AFTER_MS);
   };
+  const follow = () => { element.scrollTop = element.scrollHeight; };
   function next() {
     const line = queue.shift();
     if (line === undefined) { settled(); return; }
     const p = doc.createElement('p');
     textEl.append(p);
-    if (reduced()) { p.textContent = line; announce(line); next(); return; }
+    follow();
+    // Reduced motion, or nothing to type (an empty reply): the line appears at once, so the window always settles.
+    if (reduced() || !line.trim()) { p.textContent = line; announce(line); next(); return; }
     current = { p, line };
     const words = typingPlan(line);
     words.forEach(({ word, at }, i) => {
@@ -67,6 +70,7 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
         span.className = 'yapi-narrator__word';
         span.textContent = (i ? ' ' : '') + word;
         p.append(span);
+        follow();
         if (i === words.length - 1) { timers = []; current = null; announce(line); timers.push(win.setTimeout(next, 220)); }
       }, at));
     });
@@ -75,6 +79,18 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
   function show(narration: Narration) {
     phase = narration.phase;
     win.clearTimeout(pillTimer);
+    // A new stage changes only the last line («Ahora: …»): retype that line, never the whole plan above it.
+    const replacesLast = shown.length > 0 && shown.length === narration.lines.length && shown.slice(0, -1).every((line, i) => narration.lines[i] === line) && shown.at(-1) !== narration.lines.at(-1);
+    if (replacesLast) {
+      const last = narration.lines.at(-1)!;
+      shown = [...narration.lines];
+      if (queue.length) { queue[queue.length - 1] = last; return; }
+      clearTimers(); current = null;
+      textEl.lastElementChild?.remove();
+      queue = [last];
+      next();
+      return;
+    }
     const grows = shown.length <= narration.lines.length && shown.every((line, i) => narration.lines[i] === line);
     if (!grows) { clearTimers(); current = null; queue = []; textEl.replaceChildren(); shown = []; }
     const fresh = narration.lines.slice(shown.length);
@@ -93,11 +109,17 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
     element.hidden = false;
   }
   function close() { element.hidden = true; win.clearTimeout(pillTimer); }
+  /** One way out for the close button and Escape: a finished summary stays reachable through the pill. */
+  const dismiss = () => { close(); if (phase === 'done') pill.hidden = false; };
 
   textEl.addEventListener('click', finishCurrent);
-  element.querySelector('[data-narrator-close]')!.addEventListener('click', () => { close(); if (phase === 'done') pill.hidden = false; });
+  element.querySelector('[data-narrator-close]')!.addEventListener('click', dismiss);
   pill.addEventListener('click', () => { pill.hidden = true; element.hidden = false; });
-  doc.addEventListener('keydown', event => { if (event.key === 'Escape' && !element.hidden) close(); });
+  doc.addEventListener('keydown', event => {
+    // Escape belongs to an open dialog first.
+    if (event.key !== 'Escape' || element.hidden || event.defaultPrevented || doc.querySelector('dialog[open], [aria-modal="true"]')) return;
+    dismiss();
+  });
 
   return { open, show, close, element };
 }
@@ -105,11 +127,14 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
 /** Connects the window to the Studio's build lifecycle; a poll that says nothing new types nothing. */
 export function narratorBridge(narrator: Pick<Narrator, 'open' | 'show'>) {
   let last = '';
+  let active = false;
   const show = (n: Narration) => { const key = JSON.stringify(n); if (key === last) return; last = key; narrator.show(n); };
   return {
-    submitted(text: string) { last = ''; narrator.open(text); },
-    progress(progress: BuildProgress | null) { show(narrationFromProgress(progress)); },
-    completed(reply: string | { content?: unknown; metadata?: Record<string, unknown> | null }) { show(typeof reply === 'string' ? narrationFromReply(reply) : narrationFromMessage(reply)); },
-    interrupted() { show(stoppedNarration()); },
+    /** The merchant's words only: the Studio's own instructions («Navegación elegida: …») stay out of the window. */
+    submitted(text: string) { last = ''; active = true; narrator.open(text.split(/\n\s*\nNavegación elegida:/)[0].trim()); },
+    progress(progress: BuildProgress | null) { if (active) show(narrationFromProgress(progress)); },
+    completed(reply: string | { content?: unknown; metadata?: Record<string, unknown> | null }) { active = false; show(typeof reply === 'string' ? narrationFromReply(reply) : narrationFromMessage(reply)); },
+    /** Only a build this window is following can stop; a later failure (an «Alternativa») never replaces the summary. */
+    interrupted(reason?: string) { if (!active) return; active = false; show(stoppedNarration(reason)); },
   };
 }

@@ -133,3 +133,16 @@ it('asks the finish summary in plain words for the merchant, without developer j
   expect(finishTool.description).toMatch(/palabras simples/);
   expect(finishTool.description).toMatch(/CTA/);
 });
+
+it('writes the plan lines once: re-planning the same requirements adds no new «Voy a» steps', async () => {
+  const tools = box();
+  await tools.run('plan_task', JSON.stringify({ requirements: [requirement] }));
+  await tools.run('plan_task', JSON.stringify({ requirements: [requirement] }));
+  expect(tools.steps.filter(s => s.label.startsWith('Voy a:'))).toHaveLength(1);
+});
+
+it('asks each plan description in plain Spanish for the merchant', async () => {
+  const { AGENT_TOOLS } = await import('./agent-tools');
+  const plan = AGENT_TOOLS.find(t => t.name === 'plan_task') as unknown as { parameters: { properties: { requirements: { items: { properties: { description: { description?: string } } } } } } };
+  expect(plan.parameters.properties.requirements.items.properties.description.description).toMatch(/palabras simples/);
+});

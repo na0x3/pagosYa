@@ -10,8 +10,11 @@ const PLAN = /^Voy a:\s*(.+)$/;
 const sentence = (text: string) => { const t = text.trim(); return /[.!?…:]$/.test(t) ? t : `${t}.`; };
 const lowerFirst = (text: string) => text.charAt(0).toLocaleLowerCase('es') + text.slice(1);
 
-export function stoppedNarration(): Narration {
-  return { phase: 'stopped', lines: ['Me detuve antes de terminar. Tu tienda sigue como estaba.'] };
+/** A stop says why when the Studio knows (no credits, a validation error), and always that the store is unchanged. */
+export function stoppedNarration(reason?: string): Narration {
+  const why = reason?.replace(/\s+/g, ' ').trim();
+  if (!why) return { phase: 'stopped', lines: ['Me detuve antes de terminar. Tu tienda sigue como estaba.'] };
+  return { phase: 'stopped', lines: [`No pude terminar: ${sentence(lowerFirst(why))}`, 'Tu tienda sigue como estaba.'] };
 }
 
 export function narrationFromProgress(progress: BuildProgress | null): Narration {
@@ -52,5 +55,6 @@ export function narrationFromMessage(message: { content?: unknown; metadata?: Re
   if (typeof meta.sourceRevision !== 'number') return narrationFromReply(String(message.content ?? ''));
   const own = [meta.agentSummary, meta.label].find(value => typeof value === 'string' && value.trim() && !/^r\d+$/i.test(value.trim())) as string | undefined;
   const change = own ? narrationFromReply(own).lines.at(-1)! : '';
-  return { phase: 'done', lines: ['Listo.', ...(change ? [sentence(change)] : []), 'Ya está en tu vista previa. Publícalo cuando te guste.'] };
+  const sections = Array.isArray(meta.agentSections) ? meta.agentSections.filter((s): s is string => typeof s === 'string' && Boolean(s.trim())).slice(0, 6) : [];
+  return { phase: 'done', lines: ['Listo.', ...(change ? [sentence(change)] : []), ...(sections.length ? [`Incluye: ${sections.join(', ')}.`] : []), 'Ya está en tu vista previa. Publícalo cuando te guste.'] };
 }

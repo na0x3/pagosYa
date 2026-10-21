@@ -17,7 +17,7 @@
 .yapi-narrator__close { margin-left: auto; width: 30px; height: 30px; border: 0; border-radius: 999px; background: transparent; color: #5f5b53; font-size: 18px; line-height: 1; cursor: pointer; }
 .yapi-narrator__close:hover { background: rgb(40 36 28 / .06); color: #1d1b17; }
 .yapi-narrator__close:focus-visible, .yapi-narrator-pill:focus-visible { outline: 2px solid #23211c; outline-offset: 2px; }
-.yapi-narrator__request { margin: 0 0 10px; color: #5f5b53; font: italic 400 17px/1.35 "Instrument Serif", ui-serif, Georgia, serif; }
+.yapi-narrator__request { margin: 0 0 10px; color: #5f5b53; font: italic 400 17px/1.35 "Instrument Serif", ui-serif, Georgia, serif; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .yapi-narrator__request:empty { display: none; }
 .yapi-narrator__text { cursor: default; }
 .yapi-narrator__text p { margin: 0 0 6px; }
@@ -36,3 +36,10 @@
 @keyframes yapi-word-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .yapi-narrator, .yapi-narrator-pill, .yapi-narrator__word { animation: none; } }
 @media (max-width: 600px) { .yapi-narrator { right: 16px; bottom: 16px; } .yapi-narrator-pill { right: 16px; bottom: 16px; } }
+/* The Studio's toasts stay readable above the window and its pill. */
+.toast { z-index: 2147483001 !important; }
+/* Phones: the chat and its composer are the bottom of the screen, so the window and pill sit at the top. */
+@media (max-width: 759px) {
+  .yapi-narrator { top: 12px; bottom: auto; max-height: 42vh; }
+  .yapi-narrator-pill { top: 12px; bottom: auto; }
+}
