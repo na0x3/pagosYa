@@ -113,3 +113,37 @@ it('a kit card: words under its «Ver detalle» overlay open that product, never
   ]);
   expect(w.document.querySelector('[contenteditable]')).toBeNull();
 });
+
+it('an allowed product: name, description and simple price change in place and post as a product edit (owner 2026-10-21)', async () => {
+  const card = `<!doctype html><html><body><article class="menu-item" data-product-id="p9"><a class="menu-item__details" href="index.html" aria-label="Ver detalle"></a><div class="menu-item__copy"><h3 id="name">Tomahawk</h3><p id="desc">Madurada</p></div><strong class="menu-item__price" id="price">Bs 320,00</strong></article>
+    <article class="menu-item" data-product-id="p8"><div class="menu-item__copy"><h3 id="name8">Kit</h3></div><strong class="menu-item__price" id="price8">Bs 90,00</strong></article>
+    <article class="gr-card menu-item" data-product-id="p7"><h3 class="gr-card__name" data-product-field="name"><a id="name7" href="index.html">Chorizo</a></h3></article></body></html>`;
+  const dom = new JSDOM(sourcePreviewDocument({ ...snapshot, files: [{ path: 'index.html', content: card }] }, 'index.html', { inlineText: true, inlineProducts: { p9: { price: true }, p8: { price: false }, p7: { price: true } } }), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://source.invalid/index.html' });
+  const w = dom.window; windows.push(w);
+  const posted: any[] = []; w.addEventListener('message', (event: any) => { if (/^pagosya:inline-/.test(event.data?.type)) posted.push(event.data); });
+  await tick();
+  const el = (id: string) => w.document.getElementById(id);
+  const edit = (id: string, text: string) => {
+    el(id).dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+    expect(el(id).getAttribute('contenteditable')).toMatch(/plaintext-only|true/);
+    el(id).textContent = text;
+    el(id).dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  };
+  edit('name', 'Tomahawk 1 kg'); edit('desc', 'Madurada 28 días'); edit('price', 'Bs 299,90');
+  // A template card: the kit wraps the name in a link to its page; the link's words are what change.
+  el('name7').dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+  expect(w.getSelection().toString()).toBe('Chorizo');
+  el('name7').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  edit('name7', 'Chorizo casero');
+  // A price with options is not edited here: its editor opens instead.
+  el('price8').dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+  await tick();
+  expect(el('price8').hasAttribute('contenteditable')).toBe(false);
+  expect(posted).toEqual([
+    { type: 'pagosya:inline-product-text', productId: 'p9', field: 'name', before: 'Tomahawk', after: 'Tomahawk 1 kg' },
+    { type: 'pagosya:inline-product-text', productId: 'p9', field: 'description', before: 'Madurada', after: 'Madurada 28 días' },
+    { type: 'pagosya:inline-product-text', productId: 'p9', field: 'price', before: 'Bs 320,00', after: 'Bs 299,90' },
+    { type: 'pagosya:inline-product-text', productId: 'p7', field: 'name', before: 'Chorizo', after: 'Chorizo casero' },
+    { type: 'pagosya:inline-product', productId: 'p8', field: 'price' },
+  ]);
+});

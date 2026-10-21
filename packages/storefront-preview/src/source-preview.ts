@@ -72,7 +72,7 @@ export function hostedAssetSource(value: string): string | null {
   } catch { return null; }
 }
 
-export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; accountForms?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[]; assetSources?: string[]; inlineText?: boolean; scrollY?: number } = {}): string {
+export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; accountForms?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[]; assetSources?: string[]; inlineText?: boolean; scrollY?: number; inlineProducts?: Record<string, { price: boolean }> } = {}): string {
   const imageSources = (navigation.imageSources || []).map(uploadImageSource).filter((source): source is string => Boolean(source));
   const entry = snapshot.files.find((file) => file.path === page && file.encoding !== "base64");
   if (!entry) throw new Error("Esta revisión no incluye la página seleccionada.");
@@ -228,7 +228,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   // Edit mode (visual selection) belongs to the Studio preview only: a published, hosted page never carries it.
   if (navigation.hosted !== true) flag.textContent += '\n' + editModeRuntime + '\n' + bocetoModeRuntime;
   // Spec 2026-10-20 §6: double-click text editing, only in the Studio's own preview.
-  if (navigation.hosted !== true && navigation.inlineText === true) flag.textContent += '\n' + inlineTextRuntime;
+  if (navigation.hosted !== true && navigation.inlineText === true) flag.textContent += `\nwindow.PAGOSYA_INLINE_PRODUCTS = ${encoded(navigation.inlineProducts || {})};\n` + inlineTextRuntime;
   // The Studio redraws its preview after every save; the page reports where it is scrolled and comes back there
   // (owner 2026-10-21: «every time I update something it reloads from the top»). Content that renders late (the
   // catalog) grows the page, so the restore retries for a moment and stops as soon as the merchant scrolls.

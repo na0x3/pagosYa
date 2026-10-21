@@ -10,7 +10,7 @@ import { bocetoRevealY, createBocetoPanel } from './source-boceto';
 import { closeBocetoMenu } from './boceto-menu';
 import { renderInspiration } from './source-inspiration';
 import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
-import { matchInlineField } from './source-inline-text';
+import { inlineProductChange, inlineProducts, matchInlineField, type InlineProductField } from './source-inline-text';
 import { createProductForm } from './source-create-product';
 import { renderBuildProgress, type BuildProgress } from './source-build-progress';
 import { apiHeroUrls, fitStyleFrames, keepStylePolling, renderStylePicker, type StyleProposalView } from './source-style-pick';
@@ -255,6 +255,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (visualEditing && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:visual-select') { directEditor.select(event.data.value, event.data.kind); return; }
     // Spec 2026-10-20 §6: a text double-clicked and changed in the preview, saved through the direct-edit field that holds it.
     if (plantillasOn && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:inline-text' && typeof event.data.before === 'string' && typeof event.data.after === 'string') { void saveInlineText(event.data.before.slice(0, 2000), event.data.after.slice(0, 2000)); return; }
+    if (plantillasOn && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:inline-product-text' && typeof event.data.productId === 'string' && event.data.productId.length <= 64 && ['name', 'description', 'price'].includes(event.data.field) && typeof event.data.after === 'string') { void saveInlineProduct(event.data.productId, event.data.field, event.data.after.slice(0, 2000)); return; }
     if (plantillasOn && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:inline-product' && typeof event.data.productId === 'string' && event.data.productId.length <= 64) { openProductEditor(event.data.productId, event.data.field === 'price' ? 'price' : 'description'); return; }
     const picked = receivePreviewSelection(event, previewFrame);
     if (picked) { takeSelection(picked); return; }
@@ -281,7 +282,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const scrollY = !bocetoOpen && !previewNavigation.fragment && previewScroll.key === scrollKey ? previewScroll.y : 0;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing, inlineText: plantillasOn && !visualEditing && !bocetoOpen && !historical(), scrollY }); shownScrollKey = scrollKey; if (!visualEditing) disposeAccountPreview = mountSourceAccountDemo(frame); }
+      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing, inlineText: plantillasOn && !visualEditing && !bocetoOpen && !historical(), inlineProducts: plantillasOn ? inlineProducts(liveCatalog) : undefined, scrollY }); shownScrollKey = scrollKey; if (!visualEditing) disposeAccountPreview = mountSourceAccountDemo(frame); }
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }
@@ -409,9 +410,21 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       if (toast) toastTimer = window.setTimeout(() => { toast = ''; app.querySelector('.toast')?.remove(); }, 4000);
     }
   }
+  const revertInline = () => { try { app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')?.contentWindow?.postMessage({ type: 'pagosya:inline-text-revert' }, '*'); } catch { /* frame is gone */ } };
+  /** A product's name, description or simple price changed in the preview: saved on the product, so every page shows it. */
+  async function saveInlineProduct(productId: string, field: InlineProductField, after: string) {
+    if (busy || !storeId || historical()) { revertInline(); toast = 'Espera a que termine lo que está en curso para editar el producto.'; render(); return; }
+    const items = (liveCatalog?.items as Array<Record<string, unknown>> | undefined) ?? [];
+    const change = inlineProductChange(items.find(item => item.id === productId), field, after);
+    if ('editor' in change) { revertInline(); toast = change.message; render(); return; }
+    try { await api.updateProduct(storeId, productId, change.patch); toast = 'Producto actualizado en toda tu tienda.'; await refreshCatalog(); }
+    catch (cause) { revertInline(); toast = cause instanceof Error ? cause.message : 'No pudimos guardar el producto.'; }
+    render();
+  }
+
   /** The double-clicked text's words before and after: the first text field showing them takes the change, as a new revision. */
   async function saveInlineText(before: string, after: string) {
-    const revert = () => { try { app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')?.contentWindow?.postMessage({ type: 'pagosya:inline-text-revert' }, '*'); } catch { /* frame is gone */ } };
+    const revert = revertInline;
     const shown = version;
     if (!shown || busy || dirty() || historical() || visualEditPending || !storeId) { revert(); toast = 'Espera a que termine lo que está en curso para editar el texto.'; render(); return; }
     if (!after.trim()) { revert(); toast = 'El texto no puede quedar vacío.'; render(); return; }

@@ -9,38 +9,41 @@
   var off = function () { var root = document.documentElement; return root.hasAttribute('data-boceto-on') || Boolean(document.querySelector('[data-pagosya-edit-overlay]')); };
   var productOf = function (element) {
     // Any words on a kit product card are that product's (name, description, price); buttons keep their own job.
-    var holder = element.closest('[data-product-field],.menu-item__name,.menu-item__price,[data-pagosya-product-page] [data-part="title"],[data-pagosya-product-page] .product-detail__price')
+    var holder = element.closest('[data-product-field],.menu-item__name,.menu-item__price,.menu-item__copy > h3,.menu-item__copy > p:not([class]),[data-pagosya-product-page] [data-part="title"],[data-pagosya-product-page] .product-detail__price')
       || (!element.closest('button,.menu-add') && element.closest('.menu-item') && element.closest('.menu-item__copy,.menu-item__price'));
     if (!holder) return null;
     var card = holder.closest('.menu-item,[data-pagosya-product],[data-product-id]');
     var id = card && (card.getAttribute('data-product-id') || (card.querySelector('[data-product]') || {}).getAttribute && card.querySelector('[data-product]').getAttribute('data-product'));
     if (!id && card) { var link = card.querySelector('a[href*="?c="]'); if (link) id = new URL(link.getAttribute('href'), location.href).searchParams.get('c'); }
     if (!id) { var buy = document.querySelector('[data-pagosya-product-page] [data-add]'); if (buy && holder.closest('[data-pagosya-product-page]')) id = buy.getAttribute('data-add'); }
-    var field = holder.matches('[data-product-field="price"],.menu-item__price,.product-detail__price') || holder.closest('[data-product-field="price"]') ? 'price' : 'name';
-    return { productId: id || '', field: field };
+    var field = holder.matches('[data-product-field="price"],.menu-item__price,.product-detail__price') || holder.closest('[data-product-field="price"]') ? 'price'
+      : holder.matches('[data-product-field="description"],.menu-item__copy > p:not([class])') ? 'description'
+      : holder.matches('[data-product-field="name"],.menu-item__name,.menu-item__copy > h3,[data-part="title"]') ? 'name' : 'other';
+    return { productId: id || '', field: field, holder: holder };
   };
-  function start(element) {
+  function start(element, product) {
     if (editing) stop(false);
-    editing = { element: element, original: element.textContent || '' };
+    editing = { element: element, original: element.textContent || '', product: product || null };
     element.setAttribute('data-inline-editing', '');
     element.setAttribute('contenteditable', 'plaintext-only');
     if (element.contentEditable !== 'plaintext-only') element.setAttribute('contenteditable', 'true');
     element.focus();
-    try { document.execCommand('selectAll', false, null); } catch (error) { /* a nicety */ }
+    // Only this element's words are selected (select-all selected the whole page inside a link, live check 2026-10-21).
+    try { var range = document.createRange(); range.selectNodeContents(element); var selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range); } catch (error) { /* a nicety */ }
   }
   function stop(commit) {
     if (!editing) return;
-    var element = editing.element, original = editing.original; editing = null;
+    var element = editing.element, original = editing.original, product = editing.product; editing = null;
     element.removeAttribute('contenteditable'); element.removeAttribute('data-inline-editing');
     var before = clean(original), after = clean(element.textContent);
     if (!commit) { element.textContent = original; return; }
     if (!after || after === before || after.length > 1000) { element.textContent = original; return; }
     element.textContent = after;
     last = { element: element, original: original };
-    parent.postMessage({ type: 'pagosya:inline-text', before: before, after: after }, '*');
+    parent.postMessage(product ? { type: 'pagosya:inline-product-text', productId: product.productId, field: product.field, before: before, after: after } : { type: 'pagosya:inline-text', before: before, after: after }, '*');
   }
   var style = document.createElement('style');
-  style.textContent = '[data-inline-editing]{outline:2px solid #735da5!important;outline-offset:3px!important;cursor:text!important;-webkit-user-select:text!important;user-select:text!important}';
+  style.textContent = '[data-inline-editing]{position:relative;z-index:6;outline:2px solid #735da5!important;outline-offset:3px!important;cursor:text!important;-webkit-user-select:text!important;user-select:text!important}';
   (document.head || document.documentElement).appendChild(style);
   document.addEventListener('dblclick', function (event) {
     if (off()) return;
@@ -52,7 +55,17 @@
     }
     if (!target || target.closest('form,input,textarea,select,[data-pagosya-cart],.cart-drawer,[data-pagosya-checkout-page],[data-inline-editing]')) return;
     var product = productOf(target);
-    if (product) { event.preventDefault(); event.stopImmediatePropagation(); parent.postMessage({ type: 'pagosya:inline-product', productId: product.productId, field: product.field }, '*'); return; }
+    if (product) {
+      event.preventDefault(); event.stopImmediatePropagation();
+      // Owner 2026-10-21: a product's name, description and simple price change right here; the rest opens its editor.
+      var allowed = (window.PAGOSYA_INLINE_PRODUCTS || {})[product.productId];
+      // The kit links a template card's name to its page (h3 > a > text): the words sit in the one plain child.
+      var words = product.holder;
+      while (words && !textOnly(words) && words.children.length === 1 && !Array.prototype.some.call(words.childNodes, function (node) { return node.nodeType === 3 && clean(node.textContent); })) words = words.firstElementChild;
+      if (allowed && product.field !== 'other' && (product.field !== 'price' || allowed.price) && words && textOnly(words)) { start(words, product); return; }
+      parent.postMessage({ type: 'pagosya:inline-product', productId: product.productId, field: product.field === 'price' ? 'price' : 'name' }, '*');
+      return;
+    }
     var element = target.closest(TEXT);
     while (element && !textOnly(element)) element = null;
     if (!element) return;
@@ -65,8 +78,9 @@
     else if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); stop(true); }
   }, true);
   document.addEventListener('focusout', function (event) { if (editing && event.target === editing.element) stop(true); }, true);
-  // A link or button being edited must not navigate or submit.
-  document.addEventListener('click', function (event) { if (editing && event.target instanceof Element && editing.element.contains(event.target)) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
+  // While a text is being edited no link or button acts (a card's «Ver detalle» overlay lies over its words); a click
+  // elsewhere just ends the edit through focusout.
+  window.addEventListener('click', function (event) { if (editing && event.target instanceof Element && (editing.element.contains(event.target) || event.target.closest('a[href],button'))) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
   // A link's first click would navigate before the second click makes a double-click (live check 2026-10-21: a product
   // name on a card opened its page). A single click on a link waits a moment; a second click cancels it. On window, so it
   // runs before the preview's own navigation, which listens on the document.
