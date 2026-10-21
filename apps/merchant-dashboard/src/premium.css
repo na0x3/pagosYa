@@ -58,10 +58,11 @@ body.is-logged-in .section-tab { padding: 9px 16px; font-size: 14.5px; white-spa
 body.is-logged-in .section-tab:hover { background: rgb(255 255 255 / .55); }
 body.is-logged-in .section-tab[aria-current="page"] { background: #fff; box-shadow: var(--pm-shadow-lift); }
 body.is-logged-in :is(.profile-menu, .profile-menu[popover]) { background: var(--pm-glass-strong); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); border: 1px solid var(--pm-glass-edge); border-radius: 22px; box-shadow: var(--pm-shadow-float); }
-body.is-logged-in dialog { border: 1px solid var(--pm-glass-edge); border-radius: 28px; background: var(--pm-glass-strong); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); box-shadow: var(--pm-shadow-float); }
-body.is-logged-in dialog::backdrop { background: rgb(40 36 28 / .18); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+/* The MCP dialog (Conecta tu IA) is dark by design: it keeps its own surface. */
+body.is-logged-in dialog:not(.mcp-dialog) { border: 1px solid var(--pm-glass-edge); border-radius: 28px; background: var(--pm-glass-strong); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); box-shadow: var(--pm-shadow-float); }
+body.is-logged-in dialog:not(.mcp-dialog)::backdrop { background: rgb(40 36 28 / .18); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  body.is-logged-in :is(.dashboard-sidebar, .topbar, .section-tabs, .profile-menu, dialog) { background: var(--pm-glass-strong); }
+  body.is-logged-in :is(.dashboard-sidebar, .topbar, .section-tabs, .profile-menu, dialog:not(.mcp-dialog)) { background: var(--pm-glass-strong); }
 }
 @media (min-width: 1000px) {
   body.is-logged-in { --pm-rail: 248px; --pm-gap: 16px; --pm-column: 1080px; --pm-content-left: calc(var(--pm-rail) + 2 * var(--pm-gap)); }
@@ -87,7 +88,8 @@ body.is-logged-in button.primary:hover { background: var(--pg-ink-hover); border
 body.is-logged-in :is(button.secondary, button.ghost, .button-like.ghost) { background: #fff; border: 1px solid var(--pg-border-strong); color: var(--pg-text); }
 body.is-logged-in :is(button.secondary, button.ghost, .button-like.ghost):hover { background: var(--pg-surface-raised); }
 body.is-logged-in button:is(.primary, .secondary, .ghost):active { transform: scale(.98); }
-body.is-logged-in :is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not(.ui-switch), select, textarea) { min-height: 44px; padding: 10px 14px; border: 1px solid var(--pg-border-strong); border-radius: 14px; background: #fff; color: var(--pg-text); font-size: 15px; transition: border-color .2s var(--pm-ease), box-shadow .2s var(--pm-ease); }
+/* :where() keeps this at element weight, so components that style their own fields (the YAPI dock) still win. */
+body.is-logged-in :is(input:where(:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not(.ui-switch)), select, textarea) { min-height: 44px; padding: 10px 14px; border: 1px solid var(--pg-border-strong); border-radius: 14px; background: #fff; color: var(--pg-text); font-size: 15px; transition: border-color .2s var(--pm-ease), box-shadow .2s var(--pm-ease); }
 body.is-logged-in :is(input, select, textarea):focus-visible { outline: none; border-color: var(--pg-ink); box-shadow: 0 0 0 4px var(--pg-focus-ring); }
 body.is-logged-in textarea { min-height: 96px; line-height: 1.55; }
 body.is-logged-in table { border-collapse: separate; border-spacing: 0; }
@@ -136,5 +138,6 @@ body.is-logged-in .page-entering :is(.panel, .card, .overview-kpi):nth-child(5) 
 body.is-logged-in #sectionTabs .section-tab { transition: background-color .3s var(--pm-ease), color .3s var(--pm-ease), box-shadow .3s var(--pm-ease); }
 @media (prefers-reduced-motion: reduce) {
   body.is-logged-in :is(.page-entering, .page-entering .panel, .page-entering .card, .page-entering .overview-kpi) { animation: none; }
-  body.is-logged-in :is(.dashboard-nav-button, .section-tab, button, input, select, textarea, a) { transition: none; }
+  body.is-logged-in :is(#sectionTabs .section-tab, .dashboard-nav-button, .section-tab, button, input, select, textarea, a) { transition: none; }
 }
+@media (max-width: 699px) { body.is-logged-in .panel .section-head h2 { white-space: normal; } body.is-logged-in .panel .section-head > :first-child { flex-shrink: 1; } }

@@ -13,3 +13,8 @@ test('one or no profile is chosen for the merchant; two or more ask', () => {
   assert.equal(autoProfileName([{ profileName: 'Propietario' }], 'a@x.bo'), 'Propietario');
   assert.equal(autoProfileName([{ profileName: 'Ana' }, { profileName: 'Luis' }], 'a@x.bo'), null);
 });
+
+test('the dialog is skipped only when the sessions list loaded', async () => {
+  const src = (await import('node:fs')).readFileSync(new URL('../src/profile-sessions.mjs', import.meta.url), 'utf8');
+  assert.match(src, /const automatic = loaded \? autoProfileName\(profileChoices\(payload\), emailEl\.value\) : null;/);
+});

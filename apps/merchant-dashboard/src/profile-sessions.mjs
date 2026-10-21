@@ -163,15 +163,18 @@ export function createProfileSessions(deps) {
 
   async function chooseProfileForNewLogin(loginResult) {
     let payload;
+    let loaded = false;
     try {
       payload = await api("/dashboard/sessions");
+      loaded = true;
     } catch {
       payload = { sessions: loginResult.session ? [{ ...loginResult.session, current: true }] : [] };
     }
     const currentSession = payload.sessions?.find((session) => session.current) || loginResult.session;
     if (!currentSession?.id) return;
     pendingLoginSessionId = currentSession.id;
-    const automatic = autoProfileName(profileChoices(payload), emailEl.value);
+    // Without the real list (the request failed) the account may have more people than we can see: ask.
+    const automatic = loaded ? autoProfileName(profileChoices(payload), emailEl.value) : null;
     if (automatic) {
       try {
         await updateProfileSession(currentSession.id, automatic, storedAvatarId(currentSession));

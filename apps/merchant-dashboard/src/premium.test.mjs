@@ -26,7 +26,7 @@ test('shell: floating glass sidebar and top bar, a roomy column, glass pills, me
   assert.match(s, /body\.is-logged-in > \.topbar \{[^}]*backdrop-filter: var\(--pm-blur\)/);
   assert.match(s, /body\.is-logged-in \.dashboard-workspace \{[^}]*max-width: 1080px/);
   assert.match(s, /body\.is-logged-in \.section-tabs \{[^}]*backdrop-filter: var\(--pm-blur\)/);
-  assert.match(s, /body\.is-logged-in dialog \{[^}]*backdrop-filter: var\(--pm-blur\)/);
+  assert.match(s, /body\.is-logged-in dialog:not\(\.mcp-dialog\) \{[^}]*backdrop-filter: var\(--pm-blur\)/);
   assert.match(s, /@supports not \(\(backdrop-filter: blur\(1px\)\) or \(-webkit-backdrop-filter: blur\(1px\)\)\)/);
 });
 
@@ -88,4 +88,14 @@ test('motion: pages and cards rise in slowly, staggered, and stay still with red
 
 test('the floating inset never applies to the full-screen Diseño view, where the sidebar slides away', () => {
   assert.match(css(), /body\.is-logged-in:not\(\[data-dashboard-view="workspace"\]\) \.dashboard-sidebar \{ top: var\(--pm-gap\); left: var\(--pm-gap\);/);
+});
+
+test('review fixes: the dark MCP dialog keeps its look, fields stay low-specificity, headings wrap on phones, pill fade respects reduced motion', () => {
+  const s = css();
+  assert.match(s, /body\.is-logged-in dialog:not\(\.mcp-dialog\) \{/);
+  assert.match(s, /body\.is-logged-in dialog:not\(\.mcp-dialog\)::backdrop \{/);
+  assert.doesNotMatch(s, /body\.is-logged-in :is\(input:not\(/, 'the field rule must not carry :not() specificity');
+  assert.match(s, /body\.is-logged-in :is\(input:where\(:not\(\[type=checkbox\]\)/);
+  assert.match(s, /@media \(max-width: 699px\) \{ body\.is-logged-in \.panel \.section-head h2 \{ white-space: normal; \} body\.is-logged-in \.panel \.section-head > :first-child \{ flex-shrink: 1; \} \}/);
+  assert.match(s, /body\.is-logged-in :is\(#sectionTabs \.section-tab, \.dashboard-nav-button/);
 });
