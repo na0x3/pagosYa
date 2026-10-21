@@ -141,6 +141,20 @@ describe('SourceTemplatesService', () => {
     expect(data).toContain('"title":"Preguntas"');
   });
 
+  it('a fashion store gets the menu the fill picked; the filler hears how many categories have products (dropdown menu 2026-10-21)', async () => {
+    const { templates: base, projects, prisma } = service(0);
+    const real = jest.requireActual('@pagosya/store-templates');
+    const templates = new SourceTemplatesService(prisma as any, (base as any).publicStores, projects as any, (base as any).config);
+    templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+    const filler = jest.fn(async () => ({ character: { tone: 'calm' as const, temperature: 'neutral' as const, lead: 'photo' as const, exclude: [], kind: 'fashion' as const }, menu: { style: 'dropdowns' as const, groups: [] } }));
+    await templates.applyMaster('m1', 'store-1', 0, filler);
+    expect((filler.mock.calls[0] as any[])[0].categoryCount).toBe(0);
+    const files = (projects.save.mock.calls[0] as any[])[2].files as any[];
+    const variants = JSON.parse(/export const variants[^=]*= (.*);/.exec(files.find(f => f.path === 'components/store-data.tsx').content)![1]);
+    expect(variants.menu).toBe('dropdowns');
+    expect(files.find(f => f.path === 'config.js').content).toContain('"header":{"menu":{"style":"dropdowns"}}');
+  });
+
   describe('the merchant\'s brand first (variety spec §4)', () => {
     const real = jest.requireActual('@pagosya/store-templates');
     const build = (confirmed: Array<{ field: string; value: string }>, logo?: string) => {

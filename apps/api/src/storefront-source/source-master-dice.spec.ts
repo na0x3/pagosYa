@@ -1,5 +1,5 @@
 import { templateManifest } from '@pagosya/store-templates';
-import { distinctPhotoCount, rollVariants } from './source-master-dice';
+import { distinctPhotoCount, menuVariant, rollVariants } from './source-master-dice';
 
 const settings = templateManifest('esencial')!.master!;
 const calm = { tone: 'calm', temperature: 'warm', lead: 'photo', exclude: [] as string[] } as const;
@@ -120,4 +120,39 @@ it('no other store ever rolls the fashion card or page, whatever the seed or exc
     expect(rolled.variants.cards).not.toBe('fashion');
     expect(rolled.variants.pdp).not.toBe('fashion');
   }
+});
+
+/** Dropdown menu spec 2026-10-21: the menu part. */
+describe('menu part', () => {
+  const { menu: _menu, ...withoutMenuVariants } = settings.variants as Record<string, readonly string[]>;
+  const withoutMenu = { ...settings, variants: withoutMenuVariants } as typeof settings;
+  it('the catalogue has the menu part', () => expect(settings.variants?.menu).toEqual(['none', 'panel', 'dropdowns']));
+  it('a store with fewer than 2 categories rolls none', () => {
+    for (const seed of 'abcdefgh') expect(roll(seed, { categoryCount: 1 }).variants.menu).toBe('none');
+    expect(roll('z').variants.menu).toBe('none');
+  });
+  it('fashion stores always get the panel', () => {
+    for (const seed of 'abcdefgh') expect(roll(seed, { categoryCount: 0, character: { ...calm, kind: 'fashion' } }).variants.menu).toBe('panel');
+  });
+  it('other stores with categories roll every value across seeds', () => {
+    const seen = new Set(Array.from({ length: 40 }, (_, i) => roll(`s${i}`, { categoryCount: 3 }).variants.menu));
+    expect(seen).toEqual(new Set(['none', 'panel', 'dropdowns']));
+  });
+  it('adding the menu part leaves every other roll as it was', () => {
+    for (const seed of 'abcdef') {
+      const before = rollVariants({ seed, settings: withoutMenu, character: calm, photoCount: 6, sections: [], recent: [] });
+      const after = roll(seed, { categoryCount: 3 });
+      const { menu: _rolled, ...rest } = after.variants;
+      expect(rest).toEqual(before.variants);
+      expect([after.palette, after.fonts]).toEqual([before.palette, before.fonts]);
+    }
+  });
+  it('the fill picks the style but not whether a non-fashion store has a menu', () => {
+    expect(menuVariant('panel', 'dropdowns', false)).toBe('dropdowns');
+    expect(menuVariant('none', 'dropdowns', false)).toBe('none');
+    expect(menuVariant('dropdowns', 'none', false)).toBe('dropdowns');
+    expect(menuVariant('panel', 'dropdowns', true)).toBe('dropdowns');
+    expect(menuVariant('panel', 'none', true)).toBe('panel');
+    expect(menuVariant(undefined, 'panel', false)).toBeUndefined();
+  });
 });

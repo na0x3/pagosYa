@@ -24,15 +24,27 @@ function rng(seed: string) {
 const pick = <T>(next: () => number, list: readonly T[]): T => list[Math.floor(next() * list.length)];
 
 /** Commerce displays fit any business; the fill call's exclusions skipped them every time (live 2026-10-19: offers «steps» never rolled). */
-const DICE_ONLY = new Set(['cards', 'offers']);
+const DICE_ONLY = new Set(['cards', 'offers', 'menu']);
 
 /** Fashion look spec 2026-10-21: the fashion card and product page belong to fashion stores only, and fashion stores always get them. */
 const FASHION_PARTS = ['cards', 'pdp'] as const;
 
+/** Dropdown menu spec 2026-10-21: a menu needs at least two categories to be worth opening; fashion stores always get one.
+ *  It is rolled from its own seed, so adding the part left every other part, palette and font pair as it was. */
+const MENU_MIN_CATEGORIES = 2;
+
+/** The fill's style choice over the roll: it picks panel or dropdowns, never whether a non-fashion store has a menu. */
+export function menuVariant(rolled: string | undefined, chosen: string | undefined, fashion: boolean): string | undefined {
+  if (rolled === undefined) return undefined;
+  const style = chosen === 'panel' || chosen === 'dropdowns' ? chosen : undefined;
+  if (fashion) return style ?? 'panel';
+  return rolled === 'none' ? 'none' : style ?? rolled;
+}
+
 /** Most recent first. */
 export type RecentRoll = { hero: string; palette: string; fonts: string };
 
-export function rollVariants(input: { seed: string; settings: MasterSettings; character: MasterCharacter; photoCount: number; sections: string[]; recent: RecentRoll[] }): { variants: MasterVariants; palette: string; fonts: string } {
+export function rollVariants(input: { seed: string; settings: MasterSettings; character: MasterCharacter; photoCount: number; sections: string[]; recent: RecentRoll[]; categoryCount?: number }): { variants: MasterVariants; palette: string; fonts: string } {
   const catalogue = (input.settings.variants ?? {}) as Record<string, readonly string[]>;
   // The fill call's exclusions are honoured for at most half of a part: a model that rules out nearly everything would
   // otherwise make every store the same (live check 2026-10-19: the feature grid on 4 of 6 stores).
@@ -58,8 +70,13 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   let last: { variants: MasterVariants; palette: string; fonts: string } | undefined;
   for (let attempt = 0; attempt < 20; attempt++) {
     const next = rng(`${input.seed}#${attempt}`);
-    const variants = Object.fromEntries(Object.keys(catalogue).map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
+    const variants = Object.fromEntries(Object.keys(catalogue).filter(part => part !== 'menu').map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
     if (input.character.kind === 'fashion') for (const part of FASHION_PARTS) if (catalogue[part]?.includes('fashion')) variants[part] = 'fashion';
+    if (catalogue.menu?.length) {
+      variants.menu = input.character.kind === 'fashion' ? 'panel'
+        : (input.categoryCount ?? 0) < MENU_MIN_CATEGORIES ? 'none'
+        : pick(rng(`${input.seed}#menu`), allowed('menu'));
+    }
     last = { variants: { ...variants, sections } as MasterVariants, palette: pick(next, palettePool), fonts: pick(next, fonts) };
     if (!taken.has(`${last.variants.hero}|${last.palette}|${last.fonts}`)) return last;
   }

@@ -16,14 +16,19 @@ import type { SourceProjectSnapshot } from './source-project';
 import { assembleTemplateRevision, readMasterState, refillMasterFiles, refillPlantillaFiles, templateDemoRevision, TEMPLATE_STORE_DATA_PATH } from './source-templates';
 import { plantillaFallback, plantillaFillFromRead } from './source-plantilla-fill';
 import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
-import { distinctPhotoCount, rollVariants, type RecentRoll } from './source-master-dice';
+import { distinctPhotoCount, menuVariant, rollVariants, type RecentRoll } from './source-master-dice';
 
 /** What the master template's filler is told about a store (spec 2026-10-19 §2.3). */
-export type MasterFacts = { storeName: string; products: string[]; photos: string[]; brand?: { voice?: string; headlineExamples?: string; avoid?: string } };
+export type MasterFacts = { storeName: string; products: string[]; photos: string[];
+  /** Dropdown menu spec 2026-10-21: categories that have products; the dice give a menu only from two. */
+  categoryCount: number;
+  /** What the menu may link: categories with products and the info pages (no home sections: the home is not built yet). */
+  menuTargets?: Array<{ target: string; label: string }>; brand?: { voice?: string; headlineExamples?: string; avoid?: string } };
 /** What a Plantilla's filler is told (spec 2026-10-20 §4): the store as the apply reads it, and the template's slots. */
 export type PlantillaFacts = { storeName: string; tagline: string; products: string[]; photos: string[]; slots: NonNullable<registry.TemplateManifest['copy']> };
 const HEX = /^#[0-9a-f]{6}$/i;
-import { sourcePublicApiUrl } from './source-store-config';
+import { sourcePublicApiUrl, sourceStoreConfigData } from './source-store-config';
+import { storeMenuContext, storeMenuTargetList } from './source-store-menu';
 
 /** Plantillas: apply a designer-made store as the next revision (free, no AI call). */
 @Injectable()
@@ -77,6 +82,8 @@ export class SourceTemplatesService {
     const brand = await Promise.resolve(this.brands?.get(merchantId, storeId)).catch(() => undefined);
     const confirmed = new Map((brand?.data.confirmed ?? []).map(fact => [String(fact.field), String(fact.value)]));
     const facts: MasterFacts = { storeName: publicStore.storeName, products: publicStore.items.map(item => item.name), photos: [...new Set(publicStore.items.flatMap(item => item.imageUrls ?? []))],
+      categoryCount: publicStore.categories.filter(category => publicStore.items.some(item => item.categoryId === category.id)).length,
+      menuTargets: storeMenuTargetList(storeMenuContext(sourceStoreConfigData(publicStore, sourcePublicApiUrl(this.config), false), [])),
       ...(confirmed.get('voice') || confirmed.get('avoid') || confirmed.get('headlineExamples') ? { brand: { voice: confirmed.get('voice'), headlineExamples: confirmed.get('headlineExamples'), avoid: confirmed.get('avoid') } } : {}) };
     const filled = await filler(facts).catch(() => null);
     // Live 2026-10-19: a fill that timed out left the template's placeholder story and an API-hosted hero, and that hero then
@@ -90,8 +97,10 @@ export class SourceTemplatesService {
       // Counted before bundling: a bundled hero is an asset path and would count its product photo twice (review fix).
       const photoCount = distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]);
       const rolled = rollVariants({ seed: storeId, settings: manifest.master, character: fill?.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] },
-        photoCount, sections: (fill?.sections ?? []).map(section => section.id), recent: await this.recentMasterRolls(storeId) });
+        photoCount, sections: (fill?.sections ?? []).map(section => section.id), recent: await this.recentMasterRolls(storeId), categoryCount: facts.categoryCount });
       variants = rolled.variants;
+      // Dropdown menu spec 2026-10-21: the fill picks panel or dropdowns; the roll decides whether a non-fashion store has one.
+      if (variants.menu !== undefined) variants.menu = menuVariant(variants.menu, fill?.menu?.style, fill?.character?.kind === 'fashion')!;
       fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), palette: rolled.palette, fonts: rolled.fonts } };
     }
     const brandColours = Object.fromEntries(([['paper', 'background'], ['ink', 'foreground'], ['accent', 'accent'], ['muted', 'surface']] as const)
