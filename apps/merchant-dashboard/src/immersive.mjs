@@ -14,8 +14,9 @@ export function narratorTarget({ width, height }) {
 
 /** Keyframes that carry a card from `from` to `to`, fading out as it lands. */
 export function flightFrames(from, to) {
-  const dx = to.left - from.left, dy = to.top - from.top;
-  const sx = to.width / from.width, sy = to.height / from.height;
+  // One scale for both axes (the target's width): a card that stretches unevenly squashes the words it carries.
+  const sx = to.width / from.width, sy = sx;
+  const dx = to.left - from.left, dy = to.top + to.height - from.height * sy - from.top;
   const round = (n) => Math.round(n * 100) / 100;
   return [
     { transform: "translate(0px, 0px) scale(1, 1)", opacity: 1, offset: 0 },

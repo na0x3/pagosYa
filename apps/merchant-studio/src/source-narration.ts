@@ -44,3 +44,13 @@ export function typingPlan(text: string, cps = 28): Array<{ word: string; at: nu
     return { word, at };
   });
 }
+
+/** The summary for a finished request: a saved change says «Listo», what changed (YAPI's own words) and where to see
+ *  it; a reply without a change (a question, an answer) is that reply. Never the editor's boilerplate. */
+export function narrationFromMessage(message: { content?: unknown; metadata?: Record<string, unknown> | null }): Narration {
+  const meta = message.metadata ?? {};
+  if (typeof meta.sourceRevision !== 'number') return narrationFromReply(String(message.content ?? ''));
+  const own = [meta.agentSummary, meta.label].find(value => typeof value === 'string' && value.trim() && !/^r\d+$/i.test(value.trim())) as string | undefined;
+  const change = own ? narrationFromReply(own).lines.at(-1)! : '';
+  return { phase: 'done', lines: ['Listo.', ...(change ? [sentence(change)] : []), 'Ya está en tu vista previa. Publícalo cuando te guste.'] };
+}

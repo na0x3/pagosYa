@@ -42,3 +42,11 @@ test('the dock, «Pídele a YAPI» and Crecimiento all travel the same way', () 
   assert.match(js, /function composeInYapi\(text, origin, from\) \{/);
   assert.match(js, /playImmersiveMove\(\{ doc: document, from: from \|\| dockRect\(\), text, go,/);
 });
+
+test('the card keeps its proportions in flight, so its words never squash', () => {
+  const frames = flightFrames({ left: 400, top: 800, width: 640, height: 64 }, { left: 1036, top: 756, width: 380, height: 120 });
+  for (const frame of frames) {
+    const [, sx, sy] = frame.transform.match(/scale\(([\d.]+), ([\d.]+)\)/);
+    assert.equal(sx, sy);
+  }
+});

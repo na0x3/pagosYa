@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { narrationFromProgress, narrationFromReply, stoppedNarration, typingPlan } from './source-narration';
+import { narrationFromMessage, narrationFromProgress, narrationFromReply, stoppedNarration, typingPlan } from './source-narration';
 import type { BuildProgress } from './source-build-progress';
 
 const step = (label: string, status: 'running' | 'completed' | 'failed', details: string[] = []) => ({ stage: 'agent', label, startedAt: 1, status, details: details.map(label => ({ label })) });
@@ -31,5 +31,18 @@ describe('what the glass window says', () => {
     const plan = typingPlan('Hola mundo', 28);
     expect(plan.map(w => w.word)).toEqual(['Hola', 'mundo']);
     expect(plan[1].at).toBeGreaterThanOrEqual(5 / 28 * 1000);
+  });
+});
+
+describe('the summary speaks for YAPI, not for the editor', () => {
+  it('a saved change says Listo, what changed, and where to see it', () => {
+    const n = narrationFromMessage({ content: 'Guardé los cambios de tu tienda «Cambié el CTA». El editor comprobará…', metadata: { sourceRevision: 4, label: 'Cambié el texto del botón principal a «Ver clases»' } });
+    expect(n).toEqual({ phase: 'done', lines: ['Listo.', 'Cambié el texto del botón principal a «Ver clases».', 'Ya está en tu vista previa. Publícalo cuando te guste.'] });
+  });
+  it('prefers the agent summary when there is one', () => {
+    expect(narrationFromMessage({ content: 'x', metadata: { sourceRevision: 5, label: 'r5', agentSummary: 'Hice una portada nueva con tus fotos.' } }).lines[1]).toBe('Hice una portada nueva con tus fotos.');
+  });
+  it('a reply without changes is the answer itself', () => {
+    expect(narrationFromMessage({ content: '¿Qué datos quieres en tu política?', metadata: {} })).toEqual({ phase: 'done', lines: ['¿Qué datos quieres en tu política?'] });
   });
 });

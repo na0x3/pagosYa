@@ -87,7 +87,7 @@ describe('the Studio feeds the window', () => {
     expect(studio).toMatch(/if \(event\.type === 'interrupt' && wasBuilding\) narrator\.interrupted\(\);/);
     expect(studio).toMatch(/transitionBuild\(\{ type: 'submit' \}\); narrator\.submitted\(text\);/);
     expect(studio).toMatch(/function updateBuildProgress\(\) \{\n\s+narrator\.progress\(buildProgress\);/);
-    expect(studio).toMatch(/narrator\.completed\(String\(result\.assistantMessage\?\.content \?\? ''\)\);/);
-    expect(studio).toMatch(/narrator\.completed\(String\(\[\.\.\.messages\]\.reverse\(\)\.find\(m => m\.role === 'ASSISTANT'\)\?\.content \?\? ''\)\);/);
+    expect(studio).toMatch(/narrator\.completed\(result\.assistantMessage \?\? ''\);/);
+    expect(studio).toMatch(/narrator\.completed\(\[\.\.\.messages\]\.reverse\(\)\.find\(m => m\.role === 'ASSISTANT'\) \?\? ''\);/);
   });
 });

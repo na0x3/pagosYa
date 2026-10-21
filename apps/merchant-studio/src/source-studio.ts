@@ -494,7 +494,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         window.setTimeout(() => { if (storeId !== selectedStore) return; void action(async () => {
           transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); narrator.submitted('Tu pedido en curso'); buildStatus = 'YAPI sigue trabajando en tu pedido…'; render();
           const stop = watchBuildProgress(selectedStore, job.requestId);
-          try { await api.waitSourceChatJob(selectedStore, job, showQueue); transitionBuild({ type: 'complete' }); await load(); narrator.completed(String([...messages].reverse().find(m => m.role === 'ASSISTANT')?.content ?? '')); }
+          try { await api.waitSourceChatJob(selectedStore, job, showQueue); transitionBuild({ type: 'complete' }); await load(); narrator.completed([...messages].reverse().find(m => m.role === 'ASSISTANT') ?? ''); }
           finally { stop(); stopStylePoll(); if (building()) transitionBuild({ type: 'interrupt' }); await refreshInterruptedDraft().catch(() => {}); void loadStyleProposal(); }
         }); }, 0);
       }
@@ -691,7 +691,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         succeeded = true; if (selection.get()?.sectionId === submittedSelection?.sectionId) clearSelection(); pendingSubmission = null; transitionBuild({ type: 'complete' }); liveDraft = null;
         productPhoto = false; navigationChoice = '';
         messages.push(result.userMessage, result.assistantMessage); setup = result.setup || null; liveCatalog = null;
-        narrator.completed(String(result.assistantMessage?.content ?? ''));
+        narrator.completed(result.assistantMessage ?? '');
         if (result.assistantMessage?.metadata?.styleProposal) void loadStyleProposal();
         render();
         if (result.revision) {

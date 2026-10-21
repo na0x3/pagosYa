@@ -1,4 +1,4 @@
-import { narrationFromProgress, narrationFromReply, stoppedNarration, typingPlan, type Narration } from './source-narration';
+import { narrationFromMessage, narrationFromProgress, narrationFromReply, stoppedNarration, typingPlan, type Narration } from './source-narration';
 import type { BuildProgress } from './source-build-progress';
 import { renderFaceMark } from './source-face';
 import './source-narrator.css';
@@ -109,7 +109,7 @@ export function narratorBridge(narrator: Pick<Narrator, 'open' | 'show'>) {
   return {
     submitted(text: string) { last = ''; narrator.open(text); },
     progress(progress: BuildProgress | null) { show(narrationFromProgress(progress)); },
-    completed(reply: string) { show(narrationFromReply(reply)); },
+    completed(reply: string | { content?: unknown; metadata?: Record<string, unknown> | null }) { show(typeof reply === 'string' ? narrationFromReply(reply) : narrationFromMessage(reply)); },
     interrupted() { show(stoppedNarration()); },
   };
 }
