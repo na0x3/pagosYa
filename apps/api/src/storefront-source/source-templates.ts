@@ -176,12 +176,14 @@ export function withEsencialCatalogPages<F extends { path: string; content: stri
   const block = start >= 0 && end > start ? css.slice(start, end + CATALOG_CSS_END.length) : '';
   const missing = CATALOG_PAGES.filter(path => !files.some(file => file.path === path)).flatMap(path => source.filter(file => file.path === path));
   // A page as the first version shipped it (no mark, a fixed collection title) is brought up to date; an edited one is the store's.
-  const firstVersion = (content: string) => content.replace(/^\/\/ @pagosya-catalog-page[^\n]*\n/, '').replace(' data-collection-title', '');
+  // Compared as code only: the first version's comments were worded differently (NOA VARGAS rev 8, 2026-10-21).
+  const code = (content: string) => content.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(' data-collection-title', '').replace(/\s+/g, ' ').trim();
+  const firstVersion = (content: string, latest: string) => !/^\s*\/\/\s*@pagosya-catalog-page/.test(content) && code(content) === code(latest);
   const current = (path: string) => source.find(file => file.path === path)?.content;
   const withCss = files.map(file => {
     if (file.path === 'styles/globals.css' && block && !file.content.includes(CATALOG_CSS_MARK)) return { ...file, content: `${file.content.trimEnd()}\n\n${block}\n` };
     const latest = CATALOG_PAGES.includes(file.path) ? current(file.path) : undefined;
-    return latest && file.content !== latest && file.content === firstVersion(latest) ? { ...file, content: latest } : file;
+    return latest && file.content !== latest && firstVersion(file.content, latest) ? { ...file, content: latest } : file;
   });
   return missing.length ? [...withCss, ...missing.map(file => ({ ...file }) as unknown as F)] : withCss;
 }

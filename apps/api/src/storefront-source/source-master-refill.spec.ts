@@ -221,7 +221,9 @@ describe('Esencial catalogue pages follow-ups', () => {
     expect(designFileCount([{ path: 'components/page-productos.tsx', content: template('components/page-productos.tsx') }, { path: 'components/home.tsx', content: '' }])).toBe(1);
   });
   it('a first-version collection page (no mark, fixed title) is replaced by the current one; an edited one is kept', () => {
-    const first = template('components/page-coleccion.tsx').replace(/^\/\/ @pagosya-catalog-page[^\n]*\n/, '').replace(' data-collection-title', '');
+    // As NOA VARGAS rev 8 has it: no mark, a fixed title, and the first wording of the comment (live 2026-10-21).
+    const first = template('components/page-coleccion.tsx').replace(/^\/\/ @pagosya-catalog-page[^\n]*\n/, '').replace(' data-collection-title', '')
+      .replace(/\/\*\*[\s\S]*?\*\//, "/** Sort & filter styles spec 2026-10-21: one collection inside the store's own header, menu and footer; the kit draws the\n *  collection's name, its tabs and its products into the mount. */");
     const store = storeFiles().concat({ path: 'components/page-coleccion.tsx', content: first }, { path: 'components/page-productos.tsx', content: 'mine' });
     const out = refillMasterFiles(store, manifest, { copy: { headline: 'Otra' } });
     expect(out.find(file => file.path === 'components/page-coleccion.tsx')!.content).toBe(template('components/page-coleccion.tsx'));
