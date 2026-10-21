@@ -453,6 +453,19 @@ describe("PaymentIntentsService.confirm via dLocal", () => {
     return { service, update, dlocal, domestic, railRegistry, paymentMethods, tx };
   }
 
+  it("never confirms a live payment through a simulated rail in production (security audit 2026-10-21)", async () => {
+    const live = setup({}, { livemode: true }, { environment: "production" });
+    live.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });
+    await expect(live.service.confirm("pi_1", { paymentMethod: { type: "QR", token: "qr" } } as any)).rejects.toThrow("no está disponible");
+    expect(live.domestic.authorize).not.toHaveBeenCalled();
+    const sandbox = setup({}, { livemode: false }, { environment: "production" });
+    sandbox.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });
+    await expect(sandbox.service.confirm("pi_1", { paymentMethod: { type: "QR", token: "qr" } } as any)).resolves.toBeDefined();
+    const dev = setup({}, { livemode: true }, { environment: "development" });
+    dev.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });
+    await expect(dev.service.confirm("pi_1", { paymentMethod: { type: "QR", token: "qr" } } as any)).resolves.toBeDefined();
+  });
+
   it("records the buyer's terms acceptance inside the confirm transaction, before the rail is called", async () => {
     const test = setup({});
     test.paymentMethods.findOrCreate.mockResolvedValue({ id: "pm_qr", type: "QR" });

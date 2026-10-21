@@ -400,6 +400,11 @@ export class PaymentIntentsService {
       if (international && !rail.supportedMethodTypes.includes(dto.paymentMethod.type)) {
         throw new BadRequestException("Este método de pago no está disponible para pagos desde el exterior.");
       }
+      // Security audit 2026-10-21: the simulated rails (mock_card, mock_qr, mock_tigo_money, mock_bank_transfer) approve
+      // any token. In production a live payment must never be confirmed through one: no money would move.
+      if (current.livemode && rail.railId.startsWith("mock_") && this.config.get<string>("app.environment") === "production") {
+        throw new ForbiddenException("Este método de pago no está disponible.");
+      }
       let charge: ReturnType<typeof resolveChargeAmount>;
       try {
         charge = resolveChargeAmount(current, international, this.config.get<DlocalConfig>("app.dlocal")!.bobPerUsd, new Date());
