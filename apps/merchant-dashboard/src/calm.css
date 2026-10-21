@@ -385,3 +385,6 @@ body.is-logged-in[data-dashboard-view="workspace"] .dashboard-sidebar.is-store-n
 @media (prefers-reduced-motion: reduce) {
   body.is-logged-in[data-dashboard-view="workspace"] .dashboard-sidebar { transition: none; }
 }
+/* Spec 2026-10-21 A2: screens and fields YAPI makes redundant stay in the code, hidden unless DASHBOARD_FULL_NAV=1. */
+html:not([data-full-nav]) [data-full-nav-only] { display: none !important; }
+html[data-full-nav] .ask-yapi { display: none !important; }
