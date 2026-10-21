@@ -20,7 +20,7 @@ import { createStoresPanel } from "/src/stores-panel.mjs";
 import { createInventoryImportPanel } from "/src/inventory-import-panel.mjs";
 import { createAccountPanel } from "/src/account-panel.mjs";
 import { createProfileSessions } from "/src/profile-sessions.mjs";
-import { sectionOf, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-sections.mjs";
+import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-sections.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -583,6 +583,9 @@ import { sectionOf, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-s
     button.addEventListener("click", (event) => {
       event.preventDefault();
       history.pushState(null, "", button.href);
+      // The marketing view serves Clientes and Ajustes pills: a section link always opens its own first tab.
+      const entry = button.dataset.navSection ? sectionEntry(button.dataset.navSection) : null;
+      if (entry?.marketingTab) selectMarketingTab(entry.marketingTab);
       pendingStudioAction = button.dataset.studioTool ? { action: button.dataset.studioTool, storeId: currentStoreId } : pendingStudioAction;
       setDashboardView(button.dataset.dashboardView);
       if (button.dataset.studioTool) {

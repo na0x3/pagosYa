@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NAV_SECTIONS, KNOWN_VIEWS, sectionOf, resolveView, visibleTabs, renderSectionTabs, tabKey, fullNavOn } from './nav-sections.mjs';
+import { NAV_SECTIONS, KNOWN_VIEWS, sectionOf, sectionEntry, resolveView, visibleTabs, renderSectionTabs, tabKey, fullNavOn } from './nav-sections.mjs';
 
 test('seven sections show by default; Documentos is full-nav only', () => {
   assert.deepEqual(NAV_SECTIONS.filter(s => !s.fullNavOnly).map(s => s.label), ['Inicio', 'Tienda', 'Pedidos', 'Cobrar', 'Dinero', 'Clientes', 'Ajustes']);
@@ -58,4 +58,10 @@ test('fullNavOn reads the html attribute', () => {
   assert.equal(fullNavOn({ documentElement: { hasAttribute: name => name === 'data-full-nav' } }), true);
   assert.equal(fullNavOn({ documentElement: { hasAttribute: () => false } }), false);
   assert.equal(fullNavOn(undefined), false);
+});
+
+test('sectionEntry is the first tab a sidebar link opens', () => {
+  assert.deepEqual(sectionEntry('clientes'), { view: 'marketing', marketingTab: 'emails', label: 'Correos' });
+  assert.equal(sectionEntry('ajustes').view, 'store-settings');
+  assert.equal(sectionEntry('nope'), null);
 });

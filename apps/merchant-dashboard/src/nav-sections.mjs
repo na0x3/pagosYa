@@ -59,6 +59,11 @@ export function sectionOf(view, marketingTab) {
   return { section: NAV_SECTIONS[0], tab: NAV_SECTIONS[0].tabs[0] };
 }
 
+/** The tab a section's sidebar link opens: its first one. */
+export function sectionEntry(id) {
+  return NAV_SECTIONS.find(s => s.id === id)?.tabs[0] ?? null;
+}
+
 export function resolveView(view, fullNav) {
   if (!KNOWN_VIEWS.has(view)) return "overview";
   return HIDDEN_VIEWS.has(view) && !fullNav ? "overview" : view;

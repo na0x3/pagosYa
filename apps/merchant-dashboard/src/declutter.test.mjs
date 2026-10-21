@@ -43,3 +43,8 @@ test('pills switch views and marketing tabs; the old marketing tab bar is hidden
 test('a hidden marketing tab falls back to Correos', () => {
   assert.match(js, /if \(tab === "logs" && !fullNavOn\(\)\) tab = "emails";/);
 });
+
+test('a sidebar link opens its section on the first tab, even after another section used the same view', () => {
+  assert.match(js, /const entry = button\.dataset\.navSection \? sectionEntry\(button\.dataset\.navSection\) : null;/);
+  assert.match(js, /if \(entry\?\.marketingTab\) selectMarketingTab\(entry\.marketingTab\);/);
+});
