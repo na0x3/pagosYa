@@ -1,4 +1,6 @@
 import { fullNavOn } from "./nav-sections.mjs";
+import { askYapiLine, BRAND_REQUEST } from "./ask-yapi.mjs";
+import { POLICY_REQUEST } from "./growth.mjs";
 import { escapeHtml } from "./html.mjs";
 import { uiChoice, uiHead, uiOption, uiSwitch } from "./ui-kit.mjs";
 // Store settings the live checkout reads: identity, how an order ends, support
@@ -106,6 +108,7 @@ const TEMPLATE = `<form class="store-settings-form" novalidate>
       <label class="button-like ghost" for="storeLogoInput" data-logo-pick>Subir logo</label>
       <button type="button" class="ghost" data-logo-remove hidden>Quitar</button>
     </div>
+    ${askYapiLine({ text: "Colores, tipografía y estilo los define YAPI.", request: BRAND_REQUEST })}
     </div>
   </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsCheckoutTitle">
@@ -155,6 +158,7 @@ const TEMPLATE = `<form class="store-settings-form" novalidate>
     <div class="store-editor-section-body" data-full-nav-only>
     ${POLICY_FIELDS.map(([key, label, hint]) => `<div class="full"><label for="storePolicy-${key}">${label} (opcional)</label><textarea id="storePolicy-${key}" data-policy="${key}" rows="4" maxlength="6000" placeholder="${hint}"></textarea></div>`).join("")}
     </div>
+    ${askYapiLine({ text: "Tus políticas las escribe YAPI con tus datos.", request: POLICY_REQUEST })}
   </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsLocationsTitle">
     ${uiHead({ icon: "map-pin", id: "storeSettingsLocationsTitle", title: "Ubicaciones e inventario", text: "Sucursales, retiro, entrega y stock por lugar." })}

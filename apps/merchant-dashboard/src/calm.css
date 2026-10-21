@@ -393,3 +393,5 @@ html[data-full-nav] .ask-yapi { display: none !important; }
 .section-tab:hover { background: var(--pg-surface-raised); color: var(--pg-text); }
 .section-tab[aria-current="page"] { background: var(--pg-surface); border-color: var(--pg-border); color: var(--pg-text); box-shadow: var(--calm-shadow); }
 .section-tab:focus-visible { outline: 2px solid var(--pg-focus-ring); outline-offset: 2px; }
+.ask-yapi { margin: 4px 0 0; color: var(--pg-text-muted); font-size: 14px; }
+.ask-yapi-link { border: 0; background: none; padding: 0; font: inherit; color: var(--pg-text); text-decoration: underline; text-decoration-color: var(--pg-brand); text-underline-offset: 3px; cursor: pointer; }

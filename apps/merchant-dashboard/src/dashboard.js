@@ -187,6 +187,13 @@ import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } fr
     beginPaymentLinkEdit(link, step);
     return true;
   }
+  /** Opens Diseño with the text in YAPI's composer, not sent (Crecimiento insights, «Pídele a YAPI»). */
+  function composeInYapi(text, origin) {
+    pendingStudioAction = { action: "compose", origin, text, storeId: currentStoreId };
+    history.pushState(null, "", "#dashboard-workspace");
+    setDashboardView("workspace");
+    deliverStudioAction();
+  }
   const growth = mountGrowthPanel({
     api,
     storeId: () => currentStoreId,
@@ -198,12 +205,7 @@ import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } fr
       setDashboardView(view);
       document.querySelector(".workspace-header")?.scrollIntoView({ block: "start" });
     },
-    composeYapi: (text) => {
-      pendingStudioAction = { action: "compose", origin: "growth", text, storeId: currentStoreId };
-      history.pushState(null, "", "#dashboard-workspace");
-      setDashboardView("workspace");
-      deliverStudioAction();
-    },
+    composeYapi: (text) => composeInYapi(text, "growth"),
     editProduct: (productId, step) => editProductById(productId, step),
   });
   // Crecer › Carritos abandonados: who left without paying and how to reach them; read-only.
@@ -413,6 +415,11 @@ import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } fr
     if (frame.contentWindow?.pagosyaStudioCanLeave && !frame.contentWindow.pagosyaStudioCanLeave()) return;
     selectMarketingTab(button.dataset.marketingTab); syncStoreResourceViews("marketing");
   });
+  document.addEventListener("click", event => {
+    const ask = event.target.closest("[data-ask-yapi]"); if (!ask) return;
+    if (!currentStoreId) return;
+    composeInYapi(ask.dataset.askYapi, "ask");
+  });
   document.getElementById("sectionTabs").addEventListener("click", event => {
     const pill = event.target.closest("[data-section-view]"); if (!pill) return;
     const view = pill.dataset.sectionView, tab = pill.dataset.sectionMarketingTab;
@@ -511,7 +518,7 @@ import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } fr
     if (event.data?.type === "pagosya:studio-ready" && event.data.storeId === currentStoreId) { frame.dataset.ready = "true"; deliverStudioAction(); return; }
     if (event.data?.type === "pagosya:studio-action-received" && event.data.storeId === currentStoreId) {
       // The dashboard's own YAPI box is emptied once its text is handed over; a Crecimiento suggestion leaves it alone.
-      if (pendingStudioAction?.action === "compose" && pendingStudioAction.origin !== "growth") document.getElementById("workspaceYapiDraft").value = "";
+      if (pendingStudioAction?.action === "compose" && !["growth", "ask"].includes(pendingStudioAction.origin)) document.getElementById("workspaceYapiDraft").value = "";
       pendingStudioAction = null; return;
     }
     if (event.data?.type === "pagosya:session-expired") { sessionToken = ""; showLoggedOut(); return; }
