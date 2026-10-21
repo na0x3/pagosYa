@@ -1,0 +1,135 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createRequire } from 'node:module';
+import { kitPath } from '@pagosya/storefront-kit';
+
+/** Photo zoom (spec 2026-10-21): the full-screen viewer, product-page openers, card buttons and the magnifier. */
+const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom');
+const commerce = readFileSync(kitPath('commerce.js'), 'utf8');
+const product = (over: Record<string, unknown> = {}) => ({
+  id: 'abrigo', name: 'Abrigo de lana', amount: 120000, currency: 'BOB', stock: null,
+  imageUrls: ['https://shop.test/a1.jpg', 'https://shop.test/a2.jpg', 'https://shop.test/a3.jpg'], variants: [], extras: [], highlights: [], ...over,
+});
+
+const windows: any[] = [];
+const errors: Error[] = [];
+afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
+
+async function open({ items = [product()] as any[], fullPage = false, template = '', gallery }: { items?: any[]; fullPage?: boolean; template?: string; gallery?: string } = {}) {
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on('jsdomError', (error: Error) => { if (!/Could not parse CSS stylesheet|getComputedStyle\(elt, pseudoElt\)/.test(error.message)) errors.push(error); });
+  const url = fullPage ? `https://shop.test/product.html?id=${items[0]?.id}` : 'https://shop.test/';
+  const dom = new JSDOM(`<html><head></head><body>${template}<button data-cart-open>Pedido <span data-cart-count></span></button><section data-pagosya-catalog data-catalog-full></section><section data-pagosya-cart></section>${fullPage ? '<main data-pagosya-product-page></main>' : ''}<p data-pagosya-status></p></body></html>`,
+    { url, runScripts: 'outside-only', virtualConsole });
+  const w = dom.window; windows.push(w);
+  w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+  w.HTMLDialogElement.prototype.close = function () { this.open = false; this.dispatchEvent(new w.Event('close')); };
+  w.HTMLElement.prototype.scrollIntoView = () => {};
+  w.matchMedia = () => ({ matches: true });
+  w.PAGOSYA_PREVIEW = true;
+  w.PAGOSYA_PREVIEW_CART = [];
+  const data = { storeName: 'Noa', items };
+  w.PAGOSYA_CONFIG = { slug: 'noa', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data };
+  const quote = { subtotal: 0, discountAmount: 0, amount: 0, currency: 'BOB', shippingOptions: [] };
+  w.fetch = jest.fn(async (target: string) => ({ ok: true, json: async () => String(target).endsWith('/store') ? data : quote }));
+  if (gallery) w.document.documentElement.setAttribute('data-dna-gallery', gallery);
+  w.eval(commerce);
+  await new Promise(resolve => setImmediate(resolve));
+  const q = (selector: string) => w.document.querySelector(selector) as any;
+  const all = (selector: string) => [...w.document.querySelectorAll(selector)] as any[];
+  const key = (target: any, name: string) => target.dispatchEvent(new w.KeyboardEvent('keydown', { key: name, bubbles: true }));
+  return { w, q, all, key };
+}
+
+describe('photo viewer', () => {
+  it('opens on the photo asked for, moves with the arrows and keys, and wraps', async () => {
+    const { w, q, all, key } = await open();
+    expect(w.eval(`pagosyaPhotos.open(${JSON.stringify(product().imageUrls)}, 1, { title: 'Abrigo de lana' })`)).toBe(true);
+    const viewer = q('[data-pagosya-viewer]');
+    expect(viewer.open).toBe(true);
+    expect(viewer.getAttribute('aria-label')).toBe('Fotos de Abrigo de lana');
+    expect(q('[data-viewer-photo]').getAttribute('src')).toBe('https://shop.test/a2.jpg');
+    expect(q('[data-viewer-count]').textContent).toBe('2 / 3');
+    q('[data-viewer-next]').click();
+    expect(viewer.dataset.index).toBe('2');
+    key(viewer, 'ArrowRight');
+    expect(viewer.dataset.index).toBe('0');
+    key(viewer, 'ArrowLeft');
+    expect(viewer.dataset.index).toBe('2');
+    all('[data-viewer-thumb]')[0].click();
+    expect(q('[data-viewer-photo]').getAttribute('src')).toBe('https://shop.test/a1.jpg');
+    expect(all('[data-viewer-thumb]')[0].getAttribute('aria-current')).toBe('true');
+  });
+
+  it('closes on Escape and ×, gives focus back and restores the overflow it found', async () => {
+    const { w, q, key } = await open();
+    const opener = q('[data-cart-open]');
+    w.document.documentElement.style.overflow = 'hidden';
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg'], 0, { title: 'Abrigo', opener: document.querySelector('[data-cart-open]') })`);
+    const viewer = q('[data-pagosya-viewer]');
+    expect(w.document.activeElement).toBe(q('[data-viewer-close]'));
+    key(viewer, 'Escape');
+    expect(viewer.open).toBe(false);
+    expect(w.document.documentElement.style.overflow).toBe('hidden');
+    expect(w.document.activeElement).toBe(opener);
+    w.document.documentElement.style.overflow = '';
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg'], 0, { title: 'Abrigo' })`);
+    expect(w.document.documentElement.style.overflow).toBe('hidden');
+    q('[data-viewer-close]').click();
+    expect(viewer.open).toBe(false);
+    expect(w.document.documentElement.style.overflow).toBe('');
+  });
+
+  it('skips videos, maps the tapped photo past a video, and never opens without a photo', async () => {
+    const { w, q, all } = await open();
+    expect(w.eval(`pagosyaPhotos.open(['https://shop.test/v.mp4'], 0, { title: 'X' })`)).toBe(false);
+    expect(q('[data-pagosya-viewer]')?.open ?? false).toBe(false);
+    w.eval(`pagosyaPhotos.open(['https://shop.test/v.mp4?x=1', 'https://shop.test/a1.jpg', 'https://shop.test/a2.jpg'], 2, { title: 'X' })`);
+    expect(q('[data-viewer-photo]').getAttribute('src')).toBe('https://shop.test/a2.jpg');
+    expect(all('[data-viewer-thumb]')).toHaveLength(2);
+  });
+
+  it('a single photo has no arrows or thumbnails', async () => {
+    const { w, q, all } = await open();
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg'], 0, { title: 'X' })`);
+    expect(q('[data-viewer-prev]').hidden).toBe(true);
+    expect(q('[data-viewer-next]').hidden).toBe(true);
+    expect(all('[data-viewer-thumb]')).toHaveLength(0);
+    expect(q('[data-pagosya-viewer]').hasAttribute('data-single')).toBe(true);
+  });
+
+  it('double-click zooms in and out, and a new photo starts unzoomed', async () => {
+    const { w, q } = await open();
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg', 'https://shop.test/a2.jpg'], 0, { title: 'X' })`);
+    const viewer = q('[data-pagosya-viewer]'), stage = q('[data-viewer-stage]');
+    stage.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, clientX: 10, clientY: 10 }));
+    expect(viewer.dataset.zoom).toBe('2.5');
+    expect(viewer.hasAttribute('data-zoomed')).toBe(true);
+    stage.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, clientX: 10, clientY: 10 }));
+    expect(viewer.dataset.zoom).toBe('1');
+    stage.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
+    q('[data-viewer-next]').click();
+    expect(viewer.dataset.zoom).toBe('1');
+    expect(q('[data-viewer-photo]').style.transform).toBe('translate(0px, 0px) scale(1)');
+  });
+
+  it('a click on the empty backdrop closes it only when not zoomed', async () => {
+    const { w, q } = await open();
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg'], 0, { title: 'X' })`);
+    const viewer = q('[data-pagosya-viewer]'), stage = q('[data-viewer-stage]');
+    stage.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
+    stage.click();
+    expect(viewer.open).toBe(true);
+    stage.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
+    stage.click();
+    expect(viewer.open).toBe(false);
+  });
+
+  it('escapes photo URLs and titles', async () => {
+    const { w, q } = await open();
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a"1.jpg', 'https://shop.test/a2.jpg'], 0, { title: '<b>X</b>' })`);
+    expect(q('[data-pagosya-viewer]').getAttribute('aria-label')).toBe('Fotos de <b>X</b>');
+    expect(q('[data-viewer-thumbs] b')).toBeNull();
+    expect(q('[data-viewer-thumb] img').getAttribute('src')).toBe('https://shop.test/a"1.jpg');
+  });
+});

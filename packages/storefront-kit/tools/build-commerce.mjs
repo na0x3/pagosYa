@@ -35,6 +35,7 @@ export const PARTS = [
   'pages/policy-links.js',
   'account/pages.js',
   'pages/standard.js',
+  'product/photo-viewer.js',
   'product/page.js',
   'checkout/page-setup.js',
   'cart/drawer.js',
