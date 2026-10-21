@@ -85,3 +85,60 @@ describe('fashion card', () => {
     expect(q('.menu-item[data-product-id="carden"]').hasAttribute('data-anatomy')).toBe(false);
   });
 });
+
+describe('fashion product page', () => {
+  const sized = () => product({ variants: [variant('xs', 'XS', 'Negro'), variant('s', 'S', 'Negro', { stock: 0 }), variant('m', 'M', 'Negro'), variant('g', 'M', 'Gris')] });
+
+  it('no size is chosen for the shopper: the button asks for one, then adds', async () => {
+    const { q, all } = await open({ fullPage: true, items: [sized()] });
+    expect(q('[data-pagosya-product]').getAttribute('data-style')).toBe('fashion');
+    const buy = q('[data-pagosya-product] [data-variant-add]');
+    expect(buy.disabled).toBe(true);
+    expect(buy.textContent).toMatch(/^Elige una talla/);
+    const sizes = all('[data-pagosya-product] .product-detail__values')[0].querySelectorAll('[data-product-option]');
+    expect([...sizes].map((b: any) => b.disabled)).toEqual([false, true, false]);
+    sizes[0].click();
+    expect(q('[data-pagosya-product] [data-variant-add]').textContent).toMatch(/^Agregar al pedido/);
+    expect(q('[data-pagosya-product] [data-variant-add]').disabled).toBe(false);
+  });
+
+  it('the colour group reads «2 colores:» with the chosen one after it', async () => {
+    const { q } = await open({ fullPage: true, items: [sized()] });
+    const legends = [...q('[data-pagosya-product]').querySelectorAll('.product-detail__options legend')].map((l: any) => l.textContent.trim());
+    expect(legends[1]).toMatch(/^2 colores:/);
+  });
+
+  it('a product without sizes keeps the normal button', async () => {
+    const { q } = await open({ fullPage: true, items: [product({ id: 'collar', variants: [] })] });
+    const buy = q('[data-pagosya-product] .product-detail__buy');
+    expect(buy.textContent).toMatch(/^Agregar al pedido/);
+    expect(buy.disabled).toBe(false);
+  });
+
+  it('category • label under the title, and a long description gets «Leer más»', async () => {
+    const description = 'Tejido en Inglaterra con lana merino extrafina y cachemira reciclada. '.repeat(5);
+    const { q } = await open({ fullPage: true, items: [product({ description })] });
+    expect(q('[data-pagosya-product] .product-detail__eyebrow').textContent).toBe('Vestidos • Corte holgado');
+    const more = q('[data-pagosya-product] [data-product-more]');
+    expect(more.textContent).toBe('Leer más');
+    more.click();
+    expect(q('[data-pagosya-product] .product-detail__intro').hasAttribute('data-expanded')).toBe(true);
+    expect(more.textContent).toBe('Leer menos');
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('a short description has no «Leer más»', async () => {
+    const { q } = await open({ fullPage: true, items: [product({ description: 'Punto inglés.' })] });
+    expect(q('[data-pagosya-product] [data-product-more]')).toBeNull();
+  });
+
+  it('the related row says «También te puede gustar»', async () => {
+    const { q } = await open({ fullPage: true, items: [product(), product({ id: 'otro', name: 'Moor' })] });
+    expect(q('#product-related-title')?.textContent).toMatch(/^También te puede gustar/);
+  });
+
+  it('other styles keep «Añadir al pedido» and preselect as before', async () => {
+    const { q } = await open({ fullPage: true, items: [sized()], style: 'editorial' });
+    expect(q('[data-pagosya-product] [data-variant-add]').textContent).toMatch(/^Añadir al pedido/);
+  });
+});

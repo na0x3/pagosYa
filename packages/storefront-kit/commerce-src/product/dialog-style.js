@@ -461,6 +461,34 @@
        on a hairline, a large tight title with an italic subtitle, the price on a rule, options as hairline pills named in
        tracked small caps, purchase choices as cards, a wide tracked call to action carrying the total, a centred trust row.
        Motion is one 0.18 s standard ease on hover; nothing bounces. */
+    /* The fashion product page (2026-10-21, the John Smedley references): info left, photos right, round sizes, colour bars. */
+    [data-pagosya-product][data-style=fashion] .product-detail__layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;align-items:stretch}
+    [data-pagosya-product][data-style=fashion] .product-detail__layout>.product-detail__gallery{order:2;background:color-mix(in srgb,var(--pd-ink) 6%,var(--pd-paper))}
+    [data-pagosya-product][data-style=fashion] .product-detail__photo{height:min(calc(100dvh - 64px),880px);object-fit:contain;background:transparent}
+    [data-pagosya-product][data-style=fashion] .product-detail__copy{display:flex;flex-direction:column;gap:14px;padding:clamp(24px,4vw,56px) clamp(20px,3vw,48px)}
+    [data-pagosya-product][data-style=fashion] [data-part=title]{order:0;margin:0;font:400 clamp(30px,3.2vw,44px)/1.1 var(--pd-heading);letter-spacing:-.01em}
+    [data-pagosya-product][data-style=fashion] .product-detail__eyebrow{order:1;margin:-6px 0 0;font:400 15px/1.4 var(--pd-body);letter-spacing:0;text-transform:none;color:var(--pd-ink)}
+    [data-pagosya-product][data-style=fashion] .product-detail__copy>:not([data-part=title],.product-detail__eyebrow){order:2}
+    [data-pagosya-product][data-style=fashion] .product-detail__intro{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;margin:0;font:400 18px/1.55 var(--pd-heading)}
+    [data-pagosya-product][data-style=fashion] .product-detail__intro[data-expanded]{display:block}
+    [data-pagosya-product][data-style=fashion] .product-detail__more{align-self:flex-start;padding:0;border:0;background:none;font:inherit;font-size:14px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;color:inherit}
+    [data-pagosya-product][data-style=fashion] .product-detail__values:not([data-kind=swatch]) button{position:relative;min-width:56px;min-height:56px;padding:0 14px;border:1px dashed color-mix(in srgb,var(--pd-ink) 55%,transparent);border-radius:999px;background:transparent;color:var(--pd-ink)}
+    [data-pagosya-product][data-style=fashion] .product-detail__values:not([data-kind=swatch]) button[aria-pressed=true]{border-style:solid;border-color:var(--pd-ink);background:var(--pd-ink);color:var(--pd-paper)}
+    [data-pagosya-product][data-style=fashion] .product-detail__values:not([data-kind=swatch]) button:disabled{opacity:.45;background:linear-gradient(to top right,transparent calc(50% - .5px),currentColor calc(50% - .5px),currentColor calc(50% + .5px),transparent calc(50% + .5px))}
+    [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch]{display:flex;gap:4px}
+    [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch] button{position:relative;flex:1;height:22px;min-height:0;padding:0;border:0;border-radius:0;background:none}
+    [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch] .product-detail__swatch{display:block;width:100%;height:100%;border-radius:0}
+    [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch] .product-detail__option-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+    [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch] button[aria-pressed=true]{box-shadow:inset 0 -3px 0 var(--pd-ink)}
+    [data-pagosya-product][data-style=fashion] .product-detail__buy{width:100%;min-height:56px;border:0;border-radius:0;background:var(--pd-ink);color:var(--pd-paper);font:500 16px/1 var(--pd-body);letter-spacing:0;text-transform:none}
+    /* «También te puede gustar»: the kit's related list, dressed like the fashion card (tinted 4:5 panel, name and price). */
+    [data-pagosya-product][data-style=fashion] .product-detail__related img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:0;background:color-mix(in srgb,var(--pd-ink) 6%,var(--pd-paper))}
+    [data-pagosya-product][data-style=fashion] .product-detail__related h2{font:400 clamp(26px,2.6vw,36px)/1.15 var(--pd-heading);padding-top:18px;border-top:1px solid var(--pd-ink)}
+    @media(max-width:820px){
+      [data-pagosya-product][data-style=fashion] .product-detail__layout{grid-template-columns:1fr}
+      [data-pagosya-product][data-style=fashion] .product-detail__layout>.product-detail__gallery{order:0}
+      [data-pagosya-product][data-style=fashion] .product-detail__photo{height:auto;aspect-ratio:4/5}
+    }
     [data-pagosya-product][data-style=atelier] .product-detail__copy{display:flex;flex-direction:column;gap:14px;padding:clamp(24px,4vw,56px)}
     [data-pagosya-product][data-style=atelier] .product-detail__copy>.product-detail__breadcrumb{order:-3;margin:0;font-size:12px;font-style:italic;letter-spacing:.02em;color:var(--pd-muted)}
     [data-pagosya-product][data-style=atelier] .product-detail__copy>.product-detail__rating{order:-2;margin:0;font-size:13px}

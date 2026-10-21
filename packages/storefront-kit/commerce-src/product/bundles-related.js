@@ -40,7 +40,7 @@
     const sample = preview && !items.length;
     if (sample) items = products().filter(item => item.id !== p.id && limit(item) !== 0).slice(0, 4);
     if (!items.length) return '';
-    return `<section class="product-detail__related" aria-labelledby="product-related-title"><h2 id="product-related-title">Combínalo con${sample ? ' · ejemplo' : ''}</h2>${sample ? '<p class="product-detail__related-note">Elige los productos sugeridos de cada producto en tu panel; mientras tanto esta fila es una muestra de tu catálogo.</p>' : ''}<ul>${items.map(item => {
+    return `<section class="product-detail__related" aria-labelledby="product-related-title"><h2 id="product-related-title">${productPageStyle() === 'fashion' ? 'También te puede gustar' : 'Combínalo con'}${sample ? ' · ejemplo' : ''}</h2>${sample ? '<p class="product-detail__related-note">Elige los productos sugeridos de cada producto en tu panel; mientras tanto esta fila es una muestra de tu catálogo.</p>' : ''}<ul>${items.map(item => {
       const image = galleryImages(item)[0];
       const amounts = item.variants?.length ? item.variants.map(v => price({ ...item, amount: v.amount })) : [price(item)];
       const low = Math.min(...amounts);

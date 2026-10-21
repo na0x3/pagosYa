@@ -1071,6 +1071,34 @@
        on a hairline, a large tight title with an italic subtitle, the price on a rule, options as hairline pills named in
        tracked small caps, purchase choices as cards, a wide tracked call to action carrying the total, a centred trust row.
        Motion is one 0.18 s standard ease on hover; nothing bounces. */
+    /* The fashion product page (2026-10-21, the John Smedley references): info left, photos right, round sizes, colour bars. */
+    [data-pagosya-product][data-style=fashion] .product-detail__layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;align-items:stretch}
+    [data-pagosya-product][data-style=fashion] .product-detail__layout>.product-detail__gallery{order:2;background:color-mix(in srgb,var(--pd-ink) 6%,var(--pd-paper))}
+    [data-pagosya-product][data-style=fashion] .product-detail__photo{height:min(calc(100dvh - 64px),880px);object-fit:contain;background:transparent}
+    [data-pagosya-product][data-style=fashion] .product-detail__copy{display:flex;flex-direction:column;gap:14px;padding:clamp(24px,4vw,56px) clamp(20px,3vw,48px)}
+    [data-pagosya-product][data-style=fashion] [data-part=title]{order:0;margin:0;font:400 clamp(30px,3.2vw,44px)/1.1 var(--pd-heading);letter-spacing:-.01em}
+    [data-pagosya-product][data-style=fashion] .product-detail__eyebrow{order:1;margin:-6px 0 0;font:400 15px/1.4 var(--pd-body);letter-spacing:0;text-transform:none;color:var(--pd-ink)}
+    [data-pagosya-product][data-style=fashion] .product-detail__copy>:not([data-part=title],.product-detail__eyebrow){order:2}
+    [data-pagosya-product][data-style=fashion] .product-detail__intro{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;margin:0;font:400 18px/1.55 var(--pd-heading)}
+    [data-pagosya-product][data-style=fashion] .product-detail__intro[data-expanded]{display:block}
+    [data-pagosya-product][data-style=fashion] .product-detail__more{align-self:flex-start;padding:0;border:0;background:none;font:inherit;font-size:14px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;color:inherit}
+    [data-pagosya-product][data-style=fashion] .product-detail__values:not([data-kind=swatch]) button{position:relative;min-width:56px;min-height:56px;padding:0 14px;border:1px dashed color-mix(in srgb,var(--pd-ink) 55%,transparent);border-radius:999px;background:transparent;color:var(--pd-ink)}
+    [data-pagosya-product][data-style=fashion] .product-detail__values:not([data-kind=swatch]) button[aria-pressed=true]{border-style:solid;border-color:var(--pd-ink);background:var(--pd-ink);color:var(--pd-paper)}
+    [data-pagosya-product][data-style=fashion] .product-detail__values:not([data-kind=swatch]) button:disabled{opacity:.45;background:linear-gradient(to top right,transparent calc(50% - .5px),currentColor calc(50% - .5px),currentColor calc(50% + .5px),transparent calc(50% + .5px))}
+    [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch]{display:flex;gap:4px}
+    [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch] button{position:relative;flex:1;height:22px;min-height:0;padding:0;border:0;border-radius:0;background:none}
+    [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch] .product-detail__swatch{display:block;width:100%;height:100%;border-radius:0}
+    [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch] .product-detail__option-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+    [data-pagosya-product][data-style=fashion] .product-detail__values[data-kind=swatch] button[aria-pressed=true]{box-shadow:inset 0 -3px 0 var(--pd-ink)}
+    [data-pagosya-product][data-style=fashion] .product-detail__buy{width:100%;min-height:56px;border:0;border-radius:0;background:var(--pd-ink);color:var(--pd-paper);font:500 16px/1 var(--pd-body);letter-spacing:0;text-transform:none}
+    /* «También te puede gustar»: the kit's related list, dressed like the fashion card (tinted 4:5 panel, name and price). */
+    [data-pagosya-product][data-style=fashion] .product-detail__related img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:0;background:color-mix(in srgb,var(--pd-ink) 6%,var(--pd-paper))}
+    [data-pagosya-product][data-style=fashion] .product-detail__related h2{font:400 clamp(26px,2.6vw,36px)/1.15 var(--pd-heading);padding-top:18px;border-top:1px solid var(--pd-ink)}
+    @media(max-width:820px){
+      [data-pagosya-product][data-style=fashion] .product-detail__layout{grid-template-columns:1fr}
+      [data-pagosya-product][data-style=fashion] .product-detail__layout>.product-detail__gallery{order:0}
+      [data-pagosya-product][data-style=fashion] .product-detail__photo{height:auto;aspect-ratio:4/5}
+    }
     [data-pagosya-product][data-style=atelier] .product-detail__copy{display:flex;flex-direction:column;gap:14px;padding:clamp(24px,4vw,56px)}
     [data-pagosya-product][data-style=atelier] .product-detail__copy>.product-detail__breadcrumb{order:-3;margin:0;font-size:12px;font-style:italic;letter-spacing:.02em;color:var(--pd-muted)}
     [data-pagosya-product][data-style=atelier] .product-detail__copy>.product-detail__rating{order:-2;margin:0;font-size:13px}
@@ -1571,7 +1599,7 @@
     const sample = preview && !items.length;
     if (sample) items = products().filter(item => item.id !== p.id && limit(item) !== 0).slice(0, 4);
     if (!items.length) return '';
-    return `<section class="product-detail__related" aria-labelledby="product-related-title"><h2 id="product-related-title">Combínalo con${sample ? ' · ejemplo' : ''}</h2>${sample ? '<p class="product-detail__related-note">Elige los productos sugeridos de cada producto en tu panel; mientras tanto esta fila es una muestra de tu catálogo.</p>' : ''}<ul>${items.map(item => {
+    return `<section class="product-detail__related" aria-labelledby="product-related-title"><h2 id="product-related-title">${productPageStyle() === 'fashion' ? 'También te puede gustar' : 'Combínalo con'}${sample ? ' · ejemplo' : ''}</h2>${sample ? '<p class="product-detail__related-note">Elige los productos sugeridos de cada producto en tu panel; mientras tanto esta fila es una muestra de tu catálogo.</p>' : ''}<ul>${items.map(item => {
       const image = galleryImages(item)[0];
       const amounts = item.variants?.length ? item.variants.map(v => price({ ...item, amount: v.amount })) : [price(item)];
       const low = Math.min(...amounts);
@@ -2372,9 +2400,11 @@
     return found ? `<span class="product-detail__swatch-photo" aria-hidden="true"><img src="${escape(variantPhotos(found)[0])}" alt="" loading="lazy" /></span>` : '';
   }
   function optionsMarkup(groups) {
+    // Fashion look (spec 2026-10-21): the colour group reads «4 colores:» with the chosen colour after it.
+    const fashion = productPageStyle() === 'fashion', colourIndex = colourGroupIndex(groups);
     return `<div class="product-detail__options">${groups.map((group, index) => {
       const colors = group.values.map(value => swatchColor(group.name, value));
-      return `<fieldset><legend>${escape(group.name)} <span data-product-selection="${index}"></span></legend><div class="product-detail__values"${colors.every(Boolean) ? ' data-kind="swatch"' : ''}>${group.values.map((value, valueIndex) => `<button type="button" data-part="swatch" data-product-option="${index}" data-option-value="${valueIndex}" aria-pressed="false">${optionPhoto(index, value) || (colors[valueIndex] ? `<span class="product-detail__swatch" style="--swatch:${colors[valueIndex]}" aria-hidden="true"></span>` : '')}<span class="product-detail__option-label">${escape(value)}</span></button>`).join('')}</div></fieldset>`;
+      return `<fieldset><legend>${fashion && index === colourIndex ? `${group.values.length} ${group.values.length === 1 ? 'color' : 'colores'}:` : escape(group.name)} <span data-product-selection="${index}"></span></legend><div class="product-detail__values"${colors.every(Boolean) ? ' data-kind="swatch"' : ''}>${group.values.map((value, valueIndex) => `<button type="button" data-part="swatch" data-product-option="${index}" data-option-value="${valueIndex}" aria-pressed="false">${optionPhoto(index, value) || (colors[valueIndex] ? `<span class="product-detail__swatch" style="--swatch:${colors[valueIndex]}" aria-hidden="true"></span>` : '')}<span class="product-detail__option-label">${escape(value)}</span></button>`).join('')}</div></fieldset>`;
     }).join('')}</div>`;
   }
   /** Fill every group with an available value, keeping the shopper's choices where a variant still allows them. */
@@ -2420,6 +2450,12 @@
     const variant = selectedVariant(), buy = detail.querySelector('[data-variant-add]');
     const available = variant && remaining(p, variant) > 0;
     buy.disabled = !ready || checkingOut || !available;
+    if (productPageStyle() === 'fashion') {
+      const missing = groups.findIndex((group, index) => selectedOptions[index] === undefined);
+      const text = missing < 0 ? 'Agregar al pedido' : missing === sizeGroupIndex(groups) ? 'Elige una talla' : missing === colourGroupIndex(groups) ? 'Elige un color' : `Elige ${groups[missing].name.toLowerCase()}`;
+      const node = [...buy.childNodes].find(child => child.nodeType === 3);
+      if (node) node.textContent = text; else buy.prepend(text);
+    }
     if (variant) buy.dataset.add = lineKey(p.id, variant.id, selectedCadence()); else delete buy.dataset.add;
     const compatible = p.variants.filter(v => remaining(p, v) > 0 && variantValues(v).every((value, i) => selectedOptions[i] === undefined || selectedOptions[i] === value));
     const lowest = (compatible.length ? compatible : p.variants).reduce((a, b) => a.amount <= b.amount ? a : b);
@@ -2483,18 +2519,24 @@
     selectedProduct = p; selectedImage = 0; selectedQuantity = 1; detailTrigger = trigger; selectionNote = ''; selectedPicks = [];
     activeGallery = null;
     selectedOptions = completeSelection(p, []);
+    // Fashion look: the shopper picks the size; the page never picks one for them (the John Smedley «Select a size»).
+    if (productPageStyle() === 'fashion') { const size = sizeGroupIndex(optionGroups(p)); if (size >= 0) selectedOptions = selectedOptions.map((value, index) => index === size ? undefined : value); }
     const images = galleryImages(p), box = boxGroup(p), complex = !box && (p.variants?.length || p.extras?.length), groups = optionGroups(p);
     const style = productPageStyle();
     // Atelier (2026-10-19, the Amboras product page): a short first sentence becomes the subtitle under the title.
     const lead = style === 'atelier' ? productLead(p.description) : null;
     const rating = fullProductPage ? '<p class="product-detail__rating" data-product-rating hidden></p>' : '';
+    // Fashion look: «Categoría • label» under the title, the label being the merchant's card phrase.
+    const category = (store.categories || []).find(c => c.id === p.categoryId)?.name;
+    const eyebrowText = style === 'fashion' ? [category, typeof p.cardEyebrow === 'string' ? p.cardEyebrow.trim() : ''].filter(Boolean).join(' • ') : (category || store.storeName || 'Tu tienda');
+    const addText = style === 'fashion' ? 'Agregar al pedido' : 'Añadir al pedido';
     detail.dataset.style = style;
     adoptAuthoredAction();
     // Stores nearly always author their own way back right above the mount; a second trail beside it reads as a template.
     let authoredTrail = false;
     for (let node = fullProductPage ? detail.previousElementSibling : null; node && !node.matches('header,[role=banner]'); node = node.previousElementSibling) if (node.matches('a[href]') || node.querySelector('a[href]')) { authoredTrail = true; break; }
     const breadcrumb = authoredTrail ? '' : `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('productos.html'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>`;
-    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" data-part="gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${galleryMarkup(images, p)}</section><section class="product-detail__copy"><span class="product-detail__decor" data-part="decor-b" aria-hidden="true"></span>${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow" data-part="eyebrow">${escape((store.categories || []).find(c => c.id === p.categoryId)?.name || store.storeName || 'Tu tienda')}</p>${style === 'conversion' || style === 'atelier' ? rating : ''}<${fullProductPage ? "h1" : "h2"} id="pagosya-product-title" data-part="title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${lead ? `<p class="product-detail__subtitle" data-part="subtitle">${escape(lead.lead)}</p>` : ''}${style !== 'conversion' && style !== 'atelier' ? rating : ''}<div class="product-detail__pricing" data-product-pricing>${isMembership(p) ? `<strong class="product-detail__price">${escape(membershipPriceText(p))}</strong>` : priceMarkup(p)}</div>${style === 'conversion' ? checksMarkup(conversionHighlights(p).checks) : ''}${p.description ? `<p class="product-detail__intro" data-part="intro">${escape(lead ? lead.rest : p.description)}</p>` : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' && style !== 'conversion' ? highlightsMarkup(p) : ''}${isMembership(p) ? membershipMarkup(p) : groups ? `${optionsMarkup(groups)}${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">Añadir al pedido<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${contentBlocksMarkup(p)}${fullProductPage ? longPageTop(p) : ''}${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section>${longPageBottom(p)}<div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>${isMembership(p) ? 'Hacerme miembro' : 'Añadir'}</button></div>` : ''}`;
+    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" data-part="gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${galleryMarkup(images, p)}</section><section class="product-detail__copy"><span class="product-detail__decor" data-part="decor-b" aria-hidden="true"></span>${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow" data-part="eyebrow">${escape(eyebrowText)}</p>${style === 'conversion' || style === 'atelier' ? rating : ''}<${fullProductPage ? "h1" : "h2"} id="pagosya-product-title" data-part="title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${lead ? `<p class="product-detail__subtitle" data-part="subtitle">${escape(lead.lead)}</p>` : ''}${style !== 'conversion' && style !== 'atelier' ? rating : ''}<div class="product-detail__pricing" data-product-pricing>${isMembership(p) ? `<strong class="product-detail__price">${escape(membershipPriceText(p))}</strong>` : priceMarkup(p)}</div>${style === 'conversion' ? checksMarkup(conversionHighlights(p).checks) : ''}${p.description ? `<p class="product-detail__intro" data-part="intro">${escape(lead ? lead.rest : p.description)}</p>` : ''}${style === 'fashion' && (p.description || '').length > 220 ? '<button type="button" class="product-detail__more" data-product-more aria-expanded="false">Leer más</button>' : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' && style !== 'conversion' ? highlightsMarkup(p) : ''}${isMembership(p) ? membershipMarkup(p) : groups ? `${optionsMarkup(groups)}${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>' + addText + '<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>' + addText + '<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">${addText}<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${contentBlocksMarkup(p)}${fullProductPage ? longPageTop(p) : ''}${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section>${longPageBottom(p)}<div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><div><strong>${escape(p.name)}</strong><span data-product-sticky-price></span></div><button type="button" data-product-jump>${isMembership(p) ? 'Hacerme miembro' : 'Añadir'}</button></div>` : ''}`;
     detail.removeAttribute('data-page-template');
     applyProductPageTemplate();
     showImage(0);
@@ -2750,7 +2792,7 @@
     return match ? { lead: match[1], rest: match[2] } : null;
   }
   function productPageStyle() {
-    if (['editorial', 'dense', 'image-led', 'story-led', 'conversion', 'atelier'].includes(config.productPageStyle)) return config.productPageStyle;
+    if (['editorial', 'dense', 'image-led', 'story-led', 'conversion', 'atelier', 'fashion'].includes(config.productPageStyle)) return config.productPageStyle;
     const items = products();
     return items.length && items.filter(p => specRows(p).length >= 3).length * 2 >= items.length ? 'dense' : 'editorial';
   }
@@ -5572,6 +5614,12 @@
         fieldset.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
         fieldset.querySelector('[data-product-option]:not(:disabled)')?.focus({ preventScroll: true });
       } else if (buy && !buy.disabled) buy.click();
+      return;
+    }
+    if (button.hasAttribute('data-product-more')) {
+      const intro = detail.querySelector('.product-detail__intro'), open = !intro?.hasAttribute('data-expanded');
+      intro?.toggleAttribute('data-expanded', open);
+      button.setAttribute('aria-expanded', String(open)); button.textContent = open ? 'Leer menos' : 'Leer más';
       return;
     }
     if (button.hasAttribute('data-product-quantity')) {

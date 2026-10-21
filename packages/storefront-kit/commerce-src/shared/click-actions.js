@@ -14,6 +14,12 @@
       } else if (buy && !buy.disabled) buy.click();
       return;
     }
+    if (button.hasAttribute('data-product-more')) {
+      const intro = detail.querySelector('.product-detail__intro'), open = !intro?.hasAttribute('data-expanded');
+      intro?.toggleAttribute('data-expanded', open);
+      button.setAttribute('aria-expanded', String(open)); button.textContent = open ? 'Leer menos' : 'Leer más';
+      return;
+    }
     if (button.hasAttribute('data-product-quantity')) {
       selectedQuantity += Number(button.dataset.productQuantity); updateQuantity(); return;
     }
