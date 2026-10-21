@@ -71,6 +71,7 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
 
 test("an expired session returns to sign-in", async ({ page }) => {
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "fixture@example.com");
   });
@@ -108,6 +109,8 @@ test("merchant can sign in with a configured Google account", async ({ page }) =
       active: 1,
       currentSessionId: "session_current",
       canManageSessions: true,
+      // Two people already use this account, so the dialog asks who is signing in (spec 2026-10-21 A5).
+      profiles: [{ profileName: "Dueño" }, { profileName: "Ana" }],
       sessions: [{ id: "session_current", ...selectedProfile, isPrimary: true, current: true, createdAt: "2026-08-21T12:00:00.000Z", expiresAt: "2026-08-22T12:00:00.000Z" }],
     };
     if (path === "/dashboard/sessions/session_current" && request.method() === "PATCH") {
@@ -144,6 +147,7 @@ test("merchant can sign in with a configured Google account", async ({ page }) =
 
 test("merchant deletion requires typed confirmation and clears the session", async ({ page }) => {
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "owner@example.com");
   });
@@ -167,6 +171,7 @@ test("merchant deletion requires typed confirmation and clears the session", asy
 
 test("profile menu can close another active session", async ({ page }) => {
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "owner@example.com");
   });
@@ -198,6 +203,7 @@ test("profile menu can close another active session", async ({ page }) => {
 
 test("main session can rename another logged-in profile", async ({ page }) => {
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_main");
     sessionStorage.setItem("pagosya_merchant_email", "owner@example.com");
   });

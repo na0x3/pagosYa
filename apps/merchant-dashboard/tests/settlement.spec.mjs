@@ -17,6 +17,7 @@ const schedule = {
 
 async function openDashboard(page, { balance, scheduleResponse = { status: 200, body: schedule } }) {
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
   });

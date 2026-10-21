@@ -65,3 +65,7 @@ test('sectionEntry is the first tab a sidebar link opens', () => {
   assert.equal(sectionEntry('ajustes').view, 'store-settings');
   assert.equal(sectionEntry('nope'), null);
 });
+
+test('Tienda opens on Productos: Diseño is full screen and would hide the pills', () => {
+  assert.equal(sectionEntry('tienda').view, 'products');
+});

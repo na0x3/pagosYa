@@ -45,6 +45,7 @@ const inForce = { version: "2026-10-01", title: "Términos y Condiciones para co
 
 async function openCompliance(page, termsHandler) {
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
   });

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { enableFullNav, openView } from "./helpers/nav.mjs";
 
 // Crecer › Asistente with a mocked API.
 const store = { id: "store_1", merchantId: "m1", slug: "casa-luz", name: "Casa Luz", status: "ACTIVE", websiteRevision: 0, heroSlides: [], contentOrder: [], editorialGallery: [], links: [], locations: [], animations: [], customDomains: [], checkoutMode: "payment" };
@@ -9,6 +10,7 @@ let view, sent, promoSent, testSent, putError, answered;
 async function open(page) {
   view = baseView(); sent = []; promoSent = []; testSent = []; putError = null; answered = false;
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "assistant-test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
   });
@@ -56,9 +58,9 @@ async function open(page) {
 }
 
 async function goToAssistant(page) {
-  await page.locator('[data-nav-group="crecer"] > summary').click();
-  await page.locator('[data-dashboard-view="assistant"]').click();
-  await expect(page.locator("#workspaceTitle")).toHaveText("Asistente");
+  await openView(page, "assistant");
+  await expect(page.locator("#workspaceTitle")).toHaveText("Clientes");
+  await expect(page.locator('#sectionTabs [data-section-view="assistant"]')).toHaveAttribute("aria-current", "page");
   await expect(page.locator("#assistantRoot")).toContainText("12 de 300 conversaciones este mes");
 }
 
@@ -97,6 +99,7 @@ test("a store without a published design explains it and cannot switch on", asyn
 });
 
 test("unsaved edits and the test chat survive other actions; coupons and usage update", async ({ page }) => {
+  await enableFullNav(page); // Apariencia (name, greeting) is hidden by default (spec 2026-10-21 A2).
   await open(page);
   await goToAssistant(page);
   await page.getByLabel("Lo que el asistente debe saber").fill("Enviamos los lunes.");

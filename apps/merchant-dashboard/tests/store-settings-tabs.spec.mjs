@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { enableFullNav, openView } from "./helpers/nav.mjs";
 
 const store = (id, name) => ({
   id,
@@ -42,6 +43,7 @@ const store = (id, name) => ({
 async function openDashboard(page, stores, responseForRequest) {
   const requests = [];
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
   });
@@ -60,6 +62,7 @@ async function openDashboard(page, stores, responseForRequest) {
       else if (path === "/merchants/invoicing_profile") body = { status: "NOT_CONFIGURED" };
       else if (path === "/merchants/payouts" || path === "/payment_intents" || path === "/merchants/orders" || path.includes("/categories") || path.includes("/payment_links") || path.includes("/operations/integrations") || path.includes("/promo-codes") || path.includes("/debt-collection-links") || path.endsWith("/domains")) body = [];
       else if (path === "/merchants/finances") body = { totalRevenue: 0, paymentCount: 0, inventoryValue: 0, totalStoreViews: 0, topProducts: [], revenueByPaymentMethod: [], currency: "BOB" };
+      else if (path === "/store-templates/settings") body = { plantillas: false };
       else if (path.endsWith("/settings")) body = { ...request.postDataJSON(), websiteRevision: request.postDataJSON().revision + 1 };
     }
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
@@ -73,9 +76,7 @@ async function navigateDashboard(page, view) {
   const sidebar = page.locator(".dashboard-sidebar");
   const handle = page.locator("#storeFullscreenNavHandle");
   if (await handle.isVisible() && !(await sidebar.evaluate((element) => element.classList.contains("is-store-nav-pinned")))) await handle.click();
-  const link = page.locator(`.dashboard-nav-button[data-dashboard-view="${view}"]`);
-  await link.evaluate((element) => element.closest("details.dashboard-nav-group")?.setAttribute("open", ""));
-  await link.click();
+  await openView(page, view);
 }
 
 async function openSettings(page) {
@@ -87,7 +88,8 @@ async function openSettings(page) {
 
 test("Ajustes is one page with tabs, and General has no collapse buttons or repeated title", async ({ page }) => {
   await openSettings(page);
-  await expect(page.getByRole("tab")).toHaveText(["General", "Marca", "Envíos y retiro", "Dominio web"]);
+  // Marca is YAPI's now, hidden unless DASHBOARD_FULL_NAV=1 (spec 2026-10-21 A2).
+  await expect(page.getByRole("tab")).toHaveText(["General", "Envíos y retiro", "Dominio web"]);
   const general = page.locator("#settingsPanelGeneral");
   await expect(general.getByRole("heading", { name: "Identidad" })).toBeVisible();
   await expect(page.locator("#storeSettingsSection").getByRole("button", { name: /^(Ocultar|Mostrar)/ })).toHaveCount(0);
@@ -99,7 +101,7 @@ test("Guardar appears only once something changed", async ({ page }) => {
   await openSettings(page);
   const save = page.locator("#storeSettingsSave");
   await expect(save).toBeHidden();
-  await page.locator("#storeTaglineInput").fill("Café de altura");
+  await page.locator("#storeNameInput").fill("Café de altura");
   await expect(save).toBeVisible();
 });
 
@@ -110,6 +112,7 @@ test("the logo is picked with a real button, not the browser's file control", as
 });
 
 test("Marca, Envíos y retiro and Dominio open inline in the page, for the selected store", async ({ page }) => {
+  await enableFullNav(page); // Marca is hidden by default (spec 2026-10-21 A2)
   await openSettings(page);
   for (const [name, section] of [["Dominio web", "domain"], ["Marca", "brand"], ["Envíos y retiro", "shipping"]]) {
     await page.getByRole("tab", { name }).click();

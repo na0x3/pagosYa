@@ -1,4 +1,5 @@
 import { icon } from "./icons.mjs";
+import { fullNavOn } from "./nav-sections.mjs";
 
 /** Ajustes is one page with tabs. General is the dashboard's own; Marca, Envíos y retiro and Dominio web are
  * the Studio's panels, drawn inline in a same-origin frame that grows with its content. The store's emails
@@ -39,9 +40,12 @@ export function mountSettingsTabs(root, deps) {
     frame.setAttribute("src", src);
   }
 
+  /** The tabs a merchant can reach: a full-nav-only tab (Marca) only with DASHBOARD_FULL_NAV=1 (spec 2026-10-21 A2). */
+  const reachable = () => SETTINGS_TABS.filter(tab => fullNavOn(root.ownerDocument) || !root.querySelector(`[data-settings-tab="${tab}"]`)?.hasAttribute("data-full-nav-only"));
+
   /** @param {string} tab @param {{ focus?: boolean, notify?: boolean }} [options] */
   function select(tab, { focus = false, notify = true } = {}) {
-    if (!SETTINGS_TABS.includes(tab)) return;
+    if (!reachable().includes(tab)) return;
     current = tab;
     for (const button of tabs) {
       const active = button.dataset.settingsTab === tab;
@@ -62,8 +66,8 @@ export function mountSettingsTabs(root, deps) {
       const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
       if (!step) return;
       event.preventDefault();
-      const index = SETTINGS_TABS.indexOf(current);
-      select(SETTINGS_TABS[(index + step + SETTINGS_TABS.length) % SETTINGS_TABS.length], { focus: true });
+      const order = reachable(), index = order.indexOf(current);
+      select(order[(index + step + order.length) % order.length], { focus: true });
     });
   }
 

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openView } from "./helpers/nav.mjs";
 
 const store = (id, name) => ({
   id,
@@ -42,6 +43,7 @@ const store = (id, name) => ({
 async function openDashboard(page, stores, responseForRequest) {
   const requests = [];
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
   });
@@ -64,6 +66,7 @@ async function openDashboard(page, stores, responseForRequest) {
       else if (path === "/merchants/invoicing_profile") body = { status: "NOT_CONFIGURED" };
       else if (path === "/merchants/payouts" || path === "/payment_intents" || path === "/merchants/orders" || path.includes("/categories") || path.includes("/payment_links") || path.includes("/operations/integrations") || path.includes("/promo-codes") || path.includes("/debt-collection-links") || path.endsWith("/domains")) body = [];
       else if (path === "/merchants/finances") body = { totalRevenue: 0, paymentCount: 0, inventoryValue: 0, totalStoreViews: 0, topProducts: [], revenueByPaymentMethod: [], currency: "BOB" };
+      else if (path === "/store-templates/settings") body = { plantillas: false };
       else if (path.endsWith("/settings")) body = { ...request.postDataJSON(), websiteRevision: request.postDataJSON().revision + 1 };
     }
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
@@ -78,10 +81,7 @@ async function goToPayments(page) {
   // On desktop the sidebar is docked; only narrow screens tuck it behind the handle.
   const handle = page.locator("#storeFullscreenNavHandle");
   if (await handle.isVisible() && !(await page.locator(".dashboard-sidebar").evaluate((element) => element.classList.contains("is-store-nav-pinned")))) await handle.click();
-  const link = page.locator('.dashboard-nav-button[data-dashboard-view="payments"]');
-  // The link sits inside a <details> nav group that starts closed.
-  await link.evaluate((element) => element.closest("details.dashboard-nav-group")?.setAttribute("open", ""));
-  await link.click();
+  await openView(page, "payments");
   // Payments owns its page, so its block opens without a click.
   await expect(page.locator("#paymentsSectionBody")).toBeVisible();
 }

@@ -1,14 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { enableFullNav, openView } from './helpers/nav.mjs';
 import { readFileSync } from 'node:fs';
 import { kitPath } from '@pagosya/storefront-kit';
 
-async function openNav(page, view) {
-  const link = page.locator(`#dashboardNav [data-dashboard-view="${view}"]`).first();
-  if (!await link.isVisible()) {
-    await page.locator(`#dashboardNav .dashboard-nav-group:has([data-dashboard-view="${view}"]) > summary`).click();
-  }
-  return link;
-}
+
 
 // The Integraciones page lists extensions from GET /stores/:id/extensions (spec 2026-09-27).
 const extensionsFixture = {
@@ -117,7 +112,7 @@ test('retired sections are absent and old view selections fall back to the overv
   expect(requests.some(request => request.path.startsWith('/events') || request.path.endsWith('/operations/hub'))).toBe(false);
   if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
   if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
-  await (await openNav(page, 'products')).click();
+  await openView(page, 'products');
   await expect(page.locator('#paymentLinksSection')).toBeVisible();
   expect(errors).toEqual([]);
   await page.screenshot({ path: '.test-artifacts/retired-sections-desktop.png', fullPage: false });
@@ -149,7 +144,7 @@ test('store opens the shared editor full screen; an unsent message survives prod
   await expect.poll(() => products.length).toBe(1);
   expect(products[0].amount).toBe(6500);
   expect(requests.find(r => r.method === 'POST' && r.path.endsWith('/payment_links')).path).toBe('/stores/store_1/payment_links');
-  await page.locator('#dashboardNav [data-dashboard-view="workspace"]:not([data-studio-tool])').click();
+  await openView(page, 'workspace');
   await expect(composer).toHaveValue('Destacar el café en grano');
   expect(requests.some(r => r.method === 'POST' && /messages|chat-jobs/.test(r.path))).toBe(false);
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -164,11 +159,12 @@ test('store opens the shared editor full screen; an unsent message survives prod
 });
 
 test('AI setup opens the YAPI conversation without the retired four-step wizard', async ({ page }) => {
+  await enableFullNav(page); // the sidebar's «Configurar sitio con IA» button is hidden by default (spec 2026-10-21 A2)
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   const { editor, requests } = await workspace(page);
   if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
   if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
-  await page.locator('#dashboardNav [data-dashboard-view="products"]').click();
+  await openView(page, 'products');
   await expect(page.locator('body')).toHaveAttribute('data-dashboard-view', 'products');
   if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
   if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
@@ -186,7 +182,7 @@ test('switching stores protects unsent work and scopes the editor; untrusted mes
   await composer.fill('Un mensaje sin enviar');
   if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
   if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
-  await page.locator('#dashboardNav [data-dashboard-view="stores"]').click();
+  await openView(page, 'stores');
   page.once('dialog', dialog => dialog.dismiss());
   await page.locator('.store-row[data-id="store_2"] .store-row-name').click();
   await expect(page.locator('#merchantStudioFrame')).toHaveAttribute('data-store-id', 'store_1');
@@ -205,11 +201,11 @@ test('saved site previews refresh the real catalog after product creation withou
   await page.context().route('http://localhost:3001/v1/uploads/1111-aaaa.png', route => route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64') }));
   if (await page.locator('body').getAttribute('data-dashboard-view') === 'workspace') await page.frameLocator('#merchantStudioFrame').locator('#source-back-stores').click();
   if (await page.locator('#storeFullscreenNavHandle').isVisible()) await page.locator('#storeFullscreenNavHandle').click();
-  await page.locator('#dashboardNav [data-dashboard-view="products"]').click();
+  await openView(page, 'products');
   await createProductWithGuide(page, 'Café recién tostado', '42');
   await expect.poll(() => products.length).toBe(1);
   products[0].imageUrls = ['/v1/uploads/1111-aaaa.png'];
-  await page.locator('#dashboardNav [data-dashboard-view="workspace"]:not([data-studio-tool])').click();
+  await openView(page, 'workspace');
   const preview = editor.frameLocator('iframe[title="Vista previa del sitio"]');
   await expect(preview.getByRole('heading', { name: 'Café recién tostado' })).toBeVisible();
   await expect(preview.locator('.menu-item__price')).toContainText('42');
@@ -255,7 +251,7 @@ test('Comeback, campaigns and customers show distinct pages with the current fon
   await workspace(page, { withSite: true });
   await expect(page.locator('[data-dashboard-view="content"], [data-dashboard-page="content"]')).toHaveCount(0);
   await page.evaluate(() => window.setDashboardView('marketing'));
-  await page.locator('[data-marketing-tab="program"]').click();
+  await openView(page, 'marketing', 'program');
   const frame = page.frameLocator('#storeMarketingFrame');
   await expect(frame.getByRole('heading', { name: 'Comeback Card', exact: true })).toBeVisible();
   await expect(frame.locator('.comeback-card')).toBeVisible();
@@ -264,16 +260,16 @@ test('Comeback, campaigns and customers show distinct pages with the current fon
   await expect(frame.locator('body')).not.toContainText('Cargando las herramientas');
   expect(await frame.locator('.retention-dialog').evaluate(el => getComputedStyle(el).fontFamily)).toContain('Arial');
   await page.screenshot({ path: '/tmp/pagosya-comeback-desktop.png', fullPage: true });
-  await page.locator('[data-marketing-tab="campaigns"]').click();
+  await openView(page, 'marketing', 'campaigns');
   await expect(frame.locator('h2')).toHaveText('Campañas');
   await expect(frame.locator('[data-campaign]')).toBeVisible();
   await expect(frame.locator('[data-settings], [data-redeem], .comeback-card')).toHaveCount(0);
-  await page.locator('[data-marketing-tab="customers"]').click();
+  await openView(page, 'marketing', 'customers');
   await expect(frame.locator('h2')).toHaveText('Clientes y canjes');
   await expect(frame.getByText('ana@example.com', { exact: false })).toBeVisible();
   await expect(frame.locator('[data-redeem]')).toBeVisible();
   await expect(frame.locator('[data-campaign], [data-settings]')).toHaveCount(0);
-  await page.locator('[data-marketing-tab="program"]').click();
+  await openView(page, 'marketing', 'program');
   await expect(frame.locator('.comeback-card')).toBeVisible();
   await frame.locator('[name=visitsRequired]').fill('8');
   await frame.locator('[name=rewardLabel]').fill('Tu bebida favorita');
@@ -320,7 +316,7 @@ test('compact navigation stays at the edge and the idle canvas keeps the draft',
   await expect(handle).toHaveAttribute('aria-expanded', 'true');
   await expect.poll(async () => (await sidebar.boundingBox()).x).toBe(0);
   expect((await sidebar.boundingBox()).height).toBe(960);
-  await expect(page.getByRole('link', { name: 'Diseñar sitio', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('link', { name: 'Tienda', exact: true })).toHaveAttribute('aria-current', 'page');
   await page.keyboard.press('Escape');
   await expect(handle).toHaveAttribute('aria-expanded', 'false');
   await expect.poll(async () => { const box = await sidebar.boundingBox(); return box.x + box.width; }).toBeLessThanOrEqual(0);

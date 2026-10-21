@@ -7,6 +7,7 @@ async function account(page) {
   let stores = [{ ...base, id: 'uno', name: 'Uno', slug: 'uno' }, { ...base, id: 'dos', name: 'Dos', slug: 'dos' }, { ...base, id: 'tres', name: 'Tres', slug: 'tres' }];
   const requests = [];
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem('pagosya_merchant_session', 'bulk-delete-test');
     sessionStorage.setItem('pagosya_merchant_email', 'bulk@example.test');
   });

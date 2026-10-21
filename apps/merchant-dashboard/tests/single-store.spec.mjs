@@ -5,6 +5,7 @@ async function account(page, { occupied = false } = {}) {
   let stores = occupied ? [store] : [];
   const requests = [];
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem('pagosya_merchant_session', 'multiple-store-test');
     sessionStorage.setItem('pagosya_merchant_email', 'single@example.test');
   });

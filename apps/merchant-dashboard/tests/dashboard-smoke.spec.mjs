@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { enableFullNav } from "./helpers/nav.mjs";
+
+// These screens are hidden by default (spec 2026-10-21 A2); DASHBOARD_FULL_NAV=1 brings them back.
+test.beforeEach(async ({ page }) => { await enableFullNav(page); });
 
 // Every view must open without a script error; removals in dashboard.js
 // surface here first, because one stale element lookup stops the whole script.

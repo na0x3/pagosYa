@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { enableFullNav } from "./helpers/nav.mjs";
+
+// These screens are hidden by default (spec 2026-10-21 A2); DASHBOARD_FULL_NAV=1 brings them back.
+test.beforeEach(async ({ page }) => { await enableFullNav(page); });
 
 // Documentos → Cobros: create a cobro, share it, and follow it. The API is mocked
 // with a tiny in-memory store so create → send → list → summary reads back what was posted.
@@ -153,6 +157,7 @@ function fakeApi(initial = [], { merchantStatus = "ACTIVE", failSend = 0 } = {})
 
 async function openCobros(page, api) {
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
   });

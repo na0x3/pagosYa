@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { enableFullNav } from "./helpers/nav.mjs";
+
+// These screens are hidden by default (spec 2026-10-21 A2); DASHBOARD_FULL_NAV=1 brings them back.
+test.beforeEach(async ({ page }) => { await enableFullNav(page); });
 
 // Documentos → Propuestas: describe the job, YAPI drafts it (mocked: no AI call ever
 // leaves the test), edit, send, share; follow answers; turn an accepted one into a cobro.
@@ -159,6 +163,7 @@ function fakeApi(initial = [], { aiDown = false } = {}) {
 
 async function openProposals(page, api) {
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
   });

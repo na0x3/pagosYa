@@ -87,3 +87,20 @@ test('each settings tab carries one icon', () => {
   assert.equal(root.querySelectorAll('[data-settings-tab] svg.ui-icon').length, 4);
   for (const tab of root.querySelectorAll('[data-settings-tab]')) assert.equal(tab.querySelectorAll('svg').length, 1);
 });
+
+test('a full-nav-only tab is skipped by the arrow keys and by requests unless the switch is on', () => {
+  const html = MARKUP.replace('data-settings-tab="brand"', 'data-settings-tab="brand" data-full-nav-only');
+  const hidden = new JSDOM(html);
+  const root = hidden.window.document.getElementById('root');
+  const tabs = mountSettingsTabs(root, { storeId: () => 's1' });
+  root.querySelector('[data-settings-tab="general"]').dispatchEvent(new hidden.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  assert.deepEqual(selected(root), ['shipping']);
+  tabs.select('brand');
+  assert.deepEqual(selected(root), ['shipping']);
+  const on = new JSDOM(html.replace('<div id="root">', '<div id="root">'));
+  on.window.document.documentElement.setAttribute('data-full-nav', '');
+  const onRoot = on.window.document.getElementById('root');
+  const onTabs = mountSettingsTabs(onRoot, { storeId: () => 's1' });
+  onTabs.select('brand');
+  assert.deepEqual(selected(onRoot), ['brand']);
+});

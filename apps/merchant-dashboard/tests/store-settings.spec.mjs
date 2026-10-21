@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { enableFullNav, openView } from "./helpers/nav.mjs";
 
 const store = (id, name) => ({
   id,
@@ -46,6 +47,7 @@ async function openDashboard(
 ) {
   const requests = [];
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
   });
@@ -89,10 +91,7 @@ async function navigateDashboard(page, view) {
   if (await handle.isVisible() && !(await sidebar.evaluate((element) => element.classList.contains("is-store-nav-pinned")))) {
     await handle.click();
   }
-  const link = page.locator(`.dashboard-nav-button[data-dashboard-view="${view}"]`);
-  // Every view but "overview" sits inside a <details> group that starts closed.
-  await link.evaluate((element) => element.closest("details.dashboard-nav-group")?.setAttribute("open", ""));
-  await link.click();
+  await openView(page, view);
 }
 
 async function prepareInventoryImport(page, responseForRequest) {
@@ -649,9 +648,9 @@ test("an abandoned checkout is named in the empty state instead of vanishing", a
 test("a page whose only block is the content opens that block without a click", async ({ page }) => {
   await openDashboard(page, [store("store_1", "Primera")]);
 
-  // Payments, payouts and the overview each own their page: a collapsed block
+  // Payments and Dinero (finances + payouts) own their pages: a collapsed block
   // there renders as a blank page with a heading and nothing under it.
-  for (const [view, body] of [["payments", "#paymentsSectionBody"], ["payouts", "#payoutsSectionBody"], ["overview", "#financesSectionBody"]]) {
+  for (const [view, body] of [["payments", "#paymentsSectionBody"], ["payouts", "#payoutsSectionBody"], ["payouts", "#financesSectionBody"]]) {
     await navigateDashboard(page, view);
     await expect(page.locator(body)).toBeVisible();
   }
@@ -1013,7 +1012,23 @@ function settingsResponder(stores, products = []) {
   };
 }
 
+test("with the switch off, saving settings never sends the tagline or the policies YAPI writes", async ({ page }) => {
+  const stores = [store("store_1", "Primera")];
+  const requests = await openDashboard(page, stores, settingsResponder(stores));
+  await navigateDashboard(page, "store-settings");
+  await expect(page.locator("#storeTaglineInput")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Pídele a YAPI →" })).toHaveCount(2);
+  await page.locator("#storeNameInput").fill("Café Norte");
+  await page.getByRole("button", { name: "Guardar cambios" }).click();
+  await expect(page.locator("#info")).toHaveText("Datos de la tienda guardados.");
+  const patch = requests.find((entry) => entry.path === "/stores/store_1" && entry.method === "PATCH");
+  expect(patch.body).toMatchObject({ name: "Café Norte" });
+  expect(patch.body).not.toHaveProperty("tagline");
+  expect(patch.body).not.toHaveProperty("policies");
+});
+
 test("store settings save straight to the store and its links", async ({ page }) => {
+  await enableFullNav(page); // tagline and policies are editable only with DASHBOARD_FULL_NAV=1 (spec 2026-10-21 A2)
   const stores = [store("store_1", "Primera")];
   const requests = await openDashboard(page, stores, settingsResponder(stores));
   await navigateDashboard(page, "store-settings");

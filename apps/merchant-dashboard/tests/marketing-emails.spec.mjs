@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openView } from "./helpers/nav.mjs";
 
 const store = (id, name) => ({
   id, merchantId: "merchant_1", slug: id, name, websiteRevision: 0, websitePublishedRevision: 0, websiteDraft: null, status: "ACTIVE",
@@ -44,6 +45,7 @@ function correos() {
 async function openDashboard(page, stores, responseForRequest) {
   const requests = [];
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
   });
@@ -62,6 +64,7 @@ async function openDashboard(page, stores, responseForRequest) {
       else if (path === "/merchants/invoicing_profile") body = { status: "NOT_CONFIGURED" };
       else if (path === "/merchants/payouts" || path === "/payment_intents" || path === "/merchants/orders" || path.includes("/categories") || path.includes("/payment_links") || path.includes("/operations/integrations") || path.includes("/promo-codes") || path.includes("/debt-collection-links") || path.endsWith("/domains")) body = [];
       else if (path === "/merchants/finances") body = { totalRevenue: 0, paymentCount: 0, inventoryValue: 0, totalStoreViews: 0, topProducts: [], revenueByPaymentMethod: [], currency: "BOB" };
+      else if (path === "/store-templates/settings") body = { plantillas: false };
       else if (path.endsWith("/settings")) body = { ...request.postDataJSON(), websiteRevision: request.postDataJSON().revision + 1 };
     }
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
@@ -75,27 +78,26 @@ async function navigateDashboard(page, view) {
   const sidebar = page.locator(".dashboard-sidebar");
   const handle = page.locator("#storeFullscreenNavHandle");
   if (await handle.isVisible() && !(await sidebar.evaluate((element) => element.classList.contains("is-store-nav-pinned")))) await handle.click();
-  const link = page.locator(`.dashboard-nav-button[data-dashboard-view="${view}"]`);
-  await link.evaluate((element) => element.closest("details.dashboard-nav-group")?.setAttribute("open", ""));
-  await link.click();
+  await openView(page, view);
 }
 
 test("Correos y marketing opens on Correos and lists every store email once", async ({ page }) => {
   await openDashboard(page, [store("store_1", "Café Illimani")], correos());
   await navigateDashboard(page, "marketing");
-  await expect(page.locator("#marketingTabs button")).toHaveText(["Correos", "Equipo", "Remitente", "Registros", "Comeback Card", "Campañas", "Clientes", "Códigos promocionales"]);
+  await expect(page.locator("#sectionTabs .section-tab")).toHaveText(["Correos", "Campañas", "Comeback", "Códigos", "Tus clientes", "Carritos", "Suscripciones", "Asistente"]);
   await expect(page.locator('[data-marketing-tab="emails"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#storeMarketingFrame")).toBeHidden();
   await expect(page.locator("[data-email-row] strong")).toHaveText(["Confirmación de compra", "Cita confirmada", "Enviado", "Entregado", "Cancelado", "Reembolso", "Tarjeta de regalo", "Pago de suscripción fallido", "Suscripción omitida", "Bienvenida", "Carrito abandonado", "Pedir reseña"]);
   // The purchase confirmation opens in the designed editor, with no second list of emails inside it.
   await expect(page.locator(".email-studio-frame iframe")).toHaveCount(2);
   await expect(page.locator(".email-studio-types")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Contenido de tus correos" })).toBeVisible();
+  // The email content editor is YAPI's now: hidden unless DASHBOARD_FULL_NAV=1 (spec 2026-10-21 A2).
+  await expect(page.getByRole("heading", { name: "Contenido de tus correos" })).toBeHidden();
   // A Studio tab still loads in the frame, and coming back shows the list again.
-  await page.locator('[data-marketing-tab="staff"]').click();
+  await openView(page, "marketing", "staff");
   await expect(page.locator("#storeMarketingFrame")).toHaveAttribute("src", /library=marketing&tab=staff/);
   await expect(page.locator("#marketingEmails")).toBeHidden();
-  await page.locator('[data-marketing-tab="emails"]').click();
+  await openView(page, "marketing", "emails");
   await expect(page.locator("#marketingEmails")).toBeVisible();
 });
 
@@ -124,7 +126,7 @@ test("selecting Cita confirmada opens the designed editor for that email", async
 test("a Studio request for the old Plantillas tab lands on Correos", async ({ page }) => {
   await openDashboard(page, [store("store_1", "Café Illimani")], correos());
   await navigateDashboard(page, "marketing");
-  await page.locator('[data-marketing-tab="program"]').click();
+  await openView(page, "marketing", "program");
   await page.evaluate(() => {
     const studio = /** @type {HTMLIFrameElement} */ (document.getElementById("merchantStudioFrame"));
     /** @type {any} */ (studio.contentWindow).eval(`parent.postMessage({ type: "pagosya:workspace", view: "marketing", tab: "templates" }, ${JSON.stringify(location.origin)})`);

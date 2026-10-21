@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openView } from "./helpers/nav.mjs";
 
 // Crecer › Carritos abandonados with a mocked API.
 const store = { id: "store_1", merchantId: "m1", slug: "casa-luz", name: "Casa Luz", status: "ACTIVE", websiteRevision: 0, heroSlides: [], contentOrder: [], editorialGallery: [], links: [], locations: [], animations: [], customDomains: [], checkoutMode: "payment" };
@@ -14,6 +15,7 @@ const carts = () => [
 async function open(page, answer) {
   const asked = [];
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "carts-test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
   });
@@ -41,9 +43,9 @@ test("Crecer › Carritos abandonados lists who left, with reminders and follow-
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   const asked = await open(page, (days) => ({ anonymousSessions: days === 30 ? 12 : 4, carts: carts() }));
-  await page.locator('[data-nav-group="crecer"] > summary').click();
-  await page.locator('[data-dashboard-view="abandoned-carts"]').click();
-  await expect(page.locator("#workspaceTitle")).toHaveText("Carritos abandonados");
+  await openView(page, "abandoned-carts");
+  await expect(page.locator("#workspaceTitle")).toHaveText("Clientes");
+  await expect(page.locator('#sectionTabs [data-section-view="abandoned-carts"]')).toHaveAttribute("aria-current", "page");
   await expect(page.locator(".carts-anonymous")).toHaveText("4 visitas dejaron su carrito sin dejar contacto");
   const rows = page.locator(".carts-row");
   await expect(rows).toHaveCount(4);

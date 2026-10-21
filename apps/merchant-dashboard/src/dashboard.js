@@ -312,7 +312,8 @@ import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } fr
       dashboardSections.set(section.id, { body, panel, toggle, title });
 
       const saved = localStorage.getItem(`pagosya_dashboard_section_${section.id}`);
-      const expanded = saved === null ? blocksPerPage.get(section.dataset.dashboardPage) === 1 : saved === "true";
+      // Dinero holds finances and payouts (spec 2026-10-21 A4): a page of one or two blocks opens them all.
+      const expanded = saved === null ? blocksPerPage.get(section.dataset.dashboardPage) <= 2 : saved === "true";
       setDashboardSectionExpanded(section.id, expanded, false);
       toggle.addEventListener("click", () => setDashboardSectionExpanded(section.id, toggle.getAttribute("aria-expanded") !== "true"));
     });
@@ -757,7 +758,8 @@ import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } fr
     const [onboarding, templateSettings] = await Promise.all([api("/stores/onboarding").catch(() => ({ enabled: false, store: null })), api("/store-templates/settings").catch(() => ({ plantillas: false }))]);
     // Spec 2026-10-20 Plantillas fill: the Plantillas menu and «Elegir una plantilla» come back with the API flag.
     plantillasOn = templateSettings?.plantillas === true;
-    setDashboardView(document.body.dataset.dashboardView, { remember: false });
+    const shown = sectionOf(document.body.dataset.dashboardView, document.getElementById("marketingTabs").dataset.tab);
+    renderSectionPills(shown.section, shown.tab);
     onboardingEnabled = Boolean(onboarding.enabled);
     onboardingResumable = onboarding.store || null;
     const entry = walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, resumable: Boolean(onboardingResumable), intent: "boot" });

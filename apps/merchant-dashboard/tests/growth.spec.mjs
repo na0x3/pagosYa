@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { enableFullNav } from "./helpers/nav.mjs";
 import { mkdirSync } from "node:fs";
 
 // Crecimiento (G2) with a mocked API: a rich payment store, a brand-new store, and a WhatsApp store, at 390 and 1280.
@@ -122,6 +123,7 @@ async function openGrowth(page, { mode = "payment", empty = false, width = 1280 
   const calls = [];
   const state = { answer: (n) => overview({ mode, n, empty }) };
   await page.addInitScript(() => {
+    if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "merchant@example.com");
     try { localStorage.removeItem("pagosya_growth_days"); } catch {}
@@ -155,7 +157,8 @@ async function openGrowth(page, { mode = "payment", empty = false, width = 1280 
   });
   await page.goto("/#dashboard-growth");
   await expect(page.locator("#app")).toBeVisible();
-  await expect(page.locator("#workspaceTitle")).toHaveText("Crecimiento");
+  await expect(page.locator("#workspaceTitle")).toHaveText("Inicio");
+  await expect(page.locator('#sectionTabs [data-section-view="growth"]')).toHaveAttribute("aria-current", "page");
   return { calls, state };
 }
 const noOverflow = async (page) => expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
@@ -165,10 +168,11 @@ test.describe("Crecimiento", () => {
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await openGrowth(page);
-    const nav = page.locator('#dashboardNav > [data-dashboard-view]');
-    await expect(nav.nth(0)).toHaveText("Resumen");
-    await expect(nav.nth(1)).toHaveText("Crecimiento");
-    await expect(nav.nth(1)).toHaveAttribute("aria-current", "page");
+    // Crecimiento is Inicio's second pill (spec 2026-10-21 A1).
+    await expect(page.locator('#dashboardNav [data-nav-section="inicio"]')).toHaveAttribute("aria-current", "page");
+    const pills = page.locator("#sectionTabs .section-tab");
+    await expect(pills).toHaveText(["Resumen", "Crecimiento"]);
+    await expect(pills.nth(1)).toHaveAttribute("aria-current", "page");
     const root = page.locator("#growthRoot");
     await expect(root.locator('[data-kpi="visits"]')).toContainText(/1\.?240/);
     await expect(root.locator('[data-kpi="visits"] .growth-delta')).toContainText("+18 %");
@@ -216,7 +220,7 @@ test.describe("Crecimiento", () => {
   test("the YAPI button fills the composer in Diseñar sitio and sends nothing", async ({ page }) => {
     await openGrowth(page);
     await page.getByRole("button", { name: "Mejorar el carrito con YAPI" }).click();
-    await expect(page.locator("#workspaceTitle")).toHaveText("Mi tienda");
+    await expect(page.locator("#workspaceTitle")).toHaveText("Tienda");
     await expect.poll(() => page.evaluate(() => (window.__studio || []).find((m) => m.type === "pagosya:studio-action") || null)).toMatchObject({
       type: "pagosya:studio-action", action: "compose", origin: "growth", storeId: "store_1", text: "Mejora el carrito de mi tienda para que más clientes continúen. No cambies precios ni productos.",
     });
@@ -225,7 +229,7 @@ test.describe("Crecimiento", () => {
   test("product and stock buttons open the product guide at the right step", async ({ page }) => {
     await openGrowth(page);
     await page.getByRole("button", { name: "Reponer stock" }).click();
-    await expect(page.locator("#workspaceTitle")).toHaveText("Productos");
+    await expect(page.locator("#workspaceTitle")).toHaveText("Tienda");
     await expect.poll(() => page.evaluate(() => (window.__studio || []).filter((m) => m.type === "pagosya:product-guide-edit").map((m) => [m.product.id, m.step]))).toEqual([["p1", "stock"]]);
     await page.goto("/#dashboard-growth");
     await page.getByRole("button", { name: "Mejorar las fotos de «Lámpara Nube»" }).click();
@@ -237,18 +241,22 @@ test.describe("Crecimiento", () => {
     await page.getByRole("button", { name: "Crear un código para esas visitas" }).click();
     await expect(page.locator("#promoCodeInput")).toHaveValue("INSTAGRAM");
     await page.goto("/#dashboard-growth");
+    // Policies are YAPI's (spec 2026-10-21 A2): the button opens its composer with the request, unsent.
     await page.getByRole("button", { name: "Escribir mis políticas" }).click();
-    await expect(page.locator("#workspaceTitle")).toHaveText("Ajustes de la tienda");
-    await expect(page.locator("#storeSettingsPoliciesTitle")).toBeInViewport();
+    await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "workspace");
+    await expect.poll(() => page.evaluate(() => (window.__studio || []).find((m) => m.type === "pagosya:studio-action") || null)).toMatchObject({
+      type: "pagosya:studio-action", action: "compose", origin: "growth", text: "Escribe las políticas de mi tienda con estos datos: ",
+    });
   });
 
   test("the proposal button opens Propuestas' composer with the brief", async ({ page }) => {
+    await enableFullNav(page); // Propuestas is hidden by default (spec 2026-10-21 A2).
     const { state } = await openGrowth(page);
     state.answer = (n) => ({ ...overview({ n }), insights: [insight("leads-to-proposal", "low", "proposal", { prompt: "Propuesta para un cliente que escribió a Casa Luz pidiendo información." }, "Convierte tus consultas en propuestas", "Recibiste 4 consultas en los últimos 30 días.", { label: "Crear una propuesta" })] });
     await page.getByRole("button", { name: "30 días", exact: true }).click();
     await page.getByRole("button", { name: "7 días", exact: true }).click();
     await page.getByRole("button", { name: "Crear una propuesta" }).click();
-    await expect(page.locator("#workspaceTitle")).toHaveText("Propuestas");
+    await expect(page.locator("#workspaceTitle")).toHaveText("Documentos");
     await expect(page.locator("#proposalBrief")).toHaveValue("Propuesta para un cliente que escribió a Casa Luz pidiendo información.");
   });
 
