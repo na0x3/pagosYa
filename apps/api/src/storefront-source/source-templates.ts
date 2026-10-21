@@ -21,6 +21,8 @@ import { buildSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_FI
 import { sourceStoreConfigData, type SourcePublicStore } from './source-store-config';
 import { menuFromVariant, storeMenuContext, type StoreMenuGroup } from './source-store-menu';
 import { isFilterStyle } from './source-filter-style';
+import { buildFeatures, eligibleFeatures, featureFacts, rollFeatures } from './source-master-features';
+import { readConfigFile } from './store-look';
 
 export const TEMPLATE_STORE_DATA_PATH = 'components/store-data.tsx';
 
@@ -61,7 +63,7 @@ export function sameAsBundled(photos: Record<string, string>, sources: MasterFil
   }));
 }
 
-export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[] }, plantillaCopy?: Record<string, string>): SourceProjectFileDto {
+export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[]; features?: Record<string, unknown> }, plantillaCopy?: Record<string, string>): SourceProjectFileDto {
   const data = { name: store.name, tagline: store.tagline ?? '', city: store.city ?? '', logo: store.logo ?? '', phone: store.phone ?? '' };
   return {
     path: TEMPLATE_STORE_DATA_PATH,
@@ -70,7 +72,9 @@ export function templateStoreDataFile(store: { name: string; tagline?: string; c
       + `export const photos: Record<string, string> = ${JSON.stringify(photos)};\n`
       + (master ? `export const copy = ${JSON.stringify(master.copy)} as const;\nexport const look = ${JSON.stringify(master.look)} as const;\n`
         + `export const variants: Record<string, string | string[]> = ${JSON.stringify(master.variants ?? { sections: [] })};\n`
-        + `export const sections: Array<{ id: string; title: string; items: Array<{ title: string; text: string }> }> = ${JSON.stringify(master.sections ?? [])};\n` : '')
+        + `export const sections: Array<{ id: string; title: string; items: Array<{ title: string; text: string }> }> = ${JSON.stringify(master.sections ?? [])};\n`
+        // John Smedley sections (spec 2026-10-21): always exported, so a home that imports it compiles with none rolled.
+        + `export const features: Record<string, any> = ${JSON.stringify(master.features ?? {})};\n` : '')
       // A converted Plantilla (spec 2026-10-20): every text it shows, filled for the merchant or the template's own defaults.
       + (plantillaCopy ? `export const copy: Record<string, string> = ${JSON.stringify(plantillaCopy)};\n` : ''),
   };
@@ -113,6 +117,7 @@ export function readMasterState(files: readonly SourceProjectFileDto[]) {
     look: dataLine(content, 'look') as MasterLook | undefined,
     variants: dataLine(content, 'variants') as MasterVariants | undefined,
     sections: dataLine(content, 'sections') as MasterSection[] | undefined,
+    features: (dataLine(content, 'features') ?? {}) as Record<string, unknown>,
   };
 }
 
@@ -209,10 +214,26 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
     else if (!change.menu && variants.cards === 'fashion' && variants.menu === undefined) variants.menu = 'panel';
   }
   // A style already in config.js (rolled, or asked for in chat) stays unless this change names one (final review 2026-10-21).
+  // John Smedley sections (spec 2026-10-21): sections a change names (one id, a comma list or a list) are built; an older store
+  // with no record gets its roll, seeded by its slug; otherwise the built sections stay as they are.
+  let features = state.features ?? {};
+  const featureIds = (settings.variants?.feature ?? []) as readonly string[];
+  if (featureIds.length) {
+    const asked = (change.variants as Record<string, unknown> | undefined)?.feature;
+    const named = asked === undefined ? undefined : (Array.isArray(asked) ? asked : String(asked).split(',')).map(id => String(id).trim()).filter(id => featureIds.includes(id));
+    if (named || variants.feature === undefined) {
+      const config = readConfigFile(files);
+      const facts = featureFacts(config.data ?? {}, photos, state.store?.city ?? '');
+      const fashion = variants.cards === 'fashion';
+      const ids = named ?? rollFeatures({ seed: String(config.slug || state.store?.name || ''), eligible: eligibleFeatures(facts, fashion), fashion, exclude: [] });
+      variants.feature = ids.join(',');
+      features = buildFeatures(ids, facts, change.featureCopy ?? {}, { productsTitle: copy.productsTitle, storyTitle: copy.storyTitle, subcopy: copy.subcopy });
+    }
+  }
   // Sort & filter styles spec 2026-10-21: a fashion store from before the filters part gets the John Smedley chip rows.
   if ((settings.variants?.filters ?? []).includes('chips') && variants.filters === undefined && variants.cards === 'fashion') variants.filters = 'chips';
   const out = withFashionTemplateParts(files.map(file => {
-    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [] });
+    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [], features });
     if (file.path === 'styles/globals.css') return { ...file, content: withMasterTheme(file.content, theme) };
     if (file.path === 'config.js') {
       const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
@@ -286,8 +307,20 @@ export async function assembleTemplateRevision(input: {
   const demoSlots = filled.demoSlots.filter(slot => photos[slot] === templateDemoPath(manifest, slot));
   const copy = settings ? masterCopy(settings, input.fill?.copy) : undefined;
   const look = settings ? masterLook(settings, input.fill?.look) : undefined;
-  const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city: (data.locations as Array<{ city?: string | null }> | undefined)?.[0]?.city ?? '',
-    logo: data.logoUrl ?? '', phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: input.variants ?? (input.fill?.variants as MasterVariants | undefined), sections: input.sections ?? input.fill?.sections } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
+  const city = (data.locations as Array<{ city?: string | null }> | undefined)?.[0]?.city ?? '';
+  // John Smedley sections (spec 2026-10-21): rolled here, where the store's photos are known, unless the dice already did.
+  let builtVariants = input.variants ?? (input.fill?.variants as MasterVariants | undefined);
+  let features: Record<string, unknown> = {};
+  if (settings && builtVariants && (settings.variants?.feature ?? []).length) {
+    const facts = featureFacts(data, photos, city);
+    const fashion = input.fill?.character?.kind === 'fashion' || builtVariants.cards === 'fashion';
+    const ids = typeof builtVariants.feature === 'string' ? builtVariants.feature.split(',').filter(Boolean)
+      : rollFeatures({ seed: input.storeId, eligible: eligibleFeatures(facts, fashion), fashion, exclude: input.fill?.character?.exclude ?? [] });
+    builtVariants = Object.assign({}, builtVariants, { feature: ids.join(',') });
+    features = buildFeatures(ids, facts, input.fill?.featureCopy ?? {}, { productsTitle: copy!.productsTitle, storyTitle: copy!.storyTitle, subcopy: copy!.subcopy });
+  }
+  const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city,
+    logo: data.logoUrl ?? '', phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: builtVariants, sections: input.sections ?? input.fill?.sections, features } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
   const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withMasterTheme(file.content, masterThemeCss(settings, look!)) } : file;
   // A filled Plantilla never shows the demo business's photos; a slot the merchant has no photo for stays empty instead
   // of a broken image showing its description (live check 2026-10-21, Alfar's floating photos).

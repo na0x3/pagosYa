@@ -110,6 +110,18 @@ describe('Esencial', () => {
     expect(refillMasterFiles(own, manifest, {}).find((f: any) => f.path === 'components/page-productos.tsx')!.content).toContain('Nuestra colección');
   });
 
+  it('a build writes the rolled John Smedley sections and their data to store-data (spec 2026-10-21)', async () => {
+    const variants = { ...Object.fromEntries(Object.entries(manifest.master!.variants!).filter(([part]) => part !== 'feature').map(([part, ids]) => [part, (ids as string[])[0]])), sections: [] };
+    const demo = { ...templateDemoPublicStore(), categories: [{ id: 'k1', name: 'Velas' }, { id: 'k2', name: 'Jabones' }] } as any;
+    demo.items = demo.items.map((item: any, index: number) => ({ ...item, categoryId: index % 2 ? 'k2' : 'k1' }));
+    const assembled = await assemble(demo, { variants: { ...variants, feature: 'explore' } });
+    const data = assembled.files.find((f: any) => f.path === 'components/store-data.tsx')!.content;
+    expect(data).toMatch(/"feature":"explore"/);
+    expect(JSON.parse(data.match(/^export const features: Record<string, any> = (.*);$/m)![1]).explore.categories).toEqual([{ id: 'k1', name: 'Velas' }, { id: 'k2', name: 'Jabones' }]);
+    const rolled = await assemble(templateDemoPublicStore(), { variants });
+    expect(rolled.files.find((f: any) => f.path === 'components/store-data.tsx')!.content).toMatch(/"feature":"[a-z,]*"/);
+  });
+
   it('every font pair uses catalogued OFL fonts', () => {
     for (const pair of manifest.master!.fonts) for (const id of [pair.heading, pair.body]) expect(SOURCE_FONT_CATALOG.some(font => font.id === id)).toBe(true);
   });

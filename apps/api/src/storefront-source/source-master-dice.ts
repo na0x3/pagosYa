@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import type { MasterSettings } from '@pagosya/store-templates';
 import type { MasterCharacter, MasterVariants } from './source-master';
 import { uploadPath } from './source-product-photos';
+import { rollFeatures } from './source-master-features';
 
 /** Review fix: one photo is counted once, whether it is a relative upload path or an absolute API URL. */
 export const distinctPhotoCount = (urls: Array<string | null | undefined>) => new Set(urls.filter((url): url is string => Boolean(url)).map(uploadPath)).size;
@@ -24,7 +25,7 @@ function rng(seed: string) {
 const pick = <T>(next: () => number, list: readonly T[]): T => list[Math.floor(next() * list.length)];
 
 /** Commerce displays fit any business; the fill call's exclusions skipped them every time (live 2026-10-19: offers «steps» never rolled). */
-const DICE_ONLY = new Set(['cards', 'offers', 'menu', 'filters']);
+const DICE_ONLY = new Set(['cards', 'offers', 'menu', 'filters', 'feature']);
 
 /** Fashion look spec 2026-10-21: the fashion card and product page belong to fashion stores only, and fashion stores always get them. */
 const FASHION_PARTS = ['cards', 'pdp'] as const;
@@ -44,7 +45,9 @@ export function menuVariant(rolled: string | undefined, chosen: string | undefin
 /** Most recent first. */
 export type RecentRoll = { hero: string; palette: string; fonts: string };
 
-export function rollVariants(input: { seed: string; settings: MasterSettings; character: MasterCharacter; photoCount: number; sections: string[]; recent: RecentRoll[]; categoryCount?: number }): { variants: MasterVariants; palette: string; fonts: string } {
+export function rollVariants(input: { seed: string; settings: MasterSettings; character: MasterCharacter; photoCount: number; sections: string[]; recent: RecentRoll[]; categoryCount?: number;
+  /** John Smedley sections (spec 2026-10-21): the sections this store can have; without it the roll is left to the page assembly. */
+  featureEligible?: string[] }): { variants: MasterVariants; palette: string; fonts: string } {
   const catalogue = (input.settings.variants ?? {}) as Record<string, readonly string[]>;
   // The fill call's exclusions are honoured for at most half of a part: a model that rules out nearly everything would
   // otherwise make every store the same (live check 2026-10-19: the feature grid on 4 of 6 stores).
@@ -70,7 +73,7 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   let last: { variants: MasterVariants; palette: string; fonts: string } | undefined;
   for (let attempt = 0; attempt < 20; attempt++) {
     const next = rng(`${input.seed}#${attempt}`);
-    const variants = Object.fromEntries(Object.keys(catalogue).filter(part => part !== 'menu' && part !== 'filters').map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
+    const variants = Object.fromEntries(Object.keys(catalogue).filter(part => part !== 'menu' && part !== 'filters' && part !== 'feature').map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
     if (input.character.kind === 'fashion') for (const part of FASHION_PARTS) if (catalogue[part]?.includes('fashion')) variants[part] = 'fashion';
     if (catalogue.menu?.length) {
       variants.menu = input.character.kind === 'fashion' ? 'panel'
@@ -79,6 +82,9 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
     }
     // Sort & filter styles spec 2026-10-21: a fashion store with categories gets the John Smedley chip rows; others roll, from
     // their own seed, so adding the part left every other roll as it was.
+    if (catalogue.feature?.length && input.featureEligible) {
+      variants.feature = rollFeatures({ seed: input.seed, eligible: input.featureEligible.filter(id => catalogue.feature.includes(id)), fashion: input.character.kind === 'fashion', exclude: input.character.exclude }).join(',');
+    }
     if (catalogue.filters?.length) {
       variants.filters = input.character.kind === 'fashion' && (input.categoryCount ?? 0) >= 2 && catalogue.filters.includes('chips') ? 'chips'
         : pick(rng(`${input.seed}#filters`), allowed('filters'));

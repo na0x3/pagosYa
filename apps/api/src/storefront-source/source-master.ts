@@ -4,6 +4,7 @@ import type { MasterCopy, MasterSettings } from '@pagosya/store-templates';
 import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 import { bestInkFor, contrastRatio } from './sketch/sketch-schema';
 import type { StoreMenuGroup } from './source-store-menu';
+import type { FeatureCopy } from './source-master-features';
 
 export const MASTER_TEMPLATE_ID = 'esencial';
 export const MASTER_THEME_START = '/* pagosya:master-theme */';
@@ -23,7 +24,9 @@ export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook
   /** The uploads the bundled hero/story photos came from, so product slots holding the same photo can point at the bundle. */
   photoSources?: { hero?: string; story?: string };
   /** Dropdown menu spec 2026-10-21: the menu style (none removes it) and the groups YAPI wrote ([] = built from the categories). */
-  menu?: { style: 'none' | 'panel' | 'dropdowns'; groups: StoreMenuGroup[] } };
+  menu?: { style: 'none' | 'panel' | 'dropdowns'; groups: StoreMenuGroup[] };
+  /** John Smedley sections (spec 2026-10-21): the words for the rolled sections. */
+  featureCopy?: Partial<FeatureCopy> };
 
 /** a → b by t (0..1), both #rrggbb. */
 const mixHex = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
@@ -103,7 +106,7 @@ export function withMasterTheme(css: string, block: string): string {
 }
 
 /** The rolled button shape and corners, as the kit's DNA, so kit-drawn parts (cart, checkout, product buy box) match. */
-const DNA_BUTTON: Record<string, string> = { pill: 'pill', soft: 'block', square: 'block', underline: 'underline' };
+const DNA_BUTTON: Record<string, string> = { pill: 'pill', soft: 'block', square: 'block', underline: 'underline', dashed: 'block' };
 const DNA_RADIUS: Record<string, string> = { round: 'round', soft: 'soft', sharp: 'none' };
 export function masterDnaLook(variants: Partial<MasterVariants> | undefined): Record<string, string> {
   const button = DNA_BUTTON[String(variants?.button)];
@@ -142,7 +145,8 @@ export type MasterRead = MasterCopy & { palette: string; fonts: string; colors: 
   variantChoices?: Array<{ part: string; id: string }>;
   /** Dropdown menu spec 2026-10-21: the menu style and the groups YAPI wrote ([] = built from the categories). */
   menuStyle?: 'none' | 'panel' | 'dropdowns';
-  menuGroups?: Array<{ label: string; links: Array<{ label: string; target: string }>; tilesTitle: string; tiles: Array<{ title: string; photo: number; target: string }>; footerLabel: string; footerTarget: string }> };
+  menuGroups?: Array<{ label: string; links: Array<{ label: string; target: string }>; tilesTitle: string; tiles: Array<{ title: string; photo: number; target: string }>; footerLabel: string; footerTarget: string }>;
+  featureCopy?: FeatureCopy };
 const COPY_FIELDS = [...Object.keys(MASTER_COPY_CAPS), 'values'];
 
 export function masterFillFromRead(read: MasterRead, photos: readonly string[], edit: boolean): MasterFill {
@@ -156,6 +160,7 @@ export function masterFillFromRead(read: MasterRead, photos: readonly string[], 
     ...(read.tone ? { character: { tone: read.tone, temperature: read.temperature ?? 'neutral', lead: read.lead ?? 'photo', exclude: Array.isArray(read.exclude) ? read.exclude : [], ...(read.kind ? { kind: read.kind } : {}) } } : {}),
     ...(Array.isArray(read.sections) && keep('sections') ? { sections: read.sections.slice(0, 2) } : {}),
     ...(Array.isArray(read.variantChoices) && read.variantChoices.length && keep('variants') ? { variants: Object.fromEntries(read.variantChoices.map(choice => [choice.part, choice.id])) } : {}),
+    ...(read.featureCopy && keep('features') ? { featureCopy: read.featureCopy } : {}),
     ...(read.menuStyle && keep('menu') ? { menu: { style: read.menuStyle, groups: menuGroupsFromRead(read.menuGroups, photos) } } : {}),
     ...(keep('heroPhoto') ? { heroPhoto: photo(read.heroPhoto) } : {}),
     ...(keep('storyPhoto') ? { storyPhoto: photo(read.storyPhoto) } : {}),

@@ -171,3 +171,27 @@ describe('filters part', () => {
     expect(rest).toEqual(before.variants);
   });
 });
+
+/** John Smedley sections (spec 2026-10-21): the feature part. */
+describe('feature part', () => {
+  it('the catalogue has the feature part and the new looks', () => {
+    expect(settings.variants?.feature).toEqual(['duo', 'explore', 'capsule', 'origin', 'palette']);
+    expect(settings.variants?.grid).toContain('side-title');
+    expect(settings.variants?.header).toContain('boxed');
+    expect(settings.variants?.button).toContain('dashed');
+    expect(settings.variants?.footer).toContain('column');
+  });
+  it('rolls 0–2 eligible sections as a comma list, from its own seed', () => {
+    const rolled = Array.from({ length: 40 }, (_, i) => roll(`s${i}`, { featureEligible: ['duo', 'origin'] }).variants.feature);
+    for (const value of rolled) expect(value.split(',').filter(Boolean).every(id => ['duo', 'origin'].includes(id))).toBe(true);
+    expect(new Set(rolled.map(value => value.split(',').filter(Boolean).length))).toEqual(new Set([0, 1, 2]));
+    const { feature: _f, ...variants } = settings.variants as Record<string, readonly string[]>;
+    const before = rollVariants({ seed: 'x', settings: { ...settings, variants } as typeof settings, character: calm, photoCount: 6, sections: [], recent: [] });
+    const { feature: _rolled, ...rest } = roll('x', { featureEligible: ['duo'] }).variants;
+    expect(rest).toEqual(before.variants);
+  });
+  it('nothing eligible rolls nothing', () => {
+    expect(roll('z', { featureEligible: [] }).variants.feature).toBe('');
+    expect(roll('z').variants.feature).toBeUndefined();
+  });
+});

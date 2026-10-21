@@ -323,7 +323,8 @@
         "centered",
         "links",
         "split",
-        "minimal"
+        "minimal",
+        "boxed"
       ],
       "announce": [
         "plain",
@@ -348,7 +349,8 @@
         "feature",
         "strip",
         "list",
-        "masonry"
+        "masonry",
+        "side-title"
       ],
       "card": [
         "plain",
@@ -382,7 +384,8 @@
         "columns",
         "bigname",
         "minimal",
-        "twotone"
+        "twotone",
+        "column"
       ],
       "pdp": [
         "gallery-left",
@@ -402,7 +405,8 @@
         "pill",
         "soft",
         "square",
-        "underline"
+        "underline",
+        "dashed"
       ],
       "corners": [
         "round",
@@ -451,6 +455,13 @@
         "bar",
         "chips",
         "sidebar"
+      ],
+      "feature": [
+        "duo",
+        "explore",
+        "capsule",
+        "origin",
+        "palette"
       ]
     },
     "sections": [

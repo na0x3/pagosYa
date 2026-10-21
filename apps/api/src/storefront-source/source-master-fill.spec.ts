@@ -93,6 +93,17 @@ describe('fillMaster', () => {
     expect(JSON.parse(sent.input[0].content[0].text).menuTargets).toEqual([{ target: 'all', label: 'Todos los productos' }, { target: 'category:c1', label: 'Vestidos' }]);
     expect(sent.instructions).toMatch(/menuStyle/);
   });
+  it('asks for the John Smedley sections\' words, capped (spec 2026-10-21)', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 200, json: async () => body(read()) } as any);
+    await service().fillMaster('m1', input);
+    const sent = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
+    const copy = sent.text.format.schema.properties.featureCopy;
+    expect(sent.text.format.schema.required).toContain('featureCopy');
+    expect(copy.required).toEqual(['duoTitles', 'duoCtas', 'capsuleText', 'originCaption', 'originLink', 'paletteIntro']);
+    expect(copy.properties.duoTitles.items.maxLength).toBe(28);
+    expect(copy.properties.capsuleText.maxLength).toBe(220);
+    expect(sent.instructions).toMatch(/featureCopy/);
+  });
   it('labels every image with its index and sends the current photo choices (review fix 6)', async () => {
     const svc = new SourceConversationService({ mediaAsset: { findMany: jest.fn().mockResolvedValue([{ url: 'https://x/u/a.jpg' }, { url: 'https://x/u/c.jpg' }]) } } as any,
       { getBuffer: jest.fn().mockResolvedValue(Buffer.from('px')), contentTypeFor: () => 'image/jpeg' } as any, config);

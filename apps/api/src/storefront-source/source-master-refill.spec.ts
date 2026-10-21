@@ -231,3 +231,28 @@ describe('Esencial catalogue pages follow-ups', () => {
   });
 });
 
+/** John Smedley sections (spec 2026-10-21): the features on a master store. */
+describe('features on a master store', () => {
+  const featureManifest = { ...manifest, master: { ...master, variants: { feature: ['duo', 'explore', 'capsule', 'origin', 'palette'] } } } as unknown as TemplateManifest;
+  const withData = () => storeFiles().map(file => file.path === 'config.js' ? { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ dna: {}, slug: 'noa', data: { categories: [{ id: 'c1', name: 'Vestidos' }, { id: 'c2', name: 'Faldas' }], items: [{ id: 'a', categoryId: 'c1', imageUrls: [] }, { id: 'b', categoryId: 'c2', imageUrls: [] }] } })};\n` } : file)
+    .map(file => file.path === 'components/store-data.tsx' ? { ...file, content: file.content.replace('{"hero":"https://x/h.jpg","story":""}', '{"hero":"https://x/h.jpg","story":"https://x/s.jpg","p1":"https://x/p1.jpg"}') } : file);
+  it('a named section builds its data into store-data', () => {
+    const files = refillMasterFiles(withData(), featureManifest, { variants: { feature: 'duo' } as never, featureCopy: { duoTitles: ['Novias', ''] } });
+    const state = readMasterState(files);
+    expect(state.variants?.feature).toBe('duo');
+    expect((state.features as any).duo.halves[0]).toMatchObject({ title: 'Novias', href: 'productos.html?f_categoria=c1', photo: 'https://x/s.jpg' });
+    expect((state.features as any).duo.halves[1]).toMatchObject({ title: 'Faldas', photo: 'https://x/p1.jpg' });
+  });
+  it('a list of sections is taken as given; a refill that names none keeps them', () => {
+    const files = refillMasterFiles(withData(), featureManifest, { variants: { feature: ['duo', 'origin'] } as never });
+    expect(readMasterState(files).variants?.feature).toBe('duo,origin');
+    const again = refillMasterFiles(files, featureManifest, { copy: { headline: 'Otra' } });
+    expect(readMasterState(again).features).toEqual(readMasterState(files).features);
+  });
+  it('an older store without a feature record gets a roll, and store-data always exports features', () => {
+    const files = refillMasterFiles(withData(), featureManifest, { copy: { headline: 'Otra' } });
+    expect(typeof readMasterState(files).variants?.feature).toBe('string');
+    expect(files.find(file => file.path === 'components/store-data.tsx')!.content).toMatch(/^export const features: Record<string, any> = /m);
+  });
+});
+
