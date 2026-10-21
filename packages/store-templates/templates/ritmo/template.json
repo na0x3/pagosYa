@@ -52,5 +52,181 @@
       "role": "lifestyle",
       "demo": "accion.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "item",
+      "default": "Para antes o después de entrenar",
+      "max": 51
+    },
+    {
+      "key": "home_2",
+      "role": "item",
+      "default": "Sabores que dan ganas",
+      "max": 34
+    },
+    {
+      "key": "home_3",
+      "role": "item",
+      "default": "Fácil de preparar",
+      "max": 27
+    },
+    {
+      "key": "home_4",
+      "role": "title",
+      "default": "Mezcla",
+      "max": 12
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "Una medida con agua o leche en tu shaker.",
+      "max": 66
+    },
+    {
+      "key": "home_6",
+      "role": "title",
+      "default": "Agita",
+      "max": 12
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Diez segundos y listo, sin grumos.",
+      "max": 54
+    },
+    {
+      "key": "home_8",
+      "role": "title",
+      "default": "Entrena",
+      "max": 12
+    },
+    {
+      "key": "home_9",
+      "role": "body",
+      "default": "Tómalo en tu rutina, cuando te sirva a ti.",
+      "max": 67
+    },
+    {
+      "key": "home_10",
+      "role": "question",
+      "default": "¿Cuándo lo tomo?",
+      "max": 26
+    },
+    {
+      "key": "home_11",
+      "role": "answer",
+      "default": "Cada producto indica su modo de uso en la ficha. Si tienes dudas, consulta con tu profesional de salud.",
+      "max": 165
+    },
+    {
+      "key": "home_12",
+      "role": "question",
+      "default": "¿Cuánto tarda el envío?",
+      "max": 37
+    },
+    {
+      "key": "home_13",
+      "role": "answer",
+      "default": "Despachamos en 24 a 48 horas hábiles y te avisamos cuando sale.",
+      "max": 101
+    },
+    {
+      "key": "home_14",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_15",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_16",
+      "role": "headline",
+      "default": "Entrena",
+      "max": 12
+    },
+    {
+      "key": "home_17",
+      "role": "label",
+      "default": "más",
+      "max": 12
+    },
+    {
+      "key": "home_18",
+      "role": "cta",
+      "default": "Comprar ahora",
+      "max": 21
+    },
+    {
+      "key": "home_19",
+      "role": "title",
+      "default": "Elige tu sabor",
+      "max": 22
+    },
+    {
+      "key": "home_20",
+      "role": "alt",
+      "default": "Entrenamiento",
+      "max": 21
+    },
+    {
+      "key": "home_21",
+      "role": "title",
+      "default": "Así de simple",
+      "max": 21
+    },
+    {
+      "key": "home_22",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Productos",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Cómo usarlo",
+      "max": 18
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Carrito ",
+      "max": 13
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Energía para entrenar mejor.",
+      "max": 45
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    }
   ]
 }

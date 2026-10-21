@@ -2,17 +2,471 @@
   "id": "obra",
   "name": "Obra",
   "category": "construccion",
+  "curated": true,
   "description": "Constructora: paquetes de servicio con precio, proyectos con antes y después, y un botón para cotizar tu obra.",
-  "tags": ["construcción", "remodelación", "servicios", "cotizar"],
+  "tags": [
+    "construcción",
+    "remodelación",
+    "servicios",
+    "cotizar"
+  ],
   "sitePurpose": "shop",
   "order": -300,
-  "dna": { "display": "oswald", "text": "chivo", "case": "upper", "radius": "none", "border": "bold", "button": "block", "hover": "invert", "press": "sink", "motion": "snappy", "cart": "drawer", "added": "inline", "card": "still", "frame": "bleed" },
+  "dna": {
+    "display": "oswald",
+    "text": "chivo",
+    "case": "upper",
+    "radius": "none",
+    "border": "bold",
+    "button": "block",
+    "hover": "invert",
+    "press": "sink",
+    "motion": "snappy",
+    "cart": "drawer",
+    "added": "inline",
+    "card": "still",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "antes", "role": "lifestyle", "demo": "antes.jpg" },
-    { "slot": "despues", "role": "lifestyle", "demo": "despues.jpg" }
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "antes",
+      "role": "lifestyle",
+      "demo": "antes.jpg"
+    },
+    {
+      "slot": "despues",
+      "role": "lifestyle",
+      "demo": "despues.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "label",
+      "default": "años construyendo",
+      "max": 27
+    },
+    {
+      "key": "home_2",
+      "role": "label",
+      "default": "obras entregadas",
+      "max": 26
+    },
+    {
+      "key": "home_3",
+      "role": "label",
+      "default": "m² construidos",
+      "max": 22
+    },
+    {
+      "key": "home_4",
+      "role": "label",
+      "default": "familias felices",
+      "max": 26
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Visita",
+      "max": 12
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Vamos a tu terreno o casa, medimos y escuchamos lo que necesitas.",
+      "max": 104
+    },
+    {
+      "key": "home_7",
+      "role": "title",
+      "default": "Presupuesto",
+      "max": 18
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Recibes un presupuesto por escrito, con materiales, plazos y precio final.",
+      "max": 118
+    },
+    {
+      "key": "home_9",
+      "role": "title",
+      "default": "Obra",
+      "max": 12
+    },
+    {
+      "key": "home_10",
+      "role": "body",
+      "default": "Un encargado fijo dirige el trabajo y te manda avances con fotos cada semana.",
+      "max": 123
+    },
+    {
+      "key": "home_11",
+      "role": "title",
+      "default": "Entrega",
+      "max": 12
+    },
+    {
+      "key": "home_12",
+      "role": "body",
+      "default": "Revisamos juntos cada detalle y te entregamos con garantía por escrito.",
+      "max": 114
+    },
+    {
+      "key": "home_13",
+      "role": "quote",
+      "default": "Nos entregaron la remodelación de la cocina una semana antes de lo prometido y sin dejar escombros.",
+      "max": 158
+    },
+    {
+      "key": "home_14",
+      "role": "name",
+      "default": "Rosario",
+      "max": 12
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Sopocachi",
+      "max": 14
+    },
+    {
+      "key": "home_16",
+      "role": "quote",
+      "default": "El presupuesto fue claro desde el primer día. Lo que nos dijeron que costaría fue lo que pagamos.",
+      "max": 155
+    },
+    {
+      "key": "home_17",
+      "role": "name",
+      "default": "Marcelo",
+      "max": 12
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Equipetrol",
+      "max": 16
+    },
+    {
+      "key": "home_19",
+      "role": "quote",
+      "default": "Construyeron la casa de mis padres con mucho cuidado. Cada semana mandaban fotos del avance.",
+      "max": 147
+    },
+    {
+      "key": "home_20",
+      "role": "name",
+      "default": "Andrea",
+      "max": 12
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "Cala Cala",
+      "max": 14
+    },
+    {
+      "key": "home_22",
+      "role": "name",
+      "default": "Cocina integral",
+      "max": 24
+    },
+    {
+      "key": "home_23",
+      "role": "alt",
+      "default": "Cocina moderna terminada en tonos neutros",
+      "max": 66
+    },
+    {
+      "key": "home_24",
+      "role": "name",
+      "default": "Losa y estructura",
+      "max": 27
+    },
+    {
+      "key": "home_25",
+      "role": "alt",
+      "default": "Encargado con casco revisando una losa de hormigón",
+      "max": 80
+    },
+    {
+      "key": "home_26",
+      "role": "body",
+      "default": "Construcción y remodelación",
+      "max": 43
+    },
+    {
+      "key": "home_27",
+      "role": "headline",
+      "default": "Construimos lo que imaginas",
+      "max": 43
+    },
+    {
+      "key": "home_28",
+      "role": "lead",
+      "default": "Visita técnica, presupuesto por escrito y una obra que se entrega en la fecha acordada.",
+      "max": 139
+    },
+    {
+      "key": "home_29",
+      "role": "cta",
+      "default": "Cotizar mi obra",
+      "max": 24
+    },
+    {
+      "key": "home_30",
+      "role": "cta",
+      "default": "Ver servicios",
+      "max": 21
+    },
+    {
+      "key": "home_31",
+      "role": "title",
+      "default": "Servicios y paquetes",
+      "max": 32
+    },
+    {
+      "key": "home_32",
+      "role": "body",
+      "default": "Elige un paquete, agrégalo a tu pedido y coordinamos la visita en 48 horas.",
+      "max": 120
+    },
+    {
+      "key": "home_33",
+      "role": "title",
+      "default": "Antes y después",
+      "max": 24
+    },
+    {
+      "key": "home_34",
+      "role": "body",
+      "default": "Algunas de las obras que entregamos este año.",
+      "max": 72
+    },
+    {
+      "key": "home_35",
+      "role": "alt",
+      "default": "Sala sin terminar, con paredes de hormigón y cables a la vista",
+      "max": 99
+    },
+    {
+      "key": "home_36",
+      "role": "body",
+      "default": "Antes",
+      "max": 12
+    },
+    {
+      "key": "home_37",
+      "role": "alt",
+      "default": "La misma sala terminada, con paredes blancas y piso de madera",
+      "max": 98
+    },
+    {
+      "key": "home_38",
+      "role": "body",
+      "default": "Después",
+      "max": 12
+    },
+    {
+      "key": "home_39",
+      "role": "label",
+      "default": "Remodelación de sala",
+      "max": 32
+    },
+    {
+      "key": "home_40",
+      "role": "body",
+      "default": " · 64 m² · 6 semanas · Calacoto",
+      "max": 50
+    },
+    {
+      "key": "home_41",
+      "role": "title",
+      "default": "Así trabajamos",
+      "max": 22
+    },
+    {
+      "key": "home_42",
+      "role": "title",
+      "default": "Lo que dicen nuestros clientes",
+      "max": 48
+    },
+    {
+      "key": "home_43",
+      "role": "title",
+      "default": "¿Listo para empezar tu obra?",
+      "max": 45
+    },
+    {
+      "key": "home_44",
+      "role": "body",
+      "default": "Elige el paquete que más se parece a lo que necesitas. Te llamamos para coordinar la visita técnica.",
+      "max": 160
+    },
+    {
+      "key": "home_45",
+      "role": "cta",
+      "default": "Cotizar tu obra",
+      "max": 24
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Servicios",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Proyectos",
+      "max": 14
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Proceso",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Opiniones",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Visita técnica a domicilio · Presupuesto por escrito · Garantía de obra",
+      "max": 114
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Cotizar",
+      "max": 12
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Construimos, remodelamos y entregamos a tiempo.",
+      "max": 75
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta",
+      "max": 48
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Servicios",
+      "max": 14
+    },
+    {
+      "key": "shell_10",
+      "role": "body",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_11",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_12",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Obras en todo el país",
+      "max": 34
+    },
+    {
+      "key": "shell_14",
+      "role": "body",
+      "default": " · Hecho en Bolivia",
+      "max": 30
+    },
+    {
+      "key": "shell_15",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "Aún no eliges ningún servicio",
+      "max": 46
+    },
+    {
+      "key": "shell_17",
+      "role": "body",
+      "default": "Agrega un paquete y te contactamos para coordinar la visita.",
+      "max": 96
+    },
+    {
+      "key": "shell_18",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_19",
+      "role": "body",
+      "default": "Agregado",
+      "max": 13
+    },
+    {
+      "key": "shell_20",
+      "role": "cta",
+      "default": "Ver pedido",
+      "max": 16
+    },
+    {
+      "key": "shell_21",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_22",
+      "role": "title",
+      "default": "Contacto y pago",
+      "max": 24
+    },
+    {
+      "key": "product_1",
+      "role": "body",
+      "default": "Coordinamos la visita en 48 h.",
+      "max": 48
+    }
   ]
 }

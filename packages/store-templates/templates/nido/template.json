@@ -72,5 +72,205 @@
       "role": "detail",
       "demo": "material.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "name",
+      "default": "Sala",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "name",
+      "default": "Dormitorio",
+      "max": 16
+    },
+    {
+      "key": "home_3",
+      "role": "name",
+      "default": "Cocina",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "name",
+      "default": "Exterior",
+      "max": 13
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Naturales",
+      "max": 14
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Madera, lino, cerámica y fibras que envejecen bien.",
+      "max": 82
+    },
+    {
+      "key": "home_7",
+      "role": "title",
+      "default": "Hechos para usarse",
+      "max": 29
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Piezas bonitas que también funcionan todos los días.",
+      "max": 83
+    },
+    {
+      "key": "home_9",
+      "role": "title",
+      "default": "Bien embaladas",
+      "max": 22
+    },
+    {
+      "key": "home_10",
+      "role": "body",
+      "default": "Llegan protegidas, listas para su lugar.",
+      "max": 64
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Cuánto tarda el envío?",
+      "max": 37
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Despachamos en 24 a 72 horas hábiles. Las piezas grandes pueden tardar un poco más.",
+      "max": 133
+    },
+    {
+      "key": "home_13",
+      "role": "question",
+      "default": "¿Qué pasa si algo llega dañado?",
+      "max": 50
+    },
+    {
+      "key": "home_14",
+      "role": "answer",
+      "default": "Escríbenos con una foto dentro de las 48 horas y lo resolvemos.",
+      "max": 101
+    },
+    {
+      "key": "home_15",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_16",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_17",
+      "role": "headline",
+      "default": "Una casa que se siente ",
+      "max": 37
+    },
+    {
+      "key": "home_18",
+      "role": "lead",
+      "default": "Objetos simples, materiales nobles y piezas que acompañan tu día a día.",
+      "max": 114
+    },
+    {
+      "key": "home_19",
+      "role": "cta",
+      "default": "Ver la tienda",
+      "max": 21
+    },
+    {
+      "key": "home_20",
+      "role": "title",
+      "default": "Por ambiente",
+      "max": 19
+    },
+    {
+      "key": "home_21",
+      "role": "title",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "Todo lo que tenemos, en un solo lugar.",
+      "max": 61
+    },
+    {
+      "key": "home_23",
+      "role": "alt",
+      "default": "Detalle de los materiales",
+      "max": 40
+    },
+    {
+      "key": "home_24",
+      "role": "title",
+      "default": "Materiales que duran",
+      "max": 32
+    },
+    {
+      "key": "home_25",
+      "role": "title",
+      "default": "Ayuda",
+      "max": 12
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Ambientes",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Materiales",
+      "max": 16
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Ayuda",
+      "max": 12
+    },
+    {
+      "key": "shell_5",
+      "role": "cta",
+      "default": "Carrito (",
+      "max": 14
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Objetos para una casa que se siente tuya.",
+      "max": 66
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    }
   ]
 }

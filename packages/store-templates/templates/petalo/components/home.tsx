@@ -1,23 +1,23 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { store, photos } from './store-data';
+import { store, photos, copy } from './store-data';
 
 const benefits = [
-  { title: 'Hidratación profunda', text: 'Ácido hialurónico en tres pesos que retiene agua durante horas.' },
-  { title: 'Luminosidad', text: 'Niacinamida y vitamina C que unifican y aclaran el tono.' },
-  { title: 'Suavidad', text: 'Manteca de karité y escualano que dejan la piel flexible.' },
+  { title: copy.home_1, text: copy.home_2 },
+  { title: copy.home_3, text: copy.home_4 },
+  { title: copy.home_5, text: copy.home_6 },
 ];
 
 const actives = [
-  { name: 'Ácido hialurónico', note: 'Hidrata sin dejar sensación grasa.' },
-  { name: 'Niacinamida', note: 'Calma y equilibra el aspecto de la piel.' },
-  { name: 'Vitamina C', note: 'Aporta luminosidad y protege del día a día.' },
-  { name: 'Escualano', note: 'Sella la hidratación y suaviza.' },
+  { name: copy.home_7, note: copy.home_8 },
+  { name: copy.home_9, note: copy.home_10 },
+  { name: copy.home_11, note: copy.home_12 },
+  { name: copy.home_13, note: copy.home_14 },
 ];
 
 const reviews = [
-  { quote: 'La textura es ligera y se absorbe enseguida. Mi piel amaneció más descansada en una semana.', name: 'Daniela', city: 'La Paz' },
-  { quote: 'No irrita mi piel sensible. El frasco es precioso y dura muchísimo.', name: 'Mónica', city: 'Santa Cruz' },
+  { quote: copy.home_15, name: copy.home_16, city: copy.home_17 },
+  { quote: copy.home_18, name: copy.home_19, city: copy.home_20 },
 ];
 
 export default function Home() {
@@ -25,40 +25,40 @@ export default function Home() {
     <main id="contenido">
       <section id="portada" className="pe-hero" aria-labelledby="pe-hero-title">
         <div className="pe-hero__copy">
-          <p className="pe-kicker">Nuevo lanzamiento</p>
-          <h1 id="pe-hero-title" className="pe-hero__title">El secreto de belleza definitivo</h1>
-          <p className="pe-hero__lead">Eleva tu rutina con una fórmula pensada para todo tipo de piel. Desarrollada por {store.name}.</p>
-          <a className="pe-btn" href="#productos">Comprar ahora <span aria-hidden="true">→</span></a>
+          <p className="pe-kicker">{copy.home_21}</p>
+          <h1 id="pe-hero-title" className="pe-hero__title">{copy.home_22}</h1>
+          <p className="pe-hero__lead">{copy.home_23}{store.name}.</p>
+          <a className="pe-btn" href="#productos">{copy.home_24}<span aria-hidden="true">→</span></a>
         </div>
         <div className="pe-hero__stage">
-          <img className="pe-hero__photo" src={photos.p1} alt="Dos mujeres de piel luminosa mejilla con mejilla a la luz del día" />
+          <img className="pe-hero__photo" src={photos.p1} alt={copy.home_25} />
           <aside className="pe-card-float" aria-label="Producto destacado">
             <div>
-              <p className="pe-card-float__name">Crema Renovación Radiante</p>
-              <p className="pe-card-float__note">Fórmula avanzada · Apta para todo tipo de piel</p>
-              <a className="pe-card-float__link" href="#estrella">Ver detalles</a>
+              <p className="pe-card-float__name">{copy.home_26}</p>
+              <p className="pe-card-float__note">{copy.home_27}</p>
+              <a className="pe-card-float__link" href="#estrella">{copy.home_28}</a>
             </div>
-            <img src={photos.p2} alt="Frasco de crema con tapa dorada" />
+            <img src={photos.p2} alt={copy.home_29} />
           </aside>
         </div>
       </section>
 
       <section id="estrella" className="pe-star" aria-labelledby="pe-star-title">
-        <Reveal className="pe-star__photo"><img src={photos.p2} alt="Frasco de crema con tapa dorada sobre un pedestal rosa empolvado" /></Reveal>
+        <Reveal className="pe-star__photo"><img src={photos.p2} alt={copy.home_30} /></Reveal>
         <Reveal className="pe-star__copy" delay={80}>
-          <p className="pe-kicker">Producto estrella</p>
-          <h2 id="pe-star-title" className="pe-title">Crema Renovación Radiante</h2>
+          <p className="pe-kicker">{copy.home_31}</p>
+          <h2 id="pe-star-title" className="pe-title">{copy.home_32}</h2>
           <ul className="pe-benefits">
             {benefits.map(item => <li key={item.title}><b>{item.title}</b><span>{item.text}</span></li>)}
           </ul>
-          <a className="pe-btn" href="#productos">Ver en la tienda</a>
+          <a className="pe-btn" href="#productos">{copy.home_33}</a>
         </Reveal>
       </section>
 
       <section id="productos" className="pe-shop" aria-labelledby="pe-shop-title">
         <Reveal className="pe-head">
-          <h2 id="pe-shop-title" className="pe-title">La rutina completa</h2>
-          <p className="pe-head__aside">Tres pasos, sin complicaciones.</p>
+          <h2 id="pe-shop-title" className="pe-title">{copy.home_34}</h2>
+          <p className="pe-head__aside">{copy.home_35}</p>
         </Reveal>
         <template data-pagosya-product-template>
           <article className="pe-card">
@@ -73,11 +73,11 @@ export default function Home() {
 
       <section id="ingredientes" className="pe-actives" aria-labelledby="pe-actives-title">
         <div className="pe-actives__photo">
-          <Parallax strength={50} mobileStrength={20} className="pe-drift"><img src={photos.textura} alt="Una espiral de crema blanca sobre un vidrio, en primer plano" /></Parallax>
+          <Parallax strength={50} mobileStrength={20} className="pe-drift"><img src={photos.textura} alt={copy.home_36} /></Parallax>
         </div>
         <Reveal className="pe-actives__copy">
-          <p className="pe-kicker">Activos que sí importan</p>
-          <h2 id="pe-actives-title" className="pe-title">Pocos ingredientes, bien elegidos</h2>
+          <p className="pe-kicker">{copy.home_37}</p>
+          <h2 id="pe-actives-title" className="pe-title">{copy.home_38}</h2>
           <ul className="pe-actives__list">
             {actives.map((item, index) => <li key={item.name}><span className="pe-actives__n">{index + 1}</span><span><b>{item.name}</b>{item.note}</span></li>)}
           </ul>
@@ -86,18 +86,18 @@ export default function Home() {
 
       <section id="resultados" className="pe-results" aria-labelledby="pe-results-title">
         <Reveal className="pe-results__inner">
-          <img className="pe-results__photo" src={photos.rutina} alt="Mujer aplicándose crema frente al espejo del baño con luz de mañana" />
+          <img className="pe-results__photo" src={photos.rutina} alt={copy.home_39} />
           <div>
-            <h2 id="pe-results-title" className="pe-title">Tu piel, más luminosa</h2>
-            <p className="pe-results__claim">“Noté mi piel más luminosa después de cuatro semanas de uso.”</p>
-            <p className="pe-results__note">Opinión de clientas que probaron la fórmula. Los resultados pueden variar según cada piel.</p>
+            <h2 id="pe-results-title" className="pe-title">{copy.home_40}</h2>
+            <p className="pe-results__claim">{copy.home_41}</p>
+            <p className="pe-results__note">{copy.home_42}</p>
           </div>
         </Reveal>
       </section>
 
       <section id="resenas" className="pe-reviews" aria-labelledby="pe-reviews-title">
         <Reveal className="pe-head">
-          <h2 id="pe-reviews-title" className="pe-title">Lo que cuentan</h2>
+          <h2 id="pe-reviews-title" className="pe-title">{copy.home_43}</h2>
         </Reveal>
         <div className="pe-quotes">
           {reviews.map((review, index) => <Reveal key={review.name} delay={index * 60}>
@@ -111,11 +111,11 @@ export default function Home() {
 
       <section id="boletin" className="pe-news" aria-labelledby="pe-news-title" data-pagosya-subscribe-block>
         <Reveal className="pe-news__inner">
-          <h2 id="pe-news-title" className="pe-news__title">Sé la primera en probarlo</h2>
-          <p className="pe-news__text">Te avisamos de cada lanzamiento y te damos acceso anticipado.</p>
+          <h2 id="pe-news-title" className="pe-news__title">{copy.home_44}</h2>
+          <p className="pe-news__text">{copy.home_45}</p>
           <button type="button" className="pe-news__button" data-pagosya-subscribe-open aria-label="Suscribirme con mi correo">
-            <span className="pe-news__field">Tu correo electrónico</span>
-            <span className="pe-news__submit">Suscribirme</span>
+            <span className="pe-news__field">{copy.home_46}</span>
+            <span className="pe-news__submit">{copy.home_47}</span>
           </button>
           <p role="status" className="pe-news__status" />
         </Reveal>

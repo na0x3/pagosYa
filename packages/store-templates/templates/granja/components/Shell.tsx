@@ -1,15 +1,15 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Canasta', href: 'index.html#canasta' },
-  { label: 'Cómo criamos', href: 'index.html#como-criamos' },
-  { label: 'Reparto', href: 'index.html#reparto' },
-  { label: 'Visítanos', href: 'index.html#visita' },
+  { label: copy.shell_1, href: 'index.html#canasta' },
+  { label: copy.shell_2, href: 'index.html#como-criamos' },
+  { label: copy.shell_3, href: 'index.html#reparto' },
+  { label: copy.shell_4, href: 'index.html#visita' },
 ];
 
-const footerLinks = [...links, { label: 'Preguntas', href: 'index.html#preguntas' }];
+const footerLinks = [...links, { label: copy.shell_5, href: 'index.html#preguntas' }];
 
 /** The longest word's length sizes the footer name so that word fits one line (see .gr-footer__name). */
 const nameFit = { '--gr-fit': Math.max(5, ...store.name.split(/\s+/).map(word => Array.from(word).length)) } as CSSProperties;
@@ -25,13 +25,13 @@ export function Header() {
     <nav className="gr-nav" aria-label="Principal">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
     <div className="gr-tools">
       <details className="gr-menu">
-        <summary className="gr-menu__toggle"><span className="gr-menu__bars" aria-hidden="true" /><span>Menú</span></summary>
+        <summary className="gr-menu__toggle"><span className="gr-menu__bars" aria-hidden="true" /><span>{copy.shell_6}</span></summary>
         <nav className="gr-menu__panel" aria-label="Principal en el teléfono">
           {footerLinks.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
-          <a href="checkout.html">Mi pedido</a>
+          <a href="checkout.html">{copy.shell_7}</a>
         </nav>
       </details>
-      <button type="button" className="gr-cart" data-cart-open aria-label="Abrir canasta"><BasketIcon /><span className="gr-cart__label">Canasta</span><span className="gr-cart__count" data-cart-count>0</span></button>
+      <button type="button" className="gr-cart" data-cart-open aria-label="Abrir canasta"><BasketIcon /><span className="gr-cart__label">{copy.shell_8}</span><span className="gr-cart__count" data-cart-count>0</span></button>
     </div>
   </header>;
 }
@@ -41,21 +41,21 @@ export function Footer() {
     <div className="gr-footer__top">
       <div className="gr-footer__about">
         <p className="gr-footer__name" style={nameFit}>{store.name}</p>
-        <p className="gr-footer__lead">Huevos de gallinas libres, queso fresco y miel del campo, recogidos la víspera de cada reparto.</p>
+        <p className="gr-footer__lead">{copy.shell_9}</p>
       </div>
       <nav className="gr-footer__col" aria-label="Pie de página">
-        <p className="gr-footer__heading">La granja</p>
+        <p className="gr-footer__heading">{copy.shell_10}</p>
         {footerLinks.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
       </nav>
       <div className="gr-footer__col">
-        <p className="gr-footer__heading">Reparto</p>
-        <p>Martes y viernes</p>
-        <p>Cercado, Sacaba y Quillacollo</p>
-        <button type="button" className="gr-footer__link" data-cart-open>Ver mi canasta</button>
-        <a href="checkout.html">Mi pedido</a>
+        <p className="gr-footer__heading">{copy.shell_11}</p>
+        <p>{copy.shell_12}</p>
+        <p>{copy.shell_13}</p>
+        <button type="button" className="gr-footer__link" data-cart-open>{copy.shell_14}</button>
+        <a href="checkout.html">{copy.shell_15}</a>
       </div>
     </div>
-    <p className="gr-footer__note">{store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta</p>
+    <p className="gr-footer__note">{store.city ? `${store.city} · ` : ''}{copy.shell_16}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -67,13 +67,13 @@ export function Commerce() {
       <div className="gr-cartpanel">
         <span className="gr-cartpanel__grip" aria-hidden="true" />
         <header className="gr-cartpanel__head">
-          <h2 className="gr-cartpanel__title">Tu canasta</h2>
-          <button type="button" className="gr-cartpanel__close" data-cart-close>Cerrar</button>
+          <h2 className="gr-cartpanel__title">{copy.shell_17}</h2>
+          <button type="button" className="gr-cartpanel__close" data-cart-close>{copy.shell_18}</button>
         </header>
         <KitSlot kind="cart" name="lines" className="gr-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="gr-cartpanel__empty">
-          <p className="gr-cartpanel__empty-title">La canasta está vacía</p>
-          <p>Empieza por una docena de huevos: los recogemos la víspera del reparto.</p>
+          <p className="gr-cartpanel__empty-title">{copy.shell_19}</p>
+          <p>{copy.shell_20}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="gr-cartpanel__suggestions" />
         <div className="gr-cartpanel__foot">
@@ -97,7 +97,7 @@ export function Commerce() {
         </div>
         <div className="gr-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="gr-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="gr-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="gr-line__remove">{copy.shell_21}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -105,17 +105,17 @@ export function Commerce() {
       <div className="gr-added">
         <KitSlot kind="added" name="photo" as="img" className="gr-added__photo" />
         <KitSlot kind="added" name="message" as="p" className="gr-added__message" />
-        <button type="button" className="gr-added__open" data-cart-open>Ver canasta</button>
+        <button type="button" className="gr-added__open" data-cart-open>{copy.shell_22}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="gr-review">
         <div className="gr-review__col gr-review__col--summary">
-          <h2 className="gr-review__heading">Tu canasta</h2>
+          <h2 className="gr-review__heading">{copy.shell_23}</h2>
           <KitSlot kind="review" name="summary" className="gr-review__summary" />
         </div>
         <div className="gr-review__col">
-          <h2 className="gr-review__heading">Entrega y pago</h2>
+          <h2 className="gr-review__heading">{copy.shell_24}</h2>
           <KitSlot kind="review" name="fields" className="gr-review__fields" />
         </div>
       </div>

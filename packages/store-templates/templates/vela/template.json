@@ -2,17 +2,291 @@
   "id": "vela",
   "name": "Vela",
   "category": "hogar",
+  "curated": true,
   "description": "Velas y aromas: ciruela profundo, luz ámbar y un ritual. Para marcas de hogar y bienestar.",
-  "tags": ["velas", "aromas", "bienestar", "cálido"],
+  "tags": [
+    "velas",
+    "aromas",
+    "bienestar",
+    "cálido"
+  ],
   "sitePurpose": "shop",
   "order": 190,
-  "dna": { "display": "playfair-display", "text": "lora", "case": "none", "radius": "round", "border": "hairline", "button": "outline", "hover": "fill", "press": "none", "motion": "cinematic", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "bleed" },
+  "dna": {
+    "display": "playfair-display",
+    "text": "lora",
+    "case": "none",
+    "radius": "round",
+    "border": "hairline",
+    "button": "outline",
+    "hover": "fill",
+    "press": "none",
+    "motion": "cinematic",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "hero", "role": "hero", "demo": "hero.jpg" },
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "ritual", "role": "lifestyle", "demo": "ritual.jpg" },
-    { "slot": "regalo", "role": "detail", "demo": "regalo.jpg" }
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "ritual",
+      "role": "lifestyle",
+      "demo": "ritual.jpg"
+    },
+    {
+      "slot": "regalo",
+      "role": "detail",
+      "demo": "regalo.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "item",
+      "default": "Cítricos",
+      "max": 13
+    },
+    {
+      "key": "home_2",
+      "role": "item",
+      "default": "Florales",
+      "max": 13
+    },
+    {
+      "key": "home_3",
+      "role": "item",
+      "default": "Amaderados",
+      "max": 16
+    },
+    {
+      "key": "home_4",
+      "role": "item",
+      "default": "Especiados",
+      "max": 16
+    },
+    {
+      "key": "home_5",
+      "role": "item",
+      "default": "Frescos",
+      "max": 12
+    },
+    {
+      "key": "home_6",
+      "role": "title",
+      "default": "Enciende",
+      "max": 13
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "La primera vez, déjala encendida hasta que la cera se derrita de borde a borde.",
+      "max": 126
+    },
+    {
+      "key": "home_8",
+      "role": "title",
+      "default": "Espera",
+      "max": 12
+    },
+    {
+      "key": "home_9",
+      "role": "body",
+      "default": "En unos minutos el aroma llena el ambiente.",
+      "max": 69
+    },
+    {
+      "key": "home_10",
+      "role": "title",
+      "default": "Disfruta",
+      "max": 13
+    },
+    {
+      "key": "home_11",
+      "role": "body",
+      "default": "Apágala tapándola y corta la mecha antes de volver a encenderla.",
+      "max": 102
+    },
+    {
+      "key": "home_12",
+      "role": "question",
+      "default": "¿Cuánto dura cada vela?",
+      "max": 37
+    },
+    {
+      "key": "home_13",
+      "role": "answer",
+      "default": "Cada ficha indica sus horas aproximadas de encendido.",
+      "max": 85
+    },
+    {
+      "key": "home_14",
+      "role": "question",
+      "default": "¿Hacen sets para regalo?",
+      "max": 38
+    },
+    {
+      "key": "home_15",
+      "role": "answer",
+      "default": "Sí. Elige tus aromas y déjanos una nota: lo enviamos listo para regalar.",
+      "max": 115
+    },
+    {
+      "key": "home_16",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_17",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Hecho a mano, en tandas pequeñas",
+      "max": 51
+    },
+    {
+      "key": "home_19",
+      "role": "headline",
+      "default": "Enciende ",
+      "max": 14
+    },
+    {
+      "key": "home_20",
+      "role": "label",
+      "default": "algo bonito",
+      "max": 18
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "Velas y aromas para que tu casa huela a ti.",
+      "max": 69
+    },
+    {
+      "key": "home_22",
+      "role": "cta",
+      "default": "Descubrir los aromas",
+      "max": 32
+    },
+    {
+      "key": "home_23",
+      "role": "title",
+      "default": "La colección",
+      "max": 19
+    },
+    {
+      "key": "home_24",
+      "role": "alt",
+      "default": "Una vela encendida",
+      "max": 29
+    },
+    {
+      "key": "home_25",
+      "role": "title",
+      "default": "El ritual",
+      "max": 14
+    },
+    {
+      "key": "home_26",
+      "role": "title",
+      "default": "Un regalo que se enciende",
+      "max": 40
+    },
+    {
+      "key": "home_27",
+      "role": "body",
+      "default": "Elige dos o tres aromas y los enviamos juntos, con tu nota.",
+      "max": 94
+    },
+    {
+      "key": "home_28",
+      "role": "cta",
+      "default": "Armar un regalo",
+      "max": 24
+    },
+    {
+      "key": "home_29",
+      "role": "alt",
+      "default": "Set de regalo",
+      "max": 21
+    },
+    {
+      "key": "home_30",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Colección",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "El ritual",
+      "max": 14
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Regalos",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "cta",
+      "default": "Bolsa · ",
+      "max": 13
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Aromas para volver a casa.",
+      "max": 42
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    }
   ]
 }

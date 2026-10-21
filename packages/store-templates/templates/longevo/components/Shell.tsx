@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Inicio', href: 'index.html' },
-  { label: 'Blog', href: 'index.html#blog' },
-  { label: 'Productos', href: 'index.html#productos' },
+  { label: copy.shell_1, href: 'index.html' },
+  { label: copy.shell_2, href: 'index.html#blog' },
+  { label: copy.shell_3, href: 'index.html#productos' },
 ];
 
 function BagIcon() {
@@ -17,7 +17,7 @@ export function Header() {
     <div className="lg-pill">
       <a className="lg-brand" href="index.html">{store.name}</a>
       <nav className="lg-nav" aria-label="Principal">{links.map(link => <a key={link.label} href={link.href}>{link.label}</a>)}</nav>
-      <a className="lg-sub" href="index.html#boletin">Suscribirse</a>
+      <a className="lg-sub" href="index.html#boletin">{copy.shell_4}</a>
       <button type="button" className="lg-cart" data-cart-open aria-label="Abrir carrito"><BagIcon /><span className="lg-cart__count" data-cart-count>0</span></button>
     </div>
   </header>;
@@ -28,19 +28,19 @@ export function Footer() {
     <div className="lg-footer__top">
       <div>
         <p className="lg-footer__name">{store.name}</p>
-        <p className="lg-footer__lead">{store.tagline || 'Suplementos y lectura para cuidar tu bienestar.'}</p>
+        <p className="lg-footer__lead">{store.tagline || copy.shell_5}</p>
       </div>
       <nav className="lg-footer__col" aria-label="Tienda">
-        <p className="lg-footer__heading">Explora</p>
+        <p className="lg-footer__heading">{copy.shell_6}</p>
         {links.map(link => <a key={link.label} href={link.href}>{link.label}</a>)}
       </nav>
       <div className="lg-footer__col">
-        <p className="lg-footer__heading">Tu compra</p>
-        <button type="button" className="lg-footer__link" data-cart-open>Ver carrito</button>
-        <a href="checkout.html">Mi pedido</a>
+        <p className="lg-footer__heading">{copy.shell_7}</p>
+        <button type="button" className="lg-footer__link" data-cart-open>{copy.shell_8}</button>
+        <a href="checkout.html">{copy.shell_9}</a>
       </div>
     </div>
-    <p className="lg-footer__note">Los suplementos no reemplazan una dieta variada. Consulta a tu médico antes de empezar. {store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta.</p>
+    <p className="lg-footer__note">{copy.shell_10}{store.city ? `${store.city} · ` : ''}{copy.shell_11}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -51,13 +51,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="lg-cartpanel">
         <header className="lg-cartpanel__head">
-          <h2 className="lg-cartpanel__title">Tu pedido</h2>
+          <h2 className="lg-cartpanel__title">{copy.shell_12}</h2>
           <button type="button" className="lg-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="lg-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="lg-cartpanel__empty">
-          <p className="lg-cartpanel__empty-title">Tu carrito está vacío</p>
-          <p>Elige un producto y aparecerá aquí.</p>
+          <p className="lg-cartpanel__empty-title">{copy.shell_13}</p>
+          <p>{copy.shell_14}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="lg-cartpanel__suggestions" />
         <div className="lg-cartpanel__foot">
@@ -81,7 +81,7 @@ export function Commerce() {
         </div>
         <div className="lg-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="lg-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="lg-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="lg-line__remove">{copy.shell_15}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -89,20 +89,20 @@ export function Commerce() {
       <div className="lg-added">
         <KitSlot kind="added" name="photo" as="img" className="lg-added__photo" />
         <div className="lg-added__copy">
-          <p className="lg-added__kicker">Agregado</p>
+          <p className="lg-added__kicker">{copy.shell_16}</p>
           <KitSlot kind="added" name="message" as="p" className="lg-added__message" />
         </div>
-        <button type="button" className="lg-added__open" data-cart-open>Ver carrito</button>
+        <button type="button" className="lg-added__open" data-cart-open>{copy.shell_17}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="lg-review">
         <div className="lg-review__col lg-review__col--summary">
-          <h2 className="lg-review__heading">Tu pedido</h2>
+          <h2 className="lg-review__heading">{copy.shell_18}</h2>
           <KitSlot kind="review" name="summary" className="lg-review__summary" />
         </div>
         <div className="lg-review__col">
-          <h2 className="lg-review__heading">Entrega y pago</h2>
+          <h2 className="lg-review__heading">{copy.shell_19}</h2>
           <KitSlot kind="review" name="fields" className="lg-review__fields" />
         </div>
       </div>

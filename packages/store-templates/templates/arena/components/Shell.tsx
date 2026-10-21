@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Todo', href: 'index.html#novedades' },
-  { label: 'Categorías', href: 'index.html#categorias' },
-  { label: 'Equipo', href: 'index.html#equipo' },
-  { label: 'Entrenar', href: 'index.html#entrenamiento' },
+  { label: copy.shell_1, href: 'index.html#novedades' },
+  { label: copy.shell_2, href: 'index.html#categorias' },
+  { label: copy.shell_3, href: 'index.html#equipo' },
+  { label: copy.shell_4, href: 'index.html#entrenamiento' },
 ];
 
 function BoltIcon() {
@@ -37,20 +37,20 @@ export function Footer() {
     <div className="ar-footer__top">
       <div className="ar-footer__about">
         <p className="ar-footer__name">{store.name}</p>
-        <p className="ar-footer__lead">{store.tagline || 'Camisetas, equipo y todo lo que necesitas para tu deporte.'}</p>
+        <p className="ar-footer__lead">{store.tagline || copy.shell_5}</p>
       </div>
       <nav className="ar-footer__col" aria-label="Tienda">
-        <p className="ar-footer__heading">Tienda</p>
+        <p className="ar-footer__heading">{copy.shell_6}</p>
         {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
       </nav>
       <div className="ar-footer__col">
-        <p className="ar-footer__heading">Tu compra</p>
-        <button type="button" className="ar-footer__link" data-cart-open>Ver carrito</button>
-        <a href="checkout.html">Mi pedido</a>
-        <p>{store.city ? `Desde ${store.city}` : 'Envíos a toda Bolivia'}</p>
+        <p className="ar-footer__heading">{copy.shell_7}</p>
+        <button type="button" className="ar-footer__link" data-cart-open>{copy.shell_8}</button>
+        <a href="checkout.html">{copy.shell_9}</a>
+        <p>{store.city ? `Desde ${store.city}` : copy.shell_10}</p>
       </div>
     </div>
-    <p className="ar-footer__note">Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <p className="ar-footer__note">{copy.shell_11}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -61,13 +61,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="ar-cartpanel">
         <header className="ar-cartpanel__head">
-          <h2 className="ar-cartpanel__title">Tu equipo</h2>
+          <h2 className="ar-cartpanel__title">{copy.shell_12}</h2>
           <button type="button" className="ar-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="ar-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="ar-cartpanel__empty">
-          <p className="ar-cartpanel__empty-title">Vestuario vacío</p>
-          <p>Elige tu equipo y aparecerá aquí.</p>
+          <p className="ar-cartpanel__empty-title">{copy.shell_13}</p>
+          <p>{copy.shell_14}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="ar-cartpanel__suggestions" />
         <div className="ar-cartpanel__foot">
@@ -91,7 +91,7 @@ export function Commerce() {
         </div>
         <div className="ar-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="ar-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="ar-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="ar-line__remove">{copy.shell_15}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -99,20 +99,20 @@ export function Commerce() {
       <div className="ar-added">
         <KitSlot kind="added" name="photo" as="img" className="ar-added__photo" />
         <div className="ar-added__copy">
-          <p className="ar-added__kicker">¡En tu equipo!</p>
+          <p className="ar-added__kicker">{copy.shell_16}</p>
           <KitSlot kind="added" name="message" as="p" className="ar-added__message" />
         </div>
-        <button type="button" className="ar-added__open" data-cart-open>Ver equipo</button>
+        <button type="button" className="ar-added__open" data-cart-open>{copy.shell_17}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="ar-review">
         <div className="ar-review__col ar-review__col--summary">
-          <h2 className="ar-review__heading">Tu pedido</h2>
+          <h2 className="ar-review__heading">{copy.shell_18}</h2>
           <KitSlot kind="review" name="summary" className="ar-review__summary" />
         </div>
         <div className="ar-review__col">
-          <h2 className="ar-review__heading">Entrega y pago</h2>
+          <h2 className="ar-review__heading">{copy.shell_19}</h2>
           <KitSlot kind="review" name="fields" className="ar-review__fields" />
         </div>
       </div>

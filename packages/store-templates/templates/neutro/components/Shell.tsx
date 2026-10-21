@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Todo', href: 'index.html#vendidos' },
-  { label: 'Más vendidos', href: 'index.html#vendidos' },
-  { label: 'Ofertas', href: 'index.html#destacado' },
-  { label: 'Nuevo', href: 'index.html#destacado' },
-  { label: 'Nosotros', href: 'index.html#historia' },
-  { label: 'Preguntas', href: 'index.html#preguntas' },
+  { label: copy.shell_1, href: 'index.html#vendidos' },
+  { label: copy.shell_2, href: 'index.html#vendidos' },
+  { label: copy.shell_3, href: 'index.html#destacado' },
+  { label: copy.shell_4, href: 'index.html#destacado' },
+  { label: copy.shell_5, href: 'index.html#historia' },
+  { label: copy.shell_6, href: 'index.html#preguntas' },
 ];
 
 function PersonIcon() {
@@ -21,7 +21,7 @@ function BagIcon() {
 
 export function Header() {
   return <header className="ne-header">
-    <p className="ne-promo">Envíos a todo el país · Pago seguro con QR y tarjeta</p>
+    <p className="ne-promo">{copy.shell_7}</p>
     <div className="ne-bar">
       <a className="ne-brand" href="index.html">{store.name}</a>
       <nav className="ne-nav" aria-label="Principal">{links.map(link => <a key={link.label} href={link.href}>{link.label}</a>)}</nav>
@@ -38,21 +38,21 @@ export function Footer() {
     <div className="ne-footer__top">
       <div>
         <p className="ne-footer__name">{store.name}</p>
-        <p className="ne-footer__lead">{store.tagline || 'Productos bien hechos, enviados con cuidado.'}</p>
+        <p className="ne-footer__lead">{store.tagline || copy.shell_8}</p>
       </div>
       <nav className="ne-footer__col" aria-label="Tienda">
-        <p className="ne-footer__heading">Tienda</p>
-        <a href="index.html#vendidos">Más vendidos</a>
-        <a href="index.html#historia">Nosotros</a>
-        <a href="index.html#preguntas">Preguntas</a>
+        <p className="ne-footer__heading">{copy.shell_9}</p>
+        <a href="index.html#vendidos">{copy.shell_10}</a>
+        <a href="index.html#historia">{copy.shell_11}</a>
+        <a href="index.html#preguntas">{copy.shell_12}</a>
       </nav>
       <div className="ne-footer__col">
-        <p className="ne-footer__heading">Tu compra</p>
-        <button type="button" className="ne-footer__link" data-cart-open>Ver carrito</button>
-        <a href="checkout.html">Mi pedido</a>
+        <p className="ne-footer__heading">{copy.shell_13}</p>
+        <button type="button" className="ne-footer__link" data-cart-open>{copy.shell_14}</button>
+        <a href="checkout.html">{copy.shell_15}</a>
       </div>
     </div>
-    <p className="ne-footer__note">{store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <p className="ne-footer__note">{store.city ? `${store.city} · ` : ''}{copy.shell_16}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -63,13 +63,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="ne-cartpanel">
         <header className="ne-cartpanel__head">
-          <h2 className="ne-cartpanel__title">Tu carrito</h2>
+          <h2 className="ne-cartpanel__title">{copy.shell_17}</h2>
           <button type="button" className="ne-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="ne-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="ne-cartpanel__empty">
-          <p className="ne-cartpanel__empty-title">Tu carrito está vacío</p>
-          <p>Agrega un producto y aparecerá aquí.</p>
+          <p className="ne-cartpanel__empty-title">{copy.shell_18}</p>
+          <p>{copy.shell_19}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="ne-cartpanel__suggestions" />
         <div className="ne-cartpanel__foot">
@@ -93,7 +93,7 @@ export function Commerce() {
         </div>
         <div className="ne-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="ne-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="ne-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="ne-line__remove">{copy.shell_20}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -101,20 +101,20 @@ export function Commerce() {
       <div className="ne-added">
         <KitSlot kind="added" name="photo" as="img" className="ne-added__photo" />
         <div className="ne-added__copy">
-          <p className="ne-added__kicker">Agregado</p>
+          <p className="ne-added__kicker">{copy.shell_21}</p>
           <KitSlot kind="added" name="message" as="p" className="ne-added__message" />
         </div>
-        <button type="button" className="ne-added__open" data-cart-open>Ver carrito</button>
+        <button type="button" className="ne-added__open" data-cart-open>{copy.shell_22}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="ne-review">
         <div className="ne-review__col ne-review__col--summary">
-          <h2 className="ne-review__heading">Tu pedido</h2>
+          <h2 className="ne-review__heading">{copy.shell_23}</h2>
           <KitSlot kind="review" name="summary" className="ne-review__summary" />
         </div>
         <div className="ne-review__col">
-          <h2 className="ne-review__heading">Entrega y pago</h2>
+          <h2 className="ne-review__heading">{copy.shell_24}</h2>
           <KitSlot kind="review" name="fields" className="ne-review__fields" />
         </div>
       </div>

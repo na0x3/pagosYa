@@ -1,22 +1,22 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { store, photos } from './store-data';
+import { store, photos, copy } from './store-data';
 
-const trust = ['Pago seguro con QR o tarjeta', 'Envío a todo el país', 'Cambios sin complicaciones'];
+const trust = [copy.home_1, copy.home_2, copy.home_3];
 const benefits = [
-  { title: 'Hecho para el día a día', body: 'Pensado para usarse mucho, no para quedarse guardado.' },
-  { title: 'Simple de usar', body: 'Sin instrucciones largas: lo abres y funciona.' },
-  { title: 'Te acompañamos', body: 'Si tienes una duda antes o después de comprar, te respondemos.' },
+  { title: copy.home_4, body: copy.home_5 },
+  { title: copy.home_6, body: copy.home_7 },
+  { title: copy.home_8, body: copy.home_9 },
 ];
 const steps = [
-  { title: 'Elige', body: 'Selecciona la opción que prefieras y agrégala al carrito.' },
-  { title: 'Paga', body: 'Con QR de cualquier banco o con tarjeta, en segundos.' },
-  { title: 'Disfruta', body: 'Te lo enviamos y te avisamos en cada paso.' },
+  { title: copy.home_10, body: copy.home_11 },
+  { title: copy.home_12, body: copy.home_13 },
+  { title: copy.home_14, body: copy.home_15 },
 ];
 const faqs = [
-  { q: '¿Cuánto tarda en llegar?', a: 'Despachamos en 24 a 48 horas hábiles y te avisamos cuando sale tu pedido.' },
-  { q: '¿Y si no me convence?', a: 'Escríbenos dentro de los 7 días de recibido y buscamos una solución.' },
-  { q: '¿Cómo pago?', a: 'Con QR de cualquier banco o con tarjeta.' },
+  { q: copy.home_16, a: copy.home_17 },
+  { q: copy.home_18, a: copy.home_19 },
+  { q: copy.home_20, a: copy.home_21 },
 ];
 
 export default function Home() {
@@ -25,11 +25,11 @@ export default function Home() {
       <section id="comprar" className="so-hero">
         <div className="so-gallery">
           <img className="so-gallery__main" src={photos.hero} alt={`Producto de ${store.name}`} />
-          <div className="so-gallery__thumbs"><img src={photos.vista2} alt="Otra vista del producto" /><img src={photos.vista3} alt="El producto en su caja" /><img src={photos.vista4} alt="Detalle del producto" /></div>
+          <div className="so-gallery__thumbs"><img src={photos.vista2} alt={copy.home_22} /><img src={photos.vista3} alt={copy.home_23} /><img src={photos.vista4} alt={copy.home_24} /></div>
         </div>
         <div className="so-buy">
           <p className="so-eyebrow">{store.name}</p>
-          <h1 className="so-h1">{store.tagline || 'El que vas a querer usar todos los días'}</h1>
+          <h1 className="so-h1">{store.tagline || copy.home_25}</h1>
           <template data-pagosya-product-template>
             <article className="so-box">
               <h2 className="so-box__name" data-product-field="name">Producto</h2>
@@ -46,26 +46,26 @@ export default function Home() {
       </section>
 
       <section id="beneficios" className="so-benefits" aria-labelledby="so-benefits-title">
-        <Reveal><h2 id="so-benefits-title" className="so-title">Por qué te va a gustar</h2></Reveal>
+        <Reveal><h2 id="so-benefits-title" className="so-title">{copy.home_26}</h2></Reveal>
         <Reveal delay={80}><ul>{benefits.map((item, index) => <li key={item.title}><span aria-hidden="true">{['◐', '◆', '●'][index]}</span><h3>{item.title}</h3><p>{item.body}</p></li>)}</ul></Reveal>
       </section>
 
       <section id="uso" className="so-how" aria-labelledby="so-how-title">
-        <div className="so-how__photo"><Parallax strength={120} mobileStrength={50} className="so-drift"><img src={photos.uso} alt="El producto en uso" /></Parallax></div>
+        <div className="so-how__photo"><Parallax strength={120} mobileStrength={50} className="so-drift"><img src={photos.uso} alt={copy.home_27} /></Parallax></div>
         <Reveal delay={80}>
-          <h2 id="so-how-title" className="so-title so-title--left">Así de fácil</h2>
+          <h2 id="so-how-title" className="so-title so-title--left">{copy.home_28}</h2>
           <ol>{steps.map((step, index) => <li key={step.title}><span>{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
         </Reveal>
       </section>
 
       <section id="preguntas" className="so-faq" aria-labelledby="so-faq-title">
-        <Reveal><h2 id="so-faq-title" className="so-title">Preguntas</h2></Reveal>
+        <Reveal><h2 id="so-faq-title" className="so-title">{copy.home_29}</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
 
       <section id="cierre" className="so-cta" aria-labelledby="so-cta-title">
-        <Reveal><h2 id="so-cta-title">¿Listo para probarlo?</h2></Reveal>
-        <a className="so-btn" href="#comprar">Comprar ahora</a>
+        <Reveal><h2 id="so-cta-title">{copy.home_30}</h2></Reveal>
+        <a className="so-btn" href="#comprar">{copy.home_31}</a>
       </section>
     </main>
   </Shell>;

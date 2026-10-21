@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Piezas', href: 'index.html#piezas' },
-  { label: 'Proceso', href: 'index.html#proceso' },
-  { label: 'Taller', href: 'index.html#taller' },
-  { label: 'Pedidos', href: 'index.html#pedidos' },
+  { label: copy.shell_1, href: 'index.html#piezas' },
+  { label: copy.shell_2, href: 'index.html#proceso' },
+  { label: copy.shell_3, href: 'index.html#taller' },
+  { label: copy.shell_4, href: 'index.html#pedidos' },
 ];
 
 function PersonIcon() {
@@ -33,20 +33,20 @@ export function Footer() {
     <div className="af-footer__top">
       <div className="af-footer__about">
         <p className="af-footer__name">{store.name}</p>
-        <p className="af-footer__lead">{store.tagline || 'Cerámica hecha a mano, una pieza a la vez.'}</p>
+        <p className="af-footer__lead">{store.tagline || copy.shell_5}</p>
       </div>
       <nav className="af-footer__col" aria-label="Tienda">
-        <p className="af-footer__heading">Tienda</p>
+        <p className="af-footer__heading">{copy.shell_6}</p>
         {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
       </nav>
       <div className="af-footer__col">
-        <p className="af-footer__heading">Tu compra</p>
-        <button type="button" className="af-footer__link" data-cart-open>Ver carrito</button>
-        <a href="checkout.html">Mi pedido</a>
-        <p>{store.city ? `Desde ${store.city}` : 'Envíos a toda Bolivia'}</p>
+        <p className="af-footer__heading">{copy.shell_7}</p>
+        <button type="button" className="af-footer__link" data-cart-open>{copy.shell_8}</button>
+        <a href="checkout.html">{copy.shell_9}</a>
+        <p>{store.city ? `Desde ${store.city}` : copy.shell_10}</p>
       </div>
     </div>
-    <p className="af-footer__note">Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <p className="af-footer__note">{copy.shell_11}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -57,13 +57,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="af-cartpanel">
         <header className="af-cartpanel__head">
-          <h2 className="af-cartpanel__title">Tu carrito</h2>
+          <h2 className="af-cartpanel__title">{copy.shell_12}</h2>
           <button type="button" className="af-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="af-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="af-cartpanel__empty">
-          <p className="af-cartpanel__empty-title">Tu carrito está vacío</p>
-          <p>Elige una pieza y aparecerá aquí.</p>
+          <p className="af-cartpanel__empty-title">{copy.shell_13}</p>
+          <p>{copy.shell_14}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="af-cartpanel__suggestions" />
         <div className="af-cartpanel__foot">
@@ -87,7 +87,7 @@ export function Commerce() {
         </div>
         <div className="af-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="af-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="af-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="af-line__remove">{copy.shell_15}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -95,20 +95,20 @@ export function Commerce() {
       <div className="af-added">
         <KitSlot kind="added" name="photo" as="img" className="af-added__photo" />
         <div className="af-added__copy">
-          <p className="af-added__kicker">Añadida</p>
+          <p className="af-added__kicker">{copy.shell_16}</p>
           <KitSlot kind="added" name="message" as="p" className="af-added__message" />
         </div>
-        <button type="button" className="af-added__open" data-cart-open>Ver carrito</button>
+        <button type="button" className="af-added__open" data-cart-open>{copy.shell_17}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="af-review">
         <div className="af-review__col af-review__col--summary">
-          <h2 className="af-review__heading">Tu pedido</h2>
+          <h2 className="af-review__heading">{copy.shell_18}</h2>
           <KitSlot kind="review" name="summary" className="af-review__summary" />
         </div>
         <div className="af-review__col">
-          <h2 className="af-review__heading">Entrega y pago</h2>
+          <h2 className="af-review__heading">{copy.shell_19}</h2>
           <KitSlot kind="review" name="fields" className="af-review__fields" />
         </div>
       </div>

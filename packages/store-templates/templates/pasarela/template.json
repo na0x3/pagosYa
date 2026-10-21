@@ -67,5 +67,175 @@
       "role": "detail",
       "demo": "look2.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "question",
+      "default": "¿Cómo elijo mi talla?",
+      "max": 34
+    },
+    {
+      "key": "home_2",
+      "role": "answer",
+      "default": "Cada prenda indica sus medidas. Si dudas entre dos, escríbenos y te ayudamos.",
+      "max": 123
+    },
+    {
+      "key": "home_3",
+      "role": "question",
+      "default": "¿Puedo cambiar una prenda?",
+      "max": 42
+    },
+    {
+      "key": "home_4",
+      "role": "answer",
+      "default": "Sí, dentro de los 7 días de recibida, sin uso y con su etiqueta.",
+      "max": 102
+    },
+    {
+      "key": "home_5",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_6",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Temporada actual",
+      "max": 26
+    },
+    {
+      "key": "home_8",
+      "role": "headline",
+      "default": "Menos, ",
+      "max": 12
+    },
+    {
+      "key": "home_9",
+      "role": "label",
+      "default": "pero mejor.",
+      "max": 18
+    },
+    {
+      "key": "home_10",
+      "role": "cta",
+      "default": "Ver la colección",
+      "max": 26
+    },
+    {
+      "key": "home_11",
+      "role": "alt",
+      "default": "Detalle de una prenda",
+      "max": 34
+    },
+    {
+      "key": "home_12",
+      "role": "alt",
+      "default": "Accesorio de la colección",
+      "max": 40
+    },
+    {
+      "key": "home_13",
+      "role": "title",
+      "default": "La colección",
+      "max": 19
+    },
+    {
+      "key": "home_14",
+      "role": "body",
+      "default": "Piezas pensadas para combinarse entre sí.",
+      "max": 66
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "“Vestirse bien es una forma de ",
+      "max": 50
+    },
+    {
+      "key": "home_16",
+      "role": "title",
+      "default": "Lookbook",
+      "max": 13
+    },
+    {
+      "key": "home_17",
+      "role": "alt",
+      "default": "Look de la temporada",
+      "max": 32
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Look 1 — Para el día",
+      "max": 32
+    },
+    {
+      "key": "home_19",
+      "role": "alt",
+      "default": "Accesorio de temporada",
+      "max": 35
+    },
+    {
+      "key": "home_20",
+      "role": "body",
+      "default": "Look 2 — Los detalles",
+      "max": 34
+    },
+    {
+      "key": "home_21",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Colección",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Lookbook",
+      "max": 13
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Bolsa (",
+      "max": 12
+    },
+    {
+      "key": "shell_5",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Prendas para usar mucho tiempo.",
+      "max": 50
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": " · Pagos seguros con pagosYa",
+      "max": 45
+    }
   ]
 }

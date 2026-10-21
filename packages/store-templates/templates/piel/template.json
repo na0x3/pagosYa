@@ -57,5 +57,157 @@
       "role": "lifestyle",
       "demo": "juntas.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "item",
+      "default": "XS",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "item",
+      "default": "XL",
+      "max": 12
+    },
+    {
+      "key": "home_3",
+      "role": "question",
+      "default": "¿Cómo elijo mi talle?",
+      "max": 34
+    },
+    {
+      "key": "home_4",
+      "role": "answer",
+      "default": "Usa tu talle habitual. Las telas estiran y se adaptan a tu cuerpo.",
+      "max": 106
+    },
+    {
+      "key": "home_5",
+      "role": "question",
+      "default": "¿Puedo cambiar una prenda?",
+      "max": 42
+    },
+    {
+      "key": "home_6",
+      "role": "answer",
+      "default": "Sí, dentro de los 15 días, sin uso y con su etiqueta.",
+      "max": 85
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta, desde tu celular.",
+      "max": 93
+    },
+    {
+      "key": "home_9",
+      "role": "body",
+      "default": "Nueva colección",
+      "max": 24
+    },
+    {
+      "key": "home_10",
+      "role": "headline",
+      "default": "Tu segunda piel",
+      "max": 24
+    },
+    {
+      "key": "home_11",
+      "role": "lead",
+      "default": "Básicos suaves que se adaptan a tu cuerpo. En seis tonos y de XS a 4X.",
+      "max": 112
+    },
+    {
+      "key": "home_12",
+      "role": "cta",
+      "default": "Comprar la colección",
+      "max": 32
+    },
+    {
+      "key": "home_13",
+      "role": "title",
+      "default": "Lo más nuevo",
+      "max": 19
+    },
+    {
+      "key": "home_14",
+      "role": "cta",
+      "default": "Ver todo",
+      "max": 13
+    },
+    {
+      "key": "home_15",
+      "role": "title",
+      "default": "Un tono para cada piel",
+      "max": 35
+    },
+    {
+      "key": "home_16",
+      "role": "alt",
+      "default": "Prendas dobladas en todos los tonos",
+      "max": 56
+    },
+    {
+      "key": "home_17",
+      "role": "body",
+      "default": "Hecho para todos los cuerpos",
+      "max": 45
+    },
+    {
+      "key": "home_18",
+      "role": "title",
+      "default": "Talles de XS a 4X",
+      "max": 27
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Nuevo",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Tonos",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Talles",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Bolsa (",
+      "max": 12
+    },
+    {
+      "key": "shell_5",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Básicos que se sienten como tu piel.",
+      "max": 58
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Envío gratis desde 2 prendas · Cambios fáciles",
+      "max": 74
+    }
   ]
 }

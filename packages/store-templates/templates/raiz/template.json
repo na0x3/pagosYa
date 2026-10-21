@@ -57,5 +57,217 @@
       "role": "lifestyle",
       "demo": "taller.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Hecho a mano",
+      "max": 19
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Cada pieza sale de las manos de un artesano, no de una fábrica.",
+      "max": 101
+    },
+    {
+      "key": "home_3",
+      "role": "body",
+      "default": "Justo",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "title",
+      "default": "Pago justo",
+      "max": 16
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "Los talleres ponen su precio. Nosotros no regateamos.",
+      "max": 85
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Natural",
+      "max": 12
+    },
+    {
+      "key": "home_7",
+      "role": "title",
+      "default": "Materiales de la tierra",
+      "max": 37
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Barro, lana, fibras y madera. Nada de plástico.",
+      "max": 75
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Todas las piezas son iguales?",
+      "max": 48
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "No. Al ser hechas a mano, cada una tiene pequeñas diferencias que la hacen única.",
+      "max": 130
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Cómo cuido mi pieza?",
+      "max": 34
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Cada producto llega con una tarjeta de cuidados según su material.",
+      "max": 106
+    },
+    {
+      "key": "home_13",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_14",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta, desde tu celular.",
+      "max": 93
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Hecho a mano",
+      "max": 19
+    },
+    {
+      "key": "home_16",
+      "role": "headline",
+      "default": "Objetos con historia, para tu casa.",
+      "max": 56
+    },
+    {
+      "key": "home_17",
+      "role": "lead",
+      "default": "Cerámica, textiles y canastos hechos por talleres que cuidan su oficio.",
+      "max": 114
+    },
+    {
+      "key": "home_18",
+      "role": "cta",
+      "default": "Explorar la tienda",
+      "max": 29
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "La tienda",
+      "max": 14
+    },
+    {
+      "key": "home_20",
+      "role": "title",
+      "default": "Hecho por manos que conocemos",
+      "max": 46
+    },
+    {
+      "key": "home_21",
+      "role": "alt",
+      "default": "Manos de una artesana tejiendo en telar",
+      "max": 62
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "Quién lo hace",
+      "max": 21
+    },
+    {
+      "key": "home_23",
+      "role": "title",
+      "default": "“Cada tejido lleva días. Por eso dura años.”",
+      "max": 70
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Trabajamos directo con talleres familiares. Conocemos sus nombres, sus tiempos y sus técnicas, y te contamos la historia detrás de cada pieza.",
+      "max": 227
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Hecho despacio.",
+      "max": 24
+    },
+    {
+      "key": "home_26",
+      "role": "body",
+      "default": "Hecho para quedarse.",
+      "max": 32
+    },
+    {
+      "key": "home_27",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Quién lo hace",
+      "max": 21
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Canasta (",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Objetos hechos a mano, con historia.",
+      "max": 58
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Comercio justo · Pagos con QR y tarjeta",
+      "max": 62
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Cada compra apoya a un taller artesanal",
+      "max": 62
+    }
   ]
 }

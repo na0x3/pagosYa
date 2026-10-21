@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Novedades', href: 'index.html#novedades' },
-  { label: 'Series', href: 'index.html#series' },
-  { label: 'Colección', href: 'index.html#coleccion' },
-  { label: 'Lectores', href: 'index.html#voces' },
+  { label: copy.shell_1, href: 'index.html#novedades' },
+  { label: copy.shell_2, href: 'index.html#series' },
+  { label: copy.shell_3, href: 'index.html#coleccion' },
+  { label: copy.shell_4, href: 'index.html#voces' },
 ];
 
 function BagIcon() {
@@ -24,13 +24,13 @@ export function Header() {
 export function Footer() {
   return <footer className="hi-footer">
     <p className="hi-footer__name">{store.name}</p>
-    <p className="hi-footer__lead">{store.tagline || 'Cómics para leer, coleccionar y regalar.'}</p>
+    <p className="hi-footer__lead">{store.tagline || copy.shell_5}</p>
     <nav className="hi-footer__links" aria-label="Pie de página">
       {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
-      <a href="checkout.html">Mi pedido</a>
-      <button type="button" className="hi-footer__link" data-cart-open>Ver carrito</button>
+      <a href="checkout.html">{copy.shell_6}</a>
+      <button type="button" className="hi-footer__link" data-cart-open>{copy.shell_7}</button>
     </nav>
-    <p className="hi-footer__note">{store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <p className="hi-footer__note">{store.city ? `${store.city} · ` : ''}{copy.shell_8}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -41,13 +41,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="hi-cartpanel">
         <header className="hi-cartpanel__head">
-          <h2 className="hi-cartpanel__title">Tu pila de cómics</h2>
+          <h2 className="hi-cartpanel__title">{copy.shell_9}</h2>
           <button type="button" className="hi-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="hi-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="hi-cartpanel__empty">
-          <p className="hi-cartpanel__empty-title">¡Todavía no hay nada!</p>
-          <p>Elige un cómic y aparecerá aquí.</p>
+          <p className="hi-cartpanel__empty-title">{copy.shell_10}</p>
+          <p>{copy.shell_11}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="hi-cartpanel__suggestions" />
         <div className="hi-cartpanel__foot">
@@ -71,7 +71,7 @@ export function Commerce() {
         </div>
         <div className="hi-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="hi-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="hi-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="hi-line__remove">{copy.shell_12}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -79,20 +79,20 @@ export function Commerce() {
       <div className="hi-added">
         <KitSlot kind="added" name="photo" as="img" className="hi-added__photo" />
         <div className="hi-added__copy">
-          <p className="hi-added__stamp">¡Al carrito!</p>
+          <p className="hi-added__stamp">{copy.shell_13}</p>
           <KitSlot kind="added" name="message" as="p" className="hi-added__message" />
         </div>
-        <button type="button" className="hi-added__open" data-cart-open>Ver pila</button>
+        <button type="button" className="hi-added__open" data-cart-open>{copy.shell_14}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="hi-review">
         <div className="hi-review__col hi-review__col--summary">
-          <h2 className="hi-review__heading">Tu pedido</h2>
+          <h2 className="hi-review__heading">{copy.shell_15}</h2>
           <KitSlot kind="review" name="summary" className="hi-review__summary" />
         </div>
         <div className="hi-review__col">
-          <h2 className="hi-review__heading">Entrega y pago</h2>
+          <h2 className="hi-review__heading">{copy.shell_16}</h2>
           <KitSlot kind="review" name="fields" className="hi-review__fields" />
         </div>
       </div>

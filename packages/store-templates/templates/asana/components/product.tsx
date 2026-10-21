@@ -1,3 +1,4 @@
+import { copy } from './store-data';
 import Shell from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
@@ -15,12 +16,12 @@ export default function Product() {
             <KitSlot kind="product" name="description" className="as-pdp__desc" />
             <KitSlot kind="product" name="highlights" className="as-pdp__highlights" />
             <details className="as-pdp__toggle" open>
-              <summary>Tela y ajuste</summary>
+              <summary>{copy.product_1}</summary>
               <KitSlot kind="product" name="info" className="as-pdp__more" />
             </details>
             <details className="as-pdp__toggle">
-              <summary>Cuidado</summary>
-              <p>Lava en frío con colores similares. No uses suavizante ni secadora: alarga la vida de la tela elástica.</p>
+              <summary>{copy.product_2}</summary>
+              <p>{copy.product_3}</p>
             </details>
             <KitSlot kind="product" name="delivery" className="as-pdp__delivery" />
           </div>

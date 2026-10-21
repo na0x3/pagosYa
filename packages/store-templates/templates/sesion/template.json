@@ -57,5 +57,247 @@
       "role": "lifestyle",
       "demo": "estudio.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Elige tu paquete",
+      "max": 26
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Retrato, pareja, producto o evento. Cada paquete dice qué incluye.",
+      "max": 106
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Conversamos",
+      "max": 18
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Te escribimos para entender qué quieres contar y elegir el lugar y la luz.",
+      "max": 118
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "La sesión",
+      "max": 14
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Sin apuro. Te guiamos en cada foto para que te sientas cómodo.",
+      "max": 99
+    },
+    {
+      "key": "home_7",
+      "role": "title",
+      "default": "Tus fotos",
+      "max": 14
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Editadas a mano, en alta resolución, en una galería privada.",
+      "max": 96
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Cuánto tardan las fotos?",
+      "max": 40
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Entre 7 y 14 días según el paquete. Te enviamos una vista previa antes.",
+      "max": 114
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Puedo cambiar la fecha?",
+      "max": 38
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Sí, avísanos con 48 horas y reprogramamos sin costo.",
+      "max": 83
+    },
+    {
+      "key": "home_13",
+      "role": "question",
+      "default": "¿Viajan fuera de la ciudad?",
+      "max": 43
+    },
+    {
+      "key": "home_14",
+      "role": "answer",
+      "default": "Sí. Escríbenos y armamos un paquete a tu medida.",
+      "max": 77
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Fotografía · Retrato · Eventos",
+      "max": 48
+    },
+    {
+      "key": "home_16",
+      "role": "headline",
+      "default": "Fotos que se ",
+      "max": 21
+    },
+    {
+      "key": "home_17",
+      "role": "label",
+      "default": "sienten.",
+      "max": 13
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Retratos, parejas y marcas, con luz natural y el tiempo que cada historia necesita.",
+      "max": 133
+    },
+    {
+      "key": "home_19",
+      "role": "cta",
+      "default": "Ver paquetes →",
+      "max": 22
+    },
+    {
+      "key": "home_20",
+      "role": "title",
+      "default": "Trabajos recientes",
+      "max": 29
+    },
+    {
+      "key": "home_21",
+      "role": "alt",
+      "default": "Retrato con luz de ventana",
+      "max": 42
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "Retrato",
+      "max": 12
+    },
+    {
+      "key": "home_23",
+      "role": "alt",
+      "default": "Arquitectura con luz de tarde",
+      "max": 46
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Arquitectura",
+      "max": 19
+    },
+    {
+      "key": "home_25",
+      "role": "alt",
+      "default": "Pareja caminando al atardecer",
+      "max": 46
+    },
+    {
+      "key": "home_26",
+      "role": "body",
+      "default": "Parejas",
+      "max": 12
+    },
+    {
+      "key": "home_27",
+      "role": "alt",
+      "default": "Bodegón de cerámicas",
+      "max": 32
+    },
+    {
+      "key": "home_28",
+      "role": "body",
+      "default": "Producto",
+      "max": 13
+    },
+    {
+      "key": "home_29",
+      "role": "title",
+      "default": "Paquetes",
+      "max": 13
+    },
+    {
+      "key": "home_30",
+      "role": "body",
+      "default": "Reserva tu sesión y coordinamos la fecha contigo.",
+      "max": 78
+    },
+    {
+      "key": "home_31",
+      "role": "alt",
+      "default": "El estudio",
+      "max": 16
+    },
+    {
+      "key": "home_32",
+      "role": "title",
+      "default": "Cómo trabajamos",
+      "max": 24
+    },
+    {
+      "key": "home_33",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Trabajos",
+      "max": 13
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Paquetes",
+      "max": 13
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Estudio",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Reserva (",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Fotografía con calma y con luz natural.",
+      "max": 62
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta",
+      "max": 48
+    }
   ]
 }

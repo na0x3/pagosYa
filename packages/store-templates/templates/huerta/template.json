@@ -57,5 +57,253 @@
       "role": "detail",
       "demo": "canasta.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "item",
+      "default": "Frutas",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "item",
+      "default": "Verduras",
+      "max": 13
+    },
+    {
+      "key": "home_3",
+      "role": "item",
+      "default": "Hierbas",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "item",
+      "default": "Granos",
+      "max": 12
+    },
+    {
+      "key": "home_5",
+      "role": "item",
+      "default": "Lácteos",
+      "max": 12
+    },
+    {
+      "key": "home_6",
+      "role": "item",
+      "default": "Miel",
+      "max": 12
+    },
+    {
+      "key": "home_7",
+      "role": "title",
+      "default": "Siembra",
+      "max": 12
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Trabajamos con productores que cuidan la tierra.",
+      "max": 77
+    },
+    {
+      "key": "home_9",
+      "role": "title",
+      "default": "Cosecha",
+      "max": 12
+    },
+    {
+      "key": "home_10",
+      "role": "body",
+      "default": "Se recoge en su punto, no antes.",
+      "max": 51
+    },
+    {
+      "key": "home_11",
+      "role": "title",
+      "default": "Entrega",
+      "max": 12
+    },
+    {
+      "key": "home_12",
+      "role": "body",
+      "default": "Llega a tu casa en pocos días, todavía fresco.",
+      "max": 74
+    },
+    {
+      "key": "home_13",
+      "role": "question",
+      "default": "¿Qué día llega mi pedido?",
+      "max": 40
+    },
+    {
+      "key": "home_14",
+      "role": "answer",
+      "default": "Armamos y enviamos los pedidos en los días de reparto de tu zona. Te avisamos antes.",
+      "max": 134
+    },
+    {
+      "key": "home_15",
+      "role": "question",
+      "default": "¿Qué pasa si algo no está en temporada?",
+      "max": 62
+    },
+    {
+      "key": "home_16",
+      "role": "answer",
+      "default": "Te avisamos y te proponemos un reemplazo o el reembolso de ese producto.",
+      "max": 115
+    },
+    {
+      "key": "home_17",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_18",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "De temporada",
+      "max": 19
+    },
+    {
+      "key": "home_20",
+      "role": "headline",
+      "default": "Fresco, cerca y de verdad",
+      "max": 40
+    },
+    {
+      "key": "home_21",
+      "role": "lead",
+      "default": "Lo que da la tierra esta semana, directo de quienes lo cultivan.",
+      "max": 102
+    },
+    {
+      "key": "home_22",
+      "role": "cta",
+      "default": "Hacer mi pedido",
+      "max": 24
+    },
+    {
+      "key": "home_23",
+      "role": "cta",
+      "default": "Ver la canasta semanal",
+      "max": 35
+    },
+    {
+      "key": "home_24",
+      "role": "title",
+      "default": "Esta semana",
+      "max": 18
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Precios por unidad o por peso, según cada producto.",
+      "max": 82
+    },
+    {
+      "key": "home_26",
+      "role": "alt",
+      "default": "El campo donde crece lo que vendemos",
+      "max": 58
+    },
+    {
+      "key": "home_27",
+      "role": "title",
+      "default": "De dónde viene",
+      "max": 22
+    },
+    {
+      "key": "home_28",
+      "role": "body",
+      "default": "Canasta semanal",
+      "max": 24
+    },
+    {
+      "key": "home_29",
+      "role": "title",
+      "default": "Una canasta, toda la semana resuelta",
+      "max": 58
+    },
+    {
+      "key": "home_30",
+      "role": "body",
+      "default": "Frutas y verduras de temporada, armadas por nosotros. Pídela cuando quieras.",
+      "max": 122
+    },
+    {
+      "key": "home_31",
+      "role": "cta",
+      "default": "Armar mi pedido",
+      "max": 24
+    },
+    {
+      "key": "home_32",
+      "role": "alt",
+      "default": "Canasta con productos de temporada",
+      "max": 54
+    },
+    {
+      "key": "home_33",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Productos",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "De dónde viene",
+      "max": 22
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Canasta",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "cta",
+      "default": "Canasta ",
+      "max": 13
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "De la tierra a tu mesa, sin intermediarios.",
+      "max": 69
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    }
   ]
 }

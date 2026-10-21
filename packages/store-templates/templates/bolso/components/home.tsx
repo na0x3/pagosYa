@@ -1,18 +1,18 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { store, photos } from './store-data';
+import { store, photos, copy } from './store-data';
 
 const bags = [
-  { slot: 'p1', name: 'Escorpión', note: 'Lona celeste', alt: 'Bolso celeste con un escorpión estampado' },
-  { slot: 'p2', name: 'Balanza', note: 'Lona azul noche', alt: 'Bolso azul con una balanza estampada' },
-  { slot: 'p3', name: 'Fiera', note: 'Lona rosa', alt: 'Bolso rosa con una fiera roja estampada' },
-  { slot: 'p4', name: 'Dragón', note: 'Lona coral', alt: 'Bolso coral con un dragón estampado' },
+  { slot: 'p1', name: copy.home_1, note: copy.home_2, alt: copy.home_3 },
+  { slot: 'p2', name: copy.home_4, note: copy.home_5, alt: copy.home_6 },
+  { slot: 'p3', name: copy.home_7, note: copy.home_8, alt: copy.home_9 },
+  { slot: 'p4', name: copy.home_10, note: copy.home_11, alt: copy.home_12 },
 ];
 
 const reviews = [
-  { quote: 'Lo uso para todo: la feria, la u y el mercado. Después de un año sigue como el primer día.', name: 'Valeria', city: 'La Paz' },
-  { quote: 'El dragón es todavía más lindo en persona. Ya pedí otro para regalarle a mi hermana.', name: 'Diego', city: 'Cochabamba' },
-  { quote: 'La lona es gruesa de verdad y la tinta no se cuartea con los lavados. Se nota el cariño.', name: 'Camila', city: 'Santa Cruz' },
+  { quote: copy.home_13, name: copy.home_14, city: copy.home_15 },
+  { quote: copy.home_16, name: copy.home_17, city: copy.home_18 },
+  { quote: copy.home_19, name: copy.home_20, city: copy.home_21 },
 ];
 
 function AnimalArt() {
@@ -44,8 +44,8 @@ export default function Home() {
     <main id="contenido">
       <section id="portada" className="bo-hero" aria-labelledby="bo-hero-title">
         <div className="bo-hero__head">
-          <p className="bo-kicker">Recién estampados</p>
-          <h1 id="bo-hero-title" className="bo-hero__title">Bolsos con actitud</h1>
+          <p className="bo-kicker">{copy.home_22}</p>
+          <h1 id="bo-hero-title" className="bo-hero__title">{copy.home_23}</h1>
         </div>
         <ul className="bo-hero__row">
           {bags.map((bag, index) => <li key={bag.slot}>
@@ -62,8 +62,8 @@ export default function Home() {
 
       <section id="mas-vendidos" className="bo-shop" aria-labelledby="bo-shop-title">
         <Reveal className="bo-head">
-          <h2 id="bo-shop-title" className="bo-title">Los más vendidos</h2>
-          <p className="bo-head__aside">Cada bolso se estampa a mano, uno por uno. Si se agota, vuelve en la próxima tirada.</p>
+          <h2 id="bo-shop-title" className="bo-title">{copy.home_24}</h2>
+          <p className="bo-head__aside">{copy.home_25}</p>
         </Reveal>
         <template data-pagosya-product-template>
           <article className="bo-card">
@@ -78,32 +78,32 @@ export default function Home() {
 
       <section id="estampas" className="bo-prints" aria-labelledby="bo-prints-title">
         <Reveal className="bo-head">
-          <h2 id="bo-prints-title" className="bo-title">Elige tu estampa</h2>
-          <p className="bo-head__aside">Tres familias de dibujos, todas en tinta al agua sobre lona de algodón.</p>
+          <h2 id="bo-prints-title" className="bo-title">{copy.home_26}</h2>
+          <p className="bo-head__aside">{copy.home_27}</p>
         </Reveal>
         <div className="bo-prints__grid">
           <Reveal>
             <a className="bo-print bo-print--sky" href="#mas-vendidos">
               <AnimalArt />
-              <span className="bo-print__name">Animales</span>
-              <span className="bo-print__note">Escorpiones, fieras y dragones</span>
-              <span className="bo-print__go">Ver bolsos <span aria-hidden="true">→</span></span>
+              <span className="bo-print__name">{copy.home_28}</span>
+              <span className="bo-print__note">{copy.home_29}</span>
+              <span className="bo-print__go">{copy.home_30}<span aria-hidden="true">→</span></span>
             </a>
           </Reveal>
           <Reveal delay={60}>
             <a className="bo-print bo-print--brick" href="#mas-vendidos">
               <SignArt />
-              <span className="bo-print__name">Signos</span>
-              <span className="bo-print__note">Balanzas, lunas y estrellas</span>
-              <span className="bo-print__go">Ver bolsos <span aria-hidden="true">→</span></span>
+              <span className="bo-print__name">{copy.home_31}</span>
+              <span className="bo-print__note">{copy.home_32}</span>
+              <span className="bo-print__go">{copy.home_33}<span aria-hidden="true">→</span></span>
             </a>
           </Reveal>
           <Reveal delay={120}>
             <a className="bo-print bo-print--mustard" href="#mas-vendidos">
               <FruitArt />
-              <span className="bo-print__name">Frutas</span>
-              <span className="bo-print__note">Manzanas, limones y tunas</span>
-              <span className="bo-print__go">Ver bolsos <span aria-hidden="true">→</span></span>
+              <span className="bo-print__name">{copy.home_34}</span>
+              <span className="bo-print__note">{copy.home_35}</span>
+              <span className="bo-print__go">{copy.home_36}<span aria-hidden="true">→</span></span>
             </a>
           </Reveal>
         </div>
@@ -111,30 +111,30 @@ export default function Home() {
 
       <section id="hecho-a-mano" className="bo-craft" aria-labelledby="bo-craft-title">
         <div className="bo-craft__photo">
-          <Parallax strength={90} mobileStrength={30} className="bo-drift"><img src={photos.taller} alt="Manos pasando la racleta sobre la malla para estampar un bolso de lona" /></Parallax>
+          <Parallax strength={90} mobileStrength={30} className="bo-drift"><img src={photos.taller} alt={copy.home_37} /></Parallax>
         </div>
         <Reveal className="bo-craft__copy">
-          <p className="bo-kicker">Hecho a mano</p>
-          <h2 id="bo-craft-title" className="bo-title">Serigrafía a mano en El Alto</h2>
-          <p className="bo-craft__text">Dibujamos cada estampa, preparamos la malla y pasamos la tinta bolso por bolso. Por eso ningún tote de {store.name} sale exactamente igual a otro.</p>
+          <p className="bo-kicker">{copy.home_38}</p>
+          <h2 id="bo-craft-title" className="bo-title">{copy.home_39}</h2>
+          <p className="bo-craft__text">{copy.home_40}{store.name}{copy.home_41}</p>
           <ul className="bo-facts">
-            <li><b>Lona gruesa</b><span>Algodón que aguanta el día entero</span></li>
-            <li><b>Tinta al agua</b><span>No se cuartea con los lavados</span></li>
-            <li><b>Uno por uno</b><span>Estampado y revisado a mano</span></li>
+            <li><b>{copy.home_42}</b><span>{copy.home_43}</span></li>
+            <li><b>{copy.home_44}</b><span>{copy.home_45}</span></li>
+            <li><b>{copy.home_46}</b><span>{copy.home_47}</span></li>
           </ul>
-          <a className="bo-btn" href="#mas-vendidos">Ver los bolsos</a>
+          <a className="bo-btn" href="#mas-vendidos">{copy.home_48}</a>
         </Reveal>
       </section>
 
       <section id="resenas" className="bo-reviews" aria-labelledby="bo-reviews-title">
         <Reveal className="bo-head">
-          <h2 id="bo-reviews-title" className="bo-title">Visto en la calle</h2>
-          <p className="bo-head__aside">Lo que cuentan quienes ya salen con el suyo.</p>
+          <h2 id="bo-reviews-title" className="bo-title">{copy.home_49}</h2>
+          <p className="bo-head__aside">{copy.home_50}</p>
         </Reveal>
         <div className="bo-reviews__grid">
           <figure className="bo-reviews__photo">
-            <img src={photos.calle} alt="Chica caminando por una calle soleada de La Paz con un bolso estampado" />
-            <figcaption>En las calles de La Paz</figcaption>
+            <img src={photos.calle} alt={copy.home_51} />
+            <figcaption>{copy.home_52}</figcaption>
           </figure>
           <div className="bo-quotes">
             {reviews.map(review => <figure key={review.name} className="bo-quote">
@@ -148,11 +148,11 @@ export default function Home() {
 
       <section id="boletin" className="bo-news" aria-labelledby="bo-news-title" data-pagosya-subscribe-block>
         <Reveal className="bo-news__inner">
-          <h2 id="bo-news-title" className="bo-news__title">Estampas nuevas cada mes</h2>
-          <p className="bo-news__text">Déjanos tu correo y te avisamos primero cuando salga una tirada nueva. Sin llenar tu bandeja.</p>
+          <h2 id="bo-news-title" className="bo-news__title">{copy.home_53}</h2>
+          <p className="bo-news__text">{copy.home_54}</p>
           <button type="button" className="bo-news__button" data-pagosya-subscribe-open aria-label="Suscribirme con mi correo">
-            <span className="bo-news__field">Tu correo electrónico</span>
-            <span className="bo-news__submit">Suscribirme</span>
+            <span className="bo-news__field">{copy.home_55}</span>
+            <span className="bo-news__submit">{copy.home_56}</span>
           </button>
           <p role="status" className="bo-news__status" />
         </Reveal>

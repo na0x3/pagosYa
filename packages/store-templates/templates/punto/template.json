@@ -57,5 +57,205 @@
       "role": "lifestyle",
       "demo": "calle.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Diseño transparente",
+      "max": 30
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Mostramos cómo está hecho. Nada que esconder.",
+      "max": 72
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Carga rápida",
+      "max": 19
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "USB-C en todo. Un cable para todo lo que llevas.",
+      "max": 77
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Garantía real",
+      "max": 21
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Un año de garantía y soporte que responde.",
+      "max": 67
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿Tiene garantía?",
+      "max": 26
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Sí, un año contra fallas de fábrica. Escríbenos y lo resolvemos.",
+      "max": 102
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Cuánto tarda el envío?",
+      "max": 37
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Despachamos en 24 horas y te avisamos cuando sale tu pedido.",
+      "max": 96
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta, desde tu celular.",
+      "max": 93
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": " Nuevo",
+      "max": 12
+    },
+    {
+      "key": "home_14",
+      "role": "headline",
+      "default": "Tecnología,",
+      "max": 18
+    },
+    {
+      "key": "home_15",
+      "role": "headline",
+      "default": "sin ruido.",
+      "max": 16
+    },
+    {
+      "key": "home_16",
+      "role": "lead",
+      "default": "Objetos simples, honestos y bien hechos. Lo que necesitas, nada más.",
+      "max": 109
+    },
+    {
+      "key": "home_17",
+      "role": "cta",
+      "default": "Ver productos",
+      "max": 21
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "[ carga ]",
+      "max": 14
+    },
+    {
+      "key": "home_19",
+      "role": "title",
+      "default": "Productos",
+      "max": 14
+    },
+    {
+      "key": "home_20",
+      "role": "body",
+      "default": "Todo disponible · envío 24 h",
+      "max": 45
+    },
+    {
+      "key": "home_21",
+      "role": "alt",
+      "default": "Detalle del interior de un producto",
+      "max": 56
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "Diseño",
+      "max": 12
+    },
+    {
+      "key": "home_23",
+      "role": "title",
+      "default": "Hecho para verse por dentro.",
+      "max": 45
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Menos cosas.",
+      "max": 19
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Mejores cosas.",
+      "max": 22
+    },
+    {
+      "key": "home_26",
+      "role": "title",
+      "default": "Ayuda",
+      "max": 12
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Productos",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Diseño",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Ayuda",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Carrito ",
+      "max": 13
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Tecnología, sin ruido.",
+      "max": 35
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta",
+      "max": 48
+    }
   ]
 }

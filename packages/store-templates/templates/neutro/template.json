@@ -3,16 +3,463 @@
   "name": "Neutro",
   "category": "producto-unico",
   "description": "Una base limpia para cualquier marca: degradado suave, título grande a la izquierda y una barra de navegación en caja.",
-  "tags": ["base", "limpia", "versátil", "marca"],
+  "tags": [
+    "base",
+    "limpia",
+    "versátil",
+    "marca"
+  ],
   "sitePurpose": "shop",
   "order": -276,
-  "dna": { "display": "outfit", "text": "manrope", "case": "none", "radius": "soft", "border": "hairline", "button": "block", "hover": "fill", "press": "sink", "motion": "calm", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "rounded" },
+  "dna": {
+    "display": "outfit",
+    "text": "manrope",
+    "case": "none",
+    "radius": "soft",
+    "border": "hairline",
+    "button": "block",
+    "hover": "fill",
+    "press": "sink",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "rounded"
+  },
   "photos": [
-    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "equipo", "role": "lifestyle", "demo": "equipo.jpg" },
-    { "slot": "empaque", "role": "product", "demo": "empaque.jpg" }
+    {
+      "slot": "p1",
+      "role": "lifestyle",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "equipo",
+      "role": "lifestyle",
+      "demo": "equipo.jpg"
+    },
+    {
+      "slot": "empaque",
+      "role": "product",
+      "demo": "empaque.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "name",
+      "default": "Envío",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "A todo el país, con seguimiento.",
+      "max": 51
+    },
+    {
+      "key": "home_3",
+      "role": "name",
+      "default": "Devolución",
+      "max": 16
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Cambios en 7 días sin complicaciones.",
+      "max": 59
+    },
+    {
+      "key": "home_5",
+      "role": "name",
+      "default": "Pago seguro",
+      "max": 18
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "QR y tarjeta, siempre protegidos.",
+      "max": 53
+    },
+    {
+      "key": "home_7",
+      "role": "name",
+      "default": "Atención",
+      "max": 13
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Respondemos el mismo día.",
+      "max": 40
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Cuánto tarda el envío?",
+      "max": 37
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Entre 2 y 5 días hábiles según tu ciudad.",
+      "max": 66
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Puedo cambiar mi pedido?",
+      "max": 40
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Sí, dentro de los 7 días con el producto sin usar.",
+      "max": 80
+    },
+    {
+      "key": "home_13",
+      "role": "question",
+      "default": "¿Cómo puedo pagar?",
+      "max": 29
+    },
+    {
+      "key": "home_14",
+      "role": "answer",
+      "default": "Con QR o tarjeta, desde la misma página.",
+      "max": 64
+    },
+    {
+      "key": "home_15",
+      "role": "question",
+      "default": "¿Hacen facturas?",
+      "max": 26
+    },
+    {
+      "key": "home_16",
+      "role": "answer",
+      "default": "Sí, indícalo al pagar y te la enviamos por correo.",
+      "max": 80
+    },
+    {
+      "key": "home_17",
+      "role": "quote",
+      "default": "Todo llegó bien empacado y tal como se ve en las fotos.",
+      "max": 88
+    },
+    {
+      "key": "home_18",
+      "role": "name",
+      "default": "Sofía, La Paz",
+      "max": 21
+    },
+    {
+      "key": "home_19",
+      "role": "quote",
+      "default": "La atención fue rápida y muy amable.",
+      "max": 58
+    },
+    {
+      "key": "home_20",
+      "role": "name",
+      "default": "Marco, Cochabamba",
+      "max": 27
+    },
+    {
+      "key": "home_21",
+      "role": "quote",
+      "default": "Calidad excelente. Ya hice un segundo pedido.",
+      "max": 72
+    },
+    {
+      "key": "home_22",
+      "role": "name",
+      "default": "Elena, Santa Cruz",
+      "max": 27
+    },
+    {
+      "key": "home_23",
+      "role": "alt",
+      "default": "Degradado suave azul y blanco con una ola de papel plegado",
+      "max": 93
+    },
+    {
+      "key": "home_24",
+      "role": "headline",
+      "default": ": hecho para durar",
+      "max": 29
+    },
+    {
+      "key": "home_25",
+      "role": "lead",
+      "default": "Productos sencillos, bien pensados y enviados a tu casa.",
+      "max": 90
+    },
+    {
+      "key": "home_26",
+      "role": "cta",
+      "default": "Comprar ahora",
+      "max": 21
+    },
+    {
+      "key": "home_27",
+      "role": "title",
+      "default": "Más vendidos",
+      "max": 19
+    },
+    {
+      "key": "home_28",
+      "role": "body",
+      "default": "Lo que más eligen nuestros clientes.",
+      "max": 58
+    },
+    {
+      "key": "home_29",
+      "role": "alt",
+      "default": "Botella blanca minimalista sobre un fondo gris claro",
+      "max": 83
+    },
+    {
+      "key": "home_30",
+      "role": "body",
+      "default": "Destacado",
+      "max": 14
+    },
+    {
+      "key": "home_31",
+      "role": "title",
+      "default": "Diseño sobrio, uso diario",
+      "max": 40
+    },
+    {
+      "key": "home_32",
+      "role": "body",
+      "default": "Materiales resistentes y un acabado limpio que combina con todo. Pensado para acompañarte a diario sin llamar la atención.",
+      "max": 195
+    },
+    {
+      "key": "home_33",
+      "role": "cta",
+      "default": "Ver el catálogo",
+      "max": 24
+    },
+    {
+      "key": "home_34",
+      "role": "alt",
+      "default": "Pequeño equipo reunido alrededor de una mesa luminosa",
+      "max": 85
+    },
+    {
+      "key": "home_35",
+      "role": "title",
+      "default": "Un equipo pequeño, cuidado en cada detalle",
+      "max": 67
+    },
+    {
+      "key": "home_36",
+      "role": "body",
+      "default": "Elegimos, probamos y empacamos cada pedido nosotros mismos. Si algo no sale bien, lo arreglamos.",
+      "max": 154
+    },
+    {
+      "key": "home_37",
+      "role": "alt",
+      "default": "Paquete de papel kraft atado con una cinta",
+      "max": 67
+    },
+    {
+      "key": "home_38",
+      "role": "title",
+      "default": "Preguntas frecuentes",
+      "max": 32
+    },
+    {
+      "key": "home_39",
+      "role": "title",
+      "default": "Lo que dicen",
+      "max": 19
+    },
+    {
+      "key": "home_40",
+      "role": "title",
+      "default": "Novedades y ofertas",
+      "max": 30
+    },
+    {
+      "key": "home_41",
+      "role": "body",
+      "default": "Un correo de vez en cuando, con lo nuevo y lo mejor.",
+      "max": 83
+    },
+    {
+      "key": "home_42",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_43",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Todo",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Más vendidos",
+      "max": 19
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Ofertas",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Nuevo",
+      "max": 12
+    },
+    {
+      "key": "shell_5",
+      "role": "label",
+      "default": "Nosotros",
+      "max": 13
+    },
+    {
+      "key": "shell_6",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Envíos a todo el país · Pago seguro con QR y tarjeta",
+      "max": 83
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Productos bien hechos, enviados con cuidado.",
+      "max": 70
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_10",
+      "role": "cta",
+      "default": "Más vendidos",
+      "max": 19
+    },
+    {
+      "key": "shell_11",
+      "role": "cta",
+      "default": "Nosotros",
+      "max": 13
+    },
+    {
+      "key": "shell_12",
+      "role": "cta",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Tu compra",
+      "max": 14
+    },
+    {
+      "key": "shell_14",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_15",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_17",
+      "role": "title",
+      "default": "Tu carrito",
+      "max": 16
+    },
+    {
+      "key": "shell_18",
+      "role": "body",
+      "default": "Tu carrito está vacío",
+      "max": 34
+    },
+    {
+      "key": "shell_19",
+      "role": "body",
+      "default": "Agrega un producto y aparecerá aquí.",
+      "max": 58
+    },
+    {
+      "key": "shell_20",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_21",
+      "role": "body",
+      "default": "Agregado",
+      "max": 13
+    },
+    {
+      "key": "shell_22",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_23",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_24",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    }
   ]
 }

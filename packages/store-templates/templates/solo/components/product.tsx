@@ -1,7 +1,8 @@
+import { copy } from './store-data';
 import Shell from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
-const trust = ['Pago seguro con QR o tarjeta', 'Envío a todo el país', 'Cambios sin complicaciones'];
+const trust = [copy.product_1, copy.product_2, copy.product_3];
 
 export default function Product() {
   return <Shell>

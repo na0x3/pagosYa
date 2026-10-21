@@ -3,16 +3,415 @@
   "name": "Afiche",
   "category": "arte",
   "description": "Afiches y láminas: titular grande en grotesca, cinta negra arriba y un collage de pósters.",
-  "tags": ["afiches", "láminas", "decoración", "retro"],
+  "tags": [
+    "afiches",
+    "láminas",
+    "decoración",
+    "retro"
+  ],
   "sitePurpose": "shop",
   "order": -285,
-  "dna": { "display": "chivo", "text": "space-mono", "case": "none", "radius": "none", "border": "hairline", "button": "underline", "hover": "invert", "press": "sink", "motion": "snappy", "cart": "drawer", "added": "stamp", "card": "zoom", "frame": "inset" },
+  "dna": {
+    "display": "chivo",
+    "text": "space-mono",
+    "case": "none",
+    "radius": "none",
+    "border": "hairline",
+    "button": "underline",
+    "hover": "invert",
+    "press": "sink",
+    "motion": "snappy",
+    "cart": "drawer",
+    "added": "stamp",
+    "card": "zoom",
+    "frame": "inset"
+  },
   "photos": [
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "pared", "role": "lifestyle", "demo": "pared.jpg" },
-    { "slot": "taller", "role": "lifestyle", "demo": "taller.jpg" }
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "pared",
+      "role": "lifestyle",
+      "demo": "pared.jpg"
+    },
+    {
+      "slot": "taller",
+      "role": "lifestyle",
+      "demo": "taller.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "name",
+      "default": "Roble",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "name",
+      "default": "Negro",
+      "max": 12
+    },
+    {
+      "key": "home_3",
+      "role": "name",
+      "default": "Blanco",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "name",
+      "default": "Sin marco",
+      "max": 14
+    },
+    {
+      "key": "home_5",
+      "role": "name",
+      "default": "Lucía Fernández",
+      "max": 24
+    },
+    {
+      "key": "home_6",
+      "role": "alt",
+      "default": "Afiche azul con puntos y formas abstractas",
+      "max": 67
+    },
+    {
+      "key": "home_7",
+      "role": "name",
+      "default": "Marcos Villca",
+      "max": 21
+    },
+    {
+      "key": "home_8",
+      "role": "alt",
+      "default": "Afiche crema con flores dibujadas a línea",
+      "max": 66
+    },
+    {
+      "key": "home_9",
+      "role": "name",
+      "default": "Ana Quispe",
+      "max": 16
+    },
+    {
+      "key": "home_10",
+      "role": "alt",
+      "default": "Afiche verde amarillento con formas geométricas",
+      "max": 75
+    },
+    {
+      "key": "home_11",
+      "role": "headline",
+      "default": "Arte audaz que habla fuerte",
+      "max": 43
+    },
+    {
+      "key": "home_12",
+      "role": "lead",
+      "default": "Afiches originales de artistas bolivianos, impresos en papel de museo y listos para colgar.",
+      "max": 146
+    },
+    {
+      "key": "home_13",
+      "role": "cta",
+      "default": "Ver todos los afiches ",
+      "max": 35
+    },
+    {
+      "key": "home_14",
+      "role": "alt",
+      "default": "Hombre colgando un afiche enmarcado de un caballo en píxeles sobre una pared clara",
+      "max": 131
+    },
+    {
+      "key": "home_15",
+      "role": "alt",
+      "default": "Afiche azul con puntos y formas",
+      "max": 50
+    },
+    {
+      "key": "home_16",
+      "role": "alt",
+      "default": "Afiche crema con flores dibujadas",
+      "max": 53
+    },
+    {
+      "key": "home_17",
+      "role": "title",
+      "default": "Todos los afiches",
+      "max": 27
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Tirada limitada de cada diseño, firmada por su artista.",
+      "max": 88
+    },
+    {
+      "key": "home_19",
+      "role": "title",
+      "default": "Tres tamaños",
+      "max": 19
+    },
+    {
+      "key": "home_20",
+      "role": "alt",
+      "default": "Manos levantando un afiche recién impreso de una prensa",
+      "max": 88
+    },
+    {
+      "key": "home_21",
+      "role": "title",
+      "default": "Con marco o sin marco",
+      "max": 34
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "Enmarcamos a mano con madera de la región. Si prefieres, te lo enviamos enrollado en tubo rígido y lo enmarcas donde quieras.",
+      "max": 200
+    },
+    {
+      "key": "home_23",
+      "role": "title",
+      "default": "Quién los dibuja",
+      "max": 26
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Ilustradoras e ilustradores de aquí, con su propia voz.",
+      "max": 88
+    },
+    {
+      "key": "home_25",
+      "role": "alt",
+      "default": "Pared con cinco afiches enmarcados sobre un escritorio de madera",
+      "max": 102
+    },
+    {
+      "key": "home_26",
+      "role": "title",
+      "default": "Ideas para tu pared",
+      "max": 30
+    },
+    {
+      "key": "home_27",
+      "role": "body",
+      "default": "Un solo afiche grande en la sala, tres pequeños en el pasillo o una galería completa sobre tu escritorio. Empieza por uno de ",
+      "max": 200
+    },
+    {
+      "key": "home_28",
+      "role": "body",
+      "default": " y sigue.",
+      "max": 14
+    },
+    {
+      "key": "home_29",
+      "role": "cta",
+      "default": "Ver los afiches",
+      "max": 24
+    },
+    {
+      "key": "home_30",
+      "role": "title",
+      "default": "Nuevos afiches, primero para ti",
+      "max": 50
+    },
+    {
+      "key": "home_31",
+      "role": "body",
+      "default": "Un correo por lanzamiento, con el arte y su artista.",
+      "max": 83
+    },
+    {
+      "key": "home_32",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_33",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Afiches",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Tamaños",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Marcos",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Artistas",
+      "max": 13
+    },
+    {
+      "key": "shell_5",
+      "role": "item",
+      "default": "Envío a todo el país",
+      "max": 32
+    },
+    {
+      "key": "shell_6",
+      "role": "item",
+      "default": "Papel de 250 g",
+      "max": 22
+    },
+    {
+      "key": "shell_7",
+      "role": "item",
+      "default": "Impresión giclée",
+      "max": 26
+    },
+    {
+      "key": "shell_8",
+      "role": "item",
+      "default": "Marcos de madera",
+      "max": 26
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Afiches y láminas para paredes con carácter.",
+      "max": 70
+    },
+    {
+      "key": "shell_10",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_11",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_12",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_13",
+      "role": "title",
+      "default": "Tu carrito",
+      "max": 16
+    },
+    {
+      "key": "shell_14",
+      "role": "body",
+      "default": "Nada por aquí",
+      "max": 21
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": "Elige un afiche y aparecerá aquí.",
+      "max": 53
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_17",
+      "role": "body",
+      "default": "Al carrito",
+      "max": 16
+    },
+    {
+      "key": "shell_18",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_19",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_20",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "label",
+      "default": "Papel",
+      "max": 12
+    },
+    {
+      "key": "product_2",
+      "role": "label",
+      "default": "Mate de 250 g",
+      "max": 21
+    },
+    {
+      "key": "product_3",
+      "role": "label",
+      "default": "Impresión",
+      "max": 14
+    },
+    {
+      "key": "product_4",
+      "role": "label",
+      "default": "Giclée de 8 tintas",
+      "max": 29
+    },
+    {
+      "key": "product_5",
+      "role": "label",
+      "default": "Envío",
+      "max": 12
+    },
+    {
+      "key": "product_6",
+      "role": "label",
+      "default": "En tubo rígido",
+      "max": 22
+    }
   ]
 }

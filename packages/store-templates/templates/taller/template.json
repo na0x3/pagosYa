@@ -2,6 +2,7 @@
   "id": "taller",
   "name": "Taller",
   "category": "servicios",
+  "curated": true,
   "description": "Oficios y reparaciones: azul marino y naranja de seguridad, precio cerrado por servicio, pasos claros y zonas de cobertura.",
   "tags": [
     "servicios",
@@ -56,6 +57,260 @@
       "slot": "equipo",
       "role": "lifestyle",
       "demo": "equipo.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "item",
+      "default": "Técnicos verificados",
+      "max": 32
+    },
+    {
+      "key": "home_2",
+      "role": "item",
+      "default": "Precio cerrado",
+      "max": 22
+    },
+    {
+      "key": "home_3",
+      "role": "item",
+      "default": "Garantía de 30 días",
+      "max": 30
+    },
+    {
+      "key": "home_4",
+      "role": "title",
+      "default": "Elige el servicio",
+      "max": 27
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "Cada servicio tiene su precio a la vista, sin sorpresas.",
+      "max": 90
+    },
+    {
+      "key": "home_6",
+      "role": "title",
+      "default": "Paga en línea",
+      "max": 21
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Con QR o tarjeta. Tu pago queda registrado.",
+      "max": 69
+    },
+    {
+      "key": "home_8",
+      "role": "title",
+      "default": "Te llamamos y vamos",
+      "max": 30
+    },
+    {
+      "key": "home_9",
+      "role": "body",
+      "default": "Coordinamos el horario y llegamos con todo lo necesario.",
+      "max": 90
+    },
+    {
+      "key": "home_10",
+      "role": "item",
+      "default": "Centro",
+      "max": 12
+    },
+    {
+      "key": "home_11",
+      "role": "item",
+      "default": "Zona Norte",
+      "max": 16
+    },
+    {
+      "key": "home_12",
+      "role": "item",
+      "default": "Zona Sur",
+      "max": 13
+    },
+    {
+      "key": "home_13",
+      "role": "item",
+      "default": "Zona Este",
+      "max": 14
+    },
+    {
+      "key": "home_14",
+      "role": "item",
+      "default": "Zona Oeste",
+      "max": 16
+    },
+    {
+      "key": "home_15",
+      "role": "item",
+      "default": "Alrededores",
+      "max": 18
+    },
+    {
+      "key": "home_16",
+      "role": "question",
+      "default": "¿Qué pasa si el trabajo necesita repuestos?",
+      "max": 69
+    },
+    {
+      "key": "home_17",
+      "role": "answer",
+      "default": "Te avisamos antes con el precio del repuesto. Nada se cambia sin tu aprobación.",
+      "max": 126
+    },
+    {
+      "key": "home_18",
+      "role": "question",
+      "default": "¿El servicio tiene garantía?",
+      "max": 45
+    },
+    {
+      "key": "home_19",
+      "role": "answer",
+      "default": "Sí, 30 días. Si algo falla por nuestro trabajo, volvemos sin costo.",
+      "max": 107
+    },
+    {
+      "key": "home_20",
+      "role": "question",
+      "default": "¿Cuándo llegan?",
+      "max": 24
+    },
+    {
+      "key": "home_21",
+      "role": "answer",
+      "default": "Te llamamos apenas recibimos tu pedido para acordar el horario, normalmente el mismo día.",
+      "max": 142
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "Reparaciones y mantenimiento",
+      "max": 45
+    },
+    {
+      "key": "home_23",
+      "role": "headline",
+      "default": "Lo arreglamos, ",
+      "max": 24
+    },
+    {
+      "key": "home_24",
+      "role": "label",
+      "default": "hoy.",
+      "max": 12
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Electricidad, plomería, electrodomésticos y limpieza. Pide en línea y te llamamos para coordinar.",
+      "max": 155
+    },
+    {
+      "key": "home_26",
+      "role": "cta",
+      "default": "Pedir un servicio",
+      "max": 27
+    },
+    {
+      "key": "home_27",
+      "role": "body",
+      "default": "Respuesta en 2 horas",
+      "max": 32
+    },
+    {
+      "key": "home_28",
+      "role": "title",
+      "default": "Servicios",
+      "max": 14
+    },
+    {
+      "key": "home_29",
+      "role": "body",
+      "default": "Precio cerrado por trabajo. Materiales aparte, siempre con tu aprobación.",
+      "max": 117
+    },
+    {
+      "key": "home_30",
+      "role": "title",
+      "default": "Cómo trabajamos",
+      "max": 24
+    },
+    {
+      "key": "home_31",
+      "role": "alt",
+      "default": "Nuestro equipo listo para salir",
+      "max": 50
+    },
+    {
+      "key": "home_32",
+      "role": "body",
+      "default": "Dónde llegamos",
+      "max": 22
+    },
+    {
+      "key": "home_33",
+      "role": "title",
+      "default": "Cerca de tu casa",
+      "max": 26
+    },
+    {
+      "key": "home_34",
+      "role": "body",
+      "default": "Nuestro equipo recorre la ciudad todos los días. Si tu zona no está, escríbenos igual.",
+      "max": 138
+    },
+    {
+      "key": "home_35",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Servicios",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Cómo trabajamos",
+      "max": 24
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Mi pedido ",
+      "max": 16
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Técnicos de confianza, a tu puerta.",
+      "max": 56
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Paga con QR o tarjeta",
+      "max": 34
     }
   ]
 }

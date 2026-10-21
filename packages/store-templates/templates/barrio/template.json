@@ -3,16 +3,451 @@
   "name": "Barrio",
   "category": "moda",
   "description": "Ropa urbana por lanzamientos: nombre entre corchetes, texto en cajas apiladas y acentos rojos.",
-  "tags": ["streetwear", "urbano", "lanzamientos", "joven"],
+  "tags": [
+    "streetwear",
+    "urbano",
+    "lanzamientos",
+    "joven"
+  ],
   "sitePurpose": "shop",
   "order": -294,
-  "dna": { "display": "space-grotesk", "text": "space-mono", "case": "upper", "radius": "none", "border": "hairline", "button": "brutal", "hover": "invert", "press": "pop", "motion": "cinematic", "cart": "drawer", "added": "ribbon", "card": "zoom", "frame": "bleed" },
+  "dna": {
+    "display": "space-grotesk",
+    "text": "space-mono",
+    "case": "upper",
+    "radius": "none",
+    "border": "hairline",
+    "button": "brutal",
+    "hover": "invert",
+    "press": "pop",
+    "motion": "cinematic",
+    "cart": "drawer",
+    "added": "ribbon",
+    "card": "zoom",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "calle", "role": "lifestyle", "demo": "calle.jpg" },
-    { "slot": "detalle", "role": "detail", "demo": "detalle.jpg" }
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "calle",
+      "role": "lifestyle",
+      "demo": "calle.jpg"
+    },
+    {
+      "slot": "detalle",
+      "role": "detail",
+      "demo": "detalle.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "name",
+      "default": "Hoodie oversize",
+      "max": 24
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Algodón pesado, corte ancho",
+      "max": 43
+    },
+    {
+      "key": "home_3",
+      "role": "alt",
+      "default": "Modelo con un hoodie negro oversize sobre un muro verde salvia",
+      "max": 99
+    },
+    {
+      "key": "home_4",
+      "role": "name",
+      "default": "Pantalón cargo",
+      "max": 22
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "Bolsillos grandes, tiro alto",
+      "max": 45
+    },
+    {
+      "key": "home_6",
+      "role": "alt",
+      "default": "Modelo caminando con pantalón cargo ancho y zapatillas",
+      "max": 86
+    },
+    {
+      "key": "home_7",
+      "role": "name",
+      "default": "Gorra y tote",
+      "max": 19
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Para completar el look",
+      "max": 35
+    },
+    {
+      "key": "home_9",
+      "role": "alt",
+      "default": "Gorra negra y bolso de lona sobre concreto",
+      "max": 67
+    },
+    {
+      "key": "home_10",
+      "role": "title",
+      "default": "Tiradas cortas",
+      "max": 22
+    },
+    {
+      "key": "home_11",
+      "role": "body",
+      "default": "Cada prenda se hace en una serie pequeña. Cuando se acaba, no vuelve.",
+      "max": 110
+    },
+    {
+      "key": "home_12",
+      "role": "title",
+      "default": "Corte propio",
+      "max": 19
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Patrones anchos y largos que dibujamos con gente del barrio.",
+      "max": 96
+    },
+    {
+      "key": "home_14",
+      "role": "title",
+      "default": "Hecho aquí",
+      "max": 16
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Cosido y estampado en talleres de la ciudad, con nombre y apellido.",
+      "max": 107
+    },
+    {
+      "key": "home_16",
+      "role": "title",
+      "default": "Sin vueltas",
+      "max": 18
+    },
+    {
+      "key": "home_17",
+      "role": "body",
+      "default": "Cambios en 7 días y envío a todo el país.",
+      "max": 66
+    },
+    {
+      "key": "home_18",
+      "role": "label",
+      "default": "Cortes frescos",
+      "max": 22
+    },
+    {
+      "key": "home_19",
+      "role": "label",
+      "default": "y declaraciones",
+      "max": 24
+    },
+    {
+      "key": "home_20",
+      "role": "label",
+      "default": "de calle",
+      "max": 13
+    },
+    {
+      "key": "home_21",
+      "role": "alt",
+      "default": "Modelo con camiseta a rayas y pantalón ancho frente a una pared gris",
+      "max": 109
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "Drop 03 // Edición limitada",
+      "max": 43
+    },
+    {
+      "key": "home_23",
+      "role": "body",
+      "default": "Ropa por lanzamientos, hecha en talleres de la ciudad. Cuando se acaba, se acaba.",
+      "max": 130
+    },
+    {
+      "key": "home_24",
+      "role": "cta",
+      "default": "Ver el drop",
+      "max": 18
+    },
+    {
+      "key": "home_25",
+      "role": "title",
+      "default": "El drop",
+      "max": 12
+    },
+    {
+      "key": "home_26",
+      "role": "body",
+      "default": "Disponible mientras dure. Elige tu talla y no lo pienses tanto.",
+      "max": 101
+    },
+    {
+      "key": "home_27",
+      "role": "title",
+      "default": "Looks",
+      "max": 12
+    },
+    {
+      "key": "home_28",
+      "role": "body",
+      "default": "Tres formas de llevar el drop.",
+      "max": 48
+    },
+    {
+      "key": "home_29",
+      "role": "title",
+      "default": "El código",
+      "max": 14
+    },
+    {
+      "key": "home_30",
+      "role": "body",
+      "default": "Próximo lanzamiento",
+      "max": 30
+    },
+    {
+      "key": "home_31",
+      "role": "title",
+      "default": "Drop 04",
+      "max": 12
+    },
+    {
+      "key": "home_32",
+      "role": "body",
+      "default": "Sábado · 12:00 · Solo en línea",
+      "max": 48
+    },
+    {
+      "key": "home_33",
+      "role": "cta",
+      "default": "Avísame primero",
+      "max": 24
+    },
+    {
+      "key": "home_34",
+      "role": "title",
+      "default": "Comunidad",
+      "max": 14
+    },
+    {
+      "key": "home_35",
+      "role": "body",
+      "default": "Gente real usando ropa real. Etiquétanos y sales aquí.",
+      "max": 86
+    },
+    {
+      "key": "home_36",
+      "role": "alt",
+      "default": "Un grupo de amigos en una plaza de skate al atardecer",
+      "max": 85
+    },
+    {
+      "key": "home_37",
+      "role": "alt",
+      "default": "Etiqueta tejida y costuras de una prenda",
+      "max": 64
+    },
+    {
+      "key": "home_38",
+      "role": "title",
+      "default": "No te pierdas el próximo drop",
+      "max": 46
+    },
+    {
+      "key": "home_39",
+      "role": "body",
+      "default": "Te escribimos una hora antes de que salga. Solo eso.",
+      "max": 83
+    },
+    {
+      "key": "home_40",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_41",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Drop",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Looks",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Código",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Comunidad",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "item",
+      "default": "Drop 03",
+      "max": 12
+    },
+    {
+      "key": "shell_6",
+      "role": "item",
+      "default": "Usa el código BARRIO10 en tu primera compra",
+      "max": 69
+    },
+    {
+      "key": "shell_7",
+      "role": "item",
+      "default": "Envíos a todo el país",
+      "max": 34
+    },
+    {
+      "key": "shell_8",
+      "role": "item",
+      "default": "Edición limitada",
+      "max": 26
+    },
+    {
+      "key": "shell_9",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_10",
+      "role": "body",
+      "default": "Ropa por lanzamientos. Cuando se acaba, se acaba.",
+      "max": 78
+    },
+    {
+      "key": "shell_11",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_12",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_14",
+      "role": "title",
+      "default": "En la bolsa",
+      "max": 18
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": "Bolsa vacía",
+      "max": 18
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "Elige una prenda del drop y aparecerá aquí.",
+      "max": 69
+    },
+    {
+      "key": "shell_17",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_18",
+      "role": "body",
+      "default": "En la bolsa",
+      "max": 18
+    },
+    {
+      "key": "shell_19",
+      "role": "cta",
+      "default": "Ver bolsa",
+      "max": 14
+    },
+    {
+      "key": "shell_20",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_21",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "question",
+      "default": "Detalles",
+      "max": 13
+    },
+    {
+      "key": "product_2",
+      "role": "question",
+      "default": "Cuidado y envío",
+      "max": 24
+    },
+    {
+      "key": "product_3",
+      "role": "body",
+      "default": "Lava del revés, en frío y sin secadora. Enviamos a todo el país en 2 a 5 días hábiles.",
+      "max": 138
+    }
   ]
 }

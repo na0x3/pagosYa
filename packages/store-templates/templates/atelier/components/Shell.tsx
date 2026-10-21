@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Piezas', href: 'index.html#piezas' },
-  { label: 'El oficio', href: 'index.html#oficio' },
-  { label: 'Materiales', href: 'index.html#materiales' },
-  { label: 'Regalos', href: 'index.html#regalos' },
+  { label: copy.shell_1, href: 'index.html#piezas' },
+  { label: copy.shell_2, href: 'index.html#oficio' },
+  { label: copy.shell_3, href: 'index.html#materiales' },
+  { label: copy.shell_4, href: 'index.html#regalos' },
 ];
 
 function PersonIcon() {
@@ -18,7 +18,7 @@ function BagIcon() {
 }
 
 export function Announce() {
-  return <p className="at-announce"><span>Empaque de regalo incluido en cada pedido</span><span>Cuero curtido de forma vegetal</span><span>Hecho a mano en pequeñas series</span></p>;
+  return <p className="at-announce"><span>{copy.shell_5}</span><span>{copy.shell_6}</span><span>{copy.shell_7}</span></p>;
 }
 
 export function Header() {
@@ -38,20 +38,20 @@ export function Footer() {
     <div className="at-footer__top">
       <div className="at-footer__about">
         <p className="at-footer__name">{store.name}</p>
-        <p className="at-footer__lead">{store.tagline || 'Marroquinería hecha a mano, para acompañarte por años.'}</p>
+        <p className="at-footer__lead">{store.tagline || copy.shell_8}</p>
       </div>
       <nav className="at-footer__col" aria-label="Tienda">
-        <p className="at-footer__heading">Tienda</p>
+        <p className="at-footer__heading">{copy.shell_9}</p>
         {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
       </nav>
       <div className="at-footer__col">
-        <p className="at-footer__heading">Tu compra</p>
-        <button type="button" className="at-footer__link" data-cart-open>Ver carrito</button>
-        <a href="checkout.html">Mi pedido</a>
-        <p>{store.city ? `Desde ${store.city}` : 'Envíos a toda Bolivia'}</p>
+        <p className="at-footer__heading">{copy.shell_10}</p>
+        <button type="button" className="at-footer__link" data-cart-open>{copy.shell_11}</button>
+        <a href="checkout.html">{copy.shell_12}</a>
+        <p>{store.city ? `Desde ${store.city}` : copy.shell_13}</p>
       </div>
     </div>
-    <p className="at-footer__note">Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <p className="at-footer__note">{copy.shell_14}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -62,13 +62,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="at-cartpanel">
         <header className="at-cartpanel__head">
-          <h2 className="at-cartpanel__title">Tu selección</h2>
+          <h2 className="at-cartpanel__title">{copy.shell_15}</h2>
           <button type="button" className="at-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="at-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="at-cartpanel__empty">
-          <p className="at-cartpanel__empty-title">Tu selección está vacía</p>
-          <p>Elige una pieza y aparecerá aquí.</p>
+          <p className="at-cartpanel__empty-title">{copy.shell_16}</p>
+          <p>{copy.shell_17}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="at-cartpanel__suggestions" />
         <div className="at-cartpanel__foot">
@@ -92,7 +92,7 @@ export function Commerce() {
         </div>
         <div className="at-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="at-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="at-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="at-line__remove">{copy.shell_18}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -100,20 +100,20 @@ export function Commerce() {
       <div className="at-added">
         <KitSlot kind="added" name="photo" as="img" className="at-added__photo" />
         <div className="at-added__copy">
-          <p className="at-added__kicker">Añadida a tu selección</p>
+          <p className="at-added__kicker">{copy.shell_19}</p>
           <KitSlot kind="added" name="message" as="p" className="at-added__message" />
         </div>
-        <button type="button" className="at-added__open" data-cart-open>Ver selección</button>
+        <button type="button" className="at-added__open" data-cart-open>{copy.shell_20}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="at-review">
         <div className="at-review__col at-review__col--summary">
-          <h2 className="at-review__heading">Tu pedido</h2>
+          <h2 className="at-review__heading">{copy.shell_21}</h2>
           <KitSlot kind="review" name="summary" className="at-review__summary" />
         </div>
         <div className="at-review__col">
-          <h2 className="at-review__heading">Entrega y pago</h2>
+          <h2 className="at-review__heading">{copy.shell_22}</h2>
           <KitSlot kind="review" name="fields" className="at-review__fields" />
         </div>
       </div>

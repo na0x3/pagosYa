@@ -72,5 +72,217 @@
       "role": "lifestyle",
       "demo": "gente3.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "item",
+      "default": "Crujiente de verdad",
+      "max": 30
+    },
+    {
+      "key": "home_2",
+      "role": "item",
+      "default": "Hecho en pequeñas tandas",
+      "max": 38
+    },
+    {
+      "key": "home_3",
+      "role": "item",
+      "default": "Pide el tuyo",
+      "max": 19
+    },
+    {
+      "key": "home_4",
+      "role": "item",
+      "default": "Sabor intenso",
+      "max": 21
+    },
+    {
+      "key": "home_5",
+      "role": "item",
+      "default": "Ingredientes reales",
+      "max": 30
+    },
+    {
+      "key": "home_6",
+      "role": "item",
+      "default": "Para compartir",
+      "max": 22
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿Cuándo llega mi pedido?",
+      "max": 38
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Lo preparamos en 24 a 48 horas y te avisamos cuando sale.",
+      "max": 91
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Hacen pedidos grandes?",
+      "max": 37
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Sí, escríbenos para eventos, oficinas o regalos corporativos.",
+      "max": 98
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_13",
+      "role": "headline",
+      "default": "El antojo que estabas buscando.",
+      "max": 50
+    },
+    {
+      "key": "home_14",
+      "role": "lead",
+      "default": "Recién hecho, con ingredientes reales y un crujido que se escucha. Pide y compártelo (o no).",
+      "max": 147
+    },
+    {
+      "key": "home_15",
+      "role": "cta",
+      "default": "Pedir ahora",
+      "max": 18
+    },
+    {
+      "key": "home_16",
+      "role": "label",
+      "default": "¡Nuevo!",
+      "max": 12
+    },
+    {
+      "key": "home_17",
+      "role": "title",
+      "default": "Elige tu sabor",
+      "max": 22
+    },
+    {
+      "key": "home_18",
+      "role": "title",
+      "default": "Hecho para compartir",
+      "max": 32
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "Una bolsa, varias manos. Pide para la oficina, la casa o el camino.",
+      "max": 107
+    },
+    {
+      "key": "home_20",
+      "role": "alt",
+      "default": "Nuestro producto servido",
+      "max": 38
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "No dejes",
+      "max": 13
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "ni las",
+      "max": 12
+    },
+    {
+      "key": "home_23",
+      "role": "alt",
+      "default": "Compartiendo nuestros productos",
+      "max": 50
+    },
+    {
+      "key": "home_24",
+      "role": "alt",
+      "default": "Un plato con nuestros productos",
+      "max": 50
+    },
+    {
+      "key": "home_25",
+      "role": "alt",
+      "default": "Un momento con nuestros productos",
+      "max": 53
+    },
+    {
+      "key": "home_26",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "home_27",
+      "role": "title",
+      "default": "¿Qué esperas?",
+      "max": 21
+    },
+    {
+      "key": "home_28",
+      "role": "cta",
+      "default": "Pedir el mío",
+      "max": 19
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Inicio",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Productos",
+      "max": 14
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Carrito ",
+      "max": 13
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Pequeños antojos, gran sabor.",
+      "max": 46
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    }
   ]
 }

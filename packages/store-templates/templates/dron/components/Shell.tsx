@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Modelos', href: 'index.html#modelos' },
-  { label: 'Vuelo', href: 'index.html#vuelo' },
-  { label: 'Accesorios', href: 'index.html#accesorios' },
-  { label: 'Licencia', href: 'index.html#licencia' },
+  { label: copy.shell_1, href: 'index.html#modelos' },
+  { label: copy.shell_2, href: 'index.html#vuelo' },
+  { label: copy.shell_3, href: 'index.html#accesorios' },
+  { label: copy.shell_4, href: 'index.html#licencia' },
 ];
 
 function PersonIcon() {
@@ -19,7 +19,7 @@ function BagIcon() {
 
 export function Header() {
   return <>
-    <p className="dr-ticker">Envío al día siguiente en todos los sistemas</p>
+    <p className="dr-ticker">{copy.shell_5}</p>
     <header className="dr-header">
       <div className="dr-box">
         <a className="dr-brand" href="index.html">{store.name}</a>
@@ -41,19 +41,19 @@ export function Footer() {
     <div className="dr-footer__top">
       <div>
         <p className="dr-footer__name">{store.name}</p>
-        <p className="dr-footer__lead">{store.tagline || 'Drones y accesorios para volar más lejos.'}</p>
+        <p className="dr-footer__lead">{store.tagline || copy.shell_6}</p>
       </div>
       <nav className="dr-footer__col" aria-label="Tienda">
-        <p className="dr-footer__heading">Tienda</p>
+        <p className="dr-footer__heading">{copy.shell_7}</p>
         {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
       </nav>
       <div className="dr-footer__col">
-        <p className="dr-footer__heading">Tu compra</p>
-        <button type="button" className="dr-footer__link" data-cart-open>Ver carrito</button>
-        <a href="checkout.html">Mi pedido</a>
+        <p className="dr-footer__heading">{copy.shell_8}</p>
+        <button type="button" className="dr-footer__link" data-cart-open>{copy.shell_9}</button>
+        <a href="checkout.html">{copy.shell_10}</a>
       </div>
     </div>
-    <p className="dr-footer__note">{store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <p className="dr-footer__note">{store.city ? `${store.city} · ` : ''}{copy.shell_11}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -64,13 +64,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="dr-cartpanel">
         <header className="dr-cartpanel__head">
-          <h2 className="dr-cartpanel__title">Tu pedido</h2>
+          <h2 className="dr-cartpanel__title">{copy.shell_12}</h2>
           <button type="button" className="dr-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="dr-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="dr-cartpanel__empty">
-          <p className="dr-cartpanel__empty-title">Carrito vacío</p>
-          <p>Elige un dron y aparecerá aquí.</p>
+          <p className="dr-cartpanel__empty-title">{copy.shell_13}</p>
+          <p>{copy.shell_14}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="dr-cartpanel__suggestions" />
         <div className="dr-cartpanel__foot">
@@ -94,7 +94,7 @@ export function Commerce() {
         </div>
         <div className="dr-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="dr-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="dr-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="dr-line__remove">{copy.shell_15}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -102,20 +102,20 @@ export function Commerce() {
       <div className="dr-added">
         <KitSlot kind="added" name="photo" as="img" className="dr-added__photo" />
         <div className="dr-added__copy">
-          <p className="dr-added__kicker">Agregado</p>
+          <p className="dr-added__kicker">{copy.shell_16}</p>
           <KitSlot kind="added" name="message" as="p" className="dr-added__message" />
         </div>
-        <button type="button" className="dr-added__open" data-cart-open>Ver carrito</button>
+        <button type="button" className="dr-added__open" data-cart-open>{copy.shell_17}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="dr-review">
         <div className="dr-review__col dr-review__col--summary">
-          <h2 className="dr-review__heading">Tu pedido</h2>
+          <h2 className="dr-review__heading">{copy.shell_18}</h2>
           <KitSlot kind="review" name="summary" className="dr-review__summary" />
         </div>
         <div className="dr-review__col">
-          <h2 className="dr-review__heading">Entrega y pago</h2>
+          <h2 className="dr-review__heading">{copy.shell_19}</h2>
           <KitSlot kind="review" name="fields" className="dr-review__fields" />
         </div>
       </div>

@@ -1,25 +1,25 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { photos } from './store-data';
+import { photos, copy } from './store-data';
 
 const categories = [
-  { slot: 'audio', name: 'Audio', note: 'Audífonos y parlantes', alt: 'Audífonos negros de diadema sobre fondo gris claro' },
-  { slot: 'carga', name: 'Carga', note: 'Cargadores y baterías', alt: 'Batería portátil blanca junto a un cargador inalámbrico con un celular' },
-  { slot: 'hogar', name: 'Hogar inteligente', note: 'Enchufes, luces y parlantes', alt: 'Parlante inteligente blanco junto a un interruptor inteligente' },
-  { slot: 'accesorios', name: 'Accesorios', note: 'Cables, soportes y hubs', alt: 'Cable trenzado, soporte, hub USB-C y un reloj inteligente vistos desde arriba' },
+  { slot: 'audio', name: copy.home_1, note: copy.home_2, alt: copy.home_3 },
+  { slot: 'carga', name: copy.home_4, note: copy.home_5, alt: copy.home_6 },
+  { slot: 'hogar', name: copy.home_7, note: copy.home_8, alt: copy.home_9 },
+  { slot: 'accesorios', name: copy.home_10, note: copy.home_11, alt: copy.home_12 },
 ];
 
 const earbuds = [
-  { name: 'Pulso Lite', note: 'Para el día a día' },
-  { name: 'Pulso', note: 'El más elegido', pick: true },
-  { name: 'Pulso Pro', note: 'Para viajar' },
+  { name: copy.home_13, note: copy.home_14 },
+  { name: copy.home_15, note: copy.home_16, pick: true },
+  { name: copy.home_17, note: copy.home_18 },
 ];
 
 const specs = [
-  { label: 'Batería con estuche', values: ['20 h', '30 h', '36 h'] },
-  { label: 'Cancelación de ruido', values: ['No', 'Básica', 'Activa adaptativa'] },
-  { label: 'Resistencia al agua', values: ['IPX4', 'IPX5', 'IP55'] },
-  { label: 'Precio', values: ['Bs 189', 'Bs 349', 'Bs 590'] },
+  { label: copy.home_19, values: ['20 h', '30 h', '36 h'] },
+  { label: copy.home_20, values: [copy.home_21, copy.home_22, copy.home_23] },
+  { label: copy.home_24, values: [copy.home_25, copy.home_26, copy.home_27] },
+  { label: copy.home_28, values: [copy.home_29, copy.home_30, copy.home_31] },
 ];
 
 function ShieldIcon() {
@@ -35,17 +35,17 @@ function ReceiptIcon() {
 }
 
 const promises = [
-  { icon: <ShieldIcon />, title: 'Garantía de 1 año', text: 'Si falla, lo cambiamos o lo reparamos sin vueltas.' },
-  { icon: <ChatIcon />, title: 'Soporte por WhatsApp', text: 'Te ayudamos a configurarlo, de lunes a sábado.' },
-  { icon: <ReceiptIcon />, title: 'Factura con NIT', text: 'Pídela al pagar y te llega junto con tu pedido.' },
+  { icon: <ShieldIcon />, title: copy.home_32, text: copy.home_33 },
+  { icon: <ChatIcon />, title: copy.home_34, text: copy.home_35 },
+  { icon: <ReceiptIcon />, title: copy.home_36, text: copy.home_37 },
 ];
 
 const questions = [
-  { q: '¿Hacen envíos a toda Bolivia?', a: 'Sí. Enviamos a las nueve capitales de departamento y a otras ciudades por courier. Desde Bs 500 el envío es gratis.' },
-  { q: '¿Los cargadores sirven con los enchufes de Bolivia?', a: 'Sí. Todos nuestros cargadores y enchufes inteligentes funcionan con 220 V y con las tomas de dos patas redondas que se usan en casa.' },
-  { q: '¿Cómo funciona la garantía?', a: 'Todos los productos tienen un año de garantía contra fallas de fábrica. Escríbenos por WhatsApp con tu número de pedido y lo resolvemos.' },
-  { q: '¿Puedo pedir factura con NIT?', a: 'Claro. Al pagar, deja tu NIT o CI y la razón social, y te enviamos la factura con tu pedido.' },
-  { q: '¿Cómo puedo pagar?', a: 'Con QR desde cualquier banco o con tarjeta de débito o crédito. El pago es seguro y se confirma al instante.' },
+  { q: copy.home_38, a: copy.home_39 },
+  { q: copy.home_40, a: copy.home_41 },
+  { q: copy.home_42, a: copy.home_43 },
+  { q: copy.home_44, a: copy.home_45 },
+  { q: copy.home_46, a: copy.home_47 },
 ];
 
 export default function Home() {
@@ -54,20 +54,20 @@ export default function Home() {
       <section id="conectado" className="ec-hero" aria-labelledby="ec-hero-title">
         <div className="ec-hero__panel">
           <div className="ec-hero__product">
-            <img src={photos.hero} alt="Cámara compacta negra y plateada sobre fondo gris claro" />
+            <img src={photos.hero} alt={copy.home_48} />
           </div>
-          <p className="ec-chip">Audio · Carga · Hogar inteligente</p>
-          <h1 id="ec-hero-title" className="ec-hero__title">Tecnología útil. Precios justos.</h1>
-          <p className="ec-hero__lead">Audífonos, cargadores y gadgets para la casa, elegidos por lo bien que funcionan.</p>
-          <a className="ec-btn ec-btn--purple" href="#mas-vendidos">Ver lo más vendido</a>
+          <p className="ec-chip">{copy.home_49}</p>
+          <h1 id="ec-hero-title" className="ec-hero__title">{copy.home_50}</h1>
+          <p className="ec-hero__lead">{copy.home_51}</p>
+          <a className="ec-btn ec-btn--purple" href="#mas-vendidos">{copy.home_52}</a>
         </div>
       </section>
 
       <section id="mas-vendidos" className="ec-shop" aria-labelledby="ec-shop-title">
         <div className="ec-panel">
           <Reveal className="ec-head">
-            <h2 id="ec-shop-title" className="ec-title">Lo más vendido</h2>
-            <p className="ec-head__aside">Lo que más se llevan esta semana, listo para enviar.</p>
+            <h2 id="ec-shop-title" className="ec-title">{copy.home_53}</h2>
+            <p className="ec-head__aside">{copy.home_54}</p>
           </Reveal>
           <template data-pagosya-product-template>
             <article className="ec-card">
@@ -85,7 +85,7 @@ export default function Home() {
 
       <section id="categorias" className="ec-cats" aria-labelledby="ec-cats-title">
         <Reveal className="ec-head">
-          <h2 id="ec-cats-title" className="ec-title">Compra por categoría</h2>
+          <h2 id="ec-cats-title" className="ec-title">{copy.home_55}</h2>
         </Reveal>
         <ul className="ec-cats__grid">
           {categories.map((cat, index) => <li key={cat.slot}>
@@ -103,14 +103,14 @@ export default function Home() {
       <section id="comparar" className="ec-compare" aria-labelledby="ec-compare-title">
         <div className="ec-panel ec-compare__panel">
           <Reveal className="ec-compare__intro">
-            <p className="ec-kicker">Audio</p>
-            <h2 id="ec-compare-title" className="ec-title">¿Qué audífonos son para ti?</h2>
-            <p className="ec-compare__text">Tres modelos inalámbricos, lado a lado. Todos traen estuche de carga con USB-C y un año de garantía.</p>
-            <a className="ec-btn" href="#mas-vendidos">Ver audífonos</a>
+            <p className="ec-kicker">{copy.home_56}</p>
+            <h2 id="ec-compare-title" className="ec-title">{copy.home_57}</h2>
+            <p className="ec-compare__text">{copy.home_58}</p>
+            <a className="ec-btn" href="#mas-vendidos">{copy.home_59}</a>
           </Reveal>
           <Reveal className="ec-table">
             <table>
-              <caption className="ec-sr">Comparación de tres audífonos inalámbricos</caption>
+              <caption className="ec-sr">{copy.home_60}</caption>
               <thead>
                 <tr>
                   <td />
@@ -132,7 +132,7 @@ export default function Home() {
       </section>
 
       <section id="soporte" className="ec-support" aria-labelledby="ec-support-title">
-        <h2 id="ec-support-title" className="ec-sr">Compra con respaldo</h2>
+        <h2 id="ec-support-title" className="ec-sr">{copy.home_61}</h2>
         <ul className="ec-support__list">
           {promises.map((promise, index) => <li key={promise.title}>
             <Reveal delay={index * 50} className="ec-promise">
@@ -145,21 +145,21 @@ export default function Home() {
 
       <section id="escritorio" className="ec-desk" aria-labelledby="ec-desk-title">
         <div className="ec-desk__photo">
-          <Parallax strength={70} mobileStrength={26} className="ec-drift"><img src={photos.escritorio} alt="Escritorio de madera junto a la ventana con una laptop, teclado, audífonos y un cargador inalámbrico" /></Parallax>
+          <Parallax strength={70} mobileStrength={26} className="ec-drift"><img src={photos.escritorio} alt={copy.home_62} /></Parallax>
         </div>
         <Reveal className="ec-desk__card">
-          <p className="ec-kicker">Novedades</p>
-          <h2 id="ec-desk-title" className="ec-desk__title">Un escritorio que trabaja contigo</h2>
-          <p className="ec-desk__text">Carga inalámbrica, un hub para todo y audífonos que cortan el ruido. Menos cables, más espacio.</p>
-          <a className="ec-btn ec-btn--purple" href="#categorias">Armar mi escritorio</a>
+          <p className="ec-kicker">{copy.home_63}</p>
+          <h2 id="ec-desk-title" className="ec-desk__title">{copy.home_64}</h2>
+          <p className="ec-desk__text">{copy.home_65}</p>
+          <a className="ec-btn ec-btn--purple" href="#categorias">{copy.home_66}</a>
         </Reveal>
       </section>
 
       <section id="preguntas" className="ec-faq" aria-labelledby="ec-faq-title">
         <div className="ec-panel ec-faq__panel">
           <Reveal className="ec-faq__head">
-            <h2 id="ec-faq-title" className="ec-title">Preguntas frecuentes</h2>
-            <p className="ec-head__aside">¿Tienes otra duda? Escríbenos por WhatsApp y te respondemos el mismo día.</p>
+            <h2 id="ec-faq-title" className="ec-title">{copy.home_67}</h2>
+            <p className="ec-head__aside">{copy.home_68}</p>
           </Reveal>
           <div className="ec-faq__list">
             {questions.map(item => <details key={item.q} className="ec-faq__item">

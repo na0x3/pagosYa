@@ -3,16 +3,469 @@
   "name": "Retoño",
   "category": "ninos",
   "description": "Ropa infantil: tira de tres fotos, tarjeta blanca flotante y nombre en letra cursiva.",
-  "tags": ["ropa infantil", "algodón", "colorido", "juego"],
+  "tags": [
+    "ropa infantil",
+    "algodón",
+    "colorido",
+    "juego"
+  ],
   "sitePurpose": "shop",
   "order": -279,
-  "dna": { "display": "bricolage", "text": "nunito", "case": "none", "radius": "round", "border": "none", "button": "pill", "hover": "lift", "press": "squash", "motion": "playful", "cart": "drawer", "added": "bubble", "card": "tilt", "frame": "rounded" },
+  "dna": {
+    "display": "bricolage",
+    "text": "nunito",
+    "case": "none",
+    "radius": "round",
+    "border": "none",
+    "button": "pill",
+    "hover": "lift",
+    "press": "squash",
+    "motion": "playful",
+    "cart": "drawer",
+    "added": "bubble",
+    "card": "tilt",
+    "frame": "rounded"
+  },
   "photos": [
-    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "lifestyle", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "lifestyle", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "tela", "role": "product", "demo": "tela.jpg" },
-    { "slot": "parque", "role": "lifestyle", "demo": "parque.jpg" }
+    {
+      "slot": "p1",
+      "role": "lifestyle",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "lifestyle",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "lifestyle",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "tela",
+      "role": "product",
+      "demo": "tela.jpg"
+    },
+    {
+      "slot": "parque",
+      "role": "lifestyle",
+      "demo": "parque.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "name",
+      "default": "Bebé",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "De 0 a 24 meses, con botones suaves.",
+      "max": 58
+    },
+    {
+      "key": "home_3",
+      "role": "name",
+      "default": "Niños",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "De 2 a 8 años, hechos para correr.",
+      "max": 54
+    },
+    {
+      "key": "home_5",
+      "role": "name",
+      "default": "Grandes",
+      "max": 12
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "De 9 a 14 años, con más estilo.",
+      "max": 50
+    },
+    {
+      "key": "home_7",
+      "role": "title",
+      "default": "Algodón peinado",
+      "max": 24
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Más suave desde el primer lavado.",
+      "max": 53
+    },
+    {
+      "key": "home_9",
+      "role": "title",
+      "default": "Tintes sin químicos agresivos",
+      "max": 46
+    },
+    {
+      "key": "home_10",
+      "role": "body",
+      "default": "Cuidamos la piel sensible de los niños.",
+      "max": 62
+    },
+    {
+      "key": "home_11",
+      "role": "title",
+      "default": "Costuras planas",
+      "max": 24
+    },
+    {
+      "key": "home_12",
+      "role": "body",
+      "default": "Sin etiquetas que rocen ni molesten.",
+      "max": 58
+    },
+    {
+      "key": "home_13",
+      "role": "name",
+      "default": "Look de parque",
+      "max": 22
+    },
+    {
+      "key": "home_14",
+      "role": "body",
+      "default": "Camiseta estampada, short y gorra para jugar todo el día.",
+      "max": 91
+    },
+    {
+      "key": "home_15",
+      "role": "name",
+      "default": "Look de domingo",
+      "max": 24
+    },
+    {
+      "key": "home_16",
+      "role": "body",
+      "default": "Camisa suave y pantalón cómodo para salir en familia.",
+      "max": 85
+    },
+    {
+      "key": "home_17",
+      "role": "quote",
+      "default": "La tela es suave y después de muchos lavados sigue igual.",
+      "max": 91
+    },
+    {
+      "key": "home_18",
+      "role": "name",
+      "default": "Paola, La Paz",
+      "max": 21
+    },
+    {
+      "key": "home_19",
+      "role": "quote",
+      "default": "A mi hijo le encantan los estampados. No quiere quitarse la camiseta.",
+      "max": 110
+    },
+    {
+      "key": "home_20",
+      "role": "name",
+      "default": "Rodrigo, Tarija",
+      "max": 24
+    },
+    {
+      "key": "home_21",
+      "role": "quote",
+      "default": "Las tallas son fieles y el envío llegó rapidísimo.",
+      "max": 80
+    },
+    {
+      "key": "home_22",
+      "role": "name",
+      "default": "Ximena, Cochabamba",
+      "max": 29
+    },
+    {
+      "key": "home_23",
+      "role": "headline",
+      "default": "Ropa infantil",
+      "max": 21
+    },
+    {
+      "key": "home_24",
+      "role": "alt",
+      "default": "Niño visto de espaldas con una camiseta verde estampada de nubes",
+      "max": 102
+    },
+    {
+      "key": "home_25",
+      "role": "alt",
+      "default": "Niño de pelo rizado sentado en un taburete con un conjunto verde",
+      "max": 102
+    },
+    {
+      "key": "home_26",
+      "role": "alt",
+      "default": "Niño sonriendo con lentes redondos amarillos y una gorra verde",
+      "max": 99
+    },
+    {
+      "key": "home_27",
+      "role": "title",
+      "default": "Hecho para jugar",
+      "max": 26
+    },
+    {
+      "key": "home_28",
+      "role": "body",
+      "default": "Ropa de algodón suave, colores alegres y costuras pensadas para correr, saltar y crecer.",
+      "max": 141
+    },
+    {
+      "key": "home_29",
+      "role": "cta",
+      "default": "Ver ropa",
+      "max": 13
+    },
+    {
+      "key": "home_30",
+      "role": "title",
+      "default": "Ropa para jugar",
+      "max": 24
+    },
+    {
+      "key": "home_31",
+      "role": "body",
+      "default": "Novedades de la temporada, listas para estrenar.",
+      "max": 77
+    },
+    {
+      "key": "home_32",
+      "role": "title",
+      "default": "Compra por edad",
+      "max": 24
+    },
+    {
+      "key": "home_33",
+      "role": "alt",
+      "default": "Primer plano de tela de algodón estampada con pequeñas nubes verdes",
+      "max": 107
+    },
+    {
+      "key": "home_34",
+      "role": "title",
+      "default": "Algodón que se siente bien",
+      "max": 42
+    },
+    {
+      "key": "home_35",
+      "role": "title",
+      "default": "Looks para copiar",
+      "max": 27
+    },
+    {
+      "key": "home_36",
+      "role": "alt",
+      "default": "Ropa infantil doblada en colores vivos sobre una superficie blanca",
+      "max": 106
+    },
+    {
+      "key": "home_37",
+      "role": "alt",
+      "default": "Niños jugando en un parque soleado",
+      "max": 54
+    },
+    {
+      "key": "home_38",
+      "role": "title",
+      "default": "Papás contentos",
+      "max": 24
+    },
+    {
+      "key": "home_39",
+      "role": "title",
+      "default": "Novedades y ofertas",
+      "max": 30
+    },
+    {
+      "key": "home_40",
+      "role": "body",
+      "default": "Colecciones nuevas y descuentos, en tu correo.",
+      "max": 74
+    },
+    {
+      "key": "home_41",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_42",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Nosotros",
+      "max": 13
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Bebé",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Niños",
+      "max": 12
+    },
+    {
+      "key": "shell_5",
+      "role": "label",
+      "default": "Grandes",
+      "max": 12
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Envío gratis en pedidos desde Bs 350",
+      "max": 58
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Ropa de algodón para crecer y jugar.",
+      "max": 58
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_9",
+      "role": "cta",
+      "default": "Ropa",
+      "max": 12
+    },
+    {
+      "key": "shell_10",
+      "role": "cta",
+      "default": "Edades",
+      "max": 12
+    },
+    {
+      "key": "shell_11",
+      "role": "cta",
+      "default": "Looks",
+      "max": 12
+    },
+    {
+      "key": "shell_12",
+      "role": "body",
+      "default": "Tu compra",
+      "max": 14
+    },
+    {
+      "key": "shell_13",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_14",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_16",
+      "role": "title",
+      "default": "Tu bolsa",
+      "max": 13
+    },
+    {
+      "key": "shell_17",
+      "role": "body",
+      "default": "Tu bolsa está vacía",
+      "max": 30
+    },
+    {
+      "key": "shell_18",
+      "role": "body",
+      "default": "Elige algo divertido y aparecerá aquí.",
+      "max": 61
+    },
+    {
+      "key": "shell_19",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_20",
+      "role": "body",
+      "default": "¡Listo!",
+      "max": 12
+    },
+    {
+      "key": "shell_21",
+      "role": "cta",
+      "default": "Ver bolsa",
+      "max": 14
+    },
+    {
+      "key": "shell_22",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_23",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "question",
+      "default": "Tela, tallas y cuidado",
+      "max": 35
+    },
+    {
+      "key": "product_2",
+      "role": "question",
+      "default": "Envíos",
+      "max": 12
+    },
+    {
+      "key": "product_3",
+      "role": "body",
+      "default": "Enviamos en 2 a 5 días hábiles. Cambios de talla en 7 días.",
+      "max": 94
+    }
   ]
 }

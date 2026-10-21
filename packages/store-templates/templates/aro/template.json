@@ -57,5 +57,211 @@
       "role": "lifestyle",
       "demo": "caja.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "question",
+      "default": "¿De qué están hechas?",
+      "max": 34
+    },
+    {
+      "key": "home_2",
+      "role": "answer",
+      "default": "Oro de 18k o plata 925 con baño de oro. Cada producto indica su material.",
+      "max": 117
+    },
+    {
+      "key": "home_3",
+      "role": "question",
+      "default": "¿Se oscurecen?",
+      "max": 22
+    },
+    {
+      "key": "home_4",
+      "role": "answer",
+      "default": "No con el uso diario. Guárdalas secas y lejos de perfumes para que brillen siempre.",
+      "max": 133
+    },
+    {
+      "key": "home_5",
+      "role": "question",
+      "default": "¿Viene lista para regalar?",
+      "max": 42
+    },
+    {
+      "key": "home_6",
+      "role": "answer",
+      "default": "Sí, todas las joyas llegan en su caja con una bolsita de tela.",
+      "max": 99
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Joyas finas",
+      "max": 18
+    },
+    {
+      "key": "home_8",
+      "role": "headline",
+      "default": "Para usar todos los días, ",
+      "max": 42
+    },
+    {
+      "key": "home_9",
+      "role": "label",
+      "default": "no para guardar.",
+      "max": 26
+    },
+    {
+      "key": "home_10",
+      "role": "body",
+      "default": "Aros, collares y anillos en oro y plata, pensados para combinarse entre sí.",
+      "max": 120
+    },
+    {
+      "key": "home_11",
+      "role": "cta",
+      "default": "Ver las joyas",
+      "max": 21
+    },
+    {
+      "key": "home_12",
+      "role": "alt",
+      "default": "Aros",
+      "max": 12
+    },
+    {
+      "key": "home_13",
+      "role": "label",
+      "default": "Aros",
+      "max": 12
+    },
+    {
+      "key": "home_14",
+      "role": "alt",
+      "default": "Collares",
+      "max": 13
+    },
+    {
+      "key": "home_15",
+      "role": "label",
+      "default": "Collares",
+      "max": 13
+    },
+    {
+      "key": "home_16",
+      "role": "alt",
+      "default": "Anillos",
+      "max": 12
+    },
+    {
+      "key": "home_17",
+      "role": "label",
+      "default": "Anillos",
+      "max": 12
+    },
+    {
+      "key": "home_18",
+      "role": "title",
+      "default": "Las más elegidas",
+      "max": 26
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "Combínalas",
+      "max": 16
+    },
+    {
+      "key": "home_20",
+      "role": "body",
+      "default": "Una sola joya dice algo. Tres cuentan tu historia.",
+      "max": 80
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "Regalos",
+      "max": 12
+    },
+    {
+      "key": "home_22",
+      "role": "title",
+      "default": "Lista para regalar",
+      "max": 29
+    },
+    {
+      "key": "home_23",
+      "role": "body",
+      "default": "Cada joya llega en su caja, con una bolsita de tela y una tarjeta con tu mensaje.",
+      "max": 130
+    },
+    {
+      "key": "home_24",
+      "role": "cta",
+      "default": "Elegir un regalo",
+      "max": 26
+    },
+    {
+      "key": "home_25",
+      "role": "alt",
+      "default": "Caja de regalo con joyas",
+      "max": 38
+    },
+    {
+      "key": "home_26",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Joyas",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Regalos",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Ayuda",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Bolsa ",
+      "max": 12
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Joyas finas para todos los días.",
+      "max": 51
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta",
+      "max": 48
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Empaque de regalo en cada pedido",
+      "max": 51
+    }
   ]
 }

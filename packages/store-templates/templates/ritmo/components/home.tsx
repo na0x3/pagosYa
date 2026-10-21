@@ -1,17 +1,17 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { store, photos } from './store-data';
+import { store, photos, copy } from './store-data';
 
-const perks = ['Para antes o después de entrenar', 'Sabores que dan ganas', 'Fácil de preparar'];
+const perks = [copy.home_1, copy.home_2, copy.home_3];
 const steps = [
-  { title: 'Mezcla', body: 'Una medida con agua o leche en tu shaker.' },
-  { title: 'Agita', body: 'Diez segundos y listo, sin grumos.' },
-  { title: 'Entrena', body: 'Tómalo en tu rutina, cuando te sirva a ti.' },
+  { title: copy.home_4, body: copy.home_5 },
+  { title: copy.home_6, body: copy.home_7 },
+  { title: copy.home_8, body: copy.home_9 },
 ];
 const faqs = [
-  { q: '¿Cuándo lo tomo?', a: 'Cada producto indica su modo de uso en la ficha. Si tienes dudas, consulta con tu profesional de salud.' },
-  { q: '¿Cuánto tarda el envío?', a: 'Despachamos en 24 a 48 horas hábiles y te avisamos cuando sale.' },
-  { q: '¿Cómo pago?', a: 'Con QR de cualquier banco o con tarjeta.' },
+  { q: copy.home_10, a: copy.home_11 },
+  { q: copy.home_12, a: copy.home_13 },
+  { q: copy.home_14, a: copy.home_15 },
 ];
 
 export default function Home() {
@@ -19,15 +19,15 @@ export default function Home() {
     <main id="contenido">
       <section id="inicio" className="ri-hero">
         <div className="ri-hero__copy">
-          <h1 className="ri-display">Entrena<br /><span>más</span> fuerte</h1>
+          <h1 className="ri-display">{copy.home_16}<br /><span>{copy.home_17}</span> fuerte</h1>
           <ul className="ri-perks">{perks.map(perk => <li key={perk}>{perk}</li>)}</ul>
-          <a className="ri-btn" href="#productos">Comprar ahora</a>
+          <a className="ri-btn" href="#productos">{copy.home_18}</a>
         </div>
         <div className="ri-hero__product"><Parallax strength={150} mobileStrength={50} className="ri-hero__float"><img src={photos.hero} alt={`Producto de ${store.name}`} /></Parallax></div>
       </section>
 
       <section id="productos" className="ri-shop" aria-labelledby="ri-shop-title">
-        <Reveal><h2 id="ri-shop-title" className="ri-title">Elige tu sabor</h2></Reveal>
+        <Reveal><h2 id="ri-shop-title" className="ri-title">{copy.home_19}</h2></Reveal>
         <template data-pagosya-product-template>
           <article className="ri-card">
             <a className="ri-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
@@ -41,15 +41,15 @@ export default function Home() {
       </section>
 
       <section id="uso" className="ri-use" aria-labelledby="ri-use-title">
-        <Reveal><img src={photos.accion} alt="Entrenamiento" /></Reveal>
+        <Reveal><img src={photos.accion} alt={copy.home_20} /></Reveal>
         <Reveal delay={80}>
-          <h2 id="ri-use-title" className="ri-title ri-title--left">Así de simple</h2>
+          <h2 id="ri-use-title" className="ri-title ri-title--left">{copy.home_21}</h2>
           <ol>{steps.map((step, index) => <li key={step.title}><span>{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
         </Reveal>
       </section>
 
       <section id="preguntas" className="ri-faq" aria-labelledby="ri-faq-title">
-        <Reveal><h2 id="ri-faq-title" className="ri-title">Preguntas</h2></Reveal>
+        <Reveal><h2 id="ri-faq-title" className="ri-title">{copy.home_22}</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
     </main>

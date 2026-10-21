@@ -2,6 +2,7 @@
   "id": "granja",
   "name": "Granja",
   "category": "comida",
+  "curated": true,
   "description": "Granja y productos del campo: fotos a todo lo ancho, nombre gigante y reparto por días de la semana.",
   "tags": [
     "granja",
@@ -66,6 +67,482 @@
       "slot": "granjero",
       "role": "lifestyle",
       "demo": "granjero.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "item",
+      "default": "Pastoreo libre",
+      "max": 22
+    },
+    {
+      "key": "home_2",
+      "role": "item",
+      "default": "Sin químicos",
+      "max": 19
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Gallinas libres",
+      "max": 24
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Duermen en el gallinero y pasan el día afuera, escarbando entre el pasto y el sol.",
+      "max": 131
+    },
+    {
+      "key": "home_5",
+      "role": "alt",
+      "default": "Gallinas coloradas picoteando el pasto frente a un gallinero de madera",
+      "max": 112
+    },
+    {
+      "key": "home_6",
+      "role": "title",
+      "default": "Pasto que rota",
+      "max": 22
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Movemos el corral cada semana para que el potrero descanse y siempre haya trébol fresco.",
+      "max": 141
+    },
+    {
+      "key": "home_8",
+      "role": "alt",
+      "default": "Pasto y trébol con rocío de la mañana, con gallinas al fondo",
+      "max": 96
+    },
+    {
+      "key": "home_9",
+      "role": "title",
+      "default": "Recolección a mano",
+      "max": 29
+    },
+    {
+      "key": "home_10",
+      "role": "body",
+      "default": "Juntamos los huevos cada mañana, uno por uno, y los revisamos antes de ponerlos en la canasta.",
+      "max": 150
+    },
+    {
+      "key": "home_11",
+      "role": "alt",
+      "default": "Manos recogiendo huevos del nido de paja y poniéndolos en una canasta de mimbre",
+      "max": 126
+    },
+    {
+      "key": "home_12",
+      "role": "body",
+      "default": "Martes",
+      "max": 12
+    },
+    {
+      "key": "home_13",
+      "role": "item",
+      "default": "Cercado",
+      "max": 12
+    },
+    {
+      "key": "home_14",
+      "role": "item",
+      "default": "Sacaba",
+      "max": 12
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Pide hasta el lunes a las 18:00",
+      "max": 50
+    },
+    {
+      "key": "home_16",
+      "role": "body",
+      "default": "Viernes",
+      "max": 12
+    },
+    {
+      "key": "home_17",
+      "role": "item",
+      "default": "Cercado",
+      "max": 12
+    },
+    {
+      "key": "home_18",
+      "role": "item",
+      "default": "Quillacollo",
+      "max": 18
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "Pide hasta el jueves a las 18:00",
+      "max": 51
+    },
+    {
+      "key": "home_20",
+      "role": "question",
+      "default": "¿Las gallinas son libres de verdad?",
+      "max": 56
+    },
+    {
+      "key": "home_21",
+      "role": "answer",
+      "default": "Sí. Salen al potrero todos los días desde que amanece y vuelven al gallinero solas al atardecer. Puedes comprobarlo cualquier sábado.",
+      "max": 213
+    },
+    {
+      "key": "home_22",
+      "role": "question",
+      "default": "¿Cuánto duran los huevos frescos?",
+      "max": 53
+    },
+    {
+      "key": "home_23",
+      "role": "answer",
+      "default": "Hasta cuatro semanas en un lugar fresco, o más en el refrigerador. Los recogemos la víspera de cada reparto, así que llegan con días de ventaja.",
+      "max": 230
+    },
+    {
+      "key": "home_24",
+      "role": "question",
+      "default": "¿Cómo pago mi pedido?",
+      "max": 34
+    },
+    {
+      "key": "home_25",
+      "role": "answer",
+      "default": "Al confirmar la canasta pagas con QR o con tarjeta, de forma segura. Te avisamos cuando el pedido sale de la granja.",
+      "max": 186
+    },
+    {
+      "key": "home_26",
+      "role": "question",
+      "default": "¿Puedo cambiar mi día de reparto?",
+      "max": 53
+    },
+    {
+      "key": "home_27",
+      "role": "answer",
+      "default": "Claro. Escríbenos antes del cierre del pedido y lo pasamos al martes o al viernes, según tu zona.",
+      "max": 155
+    },
+    {
+      "key": "home_28",
+      "role": "alt",
+      "default": "Gallinas sueltas en un potrero verde y una mano con una canasta de huevos de campo",
+      "max": 131
+    },
+    {
+      "key": "home_29",
+      "role": "body",
+      "default": "Granja familiar",
+      "max": 24
+    },
+    {
+      "key": "home_30",
+      "role": "body",
+      "default": "Huevos, queso fresco y miel del campo, del potrero a tu mesa dos veces por semana.",
+      "max": 131
+    },
+    {
+      "key": "home_31",
+      "role": "cta",
+      "default": "Hacer mi pedido",
+      "max": 24
+    },
+    {
+      "key": "home_32",
+      "role": "body",
+      "default": "Recién salido de la granja",
+      "max": 42
+    },
+    {
+      "key": "home_33",
+      "role": "title",
+      "default": "La canasta",
+      "max": 16
+    },
+    {
+      "key": "home_34",
+      "role": "body",
+      "default": "Todo se recoge la víspera del reparto. Lo que ves aquí es lo que hay esta semana.",
+      "max": 130
+    },
+    {
+      "key": "home_35",
+      "role": "body",
+      "default": "Cómo criamos",
+      "max": 19
+    },
+    {
+      "key": "home_36",
+      "role": "title",
+      "default": "Del potrero a tu mesa",
+      "max": 34
+    },
+    {
+      "key": "home_37",
+      "role": "body",
+      "default": "Dos días por semana",
+      "max": 30
+    },
+    {
+      "key": "home_38",
+      "role": "title",
+      "default": "Reparto a domicilio",
+      "max": 30
+    },
+    {
+      "key": "home_39",
+      "role": "body",
+      "default": "Llevamos tu canasta por Cochabamba de 8:00 a 13:00. ¿Vives en otra zona? Escríbenos y coordinamos.",
+      "max": 157
+    },
+    {
+      "key": "home_40",
+      "role": "alt",
+      "default": "Granjero con botas de goma cruzando el potrero al amanecer con un balde, entre gallinas",
+      "max": 139
+    },
+    {
+      "key": "home_41",
+      "role": "body",
+      "default": "Puertas abiertas",
+      "max": 26
+    },
+    {
+      "key": "home_42",
+      "role": "title",
+      "default": "Visítanos los sábados",
+      "max": 34
+    },
+    {
+      "key": "home_43",
+      "role": "body",
+      "default": "Abrimos la tranquera cada sábado por la mañana. Recoge tu canasta, conoce a las gallinas y llévate el queso del día.",
+      "max": 186
+    },
+    {
+      "key": "home_44",
+      "role": "title",
+      "default": "Horario",
+      "max": 12
+    },
+    {
+      "key": "home_45",
+      "role": "body",
+      "default": "Sábados de 9:00 a 13:00",
+      "max": 37
+    },
+    {
+      "key": "home_46",
+      "role": "title",
+      "default": "Recojo",
+      "max": 12
+    },
+    {
+      "key": "home_47",
+      "role": "body",
+      "default": "Tu pedido listo en la entrada, sin costo",
+      "max": 64
+    },
+    {
+      "key": "home_48",
+      "role": "title",
+      "default": "Niños",
+      "max": 12
+    },
+    {
+      "key": "home_49",
+      "role": "body",
+      "default": "Bienvenidos, con permiso de las gallinas",
+      "max": 64
+    },
+    {
+      "key": "home_50",
+      "role": "cta",
+      "default": "Pedir para recoger",
+      "max": 29
+    },
+    {
+      "key": "home_51",
+      "role": "body",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "home_52",
+      "role": "title",
+      "default": "Lo que más nos preguntan",
+      "max": 38
+    },
+    {
+      "key": "home_53",
+      "role": "body",
+      "default": "¿Otra duda? En ",
+      "max": 24
+    },
+    {
+      "key": "home_54",
+      "role": "body",
+      "default": " respondemos cada mensaje antes del siguiente reparto.",
+      "max": 86
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Canasta",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Cómo criamos",
+      "max": 19
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Reparto",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Visítanos",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_6",
+      "role": "label",
+      "default": "Menú",
+      "max": 12
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "label",
+      "default": "Canasta",
+      "max": 12
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Huevos de gallinas libres, queso fresco y miel del campo, recogidos la víspera de cada reparto.",
+      "max": 152
+    },
+    {
+      "key": "shell_10",
+      "role": "body",
+      "default": "La granja",
+      "max": 14
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Reparto",
+      "max": 12
+    },
+    {
+      "key": "shell_12",
+      "role": "body",
+      "default": "Martes y viernes",
+      "max": 26
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Cercado, Sacaba y Quillacollo",
+      "max": 46
+    },
+    {
+      "key": "shell_14",
+      "role": "cta",
+      "default": "Ver mi canasta",
+      "max": 22
+    },
+    {
+      "key": "shell_15",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta",
+      "max": 48
+    },
+    {
+      "key": "shell_17",
+      "role": "title",
+      "default": "Tu canasta",
+      "max": 16
+    },
+    {
+      "key": "shell_18",
+      "role": "cta",
+      "default": "Cerrar",
+      "max": 12
+    },
+    {
+      "key": "shell_19",
+      "role": "body",
+      "default": "La canasta está vacía",
+      "max": 34
+    },
+    {
+      "key": "shell_20",
+      "role": "body",
+      "default": "Empieza por una docena de huevos: los recogemos la víspera del reparto.",
+      "max": 114
+    },
+    {
+      "key": "shell_21",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_22",
+      "role": "cta",
+      "default": "Ver canasta",
+      "max": 18
+    },
+    {
+      "key": "shell_23",
+      "role": "title",
+      "default": "Tu canasta",
+      "max": 16
+    },
+    {
+      "key": "shell_24",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "body",
+      "default": "Entrega y pago",
+      "max": 22
     }
   ]
 }

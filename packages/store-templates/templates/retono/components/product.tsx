@@ -1,3 +1,4 @@
+import { copy } from './store-data';
 import Shell from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
@@ -17,12 +18,12 @@ export default function Product() {
             <KitSlot kind="product" name="description" className="rt-pdp__desc" />
             <KitSlot kind="product" name="highlights" className="rt-pdp__highlights" />
             <details className="rt-pdp__toggle" open>
-              <summary>Tela, tallas y cuidado</summary>
+              <summary>{copy.product_1}</summary>
               <KitSlot kind="product" name="info" className="rt-pdp__more" />
             </details>
             <details className="rt-pdp__toggle">
-              <summary>Envíos</summary>
-              <p>Enviamos en 2 a 5 días hábiles. Cambios de talla en 7 días.</p>
+              <summary>{copy.product_2}</summary>
+              <p>{copy.product_3}</p>
               <KitSlot kind="product" name="delivery" className="rt-pdp__delivery" />
             </details>
           </div>

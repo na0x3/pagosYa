@@ -1,42 +1,42 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { store, photos } from './store-data';
+import { store, photos, copy } from './store-data';
 
 const steps = [
-  { n: '1', title: 'Elige tu obra', text: 'Cada pieza es única: cuando se vende, no vuelve a estar disponible.' },
-  { n: '2', title: 'Recibe el certificado', text: 'Firmado a mano, con número de registro y datos de la técnica.' },
-  { n: '3', title: 'Envío enmarcado', text: 'Sale protegida y, si quieres, con marco de madera a medida.' },
+  { n: '1', title: copy.home_1, text: copy.home_2 },
+  { n: '2', title: copy.home_3, text: copy.home_4 },
+  { n: '3', title: copy.home_5, text: copy.home_6 },
 ];
 
 const series = [
-  { slot: 'p2', name: 'Campo abierto', note: 'Óleo sobre lienzo', alt: 'Paisaje abstracto en ocres y verde musgo' },
-  { slot: 'p3', name: 'Limones', note: 'Óleo sobre lienzo', alt: 'Naturaleza muerta con limones en colores intensos' },
-  { slot: 'p4', name: 'Estudio azul', note: 'Óleo sobre lienzo', alt: 'Estudio de retrato en tonos azules' },
-  { slot: 'p1', name: 'Begonias', note: 'Óleo sobre lienzo', alt: 'Mujer dormida entre hojas de begonia moteadas' },
+  { slot: 'p2', name: copy.home_7, note: copy.home_8, alt: copy.home_9 },
+  { slot: 'p3', name: copy.home_10, note: copy.home_11, alt: copy.home_12 },
+  { slot: 'p4', name: copy.home_13, note: copy.home_14, alt: copy.home_15 },
+  { slot: 'p1', name: copy.home_16, note: copy.home_17, alt: copy.home_18 },
 ];
 
 const shows = [
-  { date: 'Marzo', place: 'Casa de la Cultura, La Paz', title: 'Hojas y sueños' },
-  { date: 'Junio', place: 'Galería Espacio, Cochabamba', title: 'Colores del valle' },
-  { date: 'Octubre', place: 'Centro Cultural, Santa Cruz', title: 'Retratos' },
+  { date: copy.home_19, place: copy.home_20, title: copy.home_21 },
+  { date: copy.home_22, place: copy.home_23, title: copy.home_24 },
+  { date: copy.home_25, place: copy.home_26, title: copy.home_27 },
 ];
 
 export default function Home() {
   return <Shell>
     <main id="contenido">
       <section id="portada" className="ga-hero" aria-labelledby="ga-hero-title">
-        <img className="ga-hero__art" src={photos.p1} alt="Pintura al óleo de una mujer dormida entre hojas de begonia rojas y verdes" />
+        <img className="ga-hero__art" src={photos.p1} alt={copy.home_28} />
         <div className="ga-hero__caption">
-          <h1 id="ga-hero-title" className="ga-hero__title">Arte ahora</h1>
-          <p className="ga-hero__sub">Obras contemporáneas de {store.name}</p>
-          <a className="ga-link" href="#obras">Ver obras <span aria-hidden="true">↗</span></a>
+          <h1 id="ga-hero-title" className="ga-hero__title">{copy.home_29}</h1>
+          <p className="ga-hero__sub">{copy.home_30}{store.name}</p>
+          <a className="ga-link" href="#obras">{copy.home_31}<span aria-hidden="true">↗</span></a>
         </div>
       </section>
 
       <section id="obras" className="ga-shop" aria-labelledby="ga-shop-title">
         <Reveal className="ga-head">
-          <h2 id="ga-shop-title" className="ga-title">Obras disponibles</h2>
-          <p className="ga-head__aside">Óleos originales, firmados y con certificado.</p>
+          <h2 id="ga-shop-title" className="ga-title">{copy.home_32}</h2>
+          <p className="ga-head__aside">{copy.home_33}</p>
         </Reveal>
         <template data-pagosya-product-template>
           <article className="ga-card">
@@ -52,19 +52,19 @@ export default function Home() {
 
       <section id="artista" className="ga-artist" aria-labelledby="ga-artist-title">
         <div className="ga-artist__photo">
-          <Parallax strength={60} mobileStrength={22} className="ga-drift"><img src={photos.estudio} alt="La pintora frente a su caballete en un taller lleno de luz" /></Parallax>
+          <Parallax strength={60} mobileStrength={22} className="ga-drift"><img src={photos.estudio} alt={copy.home_34} /></Parallax>
         </div>
         <Reveal className="ga-artist__copy">
-          <p className="ga-kicker">Sobre la artista</p>
-          <h2 id="ga-artist-title" className="ga-title">Pinto lo que se queda en la memoria</h2>
-          <p>Empecé pintando hojas de mi patio y terminé pintando a la gente que las mira. Trabajo al óleo, despacio, con capas finas y muchos colores que se contradicen.</p>
-          <p>Cada obra que sale de mi taller lleva una historia. Espero que la tuya empiece cuando la cuelgues en tu pared.</p>
+          <p className="ga-kicker">{copy.home_35}</p>
+          <h2 id="ga-artist-title" className="ga-title">{copy.home_36}</h2>
+          <p>{copy.home_37}</p>
+          <p>{copy.home_38}</p>
         </Reveal>
       </section>
 
       <section id="coleccionar" className="ga-collect" aria-labelledby="ga-collect-title">
         <Reveal className="ga-head">
-          <h2 id="ga-collect-title" className="ga-title">Cómo coleccionar</h2>
+          <h2 id="ga-collect-title" className="ga-title">{copy.home_39}</h2>
         </Reveal>
         <ol className="ga-steps">
           {steps.map((step, index) => <li key={step.n}>
@@ -79,7 +79,7 @@ export default function Home() {
 
       <section id="serie" className="ga-series" aria-labelledby="ga-series-title">
         <Reveal className="ga-head">
-          <h2 id="ga-series-title" className="ga-title">La serie más reciente</h2>
+          <h2 id="ga-series-title" className="ga-title">{copy.home_40}</h2>
         </Reveal>
         <ul className="ga-rail">
           {series.map(item => <li key={item.slot}>
@@ -94,7 +94,7 @@ export default function Home() {
 
       <section id="exposiciones" className="ga-shows" aria-labelledby="ga-shows-title">
         <Reveal className="ga-head">
-          <h2 id="ga-shows-title" className="ga-title">Exposiciones</h2>
+          <h2 id="ga-shows-title" className="ga-title">{copy.home_41}</h2>
         </Reveal>
         <ul className="ga-shows__list">
           {shows.map((show, index) => <li key={show.title}>
@@ -109,11 +109,11 @@ export default function Home() {
 
       <section id="boletin" className="ga-news" aria-labelledby="ga-news-title" data-pagosya-subscribe-block>
         <Reveal className="ga-news__inner">
-          <h2 id="ga-news-title" className="ga-news__title">Sé el primero en ver la próxima obra</h2>
-          <p className="ga-news__text">Te invitamos a cada inauguración y te avisamos cuando sale una serie nueva.</p>
+          <h2 id="ga-news-title" className="ga-news__title">{copy.home_42}</h2>
+          <p className="ga-news__text">{copy.home_43}</p>
           <button type="button" className="ga-news__button" data-pagosya-subscribe-open aria-label="Suscribirme con mi correo">
-            <span className="ga-news__field">Tu correo electrónico</span>
-            <span className="ga-news__submit">Suscribirme</span>
+            <span className="ga-news__field">{copy.home_44}</span>
+            <span className="ga-news__submit">{copy.home_45}</span>
           </button>
           <p role="status" className="ga-news__status" />
         </Reveal>

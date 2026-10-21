@@ -2,6 +2,7 @@
   "id": "colita",
   "name": "Colita",
   "category": "mascotas",
+  "curated": true,
   "description": "Tienda de mascotas alegre: barra flotante amarilla, perros felices desde arriba y una caja central que invita.",
   "tags": [
     "mascotas",
@@ -71,6 +72,482 @@
       "slot": "comida",
       "role": "lifestyle",
       "demo": "comida.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "name",
+      "default": "Perro",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Juguetes para morder y correr",
+      "max": 46
+    },
+    {
+      "key": "home_3",
+      "role": "alt",
+      "default": "Golden retriever sonriente sobre fondo amarillo",
+      "max": 75
+    },
+    {
+      "key": "home_4",
+      "role": "name",
+      "default": "Gato",
+      "max": 12
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "Rascadores, camas y mimos",
+      "max": 40
+    },
+    {
+      "key": "home_6",
+      "role": "alt",
+      "default": "Gato atigrado de ojos verdes sobre fondo celeste",
+      "max": 77
+    },
+    {
+      "key": "home_7",
+      "role": "name",
+      "default": "Cachorro",
+      "max": 13
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Sus primeras cosas",
+      "max": 29
+    },
+    {
+      "key": "home_9",
+      "role": "alt",
+      "default": "Cachorro beagle con las orejas caídas",
+      "max": 59
+    },
+    {
+      "key": "home_10",
+      "role": "name",
+      "default": "Senior",
+      "max": 12
+    },
+    {
+      "key": "home_11",
+      "role": "body",
+      "default": "Comodidad para los años dorados",
+      "max": 50
+    },
+    {
+      "key": "home_12",
+      "role": "alt",
+      "default": "Labrador mayor con el hocico canoso",
+      "max": 56
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Hasta 5 kg",
+      "max": 16
+    },
+    {
+      "key": "home_14",
+      "role": "body",
+      "default": "½ a 1 taza",
+      "max": 16
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Más de 30 kg",
+      "max": 19
+    },
+    {
+      "key": "home_16",
+      "role": "item",
+      "default": "Pides cuando quieras, sin compromiso",
+      "max": 58
+    },
+    {
+      "key": "home_17",
+      "role": "item",
+      "default": "Te avisamos antes de que se acabe la comida",
+      "max": 69
+    },
+    {
+      "key": "home_18",
+      "role": "item",
+      "default": "Un regalo en su cumpleaños",
+      "max": 42
+    },
+    {
+      "key": "home_19",
+      "role": "quote",
+      "default": "Toby destrozaba todos los juguetes en un día. La cuerda trenzada ya lleva tres meses y sigue entera.",
+      "max": 160
+    },
+    {
+      "key": "home_20",
+      "role": "body",
+      "default": "Mariana",
+      "max": 12
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "Toby",
+      "max": 12
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "La Paz",
+      "max": 12
+    },
+    {
+      "key": "home_23",
+      "role": "quote",
+      "default": "Mi gata no se subía a ninguna cama. Esta la eligió ella sola la primera noche y ya no la suelta.",
+      "max": 154
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Rodrigo",
+      "max": 12
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Mishi",
+      "max": 12
+    },
+    {
+      "key": "home_26",
+      "role": "body",
+      "default": "Cochabamba",
+      "max": 16
+    },
+    {
+      "key": "home_27",
+      "role": "quote",
+      "default": "Pido la comida cada mes con el club y me llega antes de que se acabe. Lola come feliz y yo ahorro.",
+      "max": 157
+    },
+    {
+      "key": "home_28",
+      "role": "body",
+      "default": "Fernanda",
+      "max": 13
+    },
+    {
+      "key": "home_29",
+      "role": "body",
+      "default": "Lola",
+      "max": 12
+    },
+    {
+      "key": "home_30",
+      "role": "body",
+      "default": "Santa Cruz",
+      "max": 16
+    },
+    {
+      "key": "home_31",
+      "role": "alt",
+      "default": "Cinco perros felices de distintas razas, vistos desde arriba sobre un piso ciruela con juguetes de colores",
+      "max": 170
+    },
+    {
+      "key": "home_32",
+      "role": "headline",
+      "default": "Colas felices empiezan aquí",
+      "max": 43
+    },
+    {
+      "key": "home_33",
+      "role": "lead",
+      "default": "Juguetes, camas y comida que tu mascota va a amar.",
+      "max": 80
+    },
+    {
+      "key": "home_34",
+      "role": "cta",
+      "default": "Comprar",
+      "max": 12
+    },
+    {
+      "key": "home_35",
+      "role": "body",
+      "default": "Compra por mascota",
+      "max": 29
+    },
+    {
+      "key": "home_36",
+      "role": "title",
+      "default": "¿Quién espera en casa?",
+      "max": 35
+    },
+    {
+      "key": "home_37",
+      "role": "body",
+      "default": "Favoritos",
+      "max": 14
+    },
+    {
+      "key": "home_38",
+      "role": "title",
+      "default": "Lo que más mueve colas",
+      "max": 35
+    },
+    {
+      "key": "home_39",
+      "role": "body",
+      "default": "Probado por perros y gatos exigentes antes de llegar a la tienda.",
+      "max": 104
+    },
+    {
+      "key": "home_40",
+      "role": "alt",
+      "default": "Perro comiendo croquetas de un plato de cerámica en la cocina",
+      "max": 98
+    },
+    {
+      "key": "home_41",
+      "role": "body",
+      "default": "Nutrición",
+      "max": 14
+    },
+    {
+      "key": "home_42",
+      "role": "title",
+      "default": "¿Cuánto le sirvo?",
+      "max": 27
+    },
+    {
+      "key": "home_43",
+      "role": "body",
+      "default": "Una guía rápida para perros adultos con croquetas secas. Reparte la porción en dos comidas y deja siempre agua fresca a mano.",
+      "max": 200
+    },
+    {
+      "key": "home_44",
+      "role": "body",
+      "default": "Guía de porciones al día",
+      "max": 38
+    },
+    {
+      "key": "home_45",
+      "role": "body",
+      "default": "Referencial: ajústala según la edad y la actividad, y consulta a tu veterinario.",
+      "max": 128
+    },
+    {
+      "key": "home_46",
+      "role": "cta",
+      "default": "Ver alimentos",
+      "max": 21
+    },
+    {
+      "key": "home_47",
+      "role": "title",
+      "default": "Club Colita: 10% en cada pedido repetido",
+      "max": 64
+    },
+    {
+      "key": "home_48",
+      "role": "cta",
+      "default": "Hacer mi primer pedido",
+      "max": 35
+    },
+    {
+      "key": "home_49",
+      "role": "body",
+      "default": "Opiniones",
+      "max": 14
+    },
+    {
+      "key": "home_50",
+      "role": "title",
+      "default": "Lo dicen sus humanos",
+      "max": 32
+    },
+    {
+      "key": "home_51",
+      "role": "title",
+      "default": "Noticias con cola",
+      "max": 27
+    },
+    {
+      "key": "home_52",
+      "role": "body",
+      "default": "Novedades, consejos de cuidado y ofertas para tu mascota, una vez al mes.",
+      "max": 117
+    },
+    {
+      "key": "home_53",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_54",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Mascotas",
+      "max": 13
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Nutrición",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Club",
+      "max": 12
+    },
+    {
+      "key": "shell_5",
+      "role": "label",
+      "default": "Carrito",
+      "max": 12
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Opiniones",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Juguetes, camas y comida para perros y gatos felices. Elegimos cada cosa como si fuera para los nuestros.",
+      "max": 168
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_10",
+      "role": "cta",
+      "default": "Opiniones",
+      "max": 14
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_12",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_13",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_14",
+      "role": "body",
+      "default": "Envíos a toda Bolivia",
+      "max": 34
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": " · Pagos seguros con QR y tarjeta",
+      "max": 53
+    },
+    {
+      "key": "shell_16",
+      "role": "title",
+      "default": "Tu carrito",
+      "max": 16
+    },
+    {
+      "key": "shell_17",
+      "role": "body",
+      "default": "Tu carrito está vacío",
+      "max": 34
+    },
+    {
+      "key": "shell_18",
+      "role": "body",
+      "default": "Un juguete nuevo siempre alegra la cola. Elige uno y aparecerá aquí.",
+      "max": 109
+    },
+    {
+      "key": "shell_19",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_20",
+      "role": "body",
+      "default": "¡Guau, listo!",
+      "max": 21
+    },
+    {
+      "key": "shell_21",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_22",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_23",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "body",
+      "default": "Para:",
+      "max": 12
+    },
+    {
+      "key": "product_2",
+      "role": "body",
+      "default": "Guía de alimentación",
+      "max": 32
     }
   ]
 }

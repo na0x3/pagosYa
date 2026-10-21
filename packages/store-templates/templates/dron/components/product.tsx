@@ -1,3 +1,4 @@
+import { copy } from './store-data';
 import Shell from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
@@ -18,8 +19,8 @@ export default function Product() {
             <KitSlot kind="product" name="highlights" className="dr-pdp__highlights" />
             <KitSlot kind="product" name="info" className="dr-pdp__specs" />
             <details className="dr-pdp__toggle">
-              <summary>Garantía y envíos</summary>
-              <p>Garantía de 12 meses y cambios en 7 días. Envío al día siguiente en las ciudades principales.</p>
+              <summary>{copy.product_1}</summary>
+              <p>{copy.product_2}</p>
               <KitSlot kind="product" name="delivery" className="dr-pdp__delivery" />
             </details>
           </div>

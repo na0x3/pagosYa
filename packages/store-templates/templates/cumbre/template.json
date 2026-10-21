@@ -67,5 +67,187 @@
       "role": "detail",
       "demo": "uso3.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Para todos los días",
+      "max": 30
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Ciudad, trabajo, universidad.",
+      "max": 46
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Para el fin de semana",
+      "max": 34
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Cerro, lago o carretera.",
+      "max": 38
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Para regalar",
+      "max": 19
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Algo que se usa de verdad.",
+      "max": 42
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿Cuánto tarda el envío?",
+      "max": 37
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Despachamos en 24 a 48 horas hábiles y te avisamos cuando sale tu pedido.",
+      "max": 117
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Puedo cambiar la talla o el modelo?",
+      "max": 58
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Sí. Escríbenos dentro de los 7 días de recibido y coordinamos el cambio.",
+      "max": 115
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Temporada nueva",
+      "max": 24
+    },
+    {
+      "key": "home_14",
+      "role": "headline",
+      "default": "Hecho para salir.",
+      "max": 27
+    },
+    {
+      "key": "home_15",
+      "role": "cta",
+      "default": "Comprar ahora",
+      "max": 21
+    },
+    {
+      "key": "home_16",
+      "role": "title",
+      "default": "Novedades de temporada",
+      "max": 35
+    },
+    {
+      "key": "home_17",
+      "role": "cta",
+      "default": "Ver todo",
+      "max": 13
+    },
+    {
+      "key": "home_18",
+      "role": "title",
+      "default": "Lo que llevas, te acompaña.",
+      "max": 43
+    },
+    {
+      "key": "home_19",
+      "role": "cta",
+      "default": "Ver la colección",
+      "max": 26
+    },
+    {
+      "key": "home_20",
+      "role": "title",
+      "default": "Para cada salida",
+      "max": 26
+    },
+    {
+      "key": "home_21",
+      "role": "title",
+      "default": "Preguntas frecuentes",
+      "max": 32
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Novedades",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Colección",
+      "max": 14
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Para cada salida",
+      "max": 26
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Envíos a todo el país · Paga con QR o tarjeta",
+      "max": 72
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Carrito ",
+      "max": 13
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Equipo para salir, volver y volver a salir.",
+      "max": 69
+    },
+    {
+      "key": "shell_8",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    }
   ]
 }

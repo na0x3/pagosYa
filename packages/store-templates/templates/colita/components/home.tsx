@@ -1,46 +1,46 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell, { Paw } from './Shell';
-import { photos } from './store-data';
+import { photos, copy } from './store-data';
 
 const pets = [
-  { slot: 'perro', name: 'Perro', note: 'Juguetes para morder y correr', alt: 'Golden retriever sonriente sobre fondo amarillo' },
-  { slot: 'gato', name: 'Gato', note: 'Rascadores, camas y mimos', alt: 'Gato atigrado de ojos verdes sobre fondo celeste' },
-  { slot: 'cachorro', name: 'Cachorro', note: 'Sus primeras cosas', alt: 'Cachorro beagle con las orejas caídas' },
-  { slot: 'senior', name: 'Senior', note: 'Comodidad para los años dorados', alt: 'Labrador mayor con el hocico canoso' },
+  { slot: 'perro', name: copy.home_1, note: copy.home_2, alt: copy.home_3 },
+  { slot: 'gato', name: copy.home_4, note: copy.home_5, alt: copy.home_6 },
+  { slot: 'cachorro', name: copy.home_7, note: copy.home_8, alt: copy.home_9 },
+  { slot: 'senior', name: copy.home_10, note: copy.home_11, alt: copy.home_12 },
 ];
 
 const portions = [
-  { weight: 'Hasta 5 kg', cups: '½ a 1 taza' },
+  { weight: copy.home_13, cups: copy.home_14 },
   { weight: '5 a 15 kg', cups: '1 a 2 tazas' },
   { weight: '15 a 30 kg', cups: '2 a 3 tazas' },
-  { weight: 'Más de 30 kg', cups: '3 a 4 tazas' },
+  { weight: copy.home_15, cups: '3 a 4 tazas' },
 ];
 
-const perks = ['Pides cuando quieras, sin compromiso', 'Te avisamos antes de que se acabe la comida', 'Un regalo en su cumpleaños'];
+const perks = [copy.home_16, copy.home_17, copy.home_18];
 
 const reviews = [
-  { quote: 'Toby destrozaba todos los juguetes en un día. La cuerda trenzada ya lleva tres meses y sigue entera.', owner: 'Mariana', pet: 'Toby', kind: 'Mestizo', city: 'La Paz' },
-  { quote: 'Mi gata no se subía a ninguna cama. Esta la eligió ella sola la primera noche y ya no la suelta.', owner: 'Rodrigo', pet: 'Mishi', kind: 'Gata atigrada', city: 'Cochabamba' },
-  { quote: 'Pido la comida cada mes con el club y me llega antes de que se acabe. Lola come feliz y yo ahorro.', owner: 'Fernanda', pet: 'Lola', kind: 'Golden retriever', city: 'Santa Cruz' },
+  { quote: copy.home_19, owner: copy.home_20, pet: copy.home_21, kind: 'Mestizo', city: copy.home_22 },
+  { quote: copy.home_23, owner: copy.home_24, pet: copy.home_25, kind: 'Gata atigrada', city: copy.home_26 },
+  { quote: copy.home_27, owner: copy.home_28, pet: copy.home_29, kind: 'Golden retriever', city: copy.home_30 },
 ];
 
 export default function Home() {
   return <Shell>
     <main id="contenido">
       <section id="colas" className="co-hero" aria-labelledby="co-hero-title">
-        <div className="co-hero__photo"><img src={photos.hero} alt="Cinco perros felices de distintas razas, vistos desde arriba sobre un piso ciruela con juguetes de colores" /></div>
+        <div className="co-hero__photo"><img src={photos.hero} alt={copy.home_31} /></div>
         <div className="co-hero__box">
           <Paw className="co-hero__paw" />
-          <h1 id="co-hero-title" className="co-hero__title">Colas felices empiezan aquí</h1>
-          <p className="co-hero__lead">Juguetes, camas y comida que tu mascota va a amar.</p>
-          <a className="co-btn" href="#favoritos">Comprar</a>
+          <h1 id="co-hero-title" className="co-hero__title">{copy.home_32}</h1>
+          <p className="co-hero__lead">{copy.home_33}</p>
+          <a className="co-btn" href="#favoritos">{copy.home_34}</a>
         </div>
       </section>
 
       <section id="por-mascota" className="co-pets" aria-labelledby="co-pets-title">
         <Reveal className="co-head co-head--center">
-          <p className="co-kicker">Compra por mascota</p>
-          <h2 id="co-pets-title" className="co-title">¿Quién espera en casa?</h2>
+          <p className="co-kicker">{copy.home_35}</p>
+          <h2 id="co-pets-title" className="co-title">{copy.home_36}</h2>
         </Reveal>
         <ul className="co-pets__grid">
           {pets.map((pet, index) => <li key={pet.slot}>
@@ -58,10 +58,10 @@ export default function Home() {
       <section id="favoritos" className="co-shop" aria-labelledby="co-shop-title">
         <Reveal className="co-head">
           <div>
-            <p className="co-kicker">Favoritos</p>
-            <h2 id="co-shop-title" className="co-title">Lo que más mueve colas</h2>
+            <p className="co-kicker">{copy.home_37}</p>
+            <h2 id="co-shop-title" className="co-title">{copy.home_38}</h2>
           </div>
-          <p className="co-head__aside">Probado por perros y gatos exigentes antes de llegar a la tienda.</p>
+          <p className="co-head__aside">{copy.home_39}</p>
         </Reveal>
         <template data-pagosya-product-template>
           <article className="co-card">
@@ -78,20 +78,20 @@ export default function Home() {
 
       <section id="nutricion" className="co-food" aria-labelledby="co-food-title">
         <div className="co-food__photo">
-          <Parallax strength={70} mobileStrength={28} className="co-drift"><img src={photos.comida} alt="Perro comiendo croquetas de un plato de cerámica en la cocina" /></Parallax>
+          <Parallax strength={70} mobileStrength={28} className="co-drift"><img src={photos.comida} alt={copy.home_40} /></Parallax>
         </div>
         <Reveal className="co-food__copy">
-          <p className="co-kicker">Nutrición</p>
-          <h2 id="co-food-title" className="co-title">¿Cuánto le sirvo?</h2>
-          <p className="co-food__text">Una guía rápida para perros adultos con croquetas secas. Reparte la porción en dos comidas y deja siempre agua fresca a mano.</p>
+          <p className="co-kicker">{copy.home_41}</p>
+          <h2 id="co-food-title" className="co-title">{copy.home_42}</h2>
+          <p className="co-food__text">{copy.home_43}</p>
           <div className="co-guide">
-            <p className="co-guide__title">Guía de porciones al día</p>
+            <p className="co-guide__title">{copy.home_44}</p>
             <dl className="co-guide__table">
               {portions.map(row => <div key={row.weight}><dt>{row.weight}</dt><dd>{row.cups}</dd></div>)}
             </dl>
-            <p className="co-guide__note">Referencial: ajústala según la edad y la actividad, y consulta a tu veterinario.</p>
+            <p className="co-guide__note">{copy.home_45}</p>
           </div>
-          <a className="co-btn" href="#favoritos">Ver alimentos</a>
+          <a className="co-btn" href="#favoritos">{copy.home_46}</a>
         </Reveal>
       </section>
 
@@ -99,16 +99,16 @@ export default function Home() {
         <Paw className="co-club__paw co-club__paw--a" />
         <Paw className="co-club__paw co-club__paw--b" />
         <Reveal className="co-club__inner">
-          <h2 id="co-club-title" className="co-club__title">Club Colita: 10% en cada pedido repetido</h2>
+          <h2 id="co-club-title" className="co-club__title">{copy.home_47}</h2>
           <ul className="co-club__perks">{perks.map(perk => <li key={perk}>{perk}</li>)}</ul>
-          <a className="co-btn" href="#favoritos">Hacer mi primer pedido</a>
+          <a className="co-btn" href="#favoritos">{copy.home_48}</a>
         </Reveal>
       </section>
 
       <section id="resenas" className="co-reviews" aria-labelledby="co-reviews-title">
         <Reveal className="co-head co-head--center">
-          <p className="co-kicker">Opiniones</p>
-          <h2 id="co-reviews-title" className="co-title">Lo dicen sus humanos</h2>
+          <p className="co-kicker">{copy.home_49}</p>
+          <h2 id="co-reviews-title" className="co-title">{copy.home_50}</h2>
         </Reveal>
         <div className="co-quotes">
           {reviews.map(review => <figure key={review.owner} className="co-quote">
@@ -121,11 +121,11 @@ export default function Home() {
 
       <section id="boletin" className="co-news" aria-labelledby="co-news-title" data-pagosya-subscribe-block>
         <Reveal className="co-news__inner">
-          <h2 id="co-news-title" className="co-news__title">Noticias con cola</h2>
-          <p className="co-news__text">Novedades, consejos de cuidado y ofertas para tu mascota, una vez al mes.</p>
+          <h2 id="co-news-title" className="co-news__title">{copy.home_51}</h2>
+          <p className="co-news__text">{copy.home_52}</p>
           <button type="button" className="co-news__button" data-pagosya-subscribe-open aria-label="Suscribirme con mi correo">
-            <span className="co-news__field">Tu correo electrónico</span>
-            <span className="co-news__submit">Suscribirme</span>
+            <span className="co-news__field">{copy.home_53}</span>
+            <span className="co-news__submit">{copy.home_54}</span>
           </button>
           <p role="status" className="co-news__status" />
         </Reveal>

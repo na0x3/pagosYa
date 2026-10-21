@@ -57,5 +57,223 @@
       "role": "detail",
       "demo": "taller.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Amasar",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Preparamos el barro hasta que está listo para tomar forma.",
+      "max": 93
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Formar",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Cada pieza se hace a mano o en el torno, sin moldes.",
+      "max": 83
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Esmaltar",
+      "max": 13
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Los colores cambian con el fuego: ninguna sale igual.",
+      "max": 85
+    },
+    {
+      "key": "home_7",
+      "role": "title",
+      "default": "Hornear",
+      "max": 12
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Dos quemas lentas para que dure años.",
+      "max": 59
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Por qué mi pieza no es idéntica a la foto?",
+      "max": 69
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Porque está hecha a mano. Forma y esmalte varían un poco en cada una, y eso la hace única.",
+      "max": 144
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Se pueden usar en el microondas?",
+      "max": 53
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Cada pieza indica en su ficha si es apta para microondas y lavavajillas.",
+      "max": 115
+    },
+    {
+      "key": "home_13",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_14",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Hecho a mano",
+      "max": 19
+    },
+    {
+      "key": "home_16",
+      "role": "headline",
+      "default": "Piezas con ",
+      "max": 18
+    },
+    {
+      "key": "home_17",
+      "role": "headline",
+      "default": ", hechas para usarse",
+      "max": 32
+    },
+    {
+      "key": "home_18",
+      "role": "lead",
+      "default": "Cerámica y objetos hechos uno por uno. Cada pieza es distinta, como tu mesa.",
+      "max": 122
+    },
+    {
+      "key": "home_19",
+      "role": "cta",
+      "default": "Ver las piezas",
+      "max": 22
+    },
+    {
+      "key": "home_20",
+      "role": "title",
+      "default": "Piezas disponibles",
+      "max": 29
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "Cuando se acaban, hacemos una nueva tanda.",
+      "max": 67
+    },
+    {
+      "key": "home_22",
+      "role": "alt",
+      "default": "Manos trabajando el barro",
+      "max": 40
+    },
+    {
+      "key": "home_23",
+      "role": "title",
+      "default": "Así nace cada pieza",
+      "max": 30
+    },
+    {
+      "key": "home_24",
+      "role": "alt",
+      "default": "El taller",
+      "max": 14
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Quién lo hace",
+      "max": 21
+    },
+    {
+      "key": "home_26",
+      "role": "title",
+      "default": "Del taller a tu casa",
+      "max": 32
+    },
+    {
+      "key": "home_27",
+      "role": "body",
+      "default": "Trabajamos en un taller pequeño, sin prisa. Cada pieza pasa por nuestras manos varias veces antes de llegar a las tuyas.",
+      "max": 192
+    },
+    {
+      "key": "home_28",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Piezas",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "El proceso",
+      "max": 16
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Quién lo hace",
+      "max": 21
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "cta",
+      "default": "Carrito · ",
+      "max": 16
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Piezas hechas a mano, una por una.",
+      "max": 54
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    }
   ]
 }

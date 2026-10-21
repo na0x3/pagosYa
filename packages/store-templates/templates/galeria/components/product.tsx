@@ -1,6 +1,6 @@
 import Shell from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
-import { photos } from './store-data';
+import { photos, copy } from './store-data';
 
 export default function Product() {
   return <Shell>
@@ -10,8 +10,8 @@ export default function Product() {
           <div className="ga-pdp__left">
             <KitSlot kind="product" name="gallery" className="ga-pdp__gallery" />
             <figure className="ga-pdp__wall">
-              <img src={photos.pared} alt="Una obra enmarcada sobre un sofá beige en una sala luminosa" />
-              <figcaption>Así se ve una obra sobre tu pared</figcaption>
+              <img src={photos.pared} alt={copy.product_1} />
+              <figcaption>{copy.product_2}</figcaption>
             </figure>
           </div>
           <div className="ga-pdp__info">
@@ -22,8 +22,8 @@ export default function Product() {
             <KitSlot kind="product" name="description" className="ga-pdp__desc" />
             <KitSlot kind="product" name="highlights" className="ga-pdp__highlights" />
             <ul className="ga-pdp__notes">
-              <li><b>Certificado</b><span>Cada obra original lleva certificado de autenticidad firmado.</span></li>
-              <li><b>Enmarcado</b><span>Puedes recibirla con marco de madera o sin marco, enrollada.</span></li>
+              <li><b>{copy.product_3}</b><span>{copy.product_4}</span></li>
+              <li><b>{copy.product_5}</b><span>{copy.product_6}</span></li>
             </ul>
             <KitSlot kind="product" name="info" className="ga-pdp__more" />
             <KitSlot kind="product" name="delivery" className="ga-pdp__delivery" />

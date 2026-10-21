@@ -2,6 +2,7 @@
   "id": "pagina",
   "name": "Página",
   "category": "libros",
+  "curated": true,
   "description": "Librería con alma: papel crema, rojo de encuadernación, libros que parecen libros y recomendaciones de la casa.",
   "tags": [
     "libros",
@@ -66,6 +67,194 @@
       "slot": "pila",
       "role": "detail",
       "demo": "pila.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "question",
+      "default": "¿Me ayudan a elegir un libro?",
+      "max": 46
+    },
+    {
+      "key": "home_2",
+      "role": "answer",
+      "default": "Sí. Cuéntanos qué te gustó leer últimamente y te recomendamos el siguiente.",
+      "max": 120
+    },
+    {
+      "key": "home_3",
+      "role": "question",
+      "default": "¿Lo envuelven para regalo?",
+      "max": 42
+    },
+    {
+      "key": "home_4",
+      "role": "answer",
+      "default": "Con gusto. Déjanos una nota en tu pedido y lo enviamos listo para regalar.",
+      "max": 118
+    },
+    {
+      "key": "home_5",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_6",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Librería",
+      "max": 13
+    },
+    {
+      "key": "home_8",
+      "role": "headline",
+      "default": "Un buen libro te está esperando",
+      "max": 50
+    },
+    {
+      "key": "home_9",
+      "role": "lead",
+      "default": "Novedades, clásicos y los libros que la casa recomienda. Elige el tuyo y lo llevamos a tu puerta.",
+      "max": 155
+    },
+    {
+      "key": "home_10",
+      "role": "cta",
+      "default": "Ver los libros",
+      "max": 22
+    },
+    {
+      "key": "home_11",
+      "role": "title",
+      "default": "Recomendados de la semana",
+      "max": 40
+    },
+    {
+      "key": "home_12",
+      "role": "body",
+      "default": "Leídos y elegidos por nosotros.",
+      "max": 50
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Hay libros que se leen de un tirón y otros que se quedan contigo para siempre.",
+      "max": 125
+    },
+    {
+      "key": "home_14",
+      "role": "alt",
+      "default": "Un libro y una taza en la cama",
+      "max": 48
+    },
+    {
+      "key": "home_15",
+      "role": "title",
+      "default": "Para leer en casa",
+      "max": 27
+    },
+    {
+      "key": "home_16",
+      "role": "body",
+      "default": "Te lo enviamos bien protegido, y si es un regalo, envuelto y con tu nota. Solo falta el café.",
+      "max": 149
+    },
+    {
+      "key": "home_17",
+      "role": "cta",
+      "default": "Elegir mi próxima lectura →",
+      "max": 43
+    },
+    {
+      "key": "home_18",
+      "role": "title",
+      "default": "La librería",
+      "max": 18
+    },
+    {
+      "key": "home_19",
+      "role": "alt",
+      "default": "Una lectora eligiendo un libro",
+      "max": 48
+    },
+    {
+      "key": "home_20",
+      "role": "alt",
+      "default": "Estantes llenos de libros",
+      "max": 40
+    },
+    {
+      "key": "home_21",
+      "role": "alt",
+      "default": "Una pila de libros",
+      "max": 29
+    },
+    {
+      "key": "home_22",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Libros",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Para leer en casa",
+      "max": 27
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "La librería",
+      "max": 18
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Recomendaciones de la casa cada semana · Envolvemos para regalo",
+      "max": 101
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi bolsa (",
+      "max": 16
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Libros elegidos uno por uno, para leer sin apuro.",
+      "max": 78
+    },
+    {
+      "key": "shell_8",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
     }
   ]
 }

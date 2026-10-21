@@ -3,16 +3,469 @@
   "name": "Asana",
   "category": "deporte",
   "description": "Ropa de yoga y entrenamiento: composición dividida y mínima, nombre con letras espaciadas y botón de contorno fino.",
-  "tags": ["yoga", "activewear", "minimalista", "bienestar"],
+  "tags": [
+    "yoga",
+    "activewear",
+    "minimalista",
+    "bienestar"
+  ],
   "sitePurpose": "shop",
   "order": -287,
-  "dna": { "display": "outfit", "text": "manrope", "case": "none", "radius": "none", "border": "hairline", "button": "outline", "hover": "fill", "press": "none", "motion": "calm", "cart": "drawer", "added": "toast", "card": "still", "frame": "bleed" },
+  "dna": {
+    "display": "outfit",
+    "text": "manrope",
+    "case": "none",
+    "radius": "none",
+    "border": "hairline",
+    "button": "outline",
+    "hover": "fill",
+    "press": "none",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "still",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "estudio", "role": "lifestyle", "demo": "estudio.jpg" },
-    { "slot": "detalle", "role": "detail", "demo": "detalle.jpg" }
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "estudio",
+      "role": "lifestyle",
+      "demo": "estudio.jpg"
+    },
+    {
+      "slot": "detalle",
+      "role": "detail",
+      "demo": "detalle.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "name",
+      "default": "Yoga",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Fluye con la respiración",
+      "max": 38
+    },
+    {
+      "key": "home_3",
+      "role": "alt",
+      "default": "Mujer con leggings verde salvia en una postura de guerrera en un estudio luminoso",
+      "max": 130
+    },
+    {
+      "key": "home_4",
+      "role": "name",
+      "default": "Pilates",
+      "max": 12
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "Fuerza desde el centro",
+      "max": 35
+    },
+    {
+      "key": "home_6",
+      "role": "alt",
+      "default": "Manos ajustando una esterilla color arcilla sobre un piso de madera",
+      "max": 107
+    },
+    {
+      "key": "home_7",
+      "role": "name",
+      "default": "Caminar",
+      "max": 12
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Aire libre y sin prisa",
+      "max": 35
+    },
+    {
+      "key": "home_9",
+      "role": "alt",
+      "default": "Estudio de yoga luminoso con esterillas enrolladas y plantas",
+      "max": 96
+    },
+    {
+      "key": "home_10",
+      "role": "body",
+      "default": "Lunes",
+      "max": 12
+    },
+    {
+      "key": "home_11",
+      "role": "name",
+      "default": "Vinyasa suave",
+      "max": 21
+    },
+    {
+      "key": "home_12",
+      "role": "body",
+      "default": "Sala Sol",
+      "max": 13
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Miércoles",
+      "max": 14
+    },
+    {
+      "key": "home_14",
+      "role": "name",
+      "default": "Pilates de suelo",
+      "max": 26
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Sala Luna",
+      "max": 14
+    },
+    {
+      "key": "home_16",
+      "role": "body",
+      "default": "Sábado",
+      "max": 12
+    },
+    {
+      "key": "home_17",
+      "role": "name",
+      "default": "Yoga restaurativo",
+      "max": 27
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Sala Sol",
+      "max": 13
+    },
+    {
+      "key": "home_19",
+      "role": "quote",
+      "default": "Las leggings no se transparentan y no se caen. Las uso para yoga y para ir al mercado.",
+      "max": 138
+    },
+    {
+      "key": "home_20",
+      "role": "name",
+      "default": "Carla",
+      "max": 12
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "La Paz",
+      "max": 12
+    },
+    {
+      "key": "home_22",
+      "role": "quote",
+      "default": "La tela es suave y respira. Después de seis meses de lavarlas sigue igual.",
+      "max": 118
+    },
+    {
+      "key": "home_23",
+      "role": "name",
+      "default": "Julieta",
+      "max": 12
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Cochabamba",
+      "max": 16
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Ropa de movimiento",
+      "max": 29
+    },
+    {
+      "key": "home_26",
+      "role": "headline",
+      "default": "Muévete con intención",
+      "max": 34
+    },
+    {
+      "key": "home_27",
+      "role": "lead",
+      "default": "Prendas de tela elástica y respirable, cortadas para acompañarte en el tapete y fuera de él. Diseñadas en ",
+      "max": 170
+    },
+    {
+      "key": "home_28",
+      "role": "cta",
+      "default": "Comprar",
+      "max": 12
+    },
+    {
+      "key": "home_29",
+      "role": "alt",
+      "default": "Conjunto de yoga marrón doblado sobre fondo blanco",
+      "max": 80
+    },
+    {
+      "key": "home_30",
+      "role": "label",
+      "default": "Conjunto arcilla",
+      "max": 26
+    },
+    {
+      "key": "home_31",
+      "role": "label",
+      "default": "Nuevo",
+      "max": 12
+    },
+    {
+      "key": "home_32",
+      "role": "alt",
+      "default": "Mujer en una postura de yoga de espalda arqueada, fotografía en blanco y negro",
+      "max": 125
+    },
+    {
+      "key": "home_33",
+      "role": "title",
+      "default": "Prendas",
+      "max": 12
+    },
+    {
+      "key": "home_34",
+      "role": "body",
+      "default": "Tela que se mueve contigo.",
+      "max": 42
+    },
+    {
+      "key": "home_35",
+      "role": "title",
+      "default": "Tu práctica",
+      "max": 18
+    },
+    {
+      "key": "home_36",
+      "role": "alt",
+      "default": "Primer plano de una tela elástica color verde salvia",
+      "max": 83
+    },
+    {
+      "key": "home_37",
+      "role": "body",
+      "default": "La tela",
+      "max": 12
+    },
+    {
+      "key": "home_38",
+      "role": "title",
+      "default": "Respira, se estira y vuelve",
+      "max": 43
+    },
+    {
+      "key": "home_39",
+      "role": "body",
+      "default": "Un tejido de poliamida y elastano que sigue tu movimiento sin apretar. Seca rápido, no se pilla y mantiene su forma después de muchos lavados.",
+      "max": 227
+    },
+    {
+      "key": "home_40",
+      "role": "title",
+      "default": "Clases de la semana",
+      "max": 30
+    },
+    {
+      "key": "home_41",
+      "role": "body",
+      "default": "Cupos limitados. Escríbenos para reservar el tuyo.",
+      "max": 80
+    },
+    {
+      "key": "home_42",
+      "role": "title",
+      "default": "Lo que dicen",
+      "max": 19
+    },
+    {
+      "key": "home_43",
+      "role": "title",
+      "default": "Un aviso, con calma",
+      "max": 30
+    },
+    {
+      "key": "home_44",
+      "role": "body",
+      "default": "Novedades y horarios de clases, una vez al mes.",
+      "max": 75
+    },
+    {
+      "key": "home_45",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_46",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Inicio",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Prendas",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Práctica",
+      "max": 13
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Clases",
+      "max": 12
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Ropa para moverte con calma y con intención.",
+      "max": 70
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Tu compra",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_9",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_10",
+      "role": "body",
+      "default": "Envíos a toda Bolivia",
+      "max": 34
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_12",
+      "role": "title",
+      "default": "Tu carrito",
+      "max": 16
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Tu carrito está vacío",
+      "max": 34
+    },
+    {
+      "key": "shell_14",
+      "role": "body",
+      "default": "Elige una prenda y aparecerá aquí.",
+      "max": 54
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "Añadido",
+      "max": 12
+    },
+    {
+      "key": "shell_17",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_18",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_19",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "question",
+      "default": "Tela y ajuste",
+      "max": 21
+    },
+    {
+      "key": "product_2",
+      "role": "question",
+      "default": "Cuidado",
+      "max": 12
+    },
+    {
+      "key": "product_3",
+      "role": "body",
+      "default": "Lava en frío con colores similares. No uses suavizante ni secadora: alarga la vida de la tela elástica.",
+      "max": 165
+    }
   ]
 }

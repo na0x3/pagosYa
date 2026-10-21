@@ -3,16 +3,433 @@
   "name": "Arrullo",
   "category": "ninos",
   "description": "Regalos para bebé y cuarto del bebé: neutros cálidos, dos fotos en mitades y una cinta pequeña de envoltura.",
-  "tags": ["bebé", "regalos", "cuarto", "suave"],
+  "tags": [
+    "bebé",
+    "regalos",
+    "cuarto",
+    "suave"
+  ],
   "sitePurpose": "shop",
   "order": -280,
-  "dna": { "display": "lora", "text": "nunito", "case": "none", "radius": "round", "border": "none", "button": "pill", "hover": "fill", "press": "none", "motion": "calm", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "rounded" },
+  "dna": {
+    "display": "lora",
+    "text": "nunito",
+    "case": "none",
+    "radius": "round",
+    "border": "none",
+    "button": "pill",
+    "hover": "fill",
+    "press": "none",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "rounded"
+  },
   "photos": [
-    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "lifestyle", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "cuarto", "role": "lifestyle", "demo": "cuarto.jpg" },
-    { "slot": "manos", "role": "lifestyle", "demo": "manos.jpg" }
+    {
+      "slot": "p1",
+      "role": "lifestyle",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "lifestyle",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "cuarto",
+      "role": "lifestyle",
+      "demo": "cuarto.jpg"
+    },
+    {
+      "slot": "manos",
+      "role": "lifestyle",
+      "demo": "manos.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "name",
+      "default": "Hasta Bs 150",
+      "max": 19
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Sonajeros, mordedores y tarjetas de bienvenida.",
+      "max": 75
+    },
+    {
+      "key": "home_3",
+      "role": "name",
+      "default": "Bs 150 a 300",
+      "max": 19
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Mantas tejidas, peluches y sets de baño.",
+      "max": 64
+    },
+    {
+      "key": "home_5",
+      "role": "name",
+      "default": "Más de Bs 300",
+      "max": 21
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Cunas móviles, canastas completas y cajas de regalo.",
+      "max": 83
+    },
+    {
+      "key": "home_7",
+      "role": "item",
+      "default": "Una cuna firme y sin adornos sueltos",
+      "max": 58
+    },
+    {
+      "key": "home_8",
+      "role": "item",
+      "default": "Mantas de algodón para cada estación",
+      "max": 58
+    },
+    {
+      "key": "home_9",
+      "role": "item",
+      "default": "Luz cálida y tenue para la noche",
+      "max": 51
+    },
+    {
+      "key": "home_10",
+      "role": "item",
+      "default": "Un rincón suave para leer juntos",
+      "max": 51
+    },
+    {
+      "key": "home_11",
+      "role": "name",
+      "default": "Materiales seguros",
+      "max": 29
+    },
+    {
+      "key": "home_12",
+      "role": "body",
+      "default": "Algodón y lana sin tintes agresivos.",
+      "max": 58
+    },
+    {
+      "key": "home_13",
+      "role": "name",
+      "default": "Tejido a mano",
+      "max": 21
+    },
+    {
+      "key": "home_14",
+      "role": "body",
+      "default": "Cada pieza pasa por manos artesanas.",
+      "max": 58
+    },
+    {
+      "key": "home_15",
+      "role": "name",
+      "default": "Empaque reutilizable",
+      "max": 32
+    },
+    {
+      "key": "home_16",
+      "role": "body",
+      "default": "Bolsas de tela que se vuelven útiles.",
+      "max": 59
+    },
+    {
+      "key": "home_17",
+      "role": "quote",
+      "default": "La manta es suave y el empaque parecía un regalo desde antes de abrirlo.",
+      "max": 115
+    },
+    {
+      "key": "home_18",
+      "role": "name",
+      "default": "Valeria, La Paz",
+      "max": 24
+    },
+    {
+      "key": "home_19",
+      "role": "quote",
+      "default": "Lo elegí para mi sobrina y llegó impecable, con tarjeta incluida.",
+      "max": 104
+    },
+    {
+      "key": "home_20",
+      "role": "name",
+      "default": "Marcela, Sucre",
+      "max": 22
+    },
+    {
+      "key": "home_21",
+      "role": "quote",
+      "default": "El conejito no se separa de mi bebé.",
+      "max": 58
+    },
+    {
+      "key": "home_22",
+      "role": "name",
+      "default": "Diego, Santa Cruz",
+      "max": 27
+    },
+    {
+      "key": "home_23",
+      "role": "headline",
+      "default": "Regalos para bebé",
+      "max": 27
+    },
+    {
+      "key": "home_24",
+      "role": "alt",
+      "default": "Rincón de un cuarto de bebé con un dosel de lino y un móvil de fieltro",
+      "max": 112
+    },
+    {
+      "key": "home_25",
+      "role": "alt",
+      "default": "Nubes de fieltro y una luna creciente sobre fondo neutro",
+      "max": 90
+    },
+    {
+      "key": "home_26",
+      "role": "body",
+      "default": "Suavidad para los primeros días",
+      "max": 50
+    },
+    {
+      "key": "home_27",
+      "role": "cta",
+      "default": "Ver regalos",
+      "max": 18
+    },
+    {
+      "key": "home_28",
+      "role": "title",
+      "default": "Regalos para bebé",
+      "max": 27
+    },
+    {
+      "key": "home_29",
+      "role": "body",
+      "default": "Piezas suaves, hechas para durar.",
+      "max": 53
+    },
+    {
+      "key": "home_30",
+      "role": "title",
+      "default": "Guía por presupuesto",
+      "max": 32
+    },
+    {
+      "key": "home_31",
+      "role": "alt",
+      "default": "Cuarto de bebé luminoso y neutro con una cuna de madera",
+      "max": 88
+    },
+    {
+      "key": "home_32",
+      "role": "title",
+      "default": "El cuarto, paso a paso",
+      "max": 35
+    },
+    {
+      "key": "home_33",
+      "role": "cta",
+      "default": "Ver para el cuarto",
+      "max": 29
+    },
+    {
+      "key": "home_34",
+      "role": "title",
+      "default": "Nuestras promesas",
+      "max": 27
+    },
+    {
+      "key": "home_35",
+      "role": "alt",
+      "default": "Manos de un adulto sosteniendo la mano de un bebé",
+      "max": 78
+    },
+    {
+      "key": "home_36",
+      "role": "title",
+      "default": "Familias felices",
+      "max": 26
+    },
+    {
+      "key": "home_37",
+      "role": "title",
+      "default": "Ideas suaves, en tu correo",
+      "max": 42
+    },
+    {
+      "key": "home_38",
+      "role": "body",
+      "default": "Guías de regalos y novedades, una vez al mes.",
+      "max": 72
+    },
+    {
+      "key": "home_39",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_40",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Nuestra filosofía",
+      "max": 27
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Guía de regalos",
+      "max": 24
+    },
+    {
+      "key": "shell_4",
+      "role": "body",
+      "default": "Envoltura de regalo gratis desde Bs 250",
+      "max": 62
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Regalos suaves para los primeros días.",
+      "max": 61
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Tu compra",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_9",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_10",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_11",
+      "role": "title",
+      "default": "Tu canasta",
+      "max": 16
+    },
+    {
+      "key": "shell_12",
+      "role": "body",
+      "default": "Tu canasta está vacía",
+      "max": 34
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Elige un regalo y aparecerá aquí.",
+      "max": 53
+    },
+    {
+      "key": "shell_14",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": "Agregado",
+      "max": 13
+    },
+    {
+      "key": "shell_16",
+      "role": "cta",
+      "default": "Ver canasta",
+      "max": 18
+    },
+    {
+      "key": "shell_17",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_18",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "body",
+      "default": "Añadimos una tarjeta de regalo escrita a mano si nos lo pides al pagar.",
+      "max": 114
+    },
+    {
+      "key": "product_2",
+      "role": "question",
+      "default": "Materiales, cuidado y edad",
+      "max": 42
+    },
+    {
+      "key": "product_3",
+      "role": "question",
+      "default": "Envíos",
+      "max": 12
+    },
+    {
+      "key": "product_4",
+      "role": "body",
+      "default": "Enviamos en 2 a 5 días hábiles, con empaque reutilizable.",
+      "max": 91
+    }
   ]
 }

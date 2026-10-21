@@ -3,16 +3,385 @@
   "name": "Acuarela",
   "category": "arte",
   "description": "Materiales de arte: nombre rojo gigante en letra condensada, foto colorida de pinturas y cajas, botón redondeado.",
-  "tags": ["pinturas", "pinceles", "papel", "materiales"],
+  "tags": [
+    "pinturas",
+    "pinceles",
+    "papel",
+    "materiales"
+  ],
   "sitePurpose": "shop",
   "order": -284,
-  "dna": { "display": "bebas-neue", "text": "figtree", "case": "upper", "radius": "pill", "border": "none", "button": "pill", "hover": "lift", "press": "pop", "motion": "playful", "cart": "drawer", "added": "bubble", "card": "zoom", "frame": "rounded" },
+  "dna": {
+    "display": "bebas-neue",
+    "text": "figtree",
+    "case": "upper",
+    "radius": "pill",
+    "border": "none",
+    "button": "pill",
+    "hover": "lift",
+    "press": "pop",
+    "motion": "playful",
+    "cart": "drawer",
+    "added": "bubble",
+    "card": "zoom",
+    "frame": "rounded"
+  },
   "photos": [
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "estudio", "role": "lifestyle", "demo": "estudio.jpg" },
-    { "slot": "mesa", "role": "lifestyle", "demo": "mesa.jpg" }
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "estudio",
+      "role": "lifestyle",
+      "demo": "estudio.jpg"
+    },
+    {
+      "slot": "mesa",
+      "role": "lifestyle",
+      "demo": "mesa.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "name",
+      "default": "Óleo",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "name",
+      "default": "Acrílico",
+      "max": 13
+    },
+    {
+      "key": "home_3",
+      "role": "name",
+      "default": "Acuarela",
+      "max": 13
+    },
+    {
+      "key": "home_4",
+      "role": "name",
+      "default": "Papel",
+      "max": 12
+    },
+    {
+      "key": "home_5",
+      "role": "name",
+      "default": "Pinceles",
+      "max": 13
+    },
+    {
+      "key": "home_6",
+      "role": "name",
+      "default": "Set principiante",
+      "max": 26
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Doce acuarelas, tres pinceles y un bloc de papel grueso. Todo para empezar.",
+      "max": 120
+    },
+    {
+      "key": "home_8",
+      "role": "name",
+      "default": "Set de acrílicos",
+      "max": 26
+    },
+    {
+      "key": "home_9",
+      "role": "body",
+      "default": "Diez colores básicos en tubos de 60 ml, listos para mezclar en la paleta.",
+      "max": 117
+    },
+    {
+      "key": "home_10",
+      "role": "name",
+      "default": "Set de dibujo",
+      "max": 21
+    },
+    {
+      "key": "home_11",
+      "role": "body",
+      "default": "Lápices de grafito, carboncillo, difuminos y un cuaderno de bocetos.",
+      "max": 109
+    },
+    {
+      "key": "home_12",
+      "role": "title",
+      "default": "Empieza con tres colores",
+      "max": 38
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Un rojo, un azul y un amarillo bastan para mezclar casi cualquier tono.",
+      "max": 114
+    },
+    {
+      "key": "home_14",
+      "role": "title",
+      "default": "Papel grueso, siempre",
+      "max": 34
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Con 300 g o más el papel no se arruga cuando lo mojas.",
+      "max": 86
+    },
+    {
+      "key": "home_16",
+      "role": "title",
+      "default": "Lava tus pinceles",
+      "max": 27
+    },
+    {
+      "key": "home_17",
+      "role": "body",
+      "default": "Con agua tibia y jabón neutro al terminar: duran años.",
+      "max": 86
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Materiales para pintores, ilustradores y creadores.",
+      "max": 82
+    },
+    {
+      "key": "home_19",
+      "role": "cta",
+      "default": "Comprar ahora",
+      "max": 21
+    },
+    {
+      "key": "home_20",
+      "role": "alt",
+      "default": "Mesa de madera con latas, tubos de pintura y carretes de hilo en amarillo, azul y rojo",
+      "max": 138
+    },
+    {
+      "key": "home_21",
+      "role": "title",
+      "default": "Todo para crear",
+      "max": 24
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "Pinturas, papeles y herramientas de marcas que usamos en nuestro propio taller.",
+      "max": 126
+    },
+    {
+      "key": "home_23",
+      "role": "title",
+      "default": "Sets con descuento",
+      "max": 29
+    },
+    {
+      "key": "home_24",
+      "role": "title",
+      "default": "Consejos para empezar",
+      "max": 34
+    },
+    {
+      "key": "home_25",
+      "role": "alt",
+      "default": "Escritorio de artista con un lienzo a medio pintar, pinceles y tubos de pintura",
+      "max": 126
+    },
+    {
+      "key": "home_26",
+      "role": "alt",
+      "default": "Mesa de una clase de arte para niños con pinturas y papeles de colores",
+      "max": 112
+    },
+    {
+      "key": "home_27",
+      "role": "body",
+      "default": "Nuestro estudio",
+      "max": 24
+    },
+    {
+      "key": "home_28",
+      "role": "title",
+      "default": "Probamos todo antes de venderlo",
+      "max": 50
+    },
+    {
+      "key": "home_29",
+      "role": "body",
+      "default": "Cada pintura, papel y pincel pasa por las manos de alguien de nuestro equipo. También damos talleres para niños y adultos los fines de semana.",
+      "max": 227
+    },
+    {
+      "key": "home_30",
+      "role": "cta",
+      "default": "Ver los materiales",
+      "max": 29
+    },
+    {
+      "key": "home_31",
+      "role": "title",
+      "default": "Ofertas y consejos, en tu correo",
+      "max": 51
+    },
+    {
+      "key": "home_32",
+      "role": "body",
+      "default": "Un mensaje al mes con novedades, sets y una idea para pintar.",
+      "max": 98
+    },
+    {
+      "key": "home_33",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_34",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Pinturas",
+      "max": 13
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Sets",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Consejos",
+      "max": 13
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Estudio",
+      "max": 12
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Descuentos en sets · Envío rápido a todo el país · Pincel de regalo desde tu primera compra",
+      "max": 146
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Carrito ",
+      "max": 13
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Todo para pintar, dibujar y crear.",
+      "max": 54
+    },
+    {
+      "key": "shell_9",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_10",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_12",
+      "role": "title",
+      "default": "Tu carrito",
+      "max": 16
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Todavía nada",
+      "max": 19
+    },
+    {
+      "key": "shell_14",
+      "role": "body",
+      "default": "Elige colores y pinceles, y aparecerán aquí.",
+      "max": 70
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "¡Listo!",
+      "max": 12
+    },
+    {
+      "key": "shell_17",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_18",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_19",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "body",
+      "default": "Qué incluye",
+      "max": 18
+    }
   ]
 }

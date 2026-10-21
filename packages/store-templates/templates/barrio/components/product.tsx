@@ -1,3 +1,4 @@
+import { copy } from './store-data';
 import Shell from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
@@ -15,12 +16,12 @@ export default function Product() {
             <KitSlot kind="product" name="description" className="ba-pdp__desc" />
             <KitSlot kind="product" name="highlights" className="ba-pdp__highlights" />
             <details className="ba-pdp__toggle">
-              <summary>Detalles</summary>
+              <summary>{copy.product_1}</summary>
               <KitSlot kind="product" name="info" className="ba-pdp__more" />
             </details>
             <details className="ba-pdp__toggle">
-              <summary>Cuidado y envío</summary>
-              <p>Lava del revés, en frío y sin secadora. Enviamos a todo el país en 2 a 5 días hábiles.</p>
+              <summary>{copy.product_2}</summary>
+              <p>{copy.product_3}</p>
               <KitSlot kind="product" name="delivery" className="ba-pdp__delivery" />
             </details>
           </div>

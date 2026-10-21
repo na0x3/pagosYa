@@ -2,6 +2,7 @@
   "id": "urbano",
   "name": "Urbano",
   "category": "moda",
+  "curated": true,
   "description": "Streetwear y drops: negro, concreto y naranja neón, mayúsculas enormes y etiquetas en mono.",
   "tags": [
     "streetwear",
@@ -61,6 +62,182 @@
       "slot": "look3",
       "role": "detail",
       "demo": "look3.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "item",
+      "default": "Nueva colección disponible",
+      "max": 42
+    },
+    {
+      "key": "home_2",
+      "role": "item",
+      "default": "Stock limitado",
+      "max": 22
+    },
+    {
+      "key": "home_3",
+      "role": "item",
+      "default": "Envíos a todo el país",
+      "max": 34
+    },
+    {
+      "key": "home_4",
+      "role": "item",
+      "default": "Paga con QR",
+      "max": 18
+    },
+    {
+      "key": "home_5",
+      "role": "question",
+      "default": "¿Vuelven a reponer?",
+      "max": 30
+    },
+    {
+      "key": "home_6",
+      "role": "answer",
+      "default": "Algunas piezas sí, otras no. Si una se agota, escríbenos y te avisamos.",
+      "max": 114
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿Cómo elijo la talla?",
+      "max": 34
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Cada prenda indica sus medidas. El corte es amplio: si dudas, elige tu talla de siempre.",
+      "max": 141
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_11",
+      "role": "label",
+      "default": "Sin",
+      "max": 12
+    },
+    {
+      "key": "home_12",
+      "role": "cta",
+      "default": "Ver la colección →",
+      "max": 29
+    },
+    {
+      "key": "home_13",
+      "role": "title",
+      "default": "Colección",
+      "max": 14
+    },
+    {
+      "key": "home_14",
+      "role": "body",
+      "default": "Todo lo disponible ahora",
+      "max": 38
+    },
+    {
+      "key": "home_15",
+      "role": "title",
+      "default": "Lookbook",
+      "max": 13
+    },
+    {
+      "key": "home_16",
+      "role": "alt",
+      "default": "Look de la colección",
+      "max": 32
+    },
+    {
+      "key": "home_17",
+      "role": "body",
+      "default": "Look 01",
+      "max": 12
+    },
+    {
+      "key": "home_18",
+      "role": "alt",
+      "default": "Accesorio de la colección",
+      "max": 40
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "Look 02",
+      "max": 12
+    },
+    {
+      "key": "home_20",
+      "role": "alt",
+      "default": "Calzado de la colección",
+      "max": 37
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "Look 03",
+      "max": 12
+    },
+    {
+      "key": "home_22",
+      "role": "title",
+      "default": "Info",
+      "max": 12
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Colección",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Lookbook",
+      "max": 13
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Info",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Carrito [",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Hecho para la calle.",
+      "max": 32
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
     }
   ]
 }

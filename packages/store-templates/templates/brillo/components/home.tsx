@@ -1,31 +1,31 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { store, photos } from './store-data';
+import { store, photos, copy } from './store-data';
 
 const care = [
-  { title: 'Guárdalas por separado', body: 'Cada pieza en su bolsita, lejos de la humedad.' },
-  { title: 'Póntelas al final', body: 'Después del perfume y las cremas, nunca antes.' },
-  { title: 'Límpialas con suavidad', body: 'Un paño seco y suave les devuelve el brillo.' },
+  { title: copy.home_1, body: copy.home_2 },
+  { title: copy.home_3, body: copy.home_4 },
+  { title: copy.home_5, body: copy.home_6 },
 ];
 const faqs = [
-  { q: '¿Viene lista para regalar?', a: 'Sí. Cada pedido sale en su estuche, con una nota si nos la dejas.' },
-  { q: '¿Puedo cambiarla?', a: 'Escríbenos dentro de los 7 días de recibida y lo coordinamos.' },
-  { q: '¿Cómo pago?', a: 'Con QR de cualquier banco o con tarjeta.' },
+  { q: copy.home_7, a: copy.home_8 },
+  { q: copy.home_9, a: copy.home_10 },
+  { q: copy.home_11, a: copy.home_12 },
 ];
 
 export default function Home() {
   return <Shell>
     <main id="contenido">
       <section id="inicio" className="br-hero">
-        <p className="br-kicker">Colección</p>
-        <h1 className="br-display">Detalles que se quedan contigo</h1>
+        <p className="br-kicker">{copy.home_13}</p>
+        <h1 className="br-display">{copy.home_14}</h1>
         <div className="br-rule" aria-hidden="true"><span>◆</span></div>
         <div className="br-hero__arch"><Parallax strength={60} mobileStrength={30} className="br-drift"><img src={photos.hero} alt={`Joyas de ${store.name}`} /></Parallax></div>
-        <a className="br-btn" href="#coleccion">Descubrir la colección</a>
+        <a className="br-btn" href="#coleccion">{copy.home_15}</a>
       </section>
 
       <section id="coleccion" className="br-shop" aria-labelledby="br-shop-title">
-        <Reveal><h2 id="br-shop-title" className="br-title">La colección</h2></Reveal>
+        <Reveal><h2 id="br-shop-title" className="br-title">{copy.home_16}</h2></Reveal>
         <template data-pagosya-product-template>
           <article className="br-card">
             <a className="br-card__media" data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a>
@@ -38,25 +38,25 @@ export default function Home() {
       </section>
 
       <section id="cuidados" className="br-care" aria-labelledby="br-care-title">
-        <Reveal><img src={photos.detalle} alt="Detalle de una joya" /></Reveal>
+        <Reveal><img src={photos.detalle} alt={copy.home_17} /></Reveal>
         <Reveal delay={120}>
-          <h2 id="br-care-title" className="br-title br-title--left">Para que brillen siempre</h2>
+          <h2 id="br-care-title" className="br-title br-title--left">{copy.home_18}</h2>
           <ul>{care.map(item => <li key={item.title}><h3>{item.title}</h3><p>{item.body}</p></li>)}</ul>
         </Reveal>
       </section>
 
       <section id="regalos" className="br-gift" aria-labelledby="br-gift-title">
         <Reveal className="br-gift__copy">
-          <p className="br-kicker br-kicker--light">Regalos</p>
-          <h2 id="br-gift-title" className="br-title br-title--light">Un regalo que se recuerda</h2>
-          <p>Elige la pieza, déjanos tu nota y la enviamos lista para entregar.</p>
-          <a className="br-btn br-btn--light" href="#coleccion">Elegir un regalo</a>
+          <p className="br-kicker br-kicker--light">{copy.home_19}</p>
+          <h2 id="br-gift-title" className="br-title br-title--light">{copy.home_20}</h2>
+          <p>{copy.home_21}</p>
+          <a className="br-btn br-btn--light" href="#coleccion">{copy.home_22}</a>
         </Reveal>
-        <div className="br-gift__media"><Parallax strength={90} className="br-drift br-drift--deep"><img src={photos.regalo} alt="Estuche de regalo" /></Parallax></div>
+        <div className="br-gift__media"><Parallax strength={90} className="br-drift br-drift--deep"><img src={photos.regalo} alt={copy.home_23} /></Parallax></div>
       </section>
 
       <section id="preguntas" className="br-faq" aria-labelledby="br-faq-title">
-        <Reveal><h2 id="br-faq-title" className="br-title">Preguntas</h2></Reveal>
+        <Reveal><h2 id="br-faq-title" className="br-title">{copy.home_24}</h2></Reveal>
         {faqs.map(item => <details key={item.q}><summary>{item.q}</summary><p>{item.a}</p></details>)}
       </section>
     </main>

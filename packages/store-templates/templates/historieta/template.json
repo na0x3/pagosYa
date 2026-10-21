@@ -3,16 +3,433 @@
   "name": "Historieta",
   "category": "libros",
   "description": "Tienda de cómics: puntos de semitono, un panel de historia con globo de texto y un naranja rojizo con botón amarillo.",
-  "tags": ["cómics", "historietas", "coleccionables", "retro"],
+  "tags": [
+    "cómics",
+    "historietas",
+    "coleccionables",
+    "retro"
+  ],
   "sitePurpose": "shop",
   "order": -299,
-  "dna": { "display": "anton", "text": "nunito", "case": "upper", "radius": "soft", "border": "bold", "button": "sticker", "hover": "lift", "press": "pop", "motion": "playful", "cart": "overlay", "added": "stamp", "card": "tilt", "frame": "inset" },
+  "dna": {
+    "display": "anton",
+    "text": "nunito",
+    "case": "upper",
+    "radius": "soft",
+    "border": "bold",
+    "button": "sticker",
+    "hover": "lift",
+    "press": "pop",
+    "motion": "playful",
+    "cart": "overlay",
+    "added": "stamp",
+    "card": "tilt",
+    "frame": "inset"
+  },
   "photos": [
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "tienda", "role": "lifestyle", "demo": "tienda.jpg" },
-    { "slot": "lectura", "role": "lifestyle", "demo": "lectura.jpg" }
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "tienda",
+      "role": "lifestyle",
+      "demo": "tienda.jpg"
+    },
+    {
+      "slot": "lectura",
+      "role": "lifestyle",
+      "demo": "lectura.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "body",
+      "default": "Página 1",
+      "max": 13
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Todo empezó con una caja de cómics heredada y un local de tres metros.",
+      "max": 112
+    },
+    {
+      "key": "home_3",
+      "role": "alt",
+      "default": "Dueño de la tienda con una pila de cómics entre estantes de colores",
+      "max": 107
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Página 2",
+      "max": 13
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "Hoy hay lectores de todas las edades sentados en el piso, sin querer irse.",
+      "max": 118
+    },
+    {
+      "key": "home_6",
+      "role": "alt",
+      "default": "Mujer sentada en el piso de un pasillo leyendo un cómic",
+      "max": 88
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Página 3",
+      "max": 13
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Y cada semana llegan historias nuevas que ya esperan en el estante.",
+      "max": 107
+    },
+    {
+      "key": "home_9",
+      "role": "alt",
+      "default": "Portada ilustrada de un robot gigante entre flores",
+      "max": 80
+    },
+    {
+      "key": "home_10",
+      "role": "name",
+      "default": "Superhéroes",
+      "max": 18
+    },
+    {
+      "key": "home_11",
+      "role": "body",
+      "default": "Capas, máscaras y ciudades en peligro",
+      "max": 59
+    },
+    {
+      "key": "home_12",
+      "role": "name",
+      "default": "Aventura",
+      "max": 13
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Mapas, cohetes y mundos por descubrir",
+      "max": 59
+    },
+    {
+      "key": "home_14",
+      "role": "name",
+      "default": "Humor",
+      "max": 12
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Tiras para reírse en el micro",
+      "max": 46
+    },
+    {
+      "key": "home_16",
+      "role": "name",
+      "default": "Clásicos",
+      "max": 13
+    },
+    {
+      "key": "home_17",
+      "role": "body",
+      "default": "Ediciones que ya son leyenda",
+      "max": 45
+    },
+    {
+      "key": "home_18",
+      "role": "quote",
+      "default": "Vine por un cómic y me fui con cinco. El dueño se acuerda de lo que le gusta a cada uno.",
+      "max": 141
+    },
+    {
+      "key": "home_19",
+      "role": "name",
+      "default": "Sebastián",
+      "max": 14
+    },
+    {
+      "key": "home_20",
+      "role": "body",
+      "default": "La Paz",
+      "max": 12
+    },
+    {
+      "key": "home_21",
+      "role": "quote",
+      "default": "Le regalé una edición de colección a mi papá y casi llora. Llegó impecable y bien protegida.",
+      "max": 147
+    },
+    {
+      "key": "home_22",
+      "role": "name",
+      "default": "Lucía",
+      "max": 12
+    },
+    {
+      "key": "home_23",
+      "role": "body",
+      "default": "Santa Cruz",
+      "max": 16
+    },
+    {
+      "key": "home_24",
+      "role": "alt",
+      "default": "Portada ilustrada de un héroe enmascarado saltando sobre una ciudad al atardecer",
+      "max": 128
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Cómics y coleccionables",
+      "max": 37
+    },
+    {
+      "key": "home_26",
+      "role": "headline",
+      "default": "El hombre detrás de los cómics",
+      "max": 48
+    },
+    {
+      "key": "home_27",
+      "role": "lead",
+      "default": "En ",
+      "max": 12
+    },
+    {
+      "key": "home_28",
+      "role": "body",
+      "default": " cada cómic se elige a mano, se guarda en su funda y llega a tu casa listo para leer. Historias de aquí, de allá y de otro planeta.",
+      "max": 210
+    },
+    {
+      "key": "home_29",
+      "role": "cta",
+      "default": "Comprar ahora ",
+      "max": 22
+    },
+    {
+      "key": "home_30",
+      "role": "title",
+      "default": "Recién llegados",
+      "max": 24
+    },
+    {
+      "key": "home_31",
+      "role": "body",
+      "default": "Portadas nuevas cada semana. Si ves una que te gusta, no la dejes ir.",
+      "max": 110
+    },
+    {
+      "key": "home_32",
+      "role": "title",
+      "default": "Nuestra historia en tres viñetas",
+      "max": 51
+    },
+    {
+      "key": "home_33",
+      "role": "title",
+      "default": "Elige tu género",
+      "max": 24
+    },
+    {
+      "key": "home_34",
+      "role": "alt",
+      "default": "Portada ilustrada de un cohete despegando sobre un planeta rojo",
+      "max": 101
+    },
+    {
+      "key": "home_35",
+      "role": "label",
+      "default": "Edición limitada",
+      "max": 26
+    },
+    {
+      "key": "home_36",
+      "role": "title",
+      "default": "Para coleccionistas",
+      "max": 30
+    },
+    {
+      "key": "home_37",
+      "role": "body",
+      "default": "Ediciones numeradas, en funda y con certificado. Cada mes separamos una para quien la busca de verdad.",
+      "max": 163
+    },
+    {
+      "key": "home_38",
+      "role": "cta",
+      "default": "Ver la colección",
+      "max": 26
+    },
+    {
+      "key": "home_39",
+      "role": "title",
+      "default": "Lo que dicen los lectores",
+      "max": 40
+    },
+    {
+      "key": "home_40",
+      "role": "title",
+      "default": "Un cómic nuevo cada mes",
+      "max": 37
+    },
+    {
+      "key": "home_41",
+      "role": "body",
+      "default": "Déjanos tu correo y te avisamos primero cuando llegue una edición nueva.",
+      "max": 115
+    },
+    {
+      "key": "home_42",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_43",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Novedades",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Series",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Colección",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Lectores",
+      "max": 13
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Cómics para leer, coleccionar y regalar.",
+      "max": 64
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_9",
+      "role": "title",
+      "default": "Tu pila de cómics",
+      "max": 27
+    },
+    {
+      "key": "shell_10",
+      "role": "body",
+      "default": "¡Todavía no hay nada!",
+      "max": 34
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Elige un cómic y aparecerá aquí.",
+      "max": 51
+    },
+    {
+      "key": "shell_12",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "¡Al carrito!",
+      "max": 19
+    },
+    {
+      "key": "shell_14",
+      "role": "cta",
+      "default": "Ver pila",
+      "max": 13
+    },
+    {
+      "key": "shell_15",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_16",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "label",
+      "default": "Nuevo",
+      "max": 12
+    },
+    {
+      "key": "product_2",
+      "role": "body",
+      "default": "Ficha",
+      "max": 12
+    },
+    {
+      "key": "product_3",
+      "role": "body",
+      "default": "Te puede gustar",
+      "max": 24
+    }
   ]
 }

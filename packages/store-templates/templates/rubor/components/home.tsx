@@ -1,44 +1,44 @@
 import { BeforeAfter, Parallax, Reveal } from '@pagosya/ui';
 import Shell, { Wordmark, wordmarkFit } from './Shell';
-import { store, photos } from './store-data';
+import { store, photos, copy } from './store-data';
 
 const steps = [
-  { title: 'limpia', when: 'Mañana y noche', text: 'Un gel suave que se lleva el maquillaje, el sol y la contaminación sin dejar la piel tirante.' },
-  { title: 'hidrata', when: 'Mañana y noche', text: 'Sérum y crema en capas finas: el agua entra primero y la crema la guarda durante todo el día.' },
-  { title: 'protege', when: 'Cada mañana', text: 'Protector solar de amplio espectro, también nublado. En la altura el sol pega más fuerte.' },
+  { title: 'limpia', when: copy.home_1, text: copy.home_2 },
+  { title: 'hidrata', when: copy.home_3, text: copy.home_4 },
+  { title: 'protege', when: copy.home_5, text: copy.home_6 },
 ];
 
 const ingredients = [
-  { name: 'niacinamida', for: 'Poros y manchas', text: 'Afina la textura, equilibra el brillo y empareja el tono con el uso diario.' },
-  { name: 'ácido hialurónico', for: 'Hidratación', text: 'Atrae y retiene el agua en la piel para que se vea jugosa y rellena.' },
-  { name: 'vitamina C', for: 'Luminosidad', text: 'Antioxidante que devuelve la luz a la piel apagada y ayuda con las manchas.' },
-  { name: 'centella', for: 'Calma', text: 'Planta calmante que alivia el enrojecimiento y acompaña a la piel sensible.' },
-  { name: 'ceramidas', for: 'Barrera', text: 'Los ladrillos de la piel: reparan la barrera y evitan que el agua se escape.' },
-  { name: 'SPF', for: 'Protección', text: 'Filtro contra los rayos UVA y UVB, el paso que cuida todo lo demás.' },
+  { name: 'niacinamida', for: copy.home_7, text: copy.home_8 },
+  { name: copy.home_9, for: copy.home_10, text: copy.home_11 },
+  { name: copy.home_12, for: copy.home_13, text: copy.home_14 },
+  { name: 'centella', for: copy.home_15, text: copy.home_16 },
+  { name: 'ceramidas', for: copy.home_17, text: copy.home_18 },
+  { name: copy.home_19, for: copy.home_20, text: copy.home_21 },
 ];
 
 const reviews = [
-  { quote: 'Con el frío de La Paz tenía la cara pelada. En dos semanas con el sérum y la crema, nada que ver.', name: 'Andrea', skin: 'Piel seca', city: 'La Paz' },
-  { quote: 'Por fin un protector que no me deja blanca ni brillosa. Lo uso debajo del maquillaje todos los días.', name: 'Fernanda', skin: 'Piel mixta', city: 'Santa Cruz' },
-  { quote: 'La rutina de tres pasos es corta de verdad. Me la aprendí en una noche y ya no la dejo.', name: 'Mariel', skin: 'Piel sensible', city: 'Cochabamba' },
+  { quote: copy.home_22, name: copy.home_23, skin: copy.home_24, city: copy.home_25 },
+  { quote: copy.home_26, name: copy.home_27, skin: copy.home_28, city: copy.home_29 },
+  { quote: copy.home_30, name: copy.home_31, skin: copy.home_32, city: copy.home_33 },
 ];
 
 export default function Home() {
   return <Shell>
     <main id="contenido">
       <section id="piel" className="ru-hero" aria-labelledby="ru-hero-title">
-        <img className="ru-hero__photo" src={photos.hero} alt="Retrato de una joven con la piel luminosa sobre un fondo rosa intenso" />
+        <img className="ru-hero__photo" src={photos.hero} alt={copy.home_34} />
         <div className="ru-hero__top">
-          <p className="ru-hero__claim">la revolución del cuidado de la piel</p>
-          <a className="ru-pill ru-pill--red" href="#mas-queridos">Comprar ahora</a>
+          <p className="ru-hero__claim">{copy.home_35}</p>
+          <a className="ru-pill ru-pill--red" href="#mas-queridos">{copy.home_36}</a>
         </div>
         <h1 id="ru-hero-title" className="ru-hero__name" style={wordmarkFit(store.name)}><Wordmark className="ru-hero__word" /></h1>
       </section>
 
       <section id="rutina" className="ru-routine" aria-labelledby="ru-routine-title">
         <Reveal className="ru-head">
-          <h2 id="ru-routine-title" className="ru-title">tu rutina en tres pasos<span className="ru-dot">.</span></h2>
-          <p className="ru-head__aside">Sin veinte frascos ni reglas raras. Tres gestos, bien hechos, todos los días.</p>
+          <h2 id="ru-routine-title" className="ru-title">{copy.home_37}<span className="ru-dot">.</span></h2>
+          <p className="ru-head__aside">{copy.home_38}</p>
         </Reveal>
         <ol className="ru-steps">
           {steps.map((step, index) => <li key={step.title} className={`ru-step ru-step--${index + 1}`}>
@@ -54,8 +54,8 @@ export default function Home() {
 
       <section id="mas-queridos" className="ru-shop" aria-labelledby="ru-shop-title">
         <Reveal className="ru-head">
-          <h2 id="ru-shop-title" className="ru-title">los más queridos<span className="ru-dot">.</span></h2>
-          <p className="ru-head__aside">Los que se agotan primero y vuelven a pedir. Empieza por aquí.</p>
+          <h2 id="ru-shop-title" className="ru-title">{copy.home_39}<span className="ru-dot">.</span></h2>
+          <p className="ru-head__aside">{copy.home_40}</p>
         </Reveal>
         <template data-pagosya-product-template>
           <article className="ru-card">
@@ -72,13 +72,13 @@ export default function Home() {
 
       <section id="ingredientes" className="ru-glossary" aria-labelledby="ru-glossary-title">
         <div className="ru-glossary__photo">
-          <Parallax strength={120} mobileStrength={40} className="ru-drift"><img src={photos.textura} alt="Textura de crema rosada extendida en pinceladas" /></Parallax>
+          <Parallax strength={120} mobileStrength={40} className="ru-drift"><img src={photos.textura} alt={copy.home_41} /></Parallax>
         </div>
         <div className="ru-glossary__body">
           <Reveal>
-            <p className="ru-kicker">Glosario</p>
-            <h2 id="ru-glossary-title" className="ru-title">lo que le pones a tu piel<span className="ru-dot">.</span></h2>
-            <p className="ru-glossary__lead">Seis ingredientes que vas a ver una y otra vez en nuestras etiquetas, explicados sin rodeos.</p>
+            <p className="ru-kicker">{copy.home_42}</p>
+            <h2 id="ru-glossary-title" className="ru-title">{copy.home_43}<span className="ru-dot">.</span></h2>
+            <p className="ru-glossary__lead">{copy.home_44}</p>
           </Reveal>
           <dl className="ru-terms">
             {ingredients.map((item, index) => <Reveal key={item.name} delay={(index % 2) * 60} className="ru-term">
@@ -91,17 +91,17 @@ export default function Home() {
 
       <section id="antes-despues" className="ru-compare" aria-labelledby="ru-compare-title">
         <Reveal className="ru-compare__copy">
-          <p className="ru-kicker">Antes y después</p>
-          <h2 id="ru-compare-title" className="ru-title">de tirante a jugosa<span className="ru-dot">.</span></h2>
-          <p className="ru-compare__text">Una piel seca antes y después de dos semanas con limpiador, sérum y crema. Desliza para ver cómo cambia la textura cuando por fin recibe agua.</p>
-          <p className="ru-compare__note">Imagen referencial. Cada piel responde a su ritmo.</p>
-          <a className="ru-pill ru-pill--wine" href="#mas-queridos">Armar mi rutina</a>
+          <p className="ru-kicker">{copy.home_45}</p>
+          <h2 id="ru-compare-title" className="ru-title">{copy.home_46}<span className="ru-dot">.</span></h2>
+          <p className="ru-compare__text">{copy.home_47}</p>
+          <p className="ru-compare__note">{copy.home_48}</p>
+          <a className="ru-pill ru-pill--wine" href="#mas-queridos">{copy.home_49}</a>
         </Reveal>
         <div className="ru-compare__frame">
           <BeforeAfter
             before={{ src: photos.antes, alt: 'Mejilla con la piel seca y descamada, antes de la rutina' }}
             after={{ src: photos.despues, alt: 'La misma mejilla con la piel hidratada y luminosa, después de la rutina' }}
-            label="Compara la piel antes y después"
+            label={copy.home_50}
             initial={50}
             aspect="4/5"
           />
@@ -110,8 +110,8 @@ export default function Home() {
 
       <section id="resenas" className="ru-reviews" aria-labelledby="ru-reviews-title">
         <Reveal className="ru-head">
-          <h2 id="ru-reviews-title" className="ru-title">lo que dice su piel<span className="ru-dot">.</span></h2>
-          <p className="ru-head__aside">Reseñas de quienes ya hicieron de la rutina un hábito.</p>
+          <h2 id="ru-reviews-title" className="ru-title">{copy.home_51}<span className="ru-dot">.</span></h2>
+          <p className="ru-head__aside">{copy.home_52}</p>
         </Reveal>
         <div className="ru-quotes">
           {reviews.map((review, index) => <Reveal key={review.name} delay={index * 70} className="ru-quote">
@@ -126,11 +126,11 @@ export default function Home() {
 
       <section id="boletin" className="ru-news" aria-labelledby="ru-news-title" data-pagosya-subscribe-block>
         <Reveal className="ru-news__inner">
-          <h2 id="ru-news-title" className="ru-news__title">únete al club<span className="ru-dot">.</span></h2>
-          <p className="ru-news__text">Consejos para tu tipo de piel, lanzamientos antes que nadie y un regalo en tu primera compra.</p>
+          <h2 id="ru-news-title" className="ru-news__title">{copy.home_53}<span className="ru-dot">.</span></h2>
+          <p className="ru-news__text">{copy.home_54}</p>
           <button type="button" className="ru-news__button" data-pagosya-subscribe-open aria-label="Suscribirme con mi correo">
-            <span className="ru-news__field">Tu correo electrónico</span>
-            <span className="ru-news__submit">Quiero unirme</span>
+            <span className="ru-news__field">{copy.home_55}</span>
+            <span className="ru-news__submit">{copy.home_56}</span>
           </button>
           <p role="status" className="ru-news__status" />
         </Reveal>

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 /**
  * How many characters the giant wordmark must fit across its column (see .ru-hero__name / .ru-footer__brand).
@@ -18,10 +18,10 @@ export function wordmarkFit(name: string): CSSProperties {
 const nameFit = wordmarkFit(store.name);
 
 const links = [
-  { label: 'Limpiar', href: 'index.html#rutina' },
-  { label: 'Hidratar', href: 'index.html#ingredientes' },
-  { label: 'Proteger', href: 'index.html#antes-despues' },
-  { label: 'Novedades', href: 'index.html#mas-queridos' },
+  { label: copy.shell_1, href: 'index.html#rutina' },
+  { label: copy.shell_2, href: 'index.html#ingredientes' },
+  { label: copy.shell_3, href: 'index.html#antes-despues' },
+  { label: copy.shell_4, href: 'index.html#mas-queridos' },
 ];
 
 function BagIcon() {
@@ -34,14 +34,14 @@ export function Wordmark({ className }: { className: string }) {
 }
 
 export function Announce() {
-  return <p className="ru-announce">Envío gratis desde Bs 250</p>;
+  return <p className="ru-announce">{copy.shell_5}</p>;
 }
 
 export function Header() {
   return <header className="ru-header">
     <a className="ru-logo" href="index.html" aria-label={`${store.name}, inicio`}><Wordmark className="ru-logo__name" /></a>
     <nav className="ru-nav" aria-label="Principal">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
-    <button type="button" className="ru-cart" data-cart-open aria-label="Abrir carrito"><BagIcon /><span className="ru-cart__label">Carrito</span><span className="ru-cart__count" data-cart-count>0</span></button>
+    <button type="button" className="ru-cart" data-cart-open aria-label="Abrir carrito"><BagIcon /><span className="ru-cart__label">{copy.shell_6}</span><span className="ru-cart__count" data-cart-count>0</span></button>
   </header>;
 }
 
@@ -50,20 +50,20 @@ export function Footer() {
     <div className="ru-footer__top">
       <div className="ru-footer__about">
         <p className="ru-footer__brand" style={nameFit}><Wordmark className="ru-footer__name" /></p>
-        <p className="ru-footer__lead">Rutinas cortas, fórmulas honestas y una piel que se siente tuya.</p>
+        <p className="ru-footer__lead">{copy.shell_7}</p>
       </div>
       <nav className="ru-footer__col" aria-label="Pie de página">
-        <p className="ru-footer__heading">Tienda</p>
+        <p className="ru-footer__heading">{copy.shell_8}</p>
         {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
       </nav>
       <div className="ru-footer__col">
-        <p className="ru-footer__heading">Tu pedido</p>
-        <button type="button" className="ru-footer__link" data-cart-open>Ver carrito</button>
-        <a href="checkout.html">Mi pedido</a>
-        <p>{store.city ? `Enviamos desde ${store.city}` : 'Envíos a toda Bolivia'}</p>
+        <p className="ru-footer__heading">{copy.shell_9}</p>
+        <button type="button" className="ru-footer__link" data-cart-open>{copy.shell_10}</button>
+        <a href="checkout.html">{copy.shell_11}</a>
+        <p>{store.city ? `Enviamos desde ${store.city}` : copy.shell_12}</p>
       </div>
     </div>
-    <p className="ru-footer__note">{store.name} · Pagos seguros con QR y tarjeta</p>
+    <p className="ru-footer__note">{store.name}{copy.shell_13}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -74,13 +74,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="ru-cartpanel">
         <header className="ru-cartpanel__head">
-          <h2 className="ru-cartpanel__title">tu carrito<span className="ru-dot">.</span></h2>
-          <button type="button" className="ru-cartpanel__close" data-cart-close>Cerrar</button>
+          <h2 className="ru-cartpanel__title">{copy.shell_14}<span className="ru-dot">.</span></h2>
+          <button type="button" className="ru-cartpanel__close" data-cart-close>{copy.shell_15}</button>
         </header>
         <KitSlot kind="cart" name="lines" className="ru-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="ru-cartpanel__empty">
-          <p className="ru-cartpanel__empty-title">todavía nada por aquí<span className="ru-dot">.</span></p>
-          <p>Empieza por lo básico: limpiar, hidratar y proteger.</p>
+          <p className="ru-cartpanel__empty-title">{copy.shell_16}<span className="ru-dot">.</span></p>
+          <p>{copy.shell_17}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="ru-cartpanel__suggestions" />
         <div className="ru-cartpanel__foot">
@@ -104,7 +104,7 @@ export function Commerce() {
         </div>
         <div className="ru-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="ru-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="ru-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="ru-line__remove">{copy.shell_18}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -112,20 +112,20 @@ export function Commerce() {
       <div className="ru-added">
         <KitSlot kind="added" name="photo" as="img" className="ru-added__photo" />
         <div className="ru-added__copy">
-          <p className="ru-added__kicker">¡a tu rutina!</p>
+          <p className="ru-added__kicker">{copy.shell_19}</p>
           <KitSlot kind="added" name="message" as="p" className="ru-added__message" />
         </div>
-        <button type="button" className="ru-added__open" data-cart-open>Ver carrito</button>
+        <button type="button" className="ru-added__open" data-cart-open>{copy.shell_20}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="ru-review">
         <div className="ru-review__col ru-review__col--summary">
-          <h2 className="ru-review__heading">tu rutina<span className="ru-dot">.</span></h2>
+          <h2 className="ru-review__heading">{copy.shell_21}<span className="ru-dot">.</span></h2>
           <KitSlot kind="review" name="summary" className="ru-review__summary" />
         </div>
         <div className="ru-review__col">
-          <h2 className="ru-review__heading">entrega y pago<span className="ru-dot">.</span></h2>
+          <h2 className="ru-review__heading">{copy.shell_22}<span className="ru-dot">.</span></h2>
           <KitSlot kind="review" name="fields" className="ru-review__fields" />
         </div>
       </div>

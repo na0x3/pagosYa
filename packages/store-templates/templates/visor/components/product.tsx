@@ -1,3 +1,4 @@
+import { copy } from './store-data';
 import Shell from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
@@ -17,7 +18,7 @@ export default function Product() {
             <KitSlot kind="product" name="description" className="vi-pdp__desc" />
             <KitSlot kind="product" name="highlights" className="vi-pdp__highlights" />
             <div className="vi-pdp__specs">
-              <p className="vi-pdp__specs-title">Ficha técnica</p>
+              <p className="vi-pdp__specs-title">{copy.product_1}</p>
               <KitSlot kind="product" name="info" className="vi-pdp__more" />
             </div>
             <KitSlot kind="product" name="delivery" className="vi-pdp__delivery" />

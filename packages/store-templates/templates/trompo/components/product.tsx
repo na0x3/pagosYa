@@ -1,3 +1,4 @@
+import { copy } from './store-data';
 import Shell from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
@@ -14,16 +15,16 @@ export default function Product() {
             <KitSlot kind="product" name="buy" className="tr-pdp__buy" />
             <KitSlot kind="product" name="description" className="tr-pdp__desc" />
             <ul className="tr-pdp__facts">
-              <li><b>Sin tóxicos</b><span>Pintura al agua apta para bebés</span></li>
-              <li><b>Lijado a mano</b><span>Bordes suaves, sin astillas</span></li>
-              <li><b>Cuidado de la madera</b><span>Límpialo con un paño húmedo</span></li>
+              <li><b>{copy.product_1}</b><span>{copy.product_2}</span></li>
+              <li><b>{copy.product_3}</b><span>{copy.product_4}</span></li>
+              <li><b>{copy.product_5}</b><span>{copy.product_6}</span></li>
             </ul>
             <KitSlot kind="product" name="highlights" className="tr-pdp__highlights" />
             <KitSlot kind="product" name="info" className="tr-pdp__more" />
             <KitSlot kind="product" name="delivery" className="tr-pdp__delivery" />
           </div>
         </div>
-        <p className="tr-pdp__also">Otros para su edad</p>
+        <p className="tr-pdp__also">{copy.product_7}</p>
         <KitSlot kind="product" name="related" className="tr-pdp__band" />
         <KitSlot kind="product" name="reviews" className="tr-pdp__band" />
       </article>

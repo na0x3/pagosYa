@@ -57,5 +57,193 @@
       "role": "product",
       "demo": "p3.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Cambia de comida de a poco",
+      "max": 42
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Mezcla la nueva con la de siempre durante una semana.",
+      "max": 85
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Juego todos los días",
+      "max": 32
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Unos minutos de juego valen más que un juguete nuevo.",
+      "max": 85
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Agua fresca siempre",
+      "max": 30
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Cámbiala cada día y lava el plato seguido.",
+      "max": 67
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿Qué tamaño elijo?",
+      "max": 29
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Cada producto indica para qué tamaño o edad es. Si dudas, escríbenos y te ayudamos.",
+      "max": 133
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Cuándo llega mi pedido?",
+      "max": 38
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Lo preparamos en 24 horas y te avisamos cuando sale.",
+      "max": 83
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_13",
+      "role": "headline",
+      "default": "Todo para que mueva la cola",
+      "max": 43
+    },
+    {
+      "key": "home_14",
+      "role": "lead",
+      "default": "Comida, juguetes y accesorios elegidos por gente que también vive con mascotas.",
+      "max": 126
+    },
+    {
+      "key": "home_15",
+      "role": "cta",
+      "default": "Comprar ahora",
+      "max": 21
+    },
+    {
+      "key": "home_16",
+      "role": "alt",
+      "default": "Para perros",
+      "max": 18
+    },
+    {
+      "key": "home_17",
+      "role": "label",
+      "default": "Para perros",
+      "max": 18
+    },
+    {
+      "key": "home_18",
+      "role": "alt",
+      "default": "Para gatos",
+      "max": 16
+    },
+    {
+      "key": "home_19",
+      "role": "label",
+      "default": "Para gatos",
+      "max": 16
+    },
+    {
+      "key": "home_20",
+      "role": "title",
+      "default": "Sus favoritos",
+      "max": 21
+    },
+    {
+      "key": "home_21",
+      "role": "title",
+      "default": "Consejos de la casa",
+      "max": 30
+    },
+    {
+      "key": "home_22",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Perros",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Gatos",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Productos",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Consejos",
+      "max": 13
+    },
+    {
+      "key": "shell_5",
+      "role": "cta",
+      "default": "Carrito ",
+      "max": 13
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Todo para que tu mascota sea feliz.",
+      "max": 56
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Paga con QR o tarjeta · Envíos a domicilio",
+      "max": 67
+    }
   ]
 }

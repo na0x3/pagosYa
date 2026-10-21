@@ -52,5 +52,199 @@
       "role": "lifestyle",
       "demo": "estudio.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Impresión",
+      "max": 14
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Papel de algodón de archivo y tintas pigmentadas que no se decoloran.",
+      "max": 110
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Marco",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Puedes pedir la obra con marco de madera o solo la impresión.",
+      "max": 98
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Envío",
+      "max": 12
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Viaja en tubo o en caja rígida, protegida en cada esquina.",
+      "max": 93
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿Son ediciones limitadas?",
+      "max": 40
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Cada obra indica en su ficha si es una edición numerada y cuántas copias existen.",
+      "max": 130
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Qué tamaños hay?",
+      "max": 27
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Los tamaños disponibles aparecen al elegir la obra.",
+      "max": 82
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Colección actual",
+      "max": 26
+    },
+    {
+      "key": "home_14",
+      "role": "headline",
+      "default": "Obras para vivir con ellas",
+      "max": 42
+    },
+    {
+      "key": "home_15",
+      "role": "cta",
+      "default": "Ver todas las obras →",
+      "max": 34
+    },
+    {
+      "key": "home_16",
+      "role": "label",
+      "default": "Obra destacada",
+      "max": 22
+    },
+    {
+      "key": "home_17",
+      "role": "label",
+      "default": "Impresión de archivo",
+      "max": 32
+    },
+    {
+      "key": "home_18",
+      "role": "title",
+      "default": "Obras",
+      "max": 12
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "Todas disponibles",
+      "max": 27
+    },
+    {
+      "key": "home_20",
+      "role": "alt",
+      "default": "El estudio",
+      "max": 16
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "Sobre la obra",
+      "max": 21
+    },
+    {
+      "key": "home_22",
+      "role": "title",
+      "default": "Hecho despacio, para mirar despacio",
+      "max": 56
+    },
+    {
+      "key": "home_23",
+      "role": "body",
+      "default": "Cada obra nace en el estudio y se imprime solo cuando alguien la elige. Así ninguna copia se desperdicia.",
+      "max": 168
+    },
+    {
+      "key": "home_24",
+      "role": "title",
+      "default": "Impresión y envío",
+      "max": 27
+    },
+    {
+      "key": "home_25",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Obras",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Artista",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Impresión y envío",
+      "max": 27
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Carrito (",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Obras para vivir con ellas.",
+      "max": 43
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": " — Pagos seguros con pagosYa",
+      "max": 45
+    }
   ]
 }

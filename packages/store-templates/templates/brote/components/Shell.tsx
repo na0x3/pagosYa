@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Esenciales', href: 'index.html#esenciales' },
-  { label: 'Rituales', href: 'index.html#rituales' },
-  { label: 'Cero plástico', href: 'index.html#sin-plastico' },
-  { label: 'Recarga', href: 'index.html#recarga' },
-  { label: 'Opiniones', href: 'index.html#resenas' },
+  { label: copy.shell_1, href: 'index.html#esenciales' },
+  { label: copy.shell_2, href: 'index.html#rituales' },
+  { label: copy.shell_3, href: 'index.html#sin-plastico' },
+  { label: copy.shell_4, href: 'index.html#recarga' },
+  { label: copy.shell_5, href: 'index.html#resenas' },
 ];
 
 /** The store's initials for the centred monogram: "Tu marca" → "TM". */
@@ -22,16 +22,16 @@ function BagIcon() {
 }
 
 export function Announce() {
-  return <p className="br-announce">Envío gratis en Cochabamba desde Bs 200</p>;
+  return <p className="br-announce">{copy.shell_6}</p>;
 }
 
 export function Header() {
   return <header className="br-header">
     <details className="br-menu">
-      <summary className="br-menu__toggle"><span className="br-menu__bars" aria-hidden="true" /><span>Menú</span></summary>
+      <summary className="br-menu__toggle"><span className="br-menu__bars" aria-hidden="true" /><span>{copy.shell_7}</span></summary>
       <nav className="br-menu__panel" aria-label="Principal">
         {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
-        <a href="checkout.html">Mi pedido</a>
+        <a href="checkout.html">{copy.shell_8}</a>
       </nav>
     </details>
     <a className="br-mono" href="index.html" aria-label={`${store.name}, inicio`}><span aria-hidden="true">{initials}</span></a>
@@ -48,20 +48,20 @@ export function Footer() {
       <div className="br-footer__about">
         <p className="br-footer__mono" aria-hidden="true">{initials}</p>
         <p className="br-footer__name">{store.name}</p>
-        <p className="br-footer__lead">Jabones, recargas y básicos del hogar hechos para durar y volver a la tierra.</p>
+        <p className="br-footer__lead">{copy.shell_9}</p>
       </div>
       <nav className="br-footer__col" aria-label="Tienda">
-        <p className="br-footer__heading">Tienda</p>
+        <p className="br-footer__heading">{copy.shell_10}</p>
         {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
       </nav>
       <div className="br-footer__col">
-        <p className="br-footer__heading">Tu compra</p>
-        <button type="button" className="br-footer__link" data-cart-open>Ver carrito</button>
-        <a href="checkout.html">Mi pedido</a>
-        <p>{store.city ? `Desde ${store.city} con cariño` : 'Envíos a toda Bolivia'}</p>
+        <p className="br-footer__heading">{copy.shell_11}</p>
+        <button type="button" className="br-footer__link" data-cart-open>{copy.shell_12}</button>
+        <a href="checkout.html">{copy.shell_13}</a>
+        <p>{store.city ? `Desde ${store.city} con cariño` : copy.shell_14}</p>
       </div>
     </div>
-    <p className="br-footer__note">{store.name} · Pagos seguros con QR y tarjeta</p>
+    <p className="br-footer__note">{store.name}{copy.shell_15}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -72,13 +72,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="br-cartpanel">
         <header className="br-cartpanel__head">
-          <h2 className="br-cartpanel__title">Tu canasta</h2>
+          <h2 className="br-cartpanel__title">{copy.shell_16}</h2>
           <button type="button" className="br-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="br-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="br-cartpanel__empty">
-          <p className="br-cartpanel__empty-title">Tu canasta está vacía</p>
-          <p>Empieza por un jabón o una recarga: todo llega sin plástico.</p>
+          <p className="br-cartpanel__empty-title">{copy.shell_17}</p>
+          <p>{copy.shell_18}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="br-cartpanel__suggestions" />
         <div className="br-cartpanel__foot">
@@ -102,7 +102,7 @@ export function Commerce() {
         </div>
         <div className="br-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="br-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="br-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="br-line__remove">{copy.shell_19}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -110,20 +110,20 @@ export function Commerce() {
       <div className="br-added">
         <KitSlot kind="added" name="photo" as="img" className="br-added__photo" />
         <div className="br-added__copy">
-          <p className="br-added__kicker">En tu canasta</p>
+          <p className="br-added__kicker">{copy.shell_20}</p>
           <KitSlot kind="added" name="message" as="p" className="br-added__message" />
         </div>
-        <button type="button" className="br-added__open" data-cart-open>Ver canasta</button>
+        <button type="button" className="br-added__open" data-cart-open>{copy.shell_21}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="br-review">
         <div className="br-review__col br-review__col--summary">
-          <h2 className="br-review__heading">Tu pedido</h2>
+          <h2 className="br-review__heading">{copy.shell_22}</h2>
           <KitSlot kind="review" name="summary" className="br-review__summary" />
         </div>
         <div className="br-review__col">
-          <h2 className="br-review__heading">Entrega y pago</h2>
+          <h2 className="br-review__heading">{copy.shell_23}</h2>
           <KitSlot kind="review" name="fields" className="br-review__fields" />
         </div>
       </div>

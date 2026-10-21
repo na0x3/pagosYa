@@ -2,6 +2,7 @@
   "id": "solo",
   "name": "Solo",
   "category": "producto-unico",
+  "curated": true,
   "description": "Una tienda para un producto estrella: galería grande, ficha de compra completa y todo lo que convence.",
   "tags": [
     "producto único",
@@ -52,6 +53,278 @@
       "slot": "uso",
       "role": "lifestyle",
       "demo": "uso.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "item",
+      "default": "Pago seguro con QR o tarjeta",
+      "max": 45
+    },
+    {
+      "key": "home_2",
+      "role": "item",
+      "default": "Envío a todo el país",
+      "max": 32
+    },
+    {
+      "key": "home_3",
+      "role": "item",
+      "default": "Cambios sin complicaciones",
+      "max": 42
+    },
+    {
+      "key": "home_4",
+      "role": "title",
+      "default": "Hecho para el día a día",
+      "max": 37
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "Pensado para usarse mucho, no para quedarse guardado.",
+      "max": 85
+    },
+    {
+      "key": "home_6",
+      "role": "title",
+      "default": "Simple de usar",
+      "max": 22
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Sin instrucciones largas: lo abres y funciona.",
+      "max": 74
+    },
+    {
+      "key": "home_8",
+      "role": "title",
+      "default": "Te acompañamos",
+      "max": 22
+    },
+    {
+      "key": "home_9",
+      "role": "body",
+      "default": "Si tienes una duda antes o después de comprar, te respondemos.",
+      "max": 99
+    },
+    {
+      "key": "home_10",
+      "role": "title",
+      "default": "Elige",
+      "max": 12
+    },
+    {
+      "key": "home_11",
+      "role": "body",
+      "default": "Selecciona la opción que prefieras y agrégala al carrito.",
+      "max": 91
+    },
+    {
+      "key": "home_12",
+      "role": "title",
+      "default": "Paga",
+      "max": 12
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Con QR de cualquier banco o con tarjeta, en segundos.",
+      "max": 85
+    },
+    {
+      "key": "home_14",
+      "role": "title",
+      "default": "Disfruta",
+      "max": 13
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Te lo enviamos y te avisamos en cada paso.",
+      "max": 67
+    },
+    {
+      "key": "home_16",
+      "role": "question",
+      "default": "¿Cuánto tarda en llegar?",
+      "max": 38
+    },
+    {
+      "key": "home_17",
+      "role": "answer",
+      "default": "Despachamos en 24 a 48 horas hábiles y te avisamos cuando sale tu pedido.",
+      "max": 117
+    },
+    {
+      "key": "home_18",
+      "role": "question",
+      "default": "¿Y si no me convence?",
+      "max": 34
+    },
+    {
+      "key": "home_19",
+      "role": "answer",
+      "default": "Escríbenos dentro de los 7 días de recibido y buscamos una solución.",
+      "max": 109
+    },
+    {
+      "key": "home_20",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_21",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_22",
+      "role": "alt",
+      "default": "Otra vista del producto",
+      "max": 37
+    },
+    {
+      "key": "home_23",
+      "role": "alt",
+      "default": "El producto en su caja",
+      "max": 35
+    },
+    {
+      "key": "home_24",
+      "role": "alt",
+      "default": "Detalle del producto",
+      "max": 32
+    },
+    {
+      "key": "home_25",
+      "role": "headline",
+      "default": "El que vas a querer usar todos los días",
+      "max": 62
+    },
+    {
+      "key": "home_26",
+      "role": "title",
+      "default": "Por qué te va a gustar",
+      "max": 35
+    },
+    {
+      "key": "home_27",
+      "role": "alt",
+      "default": "El producto en uso",
+      "max": 29
+    },
+    {
+      "key": "home_28",
+      "role": "title",
+      "default": "Así de fácil",
+      "max": 19
+    },
+    {
+      "key": "home_29",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "home_30",
+      "role": "title",
+      "default": "¿Listo para probarlo?",
+      "max": 34
+    },
+    {
+      "key": "home_31",
+      "role": "cta",
+      "default": "Comprar ahora",
+      "max": 21
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Comprar",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Beneficios",
+      "max": 16
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Cómo se usa",
+      "max": 18
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "label",
+      "default": "Paga con QR o tarjeta",
+      "max": 34
+    },
+    {
+      "key": "shell_6",
+      "role": "label",
+      "default": "Envíos a todo el país",
+      "max": 34
+    },
+    {
+      "key": "shell_7",
+      "role": "label",
+      "default": "Te ayudamos por mensaje",
+      "max": 37
+    },
+    {
+      "key": "shell_8",
+      "role": "cta",
+      "default": "Carrito ",
+      "max": 13
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Un producto, hecho muy bien.",
+      "max": 45
+    },
+    {
+      "key": "shell_10",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    },
+    {
+      "key": "product_1",
+      "role": "item",
+      "default": "Pago seguro con QR o tarjeta",
+      "max": 45
+    },
+    {
+      "key": "product_2",
+      "role": "item",
+      "default": "Envío a todo el país",
+      "max": 32
+    },
+    {
+      "key": "product_3",
+      "role": "item",
+      "default": "Cambios sin complicaciones",
+      "max": 42
     }
   ]
 }

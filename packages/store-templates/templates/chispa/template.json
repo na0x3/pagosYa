@@ -62,5 +62,247 @@
       "role": "detail",
       "demo": "vida3.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "label",
+      "default": "Lo nuevo",
+      "max": 13
+    },
+    {
+      "key": "home_2",
+      "role": "label",
+      "default": "Favoritos",
+      "max": 14
+    },
+    {
+      "key": "home_3",
+      "role": "label",
+      "default": "Para regalar",
+      "max": 19
+    },
+    {
+      "key": "home_4",
+      "role": "title",
+      "default": "Pagas como quieras",
+      "max": 29
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "QR de cualquier banco o tarjeta, desde tu celular.",
+      "max": 80
+    },
+    {
+      "key": "home_6",
+      "role": "title",
+      "default": "Sabes dónde está tu pedido",
+      "max": 42
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Te avisamos cuando lo preparamos y cuando sale.",
+      "max": 75
+    },
+    {
+      "key": "home_8",
+      "role": "title",
+      "default": "Te respondemos",
+      "max": 22
+    },
+    {
+      "key": "home_9",
+      "role": "body",
+      "default": "¿Dudas? Escríbenos y te ayudamos a elegir.",
+      "max": 67
+    },
+    {
+      "key": "home_10",
+      "role": "question",
+      "default": "¿Cuánto tarda mi pedido?",
+      "max": 38
+    },
+    {
+      "key": "home_11",
+      "role": "answer",
+      "default": "Lo preparamos en 24 a 48 horas y te avisamos cuando sale.",
+      "max": 91
+    },
+    {
+      "key": "home_12",
+      "role": "question",
+      "default": "¿Puedo regalarlo?",
+      "max": 27
+    },
+    {
+      "key": "home_13",
+      "role": "answer",
+      "default": "Claro. Déjanos una nota en tu pedido y lo enviamos listo para regalar.",
+      "max": 112
+    },
+    {
+      "key": "home_14",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_15",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_16",
+      "role": "headline",
+      "default": "Pequeñas cosas que te cambian el día.",
+      "max": 59
+    },
+    {
+      "key": "home_17",
+      "role": "lead",
+      "default": "Colores que se notan, calidad que dura. Descubre lo que tenemos para ti.",
+      "max": 115
+    },
+    {
+      "key": "home_18",
+      "role": "cta",
+      "default": "Comprar ahora",
+      "max": 21
+    },
+    {
+      "key": "home_19",
+      "role": "title",
+      "default": "Explora",
+      "max": 12
+    },
+    {
+      "key": "home_20",
+      "role": "title",
+      "default": "Elige tus favoritos",
+      "max": 30
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "HECHO CON CARIÑO ✦ HECHO CON CARIÑO ✦",
+      "max": 59
+    },
+    {
+      "key": "home_22",
+      "role": "title",
+      "default": "Creemos en el poder de lo simple.",
+      "max": 53
+    },
+    {
+      "key": "home_23",
+      "role": "cta",
+      "default": "Conócenos",
+      "max": 14
+    },
+    {
+      "key": "home_24",
+      "role": "title",
+      "default": "Nuestra promesa",
+      "max": 24
+    },
+    {
+      "key": "home_25",
+      "role": "title",
+      "default": "En el día a día",
+      "max": 24
+    },
+    {
+      "key": "home_26",
+      "role": "alt",
+      "default": "Nuestros productos en uso",
+      "max": 40
+    },
+    {
+      "key": "home_27",
+      "role": "alt",
+      "default": "Un momento con nuestros productos",
+      "max": 53
+    },
+    {
+      "key": "home_28",
+      "role": "alt",
+      "default": "Detalle de un producto",
+      "max": 35
+    },
+    {
+      "key": "home_29",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Productos",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Nosotros",
+      "max": 13
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "item",
+      "default": "Paga con QR o tarjeta",
+      "max": 34
+    },
+    {
+      "key": "shell_5",
+      "role": "item",
+      "default": "Envíos a todo el país",
+      "max": 34
+    },
+    {
+      "key": "shell_6",
+      "role": "item",
+      "default": "Hecho para el día a día",
+      "max": 37
+    },
+    {
+      "key": "shell_7",
+      "role": "item",
+      "default": "Te respondemos rápido",
+      "max": 34
+    },
+    {
+      "key": "shell_8",
+      "role": "label",
+      "default": "Carrito",
+      "max": 12
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Cosas lindas que te alegran el día.",
+      "max": 56
+    },
+    {
+      "key": "shell_10",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    }
   ]
 }

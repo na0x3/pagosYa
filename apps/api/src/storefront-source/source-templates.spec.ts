@@ -68,7 +68,7 @@ describe('store-data.tsx', () => {
 
   it('exports every value as a plain string', () => {
     const data = templateStoreDataFile({ name: 'Tostado' }, { hero: '' });
-    expect(data.content).toContain('export const store = {"name":"Tostado","tagline":"","city":""} as const;');
+    expect(data.content).toContain('export const store = {"name":"Tostado","tagline":"","city":"","logo":"","phone":""} as const;');
     expect(data.content).toContain('export const photos: Record<string, string> = {"hero":""};');
   });
 });

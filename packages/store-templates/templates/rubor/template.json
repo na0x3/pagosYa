@@ -2,6 +2,7 @@
   "id": "rubor",
   "name": "Rubor",
   "category": "belleza",
+  "curated": true,
   "description": "Skincare con actitud: rosa intenso, retrato a pantalla completa y un nombre enorme en minúsculas.",
   "tags": [
     "skincare",
@@ -61,6 +62,482 @@
       "slot": "despues",
       "role": "detail",
       "demo": "despues.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "body",
+      "default": "Mañana y noche",
+      "max": 22
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Un gel suave que se lleva el maquillaje, el sol y la contaminación sin dejar la piel tirante.",
+      "max": 149
+    },
+    {
+      "key": "home_3",
+      "role": "body",
+      "default": "Mañana y noche",
+      "max": 22
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Sérum y crema en capas finas: el agua entra primero y la crema la guarda durante todo el día.",
+      "max": 149
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "Cada mañana",
+      "max": 18
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Protector solar de amplio espectro, también nublado. En la altura el sol pega más fuerte.",
+      "max": 142
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Poros y manchas",
+      "max": 24
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Afina la textura, equilibra el brillo y empareja el tono con el uso diario.",
+      "max": 120
+    },
+    {
+      "key": "home_9",
+      "role": "name",
+      "default": "ácido hialurónico",
+      "max": 27
+    },
+    {
+      "key": "home_10",
+      "role": "body",
+      "default": "Hidratación",
+      "max": 18
+    },
+    {
+      "key": "home_11",
+      "role": "body",
+      "default": "Atrae y retiene el agua en la piel para que se vea jugosa y rellena.",
+      "max": 109
+    },
+    {
+      "key": "home_12",
+      "role": "name",
+      "default": "vitamina C",
+      "max": 16
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Luminosidad",
+      "max": 18
+    },
+    {
+      "key": "home_14",
+      "role": "body",
+      "default": "Antioxidante que devuelve la luz a la piel apagada y ayuda con las manchas.",
+      "max": 120
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Calma",
+      "max": 12
+    },
+    {
+      "key": "home_16",
+      "role": "body",
+      "default": "Planta calmante que alivia el enrojecimiento y acompaña a la piel sensible.",
+      "max": 120
+    },
+    {
+      "key": "home_17",
+      "role": "body",
+      "default": "Barrera",
+      "max": 12
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Los ladrillos de la piel: reparan la barrera y evitan que el agua se escape.",
+      "max": 122
+    },
+    {
+      "key": "home_19",
+      "role": "name",
+      "default": "SPF",
+      "max": 12
+    },
+    {
+      "key": "home_20",
+      "role": "body",
+      "default": "Protección",
+      "max": 16
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "Filtro contra los rayos UVA y UVB, el paso que cuida todo lo demás.",
+      "max": 107
+    },
+    {
+      "key": "home_22",
+      "role": "quote",
+      "default": "Con el frío de La Paz tenía la cara pelada. En dos semanas con el sérum y la crema, nada que ver.",
+      "max": 155
+    },
+    {
+      "key": "home_23",
+      "role": "name",
+      "default": "Andrea",
+      "max": 12
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Piel seca",
+      "max": 14
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "La Paz",
+      "max": 12
+    },
+    {
+      "key": "home_26",
+      "role": "quote",
+      "default": "Por fin un protector que no me deja blanca ni brillosa. Lo uso debajo del maquillaje todos los días.",
+      "max": 160
+    },
+    {
+      "key": "home_27",
+      "role": "name",
+      "default": "Fernanda",
+      "max": 13
+    },
+    {
+      "key": "home_28",
+      "role": "body",
+      "default": "Piel mixta",
+      "max": 16
+    },
+    {
+      "key": "home_29",
+      "role": "body",
+      "default": "Santa Cruz",
+      "max": 16
+    },
+    {
+      "key": "home_30",
+      "role": "quote",
+      "default": "La rutina de tres pasos es corta de verdad. Me la aprendí en una noche y ya no la dejo.",
+      "max": 139
+    },
+    {
+      "key": "home_31",
+      "role": "name",
+      "default": "Mariel",
+      "max": 12
+    },
+    {
+      "key": "home_32",
+      "role": "body",
+      "default": "Piel sensible",
+      "max": 21
+    },
+    {
+      "key": "home_33",
+      "role": "body",
+      "default": "Cochabamba",
+      "max": 16
+    },
+    {
+      "key": "home_34",
+      "role": "alt",
+      "default": "Retrato de una joven con la piel luminosa sobre un fondo rosa intenso",
+      "max": 110
+    },
+    {
+      "key": "home_35",
+      "role": "body",
+      "default": "la revolución del cuidado de la piel",
+      "max": 58
+    },
+    {
+      "key": "home_36",
+      "role": "cta",
+      "default": "Comprar ahora",
+      "max": 21
+    },
+    {
+      "key": "home_37",
+      "role": "title",
+      "default": "tu rutina en tres pasos",
+      "max": 37
+    },
+    {
+      "key": "home_38",
+      "role": "body",
+      "default": "Sin veinte frascos ni reglas raras. Tres gestos, bien hechos, todos los días.",
+      "max": 123
+    },
+    {
+      "key": "home_39",
+      "role": "title",
+      "default": "los más queridos",
+      "max": 26
+    },
+    {
+      "key": "home_40",
+      "role": "body",
+      "default": "Los que se agotan primero y vuelven a pedir. Empieza por aquí.",
+      "max": 99
+    },
+    {
+      "key": "home_41",
+      "role": "alt",
+      "default": "Textura de crema rosada extendida en pinceladas",
+      "max": 75
+    },
+    {
+      "key": "home_42",
+      "role": "body",
+      "default": "Glosario",
+      "max": 13
+    },
+    {
+      "key": "home_43",
+      "role": "title",
+      "default": "lo que le pones a tu piel",
+      "max": 40
+    },
+    {
+      "key": "home_44",
+      "role": "body",
+      "default": "Seis ingredientes que vas a ver una y otra vez en nuestras etiquetas, explicados sin rodeos.",
+      "max": 147
+    },
+    {
+      "key": "home_45",
+      "role": "body",
+      "default": "Antes y después",
+      "max": 24
+    },
+    {
+      "key": "home_46",
+      "role": "title",
+      "default": "de tirante a jugosa",
+      "max": 30
+    },
+    {
+      "key": "home_47",
+      "role": "body",
+      "default": "Una piel seca antes y después de dos semanas con limpiador, sérum y crema. Desliza para ver cómo cambia la textura cuando por fin recibe agua.",
+      "max": 227
+    },
+    {
+      "key": "home_48",
+      "role": "body",
+      "default": "Imagen referencial. Cada piel responde a su ritmo.",
+      "max": 80
+    },
+    {
+      "key": "home_49",
+      "role": "cta",
+      "default": "Armar mi rutina",
+      "max": 24
+    },
+    {
+      "key": "home_50",
+      "role": "label",
+      "default": "Compara la piel antes y después",
+      "max": 50
+    },
+    {
+      "key": "home_51",
+      "role": "title",
+      "default": "lo que dice su piel",
+      "max": 30
+    },
+    {
+      "key": "home_52",
+      "role": "body",
+      "default": "Reseñas de quienes ya hicieron de la rutina un hábito.",
+      "max": 86
+    },
+    {
+      "key": "home_53",
+      "role": "title",
+      "default": "únete al club",
+      "max": 21
+    },
+    {
+      "key": "home_54",
+      "role": "body",
+      "default": "Consejos para tu tipo de piel, lanzamientos antes que nadie y un regalo en tu primera compra.",
+      "max": 149
+    },
+    {
+      "key": "home_55",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_56",
+      "role": "label",
+      "default": "Quiero unirme",
+      "max": 21
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Limpiar",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Hidratar",
+      "max": 13
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Proteger",
+      "max": 13
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Novedades",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Envío gratis desde Bs 250",
+      "max": 40
+    },
+    {
+      "key": "shell_6",
+      "role": "label",
+      "default": "Carrito",
+      "max": 12
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Rutinas cortas, fórmulas honestas y una piel que se siente tuya.",
+      "max": 102
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_10",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_11",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_12",
+      "role": "body",
+      "default": "Envíos a toda Bolivia",
+      "max": 34
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": " · Pagos seguros con QR y tarjeta",
+      "max": 53
+    },
+    {
+      "key": "shell_14",
+      "role": "title",
+      "default": "tu carrito",
+      "max": 16
+    },
+    {
+      "key": "shell_15",
+      "role": "cta",
+      "default": "Cerrar",
+      "max": 12
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "todavía nada por aquí",
+      "max": 34
+    },
+    {
+      "key": "shell_17",
+      "role": "body",
+      "default": "Empieza por lo básico: limpiar, hidratar y proteger.",
+      "max": 83
+    },
+    {
+      "key": "shell_18",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_19",
+      "role": "body",
+      "default": "¡a tu rutina!",
+      "max": 21
+    },
+    {
+      "key": "shell_20",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_21",
+      "role": "title",
+      "default": "tu rutina",
+      "max": 14
+    },
+    {
+      "key": "shell_22",
+      "role": "title",
+      "default": "entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "body",
+      "default": "ingredientes y detalles",
+      "max": 37
     }
   ]
 }

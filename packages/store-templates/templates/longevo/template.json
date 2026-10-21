@@ -3,16 +3,409 @@
   "name": "Longevo",
   "category": "belleza",
   "description": "Suplementos y blog de salud: foto de estilo de vida desenfocada, navegación en píldoras y una tarjeta de artículo destacado.",
-  "tags": ["suplementos", "bienestar", "longevidad", "blog"],
+  "tags": [
+    "suplementos",
+    "bienestar",
+    "longevidad",
+    "blog"
+  ],
   "sitePurpose": "shop",
   "order": -278,
-  "dna": { "display": "epilogue", "text": "manrope", "case": "none", "radius": "pill", "border": "hairline", "button": "pill", "hover": "fill", "press": "none", "motion": "cinematic", "cart": "drawer", "added": "toast", "card": "zoom", "frame": "rounded" },
+  "dna": {
+    "display": "epilogue",
+    "text": "manrope",
+    "case": "none",
+    "radius": "pill",
+    "border": "hairline",
+    "button": "pill",
+    "hover": "fill",
+    "press": "none",
+    "motion": "cinematic",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "rounded"
+  },
   "photos": [
-    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "laboratorio", "role": "lifestyle", "demo": "laboratorio.jpg" },
-    { "slot": "articulo", "role": "lifestyle", "demo": "articulo.jpg" }
+    {
+      "slot": "p1",
+      "role": "lifestyle",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "laboratorio",
+      "role": "lifestyle",
+      "demo": "laboratorio.jpg"
+    },
+    {
+      "slot": "articulo",
+      "role": "lifestyle",
+      "demo": "articulo.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "name",
+      "default": "Sueño",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Horarios regulares y un cuarto oscuro y fresco.",
+      "max": 75
+    },
+    {
+      "key": "home_3",
+      "role": "name",
+      "default": "Movimiento",
+      "max": 16
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Caminar cada día vale más que entrenar una vez.",
+      "max": 75
+    },
+    {
+      "key": "home_5",
+      "role": "name",
+      "default": "Nutrición",
+      "max": 14
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Comida real, variada y con mucha fibra.",
+      "max": 62
+    },
+    {
+      "key": "home_7",
+      "role": "name",
+      "default": "Estrés",
+      "max": 12
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Pausas cortas para respirar y desconectar.",
+      "max": 67
+    },
+    {
+      "key": "home_9",
+      "role": "title",
+      "default": "Qué dice el sueño sobre tu salud",
+      "max": 51
+    },
+    {
+      "key": "home_10",
+      "role": "title",
+      "default": "Cinco hábitos simples para la mañana",
+      "max": 58
+    },
+    {
+      "key": "home_11",
+      "role": "title",
+      "default": "Cómo leer la etiqueta de un suplemento",
+      "max": 61
+    },
+    {
+      "key": "home_12",
+      "role": "quote",
+      "default": "Me gusta que expliquen cada ingrediente sin exagerar.",
+      "max": 85
+    },
+    {
+      "key": "home_13",
+      "role": "name",
+      "default": "Alejandro, La Paz",
+      "max": 27
+    },
+    {
+      "key": "home_14",
+      "role": "quote",
+      "default": "El blog me ayudó a ordenar mis rutinas.",
+      "max": 62
+    },
+    {
+      "key": "home_15",
+      "role": "name",
+      "default": "Carla, Santa Cruz",
+      "max": 27
+    },
+    {
+      "key": "home_16",
+      "role": "quote",
+      "default": "Empaque sobrio y envío puntual.",
+      "max": 50
+    },
+    {
+      "key": "home_17",
+      "role": "name",
+      "default": "Mauricio, Cochabamba",
+      "max": 32
+    },
+    {
+      "key": "home_18",
+      "role": "alt",
+      "default": "Hombre de unos cincuenta años con barba gris junto a una ventana con luz suave",
+      "max": 125
+    },
+    {
+      "key": "home_19",
+      "role": "headline",
+      "default": "Descubre los secretos de la longevidad",
+      "max": 61
+    },
+    {
+      "key": "home_20",
+      "role": "cta",
+      "default": "Empieza tu camino →",
+      "max": 30
+    },
+    {
+      "key": "home_21",
+      "role": "alt",
+      "default": "Mano de una persona dormida sobre sábanas blancas a la luz de la mañana",
+      "max": 114
+    },
+    {
+      "key": "home_22",
+      "role": "label",
+      "default": "Artículo destacado",
+      "max": 29
+    },
+    {
+      "key": "home_23",
+      "role": "label",
+      "default": "Qué dice el sueño sobre tu salud",
+      "max": 51
+    },
+    {
+      "key": "home_24",
+      "role": "title",
+      "default": "Productos",
+      "max": 14
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Fórmulas simples, con ingredientes que puedes leer.",
+      "max": 82
+    },
+    {
+      "key": "home_26",
+      "role": "title",
+      "default": "Cuatro pilares",
+      "max": 22
+    },
+    {
+      "key": "home_27",
+      "role": "title",
+      "default": "Del blog",
+      "max": 13
+    },
+    {
+      "key": "home_28",
+      "role": "alt",
+      "default": "Mesa de laboratorio limpia con frascos de vidrio ámbar",
+      "max": 86
+    },
+    {
+      "key": "home_29",
+      "role": "title",
+      "default": "Cómo elegimos cada ingrediente",
+      "max": 48
+    },
+    {
+      "key": "home_30",
+      "role": "body",
+      "default": "Revisamos la fuente, la pureza y la dosis de cada ingrediente, y lo publicamos en la etiqueta. No prometemos curas: un suplemento acompaña hábitos, no los reemplaza.",
+      "max": 264
+    },
+    {
+      "key": "home_31",
+      "role": "body",
+      "default": "Consulta a tu médico antes de empezar cualquier suplemento.",
+      "max": 94
+    },
+    {
+      "key": "home_32",
+      "role": "title",
+      "default": "Lo que dicen",
+      "max": 19
+    },
+    {
+      "key": "home_33",
+      "role": "title",
+      "default": "Un artículo por semana",
+      "max": 35
+    },
+    {
+      "key": "home_34",
+      "role": "body",
+      "default": "Lecturas breves sobre hábitos y bienestar, en tu correo.",
+      "max": 90
+    },
+    {
+      "key": "home_35",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_36",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Inicio",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Blog",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Productos",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Suscribirse",
+      "max": 18
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Suplementos y lectura para cuidar tu bienestar.",
+      "max": 75
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Explora",
+      "max": 12
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Tu compra",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_9",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_10",
+      "role": "body",
+      "default": "Los suplementos no reemplazan una dieta variada. Consulta a tu médico antes de empezar. ",
+      "max": 141
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta.",
+      "max": 50
+    },
+    {
+      "key": "shell_12",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Tu carrito está vacío",
+      "max": 34
+    },
+    {
+      "key": "shell_14",
+      "role": "body",
+      "default": "Elige un producto y aparecerá aquí.",
+      "max": 56
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "Agregado",
+      "max": 13
+    },
+    {
+      "key": "shell_17",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_18",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_19",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "question",
+      "default": "Ingredientes, modo de uso y advertencias",
+      "max": 64
+    },
+    {
+      "key": "product_2",
+      "role": "question",
+      "default": "Envíos",
+      "max": 12
+    },
+    {
+      "key": "product_3",
+      "role": "body",
+      "default": "Enviamos en 2 a 5 días hábiles. Consulta a tu médico antes de usar cualquier suplemento.",
+      "max": 141
+    }
   ]
 }

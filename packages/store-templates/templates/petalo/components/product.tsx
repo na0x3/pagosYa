@@ -1,3 +1,4 @@
+import { copy } from './store-data';
 import Shell from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
@@ -17,9 +18,9 @@ export default function Product() {
             <KitSlot kind="product" name="description" className="pe-pdp__desc" />
             <KitSlot kind="product" name="highlights" className="pe-pdp__highlights" />
             <div className="pe-pdp__card">
-              <p className="pe-pdp__card-title">Ingredientes y modo de uso</p>
+              <p className="pe-pdp__card-title">{copy.product_1}</p>
               <KitSlot kind="product" name="info" className="pe-pdp__more" />
-              <p className="pe-pdp__how">Aplica sobre la piel limpia, mañana y noche, con movimientos suaves hacia arriba.</p>
+              <p className="pe-pdp__how">{copy.product_2}</p>
             </div>
             <KitSlot kind="product" name="delivery" className="pe-pdp__delivery" />
           </div>

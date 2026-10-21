@@ -12,6 +12,7 @@ const SLOT = /^[a-z0-9-]{1,30}$/;
 const DEMO_FILE = /^[a-z0-9-]+\.(jpg|png|webp)$/;
 const templatesDir = join(__dirname, 'templates');
 
+const COPY_ROLES = ['headline', 'title', 'lead', 'body', 'cta', 'label', 'item', 'question', 'answer', 'quote', 'name', 'alt'];
 function fail(id, field, detail) { throw new TypeError(`Plantilla ${id}: ${field} ${detail}`); }
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -48,6 +49,12 @@ function validate(dir, id) {
   if (manifest.hidden !== undefined && typeof manifest.hidden !== 'boolean') fail(id, 'hidden', 'must be true or false');
   if (manifest.dna !== undefined && (!manifest.dna || typeof manifest.dna !== 'object' || Array.isArray(manifest.dna) || Object.entries(manifest.dna).some(([key, value]) => !/^[a-z]+$/.test(key) || typeof value !== 'string'))) fail(id, 'dna', 'must map kit surface names to values');
   if (manifest.master !== undefined) validateMaster(id, manifest.master);
+  // Spec 2026-10-20 Plantillas fill: the flat text slots a converted template reads from store-data `copy`.
+  if (manifest.copy !== undefined) {
+    if (!Array.isArray(manifest.copy) || manifest.copy.some(slot => !slot || !/^(?:home|shell|product)_\d+$/.test(slot.key) || !COPY_ROLES.includes(slot.role) || typeof slot.default !== 'string' || !Number.isInteger(slot.max) || slot.max < 1)) fail(id, 'copy', 'must be a list of { key, role, default, max } slots');
+    if (new Set(manifest.copy.map(slot => slot.key)).size !== manifest.copy.length) fail(id, 'copy', 'has a repeated key');
+  }
+  if (manifest.curated !== undefined && (typeof manifest.curated !== 'boolean' || (manifest.curated && !manifest.copy))) fail(id, 'curated', 'must be true or false, and only on a converted template (with copy)');
   if (!Array.isArray(manifest.photos)) fail(id, 'photos', 'must be a list');
   const slots = new Set();
   for (const photo of manifest.photos) {
@@ -61,7 +68,7 @@ function validate(dir, id) {
       if (statSync(path).size > DEMO_MAX_BYTES) fail(id, `demo ${photo.demo}`, 'is larger than 600 KB');
     }
   }
-  return Object.freeze({ ...manifest, ...(manifest.dna ? { dna: Object.freeze({ ...manifest.dna }) } : {}), ...(manifest.master ? { master: Object.freeze(manifest.master) } : {}), tags: Object.freeze([...manifest.tags]), photos: Object.freeze(manifest.photos.map(photo => Object.freeze({ ...photo }))) });
+  return Object.freeze({ ...manifest, ...(manifest.dna ? { dna: Object.freeze({ ...manifest.dna }) } : {}), ...(manifest.master ? { master: Object.freeze(manifest.master) } : {}), ...(manifest.copy ? { copy: Object.freeze(manifest.copy.map(slot => Object.freeze({ ...slot }))) } : {}), tags: Object.freeze([...manifest.tags]), photos: Object.freeze(manifest.photos.map(photo => Object.freeze({ ...photo }))) });
 }
 
 /** Reads and validates every template under `root`. Throws on the first invalid manifest (a build error, never input). */

@@ -20,8 +20,12 @@ test('every "Cotizar" button scrolls to the services grid', () => {
   const home = read('home.tsx');
   assert.match(shell, /className="ob-getquote" href="index\.html#servicios"/);
   assert.match(home, /id="servicios"/);
+  // Since 2026-10-20 the labels live in store-data `copy` (Plantillas fill): the button shows its slot, the slot holds the label.
+  const slots = JSON.parse(readFileSync(join(root, '..', 'template.json'), 'utf8')).copy;
   for (const label of ['Cotizar mi obra', 'Cotizar tu obra']) {
-    assert.match(home, new RegExp(`href="#servicios">${label}<`), `"${label}" must link to #servicios`);
+    const slot = slots.find(candidate => candidate.default === label);
+    assert.ok(slot, `"${label}" is a copy slot`);
+    assert.match(home, new RegExp(`href="#servicios">\\{copy\\.${slot.key}\\}<`), `"${label}" must link to #servicios`);
   }
 });
 

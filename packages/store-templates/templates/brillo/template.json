@@ -57,5 +57,205 @@
       "role": "detail",
       "demo": "detalle.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Guárdalas por separado",
+      "max": 35
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Cada pieza en su bolsita, lejos de la humedad.",
+      "max": 74
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Póntelas al final",
+      "max": 27
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Después del perfume y las cremas, nunca antes.",
+      "max": 74
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Límpialas con suavidad",
+      "max": 35
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Un paño seco y suave les devuelve el brillo.",
+      "max": 70
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿Viene lista para regalar?",
+      "max": 42
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Sí. Cada pedido sale en su estuche, con una nota si nos la dejas.",
+      "max": 104
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Puedo cambiarla?",
+      "max": 27
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Escríbenos dentro de los 7 días de recibida y lo coordinamos.",
+      "max": 98
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Colección",
+      "max": 14
+    },
+    {
+      "key": "home_14",
+      "role": "headline",
+      "default": "Detalles que se quedan contigo",
+      "max": 48
+    },
+    {
+      "key": "home_15",
+      "role": "cta",
+      "default": "Descubrir la colección",
+      "max": 35
+    },
+    {
+      "key": "home_16",
+      "role": "title",
+      "default": "La colección",
+      "max": 19
+    },
+    {
+      "key": "home_17",
+      "role": "alt",
+      "default": "Detalle de una joya",
+      "max": 30
+    },
+    {
+      "key": "home_18",
+      "role": "title",
+      "default": "Para que brillen siempre",
+      "max": 38
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "Regalos",
+      "max": 12
+    },
+    {
+      "key": "home_20",
+      "role": "title",
+      "default": "Un regalo que se recuerda",
+      "max": 40
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "Elige la pieza, déjanos tu nota y la enviamos lista para entregar.",
+      "max": 106
+    },
+    {
+      "key": "home_22",
+      "role": "cta",
+      "default": "Elegir un regalo",
+      "max": 26
+    },
+    {
+      "key": "home_23",
+      "role": "alt",
+      "default": "Estuche de regalo",
+      "max": 27
+    },
+    {
+      "key": "home_24",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Colección",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Cuidados",
+      "max": 13
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Regalos",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "cta",
+      "default": "Bolsa · ",
+      "max": 13
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Piezas para guardar, usar y heredar.",
+      "max": 58
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Empaque de regalo en cada pedido · Paga con QR o tarjeta",
+      "max": 90
+    }
   ]
 }

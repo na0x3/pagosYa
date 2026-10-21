@@ -2,6 +2,7 @@
   "id": "pausa",
   "name": "Pausa",
   "category": "servicios",
+  "curated": true,
   "description": "Estudio de pilates, yoga o bienestar: tonos cálidos, arcos suaves y clases que se reservan en un toque.",
   "tags": [
     "servicios",
@@ -56,6 +57,212 @@
       "slot": "instructora",
       "role": "lifestyle",
       "demo": "instructora.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Elige tu clase o paquete",
+      "max": 38
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Clase suelta, paquete del mes o tu primera clase de prueba.",
+      "max": 94
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Paga en línea",
+      "max": 21
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Con QR o tarjeta, en un minuto desde tu celular.",
+      "max": 77
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Coordinamos tu horario",
+      "max": 35
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Te escribimos para confirmar el día y la hora que te queden mejor.",
+      "max": 106
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿Nunca hice pilates, puedo empezar?",
+      "max": 56
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Sí. Las clases se adaptan a tu nivel y la primera es para conocerte.",
+      "max": 109
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Qué tengo que llevar?",
+      "max": 35
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Ropa cómoda y medias antideslizantes. Nosotros tenemos todo lo demás.",
+      "max": 110
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Puedo cambiar mi horario?",
+      "max": 42
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Avísanos con 24 horas y reprogramamos tu clase sin costo.",
+      "max": 91
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Pilates · Yoga · Bienestar",
+      "max": 42
+    },
+    {
+      "key": "home_14",
+      "role": "headline",
+      "default": "Un respiro",
+      "max": 16
+    },
+    {
+      "key": "home_15",
+      "role": "label",
+      "default": "para tu cuerpo.",
+      "max": 24
+    },
+    {
+      "key": "home_16",
+      "role": "body",
+      "default": "Clases en grupos pequeños, con instructoras que te acompañan en cada movimiento.",
+      "max": 128
+    },
+    {
+      "key": "home_17",
+      "role": "cta",
+      "default": "Reservar una clase",
+      "max": 29
+    },
+    {
+      "key": "home_18",
+      "role": "cta",
+      "default": "Cómo funciona",
+      "max": 21
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "Clases y paquetes",
+      "max": 27
+    },
+    {
+      "key": "home_20",
+      "role": "title",
+      "default": "Elige cómo empezar",
+      "max": 29
+    },
+    {
+      "key": "home_21",
+      "role": "title",
+      "default": "Así de simple",
+      "max": 21
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "“Sal de la clase más liviana de lo que entraste.”",
+      "max": 78
+    },
+    {
+      "key": "home_23",
+      "role": "alt",
+      "default": "Una de nuestras instructoras",
+      "max": 45
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Quién te acompaña",
+      "max": 27
+    },
+    {
+      "key": "home_25",
+      "role": "title",
+      "default": "Instructoras certificadas, con paciencia de verdad.",
+      "max": 82
+    },
+    {
+      "key": "home_26",
+      "role": "body",
+      "default": "Te corregimos con cariño, adaptamos cada ejercicio y celebramos tus avances. Aquí nadie compite.",
+      "max": 154
+    },
+    {
+      "key": "home_27",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Clases",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "El estudio",
+      "max": 16
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Mis clases ",
+      "max": 18
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Muévete con calma, sal con energía.",
+      "max": 56
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Paga con QR o tarjeta",
+      "max": 34
     }
   ]
 }

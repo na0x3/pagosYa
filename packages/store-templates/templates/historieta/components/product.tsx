@@ -1,3 +1,4 @@
+import { copy } from './store-data';
 import Shell from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
@@ -7,7 +8,7 @@ export default function Product() {
       <article className="hi-pdp">
         <div className="hi-pdp__grid">
           <div className="hi-pdp__cover">
-            <span className="hi-pdp__sticker" aria-hidden="true">Nuevo</span>
+            <span className="hi-pdp__sticker" aria-hidden="true">{copy.product_1}</span>
             <KitSlot kind="product" name="gallery" className="hi-pdp__gallery" />
           </div>
           <div className="hi-pdp__info">
@@ -18,13 +19,13 @@ export default function Product() {
             <KitSlot kind="product" name="description" className="hi-pdp__desc" />
             <KitSlot kind="product" name="highlights" className="hi-pdp__highlights" />
             <div className="hi-pdp__sheet">
-              <p className="hi-pdp__sheet-title">Ficha</p>
+              <p className="hi-pdp__sheet-title">{copy.product_2}</p>
               <KitSlot kind="product" name="info" className="hi-pdp__more" />
               <KitSlot kind="product" name="delivery" className="hi-pdp__delivery" />
             </div>
           </div>
         </div>
-        <p className="hi-pdp__also">Te puede gustar</p>
+        <p className="hi-pdp__also">{copy.product_3}</p>
         <KitSlot kind="product" name="related" className="hi-pdp__band" />
         <KitSlot kind="product" name="reviews" className="hi-pdp__band" />
       </article>

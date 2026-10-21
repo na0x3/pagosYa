@@ -2,17 +2,483 @@
   "id": "galeria",
   "name": "Galería",
   "category": "arte",
+  "curated": true,
   "description": "Obras originales de una pintora: cuadro a pantalla completa, leyenda en una caja serif y un logo pequeño.",
-  "tags": ["pintura", "obra original", "arte", "galería"],
+  "tags": [
+    "pintura",
+    "obra original",
+    "arte",
+    "galería"
+  ],
   "sitePurpose": "shop",
   "order": -293,
-  "dna": { "display": "libre-caslon-text", "text": "figtree", "case": "none", "radius": "none", "border": "none", "button": "outline", "hover": "fill", "press": "none", "motion": "calm", "cart": "drawer", "added": "toast", "card": "still", "frame": "bleed" },
+  "dna": {
+    "display": "libre-caslon-text",
+    "text": "figtree",
+    "case": "none",
+    "radius": "none",
+    "border": "none",
+    "button": "outline",
+    "hover": "fill",
+    "press": "none",
+    "motion": "calm",
+    "cart": "drawer",
+    "added": "toast",
+    "card": "still",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "estudio", "role": "lifestyle", "demo": "estudio.jpg" },
-    { "slot": "pared", "role": "lifestyle", "demo": "pared.jpg" }
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "estudio",
+      "role": "lifestyle",
+      "demo": "estudio.jpg"
+    },
+    {
+      "slot": "pared",
+      "role": "lifestyle",
+      "demo": "pared.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Elige tu obra",
+      "max": 21
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Cada pieza es única: cuando se vende, no vuelve a estar disponible.",
+      "max": 107
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Recibe el certificado",
+      "max": 34
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Firmado a mano, con número de registro y datos de la técnica.",
+      "max": 98
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Envío enmarcado",
+      "max": 24
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Sale protegida y, si quieres, con marco de madera a medida.",
+      "max": 94
+    },
+    {
+      "key": "home_7",
+      "role": "name",
+      "default": "Campo abierto",
+      "max": 21
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Óleo sobre lienzo",
+      "max": 27
+    },
+    {
+      "key": "home_9",
+      "role": "alt",
+      "default": "Paisaje abstracto en ocres y verde musgo",
+      "max": 64
+    },
+    {
+      "key": "home_10",
+      "role": "name",
+      "default": "Limones",
+      "max": 12
+    },
+    {
+      "key": "home_11",
+      "role": "body",
+      "default": "Óleo sobre lienzo",
+      "max": 27
+    },
+    {
+      "key": "home_12",
+      "role": "alt",
+      "default": "Naturaleza muerta con limones en colores intensos",
+      "max": 78
+    },
+    {
+      "key": "home_13",
+      "role": "name",
+      "default": "Estudio azul",
+      "max": 19
+    },
+    {
+      "key": "home_14",
+      "role": "body",
+      "default": "Óleo sobre lienzo",
+      "max": 27
+    },
+    {
+      "key": "home_15",
+      "role": "alt",
+      "default": "Estudio de retrato en tonos azules",
+      "max": 54
+    },
+    {
+      "key": "home_16",
+      "role": "name",
+      "default": "Begonias",
+      "max": 13
+    },
+    {
+      "key": "home_17",
+      "role": "body",
+      "default": "Óleo sobre lienzo",
+      "max": 27
+    },
+    {
+      "key": "home_18",
+      "role": "alt",
+      "default": "Mujer dormida entre hojas de begonia moteadas",
+      "max": 72
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "Marzo",
+      "max": 12
+    },
+    {
+      "key": "home_20",
+      "role": "body",
+      "default": "Casa de la Cultura, La Paz",
+      "max": 42
+    },
+    {
+      "key": "home_21",
+      "role": "title",
+      "default": "Hojas y sueños",
+      "max": 22
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "Junio",
+      "max": 12
+    },
+    {
+      "key": "home_23",
+      "role": "body",
+      "default": "Galería Espacio, Cochabamba",
+      "max": 43
+    },
+    {
+      "key": "home_24",
+      "role": "title",
+      "default": "Colores del valle",
+      "max": 27
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Octubre",
+      "max": 12
+    },
+    {
+      "key": "home_26",
+      "role": "body",
+      "default": "Centro Cultural, Santa Cruz",
+      "max": 43
+    },
+    {
+      "key": "home_27",
+      "role": "title",
+      "default": "Retratos",
+      "max": 13
+    },
+    {
+      "key": "home_28",
+      "role": "alt",
+      "default": "Pintura al óleo de una mujer dormida entre hojas de begonia rojas y verdes",
+      "max": 118
+    },
+    {
+      "key": "home_29",
+      "role": "headline",
+      "default": "Arte ahora",
+      "max": 16
+    },
+    {
+      "key": "home_30",
+      "role": "lead",
+      "default": "Obras contemporáneas de ",
+      "max": 38
+    },
+    {
+      "key": "home_31",
+      "role": "cta",
+      "default": "Ver obras ",
+      "max": 16
+    },
+    {
+      "key": "home_32",
+      "role": "title",
+      "default": "Obras disponibles",
+      "max": 27
+    },
+    {
+      "key": "home_33",
+      "role": "body",
+      "default": "Óleos originales, firmados y con certificado.",
+      "max": 72
+    },
+    {
+      "key": "home_34",
+      "role": "alt",
+      "default": "La pintora frente a su caballete en un taller lleno de luz",
+      "max": 93
+    },
+    {
+      "key": "home_35",
+      "role": "body",
+      "default": "Sobre la artista",
+      "max": 26
+    },
+    {
+      "key": "home_36",
+      "role": "title",
+      "default": "Pinto lo que se queda en la memoria",
+      "max": 56
+    },
+    {
+      "key": "home_37",
+      "role": "body",
+      "default": "Empecé pintando hojas de mi patio y terminé pintando a la gente que las mira. Trabajo al óleo, despacio, con capas finas y muchos colores que se contradicen.",
+      "max": 251
+    },
+    {
+      "key": "home_38",
+      "role": "body",
+      "default": "Cada obra que sale de mi taller lleva una historia. Espero que la tuya empiece cuando la cuelgues en tu pared.",
+      "max": 176
+    },
+    {
+      "key": "home_39",
+      "role": "title",
+      "default": "Cómo coleccionar",
+      "max": 26
+    },
+    {
+      "key": "home_40",
+      "role": "title",
+      "default": "La serie más reciente",
+      "max": 34
+    },
+    {
+      "key": "home_41",
+      "role": "title",
+      "default": "Exposiciones",
+      "max": 19
+    },
+    {
+      "key": "home_42",
+      "role": "title",
+      "default": "Sé el primero en ver la próxima obra",
+      "max": 58
+    },
+    {
+      "key": "home_43",
+      "role": "body",
+      "default": "Te invitamos a cada inauguración y te avisamos cuando sale una serie nueva.",
+      "max": 120
+    },
+    {
+      "key": "home_44",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_45",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Obras",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "La artista",
+      "max": 16
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Coleccionar",
+      "max": 18
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Exposiciones",
+      "max": 19
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Obras originales, con certificado y envío enmarcado.",
+      "max": 83
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Galería",
+      "max": 12
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Tu compra",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_9",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_10",
+      "role": "body",
+      "default": "Envíos a toda Bolivia",
+      "max": 34
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_12",
+      "role": "title",
+      "default": "Tu selección",
+      "max": 19
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Aún no eliges ninguna obra",
+      "max": 42
+    },
+    {
+      "key": "shell_14",
+      "role": "body",
+      "default": "Cuando lo hagas, aparecerá aquí.",
+      "max": 51
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "Añadida a tu selección",
+      "max": 35
+    },
+    {
+      "key": "shell_17",
+      "role": "cta",
+      "default": "Ver selección",
+      "max": 21
+    },
+    {
+      "key": "shell_18",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_19",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "alt",
+      "default": "Una obra enmarcada sobre un sofá beige en una sala luminosa",
+      "max": 94
+    },
+    {
+      "key": "product_2",
+      "role": "body",
+      "default": "Así se ve una obra sobre tu pared",
+      "max": 53
+    },
+    {
+      "key": "product_3",
+      "role": "label",
+      "default": "Certificado",
+      "max": 18
+    },
+    {
+      "key": "product_4",
+      "role": "label",
+      "default": "Cada obra original lleva certificado de autenticidad firmado.",
+      "max": 98
+    },
+    {
+      "key": "product_5",
+      "role": "label",
+      "default": "Enmarcado",
+      "max": 14
+    },
+    {
+      "key": "product_6",
+      "role": "label",
+      "default": "Puedes recibirla con marco de madera o sin marco, enrollada.",
+      "max": 96
+    }
   ]
 }

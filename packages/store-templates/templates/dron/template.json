@@ -3,16 +3,469 @@
   "name": "Dron",
   "category": "tecnologia",
   "description": "Drones: paisaje de montaña con retícula tipo HUD, letra monoespaciada y el producto en un recuadro.",
-  "tags": ["drones", "cámaras aéreas", "tecnología", "montaña"],
+  "tags": [
+    "drones",
+    "cámaras aéreas",
+    "tecnología",
+    "montaña"
+  ],
   "sitePurpose": "shop",
   "order": -282,
-  "dna": { "display": "sora", "text": "space-mono", "case": "none", "radius": "none", "border": "hairline", "button": "block", "hover": "invert", "press": "sink", "motion": "cinematic", "cart": "sheet", "added": "toast", "card": "zoom", "frame": "bleed" },
+  "dna": {
+    "display": "sora",
+    "text": "space-mono",
+    "case": "none",
+    "radius": "none",
+    "border": "hairline",
+    "button": "block",
+    "hover": "invert",
+    "press": "sink",
+    "motion": "cinematic",
+    "cart": "sheet",
+    "added": "toast",
+    "card": "zoom",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "p1", "role": "lifestyle", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "lifestyle", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "campo", "role": "lifestyle", "demo": "campo.jpg" },
-    { "slot": "control", "role": "product", "demo": "control.jpg" }
+    {
+      "slot": "p1",
+      "role": "lifestyle",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "lifestyle",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "campo",
+      "role": "lifestyle",
+      "demo": "campo.jpg"
+    },
+    {
+      "slot": "control",
+      "role": "product",
+      "demo": "control.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "label",
+      "default": "Autonomía",
+      "max": 14
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "De vuelo continuo con una sola batería.",
+      "max": 62
+    },
+    {
+      "key": "home_3",
+      "role": "label",
+      "default": "Alcance",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Señal estable, incluso entre montañas.",
+      "max": 61
+    },
+    {
+      "key": "home_5",
+      "role": "label",
+      "default": "Cámara",
+      "max": 12
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Sensor estabilizado en tres ejes.",
+      "max": 53
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "Peso",
+      "max": 12
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Autonomía",
+      "max": 14
+    },
+    {
+      "key": "home_9",
+      "role": "body",
+      "default": "Alcance",
+      "max": 12
+    },
+    {
+      "key": "home_10",
+      "role": "body",
+      "default": "Video",
+      "max": 12
+    },
+    {
+      "key": "home_11",
+      "role": "name",
+      "default": "Baterías",
+      "max": 13
+    },
+    {
+      "key": "home_12",
+      "role": "body",
+      "default": "Ciclos largos y carga rápida.",
+      "max": 46
+    },
+    {
+      "key": "home_13",
+      "role": "name",
+      "default": "Hélices",
+      "max": 12
+    },
+    {
+      "key": "home_14",
+      "role": "body",
+      "default": "Repuestos de bajo ruido.",
+      "max": 38
+    },
+    {
+      "key": "home_15",
+      "role": "name",
+      "default": "Estuches",
+      "max": 13
+    },
+    {
+      "key": "home_16",
+      "role": "body",
+      "default": "Rígidos y resistentes al agua.",
+      "max": 48
+    },
+    {
+      "key": "home_17",
+      "role": "name",
+      "default": "Filtros",
+      "max": 12
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "ND para luz intensa.",
+      "max": 32
+    },
+    {
+      "key": "home_19",
+      "role": "title",
+      "default": "Registra tu dron",
+      "max": 26
+    },
+    {
+      "key": "home_20",
+      "role": "body",
+      "default": "Consulta con la autoridad aeronáutica de tu país antes del primer vuelo.",
+      "max": 115
+    },
+    {
+      "key": "home_21",
+      "role": "title",
+      "default": "Mantén la vista",
+      "max": 24
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "Vuela siempre con el dron a la vista y lejos de aeropuertos.",
+      "max": 96
+    },
+    {
+      "key": "home_23",
+      "role": "title",
+      "default": "Respeta a las personas",
+      "max": 35
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "No sobrevueles multitudes ni propiedades privadas sin permiso.",
+      "max": 99
+    },
+    {
+      "key": "home_25",
+      "role": "alt",
+      "default": "Ladera verde de los Andes bajo nubes suaves con picos lejanos",
+      "max": 98
+    },
+    {
+      "key": "home_26",
+      "role": "body",
+      "default": "LAT 16.4990° S · LON 68.1193° W · ALT 3 640 m",
+      "max": 72
+    },
+    {
+      "key": "home_27",
+      "role": "headline",
+      "default": "Desafía el horizonte",
+      "max": 32
+    },
+    {
+      "key": "home_28",
+      "role": "lead",
+      "default": "Drones de grado aeroespacial, estabilidad y 8K.",
+      "max": 75
+    },
+    {
+      "key": "home_29",
+      "role": "cta",
+      "default": "Comprar ahora →",
+      "max": 24
+    },
+    {
+      "key": "home_30",
+      "role": "alt",
+      "default": "Dron plegable gris sobre fondo blanco",
+      "max": 59
+    },
+    {
+      "key": "home_31",
+      "role": "title",
+      "default": "Modelos",
+      "max": 12
+    },
+    {
+      "key": "home_32",
+      "role": "body",
+      "default": " · elige el dron para tu próximo vuelo.",
+      "max": 62
+    },
+    {
+      "key": "home_33",
+      "role": "alt",
+      "default": "Dron flotando sobre un valle con lago al amanecer",
+      "max": 78
+    },
+    {
+      "key": "home_34",
+      "role": "title",
+      "default": "Hecho para volar lejos",
+      "max": 35
+    },
+    {
+      "key": "home_35",
+      "role": "title",
+      "default": "Compara modelos",
+      "max": 24
+    },
+    {
+      "key": "home_36",
+      "role": "body",
+      "default": "Especificación",
+      "max": 22
+    },
+    {
+      "key": "home_37",
+      "role": "body",
+      "default": "Explorer",
+      "max": 13
+    },
+    {
+      "key": "home_38",
+      "role": "body",
+      "default": "Pro",
+      "max": 12
+    },
+    {
+      "key": "home_39",
+      "role": "title",
+      "default": "Accesorios",
+      "max": 16
+    },
+    {
+      "key": "home_40",
+      "role": "alt",
+      "default": "Batería de dron y cargador compacto sobre fondo blanco",
+      "max": 86
+    },
+    {
+      "key": "home_41",
+      "role": "alt",
+      "default": "Piloto de dron con control remoto sobre una colina",
+      "max": 80
+    },
+    {
+      "key": "home_42",
+      "role": "alt",
+      "default": "Manos sosteniendo un control remoto de dron",
+      "max": 69
+    },
+    {
+      "key": "home_43",
+      "role": "title",
+      "default": "Antes de volar",
+      "max": 22
+    },
+    {
+      "key": "home_44",
+      "role": "title",
+      "default": "Novedades de vuelo",
+      "max": 29
+    },
+    {
+      "key": "home_45",
+      "role": "body",
+      "default": "Lanzamientos, guías y rutas para volar, en tu correo.",
+      "max": 85
+    },
+    {
+      "key": "home_46",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_47",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Modelos",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Vuelo",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Accesorios",
+      "max": 16
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Licencia",
+      "max": 13
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Envío al día siguiente en todos los sistemas",
+      "max": 70
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Drones y accesorios para volar más lejos.",
+      "max": 66
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Tu compra",
+      "max": 14
+    },
+    {
+      "key": "shell_9",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_10",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_12",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Carrito vacío",
+      "max": 21
+    },
+    {
+      "key": "shell_14",
+      "role": "body",
+      "default": "Elige un dron y aparecerá aquí.",
+      "max": 50
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "Agregado",
+      "max": 13
+    },
+    {
+      "key": "shell_17",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_18",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_19",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "question",
+      "default": "Garantía y envíos",
+      "max": 27
+    },
+    {
+      "key": "product_2",
+      "role": "body",
+      "default": "Garantía de 12 meses y cambios en 7 días. Envío al día siguiente en las ciudades principales.",
+      "max": 149
+    }
   ]
 }

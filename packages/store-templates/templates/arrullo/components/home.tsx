@@ -1,46 +1,46 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { photos } from './store-data';
+import { photos, copy } from './store-data';
 
 const budgets = [
-  { name: 'Hasta Bs 150', text: 'Sonajeros, mordedores y tarjetas de bienvenida.' },
-  { name: 'Bs 150 a 300', text: 'Mantas tejidas, peluches y sets de baño.' },
-  { name: 'Más de Bs 300', text: 'Cunas móviles, canastas completas y cajas de regalo.' },
+  { name: copy.home_1, text: copy.home_2 },
+  { name: copy.home_3, text: copy.home_4 },
+  { name: copy.home_5, text: copy.home_6 },
 ];
 
-const checklist = ['Una cuna firme y sin adornos sueltos', 'Mantas de algodón para cada estación', 'Luz cálida y tenue para la noche', 'Un rincón suave para leer juntos'];
+const checklist = [copy.home_7, copy.home_8, copy.home_9, copy.home_10];
 
 const promises = [
-  { name: 'Materiales seguros', text: 'Algodón y lana sin tintes agresivos.' },
-  { name: 'Tejido a mano', text: 'Cada pieza pasa por manos artesanas.' },
-  { name: 'Empaque reutilizable', text: 'Bolsas de tela que se vuelven útiles.' },
+  { name: copy.home_11, text: copy.home_12 },
+  { name: copy.home_13, text: copy.home_14 },
+  { name: copy.home_15, text: copy.home_16 },
 ];
 
 const reviews = [
-  { quote: 'La manta es suave y el empaque parecía un regalo desde antes de abrirlo.', who: 'Valeria, La Paz' },
-  { quote: 'Lo elegí para mi sobrina y llegó impecable, con tarjeta incluida.', who: 'Marcela, Sucre' },
-  { quote: 'El conejito no se separa de mi bebé.', who: 'Diego, Santa Cruz' },
+  { quote: copy.home_17, who: copy.home_18 },
+  { quote: copy.home_19, who: copy.home_20 },
+  { quote: copy.home_21, who: copy.home_22 },
 ];
 
 export default function Home() {
   return <Shell>
     <main id="contenido">
       <section id="portada" className="au-hero" aria-labelledby="au-hero-title">
-        <h1 id="au-hero-title" className="au-sr">Regalos para bebé</h1>
+        <h1 id="au-hero-title" className="au-sr">{copy.home_23}</h1>
         <div className="au-hero__halves">
-          <img src={photos.p1} alt="Rincón de un cuarto de bebé con un dosel de lino y un móvil de fieltro" />
-          <img src={photos.p2} alt="Nubes de fieltro y una luna creciente sobre fondo neutro" />
+          <img src={photos.p1} alt={copy.home_24} />
+          <img src={photos.p2} alt={copy.home_25} />
         </div>
         <div className="au-hero__caption">
-          <p>Suavidad para los primeros días</p>
-          <a className="au-btn" href="#regalos">Ver regalos</a>
+          <p>{copy.home_26}</p>
+          <a className="au-btn" href="#regalos">{copy.home_27}</a>
         </div>
       </section>
 
       <section id="regalos" className="au-shop" aria-labelledby="au-shop-title">
         <Reveal className="au-head">
-          <h2 id="au-shop-title" className="au-title">Regalos para bebé</h2>
-          <p className="au-head__aside">Piezas suaves, hechas para durar.</p>
+          <h2 id="au-shop-title" className="au-title">{copy.home_28}</h2>
+          <p className="au-head__aside">{copy.home_29}</p>
         </Reveal>
         <template data-pagosya-product-template>
           <article className="au-card">
@@ -55,7 +55,7 @@ export default function Home() {
 
       <section id="guia" className="au-guide" aria-labelledby="au-guide-title">
         <Reveal className="au-head">
-          <h2 id="au-guide-title" className="au-title">Guía por presupuesto</h2>
+          <h2 id="au-guide-title" className="au-title">{copy.home_30}</h2>
         </Reveal>
         <div className="au-guide__grid">
           {budgets.map((item, index) => <Reveal key={item.name} delay={index * 60}>
@@ -66,30 +66,30 @@ export default function Home() {
 
       <section id="cuarto" className="au-room" aria-labelledby="au-room-title">
         <div className="au-room__frame">
-          <Parallax strength={40} mobileStrength={20} className="au-drift"><img src={photos.cuarto} alt="Cuarto de bebé luminoso y neutro con una cuna de madera" /></Parallax>
+          <Parallax strength={40} mobileStrength={20} className="au-drift"><img src={photos.cuarto} alt={copy.home_31} /></Parallax>
         </div>
         <Reveal className="au-room__copy">
-          <h2 id="au-room-title" className="au-title">El cuarto, paso a paso</h2>
+          <h2 id="au-room-title" className="au-title">{copy.home_32}</h2>
           <ul className="au-room__list">{checklist.map(item => <li key={item}>{item}</li>)}</ul>
-          <a className="au-btn au-btn--ghost" href="#regalos">Ver para el cuarto</a>
+          <a className="au-btn au-btn--ghost" href="#regalos">{copy.home_33}</a>
         </Reveal>
       </section>
 
       <section id="filosofia" className="au-phil" aria-labelledby="au-phil-title">
         <Reveal className="au-head">
-          <h2 id="au-phil-title" className="au-title">Nuestras promesas</h2>
+          <h2 id="au-phil-title" className="au-title">{copy.home_34}</h2>
         </Reveal>
         <div className="au-phil__grid">
           {promises.map((item, index) => <Reveal key={item.name} delay={index * 60}>
             <div className="au-phil__item"><b>{item.name}</b><span>{item.text}</span></div>
           </Reveal>)}
-          <img className="au-phil__photo" src={photos.manos} alt="Manos de un adulto sosteniendo la mano de un bebé" />
+          <img className="au-phil__photo" src={photos.manos} alt={copy.home_35} />
         </div>
       </section>
 
       <section id="resenas" className="au-rev" aria-labelledby="au-rev-title">
         <Reveal className="au-head">
-          <h2 id="au-rev-title" className="au-title">Familias felices</h2>
+          <h2 id="au-rev-title" className="au-title">{copy.home_36}</h2>
         </Reveal>
         <div className="au-rev__grid">
           {reviews.map((rev, index) => <Reveal key={rev.who} delay={index * 60}>
@@ -100,11 +100,11 @@ export default function Home() {
 
       <section id="boletin" className="au-news" aria-labelledby="au-news-title" data-pagosya-subscribe-block>
         <Reveal className="au-news__inner">
-          <h2 id="au-news-title" className="au-news__title">Ideas suaves, en tu correo</h2>
-          <p className="au-news__text">Guías de regalos y novedades, una vez al mes.</p>
+          <h2 id="au-news-title" className="au-news__title">{copy.home_37}</h2>
+          <p className="au-news__text">{copy.home_38}</p>
           <button type="button" className="au-news__button" data-pagosya-subscribe-open aria-label="Suscribirme con mi correo">
-            <span className="au-news__field">Tu correo electrónico</span>
-            <span className="au-news__submit">Suscribirme</span>
+            <span className="au-news__field">{copy.home_39}</span>
+            <span className="au-news__submit">{copy.home_40}</span>
           </button>
           <p role="status" className="au-news__status" />
         </Reveal>

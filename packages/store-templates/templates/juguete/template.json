@@ -52,5 +52,169 @@
       "role": "lifestyle",
       "demo": "juego.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Imaginar",
+      "max": 13
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Juguetes que dejan espacio para inventar.",
+      "max": 66
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Moverse",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Para correr, trepar, construir y derribar.",
+      "max": 67
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Compartir",
+      "max": 14
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Juegos para jugar en familia o con amigos.",
+      "max": 67
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿Para qué edad es cada juguete?",
+      "max": 50
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Cada ficha indica la edad recomendada. Si dudas, escríbenos y te ayudamos a elegir.",
+      "max": 133
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Lo envuelven para regalo?",
+      "max": 42
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Sí. Déjanos una nota en tu pedido y lo enviamos listo para regalar.",
+      "max": 107
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta.",
+      "max": 64
+    },
+    {
+      "key": "home_13",
+      "role": "headline",
+      "default": "Jugar es la mejor forma de aprender",
+      "max": 56
+    },
+    {
+      "key": "home_14",
+      "role": "lead",
+      "default": "Juguetes elegidos para imaginar, moverse y compartir.",
+      "max": 85
+    },
+    {
+      "key": "home_15",
+      "role": "cta",
+      "default": "Ver juguetes",
+      "max": 19
+    },
+    {
+      "key": "home_16",
+      "role": "title",
+      "default": "Encuentra por edad",
+      "max": 29
+    },
+    {
+      "key": "home_17",
+      "role": "title",
+      "default": "Juguetes",
+      "max": 13
+    },
+    {
+      "key": "home_18",
+      "role": "alt",
+      "default": "Niños jugando",
+      "max": 21
+    },
+    {
+      "key": "home_19",
+      "role": "title",
+      "default": "Lo que buscamos en cada juguete",
+      "max": 50
+    },
+    {
+      "key": "home_20",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Juguetes",
+      "max": 13
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Por edad",
+      "max": 13
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Carrito ",
+      "max": 13
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Juguetes para crecer jugando.",
+      "max": 46
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
+    }
   ]
 }

@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Tienda', href: 'index.html#regalos' },
-  { label: 'Nuestra filosofía', href: 'index.html#filosofia' },
-  { label: 'Guía de regalos', href: 'index.html#guia' },
+  { label: copy.shell_1, href: 'index.html#regalos' },
+  { label: copy.shell_2, href: 'index.html#filosofia' },
+  { label: copy.shell_3, href: 'index.html#guia' },
 ];
 
 function PersonIcon() {
@@ -18,7 +18,7 @@ function BagIcon() {
 
 export function Header() {
   return <header className="au-header">
-    <p className="au-ticker">Envoltura de regalo gratis desde Bs 250</p>
+    <p className="au-ticker">{copy.shell_4}</p>
     <div className="au-bar">
       <a className="au-brand" href="index.html"><span className="au-brand__dot" aria-hidden="true" />{store.name}</a>
       <nav className="au-nav" aria-label="Principal">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
@@ -35,19 +35,19 @@ export function Footer() {
     <div className="au-footer__top">
       <div>
         <p className="au-footer__name">{store.name}</p>
-        <p className="au-footer__lead">{store.tagline || 'Regalos suaves para los primeros días.'}</p>
+        <p className="au-footer__lead">{store.tagline || copy.shell_5}</p>
       </div>
       <nav className="au-footer__col" aria-label="Tienda">
-        <p className="au-footer__heading">Tienda</p>
+        <p className="au-footer__heading">{copy.shell_6}</p>
         {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
       </nav>
       <div className="au-footer__col">
-        <p className="au-footer__heading">Tu compra</p>
-        <button type="button" className="au-footer__link" data-cart-open>Ver carrito</button>
-        <a href="checkout.html">Mi pedido</a>
+        <p className="au-footer__heading">{copy.shell_7}</p>
+        <button type="button" className="au-footer__link" data-cart-open>{copy.shell_8}</button>
+        <a href="checkout.html">{copy.shell_9}</a>
       </div>
     </div>
-    <p className="au-footer__note">{store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <p className="au-footer__note">{store.city ? `${store.city} · ` : ''}{copy.shell_10}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -58,13 +58,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="au-cartpanel">
         <header className="au-cartpanel__head">
-          <h2 className="au-cartpanel__title">Tu canasta</h2>
+          <h2 className="au-cartpanel__title">{copy.shell_11}</h2>
           <button type="button" className="au-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="au-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="au-cartpanel__empty">
-          <p className="au-cartpanel__empty-title">Tu canasta está vacía</p>
-          <p>Elige un regalo y aparecerá aquí.</p>
+          <p className="au-cartpanel__empty-title">{copy.shell_12}</p>
+          <p>{copy.shell_13}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="au-cartpanel__suggestions" />
         <div className="au-cartpanel__foot">
@@ -88,7 +88,7 @@ export function Commerce() {
         </div>
         <div className="au-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="au-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="au-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="au-line__remove">{copy.shell_14}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -96,20 +96,20 @@ export function Commerce() {
       <div className="au-added">
         <KitSlot kind="added" name="photo" as="img" className="au-added__photo" />
         <div className="au-added__copy">
-          <p className="au-added__kicker">Agregado</p>
+          <p className="au-added__kicker">{copy.shell_15}</p>
           <KitSlot kind="added" name="message" as="p" className="au-added__message" />
         </div>
-        <button type="button" className="au-added__open" data-cart-open>Ver canasta</button>
+        <button type="button" className="au-added__open" data-cart-open>{copy.shell_16}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="au-review">
         <div className="au-review__col au-review__col--summary">
-          <h2 className="au-review__heading">Tu pedido</h2>
+          <h2 className="au-review__heading">{copy.shell_17}</h2>
           <KitSlot kind="review" name="summary" className="au-review__summary" />
         </div>
         <div className="au-review__col">
-          <h2 className="au-review__heading">Entrega y pago</h2>
+          <h2 className="au-review__heading">{copy.shell_18}</h2>
           <KitSlot kind="review" name="fields" className="au-review__fields" />
         </div>
       </div>

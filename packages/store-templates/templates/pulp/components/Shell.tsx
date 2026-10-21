@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Inicio', href: 'index.html' },
-  { label: 'La bóveda', href: 'index.html#boveda' },
-  { label: 'Épocas', href: 'index.html#epocas' },
-  { label: 'Raros', href: 'index.html#raros' },
+  { label: copy.shell_1, href: 'index.html' },
+  { label: copy.shell_2, href: 'index.html#boveda' },
+  { label: copy.shell_3, href: 'index.html#epocas' },
+  { label: copy.shell_4, href: 'index.html#raros' },
 ];
 
 function BagIcon() {
@@ -14,7 +14,7 @@ function BagIcon() {
 }
 
 export function Announce() {
-  return <p className="pu-announce"><span>Envíos cuidados en funda y cartón rígido</span><span>Ediciones raras con certificado</span><span>Nuevas llegadas cada semana</span></p>;
+  return <p className="pu-announce"><span>{copy.shell_5}</span><span>{copy.shell_6}</span><span>{copy.shell_7}</span></p>;
 }
 
 export function Header() {
@@ -22,7 +22,7 @@ export function Header() {
     <a className="pu-brand" href="index.html"><span className="pu-brand__badge" aria-hidden="true">★</span><span className="pu-brand__name">{store.name}</span></a>
     <nav className="pu-nav" aria-label="Principal">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
     <div className="pu-tools">
-      <a className="pu-tool pu-tool--text" href="checkout.html">Mi pedido</a>
+      <a className="pu-tool pu-tool--text" href="checkout.html">{copy.shell_8}</a>
       <button type="button" className="pu-tool" data-cart-open aria-label="Abrir carrito"><BagIcon /><span className="pu-tool__count" data-cart-count>0</span></button>
     </div>
   </header>;
@@ -31,13 +31,13 @@ export function Header() {
 export function Footer() {
   return <footer className="pu-footer">
     <p className="pu-footer__name">{store.name}</p>
-    <p className="pu-footer__lead">{store.tagline || 'Cómics de colección, protegidos y con historia.'}</p>
+    <p className="pu-footer__lead">{store.tagline || copy.shell_9}</p>
     <nav className="pu-footer__links" aria-label="Pie de página">
       {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
-      <a href="checkout.html">Mi pedido</a>
-      <button type="button" className="pu-footer__link" data-cart-open>Ver carrito</button>
+      <a href="checkout.html">{copy.shell_10}</a>
+      <button type="button" className="pu-footer__link" data-cart-open>{copy.shell_11}</button>
     </nav>
-    <p className="pu-footer__note">{store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <p className="pu-footer__note">{store.city ? `${store.city} · ` : ''}{copy.shell_12}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -48,13 +48,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="pu-cartpanel">
         <header className="pu-cartpanel__head">
-          <h2 className="pu-cartpanel__title">Tu pila</h2>
+          <h2 className="pu-cartpanel__title">{copy.shell_13}</h2>
           <button type="button" className="pu-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="pu-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="pu-cartpanel__empty">
-          <p className="pu-cartpanel__empty-title">Nada por aquí</p>
-          <p>Elige un número de la bóveda y aparecerá en tu pila.</p>
+          <p className="pu-cartpanel__empty-title">{copy.shell_14}</p>
+          <p>{copy.shell_15}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="pu-cartpanel__suggestions" />
         <div className="pu-cartpanel__foot">
@@ -78,7 +78,7 @@ export function Commerce() {
         </div>
         <div className="pu-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="pu-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="pu-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="pu-line__remove">{copy.shell_16}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -86,20 +86,20 @@ export function Commerce() {
       <div className="pu-added">
         <KitSlot kind="added" name="photo" as="img" className="pu-added__photo" />
         <div className="pu-added__copy">
-          <p className="pu-added__stamp">Agregado</p>
+          <p className="pu-added__stamp">{copy.shell_17}</p>
           <KitSlot kind="added" name="message" as="p" className="pu-added__message" />
         </div>
-        <button type="button" className="pu-added__open" data-cart-open>Ver pila</button>
+        <button type="button" className="pu-added__open" data-cart-open>{copy.shell_18}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="pu-review">
         <div className="pu-review__col pu-review__col--summary">
-          <h2 className="pu-review__heading">Tu pedido</h2>
+          <h2 className="pu-review__heading">{copy.shell_19}</h2>
           <KitSlot kind="review" name="summary" className="pu-review__summary" />
         </div>
         <div className="pu-review__col">
-          <h2 className="pu-review__heading">Entrega y pago</h2>
+          <h2 className="pu-review__heading">{copy.shell_20}</h2>
           <KitSlot kind="review" name="fields" className="pu-review__fields" />
         </div>
       </div>

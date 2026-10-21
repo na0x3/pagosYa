@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Inicio', href: 'index.html' },
-  { label: 'Estantes', href: 'index.html#estantes' },
-  { label: 'Géneros', href: 'index.html#generos' },
-  { label: 'Club', href: 'index.html#lectura' },
+  { label: copy.shell_1, href: 'index.html' },
+  { label: copy.shell_2, href: 'index.html#estantes' },
+  { label: copy.shell_3, href: 'index.html#generos' },
+  { label: copy.shell_4, href: 'index.html#lectura' },
 ];
 
 function BagIcon() {
@@ -24,13 +24,13 @@ export function Header() {
 export function Footer() {
   return <footer className="ti-footer">
     <p className="ti-footer__name">{store.name}</p>
-    <p className="ti-footer__lead">{store.tagline || 'Cómics, manga y novelas gráficas para leer sin parar.'}</p>
+    <p className="ti-footer__lead">{store.tagline || copy.shell_5}</p>
     <nav className="ti-footer__links" aria-label="Pie de página">
       {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
-      <a href="checkout.html">Mi pedido</a>
-      <button type="button" className="ti-footer__link" data-cart-open>Ver carrito</button>
+      <a href="checkout.html">{copy.shell_6}</a>
+      <button type="button" className="ti-footer__link" data-cart-open>{copy.shell_7}</button>
     </nav>
-    <p className="ti-footer__note">{store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <p className="ti-footer__note">{store.city ? `${store.city} · ` : ''}{copy.shell_8}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -41,13 +41,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="ti-cartpanel">
         <header className="ti-cartpanel__head">
-          <h2 className="ti-cartpanel__title">Tu pila</h2>
+          <h2 className="ti-cartpanel__title">{copy.shell_9}</h2>
           <button type="button" className="ti-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="ti-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="ti-cartpanel__empty">
-          <p className="ti-cartpanel__empty-title">Nada por aquí</p>
-          <p>Elige un tomo y aparecerá en tu pila.</p>
+          <p className="ti-cartpanel__empty-title">{copy.shell_10}</p>
+          <p>{copy.shell_11}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="ti-cartpanel__suggestions" />
         <div className="ti-cartpanel__foot">
@@ -71,7 +71,7 @@ export function Commerce() {
         </div>
         <div className="ti-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="ti-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="ti-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="ti-line__remove">{copy.shell_12}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -79,20 +79,20 @@ export function Commerce() {
       <div className="ti-added">
         <KitSlot kind="added" name="photo" as="img" className="ti-added__photo" />
         <div className="ti-added__copy">
-          <p className="ti-added__kicker">¡A la pila!</p>
+          <p className="ti-added__kicker">{copy.shell_13}</p>
           <KitSlot kind="added" name="message" as="p" className="ti-added__message" />
         </div>
-        <button type="button" className="ti-added__open" data-cart-open>Ver pila</button>
+        <button type="button" className="ti-added__open" data-cart-open>{copy.shell_14}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="ti-review">
         <div className="ti-review__col ti-review__col--summary">
-          <h2 className="ti-review__heading">Tu pedido</h2>
+          <h2 className="ti-review__heading">{copy.shell_15}</h2>
           <KitSlot kind="review" name="summary" className="ti-review__summary" />
         </div>
         <div className="ti-review__col">
-          <h2 className="ti-review__heading">Entrega y pago</h2>
+          <h2 className="ti-review__heading">{copy.shell_16}</h2>
           <KitSlot kind="review" name="fields" className="ti-review__fields" />
         </div>
       </div>

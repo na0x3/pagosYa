@@ -3,16 +3,433 @@
   "name": "Arena",
   "category": "deporte",
   "description": "Merchandising deportivo: degradado morado, atleta recortado y una barra oscura de categorías.",
-  "tags": ["deporte", "camisetas", "hinchas", "entrenamiento"],
+  "tags": [
+    "deporte",
+    "camisetas",
+    "hinchas",
+    "entrenamiento"
+  ],
   "sitePurpose": "shop",
   "order": -283,
-  "dna": { "display": "unbounded", "text": "chivo", "case": "upper", "radius": "soft", "border": "none", "button": "block", "hover": "lift", "press": "pop", "motion": "cinematic", "cart": "drawer", "added": "ribbon", "card": "zoom", "frame": "bleed" },
+  "dna": {
+    "display": "unbounded",
+    "text": "chivo",
+    "case": "upper",
+    "radius": "soft",
+    "border": "none",
+    "button": "block",
+    "hover": "lift",
+    "press": "pop",
+    "motion": "cinematic",
+    "cart": "drawer",
+    "added": "ribbon",
+    "card": "zoom",
+    "frame": "bleed"
+  },
   "photos": [
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "cancha", "role": "lifestyle", "demo": "cancha.jpg" },
-    { "slot": "hinchada", "role": "lifestyle", "demo": "hinchada.jpg" }
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "cancha",
+      "role": "lifestyle",
+      "demo": "cancha.jpg"
+    },
+    {
+      "slot": "hinchada",
+      "role": "lifestyle",
+      "demo": "hinchada.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "item",
+      "default": "Camisetas",
+      "max": 14
+    },
+    {
+      "key": "home_2",
+      "role": "item",
+      "default": "Gorras",
+      "max": 12
+    },
+    {
+      "key": "home_3",
+      "role": "item",
+      "default": "Calzado",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "item",
+      "default": "Accesorios",
+      "max": 16
+    },
+    {
+      "key": "home_5",
+      "role": "item",
+      "default": "Entrenamiento",
+      "max": 21
+    },
+    {
+      "key": "home_6",
+      "role": "name",
+      "default": "Local",
+      "max": 12
+    },
+    {
+      "key": "home_7",
+      "role": "body",
+      "default": "La camiseta del partido en casa, tela que respira y escudo bordado.",
+      "max": 107
+    },
+    {
+      "key": "home_8",
+      "role": "name",
+      "default": "Visitante",
+      "max": 14
+    },
+    {
+      "key": "home_9",
+      "role": "body",
+      "default": "Para jugar de afuera: lima intenso, corte atlético.",
+      "max": 82
+    },
+    {
+      "key": "home_10",
+      "role": "name",
+      "default": "Práctica",
+      "max": 13
+    },
+    {
+      "key": "home_11",
+      "role": "body",
+      "default": "Ligera, con secado rápido para las sesiones de cada semana.",
+      "max": 94
+    },
+    {
+      "key": "home_12",
+      "role": "title",
+      "default": "Calentamiento",
+      "max": 21
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Diez minutos de movilidad antes de tocar el balón.",
+      "max": 80
+    },
+    {
+      "key": "home_14",
+      "role": "title",
+      "default": "Técnica",
+      "max": 12
+    },
+    {
+      "key": "home_15",
+      "role": "body",
+      "default": "Pases cortos, control y giros en espacios reducidos.",
+      "max": 83
+    },
+    {
+      "key": "home_16",
+      "role": "title",
+      "default": "Partido",
+      "max": 12
+    },
+    {
+      "key": "home_17",
+      "role": "body",
+      "default": "Seis contra seis con reglas simples y cambios rápidos.",
+      "max": 86
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Temporada nueva",
+      "max": 24
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "Camisetas, gorras y calzado para los que viven el deporte.",
+      "max": 93
+    },
+    {
+      "key": "home_20",
+      "role": "cta",
+      "default": "Comprar ahora",
+      "max": 21
+    },
+    {
+      "key": "home_21",
+      "role": "alt",
+      "default": "Corredor en plena carrera con ropa deportiva sobre fondo violeta",
+      "max": 102
+    },
+    {
+      "key": "home_22",
+      "role": "alt",
+      "default": "Gorra deportiva morada sobre fondo liso",
+      "max": 62
+    },
+    {
+      "key": "home_23",
+      "role": "title",
+      "default": "Novedades",
+      "max": 14
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Lo último que llegó al vestuario.",
+      "max": 53
+    },
+    {
+      "key": "home_25",
+      "role": "title",
+      "default": "Equipo completo",
+      "max": 24
+    },
+    {
+      "key": "home_26",
+      "role": "body",
+      "default": "Tres camisetas para cada momento del campeonato.",
+      "max": 77
+    },
+    {
+      "key": "home_27",
+      "role": "alt",
+      "default": "Camiseta deportiva violeta doblada sobre fondo liso",
+      "max": 82
+    },
+    {
+      "key": "home_28",
+      "role": "alt",
+      "default": "Zapatillas deportivas con detalles lima sobre fondo liso",
+      "max": 90
+    },
+    {
+      "key": "home_29",
+      "role": "alt",
+      "default": "Cancha de fútbol al atardecer con las líneas marcadas",
+      "max": 85
+    },
+    {
+      "key": "home_30",
+      "role": "body",
+      "default": "Entrenamiento",
+      "max": 21
+    },
+    {
+      "key": "home_31",
+      "role": "title",
+      "default": "Sesiones para todos los niveles",
+      "max": 50
+    },
+    {
+      "key": "home_32",
+      "role": "cta",
+      "default": "Equiparme",
+      "max": 14
+    },
+    {
+      "key": "home_33",
+      "role": "title",
+      "default": "Ofertas de temporada",
+      "max": 32
+    },
+    {
+      "key": "home_34",
+      "role": "body",
+      "default": "Elige tu equipo y aprovecha los descuentos de cierre de campeonato.",
+      "max": 107
+    },
+    {
+      "key": "home_35",
+      "role": "cta",
+      "default": "Ver ofertas",
+      "max": 18
+    },
+    {
+      "key": "home_36",
+      "role": "alt",
+      "default": "Hinchada en las gradas con banderas y bufandas moradas",
+      "max": 86
+    },
+    {
+      "key": "home_37",
+      "role": "title",
+      "default": "Únete al equipo",
+      "max": 24
+    },
+    {
+      "key": "home_38",
+      "role": "body",
+      "default": "Lanzamientos, ofertas y fechas de entrenamiento en tu correo.",
+      "max": 98
+    },
+    {
+      "key": "home_39",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_40",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Todo",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Categorías",
+      "max": 16
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Equipo",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Entrenar",
+      "max": 13
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Camisetas, equipo y todo lo que necesitas para tu deporte.",
+      "max": 93
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Tu compra",
+      "max": 14
+    },
+    {
+      "key": "shell_8",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_9",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_10",
+      "role": "body",
+      "default": "Envíos a toda Bolivia",
+      "max": 34
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_12",
+      "role": "title",
+      "default": "Tu equipo",
+      "max": 14
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Vestuario vacío",
+      "max": 24
+    },
+    {
+      "key": "shell_14",
+      "role": "body",
+      "default": "Elige tu equipo y aparecerá aquí.",
+      "max": 53
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "¡En tu equipo!",
+      "max": 22
+    },
+    {
+      "key": "shell_17",
+      "role": "cta",
+      "default": "Ver equipo",
+      "max": 16
+    },
+    {
+      "key": "shell_18",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_19",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "question",
+      "default": "Tela y ajuste",
+      "max": 21
+    },
+    {
+      "key": "product_2",
+      "role": "question",
+      "default": "Cambios y envíos",
+      "max": 26
+    },
+    {
+      "key": "product_3",
+      "role": "body",
+      "default": "Cambios en 7 días con la etiqueta puesta. Envíos a todo el país en 2 a 5 días hábiles.",
+      "max": 138
+    }
   ]
 }

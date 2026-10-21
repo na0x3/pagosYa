@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Pinturas', href: 'index.html#pinturas' },
-  { label: 'Sets', href: 'index.html#sets' },
-  { label: 'Consejos', href: 'index.html#consejos' },
-  { label: 'Estudio', href: 'index.html#estudio' },
+  { label: copy.shell_1, href: 'index.html#pinturas' },
+  { label: copy.shell_2, href: 'index.html#sets' },
+  { label: copy.shell_3, href: 'index.html#consejos' },
+  { label: copy.shell_4, href: 'index.html#estudio' },
 ];
 
 export function Announce() {
-  return <p className="ac-announce">Descuentos en sets · Envío rápido a todo el país · Pincel de regalo desde tu primera compra</p>;
+  return <p className="ac-announce">{copy.shell_5}</p>;
 }
 
 export function Header() {
@@ -18,8 +18,8 @@ export function Header() {
     <a className="ac-brand" href="index.html">{store.name}</a>
     <nav className="ac-nav" aria-label="Principal">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
     <div className="ac-tools">
-      <a className="ac-account" href="checkout.html">Mi pedido</a>
-      <button type="button" className="ac-cart" data-cart-open aria-label="Abrir carrito">Carrito <span className="ac-cart__count" data-cart-count>0</span></button>
+      <a className="ac-account" href="checkout.html">{copy.shell_6}</a>
+      <button type="button" className="ac-cart" data-cart-open aria-label="Abrir carrito">{copy.shell_7}<span className="ac-cart__count" data-cart-count>0</span></button>
     </div>
   </header>;
 }
@@ -27,13 +27,13 @@ export function Header() {
 export function Footer() {
   return <footer className="ac-footer">
     <p className="ac-footer__name">{store.name}</p>
-    <p className="ac-footer__lead">{store.tagline || 'Todo para pintar, dibujar y crear.'}</p>
+    <p className="ac-footer__lead">{store.tagline || copy.shell_8}</p>
     <nav className="ac-footer__links" aria-label="Pie de página">
       {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
-      <a href="checkout.html">Mi pedido</a>
-      <button type="button" className="ac-footer__link" data-cart-open>Ver carrito</button>
+      <a href="checkout.html">{copy.shell_9}</a>
+      <button type="button" className="ac-footer__link" data-cart-open>{copy.shell_10}</button>
     </nav>
-    <p className="ac-footer__note">{store.city ? `${store.city} · ` : ''}Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <p className="ac-footer__note">{store.city ? `${store.city} · ` : ''}{copy.shell_11}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -44,13 +44,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="ac-cartpanel">
         <header className="ac-cartpanel__head">
-          <h2 className="ac-cartpanel__title">Tu carrito</h2>
+          <h2 className="ac-cartpanel__title">{copy.shell_12}</h2>
           <button type="button" className="ac-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="ac-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="ac-cartpanel__empty">
-          <p className="ac-cartpanel__empty-title">Todavía nada</p>
-          <p>Elige colores y pinceles, y aparecerán aquí.</p>
+          <p className="ac-cartpanel__empty-title">{copy.shell_13}</p>
+          <p>{copy.shell_14}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="ac-cartpanel__suggestions" />
         <div className="ac-cartpanel__foot">
@@ -74,7 +74,7 @@ export function Commerce() {
         </div>
         <div className="ac-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="ac-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="ac-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="ac-line__remove">{copy.shell_15}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -82,20 +82,20 @@ export function Commerce() {
       <div className="ac-added">
         <KitSlot kind="added" name="photo" as="img" className="ac-added__photo" />
         <div className="ac-added__copy">
-          <p className="ac-added__kicker">¡Listo!</p>
+          <p className="ac-added__kicker">{copy.shell_16}</p>
           <KitSlot kind="added" name="message" as="p" className="ac-added__message" />
         </div>
-        <button type="button" className="ac-added__open" data-cart-open>Ver carrito</button>
+        <button type="button" className="ac-added__open" data-cart-open>{copy.shell_17}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="ac-review">
         <div className="ac-review__col ac-review__col--summary">
-          <h2 className="ac-review__heading">Tu pedido</h2>
+          <h2 className="ac-review__heading">{copy.shell_18}</h2>
           <KitSlot kind="review" name="summary" className="ac-review__summary" />
         </div>
         <div className="ac-review__col">
-          <h2 className="ac-review__heading">Entrega y pago</h2>
+          <h2 className="ac-review__heading">{copy.shell_19}</h2>
           <KitSlot kind="review" name="fields" className="ac-review__fields" />
         </div>
       </div>

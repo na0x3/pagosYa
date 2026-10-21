@@ -2,6 +2,7 @@
   "id": "tostado",
   "name": "Tostado",
   "category": "comida",
+  "curated": true,
   "description": "Café de especialidad: papel cálido, títulos en mayúsculas y un carrusel de productos con notas de sabor.",
   "tags": [
     "café",
@@ -57,6 +58,218 @@
       "slot": "taza",
       "role": "detail",
       "demo": "taza.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Seleccionamos",
+      "max": 21
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Probamos cada lote y elegimos los que tienen algo que contar.",
+      "max": 98
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Tostamos",
+      "max": 13
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "En tandas pequeñas, cada semana, para que llegue fresco.",
+      "max": 90
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Enviamos",
+      "max": 13
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Molido o en grano, como lo prepares en casa.",
+      "max": 70
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿En grano o molido?",
+      "max": 30
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Como prefieras. Si no tienes molino, te lo molemos para tu método: prensa, filtro o espresso.",
+      "max": 149
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Cuándo tuestan?",
+      "max": 26
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Cada semana. Tu café sale entre 2 y 7 días después de tostado.",
+      "max": 99
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Cómo pago?",
+      "max": 18
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta, desde tu celular.",
+      "max": 93
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Café de especialidad",
+      "max": 32
+    },
+    {
+      "key": "home_14",
+      "role": "headline",
+      "default": "Café que vale la pena despertarse",
+      "max": 53
+    },
+    {
+      "key": "home_15",
+      "role": "lead",
+      "default": "Granos seleccionados, tostados cada semana y enviados a tu puerta. Elige el tuyo.",
+      "max": 130
+    },
+    {
+      "key": "home_16",
+      "role": "cta",
+      "default": "Comprar café",
+      "max": 19
+    },
+    {
+      "key": "home_17",
+      "role": "title",
+      "default": "Nuestros cafés",
+      "max": 22
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Cada uno con su origen y su perfil. Desliza para verlos todos.",
+      "max": 99
+    },
+    {
+      "key": "home_19",
+      "role": "cta",
+      "default": "Ver todos",
+      "max": 14
+    },
+    {
+      "key": "home_20",
+      "role": "body",
+      "default": "Del origen a tu taza",
+      "max": 32
+    },
+    {
+      "key": "home_21",
+      "role": "title",
+      "default": "Así llega tu café",
+      "max": 27
+    },
+    {
+      "key": "home_22",
+      "role": "alt",
+      "default": "Origen del café",
+      "max": 24
+    },
+    {
+      "key": "home_23",
+      "role": "title",
+      "default": "Nunca te quedes sin café",
+      "max": 38
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Pídenos tu café de siempre cada vez que se te acabe. Lo tostamos y te lo enviamos esa misma semana.",
+      "max": 158
+    },
+    {
+      "key": "home_25",
+      "role": "cta",
+      "default": "Elegir mi café",
+      "max": 22
+    },
+    {
+      "key": "home_26",
+      "role": "title",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Cafés",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Origen",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Suscripción",
+      "max": 18
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Tostado cada semana · Paga con QR o tarjeta",
+      "max": 69
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Carrito (",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Café de especialidad, tostado en pequeñas tandas.",
+      "max": 78
+    },
+    {
+      "key": "shell_8",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Pagos seguros con pagosYa",
+      "max": 40
     }
   ]
 }

@@ -1,30 +1,30 @@
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { store, photos } from './store-data';
+import { store, photos, copy } from './store-data';
 
 const numbers = [
-  { value: '12', label: 'años construyendo' },
-  { value: '240+', label: 'obras entregadas' },
-  { value: '18.500', label: 'm² construidos' },
-  { value: '190', label: 'familias felices' },
+  { value: '12', label: copy.home_1 },
+  { value: '240+', label: copy.home_2 },
+  { value: '18.500', label: copy.home_3 },
+  { value: '190', label: copy.home_4 },
 ];
 
 const steps = [
-  { title: 'Visita', text: 'Vamos a tu terreno o casa, medimos y escuchamos lo que necesitas.' },
-  { title: 'Presupuesto', text: 'Recibes un presupuesto por escrito, con materiales, plazos y precio final.' },
-  { title: 'Obra', text: 'Un encargado fijo dirige el trabajo y te manda avances con fotos cada semana.' },
-  { title: 'Entrega', text: 'Revisamos juntos cada detalle y te entregamos con garantía por escrito.' },
+  { title: copy.home_5, text: copy.home_6 },
+  { title: copy.home_7, text: copy.home_8 },
+  { title: copy.home_9, text: copy.home_10 },
+  { title: copy.home_11, text: copy.home_12 },
 ];
 
 const reviews = [
-  { quote: 'Nos entregaron la remodelación de la cocina una semana antes de lo prometido y sin dejar escombros.', name: 'Rosario', place: 'Sopocachi' },
-  { quote: 'El presupuesto fue claro desde el primer día. Lo que nos dijeron que costaría fue lo que pagamos.', name: 'Marcelo', place: 'Equipetrol' },
-  { quote: 'Construyeron la casa de mis padres con mucho cuidado. Cada semana mandaban fotos del avance.', name: 'Andrea', place: 'Cala Cala' },
+  { quote: copy.home_13, name: copy.home_14, place: copy.home_15 },
+  { quote: copy.home_16, name: copy.home_17, place: copy.home_18 },
+  { quote: copy.home_19, name: copy.home_20, place: copy.home_21 },
 ];
 
 const projects = [
-  { slot: 'p4', name: 'Cocina integral', meta: '38 m² · 5 semanas · Achumani', alt: 'Cocina moderna terminada en tonos neutros' },
-  { slot: 'p2', name: 'Losa y estructura', meta: '96 m² · 8 semanas · Cochabamba', alt: 'Encargado con casco revisando una losa de hormigón' },
+  { slot: 'p4', name: copy.home_22, meta: '38 m² · 5 semanas · Achumani', alt: copy.home_23 },
+  { slot: 'p2', name: copy.home_24, meta: '96 m² · 8 semanas · Cochabamba', alt: copy.home_25 },
 ];
 
 export default function Home() {
@@ -33,20 +33,20 @@ export default function Home() {
       <section id="portada" className="ob-hero" aria-labelledby="ob-hero-title">
         <img className="ob-hero__photo" src={photos.p3} alt={`Obra de ${store.name}: muro de ladrillo en construcción`} />
         <div className="ob-hero__copy">
-          <p className="ob-kicker">Construcción y remodelación</p>
-          <h1 id="ob-hero-title" className="ob-hero__title">Construimos lo que imaginas</h1>
-          <p className="ob-hero__lead">Visita técnica, presupuesto por escrito y una obra que se entrega en la fecha acordada.</p>
+          <p className="ob-kicker">{copy.home_26}</p>
+          <h1 id="ob-hero-title" className="ob-hero__title">{copy.home_27}</h1>
+          <p className="ob-hero__lead">{copy.home_28}</p>
           <div className="ob-hero__actions">
-            <a className="ob-btn ob-btn--yellow" href="#servicios">Cotizar mi obra</a>
-            <a className="ob-btn ob-btn--ghost" href="#servicios">Ver servicios</a>
+            <a className="ob-btn ob-btn--yellow" href="#servicios">{copy.home_29}</a>
+            <a className="ob-btn ob-btn--ghost" href="#servicios">{copy.home_30}</a>
           </div>
         </div>
       </section>
 
       <section id="servicios" className="ob-shop" aria-labelledby="ob-shop-title">
         <Reveal className="ob-head">
-          <h2 id="ob-shop-title" className="ob-title">Servicios y paquetes</h2>
-          <p className="ob-head__aside">Elige un paquete, agrégalo a tu pedido y coordinamos la visita en 48 horas.</p>
+          <h2 id="ob-shop-title" className="ob-title">{copy.home_31}</h2>
+          <p className="ob-head__aside">{copy.home_32}</p>
         </Reveal>
         <template data-pagosya-product-template>
           <article className="ob-card">
@@ -74,20 +74,20 @@ export default function Home() {
 
       <section id="proyectos" className="ob-projects" aria-labelledby="ob-projects-title">
         <Reveal className="ob-head">
-          <h2 id="ob-projects-title" className="ob-title">Antes y después</h2>
-          <p className="ob-head__aside">Algunas de las obras que entregamos este año.</p>
+          <h2 id="ob-projects-title" className="ob-title">{copy.home_33}</h2>
+          <p className="ob-head__aside">{copy.home_34}</p>
         </Reveal>
         <div className="ob-projects__grid">
           <Reveal className="ob-pair">
             <figure className="ob-pair__side">
-              <img src={photos.antes} alt="Sala sin terminar, con paredes de hormigón y cables a la vista" />
-              <figcaption>Antes</figcaption>
+              <img src={photos.antes} alt={copy.home_35} />
+              <figcaption>{copy.home_36}</figcaption>
             </figure>
             <figure className="ob-pair__side">
-              <img src={photos.despues} alt="La misma sala terminada, con paredes blancas y piso de madera" />
-              <figcaption>Después</figcaption>
+              <img src={photos.despues} alt={copy.home_37} />
+              <figcaption>{copy.home_38}</figcaption>
             </figure>
-            <p className="ob-pair__caption"><b>Remodelación de sala</b> · 64 m² · 6 semanas · Calacoto</p>
+            <p className="ob-pair__caption"><b>{copy.home_39}</b>{copy.home_40}</p>
           </Reveal>
           {projects.map((project, index) => <Reveal key={project.slot} delay={(index + 1) * 60} className="ob-project">
             <img src={photos[project.slot]} alt={project.alt} />
@@ -101,7 +101,7 @@ export default function Home() {
         <Parallax strength={70} mobileStrength={24} className="ob-drift"><img src={photos.p1} alt="" aria-hidden="true" /></Parallax>
         <div className="ob-process__inner">
           <Reveal className="ob-head">
-            <h2 id="ob-process-title" className="ob-title ob-title--light">Así trabajamos</h2>
+            <h2 id="ob-process-title" className="ob-title ob-title--light">{copy.home_41}</h2>
           </Reveal>
           <ol className="ob-steps">
             {steps.map((step, index) => <li key={step.title}>
@@ -117,7 +117,7 @@ export default function Home() {
 
       <section id="resenas" className="ob-reviews" aria-labelledby="ob-reviews-title">
         <Reveal className="ob-head">
-          <h2 id="ob-reviews-title" className="ob-title">Lo que dicen nuestros clientes</h2>
+          <h2 id="ob-reviews-title" className="ob-title">{copy.home_42}</h2>
         </Reveal>
         <div className="ob-quotes">
           {reviews.map((review, index) => <Reveal key={review.name} delay={index * 60}>
@@ -132,9 +132,9 @@ export default function Home() {
 
       <section id="cotizar" className="ob-cta" aria-labelledby="ob-cta-title">
         <Reveal className="ob-cta__inner">
-          <h2 id="ob-cta-title" className="ob-cta__title">¿Listo para empezar tu obra?</h2>
-          <p className="ob-cta__text">Elige el paquete que más se parece a lo que necesitas. Te llamamos para coordinar la visita técnica.</p>
-          <a className="ob-btn ob-btn--dark" href="#servicios">Cotizar tu obra</a>
+          <h2 id="ob-cta-title" className="ob-cta__title">{copy.home_43}</h2>
+          <p className="ob-cta__text">{copy.home_44}</p>
+          <a className="ob-btn ob-btn--dark" href="#servicios">{copy.home_45}</a>
         </Reveal>
       </section>
     </main>

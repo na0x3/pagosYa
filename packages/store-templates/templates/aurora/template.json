@@ -57,5 +57,205 @@
       "role": "detail",
       "demo": "texture.jpg"
     }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "title",
+      "default": "Limpia",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Empieza con la piel limpia para que lo demás funcione mejor.",
+      "max": 96
+    },
+    {
+      "key": "home_3",
+      "role": "title",
+      "default": "Trata",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Aplica lo que tu piel necesita hoy, en capas finas.",
+      "max": 82
+    },
+    {
+      "key": "home_5",
+      "role": "title",
+      "default": "Hidrata",
+      "max": 12
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Sella la rutina y deja que actúe mientras sigues tu día.",
+      "max": 90
+    },
+    {
+      "key": "home_7",
+      "role": "question",
+      "default": "¿Cuánto tarda el envío?",
+      "max": 37
+    },
+    {
+      "key": "home_8",
+      "role": "answer",
+      "default": "Preparamos tu pedido en 24 horas y te avisamos cuando sale.",
+      "max": 94
+    },
+    {
+      "key": "home_9",
+      "role": "question",
+      "default": "¿Cómo puedo pagar?",
+      "max": 29
+    },
+    {
+      "key": "home_10",
+      "role": "answer",
+      "default": "Con QR de cualquier banco o con tarjeta, desde tu celular.",
+      "max": 93
+    },
+    {
+      "key": "home_11",
+      "role": "question",
+      "default": "¿Puedo cambiar un producto?",
+      "max": 43
+    },
+    {
+      "key": "home_12",
+      "role": "answer",
+      "default": "Escríbenos dentro de los 7 días de recibido y lo resolvemos.",
+      "max": 96
+    },
+    {
+      "key": "home_13",
+      "role": "body",
+      "default": "Nueva temporada",
+      "max": 24
+    },
+    {
+      "key": "home_14",
+      "role": "headline",
+      "default": "Tu piel, en su mejor versión.",
+      "max": 46
+    },
+    {
+      "key": "home_15",
+      "role": "lead",
+      "default": "Pocos pasos, fórmulas pensadas para el día a día y una rutina que sí vas a mantener.",
+      "max": 134
+    },
+    {
+      "key": "home_16",
+      "role": "cta",
+      "default": "Ver productos",
+      "max": 21
+    },
+    {
+      "key": "home_17",
+      "role": "cta",
+      "default": "Cómo usarlos",
+      "max": 19
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "home_19",
+      "role": "title",
+      "default": "Los esenciales",
+      "max": 22
+    },
+    {
+      "key": "home_20",
+      "role": "body",
+      "default": "Todo lo que ofrecemos, listo para agregar a tu bolsa.",
+      "max": 85
+    },
+    {
+      "key": "home_21",
+      "role": "alt",
+      "default": "Rutina de cuidado",
+      "max": 27
+    },
+    {
+      "key": "home_22",
+      "role": "body",
+      "default": "Rutina",
+      "max": 12
+    },
+    {
+      "key": "home_23",
+      "role": "title",
+      "default": "Tres pasos, cada día",
+      "max": 32
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Texturas ligeras que se sienten bien desde la primera vez.",
+      "max": 93
+    },
+    {
+      "key": "home_25",
+      "role": "title",
+      "default": "Preguntas frecuentes",
+      "max": 32
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Rutina",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_4",
+      "role": "cta",
+      "default": "Bolsa ",
+      "max": 12
+    },
+    {
+      "key": "shell_5",
+      "role": "body",
+      "default": "Cuidado diario, sin complicaciones.",
+      "max": 56
+    },
+    {
+      "key": "shell_6",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_7",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta",
+      "max": 48
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Envíos a todo el país · Paga con QR o tarjeta",
+      "max": 72
+    }
   ]
 }

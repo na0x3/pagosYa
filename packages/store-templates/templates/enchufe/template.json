@@ -2,6 +2,7 @@
   "id": "enchufe",
   "name": "Enchufe",
   "category": "tecnologia",
+  "curated": true,
   "description": "Gadgets y accesorios: paneles grises redondeados, titulares directos y comparación de productos.",
   "tags": [
     "tecnología",
@@ -71,6 +72,566 @@
       "slot": "escritorio",
       "role": "lifestyle",
       "demo": "escritorio.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "name",
+      "default": "Audio",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Audífonos y parlantes",
+      "max": 34
+    },
+    {
+      "key": "home_3",
+      "role": "alt",
+      "default": "Audífonos negros de diadema sobre fondo gris claro",
+      "max": 80
+    },
+    {
+      "key": "home_4",
+      "role": "name",
+      "default": "Carga",
+      "max": 12
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "Cargadores y baterías",
+      "max": 34
+    },
+    {
+      "key": "home_6",
+      "role": "alt",
+      "default": "Batería portátil blanca junto a un cargador inalámbrico con un celular",
+      "max": 112
+    },
+    {
+      "key": "home_7",
+      "role": "name",
+      "default": "Hogar inteligente",
+      "max": 27
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Enchufes, luces y parlantes",
+      "max": 43
+    },
+    {
+      "key": "home_9",
+      "role": "alt",
+      "default": "Parlante inteligente blanco junto a un interruptor inteligente",
+      "max": 99
+    },
+    {
+      "key": "home_10",
+      "role": "name",
+      "default": "Accesorios",
+      "max": 16
+    },
+    {
+      "key": "home_11",
+      "role": "body",
+      "default": "Cables, soportes y hubs",
+      "max": 37
+    },
+    {
+      "key": "home_12",
+      "role": "alt",
+      "default": "Cable trenzado, soporte, hub USB-C y un reloj inteligente vistos desde arriba",
+      "max": 123
+    },
+    {
+      "key": "home_13",
+      "role": "name",
+      "default": "Pulso Lite",
+      "max": 16
+    },
+    {
+      "key": "home_14",
+      "role": "body",
+      "default": "Para el día a día",
+      "max": 27
+    },
+    {
+      "key": "home_15",
+      "role": "name",
+      "default": "Pulso",
+      "max": 12
+    },
+    {
+      "key": "home_16",
+      "role": "body",
+      "default": "El más elegido",
+      "max": 22
+    },
+    {
+      "key": "home_17",
+      "role": "name",
+      "default": "Pulso Pro",
+      "max": 14
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Para viajar",
+      "max": 18
+    },
+    {
+      "key": "home_19",
+      "role": "label",
+      "default": "Batería con estuche",
+      "max": 30
+    },
+    {
+      "key": "home_20",
+      "role": "label",
+      "default": "Cancelación de ruido",
+      "max": 32
+    },
+    {
+      "key": "home_21",
+      "role": "item",
+      "default": "No",
+      "max": 12
+    },
+    {
+      "key": "home_22",
+      "role": "item",
+      "default": "Básica",
+      "max": 12
+    },
+    {
+      "key": "home_23",
+      "role": "item",
+      "default": "Activa adaptativa",
+      "max": 27
+    },
+    {
+      "key": "home_24",
+      "role": "label",
+      "default": "Resistencia al agua",
+      "max": 30
+    },
+    {
+      "key": "home_25",
+      "role": "item",
+      "default": "IPX4",
+      "max": 12
+    },
+    {
+      "key": "home_26",
+      "role": "item",
+      "default": "IPX5",
+      "max": 12
+    },
+    {
+      "key": "home_27",
+      "role": "item",
+      "default": "IP55",
+      "max": 12
+    },
+    {
+      "key": "home_28",
+      "role": "label",
+      "default": "Precio",
+      "max": 12
+    },
+    {
+      "key": "home_29",
+      "role": "item",
+      "default": "Bs 189",
+      "max": 12
+    },
+    {
+      "key": "home_30",
+      "role": "item",
+      "default": "Bs 349",
+      "max": 12
+    },
+    {
+      "key": "home_31",
+      "role": "item",
+      "default": "Bs 590",
+      "max": 12
+    },
+    {
+      "key": "home_32",
+      "role": "title",
+      "default": "Garantía de 1 año",
+      "max": 27
+    },
+    {
+      "key": "home_33",
+      "role": "body",
+      "default": "Si falla, lo cambiamos o lo reparamos sin vueltas.",
+      "max": 80
+    },
+    {
+      "key": "home_34",
+      "role": "title",
+      "default": "Soporte por WhatsApp",
+      "max": 32
+    },
+    {
+      "key": "home_35",
+      "role": "body",
+      "default": "Te ayudamos a configurarlo, de lunes a sábado.",
+      "max": 74
+    },
+    {
+      "key": "home_36",
+      "role": "title",
+      "default": "Factura con NIT",
+      "max": 24
+    },
+    {
+      "key": "home_37",
+      "role": "body",
+      "default": "Pídela al pagar y te llega junto con tu pedido.",
+      "max": 75
+    },
+    {
+      "key": "home_38",
+      "role": "question",
+      "default": "¿Hacen envíos a toda Bolivia?",
+      "max": 46
+    },
+    {
+      "key": "home_39",
+      "role": "answer",
+      "default": "Sí. Enviamos a las nueve capitales de departamento y a otras ciudades por courier. Desde Bs 500 el envío es gratis.",
+      "max": 184
+    },
+    {
+      "key": "home_40",
+      "role": "question",
+      "default": "¿Los cargadores sirven con los enchufes de Bolivia?",
+      "max": 82
+    },
+    {
+      "key": "home_41",
+      "role": "answer",
+      "default": "Sí. Todos nuestros cargadores y enchufes inteligentes funcionan con 220 V y con las tomas de dos patas redondas que se usan en casa.",
+      "max": 211
+    },
+    {
+      "key": "home_42",
+      "role": "question",
+      "default": "¿Cómo funciona la garantía?",
+      "max": 43
+    },
+    {
+      "key": "home_43",
+      "role": "answer",
+      "default": "Todos los productos tienen un año de garantía contra fallas de fábrica. Escríbenos por WhatsApp con tu número de pedido y lo resolvemos.",
+      "max": 218
+    },
+    {
+      "key": "home_44",
+      "role": "question",
+      "default": "¿Puedo pedir factura con NIT?",
+      "max": 46
+    },
+    {
+      "key": "home_45",
+      "role": "answer",
+      "default": "Claro. Al pagar, deja tu NIT o CI y la razón social, y te enviamos la factura con tu pedido.",
+      "max": 147
+    },
+    {
+      "key": "home_46",
+      "role": "question",
+      "default": "¿Cómo puedo pagar?",
+      "max": 29
+    },
+    {
+      "key": "home_47",
+      "role": "answer",
+      "default": "Con QR desde cualquier banco o con tarjeta de débito o crédito. El pago es seguro y se confirma al instante.",
+      "max": 173
+    },
+    {
+      "key": "home_48",
+      "role": "alt",
+      "default": "Cámara compacta negra y plateada sobre fondo gris claro",
+      "max": 88
+    },
+    {
+      "key": "home_49",
+      "role": "body",
+      "default": "Audio · Carga · Hogar inteligente",
+      "max": 53
+    },
+    {
+      "key": "home_50",
+      "role": "headline",
+      "default": "Tecnología útil. Precios justos.",
+      "max": 51
+    },
+    {
+      "key": "home_51",
+      "role": "lead",
+      "default": "Audífonos, cargadores y gadgets para la casa, elegidos por lo bien que funcionan.",
+      "max": 130
+    },
+    {
+      "key": "home_52",
+      "role": "cta",
+      "default": "Ver lo más vendido",
+      "max": 29
+    },
+    {
+      "key": "home_53",
+      "role": "title",
+      "default": "Lo más vendido",
+      "max": 22
+    },
+    {
+      "key": "home_54",
+      "role": "body",
+      "default": "Lo que más se llevan esta semana, listo para enviar.",
+      "max": 83
+    },
+    {
+      "key": "home_55",
+      "role": "title",
+      "default": "Compra por categoría",
+      "max": 32
+    },
+    {
+      "key": "home_56",
+      "role": "body",
+      "default": "Audio",
+      "max": 12
+    },
+    {
+      "key": "home_57",
+      "role": "title",
+      "default": "¿Qué audífonos son para ti?",
+      "max": 43
+    },
+    {
+      "key": "home_58",
+      "role": "body",
+      "default": "Tres modelos inalámbricos, lado a lado. Todos traen estuche de carga con USB-C y un año de garantía.",
+      "max": 160
+    },
+    {
+      "key": "home_59",
+      "role": "cta",
+      "default": "Ver audífonos",
+      "max": 21
+    },
+    {
+      "key": "home_60",
+      "role": "body",
+      "default": "Comparación de tres audífonos inalámbricos",
+      "max": 67
+    },
+    {
+      "key": "home_61",
+      "role": "title",
+      "default": "Compra con respaldo",
+      "max": 30
+    },
+    {
+      "key": "home_62",
+      "role": "alt",
+      "default": "Escritorio de madera junto a la ventana con una laptop, teclado, audífonos y un cargador inalámbrico",
+      "max": 160
+    },
+    {
+      "key": "home_63",
+      "role": "body",
+      "default": "Novedades",
+      "max": 14
+    },
+    {
+      "key": "home_64",
+      "role": "title",
+      "default": "Un escritorio que trabaja contigo",
+      "max": 53
+    },
+    {
+      "key": "home_65",
+      "role": "body",
+      "default": "Carga inalámbrica, un hub para todo y audífonos que cortan el ruido. Menos cables, más espacio.",
+      "max": 152
+    },
+    {
+      "key": "home_66",
+      "role": "cta",
+      "default": "Armar mi escritorio",
+      "max": 30
+    },
+    {
+      "key": "home_67",
+      "role": "title",
+      "default": "Preguntas frecuentes",
+      "max": 32
+    },
+    {
+      "key": "home_68",
+      "role": "body",
+      "default": "¿Tienes otra duda? Escríbenos por WhatsApp y te respondemos el mismo día.",
+      "max": 117
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Todo",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Audio",
+      "max": 12
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Carga",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Hogar inteligente",
+      "max": 27
+    },
+    {
+      "key": "shell_5",
+      "role": "label",
+      "default": "Novedades",
+      "max": 14
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Envío gratis desde Bs 500",
+      "max": 40
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Carrito ",
+      "max": 13
+    },
+    {
+      "key": "shell_8",
+      "role": "body",
+      "default": "Gadgets y accesorios que se usan todos los días, con garantía, soporte de verdad y precios claros.",
+      "max": 157
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_10",
+      "role": "body",
+      "default": "Ayuda",
+      "max": 12
+    },
+    {
+      "key": "shell_11",
+      "role": "cta",
+      "default": "Garantía y soporte",
+      "max": 29
+    },
+    {
+      "key": "shell_12",
+      "role": "cta",
+      "default": "Preguntas frecuentes",
+      "max": 32
+    },
+    {
+      "key": "shell_13",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_14",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_15",
+      "role": "label",
+      "default": "Envíos a toda Bolivia",
+      "max": 34
+    },
+    {
+      "key": "shell_16",
+      "role": "label",
+      "default": "Pagos seguros con QR y tarjeta",
+      "max": 48
+    },
+    {
+      "key": "shell_17",
+      "role": "title",
+      "default": "Tu carrito",
+      "max": 16
+    },
+    {
+      "key": "shell_18",
+      "role": "body",
+      "default": "Tu carrito está vacío",
+      "max": 34
+    },
+    {
+      "key": "shell_19",
+      "role": "body",
+      "default": "Audífonos, cargadores y más: elige algo útil y aparecerá aquí.",
+      "max": 99
+    },
+    {
+      "key": "shell_20",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_21",
+      "role": "body",
+      "default": "Agregado al carrito",
+      "max": 30
+    },
+    {
+      "key": "shell_22",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_23",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_24",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "body",
+      "default": "Qué incluye",
+      "max": 18
     }
   ]
 }

@@ -3,16 +3,463 @@
   "name": "Pulp",
   "category": "libros",
   "description": "Cómics de colección: fondo amarillo, titular rojo gigante con serifa gruesa y ráfagas en zigzag.",
-  "tags": ["cómics", "vintage", "colección", "pulp"],
+  "tags": [
+    "cómics",
+    "vintage",
+    "colección",
+    "pulp"
+  ],
   "sitePurpose": "shop",
   "order": -295,
-  "dna": { "display": "bitter", "text": "space-mono", "case": "upper", "radius": "none", "border": "bold", "button": "brutal", "hover": "invert", "press": "sink", "motion": "snappy", "cart": "overlay", "added": "stamp", "card": "zoom", "frame": "inset" },
+  "dna": {
+    "display": "bitter",
+    "text": "space-mono",
+    "case": "upper",
+    "radius": "none",
+    "border": "bold",
+    "button": "brutal",
+    "hover": "invert",
+    "press": "sink",
+    "motion": "snappy",
+    "cart": "overlay",
+    "added": "stamp",
+    "card": "zoom",
+    "frame": "inset"
+  },
   "photos": [
-    { "slot": "p1", "role": "product", "demo": "p1.jpg" },
-    { "slot": "p2", "role": "product", "demo": "p2.jpg" },
-    { "slot": "p3", "role": "product", "demo": "p3.jpg" },
-    { "slot": "p4", "role": "product", "demo": "p4.jpg" },
-    { "slot": "estante", "role": "lifestyle", "demo": "estante.jpg" },
-    { "slot": "lupa", "role": "detail", "demo": "lupa.jpg" }
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    },
+    {
+      "slot": "estante",
+      "role": "lifestyle",
+      "demo": "estante.jpg"
+    },
+    {
+      "slot": "lupa",
+      "role": "detail",
+      "demo": "lupa.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "body",
+      "default": "Años 40",
+      "max": 12
+    },
+    {
+      "key": "home_2",
+      "role": "body",
+      "default": "Héroes de guerra, portadas pintadas a mano y papel que huele a historia.",
+      "max": 115
+    },
+    {
+      "key": "home_3",
+      "role": "body",
+      "default": "Años 70",
+      "max": 12
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Cómics de terror, ciencia ficción y aventuras con líneas gruesas y color plano.",
+      "max": 126
+    },
+    {
+      "key": "home_5",
+      "role": "body",
+      "default": "Años 90",
+      "max": 12
+    },
+    {
+      "key": "home_6",
+      "role": "body",
+      "default": "Series de culto, ediciones variantes y portadas que hoy se buscan en todo el mundo.",
+      "max": 133
+    },
+    {
+      "key": "home_7",
+      "role": "label",
+      "default": "Mint",
+      "max": 12
+    },
+    {
+      "key": "home_8",
+      "role": "body",
+      "default": "Como salió de imprenta. Sin dobleces, sin marcas.",
+      "max": 78
+    },
+    {
+      "key": "home_9",
+      "role": "label",
+      "default": "Fine",
+      "max": 12
+    },
+    {
+      "key": "home_10",
+      "role": "body",
+      "default": "Muy buen estado. Uso mínimo y colores vivos.",
+      "max": 70
+    },
+    {
+      "key": "home_11",
+      "role": "label",
+      "default": "Good",
+      "max": 12
+    },
+    {
+      "key": "home_12",
+      "role": "body",
+      "default": "Se nota el paso del tiempo, pero se lee completo y sin roturas.",
+      "max": 101
+    },
+    {
+      "key": "home_13",
+      "role": "title",
+      "default": "Funda y cartón",
+      "max": 22
+    },
+    {
+      "key": "home_14",
+      "role": "body",
+      "default": "Cada número viaja en funda de mylar y con tapa de cartón rígido.",
+      "max": 102
+    },
+    {
+      "key": "home_15",
+      "role": "title",
+      "default": "Estado a la vista",
+      "max": 27
+    },
+    {
+      "key": "home_16",
+      "role": "body",
+      "default": "Cada ficha dice el estado exacto y muestra fotos reales del ejemplar.",
+      "max": 110
+    },
+    {
+      "key": "home_17",
+      "role": "title",
+      "default": "Envío asegurado",
+      "max": 24
+    },
+    {
+      "key": "home_18",
+      "role": "body",
+      "default": "Sale con seguimiento y con el valor de la pieza declarado.",
+      "max": 93
+    },
+    {
+      "key": "home_19",
+      "role": "quote",
+      "default": "Encontré el número que me faltaba hace veinte años. Llegó igual que en la foto, protegido como una joya.",
+      "max": 166
+    },
+    {
+      "key": "home_20",
+      "role": "name",
+      "default": "Gustavo",
+      "max": 12
+    },
+    {
+      "key": "home_21",
+      "role": "body",
+      "default": "La Paz",
+      "max": 12
+    },
+    {
+      "key": "home_22",
+      "role": "quote",
+      "default": "Me explicaron cada estado con calma. Compré mi primera edición de colección sin miedo.",
+      "max": 138
+    },
+    {
+      "key": "home_23",
+      "role": "name",
+      "default": "Natalia",
+      "max": 12
+    },
+    {
+      "key": "home_24",
+      "role": "body",
+      "default": "Sucre",
+      "max": 12
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Colección exclusiva",
+      "max": 30
+    },
+    {
+      "key": "home_26",
+      "role": "headline",
+      "default": "Las leyendas nunca mueren",
+      "max": 40
+    },
+    {
+      "key": "home_27",
+      "role": "lead",
+      "default": "Redescubre las portadas pintadas a mano y las historias que definieron una época. En ",
+      "max": 136
+    },
+    {
+      "key": "home_28",
+      "role": "body",
+      "default": " cada número se guarda con cariño.",
+      "max": 54
+    },
+    {
+      "key": "home_29",
+      "role": "cta",
+      "default": "Entrar a la bóveda",
+      "max": 29
+    },
+    {
+      "key": "home_30",
+      "role": "label",
+      "default": "Exclusivo",
+      "max": 14
+    },
+    {
+      "key": "home_31",
+      "role": "alt",
+      "default": "Portada ilustrada estilo pulp de un robot con una mano enorme",
+      "max": 98
+    },
+    {
+      "key": "home_32",
+      "role": "title",
+      "default": "La bóveda",
+      "max": 14
+    },
+    {
+      "key": "home_33",
+      "role": "body",
+      "default": "Números sueltos, series completas y rarezas. Cada uno con su ficha.",
+      "max": 107
+    },
+    {
+      "key": "home_34",
+      "role": "title",
+      "default": "Elige tu época",
+      "max": 22
+    },
+    {
+      "key": "home_35",
+      "role": "alt",
+      "default": "Cajas largas llenas de cómics antiguos en estantes de una tienda cálida",
+      "max": 114
+    },
+    {
+      "key": "home_36",
+      "role": "alt",
+      "default": "Portada pulp de un cohete sobre un desierto a la luz de la luna",
+      "max": 101
+    },
+    {
+      "key": "home_37",
+      "role": "body",
+      "default": "Pieza destacada",
+      "max": 24
+    },
+    {
+      "key": "home_38",
+      "role": "title",
+      "default": "Un número que casi nadie tiene",
+      "max": 48
+    },
+    {
+      "key": "home_39",
+      "role": "body",
+      "default": "Cada mes separamos una edición rara con certificado y funda de archivo. Así clasificamos su estado:",
+      "max": 158
+    },
+    {
+      "key": "home_40",
+      "role": "title",
+      "default": "Así los cuidamos",
+      "max": 26
+    },
+    {
+      "key": "home_41",
+      "role": "alt",
+      "default": "Lupa de latón sobre un escritorio de madera junto a una pila de libros antiguos",
+      "max": 126
+    },
+    {
+      "key": "home_42",
+      "role": "title",
+      "default": "Cartas de lectores",
+      "max": 29
+    },
+    {
+      "key": "home_43",
+      "role": "title",
+      "default": "Avisos de la bóveda",
+      "max": 30
+    },
+    {
+      "key": "home_44",
+      "role": "body",
+      "default": "Te escribimos cuando llega una pieza rara o un número que buscabas. Nada más.",
+      "max": 123
+    },
+    {
+      "key": "home_45",
+      "role": "label",
+      "default": "Tu correo electrónico",
+      "max": 34
+    },
+    {
+      "key": "home_46",
+      "role": "label",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "Inicio",
+      "max": 12
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "La bóveda",
+      "max": 14
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Épocas",
+      "max": 12
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Raros",
+      "max": 12
+    },
+    {
+      "key": "shell_5",
+      "role": "label",
+      "default": "Envíos cuidados en funda y cartón rígido",
+      "max": 64
+    },
+    {
+      "key": "shell_6",
+      "role": "label",
+      "default": "Ediciones raras con certificado",
+      "max": 50
+    },
+    {
+      "key": "shell_7",
+      "role": "label",
+      "default": "Nuevas llegadas cada semana",
+      "max": 43
+    },
+    {
+      "key": "shell_8",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_9",
+      "role": "body",
+      "default": "Cómics de colección, protegidos y con historia.",
+      "max": 75
+    },
+    {
+      "key": "shell_10",
+      "role": "cta",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_11",
+      "role": "cta",
+      "default": "Ver carrito",
+      "max": 18
+    },
+    {
+      "key": "shell_12",
+      "role": "body",
+      "default": "Pagos seguros con QR y tarjeta · Hecho en Bolivia",
+      "max": 78
+    },
+    {
+      "key": "shell_13",
+      "role": "title",
+      "default": "Tu pila",
+      "max": 12
+    },
+    {
+      "key": "shell_14",
+      "role": "body",
+      "default": "Nada por aquí",
+      "max": 21
+    },
+    {
+      "key": "shell_15",
+      "role": "body",
+      "default": "Elige un número de la bóveda y aparecerá en tu pila.",
+      "max": 83
+    },
+    {
+      "key": "shell_16",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_17",
+      "role": "body",
+      "default": "Agregado",
+      "max": 13
+    },
+    {
+      "key": "shell_18",
+      "role": "cta",
+      "default": "Ver pila",
+      "max": 13
+    },
+    {
+      "key": "shell_19",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_20",
+      "role": "title",
+      "default": "Entrega y pago",
+      "max": 22
+    },
+    {
+      "key": "product_1",
+      "role": "body",
+      "default": "Ficha técnica",
+      "max": 21
+    }
   ]
 }

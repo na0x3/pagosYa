@@ -1,3 +1,4 @@
+import { copy } from './store-data';
 import Shell from './Shell';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
@@ -17,12 +18,12 @@ export default function Product() {
             <KitSlot kind="product" name="description" className="lg-pdp__desc" />
             <KitSlot kind="product" name="highlights" className="lg-pdp__highlights" />
             <details className="lg-pdp__toggle" open>
-              <summary>Ingredientes, modo de uso y advertencias</summary>
+              <summary>{copy.product_1}</summary>
               <KitSlot kind="product" name="info" className="lg-pdp__more" />
             </details>
             <details className="lg-pdp__toggle">
-              <summary>Envíos</summary>
-              <p>Enviamos en 2 a 5 días hábiles. Consulta a tu médico antes de usar cualquier suplemento.</p>
+              <summary>{copy.product_2}</summary>
+              <p>{copy.product_3}</p>
               <KitSlot kind="product" name="delivery" className="lg-pdp__delivery" />
             </details>
           </div>

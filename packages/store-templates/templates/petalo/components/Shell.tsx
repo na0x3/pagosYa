@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store } from './store-data';
+import { store, copy } from './store-data';
 
 const links = [
-  { label: 'Inicio', href: 'index.html' },
-  { label: 'Tienda', href: 'index.html#productos' },
-  { label: 'Contacto', href: 'index.html#boletin' },
+  { label: copy.shell_1, href: 'index.html' },
+  { label: copy.shell_2, href: 'index.html#productos' },
+  { label: copy.shell_3, href: 'index.html#boletin' },
 ];
 
 function PersonIcon() {
@@ -32,20 +32,20 @@ export function Footer() {
     <div className="pe-footer__top">
       <div className="pe-footer__about">
         <p className="pe-footer__name">{store.name}</p>
-        <p className="pe-footer__lead">{store.tagline || 'Cuidado de la piel delicado, hecho con activos que sí importan.'}</p>
+        <p className="pe-footer__lead">{store.tagline || copy.shell_4}</p>
       </div>
       <nav className="pe-footer__col" aria-label="Tienda">
-        <p className="pe-footer__heading">Tienda</p>
+        <p className="pe-footer__heading">{copy.shell_5}</p>
         {links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}
       </nav>
       <div className="pe-footer__col">
-        <p className="pe-footer__heading">Tu compra</p>
-        <button type="button" className="pe-footer__link" data-cart-open>Ver carrito</button>
-        <a href="checkout.html">Mi pedido</a>
-        <p>{store.city ? `Desde ${store.city}` : 'Envíos a toda Bolivia'}</p>
+        <p className="pe-footer__heading">{copy.shell_6}</p>
+        <button type="button" className="pe-footer__link" data-cart-open>{copy.shell_7}</button>
+        <a href="checkout.html">{copy.shell_8}</a>
+        <p>{store.city ? `Desde ${store.city}` : copy.shell_9}</p>
       </div>
     </div>
-    <p className="pe-footer__note">Pagos seguros con QR y tarjeta · Hecho en Bolivia</p>
+    <p className="pe-footer__note">{copy.shell_10}</p>
     <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
   </footer>;
 }
@@ -56,13 +56,13 @@ export function Commerce() {
     <CartTemplate>
       <div className="pe-cartpanel">
         <header className="pe-cartpanel__head">
-          <h2 className="pe-cartpanel__title">Tu carrito</h2>
+          <h2 className="pe-cartpanel__title">{copy.shell_11}</h2>
           <button type="button" className="pe-cartpanel__close" data-cart-close aria-label="Cerrar carrito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg></button>
         </header>
         <KitSlot kind="cart" name="lines" className="pe-cartpanel__lines" />
         <KitSlot kind="cart" name="empty" className="pe-cartpanel__empty">
-          <p className="pe-cartpanel__empty-title">Tu carrito está vacío</p>
-          <p>Elige un producto y aparecerá aquí.</p>
+          <p className="pe-cartpanel__empty-title">{copy.shell_12}</p>
+          <p>{copy.shell_13}</p>
         </KitSlot>
         <KitSlot kind="cart" name="suggestions" className="pe-cartpanel__suggestions" />
         <div className="pe-cartpanel__foot">
@@ -86,7 +86,7 @@ export function Commerce() {
         </div>
         <div className="pe-line__end">
           <KitSlot kind="line" name="line-total" as="p" className="pe-line__total" />
-          <KitSlot kind="line" name="remove" as="button" className="pe-line__remove">Quitar</KitSlot>
+          <KitSlot kind="line" name="remove" as="button" className="pe-line__remove">{copy.shell_14}</KitSlot>
         </div>
       </div>
     </CartLineTemplate>
@@ -94,20 +94,20 @@ export function Commerce() {
       <div className="pe-added">
         <KitSlot kind="added" name="photo" as="img" className="pe-added__photo" />
         <div className="pe-added__copy">
-          <p className="pe-added__kicker">Añadido</p>
+          <p className="pe-added__kicker">{copy.shell_15}</p>
           <KitSlot kind="added" name="message" as="p" className="pe-added__message" />
         </div>
-        <button type="button" className="pe-added__open" data-cart-open>Ver carrito</button>
+        <button type="button" className="pe-added__open" data-cart-open>{copy.shell_16}</button>
       </div>
     </AddedTemplate>
     <ReviewTemplate>
       <div className="pe-review">
         <div className="pe-review__col pe-review__col--summary">
-          <h2 className="pe-review__heading">Tu pedido</h2>
+          <h2 className="pe-review__heading">{copy.shell_17}</h2>
           <KitSlot kind="review" name="summary" className="pe-review__summary" />
         </div>
         <div className="pe-review__col">
-          <h2 className="pe-review__heading">Entrega y pago</h2>
+          <h2 className="pe-review__heading">{copy.shell_18}</h2>
           <KitSlot kind="review" name="fields" className="pe-review__fields" />
         </div>
       </div>
