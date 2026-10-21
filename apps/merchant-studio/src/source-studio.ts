@@ -683,6 +683,10 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         submittedUrls = retryAssetUrls || submittedAssets.map(asset => asset.url!);
         sentToApi = true;
         const browserReview = checksKey === checkKey() && !checking ? [...new Set((checks || []).filter(row => row.status === 'failed' || row.status === 'warning').map(row => `${row.label}: ${row.detail || ''}`))].slice(0, 8).map(row => row.slice(0, 500)) : [];
+        // Stress test 2026-10-21: a background touch saved r2–r3 while this Studio still held r1, so every request was
+        // refused with «El sitio cambió en otra sesión». Catch up to the newest saved revision before sending.
+        const latest = await api.sourceState(storeId).catch(() => null);
+        if (latest && latest.revision > state.revision) await load();
         const requestId = crypto.randomUUID();
         buildStatus = 'Esperando la respuesta de YAPI…'; updateBuildProgress();
         stopProgress = watchBuildProgress(storeId, requestId);
@@ -734,6 +738,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         if (!succeeded) {
           if (liveDraft) liveDraft.interrupted = true;
           await refreshInterruptedDraft().catch(() => {});
+          // The window says why it stopped (the server's merchant text), not a bare «Me detuve».
+          narrator.interrupted(merchantSafeText(e instanceof Error ? e.message : '', ''));
         }
         throw e;
       } finally {

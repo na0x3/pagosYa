@@ -139,7 +139,74 @@ describe('review fixes (2026-10-21)', () => {
 
   it('the summary lists what YAPI built, and a failed request says why', async () => {
     const { narrationFromMessage, stoppedNarration } = await import('./source-narration');
-    expect(narrationFromMessage({ content: 'x', metadata: { sourceRevision: 2, agentSummary: 'Hice tu portada.', agentSections: ['Portada', 'Productos'] } }).lines).toEqual(['Listo.', 'Hice tu portada.', 'Incluye: Portada, Productos.', 'Ya está en tu vista previa. Publícalo cuando te guste.']);
+    expect(narrationFromMessage({ content: 'x', metadata: { sourceRevision: 2, agentSummary: 'Hice tu portada.', agentSections: ['Portada', 'Productos'] } }).lines).toEqual(['Listo.', 'Hice tu portada.', 'Incluye: Portada, Productos.']);
     expect(stoppedNarration('No te quedan créditos este mes.').lines).toEqual(['No pude terminar: no te quedan créditos este mes.', 'Tu tienda sigue como estaba.']);
+  });
+});
+
+describe('a window the merchant controls (owner 2026-10-21)', () => {
+  const store = new Map<string, string>();
+  const localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); }, clear: () => store.clear() };
+  beforeEach(() => { vi.useFakeTimers(); document.body.innerHTML = ''; store.clear(); vi.stubGlobal('localStorage', localStorage); });
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+  const lines = (count: number) => Array.from({ length: count }, (_, i) => `Línea ${i + 1}.`);
+
+  it('the pagosYa star is in the header and comes back after every five lines', () => {
+    const n = mountNarrator(document, { reducedMotion: () => true });
+    n.open('x');
+    expect(n.element.querySelector('[data-narrator-logo]')!.getAttribute('src')).toMatch(/logo-mark\.png$/);
+    n.show({ phase: 'work', lines: lines(11) });
+    const order = [...document.querySelector('[data-narrator-text]')!.children].map(node => node.tagName === 'P' ? 'p' : 'star');
+    expect(order).toEqual(['p', 'p', 'p', 'p', 'p', 'star', 'p', 'p', 'p', 'p', 'p', 'star', 'p']);
+  });
+  it('retyping the «Ahora» line never stacks a second star', () => {
+    const n = mountNarrator(document, { reducedMotion: () => true });
+    n.open('x');
+    n.show({ phase: 'work', lines: [...lines(5), 'Ahora: a…'] });
+    n.show({ phase: 'work', lines: [...lines(5), 'Ahora: b…'] });
+    expect(document.querySelectorAll('[data-narrator-divider]')).toHaveLength(1);
+    expect(text()).toContain('Ahora: b…');
+    expect(text()).not.toContain('Ahora: a…');
+  });
+  it('shrinks and grows between three sizes, and remembers the size', () => {
+    const n = mountNarrator(document, { reducedMotion: () => true });
+    const shrink = n.element.querySelector<HTMLButtonElement>('[data-narrator-shrink]')!;
+    const grow = n.element.querySelector<HTMLButtonElement>('[data-narrator-grow]')!;
+    expect(n.element.dataset.size).toBe('normal');
+    shrink.click();
+    expect(n.element.dataset.size).toBe('small');
+    expect(shrink.disabled).toBe(true);
+    grow.click(); grow.click();
+    expect(n.element.dataset.size).toBe('large');
+    expect(grow.disabled).toBe(true);
+    document.body.innerHTML = '';
+    expect(mountNarrator(document, { reducedMotion: () => true }).element.dataset.size).toBe('large');
+  });
+  it('drags by the header, stays on screen, remembers where, and a double click sends it back to the corner', () => {
+    const n = mountNarrator(document, { reducedMotion: () => true });
+    n.open('x');
+    const head = n.element.querySelector<HTMLElement>('[data-narrator-drag]')!;
+    const pointer = (type: string, x: number, y: number) => head.dispatchEvent(Object.assign(new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0 }), { pointerId: 1 }));
+    pointer('pointerdown', 10, 10);
+    pointer('pointermove', 120, 90);
+    pointer('pointerup', 120, 90);
+    expect(n.element.style.left).toBe('110px');
+    expect(n.element.style.top).toBe('80px');
+    expect(JSON.parse(localStorage.getItem('pagosya_yapi_window')!)).toMatchObject({ x: 110, y: 80 });
+    pointer('pointerdown', 120, 90);
+    pointer('pointermove', -500, -500);
+    expect(n.element.style.left).toBe('8px');
+    expect(n.element.style.top).toBe('8px');
+    pointer('pointerup', -500, -500);
+    head.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(n.element.style.left).toBe('');
+    expect(JSON.parse(localStorage.getItem('pagosya_yapi_window')!).x).toBeUndefined();
+  });
+  it('one click on the close button closes it while YAPI is still working', () => {
+    const n = mountNarrator(document, { reducedMotion: () => true });
+    n.open('x');
+    n.show({ phase: 'work', lines: ['Ahora: diseñando…'] });
+    n.element.querySelector<HTMLButtonElement>('[data-narrator-close]')!.click();
+    expect(n.element.hidden).toBe(true);
   });
 });
