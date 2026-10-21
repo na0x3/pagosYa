@@ -121,7 +121,7 @@ export function masterDnaFonts(settings: MasterSettings, look: MasterLook) {
 /** What the fill call returns (spec 2026-10-19 §2.3): every copy field, the look, photo indexes (-1 = none) and, for an
  *  edit, the field names it changed ('look' = palette/fonts/colors; heroPhoto and storyPhoto each by name). */
 export type MasterRead = MasterCopy & { palette: string; fonts: string; colors: Record<MasterColour, string>; heroPhoto: number; storyPhoto: number; changed: string[];
-  tone?: 'calm' | 'bold'; temperature?: 'warm' | 'cool' | 'neutral'; lead?: 'photo' | 'text'; exclude?: string[]; sections?: MasterSection[];
+  tone?: 'calm' | 'bold'; kind?: 'fashion' | 'other'; temperature?: 'warm' | 'cool' | 'neutral'; lead?: 'photo' | 'text'; exclude?: string[]; sections?: MasterSection[];
   /** A layout the merchant named in an edit («hero con la foto a la izquierda» → hero: split-left). */
   variantChoices?: Array<{ part: string; id: string }> };
 const COPY_FIELDS = [...Object.keys(MASTER_COPY_CAPS), 'values'];
@@ -134,7 +134,7 @@ export function masterFillFromRead(read: MasterRead, photos: readonly string[], 
   return {
     ...(Object.keys(copy).length ? { copy } : {}),
     ...(keep('look') ? { look: { palette: read.palette, fonts: read.fonts, colors } } : {}),
-    ...(read.tone ? { character: { tone: read.tone, temperature: read.temperature ?? 'neutral', lead: read.lead ?? 'photo', exclude: Array.isArray(read.exclude) ? read.exclude : [] } } : {}),
+    ...(read.tone ? { character: { tone: read.tone, temperature: read.temperature ?? 'neutral', lead: read.lead ?? 'photo', exclude: Array.isArray(read.exclude) ? read.exclude : [], ...(read.kind ? { kind: read.kind } : {}) } } : {}),
     ...(Array.isArray(read.sections) && keep('sections') ? { sections: read.sections.slice(0, 2) } : {}),
     ...(Array.isArray(read.variantChoices) && read.variantChoices.length && keep('variants') ? { variants: Object.fromEntries(read.variantChoices.map(choice => [choice.part, choice.id])) } : {}),
     ...(keep('heroPhoto') ? { heroPhoto: photo(read.heroPhoto) } : {}),
@@ -145,5 +145,5 @@ export function masterFillFromRead(read: MasterRead, photos: readonly string[], 
 /** Variety spec §2–3: the rolled variant per part (header, hero, grid…) plus the chosen business sections. */
 export type MasterVariants = Record<string, string> & { sections: string[] };
 /** What the fill call says about the business; the dice choose within it. */
-export type MasterCharacter = { tone: 'calm' | 'bold'; temperature: 'warm' | 'cool' | 'neutral'; lead: 'photo' | 'text'; exclude: string[] };
+export type MasterCharacter = { tone: 'calm' | 'bold'; temperature: 'warm' | 'cool' | 'neutral'; lead: 'photo' | 'text'; exclude: string[]; kind?: 'fashion' | 'other' };
 export type MasterSection = { id: string; title: string; items: Array<{ title: string; text: string }> };
