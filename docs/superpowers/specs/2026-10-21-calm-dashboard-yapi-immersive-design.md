@@ -195,3 +195,13 @@ to the Studio today, C4 adds them to it.
 - Studio-embedded tabs may not read the new tokens and look out of place next to the calm shell; the plan lists each.
 - Saving `apps/api` restarts the API and kills running YAPI jobs — check for RUNNING jobs before C4 edits.
 - The Studio is pre-built into the dashboard; Studio changes need `build:studio` before a live check.
+
+## Plans and planning-time corrections
+
+- Part A plan: `docs/superpowers/plans/2026-10-21-calm-dashboard-a-declutter.md`. Parts B and C get their own plans after A ships.
+- Corrections found in the code while planning Part A (they override A1, A3, A4, A5 above):
+  - Crecimiento is a pill under Inicio («Resumen · Crecimiento») rather than merged into one page.
+  - Equipo and Remitente are Ajustes pills; Comeback is a Clientes pill.
+  - The inventory import is already a closed disclosure; no change.
+  - «Pídele a YAPI» appears only for policies and colours/type. YAPI's design agent cannot edit store emails or the
+    assistant's look, so those editors are hidden without a YAPI line.
