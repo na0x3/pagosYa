@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { actionRoute, barWidth, formatCount, formatDelta, formatPercent, linePath, severityLabel, shortDay } from "./growth.mjs";
+import { POLICY_REQUEST, actionRoute, barWidth, formatCount, formatDelta, formatPercent, linePath, severityLabel, shortDay } from "./growth.mjs";
 
 test("counts and percents read like Bolivian Spanish", () => {
   assert.equal(formatCount(12345), "12.345");
@@ -59,4 +59,13 @@ test("every action kind routes to the screen that does it, prefilled", () => {
   assert.equal(actionRoute({ kind: "yapi", payload: {} }), null);
   assert.equal(actionRoute({ kind: "launch-rockets", payload: {} }), null);
   assert.equal(actionRoute(null), null);
+});
+
+test('without full nav, policy insights open YAPI and proposal insights have no action', () => {
+  const policies = { kind: 'settings', payload: { view: 'store-settings', section: 'policies' } };
+  assert.deepEqual(actionRoute(policies, { fullNav: false }), { view: 'workspace', compose: POLICY_REQUEST });
+  assert.deepEqual(actionRoute(policies, { fullNav: true }), { view: 'store-settings', section: 'policies' });
+  assert.deepEqual(actionRoute(policies), { view: 'store-settings', section: 'policies' });
+  assert.equal(actionRoute({ kind: 'proposal', payload: { prompt: 'x' } }, { fullNav: false }), null);
+  assert.deepEqual(actionRoute({ kind: 'settings', payload: { view: 'store-settings', section: 'contact' } }, { fullNav: false }), { view: 'store-settings', section: 'contact' });
 });

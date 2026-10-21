@@ -53,3 +53,26 @@ test('finance detail lives on Dinero; Inicio links to it', () => {
   assert.match(html, /<section class="block" id="financesSection" data-dashboard-page="payouts">/);
   assert.match(html, /<a class="overview-account-link" href="#dashboard-payouts" data-dashboard-view="payouts">Ver tu dinero<\/a>/);
 });
+
+const settings = readFileSync(new URL('./store-settings.mjs', import.meta.url), 'utf8');
+const assistant = readFileSync(new URL('./assistant-panel.mjs', import.meta.url), 'utf8');
+const emails = readFileSync(new URL('./email-studio-panel.mjs', import.meta.url), 'utf8');
+
+test('Marca, tagline and policy fields are full-nav only', () => {
+  assert.match(html, /data-settings-tab="brand" data-full-nav-only>Marca</);
+  assert.match(settings, /<div data-full-nav-only><label for="storeTaglineInput">/);
+  assert.match(settings, /<div class="store-editor-section-body" data-full-nav-only>\s*\$\{POLICY_FIELDS/);
+});
+
+test('with the switch off, saving never sends tagline or policies', () => {
+  assert.match(settings, /\.\.\.\(fullNavOn\(\) && \{ tagline: taglineInput\.value\.trim\(\) \|\| null \}\)/);
+  assert.match(settings, /\.\.\.\(fullNavOn\(\) && \{ policies: Object\.fromEntries/);
+  assert.doesNotMatch(settings, /^\s+tagline: taglineInput/m);
+});
+
+test('assistant look and email editors are full-nav only', () => {
+  assert.match(assistant, /<section class="assistant-card" data-full-nav-only>\s*\$\{uiHead\(\{ icon: "palette", title: "Apariencia" \}\)\}/);
+  assert.match(emails, /contentRoot\.setAttribute\("data-full-nav-only", ""\);/);
+  assert.match(emails, /<form class="email-studio-copy" data-copy-form data-full-nav-only novalidate>/);
+  assert.match(emails, /data-email-bold data-full-nav-only/);
+});

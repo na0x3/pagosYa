@@ -59,15 +59,23 @@ const text = (value) => typeof value === "string" && value.trim() ? value.trim()
  * Where an insight's button goes and what it fills in. The dashboard opens that view and prefills; nothing is saved,
  * sent or generated until the merchant confirms there. Unknown or malformed actions route nowhere (the card hides the button).
  */
-export function actionRoute(action) {
+export const POLICY_REQUEST = "Escribe las políticas de mi tienda con estos datos: ";
+
+/** Without the full nav (spec 2026-10-21 A2) policies are YAPI's and Propuestas is hidden. */
+export function actionRoute(action, { fullNav = true } = {}) {
   const payload = action?.payload || {};
   switch (action?.kind) {
     case "yapi": return text(payload.instruction) ? { view: "workspace", compose: text(payload.instruction) } : null;
     case "product": return text(payload.productId) ? { view: "products", productId: text(payload.productId), step: PRODUCT_STEPS.includes(payload.step) ? payload.step : null } : null;
     case "stock": return text(payload.productId) ? { view: "products", productId: text(payload.productId), step: "stock" } : null;
-    case "proposal": return { view: "proposals", brief: text(payload.prompt) };
+    case "proposal": return fullNav ? { view: "proposals", brief: text(payload.prompt) } : null;
     case "promo": return { view: "discounts", code: /^[A-Za-z0-9][A-Za-z0-9_-]{2,31}$/.test(payload.code || "") ? payload.code : "" };
-    case "settings": return SETTINGS_VIEWS.includes(payload.view) ? { view: payload.view, section: SETTINGS_SECTIONS.includes(payload.section) ? payload.section : null } : null;
+    case "settings": {
+      if (!SETTINGS_VIEWS.includes(payload.view)) return null;
+      const section = SETTINGS_SECTIONS.includes(payload.section) ? payload.section : null;
+      if (!fullNav && section === "policies") return { view: "workspace", compose: POLICY_REQUEST };
+      return { view: payload.view, section };
+    }
     case "inbox": return { view: "inbox" };
     default: return null;
   }

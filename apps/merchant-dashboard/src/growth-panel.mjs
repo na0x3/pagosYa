@@ -1,4 +1,5 @@
 import { escapeHtml as esc } from "./html.mjs";
+import { fullNavOn } from "./nav-sections.mjs";
 import { actionRoute, barWidth, formatCount, formatDelta, formatPercent, linePath, severityLabel, shortDay } from "./growth.mjs";
 
 /**
@@ -112,7 +113,7 @@ export function mountGrowthPanel(deps) {
   }
 
   function insightCard(insight, index) {
-    const route = actionRoute(insight.action);
+    const route = actionRoute(insight.action, { fullNav: fullNavOn() });
     const why = Array.isArray(insight.why) ? insight.why : [];
     return `<li class="growth-insight is-${esc(insight.severity)}" data-insight-id="${esc(insight.id)}">
       <div class="growth-insight-top"><span class="growth-chip is-${esc(insight.severity)}">${esc(severityLabel(insight.severity))}</span><span class="growth-insight-rank" aria-hidden="true">${index + 1}</span></div>
@@ -298,7 +299,7 @@ export function mountGrowthPanel(deps) {
   }
 
   async function act(insight) {
-    const route = actionRoute(insight.action);
+    const route = actionRoute(insight.action, { fullNav: fullNavOn() });
     if (!route) return;
     if (route.compose) { deps.composeYapi(route.compose); return; }
     if (route.productId) {

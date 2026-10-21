@@ -51,7 +51,7 @@ export function mountAssistantPanel(deps) {
         <p>${esc(usageLabel(data.usage.used, data.usage.cap))}</p>
         <p class="assistant-status" role="status">${esc(status)}</p>
       </section>
-      <section class="assistant-card">
+      <section class="assistant-card" data-full-nav-only>
         ${uiHead({ icon: "palette", title: "Apariencia" })}
         <div class="store-settings-logo"><div class="store-logo-frame">${avatar ? `<img src="${esc(avatar)}" alt="">` : "<span>Logo de la tienda</span>"}</div>
           <div class="store-logo-copy"><input id="assistantAvatarInput" class="sr-only" type="file" accept="image/png,image/jpeg,image/webp">

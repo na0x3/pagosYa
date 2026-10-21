@@ -30,6 +30,7 @@ export function mountEmailStudio(container, deps) {
     view = document.createElement("div");
     const contentRoot = document.createElement("div");
     contentRoot.setAttribute("data-email-content-root", "");
+    contentRoot.setAttribute("data-full-nav-only", "");
     container.replaceChildren(view, contentRoot);
     content = mountEmailContent(contentRoot, { api: deps.api, base, type: () => state.type, assetUrl: deps.assetUrl ?? (path => path), onChange: () => void loadEmail() });
   }
@@ -52,7 +53,7 @@ export function mountEmailStudio(container, deps) {
     const main = s.kit === "none" ? `Diseñar mis correos${cost}` : s.siteChanged ? `Actualizar correos${cost}` : null;
     return [
       main ? `<button type="button" class="primary" data-email-design ${off}>${esc(main)}</button>` : "",
-      s.kit !== "none" ? `<button type="button" class="ghost" data-email-bold ${off}>${esc(`Más llamativo${cost}`)}</button>` : "",
+      s.kit !== "none" ? `<button type="button" class="ghost" data-email-bold data-full-nav-only ${off}>${esc(`Más llamativo${cost}`)}</button>` : "",
       s.previous ? `<button type="button" class="ghost" data-email-revert ${off}>Volver al anterior</button>` : "",
     ].join("");
   }
@@ -89,7 +90,7 @@ export function mountEmailStudio(container, deps) {
   function form() {
     const fields = state.fields.filter(f => Object.hasOwn(FIELD_LABELS, f.field));
     if (!fields.length || state.status?.available === false) return "";
-    return `<form class="email-studio-copy" data-copy-form novalidate><h4>Texto de este correo</h4>${fields.map(f => {
+    return `<form class="email-studio-copy" data-copy-form data-full-nav-only novalidate><h4>Texto de este correo</h4>${fields.map(f => {
       const value = state.edits[f.field] ?? f.value;
       const input = f.field === "intro"
         ? `<textarea data-copy-field="${f.field}" maxlength="${f.max}" rows="3">${esc(value)}</textarea>`

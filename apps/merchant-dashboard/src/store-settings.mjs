@@ -1,3 +1,4 @@
+import { fullNavOn } from "./nav-sections.mjs";
 import { escapeHtml } from "./html.mjs";
 import { uiChoice, uiHead, uiOption, uiSwitch } from "./ui-kit.mjs";
 // Store settings the live checkout reads: identity, how an order ends, support
@@ -97,7 +98,7 @@ const TEMPLATE = `<form class="store-settings-form" novalidate>
     ${uiHead({ icon: "store", id: "storeSettingsIdentityTitle", title: "Identidad", text: "Aparece en el cobro y los comprobantes." })}
     <div class="store-editor-section-body">
     <div><label for="storeNameInput">Nombre</label><input id="storeNameInput" name="name" maxlength="80" required></div>
-    <div><label for="storeTaglineInput">Descripción corta (opcional)</label><input id="storeTaglineInput" name="tagline" maxlength="160" placeholder="Ropa urbana hecha en Bolivia"></div>
+    <div data-full-nav-only><label for="storeTaglineInput">Descripción corta (opcional)</label><input id="storeTaglineInput" name="tagline" maxlength="160" placeholder="Ropa urbana hecha en Bolivia"></div>
     <div class="store-settings-logo full">
       <span class="store-logo-frame"><img data-logo-preview src="${EMPTY_IMAGE}" alt="Vista previa del logo" hidden><span data-logo-empty aria-hidden="true">Logo</span></span>
       <span class="store-logo-copy"><strong>Logo (opcional)</strong><small class="faint">PNG, JPG o WebP, hasta 8 MB.</small></span>
@@ -151,7 +152,7 @@ const TEMPLATE = `<form class="store-settings-form" novalidate>
   </section>
   <section class="store-editor-section" aria-labelledby="storeSettingsPoliciesTitle">
     ${uiHead({ icon: "file-text", id: "storeSettingsPoliciesTitle", title: "Políticas para tus clientes", text: "Junto al botón de compra. Usa tus condiciones reales." })}
-    <div class="store-editor-section-body">
+    <div class="store-editor-section-body" data-full-nav-only>
     ${POLICY_FIELDS.map(([key, label, hint]) => `<div class="full"><label for="storePolicy-${key}">${label} (opcional)</label><textarea id="storePolicy-${key}" data-policy="${key}" rows="4" maxlength="6000" placeholder="${hint}"></textarea></div>`).join("")}
     </div>
   </section>
@@ -440,14 +441,14 @@ export function mountStoreSettings(root, deps) {
     const savedStore = store, previousMode = store.checkoutMode || "payment", nextMode = mode();
     const patch = {
       name: nameInput.value.trim(),
-      tagline: taglineInput.value.trim() || null,
+      ...(fullNavOn() && { tagline: taglineInput.value.trim() || null }),
       logoUrl,
       checkoutMode: nextMode,
       contactPhone: phoneInput.value.trim() || null,
       contactEmail: emailInput.value.trim() || null,
       showLowStockToCustomers: lowStockInput.checked,
       publicVisibility: visibilityInput.checked,
-      policies: Object.fromEntries(POLICY_FIELDS.map(([key]) => [key, policyInput(key).value.trim() || null])),
+      ...(fullNavOn() && { policies: Object.fromEntries(POLICY_FIELDS.map(([key]) => [key, policyInput(key).value.trim() || null])) }),
       ...(nextMode !== "external" && { leadCaptureUrl: null }),
       ...(locationsEdited && { locations: serializedLocations() }),
     };
