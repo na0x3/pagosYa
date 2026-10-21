@@ -2,3 +2,43 @@
    soft and premium in the spirit of granola.ai. Linked after every other dashboard stylesheet so it wins; glass only on
    the floating layers (top bar, sidebar, section pills, menus, dialogs), content cards stay solid. */
 @font-face { font-family: "Instrument Serif"; src: url("/fonts/instrument-serif.ttf") format("truetype"); font-display: swap; }
+
+/* ── Tokens ──────────────────────────────────────────────
+   calm.css sets its tokens on body.is-logged-in; the same selector here, linked later, wins. */
+body.is-logged-in {
+  --pm-serif: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
+  --pm-ease: cubic-bezier(.22,1,.36,1);
+  --pm-bg: #f6f4ef;
+  --pm-glass: rgb(255 255 255 / .62);
+  --pm-glass-strong: rgb(255 255 255 / .84);
+  --pm-glass-edge: rgb(255 255 255 / .78);
+  --pm-blur: saturate(1.5) blur(22px);
+  --pm-shadow-float: 0 24px 60px -28px rgb(40 36 28 / .28), 0 2px 10px rgb(40 36 28 / .05);
+  --pm-shadow-card: 0 1px 2px rgb(40 36 28 / .04), 0 10px 30px -18px rgb(40 36 28 / .14);
+  --pm-shadow-lift: 0 1px 2px rgb(40 36 28 / .06), 0 6px 16px -10px rgb(40 36 28 / .26);
+  --pg-bg: var(--pm-bg); --pg-surface: #fff; --pg-surface-raised: #f2efe8; --workspace-sidebar: transparent;
+  --pg-text: #1d1b17; --pg-text-muted: #5f5b53; --pg-text-faint: #77726a;
+  --pg-border: rgb(40 36 28 / .08); --pg-border-strong: rgb(40 36 28 / .14);
+  --pg-ink: #23211c; --pg-ink-hover: #3a3730; --pg-accent: #3a3730; --pg-accent-soft: #f2efe8;
+  --pg-focus-ring: rgb(35 33 28 / .10);
+  --calm-radius: 20px; --calm-radius-sm: 14px;
+  --calm-shadow: var(--pm-shadow-card); --calm-shadow-lg: var(--pm-shadow-float);
+}
+
+/* ── Page ─────────────────────────────────────────────── */
+html:has(> body.is-logged-in) { background: #f6f4ef; }
+body.is-logged-in {
+  background:
+    radial-gradient(1100px 700px at 8% -10%, rgb(205 222 190 / .55), transparent 60%),
+    radial-gradient(900px 600px at 100% 0%, rgb(246 222 196 / .45), transparent 60%),
+    radial-gradient(1000px 800px at 60% 110%, rgb(214 220 236 / .40), transparent 60%),
+    var(--pm-bg);
+  background-attachment: fixed;
+  font-size: 15px;
+}
+body.is-logged-in .workspace-title { font: 400 44px/1.05 var(--pm-serif); letter-spacing: -.01em; color: var(--pg-text); }
+body.is-logged-in .workspace-description { font-size: 15px; line-height: 1.55; margin-top: 10px; color: var(--pg-text-muted); }
+body.is-logged-in :is(.panel .section-head h2, .ui-head h3, .overview-greeting) { font-family: var(--pm-serif); font-weight: 400; letter-spacing: 0; }
+body.is-logged-in .panel .section-head h2 { font-size: 26px; line-height: 1.15; }
+body.is-logged-in .ui-head h3 { font-size: 21px; line-height: 1.2; margin-bottom: 4px; }
+body.is-logged-in .overview-greeting { font-size: 24px; color: var(--pg-text-muted); }
