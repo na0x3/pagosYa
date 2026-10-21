@@ -175,3 +175,20 @@ it('matches rendered JSX attribute text while preserving literal entities in Jav
   expect(changed[0].content).toContain('title="A &amp; B"');
   expect(sourceVisualFields(changed).find(field => field.value === 'C &amp; D')?.previewValue).toBe('C &amp; D');
 });
+
+// Spec 2026-10-20 Plantillas fill §6: a converted template's words live in store-data `copy`; editing one in place
+// rewrites that string and nothing else.
+describe('store-data copy', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { templateStoreDataFile, readPlantillaCopy } = require('./source-templates');
+  const files = (): File[] => [templateStoreDataFile({ name: 'Meathouse' }, { hero: '/v1/uploads/a.jpg' }, undefined, { home_1: 'Fuego sin disculpas', home_2: 'Comprar "ya"' })];
+  it('lists every copy text as a text field, and not the store name or photos', () => {
+    const fields = sourceVisualFields(files()).filter(field => field.kind === 'text');
+    expect(fields.map(field => field.value)).toEqual(['Fuego sin disculpas', 'Comprar "ya"']);
+  });
+  it('rewrites one copy string and keeps the line readable', () => {
+    const field = sourceVisualFields(files()).find(candidate => candidate.value === 'Comprar "ya"')!;
+    const edited = applySourceVisualEdit(files(), field.id, 'Pedí «hoy» tu corte');
+    expect(readPlantillaCopy(edited.files)).toEqual({ home_1: 'Fuego sin disculpas', home_2: 'Pedí «hoy» tu corte' });
+  });
+});

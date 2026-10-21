@@ -76,6 +76,10 @@ function editableFields(files: File[]): Editable[] {
         }
         return false;
       };
+      const inCopy = (node: ts.Node) => {
+        for (let current: ts.Node | undefined = node.parent; current; current = current.parent) if (ts.isVariableDeclaration(current)) return current.name.getText(source) === 'copy';
+        return false;
+      };
       const visit = (node: ts.Node) => {
         if (protectedNode(node)) return;
         if (ts.isJsxText(node) && node.text.trim()) {
@@ -100,6 +104,8 @@ function editableFields(files: File[]): Editable[] {
         if (ts.isPropertyAssignment(node) && ts.isStringLiteral(node.initializer)) {
           const property = node.name.getText(source).replace(/^['"]|['"]$/g, '');
           const literal = node.initializer;
+          // Spec 2026-10-20 Plantillas fill: a converted template's (and Esencial's) words, kept in store-data `copy`.
+          if (file.path === 'components/store-data.tsx' && inCopy(node)) add(file, literal.getStart(source), literal.end, 'text', literal.text, `Texto · ${property}`, 'js-string');
           if ((property === 'src' || property === 'alt') && imageObject(node)) add(file, literal.getStart(source), literal.end, property === 'src' ? 'image' : 'text', literal.text, `${tagOf(node)} · ${property}`, 'js-string');
           if (property === 'position' && imageObject(node)) {
             const field = add(file, literal.getStart(source), literal.end, 'select', literal.text, `${tagOf(node)} · Encuadre`, 'js-string', [...new Set([literal.text, ...Object.keys(IMAGE_POSITIONS)])]);
