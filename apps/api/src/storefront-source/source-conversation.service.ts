@@ -15,6 +15,8 @@ import { sourceResponseJson } from './source-response';
 import { SUGGESTIONS_PROMPT, SUGGESTIONS_SCHEMA, type SuggestionInput } from './source-suggestions';
 import type { MasterCopy } from '@pagosya/store-templates';
 import { MASTER_COLOURS, MASTER_COPY_CAPS, MASTER_VALUE_CAPS, type MasterLook, type MasterRead } from './source-master';
+import { PLANTILLA_FILL_PROMPT, plantillaFillFromRead, plantillaFillSchema } from './source-plantilla-fill';
+import type { TemplateCopySlot } from '@pagosya/store-templates';
 import { checkSourceProviderQuota, SourceProviderQuotaException } from './source-provider-error';
 import { Logger, Optional } from '@nestjs/common';
 import { BrandProfileService } from '../brand/brand-profile.service';
@@ -158,6 +160,10 @@ const masterFillSchema = (palettes: string[], fonts: string[], variantIds: strin
 export type MasterFillInput = { storeId: string; model?: SourceModelChoice; storeName: string; brand?: { voice?: string; headlineExamples?: string; avoid?: string }; what: string; story: string; city: string; products: string[]; photos: string[];
   palettes: Array<{ id: string; name: string }>; fonts: Array<{ id: string; name: string }>; variantCatalogue?: Record<string, readonly string[]>; sectionCatalogue?: readonly string[]; current?: { copy: MasterCopy; look: MasterLook; heroPhoto?: number; storyPhoto?: number }; request?: string };
 
+/** Spec 2026-10-20 Plantillas fill: what the one fill call of a converted template is given. */
+export type PlantillaFillInput = { storeId: string; storeName: string; about: string; products: string[]; photos: string[]; slots: readonly TemplateCopySlot[];
+  current?: Record<string, string>; request?: string };
+
 @Injectable()
 export class SourceConversationService {
   private readonly logger = new Logger(SourceConversationService.name);
@@ -227,6 +233,45 @@ export class SourceConversationService {
         if (error instanceof SourceProviderQuotaException) throw error;
         this.logger.warn(JSON.stringify({ stage: 'master-fill', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
       } finally { await this.metering?.record(input.storeId, 'source-master-fill', model, body, Date.now() - started, status); }
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    return null;
+  }
+
+  /** Spec 2026-10-20 Plantillas fill §4: every text slot of a converted template, for this business, in one call (the same
+   *  transport as fillMaster, which stays as it is). Null when both attempts fail; the caller falls back to the merchant's words. */
+  async fillPlantilla(merchantId: string, input: PlantillaFillInput): Promise<Record<string, string> | null> {
+    const model = sourceConversationModel(undefined, this.config.get<string>('app.openAi.conversationModel'));
+    const provider = sourceProvider(this.config, model);
+    const photos = input.photos.slice(0, 8);
+    const owned = photos.length ? new Set((await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: photos } }, select: { url: true } })).map(asset => asset.url)) : new Set<string>();
+    const images: Array<{ type: 'input_text'; text: string } | { type: 'input_image'; image_url: string; detail: 'low' }> = [];
+    for (const [index, url] of photos.entries()) {
+      const filename = url.split('/').at(-1)!;
+      if (!this.uploads.contentTypeFor(filename).startsWith('image/')) continue;
+      const bytes = owned.has(url) ? await this.uploads.getBuffer(filename).catch(() => null) : null;
+      if (bytes && bytes.length <= 4_000_000) images.push({ type: 'input_text', text: `Foto ${index}` }, { type: 'input_image', image_url: `data:${this.uploads.contentTypeFor(filename)};base64,${bytes.toString('base64')}`, detail: 'low' });
+    }
+    const facts = { storeName: input.storeName, about: input.about.slice(0, 2000), products: input.products.slice(0, 20), photoCount: photos.length,
+      slots: input.slots.map(slot => ({ key: slot.key, role: slot.role, demo: slot.default, max: slot.max })),
+      ...(input.current ? { current: input.current } : {}), ...(input.request ? { request: input.request.slice(0, 2000) } : {}) };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const started = Date.now(); let body: any = null; let status = 'FAILED';
+      try {
+        const response = await fetch(provider.endpoint, {
+          method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(120_000),
+          body: JSON.stringify({ model, store: false, instructions: PLANTILLA_FILL_PROMPT,
+            input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(facts) }, ...images] }],
+            text: { format: { type: 'json_schema', name: 'plantilla_fill', strict: true, schema: plantillaFillSchema(input.slots) } },
+            reasoning: { effort: 'low' }, max_output_tokens: 12000 }),
+        });
+        body = await response.json().catch(() => null);
+        checkSourceProviderQuota(response.status, body, provider.name);
+        if (response.ok) { status = 'COMPLETED'; return plantillaFillFromRead(sourceResponseJson(body) as Record<string, unknown>, input.slots); }
+      } catch (error) {
+        if (error instanceof SourceProviderQuotaException) throw error;
+        this.logger.warn(JSON.stringify({ stage: 'plantilla-fill', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
+      } finally { await this.metering?.record(input.storeId, 'source-plantilla-fill', model, body, Date.now() - started, status); }
       if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 3000));
     }
     return null;
