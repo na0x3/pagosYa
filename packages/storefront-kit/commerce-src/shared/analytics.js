@@ -54,7 +54,7 @@
       if (label && ANALYTICS_LABELS.includes(label)) analytics('cta_click', { target: label });
       const control = target.closest('a,button');
       const card = control?.closest('.menu-item');
-      if (card && !control.matches('[data-add],[data-card-swatch]')) { const id = cardProductId(card); if (id) analytics('product_card_click', { productId: id }); }
+      if (card && !control.matches('[data-add],[data-card-swatch],[data-product-zoom]')) { const id = cardProductId(card); if (id) analytics('product_card_click', { productId: id }); }
       // The shopper is leaving for WhatsApp: hand the queue over now.
       if (control?.matches('a[href]') && WHATSAPP_LINK.test(control.href)) { analytics('whatsapp_click'); flushAnalytics(); }
     }, true);

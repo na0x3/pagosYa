@@ -73,6 +73,14 @@ describe('kit analytics events (hosted stores)', () => {
     expect(shop.$('.cart-drawer').open).toBe(true);
   });
 
+  it('a tap on a card\'s «Ampliar foto» is not counted as a card click', () => {
+    const shop = boot({ settings: { items: [{ ...ITEMS[0], imageUrls: ['https://shop.test/lamp.jpg'] }] } });
+    const zoom = shop.$('.menu-item [data-product-zoom]');
+    expect(zoom).not.toBeNull();
+    zoom.click();
+    expect(shop.events().filter(e => e.type === 'product_card_click')).toEqual([]);
+  });
+
   it('tells a card click from an add, and views a product once per page', () => {
     const shop = boot();
     const lamp = [...shop.w.document.querySelectorAll('.menu-item')].find((card: any) => card.textContent.includes('Lámpara'));

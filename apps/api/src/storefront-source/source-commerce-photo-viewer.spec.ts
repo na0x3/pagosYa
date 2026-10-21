@@ -152,6 +152,81 @@ describe('photo viewer', () => {
     expect(viewer.open).toBe(true);
   });
 
+  // A 1000×800 stage with a 400×800 portrait (drawn 400 wide, 300px of background each side) or a 1000×500 landscape.
+  const sized = (w: any, q: any, natural: [number, number]) => {
+    const stage = q('[data-viewer-stage]'), photo = q('[data-viewer-photo]');
+    Object.defineProperties(stage, { clientWidth: { value: 1000 }, clientHeight: { value: 800 } });
+    stage.getBoundingClientRect = () => ({ left: 0, top: 0, right: 1000, bottom: 800, width: 1000, height: 800 });
+    Object.defineProperties(photo, { naturalWidth: { value: natural[0] }, naturalHeight: { value: natural[1] }, offsetWidth: { value: 1000 }, offsetHeight: { value: 800 } });
+    const pointer = (type: string, target: any, x: number, y: number, id = 1, pointerType = 'mouse') => { const event = new w.MouseEvent(type, { bubbles: true, clientX: x, clientY: y }); Object.defineProperties(event, { pointerId: { value: id }, pointerType: { value: pointerType } }); target.dispatchEvent(event); };
+    return { stage, photo, pointer, shift: () => photo.style.transform.match(/translate\((-?\d+)px, (-?\d+)px\)/)!.slice(1).map(Number) };
+  };
+
+  it('a zoomed photo pans only as far as its drawn picture reaches, never into empty background', async () => {
+    const { w, q } = await open();
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg'], 0, { title: 'X' })`);
+    const { stage, photo, pointer, shift } = sized(w, q, [400, 800]);
+    stage.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, clientX: 500, clientY: 400 }));
+    pointer('pointerdown', photo, 500, 400);
+    pointer('pointermove', photo, 1500, 900);
+    pointer('pointerup', stage, 1500, 900);
+    // Drawn 1000×2000 at 2.5×: no sideways room on a 1000-wide stage, 600px up or down.
+    expect(shift()).toEqual([0, 500]);
+  });
+
+  it('a tap on the background beside the drawn picture closes it at 1×; a tap on the picture does not', async () => {
+    const { w, q } = await open();
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg'], 0, { title: 'X' })`);
+    const viewer = q('[data-pagosya-viewer]');
+    const { stage, photo, pointer } = sized(w, q, [400, 800]);
+    pointer('pointerdown', photo, 500, 400); pointer('pointerup', stage, 500, 400); stage.click();
+    expect(viewer.open).toBe(true);
+    pointer('pointerdown', photo, 100, 400); pointer('pointerup', stage, 100, 400); stage.click();
+    expect(viewer.open).toBe(false);
+  });
+
+  it('lifting one finger after a pinch keeps the photo where it is; the other finger then pans from there', async () => {
+    const { w, q } = await open();
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg'], 0, { title: 'X' })`);
+    const { stage, photo, pointer, shift } = sized(w, q, [1000, 500]);
+    pointer('pointerdown', photo, 400, 400, 1, 'touch');
+    pointer('pointerdown', photo, 600, 400, 2, 'touch');
+    pointer('pointermove', photo, 700, 400, 2, 'touch');
+    expect(q('[data-pagosya-viewer]').dataset.zoom).toBe('1.5');
+    pointer('pointerup', stage, 700, 400, 2, 'touch');
+    const [x] = shift();
+    pointer('pointermove', photo, 420, 400, 1, 'touch');
+    expect(shift()[0]).toBe(x + 20);
+  });
+
+  it('a touch double-tap is not undone by the dblclick some phones send after it', async () => {
+    const { w, q } = await open();
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg'], 0, { title: 'X' })`);
+    const { stage, photo, pointer } = sized(w, q, [1000, 500]);
+    pointer('pointerdown', photo, 500, 400, 1, 'touch'); pointer('pointerup', stage, 500, 400, 1, 'touch');
+    pointer('pointerdown', photo, 500, 400, 1, 'touch'); pointer('pointerup', stage, 500, 400, 1, 'touch');
+    stage.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, clientX: 500, clientY: 400 }));
+    expect(q('[data-pagosya-viewer]').dataset.zoom).toBe('2.5');
+  });
+
+  it('closing the dialog from outside the viewer (back gesture, store code) still gives the scroll back', async () => {
+    const { w, q } = await open();
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg'], 0, { title: 'X' })`);
+    expect(w.document.documentElement.style.overflow).toBe('hidden');
+    q('[data-pagosya-viewer]').close();
+    expect(w.document.documentElement.style.overflow).toBe('');
+    w.eval(`pagosyaPhotos.open(['https://shop.test/a1.jpg'], 0, { title: 'X' })`);
+    q('[data-viewer-close]').click();
+    expect(w.document.documentElement.style.overflow).toBe('');
+  });
+
+  it('the viewer box and thumbnail row hold against store dialog CSS and many photos', async () => {
+    const { q } = await open();
+    const css = q('style[data-pagosya-photo-viewer]').textContent;
+    expect(css).toContain('dialog.pagosya-viewer{');
+    expect(css).toContain('justify-content:safe center');
+  });
+
   it('escapes photo URLs and titles', async () => {
     const { w, q } = await open();
     w.eval(`pagosyaPhotos.open(['https://shop.test/a"1.jpg', 'https://shop.test/a2.jpg'], 0, { title: '<b>X</b>' })`);
@@ -216,6 +291,8 @@ describe('photo viewer', () => {
     const button = card.querySelector('[data-product-zoom]');
     expect(button.getAttribute('aria-label')).toBe('Ampliar foto de Abrigo de lana');
     expect(q('.menu-item[data-product-id="sin"] [data-product-zoom]')).toBeNull();
+    // A kit card's photo sits straight in the card (a split card puts it in one grid column): measured onto the photo.
+    expect(button.hasAttribute('data-zoom-float')).toBe(true);
     button.click();
     expect(q('[data-pagosya-viewer]').open).toBe(true);
     expect(q('[data-viewer-photo]').getAttribute('src')).toBe('https://shop.test/a1.jpg');
@@ -232,7 +309,7 @@ describe('photo viewer', () => {
     expect(button.parentElement).toBe(card);
   });
 
-  it('a button outside the photo holder is placed over the photo\'s top-right corner', async () => {
+  it('a button outside the photo holder is placed over the photo\'s bottom-right corner', async () => {
     const { w, q } = await open({ template: esCard });
     const card = q('[data-custom-product][data-product-id="abrigo"]'), photo = card.querySelector('img');
     // Photo on the left of a horizontal card: 20px from the card's top-left, 120 wide.
@@ -240,7 +317,8 @@ describe('photo viewer', () => {
     photo.getBoundingClientRect = () => ({ top: 120, left: 70, right: 190, bottom: 270, width: 120, height: 150 });
     w.eval(`pagosyaPhotos.place(document)`);
     const button = card.querySelector('[data-product-zoom]');
-    expect(button.style.top).toBe('30px');
+    // Bottom-right of the photo: badges hold its top-left, «Más vendido» and quick look its top-right.
+    expect(button.style.top).toBe('124px');
     expect(button.style.left).toBe('94px');
     expect(button.style.right).toBe('auto');
   });

@@ -6,7 +6,7 @@
   const VIEWER_MAX = 4, VIEWER_STEP = 2.5;
   const ZOOM_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/></svg>';
   const PHOTO_VIEWER_CSS = `
-    :where(.pagosya-viewer){position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:var(--store-background,#fff);color:var(--store-foreground,#111);overflow:hidden}
+    dialog.pagosya-viewer{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:var(--store-background,#fff);color:var(--store-foreground,#111);overflow:hidden}
     .pagosya-viewer::backdrop{background:transparent}
     .pagosya-viewer:not([open]){display:none}
     .pagosya-viewer__stage{position:absolute;inset:0 0 88px;overflow:hidden;touch-action:none;cursor:zoom-in}
@@ -22,12 +22,12 @@
     .pagosya-viewer__nav--prev{left:16px}.pagosya-viewer__nav--next{right:16px}
     .pagosya-viewer .pagosya-viewer__nav[hidden]{display:none}
     .pagosya-viewer__count{position:absolute;top:28px;left:20px;margin:0;font-size:13px;letter-spacing:.06em}
-    .pagosya-viewer__thumbs{position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:center;gap:8px;padding:0 16px;overflow-x:auto}
+    .pagosya-viewer__thumbs{position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:safe center;gap:8px;padding:0 16px;overflow-x:auto}
     .pagosya-viewer .pagosya-viewer__thumbs button{flex:0 0 56px;width:56px;height:56px;padding:0;border-radius:4px;overflow:hidden;opacity:.6}
     .pagosya-viewer__thumbs button[aria-current=true]{opacity:1;outline:1.5px solid currentColor;outline-offset:2px}
     .pagosya-viewer__thumbs img{display:block;width:100%;height:100%;object-fit:cover}
     @media(max-width:640px){.pagosya-viewer .pagosya-viewer__nav{display:none}}
-    .menu-item [data-product-zoom]{position:absolute;top:10px;right:10px;z-index:3;display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--store-background,#fff) 88%,transparent);color:var(--store-foreground,#111);cursor:zoom-in;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+    .menu-item [data-product-zoom]{position:absolute;right:10px;bottom:10px;z-index:3;display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--store-background,#fff) 88%,transparent);color:var(--store-foreground,#111);cursor:zoom-in;box-shadow:0 1px 3px rgba(0,0,0,.12)}
     [data-product-zoom] svg{width:18px;height:18px}
     :where(:has(>[data-product-zoom])){position:relative}
     @media(hover:hover){.menu-item [data-product-zoom]{opacity:0;transition:opacity .2s}.menu-item:is(:hover,:focus-within) [data-product-zoom]{opacity:1}}
@@ -38,7 +38,7 @@
     @media(prefers-reduced-motion:reduce){.pagosya-viewer__photo,.product-detail__stage[data-magnify] .product-detail__photo,.menu-item [data-product-zoom]{transition:none}}
   `;
   let photoViewer = null;
-  const viewerState = { images: [], index: 0, scale: 1, x: 0, y: 0, title: '', opener: null, lockedFrom: null, moved: false, pressedPhoto: false, lastTap: 0 };
+  const viewerState = { images: [], index: 0, scale: 1, x: 0, y: 0, title: '', opener: null, lockedFrom: null, moved: false, pressedPhoto: false, lastTap: 0, touchToggle: 0, locked: false };
   const viewerPhotos = list => (Array.isArray(list) ? list : []).filter(url => typeof url === 'string' && url && !VIEWER_VIDEO.test(url));
   function ensurePhotoViewerStyle() {
     if (document.querySelector('style[data-pagosya-photo-viewer]')) return;
@@ -66,11 +66,19 @@
     wirePhotoViewer(photoViewer);
     return photoViewer;
   }
+  // The picture as drawn inside the stage (object-fit: contain), not the photo box, which always fills the stage.
+  function viewerDrawn() {
+    const stage = photoViewer.querySelector('[data-viewer-stage]'), photo = photoViewer.querySelector('[data-viewer-photo]');
+    const W = stage.clientWidth, H = stage.clientHeight, nw = photo.naturalWidth, nh = photo.naturalHeight;
+    if (!W || !H || !nw || !nh) return null;
+    const fit = Math.min(W / nw, H / nh);
+    return { w: nw * fit, h: nh * fit, W, H };
+  }
   function viewerApply() {
-    const el = photoViewer, photo = el.querySelector('[data-viewer-photo]'), stage = el.querySelector('[data-viewer-stage]');
-    const s = viewerState.scale;
-    // Pan stops where the photo's edge meets the stage's: never a gap on a side the photo is wider than.
-    const maxX = Math.max(0, (photo.offsetWidth * s - stage.clientWidth) / 2), maxY = Math.max(0, (photo.offsetHeight * s - stage.clientHeight) / 2);
+    const el = photoViewer, photo = el.querySelector('[data-viewer-photo]');
+    const s = viewerState.scale, drawn = viewerDrawn();
+    // Pan stops where the picture's edge meets the stage's: never into empty background (review 2026-10-21).
+    const maxX = drawn ? Math.max(0, (drawn.w * s - drawn.W) / 2) : 0, maxY = drawn ? Math.max(0, (drawn.h * s - drawn.H) / 2) : 0;
     viewerState.x = s === 1 ? 0 : Math.max(-maxX, Math.min(maxX, viewerState.x));
     viewerState.y = s === 1 ? 0 : Math.max(-maxY, Math.min(maxY, viewerState.y));
     photo.style.transform = `translate(${Math.round(viewerState.x)}px, ${Math.round(viewerState.y)}px) scale(${s})`;
@@ -123,27 +131,36 @@
     viewerShow(Math.max(0, list.indexOf(asked)));
     if (!el.open) {
       viewerState.lockedFrom = document.documentElement.style.overflow;
+      viewerState.locked = true;
       document.documentElement.style.overflow = 'hidden';
       if (typeof el.showModal === 'function') el.showModal(); else el.setAttribute('open', '');
     }
     el.querySelector('[data-viewer-close]').focus({ preventScroll: true });
     return true;
   }
-  function closePhotoViewer() {
-    const el = photoViewer;
-    if (!el || !el.open) return;
-    if (typeof el.close === 'function') el.close(); else el.removeAttribute('open');
+  // Gives the page its scroll and the opener its focus back, once, however the dialog closed: the viewer's own controls, or
+  // the browser (a back gesture) or store code closing the dialog directly (review 2026-10-21).
+  function viewerRelease() {
+    if (!viewerState.locked) return;
+    viewerState.locked = false;
     document.documentElement.style.overflow = viewerState.lockedFrom || '';
     viewerState.lockedFrom = null;
     const opener = viewerState.opener;
     viewerState.opener = null;
     if (opener?.isConnected && typeof opener.focus === 'function') opener.focus({ preventScroll: true });
   }
+  function closePhotoViewer() {
+    const el = photoViewer;
+    if (!el || !el.open) return;
+    if (typeof el.close === 'function') el.close(); else el.removeAttribute('open');
+    viewerRelease();
+  }
   function wirePhotoViewer(el) {
     const stage = el.querySelector('[data-viewer-stage]');
     const pointers = new Map();
     let pinchFrom = 0, pinchScale = 1, start = null;
     el.addEventListener('cancel', event => { event.preventDefault(); closePhotoViewer(); });
+    el.addEventListener('close', viewerRelease);
     el.addEventListener('keydown', event => {
       if (event.key === 'ArrowLeft') { event.preventDefault(); viewerGo(-1); }
       else if (event.key === 'ArrowRight') { event.preventDefault(); viewerGo(1); }
@@ -161,7 +178,12 @@
       viewerState.pressedPhoto = false;
       if (event.target === stage && viewerState.scale === 1 && !viewerState.moved && !fromPhoto) closePhotoViewer();
     });
-    stage.addEventListener('dblclick', event => { event.preventDefault(); viewerToggleZoom(event); });
+    stage.addEventListener('dblclick', event => {
+      event.preventDefault();
+      // Some phones send a dblclick after the double-tap the touch path already toggled (review 2026-10-21).
+      if (Date.now() - viewerState.touchToggle < 500) return;
+      viewerToggleZoom(event);
+    });
     stage.addEventListener('wheel', event => {
       event.preventDefault();
       const [px, py] = viewerPoint(event);
@@ -171,7 +193,11 @@
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       try { stage.setPointerCapture?.(event.pointerId); } catch { /* a pointer the browser no longer tracks: no capture, the gesture still counts */ }
       viewerState.moved = false;
-      viewerState.pressedPhoto = event.target !== stage;
+      // On the picture or on the background beside it: the photo box fills the stage, so the drawn picture decides.
+      const drawn = viewerDrawn(), [px, py] = viewerPoint(event);
+      viewerState.pressedPhoto = drawn
+        ? Math.abs(px - viewerState.x) <= (drawn.w * viewerState.scale) / 2 && Math.abs(py - viewerState.y) <= (drawn.h * viewerState.scale) / 2
+        : event.target !== stage;
       start = { x: event.clientX, y: event.clientY, panX: viewerState.x, panY: viewerState.y };
       if (pointers.size === 2) {
         const [a, b] = [...pointers.values()];
@@ -197,13 +223,20 @@
       if (!pointers.has(event.pointerId)) return;
       pointers.delete(event.pointerId);
       el.removeAttribute('data-dragging');
+      // One finger left after a pinch: it pans from where the photo is now, and the gesture is no longer a tap or swipe.
+      if (pointers.size === 1) {
+        const [rest] = [...pointers.values()];
+        start = { x: rest.x, y: rest.y, panX: viewerState.x, panY: viewerState.y };
+        viewerState.moved = true;
+        return;
+      }
       if (pointers.size || !start) return;
       const dx = event.clientX - start.x, dy = event.clientY - start.y;
       // A swipe at 1× moves between photos; a quick second tap on touch toggles zoom (mobile Safari sends no dblclick).
       if (viewerState.scale === 1 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) viewerGo(dx < 0 ? 1 : -1);
       else if (event.pointerType === 'touch' && !viewerState.moved) {
         const now = Date.now();
-        if (now - viewerState.lastTap < 300) { viewerToggleZoom(event); viewerState.lastTap = 0; viewerState.moved = true; } else viewerState.lastTap = now;
+        if (now - viewerState.lastTap < 300) { viewerToggleZoom(event); viewerState.lastTap = 0; viewerState.touchToggle = now; viewerState.moved = true; } else viewerState.lastTap = now;
       }
       start = null;
     };
@@ -260,13 +293,14 @@
       button.setAttribute('aria-label', `Ampliar foto de ${p.name}`);
       button.innerHTML = ZOOM_ICON;
       holder.append(button);
-      if (holder === card && photo.parentElement !== card) button.setAttribute('data-zoom-float', '');
+      if (holder === card) button.setAttribute('data-zoom-float', '');
       added = true;
     });
     if (added) { ensurePhotoViewerStyle(); placeZoomButtons(root); }
   }
-  // A button that could not go inside the photo's holder (the holder is the card link) is measured onto the photo's top-right
-  // corner, and kept there when the card changes size (a horizontal card would otherwise show it beside the name).
+  // A button that could not go inside the photo's holder (the photo sits in the card itself, or in the card link) is measured onto
+  // the photo's bottom-right corner, and kept there when the card changes size (a horizontal or split card would otherwise show
+  // it beside the name). Bottom-right: badges hold the top-left, «Más vendido» and quick look the top-right.
   const zoomResize = typeof ResizeObserver === 'function' ? new ResizeObserver(entries => entries.forEach(entry => placeZoomButtons(entry.target))) : null;
   function placeZoomButtons(root) {
     const buttons = root?.matches?.('[data-zoom-float]') ? [root] : [...(root?.querySelectorAll?.('[data-zoom-float]') || [])];
@@ -275,7 +309,8 @@
       if (!card || !photo) return;
       const box = card.getBoundingClientRect(), shot = photo.getBoundingClientRect();
       const inset = 10, size = button.offsetWidth || 36;
-      button.style.top = `${Math.round(shot.top - box.top + inset)}px`;
+      button.style.top = `${Math.round(shot.bottom - box.top - inset - size)}px`;
+      button.style.bottom = 'auto';
       button.style.left = `${Math.round(shot.right - box.left - inset - size)}px`;
       button.style.right = 'auto';
       if (zoomResize && !card.hasAttribute('data-zoom-watched')) { card.setAttribute('data-zoom-watched', ''); zoomResize.observe(card); }
