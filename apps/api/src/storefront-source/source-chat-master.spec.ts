@@ -239,7 +239,7 @@ it('a new store\'s fill call gets the menu targets', async () => {
 
 /** Dropdown menu spec 2026-10-21: the fill call builds and edits the menu; the merchant's clear words always count. */
 describe('the store menu on a master store', () => {
-  let refill: jest.Mock, configJs: string;
+  let refill: jest.Mock, catalog: jest.Mock, configJs: string;
   const storeData = 'export const store = {"name":"Noa","tagline":"","city":"","logo":"","phone":""} as const;\nexport const photos: Record<string, string> = {"hero":"","story":""};\nexport const copy = {"headline":"Hecho a mano"} as const;\nexport const look = {"palette":"terracotta","fonts":"classic","colors":{}} as const;\n';
   const data = { categories: [{ id: 'c1', name: 'Vestidos' }, { id: 'c2', name: 'Seda' }], items: [{ categoryId: 'c1', imageUrls: [] }, { categoryId: 'c2', imageUrls: [] }] };
   const read = { changed: [], values: [], palette: 'terracotta', fonts: 'classic', colors: {}, heroPhoto: -1, storyPhoto: -1, menuStyle: 'none', menuGroups: [] };
@@ -247,7 +247,8 @@ describe('the store menu on a master store', () => {
     configJs = `window.PAGOSYA_CONFIG = ${JSON.stringify({ data })};\n`;
     refill = jest.fn().mockResolvedValue({ revision: 3, label: 'Textos y estilo actualizados' });
     const projects = { current: jest.fn().mockResolvedValue({ revision: 2 }), version: jest.fn().mockImplementation(async () => ({ snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files: [{ path: 'components/store-data.tsx', content: storeData }, { path: 'components/home.tsx', content: "import { copy, photos } from './store-data';\n" }, { path: 'config.js', content: configJs }] } })) };
-    chat = new SourceChatService(prisma, projects as any, generation(), { decide, fillMaster } as any, { apply: jest.fn(), applyMaster, refill } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
+    catalog = jest.fn().mockResolvedValue(undefined);
+    chat = new SourceChatService(prisma, projects as any, { ...generation(), catalog }, { decide, fillMaster } as any, { apply: jest.fn(), applyMaster, refill } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
   });
   const edit = (instruction: string) => chat.send('m1', 's1', { revision: 2, instruction, requestId: uuid() }) as Promise<any>;
   const decided = (editKind: string) => decide.mockResolvedValueOnce({ action: 'generate', reply: '', summary: 's', generationInstruction: 'x', imageUses: [], startFrom: 'unknown', editKind });
@@ -283,6 +284,36 @@ describe('the store menu on a master store', () => {
     fillMaster.mockResolvedValueOnce(read);
     await edit('agrega Accesorios al menú');
     expect(fillMaster).toHaveBeenCalled();
+  });
+
+  it('a design request that also asks for the menu runs the design edit, then saves the menu (final review 2026-10-21)', async () => {
+    decided('design');
+    await edit('agrega una sección de reseñas y un menú desplegable');
+    expect(fillMaster).not.toHaveBeenCalled();
+    expect(generate).toHaveBeenCalled();
+    expect(refill).toHaveBeenCalledWith('m1', 's1', 1, { menu: { style: 'panel', groups: [] } }, expect.any(String));
+  });
+
+  it('a redesign that names the menu stays a redesign (final review 2026-10-21)', async () => {
+    decided('redesign');
+    await edit('rediseña todo y ponle un menú desplegable');
+    expect(fillMaster).not.toHaveBeenCalled();
+    expect(generate).toHaveBeenCalled();
+  });
+
+  it('the merchant\'s clear ask wins over a read that says none (final review 2026-10-21)', async () => {
+    decided('content');
+    fillMaster.mockResolvedValueOnce({ ...read, changed: ['menu'], menuStyle: 'none', menuGroups: [] });
+    await edit('quiero un menú desplegable');
+    expect(refill).toHaveBeenCalledWith('m1', 's1', 2, { menu: { style: 'panel', groups: [] } }, expect.any(String));
+  });
+
+  it('the fill sees categories made after the last build (final review 2026-10-21)', async () => {
+    catalog.mockResolvedValueOnce({ ...data, categories: [...data.categories, { id: 'c3', name: 'Accesorios' }], items: [...data.items, { categoryId: 'c3', imageUrls: [] }] });
+    decided('content');
+    fillMaster.mockResolvedValueOnce(read);
+    await edit('quiero un menú desplegable');
+    expect(fillMaster.mock.calls[0][1].menuTargets).toEqual(expect.arrayContaining([{ target: 'category:c3', label: 'Accesorios' }]));
   });
 
   it('«agrega postres al menú» on a store without a menu stays a design edit', async () => {

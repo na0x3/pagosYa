@@ -173,6 +173,11 @@ describe('menu on a master store', () => {
     const fashion = refillMasterFiles(menuStore(), menuManifest, { variants: { cards: 'fashion' } as never });
     expect(readStoreMenu(fashion)).toEqual({ style: 'panel' });
   });
+  it('a fashion store that removed its menu keeps it removed through later edits (final review 2026-10-21)', () => {
+    const off = refillMasterFiles(menuStore(), menuManifest, { variants: { cards: 'fashion' } as never, menu: { style: 'none', groups: [] } });
+    expect(readStoreMenu(off)).toBeUndefined();
+    expect(readStoreMenu(refillMasterFiles(off, menuManifest, { copy: { headline: 'Otra' } }))).toBeUndefined();
+  });
   it('a store without the menu part in its catalogue never gets a menu', () => {
     expect(readStoreMenu(refillMasterFiles(menuStore(), manifest, { copy: { headline: 'Otra' } }))).toBeUndefined();
   });

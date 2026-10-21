@@ -79,15 +79,30 @@ export function withStoreMenuConfig<T extends { path: string; content: string }>
 }
 
 // «Menú» alone is a restaurant's word too («agrega postres al menú»): only phrases that name a navigation menu switch one on.
-const MENU_ASK = /(?<!\p{L})(men[uú]s? desplegables?|desplegables? (?:arriba|en (?:la|el) (?:barra|encabezado|header))|dropdowns?|mega ?men[uú]s?|men[uú]s? (?:con|de) (?:las |sus )?categor[ií]as|men[uú]s? de (?:navegaci[oó]n|la tienda))(?!\p{L})/iu;
-const MENU_REMOVE = /(?<!\p{L})(quita|qu[ií]ta(?:le|lo)|elimina|saca|oculta|borra|remueve|sin)(?!\p{L})/iu;
+// «Dropdown» alone is a size picker too («el dropdown de tallas»): it counts only beside a menu or navigation word.
+const MENU_ASK = /(?<!\p{L})(men[uú]s? desplegables?|desplegables? (?:arriba|en (?:la|el) (?:barra|encabezado|header))|men[uú]s? dropdowns?|dropdowns? (?:en (?:el|la) |del? )?(?:men[uú]|navegaci[oó]n|encabezado|header|barra)|mega ?men[uú]s?|men[uú]s? (?:con|de) (?:las |sus )?categor[ií]as|men[uú]s? de (?:navegaci[oó]n|la tienda))(?!\p{L})/iu;
+const MENU_REMOVE = /(?<!\p{L})(no|ya no|nunca|quita|qu[ií]ta(?:le|lo)|elimina|saca|oculta|borra|remueve|sin)(?!\p{L})/iu;
+/** «…menú desplegable, quítalo»: a removal said right after the ask, in the same sentence. */
+const MENU_REMOVE_AFTER = /^[^.!?\n]{0,40}?(?<!\p{L})(qu[ií]talo|elim[ií]nalo|s[aá]calo|b[oó]rralo|oc[uú]ltalo|qu[ií]tala|elim[ií]nala)(?!\p{L})/iu;
 const MENU_TOUCH = /(?<!\p{L})(?:al|del|en el|el) men[uú](?!\p{L})/iu;
 
-/** The merchant's words ask for the store menu (true), ask to take it away (false), or say nothing of it. */
+/** The merchant's words ask for the store menu (true), ask to take it away (false), or say nothing of it. Only the clause that
+ *  holds the ask is read: «elimina el banner y pon un menú desplegable» asks for one (final review 2026-10-21). */
 export function instructionAsksStoreMenu(text: string): boolean | undefined {
   const asked = MENU_ASK.exec(text);
   if (!asked) return undefined;
-  return !MENU_REMOVE.test(text.slice(Math.max(0, asked.index - 40), asked.index));
+  const before = text.slice(0, asked.index);
+  const clause = before.slice(Math.max(...[',', '.', ';', ':', '!', '?', '\n', ' y ', ' e ', ' pero '].map(mark => { const at = before.lastIndexOf(mark); return at < 0 ? 0 : at + mark.length; })));
+  return !(MENU_REMOVE.test(clause) || MENU_REMOVE_AFTER.test(text.slice(asked.index + asked[0].length)));
+}
+const CLAUSES = /[,.;:!?\n]| y | e | pero /i;
+const FILLER = /^(?:por favor|porfa|gracias|ok|listo|hola|please)$/i;
+const ABOUT_MENU = /(?<!\p{L})(men[uú]s?|desplegables?|dropdowns?|categor[ií]as?)(?!\p{L})/iu;
+/** Every clause of the request is about the menu: a request that also asks for something else («agrega una sección de reseñas y
+ *  un menú desplegable», «rediseña todo y ponle un menú») is a design edit that sets the menu after it (final review 2026-10-21). */
+export function instructionOnlyAboutStoreMenu(text: string): boolean {
+  const clauses = text.split(CLAUSES).map(part => part.trim()).filter(part => part && !FILLER.test(part));
+  return clauses.length > 0 && clauses.every(clause => ABOUT_MENU.test(clause));
 }
 /** Looser: «agrega Accesorios al menú». Counts only for a store whose menu already exists. */
 export const instructionTouchesStoreMenu = (text: string) => MENU_ASK.test(text) || MENU_TOUCH.test(text);

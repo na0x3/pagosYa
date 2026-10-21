@@ -27,7 +27,7 @@ export type MasterFacts = { storeName: string; products: string[]; photos: strin
 /** What a Plantilla's filler is told (spec 2026-10-20 §4): the store as the apply reads it, and the template's slots. */
 export type PlantillaFacts = { storeName: string; tagline: string; products: string[]; photos: string[]; slots: NonNullable<registry.TemplateManifest['copy']> };
 const HEX = /^#[0-9a-f]{6}$/i;
-import { sourcePublicApiUrl, sourceStoreConfigData } from './source-store-config';
+import { sourcePublicApiUrl, sourceStoreConfigData, withLiveCatalog } from './source-store-config';
 import { storeMenuContext, storeMenuTargetList } from './source-store-menu';
 
 /** Plantillas: apply a designer-made store as the next revision (free, no AI call). */
@@ -123,8 +123,17 @@ export class SourceTemplatesService {
     const manifest = snapshot.brief?.templateId ? this.registry.templateManifest(snapshot.brief.templateId) : undefined;
     if (!manifest?.master) throw new BadRequestException('Esta tienda no usa la plantilla base.');
     const bundled = await this.bundleMasterPhotos(merchantId, change);
-    const files = refillMasterFiles(snapshot.files, manifest, bundled.change, sourcePublicApiUrl(this.config));
+    // Dropdown menu spec 2026-10-21: a menu change is checked against the live catalog, so a category made after the last build can
+    // be linked (final review); config.js data is refreshed the way every save refreshes it.
+    const live = change.menu ? await this.liveConfigData(merchantId, storeId).catch(() => undefined) : undefined;
+    const files = refillMasterFiles(live ? withLiveCatalog(snapshot.files, live) : snapshot.files, manifest, bundled.change, sourcePublicApiUrl(this.config));
     return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: [...files, ...bundled.files.filter(asset => !files.some(file => file.path === asset.path))] });
+  }
+
+  private async liveConfigData(merchantId: string, storeId: string) {
+    const current = await this.projects.current(merchantId, storeId);
+    const publicStore = await this.publicStores.getStorePublic(current.slug, { trackView: false, ownerMerchantId: merchantId });
+    return sourceStoreConfigData(publicStore, sourcePublicApiUrl(this.config), false);
   }
 
   /** Spec 2026-10-20 Plantillas fill §4: a converted Plantilla applied and filled for this business in one call. The store is

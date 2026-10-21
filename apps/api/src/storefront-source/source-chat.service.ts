@@ -37,7 +37,7 @@ import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook, type Ma
 import { isFashionStore } from './source-master-fashion';
 import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy } from './source-templates';
-import { instructionAsksStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList } from './source-store-menu';
+import { instructionAsksStoreMenu, instructionOnlyAboutStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList } from './source-store-menu';
 import { readConfigFile } from './store-look';
 import { buildSuggestions } from './source-suggestions';
 import { templateDemoPath } from './source-templates';
@@ -309,7 +309,9 @@ export class SourceChatService {
     const state = readMasterState(files);
     // Dropdown menu spec 2026-10-21: the fill call sees the store's menu and what it may link.
     const currentMenu = readStoreMenu(files) ?? null;
-    const menuTargets = storeMenuTargetList(storeMenuContext(readConfigFile(files).data ?? {}, files));
+    // The live catalog, so a category made after the last build can be linked (final review 2026-10-21); the saved one otherwise.
+    const liveCatalog = await Promise.resolve(this.generation.catalog(merchantId, storeId)).catch(() => undefined);
+    const menuTargets = storeMenuTargetList(storeMenuContext(liveCatalog ?? readConfigFile(files).data ?? {}, files));
     const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
     const recent = await Promise.resolve(this.prisma.mediaAsset.findMany({ where: { merchantId }, orderBy: { createdAt: 'desc' }, take: 8, select: { url: true } })).catch(() => [] as Array<{ url: string }>);
     const photos = [...new Set([...Object.values(state.photos).filter(Boolean), ...(recent ?? []).map(asset => asset.url)])].slice(0, 8);
@@ -319,8 +321,9 @@ export class SourceChatService {
     // The merchant's clear words win over a read that missed them: «quiero un menú desplegable» turns it on, «quita…» off.
     const asked = instructionAsksStoreMenu(request);
     const filled = read ? masterFillFromRead(read, photos, true) : null;
-    const change: MasterFill | null = !filled || asked === undefined || filled.menu ? filled
-      : { ...filled, menu: asked ? { style: currentMenu?.style ?? 'panel', groups: currentMenu?.groups ?? [] } : { style: 'none', groups: [] } };
+    const contradicts = (style: string | undefined) => asked === true ? !style || style === 'none' : asked === false ? style !== 'none' : false;
+    const change: MasterFill | null = !filled || asked === undefined || (filled.menu && !contradicts(filled.menu.style)) ? filled
+      : { ...filled, menu: asked ? { style: filled.menu && filled.menu.style !== 'none' ? filled.menu.style : currentMenu?.style ?? 'panel', groups: filled.menu?.groups.length ? filled.menu.groups : currentMenu?.groups ?? [] } : { style: 'none', groups: [] } };
     // Nothing in the data to change: the caller turns the request into a minimal design edit.
     if (change && !Object.keys(change).length) return null;
     if (!change) {
@@ -793,15 +796,19 @@ export class SourceChatService {
       // Master template (spec 2026-10-19 §3): words, colours, fonts and photos change the store's data; design changes stay minimal.
       const masterStore = this.config.get<boolean>('app.yapiMasterTemplate') === true && Boolean(current.revision) && previousBrief?.templateId === MASTER_TEMPLATE_ID
         && readsMasterData((previous!.snapshot as unknown as SourceProjectSnapshot).files);
-      // Dropdown menu spec 2026-10-21: menu words are a data change on a master store whatever the decision said.
-      const menuWords = masterStore && (instructionAsksStoreMenu(input.instruction) !== undefined
+      // Dropdown menu spec 2026-10-21: a request only about the menu is a data change on a master store whatever the decision said; one
+      // that also asks for something else keeps its edit and the menu is saved after it (final review 2026-10-21).
+      const menuAsk = masterStore ? instructionAsksStoreMenu(input.instruction) : undefined;
+      const menuWords = masterStore && (menuAsk !== undefined
         || (Boolean(readStoreMenu((previous!.snapshot as unknown as SourceProjectSnapshot).files)) && instructionTouchesStoreMenu(input.instruction)));
-      if (masterStore && (decision.editKind === 'content' || menuWords)) {
+      const menuOnly = menuWords && instructionOnlyAboutStoreMenu(input.instruction);
+      if (masterStore && (decision.editKind === 'content' || menuOnly)) {
         const done = await this.masterContentEdit(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous!);
         if (done) return done;
         // Words Esencial has no field for (a heading a design edit added, «Lo que dicen nuestros clientes»): a minimal design edit.
-        decision.editKind = 'design';
+        if (decision.editKind === 'content') decision.editKind = 'design';
       }
+      const pendingMenu = masterStore && !menuOnly && menuAsk !== undefined ? menuAsk : undefined;
       // Plantillas fill (spec 2026-10-20 §5): words on a filled Plantilla store change its copy slots in one call; the rest is an ordinary edit.
       const plantilla = !masterStore && this.config.get<boolean>('app.yapiPlantillasFill') === true && current.revision && previousBrief?.templateId && previousBrief.templateId !== MASTER_TEMPLATE_ID
         ? templateManifest(previousBrief.templateId) : undefined;
@@ -879,6 +886,13 @@ export class SourceChatService {
           const after = checkedRevision !== revision ? await masterLayoutFindings((await this.projects.version(merchantId, storeId, checkedRevision.revision)).snapshot as unknown as SourceProjectSnapshot).catch(() => findings) : findings;
           layoutNote = after.length ? ` Revisé la página y queda esto por mejorar: ${after.join(' ')}` : '';
         }
+      }
+      // The menu a design request also asked for, saved on top of the design edit (final review 2026-10-21).
+      if (masterDesign && pendingMenu !== undefined) {
+        const savedMenu = readStoreMenu(((await this.projects.version(merchantId, storeId, checkedRevision.revision)).snapshot as unknown as SourceProjectSnapshot).files);
+        const menu = pendingMenu ? { style: savedMenu?.style ?? 'panel', groups: savedMenu?.groups ?? [] } : { style: 'none' as const, groups: [] };
+        const refilled = await this.templates.refill(merchantId, storeId, checkedRevision.revision, { menu }, 'Menú actualizado').catch(() => null);
+        if (refilled) checkedRevision = { ...checkedRevision, ...refilled };
       }
       const finalRevision = checkedRevision;
       let copyNote = layoutNote;

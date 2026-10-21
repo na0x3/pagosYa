@@ -178,7 +178,8 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   const menuIds = settings.variants?.menu ?? [];
   if (menuIds.length) {
     if (change.menu && menuIds.includes(change.menu.style)) variants.menu = change.menu.style;
-    else if (!change.menu && variants.cards === 'fashion' && (!variants.menu || variants.menu === 'none')) variants.menu = 'panel';
+    // Only a fashion store from before the menu (no record) gets the default: an explicit «none» is the merchant's removal.
+    else if (!change.menu && variants.cards === 'fashion' && variants.menu === undefined) variants.menu = 'panel';
   }
   const out = withFashionTemplateParts(files.map(file => {
     if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [] });

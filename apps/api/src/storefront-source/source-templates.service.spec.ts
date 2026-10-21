@@ -155,6 +155,19 @@ describe('SourceTemplatesService', () => {
     expect(files.find(f => f.path === 'config.js').content).toContain('"header":{"menu":{"style":"dropdowns"}}');
   });
 
+  it('a menu change is checked against the live catalog, so a category made after the build can be linked (final review 2026-10-21)', async () => {
+    const real = jest.requireActual('@pagosya/store-templates');
+    const { templates: base, prisma } = service(2);
+    const config = `window.PAGOSYA_CONFIG = ${JSON.stringify({ dna: {}, data: { categories: [], items: [] } })};\n`;
+    const projects = { current: jest.fn(async () => ({ slug: 'tostado', revision: 2, updatedAt: null })), version: jest.fn(async () => ({ snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files: [{ path: 'config.js', content: config }, { path: 'components/store-data.tsx', content: '' }] } })), save: jest.fn(async (_m: string, _s: string, input: any) => ({ revision: input.revision + 1, label: input.label })) };
+    const live = { ...publicStore([{ ...item, categoryId: 'k9' }]), categories: [{ id: 'k9', name: 'Accesorios', bannerUrl: null, highlights: [] }] };
+    const templates = new SourceTemplatesService(prisma as any, { getStorePublic: jest.fn(async () => live) } as any, projects as any, (base as any).config);
+    templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+    await templates.refill('m1', 's1', 2, { menu: { style: 'panel', groups: [{ label: 'Tienda', links: [{ to: 'category:k9' }] }] } }, 'Menú');
+    const saved = ((projects.save.mock.calls[0] as any[])[2].files as any[]).find(f => f.path === 'config.js').content;
+    expect(JSON.parse(saved.match(/= ([\s\S]*);\n$/)![1]).header.menu).toEqual({ style: 'panel', groups: [{ label: 'Tienda', links: [{ label: 'Accesorios', to: 'category:k9' }] }] });
+  });
+
   describe('the merchant\'s brand first (variety spec §4)', () => {
     const real = jest.requireActual('@pagosya/store-templates');
     const build = (confirmed: Array<{ field: string; value: string }>, logo?: string) => {

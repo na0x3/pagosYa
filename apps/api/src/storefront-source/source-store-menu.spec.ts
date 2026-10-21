@@ -78,6 +78,10 @@ describe('chat words', () => {
     ['quiero un menú desplegable', true], ['pon menús desplegables arriba', true], ['un menú con categorías como John Smedley', true],
     ['agrega un mega menú', true], ['quita el menú desplegable', false], ['sin menú desplegable por favor', false],
     ['agrega postres al menú', undefined], ['cambia el menú del día', undefined], ['cambia el color del botón', undefined],
+    // Final review 2026-10-21: «no» removes, and only the clause that holds the ask counts.
+    ['no quiero menú desplegable', false], ['ya no quiero el menú desplegable', false], ['nunca pedí un menú desplegable, quítalo', false],
+    ['elimina el banner y pon un menú desplegable', true], ['sin cambiar nada más, agrega un menú desplegable', true],
+    ['cambia el dropdown de tallas por botones', undefined], ['quiero un dropdown en el menú', true],
   ])('%s → %s', (text, expected) => expect(instructionAsksStoreMenu(text)).toBe(expected));
   it('«al menú» only touches a menu that exists', () => {
     expect(instructionTouchesStoreMenu('agrega Accesorios al menú')).toBe(true);
@@ -85,7 +89,7 @@ describe('chat words', () => {
   });
 });
 
-import { menuFromVariant } from './source-store-menu';
+import { instructionOnlyAboutStoreMenu, menuFromVariant } from './source-store-menu';
 describe('menuFromVariant', () => {
   it('none or no variant means no menu; a style keeps the checked groups', () => {
     expect(menuFromVariant('none', [], ctx)).toBeUndefined();
@@ -94,3 +98,12 @@ describe('menuFromVariant', () => {
     expect(menuFromVariant('dropdowns', [{ label: 'Mujer', links: [{ to: 'category:c1' }] }], ctx)).toEqual({ style: 'dropdowns', groups: [{ label: 'Mujer', links: [{ label: 'Vestidos', to: 'category:c1' }] }] });
   });
 });
+
+describe('instructionOnlyAboutStoreMenu (final review 2026-10-21)', () => {
+  it.each([
+    ['quiero un menú desplegable con mis categorías', true], ['agrega Accesorios al menú', true], ['quita el menú desplegable, por favor', true],
+    ['agrega una sección de reseñas y un menú desplegable', false], ['rediseña todo y ponle un menú desplegable', false],
+    ['Crea la página NOVIAS con Vestido Cala, y ponla en el menú', false],
+  ])('%s → %s', (text, expected) => expect(instructionOnlyAboutStoreMenu(text)).toBe(expected));
+});
+

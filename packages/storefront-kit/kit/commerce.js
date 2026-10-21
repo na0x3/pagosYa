@@ -6036,6 +6036,7 @@
       .pym-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px 40px;align-items:start}
       .pym-tiles{margin-top:0}
       .pym-footer{grid-column:1/-1;margin-top:8px}
+      .pyh--side-rail .pym-panel{position:fixed;top:0;left:88px;right:auto;width:min(960px,calc(100vw - 88px));max-height:100dvh;padding:32px}
     }`;
   function ensureStoreMenuStyle() {
     if (document.querySelector('style[data-pagosya-store-menu-style]')) return;
@@ -6052,6 +6053,8 @@
   /** A target as { href, label }, or null when the live store has nothing there. */
   function storeMenuTarget(to) {
     const value = String(to || '');
+    // A showcase sells nothing online: no catalog, category, collection, shipping or refund page to link (final review 2026-10-21).
+    if (SHOWCASE && (value === 'all' || value === 'new' || /^(?:category|collection):/.test(value) || SHOP_ONLY_INFO.has(value.slice(5)) && value.startsWith('page:'))) return null;
     if (value === 'all') return { href: pageHref('productos.html'), label: 'Todos los productos' };
     if (value === 'new') return products().length ? { href: pageHref('productos.html', '?orden=novedades'), label: 'Novedades' } : null;
     if (value.startsWith('category:')) {
@@ -6131,7 +6134,8 @@
     const tops = linksMount ? [...linksMount.querySelectorAll('[data-store-menu-top]')] : [];
     const tabs = [...panel.querySelectorAll('[role=tab]')];
     const panes = [...panel.querySelectorAll('[role=tabpanel]')];
-    let opener = null, lockedFrom = null, openTimer = 0, closeTimer = 0;
+    // openedBy: a hover-opened dropdown closes when the pointer leaves; a clicked one stays until clicked again (final review 2026-10-21).
+    let opener = null, openedBy = '', lockedFrom = null, openTimer = 0, closeTimer = 0;
     const select = index => tabs.forEach((tab, i) => { tab.setAttribute('aria-selected', String(i === index)); tab.tabIndex = i === index ? 0 : -1; panes[i].hidden = i !== index; });
     const focusable = () => [...panel.querySelectorAll('a[href],button:not([disabled])')].filter(el => !el.closest('[hidden]') && !el.closest('.pym-tabs[data-single]') && !(panel.getAttribute('data-mode') === 'dropdown' && el.closest('.pym-tabs')));
     const unlock = () => { if (lockedFrom !== null) { document.documentElement.style.overflow = lockedFrom; lockedFrom = null; } };
@@ -6145,9 +6149,10 @@
       storeMenuOpenState.host = storeMenuOpenState.close = null;
       if (returnFocus && opener) opener.focus({ preventScroll: true });
     }
-    function open(mode, index, from, focus) {
+    function open(mode, index, from, focus, by = 'click') {
       if (storeMenuOpenState.close && storeMenuOpenState.host !== host) storeMenuOpenState.close(false);
       opener = from;
+      openedBy = by;
       panel.setAttribute('data-mode', mode);
       select(index);
       panel.hidden = false;
@@ -6159,12 +6164,12 @@
     }
     toggle.addEventListener('click', () => (panel.hidden || panel.getAttribute('data-mode') !== 'panel' ? open('panel', 0, toggle, true) : close(true)));
     tops.forEach((top, index) => {
-      top.addEventListener('click', () => { clearTimeout(openTimer); if (!panel.hidden && opener === top) close(false); else open('dropdown', index, top, true); });
-      top.addEventListener('pointerenter', event => { if (!mouse(event)) return; clearTimeout(closeTimer); clearTimeout(openTimer); openTimer = setTimeout(() => open('dropdown', index, top, false), STORE_MENU_OPEN_MS); });
-      top.addEventListener('pointerleave', event => { if (!mouse(event)) return; clearTimeout(openTimer); if (panel.getAttribute('data-mode') === 'dropdown') closeTimer = setTimeout(() => close(false), STORE_MENU_CLOSE_MS); });
+      top.addEventListener('click', () => { clearTimeout(openTimer); clearTimeout(closeTimer); if (!panel.hidden && opener === top && openedBy === 'click') close(false); else open('dropdown', index, top, true); });
+      top.addEventListener('pointerenter', event => { if (!mouse(event)) return; clearTimeout(closeTimer); clearTimeout(openTimer); if (!panel.hidden && openedBy === 'click') return; openTimer = setTimeout(() => open('dropdown', index, top, false, 'hover'), STORE_MENU_OPEN_MS); });
+      top.addEventListener('pointerleave', event => { if (!mouse(event)) return; clearTimeout(openTimer); if (panel.getAttribute('data-mode') === 'dropdown' && openedBy === 'hover') closeTimer = setTimeout(() => close(false), STORE_MENU_CLOSE_MS); });
     });
     panel.addEventListener('pointerenter', event => { if (mouse(event)) clearTimeout(closeTimer); });
-    panel.addEventListener('pointerleave', event => { if (mouse(event) && panel.getAttribute('data-mode') === 'dropdown') closeTimer = setTimeout(() => close(false), STORE_MENU_CLOSE_MS); });
+    panel.addEventListener('pointerleave', event => { if (mouse(event) && panel.getAttribute('data-mode') === 'dropdown' && openedBy === 'hover') closeTimer = setTimeout(() => close(false), STORE_MENU_CLOSE_MS); });
     tabs.forEach((tab, index) => {
       tab.addEventListener('click', () => select(index));
       tab.addEventListener('keydown', event => {

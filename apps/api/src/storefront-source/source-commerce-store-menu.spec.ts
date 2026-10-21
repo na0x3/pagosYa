@@ -19,7 +19,7 @@ const windows: any[] = [];
 const errors: Error[] = [];
 afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
 
-async function open({ menu, data = DATA, host = HOST }: { menu?: unknown; data?: any; host?: string } = {}) {
+async function open({ menu, data = DATA, host = HOST, extra = {} }: { menu?: unknown; data?: any; host?: string; extra?: Record<string, unknown> } = {}) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (error: Error) => { if (!/Could not parse CSS stylesheet|getComputedStyle\(elt, pseudoElt\)/.test(error.message)) errors.push(error); });
   const dom = new JSDOM(`<html><head></head><body>${host}<section data-pagosya-catalog></section><section data-pagosya-cart></section><p data-pagosya-status></p></body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', virtualConsole });
@@ -28,7 +28,7 @@ async function open({ menu, data = DATA, host = HOST }: { menu?: unknown; data?:
   w.matchMedia = (query: string) => ({ matches: /min-width/.test(query), addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
   w.PAGOSYA_PREVIEW = true;
   w.PAGOSYA_PREVIEW_CART = [];
-  w.PAGOSYA_CONFIG = { slug: 'noa', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data, ...(menu ? { header: { menu } } : {}) };
+  w.PAGOSYA_CONFIG = { slug: 'noa', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', data, ...extra, ...(menu ? { header: { menu } } : {}) };
   const quote = { subtotal: 0, discountAmount: 0, amount: 0, currency: 'BOB', shippingOptions: [] };
   w.fetch = jest.fn(async (target: string) => ({ ok: true, json: async () => String(target).endsWith('/store') ? data : quote }));
   w.eval(commerce);
@@ -193,5 +193,33 @@ describe('store menu', () => {
     q('[data-store-menu-toggle]').click();
     q('.pym-links a').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
     expect(q('[data-store-menu-panel]').hidden).toBe(true);
+  });
+
+  it('a showcase (no online shop) never links the shop pages (final review 2026-10-21)', async () => {
+    const { all } = await open({ menu: { style: 'panel' }, extra: { sitePurpose: 'service' } });
+    expect(all('[role=tab]').map(tab => tab.textContent)).toEqual(['Descubre']);
+    expect(all('.pym-panel a').map(a => a.getAttribute('href')).filter(href => /productos|coleccion|envios|reembolsos/.test(href))).toEqual([]);
+    const { all: own } = await open({ menu: { style: 'panel', groups: [{ label: 'Tienda', links: [{ label: 'Todo', to: 'all' }, { label: 'Vestidos', to: 'category:C1' }] }] }, extra: { sitePurpose: 'service' } });
+    expect(own('[role=tab]').map(tab => tab.textContent)).toEqual(['Descubre']);
+  });
+
+  it('dropdowns: a click after the hover opened it keeps it open; the next click closes (final review 2026-10-21)', async () => {
+    const { q, all, pointer } = await open({ menu: { style: 'dropdowns' } });
+    const top = all('[data-store-menu-top]')[0];
+    pointer(top, 'pointerenter');
+    await sleep(160);
+    expect(q('[data-store-menu-panel]').hidden).toBe(false);
+    top.click();
+    expect(q('[data-store-menu-panel]').hidden).toBe(false);
+    pointer(top, 'pointerleave');
+    await sleep(240);
+    expect(q('[data-store-menu-panel]').hidden).toBe(false);
+    top.click();
+    expect(q('[data-store-menu-panel]').hidden).toBe(true);
+  });
+
+  it('the side rail places the panel beside the rail, not under it (final review 2026-10-21)', async () => {
+    const { q } = await open({ menu: { style: 'panel' } });
+    expect(q('style[data-pagosya-store-menu-style]').textContent).toMatch(/\.pyh--side-rail \.pym-panel\{position:fixed;top:0;left:88px/);
   });
 });
