@@ -201,6 +201,8 @@
     const ownCards = [...el.querySelectorAll(':scope > .menu-item:not([data-custom-product])')];
     const card = ownCards[0], photo = card?.querySelector('.menu-item__image');
     if (photo && !el.hasAttribute('data-pagosya-grid') && getComputedStyle(el).display === 'block' && photo.getBoundingClientRect().width >= card.getBoundingClientRect().width * 0.6) el.setAttribute('data-pagosya-grid', '');
+    // Photo zoom (spec 2026-10-21): every card with a photo gets its «Ampliar foto» button.
+    decorateZoomButtons(el);
     // Contrast correction must reach every card, including ones nested inside `sections` groups.
     readableText(el);
   }

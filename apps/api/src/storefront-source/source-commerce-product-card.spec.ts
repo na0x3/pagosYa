@@ -45,7 +45,9 @@ async function open(dna: Record<string, unknown> | undefined, items: any[] = [pr
 afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
 
 /** The pre-theme markup: data-part hooks and the empty decor slots are the only allowed additions. */
-const stripAdditions = (html: string) => html.replace(/<span class="product-detail__decor"[^>]*><\/span>/g, '').replace(/ data-part="[^"]*"/g, '').replace(/ data-part-type="[^"]*"/g, '');
+const stripAdditions = (html: string) => html.replace(/<span class="product-detail__decor"[^>]*><\/span>/g, '').replace(/ data-part="[^"]*"/g, '').replace(/ data-part-type="[^"]*"/g, '')
+  // Photo zoom (2026-10-21): the photo became a «Ampliar foto» opener; the rest of the page must stay byte for byte.
+  .replace(/ data-photo-zoom="[^"]*" role="button" tabindex="0" aria-label="Ampliar foto de [^"]*"/g, '');
 
 describe('product highlights in the kit', () => {
   it('draws up to six highlights, including the cold, heat and carry icons', async () => {

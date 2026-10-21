@@ -170,4 +170,48 @@ describe('photo viewer', () => {
     move('touch');
     expect(stage.hasAttribute('data-magnify')).toBe(false);
   });
+
+  const esCard = '<template data-pagosya-product-template><article class="es-card"><a class="es-card__media" data-product-link href="product.html"><img data-product-field="image" alt="" /></a><h3 data-product-field="name">P</h3><p data-product-field="price"></p><button type="button" data-product-add>+</button></article></template>';
+
+  it('kit cards with a photo get one zoom button that opens the viewer without opening the product', async () => {
+    const { w, q, all } = await open({ items: [product(), product({ id: 'sin', name: 'Sin foto', imageUrls: [] })] });
+    const card = q('.menu-item[data-product-id="abrigo"]');
+    const button = card.querySelector('[data-product-zoom]');
+    expect(button.getAttribute('aria-label')).toBe('Ampliar foto de Abrigo de lana');
+    expect(q('.menu-item[data-product-id="sin"] [data-product-zoom]')).toBeNull();
+    button.click();
+    expect(q('[data-pagosya-viewer]').open).toBe(true);
+    expect(q('[data-viewer-photo]').getAttribute('src')).toBe('https://shop.test/a1.jpg');
+    expect(all('dialog[data-pagosya-product][open]')).toHaveLength(0);
+    expect(w.document.activeElement).toBe(q('[data-viewer-close]'));
+  });
+
+  it('template cards: the button sits in the card, never inside the card link', async () => {
+    const { q } = await open({ template: esCard });
+    const card = q('[data-custom-product][data-product-id="abrigo"]');
+    const button = card.querySelector('[data-product-zoom]');
+    expect(button).not.toBeNull();
+    expect(button.closest('a')).toBeNull();
+    expect(button.parentElement).toBe(card);
+  });
+
+  it('a template that draws its own zoom button keeps it and gets no second one', async () => {
+    const own = esCard.replace('<h3', '<button type="button" data-product-zoom aria-label="Zoom">Z</button><h3');
+    const { all } = await open({ template: own });
+    expect(all('[data-product-id="abrigo"] [data-product-zoom]')).toHaveLength(1);
+  });
+
+  it('one button after two renders', async () => {
+    const { w, all } = await open();
+    w.eval(`pagosyaPhotos.decorate(document)`);
+    w.eval(`pagosyaPhotos.decorate(document)`);
+    expect(all('.menu-item[data-product-id="abrigo"] [data-product-zoom]')).toHaveLength(1);
+  });
+
+  it('a click an editor already handled does not open the viewer', async () => {
+    const { w, q } = await open();
+    w.document.addEventListener('click', (event: any) => event.preventDefault(), { capture: true });
+    q('[data-product-zoom]').click();
+    expect(q('[data-pagosya-viewer]')?.open ?? false).toBe(false);
+  });
 });

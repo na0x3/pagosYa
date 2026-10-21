@@ -2199,7 +2199,6 @@
     stage.addEventListener('pointercancel', release);
   }
   // A public handle so a store's own code can open the same viewer (and the kit's specs can reach it).
-  window.pagosyaPhotos = { open: openPhotoViewer, close: closePhotoViewer };
   // Product page: the shown photo (data-photo-zoom="") or a stacked one (its index) opens the viewer. A click an editor already
   // handled (defaultPrevented) is left alone.
   function openProductPhoto(target) {
@@ -2231,6 +2230,41 @@
       stage.addEventListener('pointerleave', () => stage.removeAttribute('data-magnify'), { once: true });
     }
   });
+  // Cards: a small «Ampliar foto» button on every card that shows a photo. It goes in the photo's holder, or in the card itself
+  // when the holder is the card's link or button (a button inside a link would follow the link). A template's own button stays.
+  function decorateZoomButtons(root) {
+    const cards = root?.querySelectorAll?.('.menu-item[data-product-id]');
+    if (!cards?.length) return;
+    let added = false;
+    cards.forEach(card => {
+      if (card.querySelector('[data-product-zoom]')) return;
+      const photo = card.querySelector('img.menu-item__image[src]');
+      const p = products().find(item => item.id === card.dataset.productId);
+      if (!photo || photo.hidden || !p || !viewerPhotos(galleryImages(p)).length) return;
+      const holder = photo.parentElement && photo.parentElement !== card && !photo.parentElement.closest('a,button') ? photo.parentElement : card;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.setAttribute('data-product-zoom', '');
+      button.setAttribute('aria-label', `Ampliar foto de ${p.name}`);
+      button.innerHTML = ZOOM_ICON;
+      holder.append(button);
+      added = true;
+    });
+    if (added) ensurePhotoViewerStyle();
+  }
+  document.addEventListener('click', event => {
+    if (event.defaultPrevented) return;
+    const button = event.target.closest?.('[data-product-zoom]');
+    if (!button) return;
+    const card = button.closest('[data-product-id]');
+    const p = card && products().find(item => item.id === card.dataset.productId);
+    if (!p) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openPhotoViewer(galleryImages(p), 0, { title: p.name, opener: button });
+  });
+  // A public handle so a store's own code can open the same viewer (and the kit's specs can reach it).
+  window.pagosyaPhotos = { open: openPhotoViewer, close: closePhotoViewer, decorate: decorateZoomButtons };
   // Reassurance comes only from real store settings; nothing here is a marketing claim.
   function deliveryMarkup(p) {
     const locations = store.locations || [];
@@ -3857,6 +3891,8 @@
     const ownCards = [...el.querySelectorAll(':scope > .menu-item:not([data-custom-product])')];
     const card = ownCards[0], photo = card?.querySelector('.menu-item__image');
     if (photo && !el.hasAttribute('data-pagosya-grid') && getComputedStyle(el).display === 'block' && photo.getBoundingClientRect().width >= card.getBoundingClientRect().width * 0.6) el.setAttribute('data-pagosya-grid', '');
+    // Photo zoom (spec 2026-10-21): every card with a photo gets its «Ampliar foto» button.
+    decorateZoomButtons(el);
     // Contrast correction must reach every card, including ones nested inside `sections` groups.
     readableText(el);
   }
