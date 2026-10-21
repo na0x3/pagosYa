@@ -114,3 +114,20 @@ it('the fashion variants reach the kit config: card design and product-page styl
   expect(masterProductStyle({ pdp: 'fashion' } as any)).toEqual({ productPageStyle: 'fashion' });
   expect(masterProductStyle({ pdp: 'gallery-left' } as any)).toEqual({});
 });
+
+import { menuGroupsFromRead } from './source-master';
+/** Dropdown menu spec 2026-10-21: the fill read's menu. */
+describe('menu from the fill read', () => {
+  const photos = ['/v1/uploads/a.jpg', '/v1/uploads/b.jpg'];
+  const groups = [{ label: 'Mujer', links: [{ label: '', target: 'category:c1' }], tilesTitle: 'Por estilo', tiles: [{ title: 'Vestidos', photo: 1, target: 'category:c1' }, { title: 'Sin foto', photo: 9, target: 'all' }], footerLabel: 'Ver toda la tienda', footerTarget: 'all' }];
+  it('turns photo indexes into the photos, leaves empty labels to the save check, and drops empty tile lists', () => {
+    expect(menuGroupsFromRead(groups, photos)).toEqual([{ label: 'Mujer', links: [{ to: 'category:c1' }], tilesTitle: 'Por estilo', tiles: [{ title: 'Vestidos', image: '/v1/uploads/b.jpg', to: 'category:c1' }], footer: { label: 'Ver toda la tienda', to: 'all' } }]);
+    expect(menuGroupsFromRead([{ ...groups[0], tiles: [], tilesTitle: '', footerTarget: '' }], photos)).toEqual([{ label: 'Mujer', links: [{ to: 'category:c1' }] }]);
+  });
+  it('a build always carries the read menu; an edit only when "menu" changed', () => {
+    const read = { menuStyle: 'dropdowns', menuGroups: groups, changed: [] } as never;
+    expect(masterFillFromRead(read, photos, false).menu?.style).toBe('dropdowns');
+    expect(masterFillFromRead(read, photos, true).menu).toBeUndefined();
+    expect(masterFillFromRead({ ...(read as object), changed: ['menu'] } as never, photos, true).menu?.style).toBe('dropdowns');
+  });
+});

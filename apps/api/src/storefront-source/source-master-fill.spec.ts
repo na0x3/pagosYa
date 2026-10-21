@@ -78,6 +78,21 @@ describe('fillMaster', () => {
     expect(sent.text.format.schema.properties.exclude.items.enum).toEqual(['density:airy', 'density:compact', 'cards:showcase', 'cards:compact']);
     expect(sent.instructions).toMatch(/part:id/);
   });
+  it('asks for the store menu only with the store\'s own targets (dropdown menu 2026-10-21)', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: true, status: 200, json: async () => body(read()) } as any);
+    await service().fillMaster('m1', { ...input, menuTargets: [{ target: 'all', label: 'Todos los productos' }, { target: 'category:c1', label: 'Vestidos' }] });
+    const sent = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
+    const schema = sent.text.format.schema;
+    expect(schema.required).toEqual(expect.arrayContaining(['menuStyle', 'menuGroups']));
+    expect(schema.properties.menuStyle.enum).toEqual(['none', 'panel', 'dropdowns']);
+    const group = schema.properties.menuGroups.items;
+    expect(group.properties.links.items.properties.target.enum).toEqual(['all', 'category:c1']);
+    expect(group.properties.tiles.items.properties.target.enum).toEqual(['all', 'category:c1']);
+    expect(group.properties.footerTarget.enum).toEqual(['', 'all', 'category:c1']);
+    expect(schema.properties.changed.items.enum).toContain('menu');
+    expect(JSON.parse(sent.input[0].content[0].text).menuTargets).toEqual([{ target: 'all', label: 'Todos los productos' }, { target: 'category:c1', label: 'Vestidos' }]);
+    expect(sent.instructions).toMatch(/menuStyle/);
+  });
   it('labels every image with its index and sends the current photo choices (review fix 6)', async () => {
     const svc = new SourceConversationService({ mediaAsset: { findMany: jest.fn().mockResolvedValue([{ url: 'https://x/u/a.jpg' }, { url: 'https://x/u/c.jpg' }]) } } as any,
       { getBuffer: jest.fn().mockResolvedValue(Buffer.from('px')), contentTypeFor: () => 'image/jpeg' } as any, config);

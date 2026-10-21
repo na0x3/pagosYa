@@ -37,6 +37,8 @@ import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook, type Ma
 import { isFashionStore } from './source-master-fashion';
 import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy } from './source-templates';
+import { instructionAsksStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList } from './source-store-menu';
+import { readConfigFile } from './store-look';
 import { buildSuggestions } from './source-suggestions';
 import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
@@ -279,6 +281,7 @@ export class SourceChatService {
       const read = await this.dialogue.fillMaster(merchantId, {
         storeId, storeName: facts.storeName, ...(facts.brand ? { brand: facts.brand } : {}), what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '', city: onboarding.contact?.city ?? '',
         products: facts.products, photos, palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: manifest.master!.sections,
+        ...(facts.menuTargets ? { menuTargets: facts.menuTargets } : {}),
       });
       const base: MasterFill = read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: (onboarding.what ?? '').slice(0, 160) } };
       // Fashion look spec 2026-10-21: the read's kind, backed by the store's own words, decides the fashion card and page.
@@ -302,14 +305,22 @@ export class SourceChatService {
 
   /** Spec 2026-10-19 §3.1: a words/colours/fonts/photos change on a master store — one fill call, data only, seconds. */
   private async masterContentEdit(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, request: string, revision: number, previous: { snapshot: unknown }) {
-    const state = readMasterState((previous.snapshot as SourceProjectSnapshot).files);
+    const files = (previous.snapshot as SourceProjectSnapshot).files;
+    const state = readMasterState(files);
+    // Dropdown menu spec 2026-10-21: the fill call sees the store's menu and what it may link.
+    const currentMenu = readStoreMenu(files) ?? null;
+    const menuTargets = storeMenuTargetList(storeMenuContext(readConfigFile(files).data ?? {}, files));
     const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
     const recent = await Promise.resolve(this.prisma.mediaAsset.findMany({ where: { merchantId }, orderBy: { createdAt: 'desc' }, take: 8, select: { url: true } })).catch(() => [] as Array<{ url: string }>);
     const photos = [...new Set([...Object.values(state.photos).filter(Boolean), ...(recent ?? []).map(asset => asset.url)])].slice(0, 8);
     const read = await this.dialogue.fillMaster(merchantId, { storeId, storeName: state.store?.name ?? '', what: '', story: '', city: state.store?.city ?? '', products: [], photos,
       palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: manifest.master!.sections,
-      current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? '') }, request });
-    const change = read ? masterFillFromRead(read, photos, true) : null;
+      current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? ''), menu: currentMenu }, request, menuTargets });
+    // The merchant's clear words win over a read that missed them: «quiero un menú desplegable» turns it on, «quita…» off.
+    const asked = instructionAsksStoreMenu(request);
+    const filled = read ? masterFillFromRead(read, photos, true) : null;
+    const change: MasterFill | null = !filled || asked === undefined || filled.menu ? filled
+      : { ...filled, menu: asked ? { style: currentMenu?.style ?? 'panel', groups: currentMenu?.groups ?? [] } : { style: 'none', groups: [] } };
     // Nothing in the data to change: the caller turns the request into a minimal design edit.
     if (change && !Object.keys(change).length) return null;
     if (!change) {
@@ -782,7 +793,10 @@ export class SourceChatService {
       // Master template (spec 2026-10-19 §3): words, colours, fonts and photos change the store's data; design changes stay minimal.
       const masterStore = this.config.get<boolean>('app.yapiMasterTemplate') === true && Boolean(current.revision) && previousBrief?.templateId === MASTER_TEMPLATE_ID
         && readsMasterData((previous!.snapshot as unknown as SourceProjectSnapshot).files);
-      if (masterStore && decision.editKind === 'content') {
+      // Dropdown menu spec 2026-10-21: menu words are a data change on a master store whatever the decision said.
+      const menuWords = masterStore && (instructionAsksStoreMenu(input.instruction) !== undefined
+        || (Boolean(readStoreMenu((previous!.snapshot as unknown as SourceProjectSnapshot).files)) && instructionTouchesStoreMenu(input.instruction)));
+      if (masterStore && (decision.editKind === 'content' || menuWords)) {
         const done = await this.masterContentEdit(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous!);
         if (done) return done;
         // Words Esencial has no field for (a heading a design edit added, «Lo que dicen nuestros clientes»): a minimal design edit.
