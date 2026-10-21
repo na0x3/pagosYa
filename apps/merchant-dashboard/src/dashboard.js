@@ -20,6 +20,7 @@ import { createStoresPanel } from "/src/stores-panel.mjs";
 import { createInventoryImportPanel } from "/src/inventory-import-panel.mjs";
 import { createAccountPanel } from "/src/account-panel.mjs";
 import { createProfileSessions } from "/src/profile-sessions.mjs";
+import { sectionOf, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-sections.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -373,57 +374,10 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
     toggle.addEventListener("click", () => setCollapsed(!shell.classList.contains("is-sidebar-collapsed")));
   }
 
-  /* Solo un grupo abierto: el que contiene la vista actual. */
-  function syncNavGroups(view) {
-    for (const group of document.querySelectorAll(".dashboard-nav-group")) {
-      group.open = !!group.querySelector(`[data-dashboard-view="${view}"]`);
-    }
-  }
-  for (const group of document.querySelectorAll(".dashboard-nav-group")) {
-    group.querySelector("summary")?.addEventListener("click", (event) => {
-      const shell = document.querySelector(".dashboard-shell");
-      // En modo iconos la lista del grupo está oculta: abrirla no serviría de nada.
-      if (shell?.classList.contains("is-sidebar-collapsed")) {
-        event.preventDefault();
-        document.getElementById("dashboardSidebarToggle")?.click();
-        group.open = true;
-        return;
-      }
-      if (!group.open) for (const other of document.querySelectorAll(".dashboard-nav-group")) if (other !== group) other.open = false;
-    });
-  }
-
   initDashboardSections();
   const DASHBOARD_VIEW_KEY = "pagosya_dashboard_view";
   // Conecta tu IA; mounted by a dynamic import further down, so it may still be null here.
   let mcpConnect = null;
-  const DASHBOARD_VIEW_COPY = {
-    overview: ["Resumen", "Tu operación, ventas y estado general en un solo lugar."],
-    growth: ["Crecimiento", "Qué pasa en tu tienda y qué hacer ahora para vender más."],
-    "abandoned-carts": ["Carritos abandonados", "Quién dejó productos sin pagar y cómo escribirle."],
-    "assistant": ["Asistente", "Un chat en tu tienda que responde con tus productos y te pasa a los clientes cuando no sabe."],
-    stores: ["Mi tienda", "Tus tiendas, sus diseños y sus catálogos. Todo desde un mismo perfil."],
-    discounts: ["Correos y marketing", "Cuida a tus clientes y haz que vuelvan."],
-    marketing: ["Correos y marketing", "Mensajes, Comeback y promociones para la tienda seleccionada."],
-    experiments: ["Pruebas A/B", "Compara dos diseños y descubre cuál convierte más visitas en compras."],
-    integrations: ["Integraciones", "Conecta las herramientas que tu tienda necesita."],
-    products: ["Productos", "Tu catálogo y YAPI: añade productos paso a paso."],
-    media: ["Medios", "Las imágenes, videos e iconos de la tienda seleccionada."],
-    templates: ["Plantillas", "Elige una tienda completa y mírala con tus productos antes de usarla."],
-    workspace: ["Mi tienda", "Diseña con YAPI y administra tu negocio desde aquí."],
-    "charge-links": ["Link de cobro", "Genera un QR inmediato o un portal por carnet para la tienda seleccionada."],
-    cobros: ["Cobros", "Crea un cobro, compártelo por WhatsApp o correo y recibe el pago con QR o tarjeta."],
-    subscriptions: ["Suscripciones", "Clientes que compran tus productos de forma recurrente."],
-    proposals: ["Propuestas", "Describe el trabajo, YAPI arma la propuesta y tu cliente la acepta en línea."],
-    contracts: ["Contratos", "Elige el tipo, YAPI redacta las cláusulas y los dos firman en línea con código por correo."],
-    inbox: ["Inbox", "Responde a tus compradores y a quien escribió por el formulario de tu tienda."],
-    "connect-ai": ["Conecta tu IA", "Usa Claude, ChatGPT, Claude Code, Cursor o Codex con tu tienda. Tu IA diseña y carga productos; publicar y cobrar siguen siendo tuyos."],
-    "store-settings": ["Ajustes de la tienda", "Cobro, contacto, ubicaciones y políticas de la tienda seleccionada."],
-    payments: ["Pagos", "Consulta el estado y el detalle de tus cobros recientes."],
-    payouts: ["Desembolsos", "Revisa las transferencias programadas y completadas."],
-    account: ["Cuenta", "Tu perfil, tus accesos y el estado de tu negocio en pagosYa."],
-    compliance: ["Cumplimiento y credenciales", "Completa KYC, facturación electrónica y credenciales de producción."],
-  };
 
   let pendingStudioAction = null;
   function deliverStudioAction() {
@@ -564,10 +518,16 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
     }
   });
 
+  function renderSectionPills(section, activeTab) {
+    const host = document.getElementById("sectionTabs");
+    host.innerHTML = renderSectionTabs(section, activeTab, { fullNav: fullNavOn() });
+    host.hidden = !host.innerHTML;
+  }
+
   function setDashboardView(view, { remember = true } = {}) {
     if (view === "content") view = "workspace";
     if (view === "discounts") { view = "marketing"; selectMarketingTab("promotions"); }
-    const nextView = DASHBOARD_VIEW_COPY[view] ? view : "overview";
+    const nextView = resolveView(view, fullNavOn());
     const viewChanged = document.body.dataset.dashboardView !== nextView;
     if (viewChanged) {
       document.body.dataset.dashboardView = nextView;
@@ -580,14 +540,17 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
         }
       });
     }
-    document.querySelectorAll("[data-dashboard-view]").forEach((button) => {
+    const { section, tab: activeTab } = sectionOf(nextView, document.getElementById("marketingTabs").dataset.tab);
+    document.querySelectorAll("[data-dashboard-view]:not([data-nav-section])").forEach((button) => {
       if (button.dataset.dashboardView === nextView && !button.dataset.studioTool) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
     });
-    syncNavGroups(nextView);
-    const [title, description] = DASHBOARD_VIEW_COPY[nextView];
-    document.getElementById("workspaceTitle").textContent = title;
-    document.getElementById("workspaceDescription").textContent = description;
+    document.querySelectorAll("#dashboardNav [data-nav-section]").forEach((link) => {
+      if (link.dataset.navSection === section.id) link.setAttribute("aria-current", "page"); else link.removeAttribute("aria-current");
+    });
+    document.getElementById("workspaceTitle").textContent = section.label;
+    document.getElementById("workspaceDescription").textContent = section.description;
+    renderSectionPills(section, activeTab);
     if (nextView === "workspace") window.scrollTo({ top: 0, behavior: "instant" });
     syncMerchantStoreWorkspace(nextView);
     if (nextView === "cobros") cobros.show();
