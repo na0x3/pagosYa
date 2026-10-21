@@ -78,3 +78,16 @@ describe('YAPI glass window', () => {
     expect(shown).toEqual(['open:Hazme una tienda', 'work', 'done', 'stopped']);
   });
 });
+
+describe('the Studio feeds the window', () => {
+  it('opens it on submit, updates it on progress, finishes it on the reply and stops it on an interrupt', async () => {
+    const { readFileSync } = await import('node:fs');
+    const studio = readFileSync(`${process.cwd()}/src/source-studio.ts`, 'utf8');
+    expect(studio).toMatch(/const narrator = narratorBridge\(mountNarrator\(document\)\);/);
+    expect(studio).toMatch(/if \(event\.type === 'interrupt' && wasBuilding\) narrator\.interrupted\(\);/);
+    expect(studio).toMatch(/transitionBuild\(\{ type: 'submit' \}\); narrator\.submitted\(text\);/);
+    expect(studio).toMatch(/function updateBuildProgress\(\) \{\n\s+narrator\.progress\(buildProgress\);/);
+    expect(studio).toMatch(/narrator\.completed\(String\(result\.assistantMessage\?\.content \?\? ''\)\);/);
+    expect(studio).toMatch(/narrator\.completed\(String\(\[\.\.\.messages\]\.reverse\(\)\.find\(m => m\.role === 'ASSISTANT'\)\?\.content \?\? ''\)\);/);
+  });
+});

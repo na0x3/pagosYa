@@ -45,6 +45,7 @@ import './source-workspace-design.css';
 import { bindSourcePaymentPreview } from './source-payment-preview';
 import { bindAssistantPreview } from './source-assistant-preview';
 import { focusDebugEnabled, recordFocusLoss, watchComposerFocus } from './source-focus-debug';
+import { mountNarrator, narratorBridge } from './source-narrator';
 
 const SOURCE_MODEL_OPTIONS = [['auto', 'Auto · OpenAI'], ['gpt-5.6-luna', 'Luna · económico'], ['gpt-5.6-terra', 'Terra · equilibrado'], ['gpt-5.6-sol', 'Sol · avanzado'], ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5 · económico'], ['claude-sonnet-5', 'Claude Sonnet 5 · equilibrado'], ['claude-opus-5-5', 'Claude Opus 5.5 · avanzado']] as const;
 const SOURCE_MODEL_STORAGE = "pagosya_source_model";
@@ -290,7 +291,13 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let stores: MerchantStore[] = [], storeId = '', state: SourceState = { revision: 0, versions: [], nextBefore: null }, version: SourceVersion | null = null;
   let messages: AgentMessage[] = [], assets: Attachment[] = [];
   let buildSession: SourceBuildSession = { phase: 'idle' };
-  const transitionBuild = (event: SourceBuildEvent) => { buildSession = sourceBuildTransition(buildSession, event); };
+  // YAPI's glass window over the preview (spec 2026-10-21 Part C): request, plan, step, summary.
+  const narrator = narratorBridge(mountNarrator(document));
+  const transitionBuild = (event: SourceBuildEvent) => {
+    const wasBuilding = buildIsActive(buildSession);
+    buildSession = sourceBuildTransition(buildSession, event);
+    if (event.type === 'interrupt' && wasBuilding) narrator.interrupted();
+  };
   const building = () => buildIsActive(buildSession);
   let busy = false, loading = true, error = '', toast = '', instruction = '';
   // Spec 2026-10-20 Plantillas fill: the Plantillas button and double-click text editing, asked once from the API.
@@ -485,9 +492,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const job = latest.job;
         // Boot's action finishes first, then the restored job owns the editor state.
         window.setTimeout(() => { if (storeId !== selectedStore) return; void action(async () => {
-          transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); buildStatus = 'YAPI sigue trabajando en tu pedido…'; render();
+          transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); narrator.submitted('Tu pedido en curso'); buildStatus = 'YAPI sigue trabajando en tu pedido…'; render();
           const stop = watchBuildProgress(selectedStore, job.requestId);
-          try { await api.waitSourceChatJob(selectedStore, job, showQueue); transitionBuild({ type: 'complete' }); await load(); }
+          try { await api.waitSourceChatJob(selectedStore, job, showQueue); transitionBuild({ type: 'complete' }); await load(); narrator.completed(String([...messages].reverse().find(m => m.role === 'ASSISTANT')?.content ?? '')); }
           finally { stop(); stopStylePoll(); if (building()) transitionBuild({ type: 'interrupt' }); await refreshInterruptedDraft().catch(() => {}); void loadStyleProposal(); }
         }); }, 0);
       }
@@ -516,6 +523,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
    * so the face keeps its phase instead of snapping back to its first beat.
    */
   function updateBuildProgress() {
+    narrator.progress(buildProgress);
     buildStage?.update({ status: buildStatus, progress: buildProgress });
     const host = app.querySelector<HTMLElement>('[data-build-progress]');
     if (!host) return;
@@ -659,7 +667,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       // The blobs stay valid until the request ends, so the merchant sees what they sent while YAPI works.
       files: retryAssetUrls ? [] : submittedAssets.map(a => ({ src: a.src, video: a.file.type === 'video/mp4' })) };
     showSavedRevision = false; mode = 'preview';
-    transitionBuild({ type: 'submit' }); buildProgress = null; buildStatus = submittedAssets.some(asset => !asset.url) ? 'Subiendo tus archivos…' : 'Enviando tu pedido…';
+    transitionBuild({ type: 'submit' }); narrator.submitted(text); buildProgress = null; buildStatus = submittedAssets.some(asset => !asset.url) ? 'Subiendo tus archivos…' : 'Enviando tu pedido…';
     await action(async () => {
       let sentToApi = false, succeeded = false;
       let stopProgress = () => {};
@@ -683,6 +691,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         succeeded = true; if (selection.get()?.sectionId === submittedSelection?.sectionId) clearSelection(); pendingSubmission = null; transitionBuild({ type: 'complete' }); liveDraft = null;
         productPhoto = false; navigationChoice = '';
         messages.push(result.userMessage, result.assistantMessage); setup = result.setup || null; liveCatalog = null;
+        narrator.completed(String(result.assistantMessage?.content ?? ''));
         if (result.assistantMessage?.metadata?.styleProposal) void loadStyleProposal();
         render();
         if (result.revision) {
