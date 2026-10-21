@@ -40,10 +40,6 @@
       if (key === 'q') state.q = ''; else if (key === 'precio') state.precio = null; else if (value) state.sets[key] = (state.sets[key] || []).filter(v => v !== value); else state.toggles.delete(key);
       writeFilterState(state); render(); return;
     }
-    if (button.hasAttribute('data-filters-open')) {
-      const root = button.closest('.catalog-filters'), open = !root.hasAttribute('data-open');
-      root.toggleAttribute('data-open', open); button.setAttribute('aria-expanded', String(open)); return;
-    }
     if (button.hasAttribute('data-offer-square') && button.closest('[data-pagosya-spotlight]')) {
       // A spotlight's squares choose how many its add button adds (subscriptions are chosen on the product page).
       const spot = button.closest('[data-pagosya-spotlight]'), [kind, value] = button.dataset.offerSquare.split(':');

@@ -4333,61 +4333,166 @@
     if (order === 'mejor-oferta') list.sort((a, b) => saving(b) - saving(a));
     return list;
   }
+  /* Sort & filter styles (spec 2026-10-21): three finished styles over the same state — `bar` (top row + drawer), `chips` (the
+   * John Smedley explorer: category and option chip rows, price and switches in «Más filtros») and `sidebar` (collapsible groups
+   * beside the grid; the drawer under 900 px). Every control edits the state directly (read → change → write → render). */
+  const FILTER_STYLES = ['bar', 'chips', 'sidebar'];
+  let filtersDrawerOpen = false, filtersLockedFrom = null, filtersOpener = null;
+  const filterStyleFor = (all, groups) => FILTER_STYLES.includes(config.filterStyle) ? config.filterStyle : all.length >= 9 || groups.length >= 3 ? 'sidebar' : 'bar';
+  const productsWord = n => `${n} ${n === 1 ? 'producto' : 'productos'}`;
   function filtersMarkup(all, state, shown) {
     const groups = filterGroups(all);
-    const control = g => g.kind === 'range'
-      ? `<fieldset data-filter-group="precio"><legend>Precio (Bs)</legend><label>Desde <input type="number" name="precio-min" min="0" inputmode="numeric" value="${Math.floor((state.precio?.[0] ?? g.values[0]) / 100)}"></label><label>Hasta <input type="number" name="precio-max" min="0" inputmode="numeric" value="${Math.ceil((state.precio?.[1] ?? g.values[1]) / 100)}"></label></fieldset>`
-      : g.kind === 'toggle' ? `<label class="catalog-filters__toggle" data-filter-group="${escape(g.key)}"><input type="checkbox" name="${escape(g.key)}" ${state.toggles.has(g.key) ? 'checked' : ''}> ${escape(g.label)}</label>`
-      : `<fieldset data-filter-group="${escape(g.key)}"><legend>${escape(g.label)}</legend>${g.values.map(v => `<label><input type="checkbox" name="f_${escape(g.key)}" value="${escape(v.value)}" ${(state.sets[g.key] || []).includes(v.value) ? 'checked' : ''}>${v.color ? `<span data-swatch style="--swatch:${escape(v.color)}" aria-hidden="true"></span>` : ''} ${escape(v.text)}</label>`).join('')}</fieldset>`;
+    const style = filterStyleFor(all, groups);
+    const chosen = key => state.sets[key] || [];
+    const chip = (g, v) => `<button type="button" class="cf-chip"${v.color ? ' data-swatch-chip' : ''} data-filter-chip="${escape(g.key)}:${escape(v.value)}" aria-pressed="${chosen(g.key).includes(v.value)}">${v.color ? `<span data-swatch style="--swatch:${escape(v.color)}" aria-hidden="true"></span>` : ''}<span>${escape(v.text)}</span></button>`;
+    const range = g => {
+      const lo = Math.floor(g.values[0] / 100), hi = Math.ceil(g.values[1] / 100);
+      const a = Math.floor((state.precio?.[0] ?? g.values[0]) / 100), b = Math.ceil((state.precio?.[1] ?? g.values[1]) / 100);
+      return `<div class="cf-range" data-filter-range data-lo="${lo}" data-hi="${hi}"><p class="cf-range__values"><output data-range-out="min">Bs ${a}</output><span aria-hidden="true">–</span><output data-range-out="max">Bs ${b}</output></p>`
+        + `<input type="range" name="precio-min" min="${lo}" max="${hi}" step="1" value="${a}" aria-label="Precio desde"><input type="range" name="precio-max" min="${lo}" max="${hi}" step="1" value="${b}" aria-label="Precio hasta"></div>`;
+    };
+    const toggle = g => `<button type="button" class="cf-switch" role="switch" data-filter-toggle="${escape(g.key)}" aria-checked="${state.toggles.has(g.key)}"><span class="cf-switch__track" aria-hidden="true"></span><span>${escape(g.label)}</span></button>`;
+    const body = g => g.kind === 'range' ? range(g) : g.kind === 'toggle' ? toggle(g) : `<div class="cf-chips" role="group" aria-label="${escape(g.label)}">${g.values.map(v => chip(g, v)).join('')}</div>`;
+    const title = g => g.kind === 'range' ? 'Precio' : g.label;
+    const section = g => g.kind === 'toggle' ? `<div class="cf-group cf-group--toggle" data-filter-group="${escape(g.key)}">${body(g)}</div>` : `<section class="cf-group" data-filter-group="${escape(g.key)}"><h3 class="cf-group__title">${escape(title(g))}</h3>${body(g)}</section>`;
     const textOf = (key, value) => groups.find(g => g.key === key)?.values?.find?.(v => v.value === value)?.text || value;
     const active = [...(state.q ? [['q', '', `“${state.q}”`]] : []), ...Object.entries(state.sets).flatMap(([key, values]) => values.map(value => [key, value, textOf(key, value)])), ...[...state.toggles].map(key => [key, '', groups.find(g => g.key === key)?.label || key]), ...(state.precio ? [['precio', '', 'Precio']] : [])];
-    const layout = all.length >= 9 || groups.length >= 3 ? 'sidebar' : 'bar';
+    const filterCount = active.filter(([key]) => key !== 'q').length;
+    const sortLabel = (SORTS.find(([value]) => value === state.orden) || SORTS[0])[1];
+    const sort = `<div class="cf-sort"><button type="button" class="cf-sort__toggle" data-sort-toggle aria-haspopup="listbox" aria-expanded="false" aria-controls="cf-sort-list">Ordenar: <strong>${escape(sortLabel)}</strong><span class="cf-caret" aria-hidden="true"></span></button>`
+      + `<ul class="cf-sort__list" id="cf-sort-list" role="listbox" aria-label="Ordenar" hidden>${SORTS.map(([value, text]) => `<li role="option" tabindex="-1" data-sort="${value}" aria-selected="${state.orden === value}">${escape(text)}</li>`).join('')}</ul></div>`;
     const search = `<div class="catalog-search" role="search"><label class="catalog-search__label" for="catalog-q">Buscar productos</label><span class="catalog-search__icon" aria-hidden="true"></span><input id="catalog-q" type="search" name="q" maxlength="80" autocomplete="off" placeholder="Buscar en la tienda" value="${escape(state.q || '')}">${state.q ? '<button type="button" class="catalog-search__clear" data-search-clear aria-label="Borrar búsqueda">✕</button>' : ''}</div>`;
-    return `<div class="catalog-filters" data-filters-layout="${layout}">${search}<button type="button" class="catalog-filters__open" data-filters-open aria-expanded="false">Filtrar${active.length ? ` (${active.length})` : ''}</button>`
-      + `<label class="catalog-filters__sort">Ordenar <select name="orden">${SORTS.map(([value, text]) => `<option value="${value}" ${state.orden === value ? 'selected' : ''}>${text}</option>`).join('')}</select></label>`
-      + (groups.length ? `<form class="catalog-filters__panel" data-filters-form>${groups.map(control).join('')}<button type="submit" class="catalog-filters__apply">Ver ${shown} productos</button></form>` : '')
-      + (active.length ? `<p class="catalog-filters__active">${active.map(([key, value, text]) => `<button type="button" data-filter-remove="${escape(key)}:${escape(value)}" aria-label="Quitar ${escape(text)}">${escape(text)} ✕</button>`).join('')}<button type="button" data-filters-clear>Borrar todo</button></p>` : '')
-      + `<p class="catalog-filters__count" aria-live="polite">${shown} ${shown === 1 ? 'producto' : 'productos'}</p></div>`;
-  }
-  /** Reads the controls back into a state (every change applies at once; the phone sheet's button only closes it). */
-  function filterStateFromControls(root) {
-    const state = { orden: root.querySelector('select[name=orden]')?.value || 'destacados', precio: null, sets: {}, toggles: new Set(), q: (root.querySelector('input[name=q]')?.value || '').slice(0, 80) };
-    for (const input of root.querySelectorAll('input[type=checkbox]:checked')) {
-      if (input.name.startsWith('f_')) (state.sets[input.name.slice(2)] ||= []).push(input.value);
-      else if (FILTER_TOGGLES.includes(input.name)) state.toggles.add(input.name);
+    const count = `<p class="catalog-filters__count" aria-live="polite">${productsWord(shown)}</p>`;
+    const activeRow = active.length ? `<p class="catalog-filters__active">${active.map(([key, value, text]) => `<button type="button" data-filter-remove="${escape(key)}:${escape(value)}" aria-label="Quitar ${escape(text)}">${escape(text)} <span aria-hidden="true">✕</span></button>`).join('')}<button type="button" class="cf-link" data-filters-clear>Borrar todo</button></p>` : '';
+    const opener = label => `<button type="button" class="cf-open" data-filters-open aria-expanded="${filtersDrawerOpen}" aria-controls="cf-drawer">${escape(label)}${filterCount ? ` (${filterCount})` : ''}</button>`;
+    const drawer = (list, label) => list.length ? `<div class="cf-drawer" id="cf-drawer" data-filters-drawer role="dialog" aria-modal="true" aria-label="${escape(label)}"${filtersDrawerOpen ? '' : ' hidden'}><div class="cf-drawer__panel"><div class="cf-drawer__head"><h2>${escape(label)}</h2><button type="button" class="cf-drawer__close" data-filters-close aria-label="Cerrar">✕</button></div><div class="cf-drawer__body">${list.map(section).join('')}</div><div class="cf-drawer__foot"><button type="button" class="cf-link" data-filters-clear>Borrar todo</button><button type="button" class="cf-done" data-filters-done>Ver ${productsWord(shown)}</button></div></div></div>` : '';
+    let inner;
+    if (style === 'chips') {
+      const cat = groups.find(g => g.key === 'categoria');
+      const options = groups.filter(g => g.key !== 'categoria' && (g.kind === 'check' || g.kind === 'swatch'));
+      const more = groups.filter(g => g.kind === 'range' || g.kind === 'toggle');
+      const catRow = cat ? `<div class="catalog-filters__row catalog-filters__row--categories" data-filter-group="categoria" role="group" aria-label="${escape(cat.label)}"><button type="button" class="cf-chip cf-chip--plain" data-filter-chip="categoria:" aria-pressed="${!chosen('categoria').length}">Todo</button>${cat.values.map(v => chip(cat, v).replace('class="cf-chip"', 'class="cf-chip cf-chip--plain"')).join('')}</div>` : '';
+      const optionRow = options.length ? `<div class="catalog-filters__row catalog-filters__row--options">${options.map(g => `<div class="cf-chips" data-filter-group="${escape(g.key)}" role="group" aria-label="${escape(g.label)}">${g.values.map(v => chip(g, v)).join('')}</div>`).join('')}</div>` : '';
+      inner = `${search}<div class="catalog-filters__top">${catRow}${sort}</div>${optionRow}<div class="catalog-filters__bar">${count}${more.length ? opener('Más filtros') : ''}</div>${activeRow}${drawer(more, 'Más filtros')}`;
+    } else if (style === 'sidebar') {
+      const details = g => g.kind === 'toggle' ? `<div class="cf-group cf-group--toggle" data-filter-group="${escape(g.key)}">${toggle(g)}</div>`
+        : `<details class="cf-group" data-filter-group="${escape(g.key)}" open><summary>${escape(title(g))}${chosen(g.key).length ? ` · ${chosen(g.key).length}` : ''}<span class="cf-caret" aria-hidden="true"></span></summary>${body(g)}</details>`;
+      inner = `${search}<aside class="catalog-filters__side" aria-label="Filtros">${groups.map(details).join('')}${filterCount ? '<button type="button" class="cf-link" data-filters-clear>Borrar filtros</button>' : ''}</aside>`
+        + `<div class="catalog-filters__bar">${count}${opener('Filtrar')}${sort}</div>${activeRow}${drawer(groups, 'Filtrar')}`;
+    } else {
+      inner = `${search}<div class="catalog-filters__bar">${count}${sort}${groups.length ? opener('Filtrar') : ''}</div>${activeRow}${drawer(groups, 'Filtrar')}`;
     }
-    const min = root.querySelector('input[name="precio-min"]'), max = root.querySelector('input[name="precio-max"]');
-    const range = filterGroups(products()).find(g => g.kind === 'range')?.values;
-    if (min && max && range && (Number(min.value) * 100 > range[0] || Number(max.value) * 100 < range[1])) state.precio = [Math.max(0, Number(min.value) || 0) * 100, Math.max(0, Number(max.value) || 0) * 100];
-    return state;
+    return `<div class="catalog-filters" data-filter-style="${style}">${inner}</div>`;
   }
   /** The search field filters as the shopper types (150 ms after the last key); Esc and ✕ clear it. */
   let searchTimer = 0;
   const setSearch = value => { clearTimeout(searchTimer); const state = readFilterState(); state.q = String(value || '').slice(0, 80); writeFilterState(state); render(); };
+  /** A value inside a double-quoted attribute selector (CSS.escape is missing in some runtimes). */
+  const attrValue = value => String(value).replace(/["\\]/g, '\\$&');
+  const filterControl = selector => document.querySelector(`.catalog-filters ${selector}`);
+  /** Writes a changed state, redraws, and gives the focus back to the control that was used (the redraw replaced it). */
+  function applyFilterChange(state, focusSelector) {
+    writeFilterState(state);
+    render();
+    if (focusSelector) filterControl(focusSelector)?.focus({ preventScroll: true });
+  }
+  const drawerFocusable = drawer => [...drawer.querySelectorAll('button:not([disabled]),input,[tabindex="0"],summary')].filter(el => !el.closest('[hidden]'));
+  function openFiltersDrawer(opener) {
+    const drawer = document.querySelector('[data-filters-drawer]');
+    if (!drawer) return;
+    filtersDrawerOpen = true; filtersOpener = opener;
+    drawer.hidden = false;
+    document.querySelectorAll('[data-filters-open]').forEach(button => button.setAttribute('aria-expanded', 'true'));
+    if (filtersLockedFrom === null) { filtersLockedFrom = document.documentElement.style.overflow; document.documentElement.style.overflow = 'hidden'; }
+    drawerFocusable(drawer)[0]?.focus({ preventScroll: true });
+  }
+  function closeFiltersDrawer(returnFocus) {
+    filtersDrawerOpen = false;
+    const drawer = document.querySelector('[data-filters-drawer]');
+    if (drawer) drawer.hidden = true;
+    document.querySelectorAll('[data-filters-open]').forEach(button => button.setAttribute('aria-expanded', 'false'));
+    if (filtersLockedFrom !== null) { document.documentElement.style.overflow = filtersLockedFrom; filtersLockedFrom = null; }
+    if (returnFocus) (document.querySelector('[data-filters-open]') || filtersOpener)?.focus({ preventScroll: true });
+  }
+  function setSortOpen(open) {
+    const list = document.querySelector('.cf-sort__list'), toggle = document.querySelector('[data-sort-toggle]');
+    if (!list || !toggle) return;
+    list.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    if (open) (list.querySelector('[aria-selected="true"]') || list.querySelector('[role=option]'))?.focus({ preventScroll: true });
+  }
+  function pickSort(value) {
+    const state = readFilterState();
+    state.orden = SORTS.some(([v]) => v === value) ? value : 'destacados';
+    applyFilterChange(state, '[data-sort-toggle]');
+  }
   document.addEventListener('input', event => {
-    if (!event.target?.matches?.('.catalog-search input[name=q]')) return;
-    const value = event.target.value;
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => setSearch(value), 150);
+    const target = event.target;
+    if (target?.matches?.('.catalog-search input[name=q]')) {
+      const value = target.value;
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => setSearch(value), 150);
+      return;
+    }
+    // The price range shows its numbers while it is dragged; the products follow on release (`change`).
+    const range = target?.closest?.('[data-filter-range]');
+    if (range) for (const name of ['min', 'max']) { const out = range.querySelector(`[data-range-out="${name}"]`), input = range.querySelector(`input[name="precio-${name}"]`); if (out && input) out.textContent = `Bs ${input.value}`; }
+  });
+  document.addEventListener('change', event => {
+    const range = event.target?.closest?.('[data-filter-range]');
+    if (!range) return;
+    let a = Number(range.querySelector('input[name="precio-min"]').value), b = Number(range.querySelector('input[name="precio-max"]').value);
+    if (a > b) [a, b] = [b, a];
+    const state = readFilterState();
+    state.precio = a <= Number(range.dataset.lo) && b >= Number(range.dataset.hi) ? null : [a * 100, b * 100];
+    applyFilterChange(state, `[data-filter-range] input[name="${event.target.name}"]`);
+  });
+  document.addEventListener('click', event => {
+    const target = event.target;
+    if (target?.closest?.('[data-search-clear]')) { setSearch(''); return; }
+    const chipButton = target?.closest?.('[data-filter-chip]');
+    if (chipButton) {
+      const raw = chipButton.dataset.filterChip, at = raw.indexOf(':'), key = raw.slice(0, at), value = raw.slice(at + 1);
+      const state = readFilterState(), single = key === 'categoria' && chipButton.closest('.catalog-filters__row--categories');
+      const current = state.sets[key] || [];
+      state.sets[key] = !value ? [] : single ? (current.length === 1 && current[0] === value ? [] : [value]) : current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+      applyFilterChange(state, `[data-filter-chip="${attrValue(raw)}"]`);
+      return;
+    }
+    const switchButton = target?.closest?.('[data-filter-toggle]');
+    if (switchButton) {
+      const state = readFilterState(), key = switchButton.dataset.filterToggle;
+      if (state.toggles.has(key)) state.toggles.delete(key); else state.toggles.add(key);
+      applyFilterChange(state, `[data-filter-toggle="${attrValue(key)}"]`);
+      return;
+    }
+    if (target?.closest?.('[data-sort-toggle]')) { setSortOpen(document.querySelector('.cf-sort__list')?.hidden !== false); return; }
+    const option = target?.closest?.('.cf-sort__list [data-sort]');
+    if (option) { pickSort(option.dataset.sort); return; }
+    if (!target?.closest?.('.cf-sort')) setSortOpen(false);
+    if (target?.closest?.('[data-filters-open]')) { if (filtersDrawerOpen) closeFiltersDrawer(true); else openFiltersDrawer(target.closest('[data-filters-open]')); return; }
+    if (target?.closest?.('[data-filters-close],[data-filters-done]') || target?.matches?.('[data-filters-drawer]')) closeFiltersDrawer(true);
   });
   document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape' || !event.target?.matches?.('.catalog-search input[name=q]') || !event.target.value) return;
-    event.preventDefault();
-    setSearch('');
+    const target = event.target;
+    if (event.key === 'Escape' && target?.matches?.('.catalog-search input[name=q]') && target.value) { event.preventDefault(); setSearch(''); return; }
+    const list = document.querySelector('.cf-sort__list');
+    if (list && !list.hidden) {
+      const options = [...list.querySelectorAll('[role=option]')], at = options.indexOf(document.activeElement);
+      if (event.key === 'Escape') { event.preventDefault(); setSortOpen(false); document.querySelector('[data-sort-toggle]')?.focus({ preventScroll: true }); return; }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); options[Math.max(0, Math.min(options.length - 1, at + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus(); return; }
+      if ((event.key === 'Enter' || event.key === ' ') && at >= 0) { event.preventDefault(); pickSort(options[at].dataset.sort); return; }
+    }
+    if (!filtersDrawerOpen) return;
+    if (event.key === 'Escape') { event.preventDefault(); closeFiltersDrawer(true); return; }
+    const drawer = document.querySelector('[data-filters-drawer]');
+    if (event.key === 'Tab' && drawer && drawer.contains(target)) {
+      const items = drawerFocusable(drawer), first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && target === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && target === last) { event.preventDefault(); first?.focus(); }
+    }
   });
-  document.addEventListener('click', event => { if (event.target?.closest?.('[data-search-clear]')) setSearch(''); });
-  document.addEventListener('change', event => {
-    const root = event.target?.closest?.('.catalog-filters');
-    if (!root || event.target.matches?.('input[name=q]')) return;
-    writeFilterState(filterStateFromControls(root));
-    render();
-  });
-  document.addEventListener('submit', event => {
-    const form = event.target?.closest?.('[data-filters-form]');
-    if (!form) return;
-    event.preventDefault();
-    form.closest('.catalog-filters')?.removeAttribute('data-open');
-  });
+  window.addEventListener('pagehide', () => { if (filtersDrawerOpen) closeFiltersDrawer(false); });
   const catalogLayout = () => ['all', 'sections', 'page', 'tabs'].includes(store.catalogLayout) ? store.catalogLayout : 'all';
   const collections = () => Array.isArray(store.collections) ? store.collections : [];
   const HOME_PREVIEW = 4;
@@ -5281,26 +5386,78 @@
     '[data-pagosya-spotlight] .spotlight__add{width:100%;justify-content:center}',
     '[data-pagosya-spotlight] video{width:100%;border-radius:var(--store-radius,16px);background:#111}',
     '@media(max-width:760px){[data-pagosya-spotlight]{grid-template-columns:1fr}}',
-    '.catalog-filters{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:16px}',
-    '.catalog-filters__panel{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:flex-start;margin:0}',
-    '.catalog-filters fieldset{display:flex;flex-wrap:wrap;gap:6px 12px;border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:8px 12px;margin:0}',
-    '.catalog-filters legend{font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.7}',
-    '.catalog-filters label{display:inline-flex;align-items:center;gap:6px;font-size:14px}',
-    '.catalog-filters input[type=number]{width:6em}',
-    '.catalog-filters [data-swatch]{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--swatch);border:1px solid rgba(0,0,0,.2)}',
-    '.catalog-filters__active{display:flex;flex-wrap:wrap;gap:6px;margin:0;width:100%}',
-    '.catalog-filters__active button{border:0;border-radius:99px;padding:4px 10px;background:var(--store-surface,#f2ece0);color:inherit;font:inherit;font-size:12px;cursor:pointer}',
-    '.catalog-filters__count{margin:0;font-size:13px;opacity:.7}',
-    '.catalog-filters__open,.catalog-filters__apply{display:none}',
-    '.catalog-filters__sort{margin-left:auto}',
-    '@media(min-width:761px){[data-pagosya-catalog]:has(>.catalog-filters[data-filters-layout=sidebar]){display:grid;grid-template-columns:220px repeat(auto-fill,minmax(200px,1fr));align-items:start}',
-    '[data-pagosya-catalog]>.catalog-filters[data-filters-layout=sidebar]{grid-column:1;grid-row:1/span 99;flex-direction:column;align-items:stretch}',
-    '.catalog-filters[data-filters-layout=sidebar] .catalog-filters__panel{flex-direction:column}',
-    '.catalog-filters[data-filters-layout=sidebar] .catalog-filters__sort{margin-left:0}}',
-    '@media(max-width:760px){.catalog-filters__open{display:inline-flex;border:1px solid currentColor;border-radius:99px;padding:6px 14px;background:none;color:inherit;font:inherit}',
-    '.catalog-filters__panel{display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;max-height:80vh;overflow:auto;flex-direction:column;padding:16px;border-radius:16px 16px 0 0;background:var(--store-background,#fff);color:var(--store-foreground,#111);box-shadow:0 -10px 30px rgba(0,0,0,.2)}',
-    '.catalog-filters[data-open] .catalog-filters__panel{display:flex}',
-    '.catalog-filters__apply{display:block;width:100%;border:0;border-radius:99px;padding:12px;background:var(--store-foreground,#111);color:var(--store-background,#fff);font:inherit;font-weight:700}}',
+    '/* Sort & filter styles (spec 2026-10-21): bar, chips and sidebar, drawn with the store\'s tokens. */',
+    '.catalog-filters{grid-column:1/-1;display:grid;gap:12px;margin:0 0 20px;font-family:var(--store-body-font,inherit);color:var(--store-foreground,inherit)}',
+    '.catalog-filters button{font:inherit;color:inherit;cursor:pointer}',
+    '.catalog-search{position:relative;display:flex;align-items:center;max-width:560px}',
+    '.catalog-search__label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}',
+    '.catalog-search__icon{position:absolute;left:14px;top:50%;width:14px;height:14px;margin-top:-9px;border:1.6px solid currentColor;border-radius:50%;opacity:.6;pointer-events:none}',
+    '.catalog-search__icon::after{content:"";position:absolute;right:-6px;bottom:-5px;width:7px;height:1.6px;background:currentColor;transform:rotate(45deg)}',
+    '.catalog-search input{width:100%;min-height:46px;padding:0 44px 0 42px;border:1px solid color-mix(in srgb,currentColor 22%,transparent);border-radius:var(--store-radius,999px);background:var(--store-background,#fff);color:inherit;font:inherit;font-size:15px;-webkit-appearance:none;appearance:none}',
+    '.catalog-search input::-webkit-search-cancel-button{display:none}',
+    '.catalog-search input:focus{outline:2px solid var(--store-accent,currentColor);outline-offset:2px}',
+    '.catalog-search__clear{position:absolute;right:4px;width:40px;height:40px;border:0;border-radius:50%;background:none;font-size:14px}',
+    '.catalog-filters__bar,.catalog-filters__top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}',
+    '.catalog-filters__count{margin:0;font-size:13px;letter-spacing:.04em;opacity:.7}',
+    '.catalog-filters__bar .cf-sort,.catalog-filters__top .cf-sort{margin-left:auto}',
+    '.cf-open{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border:1px solid currentColor;border-radius:var(--store-radius,999px);background:none;font-size:13px;letter-spacing:.06em;text-transform:uppercase}',
+    '.cf-link{border:0;background:none;padding:0 4px;min-height:44px;font-size:13px;text-decoration:underline;text-underline-offset:4px}',
+    '.cf-caret{display:inline-block;width:7px;height:7px;margin-left:8px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg)}',
+    '.cf-sort{position:relative}',
+    '.cf-sort__toggle{display:inline-flex;align-items:center;min-height:44px;padding:0 4px;border:0;background:none;font-size:14px}',
+    '.cf-sort__toggle strong{margin-left:4px;font-weight:600}',
+    '.cf-sort__list{position:absolute;right:0;top:100%;z-index:30;min-width:200px;margin:6px 0 0;padding:6px;list-style:none;background:var(--store-background,#fff);border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:12px;box-shadow:0 18px 40px -18px rgb(0 0 0 / .35)}',
+    '.cf-sort__list[hidden]{display:none}',
+    '.cf-sort__list [role=option]{display:flex;align-items:center;min-height:44px;padding:0 12px;border-radius:8px;font-size:14px;cursor:pointer}',
+    '.cf-sort__list [role=option]:hover,.cf-sort__list [role=option]:focus{background:color-mix(in srgb,currentColor 8%,transparent);outline:none}',
+    '.cf-sort__list [aria-selected=true]{font-weight:700}',
+    '.cf-chips{display:flex;flex-wrap:wrap;gap:8px}',
+    '.cf-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,currentColor 25%,transparent);border-radius:var(--store-radius,999px);background:none;font-size:14px;transition:background .15s,color .15s}',
+    '.cf-chip[aria-pressed=true]{background:var(--store-foreground,#111);border-color:var(--store-foreground,#111);color:var(--store-background,#fff)}',
+    '.cf-chip [data-swatch]{width:22px;height:22px;border-radius:50%;background:var(--swatch);box-shadow:inset 0 0 0 1px rgb(0 0 0 / .15)}',
+    '.cf-chip[data-swatch-chip][aria-pressed=true] [data-swatch]{box-shadow:0 0 0 2px var(--store-background,#fff)}',
+    '.cf-chip--plain{border-color:transparent;padding:0 6px;border-radius:0;font-size:13px;letter-spacing:.1em;text-transform:uppercase}',
+    '.cf-chip--plain[aria-pressed=true]{background:none;color:inherit;border-color:transparent;box-shadow:inset 0 -2px 0 currentColor}',
+    '.cf-switch{display:inline-flex;align-items:center;gap:12px;min-height:44px;padding:0;border:0;background:none;font-size:14px}',
+    '.cf-switch__track{position:relative;width:40px;height:24px;border-radius:999px;background:color-mix(in srgb,currentColor 22%,transparent);transition:background .15s}',
+    '.cf-switch__track::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--store-background,#fff);transition:transform .15s}',
+    '.cf-switch[aria-checked=true] .cf-switch__track{background:var(--store-foreground,#111)}',
+    '.cf-switch[aria-checked=true] .cf-switch__track::after{transform:translateX(16px)}',
+    '.cf-range{display:grid;gap:6px}',
+    '.cf-range__values{display:flex;gap:8px;margin:0;font-size:14px}',
+    '.cf-range input[type=range]{width:100%;accent-color:var(--store-foreground,#111);min-height:28px}',
+    '.cf-group{display:grid;gap:10px;margin:0}',
+    '.cf-group__title{margin:0;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;opacity:.75}',
+    '.catalog-filters__active{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0}',
+    '.catalog-filters__active [data-filter-remove]{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:0;border-radius:999px;background:color-mix(in srgb,currentColor 8%,transparent);font-size:13px}',
+    '.catalog-filters__row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}',
+    '.catalog-filters__row::-webkit-scrollbar{display:none}',
+    '.catalog-filters__row--options{gap:20px}',
+    '.catalog-filters__row--options .cf-chips{flex-wrap:nowrap}',
+    '.cf-drawer{position:fixed;inset:0;z-index:2147482000;display:flex;justify-content:flex-end;background:rgb(0 0 0 / .35)}',
+    '.cf-drawer[hidden]{display:none}',
+    '.cf-drawer__panel{display:flex;flex-direction:column;width:min(420px,100%);height:100%;background:var(--store-background,#fff);color:var(--store-foreground,#111);animation:cf-in .2s ease-out}',
+    '.cf-drawer__head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent)}',
+    '.cf-drawer__head h2{margin:0;font-family:var(--store-heading-font,inherit);font-size:20px}',
+    '.cf-drawer__close{width:44px;height:44px;border:0;background:none;font-size:16px}',
+    '.cf-drawer__body{flex:1;overflow:auto;display:grid;align-content:start;gap:24px;padding:24px}',
+    '.cf-drawer__foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 24px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}',
+    '.cf-done{flex:1;min-height:48px;border:0;border-radius:var(--store-radius,999px);background:var(--store-foreground,#111);color:var(--store-background,#fff)!important;font-weight:600}',
+    '@keyframes cf-in{from{transform:translateX(24px);opacity:0}}',
+    '@media(max-width:760px){.cf-drawer{align-items:flex-end}.cf-drawer__panel{width:100%;height:auto;max-height:85vh;border-radius:18px 18px 0 0;animation-name:cf-up}@keyframes cf-up{from{transform:translateY(24px);opacity:0}}}',
+    '.catalog-filters[data-filter-style=sidebar] .catalog-filters__side{display:none}',
+    '.catalog-filters__side details>summary{display:flex;align-items:center;justify-content:space-between;min-height:44px;cursor:pointer;list-style:none;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}',
+    '.catalog-filters__side details>summary::-webkit-details-marker{display:none}',
+    '.catalog-filters__side details[open]>summary .cf-caret{transform:translateY(2px) rotate(-135deg)}',
+    '@media(min-width:900px){',
+    '[data-pagosya-catalog]:has(>.catalog-filters[data-filter-style=sidebar]){display:grid;grid-template-columns:240px repeat(auto-fill,minmax(220px,1fr));gap:24px;align-items:start}',
+    '.catalog-filters[data-filter-style=sidebar]{display:contents}',
+    '.catalog-filters[data-filter-style=sidebar] .catalog-filters__side{display:grid;gap:18px;grid-column:1;grid-row:1/span 99;position:sticky;top:96px;align-self:start;padding-right:8px}',
+    '.catalog-filters[data-filter-style=sidebar]>.catalog-search{grid-column:1/-1}',
+    '.catalog-filters[data-filter-style=sidebar] .catalog-filters__bar,.catalog-filters[data-filter-style=sidebar] .catalog-filters__active{grid-column:2/-1}',
+    '.catalog-filters[data-filter-style=sidebar] .cf-open{display:none}',
+    '}',
+    '@media(prefers-reduced-motion:reduce){.cf-drawer__panel{animation:none}.cf-chip,.cf-switch__track,.cf-switch__track::after{transition:none}}',
   ];
   const showcaseStyle = document.createElement('style');
   showcaseStyle.dataset.pagosyaKit = 'showcase';
@@ -5687,10 +5844,6 @@
       const state = readFilterState(), [key, value] = button.dataset.filterRemove.split(':');
       if (key === 'q') state.q = ''; else if (key === 'precio') state.precio = null; else if (value) state.sets[key] = (state.sets[key] || []).filter(v => v !== value); else state.toggles.delete(key);
       writeFilterState(state); render(); return;
-    }
-    if (button.hasAttribute('data-filters-open')) {
-      const root = button.closest('.catalog-filters'), open = !root.hasAttribute('data-open');
-      root.toggleAttribute('data-open', open); button.setAttribute('aria-expanded', String(open)); return;
     }
     if (button.hasAttribute('data-offer-square') && button.closest('[data-pagosya-spotlight]')) {
       // A spotlight's squares choose how many its add button adds (subscriptions are chosen on the product page).

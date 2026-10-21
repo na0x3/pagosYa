@@ -41,8 +41,8 @@ describe('sort and filter', () => {
 
   it('shows only the filters the data supports, and every sort order', async () => {
     const { all } = await open(six);
-    expect(all('.catalog-filters [data-filter-group]').map(group => group.dataset.filterGroup)).toEqual(['precio', 'descuento']);
-    expect(all('.catalog-filters select[name=orden] option').map(option => option.value)).toEqual(['destacados', 'precio-asc', 'precio-desc', 'novedades', 'mejor-oferta']);
+    expect([...new Set(all('.catalog-filters [data-filter-group]').map(group => group.dataset.filterGroup))]).toEqual(['precio', 'descuento']);
+    expect(all('.catalog-filters [role=listbox] [role=option]').map(option => option.dataset.sort)).toEqual(['destacados', 'precio-asc', 'precio-desc', 'novedades', 'mejor-oferta']);
   });
 
   it('sorts by price and by newest', async () => {
@@ -64,8 +64,7 @@ describe('sort and filter', () => {
 
   it('changing a filter writes the URL and re-renders', async () => {
     const { q, w, ids } = await open(six);
-    const box = q('.catalog-filters input[name=descuento]');
-    box.checked = true; box.dispatchEvent(new w.Event('change', { bubbles: true })); await tick();
+    q('.catalog-filters [data-filter-toggle="descuento"]').click(); await tick();
     expect(w.location.search).toContain('descuento=1');
     expect(ids()).toEqual(['b']);
   });
@@ -74,7 +73,7 @@ describe('sort and filter', () => {
     const v = (name: string, value: string) => ({ id: name + value, name: value, amount: 1000, options: [{ name, value }] });
     const items = [...six, p('x', 1500, { variants: [v('TALLA', 'S')] }), p('y', 1500, { variants: [v('talla', 'M')] }), p('z', 1500, { variants: [v('Colour', 'Red')] })];
     const { all, q } = await open(items);
-    expect(all('.catalog-filters [data-filter-group]').map(group => group.dataset.filterGroup).filter(key => key === 'talla')).toHaveLength(1);
+    expect(new Set(all('.catalog-filters [data-filter-group]').map(group => group.dataset.filterGroup).filter(key => key === 'talla')).size).toBe(1);
     expect(q('[data-filter-group="colour"] [data-swatch]')).not.toBeNull();
   });
 
@@ -85,9 +84,9 @@ describe('sort and filter', () => {
   });
 
   it('chooses the sidebar for a big catalog and the chip bar for a small one', async () => {
-    expect((await open(six)).q('.catalog-filters').dataset.filtersLayout).toBe('bar');
+    expect((await open(six)).q('.catalog-filters').dataset.filterStyle).toBe('bar');
     const nine = [...six, p('g', 7000), p('h', 8000), p('i', 9000)];
-    expect((await open(nine)).q('.catalog-filters').dataset.filtersLayout).toBe('sidebar');
+    expect((await open(nine)).q('.catalog-filters').dataset.filterStyle).toBe('sidebar');
   });
 });
 
@@ -147,6 +146,107 @@ describe('search', () => {
   it('cuts the search at 80 characters', async () => {
     const env = await open(items, `?q=${'a'.repeat(120)}`);
     expect(field(env).value).toHaveLength(80);
+  });
+});
+
+/** Spec 2026-10-21 sort & filter styles: three finished styles over the same state. */
+describe.each(['bar', 'chips', 'sidebar'])('filter style %s', style => {
+  const v = (value: string, group = 'Color') => ({ id: value, name: value, amount: 1000, options: [{ name: group, value }] });
+  const items = [...six.map((item, i) => ({ ...item, categoryId: i % 2 ? 'c2' : 'c1' })), p('m', 1500, { categoryId: 'c1', variants: [v('Rojo'), v('Azul')] }), p('n', 1500, { categoryId: 'c2', variants: [v('M', 'Talla')] })];
+  const categories = [{ id: 'c1', name: 'Vestidos' }, { id: 'c2', name: 'Faldas' }];
+  const env = (search = '') => open(items, search, { filterStyle: style, categories });
+  it('shows no raw select, number or checkbox', async () => {
+    const { all, q } = await env();
+    expect(q('.catalog-filters').dataset.filterStyle).toBe(style);
+    expect(all('.catalog-filters select, .catalog-filters input[type=number], .catalog-filters input[type=checkbox]')).toEqual([]);
+  });
+  it('a chip filters, writes the URL and shows pressed', async () => {
+    const e = await env();
+    e.q('[data-filter-chip="color:rojo"]').click(); await tick();
+    expect(e.w.location.search).toContain('f_color=rojo');
+    expect(e.ids()).toEqual(['m']);
+    expect(e.q('[data-filter-chip="color:rojo"]').getAttribute('aria-pressed')).toBe('true');
+    e.q('[data-filter-chip="color:rojo"]').click(); await tick();
+    expect(e.ids()).toHaveLength(8);
+  });
+  it('the sort listbox sorts and shows its choice', async () => {
+    const e = await env();
+    e.q('[data-sort-toggle]').click();
+    expect(e.q('[role=listbox]').hidden).toBe(false);
+    e.q('[role=option][data-sort="precio-desc"]').click(); await tick();
+    expect(e.ids()[0]).toBe('f');
+    expect(e.q('[data-sort-toggle]').textContent).toContain('Precio ↓');
+  });
+  it('a switch toggles «Con descuento»', async () => {
+    const e = await env();
+    e.q('[data-filter-toggle="descuento"]').click(); await tick();
+    expect(e.ids()).toEqual(['b']);
+    expect(e.q('[data-filter-toggle="descuento"]').getAttribute('aria-checked')).toBe('true');
+  });
+  it('an old link with category, colour and search restores the same products and chips — Review Focus 3', async () => {
+    const e = await env('?f_categoria=c1&f_color=rojo&q=m');
+    expect(e.ids()).toEqual(['m']);
+    expect(e.all('.catalog-filters__active [data-filter-remove]').map((b: any) => b.dataset.filterRemove)).toEqual(expect.arrayContaining(['categoria:c1', 'color:rojo', 'q:']));
+  });
+  it('the price range narrows the products', async () => {
+    const e = await env();
+    const max = e.q('[data-filter-range] input[name="precio-max"]');
+    max.value = '20'; max.dispatchEvent(new e.w.Event('change', { bubbles: true })); await tick();
+    expect(e.w.location.search).toContain('precio=10-20');
+    expect(e.ids().sort()).toEqual(['a', 'b', 'm', 'n']);
+  });
+});
+
+describe('filter style behaviour', () => {
+  it('the drawer locks the page, Esc closes it, focus returns and the lock is given back — Review Focus 5', async () => {
+    const e = await open(six, '', { filterStyle: 'bar' });
+    e.w.document.documentElement.style.overflow = 'clip';
+    e.q('[data-filters-open]').click();
+    expect(e.q('[data-filters-drawer]').hidden).toBe(false);
+    expect(e.w.document.documentElement.style.overflow).toBe('hidden');
+    expect(e.q('[data-filters-drawer]').contains(e.w.document.activeElement)).toBe(true);
+    e.w.document.dispatchEvent(new e.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(e.q('[data-filters-drawer]').hidden).toBe(true);
+    expect(e.w.document.activeElement).toBe(e.q('[data-filters-open]'));
+    expect(e.w.document.documentElement.style.overflow).toBe('clip');
+  });
+  it('a choice inside the open drawer keeps it open, and «Ver N productos» closes it', async () => {
+    const e = await open(six, '', { filterStyle: 'bar' });
+    e.q('[data-filters-open]').click();
+    e.q('[data-filter-toggle="descuento"]').click(); await tick();
+    expect(e.q('[data-filters-drawer]').hidden).toBe(false);
+    expect(e.q('[data-filters-done]').textContent).toContain('Ver 1 producto');
+    e.q('[data-filters-done]').click();
+    expect(e.q('[data-filters-drawer]').hidden).toBe(true);
+    expect(e.w.document.documentElement.style.overflow).toBe('');
+  });
+  it('chips style puts «Todo» and the categories in the first row, single choice, and price in «Más filtros»', async () => {
+    const items = six.map((item, i) => ({ ...item, categoryId: i % 2 ? 'c2' : 'c1' }));
+    const e = await open(items, '', { filterStyle: 'chips', categories: [{ id: 'c1', name: 'Vestidos' }, { id: 'c2', name: 'Faldas' }] });
+    expect(e.all('.catalog-filters__row--categories button').map((b: any) => b.textContent.trim())).toEqual(['Todo', 'Vestidos', 'Faldas']);
+    expect(e.q('.catalog-filters__row--categories [data-filter-chip="categoria:"]').getAttribute('aria-pressed')).toBe('true');
+    e.q('[data-filter-chip="categoria:c1"]').click(); await tick();
+    e.q('[data-filter-chip="categoria:c2"]').click(); await tick();
+    expect(e.w.location.search).toContain('f_categoria=c2');
+    expect(e.w.location.search).not.toContain('c1');
+    expect(e.q('[data-filters-open]').textContent).toContain('Más filtros');
+    expect(e.q('[data-filters-drawer] [data-filter-range]')).not.toBeNull();
+  });
+  it('the sort listbox moves with the arrows, picks with Enter and closes with Esc', async () => {
+    const e = await open(six, '', { filterStyle: 'bar' });
+    e.q('[data-sort-toggle]').click();
+    const list = e.q('[role=listbox]');
+    expect(e.w.document.activeElement.dataset.sort).toBe('destacados');
+    list.dispatchEvent(new e.w.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(e.w.document.activeElement.dataset.sort).toBe('precio-asc');
+    e.w.document.activeElement.dispatchEvent(new e.w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await tick();
+    expect(e.w.location.search).toContain('orden=precio-asc');
+    e.q('[data-sort-toggle]').click();
+    e.w.document.dispatchEvent(new e.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(e.q('[role=listbox]').hidden).toBe(true);
+  });
+  it('an unknown filterStyle falls back to the automatic choice', async () => {
+    expect((await open(six, '', { filterStyle: 'mosaic' })).q('.catalog-filters').dataset.filterStyle).toBe('bar');
   });
 });
 
