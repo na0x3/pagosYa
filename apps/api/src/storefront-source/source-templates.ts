@@ -5,7 +5,8 @@ import { uploadPath } from './source-product-photos';
 import type { MasterCopy } from '@pagosya/store-templates';
 import { masterCopy, masterDnaFonts, masterDnaLook, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
 import { readFile } from 'node:fs/promises';
-import { templateDemoPhoto, type TemplateManifest } from '@pagosya/store-templates';
+import { templateDemoPhoto, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
+import { plantillaFillFromRead } from './source-plantilla-fill';
 import { kitPath } from '@pagosya/storefront-kit';
 import type { SourceProjectBriefDto, SourceProjectFileDto } from './dto/save-source-project.dto';
 import { compileNextPreview, nextContentPages, nextProjectScaffold } from './source-next';
@@ -82,6 +83,17 @@ const dataLine = (content: string, name: string) => {
 export function readPlantillaCopy(files: readonly SourceProjectFileDto[]): Record<string, string> {
   const value = dataLine(files.find(file => file.path === TEMPLATE_STORE_DATA_PATH)?.content ?? '', 'copy');
   return value && typeof value === 'object' && !Array.isArray(value) && Object.values(value).every(text => typeof text === 'string') ? value as Record<string, string> : {};
+}
+
+/** Spec 2026-10-20 §5: a words change on a Plantilla store. Only store-data's `copy` line is rewritten, merged over the
+ *  current words; keys the template has no slot for are dropped and long values clipped to the slot. */
+export function refillPlantillaFiles(files: SourceProjectFileDto[], change: Record<string, unknown>, slots: readonly TemplateCopySlot[]): SourceProjectFileDto[] {
+  const line = /^export const copy: Record<string, string> = .*;$/m;
+  return files.map(file => {
+    if (file.path !== TEMPLATE_STORE_DATA_PATH || !line.test(file.content)) return file;
+    const copy = { ...readPlantillaCopy([file]), ...plantillaFillFromRead(change, slots) };
+    return { ...file, content: file.content.replace(line, () => `export const copy: Record<string, string> = ${JSON.stringify(copy)};`) };
+  });
 }
 
 /** The template's own words for every slot: the demo store and the gallery preview show exactly what it was designed with. */

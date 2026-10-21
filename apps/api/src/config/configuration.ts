@@ -109,6 +109,9 @@ export interface AppConfig {
   yapiEsencialDice: boolean;
   /** Variety spec 2026-10-19 §5: a background personal touch after each new master store. Default on; YAPI_PERSONAL_TOUCH=off disables. */
   yapiPersonalTouch: boolean;
+  /** Spec 2026-10-20 Plantillas fill: curated Plantillas filled by one call, «Elegir una plantilla», the Plantillas menu and
+   *  double-click text editing in the Studio. Default off; YAPI_PLANTILLAS_FILL=1. */
+  yapiPlantillasFill: boolean;
   /** The bold style card is YAPI's own design (2026-10-18): only the platform's header and cart are drawn for it. Default on;
    *  YAPI_AUTHORED_BOLD=off returns to the drawn bold card (palette, hero, design parts, signature device). */
   yapiAuthoredBold: boolean;
@@ -461,6 +464,7 @@ export default (): { app: AppConfig } => {
     yapiMasterTemplate: process.env.YAPI_MASTER_TEMPLATE !== 'off',
     yapiEsencialDice: process.env.YAPI_ESENCIAL_DICE !== 'off',
     yapiPersonalTouch: process.env.YAPI_PERSONAL_TOUCH !== 'off',
+    yapiPlantillasFill: process.env.YAPI_PLANTILLAS_FILL === '1',
     yapiAuthoredBold: process.env.YAPI_AUTHORED_BOLD !== 'off',
     yapiCommerceSurfaces: process.env.YAPI_COMMERCE_SURFACES === '1',
     onboardingWalkthrough: process.env.ONBOARDING_WALKTHROUGH === '1',

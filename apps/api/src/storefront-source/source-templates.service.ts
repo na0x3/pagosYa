@@ -13,12 +13,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PublicStoresService } from '../stores/public-stores.service';
 import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectSnapshot } from './source-project';
-import { assembleTemplateRevision, readMasterState, refillMasterFiles, templateDemoRevision, TEMPLATE_STORE_DATA_PATH } from './source-templates';
+import { assembleTemplateRevision, readMasterState, refillMasterFiles, refillPlantillaFiles, templateDemoRevision, TEMPLATE_STORE_DATA_PATH } from './source-templates';
+import { plantillaFallback, plantillaFillFromRead } from './source-plantilla-fill';
 import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
 import { distinctPhotoCount, rollVariants, type RecentRoll } from './source-master-dice';
 
 /** What the master template's filler is told about a store (spec 2026-10-19 §2.3). */
 export type MasterFacts = { storeName: string; products: string[]; photos: string[]; brand?: { voice?: string; headlineExamples?: string; avoid?: string } };
+/** What a Plantilla's filler is told (spec 2026-10-20 §4): the store as the apply reads it, and the template's slots. */
+export type PlantillaFacts = { storeName: string; tagline: string; products: string[]; photos: string[]; slots: NonNullable<registry.TemplateManifest['copy']> };
 const HEX = /^#[0-9a-f]{6}$/i;
 import { sourcePublicApiUrl } from './source-store-config';
 
@@ -40,12 +43,13 @@ export class SourceTemplatesService {
     return bytes ? proposeStorePalette({ logo: { url: path, path, bytes } }).catch(() => undefined) : undefined;
   };
 
-  list() {
-    return this.registry.galleryTemplates().map(({ id, name, category, description, tags, order }) => ({ id, name, category, description, tags, order }));
+  list(curatedOnly = false) {
+    return this.registry.galleryTemplates().filter(manifest => !curatedOnly || (manifest.curated === true && Boolean(manifest.copy?.length)))
+      .map(({ id, name, category, description, tags, order }) => ({ id, name, category, description, tags, order }));
   }
 
   /** The pieces `apply` saves and `preview` shows: the template filled with this store's name, products and photos. */
-  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[], variants?: MasterVariants) {
+  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[], variants?: MasterVariants, plantillaCopy?: Record<string, string>) {
     const manifest = this.registry.templateManifest(templateId);
     if (!manifest) throw new NotFoundException('Esa plantilla no existe.');
     const current = await this.projects.current(merchantId, storeId);
@@ -56,7 +60,8 @@ export class SourceTemplatesService {
       manifest, source: this.registry.templateSourceFiles(manifest.id), storeId, slug: current.slug, publicStore,
       apiUrl: sourcePublicApiUrl(this.config), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), firstRevision: current.revision === 0,
       previousBrief: (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.brief,
-      fill, demoPhotos: !manifest.master, extraFiles, variants,
+      // A filled Plantilla shows the merchant's photos or none, never the demo business's (spec 2026-10-20).
+      fill, demoPhotos: !manifest.master && !plantillaCopy, extraFiles, variants, plantillaCopy,
     });
     return { current, assembled };
   }
@@ -111,6 +116,36 @@ export class SourceTemplatesService {
     const bundled = await this.bundleMasterPhotos(merchantId, change);
     const files = refillMasterFiles(snapshot.files, manifest, bundled.change, sourcePublicApiUrl(this.config));
     return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: [...files, ...bundled.files.filter(asset => !files.some(file => file.path === asset.path))] });
+  }
+
+  /** Spec 2026-10-20 Plantillas fill §4: a converted Plantilla applied and filled for this business in one call. The store is
+   *  saved even when the call fails: the merchant's own words stand in for every slot it left out, never the demo business's.
+   *  Esencial keeps applyMaster. */
+  async applyPlantillaFilled(merchantId: string, storeId: string, templateId: string, revision: number, filler: (facts: PlantillaFacts) => Promise<Record<string, string> | null>) {
+    const manifest = this.registry.templateManifest(templateId);
+    if (!manifest) throw new NotFoundException('Esa plantilla no existe.');
+    if (!manifest.copy?.length || manifest.master) throw new BadRequestException('YAPI no puede llenar esta plantilla.');
+    const current = await this.projects.current(merchantId, storeId);
+    if (current.revision !== revision) throw new ConflictException('El proyecto cambió. Recarga antes de aplicar la plantilla.');
+    const publicStore = await this.publicStores.getStorePublic(current.slug, { trackView: false, ownerMerchantId: merchantId });
+    const facts: PlantillaFacts = { storeName: publicStore.storeName, tagline: publicStore.tagline ?? '', products: publicStore.items.map(item => item.name),
+      photos: [...new Set(publicStore.items.flatMap(item => item.imageUrls ?? []))], slots: manifest.copy };
+    const filled = plantillaFillFromRead(await filler(facts).catch(() => null), manifest.copy);
+    const copy = { ...plantillaFallback(manifest.copy, facts), ...filled };
+    const { assembled } = await this.assemble(merchantId, storeId, templateId, revision, undefined, undefined, undefined, copy);
+    const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
+    if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
+    void Promise.resolve().then(() => this.pageWriter?.fillStore(storeId)).catch(() => undefined);
+    return { ...saved, filled: Object.keys(filled).length > 0 };
+  }
+
+  /** Spec 2026-10-20 §5: a words change on a Plantilla store — store-data's copy only, as a new revision. */
+  async refillPlantilla(merchantId: string, storeId: string, revision: number, change: Record<string, string>, label: string) {
+    const previous = await this.projects.version(merchantId, storeId, revision);
+    const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
+    const manifest = snapshot.brief?.templateId ? this.registry.templateManifest(snapshot.brief.templateId) : undefined;
+    if (!manifest?.copy?.length || manifest.master) throw new BadRequestException('Esta tienda no usa una plantilla con textos editables.');
+    return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: refillPlantillaFiles(snapshot.files, change, manifest.copy) });
   }
 
   /** Variety spec §3: hero + palette + fonts of the last 6 master stores (other stores), so a new roll avoids them. */

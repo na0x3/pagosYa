@@ -220,6 +220,19 @@ export class SourceChatService {
     return { ...result.revision, adapted: result.revision.revision > revision + 1 };
   }
 
+  /** Spec 2026-10-20 Plantillas fill §4: «Elegir una plantilla» and Plantillas › Usar — a curated template filled for this
+   *  business in one call. What the merchant wrote now comes first, then the onboarding answers and the store's brief. */
+  async applyPlantilla(merchantId: string, storeId: string, templateId: string, revision: number, input: { about?: string; assetUrls?: string[] } = {}) {
+    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { onboarding: true } });
+    const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; photos?: string[] };
+    const brief = revision ? ((await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot).brief : undefined;
+    const about = [input.about, onboarding.what, onboarding.story, brief?.businessInformation].map(text => text?.trim()).filter(Boolean).join('\n').slice(0, 2000);
+    return this.templates.applyPlantillaFilled(merchantId, storeId, templateId, revision, facts => this.dialogue.fillPlantilla(merchantId, {
+      storeId, storeName: facts.storeName, about: about || facts.tagline, products: facts.products, slots: facts.slots,
+      photos: [...new Set([...(input.assetUrls ?? []), ...(onboarding.photos ?? []), ...facts.photos])].slice(0, 8),
+    }));
+  }
+
   /** Spec 2026-09-27 §3: the free first build after a Shopify import. Progress is saved on the user message under requestId = importId. */
   async importBuild(merchantId: string, storeId: string, input: { importId: string; option: 'same' | 'redesign'; origin: string; productHandle?: string; summary: string }) {
     const current = await this.projects.current(merchantId, storeId);
