@@ -97,3 +97,16 @@ describe('cut phrases (live 2026-10-19)', () => {
     expect(writtenPage({ highlights: [], eyebrow: 'Para el trabajo' }, facts, []).eyebrow).toBe('Para el trabajo');
   });
 });
+
+it('a fashion store asks for a fit, fabric or edition label of at most 3 words', () => {
+  const prompt = productPagePrompt({ name: 'Carden', description: 'Jersey de cachemira', specifications: [], tags: [], category: 'Jerseys' } as any, 'Noa', undefined, { fashion: true });
+  expect(prompt).toMatch(/máximo 3 palabras/);
+  expect(productPagePrompt({ name: 'Café', description: null, specifications: [], tags: [], category: null } as any, 'Luz')).not.toMatch(/máximo 3 palabras/);
+});
+
+it('a YAPI label over 3 words is dropped for a fashion store, kept for others', () => {
+  const facts = { name: 'Carden', description: 'Jersey', specifications: [], tags: [], category: null } as any;
+  expect(writtenPage({ highlights: [], eyebrow: 'Corte holgado inglés clásico' }, facts, [], { fashion: true }).eyebrow).toBeNull();
+  expect(writtenPage({ highlights: [], eyebrow: 'Corte holgado' }, facts, [], { fashion: true }).eyebrow).toBe('Corte holgado');
+  expect(writtenPage({ highlights: [], eyebrow: 'Corte holgado inglés clásico' }, facts, []).eyebrow).toBe('Corte holgado inglés clásico');
+});

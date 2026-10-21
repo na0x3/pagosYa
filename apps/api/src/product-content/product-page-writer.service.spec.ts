@@ -81,6 +81,13 @@ describe('ProductPageWriterService', () => {
 
 describe('card eyebrow (showcase commerce 2026-10-19)', () => {
   const withEyebrow = (eyebrow: string) => jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ output: [{ content: [{ type: 'output_text', text: JSON.stringify({ ...answer, eyebrow }) }] }] }), { status: 200 }));
+  it("a fashion store never replaces the merchant's own long label, and asks the model for 3 words", async () => {
+    const { service, prisma } = setup(product({ cardEyebrow: 'Hecho a mano en La Paz para novias' }));
+    const fetchMock = withEyebrow('Seda');
+    await service.fill('s1', 'p1', 'auto', undefined, { fashion: true });
+    expect(prisma.paymentLink.updateMany.mock.calls[0][0].data).not.toHaveProperty('cardEyebrow');
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).input[0].content[0].text).toMatch(/máximo 3 palabras/);
+  });
   it('writes the eyebrow onto a product without one', async () => {
     const { service, prisma } = setup(product({ cardEyebrow: null }));
     withEyebrow('Para el trabajo');

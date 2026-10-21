@@ -123,7 +123,8 @@ describe('SourceTemplatesService', () => {
     templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
     await templates.applyMaster('m1', 'store-1', 0, async () => null);
     await new Promise(resolve => setImmediate(resolve));
-    expect(pageWriter.fillStore).toHaveBeenCalledWith('store-1');
+    // Fashion look (2026-10-21): the writer is told whether the store sells fashion (no fill here, so not).
+    expect(pageWriter.fillStore).toHaveBeenCalledWith('store-1', 20, { fashion: false });
   });
 
   it('rolls the store\'s variants and a palette that fits a bold character (variety spec §3)', async () => {
