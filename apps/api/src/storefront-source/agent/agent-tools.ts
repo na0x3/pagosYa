@@ -297,6 +297,8 @@ export class AgentToolbox {
         this.requirements = planned;
         this.lastVerify = null;
         step('plan_task', `Planificó ${this.requirements.length} requisitos`);
+        // The Studio's narrator writes the plan to the merchant (spec 2026-10-21 C4): one detail per requirement.
+        for (const requirement of this.requirements) step('plan_task', `Voy a: ${requirement.description}`);
         // The original request is already retained in the opening transcript.
         return { output: JSON.stringify({ requirements: this.requirements }) };
       }

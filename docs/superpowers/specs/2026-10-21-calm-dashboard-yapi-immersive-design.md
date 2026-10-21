@@ -205,3 +205,13 @@ to the Studio today, C4 adds them to it.
   - The inventory import is already a closed disclosure; no change.
   - «Pídele a YAPI» appears only for policies and colours/type. YAPI's design agent cannot edit store emails or the
     assistant's look, so those editors are hidden without a YAPI line.
+
+## Owner update to Part B (2026-10-21, evening)
+
+«all options are cramped up… make a better looking layout like granola… premium ui components, glass». So Part B also:
+- gives every page much more room (wider gutters, larger gaps, roomier rows and controls, a narrower reading column);
+- uses glass on the floating layers — top bar, sidebar, section pills, menus, dialogs and the YAPI dock/window — over a
+  softly tinted page background; content cards stay solid white so text stays crisp;
+- reshapes the shared controls (buttons, inputs, selects, tabs, badges, switches, tables) as soft pills and rounded
+  fields at a larger, calmer size.
+The "no glass outside YAPI" line in Part B above is superseded by this.

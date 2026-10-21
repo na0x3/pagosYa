@@ -119,3 +119,10 @@ it('rejects product-instance checks before editing an empty catalog while allowi
   expect(() => assertTaskFeasibility([{ ...rule, check: 'text', selector: 'body', expected: 'No disponible' }], base)).not.toThrow();
   expect(() => assertTaskFeasibility([rule], [{ path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"data":{"items":[{"id":"p1"}]}};' }])).not.toThrow();
 });
+
+it('hands the plan to the merchant: one «Voy a» step per requirement after the count (spec 2026-10-21 C4)', async () => {
+  const tools = box();
+  const second = { ...requirement, id: 'r2', description: 'El botón principal dice Comprar', selector: 'a', expected: 'Comprar' };
+  await tools.run('plan_task', JSON.stringify({ requirements: [requirement, second] }));
+  expect(tools.steps.filter(s => s.kind === 'plan_task').map(s => s.label)).toEqual(['Planificó 2 requisitos', 'Voy a: El título pedido aparece', 'Voy a: El botón principal dice Comprar']);
+});
