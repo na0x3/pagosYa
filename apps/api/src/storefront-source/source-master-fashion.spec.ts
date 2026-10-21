@@ -10,6 +10,10 @@ describe('isFashionStore', () => {
     expect(isFashionStore({ what: 'Ropa de diseño para mujer' })).toBe(true);
     expect(isFashionStore({ products: ['Zapatos de cuero', 'Bolso tote'] })).toBe(true);
   });
+  it('hoodie and sweatshirt stores are fashion (BOXY demo, 2026-10-21)', () => {
+    for (const word of ['Hoodie Boxy Esencial', 'Sudadera oversize', 'Polerón gris', 'Buzo de algodón', 'Sweatshirt crema', 'Joggers negros']) expect(isFashionStore({ products: [word] })).toBe(true);
+    expect(isFashionStore({ what: 'Hoodies de corte boxy' })).toBe(true);
+  });
   it('ignores accents and case', () => expect(isFashionStore({ products: ['SASTRERÍA A MEDIDA'] })).toBe(true));
   it('a bakery or café with «tejido», «punto» or «boutique» is not fashion', () => {
     expect(isFashionStore({ storeName: 'Boutique del Pan', products: ['Pan de punto', 'Torta'] })).toBe(false);

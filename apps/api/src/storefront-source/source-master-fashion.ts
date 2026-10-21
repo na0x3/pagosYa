@@ -2,7 +2,7 @@
  *  card and product page. The fill read says so (`kind`); the store's own words back it up when the read is missing or says
  *  other. Weak words («tejido», «punto», «boutique», «atelier», «moda») count only two together and never in another trade (food,
  *  flowers, ceramics): a bakery says «Boutique del Pan» and «pan de punto» too. */
-const STRONG = /\b(ropa|prendas?|couture|alta costura|disenador(a|as|es)?|vestidos?|blusas?|camisas?|camisetas?|poleras?|pantalon(es)?|faldas?|chaquetas?|abrigos?|sastreria|lenceria|calzados?|zapatos?|zapatillas?|carteras?|bolsos?|jerseys?|sueteres?|sweaters?|corses?|knitwear|denim|jeans?|chompas?|gorros?|bufandas?|ponchos?)\b/;
+const STRONG = /\b(ropa|prendas?|couture|alta costura|disenador(a|as|es)?|vestidos?|blusas?|camisas?|camisetas?|poleras?|pantalon(es)?|faldas?|chaquetas?|abrigos?|sastreria|lenceria|calzados?|zapatos?|zapatillas?|carteras?|bolsos?|jerseys?|sueteres?|sweaters?|corses?|knitwear|denim|jeans?|chompas?|gorros?|bufandas?|ponchos?|hoodies?|sudaderas?|polerones?|poleron|buzos?|sweatshirts?|joggers?)\b/;
 /** Words a clothing store uses but so do others («atelier» de cerámica, «polos» de fruta, «de moda», «botas» de lluvia). */
 const WEAK = /\b(tejidos?|punto|boutique|novias?|accesorios|atelier|moda|polos?|botas?)\b/g;
 /** Trades that borrow those words: food, flowers, ceramics. */
