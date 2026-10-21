@@ -5,7 +5,7 @@ import { SOURCE_FONT_IDS, SOURCE_FONT_SEED_IDS } from './source-font-catalog';
 import { sanitizeProductThemeCss } from './product-theme-css';
 import { productCardDirection, productCommerceDirection } from './source-product-card-presets';
 /** `atelier` (2026-10-19): the Amboras product page, the style new stores are drawn (design-engine/product-draw.ts). */
-export const SOURCE_PRODUCT_PAGE_STYLES = ['editorial', 'dense', 'image-led', 'story-led', 'conversion', 'atelier'] as const;
+export const SOURCE_PRODUCT_PAGE_STYLES = ['editorial', 'dense', 'image-led', 'story-led', 'conversion', 'atelier', 'fashion'] as const;
 export type SourceProductPageStyle = typeof SOURCE_PRODUCT_PAGE_STYLES[number];
 /** The self-hosted fonts in the kit, from the one catalogue (source-font-catalog.ts). */
 export const SOURCE_DNA_FONTS = SOURCE_FONT_IDS;
@@ -53,7 +53,7 @@ export type SourceDesignDna = { version: 1 } & { -readonly [G in keyof Enums]: {
 const RUNTIME_NAMES: Record<string, string> = { 'buttons.form': 'button', 'motion.personality': 'motion' };
 /** Identity libraries (T2b) appended these values. The seeded default never picks them: withSeededDna seeds every stored
  * store without a DNA on each public view, so a new value in the draw would silently restyle stores published long ago. */
-const NOT_SEEDED: Record<string, readonly string[]> = { 'buttons.form': ['sticker', 'ticket', 'bubbly', 'brutal'], 'shape.frame': ['blob', 'stamp', 'tape'], 'surfaces.product': ['atelier'] };
+const NOT_SEEDED: Record<string, readonly string[]> = { 'buttons.form': ['sticker', 'ticket', 'bubbly', 'brutal'], 'shape.frame': ['blob', 'stamp', 'tape'], 'surfaces.product': ['atelier', 'fashion'] };
 /** Fields whose seeded default is one fixed value (today's look) for every store, so no store is ever restyled by a
  * seed. The planner may still choose any value of the field (PLANNER_BY_FIELD). */
 const FIXED_DEFAULTS: Record<string, string> = Object.fromEntries(Object.entries(SOURCE_DNA_ENUMS.productCard).map(([key, values]) => [`productCard.${key}`, values[0]]));

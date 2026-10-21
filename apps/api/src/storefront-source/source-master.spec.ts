@@ -1,4 +1,4 @@
-import { masterFillFromRead, masterShowcase } from './source-master';
+import { masterFillFromRead, masterProductStyle, masterShowcase } from './source-master';
 import { templateManifest } from '@pagosya/store-templates';
 import { paletteForBrand } from './source-master';
 import type { MasterSettings } from '@pagosya/store-templates';
@@ -107,4 +107,10 @@ describe('masterShowcase (showcase commerce)', () => {
 it('the read\'s kind reaches the character', () => {
   const read = { headline: 'x', palette: 'mono', fonts: 'classic', colors: {}, heroPhoto: -1, storyPhoto: -1, changed: [], values: [], tone: 'calm', temperature: 'warm', lead: 'photo', exclude: [], kind: 'fashion' } as any;
   expect(masterFillFromRead(read, [], false).character?.kind).toBe('fashion');
+});
+
+it('the fashion variants reach the kit config: card design and product-page style', () => {
+  expect(masterShowcase({ cards: 'fashion' } as any)).toEqual({ cards: 'fashion' });
+  expect(masterProductStyle({ pdp: 'fashion' } as any)).toEqual({ productPageStyle: 'fashion' });
+  expect(masterProductStyle({ pdp: 'gallery-left' } as any)).toEqual({});
 });

@@ -26,6 +26,9 @@ const pick = <T>(next: () => number, list: readonly T[]): T => list[Math.floor(n
 /** Commerce displays fit any business; the fill call's exclusions skipped them every time (live 2026-10-19: offers «steps» never rolled). */
 const DICE_ONLY = new Set(['cards', 'offers']);
 
+/** Fashion look spec 2026-10-21: the fashion card and product page belong to fashion stores only, and fashion stores always get them. */
+const FASHION_PARTS = ['cards', 'pdp'] as const;
+
 /** Most recent first. */
 export type RecentRoll = { hero: string; palette: string; fonts: string };
 
@@ -38,10 +41,10 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   const owners = (id: string) => Object.keys(catalogue).filter(part => catalogue[part].includes(id)).length;
   const excluded = (part: string, id: string) => input.character.exclude.includes(`${part}:${id}`) || (input.character.exclude.includes(id) && owners(id) === 1);
   const allowed = (part: string) => {
-    const fits = catalogue[part].filter(id => (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
+    const fits = catalogue[part].filter(id => id !== 'fashion' && (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
     const honoured = DICE_ONLY.has(part) ? [] : fits.filter(id => excluded(part, id)).slice(0, Math.floor(fits.length / 2));
     const list = fits.filter(id => !honoured.includes(id));
-    return list.length ? list : [catalogue[part][0]];
+    return list.length ? list : [catalogue[part].find(id => id !== 'fashion') ?? catalogue[part][0]];
   };
   // Stores made one after another never share a font pair with the last six or a palette with the last two.
   const without = (list: string[], taken: string[]) => { const left = list.filter(id => !taken.includes(id)); return left.length ? left : list; };
@@ -56,6 +59,7 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   for (let attempt = 0; attempt < 20; attempt++) {
     const next = rng(`${input.seed}#${attempt}`);
     const variants = Object.fromEntries(Object.keys(catalogue).map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
+    if (input.character.kind === 'fashion') for (const part of FASHION_PARTS) if (catalogue[part]?.includes('fashion')) variants[part] = 'fashion';
     last = { variants: { ...variants, sections } as MasterVariants, palette: pick(next, palettePool), fonts: pick(next, fonts) };
     if (!taken.has(`${last.variants.hero}|${last.palette}|${last.fonts}`)) return last;
   }

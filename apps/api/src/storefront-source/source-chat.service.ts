@@ -33,7 +33,8 @@ import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { galleryTemplates, templateManifest, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
-import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook } from './source-master';
+import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook, type MasterFill } from './source-master';
+import { isFashionStore } from './source-master-fashion';
 import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy } from './source-templates';
 import { buildSuggestions } from './source-suggestions';
@@ -279,7 +280,10 @@ export class SourceChatService {
         storeId, storeName: facts.storeName, ...(facts.brand ? { brand: facts.brand } : {}), what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '', city: onboarding.contact?.city ?? '',
         products: facts.products, photos, palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: manifest.master!.sections,
       });
-      return read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: (onboarding.what ?? '').slice(0, 160) } };
+      const base: MasterFill = read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: (onboarding.what ?? '').slice(0, 160) } };
+      // Fashion look spec 2026-10-21: the read's kind, backed by the store's own words, decides the fashion card and page.
+      const fashion = isFashionStore({ kind: read?.kind, storeName: facts.storeName, what: onboarding.what ?? draft.answers?.context ?? '', products: facts.products });
+      return { ...base, character: { ...(base.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] }), kind: fashion ? 'fashion' : 'other' } };
     });
     await workflow.finish('completed');
     // Variety spec §5: one background personal touch per new master store. The reply carries it; the job runner queues it

@@ -102,3 +102,22 @@ it('card designs and offer layouts are the dice\'s alone: the fill call cannot r
   expect([...offers].sort()).toEqual(['grid', 'rows', 'steps']);
   expect(cards).toContain('compact');
 });
+
+it('a fashion store always gets the fashion card and product page; every other part still rolls', () => {
+  const fashion = { ...calm, kind: 'fashion' as const };
+  const heroes = new Set<string>();
+  for (const seed of 'abcdefghij') {
+    const rolled = roll(seed, { character: fashion });
+    expect([rolled.variants.cards, rolled.variants.pdp]).toEqual(['fashion', 'fashion']);
+    heroes.add(rolled.variants.hero);
+  }
+  expect(heroes.size).toBeGreaterThan(1);
+});
+
+it('no other store ever rolls the fashion card or page, whatever the seed or exclusions', () => {
+  for (let i = 0; i < 40; i++) {
+    const rolled = roll(`seed-${i}`, { character: { ...calm, exclude: ['cards:showcase', 'cards:compact', 'cards:split', 'pdp:gallery-left'] } });
+    expect(rolled.variants.cards).not.toBe('fashion');
+    expect(rolled.variants.pdp).not.toBe('fashion');
+  }
+});

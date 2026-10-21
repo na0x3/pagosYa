@@ -108,9 +108,14 @@ export function masterDnaLook(variants: Partial<MasterVariants> | undefined): Re
 
 /** Showcase commerce: the rolled card design and offer-square layout, read by the kit from config.showcase. */
 export function masterShowcase(variants: Partial<MasterVariants> | undefined): { cards?: string; offers?: string } {
-  const cards = ['showcase', 'compact', 'split'].includes(String(variants?.cards)) ? String(variants!.cards) : undefined;
+  const cards = ['showcase', 'compact', 'split', 'fashion'].includes(String(variants?.cards)) ? String(variants!.cards) : undefined;
   const offers = ['steps', 'grid', 'rows'].includes(String(variants?.offers)) ? String(variants!.offers) : undefined;
   return { ...(cards ? { cards } : {}), ...(offers ? { offers } : {}) };
+}
+
+/** Fashion look spec 2026-10-21: the fashion product page is a kit style, read by the kit from config.productPageStyle. */
+export function masterProductStyle(variants: Partial<MasterVariants> | undefined): { productPageStyle?: 'fashion' } {
+  return variants?.pdp === 'fashion' ? { productPageStyle: 'fashion' } : {};
 }
 
 export function masterDnaFonts(settings: MasterSettings, look: MasterLook) {

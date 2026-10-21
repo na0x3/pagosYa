@@ -89,3 +89,17 @@ describe('review fix: a product photo that is the bundled hero or story points a
   });
   it('leaves photos alone without sources', () => expect(sameAsBundled({ hero: 'h', p1: 'x' }, undefined)).toEqual({ hero: 'h', p1: 'x' }));
 });
+
+describe('fashion look', () => {
+  const withVariants = { ...manifest, master: { ...master, variants: { cards: ['compact', 'fashion'], pdp: ['gallery-left', 'fashion'] } } } as unknown as TemplateManifest;
+  const configOf = (files: Array<{ path: string; content: string }>) => JSON.parse(files.find(f => f.path === 'config.js')!.content.match(/=\s*([\s\S]*?);?\s*$/)![1]);
+  it('a refill to the fashion variants writes the card design and product-page style into config.js, and back', () => {
+    const fashion = refillMasterFiles(storeFiles(), withVariants, { variants: { cards: 'fashion', pdp: 'fashion' } as any });
+    expect(configOf(fashion).showcase.cards).toBe('fashion');
+    expect(configOf(fashion).productPageStyle).toBe('fashion');
+    expect(readMasterState(fashion).variants?.pdp).toBe('fashion');
+    const back = refillMasterFiles(fashion, withVariants, { variants: { cards: 'compact', pdp: 'gallery-left' } as any });
+    expect(configOf(back).showcase.cards).toBe('compact');
+    expect(configOf(back).productPageStyle).toBeUndefined();
+  });
+});

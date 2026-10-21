@@ -390,7 +390,8 @@
         "stacked",
         "sticky-thumbs",
         "editorial",
-        "split-scroll"
+        "split-scroll",
+        "fashion"
       ],
       "pdpOrder": [
         "story-first",
@@ -428,7 +429,8 @@
       "cards": [
         "showcase",
         "compact",
-        "split"
+        "split",
+        "fashion"
       ],
       "offers": [
         "steps",
