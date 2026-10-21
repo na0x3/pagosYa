@@ -48,3 +48,8 @@ test('a sidebar link opens its section on the first tab, even after another sect
   assert.match(js, /const entry = button\.dataset\.navSection \? sectionEntry\(button\.dataset\.navSection\) : null;/);
   assert.match(js, /if \(entry\?\.marketingTab\) selectMarketingTab\(entry\.marketingTab\);/);
 });
+
+test('finance detail lives on Dinero; Inicio links to it', () => {
+  assert.match(html, /<section class="block" id="financesSection" data-dashboard-page="payouts">/);
+  assert.match(html, /<a class="overview-account-link" href="#dashboard-payouts" data-dashboard-view="payouts">Ver tu dinero<\/a>/);
+});
