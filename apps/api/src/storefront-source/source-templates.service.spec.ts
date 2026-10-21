@@ -153,6 +153,7 @@ describe('SourceTemplatesService', () => {
     const variants = JSON.parse(/export const variants[^=]*= (.*);/.exec(files.find(f => f.path === 'components/store-data.tsx').content)![1]);
     expect(variants.menu).toBe('dropdowns');
     expect(files.find(f => f.path === 'config.js').content).toContain('"header":{"menu":{"style":"dropdowns"}}');
+    expect(['bar', 'chips', 'sidebar']).toContain(JSON.parse(files.find(f => f.path === 'config.js').content.match(/= ([\s\S]*);\n$/)![1]).filterStyle);
   });
 
   it('a menu change is checked against the live catalog, so a category made after the build can be linked (final review 2026-10-21)', async () => {

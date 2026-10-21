@@ -19,6 +19,7 @@ import { brandDirectionSchema, creativePlanSchema, BRAND_RESPONSE_SCHEMA, CREATI
 import { sep5AuthorPrompt, sep5CardLook, sep5AuthoredPlan, sep5FilesSchema, sep5ProjectIsUsable, SEP5_RESPONSE_SCHEMA, SEP5_KEEP_HERO } from './design-engine/sep5-author';
 import { emptySourceHeaders, hasPlatformHeader, headerFact, instructionAsksHeaderAccount, SOURCE_PLATFORM_HEADER_EDIT, withHeaderAccountConfig, withSourceHeader } from './source-header';
 import { instructionAsksStoreMenu, readStoreMenu, withStoreMenuConfig } from './source-store-menu';
+import { instructionAsksFilterStyle, withFilterStyleConfig } from './source-filter-style';
 import { resolveStoreAction, savedPrimaryAction, withShowcaseContactSlot } from './source-primary-action';
 import { captureHeaderCovers, headerCoverProblems, introducedHeaderCovers, type HeaderCover } from './design-engine/header-clickable';
 import { brokenHeadingProblems, captureBrokenHeadings, introducedBrokenHeadings, type BrokenHeading } from './design-engine/phone-layout';
@@ -545,6 +546,8 @@ export class SourceGenerationService {
     // Dropdown menu spec 2026-10-21: a static store with the platform header gets the store menu (panel, default groups) when the
     // merchant's words ask for one, and loses it when they ask to remove it; written to config.js at save like header.account.
     const storeMenuAsk = !creative && !useNext && hasPlatformHeader(previousFiles) ? instructionAsksStoreMenu(merchantWords) : undefined;
+    // Sort & filter styles spec 2026-10-21: the catalogue's filter style, seeded by the store and changed by the merchant's words.
+    const filterStyleAsk = instructionAsksFilterStyle(merchantWords);
     // Spec 2026-10-15 free commerce surfaces: YAPI designs the six shopping parts on new stores and redesigns, one part on request.
     const surfacesOn = this.config.get<boolean>('app.yapiCommerceSurfaces') === true && !useNext && sitePurpose === 'shop' && !claude;
     const surfacesRequest = surfacesOn && !creative ? requestedSurfaceParts(dto.instruction) : [];
@@ -1518,7 +1521,8 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     const withHeaderAccount = <T extends { files: SourceProjectFileDto[] }>(input: T): T => headerAccountAsk === undefined ? input : { ...input, files: withHeaderAccountConfig(input.files, previousFiles, headerAccountAsk) };
     const withStoreMenu = <T extends { files: SourceProjectFileDto[] }>(input: T): T => storeMenuAsk === undefined ? input
       : { ...input, files: withStoreMenuConfig(input.files, previousFiles, storeMenuAsk ? (readStoreMenu(previousFiles) ?? { style: 'panel' }) : null) };
-    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}, controlsChoice: { use?: StoreControls } = {}) => withStoreMenu(withHeaderAccount(withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice), controlsChoice)));
+    const withFilterStyle = <T extends { files: SourceProjectFileDto[] }>(input: T): T => ({ ...input, files: withFilterStyleConfig(input.files, previousFiles, filterStyleAsk, storeId) });
+    const assembleSave = async (assembleSignal: AbortSignal = signal, lookChoice: LookChoice = {}, controlsChoice: { use?: StoreControls } = {}) => withFilterStyle(withStoreMenu(withHeaderAccount(withControls(await assembleSourceSave(saveContext, assembleSignal, lookChoice), controlsChoice))));
     // A chat request about the kit pages re-runs only the touch step (source-sep5-review.ts runChatKitTouch).
     await runChatKitTouch({ facts, live, touchCall, assembleSave, skip: surfacesRequest.length > 0 });
     // A chat request about the controls (spec 2026-10-14: «haz el carrito como una taza», «botones más redondos») runs the controls

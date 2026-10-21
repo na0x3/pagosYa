@@ -446,6 +446,11 @@
         "none",
         "panel",
         "dropdowns"
+      ],
+      "filters": [
+        "bar",
+        "chips",
+        "sidebar"
       ]
     },
     "sections": [

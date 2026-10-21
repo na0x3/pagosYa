@@ -3,7 +3,7 @@ import { uploadPath } from './source-product-photos';
  * authored source never contains merchant text; it imports `./store-data`, which this module writes with every value
  * JSON-encoded, so no store name or photo URL is ever pasted into JSX. */
 import type { MasterCopy } from '@pagosya/store-templates';
-import { MASTER_TEMPLATE_ID, masterCopy, masterDnaFonts, masterDnaLook, masterProductStyle, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
+import { MASTER_TEMPLATE_ID, masterCopy, masterDnaFonts, masterDnaLook, masterFilterStyle, masterProductStyle, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
 import { readFile } from 'node:fs/promises';
 import { templateDemoPhoto, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
 import { plantillaFillFromRead } from './source-plantilla-fill';
@@ -181,6 +181,8 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
     // Only a fashion store from before the menu (no record) gets the default: an explicit «none» is the merchant's removal.
     else if (!change.menu && variants.cards === 'fashion' && variants.menu === undefined) variants.menu = 'panel';
   }
+  // Sort & filter styles spec 2026-10-21: a fashion store from before the filters part gets the John Smedley chip rows.
+  if ((settings.variants?.filters ?? []).includes('chips') && variants.filters === undefined && variants.cards === 'fashion') variants.filters = 'chips';
   const out = withFashionTemplateParts(files.map(file => {
     if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [] });
     if (file.path === 'styles/globals.css') return { ...file, content: withMasterTheme(file.content, theme) };
@@ -195,7 +197,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
       const { menu: savedMenu, ...header } = config.header ?? {};
       const menu = menuIds.length ? menuFromVariant(variants.menu, change.menu ? absoluteTiles(change.menu.groups, apiUrl) : savedMenu?.groups, storeMenuContext(config.data ?? {}, files)) : savedMenu;
       const withHeader = config.header || menu ? { header: { ...header, ...(menu ? { menu } : {}) } } : {};
-      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(style ? { productPageStyle: style } : {}), ...withHeader, dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }) }, showcase: { ...(config.showcase ?? {}), ...masterShowcase(variants) } })};\n` };
+      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(style ? { productPageStyle: style } : {}), ...masterFilterStyle(variants), ...withHeader, dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }) }, showcase: { ...(config.showcase ?? {}), ...masterShowcase(variants) } })};\n` };
     }
     return file;
   }), variants);
@@ -275,6 +277,7 @@ export async function assembleTemplateRevision(input: {
     ...sourceCommerceRoutes([...authored, ...scaffold, ...kitFiles], {}), dna: { ...templateDna(manifest, input.storeId), ...(settings ? { ...masterDnaFonts(settings, look!), ...masterDnaLook(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) } : {}) },
     ...(settings ? { showcase: masterShowcase(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) } : {}),
     ...(settings ? masterProductStyle(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) : {}),
+    ...(settings ? masterFilterStyle(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) : {}),
     ...(menu ? { header: { menu } } : {}),
     productPage: 'product.html', checkoutPage: 'checkout.html', sitePurpose: 'shop', demo: false, slug: input.slug,
     apiBaseUrl: input.apiUrl.href.replace(/\/$/, ''), checkoutOrigin: input.checkoutOrigin, data,

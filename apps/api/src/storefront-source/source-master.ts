@@ -116,6 +116,12 @@ export function masterShowcase(variants: Partial<MasterVariants> | undefined): {
   return { ...(cards ? { cards } : {}), ...(offers ? { offers } : {}) };
 }
 
+/** Sort & filter styles spec 2026-10-21: the rolled filters variant, read by the kit from config.filterStyle. */
+export function masterFilterStyle(variants: Partial<MasterVariants> | undefined): { filterStyle?: 'bar' | 'chips' | 'sidebar' } {
+  const style = String(variants?.filters);
+  return style === 'bar' || style === 'chips' || style === 'sidebar' ? { filterStyle: style } : {};
+}
+
 /** Fashion look spec 2026-10-21: the fashion product page is a kit style, read by the kit from config.productPageStyle. */
 export function masterProductStyle(variants: Partial<MasterVariants> | undefined): { productPageStyle?: 'fashion' } {
   return variants?.pdp === 'fashion' ? { productPageStyle: 'fashion' } : {};

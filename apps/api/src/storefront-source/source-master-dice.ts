@@ -24,7 +24,7 @@ function rng(seed: string) {
 const pick = <T>(next: () => number, list: readonly T[]): T => list[Math.floor(next() * list.length)];
 
 /** Commerce displays fit any business; the fill call's exclusions skipped them every time (live 2026-10-19: offers «steps» never rolled). */
-const DICE_ONLY = new Set(['cards', 'offers', 'menu']);
+const DICE_ONLY = new Set(['cards', 'offers', 'menu', 'filters']);
 
 /** Fashion look spec 2026-10-21: the fashion card and product page belong to fashion stores only, and fashion stores always get them. */
 const FASHION_PARTS = ['cards', 'pdp'] as const;
@@ -70,12 +70,18 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   let last: { variants: MasterVariants; palette: string; fonts: string } | undefined;
   for (let attempt = 0; attempt < 20; attempt++) {
     const next = rng(`${input.seed}#${attempt}`);
-    const variants = Object.fromEntries(Object.keys(catalogue).filter(part => part !== 'menu').map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
+    const variants = Object.fromEntries(Object.keys(catalogue).filter(part => part !== 'menu' && part !== 'filters').map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
     if (input.character.kind === 'fashion') for (const part of FASHION_PARTS) if (catalogue[part]?.includes('fashion')) variants[part] = 'fashion';
     if (catalogue.menu?.length) {
       variants.menu = input.character.kind === 'fashion' ? 'panel'
         : (input.categoryCount ?? 0) < MENU_MIN_CATEGORIES ? 'none'
         : pick(rng(`${input.seed}#menu`), allowed('menu'));
+    }
+    // Sort & filter styles spec 2026-10-21: a fashion store with categories gets the John Smedley chip rows; others roll, from
+    // their own seed, so adding the part left every other roll as it was.
+    if (catalogue.filters?.length) {
+      variants.filters = input.character.kind === 'fashion' && (input.categoryCount ?? 0) >= 2 && catalogue.filters.includes('chips') ? 'chips'
+        : pick(rng(`${input.seed}#filters`), allowed('filters'));
     }
     last = { variants: { ...variants, sections } as MasterVariants, palette: pick(next, palettePool), fonts: pick(next, fonts) };
     if (!taken.has(`${last.variants.hero}|${last.palette}|${last.fonts}`)) return last;

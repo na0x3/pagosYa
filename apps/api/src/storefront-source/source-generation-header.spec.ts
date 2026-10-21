@@ -180,6 +180,27 @@ describe('a showcase store (spec 2026-10-13)', () => {
     expect(file('index.html')).not.toContain('data-pagosya-store-menu');
   });
 
+  // Sort & filter styles spec 2026-10-21: a static store's filter style is seeded at save and changed by the merchant's words.
+  it('a save seeds the filter style, a chat edit naming chips changes it, and later edits keep it', async () => {
+    await service.generate('m1', 's1', showcaseDto, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
+    const config = () => JSON.parse(file('config.js')!.match(/window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]);
+    expect(['bar', 'chips', 'sidebar']).toContain(config().filterStyle);
+    const first = projects.save.mock.calls[0][2];
+    projects.current.mockResolvedValue({ revision: 1, slug: 'deff' });
+    projects.version.mockResolvedValue({ revision: 1, snapshot: sourceProjectSnapshot({ ...first, revision: 1, label: 'deff' }) });
+    projects.save.mockClear();
+    fetchMock.mockImplementation(async () => answer({ label: 'Filtros', edits: [{ path: 'styles.css', search: 'body { color: #222; }', replacement: 'body { color: #1f1f1f; }' }], files: [] }));
+    await service.generate('m1', 's1', { ...showcaseDto, revision: 1, instruction: 'pon los filtros como chips' }, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
+    expect(config().filterStyle).toBe('chips');
+    const second = projects.save.mock.calls[0][2];
+    projects.current.mockResolvedValue({ revision: 2, slug: 'deff' });
+    projects.version.mockResolvedValue({ revision: 2, snapshot: sourceProjectSnapshot({ ...second, revision: 2, label: 'deff' }) });
+    projects.save.mockClear();
+    fetchMock.mockImplementation(async () => answer({ label: 'Color', edits: [{ path: 'styles.css', search: 'body { color: #1f1f1f; }', replacement: 'body { color: #222; }' }], files: [] }));
+    await service.generate('m1', 's1', { ...showcaseDto, revision: 2, instruction: 'cambia el color del texto' }, new SourceRequestBudget(25), [], jest.fn(async () => undefined));
+    expect(config().filterStyle).toBe('chips');
+  });
+
   it('falls back to the contact form when the setup answer is unusable', async () => {
     prisma.store.findFirst.mockResolvedValue({ slug: 'deff', onboarding: { version: 1, primaryAction: { kind: 'booking', value: 'http://inseguro.test' } } });
     await service.generate('m1', 's1', showcaseDto, new SourceRequestBudget(25), [], jest.fn(async () => undefined));

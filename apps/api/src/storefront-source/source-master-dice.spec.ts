@@ -156,3 +156,18 @@ describe('menu part', () => {
     expect(menuVariant(undefined, 'panel', false)).toBeUndefined();
   });
 });
+
+/** Spec 2026-10-21 sort & filter styles: the filters part. */
+describe('filters part', () => {
+  it('the catalogue has the filters part', () => expect(settings.variants?.filters).toEqual(['bar', 'chips', 'sidebar']));
+  it('fashion stores with 2+ categories get chips', () => {
+    for (const seed of 'abcdefgh') expect(roll(seed, { categoryCount: 2, character: { ...calm, kind: 'fashion' } }).variants.filters).toBe('chips');
+  });
+  it('other stores roll every style across seeds, from their own seed', () => {
+    expect(new Set(Array.from({ length: 40 }, (_, i) => roll(`s${i}`, { categoryCount: 3 }).variants.filters))).toEqual(new Set(['bar', 'chips', 'sidebar']));
+    const { filters: _f, ...variants } = settings.variants as Record<string, readonly string[]>;
+    const before = rollVariants({ seed: 'x', settings: { ...settings, variants } as typeof settings, character: calm, photoCount: 6, sections: [], recent: [], categoryCount: 3 });
+    const { filters: _rolled, ...rest } = roll('x', { categoryCount: 3 }).variants;
+    expect(rest).toEqual(before.variants);
+  });
+});

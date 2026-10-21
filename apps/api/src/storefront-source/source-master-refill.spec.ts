@@ -188,3 +188,19 @@ describe('menu on a master store', () => {
     expect(readStoreMenu(files)).toEqual({ style: 'panel' });
   });
 });
+
+/** Spec 2026-10-21 sort & filter styles: the filters variant writes config.js filterStyle. */
+describe('filter style on a master store', () => {
+  const filtersManifest = { ...manifest, master: { ...master, variants: { filters: ['bar', 'chips', 'sidebar'] } } } as unknown as TemplateManifest;
+  it('a filters choice writes filterStyle, and a later refill keeps it', () => {
+    const files = refillMasterFiles(storeFiles(), filtersManifest, { variants: { filters: 'chips' } as never });
+    expect(configOf(files).filterStyle).toBe('chips');
+    expect(configOf(refillMasterFiles(files, filtersManifest, { copy: { headline: 'Otra' } })).filterStyle).toBe('chips');
+  });
+  it('an older fashion store without a filters record gets the chip rows at its next refill', () => {
+    const both = { ...manifest, master: { ...master, variants: { filters: ['bar', 'chips', 'sidebar'], cards: ['showcase', 'fashion'] } } } as unknown as TemplateManifest;
+    expect(configOf(refillMasterFiles(storeFiles(), both, { variants: { cards: 'fashion' } as never })).filterStyle).toBe('chips');
+    expect(configOf(refillMasterFiles(storeFiles(), both, { copy: { headline: 'Otra' } })).filterStyle).toBeUndefined();
+  });
+});
+
