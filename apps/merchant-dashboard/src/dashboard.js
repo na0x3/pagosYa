@@ -174,6 +174,18 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
     apiBase: () => apiBaseEl.value,
   });
   // Crecimiento (G2): each insight opens the screen that does the work, already filled in; nothing is applied from there.
+  /** The product guide open on one product; false when it is no longer in the catalog. */
+  async function editProductById(productId, step) {
+    let link = lastPaymentLinks.find((candidate) => candidate.id === productId);
+    if (!link && currentStoreId) {
+      try { link = (await api(`/stores/${currentStoreId}/payment_links`)).find((candidate) => candidate.id === productId); } catch { link = null; }
+    }
+    if (!link) return false;
+    history.pushState(null, "", "#dashboard-products");
+    setDashboardView("products");
+    beginPaymentLinkEdit(link, step);
+    return true;
+  }
   const growth = mountGrowthPanel({
     api,
     storeId: () => currentStoreId,
@@ -191,17 +203,7 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
       setDashboardView("workspace");
       deliverStudioAction();
     },
-    editProduct: async (productId, step) => {
-      let link = lastPaymentLinks.find((candidate) => candidate.id === productId);
-      if (!link && currentStoreId) {
-        try { link = (await api(`/stores/${currentStoreId}/payment_links`)).find((candidate) => candidate.id === productId); } catch { link = null; }
-      }
-      if (!link) return false;
-      history.pushState(null, "", "#dashboard-products");
-      setDashboardView("products");
-      beginPaymentLinkEdit(link, step);
-      return true;
-    },
+    editProduct: (productId, step) => editProductById(productId, step),
   });
   // Crecer › Carritos abandonados: who left without paying and how to reach them; read-only.
   const abandonedCarts = mountAbandonedCartsPanel({
@@ -548,6 +550,12 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
     }
     if (event.data?.type === "pagosya:session-expired") { sessionToken = ""; showLoggedOut(); return; }
     if (event.data?.type === "pagosya:workspace" && ["stores", "products", "charge-links", "marketing", "integrations", "experiments", "store-settings"].includes(event.data.view)) {
+      // A product name or price double-clicked in the Studio preview (spec 2026-10-20 §6): that product's editor.
+      if (event.data.view === "products" && typeof event.data.productId === "string" && event.data.productId.length <= 64) {
+        const step = ["description", "price"].includes(event.data.step) ? event.data.step : null;
+        void editProductById(event.data.productId, step).then((found) => { if (!found) { history.pushState(null, "", "#dashboard-products"); setDashboardView("products"); } });
+        return;
+      }
       if (event.data.view === "marketing" && ["program", "emails", "templates", "flows"].includes(event.data.tab)) selectMarketingTab(event.data.tab);
       history.pushState(null, "", `#dashboard-${event.data.view}`);
       setDashboardView(event.data.view);
@@ -711,6 +719,7 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
 
   let onboardingEnabled = false;
   let onboardingChecked = false;
+  let plantillasOn = false;
   let onboardingResumable = null;
   // resume: the unfinished store to continue, or null for a fresh run that creates a new store at step 1.
   function openWalkthrough(resume = null) {
@@ -727,7 +736,8 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
     const root = document.getElementById("onboardingWalkthrough");
     root.hidden = false;
     const close = () => { root._wtAbort?.abort(); root.hidden = true; root.innerHTML = ""; };
-    showWalkthroughMode(root, { onGuided: () => openWalkthrough(null), onChat: () => { close(); openCreateStoreDialog(); }, onExit: close });
+    showWalkthroughMode(root, { onGuided: () => openWalkthrough(null), onChat: () => { close(); openCreateStoreDialog(); },
+      ...(plantillasOn ? { onTemplates: () => { close(); openCreateStoreDialog("templates"); } } : {}), onExit: close });
   }
   // "Crear otra tienda" with a half-built walkthrough store: offer to continue it before starting a new one.
   async function offerUnfinishedOrFresh() {
@@ -759,7 +769,10 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
   async function checkOnboardingOnce() {
     if (onboardingChecked) return;
     onboardingChecked = true;
-    const onboarding = await api("/stores/onboarding").catch(() => ({ enabled: false, store: null }));
+    const [onboarding, templateSettings] = await Promise.all([api("/stores/onboarding").catch(() => ({ enabled: false, store: null })), api("/store-templates/settings").catch(() => ({ plantillas: false }))]);
+    // Spec 2026-10-20 Plantillas fill: the Plantillas menu and «Elegir una plantilla» come back with the API flag.
+    plantillasOn = templateSettings?.plantillas === true;
+    document.getElementById("dashboardTemplatesNav").hidden = !plantillasOn;
     onboardingEnabled = Boolean(onboarding.enabled);
     onboardingResumable = onboarding.store || null;
     const entry = walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, resumable: Boolean(onboardingResumable), intent: "boot" });
@@ -771,7 +784,10 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
     if (walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, intent: "create" }) === "fresh") return void offerUnfinishedOrFresh();
     openCreateStoreDialog();
   }
-  function openCreateStoreDialog() {
+  // Where a new store opens: the design workspace, or Plantillas for «Elegir una plantilla».
+  let createThen = "workspace";
+  function openCreateStoreDialog(then = "workspace") {
+    createThen = then;
     document.getElementById("createStoreTitle").textContent = lastStores.length ? "Crea otra tienda" : "Crea tu primera tienda";
     document.getElementById("createStoreError").hidden = true;
     document.getElementById("createStoreDialog").showModal();
@@ -795,8 +811,9 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
       document.getElementById("createStoreDialog").close();
       selectStore(store.id);
       await refresh();
-      history.pushState(null, "", "#dashboard-workspace");
-      setDashboardView("workspace");
+      const then = createThen; createThen = "workspace";
+      history.pushState(null, "", `#dashboard-${then}`);
+      setDashboardView(then);
       // refresh() clears the error line, so a logo that did not upload is reported once the new store is showing.
       if (warning) errorEl.textContent = warning;
     } catch (err) {

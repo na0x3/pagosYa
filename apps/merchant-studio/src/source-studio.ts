@@ -9,7 +9,8 @@ import { createDirectEditor } from './source-direct-editor';
 import { bocetoRevealY, createBocetoPanel } from './source-boceto';
 import { closeBocetoMenu } from './boceto-menu';
 import { renderInspiration } from './source-inspiration';
-import { renderTemplateChoices, type TemplateChoice } from './source-templates';
+import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
+import { matchInlineField } from './source-inline-text';
 import { createProductForm } from './source-create-product';
 import { renderBuildProgress, type BuildProgress } from './source-build-progress';
 import { apiHeroUrls, fitStyleFrames, keepStylePolling, renderStylePicker, type StyleProposalView } from './source-style-pick';
@@ -251,6 +252,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       return;
     }
     if (visualEditing && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:visual-select') { directEditor.select(event.data.value, event.data.kind); return; }
+    // Spec 2026-10-20 §6: a text double-clicked and changed in the preview, saved through the direct-edit field that holds it.
+    if (plantillasOn && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:inline-text' && typeof event.data.before === 'string' && typeof event.data.after === 'string') { void saveInlineText(event.data.before.slice(0, 2000), event.data.after.slice(0, 2000)); return; }
+    if (plantillasOn && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:inline-product' && typeof event.data.productId === 'string' && event.data.productId.length <= 64) { openProductEditor(event.data.productId, event.data.field === 'price' ? 'price' : 'description'); return; }
     const picked = receivePreviewSelection(event, previewFrame);
     if (picked) { takeSelection(picked); return; }
     const next = receivePreviewNavigation(event, previewFrame, version?.snapshot);
@@ -271,7 +275,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const selectedPage = page;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing }); if (!visualEditing) disposeAccountPreview = mountSourceAccountDemo(frame); }
+      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing, inlineText: plantillasOn && !visualEditing && !bocetoOpen && !historical() }); if (!visualEditing) disposeAccountPreview = mountSourceAccountDemo(frame); }
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }
@@ -282,6 +286,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const transitionBuild = (event: SourceBuildEvent) => { buildSession = sourceBuildTransition(buildSession, event); };
   const building = () => buildIsActive(buildSession);
   let busy = false, loading = true, error = '', toast = '', instruction = '';
+  // Spec 2026-10-20 Plantillas fill: the Plantillas button and double-click text editing, asked once from the API.
+  let plantillasOn = false, plantillasAsked = false;
   // The agent's latest clean draft while it builds (sub-project 3): the store appears in the preview as YAPI works.
   let liveDraft: { at: number; interrupted?: boolean; snapshot: SourceVersion['snapshot'] } | null = null;
   let showSavedRevision = false;
@@ -397,8 +403,31 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       if (toast) toastTimer = window.setTimeout(() => { toast = ''; app.querySelector('.toast')?.remove(); }, 4000);
     }
   }
+  /** The double-clicked text's words before and after: the first text field showing them takes the change, as a new revision. */
+  async function saveInlineText(before: string, after: string) {
+    const revert = () => { try { app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')?.contentWindow?.postMessage({ type: 'pagosya:inline-text-revert' }, '*'); } catch { /* frame is gone */ } };
+    const shown = version;
+    if (!shown || busy || dirty() || historical() || visualEditPending || !storeId) { revert(); toast = 'Espera a que termine lo que está en curso para editar el texto.'; render(); return; }
+    if (!after.trim()) { revert(); toast = 'El texto no puede quedar vacío.'; render(); return; }
+    visualEditPending = true;
+    try {
+      const field = matchInlineField((await api.sourceVisualFields(storeId, shown.revision)).fields, before);
+      if (!field) { revert(); toast = 'Ese texto no se puede cambiar aquí. Pídeselo a YAPI en el chat.'; return; }
+      await api.editSourceVisual(storeId, { revision: shown.revision, fieldId: field.id, value: after });
+      await load(); toast = 'Texto guardado.';
+    } catch (cause) { revert(); toast = cause instanceof Error ? cause.message : 'No pudimos guardar el texto.'; }
+    finally { visualEditPending = false; render(); }
+  }
+
+  /** A product's name or price double-clicked in the preview: its editor, where the product is changed everywhere. */
+  function openProductEditor(productId: string, step: 'description' | 'price') {
+    if (embedded) notifyParent({ type: 'pagosya:workspace', view: 'products', productId, step });
+    else location.assign(`${import.meta.env.VITE_DASHBOARD_ORIGIN || 'http://localhost:4323'}#dashboard-products`);
+  }
+
   async function load(_revision?: number, waitForChecks = false) {
     liveDraft = null; showSavedRevision = false;
+    if (!plantillasAsked) { plantillasAsked = true; void api.templateSettings().then(settings => { if (settings.plantillas === true) { plantillasOn = true; render(); } }, () => undefined); }
     const [project, conversation, catalog] = await Promise.all([api.sourceState(storeId), api.sourceConversation(storeId), api.sourceCatalog(storeId).catch(() => null)]);
     liveCatalog = catalog;
     state = project; messages = conversation.messages; setup = conversation.setup || null;
@@ -812,7 +841,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   function storeTools(locked: boolean) {
     const unavailable = disabled(locked || !storeId);
     return `<details class="source-store-menu source-disclosure"><summary>Mi tienda</summary><nav class="source-disclosure-panel" aria-label="Herramientas de mi tienda">
-      <section><h2>Diseño y contenido</h2><button id="source-brand" ${unavailable}>Identidad de mi marca</button><button id="source-content" ${unavailable}>Contenido y ofertas</button><button id="source-pages" ${disabled(locked || !storeId || !version)}>Páginas de mi tienda</button><button data-start-photo ${disabled(locked || !storeId || historical() || assets.length > 0)}>Diseñar desde una foto</button></section>
+      <section><h2>Diseño y contenido</h2>${plantillasOn ? `<button data-open-templates ${disabled(locked || !storeId || historical() || dirty())}>Plantillas</button>` : ''}<button id="source-brand" ${unavailable}>Identidad de mi marca</button><button id="source-content" ${unavailable}>Contenido y ofertas</button><button id="source-pages" ${disabled(locked || !storeId || !version)}>Páginas de mi tienda</button><button data-start-photo ${disabled(locked || !storeId || historical() || assets.length > 0)}>Diseñar desde una foto</button></section>
       <section><h2>Marketing</h2><button id="source-retention" ${unavailable}>Correos, Comeback y promociones</button>${embedded ? `<button data-business-view="integrations" ${unavailable}>Integraciones</button><button data-business-view="experiments" ${unavailable}>Pruebas A/B</button>` : ''}</section>
       <section><h2>Configuración</h2><button id="source-shipping" ${unavailable}>Envíos y retiro</button><button id="source-domain" ${unavailable}>Tu propio dominio</button><button id="source-arrangement" ${unavailable}>Cómo se ven tus productos</button><button id="source-recommendations" ${unavailable}>Recomendaciones</button></section>
       <section><h2>Productos</h2><button id="source-digital" ${unavailable}>Archivos digitales</button></section>
@@ -1109,6 +1138,10 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('#source-content')?.addEventListener('click', () => { if (!busy && storeId) { void openCommerceContent(api, storeId); } });
     app.querySelector('#source-shipping')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'shipping'}); else void openShippingSettings(api, storeId, () => void refreshCatalog()); } });
     app.querySelector('#source-domain')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'domain'}); else void openDomainShop(api, storeId, () => void refreshCatalog()); } });
+    app.querySelectorAll('[data-open-templates]').forEach(button => button.addEventListener('click', () => {
+      if (busy || !storeId || dirty() || historical() || !plantillasOn) return;
+      void openTemplateGallery(api, { storeId, revision: state.revision, hasSite: Boolean(version) && !templateUntouched(), fill: true, applied: async revision => { mode = 'preview'; await load(revision, true); toast = 'Plantilla lista con tus textos. Doble clic en cualquier texto para cambiarlo.'; render(); } });
+    }));
     app.querySelector('#source-recommendations')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openRecommendations(api, storeId); } });
     app.querySelector('#source-arrangement')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openCatalogArrangement(api, storeId, () => void refreshCatalog()); } });
     app.querySelector('#source-brand')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'brand'}); else void openBrandProfile(api, storeId); } });

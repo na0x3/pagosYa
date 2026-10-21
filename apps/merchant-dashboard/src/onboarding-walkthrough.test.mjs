@@ -317,6 +317,18 @@ test('mode screen: a new store starts guided (the walkthrough) or by talking to 
   assert.deepEqual(log, ['guided', 'chat', 'exit']);
 });
 
+// Spec 2026-10-20 Plantillas fill: «Elegir una plantilla» is a third card, only when the dashboard passes onTemplates.
+test('mode screen: «Elegir una plantilla» shows only with onTemplates and calls it', () => {
+  assert.doesNotMatch(walkthroughModeView(), /data-wt-templates/);
+  assert.match(walkthroughModeView({ templates: true }), /data-wt-templates><strong>Elegir una plantilla<\/strong>/);
+  let handler; const root = { innerHTML: '', addEventListener: (_t, fn) => { handler = fn; } };
+  const log = [];
+  showWalkthroughMode(root, { onGuided: () => {}, onChat: () => {}, onTemplates: () => log.push('templates') });
+  assert.match(root.innerHTML, /Elegir una plantilla/);
+  handler({ target: { closest: sel => (sel === '[data-wt-templates]' ? {} : null) } });
+  assert.deepEqual(log, ['templates']);
+});
+
 test('dashboard wiring: every fresh start asks guided or YAPI first; YAPI opens the short create dialog', () => {
   const src = readFileSync(new URL('./dashboard.js', import.meta.url), 'utf8');
   assert.match(src, /showWalkthroughMode\(root, \{ onGuided: \(\) => openWalkthrough\(null\), onChat:/);

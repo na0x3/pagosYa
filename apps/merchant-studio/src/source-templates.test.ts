@@ -165,3 +165,19 @@ describe('template choices in a YAPI message', () => {
     expect([...root(true).querySelectorAll<HTMLButtonElement>('[data-template-choice]')].every(card => card.disabled)).toBe(true);
   });
 });
+
+// Spec 2026-10-20 Plantillas fill §4: YAPI writes the words, so a card says «Usar» and asks about the business first.
+describe('Plantillas fill', () => {
+  it('cards say Usar, and the asked template opens «Cuéntanos de tu negocio» with what was typed kept', () => {
+    expect(render({ fill: true }).querySelector('[data-template-edit="aurora"]')?.textContent).toBe('Usar');
+    const root = render({ fill: true, asking: 'aurora', about: 'Vendemos <cremas>' });
+    const dialog = root.querySelector('.tpl-about[role="dialog"]');
+    expect(dialog?.querySelector('h3')?.textContent).toBe('Cuéntanos de tu negocio');
+    expect(root.querySelector<HTMLTextAreaElement>('[data-template-about]')?.value).toBe('Vendemos <cremas>');
+    expect(root.querySelector('[data-template-about-go]')?.textContent).toBe('Usar Aurora');
+  });
+  it('without the flag nothing asks, and a busy gallery hides the step', () => {
+    expect(render().querySelector('[data-template-edit="aurora"]')?.textContent).toBe('Editar');
+    expect(render({ asking: 'aurora', fill: true, busy: true }).querySelector('.tpl-about')).toBeNull();
+  });
+});

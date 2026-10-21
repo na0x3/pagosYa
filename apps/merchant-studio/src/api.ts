@@ -466,6 +466,16 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/templates/${encodeURIComponent(templateId)}/preview`);
   }
 
+  /** Spec 2026-10-20 Plantillas fill: whether curated Plantillas, «Elegir una plantilla» and double-click editing are on. */
+  templateSettings(): Promise<{ plantillas: boolean }> {
+    return this.request(`/store-templates/settings`);
+  }
+
+  /** A curated Plantilla filled with this business by one YAPI call (spec 2026-10-20 §4). */
+  applyTemplateFilled(storeId: string, templateId: string, input: { revision: number; about?: string; assetUrls?: string[] }): Promise<SourceRevision & { filled?: boolean }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/templates/${encodeURIComponent(templateId)}/apply-filled`, { method: "POST", body: JSON.stringify(input) });
+  }
+
   applyTemplate(storeId: string, templateId: string, revision: number): Promise<SourceRevision & { adapted?: boolean }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/templates/${encodeURIComponent(templateId)}`, { method: "POST", body: JSON.stringify({ revision }) });
   }

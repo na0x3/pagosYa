@@ -17,7 +17,9 @@ export const templateCategories = (templates: TemplateSummary[]) => [...new Set(
 
 /** `hasSite` means "say the current design stays in the history": false while the store is untouched.
  * `confirm` is the card asking before Editar replaces that design; `applying` is the card being applied. */
-export type GalleryState = { category: string; selected: string; busy: boolean; error: string; hasSite: boolean; previewBase: string; width?: 'desktop' | 'phone'; adapting?: boolean; query?: string; confirm?: string; applying?: string };
+export type GalleryState = { category: string; selected: string; busy: boolean; error: string; hasSite: boolean; previewBase: string; width?: 'desktop' | 'phone'; adapting?: boolean; query?: string; confirm?: string; applying?: string;
+  /** Plantillas fill (spec 2026-10-20): YAPI writes the template's words for the business; `asking` is the template whose «Cuéntanos de tu negocio» is open. */
+  fill?: boolean; asking?: string; about?: string };
 
 const fold = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -43,13 +45,26 @@ export function renderTemplateGallery(templates: TemplateSummary[], state: Galle
   const chosen = templates.find(template => template.id === state.selected);
   const count = (category: string) => templates.filter(template => !category || template.category === category).length;
   const chip = (value: string, text: string) => `<button type="button" class="tpl-chip" data-template-category="${escape(value)}" aria-pressed="${state.category === value}" ${off}>${escape(text)} <span>${count(value)}</span></button>`;
-  if (chosen) return renderTemplatePreview(chosen, state);
-  return `<header class="tpl-head"><h2>Elige la plantilla que te encante</h2><p>Tiendas completas con tus productos. Mira cómo queda la tuya antes de elegir.</p>
+  const asked = templates.find(template => template.id === state.asking);
+  const ask = asked && !state.busy ? renderAboutStep(asked, state) : '';
+  if (chosen) return ask + renderTemplatePreview(chosen, state);
+  return `${ask}<header class="tpl-head"><h2>Elige la plantilla que te encante</h2><p>Tiendas completas con tus productos. Mira cómo queda la tuya antes de elegir.</p>
       <label class="tpl-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="search" data-template-search placeholder="Busca entre las plantillas…" aria-label="Buscar plantillas" autocomplete="off" value="${escape(state.query || '')}"></label>
       <button type="button" class="tpl-close" data-template-close aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
     ${state.error ? `<p class="tpl-error" role="alert">${escape(state.error)}</p>` : ''}
     <nav class="tpl-chips" aria-label="Categorías">${chip('', 'Todas')}${templateCategories(templates).map(category => chip(category, label(category))).join('')}</nav>
     <div data-template-results>${renderTemplateCards(templates, state)}</div>`;
+}
+
+/** Spec 2026-10-20 §4: before a curated Plantilla is filled, the merchant may say what the business is in their words. */
+export function renderAboutStep(template: TemplateSummary, state: GalleryState): string {
+  const name = escape(template.name);
+  return `<div class="tpl-about" role="dialog" aria-modal="true" aria-labelledby="tpl-about-title"><form class="tpl-about__card" data-template-about-form>
+      <h3 id="tpl-about-title">Cuéntanos de tu negocio</h3>
+      <p>YAPI escribirá todos los textos de ${name} para tu tienda: títulos, botones, preguntas y más. Tus productos, precios y fotos ya están.</p>
+      <textarea data-template-about maxlength="2000" rows="4" aria-label="Tu negocio en pocas palabras" placeholder="Ej.: Vendemos cortes de res madurados en Santa Cruz, con entrega a domicilio.">${escape(state.about || '')}</textarea>
+      <div class="tpl-about__actions"><button type="submit" class="tpl-btn tpl-btn--dark" data-template-about-go>Usar ${name}</button><button type="button" class="tpl-btn" data-template-about-cancel>Cancelar</button></div>
+    </form></div>`;
 }
 
 /** The count and the cards; the search re-renders only this part so the field keeps its focus. */
@@ -69,7 +84,7 @@ export function renderTemplateCards(templates: TemplateSummary[], state: Gallery
         <span class="tpl-card__chrome" aria-hidden="true"><i></i><i></i><i></i></span>
         <img class="tpl-card__desk" src="${escape(state.previewBase)}plantillas/${id}.webp" alt="" loading="lazy">
         <div class="tpl-card__actions">
-          <button type="button" class="tpl-btn tpl-btn--dark" data-template-edit="${id}" ${off}>${state.applying === template.id ? 'Aplicando…' : 'Editar'}</button>
+          <button type="button" class="tpl-btn tpl-btn--dark" data-template-edit="${id}" ${off}>${state.applying === template.id ? (state.fill ? 'Escribiendo…' : 'Aplicando…') : state.fill ? 'Usar' : 'Editar'}</button>
           <button type="button" class="tpl-btn" data-template-view="${id}" ${off}>Ver</button>
           <button type="button" class="tpl-card__info" data-template-pick="${id}" aria-label="Info de ${name}" ${off}>Info</button>
         </div>
@@ -90,11 +105,11 @@ export function renderTemplatePreview(template: TemplateSummary, state: GalleryS
       <div class="tpl-preview-title"><strong>${escape(template.name)}</strong><small>${escape(label(template.category))}</small></div>
       <div class="tpl-preview-nav"><button type="button" data-template-prev aria-label="Plantilla anterior" ${off}>‹</button><button type="button" data-template-next aria-label="Plantilla siguiente" ${off}>›</button></div>
       <div class="tpl-width" role="group" aria-label="Tamaño de la vista previa">${size('desktop', 'Escritorio')}${size('phone', 'Celular')}</div>
-      <button type="button" class="button button--publish" data-template-apply ${off}>${state.busy ? (state.adapting ? 'Aplicando y adaptando…' : 'Aplicando…') : `Usar ${escape(template.name)}`}</button>
+      <button type="button" class="button button--publish" data-template-apply ${off}>${state.busy ? (state.fill ? 'YAPI escribe tus textos…' : state.adapting ? 'Aplicando y adaptando…' : 'Aplicando…') : `Usar ${escape(template.name)}`}</button>
       <button type="button" class="tpl-close" data-template-close aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </header>
     ${state.error ? `<p class="tpl-error" role="alert">${escape(state.error)}</p>` : ''}
-    <p class="tpl-preview-note" data-template-confirm>Así se verá tu tienda con tus productos, precios y fotos.${state.hasSite ? ' Tu diseño actual queda guardado en el historial y puedes volver a él.' : ''}</p>
+    <p class="tpl-preview-note" data-template-confirm>Así se verá tu tienda con tus productos, precios y fotos.${state.fill ? ' YAPI escribirá los textos para tu negocio.' : ''}${state.hasSite ? ' Tu diseño actual queda guardado en el historial y puedes volver a él.' : ''}</p>
     <div class="tpl-preview tpl-preview--${width}"><iframe class="tpl-preview__frame" title="Vista previa de ${escape(template.name)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><p class="tpl-preview__loading" data-template-loading role="status">${LOADER_STAR}<span>Preparando la vista previa con tus productos…</span></p></div>`;
 }
 
@@ -110,12 +125,12 @@ export function renderTemplateChoices(choices: TemplateChoice[], previewBase: st
 
 /** Opens the gallery; `applied` receives the new revision once the template is saved. */
 /** Opens the gallery as a dialog, or renders it inside `host` as a page (the dashboard's Plantillas tab). */
-export async function openTemplateGallery(api: MerchantStudioApi, options: { storeId: string; revision: number; hasSite: boolean; applied: (revision: number) => Promise<void>; host?: HTMLElement; focus?: (open: boolean) => void }) {
+export async function openTemplateGallery(api: MerchantStudioApi, options: { storeId: string; revision: number; hasSite: boolean; applied: (revision: number) => Promise<void>; host?: HTMLElement; focus?: (open: boolean) => void; fill?: boolean }) {
   const pageMode = Boolean(options.host);
   const dialog: HTMLElement = document.createElement(pageMode ? 'div' : 'dialog'); dialog.className = pageMode ? 'tpl-dialog tpl-page' : 'tpl-dialog'; dialog.setAttribute('aria-label', 'Plantillas');
   let revision = options.revision;
   const close = () => { if (!pageMode) (dialog as HTMLDialogElement).close(); };
-  const state: GalleryState = { category: '', selected: '', busy: false, error: '', hasSite: options.hasSite, previewBase: import.meta.env.BASE_URL, width: 'desktop', query: '' };
+  const state: GalleryState = { category: '', selected: '', busy: false, error: '', hasSite: options.hasSite, previewBase: import.meta.env.BASE_URL, width: 'desktop', query: '', fill: options.fill === true };
   const snapshots = new Map<string, Promise<SourceSnapshot>>();
   const loadImages = createPreviewImageLoader(API_BASE_URL);
   let templates: TemplateSummary[] = [];
@@ -175,6 +190,11 @@ export async function openTemplateGallery(api: MerchantStudioApi, options: { sto
       dialog.querySelectorAll('[data-template-width]').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
     }));
     dialog.querySelector('[data-template-apply]')?.addEventListener('click', () => void apply(state.selected));
+    const about = dialog.querySelector<HTMLTextAreaElement>('[data-template-about]');
+    about?.addEventListener('input', () => { state.about = about.value; });
+    dialog.querySelector('[data-template-about-form]')?.addEventListener('submit', event => { event.preventDefault(); void apply(state.asking || '', about?.value.trim() ?? ''); });
+    dialog.querySelector('[data-template-about-cancel]')?.addEventListener('click', () => { state.asking = ''; render(); });
+    about?.focus();
     void fillPreview();
   }
   function bindCards() {
@@ -200,13 +220,16 @@ export async function openTemplateGallery(api: MerchantStudioApi, options: { sto
     if (event.key === 'ArrowLeft') { event.preventDefault(); step(-1); }
     if (event.key === 'ArrowRight') { event.preventDefault(); step(1); }
   });
-  async function apply(id: string) {
+  async function apply(id: string, about?: string) {
     if (state.busy || !id) return;
+    // Plantillas fill: the merchant may first say what the business is; YAPI writes every text from it.
+    if (state.fill && about === undefined) { state.asking = id; state.confirm = ''; state.error = ''; render(); return; }
+    state.asking = '';
     state.busy = true; state.adapting = false; state.error = ''; state.confirm = ''; state.applying = id; render();
     // A YAPI-flow store is adapted after the template is applied, which takes longer: say so.
     const slow = window.setTimeout(() => { if (state.busy) { state.adapting = true; const button = dialog.querySelector('[data-template-apply]'); if (button) button.textContent = 'Aplicando y adaptando…'; } }, 2000);
     try {
-      const saved = await api.applyTemplate(options.storeId, id, revision);
+      const saved = state.fill ? await api.applyTemplateFilled(options.storeId, id, { revision, ...(about ? { about } : {}) }) : await api.applyTemplate(options.storeId, id, revision);
       revision = saved.revision;
       close();
       if (pageMode) { state.busy = false; state.adapting = false; state.applying = ''; state.selected = ''; state.hasSite = false; render(); }

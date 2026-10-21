@@ -183,25 +183,28 @@ export function showWalkthroughChoice(root, { store, onContinue, onFresh, onExit
 
 // A new store starts guided (the walkthrough's questions) or by talking to YAPI directly: the short create dialog, then
 // the workspace with YAPI's chat, where the merchant describes the store in their own words (owner 2026-10-18).
-export function walkthroughModeView() {
+// Spec 2026-10-20 Plantillas fill: with the flag, a third way — a ready-made design whose words YAPI writes.
+export function walkthroughModeView({ templates = false } = {}) {
   return `<div class="wt" data-wt-mode>
     <button class="wt-ghost wt-exit" type="button" data-wt-exit>Salir</button>
     <h1 class="wt-title">¿Cómo quieres crear tu tienda?</h1>
     <div class="wt-modes">
       <button class="wt-mode" type="button" data-wt-guided><strong>Paso a paso</strong><span>Te hacemos unas preguntas cortas sobre tu negocio, tus fotos y tus productos, y YAPI arma la tienda con eso.</span></button>
       <button class="wt-mode" type="button" data-wt-chat><strong>Hablar con YAPI</strong><span>Pones el nombre y le cuentas a YAPI con tus palabras y tus fotos cómo la imaginas.</span></button>
+      ${templates ? '<button class="wt-mode" type="button" data-wt-templates><strong>Elegir una plantilla</strong><span>Eliges una tienda ya diseñada, la ves con tus productos y YAPI escribe sus textos para tu negocio.</span></button>' : ''}
     </div>
   </div>`;
 }
 
-export function showWalkthroughMode(root, { onGuided, onChat, onExit }) {
+export function showWalkthroughMode(root, { onGuided, onChat, onTemplates, onExit }) {
   root._wtAbort?.abort();
   const abort = new AbortController();
   root._wtAbort = abort;
-  root.innerHTML = walkthroughModeView();
+  root.innerHTML = walkthroughModeView({ templates: typeof onTemplates === 'function' });
   root.addEventListener('click', event => {
     if (event.target.closest('[data-wt-guided]')) onGuided();
     else if (event.target.closest('[data-wt-chat]')) onChat();
+    else if (event.target.closest('[data-wt-templates]')) onTemplates?.();
     else if (event.target.closest('[data-wt-exit]')) onExit?.();
   }, { signal: abort.signal });
 }

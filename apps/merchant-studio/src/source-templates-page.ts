@@ -18,7 +18,8 @@ export async function mountTemplatesPage(app: HTMLElement) {
     const brief = revision ? (await api.sourceVersion(storeId, revision)).snapshot.brief : undefined;
     // Untouched: the current design is the one a template produced, so it can be replaced without the history note.
     const untouched = Boolean(brief?.templateId && brief.templateRevision === revision);
-    await openTemplateGallery(api, { storeId, revision, hasSite: revision > 0 && !untouched, host: app,
+    const fill = await api.templateSettings().then(settings => settings.plantillas === true, () => false);
+    await openTemplateGallery(api, { storeId, revision, hasSite: revision > 0 && !untouched, host: app, fill,
       focus: open => { document.documentElement.classList.toggle('tpl-focus', open); if (open) window.scrollTo(0, 0); post({ type: 'pagosya:template-focus', open }); },
       applied: async saved => { post({ type: 'pagosya:template-applied', revision: saved }); } });
   } catch (error) {
