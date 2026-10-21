@@ -29,3 +29,51 @@ test('shell: floating glass sidebar and top bar, a roomy column, glass pills, me
   assert.match(s, /body\.is-logged-in dialog \{[^}]*backdrop-filter: var\(--pm-blur\)/);
   assert.match(s, /@supports not \(\(backdrop-filter: blur\(1px\)\) or \(-webkit-backdrop-filter: blur\(1px\)\)\)/);
 });
+
+test('controls and surfaces: pill buttons, soft 44px fields, roomy cards, rows and badges', () => {
+  const s = css();
+  assert.match(s, /body\.is-logged-in :is\(\.panel, \.card\) \{[^}]*border-radius: 20px;[^}]*padding: 28px;/);
+  assert.match(s, /body\.is-logged-in button:is\(\.primary, \.secondary, \.ghost\), body\.is-logged-in \.button-like \{[^}]*min-height: 40px;[^}]*border-radius: 999px;/);
+  assert.match(s, /select, textarea\) \{[^}]*min-height: 44px;[^}]*border-radius: 14px;/);
+  assert.match(s, /body\.is-logged-in :is\(th, td\) \{[^}]*padding: 16px 14px;/);
+  assert.match(s, /body\.is-logged-in \.badge \{[^}]*border-radius: 999px;/);
+});
+
+test('the old marketing tab bar stays hidden, YAPI keeps its yellow, and the settings note names Clientes', () => {
+  const s = css();
+  assert.match(s, /body\.is-logged-in \.marketing-tabs\[hidden\] \{ display: none !important; \}/);
+  assert.match(s, /body\.is-logged-in \.workspace-yapi button\.primary \{ background: var\(--pg-brand\);/);
+  assert.match(html, /Tus correos están en <a href="#dashboard-marketing" data-open-marketing-emails>Clientes › Correos<\/a>\./);
+});
+
+test('an empty pill bar stays hidden and a section head wraps instead of squeezing its title', () => {
+  const s = css();
+  assert.match(s, /body\.is-logged-in \.section-tabs\[hidden\] \{ display: none; \}/);
+  assert.match(s, /body\.is-logged-in \.panel \.section-head \{ flex-wrap: wrap; row-gap: 16px; \}/);
+});
+
+test('a section head keeps title and fold button on one line and gives its tools the full row below', () => {
+  const s = css();
+  assert.match(s, /body\.is-logged-in \.panel \.section-head > \.section-toggle \{ order: 2; \}/);
+  assert.match(s, /body\.is-logged-in \.panel \.section-head > :not\(:first-child\):not\(\.section-toggle\) \{ order: 3; flex-basis: 100%; \}/);
+});
+
+test('the phone icon rail keeps hiding labels, and the figures fit two columns on a phone', () => {
+  const s = css();
+  const base = s.match(/body\.is-logged-in \.dashboard-nav-button \{[^}]*\}/)?.[0] ?? '';
+  assert.doesNotMatch(base, /font[:-]/, 'the base nav rule must not set a font size the rail sets to 0');
+  assert.match(s, /@media \(min-width: 1000px\) \{[\s\S]*body\.is-logged-in \.dashboard-nav-button \{ font: 500 15px\/1\.2 var\(--pg-font-sans\); \}/);
+  assert.match(s, /@media \(max-width: 699px\) \{ body\.is-logged-in \.overview-kpi dd \{ font-size: 24px; \} \}/);
+});
+
+test('on a phone a section head stacks its tools at full width', () => {
+  assert.match(css(), /@media \(max-width: 699px\) \{\n\s+body\.is-logged-in \.panel \.section-head > :not\(:first-child\):not\(\.section-toggle\) \{ display: grid; gap: 10px; \}/);
+});
+
+test('the inventory import toggle is a pill', () => {
+  assert.match(css(), /body\.is-logged-in \.catalog-import-disclosure > summary \{[^}]*border-radius: 999px;/);
+});
+
+test('plain links in the content are ink with a soft underline, not browser blue', () => {
+  assert.match(css(), /body\.is-logged-in \.dashboard-workspace a:not\(\[class\]\) \{ color: var\(--pg-text\);/);
+});

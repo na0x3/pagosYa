@@ -148,7 +148,7 @@ test("at phone width the tabs scroll on their own and the page does not scroll s
 
 test("General points to Correos y marketing, where the store's emails live", async ({ page }) => {
   await openSettings(page);
-  await page.locator("#settingsPanelGeneral").getByRole("link", { name: "Correos y marketing" }).click();
+  await page.locator("#settingsPanelGeneral").getByRole("link", { name: "Clientes › Correos" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-dashboard-view", "marketing");
   await expect(page.locator('[data-marketing-tab="emails"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#marketingEmails")).toBeVisible();

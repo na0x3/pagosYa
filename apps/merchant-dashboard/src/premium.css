@@ -46,7 +46,7 @@ body.is-logged-in .overview-greeting { font-size: 24px; color: var(--pg-text-mut
 /* ── Shell: floating glass sidebar and top bar, a roomy centred column ── */
 body.is-logged-in .dashboard-sidebar { background: var(--pm-glass); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); border: 1px solid var(--pm-glass-edge); box-shadow: var(--pm-shadow-float); }
 body.is-logged-in .dashboard-nav { gap: 4px; padding: 14px 0; border-top: 0; }
-body.is-logged-in .dashboard-nav-button { min-height: 42px; padding: 0 14px; gap: 12px; border: 0; border-radius: 999px; font: 500 15px/1.2 var(--pg-font-sans); color: var(--pg-text-muted); transition: background-color .2s var(--pm-ease), color .2s var(--pm-ease), box-shadow .2s var(--pm-ease); }
+body.is-logged-in .dashboard-nav-button { min-height: 42px; border: 0; border-radius: 999px; color: var(--pg-text-muted); transition: background-color .2s var(--pm-ease), color .2s var(--pm-ease), box-shadow .2s var(--pm-ease); }
 body.is-logged-in .dashboard-nav-button:hover { background: rgb(255 255 255 / .62); color: var(--pg-text); }
 body.is-logged-in .dashboard-nav-button[aria-current="page"] { background: #fff; color: var(--pg-text); box-shadow: var(--pm-shadow-lift); }
 body.is-logged-in > .topbar { background: var(--pm-glass); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); border: 1px solid var(--pm-glass-edge); box-shadow: var(--pm-shadow-float); }
@@ -65,6 +65,9 @@ body.is-logged-in dialog::backdrop { background: rgb(40 36 28 / .18); -webkit-ba
 }
 @media (min-width: 1000px) {
   body.is-logged-in { --pm-rail: 248px; --pm-gap: 16px; --pm-column: 1080px; --pm-content-left: calc(var(--pm-rail) + 2 * var(--pm-gap)); }
+  /* Label size only on the full sidebar: narrower screens use an icon rail that hides labels with font-size: 0. */
+  body.is-logged-in .dashboard-nav-button { font: 500 15px/1.2 var(--pg-font-sans); }
+  body.is-logged-in .dashboard-nav-button { padding: 0 14px; gap: 12px; }
   body.is-logged-in .dashboard-sidebar { top: var(--pm-gap); left: var(--pm-gap); width: var(--pm-rail); height: calc(100dvh - 2 * var(--pm-gap)); padding: 18px 12px; border-radius: 28px; }
   body.is-logged-in:not([data-dashboard-view="workspace"]) > .topbar { top: var(--pm-gap); margin: var(--pm-gap) var(--pm-gap) 0 var(--pm-content-left); width: auto; min-height: 60px; height: 60px; padding: 0 10px 0 18px; border-radius: 999px; }
   body.is-logged-in:not([data-dashboard-view="workspace"]) .dashboard-workspace {
@@ -72,3 +75,52 @@ body.is-logged-in dialog::backdrop { background: rgb(40 36 28 / .18); -webkit-ba
     margin-left: calc(var(--pm-content-left) + max(0px, (100vw - var(--pm-content-left) - var(--pm-column) - 96px) / 2));
   }
 }
+
+/* ── Surfaces and controls: soft, roomy, pill-shaped ── */
+body.is-logged-in :is(.panel, .card) { border: 0; border-radius: 20px; box-shadow: var(--pm-shadow-card); padding: 28px; background: #fff; }
+body.is-logged-in :is(.card:nth-child(3n+1), .card:nth-child(3n+2)) { background: #fff; color: var(--pg-text); }
+body.is-logged-in :is(.overview-grid, .cards) { gap: 20px; }
+body.is-logged-in [data-dashboard-page]:not([hidden]) ~ [data-dashboard-page]:not([hidden]) { margin-top: 24px; }
+body.is-logged-in button:is(.primary, .secondary, .ghost), body.is-logged-in .button-like { min-height: 40px; padding: 0 18px; border-radius: 999px; font-size: 14.5px; font-weight: 550; box-shadow: none; transition: background-color .2s var(--pm-ease), border-color .2s var(--pm-ease), color .2s var(--pm-ease), transform .2s var(--pm-ease); }
+body.is-logged-in button.primary { background: var(--pg-ink); border: 1px solid var(--pg-ink); color: #fff; }
+body.is-logged-in button.primary:hover { background: var(--pg-ink-hover); border-color: var(--pg-ink-hover); }
+body.is-logged-in :is(button.secondary, button.ghost, .button-like.ghost) { background: #fff; border: 1px solid var(--pg-border-strong); color: var(--pg-text); }
+body.is-logged-in :is(button.secondary, button.ghost, .button-like.ghost):hover { background: var(--pg-surface-raised); }
+body.is-logged-in button:is(.primary, .secondary, .ghost):active { transform: scale(.98); }
+body.is-logged-in :is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not(.ui-switch), select, textarea) { min-height: 44px; padding: 10px 14px; border: 1px solid var(--pg-border-strong); border-radius: 14px; background: #fff; color: var(--pg-text); font-size: 15px; transition: border-color .2s var(--pm-ease), box-shadow .2s var(--pm-ease); }
+body.is-logged-in :is(input, select, textarea):focus-visible { outline: none; border-color: var(--pg-ink); box-shadow: 0 0 0 4px var(--pg-focus-ring); }
+body.is-logged-in textarea { min-height: 96px; line-height: 1.55; }
+body.is-logged-in table { border-collapse: separate; border-spacing: 0; }
+body.is-logged-in :is(th, td) { padding: 16px 14px; border-bottom: 1px solid var(--pg-border); }
+body.is-logged-in table th { background: transparent; font: 550 12.5px/1.4 var(--pg-font-sans); color: var(--pg-text-faint); text-transform: none; letter-spacing: 0; }
+body.is-logged-in table td { font-size: 14.5px; }
+body.is-logged-in tr:last-child td { border-bottom: 0; }
+body.is-logged-in .badge { border-radius: 999px; padding: 4px 10px; font-size: 12.5px; font-weight: 550; border: 0; }
+body.is-logged-in .ui-tab { border-radius: 999px; padding: 8px 16px; }
+body.is-logged-in .ui-head-icon { border-radius: 12px; border-color: transparent; background: var(--pg-surface-raised); }
+body.is-logged-in .ui-switch { width: 40px; min-width: 40px; height: 24px; background-size: 22px 22px; background-image: radial-gradient(circle, #fff 0 8.5px, transparent 9px); }
+body.is-logged-in .overview-kpis { border: 0; border-radius: 20px; background: #fff; box-shadow: var(--pm-shadow-card); overflow: hidden; }
+body.is-logged-in .overview-kpi { padding: 22px 24px; }
+body.is-logged-in .overview-kpi dd { font: 400 34px/1.1 var(--pm-serif); letter-spacing: 0; }
+/* workspace-design.css gives .marketing-tabs display:flex, which beats the hidden attribute; the Clientes pills replace it. */
+body.is-logged-in .marketing-tabs[hidden] { display: none !important; }
+/* Yellow means YAPI: the dock's button keeps it whatever the button rules above say. */
+body.is-logged-in .workspace-yapi button.primary { background: var(--pg-brand); border-color: var(--pg-brand); color: var(--pg-brand-text); }
+body.is-logged-in .workspace-yapi button.primary:hover { background: var(--pg-brand-hover); border-color: var(--pg-brand-hover); }
+body.is-logged-in .section-tabs[hidden] { display: none; }
+/* A head with a title and controls (Pedidos y pagos, Finanzas) wraps the controls below instead of squeezing the title. */
+body.is-logged-in .panel .section-head { flex-wrap: wrap; row-gap: 16px; }
+body.is-logged-in .panel .section-head > :first-child { flex: 1 0 auto; min-width: min(100%, 220px); }
+body.is-logged-in .panel .section-head h2 { white-space: nowrap; }
+body.is-logged-in .panel .section-head > .section-toggle { order: 2; }
+body.is-logged-in .panel .section-head > :not(:first-child):not(.section-toggle) { order: 3; flex-basis: 100%; }
+@media (max-width: 699px) { body.is-logged-in .overview-kpi dd { font-size: 24px; } }
+@media (max-width: 699px) {
+  body.is-logged-in .panel .section-head > :not(:first-child):not(.section-toggle) { display: grid; gap: 10px; }
+  body.is-logged-in .panel .section-head > :not(:first-child):not(.section-toggle) :is(label, input, select, button, .button-like) { width: 100% !important; max-width: none !important; min-width: 0; margin: 0; }
+  body.is-logged-in :is(.panel, .card) { padding: 22px; }
+}
+body.is-logged-in .catalog-import-disclosure > summary { display: inline-flex; align-items: center; min-height: 40px; padding: 0 18px; border: 1px solid var(--pg-border-strong); border-radius: 999px; background: #fff; font-size: 14.5px; font-weight: 550; cursor: pointer; list-style: none; }
+body.is-logged-in .catalog-import-disclosure > summary::-webkit-details-marker { display: none; }
+body.is-logged-in .dashboard-workspace a:not([class]) { color: var(--pg-text); text-decoration: underline; text-decoration-color: var(--pg-border-strong); text-underline-offset: 3px; transition: text-decoration-color .2s var(--pm-ease); }
+body.is-logged-in .dashboard-workspace a:not([class]):hover { text-decoration-color: var(--pg-text); }
