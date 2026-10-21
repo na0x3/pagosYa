@@ -106,8 +106,8 @@
         const typing = document.activeElement?.matches?.('.catalog-search input') && el.contains(document.activeElement) ? document.activeElement.selectionStart : null;
         const filtered = Boolean(state.precio || state.toggles.size || Object.values(state.sets).some(values => values.length));
         const empty = state.q
-          ? `<p class="catalog-empty">Sin resultados para “${escape(state.q)}”. <button type="button" data-search-clear>Borrar búsqueda</button>${filtered ? ' <button type="button" data-filters-clear>Borrar filtros</button>' : ''}</p>`
-          : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear>Borrar filtros</button></p>';
+          ? `<p class="catalog-empty">Sin resultados para “${escape(state.q)}”. <button type="button" data-search-clear>Borrar búsqueda</button>${filtered ? ' <button type="button" data-filters-clear="filters">Borrar filtros</button>' : ''}</p>`
+          : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear="filters">Borrar filtros</button></p>';
         el.innerHTML = filtersMarkup(selected, state, shown.length) + (shown.length ? shown.map(productCard).join('') : empty);
         const field = typing === null ? null : el.querySelector('.catalog-search input');
         if (field) { field.focus({ preventScroll: true }); try { field.setSelectionRange(typing, typing); } catch { /* search inputs without selection support */ } }

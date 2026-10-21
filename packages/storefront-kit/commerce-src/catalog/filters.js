@@ -124,7 +124,9 @@
     } else if (style === 'sidebar') {
       const details = g => g.kind === 'toggle' ? `<div class="cf-group cf-group--toggle" data-filter-group="${escape(g.key)}">${toggle(g)}</div>`
         : `<details class="cf-group" data-filter-group="${escape(g.key)}" open><summary>${escape(title(g))}${chosen(g.key).length ? ` · ${chosen(g.key).length}` : ''}<span class="cf-caret" aria-hidden="true"></span></summary>${body(g)}</details>`;
-      inner = `${search}<aside class="catalog-filters__side" aria-label="Filtros">${groups.map(details).join('')}${filterCount ? '<button type="button" class="cf-link" data-filters-clear>Borrar filtros</button>' : ''}</aside>`
+      // On desktop the sidebar takes a fixed left column of the catalogue and its groups stay in view as the products scroll;
+      // a grid row span left the products ~2300 px below it (final review 2026-10-21).
+      inner = `${search}<aside class="catalog-filters__side" aria-label="Filtros"><div class="catalog-filters__side-inner">${groups.map(details).join('')}${filterCount ? '<button type="button" class="cf-link" data-filters-clear="filters">Borrar filtros</button>' : ''}</div></aside>`
         + `<div class="catalog-filters__bar">${count}${opener('Filtrar')}${sort}</div>${activeRow}${drawer(groups, 'Filtrar')}`;
     } else {
       inner = `${search}<div class="catalog-filters__bar">${count}${sort}${groups.length ? opener('Filtrar') : ''}</div>${activeRow}${drawer(groups, 'Filtrar')}`;

@@ -20,6 +20,7 @@ import { withSourceMotion } from './source-motion';
 import { buildSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_FILE } from './source-visual-system';
 import { sourceStoreConfigData, type SourcePublicStore } from './source-store-config';
 import { menuFromVariant, storeMenuContext, type StoreMenuGroup } from './source-store-menu';
+import { isFilterStyle } from './source-filter-style';
 
 export const TEMPLATE_STORE_DATA_PATH = 'components/store-data.tsx';
 
@@ -198,6 +199,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
     // Only a fashion store from before the menu (no record) gets the default: an explicit «none» is the merchant's removal.
     else if (!change.menu && variants.cards === 'fashion' && variants.menu === undefined) variants.menu = 'panel';
   }
+  // A style already in config.js (rolled, or asked for in chat) stays unless this change names one (final review 2026-10-21).
   // Sort & filter styles spec 2026-10-21: a fashion store from before the filters part gets the John Smedley chip rows.
   if ((settings.variants?.filters ?? []).includes('chips') && variants.filters === undefined && variants.cards === 'fashion') variants.filters = 'chips';
   const out = withFashionTemplateParts(files.map(file => {
@@ -214,7 +216,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
       const { menu: savedMenu, ...header } = config.header ?? {};
       const menu = menuIds.length ? menuFromVariant(variants.menu, change.menu ? absoluteTiles(change.menu.groups, apiUrl) : savedMenu?.groups, storeMenuContext(config.data ?? {}, files)) : savedMenu;
       const withHeader = config.header || menu ? { header: { ...header, ...(menu ? { menu } : {}) } } : {};
-      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(style ? { productPageStyle: style } : {}), ...masterFilterStyle(variants), ...withHeader, dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }) }, showcase: { ...(config.showcase ?? {}), ...masterShowcase(variants) } })};\n` };
+      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(style ? { productPageStyle: style } : {}), ...(change.variants?.filters || !isFilterStyle(rest.filterStyle) ? masterFilterStyle(variants) : {}), ...withHeader, dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }) }, showcase: { ...(config.showcase ?? {}), ...masterShowcase(variants) } })};\n` };
     }
     return file;
   }), variants);

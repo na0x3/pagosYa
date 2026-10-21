@@ -13,15 +13,28 @@ export function seededFilterStyle(storeId: string): FilterStyle {
 }
 
 const FILTERS = /(?<!\p{L})filtros?(?!\p{L})/iu;
-const CHIPS = /(?<!\p{L})(chips?|pastillas?|botones)(?!\p{L})/iu;
-const SIDEBAR = /(?<!\p{L})(a la izquierda|al costado|al lado|en una columna|columna lateral|barra lateral|lateral|sidebar)(?!\p{L})/iu;
-const BAR = /(?<!\p{L})(barra(?! lateral)|arriba del todo|en una fila|bot[oó]n de filtrar|caj[oó]n)(?!\p{L})/iu;
-/** The merchant's words name a filter style, or say nothing of one. */
+// Only words said about the filters count: «botones» or «al lado» elsewhere in the request («haz los botones más grandes y quita
+// los filtros», «pon el buscador al lado de los filtros») never change the style (final review 2026-10-21).
+const STYLE_WORDS: Array<[FilterStyle, RegExp]> = [
+  ['sidebar', /(?<!\p{L})(a la izquierda|al costado|en una columna|columna lateral|barra lateral|lateral|sidebar)(?!\p{L})/iu],
+  ['chips', /(?<!\p{L})(chips?|pastillas?|como botones|en botones)(?!\p{L})/iu],
+  ['bar', /(?<!\p{L})(barra(?! lateral)|arriba del todo|en una fila|bot[oó]n de filtrar|caj[oó]n)(?!\p{L})/iu],
+];
+/** The merchant's words name a filter style for the filters (in the same clause, «filtros» right before or after), or say nothing of one. */
 export function instructionAsksFilterStyle(text: string): FilterStyle | undefined {
-  if (!FILTERS.test(text)) return undefined;
-  if (SIDEBAR.test(text)) return 'sidebar';
-  if (CHIPS.test(text)) return 'chips';
-  if (BAR.test(text)) return 'bar';
+  for (const clause of text.split(/[,.;:!?\n]| y | e | pero /i)) {
+    const at = clause.search(FILTERS);
+    if (at < 0) continue;
+    const after = clause.slice(at);
+    for (const [style, words] of STYLE_WORDS) {
+      const hit = words.exec(after);
+      if (hit && hit.index <= 40) return style;
+    }
+    for (const [style, words] of STYLE_WORDS) {
+      const hit = words.exec(clause.slice(0, at));
+      if (hit && at - (hit.index + hit[0].length) <= 20) return style;
+    }
+  }
   return undefined;
 }
 

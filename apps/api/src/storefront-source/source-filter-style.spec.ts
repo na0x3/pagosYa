@@ -8,6 +8,7 @@ describe('filter style', () => {
   it.each([
     ['filtros como chips', 'chips'], ['pon los filtros en chips arriba', 'chips'], ['pon una barra de filtros arriba', 'bar'],
     ['filtros a la izquierda', 'sidebar'], ['quiero los filtros en una columna al costado', 'sidebar'], ['cambia el color del botón', undefined],
+    ['haz los botones más grandes y quita los filtros', undefined], ['pon el buscador al lado de los filtros', undefined],
   ])('%s → %s', (text, expected) => expect(instructionAsksFilterStyle(text)).toBe(expected));
   it('a store id always seeds the same style, and stores differ', () => {
     expect(seededFilterStyle('store-1')).toBe(seededFilterStyle('store-1'));

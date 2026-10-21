@@ -34,7 +34,8 @@
       (again && !again.disabled ? again : detail.querySelector('[data-box-add]:not(:disabled)') || detail.querySelector('[data-box-progress]'))?.focus?.();
       return;
     }
-    if (button.hasAttribute('data-filters-clear')) { writeFilterState({ orden: readFilterState().orden, precio: null, sets: {}, toggles: new Set() }); render(); return; }
+    // «Borrar filtros» (data-filters-clear="filters") keeps the search; «Borrar todo» clears it too (final review 2026-10-21).
+    if (button.hasAttribute('data-filters-clear')) { const now = readFilterState(); writeFilterState({ orden: now.orden, precio: null, sets: {}, toggles: new Set(), q: button.getAttribute('data-filters-clear') === 'filters' ? now.q : '' }); render(); return; }
     if (button.hasAttribute('data-filter-remove')) {
       const state = readFilterState(), [key, value] = button.dataset.filterRemove.split(':');
       if (key === 'q') state.q = ''; else if (key === 'precio') state.precio = null; else if (value) state.sets[key] = (state.sets[key] || []).filter(v => v !== value); else state.toggles.delete(key);

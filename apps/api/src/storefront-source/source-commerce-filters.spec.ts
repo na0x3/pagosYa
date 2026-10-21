@@ -144,6 +144,10 @@ describe('search', () => {
     expect(both.q('.catalog-empty [data-filters-clear]')).not.toBeNull();
     both.q('.catalog-empty [data-search-clear]').click(); await tick();
     expect(both.w.location.search).toBe('?precio=10-20');
+    const keep = await open(items, '?q=zzz&precio=10-20');
+    keep.q('.catalog-empty [data-filters-clear]').click(); await tick();
+    expect(keep.w.location.search).toBe('?q=zzz');
+    expect(keep.q('.catalog-search input[name=q]').value).toBe('zzz');
   });
   it('cuts the search at 80 characters', async () => {
     const env = await open(items, `?q=${'a'.repeat(120)}`);

@@ -4381,7 +4381,9 @@
     } else if (style === 'sidebar') {
       const details = g => g.kind === 'toggle' ? `<div class="cf-group cf-group--toggle" data-filter-group="${escape(g.key)}">${toggle(g)}</div>`
         : `<details class="cf-group" data-filter-group="${escape(g.key)}" open><summary>${escape(title(g))}${chosen(g.key).length ? ` · ${chosen(g.key).length}` : ''}<span class="cf-caret" aria-hidden="true"></span></summary>${body(g)}</details>`;
-      inner = `${search}<aside class="catalog-filters__side" aria-label="Filtros">${groups.map(details).join('')}${filterCount ? '<button type="button" class="cf-link" data-filters-clear>Borrar filtros</button>' : ''}</aside>`
+      // On desktop the sidebar takes a fixed left column of the catalogue and its groups stay in view as the products scroll;
+      // a grid row span left the products ~2300 px below it (final review 2026-10-21).
+      inner = `${search}<aside class="catalog-filters__side" aria-label="Filtros"><div class="catalog-filters__side-inner">${groups.map(details).join('')}${filterCount ? '<button type="button" class="cf-link" data-filters-clear="filters">Borrar filtros</button>' : ''}</div></aside>`
         + `<div class="catalog-filters__bar">${count}${opener('Filtrar')}${sort}</div>${activeRow}${drawer(groups, 'Filtrar')}`;
     } else {
       inner = `${search}<div class="catalog-filters__bar">${count}${sort}${groups.length ? opener('Filtrar') : ''}</div>${activeRow}${drawer(groups, 'Filtrar')}`;
@@ -4605,8 +4607,8 @@
         const typing = document.activeElement?.matches?.('.catalog-search input') && el.contains(document.activeElement) ? document.activeElement.selectionStart : null;
         const filtered = Boolean(state.precio || state.toggles.size || Object.values(state.sets).some(values => values.length));
         const empty = state.q
-          ? `<p class="catalog-empty">Sin resultados para “${escape(state.q)}”. <button type="button" data-search-clear>Borrar búsqueda</button>${filtered ? ' <button type="button" data-filters-clear>Borrar filtros</button>' : ''}</p>`
-          : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear>Borrar filtros</button></p>';
+          ? `<p class="catalog-empty">Sin resultados para “${escape(state.q)}”. <button type="button" data-search-clear>Borrar búsqueda</button>${filtered ? ' <button type="button" data-filters-clear="filters">Borrar filtros</button>' : ''}</p>`
+          : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear="filters">Borrar filtros</button></p>';
         el.innerHTML = filtersMarkup(selected, state, shown.length) + (shown.length ? shown.map(productCard).join('') : empty);
         const field = typing === null ? null : el.querySelector('.catalog-search input');
         if (field) { field.focus({ preventScroll: true }); try { field.setSelectionRange(typing, typing); } catch { /* search inputs without selection support */ } }
@@ -5459,11 +5461,9 @@
     '.catalog-filters__side details>summary::-webkit-details-marker{display:none}',
     '.catalog-filters__side details[open]>summary .cf-caret{transform:translateY(2px) rotate(-135deg)}',
     '@media(min-width:900px){',
-    '[data-pagosya-catalog]:has(>.catalog-filters[data-filter-style=sidebar]){display:grid;grid-template-columns:240px repeat(auto-fill,minmax(220px,1fr));gap:24px;align-items:start}',
-    '.catalog-filters[data-filter-style=sidebar]{display:contents}',
-    '.catalog-filters[data-filter-style=sidebar] .catalog-filters__side{display:grid;gap:18px;grid-column:1;grid-row:1/span 99;position:sticky;top:96px;align-self:start;padding-right:8px}',
-    '.catalog-filters[data-filter-style=sidebar]>.catalog-search{grid-column:1/-1}',
-    '.catalog-filters[data-filter-style=sidebar] .catalog-filters__bar,.catalog-filters[data-filter-style=sidebar] .catalog-filters__active{grid-column:2/-1}',
+    '[data-pagosya-catalog]:has(>.catalog-filters[data-filter-style=sidebar]){position:relative;padding-left:272px}',
+    '.catalog-filters[data-filter-style=sidebar] .catalog-filters__side{display:block;position:absolute;left:0;top:0;bottom:0;width:240px}',
+    '.catalog-filters__side-inner{position:sticky;top:96px;display:grid;gap:18px;max-height:calc(100vh - 120px);overflow:auto;padding-right:8px}',
     '.catalog-filters[data-filter-style=sidebar] .cf-open{display:none}',
     '}',
     '@media(prefers-reduced-motion:reduce){.cf-drawer__panel{animation:none}.cf-chip,.cf-switch__track,.cf-switch__track::after{transition:none}}',
@@ -5852,7 +5852,8 @@
       (again && !again.disabled ? again : detail.querySelector('[data-box-add]:not(:disabled)') || detail.querySelector('[data-box-progress]'))?.focus?.();
       return;
     }
-    if (button.hasAttribute('data-filters-clear')) { writeFilterState({ orden: readFilterState().orden, precio: null, sets: {}, toggles: new Set() }); render(); return; }
+    // «Borrar filtros» (data-filters-clear="filters") keeps the search; «Borrar todo» clears it too (final review 2026-10-21).
+    if (button.hasAttribute('data-filters-clear')) { const now = readFilterState(); writeFilterState({ orden: now.orden, precio: null, sets: {}, toggles: new Set(), q: button.getAttribute('data-filters-clear') === 'filters' ? now.q : '' }); render(); return; }
     if (button.hasAttribute('data-filter-remove')) {
       const state = readFilterState(), [key, value] = button.dataset.filterRemove.split(':');
       if (key === 'q') state.q = ''; else if (key === 'precio') state.precio = null; else if (value) state.sets[key] = (state.sets[key] || []).filter(v => v !== value); else state.toggles.delete(key);

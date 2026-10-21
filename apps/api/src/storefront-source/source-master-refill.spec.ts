@@ -197,6 +197,12 @@ describe('filter style on a master store', () => {
     expect(configOf(files).filterStyle).toBe('chips');
     expect(configOf(refillMasterFiles(files, filtersManifest, { copy: { headline: 'Otra' } })).filterStyle).toBe('chips');
   });
+  it('a style the merchant asked for in chat survives the next refill (final review 2026-10-21)', () => {
+    const rolled = refillMasterFiles(storeFiles(), filtersManifest, { variants: { filters: 'chips' } as never });
+    const asked = rolled.map(file => file.path === 'config.js' ? { ...file, content: file.content.replace('"filterStyle":"chips"', '"filterStyle":"sidebar"') } : file);
+    expect(configOf(refillMasterFiles(asked, filtersManifest, { copy: { headline: 'Otra' } })).filterStyle).toBe('sidebar');
+    expect(configOf(refillMasterFiles(asked, filtersManifest, { variants: { filters: 'bar' } as never })).filterStyle).toBe('bar');
+  });
   it('an older fashion store without a filters record gets the chip rows at its next refill', () => {
     const both = { ...manifest, master: { ...master, variants: { filters: ['bar', 'chips', 'sidebar'], cards: ['showcase', 'fashion'] } } } as unknown as TemplateManifest;
     expect(configOf(refillMasterFiles(storeFiles(), both, { variants: { cards: 'fashion' } as never })).filterStyle).toBe('chips');
