@@ -19,3 +19,13 @@ test('tokens: warm page, soft lines, rounder corners, serif titles', () => {
   assert.match(s, /body\.is-logged-in \{\n\s+background:\n\s+radial-gradient/);
   assert.match(s, /body\.is-logged-in \.workspace-title \{ font: 400 44px\/1\.05 var\(--pm-serif\)/);
 });
+
+test('shell: floating glass sidebar and top bar, a roomy column, glass pills, menus and dialogs', () => {
+  const s = css();
+  assert.match(s, /body\.is-logged-in \.dashboard-sidebar \{ background: var\(--pm-glass\); -webkit-backdrop-filter: var\(--pm-blur\); backdrop-filter: var\(--pm-blur\);/);
+  assert.match(s, /body\.is-logged-in > \.topbar \{[^}]*backdrop-filter: var\(--pm-blur\)/);
+  assert.match(s, /body\.is-logged-in \.dashboard-workspace \{[^}]*max-width: 1080px/);
+  assert.match(s, /body\.is-logged-in \.section-tabs \{[^}]*backdrop-filter: var\(--pm-blur\)/);
+  assert.match(s, /body\.is-logged-in dialog \{[^}]*backdrop-filter: var\(--pm-blur\)/);
+  assert.match(s, /@supports not \(\(backdrop-filter: blur\(1px\)\) or \(-webkit-backdrop-filter: blur\(1px\)\)\)/);
+});
