@@ -1953,7 +1953,6 @@
     return entries.length >= 2 ? entries.map(([question, answer]) => `<section class="pagosya-info__qa"><h2>${escape(question)}</h2>${answer.startsWith('<') ? answer : `<p>${answer}</p>`}</section>`).join('') : '';
   }
   // Catalog pages. `collections()` and `collectionHref` are declared further down the file, so these read the store directly.
-  const foldText = value => String(value ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const infoCollections = () => (Array.isArray(store.collections) ? store.collections : [])
     .filter(collection => collection && typeof collection.slug === 'string' && typeof collection.name === 'string')
     .map(collection => ({ ...collection, count: (Array.isArray(collection.productIds) ? collection.productIds : []).filter(id => products().some(item => item.id === id)).length }))
@@ -1971,10 +1970,9 @@
     const q = searchQuery();
     const form = `<form class="pagosya-search" role="search" method="get" action="${escape(pageHref('buscar.html'))}"><label>Buscar productos<input type="search" name="q" value="${escape(q)}" maxlength="80" autocomplete="off"></label><button type="submit">Buscar</button></form>`;
     if (!q) return `${form}<p>Escribe lo que buscas.</p>`;
-    const words = foldText(q).split(/\s+/).filter(Boolean);
-    const categoryName = item => (Array.isArray(store.categories) ? store.categories : []).find(category => category && category.id === item.categoryId)?.name;
-    const haystack = item => foldText([item.name, item.description, ...(Array.isArray(item.tags) ? item.tags : []), categoryName(item)].filter(Boolean).join(' '));
-    const hits = items.filter(item => { const text = haystack(item); return words.every(word => text.includes(word)); });
+    // One match rule with the catalogue's search bar (catalog/filters.js, amendment 2026-10-21).
+    const words = searchWords(q);
+    const hits = items.filter(item => matchesSearch(item, words));
     if (!hits.length) return `${form}<p role="status">No encontramos productos para “${escape(q)}”.</p>`;
     const cards = hits.slice(0, 48).map(item => { const image = safeImage(Array.isArray(item.imageUrls) ? item.imageUrls[0] : ''); return `<li><a href="${escape(productHref(item))}">${image ? `<img src="${escape(image)}" alt="" loading="lazy">` : ''}<strong>${escape(item.name)}</strong><span>${escape(money(item.amount, item.currency))}</span></a></li>`; });
     return `${form}<p role="status">${hits.length > 48 ? `Mostrando 48 de ${hits.length} resultados` : `${hits.length} ${hits.length === 1 ? 'resultado' : 'resultados'}`} para “${escape(q)}”.</p><ul class="pagosya-info__cards">${cards.join('')}</ul>`;
@@ -4262,6 +4260,15 @@
   const filterFold = text => String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   const SORTS = [['destacados', 'Destacados'], ['precio-asc', 'Precio ↑'], ['precio-desc', 'Precio ↓'], ['novedades', 'Novedades'], ['mejor-oferta', 'Mejor oferta']];
   const FILTER_TOGGLES = ['descuento', 'disponible', 'ofertas'];
+  /** Search (amendment 2026-10-21): the words of a query, folded; the catalogue and buscar.html match with the same rule —
+   *  every word in the product's name, description, tags or category name, case and accents ignored. */
+  function searchWords(text) { return filterFold(String(text || '').slice(0, 80)).split(/\s+/).filter(Boolean); }
+  function matchesSearch(item, words) {
+    if (!words.length) return true;
+    const category = (Array.isArray(store.categories) ? store.categories : []).find(c => c && c.id === item.categoryId)?.name;
+    const haystack = filterFold([item.name, item.description, ...(Array.isArray(item.tags) ? item.tags : []), category].filter(Boolean).join(' '));
+    return words.every(word => haystack.includes(word));
+  }
   function filterGroups(items) {
     const groups = [];
     const cats = (store.categories || []).filter(c => items.some(p => p.categoryId === c.id));
@@ -4283,7 +4290,7 @@
   }
   function readFilterState() {
     const params = new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search);
-    const state = { orden: SORTS.some(([v]) => v === params.get('orden')) ? params.get('orden') : 'destacados', precio: null, sets: {}, toggles: new Set() };
+    const state = { orden: SORTS.some(([v]) => v === params.get('orden')) ? params.get('orden') : 'destacados', precio: null, sets: {}, toggles: new Set(), q: (params.get('q') || '').slice(0, 80) };
     const range = /^(\d+)-(\d+)$/.exec(params.get('precio') || '');
     if (range) state.precio = [Number(range[1]) * 100, Number(range[2]) * 100];
     for (const [key, value] of params) if (key.startsWith('f_')) state.sets[filterFold(key.slice(2))] = value.split(',').map(filterFold).filter(Boolean);
@@ -4292,7 +4299,8 @@
   }
   function writeFilterState(state) {
     const params = new URLSearchParams(location.search);
-    [...params.keys()].filter(k => k.startsWith('f_') || ['orden', 'precio', ...FILTER_TOGGLES].includes(k)).forEach(k => params.delete(k));
+    [...params.keys()].filter(k => k.startsWith('f_') || ['orden', 'precio', 'q', ...FILTER_TOGGLES].includes(k)).forEach(k => params.delete(k));
+    if (state.q && state.q.trim()) params.set('q', state.q.slice(0, 80));
     if (state.orden !== 'destacados') params.set('orden', state.orden);
     if (state.precio) params.set('precio', `${Math.floor(state.precio[0] / 100)}-${Math.ceil(state.precio[1] / 100)}`);
     for (const [key, values] of Object.entries(state.sets)) if (values.length) params.set(`f_${key}`, values.join(','));
@@ -4300,7 +4308,9 @@
     try { history.replaceState(history.state, '', `${location.pathname}${params.toString() ? `?${params}` : ''}${location.hash}`); } catch { /* sandboxed previews */ }
   }
   function applyFilters(items, state) {
+    const words = searchWords(state.q);
     return items.filter(p => {
+      if (!matchesSearch(p, words)) return false;
       if (state.precio && (price(p) < state.precio[0] || price(p) > state.precio[1])) return false;
       if (state.toggles.has('descuento') && !(price(p) < p.amount)) return false;
       if (state.toggles.has('disponible') && p.stock === 0) return false;
@@ -4330,9 +4340,10 @@
       : g.kind === 'toggle' ? `<label class="catalog-filters__toggle" data-filter-group="${escape(g.key)}"><input type="checkbox" name="${escape(g.key)}" ${state.toggles.has(g.key) ? 'checked' : ''}> ${escape(g.label)}</label>`
       : `<fieldset data-filter-group="${escape(g.key)}"><legend>${escape(g.label)}</legend>${g.values.map(v => `<label><input type="checkbox" name="f_${escape(g.key)}" value="${escape(v.value)}" ${(state.sets[g.key] || []).includes(v.value) ? 'checked' : ''}>${v.color ? `<span data-swatch style="--swatch:${escape(v.color)}" aria-hidden="true"></span>` : ''} ${escape(v.text)}</label>`).join('')}</fieldset>`;
     const textOf = (key, value) => groups.find(g => g.key === key)?.values?.find?.(v => v.value === value)?.text || value;
-    const active = [...Object.entries(state.sets).flatMap(([key, values]) => values.map(value => [key, value, textOf(key, value)])), ...[...state.toggles].map(key => [key, '', groups.find(g => g.key === key)?.label || key]), ...(state.precio ? [['precio', '', 'Precio']] : [])];
+    const active = [...(state.q ? [['q', '', `“${state.q}”`]] : []), ...Object.entries(state.sets).flatMap(([key, values]) => values.map(value => [key, value, textOf(key, value)])), ...[...state.toggles].map(key => [key, '', groups.find(g => g.key === key)?.label || key]), ...(state.precio ? [['precio', '', 'Precio']] : [])];
     const layout = all.length >= 9 || groups.length >= 3 ? 'sidebar' : 'bar';
-    return `<div class="catalog-filters" data-filters-layout="${layout}"><button type="button" class="catalog-filters__open" data-filters-open aria-expanded="false">Filtrar${active.length ? ` (${active.length})` : ''}</button>`
+    const search = `<div class="catalog-search" role="search"><label class="catalog-search__label" for="catalog-q">Buscar productos</label><span class="catalog-search__icon" aria-hidden="true"></span><input id="catalog-q" type="search" name="q" maxlength="80" autocomplete="off" placeholder="Buscar en la tienda" value="${escape(state.q || '')}">${state.q ? '<button type="button" class="catalog-search__clear" data-search-clear aria-label="Borrar búsqueda">✕</button>' : ''}</div>`;
+    return `<div class="catalog-filters" data-filters-layout="${layout}">${search}<button type="button" class="catalog-filters__open" data-filters-open aria-expanded="false">Filtrar${active.length ? ` (${active.length})` : ''}</button>`
       + `<label class="catalog-filters__sort">Ordenar <select name="orden">${SORTS.map(([value, text]) => `<option value="${value}" ${state.orden === value ? 'selected' : ''}>${text}</option>`).join('')}</select></label>`
       + (groups.length ? `<form class="catalog-filters__panel" data-filters-form>${groups.map(control).join('')}<button type="submit" class="catalog-filters__apply">Ver ${shown} productos</button></form>` : '')
       + (active.length ? `<p class="catalog-filters__active">${active.map(([key, value, text]) => `<button type="button" data-filter-remove="${escape(key)}:${escape(value)}" aria-label="Quitar ${escape(text)}">${escape(text)} ✕</button>`).join('')}<button type="button" data-filters-clear>Borrar todo</button></p>` : '')
@@ -4340,7 +4351,7 @@
   }
   /** Reads the controls back into a state (every change applies at once; the phone sheet's button only closes it). */
   function filterStateFromControls(root) {
-    const state = { orden: root.querySelector('select[name=orden]')?.value || 'destacados', precio: null, sets: {}, toggles: new Set() };
+    const state = { orden: root.querySelector('select[name=orden]')?.value || 'destacados', precio: null, sets: {}, toggles: new Set(), q: (root.querySelector('input[name=q]')?.value || '').slice(0, 80) };
     for (const input of root.querySelectorAll('input[type=checkbox]:checked')) {
       if (input.name.startsWith('f_')) (state.sets[input.name.slice(2)] ||= []).push(input.value);
       else if (FILTER_TOGGLES.includes(input.name)) state.toggles.add(input.name);
@@ -4350,9 +4361,24 @@
     if (min && max && range && (Number(min.value) * 100 > range[0] || Number(max.value) * 100 < range[1])) state.precio = [Math.max(0, Number(min.value) || 0) * 100, Math.max(0, Number(max.value) || 0) * 100];
     return state;
   }
+  /** The search field filters as the shopper types (150 ms after the last key); Esc and ✕ clear it. */
+  let searchTimer = 0;
+  const setSearch = value => { clearTimeout(searchTimer); const state = readFilterState(); state.q = String(value || '').slice(0, 80); writeFilterState(state); render(); };
+  document.addEventListener('input', event => {
+    if (!event.target?.matches?.('.catalog-search input[name=q]')) return;
+    const value = event.target.value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => setSearch(value), 150);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !event.target?.matches?.('.catalog-search input[name=q]') || !event.target.value) return;
+    event.preventDefault();
+    setSearch('');
+  });
+  document.addEventListener('click', event => { if (event.target?.closest?.('[data-search-clear]')) setSearch(''); });
   document.addEventListener('change', event => {
     const root = event.target?.closest?.('.catalog-filters');
-    if (!root) return;
+    if (!root || event.target.matches?.('input[name=q]')) return;
     writeFilterState(filterStateFromControls(root));
     render();
   });
@@ -4466,7 +4492,15 @@
       } else if ((el.hasAttribute('data-pagosya-filters') || el.hasAttribute('data-catalog-full')) && selected.length >= 6) {
         // Showcase commerce §4: the full catalog of a store with 6+ products can be sorted and filtered.
         const state = readFilterState(), shown = sortItems(applyFilters(selected, state), state.orden);
-        el.innerHTML = filtersMarkup(selected, state, shown.length) + (shown.length ? shown.map(productCard).join('') : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear>Borrar filtros</button></p>');
+        // Typing in the search re-renders the grid: the field keeps the focus and the caret (amendment 2026-10-21).
+        const typing = document.activeElement?.matches?.('.catalog-search input') && el.contains(document.activeElement) ? document.activeElement.selectionStart : null;
+        const filtered = Boolean(state.precio || state.toggles.size || Object.values(state.sets).some(values => values.length));
+        const empty = state.q
+          ? `<p class="catalog-empty">Sin resultados para “${escape(state.q)}”. <button type="button" data-search-clear>Borrar búsqueda</button>${filtered ? ' <button type="button" data-filters-clear>Borrar filtros</button>' : ''}</p>`
+          : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear>Borrar filtros</button></p>';
+        el.innerHTML = filtersMarkup(selected, state, shown.length) + (shown.length ? shown.map(productCard).join('') : empty);
+        const field = typing === null ? null : el.querySelector('.catalog-search input');
+        if (field) { field.focus({ preventScroll: true }); try { field.setSelectionRange(typing, typing); } catch { /* search inputs without selection support */ } }
       } else {
         // Also covers `sections` with no collections yet: a single "Más productos" group holding
         // the whole catalog isn't an arrangement, so it falls back to the same flat grid as `all`.
@@ -5651,7 +5685,7 @@
     if (button.hasAttribute('data-filters-clear')) { writeFilterState({ orden: readFilterState().orden, precio: null, sets: {}, toggles: new Set() }); render(); return; }
     if (button.hasAttribute('data-filter-remove')) {
       const state = readFilterState(), [key, value] = button.dataset.filterRemove.split(':');
-      if (key === 'precio') state.precio = null; else if (value) state.sets[key] = (state.sets[key] || []).filter(v => v !== value); else state.toggles.delete(key);
+      if (key === 'q') state.q = ''; else if (key === 'precio') state.precio = null; else if (value) state.sets[key] = (state.sets[key] || []).filter(v => v !== value); else state.toggles.delete(key);
       writeFilterState(state); render(); return;
     }
     if (button.hasAttribute('data-filters-open')) {

@@ -102,7 +102,15 @@
       } else if ((el.hasAttribute('data-pagosya-filters') || el.hasAttribute('data-catalog-full')) && selected.length >= 6) {
         // Showcase commerce §4: the full catalog of a store with 6+ products can be sorted and filtered.
         const state = readFilterState(), shown = sortItems(applyFilters(selected, state), state.orden);
-        el.innerHTML = filtersMarkup(selected, state, shown.length) + (shown.length ? shown.map(productCard).join('') : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear>Borrar filtros</button></p>');
+        // Typing in the search re-renders the grid: the field keeps the focus and the caret (amendment 2026-10-21).
+        const typing = document.activeElement?.matches?.('.catalog-search input') && el.contains(document.activeElement) ? document.activeElement.selectionStart : null;
+        const filtered = Boolean(state.precio || state.toggles.size || Object.values(state.sets).some(values => values.length));
+        const empty = state.q
+          ? `<p class="catalog-empty">Sin resultados para “${escape(state.q)}”. <button type="button" data-search-clear>Borrar búsqueda</button>${filtered ? ' <button type="button" data-filters-clear>Borrar filtros</button>' : ''}</p>`
+          : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear>Borrar filtros</button></p>';
+        el.innerHTML = filtersMarkup(selected, state, shown.length) + (shown.length ? shown.map(productCard).join('') : empty);
+        const field = typing === null ? null : el.querySelector('.catalog-search input');
+        if (field) { field.focus({ preventScroll: true }); try { field.setSelectionRange(typing, typing); } catch { /* search inputs without selection support */ } }
       } else {
         // Also covers `sections` with no collections yet: a single "Más productos" group holding
         // the whole catalog isn't an arrangement, so it falls back to the same flat grid as `all`.

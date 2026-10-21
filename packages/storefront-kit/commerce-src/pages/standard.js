@@ -34,7 +34,6 @@
     return entries.length >= 2 ? entries.map(([question, answer]) => `<section class="pagosya-info__qa"><h2>${escape(question)}</h2>${answer.startsWith('<') ? answer : `<p>${answer}</p>`}</section>`).join('') : '';
   }
   // Catalog pages. `collections()` and `collectionHref` are declared further down the file, so these read the store directly.
-  const foldText = value => String(value ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const infoCollections = () => (Array.isArray(store.collections) ? store.collections : [])
     .filter(collection => collection && typeof collection.slug === 'string' && typeof collection.name === 'string')
     .map(collection => ({ ...collection, count: (Array.isArray(collection.productIds) ? collection.productIds : []).filter(id => products().some(item => item.id === id)).length }))
@@ -52,10 +51,9 @@
     const q = searchQuery();
     const form = `<form class="pagosya-search" role="search" method="get" action="${escape(pageHref('buscar.html'))}"><label>Buscar productos<input type="search" name="q" value="${escape(q)}" maxlength="80" autocomplete="off"></label><button type="submit">Buscar</button></form>`;
     if (!q) return `${form}<p>Escribe lo que buscas.</p>`;
-    const words = foldText(q).split(/\s+/).filter(Boolean);
-    const categoryName = item => (Array.isArray(store.categories) ? store.categories : []).find(category => category && category.id === item.categoryId)?.name;
-    const haystack = item => foldText([item.name, item.description, ...(Array.isArray(item.tags) ? item.tags : []), categoryName(item)].filter(Boolean).join(' '));
-    const hits = items.filter(item => { const text = haystack(item); return words.every(word => text.includes(word)); });
+    // One match rule with the catalogue's search bar (catalog/filters.js, amendment 2026-10-21).
+    const words = searchWords(q);
+    const hits = items.filter(item => matchesSearch(item, words));
     if (!hits.length) return `${form}<p role="status">No encontramos productos para “${escape(q)}”.</p>`;
     const cards = hits.slice(0, 48).map(item => { const image = safeImage(Array.isArray(item.imageUrls) ? item.imageUrls[0] : ''); return `<li><a href="${escape(productHref(item))}">${image ? `<img src="${escape(image)}" alt="" loading="lazy">` : ''}<strong>${escape(item.name)}</strong><span>${escape(money(item.amount, item.currency))}</span></a></li>`; });
     return `${form}<p role="status">${hits.length > 48 ? `Mostrando 48 de ${hits.length} resultados` : `${hits.length} ${hits.length === 1 ? 'resultado' : 'resultados'}`} para “${escape(q)}”.</p><ul class="pagosya-info__cards">${cards.join('')}</ul>`;

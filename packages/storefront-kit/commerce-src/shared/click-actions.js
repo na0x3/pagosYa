@@ -37,7 +37,7 @@
     if (button.hasAttribute('data-filters-clear')) { writeFilterState({ orden: readFilterState().orden, precio: null, sets: {}, toggles: new Set() }); render(); return; }
     if (button.hasAttribute('data-filter-remove')) {
       const state = readFilterState(), [key, value] = button.dataset.filterRemove.split(':');
-      if (key === 'precio') state.precio = null; else if (value) state.sets[key] = (state.sets[key] || []).filter(v => v !== value); else state.toggles.delete(key);
+      if (key === 'q') state.q = ''; else if (key === 'precio') state.precio = null; else if (value) state.sets[key] = (state.sets[key] || []).filter(v => v !== value); else state.toggles.delete(key);
       writeFilterState(state); render(); return;
     }
     if (button.hasAttribute('data-filters-open')) {
