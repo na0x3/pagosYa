@@ -72,7 +72,7 @@ export function hostedAssetSource(value: string): string | null {
   } catch { return null; }
 }
 
-export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; accountForms?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[]; assetSources?: string[]; inlineText?: boolean } = {}): string {
+export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; accountForms?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[]; assetSources?: string[]; inlineText?: boolean; scrollY?: number } = {}): string {
   const imageSources = (navigation.imageSources || []).map(uploadImageSource).filter((source): source is string => Boolean(source));
   const entry = snapshot.files.find((file) => file.path === page && file.encoding !== "base64");
   if (!entry) throw new Error("Esta revisión no incluye la página seleccionada.");
@@ -229,6 +229,26 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   if (navigation.hosted !== true) flag.textContent += '\n' + editModeRuntime + '\n' + bocetoModeRuntime;
   // Spec 2026-10-20 §6: double-click text editing, only in the Studio's own preview.
   if (navigation.hosted !== true && navigation.inlineText === true) flag.textContent += '\n' + inlineTextRuntime;
+  // The Studio redraws its preview after every save; the page reports where it is scrolled and comes back there
+  // (owner 2026-10-21: «every time I update something it reloads from the top»). Content that renders late (the
+  // catalog) grows the page, so the restore retries for a moment and stops as soon as the merchant scrolls.
+  if (navigation.hosted !== true) flag.textContent += `
+(function () {
+  var wanted = ${Math.max(0, Math.round(Number(navigation.scrollY) || 0))}, restoring = wanted > 0, timer = 0;
+  var report = function () { clearTimeout(timer); timer = setTimeout(function () { parent.postMessage({ type: 'pagosya:preview-scroll', y: Math.round(window.scrollY) }, '*'); }, 120); };
+  var stop = function () { restoring = false; };
+  ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(function (name) { window.addEventListener(name, stop, { passive: true, capture: true }); });
+  window.addEventListener('scroll', function () { if (!restoring) report(); }, { passive: true });
+  if (restoring) {
+    var started = Date.now();
+    (function again() {
+      if (!restoring) return;
+      window.scrollTo(0, wanted);
+      if (Math.abs(window.scrollY - wanted) < 2 || Date.now() - started > 2500) { restoring = false; report(); return; }
+      requestAnimationFrame(again);
+    })();
+  }
+})();`;
   policy.after(flag);
   return "<!doctype html>" + doc.documentElement.outerHTML;
 }

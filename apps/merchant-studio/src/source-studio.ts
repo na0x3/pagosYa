@@ -251,6 +251,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       if (event.data.type === 'pagosya:boceto-photo' && typeof event.data.id === 'string' && typeof event.data.slot === 'string') bocetoPanel.remotePhoto(event.data.id, event.data.slot);
       return;
     }
+    if (event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:preview-scroll' && Number.isFinite(event.data.y)) { previewScroll = { key: shownScrollKey, y: Math.max(0, Math.min(200000, Number(event.data.y))) }; return; }
     if (visualEditing && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:visual-select') { directEditor.select(event.data.value, event.data.kind); return; }
     // Spec 2026-10-20 §6: a text double-clicked and changed in the preview, saved through the direct-edit field that holds it.
     if (plantillasOn && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:inline-text' && typeof event.data.before === 'string' && typeof event.data.after === 'string') { void saveInlineText(event.data.before.slice(0, 2000), event.data.after.slice(0, 2000)); return; }
@@ -270,12 +271,17 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     page = next.page; previewNavigation = next; clearSelection(); render();
   });
   let disposeAccountPreview: (() => void) | undefined;
+  // Where the preview was scrolled, per store, page and query (owner 2026-10-21: saves reloaded it from the top).
+  let previewScroll = { key: '', y: 0 }, shownScrollKey = '';
   async function renderPreview(frame: HTMLIFrameElement) {
     const request = ++previewRender;
     const selectedPage = page;
+    // A redraw of the same page (a save, a new revision) comes back where the merchant was; another page starts at the top.
+    const scrollKey = `${storeId}|${selectedPage}|${previewNavigation.query || ''}`;
+    const scrollY = !bocetoOpen && !previewNavigation.fragment && previewScroll.key === scrollKey ? previewScroll.y : 0;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing, inlineText: plantillasOn && !visualEditing && !bocetoOpen && !historical() }); if (!visualEditing) disposeAccountPreview = mountSourceAccountDemo(frame); }
+      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing, inlineText: plantillasOn && !visualEditing && !bocetoOpen && !historical(), scrollY }); shownScrollKey = scrollKey; if (!visualEditing) disposeAccountPreview = mountSourceAccountDemo(frame); }
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }
