@@ -85,7 +85,7 @@ export const AGENT_TOOLS = [
     cardCss: { type: ['string', 'null'], description: `CSS con guardas para las tarjetas de producto. Partes: ${CARD_PARTS.join(', ')}. Precio y botón de agregar están protegidos. Cada llamada reemplaza el tema completo: envía también el preset y los ajustes actuales junto con catalogCss, cardCss y cartCss.` },
     cartCss: { type: ['string', 'null'], description: `CSS con guardas para el carrito. Partes: ${CART_PARTS.join(', ')}. Cantidades, totales y el botón de pagar están protegidos. Cada llamada reemplaza el tema completo: envía también el preset y los ajustes actuales junto con catalogCss, cardCss y cartCss.` },
   }),
-  tool('finish', 'Termina: resumen para el comercio (español, 1–3 frases), la lista de secciones construidas y, si aplica, tellsKept (hábitos de sitio generado que mantuviste a propósito; puede ir vacío).', { summary: text, sections: { type: 'array', items: text }, status: { type: 'string', enum: ['completed','partial','blocked'] }, remaining: { type: 'array', items: text }, tellsKept: { type: 'array', items: text } }),
+  tool('finish', 'Termina: resumen para el comercio (español, 1–3 frases, en palabras simples: qué cambió en su tienda, sin términos técnicos como CTA, hero, selector, componente o atributo), la lista de secciones construidas y, si aplica, tellsKept (hábitos de sitio generado que mantuviste a propósito; puede ir vacío).', { summary: text, sections: { type: 'array', items: text }, status: { type: 'string', enum: ['completed','partial','blocked'] }, remaining: { type: 'array', items: text }, tellsKept: { type: 'array', items: text } }),
 ];
 const VIEW = { 1280: 'escritorio', 820: 'tablet', 390: 'celular' } as const;
 

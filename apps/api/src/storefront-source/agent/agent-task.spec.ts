@@ -126,3 +126,10 @@ it('hands the plan to the merchant: one «Voy a» step per requirement after the
   await tools.run('plan_task', JSON.stringify({ requirements: [requirement, second] }));
   expect(tools.steps.filter(s => s.kind === 'plan_task').map(s => s.label)).toEqual(['Planificó 2 requisitos', 'Voy a: El título pedido aparece', 'Voy a: El botón principal dice Comprar']);
 });
+
+it('asks the finish summary in plain words for the merchant, without developer jargon (2026-10-21)', async () => {
+  const { AGENT_TOOLS } = await import('./agent-tools');
+  const finishTool = AGENT_TOOLS.find(t => t.name === 'finish') as { description: string };
+  expect(finishTool.description).toMatch(/palabras simples/);
+  expect(finishTool.description).toMatch(/CTA/);
+});
