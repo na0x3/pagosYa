@@ -66,7 +66,8 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   const sessionProfileErrorEl = document.getElementById("sessionProfileError");
   const sessionProfileContinueEl = document.getElementById("sessionProfileContinue");
 
-  const savedApiBase = sessionStorage.getItem("pagosya_merchant_api_base");
+  // In production the API base is the server's: a saved developer value is never used (security audit 2026-10-21).
+  const savedApiBase = document.documentElement.hasAttribute("data-production") ? null : sessionStorage.getItem("pagosya_merchant_api_base");
   apiBaseEl.value = savedApiBase === "http://localhost:3000/v1" ? "http://localhost:3001/v1" : savedApiBase || apiBaseEl.value;
   if (savedApiBase === "http://localhost:3000/v1") sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value);
   emailEl.value = sessionStorage.getItem("pagosya_merchant_email") || emailEl.value;

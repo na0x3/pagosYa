@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { applySecurityHeaders, hardenHttpServer } from "../../scripts/http-security.mjs";
 import { injectFullNav } from "./src/full-nav.mjs";
+import { injectServerConfig } from "./src/server-config.mjs";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const variantEditorDir = path.dirname(createRequire(import.meta.url).resolve("@pagosya/variant-editor"));
@@ -34,6 +35,8 @@ const liveReloadEnabled = process.env.DASHBOARD_LIVE_RELOAD === "1";
 const liveReloadVersion = `${process.pid}-${Date.now()}`;
 // Spec 2026-10-21 A2: the screens and fields YAPI makes redundant come back with DASHBOARD_FULL_NAV=1.
 const fullNavEnabled = process.env.DASHBOARD_FULL_NAV === "1";
+// Production: the API and checkout origins come from the environment and the login hides its developer options.
+const serverConfig = { apiBase: process.env.DASHBOARD_API_BASE, checkoutOrigin: process.env.DASHBOARD_CHECKOUT_ORIGIN, production: process.env.NODE_ENV === "production" };
 const liveReloadClients = new Set();
 const mascotAssets = new Map([
   ["/assets/yapi-idle.png", "yapi-idle.png"],
@@ -142,7 +145,7 @@ const server = createServer(async (req, res) => {
     if (requestUrl.pathname === "/" || requestUrl.pathname === "/index.html") {
       const html = await readFile(path.join(dirname, "index.html"), "utf8");
       res.writeHead(200, { "content-type": "text/html", "cache-control": "no-store" });
-      res.end(injectFullNav(injectLiveReload(html), fullNavEnabled));
+      res.end(injectServerConfig(injectFullNav(injectLiveReload(html), fullNavEnabled), serverConfig));
       return;
     }
     if (requestUrl.pathname === "/fonts/instrument-serif.ttf") {
