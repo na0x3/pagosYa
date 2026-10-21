@@ -275,5 +275,21 @@ describe('feature slots on an older home', () => {
     const files = refillMasterFiles(older(edited), manifest, { copy: { headline: 'Otra' } });
     expect(files.find(file => file.path === 'components/home.tsx')!.content).toBe(edited);
   });
+  it('an older Shell gets the column footer\'s photo band (live check 2026-10-21, NOA VARGAS rev 11)', () => {
+    const shell = `import { store, copy, variants } from './store-data';\nexport function Footer() {\n  const footer = variant('footer', 'columns');\n  return <footer className="es-footer" data-es-footer={footer}>\n  </footer>;\n}\n`;
+    const files = refillMasterFiles(older(anchors).concat({ path: 'components/Shell.tsx', content: shell }), manifest, { copy: { headline: 'Otra' } });
+    const patched = files.find(file => file.path === 'components/Shell.tsx')!.content;
+    expect(patched).toContain('data-es-footer={footer} style={band}>');
+    expect(patched).toContain("import { store, copy, variants, photos } from './store-data';");
+    expect(refillMasterFiles(files, manifest, { copy: { headline: 'Otra más' } }).find(file => file.path === 'components/Shell.tsx')!.content).toBe(patched);
+  });
+  it('an older copy of the sections CSS block is refreshed to the template\'s', () => {
+    const stale = '/* John Smedley sections (2026-10-21): old */\n.es-duo{}\n/* John Smedley sections end */';
+    const files = refillMasterFiles(older(anchors).map(file => file.path === 'styles/globals.css' ? { ...file, content: `${file.content}\n${stale}\n` } : file), manifest, { copy: { headline: 'Otra' } });
+    const css = files.find(file => file.path === 'styles/globals.css')!.content;
+    expect(css).not.toContain('/* John Smedley sections (2026-10-21): old */');
+    expect(css).toContain('#productos .es-grid[data-es-grid="side-title"][data-pagosya-catalog]');
+    expect(css.split('/* John Smedley sections end */')).toHaveLength(2);
+  });
 });
 

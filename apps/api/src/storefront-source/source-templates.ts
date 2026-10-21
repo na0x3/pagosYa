@@ -198,6 +198,8 @@ export function withEsencialCatalogPages<F extends { path: string; content: stri
  *  alone (store-data always exports `features`, so it still compiles). Doing it twice changes nothing. */
 const FEATURE_ANCHORS: Array<[string, string]> = [['<section id="historia"', 'products'], ['{sections.map(', 'story'], ['<section id="valores"', 'values'], ['<section id="cierre"', 'closing']];
 const FEATURE_CSS_MARK = '/* John Smedley sections (2026-10-21)';
+const FOOTER_ANCHOR = 'return <footer className="es-footer" data-es-footer={footer}>';
+const SHELL_DATA_IMPORT = "import { store, copy, variants } from './store-data';";
 const FEATURE_CSS_END = '/* John Smedley sections end */';
 export function withFeatureSlots<F extends { path: string; content: string }>(files: F[]): F[] {
   if (!files.some(file => file.path === TEMPLATE_STORE_DATA_PATH)) return files;
@@ -207,7 +209,19 @@ export function withFeatureSlots<F extends { path: string; content: string }>(fi
   const block = start >= 0 && end > start ? css.slice(start, end + FEATURE_CSS_END.length) : '';
   const component = source.find(file => file.path === 'components/features.tsx');
   const out = files.map(file => {
-    if (file.path === 'styles/globals.css' && block && !file.content.includes(FEATURE_CSS_MARK)) return { ...file, content: `${file.content.trimEnd()}\n\n${block}\n` };
+    if (file.path === 'styles/globals.css' && block) {
+      // An older copy of the block is replaced by the template's current one (live check, NOA VARGAS rev 11).
+      const from = file.content.indexOf(FEATURE_CSS_MARK), to = file.content.indexOf(FEATURE_CSS_END, from);
+      if (from < 0) return { ...file, content: `${file.content.trimEnd()}\n\n${block}\n` };
+      if (to > from) { const content = file.content.slice(0, from) + block + file.content.slice(to + FEATURE_CSS_END.length); return content === file.content ? file : { ...file, content }; }
+      return file;
+    }
+    // The column footer's photo band reads store-data photos; an older Shell gets the two lines (live check, NOA VARGAS rev 11).
+    if (file.path === 'components/Shell.tsx' && !file.content.includes('style={band}') && file.content.includes(FOOTER_ANCHOR) && file.content.includes(SHELL_DATA_IMPORT)) {
+      const indent = file.content.slice(file.content.lastIndexOf('\n', file.content.indexOf(FOOTER_ANCHOR)) + 1, file.content.indexOf(FOOTER_ANCHOR));
+      return { ...file, content: file.content.replace(SHELL_DATA_IMPORT, "import { store, copy, variants, photos } from './store-data';")
+        .replace(FOOTER_ANCHOR, `const band = footer === 'column' && photos.hero ? { ['--es-footer-photo' as string]: \`url("\${photos.hero}")\` } as Record<string, string> : undefined;\n${indent}return <footer className="es-footer" data-es-footer={footer} style={band}>`) };
+    }
     if (file.path !== 'components/home.tsx' || file.content.includes('FeatureSlot') || !FEATURE_ANCHORS.every(([anchor]) => file.content.split(anchor).length === 2)) return file;
     let content = file.content;
     for (const [anchor, slot] of FEATURE_ANCHORS) {
