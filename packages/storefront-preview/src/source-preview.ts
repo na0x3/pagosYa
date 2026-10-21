@@ -8,6 +8,7 @@ import chatRuntime from '@pagosya/storefront-kit/kit/chat.js?raw';
 import previewAssetsRuntime from './source-preview-assets.js?raw';
 import editModeRuntime from './source-preview-edit-mode.js?raw';
 import bocetoModeRuntime from './source-preview-boceto-mode.js?raw';
+import inlineTextRuntime from './source-preview-inline-text.js?raw';
 
 export interface SourceFile { path: string; content: string; encoding?: "utf8" | "base64" | "url" }
 export interface SourceSnapshot { schemaVersion: number; brief: { sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial'; businessType: string; audience: string; primaryAction: string; visualDirection: string; templateId?: string; templateRevision?: number }; files: SourceFile[] }
@@ -71,7 +72,7 @@ export function hostedAssetSource(value: string): string | null {
   } catch { return null; }
 }
 
-export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; accountForms?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[]; assetSources?: string[] } = {}): string {
+export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; accountForms?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[]; assetSources?: string[]; inlineText?: boolean } = {}): string {
   const imageSources = (navigation.imageSources || []).map(uploadImageSource).filter((source): source is string => Boolean(source));
   const entry = snapshot.files.find((file) => file.path === page && file.encoding !== "base64");
   if (!entry) throw new Error("Esta revisión no incluye la página seleccionada.");
@@ -226,6 +227,8 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   flag.textContent += '\n' + videoLoopRuntime;
   // Edit mode (visual selection) belongs to the Studio preview only: a published, hosted page never carries it.
   if (navigation.hosted !== true) flag.textContent += '\n' + editModeRuntime + '\n' + bocetoModeRuntime;
+  // Spec 2026-10-20 §6: double-click text editing, only in the Studio's own preview.
+  if (navigation.hosted !== true && navigation.inlineText === true) flag.textContent += '\n' + inlineTextRuntime;
   policy.after(flag);
   return "<!doctype html>" + doc.documentElement.outerHTML;
 }
