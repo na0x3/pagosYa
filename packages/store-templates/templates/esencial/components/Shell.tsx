@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type CSSProperties } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
-import { store, copy, variants } from './store-data';
+import { store, copy, variants, photos } from './store-data';
 
 /** The rolled variant of a part (variety spec §2); the first catalogue id when the store has none. */
 export const variant = (part: string, fallback: string) => { const value = variants[part]; return typeof value === 'string' && value ? value : fallback; };
@@ -99,7 +99,9 @@ export function Footer() {
   // store-data is `as const`: widen so an empty value still type-checks as text.
   const phone: string = store.phone;
   const footer = variant('footer', 'columns');
-  return <footer className="es-footer" data-es-footer={footer}>
+  // John Smedley sections (spec 2026-10-21): the `column` footer sits on a band of the store's hero photo.
+  const band = footer === 'column' && photos.hero ? { ['--es-footer-photo' as string]: `url("${photos.hero}")` } as CSSProperties : undefined;
+  return <footer className="es-footer" data-es-footer={footer} style={band}>
     {footer === 'bigname' ? <p className="es-footer__big" aria-hidden="true">{store.name}</p> : null}
     <div className="es-footer__grid">
       <div className="es-footer__brand"><p className="es-footer__name">{store.name}</p>{tagline ? <p>{tagline}</p> : null}</div>

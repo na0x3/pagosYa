@@ -193,6 +193,34 @@ export function withEsencialCatalogPages<F extends { path: string; content: stri
   return missing.length ? [...withCss, ...missing.map(file => ({ ...file }) as unknown as F)] : withCss;
 }
 
+/** John Smedley sections (spec 2026-10-21): an Esencial home built before the sections gets the component, the CSS block and a
+ *  slot before each of its four anchors — only when all four are there and none is placed yet, so a home YAPI rebuilt is left
+ *  alone (store-data always exports `features`, so it still compiles). Doing it twice changes nothing. */
+const FEATURE_ANCHORS: Array<[string, string]> = [['<section id="historia"', 'products'], ['{sections.map(', 'story'], ['<section id="valores"', 'values'], ['<section id="cierre"', 'closing']];
+const FEATURE_CSS_MARK = '/* John Smedley sections (2026-10-21)';
+const FEATURE_CSS_END = '/* John Smedley sections end */';
+export function withFeatureSlots<F extends { path: string; content: string }>(files: F[]): F[] {
+  if (!files.some(file => file.path === TEMPLATE_STORE_DATA_PATH)) return files;
+  const source = templateSourceFiles(MASTER_TEMPLATE_ID);
+  const css = source.find(file => file.path === 'styles/globals.css')?.content ?? '';
+  const start = css.indexOf(FEATURE_CSS_MARK), end = css.indexOf(FEATURE_CSS_END);
+  const block = start >= 0 && end > start ? css.slice(start, end + FEATURE_CSS_END.length) : '';
+  const component = source.find(file => file.path === 'components/features.tsx');
+  const out = files.map(file => {
+    if (file.path === 'styles/globals.css' && block && !file.content.includes(FEATURE_CSS_MARK)) return { ...file, content: `${file.content.trimEnd()}\n\n${block}\n` };
+    if (file.path !== 'components/home.tsx' || file.content.includes('FeatureSlot') || !FEATURE_ANCHORS.every(([anchor]) => file.content.split(anchor).length === 2)) return file;
+    let content = file.content;
+    for (const [anchor, slot] of FEATURE_ANCHORS) {
+      const at = content.indexOf(anchor), indent = content.slice(content.lastIndexOf('\n', at) + 1, at);
+      content = `${content.slice(0, at)}<FeatureSlot at="${slot}" />\n\n${indent}${content.slice(at)}`;
+    }
+    content = content.replace(/^(import [^\n]*from '\.\/store-data';\n)/m, `$1import { FeatureSlot } from './features';\n`);
+    return { ...file, content };
+  });
+  return component && !out.some(file => file.path === component.path) && out.some(file => file.path === 'components/home.tsx' && file.content.includes('FeatureSlot'))
+    ? [...out, { ...component } as unknown as F] : out;
+}
+
 /** A tile photo the fill gave as an upload path (`/v1/uploads/…`) as the full API URL, so the save check can match it. */
 export const absoluteTiles = (groups: StoreMenuGroup[] | undefined, apiUrl?: URL) => groups?.map(group => ({ ...group, ...(group.tiles ? { tiles: group.tiles.map(tile => ({ ...tile, image: masterPhotoUrl(tile.image, apiUrl) })) } : {}) }));
 
@@ -250,7 +278,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
     }
     return file;
   }), variants);
-  const pages = withEsencialCatalogPages(out);
+  const pages = withFeatureSlots(withEsencialCatalogPages(out));
   return variants.menu && variants.menu !== 'none' ? withStoreMenuMounts(pages) : pages;
 }
 

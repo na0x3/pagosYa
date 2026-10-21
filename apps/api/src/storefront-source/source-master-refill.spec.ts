@@ -256,3 +256,24 @@ describe('features on a master store', () => {
   });
 });
 
+/** John Smedley sections (spec 2026-10-21): an older home gets the four slots, the component and the CSS once. */
+describe('feature slots on an older home', () => {
+  const anchors = `import { copy, photos, sections, store } from './store-data';\nexport default function Home() {\n  return <main>\n      <section id="productos"></section>\n\n      <section id="historia"></section>\n\n      {sections.map(section => null)}\n\n      <section id="valores"></section>\n\n      <section id="resenas"></section>\n\n      <section id="cierre"></section>\n  </main>;\n}\n`;
+  const older = (home: string) => storeFiles().concat({ path: 'components/home.tsx', content: home });
+  it('adds the slots before the four anchors, the component and the CSS, once', () => {
+    const files = refillMasterFiles(older(anchors), manifest, { copy: { headline: 'Otra' } });
+    const home = files.find(file => file.path === 'components/home.tsx')!.content;
+    for (const at of ['products', 'story', 'values', 'closing']) expect(home).toContain(`<FeatureSlot at="${at}" />`);
+    expect(home.indexOf('<FeatureSlot at="products" />')).toBeLessThan(home.indexOf('<section id="historia">'));
+    expect(home).toContain("import { FeatureSlot } from './features';");
+    expect(files.some(file => file.path === 'components/features.tsx')).toBe(true);
+    const again = refillMasterFiles(files, manifest, { copy: { headline: 'Otra más' } });
+    expect(again.find(file => file.path === 'components/home.tsx')!.content).toBe(home);
+  });
+  it('a home without all four anchors is left alone — Review Focus 3', () => {
+    const edited = anchors.replace('<section id="valores"></section>', '<div id="valores"></div>');
+    const files = refillMasterFiles(older(edited), manifest, { copy: { headline: 'Otra' } });
+    expect(files.find(file => file.path === 'components/home.tsx')!.content).toBe(edited);
+  });
+});
+

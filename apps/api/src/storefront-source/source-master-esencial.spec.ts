@@ -122,6 +122,46 @@ describe('Esencial', () => {
     expect(rolled.files.find((f: any) => f.path === 'components/store-data.tsx')!.content).toMatch(/"feature":"[a-z,]*"/);
   });
 
+  it('the John Smedley sections render with real text, the explore chip switches the rail, and phones do not overflow (spec 2026-10-21)', async () => {
+    const variants = { ...Object.fromEntries(Object.entries(manifest.master!.variants!).filter(([part]) => part !== 'feature').map(([part, ids]) => [part, (ids as string[])[0]])), sections: [] };
+    const demo = { ...templateDemoPublicStore(), categories: [{ id: 'k1', name: 'Velas' }, { id: 'k2', name: 'Jabones' }] } as any;
+    demo.items = demo.items.map((item: any, index: number) => ({ ...item, categoryId: index % 2 ? 'k2' : 'k1' }));
+    const read = async (feature: string, width: number, act = false) => {
+      const assembled = await assemble(demo, { variants: { ...variants, feature, header: 'boxed', button: 'dashed', footer: 'column', grid: 'side-title' } });
+      const snapshot = await prepare(assembled);
+      return withVisualSandbox(snapshot, '', undefined, false, async context => {
+        const tab = await context.newPage();
+        await tab.setViewportSize({ width, height: 900 });
+        await tab.goto('https://preview.invalid/index.html', { waitUntil: 'load', timeout: 12000 });
+        await tab.waitForTimeout(300);
+        if (act) { await tab.click('.es-explore__chips button:nth-child(2)'); await tab.waitForTimeout(200); }
+        const out = await tab.evaluate(() => {
+          const texts = (selector: string) => Array.from(document.querySelectorAll(selector)).map(el => (el.textContent || '').trim());
+          return { duo: texts('.es-duo__title'), duoCtas: texts('.es-duo__cta'), duoLinks: Array.from(document.querySelectorAll('.es-duo__half')).map(a => a.getAttribute('href')),
+            exploreTitle: texts('#es-explore-title')[0], rail: document.querySelector('[data-explore-rail]')?.getAttribute('data-category'), colours: Boolean(document.querySelector('.es-explore__colours')),
+            capsule: texts('.es-capsule__text')[0], origin: texts('.es-origin__caption')[0], originLink: texts('.es-origin__link')[0],
+            emptyButtons: Array.from(document.querySelectorAll('main a.es-btn, main button')).filter(el => !(el.textContent || '').trim() && !el.getAttribute('aria-label')).length,
+            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+        });
+        await tab.close();
+        return out;
+      });
+    };
+    const desktop = await read('duo,explore', 1440, true);
+    expect(desktop.duo).toEqual(['Velas', 'Jabones']);
+    expect(desktop.duoCtas).toEqual(['Ver ahora', 'Ver colección']);
+    expect(desktop.duoLinks).toEqual(['productos.html?f_categoria=k1', 'productos.html?f_categoria=k2']);
+    expect(desktop.exploreTitle).toBe('Jabones');
+    expect(desktop.rail).toBe('k2');
+    expect(desktop.colours).toBe(false);
+    expect(desktop.emptyButtons).toBe(0);
+    const phone = await read('capsule,origin', 390);
+    expect(phone.capsule).toBeTruthy();
+    expect(phone.origin).toBeTruthy();
+    expect(phone.originLink).toBe('Nuestra historia');
+    expect(phone.overflow).toBeLessThanOrEqual(1);
+  });
+
   it('every font pair uses catalogued OFL fonts', () => {
     for (const pair of manifest.master!.fonts) for (const id of [pair.heading, pair.body]) expect(SOURCE_FONT_CATALOG.some(font => font.id === id)).toBe(true);
   });

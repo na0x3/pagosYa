@@ -2,6 +2,7 @@ import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { copy, photos, sections, store } from './store-data';
 import { variant } from './Shell';
+import { FeatureSlot } from './features';
 import { IconArrowRight, IconArrowUpRight, IconCheck, IconMessageCircle, IconPlus, IconShieldCheck, IconStar, IconTruck } from './icons';
 
 const VALUE_ICONS = [IconStar, IconTruck, IconShieldCheck];
@@ -105,6 +106,8 @@ export default function Home() {
         <div className="es-grid" data-es-grid={variant('grid', 'grid4')} data-es-cards={cards} data-pagosya-catalog />
       </section>
 
+      <FeatureSlot at="products" />
+
       <section id="historia" className={story === 'split' && !photos.story ? 'es-section es-story es-story--text' : 'es-section es-story'} data-es-story={story} data-es-band={story === 'overlay' ? undefined : band(0)} aria-labelledby="es-story-title">
         {['split', 'overlay', 'pair'].includes(story) ? <Reveal className="es-story__media">
           <img src={photos.story} alt="" aria-hidden="true" />{story === 'pair' ? <img src={photos.p1} alt="" aria-hidden="true" /> : null}
@@ -118,7 +121,11 @@ export default function Home() {
         </Reveal>
       </section>
 
+      <FeatureSlot at="story" />
+
       {sections.map((section, index) => <BusinessSection key={section.id} section={section} phone={phone} band={band(1 + index)} />)}
+
+      <FeatureSlot at="values" />
 
       <section id="valores" className="es-section es-values" data-es-values={values} data-es-band={valuesTone} aria-label="Lo que nos importa">
         {values === 'line' ? <p className="es-values__line" aria-hidden="true">{copy.values.map(value => value.title).join(' · ')}</p> : null}
@@ -130,6 +137,8 @@ export default function Home() {
         <h2 id="es-reviews-title" className="es-h2">Lo que dicen nuestros clientes</h2>
         <div className="es-reviews__list" data-pagosya-reviews />
       </section>
+
+      <FeatureSlot at="closing" />
 
       <section id="cierre" className="es-closing" data-es-closing={closing} aria-labelledby="es-closing-title">
         {closing === 'photo' ? <img className="es-closing__photo" src={photos.hero} alt="" aria-hidden="true" /> : null}
