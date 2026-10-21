@@ -194,7 +194,7 @@ export async function openTemplateGallery(api: MerchantStudioApi, options: { sto
     about?.addEventListener('input', () => { state.about = about.value; });
     dialog.querySelector('[data-template-about-form]')?.addEventListener('submit', event => { event.preventDefault(); void apply(state.asking || '', about?.value.trim() ?? ''); });
     dialog.querySelector('[data-template-about-cancel]')?.addEventListener('click', () => { state.asking = ''; render(); });
-    about?.focus();
+    if (about) { about.focus({ preventScroll: true }); about.closest('.tpl-about__card')?.scrollIntoView?.({ block: 'center' }); }
     void fillPreview();
   }
   function bindCards() {

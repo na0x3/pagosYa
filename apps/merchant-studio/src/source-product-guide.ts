@@ -7,8 +7,10 @@ export function mountProductGuide(app: HTMLDivElement) {
   const storeId = new URLSearchParams(location.search).get('store') || '';
   const api = new MerchantStudioApi(sessionStorage.getItem(SESSION_STORAGE_KEY) || '');
   let form: ReturnType<typeof createProductForm> | undefined, saved = false;
+  // The product being edited: asked for again (a double-click in the Studio preview), it stays open instead of asking to discard.
+  let openId: string | undefined;
   function start(initial?: ProductGuideRecord, step?: ProductGuideStep) {
-    form?.dispose(); saved = false;
+    form?.dispose(); saved = false; openId = initial?.id;
     form = createProductForm(api, storeId, () => {
       saved = true;
       window.parent.postMessage({ type: 'pagosya:product-saved', storeId }, location.origin);
@@ -28,6 +30,7 @@ export function mountProductGuide(app: HTMLDivElement) {
   window.addEventListener('message', event => {
     if (event.origin !== location.origin || event.source !== window.parent) return;
     // `step` (optional, from Crecimiento) opens the product where an insight points: description, price, photos or stock.
+    if (event.data?.type === 'pagosya:product-guide-edit' && event.data.storeId === storeId && event.data.product?.id === openId && !saved) { form?.focus(); return; }
     if (event.data?.type === 'pagosya:product-guide-edit' && event.data.storeId === storeId && event.data.product?.id && canLeave()) start(event.data.product, PRODUCT_GUIDE_STEPS.includes(event.data.step) ? event.data.step : undefined);
     if (event.data?.type === 'pagosya:product-guide-new' && canLeave()) { start(); form?.focus(); }
     if (event.data?.type === 'pagosya:product-guide-focus') { if (saved) start(); form?.focus(); }

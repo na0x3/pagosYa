@@ -427,8 +427,10 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
 
   async function load(_revision?: number, waitForChecks = false) {
     liveDraft = null; showSavedRevision = false;
-    if (!plantillasAsked) { plantillasAsked = true; void api.templateSettings().then(settings => { if (settings.plantillas === true) { plantillasOn = true; render(); } }, () => undefined); }
+    // Asked beside the first load, so the first preview already has double-click editing (live check 2026-10-21).
+    const settings = plantillasAsked ? null : (plantillasAsked = true, api.templateSettings().catch(() => null));
     const [project, conversation, catalog] = await Promise.all([api.sourceState(storeId), api.sourceConversation(storeId), api.sourceCatalog(storeId).catch(() => null)]);
+    if (settings) plantillasOn = (await settings)?.plantillas === true;
     liveCatalog = catalog;
     state = project; messages = conversation.messages; setup = conversation.setup || null;
     version = state.revision ? await api.sourceVersion(storeId, state.revision) : null;

@@ -30,7 +30,8 @@ export function recordFocusLoss(entry: Record<string, unknown>) {
 /** Watches the composer by id, so it survives the redraws that replace the textarea. */
 export function watchComposerFocus(app: HTMLElement, state: FocusDebugState) {
   if (!focusDebugEnabled()) return;
-  let intentAt = 0;
+  // No intent yet: the first 400 ms after page start are not a merchant action.
+  let intentAt = -Infinity;
   const intent = () => { intentAt = performance.now(); };
   app.addEventListener('pointerdown', intent, true);
   app.addEventListener('keydown', event => { if (event.key === 'Tab' || event.key === 'Escape' || event.key === 'Enter') intent(); }, true);

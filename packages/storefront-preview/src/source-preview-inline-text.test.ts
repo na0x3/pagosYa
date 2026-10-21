@@ -12,6 +12,7 @@ const page = `<!doctype html><html><body><main>
   <p id="lead">Carne <strong>madurada</strong> en seco.</p>
   <article class="menu-item"><button class="menu-item__quick-look" data-product="p1">Vista rápida</button><h3 class="menu-item__name" data-product-field="name">Ribeye</h3><p data-product-field="price">Bs 150</p></article>
   <form><label id="field">Tu correo</label></form>
+  <a id="nav" href="index.html">Inicio</a>
 </main></body></html>`;
 const snapshot = { schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files: [{ path: 'index.html', content: page }] };
 const windows: any[] = [];
@@ -75,4 +76,40 @@ it('leaves forms alone, restores on the Studio’s revert, and stays off unless 
   const off = load(false);
   off.dbl('#title');
   expect(off.el('#title').hasAttribute('contenteditable')).toBe(false);
+});
+
+it('a link waits a moment on one click and never navigates on a double-click (live check 2026-10-21)', async () => {
+  const { w, el } = load();
+  const reached: string[] = [];
+  // The preview's own navigation listens on the document in the capture phase.
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:source-navigate') reached.push('nav'); });
+  const click = () => el('#nav').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+  await tick();
+  click();
+  expect(reached).toEqual([]);
+  await new Promise(resolve => setTimeout(resolve, 360));
+  expect(reached).toEqual(['nav']);
+  click(); click();
+  await new Promise(resolve => setTimeout(resolve, 350));
+  expect(reached).toEqual(['nav']);
+});
+
+it('a kit card: words under its «Ver detalle» overlay open that product, never an inline edit (live check 2026-10-21)', async () => {
+  const card = `<!doctype html><html><body><article class="menu-item" data-product-id="p9"><a class="menu-item__details" href="index.html" aria-label="Ver detalle"></a><div class="menu-item__copy"><h3 id="name">Tomahawk</h3><p id="desc">Madurada</p></div><strong class="menu-item__price" id="price">Bs 320</strong></article></body></html>`;
+  const dom = new JSDOM(sourcePreviewDocument({ ...snapshot, files: [{ path: 'index.html', content: card }] }, 'index.html', { inlineText: true }), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://source.invalid/index.html' });
+  const w = dom.window; windows.push(w);
+  const posted: any[] = []; w.addEventListener('message', (event: any) => { if (/^pagosya:inline-/.test(event.data?.type)) posted.push(event.data); });
+  await tick();
+  const overlay = w.document.querySelector('.menu-item__details');
+  for (const id of ['name', 'price', 'desc']) {
+    w.document.elementsFromPoint = () => [overlay, w.document.getElementById(id), w.document.querySelector('.menu-item'), w.document.body];
+    overlay.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+  }
+  await tick();
+  expect(posted).toEqual([
+    { type: 'pagosya:inline-product', productId: 'p9', field: 'name' },
+    { type: 'pagosya:inline-product', productId: 'p9', field: 'price' },
+    { type: 'pagosya:inline-product', productId: 'p9', field: 'name' },
+  ]);
+  expect(w.document.querySelector('[contenteditable]')).toBeNull();
 });

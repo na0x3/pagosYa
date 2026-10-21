@@ -45,7 +45,8 @@
 .tpl-card__confirm div{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
 .tpl-card__confirm .tpl-btn{min-width:0}
 .tpl-card.tpl-card--confirm .tpl-card__actions{visibility:hidden}
-.tpl-about{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:rgba(24,24,27,.38)}
+/* The gallery page lives in a frame as tall as its content: the card sits near the top and is scrolled into view on open. */
+.tpl-about{position:fixed;inset:0;z-index:40;display:grid;justify-items:center;align-items:start;padding:96px 16px 16px;background:rgba(24,24,27,.38)}
 .tpl-about__card{display:grid;gap:12px;width:min(480px,100%);padding:24px;border-radius:14px;background:#fff;box-shadow:0 24px 60px rgba(0,0,0,.18)}
 .tpl-about__card h3{margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em}
 .tpl-about__card p{margin:0;color:#3f3f46;font-size:14px;line-height:1.5}
