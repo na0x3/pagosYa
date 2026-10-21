@@ -3,7 +3,8 @@ import { AgentToolbox } from './agent-tools';
 import { AgentWorkspace } from './agent-workspace';
 import { validateTaskRequirements, agentProjectIndex, workspaceDigest, agentImagePaths } from './agent-task';
 import { compactAgentTranscript } from './agent-loop';
-import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
+import { listTemplates } from '@pagosya/store-templates';
+import { literalTemplateSource } from '../fixtures/literal-template';
 import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { captureAgentDraft } from './agent-capture';
@@ -12,7 +13,7 @@ import sharp from 'sharp';
 jest.setTimeout(120000);
 const requirement = { id:'r1', description:'El título pedido aparece', page:'index.html', check:'text', selector:'h1', expected:'Tu calma' };
 let base: Awaited<ReturnType<typeof templateDemoRevision>>;
-beforeAll(async () => { base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa')); });
+beforeAll(async () => { base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, literalTemplateSource('pausa')); });
 const box = () => { const files = base.files.filter(f => nextSourceFile(f.path)); return new AgentToolbox({ workspace: new AgentWorkspace(files, { redesign:false }), previous:files, base, instruction:'Cambia el título a Tu calma', purpose:'shop', maxScreenshots:8, taskRequired:true }); };
 const finish = { summary:'Cambié el título.', sections:['Portada'], status:'completed', remaining:[] };
 

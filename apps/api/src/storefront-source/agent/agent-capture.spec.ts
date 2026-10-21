@@ -1,4 +1,5 @@
-import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
+import { listTemplates } from '@pagosya/store-templates';
+import { literalTemplateSource } from '../fixtures/literal-template';
 import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { agentPreviewSnapshot, captureAgentDraft } from './agent-capture';
@@ -33,7 +34,7 @@ describe('agent capture', () => {
     expect((await captureAgentDraft(snapshot('<img alt="Foto" style="width:120px;height:80px">'), 390)).errors).toEqual(['Imagen no disponible: (sin ruta)']);
   });
   it('paints store-colour art with a mask, shows colour art as an image, and names a missing illustration', async () => {
-    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
+    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, literalTemplateSource('pausa'));
     const art = '<Illustration src="/assets/creative/fluent-mono/soft-ice-cream.svg" tone="accent" size={80} /><Illustration src="/assets/creative/fluent-flat/coffee.svg" label="Café" /><Illustration src="/assets/creative/fluent-mono/no-such-thing.svg" />';
     const authored = base.files.filter(f => nextSourceFile(f.path)).map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace(/import \{([^}]*)\} from '@pagosya\/ui';/, "import {$1, Illustration } from '@pagosya/ui';").replace('</h1>', `</h1>${art}`) } : f);
     const snapshot = await agentPreviewSnapshot(base, authored);
@@ -42,14 +43,14 @@ describe('agent capture', () => {
     expect(shot.errors).toEqual(['Ilustración no disponible: /assets/creative/fluent-mono/no-such-thing.svg']);
   });
   it('gives store-colour art a visible colour on a store without kit tokens, and names a tone that resolves to nothing', async () => {
-    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
+    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, literalTemplateSource('pausa'));
     const art = '<Illustration src="/assets/creative/fluent-mono/soft-ice-cream.svg" tone="accent" /><Illustration src="/assets/creative/fluent-mono/strawberry.svg" tone="var(--not-defined)" />';
     const authored = base.files.filter(f => nextSourceFile(f.path)).map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace(/import \{([^}]*)\} from '@pagosya\/ui';/, "import {$1, Illustration } from '@pagosya/ui';").replace('</h1>', `</h1>${art}`) } : f);
     const shot = await captureAgentDraft(await agentPreviewSnapshot(base, authored), 390);
     expect(shot.errors).toEqual(['Ilustración sin color visible: /assets/creative/fluent-mono/strawberry.svg']);
   });
   it('never puts an unsafe src into a CSS url, and reports a path with a query, which the preview cannot load', async () => {
-    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
+    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, literalTemplateSource('pausa'));
     const art = '<img src="/assets/creative/fluent-flat/coffee.svg?v=1" alt="" aria-hidden="true" width="40" height="40" /><Illustration src="/assets/creative/fluent-mono/soft-ice-cream.svg?v=1#x" /><Illustration src={`/assets/creative/fluent-mono/x.svg") , url("https://example.com/a.svg`} />';
     const authored = base.files.filter(f => nextSourceFile(f.path)).map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace(/import \{([^}]*)\} from '@pagosya\/ui';/, "import {$1, Illustration } from '@pagosya/ui';").replace('</h1>', `</h1>${art}`) } : f);
     const shot = await captureAgentDraft(await agentPreviewSnapshot(base, authored), 390);
@@ -80,7 +81,7 @@ describe('agent capture', () => {
   // PEPPA please 2026-10-20: the older checkout form was pasted over the kit's, so every [data-part] check came back
   // empty and the account theme being edited never showed in the agent's own screenshots.
   it('lets the kit draw the themed account form, so [data-part] checks see it', async () => {
-    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
+    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, literalTemplateSource('pausa'));
     const snapshot = snapshotWithAccountTheme(await agentPreviewSnapshot(base, base.files.filter(f => nextSourceFile(f.path))), { layout: 'card', css: '[data-account-gate] [data-part="card"] {\n    border: 0\n}' });
     expect(snapshot.files.some(f => f.path === 'acceso-registro.html')).toBe(true);
     const shot = await captureAgentDraft(snapshot, 1280, undefined, 'acceso-registro.html', [
@@ -90,7 +91,7 @@ describe('agent capture', () => {
     expect(shot.evidence.map(e => [e.id, e.passed])).toEqual([['r1', true], ['r2', true]]);
   });
   it('compiles an edited draft over the store runtime and screenshots it on a phone', async () => {
-    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
+    const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, literalTemplateSource('pausa'));
     base.files = base.files.filter(f => !f.path.startsWith('assets/icons/'));
     const authored = base.files.filter(f => nextSourceFile(f.path)).map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace('Un respiro', 'Tu calma').replace('</h1>', '</h1><img src="/assets/icons/shopping-bag.svg" alt="Carrito" width="24" height="24" />') } : f);
     const snapshot = await agentPreviewSnapshot(base, authored);

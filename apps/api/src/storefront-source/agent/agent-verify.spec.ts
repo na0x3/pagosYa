@@ -1,4 +1,5 @@
-import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
+import { listTemplates } from '@pagosya/store-templates';
+import { literalTemplateSource } from '../fixtures/literal-template';
 import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { authoredAccountHooks, authoredAccountPhotos, verifyAgentDraft } from './agent-verify';
@@ -6,7 +7,7 @@ import { authoredAccountHooks, authoredAccountPhotos, verifyAgentDraft } from '.
 jest.setTimeout(60_000);
 let pausa: Array<{ path: string; content: string }>;
 beforeAll(async () => {
-  const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
+  const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, literalTemplateSource('pausa'));
   pausa = base.files.filter(f => nextSourceFile(f.path));
 });
 const editHome = (from: string, to: string) => pausa.map(f => f.path === 'components/home.tsx' ? { ...f, content: f.content.replace(from, to) } : f);

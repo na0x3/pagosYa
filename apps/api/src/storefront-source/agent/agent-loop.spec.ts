@@ -1,4 +1,5 @@
-import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
+import { listTemplates } from '@pagosya/store-templates';
+import { literalTemplateSource } from '../fixtures/literal-template';
 import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { AgentWorkspace } from './agent-workspace';
@@ -7,7 +8,7 @@ import { runAgent, agentLimits, AGENT_LIMITS, AGENT_CLOSE_MS, agentRunHeadroom, 
 
 jest.setTimeout(120_000);
 let base: Awaited<ReturnType<typeof templateDemoRevision>>;
-beforeAll(async () => { base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa')); });
+beforeAll(async () => { base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, literalTemplateSource('pausa')); });
 const toolbox = () => { const authored = base.files.filter(f => nextSourceFile(f.path)); return new AgentToolbox({ workspace: new AgentWorkspace(authored, { redesign: false }), previous: authored, base, instruction: 'cambia el título', purpose: 'shop', maxScreenshots: 8 }); };
 const scripted = (turns: AgentModelTurn[]): AgentModel => { let i = 0; return async () => turns[Math.min(i++, turns.length - 1)]; };
 let n = 0;
