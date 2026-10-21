@@ -1081,7 +1081,7 @@ describe("storefront routes", () => {
 
     await loadCheckout("/?link=preview-store&preview=1&editor=1");
     window.dispatchEvent(
-      new MessageEvent("message", {
+      new MessageEvent("message", { origin: "http://localhost:4323",
         source: window,
         data: {
           type: "PAGOSYA_STORE_PREVIEW",
@@ -1136,11 +1136,11 @@ describe("storefront routes", () => {
       previewAction: "scroll",
       patch: { storeName: "Vista estable editada", catalogTitle: "Colección estable" },
     };
-    window.dispatchEvent(new MessageEvent("message", { source: window, data: message }));
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323", source: window, data: message }));
     const originalHeader = document.querySelector(".merchant-header");
     const originalProducts = document.querySelector(".store-products");
 
-    window.dispatchEvent(new MessageEvent("message", { source: window, data: message }));
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323", source: window, data: message }));
 
     expect(document.querySelector(".merchant-header")).toBe(originalHeader);
     expect(document.querySelector(".store-products")).toBe(originalProducts);
@@ -1164,7 +1164,7 @@ describe("storefront routes", () => {
     vi.spyOn(window, "scrollY", "get").mockReturnValue(684);
     vi.spyOn(window, "scrollX", "get").mockReturnValue(0);
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_PREVIEW",
@@ -1231,7 +1231,7 @@ describe("storefront routes", () => {
     editedDocument.sections[0].blocks[0].text = "HONEY WITH LOL";
     editedDocument.sections[0].blocks[0].style = { textColor: "#7f1d1d" };
     editedDocument.sections[0].blocks[2].style = { textColor: "#3366aa", textWidthPercent: 39 };
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_PREVIEW",
@@ -1256,7 +1256,7 @@ describe("storefront routes", () => {
     expect(summer?.style.getPropertyValue("--canvas-text-color")).toBe("#3366aa");
     expect(summer?.style.getPropertyValue("--canvas-text-width")).toBe("39%");
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -1273,7 +1273,7 @@ describe("storefront routes", () => {
     expect(summer?.style.getPropertyValue("--canvas-text-color")).toBe("#8844aa");
     expect(winter?.style.getPropertyValue("--canvas-text-color")).toBe("#225544");
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_PREVIEW",
@@ -1303,7 +1303,7 @@ describe("storefront routes", () => {
 
     await loadCheckout("/?link=preview-store&preview=1&editor=1");
     window.dispatchEvent(
-      new MessageEvent("message", {
+      new MessageEvent("message", { origin: "http://localhost:4323",
         source: window,
         data: {
           type: "PAGOSYA_STORE_PREVIEW",
@@ -1337,7 +1337,7 @@ describe("storefront routes", () => {
 
     await loadCheckout("/?link=preview-store&preview=1&editor=1");
     window.dispatchEvent(
-      new MessageEvent("message", {
+      new MessageEvent("message", { origin: "http://localhost:4323",
         source: window,
         data: {
           type: "PAGOSYA_STORE_PREVIEW",
@@ -1355,7 +1355,7 @@ describe("storefront routes", () => {
     expect(document.activeElement).not.toBe(dialog?.querySelector(".cart-review-close"));
 
     window.dispatchEvent(
-      new MessageEvent("message", {
+      new MessageEvent("message", { origin: "http://localhost:4323",
         source: window,
         data: {
           type: "PAGOSYA_STORE_PREVIEW",
@@ -1371,7 +1371,7 @@ describe("storefront routes", () => {
 
     previewScrollTo.mockClear();
     window.dispatchEvent(
-      new MessageEvent("message", {
+      new MessageEvent("message", { origin: "http://localhost:4323",
         source: window,
         data: {
           type: "PAGOSYA_STORE_PREVIEW",
@@ -1401,7 +1401,7 @@ describe("storefront routes", () => {
     await loadCheckout("/?link=preview-store&preview=1&editor=1");
     previewScrollTo.mockClear();
     window.dispatchEvent(
-      new MessageEvent("message", {
+      new MessageEvent("message", { origin: "http://localhost:4323",
         source: window,
         data: {
           type: "PAGOSYA_STORE_PREVIEW",
@@ -1456,7 +1456,7 @@ describe("storefront routes", () => {
     await loadCheckout("/?link=preview-store&preview=1&editor=1");
     previewScrollTo.mockClear();
     window.dispatchEvent(
-      new MessageEvent("message", {
+      new MessageEvent("message", { origin: "http://localhost:4323",
         source: window,
         data: {
           type: "PAGOSYA_STORE_PREVIEW",
@@ -1471,7 +1471,7 @@ describe("storefront routes", () => {
 
     previewScrollTo.mockClear();
     window.dispatchEvent(
-      new MessageEvent("message", {
+      new MessageEvent("message", { origin: "http://localhost:4323",
         source: window,
         data: {
           type: "PAGOSYA_STORE_PREVIEW",
@@ -1774,10 +1774,10 @@ describe("storefront routes", () => {
     editableHeroTitle.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
     expect(editableHeroTitle.getAttribute("contenteditable")).toBe("plaintext-only");
     editableHeroTitle.textContent = "Título que no vuelve atrás";
-    window.dispatchEvent(new MessageEvent("message", { source: window, data: { type: "PAGOSYA_STORE_PREVIEW", patch: {} } }));
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323", source: window, data: { type: "PAGOSYA_STORE_PREVIEW", patch: {} } }));
     expect(editableHeroTitle.textContent).toBe("Título que no vuelve atrás");
     expect(editableHeroTitle.hasAttribute("contenteditable")).toBe(false);
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: { type: "PAGOSYA_STORE_PREVIEW", patch: { textColor: "#334455" } },
     }));
@@ -1790,7 +1790,7 @@ describe("storefront routes", () => {
       label: "título de portada",
       itemId: redrawnHeroTitle.dataset.storeEditorItemId,
     };
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_TEXT_UPDATE",
@@ -1800,7 +1800,7 @@ describe("storefront routes", () => {
       },
     }));
     expect(redrawnHeroTitle.textContent).toBe("Título que no vuelve atrás");
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -2648,7 +2648,7 @@ describe("storefront routes", () => {
     expect(cover.dataset.storeEditorItemId).toBe("cat_front");
     expect(cover.dataset.storeEditorInline).toBe("image");
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -3407,7 +3407,7 @@ describe("storefront routes", () => {
     expect(announcement.getAttribute("role")).toBe("button");
     expect(announcement.tabIndex).toBe(0);
     expect(announcement.getAttribute("aria-label")).toBe("Configurar marquesina superior");
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -3555,7 +3555,7 @@ describe("storefront routes", () => {
     brandName.blur();
     expect(footer.dataset.storeEditorSection).toBe("footer");
     expect(description.dataset.storeEditorField).toBe("footerBrandDescription");
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -3586,7 +3586,7 @@ describe("storefront routes", () => {
     expect(toolbar.querySelector("[data-canvas-collection-add]")?.textContent).toContain("Crear colección");
     expect(toolbar.classList.contains("is-navigation-popover")).toBe(true);
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -3603,7 +3603,7 @@ describe("storefront routes", () => {
     expect(toolbar.querySelector("[data-canvas-footer-add-column]")?.textContent).toContain("Agregar columna");
     expect(toolbar.querySelector("[data-canvas-footer-add-item=\"0\"]")?.textContent).toContain("Agregar enlace");
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -3615,7 +3615,7 @@ describe("storefront routes", () => {
     expect(toolbar.querySelector<HTMLInputElement>('[data-canvas-footer-field="itemLabel"]')?.value).toBe("Our Story");
     expect(toolbar.querySelector<HTMLInputElement>('[data-canvas-footer-field="itemHref"]')?.value).toBe("#site-section-story");
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -3635,7 +3635,7 @@ describe("storefront routes", () => {
     expect(toolbar.querySelector<HTMLElement>(`[data-product-search*="${baseItem.name.toLocaleLowerCase("es")}"]`)?.hidden).toBe(true);
     expect(toolbar.querySelector<HTMLElement>('[data-product-search*="mesa"]')?.hidden).toBe(false);
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -3649,7 +3649,7 @@ describe("storefront routes", () => {
     destination.dispatchEvent(new Event("change", { bubbles: true }));
     // Reopening immediately models an outside touch that lands before the
     // dashboard's zero-delay preview refresh has returned to the iframe.
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -3660,7 +3660,7 @@ describe("storefront routes", () => {
     }));
     expect(toolbar.querySelector<HTMLSelectElement>('[data-canvas-navigation-target="2"]')?.value).toBe("section:contact");
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -3673,7 +3673,7 @@ describe("storefront routes", () => {
     footerHref.value = "https://example.com/nueva-historia";
     footerHref.dispatchEvent(new Event("input", { bubbles: true }));
     footerHref.dispatchEvent(new Event("change", { bubbles: true }));
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -3690,7 +3690,7 @@ describe("storefront routes", () => {
     expect(catalogTarget).not.toBeNull();
     const scrollIntoView = vi.fn();
     Object.defineProperty(catalogTarget!, "scrollIntoView", { configurable: true, value: scrollIntoView });
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -3705,7 +3705,7 @@ describe("storefront routes", () => {
     catalogButton?.click();
     expect(scrollIntoView).toHaveBeenCalled();
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_PREVIEW",
@@ -3782,7 +3782,7 @@ describe("storefront routes", () => {
     }));
 
     await loadCheckout("/?link=visual-animation-preview&preview=1&editor=1");
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_PREVIEW",
@@ -3840,7 +3840,7 @@ describe("storefront routes", () => {
     }));
 
     await loadCheckout("/?link=dismiss-editor&preview=1&editor=1");
-    const selectText = () => window.dispatchEvent(new MessageEvent("message", {
+    const selectText = () => window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -4284,7 +4284,7 @@ describe("storefront routes", () => {
     await loadCheckout("/?link=canvas-type&preview=1&editor=1");
     expect([...document.querySelectorAll(".store-animation-free-text [data-animation-copy-field='textBlock']")].map((node) => node.textContent?.trim())).toEqual(["Segundo título", "Segundo subtítulo"]);
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -4305,7 +4305,7 @@ describe("storefront routes", () => {
     directColor.dispatchEvent(new Event("input", { bubbles: true }));
     expect(document.querySelector<HTMLElement>('[data-animation-text-block="title-1"]')?.style.getPropertyValue("--animation-scene-text-color")).toBe("#ff3366");
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -4324,7 +4324,7 @@ describe("storefront routes", () => {
     expect(toolbar.querySelector("[data-canvas-delete-animation]")).not.toBeNull();
 
     const selectedCopy = document.querySelector<HTMLElement>('[data-animation-text-block="title-1"]')!;
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_STYLE_UPDATE",
@@ -4368,7 +4368,7 @@ describe("storefront routes", () => {
       expect(section.querySelector('[data-store-editor-field="animationTitle"], [data-store-editor-field="animationSubtitle"], [data-store-editor-field="animationStyle"]')).not.toBeNull();
     });
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -4467,7 +4467,7 @@ describe("storefront routes", () => {
     expect(originalSection).not.toBeNull();
     expect(originalHero).not.toBeNull();
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_SELECTION",
@@ -4486,7 +4486,7 @@ describe("storefront routes", () => {
     expect(copy.style.getPropertyValue("--animation-text-y")).toBe("32%");
     expect(copy.querySelector("h3")?.dataset.storeEditorItemIndex).toBe("3");
 
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_TEXT_UPDATE",
@@ -4497,7 +4497,7 @@ describe("storefront routes", () => {
     }));
     expect(originalHero.querySelector('[data-motion-hero-background="0"]')?.classList.contains("active")).toBe(true);
     expect(originalHero.querySelector("[data-motion-hero-title]")?.textContent).toBe("Escena 1 actualizada");
-    window.dispatchEvent(new MessageEvent("message", {
+    window.dispatchEvent(new MessageEvent("message", { origin: "http://localhost:4323",
       source: window,
       data: {
         type: "PAGOSYA_STORE_EDITOR_STYLE_UPDATE",
@@ -4735,7 +4735,7 @@ describe("storefront routes", () => {
     expect(contrastRatio("#ffffff", "#757575")).toBeGreaterThanOrEqual(4.5);
 
     window.dispatchEvent(
-      new MessageEvent("message", {
+      new MessageEvent("message", { origin: "http://localhost:4323",
         source: window,
         data: { type: "PAGOSYA_STORE_PREVIEW", patch: { accentColor: "#767676" } },
       }),
@@ -4778,7 +4778,7 @@ describe("storefront routes", () => {
 
     await loadCheckout("/?link=preview-store&preview=1&editor=1");
     window.dispatchEvent(
-      new MessageEvent("message", {
+      new MessageEvent("message", { origin: "http://localhost:4323",
         source: window,
         data: {
           type: "PAGOSYA_STORE_PREVIEW",

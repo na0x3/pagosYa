@@ -1,4 +1,5 @@
 /** Connects the preview iframe to the Studio editor. Both functions run only in editor mode (see main.ts). */
+import { PREVIEW_PARENT_ORIGINS, previewParentAllowed } from "./preview-origin";
 import { postToParent } from "../postmessage";
 import { sanitizeSiteDocument, synchronizeSiteDocument } from "../site-document";
 import { state } from "../state";
@@ -280,7 +281,7 @@ export function bindStoreEditorCanvas() {
  */
 export function listenForStoreEditorMessages() {
   window.addEventListener("message", (event) => {
-    if (event.source !== window.parent || !state.activePreviewStore) return;
+    if (event.source !== window.parent || !previewParentAllowed(event.origin, PREVIEW_PARENT_ORIGINS) || !state.activePreviewStore) return;
     if (!event.data || typeof event.data !== "object") return;
     try {
     if (event.data.type === "PAGOSYA_PREVIEW_BUILDER_RESULT") {
