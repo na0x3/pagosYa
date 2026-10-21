@@ -81,3 +81,7 @@ test('the Tienda link opens Productos, and the Plantillas flag redraws only the 
   assert.match(nav, /href="#dashboard-products" data-dashboard-view="products" data-nav-section="tienda"/);
   assert.match(js, /plantillasOn = templateSettings\?\.plantillas === true;\n\s+const shown = sectionOf\(document\.body\.dataset\.dashboardView, document\.getElementById\("marketingTabs"\)\.dataset\.tab\);\n\s+renderSectionPills\(shown\.section, shown\.tab\);/);
 });
+
+test('the store link bar on Productos is gone (the top bar already has «Ver mi tienda»)', () => {
+  assert.match(html, /<p class="current-store-banner" id="currentStoreBanner" data-full-nav-only>/);
+});
