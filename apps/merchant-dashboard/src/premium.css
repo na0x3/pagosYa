@@ -1,0 +1,4 @@
+/* Calm dashboard, Part B (docs/superpowers/specs/2026-10-21-calm-dashboard-yapi-immersive-design.md): warm, roomy,
+   soft and premium in the spirit of granola.ai. Linked after every other dashboard stylesheet so it wins; glass only on
+   the floating layers (top bar, sidebar, section pills, menus, dialogs), content cards stay solid. */
+@font-face { font-family: "Instrument Serif"; src: url("/fonts/instrument-serif.ttf") format("truetype"); font-display: swap; }
