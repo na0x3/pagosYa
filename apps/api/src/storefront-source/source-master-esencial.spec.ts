@@ -1,5 +1,5 @@
 import { templateManifest, templateSourceFiles } from '@pagosya/store-templates';
-import { assembleTemplateRevision, templateDemoPublicStore, templateDemoRevision } from './source-templates';
+import { assembleTemplateRevision, refillMasterFiles, templateDemoPublicStore, templateDemoRevision } from './source-templates';
 import { SourceProjectsService } from './source-projects.service';
 import { withVisualSandbox } from './source-visual-capture';
 import { SOURCE_FONT_CATALOG } from './source-font-catalog';
@@ -76,6 +76,38 @@ describe('Esencial', () => {
     const none = await assemble(templateDemoPublicStore(), { variants: { ...variants, menu: 'none' } });
     expect(JSON.parse(none.files.find((f: any) => f.path === 'config.js')!.content.match(/= ([\s\S]*);\n$/)![1]).header).toBeUndefined();
     expect(templateSourceFiles('esencial').find(f => f.path === 'components/Shell.tsx')!.content).toContain('data-pagosya-store-menu="toggle"');
+  });
+
+  it('the catalogue and collection pages are the store\'s own, with its header, menu, footer and fonts (spec 2026-10-21 amendment)', async () => {
+    const assembled = await assemble(templateDemoPublicStore());
+    const page = (path: string) => assembled.files.find((f: any) => f.path === path)?.content ?? '';
+    expect(page('productos.html')).not.toContain('commerce-header');
+    expect(page('coleccion.html')).not.toContain('commerce-header');
+    const snapshot = await prepare(assembled);
+    const read = (path: string) => withVisualSandbox(snapshot, '', undefined, false, async context => {
+      const tab = await context.newPage();
+      await tab.goto(`https://preview.invalid/${path}`, { waitUntil: 'load', timeout: 12000 });
+      const found = await tab.evaluate(() => ({ header: Boolean(document.querySelector('.es-header [data-pagosya-store-menu="toggle"]')), footer: Boolean(document.querySelector('.es-footer')),
+        catalog: Boolean(document.querySelector('[data-pagosya-catalog][data-catalog-full]')), collection: Boolean(document.querySelector('[data-collection-page]')), title: document.querySelector('h1')?.textContent ?? '' }));
+      await tab.close();
+      return found;
+    });
+    expect(await read('productos.html')).toMatchObject({ header: true, footer: true, catalog: true, collection: false, title: 'Todos los productos' });
+    expect(await read('coleccion.html')).toMatchObject({ header: true, footer: true, catalog: true, collection: true });
+  });
+
+  it('an older store whose snapshot still has the kit catalogue page gets the store\'s own at its next refill — Review Focus 4', async () => {
+    const assembled = await assemble(templateDemoPublicStore());
+    const kitPage = '<!doctype html><html><body class="commerce-document"><header class="commerce-header"></header><main data-pagosya-catalog data-catalog-full></main></body></html>';
+    const older = assembled.files.filter((f: any) => !/^components\/page-(productos|coleccion)\.tsx$/.test(f.path)).map((f: any) => f.path === 'productos.html' || f.path === 'coleccion.html' ? { ...f, content: kitPage } : f);
+    const refilled = refillMasterFiles(older, manifest, { copy: { headline: 'Otra' } });
+    expect(refilled.some((f: any) => f.path === 'components/page-productos.tsx')).toBe(true);
+    const snapshot = await prepare({ ...assembled, files: refilled });
+    expect(snapshot.files.find((f: any) => f.path === 'productos.html')!.content).not.toContain('commerce-header');
+    const again = refillMasterFiles(refilled, manifest, { copy: { headline: 'Otra más' } });
+    expect(again.filter((f: any) => f.path.startsWith('components/page-')).map((f: any) => f.content)).toEqual(refilled.filter((f: any) => f.path.startsWith('components/page-')).map((f: any) => f.content));
+    const own = refilled.map((f: any) => f.path === 'components/page-productos.tsx' ? { ...f, content: f.content.replace('Todos los productos', 'Nuestra colección') } : f);
+    expect(refillMasterFiles(own, manifest, {}).find((f: any) => f.path === 'components/page-productos.tsx')!.content).toContain('Nuestra colección');
   });
 
   it('every font pair uses catalogued OFL fonts', () => {

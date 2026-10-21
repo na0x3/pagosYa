@@ -89,7 +89,9 @@ export function masterThemeCss(settings: MasterSettings, look: MasterLook): stri
   const c = masterColours(settings, look);
   const vars = `:root{--es-paper:${c.paper};--es-ink:${c.ink};--es-muted:${c.muted};--es-accent:${c.accent};--es-deep:${c.deep};--es-on-accent:${c.onAccent};--es-on-deep:${c.onDeep};`
     + `--es-heading:'${catalogFont(pair.heading).family}',Georgia,serif;--es-body:'${catalogFont(pair.body).family}',system-ui,sans-serif;`
-    + `--store-background:var(--es-paper);--store-foreground:var(--es-ink);--store-accent:var(--es-accent);--store-accent-foreground:var(--es-on-accent)}`;
+    + `--store-background:var(--es-paper);--store-foreground:var(--es-ink);--store-accent:var(--es-accent);--store-accent-foreground:var(--es-on-accent);`
+    // Sort & filter styles spec 2026-10-21: kit pages (checkout fallback, info pages) read these, so they show the store's fonts.
+    + `--store-heading-font:var(--es-heading);--store-body-font:var(--es-body)}`;
   return [MASTER_THEME_START, face(pair.heading), pair.body !== pair.heading ? face(pair.body) : '', vars, MASTER_THEME_END].filter(Boolean).join('\n');
 }
 

@@ -161,6 +161,23 @@ export function withStoreMenuMounts<F extends { path: string; content: string }>
   });
 }
 
+/** Sort & filter styles spec 2026-10-21: an Esencial store built before the store's own catalogue pages gets them, with their
+ *  CSS block, so its productos.html and coleccion.html carry the store's header, menu, footer and fonts (the compiled pages
+ *  replace the kit's fallback files at save). A page the store already has is left alone; doing it twice changes nothing. */
+const CATALOG_PAGES = ['components/page-productos.tsx', 'components/page-coleccion.tsx'];
+const CATALOG_CSS_MARK = '/* Esencial catalogue pages (2026-10-21)';
+const CATALOG_CSS_END = '/* Esencial catalogue pages end */';
+export function withEsencialCatalogPages<F extends { path: string; content: string }>(files: F[]): F[] {
+  if (!files.some(file => file.path === TEMPLATE_STORE_DATA_PATH)) return files;
+  const source = templateSourceFiles(MASTER_TEMPLATE_ID);
+  const css = source.find(file => file.path === 'styles/globals.css')?.content ?? '';
+  const start = css.indexOf(CATALOG_CSS_MARK), end = css.indexOf(CATALOG_CSS_END);
+  const block = start >= 0 && end > start ? css.slice(start, end + CATALOG_CSS_END.length) : '';
+  const missing = CATALOG_PAGES.filter(path => !files.some(file => file.path === path)).flatMap(path => source.filter(file => file.path === path));
+  const withCss = files.map(file => file.path === 'styles/globals.css' && block && !file.content.includes(CATALOG_CSS_MARK) ? { ...file, content: `${file.content.trimEnd()}\n\n${block}\n` } : file);
+  return missing.length ? [...withCss, ...missing.map(file => ({ ...file }) as unknown as F)] : withCss;
+}
+
 /** A tile photo the fill gave as an upload path (`/v1/uploads/…`) as the full API URL, so the save check can match it. */
 export const absoluteTiles = (groups: StoreMenuGroup[] | undefined, apiUrl?: URL) => groups?.map(group => ({ ...group, ...(group.tiles ? { tiles: group.tiles.map(tile => ({ ...tile, image: masterPhotoUrl(tile.image, apiUrl) })) } : {}) }));
 
@@ -201,7 +218,8 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
     }
     return file;
   }), variants);
-  return variants.menu && variants.menu !== 'none' ? withStoreMenuMounts(out) : out;
+  const pages = withEsencialCatalogPages(out);
+  return variants.menu && variants.menu !== 'none' ? withStoreMenuMounts(pages) : pages;
 }
 
 export function templateDemoAssets(manifest: TemplateManifest, demoSlots: readonly string[]): SourceProjectFileDto[] {

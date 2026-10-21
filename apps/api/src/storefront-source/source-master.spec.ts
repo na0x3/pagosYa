@@ -131,3 +131,14 @@ describe('menu from the fill read', () => {
     expect(masterFillFromRead({ ...(read as object), changed: ['menu'] } as never, photos, true).menu?.style).toBe('dropdowns');
   });
 });
+
+import { masterThemeCss as themeCss } from './source-master';
+import { templateManifest as manifestOf } from '@pagosya/store-templates';
+/** Sort & filter styles spec 2026-10-21: kit pages read --store-heading-font / --store-body-font. */
+it('the Esencial theme also sets the store font variables the kit pages read', () => {
+  const settings = manifestOf('esencial')!.master!;
+  const css = themeCss(settings, { palette: settings.palettes[0].id, fonts: settings.fonts[0].id, colors: {} });
+  expect(css).toContain('--store-heading-font:var(--es-heading)');
+  expect(css).toContain('--store-body-font:var(--es-body)');
+});
+
