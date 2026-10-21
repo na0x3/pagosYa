@@ -6069,7 +6069,8 @@
     if (value.startsWith('section:') && /^[\w-]{1,60}$/.test(value.slice(8))) return { href: pageHref('index.html', '#' + value.slice(8)), label: '' };
     return null;
   }
-  const storeMenuPhoto = url => (typeof url === 'string' && /^https?:\/\//i.test(url) ? url : '');
+  // A store photo: an http(s) upload, or the data URL the Studio preview turns it into (live check 2026-10-21, NOA VARGAS).
+  const storeMenuPhoto = url => (typeof url === 'string' && /^(?:https?:\/\/|data:image\/(?:png|jpe?g|webp|avif|gif);)/i.test(url) ? url : '');
   /** The default menu (spec): «Tienda» from the categories, «Descubre» from the host's own links and the info pages. */
   function defaultStoreMenuGroups(host) {
     const categories = storeMenuCategories();

@@ -63,6 +63,15 @@ describe('store menu', () => {
     expect(discover).toContain('Contacto');
   });
 
+  it('shows tiles in the Studio preview, where photos are data URLs (live check 2026-10-21, NOA VARGAS)', async () => {
+    const photo = 'data:image/jpeg;base64,/9j/AA==';
+    const data = { ...DATA, items: DATA.items.map(entry => ({ ...entry, imageUrls: [photo] })) };
+    const { all } = await open({ menu: { style: 'panel', groups: [{ label: 'Mujer', links: [{ label: 'Vestidos', to: 'category:C1' }], tiles: [{ title: 'Vestidos', image: photo, to: 'category:C1' }, { title: 'Otro', image: 'javascript:alert(1)', to: 'category:C1' }] }] }, data });
+    expect(all('.pym-tiles img').map(img => img.getAttribute('src'))).toEqual([photo]);
+    const { all: fallback } = await open({ menu: { style: 'panel' }, data });
+    expect(fallback('.pym-tiles img')).toHaveLength(3);
+  });
+
   it('draws the merchant groups, dropping targets the live store no longer has', async () => {
     const { all } = await open({ menu: { style: 'panel', groups: [
       { label: 'Mujer', links: [{ label: 'Vestidos', to: 'category:C1' }, { label: 'Borrada', to: 'category:gone' }, { label: 'Vacía', to: 'category:empty' }],
