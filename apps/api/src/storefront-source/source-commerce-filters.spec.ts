@@ -15,13 +15,15 @@ const errors: Error[] = [];
 afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-async function open(items: any[], search = '', extra: { filterStyle?: string; categories?: any[] } = {}) {
+async function open(items: any[], search = '', extra: { filterStyle?: string; categories?: any[]; preview?: string } = {}) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (error: Error) => { if (!/Could not parse CSS stylesheet|getComputedStyle\(elt, pseudoElt\)/.test(error.message)) errors.push(error); });
   const dom = new JSDOM(`<html><head></head><body><button data-cart-open>Pedido <span data-cart-count></span></button>${shop}<section data-pagosya-cart></section></body></html>`, { url: `https://shop.test/productos.html${search}`, runScripts: 'outside-only', virtualConsole });
   const w = dom.window; windows.push(w);
   w.HTMLElement.prototype.scrollIntoView = () => {};
   w.matchMedia = () => ({ matches: true });
+  // The Studio preview: a sandboxed srcdoc frame whose address cannot change, with the page's query handed in.
+  if (extra.preview !== undefined) { w.PAGOSYA_PREVIEW = true; w.PAGOSYA_PREVIEW_QUERY = extra.preview; w.history.replaceState = () => { throw new w.DOMException('sandboxed', 'SecurityError'); }; }
   const store = { storeName: 'Antojo', checkoutMode: 'payment', items, ...(extra.categories ? { categories: extra.categories } : {}) };
   w.PAGOSYA_CONFIG = { slug: 'antojo', apiBaseUrl: 'https://api.test', checkoutOrigin: 'https://pay.test', productPage: 'product.html', ...(extra.filterStyle ? { filterStyle: extra.filterStyle } : {}), data: store };
   w.fetch = jest.fn(async () => ({ ok: true, json: async () => store }));
@@ -248,5 +250,44 @@ describe('filter style behaviour', () => {
   it('an unknown filterStyle falls back to the automatic choice', async () => {
     expect((await open(six, '', { filterStyle: 'mosaic' })).q('.catalog-filters').dataset.filterStyle).toBe('bar');
   });
+});
+
+/** Live check 2026-10-21 (NOA VARGAS rev 8): Tailwind's reset (`*{border-width:0}`, unlayered) beat the filter styles in the
+ *  low kit layer, so chips and the search field lost their borders. The filter styles are their own unlayered sheet, first in
+ *  the head: they beat a reset, and a store's own later CSS still wins at equal weight. */
+it('the filter styles are an unlayered sheet placed before the store\'s own styles', async () => {
+  const e = await open(six);
+  const sheet = e.q('style[data-pagosya-kit="filters"]');
+  expect(sheet).not.toBeNull();
+  expect(sheet.textContent).not.toMatch(/@layer/);
+  expect(sheet.textContent).toContain('.cf-chip{');
+  expect(e.w.document.head.firstElementChild).toBe(sheet);
+  expect(e.q('style[data-pagosya-kit="showcase"]').textContent).not.toContain('.cf-chip');
+});
+
+/** Live check 2026-10-21 (NOA VARGAS rev 8): in the Studio preview the frame's address cannot change, so typed searches and
+ *  chips were read back from the old address and lost. The state the page writes is kept in memory as well. */
+it('search and chips work in the Studio preview, where the address cannot change', async () => {
+  const v = (value: string) => ({ id: value, name: value, amount: 1000, options: [{ name: 'Color', value }] });
+  const items = [...six, p('m', 1500, { name: 'Vestido rojo', variants: [v('Rojo')] })];
+  const e = await open(items, '', { preview: '?orden=precio-desc', filterStyle: 'chips' });
+  expect(e.ids()[0]).toBe('f');
+  const input = e.q('.catalog-search input[name=q]');
+  input.focus(); input.value = 'vestido'; input.dispatchEvent(new e.w.Event('input', { bubbles: true }));
+  await new Promise(resolve => setTimeout(resolve, 220));
+  expect(e.ids()).toEqual(['m']);
+  expect(e.q('.catalog-search input[name=q]').value).toBe('vestido');
+  e.q('[data-search-clear]').click(); await tick();
+  e.q('[data-filter-chip="color:rojo"]').click(); await tick();
+  expect(e.ids()).toEqual(['m']);
+  expect(e.q('[data-sort-toggle]').textContent).toContain('Precio ↓');
+});
+
+/** Live check 2026-10-21 (NOA VARGAS, phone): chips shrank and broke mid-word («TOD O»); a chip never shrinks or wraps, its
+ *  row scrolls sideways instead. */
+it('chips never shrink or wrap their words', async () => {
+  const css = (await open(six)).q('style[data-pagosya-kit="filters"]').textContent;
+  expect(css).toMatch(/\.cf-chip\{[^}]*flex:0 0 auto/);
+  expect(css).toMatch(/\.cf-chip\{[^}]*white-space:nowrap/);
 });
 

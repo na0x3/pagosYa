@@ -345,6 +345,11 @@
     '[data-pagosya-spotlight] .spotlight__add{width:100%;justify-content:center}',
     '[data-pagosya-spotlight] video{width:100%;border-radius:var(--store-radius,16px);background:#111}',
     '@media(max-width:760px){[data-pagosya-spotlight]{grid-template-columns:1fr}}',
+  ];
+  /* Sort & filter styles (spec 2026-10-21): their own unlayered sheet, first in the head. In the low kit layer Tailwind's reset
+   * (`*{border-width:0}`, unlayered) won and stripped every chip and the search field (live check, NOA VARGAS rev 8); first in
+   * source order, a store's own stylesheet still wins at equal weight. */
+  const FILTERS_CSS = [
     '/* Sort & filter styles (spec 2026-10-21): bar, chips and sidebar, drawn with the store\'s tokens. */',
     '.catalog-filters{grid-column:1/-1;display:grid;gap:12px;margin:0 0 20px;font-family:var(--store-body-font,inherit);color:var(--store-foreground,inherit)}',
     '.catalog-filters button{font:inherit;color:inherit;cursor:pointer}',
@@ -371,7 +376,7 @@
     '.cf-sort__list [role=option]:hover,.cf-sort__list [role=option]:focus{background:color-mix(in srgb,currentColor 8%,transparent);outline:none}',
     '.cf-sort__list [aria-selected=true]{font-weight:700}',
     '.cf-chips{display:flex;flex-wrap:wrap;gap:8px}',
-    '.cf-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,currentColor 25%,transparent);border-radius:var(--store-radius,999px);background:none;font-size:14px;transition:background .15s,color .15s}',
+    '.cf-chip{flex:0 0 auto;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,currentColor 25%,transparent);border-radius:var(--store-radius,999px);background:none;font-size:14px;transition:background .15s,color .15s}',
     '.cf-chip[aria-pressed=true]{background:var(--store-foreground,#111);border-color:var(--store-foreground,#111);color:var(--store-background,#fff)}',
     '.cf-chip [data-swatch]{width:22px;height:22px;border-radius:50%;background:var(--swatch);box-shadow:inset 0 0 0 1px rgb(0 0 0 / .15)}',
     '.cf-chip[data-swatch-chip][aria-pressed=true] [data-swatch]{box-shadow:0 0 0 2px var(--store-background,#fff)}',
@@ -418,6 +423,10 @@
     '}',
     '@media(prefers-reduced-motion:reduce){.cf-drawer__panel{animation:none}.cf-chip,.cf-switch__track,.cf-switch__track::after{transition:none}}',
   ];
+  const filtersStyle = document.createElement('style');
+  filtersStyle.dataset.pagosyaKit = 'filters';
+  filtersStyle.textContent = FILTERS_CSS.join('\n');
+  document.head.prepend(filtersStyle);
   const showcaseStyle = document.createElement('style');
   showcaseStyle.dataset.pagosyaKit = 'showcase';
   showcaseStyle.textContent = `@layer pagosya-showcase {\n${SHOWCASE_CSS.join('\n')}\n}`;

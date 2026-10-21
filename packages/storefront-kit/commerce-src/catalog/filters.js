@@ -31,8 +31,11 @@
     if (items.some(p => offerOptions(p, undefined).length)) groups.push({ key: 'ofertas', label: 'Packs y suscripción', kind: 'toggle', values: [] });
     return groups;
   }
+  /** The query the page last wrote, kept in memory too: in the Studio preview the frame's address cannot change, and a typed
+   *  search or a chosen chip was read back from the old address and lost (live check 2026-10-21, NOA VARGAS rev 8). */
+  let filterQuery = null;
   function readFilterState() {
-    const params = new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search);
+    const params = new URLSearchParams(filterQuery ?? (window.PAGOSYA_PREVIEW_QUERY || location.search));
     const state = { orden: SORTS.some(([v]) => v === params.get('orden')) ? params.get('orden') : 'destacados', precio: null, sets: {}, toggles: new Set(), q: (params.get('q') || '').slice(0, 80) };
     const range = /^(\d+)-(\d+)$/.exec(params.get('precio') || '');
     if (range) state.precio = [Number(range[1]) * 100, Number(range[2]) * 100];
@@ -41,14 +44,15 @@
     return state;
   }
   function writeFilterState(state) {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(filterQuery ?? (window.PAGOSYA_PREVIEW_QUERY || location.search));
     [...params.keys()].filter(k => k.startsWith('f_') || ['orden', 'precio', 'q', ...FILTER_TOGGLES].includes(k)).forEach(k => params.delete(k));
     if (state.q && state.q.trim()) params.set('q', state.q.slice(0, 80));
     if (state.orden !== 'destacados') params.set('orden', state.orden);
     if (state.precio) params.set('precio', `${Math.floor(state.precio[0] / 100)}-${Math.ceil(state.precio[1] / 100)}`);
     for (const [key, values] of Object.entries(state.sets)) if (values.length) params.set(`f_${key}`, values.join(','));
     for (const key of state.toggles) params.set(key, '1');
-    try { history.replaceState(history.state, '', `${location.pathname}${params.toString() ? `?${params}` : ''}${location.hash}`); } catch { /* sandboxed previews */ }
+    filterQuery = params.toString() ? `?${params}` : '';
+    try { history.replaceState(history.state, '', `${location.pathname}${filterQuery}${location.hash}`); } catch { /* sandboxed previews keep it in memory */ }
   }
   function applyFilters(items, state) {
     const words = searchWords(state.q);
