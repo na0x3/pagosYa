@@ -3,7 +3,8 @@ import { SKETCH_JSON_SCHEMA } from './sketch/sketch-request';
 import { DESIGN_FIXTURES } from './design-engine/design-fixtures';
 import { inferBrand, fallbackCreative } from './design-engine/design-engine';
 import { sketchFreeablePaths } from '@pagosya/shared-types';
-import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
+import { listTemplates } from '@pagosya/store-templates';
+import { literalTemplateSource } from './fixtures/literal-template';
 import { repairSketch } from './sketch';
 import { fillsProductPagesAfterSave, SourceGenerationService } from './source-generation.service';
 import { sourceProjectSnapshot } from './source-project';
@@ -23,7 +24,7 @@ jest.setTimeout(180_000);
 
 const configValues = (engine: string) => ({ 'app.openAi.apiKey': 'test-server-key', 'app.openAi.enabled': true, 'app.anthropic.apiKey': 'sk-ant-test', 'app.checkoutOrigin': 'http://localhost:5174', 'app.environment': 'test', 'app.sourceFramework': 'next', 'app.yapiEngine': engine } as Record<string, unknown>);
 async function setup(engine = 'agent', extra: Record<string, unknown> = {}) {
-  const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, templateSourceFiles('pausa'));
+  const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, literalTemplateSource('pausa'));
   const snapshot = sourceProjectSnapshot({ revision: 1, label: base.label, brief: base.brief, files: base.files } as any);
   const prisma: any = { storeRetention: { findUnique: jest.fn().mockResolvedValue(null) }, storeSourceGeneration: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'run-1' }), updateMany: jest.fn().mockResolvedValue({ count: 1 }), findMany: jest.fn().mockResolvedValue([]) }, store: { findFirst: jest.fn().mockResolvedValue({ slug: 'pausa' }) }, mediaAsset: { findMany: jest.fn().mockResolvedValue([]) } };
   const stores: any = { getStorePublic: jest.fn().mockResolvedValue({ storeName: 'Pausa', checkoutMode: 'PAYMENT', items: [], categories: [], locations: [] }) };
