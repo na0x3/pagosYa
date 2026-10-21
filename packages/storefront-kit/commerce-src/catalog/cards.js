@@ -180,12 +180,55 @@
   function fitCards() { labelDecoratedAddButtons(); fitCardPhotos(); alignCardPrices(); }
   if (typeof addEventListener === 'function') addEventListener('resize', () => fitCards(), { passive: true });
   const BAG_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8.5h13l-1 11.5h-11z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></svg>';
+  // ---- Fashion card (spec 2026-10-21 fashion look, the John Smedley card) ----
+  // A tinted photo panel with the merchant's label, the name and price on one row, «N colores», colour bars on hover. No add
+  // button: clothing needs a size first, so the whole card opens the product.
+  const COLOUR_GROUP = /^(colou?r|colores|tono)$/;
+  const SIZE_GROUP = /^(tallas?|size|medida)$/;
+  const groupKey = name => String(name || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+  const colourGroupIndex = groups => (groups || []).findIndex(group => COLOUR_GROUP.test(groupKey(group.name)));
+  const sizeGroupIndex = groups => (groups || []).findIndex(group => SIZE_GROUP.test(groupKey(group.name)));
+  const fashionCards = () => config.showcase?.cards === 'fashion';
+  function fashionColours(p) {
+    const groups = optionGroups(p), index = colourGroupIndex(groups);
+    if (index < 0) return [];
+    const alt = galleryImages(p)[1] || '';
+    return groups[index].values.map(value => {
+      const own = (p.variants || []).find(v => variantValues(v)[index] === value && variantPhotos(v)[0]);
+      return { value, color: swatchColor(groups[index].name, value), photo: own ? variantPhotos(own)[0] : alt };
+    });
+  }
+  function fashionCardMarkup(p, image) {
+    const colours = fashionColours(p), label = typeof p.cardEyebrow === 'string' ? p.cardEyebrow.trim().slice(0, 28) : '';
+    const line = colours.length > 1 ? `${colours.length} colores` : colours[0]?.value || '';
+    const bars = colours.filter(colour => colour.color && colour.photo);
+    const details = config.productPage
+      ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>`
+      : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`;
+    const photo = image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, '(max-width: 820px) 50vw, 33vw')} alt="${escape(p.name)}" loading="lazy" decoding="async" />` : '';
+    const barsHtml = bars.length > 1 ? `<div class="menu-item__bars">${bars.map(bar => `<button type="button" data-card-swatch="${escape(bar.photo)}" aria-label="Ver en ${escape(bar.value)}" aria-pressed="false" style="--swatch:${escape(bar.color)}"></button>`).join('')}</div>` : '';
+    const priceText = isMembership(p) ? membershipPriceText(p) : money(price(p), p.currency);
+    return `<article class="menu-item" data-product-id="${escape(p.id)}" data-anatomy="fashion">${details}<div class="menu-item__panel">${photo}${label ? `<p class="menu-item__label">${escape(label)}</p>` : ''}${barsHtml}</div><div class="menu-item__row"><h3 class="menu-item__name">${escape(p.name)}</h3><p class="menu-item__price">${escape(priceText)}</p></div>${line ? `<p class="menu-item__colors">${escape(line)}</p>` : ''}</article>`;
+  }
+  // Hovering a bar shows that colour's photo; leaving the card brings the first photo back.
+  document.addEventListener('pointerover', event => {
+    const bar = event.target.closest?.('[data-anatomy=fashion] [data-card-swatch]');
+    const card = bar?.closest('.menu-item'), photo = card?.querySelector('.menu-item__image');
+    if (!photo) return;
+    if (!photo.dataset.firstSrc) photo.dataset.firstSrc = photo.getAttribute('src') || '';
+    photo.removeAttribute('srcset'); photo.src = bar.dataset.cardSwatch;
+    if (!card.hasAttribute('data-bars-watched')) {
+      card.setAttribute('data-bars-watched', '');
+      card.addEventListener('pointerleave', () => { if (photo.dataset.firstSrc) photo.src = photo.dataset.firstSrc; card.removeAttribute('data-bars-watched'); }, { once: true });
+    }
+  });
   // The default catalog card. Custom templates (customProductCard) take priority when the store authored one.
   function productCard(p) {
     const image = galleryImages(p)[0];
     const complex = p.variants?.length || p.extras?.length;
     const custom = customProductCard(p, image, complex);
     if (custom) return custom;
+    if (fashionCards()) return fashionCardMarkup(p, image);
     const cardExtras = cardPreview(p, image);
     // Atelier stores (2026-10-19, the Amboras card): the add button says what it does, with a bag, across the card.
     const atelier = productPageStyle() === 'atelier';

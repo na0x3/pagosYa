@@ -516,6 +516,23 @@
       [data-pagosya-catalog] .menu-item[data-anatomy=atelier] .menu-add:not(:disabled):hover{background:var(--store-foreground,#111);color:var(--store-background,#fff)}
       [data-pagosya-catalog] .menu-item[data-anatomy=atelier] .menu-add:disabled{opacity:.45}
     }
+    /* The fashion card (2026-10-21, the John Smedley references). Inside the DNA layer; the store's own CSS still wins. */
+    @layer pagosya-dna {
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion]{display:flex;flex-direction:column;gap:0;padding:0;border:0;background:transparent;box-shadow:none}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__panel{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:var(--store-radius,0px);background:color-mix(in srgb,var(--store-foreground,#111) 6%,var(--store-background,#fff))}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__image{width:100%;height:100%;aspect-ratio:auto;object-fit:cover;transition:opacity .3s ease}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__label{position:absolute;top:12px;left:12px;z-index:2;margin:0;font:400 13px/1.3 var(--store-body-font,inherit);color:var(--store-foreground,#111)}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__bars{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;gap:2px;opacity:0;transition:opacity .2s ease}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__bars button{flex:1;height:12px;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:var(--swatch);cursor:pointer}
+      @media(hover:hover){[data-pagosya-catalog] .menu-item[data-anatomy=fashion]:is(:hover,:focus-within) .menu-item__bars{opacity:1}}
+      @media(hover:none){[data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__bars{display:none}}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__row{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px;margin-top:14px}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__name{margin:0;font:400 17px/1.3 var(--store-heading-font,inherit);letter-spacing:0;text-transform:none}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__price{margin:0;font:400 15px/1.3 var(--store-body-font,inherit)}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__colors{margin:2px 0 0;font:400 14px/1.3 var(--store-body-font,inherit);opacity:.72}
+      [data-pagosya-catalog] .menu-item[data-anatomy=fashion] .menu-item__panel:has([data-product-zoom]) .menu-item__bars{right:56px}
+      @media(prefers-reduced-motion:reduce){[data-pagosya-catalog] .menu-item[data-anatomy=fashion] :is(.menu-item__image,.menu-item__bars){transition:none}}
+    }
     /* The badge base rule is unlayered, so this one is too, at the base's own specificity (later wins; store CSS still wins). */
     :where(.menu-item[data-anatomy=atelier]) .menu-item__badge{top:12px;left:12px;padding:5px 8px;border-radius:0;background:var(--store-background,#fff);color:var(--store-foreground,#111);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
     /* A YAPI page template's slot with nothing visible in it (no related products, no reviews yet) takes no room: its own
