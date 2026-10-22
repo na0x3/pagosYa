@@ -2,6 +2,7 @@ import { BadGatewayException } from '@nestjs/common';
 import { voiceAuthorInput } from './store-voice-prompt';
 import { sourceMotionPlan } from './source-motion-plan';
 import { merchantNamedColours, storeColoursDirection } from './design-engine/photo-palette';
+import { asksForEnergy, motionPieceCount, motionPiecesDirection } from './source-motion-pieces';
 import { sep5AuthorableFiles, sep5PreviousSource } from './source-authorable';
 import { sep5AuthorPrompt, sep5BoldDefault, sep5FilesSchema, sep5FontDirection, sep5ProjectIsUsable, sep5Products, sep5ResponseSchema, SEP5_AUTHOR_VERSION, SEP5_NO_PHOTO_GROUPS } from './design-engine/sep5-author';
 import { merchantAsksForPhotoGroup } from './source-media-design';
@@ -51,7 +52,7 @@ export async function runSep5AuthorStage(context: Sep5StageContext): Promise<voi
   const motionPlan = sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: false });
   // A redesign shows the model the previous store, minus its standard pages: those are copies of its own
   // index.html, rebuilt below from the new one, and would spend the 24-file budget on pages nobody designs.
-  const authorInput = { products: sitePurpose === 'shop', purpose: sitePurpose, action: primaryAction, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: copying ? [] : sep5PreviousSource(oldFiles), motionPlan, storeColours: copying ? '' : storeColoursDirection(facts.storePhotoPalettes, merchantNamedColours(dto.instruction)), storeShell: true, boldDefault: !copying && ((live.styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn })), playbook: live.playbookText, fonts: sep5FontDirection(live.committedDesign), signature: copying ? '' : sourceSignatureAuthorDirection(live.committedDesign?.concepts[live.committedDesign.selected], signatureOn), frame: framePlatformHeader(live.frame.paragraph), hero: pickedHero, card: pickedCard, ...voiceAuthorInput(facts.voice), ...(live.brandBlock ? { brand: live.brandBlock } : {}), ...(merchantAsksForPhotoGroup(dto.instruction) ? {} : { photos: SEP5_NO_PHOTO_GROUPS }), ...((data as { logoUrl?: string | null }).logoUrl ? {} : { wordmark: true }) };
+  const authorInput = { products: sitePurpose === 'shop', purpose: sitePurpose, action: primaryAction, brief: dto.brief, instruction: dto.instruction, data, assetLegend, previousSource: copying ? [] : sep5PreviousSource(oldFiles), motionPlan, storeColours: copying ? '' : storeColoursDirection(facts.storePhotoPalettes, merchantNamedColours(dto.instruction)), motionPieces: copying ? '' : motionPiecesDirection({ energy: asksForEnergy(`${dto.instruction} ${JSON.stringify(dto.brief)}`) ? 'high' : 'calm', motion }), storeShell: true, boldDefault: !copying && ((live.styleBold && creative) || sep5BoldDefault({ creative, motion, instruction: dto.instruction, brief: dto.brief, playbook: playbookOn })), playbook: live.playbookText, fonts: sep5FontDirection(live.committedDesign), signature: copying ? '' : sourceSignatureAuthorDirection(live.committedDesign?.concepts[live.committedDesign.selected], signatureOn), frame: framePlatformHeader(live.frame.paragraph), hero: pickedHero, card: pickedCard, ...voiceAuthorInput(facts.voice), ...(live.brandBlock ? { brand: live.brandBlock } : {}), ...(merchantAsksForPhotoGroup(dto.instruction) ? {} : { photos: SEP5_NO_PHOTO_GROUPS }), ...((data as { logoUrl?: string | null }).logoUrl ? {} : { wordmark: true }) };
   const prompt = sep5AuthorPrompt(authorInput);
   const { attempt, body } = await sep5Call('author', prompt, images, 'independent_storefront', sep5ResponseSchema(sitePurpose === 'shop'), SEP5_CLIENT_TIMEOUT_MS);
   const authored = sep5FilesSchema.safeParse(sourceResponseJson(body));
@@ -71,7 +72,7 @@ export async function runSep5AuthorStage(context: Sep5StageContext): Promise<voi
   if (listed.note) autoRepairs.push(listed.note);
   // `motion` says whether the choreography was actually sent, so a store that came out static can be
   // told apart from a run that was never asked for movement.
-  logger.log(JSON.stringify({ event: 'sep5_author_published', generationId: runId, files: authored.data.files.length, version: SEP5_AUTHOR_VERSION, motion: motionPlan ? motion : 'none', bold: authorInput.boldDefault }));
+  logger.log(JSON.stringify({ event: 'sep5_author_published', generationId: runId, files: authored.data.files.length, pieces: motionPieceCount(authored.data.files.find(file => file.path === 'index.html')?.content ?? ''), version: SEP5_AUTHOR_VERSION, motion: motionPlan ? motion : 'none', bold: authorInput.boldDefault }));
   const authorable = sep5AuthorableFiles(authored.data.files);
   if (authorable.dropped.length) autoRepairs.push(`dropped platform files the author returned: ${authorable.dropped.join(', ')}`);
   // A store whose author left out only site.js (Licua Mini 2, 2026-10-19: a finished 6-minute build failed «Faltan archivos:

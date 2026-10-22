@@ -98,6 +98,9 @@ export function sep5AuthorPrompt(input: {
   fonts?: string;
   /** The merchant's photo colours (storeColoursDirection, owner 2026-10-22). Absent or blank, the prompt stays byte-identical. */
   storeColours?: string;
+  /** The kit's motion pieces and the spotlight-section patterns (motionPiecesDirection, owner 2026-10-22). Absent or blank, the
+   *  prompt stays byte-identical. */
+  motionPieces?: string;
   /** The drawn frame and hero (frameDirection, spec 2026-10-10). With it, the shell lists requirements only, not
    *  an order, so headers stop repeating. Absent or blank, the prompt stays byte-identical. */
   frame?: string;
@@ -155,6 +158,7 @@ export function sep5AuthorPrompt(input: {
     // "unnecessary motion", which read alone is why nine authored stores produced one @keyframes rule between
     // them; the closing clause settles which of the two paragraphs governs, and reads correctly for 'off' too.
     ...(input.storeColours?.trim() ? [input.storeColours.trim()] : []),
+    ...(input.motionPieces?.trim() ? [input.motionPieces.trim()] : []),
     ...(input.motionPlan?.trim()
       ? [`${input.motionPlan.trim()}\nMotion follows the choreography above; the contract's "unnecessary motion" means decoration that belongs to no concept, and never overrides it.`]
       : []),

@@ -90,6 +90,7 @@ import { brandContext, brandHasColours, brandStyles, BRAND_FONT_FIELDS } from '.
 import { requestedSourceProductOperations, requestedSourceProducts, sourceProductOperationsSchema, sourceProductsSchema, type SourceProductOperation } from './source-products';
 import { sourceMotionMode, sourceScrollFeel, requestedSourceMotion } from './source-motion';
 import { sourceMotionPlan } from './source-motion-plan';
+import { asksForEnergy, motionPiecesDirection } from './source-motion-pieces';
 import { sourceMotionPersonalityLine } from './source-motion-tokens';
 import { buildSourceVisualSystem, savedSourceVisualSystem, SOURCE_VISUAL_SYSTEM_CONTRACT, sourceVisualSystemContext, validateSourceVisualSystem, type SourceVisualSystem } from './source-visual-system';
 import { sourceRequestProfilePrompt, sourceRequestProfile } from './source-request-profile';
@@ -678,6 +679,7 @@ export class SourceGenerationService {
       // Owner 2026-10-22 (goodProtein #2): the photo colours reached only frame-draw, which YAPI_FRAME_DRAW=off skips.
       creative ? storeColoursDirection(storePhotoPalettes, merchantNamedColours(dto.instruction)) : "",
       sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }),
+      creative ? motionPiecesDirection({ energy: asksForEnergy(`${dto.instruction} ${JSON.stringify(dto.brief)}`) ? 'high' : 'calm', motion }) : '',
       uiComposition ? sourceUiCompositionRecipe(uiComposition) : '',
       previousDesign ? `Previous design direction (reference data): ${JSON.stringify(previousDesign.concepts[previousDesign.selected])}. ${redesign ? 'Develop a materially different composition while honoring current merchant choices.' : 'Preserve this direction for this local edit.'}` : '',
       context.omitted.includes('index.html') ? `Read-only homepage design reference (reuse its visual language; do not edit this omitted file): ${oldFiles?.find((file: SourceProjectFileDto) => file.path === 'index.html')?.content || ''}` : '',
