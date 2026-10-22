@@ -52,6 +52,7 @@ export async function runCommerceSurfaces(deps: {
   const rounds: Array<{ round: number; failures: SurfaceFailure[] }> = [];
   let pending: SurfacePart[] = [...deps.parts];
   let repair: { previous: SurfaceTemplate[]; failures: SurfaceFailure[] } | undefined;
+  let lastSignature = '';
   const approved = () => [...keep, ...[...passed.values()].map(p => p.t)];
   const checkWith = (candidates: SurfaceTemplate[]) => deps.check([...deps.files.filter(f => f.path !== COMMERCE_TEMPLATES_FILE), { path: COMMERCE_TEMPLATES_FILE, content: composeTemplatesFile([...approved(), ...candidates]) }], deps.signal);
   /** Sorts each checked candidate into passed, failed or still untested. */
@@ -88,6 +89,11 @@ export async function runCommerceSurfaces(deps: {
       for (const f of failures) if (f.check !== 'missing' || !lastFailure.has(f.part)) lastFailure.set(f.part, f.check);
       pending = deps.parts.filter(p => !passed.has(p) && !untested.has(p));
       repair = { previous: answered.filter(t => pending.includes(t.part)), failures: failures.filter(f => pending.includes(f.part)) };
+      // Owner 2026-10-22 (goodProtein #2): the same parts failing the same checks twice means another redesign will not fix it
+      // (a store whose cart never opens); the standard design takes over now instead of a third call waiting out the deadline.
+      const signature = failures.map(f => `${f.part}:${f.check}`).sort().join('|');
+      if (round > 0 && signature && signature === lastSignature) break;
+      lastSignature = signature;
     }
     // Parts never reached: one more purchase now that the failing parts fell back to the kit's (review I4).
     if (untested.size) {

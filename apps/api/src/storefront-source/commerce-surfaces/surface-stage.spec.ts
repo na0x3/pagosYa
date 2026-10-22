@@ -38,6 +38,14 @@ describe('runCommerceSurfaces (spec 2026-10-15)', () => {
     expect(out.note).toBe('El carrito no pasó la prueba de compra, así que usa el diseño estándar por ahora.');
     expect(out.retry).toEqual([{ label: 'Reintentar el carrito', value: 'Rediseña el carrito de mi tienda.' }]);
   });
+  it('stops repairing when a round fails exactly like the one before (owner 2026-10-22: 4.5 min spent on the same failure)', async () => {
+    let calls = 0;
+    const out = await runCommerceSurfaces({ ...base, parts: ['cart', 'added'],
+      call: async () => { calls++; return { body: answer([{ part: 'cart', html: T.cart }, { part: 'added', html: T.added }]), used: () => {} }; },
+      check: async () => ({ failures: [{ part: 'cart', check: 'open', detail: `El carrito no se abrió (${calls}).` }, { part: 'added', check: 'open', detail: 'El botón del aviso no abrió el carrito.' }], reached: ALL }) });
+    expect(calls).toBe(2);
+    expect(out.report).toEqual([{ part: 'cart', status: 'fallback', failed: 'open' }, { part: 'added', status: 'fallback', failed: 'open' }]);
+  });
   it('treats a statically invalid part like any failure and repairs it', async () => {
     let round = 0;
     const out = await runCommerceSurfaces({ ...base, parts: ['cart'],
@@ -114,7 +122,8 @@ describe('runCommerceSurfaces (spec 2026-10-15)', () => {
     const out = await runCommerceSurfaces({ ...base, parts: ['cart'],
       call: async () => ({ body: answer([{ part: 'cart', html: T.cart }]), used: () => {} }),
       check: async () => ({ failures: [{ part: 'cart', check: 'checkout-action', detail: 'No se ve el botón para continuar al pago.' }], reached: ALL }) });
-    expect(out.rounds).toHaveLength(3);
+    // The same failure twice stops the repairs (owner 2026-10-22), so two rounds are recorded, not three.
+    expect(out.rounds).toHaveLength(2);
     expect(out.rounds![0]).toEqual({ round: 0, failures: [{ part: 'cart', check: 'checkout-action', detail: 'No se ve el botón para continuar al pago.' }] });
   });
 });
