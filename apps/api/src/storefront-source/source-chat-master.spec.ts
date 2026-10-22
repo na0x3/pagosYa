@@ -34,7 +34,8 @@ const send = (instruction: string) => chat.send('m1', 's1', { revision: 0, instr
 
 it('a new shop is built from Esencial, never by the designer or the style cards', async () => {
   const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
-  expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function));
+  // Owner 2026-10-22: the closest Plantillas preset — a specialty café starts from «horno».
+  expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), 'horno');
   expect(generate).not.toHaveBeenCalled();
   expect(out.revision).toMatchObject({ revision: 1 });
   expect(out.assistantMessage.content).toContain('Café Buna');
@@ -90,6 +91,12 @@ describe('a merchant who wants their own design or pages (stress test 2026-10-21
     const out = await send('Quiero crear mi tienda desde cero.');
     expect(out.followUp).toMatchObject({ personalTouch: true });
   });
+});
+
+it('a business no preset fits keeps the usual roll', async () => {
+  prisma.store.findFirst.mockResolvedValue({ name: 'Tienda X', logoUrl: null, onboarding: { what: 'Cosas varias', story: '', contact: {}, photos: [] }, _count: { paymentLinks: 0 }, paymentLinks: [] });
+  await send('Crea mi tienda.');
+  expect(applyMaster.mock.calls[0][4]).toBeUndefined();
 });
 
 it('a story that bakes «desde cero» still gets Esencial (review fix 1)', async () => {

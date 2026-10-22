@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { closestPreset } from './source-preset-pick';
 import { sourceRequestContext } from './source-request-context';
 import { styleReleaseWaitMs } from './source-style-release';
 import { sourceMerchantRequest, type SourceMerchantRequest } from './source-merchant-request';
@@ -301,6 +302,9 @@ export class SourceChatService {
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true } });
     const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; contact?: { city?: string }; photos?: string[] };
     const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
+    // Owner 2026-10-22: start from the Plantillas preset closest to the business (its words and product names), not a random roll.
+    const productNames = await Promise.resolve(this.prisma.paymentLink?.findMany?.({ where: { storeId }, select: { name: true }, take: 30 })).catch(() => undefined) ?? [];
+    const presetId = closestPreset([store?.name, onboarding.what, onboarding.story, draft.answers?.context, merchantRequest ?? userMessage.content, ...productNames.map((product: { name: string }) => product.name)].filter(Boolean).join('\n'));
     const saved = await this.templates.applyMaster(merchantId, storeId, revision, async facts => {
       const photos = [...new Set([...(onboarding.photos ?? []), ...chatPhotos, ...facts.photos])].slice(0, 8);
       const read = await this.dialogue.fillMaster(merchantId, {
@@ -312,7 +316,7 @@ export class SourceChatService {
       // Fashion look spec 2026-10-21: the read's kind, backed by the store's own words, decides the fashion card and page.
       const fashion = isFashionStore({ kind: read?.kind, storeName: facts.storeName, what: onboarding.what ?? draft.answers?.context ?? '', products: facts.products });
       return { ...base, character: { ...(base.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] }), kind: fashion ? 'fashion' : 'other' } };
-    });
+    }, presetId);
     await workflow.finish('completed');
     // Variety spec §5: one background personal touch per new master store. The reply carries it; the job runner queues it
     // once this request's job is closed (a store has one active job at a time).
