@@ -59,7 +59,7 @@
       "values": "cards",
       "closing": "accent",
       "footer": "bigname",
-      "pdp": "stacked",
+      "pdp": "gallery-left",
       "pdpOrder": "reviews-first",
       "button": "pill",
       "corners": "round",

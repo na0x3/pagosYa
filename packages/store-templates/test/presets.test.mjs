@@ -38,3 +38,9 @@ test('a preset has no source of its own, its demo photos fill every Esencial pho
 test('a preset may only name what its master offers', () => {
   assert.throws(() => templates.loadTemplates(join(import.meta.dirname, 'fixtures', 'bad-preset')), /preset\.palette|preset\.variants|extends/);
 });
+
+// Owner 2026-10-22: «clients cant see product and price at same time» — a preset's product page keeps the photo beside the name,
+// price and buy button; «stacked» and «editorial» put a full-screen photo first.
+test('no preset uses a photo-first product page', () => {
+  for (const { manifest } of presets()) assert.ok(!['stacked', 'editorial'].includes(manifest.preset.variants.pdp), `${manifest.id} uses ${manifest.preset.variants.pdp}`);
+});

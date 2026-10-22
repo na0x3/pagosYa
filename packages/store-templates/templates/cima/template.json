@@ -59,7 +59,7 @@
       "values": "checklist",
       "closing": "photo",
       "footer": "bigname",
-      "pdp": "stacked",
+      "pdp": "gallery-right",
       "pdpOrder": "details-first",
       "button": "square",
       "corners": "sharp",
