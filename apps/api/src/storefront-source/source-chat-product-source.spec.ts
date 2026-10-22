@@ -9,7 +9,7 @@ const listing = { url: 'https://www.alibaba.com/product-detail/x_1.html', name: 
   images: ['https://s.alicdn.com/a.jpg', 'https://s.alicdn.com/b.jpg'], options: [{ name: 'Color', values: ['Rosa', 'Negro'] }], videos: [] as string[] };
 const link = 'https://www.alibaba.com/product-detail/x_1.html';
 
-function setup(messages: any[] = []) {
+function setup(messages: any[] = [], master = false) {
   const products: any[] = [];
   const prisma: any = {
     store: { findFirst: jest.fn().mockResolvedValue({ name: 'Batido Ya', logoUrl: null, _count: { paymentLinks: 0 } }) },
@@ -29,9 +29,12 @@ function setup(messages: any[] = []) {
   const generation: any = { generate: jest.fn().mockResolvedValue({ revision: 1, label: 'Batido Ya' }), newBudget: jest.fn((max?: number) => new SourceRequestBudget(max)), catalog: jest.fn().mockResolvedValue({ storeName: 'Batido Ya', items: [] }), interruptedPreview: jest.fn().mockResolvedValue({ at: null }) };
   const dialogue: any = { decide: jest.fn().mockResolvedValue({ action: 'generate', reply: '', summary: 'Tienda de una licuadora portátil.', generationInstruction: 'Crea la tienda completa.', imageUses: [], startFrom: 'scratch', productCopy: { name: 'Licuadora portátil', description: 'Batidos frescos donde estés.' } }) };
   const uploads: any = { saveBuffer: jest.fn(async (_body: Buffer, mimeType: string) => { const filename = `${Math.random().toString(16).slice(2)}.${mimeType === "video/mp4" ? "mp4" : "png"}`; return { filename, url: `/v1/uploads/${filename}`, mimeType, byteSize: 10 }; }) };
-  const service = new SourceChatService(prisma, projects, generation, dialogue, {} as any, { get: () => undefined } as any, uploads);
+  const applyMaster = jest.fn().mockResolvedValue({ revision: 1, label: 'Plantilla: Esencial', filled: false });
+  dialogue.fillMaster = jest.fn().mockResolvedValue(null);
+  const config = new Map<string, unknown>(master ? [['app.yapiMasterTemplate', true]] : []);
+  const service = new SourceChatService(prisma, projects, generation, dialogue, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as any, uploads);
   service.productReader = jest.fn().mockResolvedValue({ ok: true, listing, tier: 'fetch' });
-  return { service, prisma, generation, dialogue, uploads, messages, products };
+  return { service, prisma, generation, dialogue, uploads, messages, products, applyMaster };
 }
 const request = { revision: 0, assetUrls: [] as string[] };
 const execution = (generation: any) => generation.generate.mock.calls[0][2];
@@ -54,6 +57,18 @@ it('reads the link, creates the product with its photos and builds the store aro
   expect(generation.generate.mock.calls[0][4]).toEqual(expect.arrayContaining(products[0].imageUrls.map((url: string) => expect.objectContaining({ url, role: 'product' }))));
   expect(messages.find(message => message.role === 'USER').metadata.productImport).toMatchObject({ url: link, site: 'Alibaba', productId: 'p1' });
   expect(messages.at(-1).content).toMatch(/^Traje «Licuadora portátil» de Alibaba con 2 fotos\. Puse USD 18\.30, el precio del anuncio/);
+});
+
+// Owner 2026-10-22: every new store starts from the template; the product the link brought rides on the follow-up.
+it('with the template on, a product link builds on the template and the follow-up builds around the product', async () => {
+  const { service, generation, products, messages, applyMaster } = setup([], true);
+  const out: any = await service.send('m', 's', { ...request, instruction: `quiero vender esto ${link}` });
+  expect(products).toHaveLength(1);
+  expect(applyMaster).toHaveBeenCalled();
+  expect(generation.generate).not.toHaveBeenCalled();
+  expect(out.followUp.instruction).toContain('PRODUCT SOURCE');
+  expect(out.followUp.instruction).toContain('Licuadora portátil');
+  expect(messages.at(-1).content).toMatch(/^Traje «Licuadora portátil» de Alibaba/);
 });
 
 it('brings the listing video too, and asks for one carousel of photos and video (spec 2026-10-18 A2)', async () => {

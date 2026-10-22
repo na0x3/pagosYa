@@ -297,7 +297,7 @@ export class SourceChatService {
 
   /** Spec 2026-09-26 §1.3: v1 is the template as applied today; v2 is a free adaptation. A failed adaptation keeps v1. */
   /** Spec 2026-10-19 §2: Esencial applied and filled in one call; the store is saved even when the call fails. */
-  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[] = [], merchantRequest?: string) {
+  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[] = [], merchantRequest?: string, replyPrefix = '') {
     await workflow.report('saving');
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true } });
     const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; contact?: { city?: string }; photos?: string[] };
@@ -325,7 +325,7 @@ export class SourceChatService {
     const followUp: SourceMessageInput | undefined = touching ? { instruction: merchantRequest ? `${OWN_REQUEST_BRIEF}\n\nMensajes del comercio:\n${merchantRequest}` : PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, requestId: randomUUID(), model: 'auto' } : undefined;
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId, channel: 'source', role: 'ASSISTANT',
-      content: `Tu tienda ${store?.name ?? ''} está lista.${merchantRequest ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
+      content: `${replyPrefix}Tu tienda ${store?.name ?? ''} está lista.${merchantRequest ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
       metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
     } });
     // Spec 2026-10-19 §2: with no personal touch coming, the cards ride on this reply; otherwise on the touch's.
@@ -875,9 +875,13 @@ export class SourceChatService {
       // Products typed with prices in a chat-only setup are created by the designer's catalog step; that flow keeps them.
       const chatCatalog = this.config.get<boolean>('app.yapiMasterTemplate') === true && newShop && statesPrices(catalogInstruction)
         && !(await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } }))?.onboarding;
-      if (this.config.get<boolean>('app.yapiMasterTemplate') === true && newShop && !askedScratch && !websiteCopy && !productLink && !productImport && !chatCatalog) {
+      // Owner 2026-10-22: a product link or a listing screenshot already made its product above; the store starts from the template
+      // and the follow-up builds it around that product (the PRODUCT SOURCE block), in the merchant's words.
+      if (this.config.get<boolean>('app.yapiMasterTemplate') === true && newShop && !askedScratch && !websiteCopy && (!productLink || productImport) && !chatCatalog) {
         const chatPhotos = assetUrls.filter(url => ['product', 'business', 'team', 'background'].includes(decision.imageUses.find(use => use.url === url)?.role ?? ''));
-        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos, ownDesignRequest(input.instruction, history.messages));
+        const ownRequest = ownDesignRequest(input.instruction, history.messages);
+        const productRequest = productImport ? `${ownRequest ?? input.instruction}\n\n${productSourcePrompt(productImport.product, productImport.listingDescription, productImport.videoUrls?.length ?? 0)}\nConstruye la tienda alrededor de este producto.` : undefined;
+        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos, productRequest ?? ownRequest, productNote);
       }
       // "Elige tu estilo": new stores and full redesigns get two styles to pick from (one calm, one bold); a kept template stays its own style.
       // A copy follows its blueprint: no style cards (spec 2026-10-18 B §3).
