@@ -62,6 +62,7 @@ export const PARTS = [
   'header/store-menu.js',
   'controls/decorate.js',
   'look/fit-headlines.js',
+  'look/motion-pieces.js',
   'shared/start.js',
 ];
 
