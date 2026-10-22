@@ -345,3 +345,11 @@ it('stops on a ChatGPT authorization outage and preserves its safe diagnostic', 
   await expect(service.decide('merchant',input())).rejects.toMatchObject({diagnostic:{code:'provider_http',providerCode:'chatgpt_authentication_unavailable',upstreamStatus:500}});
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
+
+it('reads «vague» strictly: only a real true counts (plan card, 2026-10-22)', async () => {
+  const { service } = setup();
+  respond({ ...reply(), editKind: 'design', vague: 'yes' });
+  expect((await service.decide('merchant', input())).vague).toBe(false);
+  respond({ ...reply(), editKind: 'design', vague: true });
+  expect((await service.decide('merchant', input())).vague).toBe(true);
+});

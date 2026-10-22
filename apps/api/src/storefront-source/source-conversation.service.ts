@@ -1,4 +1,6 @@
 import { sourceRequestContext } from './source-request-context';
+import { normalizePlan, planJsonSchema, type PlanCatalogue, type StorePlan } from './plan/store-plan';
+import type { CatalogFacts } from './plan/store-plan-checks';
 import { galleryTemplates } from '@pagosya/store-templates';
 import { sourceSitePurpose, sourceSitePurposePrompt } from './source-site-purpose';
 import { sourceWebsiteReferenceContext, sourceWebsiteReferenceCaptures } from './source-website-reference';
@@ -49,6 +51,8 @@ export type SourceConversationDecision = {
   rework?: boolean;
   /** Spec 2026-10-19 §3: how a change on a master-template store is carried out. */
   editKind?: 'content' | 'design' | 'redesign' | 'none';
+  /** Plan card (spec 2026-10-22): a change of look the merchant did not spell out. */
+  vague?: boolean;
   /** Spec 2026-10-18 product link store: the catalog name and description written from the listing; empty without one. */
   productCopy?: { name: string; description: string };
 };
@@ -89,10 +93,11 @@ startFrom: for a new shop, "template" only when the merchant explicitly wants a 
 templates: only when the merchant explicitly requested a template and action=generate for a new shop, the three Plantillas that best fit this business, best first, each with a one-sentence reason in the merchant's language about why it fits; otherwise [].
 chosenTemplateId: when the merchant picks one of offeredTemplates (by name, by position such as "la segunda", or by description), its id; otherwise "".
 rework: true when the merchant asks an existing store to look more unique, more different or less like its template ("hazla más única", "que no parezca plantilla"), and also when a store that started from a template (startedFromTemplate in the context, with that template's look) settles on a visual direction or style different from that look (for example "moderna y clínica" on Pausa, a warm natural pilates template); otherwise false. Keeping the template is not a rework: a merchant who asks to use it as a reference or base, keep its style or adapt it to their business ("usa la plantilla como referencia", "mantén el estilo de la plantilla", "adáptala a mi panadería") gets rework false, even when they rename the business or ask for new copy; only an explicitly different look makes it true.
-editKind: for an existing store whose context has masterTemplate=true — "content" when the request only changes words, colours, fonts, the announcement bar or which photo goes where; "design" when it changes layout, sections, components or adds a feature (a bundle offer, moving reviews, a shorter hero); "redesign" only when the merchant explicitly asks to redesign everything or for something unique ("rediseña todo", "quiero algo único"); otherwise "none". For new stores always "none".`;
+editKind: for an existing store whose context has masterTemplate=true — "content" when the request only changes words, colours, fonts, the announcement bar or which photo goes where; "design" when it changes layout, sections, components or adds a feature (a bundle offer, moving reviews, a shorter hero); "redesign" only when the merchant explicitly asks to redesign everything or for something unique ("rediseña todo", "quiero algo único"); otherwise "none". For new stores always "none".
+vague: true when the merchant asks for a change of look without saying what («ponlo más bonito», «hazla más moderna», «cambia el estilo», «no me gusta», «mejóralo»); false when they name what to change («cambia el precio», «quita las reseñas», «el botón verde»).`;
 const decisionSchema = {
   type: 'object', additionalProperties: false,
-  required: ['action', 'reply', 'summary', 'generationInstruction', 'imageUses', 'startFrom', 'templates', 'chosenTemplateId', 'rework', 'editKind', 'productCopy'],
+  required: ['action', 'reply', 'summary', 'generationInstruction', 'imageUses', 'startFrom', 'templates', 'chosenTemplateId', 'rework', 'editKind', 'vague', 'productCopy'],
   properties: {
     action: { type: 'string', enum: ['reply', 'generate'] },
     reply: { type: 'string' }, summary: { type: 'string' }, generationInstruction: { type: 'string' },
@@ -108,6 +113,7 @@ const decisionSchema = {
     chosenTemplateId: { type: 'string', enum: [...templateIds, ''] },
     rework: { type: 'boolean' },
     editKind: { type: 'string', enum: ['content', 'design', 'redesign', 'none'] },
+    vague: { type: 'boolean' },
     productCopy: { type: 'object', additionalProperties: false, required: ['name', 'description'], properties: { name: { type: 'string', maxLength: 120 }, description: { type: 'string', maxLength: 500 } } },
   },
 };
@@ -176,6 +182,22 @@ export type MasterFillInput = { storeId: string; model?: SourceModelChoice; stor
 /** Spec 2026-10-20 Plantillas fill: what the one fill call of a converted template is given. */
 export type PlantillaFillInput = { storeId: string; storeName: string; about: string; products: string[]; photos: string[]; slots: readonly TemplateCopySlot[];
   current?: Record<string, string>; request?: string };
+
+/** YAPI plan card (spec 2026-10-22): the store as a plan, each choice with its reason from this store's data. */
+export const PLAN_PROMPT = `Eres YAPI y planificas una tienda online antes de construirla. Recibes el negocio, sus productos, sus fotos (etiquetadas «Foto N») y el catálogo de piezas de la plantilla.
+Elige una variante para cada pieza, hasta 4 secciones del catálogo, hasta 2 secciones propias (custom), paleta, tipografía y, si existe, un motivo de marca.
+Reglas del dueño:
+- Cada elección lleva un «why» que nombra algo concreto de ESTA tienda (un producto, una foto, el logo, la cantidad de productos). Nunca «se ve moderno».
+- Nunca inventes un color: «accent» y «colourFrom» solo con «logo», «marca» o «foto N» de donde sale ese color; si no, accent va en null.
+- Fondo claro y tinta oscura; un solo acento para la tienda. Las tarjetas de producto son normales: 3 o 4 por fila. Nada de bandas oscuras solo de texto.
+- Ningún adorno sin función: un motivo sale del logo o de los productos y dice algo (una espiral del logo, un sello con un dato del producto).
+- Secciones propias solo cuando el catálogo las pide: «per-brand» con 3 o más marcas que aparecen en los nombres de los productos (lístalas en brands), cada una con un layout que encaja con lo que dice (stats para números, numbered para pasos, polaroid para un sello, marquee para una palabra).
+- Que no sea aburrida: movimiento, letra con carácter y secciones que solo esta tienda tendría.
+- «card»: 5 a 7 líneas cortas en español simple para el comercio, por ejemplo «Colores: crema, negro y el naranja de tu logo».
+Si recibes «clash», cambia justo eso. Si recibes «current», planifica cambios sobre esa tienda. Si recibes «previous», es tu plan anterior y el pedido nuevo dice qué cambiar.`;
+
+export type StorePlanInput = { storeId: string; storeName: string; what: string; request: string; products: string[]; facts: CatalogFacts; photos: string[]; catalogue: PlanCatalogue; revision: number;
+  current?: { variants: Record<string, string>; sections: string[]; palette: string; fonts: string }; clash?: string; previous?: StorePlan };
 
 @Injectable()
 export class SourceConversationService {
@@ -246,6 +268,43 @@ export class SourceConversationService {
         if (error instanceof SourceProviderQuotaException) throw error;
         this.logger.warn(JSON.stringify({ stage: 'master-fill', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
       } finally { await this.metering?.record(input.storeId, 'source-master-fill', model, body, Date.now() - started, status); }
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    return null;
+  }
+
+  /** YAPI plan card (spec 2026-10-22): one structured call; null when it fails twice. */
+  async planStore(merchantId: string, input: StorePlanInput): Promise<StorePlan | null> {
+    const model = sourceConversationModel(undefined, this.config.get<string>('app.openAi.conversationModel'));
+    const provider = sourceProvider(this.config, model);
+    const photos = input.photos.slice(0, 8);
+    const owned = photos.length ? new Set((await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: photos } }, select: { url: true } })).map(asset => asset.url)) : new Set<string>();
+    const images: Array<{ type: 'input_text'; text: string } | { type: 'input_image'; image_url: string; detail: 'low' }> = [];
+    for (const [index, url] of photos.entries()) {
+      const filename = url.split('/').at(-1)!;
+      if (!this.uploads.contentTypeFor(filename).startsWith('image/')) continue;
+      const bytes = owned.has(url) ? await this.uploads.getBuffer(filename).catch(() => null) : null;
+      if (bytes && bytes.length <= 4_000_000) images.push({ type: 'input_text', text: `Foto ${index}` }, { type: 'input_image', image_url: `data:${this.uploads.contentTypeFor(filename)};base64,${bytes.toString('base64')}`, detail: 'low' });
+    }
+    const facts = { storeName: input.storeName, what: input.what.slice(0, 1500), request: input.request.slice(0, 2000), products: input.products.slice(0, 30), catalog: input.facts,
+      catalogue: input.catalogue, ...(input.current ? { current: input.current } : {}), ...(input.clash ? { clash: input.clash } : {}), ...(input.previous ? { previous: input.previous } : {}) };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const started = Date.now(); let body: any = null; let status = 'FAILED';
+      try {
+        const response = await fetch(provider.endpoint, {
+          method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(90_000),
+          body: JSON.stringify({ model, store: false, instructions: PLAN_PROMPT,
+            input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(facts) }, ...images] }],
+            text: { format: { type: 'json_schema', name: 'store_plan', strict: true, schema: planJsonSchema(input.catalogue) } },
+            reasoning: { effort: 'low' }, max_output_tokens: 4000 }),
+        });
+        body = await response.json().catch(() => null);
+        checkSourceProviderQuota(response.status, body, provider.name);
+        if (response.ok) { status = 'COMPLETED'; return normalizePlan(sourceResponseJson(body), input.catalogue, input.revision); }
+      } catch (error) {
+        if (error instanceof SourceProviderQuotaException) throw error;
+        this.logger.warn(JSON.stringify({ stage: 'store-plan', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
+      } finally { await this.metering?.record(input.storeId, 'source-store-plan', model, body, Date.now() - started, status); }
       if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 3000));
     }
     return null;
@@ -440,6 +499,7 @@ export class SourceConversationService {
           .filter(item => item && typeof item.id === 'string' && typeof item.reason === 'string').slice(0, 3) : [];
         decision.chosenTemplateId = typeof decision.chosenTemplateId === 'string' ? decision.chosenTemplateId : '';
         decision.rework = decision.rework === true;
+        decision.vague = decision.vague === true;
         decision.editKind = decision.editKind === 'content' || decision.editKind === 'design' || decision.editKind === 'redesign' ? decision.editKind : 'none';
         // Older answers (and recorded tapes) have no productCopy: it is optional, never a failed decision.
         const copy = decision.productCopy as { name?: unknown; description?: unknown } | undefined;
