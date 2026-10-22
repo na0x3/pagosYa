@@ -57,6 +57,19 @@ it('«desde cero» starts from Esencial and the follow-up carries the request', 
   expect(out.followUp.instruction).toMatch(/^Esta tienda empezó desde la plantilla/);
 });
 
+it('a specific request without «desde cero» rides on the follow-up too (owner 2026-10-22, goodProtein #4)', async () => {
+  const out = await send('Diseña la tienda goodProtein. Quiero algo con mucha energía y movimiento: tú eliges la estructura. Cuenta en pocas palabras qué aporta cada marca.');
+  expect(applyMaster).toHaveBeenCalled();
+  expect(out.followUp.instruction).toMatch(/^Esta tienda empezó desde la plantilla/);
+  expect(out.followUp.instruction).toContain('qué aporta cada marca');
+});
+
+it('a bare «crea mi tienda» keeps the usual personal touch', async () => {
+  config.set('app.yapiPersonalTouch', true);
+  const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+  expect(out.followUp.instruction).toBe(PERSONAL_TOUCH_BRIEF);
+});
+
 it('an earlier «desde cero» also starts from Esencial and is carried', async () => {
   messages.push({ role: 'USER', content: 'Prefiero un diseño desde cero', metadata: {}, createdAt: new Date(), id: 'x' });
   const out = await send('Listo, créala.');
@@ -81,10 +94,11 @@ describe('a merchant who wants their own design or pages (stress test 2026-10-21
     await send('Vendo vestidos de novia en La Paz.\n\nNavegación elegida: enlaces visibles a páginas separadas dentro del mismo sitio, en la misma pestaña del navegador.');
     expect(applyMaster).toHaveBeenCalled();
   });
-  it('pages named in passing still get Esencial, with the usual personal touch', async () => {
+  it('pages named in passing still get Esencial', async () => {
     const out = await send('Vendemos con nuestras páginas de Facebook e Instagram. Crea mi tienda.');
     expect(applyMaster).toHaveBeenCalled();
-    expect(out.followUp?.instruction ?? PERSONAL_TOUCH_BRIEF).toBe(PERSONAL_TOUCH_BRIEF);
+    // Its words ride on the follow-up like any specific message; what matters is that it is not read as its own pages.
+    expect(out.followUp?.instruction ?? '').not.toContain('Navegación elegida');
   });
   it('carries the request even with the personal touch switched off', async () => {
     config.set('app.yapiPersonalTouch', false);

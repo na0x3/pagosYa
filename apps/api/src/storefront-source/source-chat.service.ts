@@ -96,10 +96,14 @@ const MASTER_SCRATCH = /\b(?:diseñ\w*|crea\w*|cré\w*|arm\w*|haz|hacer|hagas|co
  *  estas páginas: …») gets them built; Esencial's fill writes words only and silently dropped all seven. */
 const OWN_STRUCTURE = /Navegación elegida: enlaces visibles a páginas separadas|\b(?:necesito|quiero|tenga|con)\b[^.!?\n]{0,30}\bp[aá]ginas\b[^.!?\n]{0,25}(?::|\b(?:separadas|aparte|propias)\b)/i;
 const wantsOwnDesign = (text: string) => MASTER_SCRATCH.test(text) || OWN_STRUCTURE.test(text);
-/** The merchant's own words when any message asked for their own design or pages: oldest first, the current one last. */
+/** Generic asks and the Studio's own lines say nothing the template does not already do. */
+const GENERIC_ASK = /^(?:mi negocio se llama [^.\n]*\.?|crea(?:r)? (?:mi|la) tienda\.?|cr[eé]ala\.?|listo,? cr[eé]ala\.?|hazla\.?|empieza(?: ya)?\.?|navegaci[oó]n elegida:.*)$/i;
+/** The merchant's own words when they asked for anything beyond «crea mi tienda» (owner 2026-10-22: goodProtein #4 asked for
+ *  energy and a line per brand without saying «desde cero»): oldest first, the current one last. */
 const ownDesignRequest = (instruction: string, history: Array<{ role: string; content: string }>): string | undefined => {
   const said = [...history.filter(message => message.role === 'USER').map(message => message.content).reverse(), instruction].map(text => text.trim()).filter(Boolean);
-  return said.some(wantsOwnDesign) ? [...new Set(said)].join('\n\n') : undefined;
+  const specific = said.flatMap(text => text.split(/\n+/)).map(line => line.trim()).filter(line => line && !GENERIC_ASK.test(line)).join(' ');
+  return said.some(wantsOwnDesign) || specific.length >= 40 ? [...new Set(said)].join('\n\n') : undefined;
 };
 /** A master store's home still reads its words from store-data (spec 2026-10-19 §3): after a redesign it no longer does. */
 const readsMasterData = (files: readonly { path: string; content: string }[]) => /import\s*\{[^}]*\bcopy\b[^}]*\}\s*from\s*'\.\/store-data'/.test(files.find(file => file.path === 'components/home.tsx')?.content ?? '');
