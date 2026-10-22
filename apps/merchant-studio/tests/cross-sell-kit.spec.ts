@@ -18,9 +18,9 @@ const bundles = [
   { id: 'other', name: 'Sin galleta', kind: 'FIXED', items: [{ productId: 'milk', quantity: 1 }, { productId: 'mug', quantity: 1 }], minimumQuantity: 2, discountPercent: 5 },
 ];
 
-async function open(page: Page, id: string, data: Record<string, unknown>) {
+async function open(page: Page, id: string, data: Record<string, unknown>, extra: Record<string, unknown> = {}) {
   const store = { storeName: 'Prueba', shippingPickupEnabled: true, items: [cookie, milk, mug], ...data };
-  await page.route('https://kit.test/**', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${kit('commerce-pages.css')}body{margin:0;font-family:Arial,sans-serif}</style></head><body class="commerce-document"><header class="commerce-header"><a href="index.html" data-store-name>Prueba</a><nav aria-label="Tienda"><button data-cart-open>Mi pedido (<span data-cart-count>0</span>)</button></nav></header><main data-pagosya-product-page></main><div data-pagosya-cart hidden></div><p data-pagosya-status></p><script>window.PAGOSYA_CONFIG=${JSON.stringify({ demo: true, slug: 'kit', productPage: 'product.html', data: store })}</script><script>${kit('commerce.js')}</script></body></html>` }));
+  await page.route('https://kit.test/**', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${kit('commerce-pages.css')}body{margin:0;font-family:Arial,sans-serif}</style></head><body class="commerce-document"><header class="commerce-header"><a href="index.html" data-store-name>Prueba</a><nav aria-label="Tienda"><button data-cart-open>Mi pedido (<span data-cart-count>0</span>)</button></nav></header><main data-pagosya-product-page></main><div data-pagosya-cart hidden></div><p data-pagosya-status></p><script>window.PAGOSYA_CONFIG=${JSON.stringify({ demo: true, slug: 'kit', productPage: 'product.html', data: store, ...extra })}</script><script>${kit('commerce.js')}</script></body></html>` }));
   await page.goto(`https://kit.test/product.html?id=${id}`);
   await expect(page.locator('#pagosya-product-title')).toBeVisible();
 }
@@ -41,6 +41,18 @@ test('a product page lists the bundles it belongs to and adds a fixed bundle in 
   await offers.nth(0).getByRole('button', { name: 'Añadir paquete Merienda' }).click();
   await expect(page.locator('[data-cart-count]').first()).toHaveText('3');
   await expect(page.locator('.product-detail__status')).toHaveText('Merienda añadido a tu pedido.');
+});
+
+// Owner 2026-10-22: bundle buttons are round and friendly, even in a store whose buttons are square.
+test('bundle buttons stay round pills and the other products are chips, whatever the store button form', async ({ page }) => {
+  await open(page, 'cookie', { bundlesEnabled: true, bundles }, { dna: { button: 'block', radius: 'none' } });
+  const add = page.getByRole('button', { name: 'Añadir paquete Merienda' });
+  await expect(add).toBeVisible();
+  const shape = await add.evaluate(el => { const s = getComputedStyle(el), r = el.getBoundingClientRect(); return { radius: parseFloat(s.borderTopLeftRadius), height: r.height, transform: s.textTransform }; });
+  expect(shape.radius).toBeGreaterThanOrEqual(shape.height / 2 - 1);
+  expect(shape.transform).toBe('none');
+  const chip = page.locator('.product-detail__bundle-links a').first();
+  expect(await chip.evaluate(el => parseFloat(getComputedStyle(el).borderTopLeftRadius))).toBeGreaterThanOrEqual(14);
 });
 
 test('bundles stay hidden when the store has them turned off', async ({ page }) => {

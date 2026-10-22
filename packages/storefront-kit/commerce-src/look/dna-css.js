@@ -1,11 +1,11 @@
   // Design DNA variants (sub-project 5): form becomes per store, behaviour stays platform-owned. Every
   // variant is keyed on :root[data-dna-*] and this element exists only when the store has a DNA, so a
   // store without one renders exactly as before. Surfaces read one shared token set.
-  const KIT_BUTTONS = ':where(.menu-add,.checkout-button,[data-pagosya-product] .product-detail__buy,.product-detail__sticky button,.cart-added button,.order-recommendations :is(button,a),.product-detail__bundle-add,[data-pagosya-contact] form>button[type=submit],[data-dna-fields] [data-account-gate] [data-part=submit])';
+  const KIT_BUTTONS = ':where(.menu-add,.checkout-button,[data-pagosya-product] .product-detail__buy,.product-detail__sticky button,.cart-added button,.order-recommendations :is(button,a),[data-pagosya-contact] form>button[type=submit],[data-dna-fields] [data-account-gate] [data-part=submit])';
   const KIT_STEPPERS = ':where(.quantity button,.product-detail__quantity,.product-detail__box-stepper button)';
   /* The product page is platform-owned: its kit styles are unlayered and authored rules on its hooks are released
    * (releaseProductPageStyles), so the DNA reaches its buttons with an unlayered, product-scoped copy of the rules. */
-  const PAGE_BUTTONS = '[data-pagosya-product][data-style] :is(.product-detail__buy,.product-detail__sticky button,.product-detail__bundle-add)';
+  const PAGE_BUTTONS = '[data-pagosya-product][data-style] :is(.product-detail__buy,.product-detail__sticky button)';
   const PAGE_STEPPERS = '[data-pagosya-product][data-style] :is(.product-detail__quantity,.product-detail__box-stepper button)';
   const dnaForm = (value, tokens) => `:root[data-dna-button=${value}]{${tokens}}`;
   const dnaHover = (buttons, value, declarations) => `@media(hover:hover){:root[data-dna-hover=${value}] ${buttons}:hover:not(:disabled){${declarations}}}:root[data-dna-hover=${value}] ${buttons}:focus-visible{${declarations}}`;

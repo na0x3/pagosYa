@@ -273,12 +273,17 @@
     [data-pagosya-product][data-style] .product-detail__box-stepper output{min-width:2ch;text-align:center;font-variant-numeric:tabular-nums}
     [data-pagosya-product][data-style] .product-detail__bundles{display:grid;gap:12px;margin:clamp(32px,5vw,56px) 0 0}
     [data-pagosya-product][data-style] .product-detail__bundles h2{margin:0;font-family:var(--pd-heading);font-size:clamp(20px,2.4vw,26px)}
-    [data-pagosya-product][data-style] .product-detail__bundles article{display:grid;gap:8px;padding:16px;border:1px solid var(--pd-line);border-radius:12px}
+    [data-pagosya-product][data-style] .product-detail__bundles article{display:grid;gap:10px;padding:18px 20px;border:1px solid var(--pd-line);border-radius:20px;background:color-mix(in srgb,var(--pd-accent) 6%,var(--pd-paper))}
     [data-pagosya-product][data-style] .product-detail__bundles h3{margin:0;font-size:16px}
     [data-pagosya-product][data-style] .product-detail__bundles p{margin:0;overflow-wrap:anywhere}
-    [data-pagosya-product][data-style] .product-detail__bundle-links{display:flex;flex-wrap:wrap;gap:6px 14px}
-    [data-pagosya-product][data-style] .product-detail__bundle-links a{color:inherit;text-underline-offset:3px}
-    [data-pagosya-product][data-style] .product-detail__bundle-add{justify-self:start;min-height:44px}
+    /* Owner 2026-10-22: bundle buttons are round and friendly in every store — never the store's square, stamp or ticket form. */
+    [data-pagosya-product][data-style] .product-detail__bundle-links{display:flex;flex-wrap:wrap;gap:6px}
+    [data-pagosya-product][data-style] .product-detail__bundle-links a{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border:1px solid var(--pd-line);border-radius:999px;background:var(--pd-paper);color:inherit;font-size:13px;text-decoration:none;transition:border-color .2s ease}
+    [data-pagosya-product][data-style] .product-detail__bundle-links a:hover{border-color:var(--pd-ink)}
+    [data-pagosya-product][data-style] .product-detail__bundles .product-detail__bundle-add{justify-self:start;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;margin-top:4px;padding:0 22px;border:0;border-radius:999px;background:var(--pd-accent);color:var(--pd-on-accent);box-shadow:none;font:inherit;font-size:15px;font-weight:600;letter-spacing:0;text-transform:none;cursor:pointer;transition:transform .2s ease,filter .2s ease;-webkit-mask:none;mask:none;clip-path:none}
+    [data-pagosya-product][data-style] .product-detail__bundles .product-detail__bundle-add:hover{transform:translateY(-1px);filter:brightness(.95)}
+    [data-pagosya-product][data-style] .product-detail__bundles .product-detail__bundle-add:active{transform:scale(.97)}
+    [data-pagosya-product][data-style] .product-detail__bundles .product-detail__bundle-add:focus-visible{outline:2px solid var(--pd-ink);outline-offset:3px}
     [data-pagosya-product][data-style] .product-detail__related-name{font-weight:600;overflow-wrap:anywhere}
     [data-pagosya-product][data-style] .product-detail__related-price{font-size:14px;color:var(--pd-muted);font-variant-numeric:tabular-nums}
     [data-pagosya-product][data-style] .product-detail__reviews-summary{display:flex;align-items:center;gap:10px;margin:0}
