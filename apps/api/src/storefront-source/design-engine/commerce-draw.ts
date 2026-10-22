@@ -52,7 +52,7 @@ export function parseCommerceDraw(value: unknown): Partial<CommerceDraw> {
 /** The cart's own word per kind of business: the cart button and the drawer title. */
 export const CART_WORDS: Record<PlaybookKind, string> = {
   'cafe-food': 'Tu pedido', 'bakery-sweets': 'Tu caja', clothing: 'Tu bolsa', beauty: 'Tu neceser', 'flowers-gifts': 'Tu ramo',
-  'crafts-home': 'Tu selección', 'fitness-wellness': 'Tu plan', services: 'Tu solicitud', general: 'Tu carrito',
+  'crafts-home': 'Tu selección', 'fitness-wellness': 'Tu plan', 'health-supplements': 'Tu pedido', services: 'Tu solicitud', general: 'Tu carrito',
 };
 export const cartWordFor = (kind: unknown): string | undefined => typeof kind === 'string' && Object.prototype.hasOwnProperty.call(CART_WORDS, kind) ? CART_WORDS[kind as PlaybookKind] : undefined;
 

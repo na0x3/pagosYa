@@ -6,8 +6,9 @@ const lum = (hex: string) => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i
 const contrast = (a: string, b: string) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
 const seeded = (seed: number) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 
-it('has nine entries with valid families, fonts, buttons and readable palettes', () => {
-  expect(Object.keys(PLAYBOOK).sort()).toEqual(['bakery-sweets', 'beauty', 'cafe-food', 'clothing', 'crafts-home', 'fitness-wellness', 'flowers-gifts', 'general', 'services']);
+it('has ten entries with valid families, fonts, buttons and readable palettes', () => {
+  // health-supplements added 2026-10-22 (goodProtein read as a café).
+  expect(Object.keys(PLAYBOOK).sort()).toEqual(['bakery-sweets', 'beauty', 'cafe-food', 'clothing', 'crafts-home', 'fitness-wellness', 'flowers-gifts', 'general', 'health-supplements', 'services']);
   const buttons = DESIGN_CATALOGUE.button.map(entry => entry.id);
   for (const entry of Object.values(PLAYBOOK)) {
     expect(entry.families.length).toBeGreaterThanOrEqual(2);
@@ -142,4 +143,21 @@ it('asks two or three short Spanish questions per kind and keeps its own avoid l
   expect(PLAYBOOK.services.questions.slice(0, 2)).toEqual(['¿Qué problema resuelves primero?', '¿Cómo es una primera reunión contigo?']);
   expect(PLAYBOOK['crafts-home'].questions).toContain('¿Qué te inspira?');
   expect(PLAYBOOK.general.questions).toContain('¿Cada cuánto entregan?');
+});
+
+describe('health and supplements (owner 2026-10-22: goodProtein got café colours and a café question)', () => {
+  it.each([
+    'Es una tienda de salud animada que vende proteínas, recuperación y snacks de varias marcas',
+    'Protein Pulver Vegano sabor galleta, Bloom Clear Protein, batido de proteína vegetal',
+    'suplementos, creatina, colágeno y vitaminas para tu entrenamiento',
+  ])('reads «%s» as health-supplements', text => expect(detectKind(text)).toBe('health-supplements'));
+  it('leaves a bakery and a café alone', () => {
+    expect(detectKind('panadería de masa madre con galletas y tortas')).toBe('bakery-sweets');
+    expect(detectKind('cafetería de especialidad, tostamos nuestro café')).toBe('cafe-food');
+  });
+  it('asks protein-shop questions, never about coffee', () => {
+    const questions = PLAYBOOK['health-supplements'].questions;
+    expect(questions).toHaveLength(3);
+    expect(questions.join(' ')).not.toMatch(/caf[eé]/i);
+  });
 });

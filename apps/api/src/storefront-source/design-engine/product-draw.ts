@@ -20,7 +20,7 @@ export const PRODUCT_PAGE_FIT: Record<PlaybookKind, readonly SourceProductPageSt
   // 2026-10-19, owner: «I want exactly layouts like those from Amboras». Every kind gets the atelier page; what makes two stores
   // differ is their type, colours, buttons and words, as in the Amboras examples. Stores drawn before keep their style.
   'cafe-food': ['atelier'], 'bakery-sweets': ['atelier'], clothing: ['atelier'], beauty: ['atelier'], services: ['atelier'],
-  'fitness-wellness': ['atelier'], 'crafts-home': ['atelier'], 'flowers-gifts': ['atelier'], general: ['atelier'],
+  'fitness-wellness': ['atelier'], 'health-supplements': ['atelier'], 'crafts-home': ['atelier'], 'flowers-gifts': ['atelier'], general: ['atelier'],
 };
 /** Fitting product page presets (swatch, gallery, blocks, divider, entrance, media side) per kind. */
 export const PRESET_FIT: Record<PlaybookKind, readonly PresetId[]> = {
@@ -30,6 +30,7 @@ export const PRESET_FIT: Record<PlaybookKind, readonly PresetId[]> = {
   beauty: ['boutique', 'atelier', 'plain', 'gallery'],
   services: ['plain', 'catalogue', 'workshop'],
   'fitness-wellness': ['catalogue', 'plain', 'playful', 'boutique'],
+  'health-supplements': ['playful', 'catalogue', 'boutique', 'plain'],
   'crafts-home': ['craft', 'workshop', 'gallery', 'atelier'],
   'flowers-gifts': ['boutique', 'gallery', 'playful', 'craft'],
   general: PRESET_IDS,

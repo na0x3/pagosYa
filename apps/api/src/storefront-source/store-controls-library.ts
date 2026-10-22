@@ -69,7 +69,7 @@ export const SHARED_ICONS: Record<Exclude<IconSlot, 'cart'>, Record<IconStyle, s
 
 export const KIND_CART_ICON: Record<PlaybookKind, CartIcon> = {
   'cafe-food': 'cup', 'bakery-sweets': 'scoop', clothing: 'bag', beauty: 'leaf', services: 'briefcase',
-  'fitness-wellness': 'leaf', 'crafts-home': 'frame', 'flowers-gifts': 'basket', general: 'bag',
+  'fitness-wellness': 'leaf', 'health-supplements': 'bag', 'crafts-home': 'frame', 'flowers-gifts': 'basket', general: 'bag',
 };
 // \b treats accented letters as non-word characters, so whole words use letter lookarounds (as frame-draw.ts does).
 const PET_WORDS = /(?<!\p{L})(mascotas?|perr[oa]s?|gat[oa]s?|veterinari[ao]s?|pet ?shop)(?!\p{L})/iu;

@@ -5,7 +5,7 @@
  */
 import type { Palette } from './frame-draw';
 
-export type PlaybookKind = 'cafe-food' | 'bakery-sweets' | 'clothing' | 'beauty' | 'services' | 'fitness-wellness' | 'crafts-home' | 'flowers-gifts' | 'general';
+export type PlaybookKind = 'cafe-food' | 'bakery-sweets' | 'clothing' | 'beauty' | 'services' | 'fitness-wellness' | 'health-supplements' | 'crafts-home' | 'flowers-gifts' | 'general';
 export type CraftProfile = 'shop' | 'story';
 export type StyleFamily = { id: string; name: string; palettes: Palette[]; fonts: Array<{ display: string; text: string }>; buttons: string[]; radius: string; photoShape: string };
 export type Evidence = 'hours' | 'location' | 'delivery';
@@ -91,6 +91,18 @@ const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
       { id: 'fitness-clean', name: 'clean performance', radius: 'soft', photoShape: 'plain', buttons: ['block', 'outline'], fonts: [{ display: 'archivo-black', text: 'inter' }, { display: 'archivo', text: 'dm-sans' }, { display: 'sora', text: 'manrope' }, { display: 'epilogue', text: 'epilogue' }],
         palettes: [p('fitness-white-black', 'white and black', '#ffffff', '#0f0f0f', '#0f0f0f', '#f0f0f0'), p('fitness-white-violet', 'white and violet', '#ffffff', '#16131f', '#5b3fd1', '#efecfb')] },
     ] },
+  // Owner 2026-10-22 (goodProtein #2): a protein shop read as a café got the café palette and «¿De dónde viene tu café…?».
+  'health-supplements': { kind: 'health-supplements', angles: ['field-guide', 'the-maker', 'ritual-time'], name: 'health and sports nutrition', profile: 'shop', references: ['bloomnu.com', 'goodprotein.ca', 'equipfoods.com'], footer: LEGAL,
+    sections: [{ id: 'products', label: 'productos', must: 'what each product or brand does, for whom and when to take it', detect: /(prote[ií]na|suplement|porci[oó]n|recuperaci[oó]n|sabor|marca)/i }, DELIVERY, CONTACT],
+    tone: 'energetic and clear: what each product does, when to take it and for whom, in plain words; no miracle or medical claims',
+    questions: ['¿Qué producto recomiendas más?', '¿Tu tienda es para deportistas o para quien empieza?', '¿Qué marca o sabor se vende primero?'],
+    avoid: ['resultados garantizados', 'quema grasa', 'milagro', 'cura', 'el mejor suplemento', 'transforma tu cuerpo'],
+    families: [
+      { id: 'health-energy', name: 'bright sport energy', radius: 'round', photoShape: 'rounded-corner', buttons: ['pill', 'block'], fonts: [{ display: 'archivo-black', text: 'inter' }, { display: 'outfit', text: 'outfit' }, { display: 'sora', text: 'manrope' }],
+        palettes: [p('health-citrus', 'cream and orange', '#fffdf2', '#1d1a14', '#ef5d1b', '#ffe27a'), p('health-mint', 'white and electric mint', '#ffffff', '#101614', '#11b38a', '#e6f7f1')] },
+      { id: 'health-clean', name: 'clean wellness', radius: 'soft', photoShape: 'plain', buttons: ['pill', 'outline'], fonts: [{ display: 'plus-jakarta-sans', text: 'dm-sans' }, { display: 'nunito', text: 'nunito' }, { display: 'epilogue', text: 'epilogue' }],
+        palettes: [p('health-blush', 'blush and berry', '#fff5f7', '#2a1520', '#d6336c', '#ffe1ea'), p('health-sand', 'sand and sage', '#f6f1e9', '#1f241d', '#5c7a52', '#e9e3d6')] },
+    ] },
   'crafts-home': { kind: 'crafts-home', angles: ['the-maker', 'origin-place', 'field-guide', 'neighbourhood'], name: 'crafts and home', profile: 'shop', references: ['onoracasa.com', 'utilitariomexicano.com'], footer: LEGAL,
     sections: [ABOUT, { id: 'craft', label: 'cómo se hace', must: 'materials and how each piece is made', detect: /(hecho a mano|artesan|material|barro|cer[aá]mica|madera|tejid|proceso)/i }, LOCATION, DELIVERY],
     tone: 'honest and tactile: materials, makers and care; each piece is real',
@@ -124,6 +136,8 @@ const PLAYBOOK: Record<PlaybookKind, PlaybookEntry> = {
 
 /** Keyword lists in priority order: most hits wins, ties go to the earlier (more specific) kind. */
 const KIND_WORDS: Array<[PlaybookKind, RegExp]> = [
+  // First: «sabor galleta» on a protein must not tip the store into sweets (owner 2026-10-22).
+  ['health-supplements', /(?<!\p{L})(prote[ií]nas?|protein|suplementos?|creatina|col[aá]geno|vitaminas?|whey|amino[aá]cidos?|pre-?entreno|pre-?workout|recuperaci[oó]n muscular|batidos? de prote[ií]na|nutrici[oó]n deportiva|electrolitos?)(?!\p{L})/giu],
   ['bakery-sweets', /(?<!\p{L})(panader[ií]a|pasteler[ií]a|reposter[ií]a|tortas?|pan|masa madre|galletas?|chocolates?|dulces|helados?)(?!\p{L})/giu],
   ['cafe-food', /(?<!\p{L})(caf[eé]|cafeter[ií]a|tostader[oa]|tostadur[ií]a|barista|restaurante|comida|cocina|men[uú] del d[ií]a|t[eé]|salte[nñ]as?|empanadas?|almuerzos?|viandas?|comidas? saludables?|sandwich(es)?|jugos?)(?!\p{L})/giu],
   ['flowers-gifts', /(?<!\p{L})(flor(es|er[ií]a)?|ramos? de flores|arreglos? florales?|regaler[ií]a)(?!\p{L})/giu],
