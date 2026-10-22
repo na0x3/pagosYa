@@ -135,3 +135,8 @@ against the latest plan (or the one reconstructed from `config.js` master state)
 
 - Classifier wording for «vague» and its test phrases.
 - Exact distance threshold, tuned on the existing dev stores.
+
+## Amendments (plan, 2026-10-22)
+
+1. Fingerprints are read from each store's current `store-data` (the dice already reads it this way); no `StorePlanFingerprint` table.
+2. The plan's colour is `{ palette: <Esencial palette id>, accent?: <hex>, from: string }`; the accent hex is kept only with a valid `from`.
