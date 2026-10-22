@@ -377,6 +377,8 @@ export async function assembleTemplateRevision(input: {
   plantillaCopy?: Record<string, string>;
   /** Dropdown menu spec 2026-10-21: groups YAPI wrote for the menu; without them the fill's own, else the kit builds the menu. */
   menuGroups?: StoreMenuGroup[];
+  /** YAPI plan card (spec 2026-10-22): kit surfaces the plan pins (card swatches…); values the kit does not know are dropped. */
+  dna?: Record<string, string>;
 }): Promise<{ label: string; brief: SourceProjectBriefDto; files: SourceProjectFileDto[] }> {
   const { manifest } = input;
   const data = sourceStoreConfigData(input.publicStore, input.apiUrl, input.firstRevision);
@@ -418,7 +420,8 @@ export async function assembleTemplateRevision(input: {
     .map(async path => ({ path, content: await readFile(kitPath(path), 'utf8') })));
   const demoAssets = templateDemoAssets(manifest, demoSlots);
   const config = {
-    ...sourceCommerceRoutes([...authored, ...scaffold, ...kitFiles], {}), dna: { ...templateDna(manifest, input.storeId), ...(settings ? { ...masterDnaFonts(settings, look!), ...masterDnaLook(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) } : {}) },
+    ...sourceCommerceRoutes([...authored, ...scaffold, ...kitFiles], {}), dna: { ...templateDna(manifest, input.storeId), ...(settings ? { ...masterDnaFonts(settings, look!), ...masterDnaLook(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) } : {}),
+      ...Object.fromEntries(Object.entries(input.dna ?? {}).filter(([name, value]) => SOURCE_DNA_RUNTIME_ENUMS[name]?.includes(value))) },
     ...(settings ? { showcase: masterShowcase(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) } : {}),
     ...(settings ? masterProductStyle(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) : {}),
     ...(settings ? masterFilterStyle(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) : {}),

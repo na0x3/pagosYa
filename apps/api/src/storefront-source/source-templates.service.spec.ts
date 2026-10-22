@@ -1,7 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { TemplateManifest } from '@pagosya/store-templates';
 import { nextStoreFiles } from './fixtures/next-store';
-import { assembleTemplateRevision } from './source-templates';
+import { assembleTemplateRevision, readMasterState } from './source-templates';
 import { SourceTemplatesService } from './source-templates.service';
 import { SourceProjectsService } from './source-projects.service';
 import { assertSourceCommerceContract } from './source-commerce-contract';
@@ -292,5 +292,47 @@ describe('SourceTemplatesService', () => {
     const config = first.files.find((file: any) => file.path === 'config.js')!.content;
     expect(config).toContain('Tu marca');
     expect(() => templates.demo('../prueba')).toThrow(NotFoundException);
+  });
+});
+
+/** YAPI plan card (spec 2026-10-22): a checked plan replaces the dice. */
+describe('applyMaster with a plan', () => {
+  function master() {
+    const real = jest.requireActual('@pagosya/store-templates');
+    const projects = { current: jest.fn(async () => ({ slug: 'tostado', revision: 0, updatedAt: null })), version: jest.fn(async () => ({ snapshot: { brief: undefined, files: [] } })), save: jest.fn(async (_m: string, _s: string, input: any) => ({ revision: input.revision + 1 })) };
+    const publicStores = { getStorePublic: jest.fn(async () => publicStore([item])) };
+    const prisma = { store: { update: jest.fn(async () => ({})) } };
+    const config = { get: (key: string) => ({ 'app.checkoutOrigin': 'https://pagar.pagosya.test', 'app.environment': 'development', 'app.port': 3001 } as any)[key] };
+    const templates = new SourceTemplatesService(prisma as any, publicStores as any, projects as any, config as any);
+    templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+    return { templates, projects };
+  }
+  const saved = (projects: any) => (projects.save.mock.calls[0] as any[])[2].files as Array<{ path: string; content: string }>;
+
+  it('a checked plan replaces the dice and pins its dna', async () => {
+    const dice = jest.requireActual('./source-master-dice');
+    const rollSpy = jest.spyOn(dice, 'rollVariants');
+    const { templates, projects } = master();
+    const plan = { variants: { hero: 'type', grid: 'grid3', menu: 'dropdowns', filters: 'sidebar' }, sections: ['faq', 'sizes'], palette: 'linen', fonts: master().templates.registry.templateManifest('esencial')!.master!.fonts[0].id, accent: '#f26b1d', dna: { card: 'swatch-swap', bogus: 'x' } };
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Tostado' } }), undefined, plan);
+    expect(rollSpy).not.toHaveBeenCalled();
+    const files = saved(projects);
+    const state = readMasterState(files);
+    expect(state.variants).toMatchObject({ hero: 'type', grid: 'grid3', menu: 'dropdowns', filters: 'sidebar', sections: ['faq', 'sizes'] });
+    expect(state.look).toMatchObject({ palette: 'linen', fonts: plan.fonts });
+    expect(state.look?.colors?.accent).toBe('#f26b1d');
+    const config = files.find(f => f.path === 'config.js')!.content;
+    expect(config).toContain('"card":"swatch-swap"');
+    expect(config).not.toContain('bogus');
+    rollSpy.mockRestore();
+  });
+
+  it('without a plan the dice still rolls', async () => {
+    const dice = jest.requireActual('./source-master-dice');
+    const rollSpy = jest.spyOn(dice, 'rollVariants');
+    const { templates } = master();
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Tostado' } }));
+    expect(rollSpy).toHaveBeenCalled();
+    rollSpy.mockRestore();
   });
 });

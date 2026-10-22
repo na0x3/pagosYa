@@ -31,6 +31,9 @@ import { sourcePublicApiUrl, sourceStoreConfigData, withLiveCatalog } from './so
 import { storeMenuContext, storeMenuTargetList } from './source-store-menu';
 
 /** Plantillas: apply a designer-made store as the next revision (free, no AI call). */
+/** YAPI plan card (spec 2026-10-22): what a checked plan pins on a master store. */
+export type AppliedPlan = { variants: Record<string, string>; sections: string[]; palette: string; fonts: string; accent?: string; dna: Record<string, string> };
+
 @Injectable()
 export class SourceTemplatesService {
   /** The template registry; replaceable in tests. */
@@ -54,7 +57,7 @@ export class SourceTemplatesService {
   }
 
   /** The pieces `apply` saves and `preview` shows: the template filled with this store's name, products and photos. */
-  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[], variants?: MasterVariants, plantillaCopy?: Record<string, string>) {
+  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[], variants?: MasterVariants, plantillaCopy?: Record<string, string>, dna?: Record<string, string>) {
     const chosen = this.registry.templateManifest(templateId);
     if (!chosen) throw new NotFoundException('Esa plantilla no existe.');
     // Plantillas presets (2026-10-22): a preset is saved as its master (Esencial) with the preset's look and starting words,
@@ -70,14 +73,14 @@ export class SourceTemplatesService {
       apiUrl: sourcePublicApiUrl(this.config), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), firstRevision: current.revision === 0,
       previousBrief: (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.brief,
       // A filled Plantilla shows the merchant's photos or none, never the demo business's (spec 2026-10-20).
-      fill, demoPhotos: !manifest.master && !plantillaCopy, extraFiles, variants, plantillaCopy,
+      fill, demoPhotos: !manifest.master && !plantillaCopy, extraFiles, variants, plantillaCopy, ...(dna ? { dna } : {}),
     });
     return { current, assembled };
   }
 
   /** Spec 2026-10-19 §2: the master template applied to a new store and filled in one call; the store is saved even when
    *  the filler fails. The filler sees what the apply sees: the store's name, product names and photos. */
-  async applyMaster(merchantId: string, storeId: string, revision: number, filler: (facts: MasterFacts) => Promise<MasterFill | null>, presetId?: string) {
+  async applyMaster(merchantId: string, storeId: string, revision: number, filler: (facts: MasterFacts) => Promise<MasterFill | null>, presetId?: string, plan?: AppliedPlan) {
     const presetManifest = presetId ? this.registry.templateManifest(presetId) : undefined;
     if (presetId && !presetManifest?.preset) throw new NotFoundException('Esa plantilla no existe.');
     const manifest = this.registry.templateManifest(MASTER_TEMPLATE_ID);
@@ -100,7 +103,11 @@ export class SourceTemplatesService {
     // Variety spec §3: the platform rolls the store's variants, palette and fonts within the business's character.
     let variants: MasterVariants | undefined;
     // A preset (Plantillas, 2026-10-22) is a chosen look: no dice and no logo palette; the fill only writes the words.
-    if (!presetManifest && this.config.get<boolean>('app.yapiEsencialDice') !== false) {
+    // YAPI plan card (spec 2026-10-22): a checked plan replaces the dice.
+    if (plan) {
+      variants = { ...plan.variants, sections: plan.sections } as MasterVariants;
+      fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), palette: plan.palette, fonts: plan.fonts, ...(plan.accent ? { colors: { ...(fill?.look?.colors ?? {}), accent: plan.accent } } : {}) } };
+    } else if (!presetManifest && this.config.get<boolean>('app.yapiEsencialDice') !== false) {
       // Counted before bundling: a bundled hero is an asset path and would count its product photo twice (review fix).
       const photoCount = distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]);
       const rolled = rollVariants({ seed: storeId, settings: manifest.master, character: fill?.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] },
@@ -112,10 +119,11 @@ export class SourceTemplatesService {
     }
     const brandColours = Object.fromEntries(([['paper', 'background'], ['ink', 'foreground'], ['accent', 'accent'], ['muted', 'surface']] as const)
       .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
-    const logo = presetManifest || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
+    const logo = presetManifest || plan?.accent || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
     const colours = Object.keys(brandColours).length ? brandColours : logo ? { paper: logo.paper, ink: logo.ink, accent: logo.accent, muted: logo.surface } : undefined;
+    if (colours && plan?.accent) colours.accent = plan.accent;
     if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours, ...(fill?.look?.palette ? { palette: paletteForBrand(manifest.master, fill.look.palette, colours) } : {}) } };
-    const { assembled } = await this.assemble(merchantId, storeId, presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files, variants);
+    const { assembled } = await this.assemble(merchantId, storeId, presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files, variants, undefined, plan?.dna);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
     // Variety spec §2b: every product's own page content (highlights, story, faq…), written in the background.
