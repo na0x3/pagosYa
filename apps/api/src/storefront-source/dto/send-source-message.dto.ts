@@ -39,8 +39,14 @@ export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @IsString() @Matches(/^[a-z0-9][a-z0-9-]{0,63}\.html$/) currentPage?: string;
   /** "Elige tu estilo" (spec 2026-10-11): build from this saved proposal's card, or YAPI's recommendation when auto. */
   @IsOptional() @ValidateNested() @Type(() => SourceStylePickDto) stylePick?: SourceStylePickDto;
+  /** YAPI plan card (spec 2026-10-22): build the plan YAPI showed in this message. */
+  @IsOptional() @IsString() @Matches(/^[a-z0-9]{8,40}$/i) planId?: string;
 }
 
 /** A message as the chat service runs it. personalTouch (variety spec §5) is set only by the job runner's own follow-up: it is
  *  not on the DTO, so the API rejects it from clients (review fix). A class field here would reach every request body. */
-export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolean };
+export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolean;
+  /** The follow-up carries the merchant's own request (pages, look) rather than a touch of YAPI's: it fails out loud. */
+  ownRequest?: boolean;
+  /** «sigue» after an unfinished request: what the merchant typed, shown in the chat while the kept request runs. */
+  resumeWords?: string };

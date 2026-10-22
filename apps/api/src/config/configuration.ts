@@ -109,6 +109,8 @@ export interface AppConfig {
   yapiEsencialDice: boolean;
   /** Variety spec 2026-10-19 §5: a background personal touch after each new master store. Default on; YAPI_PERSONAL_TOUCH=off disables. */
   yapiPersonalTouch: boolean;
+  /** YAPI plan card (spec 2026-10-22): short and vague requests show a plan before building. Default on; YAPI_PLAN_CARD=off disables. */
+  yapiPlanCard: boolean;
   /** Spec 2026-10-20 Plantillas fill: curated Plantillas filled by one call, «Elegir una plantilla», the Plantillas menu and
    *  double-click text editing in the Studio. Default off; YAPI_PLANTILLAS_FILL=1. */
   yapiPlantillasFill: boolean;
@@ -464,6 +466,7 @@ export default (): { app: AppConfig } => {
     yapiMasterTemplate: process.env.YAPI_MASTER_TEMPLATE !== 'off',
     yapiEsencialDice: process.env.YAPI_ESENCIAL_DICE !== 'off',
     yapiPersonalTouch: process.env.YAPI_PERSONAL_TOUCH !== 'off',
+    yapiPlanCard: process.env.YAPI_PLAN_CARD !== 'off',
     yapiPlantillasFill: process.env.YAPI_PLANTILLAS_FILL === '1',
     yapiAuthoredBold: process.env.YAPI_AUTHORED_BOLD !== 'off',
     yapiCommerceSurfaces: process.env.YAPI_COMMERCE_SURFACES === '1',
