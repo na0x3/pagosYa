@@ -42,8 +42,11 @@ const PRODUCTS = [
   { name: 'Hoodie No Weak Days', category: 'Gráficos', amount: 38000, colours: [['Azul', 8]], photos: [8], tags: ['Estampado en la espalda'],
     description: 'Azul marino con tipografía blanca en la espalda. Colección de demostración.' },
 ] as const;
-/** The look chosen for BOXY (see the chat of 2026-10-21): streetwear, editorial and calm, showing the new parts. */
-const LOOK = { feature: ['duo', 'explore'], menu: 'dropdowns', filters: 'chips', grid: 'side-title', header: 'boxed', footer: 'column', button: 'square', bands: 'blocks', hero: 'full', story: 'split', closing: 'dark', corners: 'sharp' };
+/** The look chosen for BOXY (owner 2026-10-21: «boxy is just the same as atelier but with different pictures»): loud streetwear,
+ *  the opposite of NOA VARGAS's quiet atelier — dark ink, poster type, a big-first grid, shop cards with an add bar, pills,
+ *  grain, a capsule section and a giant-name footer. No part is shared with NOA's forced look on purpose. */
+const LOOK = { feature: ['capsule'], menu: 'dropdowns', filters: 'bar', grid: 'feature', header: 'centered', announce: 'chip', footer: 'bigname', button: 'pill', corners: 'round',
+  bands: 'blocks', hero: 'poster', story: 'overlay', values: 'line', closing: 'accent', density: 'compact', texture: 'grain', photos: 'rounded', cards: 'compact', card: 'bar', pdp: 'stacked' };
 
 async function main() {
   const folder = resolve(__dirname, '../../../examples/boxy');
@@ -113,14 +116,14 @@ async function main() {
     }
     if (process.argv.includes('--look')) {
       // The words BOXY's own facts support (sizes, colours, the cut and the fabric named in its products), written for the demo.
-      const copy = { announcement: 'Nueva colección de otoño', eyebrow: 'Corte boxy · Tela pesada', headline: 'Hoodies amplios para todos los días',
+      const copy = { announcement: 'Nueva colección de otoño', eyebrow: 'Corte boxy · Tela pesada', headline: 'Hoodies pesados, corte boxy',
         subcopy: 'Básicos de algodón perchado y gráficos en la espalda. Hombro caído, capucha doble y bolsillo canguro.', primaryCta: 'Ver hoodies', secondaryCta: 'Nuestra historia',
         productsTitle: 'Hoodies', storyTitle: 'Hechos para durar', closingLine: 'Tu próximo hoodie favorito', closingCta: 'Ver la colección', tagline: 'Hoodies de corte boxy. La Paz.',
         storyBody: 'BOXY hace hoodies amplios, de hombro caído y tela pesada, para usar todos los días. Empezamos con básicos en azul, café y gris lavado, y sumamos gráficos en la espalda para los días con más ganas. Colección de demostración.',
         values: [{ title: 'Tela pesada', text: 'Algodón perchado que abriga sin perder la forma.' }, { title: 'Corte boxy', text: 'Hombro caído y un largo justo para llevar con todo.' }, { title: 'Tallas S a XL', text: 'Cuatro tallas en cada modelo.' }] };
       const saved = await templates.refill(record.merchantId, record.storeId, current.revision, {
-        copy, look: { palette: 'navy', fonts: 'geometric', colors: {} }, heroPhoto: photo(0), storyPhoto: photo(5),
-        variants: { ...LOOK, cards: 'fashion', pdp: 'fashion' } as never, featureCopy: { duoTitles: ['Básicos', 'Gráficos'], duoCtas: ['Ver básicos', 'Ver gráficos'] },
+        copy, look: { palette: 'ink', fonts: 'poster', colors: {} }, heroPhoto: photo(0), storyPhoto: photo(5),
+        variants: LOOK as never, featureCopy: { capsuleText: 'Tres básicos para empezar: azul marino, café y gris lavado. Tela pesada, corte boxy y tallas de la S a la XL.' },
       }, 'Estilo BOXY');
       record.look = saved.revision; await save();
     }
