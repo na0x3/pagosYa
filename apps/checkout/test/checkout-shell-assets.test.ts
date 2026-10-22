@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DOMESTIC_METHOD_TYPES } from "../src/checkout/payment-form";
 
@@ -20,6 +21,15 @@ describe("checkout shell assets", () => {
     for (const method of logos.methods) for (const name of method.logos) {
       expect(logos.logos[name], name).toMatch(/^<svg [^>]*role="img"[^>]*aria-label="[^"]+"/);
     }
+  });
+  it("lets the hosted calm checkout use the whole page: no 760px #app cap (owner 2026-10-22)", () => {
+    // The compact cap was meant for pages without .payment-form-panel; the calm checkout dropped that panel and was
+    // squeezed into a 760px box (summary column 300px, its total overflowing).
+    // jsdom cannot match :has(), so every such cap must name the shell among what it excludes.
+    const app = readFileSync(join(__dirname, "../src/style.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const capped = [...app.matchAll(/([^{}]+)\{[^{}]*max-width:\s*760px[^{}]*\}/g)].map(m => m[1].trim()).filter(s => /#app\b/.test(s));
+    expect(capped.length).toBeGreaterThan(0);
+    for (const selector of capped) expect(selector).toMatch(/#app:not\(:has\([^)]*\.pya-checkout\b/);
   });
   it("scopes every rule under .pya-checkout and keeps the fixed palette", () => {
     for (const selector of selectors) for (const part of topLevel(selector)) expect(part.trim(), selector).toMatch(/^\.pya-checkout/);

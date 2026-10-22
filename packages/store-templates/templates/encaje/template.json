@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 290,
+  "hidden": true,
   "dna": {
     "display": "libre-caslon-text",
     "text": "nunito",

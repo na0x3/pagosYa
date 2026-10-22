@@ -1,0 +1,123 @@
+{
+  "id": "glow",
+  "name": "Glow",
+  "category": "belleza",
+  "description": "Belleza y skincare: rosa y ciruela, serif de lujo, texturas de cerca, rutina por pasos y reseñas.",
+  "tags": [
+    "belleza",
+    "skincare",
+    "cosmética",
+    "cuidado"
+  ],
+  "sitePurpose": "shop",
+  "order": 10,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "plum",
+    "fonts": "luxury",
+    "variants": {
+      "header": "centered",
+      "announce": "plain",
+      "hero": "split-left",
+      "grid": "grid4",
+      "cards": "compact",
+      "card": "hover2",
+      "story": "quote",
+      "values": "line",
+      "closing": "newsletter",
+      "footer": "minimal",
+      "pdp": "editorial",
+      "pdpOrder": "reviews-first",
+      "button": "pill",
+      "corners": "round",
+      "density": "airy",
+      "texture": "none",
+      "photos": "natural",
+      "bands": "calm",
+      "menu": "none",
+      "filters": "chips",
+      "feature": "capsule"
+    },
+    "sections": [
+      {
+        "id": "howto",
+        "title": "Tu rutina",
+        "items": [
+          {
+            "title": "Limpia",
+            "text": "Mañana y noche, con agua tibia."
+          },
+          {
+            "title": "Trata",
+            "text": "Unas gotas de sérum."
+          },
+          {
+            "title": "Hidrata",
+            "text": "Sella con la crema."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Muestras de regalo en cada pedido",
+      "eyebrow": "Cuidado de la piel",
+      "headline": "Piel que se siente bien",
+      "subcopy": "Fórmulas simples para una rutina de tres pasos, mañana y noche.",
+      "primaryCta": "Armar mi rutina",
+      "secondaryCta": "Ver ingredientes",
+      "productsTitle": "La rutina",
+      "storyTitle": "Menos pasos, mejor piel",
+      "storyBody": "Creemos en rutinas cortas que se cumplen. Pocos productos, bien formulados, que tu piel entiende.",
+      "closingLine": "Empieza tu rutina hoy",
+      "closingCta": "Comprar",
+      "tagline": "Cuidado de la piel simple.",
+      "values": [
+        {
+          "title": "Fórmulas simples",
+          "text": "Ingredientes que se entienden."
+        },
+        {
+          "title": "Dermatológicamente probado",
+          "text": "En pieles sensibles."
+        },
+        {
+          "title": "Muestras",
+          "text": "De regalo en cada pedido."
+        }
+      ]
+    }
+  }
+}

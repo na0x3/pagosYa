@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": -281,
+  "hidden": true,
   "dna": {
     "display": "fraunces",
     "text": "figtree",

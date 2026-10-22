@@ -17,8 +17,8 @@ test('converted templates keep every visible text in copy slots', () => {
   }
 });
 
-test('only converted templates are curated, and at least 20 are', () => {
+test('only converted templates and presets are curated, and at least 12 are', () => {
   const curated = listTemplates().filter(manifest => manifest.curated);
-  assert.ok(curated.length >= 20, `${curated.length} curated`);
-  for (const manifest of curated) assert.ok(manifest.copy?.length, `${manifest.id} is curated but not converted`);
+  assert.ok(curated.length >= 12, `${curated.length} curated`);
+  for (const manifest of curated) assert.ok(manifest.copy?.length || manifest.preset, `${manifest.id} is curated but neither converted nor a preset`);
 });

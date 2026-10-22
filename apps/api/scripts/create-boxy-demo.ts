@@ -1,6 +1,7 @@
 /** BOXY (owner 2026-10-21): a demo streetwear hoodie store built from the photos in ~/Downloads/boxy, on the owner's own demo
  *  merchant (the one that owns NOA VARGAS), so it shows in «Tus tiendas». Local database only; idempotent through demo.json.
  *   npx ts-node --transpile-only scripts/create-boxy-demo.ts [--rebuild] [--look]
+ *  --rebuild --look builds the home from the current template (no YAPI call: the look's own words replace the fill's).
  *  The app context's timers are stopped before their first tick, so it never sends emails or claims jobs beside the running API.
  *  The photos are third-party Pinterest images: a local demo only, never to be published. */
 import 'reflect-metadata';
@@ -42,11 +43,33 @@ const PRODUCTS = [
   { name: 'Hoodie No Weak Days', category: 'Gráficos', amount: 38000, colours: [['Azul', 8]], photos: [8], tags: ['Estampado en la espalda'],
     description: 'Azul marino con tipografía blanca en la espalda. Colección de demostración.' },
 ] as const;
-/** The look chosen for BOXY (owner 2026-10-21: «boxy is just the same as atelier but with different pictures»): loud streetwear,
- *  the opposite of NOA VARGAS's quiet atelier — dark ink, poster type, a big-first grid, shop cards with an add bar, pills,
- *  grain, a capsule section and a giant-name footer. No part is shared with NOA's forced look on purpose. */
-const LOOK = { feature: ['capsule'], menu: 'dropdowns', filters: 'bar', grid: 'feature', header: 'centered', announce: 'chip', footer: 'bigname', button: 'pill', corners: 'round',
-  bands: 'blocks', hero: 'poster', story: 'overlay', values: 'line', closing: 'accent', density: 'compact', texture: 'grain', photos: 'rounded', cards: 'compact', card: 'bar', pdp: 'stacked' };
+/** The look chosen for BOXY (owner 2026-10-21, second pass): luxurious and minimal — black and white, the luxury serif, a split
+ *  studio-photo hero, airy cards that show the second photo on hover, underlined buttons, no bands or texture — and more sections: a
+ *  manifesto, a journal (Diario), a size guide, questions, the origin line and shop-by-colour. Kept apart from NOA VARGAS's look
+ *  (linen, gallery fonts, stacked hero, side-title grid, fashion cards, duo + explore) on every part but the sharp corners and the
+ *  one-photo story (a pair repeated the origin band's photo). Owner, same day: the manifesto and the origin band get a photo
+ *  beside the words on a light tint (bare lines and the black band read as plain). */
+const LOOK = { feature: ['origin', 'palette'], menu: 'dropdowns', filters: 'bar', grid: 'grid3', header: 'minimal', announce: 'plain', footer: 'minimal', button: 'underline', corners: 'sharp',
+  bands: 'calm', hero: 'split-right', story: 'split', values: 'numbered', closing: 'dark', density: 'airy', texture: 'none', photos: 'natural', cards: 'compact', card: 'hover2', pdp: 'editorial', pdpOrder: 'details-first' };
+/** BOXY's sections, written from its own facts (the cut, the fabric, the colours and sizes in its products). */
+const SECTIONS = [
+  { id: 'manifesto', title: 'Lo que hacemos', items: [
+    { title: 'Menos', text: 'Pocas piezas, pensadas para usarse todos los días.' },
+    { title: 'Peso', text: 'Tela pesada que abriga y no pierde la forma.' },
+    { title: 'Forma', text: 'Hombro caído y un largo justo: el corte es la firma.' }] },
+  { id: 'journal', title: 'Notas sobre el corte boxy', items: [
+    { title: 'Cómo llevar un hoodie boxy', text: 'El corte es amplio a propósito: déjalo caer suelto sobre un pantalón recto. Si prefieres un calce más justo, elige una talla menos.' },
+    { title: 'El gris lavado, pieza por pieza', text: 'Cada Hoodie Lavado Niebla se tiñe y se lava a mano, por eso ninguno es igual a otro.' },
+    { title: 'Cuidar la tela pesada', text: 'Lávalo del revés en agua fría y sécalo a la sombra. Así el algodón perchado mantiene su cuerpo.' }] },
+  { id: 'sizes', title: 'Guía de tallas', items: [
+    { title: 'Tallas', text: 'S, M, L y XL en cada modelo.' },
+    { title: 'El calce', text: 'Corte boxy: amplio en el cuerpo, con hombro caído.' },
+    { title: 'Entre dos tallas', text: 'Elige la menor para un calce más justo.' }] },
+  { id: 'faq', title: 'Preguntas', items: [
+    { title: '¿Qué colores hay?', text: 'Los básicos vienen en azul marino, café y gris lavado; los gráficos, en crema y azul marino.' },
+    { title: '¿Dónde están los gráficos?', text: 'En la espalda, con un detalle pequeño al frente.' },
+    { title: '¿Por qué un XL aparece agotado?', text: 'El Hoodie Boxy Esencial en café talla XL se agotó; las demás tallas siguen disponibles.' }] },
+];
 
 async function main() {
   const folder = resolve(__dirname, '../../../examples/boxy');
@@ -95,18 +118,20 @@ async function main() {
     }
     const what = 'Hoodies de corte boxy: básicos de algodón perchado en azul, café y gris lavado, y hoodies con gráficos en la espalda.';
     const story = 'BOXY hace hoodies amplios, de hombro caído y tela pesada, para usar todos los días. Colección de demostración.';
-    await prisma.store.update({ where: { id: record.storeId }, data: { onboarding: { what, story, contact: { city: 'La Paz' }, photos: [photo(0), photo(5)] } } });
+    await prisma.store.update({ where: { id: record.storeId }, data: { onboarding: { what, story, contact: { city: 'La Paz' }, photos: [photo(0), photo(5)], finishedAt: new Date().toISOString() } } });
+    // finishedAt: without it the dashboard resumed BOXY's walkthrough on every visit (owner 2026-10-22).
     let current = await projects.current(record.merchantId, record.storeId);
     if (current.revision === 0 || process.argv.includes('--rebuild')) {
       const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
       const saved = await templates.applyMaster(record.merchantId, record.storeId, current.revision, async facts => {
         const photos = [...new Set([photo(0), photo(5), photo(3), photo(6), photo(9), ...facts.photos])].slice(0, 8);
-        const read = await app.get(SourceConversationService).fillMaster(record.merchantId, {
+        // With --look the look's own words replace the fill's, so the YAPI call is skipped.
+        const read = process.argv.includes('--look') ? null : await app.get(SourceConversationService).fillMaster(record.merchantId, {
           storeId: record.storeId, storeName: facts.storeName, what, story, city: 'La Paz', products: facts.products, photos,
           palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })),
           variantCatalogue: manifest.master!.variants, sectionCatalogue: manifest.master!.sections, ...(facts.menuTargets ? { menuTargets: facts.menuTargets } : {}),
         });
-        console.log(read ? 'YAPI wrote the words and picked the look.' : 'The fill call failed; the merchant’s own words stand in.');
+        console.log(read ? 'YAPI wrote the words and picked the look.' : 'No fill call answer; the merchant’s own words stand in.');
         const base: MasterFill = read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: what.slice(0, 160) } };
         const fashion = isFashionStore({ kind: read?.kind, storeName: facts.storeName, what, products: facts.products });
         return { ...base, character: { ...(base.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] }), kind: fashion ? 'fashion' : 'other' } };
@@ -116,15 +141,15 @@ async function main() {
     }
     if (process.argv.includes('--look')) {
       // The words BOXY's own facts support (sizes, colours, the cut and the fabric named in its products), written for the demo.
-      const copy = { announcement: 'Nueva colección de otoño', eyebrow: 'Corte boxy · Tela pesada', headline: 'Hoodies pesados, corte boxy',
-        subcopy: 'Básicos de algodón perchado y gráficos en la espalda. Hombro caído, capucha doble y bolsillo canguro.', primaryCta: 'Ver hoodies', secondaryCta: 'Nuestra historia',
-        productsTitle: 'Hoodies', storyTitle: 'Hechos para durar', closingLine: 'Tu próximo hoodie favorito', closingCta: 'Ver la colección', tagline: 'Hoodies de corte boxy. La Paz.',
+      const copy = { announcement: '', eyebrow: 'Corte boxy', headline: 'Hoodies pesados, corte boxy',
+        subcopy: 'Algodón perchado, hombro caído y capucha doble. Pocas piezas, hechas para todos los días.', primaryCta: 'Ver la colección', secondaryCta: 'Nuestra historia',
+        productsTitle: 'La colección', storyTitle: 'Hechos para durar', closingLine: 'Tu próximo hoodie favorito', closingCta: 'Ver la colección', tagline: 'Hoodies de corte boxy. La Paz.',
         storyBody: 'BOXY hace hoodies amplios, de hombro caído y tela pesada, para usar todos los días. Empezamos con básicos en azul, café y gris lavado, y sumamos gráficos en la espalda para los días con más ganas. Colección de demostración.',
         values: [{ title: 'Tela pesada', text: 'Algodón perchado que abriga sin perder la forma.' }, { title: 'Corte boxy', text: 'Hombro caído y un largo justo para llevar con todo.' }, { title: 'Tallas S a XL', text: 'Cuatro tallas en cada modelo.' }] };
       const saved = await templates.refill(record.merchantId, record.storeId, current.revision, {
-        copy, look: { palette: 'ink', fonts: 'poster', colors: {} }, heroPhoto: photo(0), storyPhoto: photo(5),
-        variants: LOOK as never, featureCopy: { capsuleText: 'Tres básicos para empezar: azul marino, café y gris lavado. Tela pesada, corte boxy y tallas de la S a la XL.' },
-      }, 'Estilo BOXY');
+        copy, look: { palette: 'mono', fonts: 'luxury', colors: {} }, heroPhoto: photo(3), storyPhoto: photo(5), sections: SECTIONS,
+        variants: LOOK as never, featureCopy: { originCaption: 'Desde La Paz', originLink: 'Nuestra historia', paletteIntro: 'Azul marino, café, gris lavado o crema: elige por color.' },
+      }, 'BOXY lujo minimal');
       record.look = saved.revision; await save();
     }
     console.log(JSON.stringify({ storeId: record.storeId, slug: record.slug, revision: (await projects.current(record.merchantId, record.storeId)).revision, products: Object.keys(record.products).length }));

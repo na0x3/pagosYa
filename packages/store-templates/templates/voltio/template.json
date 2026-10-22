@@ -1,0 +1,119 @@
+{
+  "id": "voltio",
+  "name": "Voltio",
+  "category": "tecnologia",
+  "description": "Tiendas de electrónica: tinta oscura, letra condensada, tarjetas con barra de compra y filtros laterales.",
+  "tags": [
+    "electrónica",
+    "cámaras",
+    "drones",
+    "audio"
+  ],
+  "sitePurpose": "shop",
+  "order": 7,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "ink",
+    "fonts": "condensed",
+    "variants": {
+      "header": "boxed",
+      "announce": "ticker",
+      "hero": "full",
+      "grid": "grid4",
+      "cards": "compact",
+      "card": "bar",
+      "story": "overlay",
+      "values": "checklist",
+      "closing": "accent",
+      "footer": "twotone",
+      "pdp": "gallery-left",
+      "pdpOrder": "details-first",
+      "button": "square",
+      "corners": "sharp",
+      "density": "compact",
+      "texture": "none",
+      "photos": "natural",
+      "bands": "blocks",
+      "menu": "dropdowns",
+      "filters": "sidebar",
+      "feature": "explore,capsule"
+    },
+    "sections": [
+      {
+        "id": "pick",
+        "title": "Elige el tuyo",
+        "items": [
+          {
+            "title": "Para empezar",
+            "text": "Equipos simples, listos al sacarlos de la caja."
+          },
+          {
+            "title": "Para profesionales",
+            "text": "Más control, más potencia y accesorios."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Envío asegurado · Garantía oficial",
+      "eyebrow": "Electrónica",
+      "headline": "Drones, cámaras y audio",
+      "subcopy": "Equipos originales con garantía, listos para salir a grabar.",
+      "primaryCta": "Ver equipos",
+      "secondaryCta": "Ofertas",
+      "productsTitle": "Lo más vendido",
+      "storyTitle": "Probado antes de enviarse",
+      "storyBody": "Revisamos cada equipo antes de despacharlo y te ayudamos a elegir el que necesitas. Si algo falla, respondemos.",
+      "closingLine": "Sal a grabar",
+      "closingCta": "Ver equipos",
+      "tagline": "Electrónica original con garantía.",
+      "values": [
+        {
+          "title": "Originales",
+          "text": "Con garantía oficial."
+        },
+        {
+          "title": "Revisados",
+          "text": "Probados antes de enviarse."
+        },
+        {
+          "title": "Asesoría",
+          "text": "Te ayudamos a elegir."
+        }
+      ]
+    }
+  }
+}

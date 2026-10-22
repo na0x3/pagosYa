@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": 220,
+  "hidden": true,
   "dna": {
     "display": "fraunces",
     "text": "epilogue",

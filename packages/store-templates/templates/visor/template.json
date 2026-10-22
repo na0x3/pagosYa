@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": -292,
+  "hidden": true,
   "dna": {
     "display": "familjen-grotesk",
     "text": "manrope",

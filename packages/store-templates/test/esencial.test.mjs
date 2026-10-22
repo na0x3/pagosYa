@@ -13,7 +13,7 @@ test('esencial is the hidden master template', () => {
   assert.equal(esencial.master.palettes.length, 16);
   assert.equal(esencial.master.fonts.length, 14);
   assert.equal(esencial.master.variants.hero.length, 10);
-  assert.equal(esencial.master.sections.length, 10);
+  assert.equal(esencial.master.sections.length, 12);
   assert.deepEqual(esencial.photos.map(p => p.slot), ['hero', 'story', 'p1', 'p2', 'p3', 'p4']);
   assert.ok(!templates.galleryTemplates().some(t => t.id === 'esencial'));
 });
@@ -127,7 +127,7 @@ test('review fix: the centered header falls back to the classic layout on phones
 });
 
 test('Esencial rolls card and offer styles, and its card fills the kit fields (showcase commerce)', () => {
-  assert.deepEqual(esencial.master.variants.cards, ['showcase', 'compact', 'split']);
+  assert.deepEqual(esencial.master.variants.cards, ['showcase', 'compact', 'split', 'fashion']);
   assert.deepEqual(esencial.master.variants.offers, ['steps', 'grid', 'rows']);
   const home = file('components/home.tsx');
   for (const field of ['eyebrow', 'points', 'chips', 'deal', 'save']) assert.match(home, new RegExp(`data-product-field="${field}"`), field);

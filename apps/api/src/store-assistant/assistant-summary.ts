@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { hoursSummary } from '../store-knowledge/store-knowledge';
-import { readStoreLocations } from '../stores/store-locations';
+import { readStoreLocations, storeOffersPickup } from '../stores/store-locations';
 import { storePolicies, type StorePolicies } from '../stores/store-presentation';
 
 /** Public store fields only: the Store Brain also holds revenue and per-product sales, which buyers must never see. */
@@ -28,7 +28,7 @@ const locationsOf = (store: SummaryStore) => readStoreLocations(store.locations)
 
 export function buildAssistantSummary(store: SummaryStore, profile: AssistantProfile): string {
   const policies = storePolicies(store.policies);
-  const delivery = [store.shippingEnabled && 'envío a domicilio', store.shippingPickupEnabled && 'recojo en tienda'].filter(Boolean).join(' y ');
+  const delivery = [store.shippingEnabled && 'envío a domicilio', storeOffersPickup(store) && 'recojo en tienda'].filter(Boolean).join(' y ');
   const published = (Object.keys(POLICY_TITLES) as Array<keyof StorePolicies>).filter((key) => policies[key]).map((key) => POLICY_TITLES[key]);
   const lines = [
     `Tienda: ${oneLine(store.name, 80)}${store.tagline ? ` — ${clip(store.tagline, 160)}` : ''}`,

@@ -1,0 +1,137 @@
+{
+  "id": "cimiento",
+  "name": "Cimiento",
+  "category": "construccion",
+  "description": "Empresas de construcción: arena y óxido, letra condensada, antes y después, proceso y cotización.",
+  "tags": [
+    "construcción",
+    "remodelación",
+    "obras",
+    "materiales"
+  ],
+  "sitePurpose": "shop",
+  "order": 8,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "sand",
+    "fonts": "condensed",
+    "variants": {
+      "header": "boxed",
+      "announce": "chip",
+      "hero": "full",
+      "grid": "grid3",
+      "cards": "split",
+      "card": "framed",
+      "story": "timeline",
+      "values": "numbered",
+      "closing": "dark",
+      "footer": "columns",
+      "pdp": "gallery-left",
+      "pdpOrder": "details-first",
+      "button": "square",
+      "corners": "sharp",
+      "density": "regular",
+      "texture": "lines",
+      "photos": "natural",
+      "bands": "blocks",
+      "menu": "none",
+      "filters": "bar",
+      "feature": "origin"
+    },
+    "sections": [
+      {
+        "id": "process",
+        "title": "Cómo trabajamos",
+        "items": [
+          {
+            "title": "Visita",
+            "text": "Vamos a ver la obra y medimos."
+          },
+          {
+            "title": "Presupuesto",
+            "text": "Por escrito y sin sorpresas."
+          },
+          {
+            "title": "Obra",
+            "text": "Con fecha de entrega acordada."
+          }
+        ]
+      },
+      {
+        "id": "faq",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿La visita tiene costo?",
+            "text": "La primera visita técnica es sin costo."
+          },
+          {
+            "title": "¿Dan garantía?",
+            "text": "Sí, garantía escrita sobre el trabajo."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Visita técnica · Presupuesto por escrito",
+      "eyebrow": "Construcción y remodelación",
+      "headline": "Construimos lo que imaginas",
+      "subcopy": "Obras, remodelaciones y acabados con presupuesto claro y fecha de entrega.",
+      "primaryCta": "Pedir cotización",
+      "secondaryCta": "Ver trabajos",
+      "productsTitle": "Servicios",
+      "storyTitle": "Obra limpia, palabra cumplida",
+      "storyBody": "Trabajamos con equipo propio y materiales de primera. Presupuesto por escrito, avance semanal y entrega en la fecha acordada.",
+      "closingLine": "Hablemos de tu obra",
+      "closingCta": "Cotizar",
+      "tagline": "Construcción y remodelación.",
+      "values": [
+        {
+          "title": "Presupuesto claro",
+          "text": "Por escrito y sin sorpresas."
+        },
+        {
+          "title": "Equipo propio",
+          "text": "Personas que conocemos."
+        },
+        {
+          "title": "Garantía escrita",
+          "text": "Sobre el trabajo entregado."
+        }
+      ]
+    }
+  }
+}

@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": -296,
+  "hidden": true,
   "dna": {
     "display": "unbounded",
     "text": "nunito",

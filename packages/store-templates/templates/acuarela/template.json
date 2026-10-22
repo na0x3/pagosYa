@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": -284,
+  "hidden": true,
   "dna": {
     "display": "bebas-neue",
     "text": "figtree",

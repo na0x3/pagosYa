@@ -1,0 +1,119 @@
+{
+  "id": "patitas",
+  "name": "Patitas",
+  "category": "mascotas",
+  "description": "Tiendas para mascotas: cítrico y tinta, letra suave, fotos de mascotas, suscripción de alimento y packs.",
+  "tags": [
+    "mascotas",
+    "perros",
+    "gatos",
+    "alimento"
+  ],
+  "sitePurpose": "shop",
+  "order": 13,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "citrus",
+    "fonts": "soft",
+    "variants": {
+      "header": "classic",
+      "announce": "ticker",
+      "hero": "split-right",
+      "grid": "grid4",
+      "cards": "showcase",
+      "card": "plain",
+      "story": "pair",
+      "values": "icons",
+      "closing": "newsletter",
+      "footer": "twotone",
+      "pdp": "gallery-left",
+      "pdpOrder": "reviews-first",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "photos": "rounded",
+      "bands": "blocks",
+      "menu": "dropdowns",
+      "filters": "chips",
+      "feature": "explore,capsule"
+    },
+    "sections": [
+      {
+        "id": "faq",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Puedo suscribirme al alimento?",
+            "text": "Sí, cada 2 o 4 semanas con descuento."
+          },
+          {
+            "title": "¿Qué alimento elijo?",
+            "text": "Escríbenos la edad y el tamaño de tu mascota."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Suscríbete al alimento y ahorra",
+      "eyebrow": "Para perros y gatos",
+      "headline": "Todo para tu mejor amigo",
+      "subcopy": "Alimento, juguetes y camas para perros y gatos, con entrega a domicilio.",
+      "primaryCta": "Comprar",
+      "secondaryCta": "Suscripción",
+      "productsTitle": "Favoritos",
+      "storyTitle": "Hecho por amantes de los animales",
+      "storyBody": "Elegimos cada producto pensando en nuestras propias mascotas: alimento de calidad, juguetes resistentes y camas cómodas.",
+      "closingLine": "Hazlo feliz hoy",
+      "closingCta": "Ver productos",
+      "tagline": "Todo para tu mascota.",
+      "values": [
+        {
+          "title": "Calidad",
+          "text": "Alimento que recomendamos."
+        },
+        {
+          "title": "Suscripción",
+          "text": "Nunca te quedes sin alimento."
+        },
+        {
+          "title": "Entrega",
+          "text": "A domicilio."
+        }
+      ]
+    }
+  }
+}

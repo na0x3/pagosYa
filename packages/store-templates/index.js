@@ -54,7 +54,19 @@ function validate(dir, id) {
     if (!Array.isArray(manifest.copy) || manifest.copy.some(slot => !slot || !/^(?:home|shell|product)_\d+$/.test(slot.key) || !COPY_ROLES.includes(slot.role) || typeof slot.default !== 'string' || !Number.isInteger(slot.max) || slot.max < 1)) fail(id, 'copy', 'must be a list of { key, role, default, max } slots');
     if (new Set(manifest.copy.map(slot => slot.key)).size !== manifest.copy.length) fail(id, 'copy', 'has a repeated key');
   }
-  if (manifest.curated !== undefined && (typeof manifest.curated !== 'boolean' || (manifest.curated && !manifest.copy))) fail(id, 'curated', 'must be true or false, and only on a converted template (with copy)');
+  // Plantillas presets (2026-10-22): a look of the master template — its palette, fonts, parts, sections and starting words —
+  // with its own demo photos and no source of its own. Checked against the master once every template is loaded.
+  if (manifest.extends !== undefined || manifest.preset !== undefined) {
+    if (!ID.test(String(manifest.extends)) || !manifest.preset || typeof manifest.preset !== 'object' || Array.isArray(manifest.preset)) fail(id, 'preset', 'needs extends (a master template id) and a preset object');
+    if (manifest.master || manifest.copy) fail(id, 'preset', 'cannot also be a master or a converted template');
+    const preset = manifest.preset;
+    if (!SLOT.test(String(preset.palette)) || !SLOT.test(String(preset.fonts))) fail(id, 'preset', 'needs a palette and a font pair id');
+    if (preset.colors !== undefined && (typeof preset.colors !== 'object' || Object.values(preset.colors).some(value => !HEX.test(value)))) fail(id, 'preset.colors', 'must be #rrggbb values');
+    if (!preset.variants || typeof preset.variants !== 'object' || Object.values(preset.variants).some(value => typeof value !== 'string')) fail(id, 'preset.variants', 'must map parts to variant ids');
+    if (preset.copy !== undefined && (typeof preset.copy !== 'object' || Object.entries(preset.copy).some(([key, value]) => key === 'values' ? !Array.isArray(value) : !MASTER_COPY_KEYS.includes(key) || typeof value !== 'string'))) fail(id, 'preset.copy', 'must hold master copy keys');
+    if (preset.sections !== undefined && (!Array.isArray(preset.sections) || preset.sections.some(section => !section || !SLOT.test(section.id) || typeof section.title !== 'string' || !Array.isArray(section.items)))) fail(id, 'preset.sections', 'must be sections with id, title and items');
+  }
+  if (manifest.curated !== undefined && (typeof manifest.curated !== 'boolean' || (manifest.curated && !manifest.copy && !manifest.preset))) fail(id, 'curated', 'must be true or false, and only on a converted template (with copy) or a preset');
   if (!Array.isArray(manifest.photos)) fail(id, 'photos', 'must be a list');
   const slots = new Set();
   for (const photo of manifest.photos) {
@@ -73,9 +85,26 @@ function validate(dir, id) {
 
 /** Reads and validates every template under `root`. Throws on the first invalid manifest (a build error, never input). */
 function loadTemplates(root = templatesDir) {
-  return readdirSync(root).filter(name => ID.test(name) && statSync(join(root, name)).isDirectory() && existsSync(join(root, name, 'template.json')))
+  const entries = readdirSync(root).filter(name => ID.test(name) && statSync(join(root, name)).isDirectory() && existsSync(join(root, name, 'template.json')))
     .map(name => ({ dir: join(root, name), manifest: validate(join(root, name), name) }))
     .sort((a, b) => a.manifest.order - b.manifest.order || a.manifest.id.localeCompare(b.manifest.id));
+  for (const { manifest } of entries) if (manifest.preset) validatePreset(manifest, entries.find(entry => entry.manifest.id === manifest.extends)?.manifest);
+  return entries;
+}
+
+/** A preset only names what its master offers: a palette, a font pair, one variant per part and catalogued sections. */
+function validatePreset(manifest, base) {
+  const { id, preset } = manifest;
+  if (!base || !base.master) fail(id, 'extends', `must name a master template, not ${manifest.extends}`);
+  const settings = base.master;
+  if (!settings.palettes.some(palette => palette.id === preset.palette)) fail(id, 'preset.palette', `is not a palette of ${base.id}`);
+  if (!settings.fonts.some(font => font.id === preset.fonts)) fail(id, 'preset.fonts', `is not a font pair of ${base.id}`);
+  for (const [part, value] of Object.entries(preset.variants)) {
+    const ids = (settings.variants || {})[part];
+    if (!ids) fail(id, `preset.variants.${part}`, `is not a part of ${base.id}`);
+    for (const one of part === 'feature' ? value.split(',').filter(Boolean) : [value]) if (!ids.includes(one)) fail(id, `preset.variants.${part}`, `${one} is not offered`);
+  }
+  for (const section of preset.sections || []) if (!(settings.sections || []).includes(section.id) && section.id !== 'blog') fail(id, 'preset.sections', `${section.id} is not a section of ${base.id}`);
 }
 
 let cache;
@@ -105,6 +134,8 @@ function readTemplateSource(dir) {
 
 function templateSourceFiles(id) {
   const entry = templateManifest(id) && registry().get(id);
+  // A preset has no source of its own: it is its master's.
+  if (entry && entry.manifest.extends) return templateSourceFiles(entry.manifest.extends);
   return entry ? readTemplateSource(entry.dir) : [];
 }
 

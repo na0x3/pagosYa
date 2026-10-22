@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": -288,
+  "hidden": true,
   "dna": {
     "display": "dm-serif-display",
     "text": "epilogue",

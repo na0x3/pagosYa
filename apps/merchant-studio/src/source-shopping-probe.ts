@@ -15,7 +15,9 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
       const cart = () => { const state = { items: [] as Array<{ id: string; quantity: number }> }; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart', { detail: state })); return state.items; };
       const shown = (el: Element) => { const r = el.getBoundingClientRect(); const style = getComputedStyle(el); return r.width > 0 && r.height > 0 && style.visibility !== 'hidden' && style.display !== 'none' && !el.closest('[hidden],[inert]'); };
       const brokenImages = [...document.images].filter(img => img.getAttribute('src') && img.complete && img.naturalWidth === 0);
-      add('Imágenes cargadas', brokenImages.length === 0, brokenImages.length ? `${brokenImages.length} imágenes no pudieron cargarse.` : undefined);
+      // Named by where they sit and how their address starts, so a failure says which images (Remolino A/B 2026-10-22).
+      const imageName = (img: HTMLImageElement) => `${img.closest('[class]')?.className.toString().split(/\s+/)[0] || img.parentElement?.tagName.toLowerCase() || 'img'} ${(img.getAttribute('src') || '').replace(/^data:([^;,]+).*$/, 'data:$1').slice(0, 60)}`;
+      add('Imágenes cargadas', brokenImages.length === 0, brokenImages.length ? `${brokenImages.length} imágenes no pudieron cargarse: ${brokenImages.slice(0, 3).map(imageName).join(' · ')}` : undefined);
       // A placeholder icon/illustration standing in for real product photography reads as
       // unfinished; catch it before the merchant's customers do.
       const placeholderPhotos = [...document.querySelectorAll<HTMLImageElement>('[data-pagosya-catalog] img,[data-pagosya-product] img')].filter(img => {
@@ -173,32 +175,47 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
         if (unusedCatalogLayouts.size) warn('Distribución del catálogo', `Hay reglas de distribución sin elementos correspondientes: ${[...unusedCatalogLayouts].slice(0, 3).join(', ')}. Comprueba que el diseño previsto se aplique al catálogo visible.`);
       }
       const pause = () => new Promise(resolve => setTimeout(resolve, 80));
+      // The editor checks every page at four widths at once, so a heavy page can paint late (Remolino 2026-10-22: the added
+      // notice, the drawer and tablet catalogs were missed after one fixed pause). Each step waits for what it needs, briefly.
+      const until = async <T>(read: () => T, ms = 1500): Promise<T> => {
+        const end = Date.now() + ms;
+        let value = read();
+        while (!value && Date.now() < end) { await pause(); value = read(); }
+        return value;
+      };
       const visible = (selector: string) => [...document.querySelectorAll<HTMLElement>(selector)].find(shown);
       if (commerce) {
-      let buy = visible('[data-pagosya-catalog] button[data-add]:not(:disabled),[data-pagosya-product] button[data-add]:not(:disabled)');
+      const ADD = '[data-pagosya-catalog] button[data-add]:not(:disabled),[data-pagosya-product] button[data-add]:not(:disabled)';
+      const CHOOSE = '[data-pagosya-catalog] button.menu-add[data-product]:not(:disabled)';
+      // Only a catalog on the page itself is waited for: the cart's suggestions keep one inside the closed drawer.
+      const onPage = [...document.querySelectorAll('[data-pagosya-catalog],[data-pagosya-product]')].some(el => !el.closest('[hidden],[inert],dialog:not([open])'));
+      if (onPage) await until(() => visible(ADD) || visible(CHOOSE), 5000);
+      let buy = visible(ADD);
       // A product with options opens its configurator on the page; the first available combination is preselected.
-      const chooser = !buy ? visible('[data-pagosya-catalog] button.menu-add[data-product]:not(:disabled)') : null;
+      const chooser = !buy ? visible(CHOOSE) : null;
       if (chooser) {
-        chooser.click(); await pause();
-        buy = visible('[data-pagosya-product] button[data-add]:not(:disabled)');
+        chooser.click();
+        buy = await until(() => visible('[data-pagosya-product] button[data-add]:not(:disabled)'));
         add('Opciones de producto disponibles', Boolean(buy));
       }
       if (buy) {
         const before = cart().reduce((s, i) => s + i.quantity, 0);
-        buy.click(); await pause();
-        add('Añadir un producto', cart().reduce((s, i) => s + i.quantity, 0) === before + 1);
-        add('Confirmación de producto añadido', Boolean(visible('.cart-added')));
+        buy.click();
+        add('Añadir un producto', await until(() => cart().reduce((s, i) => s + i.quantity, 0) === before + 1));
+        add('Confirmación de producto añadido', Boolean(await until(() => visible('.cart-added'))));
       }
-      const opener = [...document.querySelectorAll<HTMLElement>('[data-cart-open],a[href="#pedido"],a[href="#carrito"],a[href="#cart"]')].find(el => shown(el) && !el.closest('.cart-added'))
+      const findOpener = () => [...document.querySelectorAll<HTMLElement>('[data-cart-open],a[href="#pedido"],a[href="#carrito"],a[href="#cart"]')].find(el => shown(el) && !el.closest('.cart-added'))
         || [...document.querySelectorAll<HTMLElement>('button,a')].find(el => shown(el) && el.querySelector('[data-cart-count]'));
+      const opener = buy ? await until(findOpener) : findOpener();
       if (buy) {
         add('Pedido abre el carrito', Boolean(opener));
-        opener?.click(); await pause();
-        const drawer = visible('dialog.cart-drawer[open]');
+        opener?.click();
+        const drawer = await until(() => visible('dialog.cart-drawer[open]'));
         add('Carrito visible en un panel lateral', Boolean(drawer));
         if (drawer) {
           const bounds = drawer.getBoundingClientRect();
-          add('Proporciones del carrito', bounds.width <= (innerWidth >= 768 ? innerWidth * .5 + 2 : innerWidth + 2));
+          // Half the screen, or the kit's 420px floor (width:min(760px,max(420px,50vw))) on a narrow tablet.
+          add('Proporciones del carrito', bounds.width <= (innerWidth >= 768 ? Math.max(innerWidth * .5, 420) + 2 : innerWidth + 2));
           const added = buy.dataset.add;
           const remove = [...drawer.querySelectorAll<HTMLButtonElement>('[data-remove]')].find(b => b.dataset.remove === added && shown(b));
           const before = cart().reduce((sum, item) => sum + item.quantity, 0);
@@ -218,7 +235,10 @@ export function sourceShoppingProbe(design?: { sections: string[]; catalogSectio
       if (cart().length) {
         const checkout = visible('button[data-checkout]:not(:disabled)');
         checkout?.click(); await pause();
-        const panel = visible('[data-checkout-review]');
+        // The calm checkout lays its review out with display:contents, so the review has no box of its own; its shown
+        // children make it visible (Remolino 2026-10-21: pay was never pressed and every calm-checkout store failed).
+        const panel = await until(() => visible('[data-checkout-review]') || [...document.querySelectorAll<HTMLElement>('[data-checkout-review]')]
+          .find(el => getComputedStyle(el).display === 'contents' && !el.closest('[hidden],[inert]') && [...el.children].some(shown)));
         if (panel) {
           const branch = panel.querySelector<HTMLSelectElement>('[name=location]');
           const method = () => panel!.querySelector<HTMLSelectElement>('[name=method]');

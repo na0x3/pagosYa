@@ -73,6 +73,16 @@ export function nextStoreLocationOpenAt(location: StoreLocation, now = new Date(
   return null;
 }
 
+/** Pickup needs somewhere to pick up (owner 2026-10-22): a branch with pickup on and an address. */
+export function offersPickupAt(location: Pick<StoreLocation, 'pickupEnabled' | 'address'>): boolean {
+  return location.pickupEnabled === true && typeof location.address === 'string' && location.address.trim() !== '';
+}
+
+/** The store-wide pickup switch only counts while a branch with an address exists. */
+export function storeOffersPickup(store: { shippingPickupEnabled: boolean; locations: Prisma.JsonValue }): boolean {
+  return store.shippingPickupEnabled === true && readStoreLocations(store.locations).some(offersPickupAt);
+}
+
 export function readStoreLocations(value: Prisma.JsonValue): StoreLocation[] {
   if (!Array.isArray(value)) return [];
   return value.filter((entry): entry is StoreLocation =>

@@ -234,6 +234,19 @@ export class SourceChatService {
     const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; photos?: string[] };
     const brief = revision ? ((await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot).brief : undefined;
     const about = [input.about, onboarding.what, onboarding.story, brief?.businessInformation].map(text => text?.trim()).filter(Boolean).join('\n').slice(0, 2000);
+    // Plantillas presets (2026-10-22): a look of Esencial — YAPI writes this business's words, the preset keeps its design.
+    if (templateManifest(templateId)?.preset) {
+      const master = templateManifest(MASTER_TEMPLATE_ID)!;
+      return this.templates.applyMaster(merchantId, storeId, revision, async facts => {
+        const photos = [...new Set([...(input.assetUrls ?? []), ...(onboarding.photos ?? []), ...facts.photos])].slice(0, 8);
+        const read = await this.dialogue.fillMaster(merchantId, {
+          storeId, storeName: facts.storeName, ...(facts.brand ? { brand: facts.brand } : {}), what: about, story: onboarding.story ?? '', city: '',
+          products: facts.products, photos, palettes: master.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: master.master!.fonts.map(({ id, name }) => ({ id, name })),
+          variantCatalogue: master.master!.variants, sectionCatalogue: master.master!.sections, ...(facts.menuTargets ? { menuTargets: facts.menuTargets } : {}),
+        });
+        return read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: about.slice(0, 160) } };
+      }, templateId);
+    }
     return this.templates.applyPlantillaFilled(merchantId, storeId, templateId, revision, facts => this.dialogue.fillPlantilla(merchantId, {
       storeId, storeName: facts.storeName, about: about || facts.tagline, products: facts.products, slots: facts.slots,
       photos: [...new Set([...(input.assetUrls ?? []), ...(onboarding.photos ?? []), ...facts.photos])].slice(0, 8),

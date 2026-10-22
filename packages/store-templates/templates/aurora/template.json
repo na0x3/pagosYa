@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 10,
+  "hidden": true,
   "dna": {
     "display": "dm-serif-display",
     "text": "manrope",

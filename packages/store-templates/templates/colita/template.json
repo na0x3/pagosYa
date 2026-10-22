@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": -200,
+  "hidden": true,
   "dna": {
     "display": "chivo",
     "text": "outfit",

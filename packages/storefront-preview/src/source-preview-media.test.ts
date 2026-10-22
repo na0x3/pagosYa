@@ -25,6 +25,19 @@ describe('preview variant photography', () => {
     expect(hosted.contentBlocks[1]).toMatchObject({ beforeUrl: 'https://api.test' + a, afterUrl: 'https://api.test' + b });
     expect(hosted.contentBlocks[2].items?.[0]?.imageUrl).toBe('https://api.test' + b);
   });
+  // The calm checkout draws the store's logo from config data; left as a URL it was blocked in the check frame, and
+  // every store with a logo failed «Imágenes cargadas» on checkout.html (Remolino 2026-10-21).
+  it('inlines the store logo kept in config data', async () => {
+    vi.stubGlobal('location', { href: 'http://localhost:5175' });
+    vi.stubGlobal('FileReader', class {
+      result = ''; onload?: () => void;
+      readAsDataURL(blob: Blob) { void blob.text().then(value => { this.result = 'data:' + value; this.onload?.(); }); }
+    });
+    vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve(new Response(new Blob([url], { type: 'image/webp' }), { headers: { 'content-type': 'image/webp' } }))));
+    const logo = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.webp';
+    const result = await createPreviewImageLoader('http://localhost:3001/v1')({ files: [{ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ data: { logoUrl: logo, items: [] } })};` }] } as SourceSnapshot);
+    expect(JSON.parse(result.files[0].content.replace('window.PAGOSYA_CONFIG = ', '').replace(/;$/, '')).data.logoUrl).toBe('data:http://localhost:3001' + logo);
+  });
   // A template's photo slots are string literals in its compiled components, not catalog data; the sandbox cannot
   // fetch them, so a template applied to a store showed its hero as a broken image.
   it('inlines upload photos quoted in compiled pages, leaving everything else alone', async () => {

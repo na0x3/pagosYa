@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 100,
+  "hidden": true,
   "dna": {
     "display": "young-serif",
     "text": "figtree",

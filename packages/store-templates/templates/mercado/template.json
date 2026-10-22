@@ -1,0 +1,123 @@
+{
+  "id": "mercado",
+  "name": "Mercado",
+  "category": "comida",
+  "description": "Productos frescos y almacén: verde oliva, serif editorial, fotos de origen y suscripción semanal.",
+  "tags": [
+    "productos frescos",
+    "almacén",
+    "granja",
+    "delivery"
+  ],
+  "sitePurpose": "shop",
+  "order": 4,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "olive",
+    "fonts": "editorial",
+    "variants": {
+      "header": "classic",
+      "announce": "chip",
+      "hero": "framed",
+      "grid": "grid4",
+      "cards": "split",
+      "card": "plain",
+      "story": "timeline",
+      "values": "checklist",
+      "closing": "newsletter",
+      "footer": "columns",
+      "pdp": "gallery-left",
+      "pdpOrder": "story-first",
+      "button": "soft",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "photos": "rounded",
+      "bands": "alternate",
+      "menu": "dropdowns",
+      "filters": "chips",
+      "feature": "origin,explore"
+    },
+    "sections": [
+      {
+        "id": "howto",
+        "title": "Cómo pedir",
+        "items": [
+          {
+            "title": "Elige",
+            "text": "Arma tu caja con lo de temporada."
+          },
+          {
+            "title": "Recibe",
+            "text": "Entregamos en tu puerta."
+          },
+          {
+            "title": "Repite",
+            "text": "Suscríbete y recibe cada semana."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Pedidos hasta las 18:00 · Entrega al día siguiente",
+      "eyebrow": "Del campo a tu mesa",
+      "headline": "Productos frescos, directo del productor",
+      "subcopy": "Huevos, quesos, miel y verduras de temporada, de pequeños productores.",
+      "primaryCta": "Armar mi pedido",
+      "secondaryCta": "Conoce el origen",
+      "productsTitle": "De temporada",
+      "storyTitle": "De dónde viene",
+      "storyBody": "Trabajamos con familias productoras de la región. Cosechan, nosotros juntamos y te lo llevamos fresco.",
+      "closingLine": "Recibe lo mejor de la semana",
+      "closingCta": "Suscribirme",
+      "tagline": "Productos frescos de productores locales.",
+      "values": [
+        {
+          "title": "De temporada",
+          "text": "Lo que la tierra da ahora."
+        },
+        {
+          "title": "Productores locales",
+          "text": "Precio justo para quien cultiva."
+        },
+        {
+          "title": "Fresco",
+          "text": "Cosechado esta semana."
+        }
+      ]
+    }
+  }
+}

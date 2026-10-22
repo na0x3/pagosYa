@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 40,
+  "hidden": true,
   "dna": {
     "display": "chivo",
     "text": "figtree",

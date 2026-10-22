@@ -1,5 +1,5 @@
-import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
-import { templateDemoRevision } from './source-templates';
+import { listTemplates, templateManifest, templateSourceFiles } from '@pagosya/store-templates';
+import { resolvePresetTemplate, templateDemoRevision } from './source-templates';
 import { SourceProjectsService } from './source-projects.service';
 import { assertSourceCommerceContract } from './source-commerce-contract';
 import { captureSourceVisuals, probeSourceShopping } from './source-visual-capture';
@@ -13,7 +13,9 @@ describe.each(listTemplates().map(manifest => [manifest.id, manifest] as const))
   let snapshot: Awaited<ReturnType<SourceProjectsService['prepare']>>;
 
   beforeAll(async () => {
-    const assembled = await templateDemoRevision(manifest, templateSourceFiles(manifest.id));
+    // A preset (2026-10-22) is checked as the store it makes: its master with the preset's look, words and photos.
+    const resolved = resolvePresetTemplate(manifest, templateManifest);
+    const assembled = await templateDemoRevision(resolved.manifest, templateSourceFiles(resolved.manifest.id), resolved.preset);
     snapshot = await new SourceProjectsService({} as any).prepare({ revision: 0, ...assembled });
   });
 

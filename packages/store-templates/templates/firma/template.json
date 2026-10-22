@@ -1,0 +1,124 @@
+{
+  "id": "firma",
+  "name": "Firma",
+  "category": "moda",
+  "description": "Marcas de diseñador: blanco y negro, serif de lujo, fotos amplias, tarjetas de moda y menú por colecciones.",
+  "tags": [
+    "moda de autor",
+    "diseño",
+    "atelier",
+    "lujo"
+  ],
+  "sitePurpose": "shop",
+  "order": 1,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "luxury",
+    "variants": {
+      "header": "minimal",
+      "announce": "plain",
+      "hero": "split-right",
+      "grid": "side-title",
+      "cards": "fashion",
+      "card": "hover2",
+      "story": "pair",
+      "values": "line",
+      "closing": "dark",
+      "footer": "column",
+      "pdp": "fashion",
+      "pdpOrder": "details-first",
+      "button": "underline",
+      "corners": "sharp",
+      "density": "airy",
+      "texture": "none",
+      "photos": "natural",
+      "bands": "calm",
+      "menu": "panel",
+      "filters": "chips",
+      "feature": "duo,origin"
+    },
+    "sections": [
+      {
+        "id": "manifesto",
+        "title": "Lo que hacemos",
+        "items": [
+          {
+            "title": "Corte",
+            "text": "Siluetas pensadas para durar más que una temporada."
+          },
+          {
+            "title": "Material",
+            "text": "Telas nobles, elegidas por cómo caen y envejecen."
+          },
+          {
+            "title": "Oficio",
+            "text": "Cada pieza se termina a mano."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "",
+      "eyebrow": "Colección otoño",
+      "headline": "Piezas que se quedan contigo",
+      "subcopy": "Diseño de autor en cortes limpios y telas nobles, hechas en pequeñas series.",
+      "primaryCta": "Ver la colección",
+      "secondaryCta": "El atelier",
+      "productsTitle": "La colección",
+      "storyTitle": "Desde el atelier",
+      "storyBody": "Cada temporada empieza con un boceto y termina con pocas piezas, terminadas a mano. Preferimos menos y mejor.",
+      "closingLine": "Hecho para durar",
+      "closingCta": "Ver la colección",
+      "tagline": "Diseño de autor.",
+      "values": [
+        {
+          "title": "Series cortas",
+          "text": "Pocas piezas por modelo."
+        },
+        {
+          "title": "Hecho a mano",
+          "text": "Terminaciones en el atelier."
+        },
+        {
+          "title": "Talles a medida",
+          "text": "Ajustes bajo pedido."
+        }
+      ]
+    },
+    "kind": "fashion"
+  }
+}

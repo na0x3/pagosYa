@@ -4,7 +4,7 @@ import { MerchantStatus, PaymentLinkStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { findActiveStoreBySlug, PUBLIC_STORE_WHERE } from "./active-store";
 import { readCatalogLayout } from "./catalog-layout";
-import { readStoreLocations, readLocationStocks } from "./store-locations";
+import { readStoreLocations, readLocationStocks, offersPickupAt, storeOffersPickup } from "./store-locations";
 import { storePolicies } from "./store-presentation";
 import { readStoreHeroSlides, readStoreEditorialGallery, readStoreMotionExperiences, readStoreAnimations, readStoreContentOrder } from "./store-presentation";
 import { readProductExtras, readStringArray, readProductVariants } from "./product-pricing";
@@ -243,6 +243,7 @@ export class PublicStoresService implements OnModuleDestroy {
     const motionExperiences = [...new Set(animations.length ? animations.map((animation) => animation.type) : legacyMotionExperiences)];
     const locations = readStoreLocations(store.locations).map((location) => ({
       ...location,
+      pickupEnabled: offersPickupAt(location),
       inventory: items.map((item) => ({
         paymentLinkId: item.id,
         stock: readLocationStocks(item.locationStocks)[location.id] ?? 0,
@@ -261,7 +262,7 @@ export class PublicStoresService implements OnModuleDestroy {
       dna: look?.dna ?? null,
       confirmationMotif: look?.confirmationMotif ?? null,
       storeName: store.name,
-      creditsEnabled: store.creditsEnabled, digitalGoodsEnabled: store.digitalGoodsEnabled, shippingEnabled: store.shippingEnabled, shippingPickupEnabled: store.shippingPickupEnabled, shippingCarriersEnabled: store.shippingCarriersEnabled, bundlesEnabled: store.bundlesEnabled, subscriptionsEnabled: store.subscriptionsEnabled,
+      creditsEnabled: store.creditsEnabled, digitalGoodsEnabled: store.digitalGoodsEnabled, shippingEnabled: store.shippingEnabled, shippingPickupEnabled: storeOffersPickup(store), shippingCarriersEnabled: store.shippingCarriersEnabled, bundlesEnabled: store.bundlesEnabled, subscriptionsEnabled: store.subscriptionsEnabled,
       tagline: store.tagline,
       logoUrl: store.logoUrl,
       bannerUrl: store.bannerUrl,

@@ -26,10 +26,40 @@ import { readConfigFile } from './store-look';
 
 export const TEMPLATE_STORE_DATA_PATH = 'components/store-data.tsx';
 
-export const templateDemoPath = (manifest: Pick<TemplateManifest, 'id' | 'photos'>, slot: string) => {
+export const templateDemoPath = (manifest: Pick<TemplateManifest, 'id' | 'photos' | 'photoSource'>, slot: string) => {
   const demo = manifest.photos.find(photo => photo.slot === slot)?.demo;
-  return demo ? `assets/template-${manifest.id}-${slot}.${demo.split('.').pop()}` : '';
+  // A preset resolved to its master carries the preset's own demo photos (Plantillas presets 2026-10-22).
+  return demo ? `assets/template-${manifest.photoSource ?? manifest.id}-${slot}.${demo.split('.').pop()}` : '';
 };
+
+/** Plantillas presets (2026-10-22): the master a preset is a look of, carrying the preset's photos, and the fill that gives
+ *  it the preset's look, parts, sections and starting words. Any other template resolves to itself. */
+export function resolvePresetTemplate(manifest: TemplateManifest, master: (id: string) => TemplateManifest | undefined): { manifest: TemplateManifest; preset?: MasterFill } {
+  if (!manifest.preset || !manifest.extends) return { manifest };
+  const base = master(manifest.extends);
+  if (!base?.master) throw new TypeError(`Plantilla ${manifest.id}: ${manifest.extends} no es una plantilla base.`);
+  return { manifest: { ...base, photos: manifest.photos, photoSource: manifest.id }, preset: presetFill(manifest.preset) };
+}
+
+export function presetFill(preset: NonNullable<TemplateManifest['preset']>): MasterFill {
+  const sections = (preset.sections ?? []).map(section => ({ id: section.id, title: section.title, items: section.items.map(item => ({ title: item.title, text: item.text })) }));
+  return {
+    look: { palette: preset.palette, fonts: preset.fonts, colors: { ...(preset.colors ?? {}) } },
+    copy: preset.copy as MasterFill['copy'],
+    variants: { ...preset.variants, sections: sections.map(section => section.id) } as MasterVariants,
+    sections, featureCopy: (preset.featureCopy ?? {}) as MasterFill['featureCopy'],
+    character: { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [], kind: preset.kind ?? (preset.variants.cards === 'fashion' ? 'fashion' : 'other') },
+  };
+}
+
+/** The preset's look, parts and sections over a business's fill: the fill's words win, the preset keeps its design. */
+export function withPreset(preset: MasterFill, fill?: MasterFill | null): MasterFill {
+  if (!fill) return preset;
+  return { ...fill, look: preset.look, variants: preset.variants,
+    copy: { ...(preset.copy ?? {}), ...(fill.copy ?? {}) }, sections: fill.sections?.length ? fill.sections : preset.sections,
+    featureCopy: { ...(preset.featureCopy ?? {}), ...(fill.featureCopy ?? {}) },
+    character: { ...(fill.character ?? preset.character!), kind: preset.character?.kind ?? fill.character?.kind } };
+}
 
 /**
  * Hero and product slots take each product's first photo in catalog order; lifestyle and detail slots take the
@@ -307,7 +337,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
 
 export function templateDemoAssets(manifest: TemplateManifest, demoSlots: readonly string[]): SourceProjectFileDto[] {
   return demoSlots.flatMap(slot => {
-    const photo = templateDemoPhoto(manifest.id, slot);
+    const photo = templateDemoPhoto(manifest.photoSource ?? manifest.id, slot);
     return photo ? [{ path: templateDemoPath(manifest, slot), content: photo.bytes.toString('base64'), encoding: 'base64' as const }] : [];
   });
 }
@@ -371,7 +401,8 @@ export async function assembleTemplateRevision(input: {
     features = buildFeatures(ids, facts, input.fill?.featureCopy ?? {}, { productsTitle: copy!.productsTitle, storyTitle: copy!.storyTitle, subcopy: copy!.subcopy });
   }
   const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city,
-    logo: data.logoUrl ?? '', phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: builtVariants, sections: input.sections ?? input.fill?.sections, features } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
+    // An uploaded logo as the full API URL, like the photos: the store is served from another origin (Remolino 2026-10-21).
+    logo: masterPhotoUrl(data.logoUrl, input.apiUrl), phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: builtVariants, sections: input.sections ?? input.fill?.sections, features } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
   const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withMasterTheme(file.content, masterThemeCss(settings, look!)) } : file;
   // A filled Plantilla never shows the demo business's photos; a slot the merchant has no photo for stays empty instead
   // of a broken image showing its description (live check 2026-10-21, Alfar's floating photos).

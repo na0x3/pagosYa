@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": -291,
+  "hidden": true,
   "dna": {
     "display": "lora",
     "text": "figtree",

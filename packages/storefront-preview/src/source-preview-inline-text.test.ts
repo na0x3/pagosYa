@@ -83,7 +83,7 @@ it('a link waits a moment on one click and never navigates on a double-click (li
   const reached: string[] = [];
   // The preview's own navigation listens on the document in the capture phase.
   w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:source-navigate') reached.push('nav'); });
-  const click = () => el('#nav').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+  const click = () => el('#nav').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1 }));
   await tick();
   click();
   expect(reached).toEqual([]);
@@ -92,6 +92,18 @@ it('a link waits a moment on one click and never navigates on a double-click (li
   click(); click();
   await new Promise(resolve => setTimeout(resolve, 350));
   expect(reached).toEqual(['nav']);
+});
+
+it('a scripted link click goes through at once: the kit opens checkout with a link it removes right after (owner 2026-10-22)', async () => {
+  const { w } = load();
+  const reached: string[] = [];
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:source-navigate') reached.push(event.data.page); });
+  await tick();
+  // commerce-src/checkout/overlay.js openCheckout: append, click(), remove — held back, the replay hit a detached link
+  // and the frame loaded checkout.html for real («localhost refused to connect»).
+  const link = w.document.createElement('a'); link.href = 'index.html'; w.document.body.append(link); link.click(); link.remove();
+  await tick();
+  expect(reached).toEqual(['index.html']);
 });
 
 it('a kit card: words under its «Ver detalle» overlay open that product, never an inline edit (live check 2026-10-21)', async () => {

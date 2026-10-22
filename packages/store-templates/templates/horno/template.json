@@ -1,0 +1,137 @@
+{
+  "id": "horno",
+  "name": "Horno",
+  "category": "comida",
+  "description": "Cafés y panaderías: crema y terracota, serif clásico, fotos cálidas y una carta clara para pedir.",
+  "tags": [
+    "café",
+    "panadería",
+    "pastelería",
+    "desayunos"
+  ],
+  "sitePurpose": "shop",
+  "order": 3,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "terracotta",
+    "fonts": "classic",
+    "variants": {
+      "header": "centered",
+      "announce": "plain",
+      "hero": "split-left",
+      "grid": "grid3",
+      "cards": "showcase",
+      "card": "plain",
+      "story": "overlay",
+      "values": "numbered",
+      "closing": "photo",
+      "footer": "twotone",
+      "pdp": "gallery-right",
+      "pdpOrder": "story-first",
+      "button": "soft",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "paper",
+      "photos": "natural",
+      "bands": "alternate",
+      "menu": "none",
+      "filters": "chips",
+      "feature": "capsule"
+    },
+    "sections": [
+      {
+        "id": "visit",
+        "title": "Visítanos",
+        "items": [
+          {
+            "title": "Horario",
+            "text": "Lunes a sábado, de 7:00 a 20:00."
+          },
+          {
+            "title": "Pedidos",
+            "text": "Encargos con un día de anticipación."
+          }
+        ]
+      },
+      {
+        "id": "process",
+        "title": "Cómo lo hacemos",
+        "items": [
+          {
+            "title": "Masa madre",
+            "text": "Fermentación lenta de 24 horas."
+          },
+          {
+            "title": "Horno",
+            "text": "Horneamos cada mañana."
+          },
+          {
+            "title": "Café",
+            "text": "Tostado en pequeñas tandas."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Pan recién horneado cada mañana",
+      "eyebrow": "Café y panadería",
+      "headline": "Pan de masa madre y buen café",
+      "subcopy": "Horneamos cada mañana y tostamos nuestro café en pequeñas tandas.",
+      "primaryCta": "Ver la carta",
+      "secondaryCta": "Nuestra historia",
+      "productsTitle": "Para hoy",
+      "storyTitle": "Desde temprano",
+      "storyBody": "Empezamos antes del amanecer: masa madre, mantequilla de verdad y café recién tostado. Lo que no se vende en el día se dona.",
+      "closingLine": "Te esperamos con el café listo",
+      "closingCta": "Pedir ahora",
+      "tagline": "Café y pan de masa madre.",
+      "values": [
+        {
+          "title": "Masa madre",
+          "text": "24 horas de fermentación."
+        },
+        {
+          "title": "Recién hecho",
+          "text": "Todo sale del horno hoy."
+        },
+        {
+          "title": "Café propio",
+          "text": "Tostado en casa."
+        }
+      ]
+    }
+  }
+}

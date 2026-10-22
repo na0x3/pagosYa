@@ -266,7 +266,8 @@
     }
     function slot(attribute) {
       let el = document.querySelector(`[${attribute}]`);
-      if (!el) { el = document.createElement('section'); el.setAttribute(attribute, ''); const footer = document.querySelector('body > footer, main > footer, .store-site-footer'); if (footer) footer.before(el); else (document.querySelector('main') || document.body).append(el); }
+      // A checkout page's <main> can be the calm checkout itself: a band there would sit inside the order (owner 2026-10-22).
+      if (!el) { el = document.createElement('section'); el.setAttribute(attribute, ''); const footer = document.querySelector('body > footer, main > footer, .store-site-footer'); const main = document.querySelector('main'); if (footer && !footer.closest('[data-pagosya-checkout],[data-pagosya-checkout-page],.pya-checkout')) footer.before(el); else (main && !main.closest('[data-pagosya-checkout],[data-pagosya-checkout-page],.pya-checkout') ? main : document.body).append(el); }
       el.classList.add('pagosya-retention'); return el;
     }
     function form(el, html, submit) {
@@ -344,8 +345,9 @@
       if (!settings.recoveryEnabled) return;
       document.querySelectorAll('[data-pagosya-cart], [data-retention-cart-host]').forEach(panel => {
         if (panel.querySelector('[data-retention-recovery]') || !getCart().length) return;
-        const el = document.createElement('section'); el.className = 'pagosya-retention'; el.setAttribute('data-retention-recovery', ''); panel.append(el);
-        form(el, `<h3>¿Prefieres terminar después?</h3><form><label>Tu correo<input type="email" name="email" autocomplete="email" maxlength="254" required value="${escape(state.email)}"></label><label class="retention-consent"><input type="checkbox" name="consent" required ${state.consent ? 'checked' : ''}>Acepto recibir un recordatorio de este carrito si no termino la compra.</label><button type="submit">Guardar y recordármelo</button></form>`, async data => {
+        // In the calm checkout the reminder belongs in the order column, under the pay button, not after the whole shell.
+        const el = document.createElement('section'); el.className = 'pagosya-retention'; el.setAttribute('data-retention-recovery', ''); (panel.querySelector(':scope > .pya-co__main') || panel).append(el);
+        form(el, `<h3>¿Prefieres terminar después?</h3><form><label class="retention-email"><span class="retention-label">Tu correo</span><input type="email" name="email" autocomplete="email" maxlength="254" required placeholder="tu@gmail.com" value="${escape(state.email)}"></label><label class="retention-consent"><input type="checkbox" name="consent" required ${state.consent ? 'checked' : ''}>Acepto recibir un recordatorio de este carrito si no termino la compra.</label><button type="submit">Guardar y recordármelo</button></form>`, async data => {
           state.email = String(data.get('email') ?? state.email ?? '').trim(); state.consent = true;
           const result = await api('carts', { email: state.email || undefined, consent: true, items: getCart(), ...(state.token ? { token: state.token } : {}) }); saveToken(result.token);
           // One reminder a week per email: a later save is refused, never claimed.

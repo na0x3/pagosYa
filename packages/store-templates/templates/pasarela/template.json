@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 60,
+  "hidden": true,
   "dna": {
     "display": "bodoni-moda",
     "text": "libre-caslon-text",

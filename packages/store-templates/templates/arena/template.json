@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": -283,
+  "hidden": true,
   "dna": {
     "display": "unbounded",
     "text": "chivo",

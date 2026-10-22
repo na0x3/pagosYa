@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": 195,
+  "hidden": true,
   "dna": {
     "display": "libre-caslon-text",
     "text": "figtree",

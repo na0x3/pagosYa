@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 160,
+  "hidden": true,
   "dna": {
     "display": "bricolage",
     "text": "outfit",

@@ -7,8 +7,8 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
-import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
-import { templateDemoRevision } from './source-templates';
+import { listTemplates, templateManifest, templateSourceFiles } from '@pagosya/store-templates';
+import { resolvePresetTemplate, templateDemoRevision } from './source-templates';
 import { SourceProjectsService } from './source-projects.service';
 import { withVisualSandbox } from './source-visual-capture';
 
@@ -20,7 +20,9 @@ run('captures the Plantillas gallery previews', async () => {
   mkdirSync(OUT, { recursive: true });
   const wanted = process.env.TEMPLATE_IDS?.split(',').filter(Boolean);
   for (const manifest of listTemplates().filter(t => !wanted || wanted.includes(t.id))) {
-    const snapshot = await new SourceProjectsService({} as any).prepare({ revision: 0, ...(await templateDemoRevision(manifest, templateSourceFiles(manifest.id))) });
+    // A preset (2026-10-22) is captured as the demo the gallery shows: its master with the preset's look and photos.
+    const resolved = resolvePresetTemplate(manifest, templateManifest);
+    const snapshot = await new SourceProjectsService({} as any).prepare({ revision: 0, ...(await templateDemoRevision(resolved.manifest, templateSourceFiles(resolved.manifest.id), resolved.preset)) });
     await withVisualSandbox(snapshot, '', undefined, false, async context => {
       for (const [suffix, width, height, out] of [['', 1280, 1700, 960], ['-mobile', 390, 844, 390]] as const) {
         const page = await context.newPage();

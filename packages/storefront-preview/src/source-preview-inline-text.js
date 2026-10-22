@@ -84,9 +84,11 @@
   // A link's first click would navigate before the second click makes a double-click (live check 2026-10-21: a product
   // name on a card opened its page). A single click on a link waits a moment; a second click cancels it. On window, so it
   // runs before the preview's own navigation, which listens on the document.
+  // Only a pointer click can become a double-click: a scripted link.click() or a keyboard Enter (detail 0) goes through
+  // at once — the kit opens checkout with a link it removes right after, and a late replay navigated the frame for real.
   var pending = null, replaying = false;
   window.addEventListener('click', function (event) {
-    if (replaying || editing || off() || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (replaying || editing || off() || event.detail === 0 || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     var link = event.target instanceof Element ? event.target.closest('a[href]') : null;
     if (!link || link.closest('form,[data-pagosya-cart],.cart-drawer,[data-pagosya-checkout-page]')) return;
     event.preventDefault(); event.stopImmediatePropagation();

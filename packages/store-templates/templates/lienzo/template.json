@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 180,
+  "hidden": true,
   "dna": {
     "display": "instrument-serif",
     "text": "space-mono",

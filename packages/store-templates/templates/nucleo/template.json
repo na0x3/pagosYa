@@ -1,0 +1,137 @@
+{
+  "id": "nucleo",
+  "name": "Núcleo",
+  "category": "tecnologia",
+  "description": "Empresas de tecnología: blanco y negro, sans geométrica, producto aislado, comparativas y FAQ técnica.",
+  "tags": [
+    "tecnología",
+    "gadgets",
+    "software",
+    "accesorios"
+  ],
+  "sitePurpose": "shop",
+  "order": 6,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "geometric",
+    "variants": {
+      "header": "links",
+      "announce": "plain",
+      "hero": "split-left",
+      "grid": "grid3",
+      "cards": "split",
+      "card": "framed",
+      "story": "split",
+      "values": "icons",
+      "closing": "dark",
+      "footer": "columns",
+      "pdp": "sticky-thumbs",
+      "pdpOrder": "details-first",
+      "button": "square",
+      "corners": "soft",
+      "density": "airy",
+      "texture": "none",
+      "photos": "natural",
+      "bands": "calm",
+      "menu": "dropdowns",
+      "filters": "sidebar",
+      "feature": "explore"
+    },
+    "sections": [
+      {
+        "id": "materials",
+        "title": "Especificaciones",
+        "items": [
+          {
+            "title": "Batería",
+            "text": "Hasta 30 horas de uso."
+          },
+          {
+            "title": "Conexión",
+            "text": "Bluetooth 5.3 y USB-C."
+          },
+          {
+            "title": "Garantía",
+            "text": "12 meses en todos los equipos."
+          }
+        ]
+      },
+      {
+        "id": "faq",
+        "title": "Soporte",
+        "items": [
+          {
+            "title": "¿Tienen garantía?",
+            "text": "Sí, 12 meses por defectos de fábrica."
+          },
+          {
+            "title": "¿Ofrecen soporte técnico?",
+            "text": "Sí, por chat y correo en horario de oficina."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Garantía de 12 meses en todos los equipos",
+      "eyebrow": "Tecnología transparente",
+      "headline": "Tecnología que se entiende",
+      "subcopy": "Equipos bien diseñados, con especificaciones claras y soporte de verdad.",
+      "primaryCta": "Ver productos",
+      "secondaryCta": "Cómo trabajamos",
+      "productsTitle": "Equipos",
+      "storyTitle": "Diseño que se ve",
+      "storyBody": "Creemos en la tecnología honesta: lo que ves es lo que hay. Probamos cada equipo antes de venderlo y te acompañamos después.",
+      "closingLine": "Hecho para funcionar",
+      "closingCta": "Comprar",
+      "tagline": "Tecnología con soporte.",
+      "values": [
+        {
+          "title": "Garantía",
+          "text": "12 meses en todo."
+        },
+        {
+          "title": "Soporte real",
+          "text": "Personas que responden."
+        },
+        {
+          "title": "Envío asegurado",
+          "text": "Embalaje protegido."
+        }
+      ]
+    }
+  }
+}

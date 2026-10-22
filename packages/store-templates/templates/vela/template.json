@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": 190,
+  "hidden": true,
   "dna": {
     "display": "playfair-display",
     "text": "lora",

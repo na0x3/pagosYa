@@ -19,6 +19,16 @@
     const match = String(path).match(/\/v1\/uploads\/([A-Za-z0-9._-]+)$/);
     return match ? apiBase() + '/uploads/' + match[1] : null;
   };
+  // The avatar is usually the store's logo. A preview frame blocks the API's address (every page of a published store failed
+  // «Imágenes cargadas» twice, Remolino A/B 2026-10-22), so there it uses the copy the page already carries, or none.
+  const avatarSrc = () => {
+    const path = settings && settings.avatarUrl;
+    if (!path) return null;
+    if (/^data:image\//.test(path)) return path;
+    if (!studio) return asset(path);
+    const logo = config.data && config.data.logoUrl;
+    return typeof logo === 'string' && /^data:image\//.test(logo) ? logo : null;
+  };
   const pageName = () => window.PAGOSYA_PREVIEW_PAGE || location.pathname.split('/').pop() || 'index.html';
   const currentProduct = () => { const detail = {}; document.dispatchEvent(new CustomEvent('pagosya:current-product', { detail })); return detail.id ? detail : null; };
   const cartCount = () => { const detail = {}; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart', { detail })); return Array.isArray(detail.items) ? detail.items.length : 0; };
@@ -66,12 +76,22 @@
     + '.pya-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}'
     + '@media (max-width:560px){[data-pagosya-assistant]{right:16px;bottom:calc(16px + var(--pya-lift,0px))}.pya-panel{position:fixed;inset:0;width:auto;height:auto;border-radius:0}}'
     + '@media (prefers-reduced-motion:no-preference){.pya-panel:not([hidden]){animation:pya-in .18s var(--kit-ease,ease-out)}@keyframes pya-in{from{opacity:0;transform:translateY(8px)}}}'
-    + '}';
+    + '}'
+    // Outside the layer: a store's own button reset (unlayered) beat every layered button rule, so the launcher turned white
+    // and the suggestions, Ver and Enviar read as plain text (Remolino 2026-10-22). Buttons wear the store's accent.
+    + '[data-pagosya-assistant] .pya-launcher{width:56px;height:56px;border:0;border-radius:999px;background:var(--kit-accent,#20211d);color:var(--kit-on-accent,#fff);box-shadow:0 8px 24px rgba(0,0,0,.18)}'
+    + '[data-pagosya-assistant] .pya-btn{min-height:40px;padding:8px 14px;border:1px solid color-mix(in srgb,var(--kit-accent,#20211d) 45%,transparent);border-radius:999px;background:color-mix(in srgb,var(--kit-accent,#20211d) 10%,var(--kit-paper,#fff));color:var(--kit-accent,#20211d);font:600 14px/1.25 var(--store-body-font,var(--brand-body-font,inherit));text-align:left;cursor:pointer;transition:background-color .15s,filter .15s}'
+    + '[data-pagosya-assistant] .pya-btn:hover{background:color-mix(in srgb,var(--kit-accent,#20211d) 18%,var(--kit-paper,#fff))}'
+    + '[data-pagosya-assistant] .pya-primary{background:var(--kit-accent,#20211d);color:var(--kit-on-accent,#fff);border-color:transparent}'
+    + '[data-pagosya-assistant] .pya-primary:hover{background:var(--kit-accent,#20211d);filter:brightness(.92)}'
+    + '[data-pagosya-assistant] .pya-foot .pya-btn{min-height:0;padding:4px 0;border:0;background:transparent;color:inherit;font-weight:500;text-decoration:underline;text-underline-offset:3px}'
+    + '[data-pagosya-assistant] .pya-suggestions:empty{display:none}'
+    + '[data-pagosya-assistant] .pya-card{align-items:flex-start}[data-pagosya-assistant] .pya-card img{width:72px;height:72px;object-fit:cover;flex:none;border-radius:12px;background:var(--kit-surface,rgba(0,0,0,.05))}';
 
   const ICON = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg>';
   function face(className) {
     const wrap = h('span', className);
-    const src = asset(settings.avatarUrl);
+    const src = avatarSrc();
     if (src) { const img = h('img', 'pya-avatar'); img.src = src; img.alt = ''; wrap.append(img); } else wrap.innerHTML = ICON;
     return wrap;
   }
@@ -80,9 +100,17 @@
   const scroll = () => { const el = log(); el.scrollTop = el.scrollHeight; };
   function say(text, who) { const el = h('p', 'pya-msg ' + (who === 'buyer' ? 'is-buyer' : 'is-bot'), text); log().append(el); scroll(); return el; }
 
+  // The product's photo as the page's own catalog carries it: inlined in the editor's preview, where an API address is
+  // blocked and the card showed an empty square (Remolino 2026-10-22); the API's copy otherwise.
+  const catalogPhoto = id => {
+    const items = (store && Array.isArray(store.items) && store.items) || (config.data && Array.isArray(config.data.items) && config.data.items) || [];
+    const product = items.find(entry => entry && entry.id === id);
+    const photos = product && Array.isArray(product.imageUrls) ? product.imageUrls : [];
+    return photos.find(url => typeof url === 'string' && /^(data:image\/|https?:\/\/)/.test(url)) || null;
+  };
   function card(item) {
     const el = h('article', 'pya-card');
-    const src = asset(item.image);
+    const src = catalogPhoto(item.id) || asset(item.image);
     if (src) { const img = h('img'); img.src = src; img.alt = ''; img.loading = 'lazy'; el.append(img); }
     const body = h('div');
     body.append(h('strong', null, item.name));
@@ -165,6 +193,8 @@
     const submit = root.querySelector('.pya-form button[type=submit]');
     if (busy || !message) return;
     busy = true; submit.disabled = true; lastMessage = message;
+    // The suggested questions are for starting; once the buyer asks, they go (owner 2026-10-22).
+    root.querySelector('.pya-suggestions').replaceChildren();
     if (!retried) say(message, 'buyer');
     const typing = h('p', 'pya-typing', 'Escribiendo…'); log().append(typing); scroll();
     const product = currentProduct();
@@ -267,7 +297,7 @@
     // Always the chat icon on the accent, so a shopper sees a chat (baek 2026-10-16: an avatar filling the circle, a logo on a
     // light background, read as a beige blob). The avatar is a small badge here and stays in the panel's head.
     const launcherIcon = h('span', 'pya-launcher-icon'); launcherIcon.innerHTML = ICON; toggle.append(launcherIcon);
-    const avatar = asset(settings.avatarUrl);
+    const avatar = avatarSrc();
     if (avatar) { const badge = h('span', 'pya-badge'), img = h('img'); img.src = avatar; img.alt = ''; badge.append(img); toggle.append(badge); }
     const hint = h('p', 'pya-hint', '¿Dudas sobre este producto?'); hint.hidden = true;
     const panel = h('div', 'pya-panel'); panel.id = 'pya-panel'; panel.hidden = true; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-labelledby', 'pya-title');

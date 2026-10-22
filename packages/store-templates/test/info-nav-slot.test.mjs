@@ -9,7 +9,7 @@ const templates = require('../index.js');
 
 // The runtime fills this slot with links to the store's information pages (spec 2026-09-30-store-content-pages-design).
 test('every template footer has exactly one information nav slot, inside the footer', () => {
-  for (const { dir, manifest } of templates.loadTemplates()) {
+  for (const { dir, manifest } of templates.loadTemplates().filter(entry => !entry.manifest.extends)) {
     const source = readFileSync(join(dir, 'components', 'Shell.tsx'), 'utf8');
     assert.equal(source.match(/data-pagosya-pages/g)?.length ?? 0, 1, `${manifest.id}: needs exactly one data-pagosya-pages slot`);
     const footer = source.slice(source.indexOf('export function Footer'));

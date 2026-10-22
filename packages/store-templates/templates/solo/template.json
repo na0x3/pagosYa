@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": 5,
+  "hidden": true,
   "dna": {
     "display": "familjen-grotesk",
     "text": "figtree",

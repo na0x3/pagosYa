@@ -110,7 +110,9 @@ export async function checkSourceWebsite(snapshot: SourceSnapshot, signal?: Abor
         let settled = false, pagePaymentOpened = false, checkoutNavigation = false;
         const finish = (rows: SourceCheck[]) => { if (settled) return; settled = true; clearTimeout(timeout); window.removeEventListener('message', receive); document.removeEventListener('focusin', trackFocus); document.removeEventListener('focusout', bounceFocus); signal?.removeEventListener('abort', abort); const restoreFocus = document.activeElement === frame; frame.remove(); if (restoreFocus && previousFocus?.isConnected && previousFocus !== frame) previousFocus.focus({ preventScroll: true }); resolve(rows); };
         const abort = () => finish([{ label: 'Comprobación interrumpida', status: 'failed', detail: 'Vuelve a comprobar el sitio antes de publicarlo.' }]);
-        const timeout = window.setTimeout(() => finish([{ label: 'Carga del sitio', status: 'failed', detail: 'La página no respondió en 8 segundos.' }]), 8000);
+        // A page carries every catalog photo inlined (several MB) and the steps wait for slow paints, so 8 s was too tight on a
+        // busy editor (Remolino 2026-10-22: timeouts late in the run).
+        const timeout = window.setTimeout(() => finish([{ label: 'Carga del sitio', status: 'failed', detail: 'La página no respondió en 15 segundos.' }]), 15000);
         const receive = (event: MessageEvent) => {
           if (event.source !== frame.contentWindow || event.origin !== 'null') return;
           if (optionsId && event.data?.type === 'pagosya:hosted-request') frame.contentWindow?.postMessage({ type: 'pagosya:hosted-response', id: event.data.id, result: { ok: false, body: { message: 'Comprobación sin solicitudes reales.' } } }, '*');

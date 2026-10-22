@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": -279,
+  "hidden": true,
   "dna": {
     "display": "bricolage",
     "text": "nunito",

@@ -18,7 +18,7 @@ import { createOrderTrackingToken } from "../consumer/order-tracking-token";
 import type { ProductVariant } from '../payment-links/product-variants';
 import { pickedProductQuantities, resolveSelectedExtras, selectedExtrasLabel } from '../payment-links/product-extras';
 import type { CartItemDto } from '../payment-links/dto/cart-checkout.dto';
-import { readStoreLocations, readLocationStocks, nextStoreLocationOpenAt } from "./store-locations";
+import { readStoreLocations, readLocationStocks, nextStoreLocationOpenAt, storeOffersPickup } from "./store-locations";
 import { readProductExtras, readProductVariants, type ProductExtra, discountedProductAmount, selectedExtrasAmount } from "./product-pricing";
 import { InboxService } from "../inbox/inbox.service";
 
@@ -224,7 +224,7 @@ export class StoreCheckoutService {
     let shippingOptions: ShippingOption[] = [];
     if (store.shippingEnabled && !digitalOnly) {
       if (!quoteOnly && !dto.fulfillmentMethod) throw new BadRequestException('Elige retiro o envío.');
-      if (dto.fulfillmentMethod === 'pickup' && !store.shippingPickupEnabled) throw new BadRequestException('Esta tienda no ofrece retiro.');
+      if (dto.fulfillmentMethod === 'pickup' && !storeOffersPickup(store)) throw new BadRequestException('Esta tienda no ofrece retiro.');
       const weightGrams = links.some(link => link.shippingWeightGrams == null) ? null : links.reduce((sum, link) => sum + link.shippingWeightGrams! * quantityByLinkId.get(link.id)!, 0);
       // Digital lines ship nothing, so they don't shape the box (the legacy weight above still counts every line).
       parcel = computeParcel(links.filter(link => link.fulfillmentType !== 'DIGITAL').map(link => ({ quantity: quantityByLinkId.get(link.id)!, weightGrams: link.shippingWeightGrams, lengthCm: link.lengthCm, widthCm: link.widthCm, heightCm: link.heightCm, fragile: link.fragile, noStack: link.noStack })));

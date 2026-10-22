@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": -285,
+  "hidden": true,
   "dna": {
     "display": "chivo",
     "text": "space-mono",

@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": -277,
+  "hidden": true,
   "dna": {
     "display": "shrikhand",
     "text": "figtree",

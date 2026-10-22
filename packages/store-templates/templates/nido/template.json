@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 120,
+  "hidden": true,
   "dna": {
     "display": "epilogue",
     "text": "newsreader",

@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": -289,
+  "hidden": true,
   "dna": {
     "display": "bodoni-moda",
     "text": "instrument",

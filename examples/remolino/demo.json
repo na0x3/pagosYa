@@ -1,0 +1,50 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvixsc9m0001oozj6twf3axu",
+  "slug": "kkp8aeog",
+  "photos": {
+    "2cbf2782594080a5f120da0f087dd71d.jpg": "/v1/uploads/d1d729d9-7a77-420f-b1fd-f0c7d6c1cfbf.jpg",
+    "555d6f24c3eb269149d501f274787c24.jpg": "/v1/uploads/ad3e25ab-e4bb-496d-bc42-2e7330a51ec0.jpg",
+    "5b297b20bbcdc217cc5098d1213669b1.jpg": "/v1/uploads/2abb7218-ade2-47bc-870b-d6fe9b748e39.jpg",
+    "5ed5e8b3d5dd2fb458881877364480f1.jpg": "/v1/uploads/d6369d53-2c82-4bb5-afdb-5efebe0c67a2.jpg",
+    "639363033b6de53a617b9aaa68e172bd.jpg": "/v1/uploads/3c414e22-148e-4db5-943e-689b2de75e8e.jpg",
+    "665fd50300baa0f77c7ef8039423a5a0.jpg": "/v1/uploads/1297c4bd-dfbb-45b4-b97b-418c960ee869.jpg",
+    "7fddb31790ebda77f1f2be78a2a182cc.jpg": "/v1/uploads/85cfb77a-19a6-4352-8ac7-f1a48c94423c.jpg",
+    "9df00367c5ff8e2a6e5a000f303e5688.jpg": "/v1/uploads/63debe34-2513-4ff5-9ba8-26571069c182.jpg",
+    "spirals.webp": "/v1/uploads/ed2b3870-e742-4799-b13f-36243881d530.webp",
+    "/Users/saramia/pagosYa/examples/remolino/guia-blender-portada.png": "/v1/uploads/4d183b5f-50b7-4464-b094-f7fe608b96ca.png"
+  },
+  "categories": {
+    "Licuadoras": "cmvixscb0000noozjeonf8qoj",
+    "Batidos": "cmvixscb1000poozjj8qxumk2",
+    "Club y guías": "cmvixscb2000roozj6znjoy6q"
+  },
+  "products": {
+    "Licuadora Remolino Pro": "cmvixsjts0001r9kr8h0uzqs9",
+    "Licuadora Torbellino": "cmvixsjul0003r9krnyxo872y",
+    "Licuadora Rosa Compacta": "cmvixsjup0005r9krj9s3jbj2",
+    "Licuadora Personal Nube": "cmvixsjus0007r9krl2lzeor2",
+    "Pack Batido Semanal": "cmvixssay0001sl2ljry2n4x3",
+    "Club Remolino": "cmvixssbp0004sl2l31igv1yg",
+    "Guía Blender (PDF)": "cmvixssc0000csl2l1w5uwk3l",
+    "Caja de frutas a elegir": "cmviy9zbu0001126iyt42itx7"
+  },
+  "done": {
+    "settings": true,
+    "recommendations": true,
+    "download": true,
+    "subscriptions": true,
+    "bundles": true,
+    "articles": true,
+    "promo-codes": true,
+    "gift-card": true,
+    "newsletter": true,
+    "assistant": true,
+    "shipping": true,
+    "pack-without-extras": true
+  },
+  "welcomeCodeId": "cmvixssdt000ysl2lcntn5ol8",
+  "giftCardCode": "5422405C-683EF7A9-E35883E8-960C4E8E",
+  "built": 12,
+  "variantB": 13
+}

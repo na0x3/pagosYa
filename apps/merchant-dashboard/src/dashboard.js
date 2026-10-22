@@ -456,10 +456,16 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     history.pushState(null, "", `#dashboard-${view}`);
     setDashboardView(view);
   });
+  // Removing src leaves the old page on screen: the previous store's editor (its YAPI chat) showed until the next store's
+  // one booted (owner 2026-10-22). Blank it first; the frame stays same-origin, so its window can be navigated.
+  function unloadFrame(frame) {
+    try { frame.contentWindow?.location.replace("about:blank"); } catch { /* A frame that never loaded has nothing to clear. */ }
+    frame.removeAttribute("src");
+  }
   function syncStoreResourceViews(view) {
     for (const [kind, id] of [["media", "storeMediaFrame"], ["templates", "storeTemplatesFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
       const frame = document.getElementById(id);
-      if (frame.dataset.storeId && frame.dataset.storeId !== currentStoreId) { frame.removeAttribute("src"); delete frame.dataset.storeId; delete frame.dataset.ready; delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
+      if (frame.dataset.storeId && frame.dataset.storeId !== currentStoreId) { unloadFrame(frame); delete frame.dataset.storeId; delete frame.dataset.ready; delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
       if (view !== kind) continue;
       frame.hidden = !currentStoreId || !sessionToken || kind === "marketing" && ["emails", "promotions"].includes(document.getElementById("marketingTabs").dataset.tab);
       const empty = document.querySelector(`[data-resource-empty="${kind}"]`); if (empty) empty.hidden = Boolean(currentStoreId && sessionToken);
@@ -488,7 +494,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     }
     if (event.data.type === "pagosya:template-applied") {
       // The design editor reloads on the new revision; the gallery reloads next time the tab opens.
-      const studio = document.getElementById("merchantStudioFrame"); studio.removeAttribute("src"); delete studio.dataset.storeId; delete studio.dataset.ready;
+      const studio = document.getElementById("merchantStudioFrame"); unloadFrame(studio); delete studio.dataset.storeId; delete studio.dataset.ready;
       frame.removeAttribute("src"); delete frame.dataset.storeId;
       history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace"); return;
     }
@@ -517,7 +523,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     document.getElementById("merchantWorkspaceStoreName").textContent = store?.name || "Mi tienda";
     const frame = document.getElementById("merchantStudioFrame");
     if (!sessionToken || !store || frame.dataset.storeId && frame.dataset.storeId !== store.id) {
-      frame.removeAttribute("src"); delete frame.dataset.storeId; delete frame.dataset.ready;
+      unloadFrame(frame); delete frame.dataset.storeId; delete frame.dataset.ready;
     }
     frame.hidden = !store;
     document.getElementById("merchantStudioEmpty").hidden = Boolean(store);
@@ -1154,7 +1160,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
 
   function showLoggedOut() {
     const studioFrame = document.getElementById("merchantStudioFrame");
-    studioFrame.removeAttribute("src"); delete studioFrame.dataset.storeId;
+    unloadFrame(studioFrame); delete studioFrame.dataset.storeId;
     dashboardRefreshVersion += 1;
     document.body.classList.add("is-logged-out");
     document.body.classList.remove("is-logged-in");

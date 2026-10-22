@@ -1,0 +1,12 @@
+{
+  "id": "broken",
+  "name": "Rota",
+  "category": "moda",
+  "description": "Un preset que nombra una base que no existe.",
+  "tags": [],
+  "sitePurpose": "shop",
+  "order": 1,
+  "extends": "esencial",
+  "photos": [],
+  "preset": { "palette": "nope", "fonts": "nope", "variants": { "hero": "nope" } }
+}

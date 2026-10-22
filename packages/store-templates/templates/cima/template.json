@@ -1,0 +1,123 @@
+{
+  "id": "cima",
+  "name": "Cima",
+  "category": "deporte",
+  "description": "Deporte y aire libre: verde musgo, letra condensada, fotos de acción a todo lo ancho y guía de uso.",
+  "tags": [
+    "deporte",
+    "aire libre",
+    "montaña",
+    "equipo"
+  ],
+  "sitePurpose": "shop",
+  "order": 12,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "moss",
+    "fonts": "condensed",
+    "variants": {
+      "header": "classic",
+      "announce": "chip",
+      "hero": "full",
+      "grid": "feature",
+      "cards": "compact",
+      "card": "bar",
+      "story": "overlay",
+      "values": "checklist",
+      "closing": "photo",
+      "footer": "bigname",
+      "pdp": "stacked",
+      "pdpOrder": "details-first",
+      "button": "square",
+      "corners": "sharp",
+      "density": "compact",
+      "texture": "grain",
+      "photos": "natural",
+      "bands": "blocks",
+      "menu": "dropdowns",
+      "filters": "bar",
+      "feature": "explore,origin"
+    },
+    "sections": [
+      {
+        "id": "howto",
+        "title": "Prepárate",
+        "items": [
+          {
+            "title": "Elige",
+            "text": "Equipo según tu ruta."
+          },
+          {
+            "title": "Ajusta",
+            "text": "Te ayudamos con la talla."
+          },
+          {
+            "title": "Sal",
+            "text": "Garantía en cada salida."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Garantía de por vida en costuras",
+      "eyebrow": "Equipo de montaña",
+      "headline": "Hecho para lo salvaje",
+      "subcopy": "Mochilas, ropa técnica y accesorios probados en ruta.",
+      "primaryCta": "Ver equipo",
+      "secondaryCta": "Rutas",
+      "productsTitle": "Equipo",
+      "storyTitle": "Probado en la montaña",
+      "storyBody": "Diseñamos y probamos cada pieza en las rutas que más queremos. Si no aguanta una semana afuera, no la vendemos.",
+      "closingLine": "Nos vemos en la ruta",
+      "closingCta": "Ver equipo",
+      "tagline": "Equipo para el aire libre.",
+      "values": [
+        {
+          "title": "Probado en ruta",
+          "text": "Cada pieza, en la montaña."
+        },
+        {
+          "title": "Garantía",
+          "text": "De por vida en costuras."
+        },
+        {
+          "title": "Reparaciones",
+          "text": "Arreglamos antes que reemplazar."
+        }
+      ]
+    }
+  }
+}

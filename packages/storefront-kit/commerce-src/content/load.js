@@ -6,7 +6,7 @@
       const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/store`, { credentials: "omit", cache: "no-store" });
       if (!response.ok) throw new Error("No pudimos cargar la carta. Intenta de nuevo.");
       const saved = cartItems();
-      store = await response.json(); ready = true; category = "all"; renderPolicyLinks();
+      store = pickupFacts(await response.json()); ready = true; category = "all"; renderPolicyLinks();
       restoreCart(saved);
       render(); message("");
     } catch (error) { ready = false; renderInfoPages(true); render(); message(error.message); }

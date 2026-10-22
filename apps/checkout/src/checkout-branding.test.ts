@@ -14,6 +14,9 @@ describe("the calm checkout keeps only the store identity", () => {
     expect(app.style.getPropertyValue("--checkout-background")).toBe("");
     expect(app.style.getPropertyValue("--checkout-heading-font")).toBe("");
     expect(document.body.hasAttribute("data-dna-button")).toBe(false);
+    // checkout-branding.css keys every #app rule on this class; on the shell they beat it (owner 2026-10-22: a 68px
+    // total overflowing the summary, a 64px gap under the logo).
+    expect(document.body.classList.contains("store-branded-checkout")).toBe(false);
   });
 });
 

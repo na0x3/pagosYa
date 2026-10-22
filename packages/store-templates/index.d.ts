@@ -18,8 +18,23 @@ export interface TemplateManifest {
   readonly master?: MasterSettings;
   /** Spec 2026-10-20 Plantillas fill: every visible text of a converted template, as flat slots in store-data `copy`. */
   readonly copy?: readonly TemplateCopySlot[];
-  /** Shown in the gallery and «Elegir una plantilla»; only converted templates (with `copy`) may be curated. */
+  /** Shown in the gallery and «Elegir una plantilla»; only converted templates (with `copy`) and presets may be curated. */
   readonly curated?: boolean;
+  /** Plantillas presets (2026-10-22): the master template this one is a look of; it has no source of its own. */
+  readonly extends?: string;
+  readonly preset?: TemplatePreset;
+  /** Set by the API on a preset resolved to its master: whose demo photos the assembled store carries. */
+  readonly photoSource?: string;
+}
+/** A preset of a master template: palette and font pair ids, one variant id per part (feature: a comma list), optional
+ *  colours, business sections and starting words. */
+export interface TemplatePreset {
+  readonly palette: string; readonly fonts: string; readonly colors?: Readonly<Record<string, string>>;
+  readonly variants: Readonly<Record<string, string>>;
+  readonly kind?: 'fashion' | 'other';
+  readonly sections?: ReadonlyArray<{ readonly id: string; readonly title: string; readonly items: ReadonlyArray<{ readonly title: string; readonly text: string }> }>;
+  readonly copy?: Readonly<Partial<Record<Exclude<keyof MasterCopy, 'values'>, string>>> & { readonly values?: readonly MasterValue[] };
+  readonly featureCopy?: Readonly<Record<string, unknown>>;
 }
 export type TemplateCopyRole = 'headline' | 'title' | 'lead' | 'body' | 'cta' | 'label' | 'item' | 'question' | 'answer' | 'quote' | 'name' | 'alt';
 export interface TemplateCopySlot { readonly key: string; readonly role: TemplateCopyRole; readonly default: string; readonly max: number }

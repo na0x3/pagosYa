@@ -95,6 +95,8 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
         if (extra && typeof extra.imageUrl === 'string') tasks.push(async () => { extra.imageUrl = await image(extra.imageUrl); });
       }
     }
+    // The calm checkout draws the store's logo from config data, which the file pass above leaves alone (Remolino 2026-10-21).
+    if (typeof config.data.logoUrl === 'string') tasks.push(async () => { config.data.logoUrl = await image(config.data.logoUrl); });
     let next = 0;
     await Promise.all(Array.from({ length: Math.min(4, tasks.length) }, async () => {
       while (next < tasks.length) await tasks[next++]();

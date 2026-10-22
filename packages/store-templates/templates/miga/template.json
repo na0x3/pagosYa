@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 90,
+  "hidden": true,
   "dna": {
     "display": "shrikhand",
     "text": "nunito",

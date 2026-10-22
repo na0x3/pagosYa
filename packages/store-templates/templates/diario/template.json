@@ -1,0 +1,133 @@
+{
+  "id": "diario",
+  "name": "Diario",
+  "category": "moda",
+  "description": "Ropa de todos los días: azul cobalto, tipografía moderna, tarjetas con color y filtros por talla y color.",
+  "tags": [
+    "ropa",
+    "casual",
+    "básicos",
+    "urbano"
+  ],
+  "sitePurpose": "shop",
+  "order": 2,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "cobalt",
+    "fonts": "modern",
+    "variants": {
+      "header": "classic",
+      "announce": "ticker",
+      "hero": "full",
+      "grid": "grid4",
+      "cards": "compact",
+      "card": "hover2",
+      "story": "split",
+      "values": "icons",
+      "closing": "accent",
+      "footer": "columns",
+      "pdp": "gallery-left",
+      "pdpOrder": "details-first",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "photos": "rounded",
+      "bands": "alternate",
+      "menu": "dropdowns",
+      "filters": "bar",
+      "feature": "explore,palette"
+    },
+    "sections": [
+      {
+        "id": "sizes",
+        "title": "Guía de tallas",
+        "items": [
+          {
+            "title": "Tallas",
+            "text": "De la S a la XL en cada modelo."
+          },
+          {
+            "title": "Entre dos tallas",
+            "text": "Elige la mayor para un calce relajado."
+          }
+        ]
+      },
+      {
+        "id": "faq",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Puedo cambiar la talla?",
+            "text": "Sí, dentro de los 15 días con la etiqueta puesta."
+          },
+          {
+            "title": "¿Cómo lavo las prendas?",
+            "text": "Agua fría y del revés para cuidar el color."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Envío gratis en compras grandes · Cambios fáciles",
+      "eyebrow": "Básicos para todos",
+      "headline": "Ropa cómoda para todos los días",
+      "subcopy": "Básicos que combinan con todo, en colores que duran lavado tras lavado.",
+      "primaryCta": "Comprar ahora",
+      "secondaryCta": "Nuestra historia",
+      "productsTitle": "Lo más pedido",
+      "storyTitle": "Hecho para usarse",
+      "storyBody": "Hacemos la ropa que más se usa: camisetas, buzos y pantalones cómodos, con buen precio y telas que aguantan.",
+      "closingLine": "Tu próximo básico favorito",
+      "closingCta": "Ver todo",
+      "tagline": "Básicos para todos los días.",
+      "values": [
+        {
+          "title": "Telas que duran",
+          "text": "Colores firmes lavado tras lavado."
+        },
+        {
+          "title": "Cambios fáciles",
+          "text": "15 días para cambiar tu talla."
+        },
+        {
+          "title": "Buen precio",
+          "text": "Básicos sin sobreprecio."
+        }
+      ]
+    }
+  }
+}

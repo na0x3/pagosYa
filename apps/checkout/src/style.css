@@ -7823,10 +7823,10 @@ body.has-bespoke-site[data-site-composition="catalog-poster"] .bespoke-catalog[d
 body.payment-page.store-payment-page{display:block;padding:0;background:var(--debt-paper)}
 body.payment-page.store-payment-page #app{width:100%;max-width:none;min-height:100dvh;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;animation:none}
 body.payment-page.store-payment-page #app:has(.payment-form-panel){display:grid;grid-template-columns:minmax(280px,.85fr) minmax(0,1.15fr)}
-body.payment-page.store-payment-page #app:not(:has(.payment-form-panel)){max-width:760px;min-height:0;margin:0 auto;padding:clamp(20px,5vw,64px)}
+body.payment-page.store-payment-page #app:not(:has(.payment-form-panel,.pya-checkout)){max-width:760px;min-height:0;margin:0 auto;padding:clamp(20px,5vw,64px)}
 .store-payment-page .payment-summary-panel{padding:clamp(28px,6vw,88px);border:0;border-right:1px solid var(--debt-ink)}
 .store-payment-page .payment-form-panel{padding:clamp(28px,6vw,80px);min-width:0}
-.store-payment-page #payment-form{max-width:620px;margin:0 auto}
+.store-payment-page #payment-form:not(.pya-checkout *){max-width:620px;margin:0 auto}
 .store-payment-page .payment-page-title{max-width:620px;margin:0 auto 36px;font-size:clamp(28px,3vw,42px);line-height:1.15;letter-spacing:-.025em}
 @media(max-width:760px){body.payment-page.store-payment-page #app:has(.payment-form-panel){grid-template-columns:1fr}.store-payment-page .payment-summary-panel{border-right:0;border-bottom:1px solid var(--debt-ink);padding:28px 20px}.store-payment-page .payment-form-panel{padding:32px 20px}.store-payment-page .payment-page-title{margin-bottom:28px}}
 

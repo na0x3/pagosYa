@@ -1,0 +1,37 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvjjcf7j00012qzpv4dvboxq",
+  "slug": "2munphyf",
+  "photos": {
+    "054504e4faceeb61c885dcb08e15e317.jpg": "/v1/uploads/708f618f-563a-46ea-8109-46386b4fd6c8.jpg",
+    "153255da6c5d115f931d85a2d7860e6b.jpg": "/v1/uploads/76a1528d-654c-44ad-b517-a81002ae4c91.jpg",
+    "44567f05249efd02ac660454918c726f.jpg": "/v1/uploads/a1e82b80-2e15-4768-85a1-3b2696be84e6.jpg",
+    "63b83b8b5f802925312124bc672dd3bc.jpg": "/v1/uploads/c254d5d6-d9a5-4a7b-a4a2-1b16670145ac.jpg",
+    "7f0ed649c3b2f0edc9718411701fa742.jpg": "/v1/uploads/fb258803-83e2-445c-8d78-88b739b0c509.jpg",
+    "b34ba468675ef9880b51e558c60c0f0a.jpg": "/v1/uploads/c0a75b9f-8874-4046-b2df-4dcd2d40cc01.jpg",
+    "be93c56e64ee98d38ec5c3e073875fba.jpg": "/v1/uploads/0f7b008f-65d1-4409-b0e9-e92258ee14ce.jpg",
+    "e0f20c93a42a55ed01a41f8c1f61d72e.jpg": "/v1/uploads/b5b9ec8b-06e4-4ee3-8de4-f1eebae1714b.jpg",
+    "faab6c6ca40b1adbbcb31dc7e0c8de84.jpg": "/v1/uploads/e786f375-4c12-40a9-a2bd-ecec12b67416.jpg"
+  },
+  "categories": {
+    "Bodas": "cmvjjcf8f000l2qzpenkttczv",
+    "Tortas": "cmvjjcf8g000n2qzp4iyg8ze5",
+    "Champagne y copas": "cmvjjcf8g000p2qzp8avr7h1k"
+  },
+  "products": {
+    "Torre de champagne": "cmvjjcf8v000r2qzpri3bibgl",
+    "Boda Esencial": "cmvjjcf9k000t2qzpdtt3vyjg",
+    "Boda Completa": "cmvjjcf9t000v2qzpkxmgcdk4",
+    "Torta de frambuesa": "cmvjjcfa1000x2qzpywy7ed5g",
+    "Torta blanca clásica": "cmvjjcfag000z2qzpheil5ack",
+    "Champagne Brut": "cmvjjcfak00112qzpc98sr1pc",
+    "Copas de cristal (set de 6)": "cmvjjcfan00132qzpwk4lhvfi"
+  },
+  "done": {
+    "settings": true,
+    "promo-codes": true,
+    "recommendations": true,
+    "shipping": true
+  },
+  "built": 3
+}

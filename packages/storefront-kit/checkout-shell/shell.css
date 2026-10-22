@@ -2,6 +2,7 @@
    the hosted payment page. Unlayered and two classes deep, so a store's element and class rules never reach it; the
    resets use :where() so the shell's own component rules (same weight, later) always win over them. */
 .pya-checkout{--pya-ink:#1a1a1a;--pya-muted:#6b6b6b;--pya-line:#d9d9d9;--pya-soft:#f7f7f7;--pya-divider:#ececec;--pya-accent:#1a1a1a;--pya-accent-ink:#ffffff;--pya-gutter:clamp(20px,4vw,56px);position:fixed;inset:0;z-index:2147483000;display:block;margin:0;padding:0;overflow:auto;overscroll-behavior:contain;background:#fff;color:var(--pya-ink);color-scheme:light;font:400 15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;letter-spacing:normal;text-align:left;text-transform:none;-webkit-font-smoothing:antialiased}
+.pya-checkout.pya-checkout{width:auto;height:auto;min-width:0;min-height:0;max-width:none;max-height:none}
 .pya-checkout[hidden]{display:none}
 .pya-checkout.pya-checkout--page{position:static;inset:auto;z-index:auto;min-height:100dvh;overflow:visible}
 .pya-checkout.pya-checkout :is(*,*::before,*::after){box-sizing:border-box}
@@ -99,6 +100,22 @@
 .pya-checkout .pya-co__code>button{min-height:48px;padding:0 16px;border:1px solid var(--pya-line);border-radius:6px;background:#ececec;color:var(--pya-ink);cursor:pointer}
 .pya-checkout .pya-co__code>p{grid-column:1 / -1;color:var(--pya-muted);font-size:13px}
 .pya-checkout .pya-co__code>p:empty{display:none}
+.pya-checkout [data-retention-recovery]{width:auto;margin:32px 0 0;padding:24px 0 0;border:0;border-top:1px solid var(--pya-divider);background:none;color:var(--pya-ink);font:inherit}
+.pya-checkout [data-retention-recovery] h3{margin:0 0 12px;font-size:15px;font-weight:600;line-height:1.3}
+.pya-checkout [data-retention-recovery] form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 8px;max-width:none}
+.pya-checkout [data-retention-recovery] .retention-consent{grid-column:1 / -1;grid-row:2;display:flex;align-items:flex-start;gap:8px;color:var(--pya-muted);font-size:12.5px;line-height:1.45}
+.pya-checkout [data-retention-recovery] input[type=checkbox]{flex:none;width:15px;height:15px;margin:1px 0 0;accent-color:var(--pya-accent)}
+.pya-checkout [data-retention-recovery] [role=status]{grid-column:1 / -1;color:var(--pya-muted);font-size:13px}
+/* Owner 2026-10-22: the reminder email and the gift card code are slim pills, each with its button beside it. */
+.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email){display:flex;align-items:center;min-height:44px;padding:0 18px;border:1px solid var(--pya-line);border-radius:999px;background:#fff;color:var(--pya-ink);font-size:14px;line-height:1.3;cursor:text}
+.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email):focus-within{border-color:var(--pya-ink);box-shadow:0 0 0 1px var(--pya-ink)}
+.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email) input{display:block;width:100%;min-width:0;min-height:42px;padding:0;border:0;border-radius:0;background:transparent;color:var(--pya-ink);font-size:14px;outline:none}
+.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email) input::placeholder{color:var(--pya-muted);opacity:1}
+.pya-checkout :is(.pya-co__code .pya-co__label,[data-retention-recovery] .retention-label){position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.pya-checkout :is(.pya-co__code>button,[data-retention-recovery] button){min-height:44px;padding:0 18px;border:1px solid var(--pya-line);border-radius:999px;background:#fff;color:var(--pya-ink);font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .15s ease}
+.pya-checkout :is(.pya-co__code>button,[data-retention-recovery] button):hover:not(:disabled){background:var(--pya-soft)}
+@media(pointer:coarse){.pya-checkout :is(.pya-co__code .order-field,[data-retention-recovery] .retention-email) input{font-size:16px}}
+@media(max-width:480px){.pya-checkout [data-retention-recovery] form{grid-template-columns:minmax(0,1fr)}}
 .pya-checkout .pya-co__totals{display:grid;gap:10px;padding-top:4px}
 .pya-checkout .pya-co__totals :is(.order-savings,.order-total,dl>div){display:flex;justify-content:space-between;gap:16px}
 .pya-checkout .pya-co__totals>div{display:flex;justify-content:space-between;gap:16px}

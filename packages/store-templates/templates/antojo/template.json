@@ -1,0 +1,119 @@
+{
+  "id": "antojo",
+  "name": "Antojo",
+  "category": "comida",
+  "description": "Snacks y marcas jóvenes de comida: colores vivos, letras grandes, cinta en movimiento y packs.",
+  "tags": [
+    "snacks",
+    "golosinas",
+    "bebidas",
+    "marca joven"
+  ],
+  "sitePurpose": "shop",
+  "order": 5,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "citrus",
+    "fonts": "poster",
+    "variants": {
+      "header": "centered",
+      "announce": "ticker",
+      "hero": "poster",
+      "grid": "feature",
+      "cards": "showcase",
+      "card": "bar",
+      "story": "overlay",
+      "values": "cards",
+      "closing": "accent",
+      "footer": "bigname",
+      "pdp": "stacked",
+      "pdpOrder": "reviews-first",
+      "button": "pill",
+      "corners": "round",
+      "density": "compact",
+      "texture": "grain",
+      "photos": "rounded",
+      "bands": "blocks",
+      "menu": "none",
+      "filters": "bar",
+      "feature": "capsule"
+    },
+    "sections": [
+      {
+        "id": "faq",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Tienen packs?",
+            "text": "Sí, combina sabores y ahorra."
+          },
+          {
+            "title": "¿Envían a todo el país?",
+            "text": "Sí, por courier en 2 a 4 días."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Nuevo sabor · Pack de 6 con descuento",
+      "eyebrow": "Crujiente de verdad",
+      "headline": "Snacks con todo el sabor",
+      "subcopy": "Crocantes, intensos y para compartir. Prueba los sabores nuevos.",
+      "primaryCta": "Probar sabores",
+      "secondaryCta": "Ver packs",
+      "productsTitle": "Sabores",
+      "storyTitle": "Hechos para compartir",
+      "storyBody": "Hacemos snacks con ingredientes simples y mucho sabor. Pocos ingredientes, nada raro, todo rico.",
+      "closingLine": "Tu próximo antojo",
+      "closingCta": "Comprar ahora",
+      "tagline": "Snacks con sabor.",
+      "values": [
+        {
+          "title": "Ingredientes simples",
+          "text": "Sin cosas raras."
+        },
+        {
+          "title": "Packs",
+          "text": "Combina y ahorra."
+        },
+        {
+          "title": "Envío rápido",
+          "text": "En 2 a 4 días."
+        }
+      ]
+    }
+  }
+}

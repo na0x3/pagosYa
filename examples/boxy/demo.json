@@ -1,0 +1,32 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmviri9o80001118u3utjb28g",
+  "slug": "vbreeqjn",
+  "photos": {
+    "0d2fb4eb273a61d945c7535f20c444cd": "/v1/uploads/a6aba889-4028-4438-adbe-e0078e6292de.jpg",
+    "1ed4b3d06c3673919e46c7bf8c9c5fc5": "/v1/uploads/4f0b83e2-19d9-4001-89cf-39a6939cce40.jpg",
+    "5467569d269d48c5a3b88b98e3b92c2a": "/v1/uploads/b0433e0f-36bd-4f97-a285-703438b262ae.jpg",
+    "6424b9c7fe3b6d038bbf508caf490cc1": "/v1/uploads/9d3b219a-9950-41b0-af7a-73632c91f599.jpg",
+    "68b4b99981fb23b898414712a3d2b013": "/v1/uploads/d081e3e9-51bf-4e79-ad13-66ab29863521.jpg",
+    "6b140618c96fd1477562f49698bb2391": "/v1/uploads/594675ab-6b60-4d4d-9da5-1ea725de6443.jpg",
+    "864d7a87e70fcaadf13a4571baf1e8f4": "/v1/uploads/5eafcf4b-6d37-4367-b500-059989ca570c.jpg",
+    "b90555ce9c0c12166b4c48999a196bb7": "/v1/uploads/8d1ae411-d7e9-46b7-9232-61b77fdf43ee.jpg",
+    "dce66be07b2360a074241f74e3abbe88": "/v1/uploads/473a8849-22e5-4fbc-bf97-08cd710300b6.jpg",
+    "eef5a66fe3744a2667b2fab41eeba4e3": "/v1/uploads/887d298b-33f3-4505-abec-678bdf569373.jpg"
+  },
+  "categories": {
+    "Básicos": "cmviri9pl000n118ud16bt64u",
+    "Gráficos": "cmviri9po000p118uf4t6odrg"
+  },
+  "products": {
+    "Hoodie Boxy Esencial": "cmviri9pr000r118umq60gluc",
+    "Hoodie Marino Oversize": "cmviri9q1000t118uaohwfn28",
+    "Hoodie Café Relajado": "cmviri9q3000v118u5dsc01pq",
+    "Hoodie Lavado Niebla": "cmviri9q4000x118uwyffszwa",
+    "Hoodie Bagels": "cmviri9q6000z118uvbp0pvxt",
+    "Hoodie Slow Sunday": "cmviri9q70011118upvjfab15",
+    "Hoodie No Weak Days": "cmviri9q90013118uegqc02be"
+  },
+  "built": 13,
+  "look": 14
+}

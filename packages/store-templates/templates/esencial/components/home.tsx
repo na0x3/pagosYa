@@ -10,27 +10,6 @@ const VALUE_ICONS = [IconStar, IconTruck, IconShieldCheck];
 /** Each photo once: merchants often use the same upload for the story and a product. */
 const unique = (list: Array<string | undefined>) => [...new Set(list.filter((src): src is string => Boolean(src)))];
 
-type Section = { id: string; title: string; items: Array<{ title: string; text: string }> };
-
-/** Variety spec §2: the business sections the fill call wrote (at most two), each from the merchant's own facts. */
-function BusinessSection({ section, phone, band }: { section: Section; phone: string; band?: string }) {
-  const { id, title, items } = section;
-  const gallery = unique([photos.p1, photos.p2, photos.p3, photos.p4, photos.story]).filter(src => src !== photos.hero).slice(0, 4);
-  const pickPhoto = unique([photos.p1, photos.p2, photos.p3]).find(src => src !== photos.story && src !== photos.hero) ?? photos.p1;
-  if (id === 'gallery' && gallery.length < 2) return null;
-  return <section id={id} className="es-section es-biz" data-es-section={id} data-es-band={band} aria-labelledby={`es-${id}-title`}>
-    <Reveal className="es-biz__head"><h2 id={`es-${id}-title`} className="es-h2">{title}</h2></Reveal>
-    {id === 'process' || id === 'howto' ? <ol className="es-biz__steps">{items.map((item, index) => <li key={index}><span className="es-biz__n">{String(index + 1).padStart(2, '0')}</span><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></li>)}</ol>
-      : id === 'sizes' ? <table className="es-biz__table"><tbody>{items.map((item, index) => <tr key={index}><th scope="row">{item.title}</th><td>{item.text}</td></tr>)}</tbody></table>
-      : id === 'faq' ? <div className="es-biz__faq">{items.map((item, index) => <details key={index}><summary>{item.title}</summary><p>{item.text}</p></details>)}</div>
-      : id === 'gallery' ? <div className="es-biz__gallery">{gallery.map(src => <img key={src} src={src} alt="" aria-hidden="true" loading="lazy" />)}</div>
-      : id === 'pick' ? <div className="es-biz__pick">{pickPhoto ? <img src={pickPhoto} alt="" aria-hidden="true" loading="lazy" /> : null}<div>{items.map((item, index) => <div key={index}><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></div>)}<a className="es-btn es-btn--accent" href="productos.html">{copy.primaryCta}</a></div></div>
-      : id === 'visit' ? <div className="es-biz__visit">{store.city ? <p className="es-biz__city">{store.city}</p> : null}<dl>{items.map((item, index) => <div key={index}><dt>{item.title}</dt><dd>{item.text}</dd></div>)}</dl>{phone ? <a className="es-btn es-btn--accent" href={`https://wa.me/${phone.replace(/\D/g, '')}`}><IconMessageCircle /> WhatsApp</a> : null}</div>
-      : id === 'quotes' ? <div className="es-biz__quotes">{items.map((item, index) => <blockquote key={index}><p>{item.text}</p><cite>{item.title}</cite></blockquote>)}</div>
-      : <ul className="es-biz__list">{items.map((item, index) => <li key={index}>{id === 'materials' ? <IconCheck className="es-biz__icon" /> : null}<div><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></div></li>)}</ul>}
-  </section>;
-}
-
 export default function Home() {
   // Variety spec §2: the rolled hero; photo-led variants fall back to the type hero when the photos are missing.
   const rolled = variant('hero', 'full');
@@ -152,4 +131,48 @@ export default function Home() {
       </section>
     </main>
   </Shell>;
+}
+
+// Below the home on purpose: YAPI reads the file's first <section> as «la sección principal», which must be the hero.
+type Section = { id: string; title: string; items: Array<{ title: string; text: string }> };
+
+/** Variety spec §2: the business sections the fill call wrote (at most two), each from the merchant's own facts. */
+function BusinessSection({ section, phone, band }: { section: Section; phone: string; band?: string }) {
+  const { id, title, items } = section;
+  const gallery = unique([photos.p1, photos.p2, photos.p3, photos.p4, photos.story]).filter(src => src !== photos.hero).slice(0, 4);
+  const pickPhoto = unique([photos.p1, photos.p2, photos.p3]).find(src => src !== photos.story && src !== photos.hero) ?? photos.p1;
+  // The journal's lead note carries one photo the hero, story and pair story do not already show; the other notes are words only.
+  const notePhoto = unique([photos.p3, photos.p2]).find(src => src !== photos.story && src !== photos.hero && src !== photos.p1);
+  if (id === 'gallery' && gallery.length < 2) return null;
+  // Manifesto (owner 2026-10-21: bare centered lines read as plain text): a photo beside the lines on a tinted band.
+  if (id === 'manifesto') {
+    const statementPhoto = unique([photos.p2, photos.p4, photos.p1]).find(src => src !== photos.hero && src !== photos.story && src !== notePhoto);
+    return <section id={id} className="es-section es-biz" data-es-section={id} data-es-band={band ?? 'muted'} aria-labelledby={`es-${id}-title`}>
+      <div className={statementPhoto ? 'es-biz__statement' : 'es-biz__statement es-biz__statement--text'}>
+        {statementPhoto ? <img className="es-biz__statement-photo" src={statementPhoto} alt="" aria-hidden="true" loading="lazy" /> : null}
+        <Reveal className="es-biz__statement-copy">
+          <h2 id={`es-${id}-title`} className="es-h2">{title}</h2>
+          <ol className="es-biz__manifesto">{items.map((item, index) => <li key={index}><span>{item.title}</span><p>{item.text}</p></li>)}</ol>
+        </Reveal>
+      </div>
+    </section>;
+  }
+  return <section id={id} className="es-section es-biz" data-es-section={id} data-es-band={band} aria-labelledby={`es-${id}-title`}>
+    <Reveal className="es-biz__head">{id === 'journal' ? <p className="es-eyebrow">Diario</p> : null}<h2 id={`es-${id}-title`} className="es-h2">{title}</h2></Reveal>
+    {id === 'process' || id === 'howto' ? <ol className="es-biz__steps">{items.map((item, index) => <li key={index}><span className="es-biz__n">{String(index + 1).padStart(2, '0')}</span><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></li>)}</ol>
+      : id === 'sizes' ? <table className="es-biz__table"><tbody>{items.map((item, index) => <tr key={index}><th scope="row">{item.title}</th><td>{item.text}</td></tr>)}</tbody></table>
+      : id === 'faq' ? <div className="es-biz__faq">{items.map((item, index) => <details key={index}><summary>{item.title}</summary><p>{item.text}</p></details>)}</div>
+      : id === 'gallery' ? <div className="es-biz__gallery">{gallery.map(src => <img key={src} src={src} alt="" aria-hidden="true" loading="lazy" />)}</div>
+      : id === 'pick' ? <div className="es-biz__pick">{pickPhoto ? <img src={pickPhoto} alt="" aria-hidden="true" loading="lazy" /> : null}<div>{items.map((item, index) => <div key={index}><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></div>)}<a className="es-btn es-btn--accent" href="productos.html">{copy.primaryCta}</a></div></div>
+      : id === 'visit' ? <div className="es-biz__visit">{store.city ? <p className="es-biz__city">{store.city}</p> : null}<dl>{items.map((item, index) => <div key={index}><dt>{item.title}</dt><dd>{item.text}</dd></div>)}</dl>{phone ? <a className="es-btn es-btn--accent" href={`https://wa.me/${phone.replace(/\D/g, '')}`}><IconMessageCircle /> WhatsApp</a> : null}</div>
+      : id === 'journal' ? <div className="es-biz__journal">
+        {notePhoto ? <img className="es-biz__note-photo" src={notePhoto} alt="" aria-hidden="true" loading="lazy" /> : null}
+        <ol className="es-biz__notes">{items.map((item, index) => <li key={index}><p className="es-biz__kicker">Nota {String(index + 1).padStart(2, '0')}</p><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></li>)}</ol>
+      </div>
+      // The store's real published articles (the kit fills the mount; each article also has its own page). Not offered to YAPI's
+      // fill: it only has words, and a store without articles would show the kit's empty line.
+      : id === 'blog' ? <div className="es-biz__blog" data-pagosya-blog />
+      : id === 'quotes' ? <div className="es-biz__quotes">{items.map((item, index) => <blockquote key={index}><p>{item.text}</p><cite>{item.title}</cite></blockquote>)}</div>
+      : <ul className="es-biz__list">{items.map((item, index) => <li key={index}>{id === 'materials' ? <IconCheck className="es-biz__icon" /> : null}<div><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></div></li>)}</ul>}
+  </section>;
 }

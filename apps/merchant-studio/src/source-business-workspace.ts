@@ -10,7 +10,8 @@ import { openCatalogArrangement } from './catalog-arrangement';
 import { openRecommendations } from './recommendations';
 import { openBrandProfile } from './brand-profile';
 import { openCommerceContent } from './commerce-content';
-import { checkSourceWebsite, sourceChecksBlockPublishing } from './source-checks';
+import { checkSourceWebsite, sourceCheckResult, sourceChecksBlockPublishing } from './source-checks';
+import { createPreviewImageLoader } from '@pagosya/storefront-preview';
 import './source-library.css';
 import './source-business-workspace.css';
 const icons: Record<string, string> = { mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/>', gift: '<path d="M3 8h18v5H3zM5 13v8h14v-8M12 8v13"/><path d="M12 8S5 8 6 4s6 4 6 4 7 0 6-4-6 4-6 4"/>', box: '<path d="m3 6 9-4 9 4v12l-9 4-9-4zM3 6l9 4 9-4M12 10v12"/>', link: '<path d="M9 15 15 9M7 14l-2 2a4 4 0 0 0 6 6l3-3M10 5l3-3a4 4 0 0 1 6 6l-2 2"/>', star: '<path d="m12 3 3 6 6 1-4.5 4.5 1 6.5-5.5-3-5.5 3 1-6.5L3 10l6-1z"/>', palette: '<circle cx="12" cy="12" r="9"/><path d="M8 8h.01M15 7h.01M6 13h.01M12 16h5"/>' };
@@ -281,7 +282,11 @@ export async function mountBusinessWorkspace(app: HTMLDivElement) {
                     alternative.addEventListener('input', () => { dirty = true; const values = new FormData(alternative); draft.instruction = String(values.get('instruction')); draft.model = String(values.get('model')); draft.maxCredits = String(values.get('maxCredits')); });
                 }
                 app.querySelector('[data-alternative]')?.addEventListener('submit', event => { event.preventDefault(); const data = new FormData(event.target as HTMLFormElement); void run(async () => { message = 'YAPI está preparando la alternativa…'; status(); const saved = await api.sourceAlternative(storeId, { revision: state.revision, instruction: String(data.get('instruction')), model: String(data.get('model')) as SourceGenerationSettings['model'], maxCredits: Number(data.get('maxCredits')) }); candidate = saved.revision; dirty = false; }, load); });
-                app.querySelector('[data-start-experiment]')?.addEventListener('click', () => void run(async () => { message = 'Comprobando el diseño antes de iniciar…'; status(); const version = await api.sourceVersion(storeId, candidate), checks = await checkSourceWebsite(version.snapshot); if (sourceChecksBlockPublishing(checks))
+                app.querySelector('[data-start-experiment]')?.addEventListener('click', () => void run(async () => { message = 'Comprobando el diseño antes de iniciar…'; status(); const version = await api.sourceVersion(storeId, candidate);
+                    // As the editor checks: photos inlined (the check frame blocks the API's addresses, so every page failed) and the
+                    // result recorded, which is what the server asks for before a test starts (Remolino A/B 2026-10-22).
+                    const checks = await checkSourceWebsite(await createPreviewImageLoader(API_BASE_URL)(version.snapshot));
+                    await api.recordSourceChecks(storeId, candidate, sourceCheckResult(checks)); if (sourceChecksBlockPublishing(checks))
                     throw Error('El diseño tiene comprobaciones pendientes. Corrígelo en Diseñar sitio antes de iniciar la prueba.'); await api.startSourceTest(storeId, candidate, publication?.version || 0); send({ type: 'pagosya:source-publication-changed' }); }, load));
                 app.querySelector('[data-refresh-experiment]')?.addEventListener('click', () => void run(async () => { }, load));
                 const finish = (apply: boolean) => { if (!experiment)

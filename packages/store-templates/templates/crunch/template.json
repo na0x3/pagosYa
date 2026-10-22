@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 50,
+  "hidden": true,
   "dna": {
     "display": "anton",
     "text": "figtree",

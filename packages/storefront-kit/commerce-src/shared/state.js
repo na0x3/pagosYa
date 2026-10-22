@@ -5,7 +5,13 @@
     const result = await window.PAGOSYA_HOSTED_REQUEST(action, options?.body ? JSON.parse(options.body) : url.includes('/content') ? { locale: document.documentElement.lang || 'es' } : {});
     return { ok: result.ok, json: async () => result.body };
   };
-  let store = config.data || {};
+  // Pickup needs somewhere to pick up (owner 2026-10-22): only a branch with an address offers it, and the store-wide
+  // flag holds only while one exists, so no page or checkout promises «Retiro en tienda» to an online-only store.
+  const pickupFacts = data => {
+    const locations = (Array.isArray(data?.locations) ? data.locations : []).map(l => ({ ...l, pickupEnabled: l?.pickupEnabled === true && typeof l.address === 'string' && l.address.trim() !== '' }));
+    return { ...data, locations, shippingPickupEnabled: data?.shippingPickupEnabled === true && locations.some(l => l.pickupEnabled) };
+  };
+  let store = pickupFacts(config.data || {});
   let ready = Boolean(config.demo || preview || hosted);
   let category = "all";
   let checkingOut = false;

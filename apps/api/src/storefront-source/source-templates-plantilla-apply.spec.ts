@@ -92,11 +92,16 @@ describe('refillPlantillaFiles', () => {
 
 // Spec §3: with Plantillas fill on, the gallery offers only the curated, converted templates.
 describe('gallery list', () => {
-  it('curated only: every listed template is curated and has slots; off lists the whole gallery as before', () => {
+  it('curated only: every listed template is curated and has slots or is a preset; off lists the whole gallery', () => {
     const { templates } = service(0);
     const curated = templates.list(true);
-    expect(curated.length).toBeGreaterThanOrEqual(20);
-    for (const { id } of curated) expect(real.templateManifest(id)).toMatchObject({ curated: true, copy: expect.any(Array) });
-    expect(templates.list().length).toBeGreaterThan(curated.length);
+    expect(curated.length).toBeGreaterThanOrEqual(12);
+    for (const { id } of curated) {
+      const manifest = real.templateManifest(id)!;
+      expect(manifest.curated).toBe(true);
+      expect(Boolean(manifest.copy?.length) || Boolean(manifest.preset)).toBe(true);
+    }
+    // Plantillas presets (2026-10-22): the old templates are hidden, so the whole gallery is the presets.
+    expect(templates.list().length).toBeGreaterThanOrEqual(curated.length);
   });
 });

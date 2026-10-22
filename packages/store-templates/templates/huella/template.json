@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 150,
+  "hidden": true,
   "dna": {
     "display": "rubik",
     "text": "nunito",

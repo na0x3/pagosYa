@@ -13,7 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PublicStoresService } from '../stores/public-stores.service';
 import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectSnapshot } from './source-project';
-import { assembleTemplateRevision, readMasterState, refillMasterFiles, refillPlantillaFiles, templateDemoRevision, TEMPLATE_STORE_DATA_PATH } from './source-templates';
+import { assembleTemplateRevision, readMasterState, refillMasterFiles, refillPlantillaFiles, resolvePresetTemplate, templateDemoRevision, TEMPLATE_STORE_DATA_PATH, withPreset } from './source-templates';
 import { plantillaFallback, plantillaFillFromRead } from './source-plantilla-fill';
 import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
 import { distinctPhotoCount, menuVariant, rollVariants, type RecentRoll } from './source-master-dice';
@@ -49,14 +49,18 @@ export class SourceTemplatesService {
   };
 
   list(curatedOnly = false) {
-    return this.registry.galleryTemplates().filter(manifest => !curatedOnly || (manifest.curated === true && Boolean(manifest.copy?.length)))
+    return this.registry.galleryTemplates().filter(manifest => !curatedOnly || (manifest.curated === true && (Boolean(manifest.copy?.length) || Boolean(manifest.preset))))
       .map(({ id, name, category, description, tags, order }) => ({ id, name, category, description, tags, order }));
   }
 
   /** The pieces `apply` saves and `preview` shows: the template filled with this store's name, products and photos. */
   private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[], variants?: MasterVariants, plantillaCopy?: Record<string, string>) {
-    const manifest = this.registry.templateManifest(templateId);
-    if (!manifest) throw new NotFoundException('Esa plantilla no existe.');
+    const chosen = this.registry.templateManifest(templateId);
+    if (!chosen) throw new NotFoundException('Esa plantilla no existe.');
+    // Plantillas presets (2026-10-22): a preset is saved as its master (Esencial) with the preset's look and starting words,
+    // so every master path (refill, chat edits, menus, sections) keeps working on the store.
+    const { manifest, preset } = resolvePresetTemplate(chosen, id => this.registry.templateManifest(id));
+    if (preset) { fill = withPreset(preset, fill); variants = variants ? { ...variants, ...preset.variants } as MasterVariants : preset.variants as MasterVariants; }
     const current = await this.projects.current(merchantId, storeId);
     if (expectedRevision !== undefined && current.revision !== expectedRevision) throw new ConflictException('El proyecto cambió. Recarga antes de aplicar la plantilla.');
     const previous = current.revision ? await this.projects.version(merchantId, storeId, current.revision) : null;
@@ -73,7 +77,9 @@ export class SourceTemplatesService {
 
   /** Spec 2026-10-19 §2: the master template applied to a new store and filled in one call; the store is saved even when
    *  the filler fails. The filler sees what the apply sees: the store's name, product names and photos. */
-  async applyMaster(merchantId: string, storeId: string, revision: number, filler: (facts: MasterFacts) => Promise<MasterFill | null>) {
+  async applyMaster(merchantId: string, storeId: string, revision: number, filler: (facts: MasterFacts) => Promise<MasterFill | null>, presetId?: string) {
+    const presetManifest = presetId ? this.registry.templateManifest(presetId) : undefined;
+    if (presetId && !presetManifest?.preset) throw new NotFoundException('Esa plantilla no existe.');
     const manifest = this.registry.templateManifest(MASTER_TEMPLATE_ID);
     if (!manifest?.master) throw new NotFoundException('La plantilla base no está disponible.');
     const current = await this.projects.current(merchantId, storeId);
@@ -93,7 +99,8 @@ export class SourceTemplatesService {
     let fill = bundled.change ?? null;
     // Variety spec §3: the platform rolls the store's variants, palette and fonts within the business's character.
     let variants: MasterVariants | undefined;
-    if (this.config.get<boolean>('app.yapiEsencialDice') !== false) {
+    // A preset (Plantillas, 2026-10-22) is a chosen look: no dice and no logo palette; the fill only writes the words.
+    if (!presetManifest && this.config.get<boolean>('app.yapiEsencialDice') !== false) {
       // Counted before bundling: a bundled hero is an asset path and would count its product photo twice (review fix).
       const photoCount = distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]);
       const rolled = rollVariants({ seed: storeId, settings: manifest.master, character: fill?.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] },
@@ -105,10 +112,10 @@ export class SourceTemplatesService {
     }
     const brandColours = Object.fromEntries(([['paper', 'background'], ['ink', 'foreground'], ['accent', 'accent'], ['muted', 'surface']] as const)
       .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
-    const logo = Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
+    const logo = presetManifest || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
     const colours = Object.keys(brandColours).length ? brandColours : logo ? { paper: logo.paper, ink: logo.ink, accent: logo.accent, muted: logo.surface } : undefined;
     if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours, ...(fill?.look?.palette ? { palette: paletteForBrand(manifest.master, fill.look.palette, colours) } : {}) } };
-    const { assembled } = await this.assemble(merchantId, storeId, MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files, variants);
+    const { assembled } = await this.assemble(merchantId, storeId, presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files, variants);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
     // Variety spec §2b: every product's own page content (highlights, story, faq…), written in the background.
@@ -227,7 +234,8 @@ export class SourceTemplatesService {
     if (!manifest) throw new NotFoundException('Esa plantilla no existe.');
     let pending = this.demos.get(manifest.id);
     if (!pending) {
-      pending = templateDemoRevision(manifest, this.registry.templateSourceFiles(manifest.id))
+      const resolved = resolvePresetTemplate(manifest, id => this.registry.templateManifest(id));
+      pending = templateDemoRevision(resolved.manifest, this.registry.templateSourceFiles(resolved.manifest.id), resolved.preset)
         .then(assembled => this.projects.prepare({ revision: 0, ...assembled }) as Promise<SourceProjectSnapshot>);
       pending.catch(() => this.demos.delete(manifest.id));
       this.demos.set(manifest.id, pending);

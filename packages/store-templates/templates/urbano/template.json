@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": 80,
+  "hidden": true,
   "dna": {
     "display": "big-shoulders-display",
     "text": "space-mono",

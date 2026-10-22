@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": -300,
+  "hidden": true,
   "dna": {
     "display": "oswald",
     "text": "chivo",

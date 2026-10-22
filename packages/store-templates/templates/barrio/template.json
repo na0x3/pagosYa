@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": -294,
+  "hidden": true,
   "dna": {
     "display": "space-grotesk",
     "text": "space-mono",

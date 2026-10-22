@@ -108,3 +108,47 @@ test('the Studio preview seeds an empty checkout with the first simple product',
   await expect(frame.locator('[data-checkout-review]')).toContainText('Pan');
   await expect(frame.locator('[data-checkout-review]')).not.toContainText('Tu pedido está vacío');
 });
+
+// Owner 2026-10-22 («Ver en navegador»): Esencial's checkout host is main.es-page{width:min(1280px,100%)}; the calm
+// checkout kept that width, so the store showed beside it on wide screens.
+test('the calm checkout covers the whole window even when the store caps its checkout host', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/?demo=1');
+  await page.evaluate(async ({ commerce }) => {
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
+    const snapshot = { schemaVersion: 1, brief: { businessType: 'Licuadoras', audience: 'Clientes', primaryAction: 'Comprar', visualDirection: 'Editorial' }, files: [
+      { path: 'checkout.html', content: `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}.es-page{width:min(1280px,100%);max-width:1280px;height:60vh;margin:0 auto;padding:40px 24px}</style><script src="config.js" defer></script><script src="commerce.js" defer></script></head><body><header>Tienda</header><main class="es-page" data-pagosya-checkout-page></main></body></html>` },
+      { path: 'config.js', content: 'window.PAGOSYA_CONFIG=' + JSON.stringify({ slug: 'checkout-wide', data: { storeName: 'Remolino', locations: [], categories: [], items: [{ id: 'pan', name: 'Pan', amount: 20000, currency: 'BOB', stock: 9, imageUrls: [] }] } }) + ';' },
+      { path: 'commerce.js', content: commerce },
+    ] };
+    document.body.innerHTML = ''; document.body.style.margin = '0';
+    const frame = document.createElement('iframe'); frame.title = 'Checkout'; frame.sandbox.add('allow-scripts'); frame.style.cssText = 'width:100%;height:100vh;border:0';
+    frame.srcdoc = sourcePreviewDocument(snapshot, 'checkout.html', { cart: [{ id: 'pan', quantity: 1 }] }); document.body.append(frame);
+  }, { commerce });
+  const shell = page.frameLocator('iframe').locator('.pya-checkout');
+  await expect(shell).toBeVisible();
+  const box = await shell.evaluate(el => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; });
+  expect(box).toEqual({ left: 0, top: 0, width: 1440, height: 900 });
+});
+
+// Owner 2026-10-22: «some stores don't have pick up». Pickup is offered only when the store has a branch with an address.
+for (const withAddress of [false, true]) test(`pickup is ${withAddress ? 'offered with' : 'not offered without'} a pickup address`, async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/?demo=1');
+  await page.evaluate(async ({ commerce, withAddress }) => {
+    const { sourcePreviewDocument } = await import('/src/storefront-preview.ts');
+    const locations = withAddress ? [{ id: 'l1', name: 'Tienda centro', address: 'Av. Arce 123', pickupEnabled: true, deliveryEnabled: true, openingHours: [] }] : [];
+    const snapshot = { schemaVersion: 1, brief: { businessType: 'Licuadoras', audience: 'Clientes', primaryAction: 'Comprar', visualDirection: 'Editorial' }, files: [
+      { path: 'checkout.html', content: `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><script src="config.js" defer></script><script src="commerce.js" defer></script></head><body><main data-pagosya-checkout-page></main></body></html>` },
+      { path: 'config.js', content: 'window.PAGOSYA_CONFIG=' + JSON.stringify({ slug: 'pickup', data: { storeName: 'Remolino', shippingEnabled: true, shippingPickupEnabled: true, locations, categories: [], items: [{ id: 'pan', name: 'Pan', amount: 20000, currency: 'BOB', stock: 9, imageUrls: [] }] } }) + ';' },
+      { path: 'commerce.js', content: commerce },
+    ] };
+    document.body.innerHTML = ''; document.body.style.margin = '0';
+    const frame = document.createElement('iframe'); frame.title = 'Checkout'; frame.sandbox.add('allow-scripts'); frame.style.cssText = 'width:100%;height:100vh;border:0';
+    frame.srcdoc = sourcePreviewDocument(snapshot, 'checkout.html', { cart: [{ id: 'pan', quantity: 1 }] }); document.body.append(frame);
+  }, { commerce, withAddress });
+  const review = page.frameLocator('iframe').locator('[data-checkout-review]');
+  await expect(review).toContainText('Entrega a domicilio');
+  const options = await review.locator('select[name=method] option').allTextContents();
+  expect(options.includes('Recoger en tienda')).toBe(withAddress);
+});

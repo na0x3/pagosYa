@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 170,
+  "hidden": true,
   "dna": {
     "display": "bebas-neue",
     "text": "rubik",

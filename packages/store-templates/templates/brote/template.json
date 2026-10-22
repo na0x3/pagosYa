@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": -230,
+  "hidden": true,
   "dna": {
     "display": "fraunces",
     "text": "outfit",

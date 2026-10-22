@@ -1,0 +1,123 @@
+{
+  "id": "casa",
+  "name": "Casa",
+  "category": "hogar",
+  "description": "Hogar y decoración: lino, serif editorial, ambientes reales, compra por espacio y envío cuidado.",
+  "tags": [
+    "hogar",
+    "decoración",
+    "muebles",
+    "textiles"
+  ],
+  "sitePurpose": "shop",
+  "order": 11,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "linen",
+    "fonts": "editorial",
+    "variants": {
+      "header": "split",
+      "announce": "plain",
+      "hero": "full",
+      "grid": "masonry",
+      "cards": "compact",
+      "card": "plain",
+      "story": "split",
+      "values": "numbered",
+      "closing": "photo",
+      "footer": "column",
+      "pdp": "gallery-right",
+      "pdpOrder": "story-first",
+      "button": "soft",
+      "corners": "soft",
+      "density": "airy",
+      "texture": "paper",
+      "photos": "natural",
+      "bands": "alternate",
+      "menu": "panel",
+      "filters": "chips",
+      "feature": "duo,capsule"
+    },
+    "sections": [
+      {
+        "id": "materials",
+        "title": "Materiales",
+        "items": [
+          {
+            "title": "Lino",
+            "text": "Lavado a la piedra."
+          },
+          {
+            "title": "Cerámica",
+            "text": "Hecha a mano en pequeños talleres."
+          },
+          {
+            "title": "Madera",
+            "text": "De bosques cuidados."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Envío cuidado a todo el país",
+      "eyebrow": "Hogar y decoración",
+      "headline": "Piezas simples para una casa tranquila",
+      "subcopy": "Textiles, cerámica y objetos hechos a mano para cada espacio.",
+      "primaryCta": "Comprar por espacio",
+      "secondaryCta": "Nuestros talleres",
+      "productsTitle": "Para tu casa",
+      "storyTitle": "Hecho por manos que conocemos",
+      "storyBody": "Trabajamos con talleres pequeños que hacen cada pieza a mano. Objetos para usar todos los días y que mejoran con el tiempo.",
+      "closingLine": "Una casa que se siente tuya",
+      "closingCta": "Ver todo",
+      "tagline": "Hogar y decoración hecha a mano.",
+      "values": [
+        {
+          "title": "Hecho a mano",
+          "text": "En talleres pequeños."
+        },
+        {
+          "title": "Materiales nobles",
+          "text": "Lino, cerámica y madera."
+        },
+        {
+          "title": "Envío cuidado",
+          "text": "Embalaje protegido."
+        }
+      ]
+    }
+  }
+}

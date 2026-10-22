@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 260,
+  "hidden": true,
   "dna": {
     "display": "sora",
     "text": "sora",

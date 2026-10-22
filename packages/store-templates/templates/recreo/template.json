@@ -1,0 +1,133 @@
+{
+  "id": "recreo",
+  "name": "Recreo",
+  "category": "ninos",
+  "description": "Accesorios y juguetes para niños: rubor suave, letra redonda, bloques de color y compra por edad.",
+  "tags": [
+    "niños",
+    "juguetes",
+    "bebés",
+    "accesorios"
+  ],
+  "sitePurpose": "shop",
+  "order": 9,
+  "curated": true,
+  "extends": "esencial",
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "blush",
+    "fonts": "soft",
+    "variants": {
+      "header": "centered",
+      "announce": "ticker",
+      "hero": "split-right",
+      "grid": "grid4",
+      "cards": "showcase",
+      "card": "plain",
+      "story": "pair",
+      "values": "icons",
+      "closing": "accent",
+      "footer": "twotone",
+      "pdp": "gallery-left",
+      "pdpOrder": "details-first",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "photos": "rounded",
+      "bands": "blocks",
+      "menu": "panel",
+      "filters": "chips",
+      "feature": "explore,palette"
+    },
+    "sections": [
+      {
+        "id": "pick",
+        "title": "Por edad",
+        "items": [
+          {
+            "title": "0 a 2 años",
+            "text": "Texturas suaves y piezas grandes."
+          },
+          {
+            "title": "3 a 6 años",
+            "text": "Juegos para armar e imaginar."
+          }
+        ]
+      },
+      {
+        "id": "materials",
+        "title": "Seguro para jugar",
+        "items": [
+          {
+            "title": "Pinturas al agua",
+            "text": "Sin tóxicos."
+          },
+          {
+            "title": "Bordes redondeados",
+            "text": "Pensados para manos pequeñas."
+          }
+        ]
+      }
+    ],
+    "copy": {
+      "announcement": "Envoltura de regalo sin costo",
+      "eyebrow": "Para jugar y crecer",
+      "headline": "Juguetes y accesorios para cada edad",
+      "subcopy": "Juguetes de madera, peluches y básicos para bebés, seguros y hechos para durar.",
+      "primaryCta": "Comprar por edad",
+      "secondaryCta": "Ideas de regalo",
+      "productsTitle": "Favoritos",
+      "storyTitle": "Juegos que duran",
+      "storyBody": "Elegimos juguetes simples, seguros y lindos, que se heredan entre hermanos. Menos pilas, más imaginación.",
+      "closingLine": "Regala algo que dure",
+      "closingCta": "Ver regalos",
+      "tagline": "Juguetes y accesorios para niños.",
+      "values": [
+        {
+          "title": "Seguros",
+          "text": "Materiales sin tóxicos."
+        },
+        {
+          "title": "Duraderos",
+          "text": "Para heredar."
+        },
+        {
+          "title": "Para regalo",
+          "text": "Envoltura incluida."
+        }
+      ]
+    }
+  }
+}

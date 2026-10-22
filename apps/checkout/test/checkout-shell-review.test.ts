@@ -87,7 +87,8 @@ describe("kit order review — content", () => {
     expect(openReview(runtime(baseStore({ checkoutMode: "whatsapp" }))).querySelector(".pya-co__methods--preview")).toBeNull();
   });
   it("drives the hidden delivery select from the radio cards", () => {
-    const root = openReview(runtime(baseStore({ shippingEnabled: true, shippingPickupEnabled: true })));
+    // Pickup needs a branch with an address (owner 2026-10-22).
+    const root = openReview(runtime(baseStore({ shippingEnabled: true, shippingPickupEnabled: true, locations: [{ id: "l1", name: "Centro", address: "Av. Arce 123", pickupEnabled: true, deliveryEnabled: true, openingHours: [] }] })));
     const select = root.querySelector("select[name=method]");
     expect(select.closest(".pya-co__mirrored")).toBeTruthy();
     const radios = [...root.querySelectorAll('.pya-co__choices input[type=radio]')] as any[];

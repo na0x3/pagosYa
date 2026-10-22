@@ -54,7 +54,8 @@ a{color:inherit}
 .es-card:hover .es-card__media{transform:translateY(-4px)}
 .es-card__name{font:400 18px/1.35 var(--es-body);margin:0}
 .es-card__price{margin:0;font-weight:500}
-.es-card__row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+/* Wraps on a narrow phone: a sale price with its saving and «Elegir opciones» spilled past 320px (Remolino 2026-10-22). */
+.es-card__row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
 .es-card__add{display:inline-grid;place-items:center;flex:none;width:40px;height:40px;border:1px solid color-mix(in srgb,var(--es-ink) 22%,transparent);border-radius:999px;background:transparent;color:var(--es-ink);cursor:pointer;transition:background-color .2s ease,color .2s ease}
 .es-card__add:hover{background:var(--es-accent);border-color:var(--es-accent);color:var(--es-on-accent)}
 .es-card__add svg{width:18px;height:18px}
@@ -206,10 +207,13 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-capsule__text{margin:0;max-width:46ch;font-size:clamp(17px,1.4vw,20px);line-height:1.6}
 .es-capsule__cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;width:100%;align-items:start}
 @media (min-width:900px){.es-capsule__cards>:nth-child(2){margin-top:56px}.es-capsule__cards>:nth-child(3){margin-top:112px}}
-.es-origin{padding:clamp(56px,9vw,128px) 24px;background:var(--es-accent);color:var(--es-on-accent);text-align:center}
-.es-origin__figure{display:grid;justify-items:center;gap:24px;margin:0}
-.es-origin__figure img{width:min(420px,80%);aspect-ratio:4/5;object-fit:cover;border:10px solid var(--es-paper)}
-.es-origin__caption{margin:0;font-family:var(--es-heading);font-size:clamp(24px,2.6vw,36px);line-height:1.15}
+.es-origin{background:var(--es-muted);color:var(--es-ink)}
+.es-origin__figure{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;margin:0}
+.es-origin__figure img{display:block;width:100%;height:clamp(420px,50vw,680px);object-fit:cover;object-position:50% 20%}
+.es-origin__figure figcaption{padding:clamp(48px,8vw,128px) clamp(24px,6vw,96px);display:grid;justify-items:start;gap:28px}
+.es-origin__figure:not(:has(img)){grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}
+.es-origin__caption{margin:0;font-family:var(--es-heading);font-size:clamp(34px,4.6vw,64px);line-height:1.04;letter-spacing:-.015em}
+@media (max-width:760px){.es-origin__figure{grid-template-columns:1fr}.es-origin__figure img{height:auto;aspect-ratio:4/5}}
 .es-origin__link{color:inherit;text-decoration:underline;text-underline-offset:6px}
 .es-palette__head{display:grid;gap:12px;max-width:640px;margin-bottom:32px}
 .es-palette__head p{margin:0}
@@ -501,7 +505,35 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-biz__quotes p{margin:0;font:400 clamp(22px,2.6vw,30px)/1.3 var(--es-heading)}
 .es-biz__quotes p::before{content:"\201C"}.es-biz__quotes p::after{content:"\201D"}
 .es-biz__quotes cite{display:block;margin-top:14px;font-style:normal;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--es-accent)}
-@media (max-width:760px){.es-biz__pick{grid-template-columns:1fr;gap:28px}.es-biz__gallery{grid-template-columns:repeat(2,minmax(0,1fr)) !important}}
+/* Journal (a short blog: one lead note with a photo, the rest as words) and manifesto (the brand's beliefs, set large). */
+.es-biz__kicker{margin:0 0 10px;font:500 12px/1.4 var(--es-body);letter-spacing:.2em;text-transform:uppercase;color:color-mix(in srgb,var(--es-ink) 58%,transparent)}
+.es-section[data-es-section="journal"] .es-biz__head{margin-bottom:56px}
+.es-biz__journal{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(32px,6vw,88px);align-items:center}
+.es-biz__journal:not(:has(.es-biz__note-photo)){grid-template-columns:minmax(0,1fr);max-width:720px}
+.es-biz__note-photo{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:var(--es-radius,6px)}
+.es-biz__notes{list-style:none;margin:0;padding:0}
+.es-biz__notes li{padding:32px 0;border-top:1px solid color-mix(in srgb,var(--es-ink) 14%,transparent)}
+.es-biz__notes li:first-child{padding-top:0;border-top:0}
+.es-biz__notes li:first-child .es-h3{font-size:clamp(26px,2.8vw,36px);line-height:1.15}
+.es-biz__notes li>p:last-child{margin:12px 0 0;max-width:56ch;color:color-mix(in srgb,var(--es-ink) 78%,transparent)}
+.es-biz__statement{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:clamp(36px,7vw,112px);align-items:center}
+.es-biz__statement--text{grid-template-columns:minmax(0,1fr);max-width:880px;margin:0 auto;text-align:center}
+.es-biz__statement-photo{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:var(--es-radius,6px)}
+.es-biz__blog{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}
+.es-biz__blog article{display:flex;flex-direction:column;gap:12px;padding:clamp(24px,3vw,32px);background:var(--es-muted);border-radius:var(--es-radius,6px)}
+.es-biz__blog h2{margin:0;font:400 clamp(22px,2.2vw,28px)/1.2 var(--es-heading)}
+.es-biz__blog p{margin:0}
+.es-biz__blog article>p:first-of-type{order:-1;font:500 12px/1.4 var(--es-body);letter-spacing:.16em;text-transform:uppercase;color:color-mix(in srgb,var(--es-ink) 62%,transparent)}
+.es-biz__blog a{color:inherit;text-decoration:underline;text-underline-offset:4px}
+.es-biz__blog summary{cursor:pointer;font-weight:500}
+.es-biz__blog details p{margin-top:12px}
+.es-section[data-es-section="manifesto"] .es-h2{margin:0 0 clamp(28px,4vw,48px);font:500 12px/1.4 var(--es-body);letter-spacing:.28em;text-transform:uppercase}
+.es-biz__manifesto{list-style:none;margin:0;padding:0;display:grid;gap:clamp(28px,4vw,44px)}
+.es-biz__manifesto li{padding-top:clamp(20px,3vw,28px);border-top:1px solid color-mix(in srgb,var(--es-ink) 16%,transparent)}
+.es-biz__statement--text .es-biz__manifesto li{border-top:0;padding-top:0}
+.es-biz__manifesto span{display:block;margin-bottom:12px;font:500 12px/1.4 var(--es-body);letter-spacing:.2em;text-transform:uppercase;color:color-mix(in srgb,var(--es-ink) 58%,transparent)}
+.es-biz__manifesto p{margin:0;font:400 clamp(24px,2.8vw,38px)/1.18 var(--es-heading);letter-spacing:-.01em;text-wrap:balance}
+@media (max-width:760px){.es-biz__journal,.es-biz__statement{grid-template-columns:1fr}.es-biz__pick{grid-template-columns:1fr;gap:28px}.es-biz__gallery{grid-template-columns:repeat(2,minmax(0,1fr)) !important}}
 /* ---- look details: buttons, corners, density, texture, photos ---- */
 .es[data-es-button="pill"]{}
 .es[data-es-button="soft"] :is(.es-btn,.es-card__bar,.es-cart__action [data-checkout],.es-review__fields [data-pay]){border-radius:10px}
@@ -522,8 +554,8 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es[data-es-texture="grain"]{background-color:var(--es-paper);background-image:radial-gradient(color-mix(in srgb,var(--es-ink) 9%,transparent) .7px,transparent .7px),radial-gradient(color-mix(in srgb,var(--es-ink) 6%,transparent) .6px,transparent .6px);background-size:3px 3px,7px 7px;background-position:0 0,1px 2px}
 .es[data-es-texture="lines"]{background-color:var(--es-paper);background-image:repeating-linear-gradient(0deg,color-mix(in srgb,var(--es-ink) 3%,transparent) 0 1px,transparent 1px 8px)}
 .es[data-es-photos="natural"]{}
-.es[data-es-photos="rounded"] :is(.es-card__media,.es-story__media img,.es-biz__gallery img,.es-biz__pick img){border-radius:24px}
-.es[data-es-photos="framed"] :is(.es-card__media,.es-story__media img,.es-biz__gallery img,.es-biz__pick img){padding:8px;background:var(--es-paper);border:1px solid color-mix(in srgb,var(--es-ink) 16%,transparent)}
+.es[data-es-photos="rounded"] :is(.es-card__media,.es-story__media img,.es-biz__gallery img,.es-biz__pick img,.es-biz__note-photo,.es-biz__statement-photo){border-radius:24px}
+.es[data-es-photos="framed"] :is(.es-card__media,.es-story__media img,.es-biz__gallery img,.es-biz__pick img,.es-biz__note-photo,.es-biz__statement-photo){padding:8px;background:var(--es-paper);border:1px solid color-mix(in srgb,var(--es-ink) 16%,transparent)}
 /* Product photos keep their true colours (a shopper buys the colour they see): duotone is for mood photos only. */
 .es[data-es-photos="duotone"] :is(.es-story__media,.es-biz__gallery){background:color-mix(in srgb,var(--es-accent) 40%,var(--es-paper))}
 .es[data-es-photos="duotone"] :is(.es-story__media img,.es-biz__gallery img){filter:grayscale(1) contrast(1.05);mix-blend-mode:multiply}

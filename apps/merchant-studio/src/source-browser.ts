@@ -5,6 +5,7 @@ import { escapeHtml } from './studio-ui';
 import './source-browser.css';
 import { LOADER_STAR } from './source-loader-star';
 import { bindSourcePaymentPreview } from './source-payment-preview';
+import { bindAssistantPreview } from './source-assistant-preview';
 
 /** Trusted full-window shell: authored source still runs only in an opaque iframe. */
 export async function mountSourceBrowser(app: HTMLDivElement) {
@@ -33,6 +34,9 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
     app.innerHTML = '<iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>';
     const frame = app.querySelector('iframe')!;
     bindSourcePaymentPreview(() => frame, () => hydrated);
+    // The store bot answers here as in the editor, through the merchant's test chat; without it every question got
+    // «Vista previa: prueba el asistente en Crecer › Asistente» (Remolino 2026-10-22).
+    if (!templateId) bindAssistantPreview(() => frame, body => api.assistantTest(storeId, body));
     frame.srcdoc = html;
     mountSourceAccountDemo(frame);
     const controller = new AbortController();

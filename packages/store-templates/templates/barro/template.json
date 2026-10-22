@@ -11,6 +11,7 @@
   ],
   "sitePurpose": "shop",
   "order": 130,
+  "hidden": true,
   "dna": {
     "display": "fraunces",
     "text": "instrument",

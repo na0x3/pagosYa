@@ -12,6 +12,7 @@
   ],
   "sitePurpose": "shop",
   "order": -210,
+  "hidden": true,
   "dna": {
     "display": "bricolage",
     "text": "figtree",
