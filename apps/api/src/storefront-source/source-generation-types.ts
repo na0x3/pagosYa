@@ -25,7 +25,7 @@ import type { StyleProposal } from './source-style-proposal';
 import type { KitTouchCss } from './kit-touch';
 import type { StoreLook } from './store-look';
 import type { StoreControls } from './store-controls';
-import type { frameForRun } from './design-engine/frame-draw';
+import type { frameForRun, Palette } from './design-engine/frame-draw';
 import type { AgentStep, AgentToolbox } from './agent/agent-tools';
 import type { PendingPolicies } from './source-agent-policies';
 import type { requestedSourceProducts } from './source-products';
@@ -68,6 +68,8 @@ export type GenerationRunFacts = {
   assetLegend: LegendEntry[]; assetUrls: string[]; ownedUrls: Set<string>;
   imageUses: SourceImageUse[]; photoFacts: Record<string, SourcePhotoFacts>; fontPaths: Record<string, string>;
   previous: { snapshot: unknown } | null; previousFiles: SourceProjectFileDto[]; oldFiles: SourceProjectFileDto[];
+  /** Photo palettes from the merchant's photos (photoPalettes), computed once per run; undefined without photos (owner 2026-10-22). */
+  storePhotoPalettes?: { calm: Palette; bold: Palette };
   previousDesign: SourceDesign | null; previousScene: SourceVisualSystem['scene'] | null; sectionScope: ReturnType<typeof sourceSectionScope>;
   sitePurpose: SourceSitePurpose; scrollFeel: SourceScrollFeel; motion: SourceMotionMode; primaryAction: ReturnType<typeof resolveStoreAction> | undefined;
   creative: boolean; redesign: boolean; useNext: boolean; editExisting: boolean;

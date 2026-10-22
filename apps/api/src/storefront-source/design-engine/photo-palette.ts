@@ -110,3 +110,17 @@ export function photoPalettes(raw: { logo?: PhotoSample; photos: PhotoSample[] }
     bold: (accent => photoPalette({ paper: dark.paper, ink: dark.ink, accent, accent2: secondColour(input.photos, accent, dark.paper, true) }, true))(standOut(input.photos, dark.accent, dark.paper)),
   };
 }
+
+const COLOUR_WORDS = /(?<!\p{L})(verde|azul|rojo|negro|blanco|amarillo|rosa|rosado|naranja|morado|lila|dorado|plateado|beige|celeste|turquesa|fucsia|gris|marr[oó]n|crema|vino|terracota)(?!\p{L})|#[0-9a-f]{3,6}\b/iu;
+/** A merchant who names a colour is obeyed over their photos; «tú eliges los colores» names none. */
+export const merchantNamedColours = (text: string): boolean => COLOUR_WORDS.test(text);
+
+/** The merchant's photo colours as one author line (owner 2026-10-22, goodProtein #2: warm orange/pink/yellow photos came out
+ *  navy and blue — the café playbook palette — because the photo palette only reached frame-draw, which YAPI_FRAME_DRAW=off skips). */
+export function storeColoursDirection(palettes: { calm: Palette; bold: Palette } | undefined, namedColours: boolean): string {
+  if (!palettes || namedColours) return '';
+  const { calm, bold } = palettes;
+  return `STORE COLOURS: Build the palette from the merchant's own photos. Calm set: background ${calm.paper}, text ${calm.ink}, accent ${calm.accent}, second colour ${calm.accent2}. `
+    + `Bold set for colour fields and highlights: ${bold.paper}, ${bold.ink}, ${bold.accent}, ${bold.accent2}. Use these hexes in :root; tints and shades of them are fine. `
+    + 'Do not introduce hues that are not in the photos, and do not use a playbook or catalogue palette instead.';
+}

@@ -1,5 +1,5 @@
 import { contrastRatio } from '../source-scorecard';
-import { decodePhotoPalette, isPhotoPalette, paperLightness, photoPalettes, washedPalette } from './photo-palette';
+import { decodePhotoPalette, isPhotoPalette, merchantNamedColours, paperLightness, photoPalettes, storeColoursDirection, washedPalette } from './photo-palette';
 import { frameForRun, paletteById, parseFrameDraw, drawFrame, frameDirection } from './frame-draw';
 
 // baek (tholhejh), 2026-10-16: eleven warm bakery photos (crust browns, cream, terracotta) and the bold card drew teal and orange.
@@ -122,5 +122,24 @@ describe('washedPalette (2026-10-18, «the calm style is always the same»)', ()
     expect(paperLightness(calm)).toBeGreaterThanOrEqual(.95);
     expect(washed).toMatchObject({ accent: '#bb9483', ink: '#2b1d17', dark: false });
     expect(decodePhotoPalette(washed.id)).toEqual(washed);
+  });
+});
+
+const rawPalette = (id: string, paper: string, ink: string, accent: string, accent2: string) => ({ id, name: id, paper, ink, accent, accent2, dark: false });
+describe('storeColoursDirection (owner 2026-10-22: «the colours of the site dont even match the colours of the pictures»)', () => {
+  const palettes = { calm: rawPalette('photo:a', '#fff6ee', '#2a1a12', '#ef5d1b', '#ffd6e3'), bold: rawPalette('photo:b', '#ef5d1b', '#fff6ee', '#ffe27a', '#2a1a12') };
+  it('names the photo colours and forbids unrelated hues', () => {
+    const line = storeColoursDirection(palettes, false);
+    expect(line).toMatch(/^STORE COLOURS:/);
+    for (const hex of ['#fff6ee', '#2a1a12', '#ef5d1b', '#ffd6e3', '#ffe27a']) expect(line).toContain(hex);
+    expect(line).toMatch(/do not introduce hues that are not in the photos/i);
+  });
+  it('is empty without photos or when the merchant named colours', () => {
+    expect(storeColoursDirection(undefined, false)).toBe('');
+    expect(storeColoursDirection(palettes, true)).toBe('');
+  });
+  it('notices colours the merchant names, not «tú eliges los colores»', () => {
+    expect(merchantNamedColours('quiero verde y negro')).toBe(true);
+    expect(merchantNamedColours('tú eliges la estructura, los colores y las secciones')).toBe(false);
   });
 });

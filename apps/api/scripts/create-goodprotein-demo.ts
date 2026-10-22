@@ -3,6 +3,8 @@
  *  section — a different layout, colour and motion per brand — with a short explanation of that kind of protein.
  *  Local database only; idempotent through examples/goodprotein/demo.json.
  *   npx ts-node --transpile-only scripts/create-goodprotein-demo.ts [--rebuild]
+ *   --yapi: a second goodProtein with the same catalog and no site (examples/goodprotein-yapi), for YAPI to design from scratch
+ *   (owner 2026-10-22: «make sure it can generate different sites every time»).
  *  The app context's timers are stopped before their first tick, so it never sends emails or claims jobs beside the running API.
  *  The photos are third-party brand images (Pinterest): a local demo only, never to be published outside. */
 import 'reflect-metadata';
@@ -281,7 +283,8 @@ const BRANDS_CSS = `
 `;
 
 async function main() {
-  const folder = resolve(__dirname, '../../../examples/goodprotein');
+  const yapi = process.argv.includes('--yapi');
+  const folder = resolve(__dirname, `../../../examples/${yapi ? 'goodprotein-yapi' : 'goodprotein'}`);
   await mkdir(folder, { recursive: true });
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
   const timers = app.get(SchedulerRegistry);
@@ -371,7 +374,7 @@ async function main() {
 
     const templates = app.get(SourceTemplatesService), projects = app.get(SourceProjectsService);
     let current = await projects.current(merchantId, storeId);
-    if (current.revision === 0 || process.argv.includes('--rebuild')) {
+    if (!yapi && (current.revision === 0 || process.argv.includes('--rebuild'))) {
       await templates.applyMaster(merchantId, storeId, current.revision, async () => null);
       current = await projects.current(merchantId, storeId);
       const copy = { announcement: 'Envío gratis en La Paz desde Bs 400 · Usa GOOD10 en tu primera compra', eyebrow: 'Proteína buena', headline: 'Tu proteína, de las marcas que te gustan',

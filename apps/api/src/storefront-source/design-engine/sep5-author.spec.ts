@@ -391,3 +391,12 @@ it('sends the premium finish with every real store run (2026-10-19), never in th
   expect(sep5AuthorPrompt({ brief: {}, instruction: '', data: {}, assetLegend: [] })).not.toContain('PREMIUM FINISH');
   expect(SEP5_PREMIUM).toContain('data-pagosya-subscribe-open');
 });
+
+// Owner 2026-10-22 (goodProtein #2): the photo colours never reached the author.
+it('appends the store colours before the motion choreography, and stays byte-identical without them', () => {
+  const base = { brief: {}, instruction: 'Hazme la tienda', data: {}, assetLegend: [] };
+  expect(sep5AuthorPrompt({ ...base, storeColours: '' })).toBe(sep5AuthorPrompt(base));
+  const withColours = sep5AuthorPrompt({ ...base, storeColours: 'STORE COLOURS: x', motionPlan: 'MOTION CHOREOGRAPHY: y' });
+  expect(withColours.indexOf('STORE COLOURS: x')).toBeGreaterThan(-1);
+  expect(withColours.indexOf('STORE COLOURS: x')).toBeLessThan(withColours.indexOf('MOTION CHOREOGRAPHY: y'));
+});

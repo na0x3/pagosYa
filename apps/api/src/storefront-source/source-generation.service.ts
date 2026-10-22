@@ -56,7 +56,7 @@ import { derivePhotoFacts } from './source-photo-facts';
 import { sketchImageRole } from './sketch/sketch-assets';
 import { BUNDLED_PHOTO, authoredUploadReferences, bundledPhotoPath, productPhotoReferences, rewriteAuthoredUploads, rewriteProductPhotos, uploadPath } from './source-product-photos';
 import { samplePhotoColours, type PhotoSample } from './source-photo-sampler';
-import { photoPalettes, withoutAppColours } from './design-engine/photo-palette';
+import { merchantNamedColours, photoPalettes, storeColoursDirection, withoutAppColours } from './design-engine/photo-palette';
 import { BRAND_READ_PROMPT, BRAND_READ_SCHEMA, brandSheet, brandSourcePrompt, brandSourceReceipt, parseBrandRead, type BrandSheet } from './brand-source-read';
 import { detectedMediaMime } from '../uploads/uploads.service';
 import { brandColourDrift, brandQuoteFound } from './brand-source-checks';
@@ -675,6 +675,8 @@ export class SourceGenerationService {
       targetedScopePrompt,
       sourceSitePurposePrompt(sitePurpose),
       oldFiles.some((file: SourceProjectFileDto) => file.path === 'index.html' && file.content.includes('data-pagosya-header')) ? SOURCE_PLATFORM_HEADER_EDIT : '',
+      // Owner 2026-10-22 (goodProtein #2): the photo colours reached only frame-draw, which YAPI_FRAME_DRAW=off skips.
+      creative ? storeColoursDirection(storePhotoPalettes, merchantNamedColours(dto.instruction)) : "",
       sourceMotionPlan({ creative, instruction: dto.instruction, motion, react: useNext }),
       uiComposition ? sourceUiCompositionRecipe(uiComposition) : '',
       previousDesign ? `Previous design direction (reference data): ${JSON.stringify(previousDesign.concepts[previousDesign.selected])}. ${redesign ? 'Develop a materially different composition while honoring current merchant choices.' : 'Preserve this direction for this local edit.'}` : '',
@@ -867,7 +869,7 @@ export class SourceGenerationService {
         budget, signal, attempts, autoRepairs, started, runTimeout, stablePrompt, signatureOn,
         brand, apiUrl, data, images, assets, retainedAssets, assetLegend, assetUrls, ownedUrls, imageUses, photoFacts, fontPaths,
         previous, previousFiles, oldFiles, previousDesign, previousScene, sectionScope,
-        sitePurpose, scrollFeel, motion, primaryAction, creative, redesign, useNext, editExisting, voice,
+        sitePurpose, scrollFeel, motion, primaryAction, creative, redesign, useNext, editExisting, voice, storePhotoPalettes,
       };
       const live: GenerationLive = {
         get generated() { return generated; }, set generated(value) { generated = value; },
