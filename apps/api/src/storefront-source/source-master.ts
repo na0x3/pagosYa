@@ -26,7 +26,9 @@ export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook
   /** Dropdown menu spec 2026-10-21: the menu style (none removes it) and the groups YAPI wrote ([] = built from the categories). */
   menu?: { style: 'none' | 'panel' | 'dropdowns'; groups: StoreMenuGroup[] };
   /** John Smedley sections (spec 2026-10-21): the words for the rolled sections. */
-  featureCopy?: Partial<FeatureCopy> };
+  featureCopy?: Partial<FeatureCopy>;
+  /** YAPI plan card (spec 2026-10-22): kit surfaces a plan pins (card swatches…); unknown values are dropped. */
+  dna?: Record<string, string> };
 
 /** a → b by t (0..1), both #rrggbb. */
 const mixHex = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');

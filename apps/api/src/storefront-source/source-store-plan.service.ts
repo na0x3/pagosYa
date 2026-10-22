@@ -1,7 +1,7 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SourceConversationService, type StorePlanInput } from './source-conversation.service';
-import { checkPlan } from './plan/store-plan-checks';
+import { checkPlan, enforceRules, type CatalogFacts } from './plan/store-plan-checks';
 import { clashesWith, clashWords, fingerprintOf, makeUnique } from './plan/store-plan-fingerprint';
 import { catalogFacts, otherFingerprints } from './plan/store-plan-data';
 import type { PlanCatalogue, StorePlan } from './plan/store-plan';
@@ -9,7 +9,7 @@ import type { AppliedPlan } from './source-templates.service';
 
 /** Where the catalogue and the dice come from; a seam so tests do not load the template package. */
 export class StorePlanParts {
-  constructor(readonly catalogue: () => PlanCatalogue, readonly roll: (storeId: string) => Record<string, string>) {}
+  constructor(readonly catalogue: () => PlanCatalogue, readonly roll: (storeId: string, facts: CatalogFacts) => Record<string, string>) {}
 }
 type PlanData = { catalogFacts: typeof catalogFacts; otherFingerprints: typeof otherFingerprints };
 
@@ -21,11 +21,13 @@ export class SourceStorePlanService {
 
   async draft(merchantId: string, storeId: string, input: { revision: number; request: string; what: string; photos: string[]; current?: StorePlanInput['current']; previous?: StorePlan }) {
     const catalogue = this.parts.catalogue();
-    const [facts, others, store] = await Promise.all([this.data.catalogFacts(this.prisma, storeId), this.data.otherFingerprints(this.prisma, storeId),
+    const [catalog, others, store] = await Promise.all([this.data.catalogFacts(this.prisma, storeId), this.data.otherFingerprints(this.prisma, storeId),
       this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true } }).catch(() => null)]);
+    const facts: CatalogFacts = { ...catalog, shownPhotos: input.photos.slice(0, 8).length };
     const ask = (clash?: string) => this.dialogue.planStore(merchantId, { storeId, storeName: store?.name ?? '', what: input.what, request: input.request, products: facts.productNames,
       facts, photos: input.photos, catalogue, revision: input.revision, ...(input.current ? { current: input.current } : {}), ...(input.previous ? { previous: input.previous } : {}), ...(clash ? { clash } : {}) });
-    const rolled = this.parts.roll(storeId);
+    // An edit starts from the store as it is; a new store from the dice, told the real catalog (final review 2026-10-22).
+    const rolled = input.current ? input.current.variants : this.parts.roll(storeId, facts);
     const checkedOf = (plan: StorePlan) => {
       const checked = checkPlan(plan, facts, rolled);
       return { checked, fingerprint: fingerprintOf({ variants: checked.variants, sections: checked.sections, palette: plan.colour.palette, fonts: plan.fonts.id, accent: plan.colour.accent }) };
@@ -38,8 +40,10 @@ export class SourceStorePlanService {
       const again = await ask(clashWords(clash.fields)).catch(() => null);
       if (again) ({ checked, fingerprint } = checkedOf(again));
     }
-    const unique = makeUnique(fingerprint, others, catalogue.variants, catalogue.sections, storeId);
-    const applied: AppliedPlan = { variants: { ...checked.variants, ...unique.fingerprint.variants }, sections: unique.fingerprint.sections, palette: checked.plan.colour.palette,
+    // Menu and filters follow the catalog, never a swap; a size guide the catalog needs is never swapped away.
+    const swappable = Object.fromEntries(Object.entries(catalogue.variants).filter(([part]) => part !== 'menu' && part !== 'filters'));
+    const unique = makeUnique(fingerprint, others, swappable, catalogue.sections, storeId, facts.sizeProducts ? ['sizes'] : []);
+    const applied: AppliedPlan = { variants: enforceRules({ ...checked.variants, ...unique.fingerprint.variants }, facts), sections: unique.fingerprint.sections, palette: checked.plan.colour.palette,
       fonts: checked.plan.fonts.id, ...(checked.plan.colour.accent ? { accent: checked.plan.colour.accent } : {}), dna: checked.dna };
     return { plan: checked.plan, applied, exhausted: unique.exhausted };
   }

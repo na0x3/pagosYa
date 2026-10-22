@@ -336,3 +336,35 @@ describe('applyMaster with a plan', () => {
     rollSpy.mockRestore();
   });
 });
+
+describe('plan card final review fixes (2026-10-22)', () => {
+  it('F1: a plan accent never overrides the merchant\'s confirmed brand colours', async () => {
+    const real = jest.requireActual('@pagosya/store-templates');
+    const projects = { current: jest.fn(async () => ({ slug: 'tostado', revision: 0, updatedAt: null })), version: jest.fn(), save: jest.fn(async (_m: string, _s: string, input: any) => ({ revision: input.revision + 1 })) };
+    const brands = { get: jest.fn(async () => ({ data: { confirmed: [{ field: 'accent', value: '#00aa88' }] } })) };
+    const templates = new SourceTemplatesService({ store: { update: jest.fn(async () => ({})) } } as any, { getStorePublic: jest.fn(async () => publicStore([item])) } as any, projects as any,
+      { get: (key: string) => ({ 'app.checkoutOrigin': 'https://pagar.pagosya.test' } as any)[key] } as any, undefined, undefined, brands as any);
+    templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+    const fonts = real.templateManifest('esencial').master.fonts[0].id;
+    await templates.applyMaster('m1', 'store-1', 0, async () => null, undefined, { variants: {}, sections: [], palette: 'linen', fonts, accent: '#f26b1d', dna: {} });
+    const state = readMasterState((projects.save.mock.calls[0] as any[])[2].files);
+    expect(state.look?.colors?.accent).toBe('#00aa88');
+  });
+
+  it('F2: a refill carries the plan\'s kit surfaces (card swatches)', async () => {
+    const { templates, projects } = (() => {
+      const real = jest.requireActual('@pagosya/store-templates');
+      const projects = { current: jest.fn(async () => ({ slug: 'tostado', revision: 0, updatedAt: null })), version: jest.fn(), save: jest.fn(async (_m: string, _s: string, input: any) => ({ revision: input.revision + 1 })) };
+      const t = new SourceTemplatesService({ store: { update: jest.fn(async () => ({})) } } as any, { getStorePublic: jest.fn(async () => publicStore([item])) } as any, projects as any, { get: (key: string) => ({ 'app.checkoutOrigin': 'https://pagar.pagosya.test' } as any)[key] } as any);
+      t.registry = { ...t.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+      return { templates: t, projects };
+    })();
+    await templates.applyMaster('m1', 'store-1', 0, async () => null);
+    const built = (projects.save.mock.calls[0] as any[])[2];
+    projects.version.mockResolvedValue({ snapshot: { brief: built.brief, files: built.files } });
+    await templates.refill('m1', 'store-1', 1, { dna: { card: 'swatch-swap', nope: 'x' } }, 'Cambios del plan');
+    const config = ((projects.save.mock.calls[1] as any[])[2].files as any[]).find(f => f.path === 'config.js').content;
+    expect(config).toContain('"card":"swatch-swap"');
+    expect(config).not.toContain('"nope"');
+  });
+});

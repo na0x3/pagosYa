@@ -30,3 +30,15 @@ it('accent hue is bucketed by 30°', () => {
   expect(fingerprintOf({ variants: {}, sections: [], palette: 'x', fonts: 'y', accent: '#00ff00' }).accentHue).toBe(4);
   expect(fingerprintOf({ variants: {}, sections: [], palette: 'x', fonts: 'y' }).accentHue).toBeNull();
 });
+
+describe('final review fixes (2026-10-22)', () => {
+  it('F4: the section sequence clashes whatever feature list each store rolled', () => {
+    const one = fingerprintOf({ variants: { hero: 'poster', feature: '' }, sections: ['faq'], palette: 'citrus', fonts: 'serif' });
+    const two = fingerprintOf({ variants: { hero: 'full', feature: 'duo,explore' }, sections: ['faq'], palette: 'linen', fonts: 'grotesk' });
+    expect(clashesWith(one, [two])?.fields).toContain('sections');
+  });
+  it('F3: locked sections are never swapped away', () => {
+    const { fingerprint } = makeUnique({ ...a, sections: ['sizes', 'faq'] }, [{ ...a, sections: ['sizes', 'faq'] }], catalogue, sections, 'store-3', ['sizes']);
+    expect(fingerprint.sections).toContain('sizes');
+  });
+});

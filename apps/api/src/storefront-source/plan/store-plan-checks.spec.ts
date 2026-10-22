@@ -51,3 +51,23 @@ it('a one-product store with no photos still checks clean', () => {
   expect(out.variants.filters).toBe('bar');
   expect(out.plan.custom).toEqual([]);
 });
+
+describe('final review fixes (2026-10-22)', () => {
+  it('F1: a logo or brand accent is never a model hex; «foto N» counts only photos the model was shown', () => {
+    expect(checkPlan({ ...base, colour: { palette: 'citrus', accent: '#f26b1d', from: 'logo' } }, facts, rolled).plan.colour.accent).toBeUndefined();
+    expect(checkPlan({ ...base, colour: { palette: 'citrus', accent: '#f26b1d', from: 'foto 2' } }, { ...facts, shownPhotos: 0 }, rolled).plan.colour.accent).toBeUndefined();
+    expect(checkPlan({ ...base, colour: { palette: 'citrus', accent: '#f26b1d', from: 'foto 2' } }, { ...facts, shownPhotos: 3 }, rolled).plan.colour.accent).toBe('#f26b1d');
+  });
+  it('F3: sidebar filters only from 12 products; no photo groups or photo-first product page without photos', () => {
+    const tiny: CatalogFacts = { productNames: ['Vela'], productCount: 1, photoCount: 0, categorySizes: [], colourProducts: 0, colourPhotoProducts: 0, sizeProducts: 0 };
+    const out = checkPlan(base, tiny, { ...rolled, filters: 'sidebar', hero: 'collage', story: 'pair', pdp: 'stacked', menu: 'dropdowns' });
+    expect(out.variants).toMatchObject({ filters: 'bar', menu: 'none' });
+    expect(['collage', 'strip']).not.toContain(out.variants.hero);
+    expect(out.variants.story).not.toBe('pair');
+    expect(['stacked', 'editorial']).not.toContain(out.variants.pdp);
+  });
+  it('F3: a size guide the catalog needs is never cut by the section cap', () => {
+    const plan = { ...base, sections: ['process', 'faq', 'gallery', 'journal'].map(id => ({ id, why: `motivo concreto para ${id} en esta tienda` })) };
+    expect(checkPlan(plan, { ...facts, sizeProducts: 2 }, rolled).sections).toContain('sizes');
+  });
+});

@@ -40,7 +40,7 @@ import { rollVariants } from "./source-master-dice";
 const esencialSettings = () => templateManifest(MASTER_TEMPLATE_ID)!.master!;
 const storePlanParts = new StorePlanParts(
   () => { const master = esencialSettings(); return { variants: master.variants ?? {}, sections: master.sections ?? [], palettes: master.palettes.map(p => p.id), fonts: master.fonts.map(f => f.id) }; },
-  storeId => { const { sections: _sections, ...variants } = rollVariants({ seed: storeId, settings: esencialSettings(), character: { tone: "calm", temperature: "neutral", lead: "photo", exclude: [] }, photoCount: 8, sections: [], recent: [] }).variants; return variants as Record<string, string>; },
+  (storeId, facts) => { const { sections: _sections, ...variants } = rollVariants({ seed: storeId, settings: esencialSettings(), character: { tone: "calm", temperature: "neutral", lead: "photo", exclude: [] }, photoCount: facts.photoCount, categoryCount: facts.categorySizes.length, sections: [], recent: [] }).variants; return variants as Record<string, string>; },
 );
 
 /** AI-generated storefront source projects (Studio): YAPI chat, generation, design jobs,

@@ -121,7 +121,8 @@ export class SourceTemplatesService {
       .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
     const logo = presetManifest || plan?.accent || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
     const colours = Object.keys(brandColours).length ? brandColours : logo ? { paper: logo.paper, ink: logo.ink, accent: logo.accent, muted: logo.surface } : undefined;
-    if (colours && plan?.accent) colours.accent = plan.accent;
+    // The merchant's confirmed brand colours always win over a plan's accent (final review 2026-10-22).
+    if (colours && plan?.accent && !Object.keys(brandColours).length) colours.accent = plan.accent;
     if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours, ...(fill?.look?.palette ? { palette: paletteForBrand(manifest.master, fill.look.palette, colours) } : {}) } };
     const { assembled } = await this.assemble(merchantId, storeId, presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files, variants, undefined, plan?.dna);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });

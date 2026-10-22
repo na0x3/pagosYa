@@ -327,7 +327,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
       const { menu: savedMenu, ...header } = config.header ?? {};
       const menu = menuIds.length ? menuFromVariant(variants.menu, change.menu ? absoluteTiles(change.menu.groups, apiUrl) : savedMenu?.groups, storeMenuContext(config.data ?? {}, files)) : savedMenu;
       const withHeader = config.header || menu ? { header: { ...header, ...(menu ? { menu } : {}) } } : {};
-      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(style ? { productPageStyle: style } : {}), ...(change.variants?.filters || !isFilterStyle(rest.filterStyle) ? masterFilterStyle(variants) : {}), ...withHeader, dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }) }, showcase: { ...(config.showcase ?? {}), ...masterShowcase(variants) } })};\n` };
+      return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(style ? { productPageStyle: style } : {}), ...(change.variants?.filters || !isFilterStyle(rest.filterStyle) ? masterFilterStyle(variants) : {}), ...withHeader, dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }), ...Object.fromEntries(Object.entries(change.dna ?? {}).filter(([name, value]) => SOURCE_DNA_RUNTIME_ENUMS[name]?.includes(value))) }, showcase: { ...(config.showcase ?? {}), ...masterShowcase(variants) } })};\n` };
     }
     return file;
   }), variants);

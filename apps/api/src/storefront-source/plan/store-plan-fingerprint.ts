@@ -22,7 +22,8 @@ export function fingerprintOf(input: { variants: Record<string, string>; section
   return { variants, sections: [...input.sections], palette: input.palette, fonts: input.fonts, accentHue: input.accent ? hue(input.accent) : null };
 }
 
-const sequence = (fp: Fingerprint) => `${fp.sections.join('|')}#${fp.variants.feature ?? ''}`;
+// The feature list is rolled at assembly, not by the plan: the sequence is the home's business sections (final review 2026-10-22).
+const sequence = (fp: Fingerprint) => fp.sections.join('|');
 
 function differences(a: Fingerprint, b: Fingerprint): { field: string; weight: number; same: boolean }[] {
   const parts = [...new Set([...Object.keys(a.variants), ...Object.keys(b.variants)])].filter(part => part !== 'feature');
@@ -60,7 +61,7 @@ export function clashWords(fields: string[]): string {
 }
 
 /** Deterministic swaps of the clashing parts for another variant, until no store is too close. */
-export function makeUnique(fp: Fingerprint, others: Fingerprint[], catalogue: Record<string, readonly string[]>, sectionCatalogue: readonly string[], seed: string) {
+export function makeUnique(fp: Fingerprint, others: Fingerprint[], catalogue: Record<string, readonly string[]>, sectionCatalogue: readonly string[], seed: string, locked: readonly string[] = []) {
   let current: Fingerprint = structuredClone(fp);
   for (let round = 0; round < 12; round++) {
     const clash = clashesWith(current, others);
@@ -68,9 +69,11 @@ export function makeUnique(fp: Fingerprint, others: Fingerprint[], catalogue: Re
     const roll = (salt: string) => createHash('sha256').update(`${seed}:${round}:${salt}`).digest().readUInt32BE(0);
     if (clash.fields.includes('sections')) {
       const unused = sectionCatalogue.filter(id => !current.sections.includes(id));
+      const free = current.sections.map((id, i) => locked.includes(id) ? -1 : i).filter(i => i >= 0);
       if (unused.length) {
         const next = unused[roll('pick') % unused.length];
-        current = { ...current, sections: current.sections.length ? current.sections.map((id, i) => i === roll('section') % current.sections.length ? next : id) : [next] };
+        const replaced = free.length ? free[roll('section') % free.length] : -1;
+        current = { ...current, sections: replaced >= 0 ? current.sections.map((id, i) => i === replaced ? next : id) : [...current.sections, next].slice(-4) };
       }
     }
     for (const field of clash.fields.filter(field => catalogue[field])) {
