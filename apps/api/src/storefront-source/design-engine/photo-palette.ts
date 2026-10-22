@@ -111,9 +111,12 @@ export function photoPalettes(raw: { logo?: PhotoSample; photos: PhotoSample[] }
   };
 }
 
-const COLOUR_WORDS = /(?<!\p{L})(verde|azul|rojo|negro|blanco|amarillo|rosa|rosado|naranja|morado|lila|dorado|plateado|beige|celeste|turquesa|fucsia|gris|marr[oó]n|crema|vino|terracota)(?!\p{L})|#[0-9a-f]{3,6}\b/iu;
+const COLOUR_WORDS = /(?<!\p{L})(verde|azul|rojo|negro|blanco|amarillo|rosado|naranja|morado|lila|plateado|beige|celeste|turquesa|fucsia|gris|marr[oó]n)(?!\p{L})|#[0-9a-f]{3,6}\b/iu;
+/** Also products («copas de vino», «crema facial», «rosa»): colours only when the message talks about colour. */
+const PRODUCT_COLOUR_WORDS = /(?<!\p{L})(rosa|crema|vino|terracota|dorado)(?!\p{L})/iu;
+const TALKS_COLOUR = /(?<!\p{L})(colou?r(es)?|tonos?|paleta)(?!\p{L})/iu;
 /** A merchant who names a colour is obeyed over their photos; «tú eliges los colores» names none. */
-export const merchantNamedColours = (text: string): boolean => COLOUR_WORDS.test(text);
+export const merchantNamedColours = (text: string): boolean => COLOUR_WORDS.test(text) || (TALKS_COLOUR.test(text) && PRODUCT_COLOUR_WORDS.test(text));
 
 /** The merchant's photo colours as one author line (owner 2026-10-22, goodProtein #2: warm orange/pink/yellow photos came out
  *  navy and blue — the café playbook palette — because the photo palette only reached frame-draw, which YAPI_FRAME_DRAW=off skips). */

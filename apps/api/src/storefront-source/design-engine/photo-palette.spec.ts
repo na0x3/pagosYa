@@ -141,5 +141,9 @@ describe('storeColoursDirection (owner 2026-10-22: «the colours of the site don
   it('notices colours the merchant names, not «tú eliges los colores»', () => {
     expect(merchantNamedColours('quiero verde y negro')).toBe(true);
     expect(merchantNamedColours('tú eliges la estructura, los colores y las secciones')).toBe(false);
+    // Products are not colours: «copas de vino», «crema facial» (final review 2026-10-22).
+    expect(merchantNamedColours('una empresa de bodas que vende champagne, tortas y copas de vino')).toBe(false);
+    expect(merchantNamedColours('vendo crema facial y jabones')).toBe(false);
+    expect(merchantNamedColours('quiero los colores crema y vino')).toBe(true);
   });
 });
