@@ -284,7 +284,9 @@ const BRANDS_CSS = `
 
 async function main() {
   const yapi = process.argv.includes('--yapi');
-  const folder = resolve(__dirname, `../../../examples/${yapi ? 'goodprotein-yapi' : 'goodprotein'}`);
+  // Each live check gets its own store: --record=<n> → examples/goodprotein-yapi-<n> (run 1 kept examples/goodprotein-yapi).
+  const recordName = process.argv.find(arg => arg.startsWith('--record='))?.slice(9);
+  const folder = resolve(__dirname, `../../../examples/${yapi ? (recordName ? `goodprotein-yapi-${recordName}` : 'goodprotein-yapi') : 'goodprotein'}`);
   await mkdir(folder, { recursive: true });
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
   const timers = app.get(SchedulerRegistry);

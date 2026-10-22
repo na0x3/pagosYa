@@ -45,36 +45,50 @@ it('the filler gets the walkthrough facts and the store photos, walkthrough phot
   expect(fillMaster).toHaveBeenCalledWith('m1', expect.objectContaining({ storeName: 'Café Buna', what: 'Café de especialidad', story: 'Tostamos en casa', city: 'La Paz', products: ['Coroico'], photos: ['https://x/u1.jpg', 'https://x/p1.jpg'] }));
 });
 
-it('«desde cero» keeps the scratch flow', async () => {
-  await send('Quiero crear mi tienda desde cero.');
-  expect(applyMaster).not.toHaveBeenCalled();
-  expect(generate).toHaveBeenCalled();
+// Owner 2026-10-22: «siempre tiene que ser desde la plantilla, yapi desde cero siempre falla». Every new shop starts from
+// Esencial; what the merchant asked for (their pages, their own look) rides on the follow-up, in their own words.
+it('«desde cero» starts from Esencial and the follow-up carries the request', async () => {
+  const out = await send('Quiero crear mi tienda desde cero.');
+  expect(applyMaster).toHaveBeenCalled();
+  expect(generate).not.toHaveBeenCalled();
+  expect(out.followUp).toMatchObject({ personalTouch: true, revision: 1 });
+  expect(out.followUp.instruction).toContain('Quiero crear mi tienda desde cero.');
+  expect(out.followUp.instruction).toMatch(/^Esta tienda empezó desde la plantilla/);
 });
 
-it('an earlier «desde cero» keeps the scratch flow', async () => {
+it('an earlier «desde cero» also starts from Esencial and is carried', async () => {
   messages.push({ role: 'USER', content: 'Prefiero un diseño desde cero', metadata: {}, createdAt: new Date(), id: 'x' });
-  await send('Listo, créala.');
-  expect(applyMaster).not.toHaveBeenCalled();
+  const out = await send('Listo, créala.');
+  expect(applyMaster).toHaveBeenCalled();
+  expect(out.followUp.instruction).toContain('Prefiero un diseño desde cero');
+  expect(out.followUp.instruction).toContain('Listo, créala.');
 });
 
-describe('a merchant who wants their own design or pages (stress test 2026-10-21)', () => {
-  it('«nada de tienda genérica ni plantilla» keeps the scratch flow', async () => {
-    await send('Quiero una casa de moda de lujo, editorial; nada de tienda genérica ni plantilla.');
-    expect(applyMaster).not.toHaveBeenCalled();
-    expect(generate).toHaveBeenCalled();
-  });
-  it('a brief that lists its own pages is built, not filled into Esencial', async () => {
-    await send('Soy diseñadora. Necesito estas páginas: (1) INICIO con 3 piezas, (2) NOVIAS, (3) NOCHE, (4) ACCESORIOS.');
-    expect(applyMaster).not.toHaveBeenCalled();
-    expect(generate).toHaveBeenCalled();
-  });
-  it('the Studio\'s separate-pages choice skips Esencial', async () => {
-    await send('Vendo vestidos de novia en La Paz.\n\nNavegación elegida: enlaces visibles a páginas separadas dentro del mismo sitio, en la misma pestaña del navegador.');
-    expect(applyMaster).not.toHaveBeenCalled();
-  });
-  it('pages named in passing still get Esencial', async () => {
-    await send('Vendemos con nuestras páginas de Facebook e Instagram. Crea mi tienda.');
+describe('a merchant who wants their own design or pages (stress test 2026-10-21) starts from Esencial too', () => {
+  it('«nada de tienda genérica ni plantilla» gets Esencial and the follow-up transforms it', async () => {
+    const out = await send('Quiero una casa de moda de lujo, editorial; nada de tienda genérica ni plantilla.');
     expect(applyMaster).toHaveBeenCalled();
+    expect(generate).not.toHaveBeenCalled();
+    expect(out.followUp.instruction).toMatch(/transforma/i);
+  });
+  it('a brief that lists its own pages gets Esencial and the follow-up builds the pages', async () => {
+    const out = await send('Soy diseñadora. Necesito estas páginas: (1) INICIO con 3 piezas, (2) NOVIAS, (3) NOCHE, (4) ACCESORIOS.');
+    expect(applyMaster).toHaveBeenCalled();
+    expect(out.followUp.instruction).toContain('(2) NOVIAS');
+  });
+  it('the Studio\'s separate-pages choice gets Esencial', async () => {
+    await send('Vendo vestidos de novia en La Paz.\n\nNavegación elegida: enlaces visibles a páginas separadas dentro del mismo sitio, en la misma pestaña del navegador.');
+    expect(applyMaster).toHaveBeenCalled();
+  });
+  it('pages named in passing still get Esencial, with the usual personal touch', async () => {
+    const out = await send('Vendemos con nuestras páginas de Facebook e Instagram. Crea mi tienda.');
+    expect(applyMaster).toHaveBeenCalled();
+    expect(out.followUp?.instruction ?? PERSONAL_TOUCH_BRIEF).toBe(PERSONAL_TOUCH_BRIEF);
+  });
+  it('carries the request even with the personal touch switched off', async () => {
+    config.set('app.yapiPersonalTouch', false);
+    const out = await send('Quiero crear mi tienda desde cero.');
+    expect(out.followUp).toMatchObject({ personalTouch: true });
   });
 });
 

@@ -79,6 +79,13 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
 /** Variety spec §5: the brief of the background personal touch that follows a new master store. */
 export const PERSONAL_TOUCH_BRIEF = 'Toque personal para este negocio: agrega UNA sección que las variantes no tienen y que nazca de sus datos reales (por ejemplo «Lo que nos hace distintos» o una guía breve de uso), UN detalle de firma (un sello con la ciudad o la idea del negocio, un subrayado dibujado en el titular o un separador propio) y, si una sección suena genérica, reescribe solo esa. No quites secciones, no cambies la estructura de store-data, no inventes datos, precios ni reseñas, no toques carrito ni pago.';
 
+/** Owner 2026-10-22: «siempre tiene que ser desde la plantilla, yapi desde cero siempre falla». A merchant who asked for their own
+ *  design, their own pages or «sin plantilla» still starts from Esencial; this follow-up then does what they asked, on top of it. */
+export const OWN_REQUEST_BRIEF = 'Esta tienda empezó desde la plantilla Esencial. Ahora haz, sobre esta base, todo lo que el comercio pidió en sus mensajes: '
+  + 'las páginas que nombró (créalas con su contenido real y enlázalas en el menú), las secciones, el orden y los detalles que describió. '
+  + 'Si pidió un diseño propio, «desde cero» o «sin plantilla», transforma la apariencia a fondo —colores, tipografía, tratamiento de fotos, secciones del inicio— '
+  + 'para que la tienda se vea suya y no se reconozca la plantilla, usando sus componentes. No inventes datos que no estén en sus mensajes o su catálogo.';
+
 /** A personal touch that was dropped (the store moved on, or the edit failed): the job ends quietly, with no message. */
 export class PersonalTouchSkipped extends Error {}
 
@@ -88,6 +95,11 @@ const MASTER_SCRATCH = /\b(?:diseñ\w*|crea\w*|cré\w*|arm\w*|haz|hacer|hagas|co
  *  estas páginas: …») gets them built; Esencial's fill writes words only and silently dropped all seven. */
 const OWN_STRUCTURE = /Navegación elegida: enlaces visibles a páginas separadas|\b(?:necesito|quiero|tenga|con)\b[^.!?\n]{0,30}\bp[aá]ginas\b[^.!?\n]{0,25}(?::|\b(?:separadas|aparte|propias)\b)/i;
 const wantsOwnDesign = (text: string) => MASTER_SCRATCH.test(text) || OWN_STRUCTURE.test(text);
+/** The merchant's own words when any message asked for their own design or pages: oldest first, the current one last. */
+const ownDesignRequest = (instruction: string, history: Array<{ role: string; content: string }>): string | undefined => {
+  const said = [...history.filter(message => message.role === 'USER').map(message => message.content).reverse(), instruction].map(text => text.trim()).filter(Boolean);
+  return said.some(wantsOwnDesign) ? [...new Set(said)].join('\n\n') : undefined;
+};
 /** A master store's home still reads its words from store-data (spec 2026-10-19 §3): after a redesign it no longer does. */
 const readsMasterData = (files: readonly { path: string; content: string }[]) => /import\s*\{[^}]*\bcopy\b[^}]*\}\s*from\s*'\.\/store-data'/.test(files.find(file => file.path === 'components/home.tsx')?.content ?? '');
 export const TEMPLATE_QUESTION = '¿Quieres que parta de una de nuestras plantillas o prefieres que diseñe desde cero?';
@@ -284,7 +296,7 @@ export class SourceChatService {
 
   /** Spec 2026-09-26 §1.3: v1 is the template as applied today; v2 is a free adaptation. A failed adaptation keeps v1. */
   /** Spec 2026-10-19 §2: Esencial applied and filled in one call; the store is saved even when the call fails. */
-  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[] = []) {
+  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[] = [], merchantRequest?: string) {
     await workflow.report('saving');
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true } });
     const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; contact?: { city?: string }; photos?: string[] };
@@ -304,11 +316,12 @@ export class SourceChatService {
     await workflow.finish('completed');
     // Variety spec §5: one background personal touch per new master store. The reply carries it; the job runner queues it
     // once this request's job is closed (a store has one active job at a time).
-    const touching = this.config.get<boolean>('app.yapiPersonalTouch') === true;
-    const followUp: SourceMessageInput | undefined = touching ? { instruction: PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, requestId: randomUUID(), model: 'auto' } : undefined;
+    // The merchant's own request (pages, their own look) rides on the follow-up whatever the personal-touch switch says.
+    const touching = this.config.get<boolean>('app.yapiPersonalTouch') === true || Boolean(merchantRequest);
+    const followUp: SourceMessageInput | undefined = touching ? { instruction: merchantRequest ? `${OWN_REQUEST_BRIEF}\n\nMensajes del comercio:\n${merchantRequest}` : PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, requestId: randomUUID(), model: 'auto' } : undefined;
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId, channel: 'source', role: 'ASSISTANT',
-      content: `Tu tienda ${store?.name ?? ''} está lista.${touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
+      content: `Tu tienda ${store?.name ?? ''} está lista.${merchantRequest ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
       metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
     } });
     // Spec 2026-10-19 §2: with no personal touch coming, the cards ride on this reply; otherwise on the touch's.
@@ -562,12 +575,12 @@ export class SourceChatService {
     // A pasted link (a site to copy, a product link) keeps its own flow, which the conversation step reads (craverly test).
     if (this.config.get<boolean>('app.yapiMasterTemplate') === true && input.setupAction === 'generate' && !current.revision
       && !/https?:\/\/|www\./i.test(input.instruction) && !setupDraft.websiteCopyUrl
-      && ![input.instruction, ...history.messages.filter(message => message.role === 'USER').map(message => message.content)].some(wantsOwnDesign)) {
+) {
       const walkthrough = await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } });
       const onboarding = walkthrough?.onboarding as { purpose?: string } | null | undefined;
       if (onboarding && onboarding.purpose !== 'showcase') {
         await workflow.report('interpreting');
-        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, (input.assetUrls || []).slice(0, 8));
+        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, (input.assetUrls || []).slice(0, 8), ownDesignRequest(input.instruction, history.messages));
       }
     }
     let retryDecision: SourceConversationDecision | undefined;
@@ -853,13 +866,14 @@ export class SourceChatService {
         ? sourceRequestContext.run({ ...requestContext, request: { ...requestContext.request, profile: sourceRequestProfile(masterDesign ? input.instruction : requested, true) } }, work) : work();
       // Master template (spec 2026-10-19): a new shop starts from Esencial unless the merchant asked, in their own words, for a design
       // from scratch. A website copy, a product link and a listing screenshot keep their own flows.
-      const askedScratch = [input.instruction, ...history.messages.filter(message => message.role === 'USER').map(message => message.content)].some(wantsOwnDesign);
+      // Owner 2026-10-22: «desde cero» no longer skips Esencial; it rides on the follow-up instead.
+      const askedScratch = false;
       // Products typed with prices in a chat-only setup are created by the designer's catalog step; that flow keeps them.
       const chatCatalog = this.config.get<boolean>('app.yapiMasterTemplate') === true && newShop && statesPrices(catalogInstruction)
         && !(await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } }))?.onboarding;
       if (this.config.get<boolean>('app.yapiMasterTemplate') === true && newShop && !askedScratch && !websiteCopy && !productLink && !productImport && !chatCatalog) {
         const chatPhotos = assetUrls.filter(url => ['product', 'business', 'team', 'background'].includes(decision.imageUses.find(use => use.url === url)?.role ?? ''));
-        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos);
+        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos, ownDesignRequest(input.instruction, history.messages));
       }
       // "Elige tu estilo": new stores and full redesigns get two styles to pick from (one calm, one bold); a kept template stays its own style.
       // A copy follows its blueprint: no style cards (spec 2026-10-18 B §3).
