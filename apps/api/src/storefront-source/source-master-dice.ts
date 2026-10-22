@@ -26,6 +26,8 @@ const pick = <T>(next: () => number, list: readonly T[]): T => list[Math.floor(n
 
 /** Commerce displays fit any business; the fill call's exclusions skipped them every time (live 2026-10-19: offers «steps» never rolled). */
 const DICE_ONLY = new Set(['cards', 'offers', 'menu', 'filters', 'feature']);
+/** Owner 2026-10-22: product pages that open on a full-screen photo hide the name, price and buy button; the dice never picks them. */
+const PHOTO_FIRST_PDP = new Set(['stacked', 'editorial']);
 
 /** Fashion look spec 2026-10-21: the fashion card and product page belong to fashion stores only, and fashion stores always get them. */
 const FASHION_PARTS = ['cards', 'pdp'] as const;
@@ -56,7 +58,7 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   const owners = (id: string) => Object.keys(catalogue).filter(part => catalogue[part].includes(id)).length;
   const excluded = (part: string, id: string) => input.character.exclude.includes(`${part}:${id}`) || (input.character.exclude.includes(id) && owners(id) === 1);
   const allowed = (part: string) => {
-    const fits = catalogue[part].filter(id => id !== 'fashion' && (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
+    const fits = catalogue[part].filter(id => id !== 'fashion' && !(part === 'pdp' && PHOTO_FIRST_PDP.has(id)) && (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
     const honoured = DICE_ONLY.has(part) ? [] : fits.filter(id => excluded(part, id)).slice(0, Math.floor(fits.length / 2));
     const list = fits.filter(id => !honoured.includes(id));
     return list.length ? list : [catalogue[part].find(id => id !== 'fashion') ?? catalogue[part][0]];

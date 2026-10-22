@@ -104,6 +104,10 @@ describe('instructionOnlyAboutStoreMenu (final review 2026-10-21)', () => {
     ['quiero un menú desplegable con mis categorías', true], ['agrega Accesorios al menú', true], ['quita el menú desplegable, por favor', true],
     ['agrega una sección de reseñas y un menú desplegable', false], ['rediseña todo y ponle un menú desplegable', false],
     ['Crea la página NOVIAS con Vestido Cala, y ponla en el menú', false],
+    // Owner 2026-10-22 (goodProtein): what the menu holds is still the menu; it went to a full edit and failed twice.
+    ['Quiero un menú desplegable arriba: que al pasar el mouse por «Tienda» se abra con las categorías (Proteínas, Recuperación y energía, Snacks proteicos) y las marcas, cada una con su enlace.', true],
+    ['quiero un menú desplegable con las categorías y cambia el logo', false],
+    ['un menú desplegable y además fotos más grandes', false],
   ])('%s → %s', (text, expected) => expect(instructionOnlyAboutStoreMenu(text)).toBe(expected));
 });
 

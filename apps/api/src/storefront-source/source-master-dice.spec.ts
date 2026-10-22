@@ -195,3 +195,8 @@ describe('feature part', () => {
     expect(roll('z').variants.feature).toBeUndefined();
   });
 });
+
+// Owner 2026-10-22: «clients cant see product and price at same time» — no roll gives a full-screen photo before name, price and buy.
+it('never rolls a photo-first product page', () => {
+  for (let i = 0; i < 200; i++) expect(['stacked', 'editorial']).not.toContain(roll(`pdp-${i}`).variants.pdp);
+});

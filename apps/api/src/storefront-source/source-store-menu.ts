@@ -100,9 +100,14 @@ const FILLER = /^(?:por favor|porfa|gracias|ok|listo|hola|please)$/i;
 const ABOUT_MENU = /(?<!\p{L})(men[uú]s?|desplegables?|dropdowns?|categor[ií]as?)(?!\p{L})/iu;
 /** Every clause of the request is about the menu: a request that also asks for something else («agrega una sección de reseñas y
  *  un menú desplegable», «rediseña todo y ponle un menú») is a design edit that sets the menu after it (final review 2026-10-21). */
+/** A clause that asks for something besides the menu: another part of the store, or an action of its own. */
+const OTHER_PART = /(?<!\p{L})(secci[oó]n(es)?|p[aá]ginas?|redise\p{L}*|banners?|fotos?|im[aá]genes?|colou?r(es)?|fuentes?|tipograf\p{L}*|textos?|t[ií]tulos?|portada|hero|tarjetas?|botones?|logos?|fondo|precios?|productos? nuevos?|rese[nñ]as?)(?!\p{L})/iu;
+const ACTION = /(?<!\p{L})(cambi\p{L}*|quit\p{L}*|elimin\p{L}*|agreg\p{L}*|a[nñ]ad\p{L}*|pon\p{L}*|crea\p{L}*|haz|hazl\p{L}*|sub\p{L}*|reemplaz\p{L}*|muev\p{L}*|borr\p{L}*)(?!\p{L})/iu;
 export function instructionOnlyAboutStoreMenu(text: string): boolean {
   const clauses = text.split(CLAUSES).map(part => part.trim()).filter(part => part && !FILLER.test(part));
-  return clauses.length > 0 && clauses.every(clause => ABOUT_MENU.test(clause));
+  // What the menu holds («y las marcas», «cada una con su enlace») is still the menu (owner 2026-10-22: goodProtein's dropdown
+  // went to a full design edit and failed twice); a clause naming another part or an action of its own is another change.
+  return clauses.some(clause => ABOUT_MENU.test(clause)) && clauses.every(clause => ABOUT_MENU.test(clause) || (!OTHER_PART.test(clause) && !ACTION.test(clause)));
 }
 /** Looser: «agrega Accesorios al menú». Counts only for a store whose menu already exists. */
 export const instructionTouchesStoreMenu = (text: string) => MENU_ASK.test(text) || MENU_TOUCH.test(text);
