@@ -9,18 +9,18 @@ export function renderPill(o: { busy: boolean; spin: 'spin' | 'pulse' | 'idle'; 
   return `<form class="yapi-pill" data-composer data-yapi-pill aria-label="Habla con YAPI">
     ${o.attachments ? `<div class="yapi-pill__files">${o.attachments}</div>` : ''}
     <div class="yapi-pill__row">
-      <img class="yapi-pill__star ${o.spin === 'spin' ? 'is-spin' : o.spin === 'pulse' ? 'is-pulse' : ''}" data-yapi-star tabindex="0" src="${esc(o.logo)}" alt="Mover a YAPI" width="32" height="32" draggable="false" title="Arrastra para mover · doble clic para volver al centro">
+      <img class="yapi-pill__star ${o.spin === 'spin' ? 'is-spin' : o.spin === 'pulse' ? 'is-pulse' : ''}" data-yapi-star tabindex="0" src="${esc(o.logo)}" alt="Mover a YAPI" width="34" height="34" draggable="false" title="Arrastra para mover · doble clic para volver al centro">
       ${o.selectionLabel ? `<span class="yapi-pill__chip">Sobre: ${esc(o.selectionLabel)}</span>` : ''}
       <label for="agent-command" class="sr-only">Indicación para YAPI</label>
       <textarea id="agent-command" name="command" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar?"${off}></textarea>
       <div class="yapi-pill__plus">
-        <button type="button" class="yapi-pill__icon" data-yapi-plus aria-expanded="${o.menuOpen}" aria-label="Más opciones"${off}>＋</button>
+        <button type="button" class="yapi-pill__icon" data-yapi-plus aria-expanded="${o.menuOpen}" aria-label="Más opciones"${off}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
         <div class="yapi-pill__menu" role="menu" ${o.menuOpen ? '' : 'hidden'}>
           <button type="button" role="menuitem" data-action="open-upload">Agregar fotos</button>
           <button type="button" role="menuitem" data-composer-action="create-product">Crear producto</button>
         </div>
       </div>
-      <button type="button" class="yapi-pill__icon" data-yapi-history-open aria-label="Ver la conversación">☰</button>
+      <button type="button" class="yapi-pill__icon" data-yapi-history-open aria-label="Ver la conversación"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></button>
       <button type="submit" class="yapi-pill__send"${off}>Enviar ↗</button>
     </div>
     <input class="sr-only" type="file" accept="image/png,image/jpeg,image/webp,video/mp4,.mp4" multiple data-image-input aria-label="Seleccionar hasta 24 imágenes o videos MP4">
