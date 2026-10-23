@@ -45,4 +45,9 @@ describe('plain step sentences', () => {
     expect(n.lines.at(-1)).toBe('Estoy mirando cómo está hecha tu tienda…');
     expect(JSON.stringify(n)).not.toMatch(/\.tsx|\.css|Leyó/);
   });
+  it('in pill mode the plain step shows under the plan even when both come from the same stage (real runs)', () => {
+    const n = narrationFromProgress(progress(['Voy a: poner una sección por marca', 'Leyó components/store-data.tsx']), true);
+    expect(n.lines[0]).toBe('Voy a:');
+    expect(n.lines.at(-1)).toBe('Estoy mirando cómo está hecha tu tienda…');
+  });
 });

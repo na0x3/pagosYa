@@ -43,9 +43,11 @@ export function narrationFromProgress(progress: BuildProgress | null, plain = fa
   if (planned.length > PLAN_LINES) plan.push(`Y ${planned.length - PLAN_LINES} ${planned.length - PLAN_LINES === 1 ? 'cosa' : 'cosas'} más.`);
   const lines = plan.length ? ['Voy a:', ...plan] : [];
   const running = [...progress.steps].reverse().find(step => step.status === 'running');
+  // Pill mode: YAPI's plan and its steps share one stage in real runs; the newest plain step always shows under the plan.
+  const now = plain && running ? stepLines(progress, 1)[0] : undefined;
+  if (now) return { phase: 'work', lines: [...lines, `${now}…`] };
   if (running && (!plan.length || progress.steps.indexOf(running) > progress.steps.findIndex(step => (step.details ?? []).some(d => PLAN.test(d?.label ?? ''))))) {
-    const now = plain ? stepLines(progress, 1)[0] : undefined;
-    return { phase: 'work', lines: [...lines, now ? `${now}…` : `Ahora: ${lowerFirst(shorten(running.label.replace(/[.…]+$/, ''), LINE_CHARS))}…`] };
+    return { phase: 'work', lines: [...lines, `Ahora: ${lowerFirst(shorten(running.label.replace(/[.…]+$/, ''), LINE_CHARS))}…`] };
   }
   return { phase: plan.length ? 'plan' : 'work', lines };
 }
