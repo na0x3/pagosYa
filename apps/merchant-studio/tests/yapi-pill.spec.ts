@@ -102,3 +102,51 @@ test('cards waiting for an answer can be put away with their ×', async ({ page 
   await cards.getByRole('button', { name: 'Ocultar' }).click();
   await expect(cards).toHaveCount(0);
 });
+
+test('review: «Crear producto» opens the form above the pill and closing it gives the pill back', async ({ page }) => {
+  await openStudio(page, 'pill');
+  await page.locator('[data-yapi-plus]').click();
+  await page.getByRole('menuitem', { name: 'Crear producto' }).click();
+  await expect(page.getByRole('heading', { name: 'Nuevo producto' })).toBeVisible();
+  await expect(page.locator('.yapi-pill__menu')).toBeHidden();
+  await page.getByRole('button', { name: 'Cancelar creación de producto' }).click();
+  await expect(page.getByRole('heading', { name: 'Nuevo producto' })).toHaveCount(0);
+  await expect(page.locator('#agent-command')).toBeEnabled();
+});
+
+test('review: what the merchant typed survives a re-render', async ({ page }) => {
+  await openStudio(page, 'pill');
+  await page.locator('#agent-command').fill('Pon una sección por marca');
+  await page.locator('[data-yapi-plus]').click();
+  await expect(page.locator('#agent-command')).toHaveValue('Pon una sección por marca');
+});
+
+test('review: YAPI\'s bubble grows upward and never covers the pill', async ({ page }) => {
+  let release!: () => void;
+  await openStudio(page, 'pill', { gate: new Promise<void>(resolve => { release = resolve; }) });
+  await page.locator('#agent-command').fill('Pon una sección por marca');
+  await page.getByRole('button', { name: 'Enviar ↗' }).click();
+  await expect(page.locator('.yapi-narrator')).toContainText('Estoy mirando', { timeout: 10_000 });
+  const bubble = (await page.locator('.yapi-narrator').boundingBox())!;
+  const pill = (await page.locator('[data-yapi-pill]').boundingBox())!;
+  expect(bubble.y + bubble.height).toBeLessThanOrEqual(pill.y + 1);
+  release();
+});
+
+test('review: selecting a section shows its chip in the pill at once', async ({ page }) => {
+  await openStudio(page, 'pill');
+  await page.locator('.canvas-toolbar').getByRole('button', { name: 'Seleccionar', exact: true }).click();
+  await page.frameLocator('.source-canvas iframe').locator('body').evaluate(() => parent.postMessage({ type: 'pagosya:source-select', kind: 'section', sectionId: 'marcas', label: 'Sección de marcas' }, '*'));
+  await expect(page.locator('.yapi-pill__chip')).toContainText('Sobre: Sección de marcas');
+});
+
+test('review: Publicar sits alone at the top right and does not fade', async ({ page }) => {
+  await openStudio(page, 'pill');
+  const publish = page.locator('.source-publish-controls');
+  await expect(publish).toBeVisible();
+  expect(await publish.evaluate(el => Boolean(el.closest('.canvas-toolbar')))).toBe(false);
+  const box = (await publish.boundingBox())!;
+  expect(box.x + box.width).toBeGreaterThan(page.viewportSize()!.width - 40);
+  expect(box.y).toBeLessThan(40);
+});
+

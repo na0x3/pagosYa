@@ -1,4 +1,5 @@
 import './source-build-progress.css';
+import { stepLines } from './source-step-words';
 import { escapeHtml as escape } from './studio-ui';
 import { renderBuildProgress, type BuildProgress } from './source-build-progress';
 import { LOADER_STAR } from './source-loader-star';
@@ -48,7 +49,8 @@ export function renderBuildStage(state: BuildStageState): string {
  * markup would restart the animation and the drawing would jump back to the
  * first scene.
  */
-export function mountBuildStage(host: HTMLElement): { update(state: BuildStageState): void; destroy(): void } {
+/** `plain` (YAPI in design mode): «Ver pasos» lists what YAPI did in plain words, never the file log (review 2026-10-22). */
+export function mountBuildStage(host: HTMLElement, opts: { plain?: boolean } = {}): { update(state: BuildStageState): void; destroy(): void } {
   const stage = host.querySelector<HTMLElement>('[data-build-stage]');
   if (!stage) return { update() {}, destroy() {} };
   const statusEl = stage.querySelector<HTMLElement>('[data-stage-status]');
@@ -79,7 +81,7 @@ export function mountBuildStage(host: HTMLElement): { update(state: BuildStageSt
     const ratio = buildStageRatio(elapsed, completed);
     if (elapsedEl) elapsedEl.textContent = formatElapsed(elapsed);
     if (meterEl) meterEl.style.width = `${(ratio * 100).toFixed(1)}%`;
-    if (stepsList && stepsOpen) stepsList.innerHTML = progress ? renderBuildProgress(progress, true) : '';
+    if (stepsList && stepsOpen) stepsList.innerHTML = !progress ? '' : opts.plain ? `<ul class="yapi-stage__plain">${stepLines(progress, 20).map(line => `<li>${line}</li>`).join('')}</ul>` : renderBuildProgress(progress, true);
     if (stepsButton) stepsButton.hidden = !steps.length;
   }
 

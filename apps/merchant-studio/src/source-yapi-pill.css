@@ -16,7 +16,7 @@
 .studio-shell.is-yapi-pill .canvas-status { display: none; }
 .studio-shell.is-yapi-pill .canvas-toolbar { position: fixed; top: 16px; left: 50%; z-index: 25; transform: translateX(-50%); width: auto; max-width: calc(100vw - 150px); padding: 6px; border: 1px solid var(--yp-edge); border-radius: 999px; background: var(--yp-glass); -webkit-backdrop-filter: var(--yp-blur); backdrop-filter: var(--yp-blur); box-shadow: var(--yp-shadow); transition: opacity .3s ease; }
 .studio-shell.is-yapi-pill .canvas-toolbar.is-idle { opacity: .35; }
-.studio-shell.is-yapi-pill .canvas-toolbar .button--publish, .studio-shell.is-yapi-pill .canvas-toolbar [id$="export"] { position: fixed; top: 16px; right: 16px; }
+.yapi-publish { position: fixed; top: 16px; right: 16px; z-index: 26; display: flex; gap: 8px; padding: 6px; border: 1px solid var(--yp-edge); border-radius: 999px; background: var(--yp-glass); -webkit-backdrop-filter: var(--yp-blur); backdrop-filter: var(--yp-blur); box-shadow: var(--yp-shadow); }
 
 .yapi-exit { position: fixed; top: 16px; left: 16px; z-index: 30; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--yp-edge); border-radius: 50%; background: var(--yp-glass); color: var(--yp-ink); font-size: 20px; line-height: 1; opacity: .6; -webkit-backdrop-filter: var(--yp-blur); backdrop-filter: var(--yp-blur); box-shadow: var(--yp-shadow); cursor: pointer; transition: opacity .2s ease, transform .2s ease; }
 .yapi-exit:hover, .yapi-exit:focus-visible { opacity: 1; }
@@ -85,3 +85,5 @@
 .studio-shell.is-yapi-pill .source-draft-recovery button { min-height: 34px; padding: 0 14px; border: 1px solid var(--yp-line); border-radius: 999px; background: #fff; color: var(--yp-ink); font-size: 13px; box-shadow: none; }
 .studio-shell.is-yapi-pill .live-draft-badge { display: none; }
 .studio-shell.is-yapi-pill .yapi-cards .agent-note > p, .studio-shell.is-yapi-pill .yapi-history .agent-note > p { white-space: normal; }
+.yapi-sheet { position: fixed; z-index: 37; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); max-height: 70vh; overflow: auto; border-radius: 22px; box-shadow: var(--yp-shadow); }
+.yapi-stage__plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13.5px; }

@@ -40,3 +40,11 @@ describe('which YAPI messages need an answer', () => {
     expect(needsAnswer({ id: 'u', role: 'USER', metadata: {} }, 2)).toBe(false);
   });
 });
+
+describe('review fixes', () => {
+  it('keeps what the merchant typed, escaped', () => {
+    const html = renderPill({ busy: false, spin: 'idle', attachments: '', menuOpen: false, logo: '/l.png', instruction: 'Pon <b>marcas</b>' });
+    expect(html).toContain('>Pon &lt;b&gt;marcas&lt;/b&gt;</textarea>');
+  });
+});
+
