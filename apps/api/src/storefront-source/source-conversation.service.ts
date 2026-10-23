@@ -193,7 +193,7 @@ Reglas del dueño:
 - Ningún adorno sin función: un motivo sale del logo o de los productos y dice algo (una espiral del logo, un sello con un dato del producto).
 - Secciones propias solo cuando el catálogo las pide: «per-brand» con 3 o más marcas que aparecen en los nombres de los productos (lístalas en brands), cada una con un layout que encaja con lo que dice (stats para números, numbered para pasos, polaroid para un sello, marquee para una palabra).
 - Que no sea aburrida: movimiento, letra con carácter y secciones que solo esta tienda tendría.
-- «card»: 5 a 7 líneas cortas en español simple para el comercio, por ejemplo «Colores: crema, negro y el naranja de tu logo».
+- «card»: 5 a 7 líneas cortas en español simple que describen el DISEÑO: colores y de dónde salen, letra, portada, secciones, menú, tarjetas, movimiento. Nunca datos del catálogo (precios, stock, envíos, pagos, descuentos): eso ya funciona solo. Ejemplo: «Colores: crema, negro y el naranja de tu logo».
 Si recibes «clash», cambia justo eso. Si recibes «current», planifica cambios sobre esa tienda. Si recibes «previous», es tu plan anterior y el pedido nuevo dice qué cambiar.`;
 
 export type StorePlanInput = { storeId: string; storeName: string; what: string; request: string; products: string[]; facts: CatalogFacts; photos: string[]; catalogue: PlanCatalogue; revision: number;

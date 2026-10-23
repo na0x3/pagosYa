@@ -71,3 +71,20 @@ describe('final review fixes (2026-10-22)', () => {
     expect(checkPlan(plan, { ...facts, sizeProducts: 2 }, rolled).sections).toContain('sizes');
   });
 });
+
+describe('the card says what the store will look like (live check 2026-10-22)', () => {
+  it('drops catalog facts and always names colours, sections and per-brand blocks from the plan', () => {
+    const plan: StorePlan = { ...base, colour: { palette: 'citrus', from: 'logo' }, sections: [{ id: 'faq', why: 'tres productos piden instrucciones de uso' }],
+      brands: ['Bloom', 'MAGNUS', 'Best Behavior'], motif: { what: 'espiral', from: 'logo' },
+      card: ['9 productos con precios y stock reales.', 'Delivery y pickup en Sopocachi.', 'Compra con carrito, checkout y pagos integrados.', 'Protein Pulver Vegano aparece como agotado.', 'Portada con el nombre en letra grande y gruesa'] };
+    const card = checkPlan(plan, facts, rolled).plan.card;
+    expect(card.join(' ')).not.toMatch(/precio|stock|delivery|pickup|checkout|pago|agotado/i);
+    expect(card).toContain('Portada con el nombre en letra grande y gruesa');
+    expect(card.join(' ')).toMatch(/Colores: fondo claro, tinta oscura y un acento sacado de tu logo/);
+    expect(card.join(' ')).toMatch(/Una sección por marca: Bloom, MAGNUS y Best Behavior/);
+    expect(card.join(' ')).toMatch(/Preguntas frecuentes/);
+    expect(card.join(' ')).toMatch(/Detalle de marca: espiral/);
+    expect(card.length).toBeLessThanOrEqual(7);
+  });
+});
+

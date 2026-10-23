@@ -74,6 +74,8 @@ export function typingPlan(text: string, cps = 28): Array<{ word: string; at: nu
  *  a reply without a change (a question, an answer) is that reply. Never the editor's boilerplate. */
 export function narrationFromMessage(message: { content?: unknown; metadata?: Record<string, unknown> | null }): Narration {
   const meta = message.metadata ?? {};
+  // A plan card shows its own lines below; the bubble only points at it (live check 2026-10-22).
+  if (meta.plan) return { phase: 'done', lines: ['Te preparé un plan: míralo abajo y toca «Construir» o dime qué cambiar.'] };
   if (typeof meta.sourceRevision !== 'number') return narrationFromReply(String(message.content ?? ''));
   const own = [meta.agentSummary, meta.label].find(value => typeof value === 'string' && value.trim() && !/^r\d+$/i.test(value.trim())) as string | undefined;
   const change = own ? narrationFromReply(firstSentence(own)).lines.at(-1)! : '';

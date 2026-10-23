@@ -68,3 +68,9 @@ describe('YAPI writes less (owner 2026-10-21)', () => {
 it('a reason that starts with YAPI keeps its capitals', () => {
   expect(stoppedNarration('YAPI llegó al límite de uso de su modelo por ahora. Tu tienda sigue como estaba.').lines[0]).toBe('No pude terminar: YAPI llegó al límite de uso de su modelo por ahora.');
 });
+
+it('a plan message: the bubble points at the card instead of repeating it (live check 2026-10-22)', () => {
+  const n = narrationFromMessage({ content: 'Esto es lo que voy a hacer con tu tienda:\n• a\n• b', metadata: { plan: { card: ['a', 'b'] }, planKind: 'new' } });
+  expect(n).toEqual({ phase: 'done', lines: ['Te preparé un plan: míralo abajo y toca «Construir» o dime qué cambiar.'] });
+});
+

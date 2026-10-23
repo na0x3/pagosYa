@@ -36,6 +36,26 @@ export function enforceRules(input: Record<string, string>, facts: CatalogFacts)
   return variants;
 }
 
+/** Live check 2026-10-22: the model's card listed prices, stock and delivery. The card says what the store will look like. */
+const CATALOG_FACT = /\b(precios?|stock|delivery|pickup|retiro|env[ií]os?|checkout|carrito|pagos?|agotad[oa]s?|descuentos?|productos con)\b/i;
+const SECTION_NAMES: Record<string, string> = { process: 'Cómo lo hacemos', pick: 'Arma tu selección', sizes: 'Guía de tallas', gallery: 'Galería', faq: 'Preguntas frecuentes',
+  visit: 'Visítanos', materials: 'Materiales', howto: 'Cómo se usa', team: 'Quiénes somos', quotes: 'Lo que dicen', journal: 'Diario', manifesto: 'Manifiesto' };
+const KIND_NAMES: Record<string, string> = { 'per-category': 'una sección por categoría', facts: 'una sección de datos del producto', origin: 'una sección del origen', guide: 'una guía de uso' };
+const list = (names: string[]) => names.length > 1 ? `${names.slice(0, -1).join(', ')} y ${names.at(-1)}` : names[0] ?? '';
+const sourceWords = (from: string) => from === 'logo' ? 'tu logo' : from === 'marca' ? 'tu marca' : `la ${from}`;
+
+function cardLines(plan: StorePlan, sections: string[], featureLines: string[], shown: number): string[] {
+  const design: string[] = [];
+  const from = plan.colour.from.trim().toLowerCase();
+  design.push(`Colores: fondo claro, tinta oscura y un acento${validSource(from, shown) ? ` sacado de ${sourceWords(from)}` : ''}`);
+  for (const section of plan.custom) design.push(section.kind === 'per-brand' ? `Una sección por marca: ${list(section.items.map(item => item.name))}, cada una distinta` : `Sección propia: ${KIND_NAMES[section.kind] ?? section.kind}`);
+  const named = sections.map(id => SECTION_NAMES[id]).filter(Boolean);
+  if (named.length) design.push(`Secciones: ${list(named)}`);
+  if (plan.motif) design.push(`Detalle de marca: ${plan.motif.what}${validSource(plan.motif.from, shown) ? ` de ${sourceWords(plan.motif.from.trim().toLowerCase())}` : ''}`);
+  const own = plan.card.filter(line => !CATALOG_FACT.test(line) && !/^(colores|una sección por marca|secciones|detalle de marca)\b/i.test(line.trim()));
+  return [...design, ...featureLines, ...own].slice(0, 7);
+}
+
 export function checkPlan(input: StorePlan, facts: CatalogFacts, rolled: Record<string, string>): CheckedPlan {
   const plan: StorePlan = structuredClone(input);
   const shown = facts.shownPhotos ?? facts.photoCount;
@@ -69,10 +89,8 @@ export function checkPlan(input: StorePlan, facts: CatalogFacts, rolled: Record<
   if (plan.brands.length < 3) plan.custom = plan.custom.filter(section => section.kind !== 'per-brand');
   else if (!plan.custom.some(section => section.kind === 'per-brand')) {
     plan.custom.push({ kind: 'per-brand', why: `${plan.brands.length} marcas en el catálogo`, items: plan.brands.map(name => ({ name, layout: 'split' })) });
-    lines.push(`Una sección por marca: ${plan.brands.length} marcas, cada una distinta`);
   }
 
-  const known = (line: string) => plan.card.some(existing => existing.toLowerCase().startsWith(line.split(':')[0].toLowerCase()));
-  plan.card = [...plan.card, ...lines.filter(line => !known(line))].slice(0, 7);
+  plan.card = cardLines(plan, sections, lines, shown);
   return { plan, dna, variants, sections: sections.slice(0, 4) };
 }
