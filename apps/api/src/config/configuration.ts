@@ -111,6 +111,8 @@ export interface AppConfig {
   yapiPersonalTouch: boolean;
   /** YAPI plan card (spec 2026-10-22): short and vague requests show a plan before building. Default on; YAPI_PLAN_CARD=off disables. */
   yapiPlanCard: boolean;
+  /** Free-first (owner 2026-10-22): an approved plan for a new store is designed freely; Esencial is the fallback. Default on; YAPI_FREE_FIRST=off disables. */
+  yapiFreeFirst: boolean;
   /** Spec 2026-10-20 Plantillas fill: curated Plantillas filled by one call, «Elegir una plantilla», the Plantillas menu and
    *  double-click text editing in the Studio. Default off; YAPI_PLANTILLAS_FILL=1. */
   yapiPlantillasFill: boolean;
@@ -467,6 +469,7 @@ export default (): { app: AppConfig } => {
     yapiEsencialDice: process.env.YAPI_ESENCIAL_DICE !== 'off',
     yapiPersonalTouch: process.env.YAPI_PERSONAL_TOUCH !== 'off',
     yapiPlanCard: process.env.YAPI_PLAN_CARD !== 'off',
+    yapiFreeFirst: process.env.YAPI_FREE_FIRST !== 'off',
     yapiPlantillasFill: process.env.YAPI_PLANTILLAS_FILL === '1',
     yapiAuthoredBold: process.env.YAPI_AUTHORED_BOLD !== 'off',
     yapiCommerceSurfaces: process.env.YAPI_COMMERCE_SURFACES === '1',

@@ -48,6 +48,16 @@ export class SourceStorePlanService {
     return { plan: checked.plan, applied, exhausted: unique.exhausted };
   }
 
+  /** Free-first (owner 2026-10-22): the approved plan as YAPI's brief for a store designed from scratch, like PEPPA and Antojo. */
+  freeBrief(plan: StorePlan, request?: string): string {
+    const custom = plan.custom.map(section => `- Sección propia «${section.kind}» (${section.why}): ${section.items.map(item => `${item.name} → ${item.layout}${item.colourFrom ? `, color de ${item.colourFrom}` : ''}`).join('; ')}`);
+    return ['Diseña esta tienda desde cero, con un diseño propio (sin la plantilla), siguiendo este plan que el comercio aprobó:',
+      ...plan.card.map(line => `• ${line}`), ...custom,
+      plan.motif ? `- Motivo de marca: ${plan.motif.what}, sacado de ${plan.motif.from}; con función, nunca solo adorno.` : '',
+      'Reglas: fondo claro y tinta oscura; un solo acento para la tienda; nunca inventes un color (solo del logo, de las fotos o de la marca confirmada); tarjetas de producto normales, 3 o 4 por fila; nada de bandas oscuras solo de texto; ningún adorno sin función; secciones que solo esta tienda tendría, con movimiento y letra con carácter.',
+      request ? `Pedido del comercio: ${request}` : ''].filter(Boolean).join('\n');
+  }
+
   followUpBrief(plan: StorePlan): string | null {
     const custom = plan.custom.map(section => `- ${section.kind} (${section.why}): ${section.items.map(item => `${item.name} → layout ${item.layout}${item.colourFrom ? `, color de ${item.colourFrom}` : ''}`).join('; ')}`);
     const motif = plan.motif ? `- Motivo de marca: ${plan.motif.what}, sacado de ${plan.motif.from}; con función, nunca solo adorno.` : '';

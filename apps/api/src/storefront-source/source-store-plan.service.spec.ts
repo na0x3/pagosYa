@@ -67,3 +67,15 @@ describe('final review fixes (2026-10-22)', () => {
     expect((await service.draft('m1', 's1', { revision: 0, request: 'x', what: '', photos: ['/v1/uploads/a.jpg', '/v1/uploads/b.jpg'] }))!.applied.accent).toBe('#f26b1d');
   });
 });
+
+it('free-first: the approved plan becomes a free-design brief, with the owner rules and the merchant\'s words', () => {
+  const { service } = setup();
+  const brief = service.freeBrief({ ...plan, card: ['Colores: crema, negro y el naranja de tu logo', 'Una sección por marca'], custom: [{ kind: 'per-brand', why: '3 marcas', items: [{ name: 'Bloom', layout: 'stats', colourFrom: 'foto 2' }] }] }, 'Hazme una tienda de proteínas');
+  expect(brief).toMatch(/^Diseña esta tienda desde cero/);
+  expect(brief).toContain('• Colores: crema, negro y el naranja de tu logo');
+  expect(brief).toMatch(/Bloom.*stats.*foto 2/s);
+  expect(brief).toMatch(/nunca inventes un color/i);
+  expect(brief).toMatch(/3 o 4 por fila/);
+  expect(brief).toContain('Pedido del comercio: Hazme una tienda de proteínas');
+});
+
