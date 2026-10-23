@@ -1,4 +1,5 @@
 import type { BuildProgress } from './source-build-progress';
+import { stepLines } from './source-step-words';
 
 /**
  * What YAPI's glass window says (spec 2026-10-21 Part C). It only re-voices text YAPI already produced: the plan
@@ -33,7 +34,8 @@ export function stoppedNarration(reason?: string): Narration {
   return { phase: 'stopped', lines: [`No pude terminar: ${sentence(lowerFirst(short))}`, 'Tu tienda sigue como estaba.'] };
 }
 
-export function narrationFromProgress(progress: BuildProgress | null): Narration {
+/** With `plain` (YAPI in design mode, spec 2026-10-22 v2 §3) the current step is said in the merchant's words, never a file name. */
+export function narrationFromProgress(progress: BuildProgress | null, plain = false): Narration {
   if (!progress) return { phase: 'work', lines: [] };
   if (progress.status === 'failed') return stoppedNarration();
   const planned = progress.steps.flatMap(step => (step.details ?? []).map(detail => detail?.label?.match(PLAN)?.[1]).filter((line): line is string => Boolean(line)));
@@ -42,7 +44,8 @@ export function narrationFromProgress(progress: BuildProgress | null): Narration
   const lines = plan.length ? ['Voy a:', ...plan] : [];
   const running = [...progress.steps].reverse().find(step => step.status === 'running');
   if (running && (!plan.length || progress.steps.indexOf(running) > progress.steps.findIndex(step => (step.details ?? []).some(d => PLAN.test(d?.label ?? ''))))) {
-    return { phase: 'work', lines: [...lines, `Ahora: ${lowerFirst(shorten(running.label.replace(/[.…]+$/, ''), LINE_CHARS))}…`] };
+    const now = plain ? stepLines(progress, 1)[0] : undefined;
+    return { phase: 'work', lines: [...lines, now ? `${now}…` : `Ahora: ${lowerFirst(shorten(running.label.replace(/[.…]+$/, ''), LINE_CHARS))}…`] };
   }
   return { phase: plan.length ? 'plan' : 'work', lines };
 }
