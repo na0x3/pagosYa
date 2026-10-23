@@ -15,7 +15,7 @@ async function openStudio(page: Page, layout: 'pill' | 'classic', opts: { gate?:
   ] } };
   const earlier = [
     { id: 'u0', role: 'USER', content: 'Hazla más clara', metadata: {} },
-    { id: 'a0', role: 'ASSISTANT', content: 'Listo: aclaré los colores.', metadata: { sourceRevision: 1, progress: { status: 'completed', startedAt: now, updatedAt: now, steps: [{ stage: 'building', label: 'Construyendo los cambios', startedAt: now, status: 'completed', details: [{ label: 'Leyó components/home.tsx' }] }] } } },
+    { id: 'a0', role: 'ASSISTANT', content: 'Listo: aclaré los colores.', metadata: { sourceRevision: 1, suggestions: [{ id: 's1', title: 'Únete a la comunidad', instruction: 'Agrega un registro', kind: 'design' }], progress: { status: 'completed', startedAt: now, updatedAt: now, steps: [{ stage: 'building', label: 'Construyendo los cambios', startedAt: now, status: 'completed', details: [{ label: 'Leyó components/home.tsx' }] }] } } },
   ];
   await page.addInitScript(() => sessionStorage.setItem('pagosya_merchant_session', 'test-session'));
   await page.route('**/api/v1/**', async route => {
@@ -46,6 +46,9 @@ test('design mode: store full width, the pill, plain words, the spinning star', 
   await expect(page.locator('.yapi-exit')).toHaveAttribute('aria-label', 'Salir del diseño');
   const canvas = await page.locator('.source-canvas').boundingBox();
   expect(canvas!.width).toBeGreaterThan(page.viewportSize()!.width * 0.95);
+  // Live check 2026-10-22: the fixed tools bar left the grid and the preview got a 150px row.
+  const frame = await page.locator('.source-canvas .preview-frame').boundingBox();
+  expect(frame!.height).toBeGreaterThan(page.viewportSize()!.height * 0.6);
   await expect(page.getByText('¿Cómo se navegará tu sitio?')).toHaveCount(0);
   await expect(page.getByText('Modelo', { exact: true })).toHaveCount(0);
   await page.locator('#agent-command').fill('Pon una sección por marca');
@@ -90,4 +93,12 @@ test('classic layout stays available', async ({ page }) => {
   await openStudio(page, 'classic');
   await expect(page.locator('.agent-panel')).toBeVisible();
   await expect(page.locator('[data-yapi-pill]')).toHaveCount(0);
+});
+
+test('cards waiting for an answer can be put away with their ×', async ({ page }) => {
+  await openStudio(page, 'pill');
+  const cards = page.locator('[data-yapi-cards]');
+  await expect(cards).toContainText('Únete a la comunidad');
+  await cards.getByRole('button', { name: 'Ocultar' }).click();
+  await expect(cards).toHaveCount(0);
 });
