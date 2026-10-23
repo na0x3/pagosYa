@@ -1990,3 +1990,8 @@ body.template-focus .store-templates-page .store-resource-frame { position: fixe
   display: grid;
   gap: 4px;
 }
+
+/* YAPI in design mode (spec 2026-10-22 v2 §6): the Studio covers the dashboard; its × is the way out. */
+html:has(body.design-focus) { overflow: hidden; }
+body.design-focus #merchantStudioFrame { position: fixed; inset: 0; width: 100vw; height: 100dvh !important; z-index: 4020; border: 0; border-radius: 0; }
+body.design-focus .ask-yapi, body.design-focus [data-ask-yapi] { display: none; }

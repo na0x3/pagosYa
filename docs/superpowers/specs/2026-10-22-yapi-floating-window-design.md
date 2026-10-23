@@ -106,3 +106,7 @@ The agent crew (project 3); changes to what YAPI decides; the dashboard outside 
   shows the conversation; drag the pill → bubble follows, place kept after reload; × → dashboard; phone width → docked pill;
   reduced motion → pulse.
 - Live: the owner opens goodProtein and works only through the pill.
+
+## Amendment (plan, 2026-10-22)
+
+The layout switch is the URL, not an API flag: pill mode is on in the embedded Studio (the dashboard's design mode) unless `layout=classic`; the standalone Studio keeps today's layout unless `layout=pill`.
