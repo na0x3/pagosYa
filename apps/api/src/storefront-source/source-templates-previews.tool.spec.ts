@@ -21,8 +21,9 @@ run('captures the Plantillas gallery previews', async () => {
   const wanted = process.env.TEMPLATE_IDS?.split(',').filter(Boolean);
   for (const manifest of listTemplates().filter(t => !wanted || wanted.includes(t.id))) {
     // A preset (2026-10-22) is captured as the demo the gallery shows: its master with the preset's look and photos.
+    // A starter (2026-10-24) is built from its own files (sourceId), so its preview must be too, not the master's.
     const resolved = resolvePresetTemplate(manifest, templateManifest);
-    const snapshot = await new SourceProjectsService({} as any).prepare({ revision: 0, ...(await templateDemoRevision(resolved.manifest, templateSourceFiles(resolved.manifest.id), resolved.preset)) });
+    const snapshot = await new SourceProjectsService({} as any).prepare({ revision: 0, ...(await templateDemoRevision(resolved.manifest, templateSourceFiles(resolved.sourceId), resolved.preset)) });
     await withVisualSandbox(snapshot, '', undefined, false, async context => {
       for (const [suffix, width, height, out] of [['', 1280, 1700, 960], ['-mobile', 390, 844, 390]] as const) {
         const page = await context.newPage();
