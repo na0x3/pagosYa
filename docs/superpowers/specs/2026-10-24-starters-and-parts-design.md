@@ -68,7 +68,7 @@ Then the starter is reviewed in the Studio and the owner approves its look befor
 | from BOXY (`cmviri9o80001118u3utjb28g`, rev 14) | approved | master |
 | from NOA VARGAS (`cmvi4x7xb0018rb8uvj9ddgzc`, rev 14) | approved | master |
 | from Antojo Café (`cmvfjmn5q0001n4za72wlym58`, rev 2) | approved | slots |
-| from goodProtein #1 (the store made by `create-goodprotein-demo.ts`; `cmvjj6qw90001yh30d069twvb` rev 6 «goodProtein con marcas» is the likely one — confirm before harvesting) | approved | slots |
+| from goodProtein #1 (`cmvjj6qw90001yh30d069twvb`, rev 6 «goodProtein con marcas»; confirmed by `examples/goodprotein/demo.json`) | approved | slots |
 | Esencial | existing | master — neutral fallback |
 | tech / electronics, beauty / wellness, home / hardware | new, designed and owner-approved one by one | master or slots |
 
