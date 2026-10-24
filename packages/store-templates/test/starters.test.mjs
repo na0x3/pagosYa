@@ -35,3 +35,14 @@ test('vitrina is a slots starter that fills every text', () => {
   assert.ok(vitrina.copy.length > 40);
   assert.equal(vitrina.curated, true);
 });
+
+// Task 1's own-source rule, pinned once a starter that extends Esencial exists (plan ruling 2026-10-24).
+test('a starter that extends Esencial builds from its own files, a preset still from Esencial’s', () => {
+  const { templateSourceFiles, templateManifest } = require('../index.js');
+  const home = id => templateSourceFiles(id).find(file => file.path === 'components/home.tsx').content;
+  assert.equal(templateManifest('taller').extends, 'esencial');
+  assert.match(home('taller'), /es-firma/);
+  assert.doesNotMatch(home('esencial'), /es-firma/);
+  const preset = require('../index.js').listTemplates().find(manifest => manifest.preset && !manifest.starter);
+  assert.equal(home(preset.id), home('esencial'));
+});
