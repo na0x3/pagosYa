@@ -73,6 +73,16 @@ function validate(dir, id) {
     if (!Array.isArray(s.fits) || s.fits.length < 3 || s.fits.some(word => typeof word !== 'string' || word !== word.toLowerCase() || !word.trim())) fail(id, 'starter.fits', 'must list at least three lowercase words');
     if (s.fashion !== undefined && typeof s.fashion !== 'boolean') fail(id, 'starter.fashion', 'must be true or false');
     if (!Number.isInteger(s.order)) fail(id, 'starter.order', 'must be an integer');
+    if (s.dice !== undefined) {
+      if (!manifest.extends) fail(id, 'starter.dice', 'only a starter that extends a master can roll dice');
+      if (!s.dice || typeof s.dice !== 'object' || Array.isArray(s.dice)) fail(id, 'starter.dice', 'must be an object of id lists');
+      for (const [part, ids] of Object.entries(s.dice)) {
+        const looks = part === 'palettes' || part === 'fonts';
+        const ok = Array.isArray(ids) && ids.every(value => typeof value === 'string' && /^[a-z0-9-]{1,40}$/.test(value)) && new Set(ids).size === ids.length;
+        const size = ok && (looks ? ids.length >= 1 && ids.length <= 6 : ids.length >= 2 && ids.length <= 4);
+        if (!size) fail(id, `starter.dice.${part}`, looks ? 'must list 1-6 distinct ids' : 'must list 2-4 distinct ids');
+      }
+    }
   }
   if (manifest.curated !== undefined && (typeof manifest.curated !== 'boolean' || (manifest.curated && !manifest.copy && !manifest.preset))) fail(id, 'curated', 'must be true or false, and only on a converted template (with copy) or a preset');
   if (!Array.isArray(manifest.photos)) fail(id, 'photos', 'must be a list');
@@ -88,7 +98,7 @@ function validate(dir, id) {
       if (statSync(path).size > DEMO_MAX_BYTES) fail(id, `demo ${photo.demo}`, 'is larger than 600 KB');
     }
   }
-  return Object.freeze({ ...manifest, ...(manifest.dna ? { dna: Object.freeze({ ...manifest.dna }) } : {}), ...(manifest.master ? { master: Object.freeze(manifest.master) } : {}), ...(manifest.copy ? { copy: Object.freeze(manifest.copy.map(slot => Object.freeze({ ...slot }))) } : {}), ...(manifest.starter ? { starter: Object.freeze({ ...manifest.starter, fits: Object.freeze([...manifest.starter.fits]) }) } : {}), tags: Object.freeze([...manifest.tags]), photos: Object.freeze(manifest.photos.map(photo => Object.freeze({ ...photo }))) });
+  return Object.freeze({ ...manifest, ...(manifest.dna ? { dna: Object.freeze({ ...manifest.dna }) } : {}), ...(manifest.master ? { master: Object.freeze(manifest.master) } : {}), ...(manifest.copy ? { copy: Object.freeze(manifest.copy.map(slot => Object.freeze({ ...slot }))) } : {}), ...(manifest.starter ? { starter: Object.freeze({ ...manifest.starter, fits: Object.freeze([...manifest.starter.fits]), ...(manifest.starter.dice ? { dice: Object.freeze(Object.fromEntries(Object.entries(manifest.starter.dice).map(([part, ids]) => [part, Object.freeze([...ids])]))) } : {}) }) } : {}), tags: Object.freeze([...manifest.tags]), photos: Object.freeze(manifest.photos.map(photo => Object.freeze({ ...photo }))) });
 }
 
 /** Reads and validates every template under `root`. Throws on the first invalid manifest (a build error, never input). */

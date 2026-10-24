@@ -1,0 +1,32 @@
+{
+  "id": "bad",
+  "name": "Dulce",
+  "category": "comida",
+  "description": "Postres y repostería con mucho color.",
+  "tags": [
+    "postres"
+  ],
+  "sitePurpose": "shop",
+  "order": 900,
+  "extends": "esencial",
+  "preset": {
+    "palette": "terracotta",
+    "fonts": "classic",
+    "variants": {}
+  },
+  "photos": [],
+  "starter": {
+    "description": "Postres, tortas y dulces con una vitrina alegre.",
+    "fits": [
+      "postres",
+      "tortas",
+      "dulces"
+    ],
+    "order": 1,
+    "dice": {
+      "hero": [
+        "full"
+      ]
+    }
+  }
+}

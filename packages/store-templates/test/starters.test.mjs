@@ -46,3 +46,23 @@ test('a starter that extends Esencial builds from its own files, a preset still 
   const preset = require('../index.js').listTemplates().find(manifest => manifest.preset && !manifest.starter);
   assert.equal(home(preset.id), home('esencial'));
 });
+
+// Starter dice (spec 2026-10-24-starter-dice §1): each varying part lists 2–4 ids; only a starter that extends a master rolls.
+test('a starter dice list needs 2–4 ids per part and a master to extend', () => {
+  assert.throws(() => loadTemplates(join(import.meta.dirname, 'fixtures', 'starters-dice-bad')), /starter\.dice/);
+});
+
+test('every dice id of a real starter exists in Esencial, and starter-only entries never sit in a preset', () => {
+  const { listTemplates, templateManifest } = require('../index.js');
+  const master = templateManifest('esencial').master;
+  for (const manifest of listTemplates().filter(m => m.starter?.dice)) {
+    const { palettes = [], fonts = [], ...parts } = manifest.starter.dice;
+    for (const [part, ids] of Object.entries(parts)) for (const id of ids) assert.ok(master.variants[part]?.includes(id), `${manifest.id}: ${part}:${id}`);
+    for (const id of palettes) assert.ok(master.palettes.some(p => p.id === id), `${manifest.id}: palette ${id}`);
+    for (const id of fonts) assert.ok(master.fonts.some(f => f.id === id), `${manifest.id}: fonts ${id}`);
+  }
+  const starterOnly = new Set([...master.palettes, ...master.fonts].filter(entry => entry.starterOnly).map(entry => entry.id));
+  for (const manifest of listTemplates().filter(m => m.preset && !m.starter)) {
+    assert.ok(!starterOnly.has(manifest.preset.palette) && !starterOnly.has(manifest.preset.fonts), manifest.id);
+  }
+});
