@@ -54,7 +54,41 @@
       "alta costura"
     ],
     "fashion": true,
-    "order": 3
+    "order": 3,
+    "dice": {
+      "hero": [
+        "stack",
+        "framed",
+        "arch"
+      ],
+      "grid": [
+        "side-title",
+        "grid3"
+      ],
+      "card": [
+        "framed",
+        "plain"
+      ],
+      "story": [
+        "split",
+        "note",
+        "quote"
+      ],
+      "closing": [
+        "accent",
+        "photo"
+      ],
+      "palettes": [
+        "linen",
+        "sand",
+        "terracotta"
+      ],
+      "fonts": [
+        "gallery",
+        "editorial",
+        "literary"
+      ]
+    }
   },
   "photos": [
     {

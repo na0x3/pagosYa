@@ -54,7 +54,41 @@
       "accesorios"
     ],
     "fashion": true,
-    "order": 2
+    "order": 2,
+    "dice": {
+      "hero": [
+        "split-left",
+        "split-right",
+        "framed"
+      ],
+      "grid": [
+        "grid3",
+        "side-title",
+        "grid4"
+      ],
+      "card": [
+        "plain",
+        "framed"
+      ],
+      "story": [
+        "split",
+        "quote",
+        "note"
+      ],
+      "closing": [
+        "accent",
+        "dark"
+      ],
+      "palettes": [
+        "mono",
+        "sand"
+      ],
+      "fonts": [
+        "luxury",
+        "editorial",
+        "gallery-sans"
+      ]
+    }
   },
   "photos": [
     {
