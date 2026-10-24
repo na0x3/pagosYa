@@ -664,3 +664,5 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es .es-hero:is([data-es-hero="framed"],[data-es-hero="type"]) .es-btn--ghost{color:var(--es-paper);border-color:var(--es-paper);box-shadow:none}
 .es .es-marquee{font-family:var(--es-heading);font-weight:700;text-transform:uppercase}
 @media (max-width:760px){.es .es-hero[data-es-hero="framed"]{margin:8px;border-radius:30px}.es .es-hero[data-es-hero="framed"] .es-hero__media img{transform:none}}
+/* A cover with no photo: uppercase Fredoka at Esencial's type-cover size ran to six lines (comparison 2026-10-24). */
+.es .es-hero[data-es-hero="type"] .es-display{font-size:clamp(40px,6vw,88px);max-width:14ch}
