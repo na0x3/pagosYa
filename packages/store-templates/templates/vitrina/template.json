@@ -1,0 +1,497 @@
+{
+  "id": "vitrina",
+  "name": "Vitrina",
+  "category": "comida",
+  "description": "Una tienda alegre y con carácter: titulares grandes, colores vivos y botones que se sienten.",
+  "tags": [
+    "alegre",
+    "colorido",
+    "pequeñas tandas"
+  ],
+  "sitePurpose": "shop",
+  "order": 200,
+  "curated": true,
+  "starter": {
+    "description": "Productos hechos en pequeñas tandas con una marca alegre y atrevida: salsas, dulces, snacks, regalos.",
+    "fits": [
+      "salsas",
+      "dulces",
+      "postres",
+      "snacks",
+      "regalos",
+      "alegre",
+      "picante",
+      "artesanal"
+    ],
+    "order": 1
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    }
+  ],
+  "copy": [
+    {
+      "key": "home_1",
+      "role": "body",
+      "default": "NUEVO · HECHO A MANO",
+      "max": 32
+    },
+    {
+      "key": "home_2",
+      "role": "headline",
+      "default": "NADA DE TIBIO. ",
+      "max": 24
+    },
+    {
+      "key": "home_3",
+      "role": "label",
+      "default": "PONLE CARÁCTER.",
+      "max": 24
+    },
+    {
+      "key": "home_4",
+      "role": "body",
+      "default": "Productos hechos en pequeñas tandas, con mucho carácter y listos para tu pedido.",
+      "max": 128
+    },
+    {
+      "key": "home_5",
+      "role": "cta",
+      "default": "Ver la tienda",
+      "max": 21
+    },
+    {
+      "key": "home_6",
+      "role": "label",
+      "default": "Pedido fácil",
+      "max": 19
+    },
+    {
+      "key": "home_7",
+      "role": "label",
+      "default": "Eliges y pagas en minutos",
+      "max": 40
+    },
+    {
+      "key": "home_8",
+      "role": "label",
+      "default": "Pequeñas tandas",
+      "max": 24
+    },
+    {
+      "key": "home_9",
+      "role": "label",
+      "default": "Hecho con cuidado",
+      "max": 27
+    },
+    {
+      "key": "home_10",
+      "role": "label",
+      "default": "Atención cercana",
+      "max": 26
+    },
+    {
+      "key": "home_11",
+      "role": "label",
+      "default": "Te respondemos rápido",
+      "max": 34
+    },
+    {
+      "key": "home_12",
+      "role": "cta",
+      "default": "Reproducir movimiento",
+      "max": 34
+    },
+    {
+      "key": "home_13",
+      "role": "cta",
+      "default": "Pausar movimiento",
+      "max": 27
+    },
+    {
+      "key": "home_14",
+      "role": "body",
+      "default": "ELIGE SIN MIEDO",
+      "max": 24
+    },
+    {
+      "key": "home_15",
+      "role": "title",
+      "default": "LO QUE HACEMOS",
+      "max": 22
+    },
+    {
+      "key": "home_16",
+      "role": "body",
+      "default": "Todo lo que tenemos hoy, listo para tu pedido.",
+      "max": 74
+    },
+    {
+      "key": "home_17",
+      "role": "body",
+      "default": "PARA REGALAR",
+      "max": 19
+    },
+    {
+      "key": "home_18",
+      "role": "title",
+      "default": "UN DETALLE QUE SE NOTA",
+      "max": 35
+    },
+    {
+      "key": "home_19",
+      "role": "body",
+      "default": "Arma un regalo con lo que más te guste de la tienda.",
+      "max": 83
+    },
+    {
+      "key": "home_20",
+      "role": "cta",
+      "default": "Ver la tienda",
+      "max": 21
+    },
+    {
+      "key": "home_21",
+      "role": "alt",
+      "default": "Productos de la tienda",
+      "max": 35
+    },
+    {
+      "key": "home_22",
+      "role": "alt",
+      "default": "Nuestro equipo",
+      "max": 22
+    },
+    {
+      "key": "home_23",
+      "role": "body",
+      "default": "NOSOTROS",
+      "max": 13
+    },
+    {
+      "key": "home_24",
+      "role": "title",
+      "default": "HECHO POR GENTE CON GANAS",
+      "max": 40
+    },
+    {
+      "key": "home_25",
+      "role": "body",
+      "default": "Somos un equipo pequeño que hace cada producto con cuidado y mucho carácter.",
+      "max": 122
+    },
+    {
+      "key": "home_26",
+      "role": "cta",
+      "default": "Elegir el mío",
+      "max": 21
+    },
+    {
+      "key": "home_27",
+      "role": "body",
+      "default": "FÁCIL Y AL GRANO",
+      "max": 26
+    },
+    {
+      "key": "home_28",
+      "role": "title",
+      "default": "CÓMO PEDIR",
+      "max": 16
+    },
+    {
+      "key": "home_29",
+      "role": "title",
+      "default": "Elige tu favorito",
+      "max": 27
+    },
+    {
+      "key": "home_30",
+      "role": "body",
+      "default": "Mira la tienda y elige lo que más te guste.",
+      "max": 69
+    },
+    {
+      "key": "home_31",
+      "role": "title",
+      "default": "Añade a Mi pedido",
+      "max": 27
+    },
+    {
+      "key": "home_32",
+      "role": "body",
+      "default": "Usa el botón de cada producto para preparar tu pedido.",
+      "max": 86
+    },
+    {
+      "key": "home_33",
+      "role": "title",
+      "default": "Paga y listo",
+      "max": 19
+    },
+    {
+      "key": "home_34",
+      "role": "body",
+      "default": "Elige cómo recibirlo y paga en el checkout.",
+      "max": 69
+    },
+    {
+      "key": "home_35",
+      "role": "body",
+      "default": "SIN VUELTAS",
+      "max": 18
+    },
+    {
+      "key": "home_36",
+      "role": "title",
+      "default": "PREGUNTAS",
+      "max": 14
+    },
+    {
+      "key": "home_37",
+      "role": "question",
+      "default": "¿Cómo hago mi pedido?",
+      "max": 34
+    },
+    {
+      "key": "home_38",
+      "role": "body",
+      "default": "Elige tus productos, añádelos a Mi pedido y paga en el checkout.",
+      "max": 102
+    },
+    {
+      "key": "home_39",
+      "role": "question",
+      "default": "¿Cómo lo recibo?",
+      "max": 26
+    },
+    {
+      "key": "home_40",
+      "role": "body",
+      "default": "Al pagar ves las opciones de entrega y retiro que ofrece la tienda.",
+      "max": 107
+    },
+    {
+      "key": "home_41",
+      "role": "question",
+      "default": "¿Puedo pedir para regalar?",
+      "max": 42
+    },
+    {
+      "key": "home_42",
+      "role": "body",
+      "default": "Sí. Escríbenos si necesitas algo especial para tu regalo.",
+      "max": 91
+    },
+    {
+      "key": "home_43",
+      "role": "title",
+      "default": "Contáctanos",
+      "max": 18
+    },
+    {
+      "key": "home_44",
+      "role": "body",
+      "default": "Cuéntanos qué necesitas y te respondemos por aquí.",
+      "max": 80
+    },
+    {
+      "key": "shell_1",
+      "role": "label",
+      "default": "La tienda",
+      "max": 14
+    },
+    {
+      "key": "shell_2",
+      "role": "label",
+      "default": "Nosotros",
+      "max": 13
+    },
+    {
+      "key": "shell_3",
+      "role": "label",
+      "default": "Cómo pedir",
+      "max": 16
+    },
+    {
+      "key": "shell_4",
+      "role": "label",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_5",
+      "role": "label",
+      "default": "Contacto",
+      "max": 13
+    },
+    {
+      "key": "shell_6",
+      "role": "body",
+      "default": "Hecho en pequeñas tandas · pide hoy",
+      "max": 56
+    },
+    {
+      "key": "shell_7",
+      "role": "cta",
+      "default": "Contacto",
+      "max": 13
+    },
+    {
+      "key": "shell_8",
+      "role": "title",
+      "default": "Crear cuenta",
+      "max": 19
+    },
+    {
+      "key": "shell_9",
+      "role": "label",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_10",
+      "role": "title",
+      "default": "Mi pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_11",
+      "role": "body",
+      "default": "Tu pedido está vacío.",
+      "max": 34
+    },
+    {
+      "key": "shell_12",
+      "role": "cta",
+      "default": "Ver la tienda",
+      "max": 21
+    },
+    {
+      "key": "shell_13",
+      "role": "body",
+      "default": "Quitar",
+      "max": 12
+    },
+    {
+      "key": "shell_14",
+      "role": "cta",
+      "default": "Ver Mi pedido",
+      "max": 21
+    },
+    {
+      "key": "shell_15",
+      "role": "title",
+      "default": "Tu pedido",
+      "max": 14
+    },
+    {
+      "key": "shell_16",
+      "role": "title",
+      "default": "Retiro y pago",
+      "max": 21
+    },
+    {
+      "key": "shell_17",
+      "role": "title",
+      "default": "Novedades primero",
+      "max": 27
+    },
+    {
+      "key": "shell_18",
+      "role": "body",
+      "default": "Te avisamos cuando llega algo nuevo o hay tanda fresca.",
+      "max": 88
+    },
+    {
+      "key": "shell_19",
+      "role": "cta",
+      "default": "Suscribirme",
+      "max": 18
+    },
+    {
+      "key": "shell_20",
+      "role": "body",
+      "default": "Hecho con ganas.",
+      "max": 26
+    },
+    {
+      "key": "shell_21",
+      "role": "title",
+      "default": "Tienda",
+      "max": 12
+    },
+    {
+      "key": "shell_22",
+      "role": "cta",
+      "default": "La tienda",
+      "max": 14
+    },
+    {
+      "key": "shell_23",
+      "role": "cta",
+      "default": "Para regalar",
+      "max": 19
+    },
+    {
+      "key": "shell_24",
+      "role": "cta",
+      "default": "Nosotros",
+      "max": 13
+    },
+    {
+      "key": "shell_25",
+      "role": "cta",
+      "default": "Cómo pedir",
+      "max": 16
+    },
+    {
+      "key": "shell_26",
+      "role": "cta",
+      "default": "Preguntas",
+      "max": 14
+    },
+    {
+      "key": "shell_27",
+      "role": "title",
+      "default": "Información",
+      "max": 18
+    },
+    {
+      "key": "shell_28",
+      "role": "title",
+      "default": "Compra",
+      "max": 12
+    },
+    {
+      "key": "shell_29",
+      "role": "body",
+      "default": "Paga en línea en minutos.",
+      "max": 40
+    },
+    {
+      "key": "shell_30",
+      "role": "cta",
+      "default": "Abrir Mi pedido",
+      "max": 24
+    },
+    {
+      "key": "shell_31",
+      "role": "cta",
+      "default": "Ir al contenido",
+      "max": 24
+    }
+  ]
+}

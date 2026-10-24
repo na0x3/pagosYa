@@ -122,7 +122,8 @@ const listTemplates = () => [...registry().values()].map(entry => entry.manifest
 const templateManifest = id => (typeof id === 'string' && ID.test(id) ? registry().get(id)?.manifest : undefined);
 
 /** What merchants may pick from: every template except the ones the owner hid. Hidden ones still resolve by id. */
-const gallerySelection = manifests => manifests.filter(manifest => manifest.hidden !== true);
+// Starters (spec 2026-10-24) are offered by YAPI's pick and «Probar otro estilo», never as Plantillas.
+const gallerySelection = manifests => manifests.filter(manifest => manifest.hidden !== true && !(manifest.starter && !manifest.preset));
 const galleryTemplates = () => gallerySelection(listTemplates());
 /** Starters (spec 2026-10-24): the finished stores a new store may start from, Esencial included, in their own order. */
 const listStarters = () => listTemplates().filter(manifest => manifest.starter && manifest.hidden !== true).sort((a, b) => a.starter.order - b.starter.order);

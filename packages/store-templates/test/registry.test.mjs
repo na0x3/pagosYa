@@ -90,9 +90,10 @@ test('the gallery leaves hidden templates out, but a hidden template keeps its m
   assert.equal(manifests.find(m => m.id === 'oculta').hidden, true);
 });
 
-test('the real gallery is the full list minus hidden ones, and hidden ones still resolve by id', () => {
+test('the real gallery is the full list minus hidden ones and starters, and hidden ones still resolve by id', () => {
   const all = templates.listTemplates();
-  assert.deepEqual(templates.galleryTemplates().map(t => t.id), all.filter(t => !t.hidden).map(t => t.id));
+  // Starters (spec 2026-10-24) are offered by YAPI's pick and «Probar otro estilo», not the Plantillas gallery.
+  assert.deepEqual(templates.galleryTemplates().map(t => t.id), all.filter(t => !t.hidden && !(t.starter && !t.preset)).map(t => t.id));
   for (const t of all.filter(t => t.hidden)) assert.equal(templates.templateManifest(t.id).id, t.id);
 });
 

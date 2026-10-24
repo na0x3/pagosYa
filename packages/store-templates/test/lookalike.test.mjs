@@ -14,7 +14,8 @@ const homeSections = id => {
   return [...home.matchAll(/\n {6}<section id="([^"]+)"/g)].map(m => m[1]);
 };
 // Presets (2026-10-22) are looks of Esencial and share its home; they are checked in presets.test.mjs.
-const fresh = () => listTemplates().filter(t => !LEGACY.has(t.id) && !t.extends);
+// Starters (spec 2026-10-24) are harvested approved stores, judged by the store contract and the owner, not by these Plantillas rules.
+const fresh = () => listTemplates().filter(t => !LEGACY.has(t.id) && !t.extends && !t.starter);
 
 test('a new template has 6–9 home sections in a sequence no other template uses', () => {
   const all = listTemplates().filter(t => !t.extends).map(t => ({ id: t.id, seq: homeSections(t.id).join(',') }));
