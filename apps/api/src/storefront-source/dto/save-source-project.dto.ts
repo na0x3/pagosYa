@@ -10,6 +10,8 @@ export class SourceProjectBriefDto {
   @IsString() @MinLength(1) @MaxLength(2000) visualDirection!: string;
   /** The Plantilla this design started from; carried through later edits so YAPI can rework it (spec 2026-09-26). */
   @IsOptional() @IsString() @Matches(/^[a-z0-9-]{1,40}$/) templateId?: string;
+  /** Starters (spec 2026-10-24): the finished store this one started from. */
+  @IsOptional() @IsString() @Matches(/^[a-z0-9-]{1,40}$/) starterId?: string;
   /** The revision a template produced (apply or its free adaptation); a later edit no longer matches it. */
   @IsOptional() @IsInt() @Min(1) templateRevision?: number;
 }

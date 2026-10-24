@@ -34,11 +34,12 @@ export const templateDemoPath = (manifest: Pick<TemplateManifest, 'id' | 'photos
 
 /** Plantillas presets (2026-10-22): the master a preset is a look of, carrying the preset's photos, and the fill that gives
  *  it the preset's look, parts, sections and starting words. Any other template resolves to itself. */
-export function resolvePresetTemplate(manifest: TemplateManifest, master: (id: string) => TemplateManifest | undefined): { manifest: TemplateManifest; preset?: MasterFill } {
-  if (!manifest.preset || !manifest.extends) return { manifest };
+export function resolvePresetTemplate(manifest: TemplateManifest, master: (id: string) => TemplateManifest | undefined): { manifest: TemplateManifest; preset?: MasterFill; sourceId: string } {
+  // sourceId: whose files the store is built from — a preset's master, or a starter's own (spec 2026-10-24).
+  if (!manifest.preset || !manifest.extends) return { manifest, sourceId: manifest.id };
   const base = master(manifest.extends);
   if (!base?.master) throw new TypeError(`Plantilla ${manifest.id}: ${manifest.extends} no es una plantilla base.`);
-  return { manifest: { ...base, photos: manifest.photos, photoSource: manifest.id }, preset: presetFill(manifest.preset) };
+  return { manifest: { ...base, photos: manifest.photos, photoSource: manifest.id }, preset: presetFill(manifest.preset), sourceId: manifest.id };
 }
 
 export function presetFill(preset: NonNullable<TemplateManifest['preset']>): MasterFill {
@@ -53,9 +54,11 @@ export function presetFill(preset: NonNullable<TemplateManifest['preset']>): Mas
 }
 
 /** The preset's look, parts and sections over a business's fill: the fill's words win, the preset keeps its design. */
-export function withPreset(preset: MasterFill, fill?: MasterFill | null): MasterFill {
+export function withPreset(preset: MasterFill, fill?: MasterFill | null, keepBrandColours = false): MasterFill {
   if (!fill) return preset;
-  return { ...fill, look: preset.look, variants: preset.variants,
+  // A starter (spec 2026-10-24) keeps the merchant's brand colours over its own look; a preset is a chosen look and keeps none.
+  const look = keepBrandColours && fill.look?.colors && Object.keys(fill.look.colors).length ? { ...(preset.look ?? {}), colors: { ...(preset.look?.colors ?? {}), ...fill.look.colors } } : preset.look;
+  return { ...fill, look, variants: preset.variants,
     copy: { ...(preset.copy ?? {}), ...(fill.copy ?? {}) }, sections: fill.sections?.length ? fill.sections : preset.sections,
     featureCopy: { ...(preset.featureCopy ?? {}), ...(fill.featureCopy ?? {}) },
     character: { ...(fill.character ?? preset.character!), kind: preset.character?.kind ?? fill.character?.kind } };
@@ -91,6 +94,13 @@ export function sameAsBundled(photos: Record<string, string>, sources: MasterFil
     const path = uploadPath(src);
     return [slot, sources.hero && path === sources.hero && photos.hero ? photos.hero : sources.story && path === sources.story && photos.story ? photos.story : src];
   }));
+}
+
+/** Starters (spec 2026-10-24 §1): the merchant's brand colours over a copy-slot starter's own, appended last so they win. */
+export type StarterBrandColours = Partial<Record<'accent' | 'background' | 'foreground' | 'surface', string>>;
+export function starterBrandBlock(colours: StarterBrandColours): string {
+  const vars = (['accent', 'background', 'foreground', 'surface'] as const).filter(key => /^#[0-9a-f]{6}$/i.test(colours[key] ?? '')).map(key => `--store-${key}:${colours[key]!.toLowerCase()}`);
+  return vars.length ? `/* pagosya-brand */ :root{${vars.join(';')}}` : '';
 }
 
 export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[]; features?: Record<string, unknown> }, plantillaCopy?: Record<string, string>): SourceProjectFileDto {
@@ -367,6 +377,8 @@ const CATEGORY_BUSINESS: Record<TemplateManifest['category'], string> = {
 export async function assembleTemplateRevision(input: {
   manifest: TemplateManifest; source: SourceProjectFileDto[]; storeId: string; slug: string; publicStore: SourcePublicStore;
   apiUrl: URL; checkoutOrigin?: string; firstRevision: boolean; previousBrief?: SourceProjectBriefDto;
+  /** Starters (spec 2026-10-24): the starter a master-based store was built from, named in its label and brief. */
+  starter?: { id: string; name: string };
   /** Master templates only (spec 2026-10-19): the filled copy, look and photo choices; and false keeps demo photos out. */
   fill?: MasterFill; demoPhotos?: boolean;
   /** Bundled photo assets the fill points at (assets/image-…). */
@@ -440,7 +452,9 @@ export async function assembleTemplateRevision(input: {
     sitePurpose: 'shop' as const, businessType: CATEGORY_BUSINESS[manifest.category], audience: `Clientes de ${data.storeName}`.slice(0, 500),
     primaryAction: 'Comprar en línea', visualDirection: `Plantilla ${manifest.name}: ${manifest.description}`.slice(0, 2000),
   }), templateId: manifest.id };
-  return { label: `Plantilla: ${manifest.name}`.slice(0, 120), brief, files };
+  // Starters (spec 2026-10-24): a store started from a finished store is named by its style.
+  const starter = input.starter ?? (manifest.starter && manifest.id !== 'esencial' ? { id: manifest.id, name: manifest.name } : undefined);
+  return { label: `${starter ? `Estilo: ${starter.name}` : `Plantilla: ${manifest.name}`}`.slice(0, 120), brief: starter ? { ...brief, starterId: starter.id } : brief, files };
 }
 
 /** The demo store Plantillas are checked and previewed with: four products (so every photo slot shows the template's

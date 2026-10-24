@@ -13,7 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PublicStoresService } from '../stores/public-stores.service';
 import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectSnapshot } from './source-project';
-import { assembleTemplateRevision, readMasterState, refillMasterFiles, refillPlantillaFiles, resolvePresetTemplate, templateDemoRevision, TEMPLATE_STORE_DATA_PATH, withPreset } from './source-templates';
+import { assembleTemplateRevision, readMasterState, refillMasterFiles, refillPlantillaFiles, resolvePresetTemplate, starterBrandBlock, templateDemoRevision, TEMPLATE_STORE_DATA_PATH, withPreset, type StarterBrandColours } from './source-templates';
 import { plantillaFallback, plantillaFillFromRead } from './source-plantilla-fill';
 import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
 import { distinctPhotoCount, menuVariant, rollVariants, type RecentRoll } from './source-master-dice';
@@ -62,14 +62,15 @@ export class SourceTemplatesService {
     if (!chosen) throw new NotFoundException('Esa plantilla no existe.');
     // Plantillas presets (2026-10-22): a preset is saved as its master (Esencial) with the preset's look and starting words,
     // so every master path (refill, chat edits, menus, sections) keeps working on the store.
-    const { manifest, preset } = resolvePresetTemplate(chosen, id => this.registry.templateManifest(id));
-    if (preset) { fill = withPreset(preset, fill); variants = variants ? { ...variants, ...preset.variants } as MasterVariants : preset.variants as MasterVariants; }
+    const { manifest, preset, sourceId } = resolvePresetTemplate(chosen, id => this.registry.templateManifest(id));
+    if (preset) { fill = withPreset(preset, fill, Boolean(chosen.starter)); variants = variants ? { ...variants, ...preset.variants } as MasterVariants : preset.variants as MasterVariants; }
     const current = await this.projects.current(merchantId, storeId);
     if (expectedRevision !== undefined && current.revision !== expectedRevision) throw new ConflictException('El proyecto cambió. Recarga antes de aplicar la plantilla.');
     const previous = current.revision ? await this.projects.version(merchantId, storeId, current.revision) : null;
     const publicStore = await this.publicStores.getStorePublic(current.slug, { trackView: false, ownerMerchantId: merchantId });
     const assembled = await assembleTemplateRevision({
-      manifest, source: this.registry.templateSourceFiles(manifest.id), storeId, slug: current.slug, publicStore,
+      manifest, source: this.registry.templateSourceFiles(sourceId), storeId,
+      ...(chosen.starter && chosen.extends ? { starter: { id: chosen.id, name: chosen.name } } : {}), slug: current.slug, publicStore,
       apiUrl: sourcePublicApiUrl(this.config), checkoutOrigin: this.config.get<string>('app.checkoutOrigin'), firstRevision: current.revision === 0,
       previousBrief: (previous?.snapshot as unknown as SourceProjectSnapshot | undefined)?.brief,
       // A filled Plantilla shows the merchant's photos or none, never the demo business's (spec 2026-10-20).
@@ -80,9 +81,12 @@ export class SourceTemplatesService {
 
   /** Spec 2026-10-19 §2: the master template applied to a new store and filled in one call; the store is saved even when
    *  the filler fails. The filler sees what the apply sees: the store's name, product names and photos. */
-  async applyMaster(merchantId: string, storeId: string, revision: number, filler: (facts: MasterFacts) => Promise<MasterFill | null>, presetId?: string, plan?: AppliedPlan) {
+  async applyMaster(merchantId: string, storeId: string, revision: number, filler: (facts: MasterFacts) => Promise<MasterFill | null>, presetId?: string, plan?: AppliedPlan, starterId?: string) {
     const presetManifest = presetId ? this.registry.templateManifest(presetId) : undefined;
     if (presetId && !presetManifest?.preset) throw new NotFoundException('Esa plantilla no existe.');
+    // Starters (spec 2026-10-24): a finished store that extends Esencial — its own files and look, no dice, still the merchant's brand.
+    const starterManifest = starterId && starterId !== MASTER_TEMPLATE_ID ? this.registry.templateManifest(starterId) : undefined;
+    if (starterId && starterId !== MASTER_TEMPLATE_ID && !(starterManifest?.starter && starterManifest.extends === MASTER_TEMPLATE_ID)) throw new NotFoundException('Ese estilo no existe.');
     const manifest = this.registry.templateManifest(MASTER_TEMPLATE_ID);
     if (!manifest?.master) throw new NotFoundException('La plantilla base no está disponible.');
     const current = await this.projects.current(merchantId, storeId);
@@ -107,7 +111,7 @@ export class SourceTemplatesService {
     if (plan) {
       variants = { ...plan.variants, sections: plan.sections } as MasterVariants;
       fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), palette: plan.palette, fonts: plan.fonts, ...(plan.accent ? { colors: { ...(fill?.look?.colors ?? {}), accent: plan.accent } } : {}) } };
-    } else if (!presetManifest && this.config.get<boolean>('app.yapiEsencialDice') !== false) {
+    } else if (!presetManifest && !starterManifest && this.config.get<boolean>('app.yapiEsencialDice') !== false) {
       // Counted before bundling: a bundled hero is an asset path and would count its product photo twice (review fix).
       const photoCount = distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]);
       const rolled = rollVariants({ seed: storeId, settings: manifest.master, character: fill?.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] },
@@ -119,12 +123,12 @@ export class SourceTemplatesService {
     }
     const brandColours = Object.fromEntries(([['paper', 'background'], ['ink', 'foreground'], ['accent', 'accent'], ['muted', 'surface']] as const)
       .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
-    const logo = presetManifest || plan?.accent || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
+    const logo = (presetManifest && !starterManifest) || plan?.accent || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
     const colours = Object.keys(brandColours).length ? brandColours : logo ? { paper: logo.paper, ink: logo.ink, accent: logo.accent, muted: logo.surface } : undefined;
     // The merchant's confirmed brand colours always win over a plan's accent (final review 2026-10-22).
     if (colours && plan?.accent && !Object.keys(brandColours).length) colours.accent = plan.accent;
     if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours, ...(fill?.look?.palette ? { palette: paletteForBrand(manifest.master, fill.look.palette, colours) } : {}) } };
-    const { assembled } = await this.assemble(merchantId, storeId, presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files, variants, undefined, plan?.dna);
+    const { assembled } = await this.assemble(merchantId, storeId, starterManifest?.id ?? presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files, variants, undefined, plan?.dna);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
     // Variety spec §2b: every product's own page content (highlights, story, faq…), written in the background.
@@ -167,10 +171,24 @@ export class SourceTemplatesService {
     const filled = plantillaFillFromRead(await filler(facts).catch(() => null), manifest.copy);
     const copy = { ...plantillaFallback(manifest.copy, facts), ...filled };
     const { assembled } = await this.assemble(merchantId, storeId, templateId, revision, undefined, undefined, undefined, copy);
+    // Starters (spec 2026-10-24 §1): a copy-slot starter keeps its look but wears the merchant's confirmed brand or logo colours.
+    const brandBlock = manifest.starter ? starterBrandBlock(await this.starterBrandColours(merchantId, storeId, publicStore.logoUrl).catch(() => ({}))) : '';
+    if (brandBlock) assembled.files = assembled.files.map(file => file.path === 'styles/globals.css' ? { ...file, content: `${file.content}\n${brandBlock}\n` } : file);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
     void Promise.resolve().then(() => this.pageWriter?.fillStore(storeId)).catch(() => undefined);
     return { ...saved, filled: Object.keys(filled).length > 0 };
+  }
+
+  /** Confirmed brand colours first, else the logo's palette; {} when the merchant has neither. */
+  private async starterBrandColours(merchantId: string, storeId: string, logoUrl?: string | null): Promise<StarterBrandColours> {
+    const brand = await Promise.resolve(this.brands?.get(merchantId, storeId)).catch(() => undefined);
+    const confirmed = new Map((brand?.data.confirmed ?? []).map(fact => [String(fact.field), String(fact.value)]));
+    const fields = ['accent', 'background', 'foreground', 'surface'] as const;
+    const fromBrand = Object.fromEntries(fields.flatMap(field => HEX.test(confirmed.get(field) ?? '') ? [[field, confirmed.get(field)!]] : []));
+    if (Object.keys(fromBrand).length) return fromBrand;
+    const logo = logoUrl ? await this.logoPalette(merchantId, logoUrl).catch(() => undefined) : undefined;
+    return logo ? { accent: logo.accent, background: logo.paper, foreground: logo.ink, surface: logo.surface } : {};
   }
 
   /** Spec 2026-10-20 §5: a words change on a Plantilla store — store-data's copy only, as a new revision. */

@@ -368,3 +368,48 @@ describe('plan card final review fixes (2026-10-22)', () => {
     expect(config).not.toContain('"nope"');
   });
 });
+
+// Starters (spec 2026-10-24): a starter that extends Esencial is built from its own files with its own look, and keeps the brand.
+describe('applyMaster from a starter', () => {
+  function starter(brandConfirmed: Array<{ field: string; value: string }> = []) {
+    const real = jest.requireActual('@pagosya/store-templates');
+    const esencial = real.templateManifest('esencial');
+    const dulce = { id: 'dulce', name: 'Dulce', category: 'comida', description: 'Dulces.', tags: [], sitePurpose: 'shop', order: 900, extends: 'esencial',
+      preset: { palette: esencial.master.palettes[1].id, fonts: esencial.master.fonts[1].id, variants: { hero: esencial.master.variants.hero[0] } },
+      starter: { description: 'Postres y dulces.', fits: ['postres', 'dulces', 'tortas'], order: 1 }, photos: esencial.photos };
+    const own = () => real.templateSourceFiles('esencial').map((file: { path: string; content: string }) => file.path === 'components/home.tsx' ? { ...file, content: `// dulce home\n${file.content}` } : file);
+    const projects = { current: jest.fn(async () => ({ slug: 'dulce', revision: 0, updatedAt: null })), version: jest.fn(async () => ({ snapshot: { brief: undefined, files: [] } })), save: jest.fn(async (_m: string, _s: string, input: any) => ({ revision: input.revision + 1, label: input.label })) };
+    const publicStores = { getStorePublic: jest.fn(async () => publicStore([item])) };
+    const prisma = { store: { update: jest.fn(async () => ({})) } };
+    const config = { get: (key: string) => ({ 'app.checkoutOrigin': 'https://pagar.pagosya.test', 'app.environment': 'development', 'app.port': 3001 } as any)[key] };
+    const brands = { get: async () => ({ data: { confirmed: brandConfirmed } }) };
+    const templates = new SourceTemplatesService(prisma as any, publicStores as any, projects as any, config as any, undefined, undefined, brands as any);
+    templates.registry = { ...templates.registry, templateManifest: (id: string) => (id === 'dulce' ? dulce : real.templateManifest(id)), templateSourceFiles: (id: string) => (id === 'dulce' ? own() : real.templateSourceFiles(id)) };
+    const saved = () => (projects.save.mock.calls[0] as any[])[2] as { label: string; brief: { starterId?: string; templateId?: string }; files: Array<{ path: string; content: string }> };
+    return { templates, saved, dulce };
+  }
+
+  it('builds from its own files: «Estilo» label, brief.starterId, its look, no dice', async () => {
+    const dice = jest.requireActual('./source-master-dice');
+    const rollSpy = jest.spyOn(dice, 'rollVariants');
+    const { templates, saved, dulce } = starter();
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Hola' } }), undefined, undefined, 'dulce');
+    expect(rollSpy).not.toHaveBeenCalled();
+    expect(saved().files.find(f => f.path === 'components/home.tsx')!.content).toContain('// dulce home');
+    expect(saved().label).toBe('Estilo: Dulce');
+    expect(saved().brief).toMatchObject({ templateId: 'esencial', starterId: 'dulce' });
+    expect(readMasterState(saved().files).look).toMatchObject({ palette: dulce.preset.palette, fonts: dulce.preset.fonts });
+    rollSpy.mockRestore();
+  });
+
+  it("still takes the merchant's confirmed brand colours", async () => {
+    const { templates, saved } = starter([{ field: 'accent', value: '#123456' }]);
+    await templates.applyMaster('m1', 'store-1', 0, async () => null, undefined, undefined, 'dulce');
+    expect(readMasterState(saved().files).look?.colors?.accent).toBe('#123456');
+  });
+
+  it('refuses a starter that does not exist', async () => {
+    const { templates } = starter();
+    await expect(templates.applyMaster('m1', 'store-1', 0, async () => null, undefined, undefined, 'nada')).rejects.toThrow('Ese estilo no existe.');
+  });
+});

@@ -105,3 +105,28 @@ describe('gallery list', () => {
     expect(templates.list().length).toBeGreaterThanOrEqual(curated.length);
   });
 });
+
+// Starters (spec 2026-10-24): a starter applied through the copy-slot fill is named as a style and takes the merchant's brand.
+describe('applyPlantillaFilled with a starter', () => {
+  it('saves «Estilo: Vitrina» and records the starter in the brief', async () => {
+    const { templates, saved } = service(0);
+    await templates.applyPlantillaFilled('m1', 'store-1', 'vitrina', 0, async () => ({}));
+    expect(saved().label).toBe('Estilo: Vitrina');
+    expect((saved().brief as { starterId?: string }).starterId).toBe('vitrina');
+  });
+
+  it("takes the merchant's confirmed brand colours over the starter's own", async () => {
+    const { templates, saved } = service(0);
+    (templates as any).brands = { get: async () => ({ data: { confirmed: [{ field: 'accent', value: '#123456' }, { field: 'background', value: '#FAFAF0' }] } }) };
+    await templates.applyPlantillaFilled('m1', 'store-1', 'vitrina', 0, async () => ({}));
+    const css = saved().files.find(file => file.path === 'styles/globals.css')!.content;
+    expect(css).toMatch(/\/\* pagosya-brand \*\/ :root\{[^}]*--store-accent:#123456[^}]*--store-background:#fafaf0/);
+    expect(css.lastIndexOf('/* pagosya-brand */')).toBeGreaterThan(css.lastIndexOf('--store-accent:#d7261e'));
+  });
+
+  it('a starter with no brand keeps its own colours', async () => {
+    const { templates, saved } = service(0);
+    await templates.applyPlantillaFilled('m1', 'store-1', 'vitrina', 0, async () => ({}));
+    expect(saved().files.find(file => file.path === 'styles/globals.css')!.content).not.toContain('/* pagosya-brand */');
+  });
+});
