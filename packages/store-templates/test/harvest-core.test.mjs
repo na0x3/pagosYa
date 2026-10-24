@@ -30,3 +30,18 @@ test('brand words match whole words only', () => {
   const { findings } = harvestFiles({ files: [{ path: 'components/home.tsx', content: '<p>Pasapeppa pleasea</p>' }], brand: ['PEPPA please'], replacements: {} });
   assert.equal(findings.length, 0);
 });
+
+test('drops the generated store-data file', () => {
+  const { files } = harvestFiles({ files: [{ path: 'components/store-data.tsx', content: 'export const store = {};' }, { path: 'components/home.tsx', content: 'x' }], brand, replacements: {} });
+  assert.deepEqual(files.map(f => f.path), ['components/home.tsx']);
+});
+
+test('catalogue font files are not store uploads', () => {
+  const { findings } = harvestFiles({ files: [{ path: 'styles/globals.css', content: "@font-face{src:url('/assets/fredoka.ttf')}" }], brand, replacements: {} });
+  assert.equal(findings.length, 0);
+});
+
+test('flags hard-coded product, category and collection ids', () => {
+  const { findings } = harvestFiles({ files: [{ path: 'components/home.tsx', content: '<div data-pagosya-catalog data-products="cmvgxe4hl0010f63cubps5p82,cmvgxe4ge000yf63ctbyeo5k9" /><div data-category="cmvgxe4dk000uf63ct8vi4l36" />' }], brand, replacements: {} });
+  assert.deepEqual(findings.map(f => f.kind), ['id', 'id', 'id']);
+});

@@ -1,7 +1,11 @@
 /** Spec 2026-10-24 §1 Harvesting: keep a store's authored source, swap known brand text, and list everything that still
  *  names the store or points at its own uploads. Pure: apps/api/scripts/harvest-starter.ts does the IO. */
-const KEEP = path => (path.startsWith('components/') && path.endsWith('.tsx')) || path === 'styles/globals.css';
-const ASSET = /(?:\bassets\/(?!fonts\/)[\w./-]+|\/v1\/uploads\/[\w.-]+)/g;
+// store-data is written when the starter is applied; a store's own copy of it is never part of the starter.
+const KEEP = path => ((path.startsWith('components/') && path.endsWith('.tsx')) || path === 'styles/globals.css') && path !== 'components/store-data.tsx';
+// Kit catalogue fonts (assets/<font>.ttf) are bundled by the API at save; images, video and uploads belong to the store.
+const ASSET = /(?:\bassets\/(?!fonts\/)(?![\w-]+\.ttf\b)[\w./-]+|\/v1\/uploads\/[\w.-]+)/g;
+// A store's own record ids (products, categories, collections): a new store has none of them.
+const RECORD_ID = /(?<![\w-])c[a-z0-9]{24}(?![\w-])/g;
 const escapeRe = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export function harvestFiles({ files, brand, replacements }) {
@@ -13,6 +17,7 @@ export function harvestFiles({ files, brand, replacements }) {
   for (const file of kept) file.content.split('\n').forEach((line, index) => {
     for (const match of brandRe ? line.matchAll(brandRe) : []) findings.push({ path: file.path, line: index + 1, kind: 'brand', text: match[0] });
     for (const match of line.matchAll(ASSET)) findings.push({ path: file.path, line: index + 1, kind: 'asset', text: match[0] });
+    for (const match of line.matchAll(RECORD_ID)) findings.push({ path: file.path, line: index + 1, kind: 'id', text: match[0] });
   });
   return { files: kept.sort((a, b) => a.path.localeCompare(b.path)), findings };
 }
