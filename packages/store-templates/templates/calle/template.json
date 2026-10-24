@@ -1,0 +1,91 @@
+{
+  "id": "calle",
+  "name": "Calle",
+  "category": "moda",
+  "description": "Moda con aire de lujo minimal: blanco y negro, mucho aire, esquinas rectas y fotos grandes.",
+  "tags": [
+    "moda",
+    "minimal",
+    "lujo"
+  ],
+  "sitePurpose": "shop",
+  "order": 201,
+  "curated": true,
+  "extends": "esencial",
+  "preset": {
+    "palette": "mono",
+    "fonts": "luxury",
+    "variants": {
+      "header": "minimal",
+      "announce": "plain",
+      "hero": "split-right",
+      "grid": "grid3",
+      "card": "hover2",
+      "story": "split",
+      "values": "numbered",
+      "closing": "dark",
+      "footer": "minimal",
+      "pdp": "fashion",
+      "pdpOrder": "details-first",
+      "button": "underline",
+      "corners": "sharp",
+      "density": "airy",
+      "texture": "none",
+      "photos": "natural",
+      "cards": "compact",
+      "offers": "rows",
+      "bands": "calm",
+      "menu": "dropdowns",
+      "filters": "bar",
+      "feature": "origin,palette"
+    },
+    "kind": "fashion"
+  },
+  "starter": {
+    "description": "Ropa y accesorios con una vitrina sobria de lujo minimal: blanco y negro, esquinas rectas, mucho aire.",
+    "fits": [
+      "ropa",
+      "moda",
+      "streetwear",
+      "poleras",
+      "urbano",
+      "lujo",
+      "minimal",
+      "accesorios"
+    ],
+    "fashion": true,
+    "order": 2
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ]
+}
