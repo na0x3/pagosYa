@@ -25,7 +25,10 @@ export interface TemplateManifest {
   readonly preset?: TemplatePreset;
   /** Set by the API on a preset resolved to its master: whose demo photos the assembled store carries. */
   readonly photoSource?: string;
+  /** Starters (spec 2026-10-24): a finished store a new store can start from. */
+  readonly starter?: TemplateStarter;
 }
+export interface TemplateStarter { readonly description: string; readonly fits: readonly string[]; readonly fashion?: boolean; readonly order: number }
 /** A preset of a master template: palette and font pair ids, one variant id per part (feature: a comma list), optional
  *  colours, business sections and starting words. */
 export interface TemplatePreset {
@@ -47,6 +50,7 @@ export declare function listTemplates(): TemplateManifest[];
 export declare function templateManifest(id: string): TemplateManifest | undefined;
 export declare function gallerySelection(manifests: readonly TemplateManifest[]): TemplateManifest[];
 export declare function galleryTemplates(): TemplateManifest[];
+export declare function listStarters(): TemplateManifest[];
 export declare function templateSourceFiles(id: string): Array<{ path: string; content: string }>;
 export declare function templateDemoPhoto(id: string, slot: string): { ext: string; bytes: Buffer } | undefined;
 export declare function readTemplateSource(dir: string): Array<{ path: string; content: string }>;

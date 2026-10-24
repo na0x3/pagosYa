@@ -478,5 +478,14 @@
       "journal",
       "manifesto"
     ]
+  },
+  "starter": {
+    "description": "Una tienda clara y versátil para cualquier negocio.",
+    "fits": [
+      "tienda",
+      "productos",
+      "general"
+    ],
+    "order": 99
   }
 }

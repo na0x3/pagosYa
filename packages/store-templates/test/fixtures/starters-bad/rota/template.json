@@ -1,0 +1,25 @@
+{
+  "id": "rota",
+  "name": "Rota",
+  "category": "comida",
+  "description": "Postres y repostería con mucho color.",
+  "tags": [
+    "postres"
+  ],
+  "sitePurpose": "shop",
+  "order": 900,
+  "extends": "esencial",
+  "preset": {
+    "palette": "terracotta",
+    "fonts": "classic",
+    "variants": {}
+  },
+  "photos": [],
+  "starter": {
+    "description": "",
+    "fits": [
+      "uno"
+    ],
+    "order": 1
+  }
+}

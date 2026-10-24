@@ -66,6 +66,14 @@ function validate(dir, id) {
     if (preset.copy !== undefined && (typeof preset.copy !== 'object' || Object.entries(preset.copy).some(([key, value]) => key === 'values' ? !Array.isArray(value) : !MASTER_COPY_KEYS.includes(key) || typeof value !== 'string'))) fail(id, 'preset.copy', 'must hold master copy keys');
     if (preset.sections !== undefined && (!Array.isArray(preset.sections) || preset.sections.some(section => !section || !SLOT.test(section.id) || typeof section.title !== 'string' || !Array.isArray(section.items)))) fail(id, 'preset.sections', 'must be sections with id, title and items');
   }
+  // Starters (spec 2026-10-24): a finished store a new store can start from; fits = the business words it suits.
+  if (manifest.starter !== undefined) {
+    const s = manifest.starter;
+    if (!s || typeof s !== 'object' || typeof s.description !== 'string' || !s.description.trim() || s.description.length > 160) fail(id, 'starter.description', 'must be 1-160 characters');
+    if (!Array.isArray(s.fits) || s.fits.length < 3 || s.fits.some(word => typeof word !== 'string' || word !== word.toLowerCase() || !word.trim())) fail(id, 'starter.fits', 'must list at least three lowercase words');
+    if (s.fashion !== undefined && typeof s.fashion !== 'boolean') fail(id, 'starter.fashion', 'must be true or false');
+    if (!Number.isInteger(s.order)) fail(id, 'starter.order', 'must be an integer');
+  }
   if (manifest.curated !== undefined && (typeof manifest.curated !== 'boolean' || (manifest.curated && !manifest.copy && !manifest.preset))) fail(id, 'curated', 'must be true or false, and only on a converted template (with copy) or a preset');
   if (!Array.isArray(manifest.photos)) fail(id, 'photos', 'must be a list');
   const slots = new Set();
@@ -80,7 +88,7 @@ function validate(dir, id) {
       if (statSync(path).size > DEMO_MAX_BYTES) fail(id, `demo ${photo.demo}`, 'is larger than 600 KB');
     }
   }
-  return Object.freeze({ ...manifest, ...(manifest.dna ? { dna: Object.freeze({ ...manifest.dna }) } : {}), ...(manifest.master ? { master: Object.freeze(manifest.master) } : {}), ...(manifest.copy ? { copy: Object.freeze(manifest.copy.map(slot => Object.freeze({ ...slot }))) } : {}), tags: Object.freeze([...manifest.tags]), photos: Object.freeze(manifest.photos.map(photo => Object.freeze({ ...photo }))) });
+  return Object.freeze({ ...manifest, ...(manifest.dna ? { dna: Object.freeze({ ...manifest.dna }) } : {}), ...(manifest.master ? { master: Object.freeze(manifest.master) } : {}), ...(manifest.copy ? { copy: Object.freeze(manifest.copy.map(slot => Object.freeze({ ...slot }))) } : {}), ...(manifest.starter ? { starter: Object.freeze({ ...manifest.starter, fits: Object.freeze([...manifest.starter.fits]) }) } : {}), tags: Object.freeze([...manifest.tags]), photos: Object.freeze(manifest.photos.map(photo => Object.freeze({ ...photo }))) });
 }
 
 /** Reads and validates every template under `root`. Throws on the first invalid manifest (a build error, never input). */
@@ -116,6 +124,8 @@ const templateManifest = id => (typeof id === 'string' && ID.test(id) ? registry
 /** What merchants may pick from: every template except the ones the owner hid. Hidden ones still resolve by id. */
 const gallerySelection = manifests => manifests.filter(manifest => manifest.hidden !== true);
 const galleryTemplates = () => gallerySelection(listTemplates());
+/** Starters (spec 2026-10-24): the finished stores a new store may start from, Esencial included, in their own order. */
+const listStarters = () => listTemplates().filter(manifest => manifest.starter && manifest.hidden !== true).sort((a, b) => a.starter.order - b.starter.order);
 
 function walk(dir, prefix) {
   if (!existsSync(dir)) return [];
@@ -134,8 +144,8 @@ function readTemplateSource(dir) {
 
 function templateSourceFiles(id) {
   const entry = templateManifest(id) && registry().get(id);
-  // A preset has no source of its own: it is its master's.
-  if (entry && entry.manifest.extends) return templateSourceFiles(entry.manifest.extends);
+  // A preset has no source of its own: it is its master's. A starter that extends a master has its own (spec 2026-10-24).
+  if (entry && entry.manifest.extends && !existsSync(join(entry.dir, 'components'))) return templateSourceFiles(entry.manifest.extends);
   return entry ? readTemplateSource(entry.dir) : [];
 }
 
@@ -146,4 +156,4 @@ function templateDemoPhoto(id, slot) {
   return { ext: extname(photo.demo).slice(1), bytes: readFileSync(join(entry.dir, 'demo', photo.demo)) };
 }
 
-module.exports = { TEMPLATE_CATEGORIES, PHOTO_ROLES, DEMO_MAX_BYTES, templatesDir, loadTemplates, readTemplateSource, listTemplates, templateManifest, gallerySelection, galleryTemplates, templateSourceFiles, templateDemoPhoto };
+module.exports = { TEMPLATE_CATEGORIES, PHOTO_ROLES, DEMO_MAX_BYTES, templatesDir, loadTemplates, readTemplateSource, listTemplates, templateManifest, gallerySelection, galleryTemplates, listStarters, templateSourceFiles, templateDemoPhoto };
