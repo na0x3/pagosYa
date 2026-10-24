@@ -111,6 +111,12 @@ export function Footer() {
         {phone ? <a className="es-footer__line" href={`https://wa.me/${phone.replace(/\D/g, '')}`}><IconMessageCircle /> WhatsApp</a> : null}
       </div> : null}
     </div>
+    {/* Owner 2026-10-24: the newsletter entry; the email is typed in pagosYa's own form, which shows it once signup is on. */}
+    <div className="es-footer__news" data-pagosya-subscribe-block>
+      <div><h2>Recibe novedades</h2><p>Lanzamientos y ofertas de {store.name} en tu correo.</p></div>
+      <button type="button" className="es-btn es-btn--accent" data-pagosya-subscribe-open data-track="newsletter">Suscribirme</button>
+      <p className="es-footer__status" role="status" />
+    </div>
     <p className="es-footer__legal">{'\u00a9'} {new Date().getFullYear()} {store.name} · Pagos seguros con pagosYa</p>
   </footer>;
 }

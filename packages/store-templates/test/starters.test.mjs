@@ -71,3 +71,15 @@ test('every dice id of a real starter exists in Esencial, and starter-only entri
     assert.ok(!starterOnly.has(manifest.preset.palette) && !starterOnly.has(manifest.preset.fonts), manifest.id);
   }
 });
+
+// Owner 2026-10-24 («make stores fuller … an email form in the footer»): Esencial and every starter built on it draw the
+// newsletter entry in the footer; the email is typed in pagosYa's own form (data-pagosya-subscribe-open), never in the design.
+test('Esencial and its starters draw the newsletter entry in the footer', () => {
+  const { listTemplates, templateSourceFiles } = require('../index.js');
+  for (const id of ['esencial', ...listTemplates().filter(m => m.starter && m.extends === 'esencial').map(m => m.id)]) {
+    const shell = templateSourceFiles(id).find(file => file.path === 'components/Shell.tsx').content;
+    assert.match(shell, /data-pagosya-subscribe-block/, id);
+    assert.match(shell, /data-pagosya-subscribe-open/, id);
+    assert.doesNotMatch(shell, /<input[^>]*type="email"/, id);
+  }
+});
