@@ -12,7 +12,8 @@ export function harvestFiles({ files, brand, replacements }) {
   const words = [...new Set(brand.map(word => String(word).trim()).filter(word => word.length >= 3))];
   // Whole words only: a short product name must not flag every word it happens to sit inside.
   const brandRe = words.length ? new RegExp(`(?<![\\p{L}\\p{N}])(?:${words.map(escapeRe).join('|')})(?![\\p{L}\\p{N}])`, 'giu') : null;
-  const kept = files.filter(file => KEEP(file.path)).map(file => ({ path: file.path, content: Object.entries(replacements).reduce((text, [from, to]) => text.split(from).join(to), file.content) }));
+  // Standard pages (`// @pagosya-page`) are written by the platform for every store, so they never travel with a starter.
+  const kept = files.filter(file => KEEP(file.path) && !file.content.startsWith('// @pagosya-page')).map(file => ({ path: file.path, content: Object.entries(replacements).reduce((text, [from, to]) => text.split(from).join(to), file.content) }));
   const findings = [];
   for (const file of kept) file.content.split('\n').forEach((line, index) => {
     for (const match of brandRe ? line.matchAll(brandRe) : []) findings.push({ path: file.path, line: index + 1, kind: 'brand', text: match[0] });

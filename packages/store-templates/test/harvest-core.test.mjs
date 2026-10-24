@@ -45,3 +45,8 @@ test('flags hard-coded product, category and collection ids', () => {
   const { findings } = harvestFiles({ files: [{ path: 'components/home.tsx', content: '<div data-pagosya-catalog data-products="cmvgxe4hl0010f63cubps5p82,cmvgxe4ge000yf63ctbyeo5k9" /><div data-category="cmvgxe4dk000uf63ct8vi4l36" />' }], brand, replacements: {} });
   assert.deepEqual(findings.map(f => f.kind), ['id', 'id', 'id']);
 });
+
+test('drops the standard pages the platform writes for every store', () => {
+  const { files } = harvestFiles({ files: [{ path: 'components/pages/faq.tsx', content: "// @pagosya-page\nimport Shell from '../Shell';" }, { path: 'components/home.tsx', content: 'x' }], brand, replacements: {} });
+  assert.deepEqual(files.map(f => f.path), ['components/home.tsx']);
+});
