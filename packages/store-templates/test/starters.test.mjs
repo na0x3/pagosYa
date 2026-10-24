@@ -28,11 +28,16 @@ test('no starter carries a store’s own uploads or record ids', () => {
   }
 });
 
-test('vitrina is a slots starter that fills every text', () => {
+// Spec 2026-10-24-starter-dice §2: Vitrina rebuilt on Esencial (owner-approved 2026-10-24), with PEPPA's look kept for starters only.
+test('vitrina is built on Esencial with its own starter-only look and dice', () => {
   const { templateManifest } = require('../index.js');
   const vitrina = templateManifest('vitrina');
-  assert.equal(vitrina.extends, undefined);
-  assert.ok(vitrina.copy.length > 40);
+  const master = templateManifest('esencial').master;
+  assert.equal(vitrina.extends, 'esencial');
+  assert.equal(vitrina.hidden, undefined);
+  assert.ok(master.fonts.find(f => f.id === vitrina.preset.fonts).starterOnly);
+  assert.ok(master.palettes.find(p => p.id === vitrina.preset.palette).starterOnly);
+  assert.ok(vitrina.starter.dice.palettes.every(id => master.palettes.find(p => p.id === id).starterOnly));
   assert.equal(vitrina.curated, true);
 });
 

@@ -229,6 +229,46 @@
         "muted": "#fbf5d6",
         "accent": "#e8a400",
         "deep": "#2c2a12"
+      },
+      {
+        "id": "cereza",
+        "name": "Cereza",
+        "paper": "#fdf3e3",
+        "ink": "#171311",
+        "muted": "#e8d4f2",
+        "accent": "#d7261e",
+        "deep": "#2a0f0c",
+        "starterOnly": true
+      },
+      {
+        "id": "limon",
+        "name": "Limón",
+        "paper": "#fff8e1",
+        "ink": "#1a1a1a",
+        "muted": "#ffe23d",
+        "accent": "#1f5fd1",
+        "deep": "#10213f",
+        "starterOnly": true
+      },
+      {
+        "id": "menta",
+        "name": "Menta",
+        "paper": "#f1fbf4",
+        "ink": "#14201a",
+        "muted": "#c9f0d6",
+        "accent": "#ff5a36",
+        "deep": "#0f3b2a",
+        "starterOnly": true
+      },
+      {
+        "id": "chicle",
+        "name": "Chicle",
+        "paper": "#fff0f5",
+        "ink": "#221018",
+        "muted": "#ffd1e3",
+        "accent": "#7b3fe4",
+        "deep": "#2b0f3a",
+        "starterOnly": true
       }
     ],
     "fonts": [
@@ -315,6 +355,13 @@
         "name": "Galería sans",
         "heading": "syne",
         "body": "instrument"
+      },
+      {
+        "id": "alegre",
+        "name": "Alegre",
+        "heading": "fredoka",
+        "body": "dm-sans",
+        "starterOnly": true
       }
     ],
     "variants": {
