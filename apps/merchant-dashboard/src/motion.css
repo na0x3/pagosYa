@@ -1,0 +1,47 @@
+/* Motion (owner 2026-10-25: «make it smoother… not just straight away disappear»).
+   Every dialog and pop-up eases in and back out instead of appearing and vanishing in one frame. The rules sit at zero
+   specificity and use the separate translate/scale properties, so a dialog with its own transform or animation keeps it. */
+:root {
+  --motion-in: 220ms;
+  --motion-out: 160ms;
+  --motion-ease-out: cubic-bezier(.2, .8, .2, 1);
+  --motion-ease-in: cubic-bezier(.4, 0, 1, 1);
+}
+
+/* Dialogs: rise in, sink out; the backdrop fades with them. */
+:where(dialog) {
+  opacity: 0;
+  translate: 0 8px;
+  scale: .985;
+  transition: opacity var(--motion-out) var(--motion-ease-in), translate var(--motion-out) var(--motion-ease-in), scale var(--motion-out) var(--motion-ease-in),
+    overlay var(--motion-out) allow-discrete, display var(--motion-out) allow-discrete;
+}
+:where(dialog[open]) {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  transition-duration: var(--motion-in);
+  transition-timing-function: var(--motion-ease-out);
+}
+@starting-style { :where(dialog[open]) { opacity: 0; translate: 0 8px; scale: .985; } }
+:where(dialog)::backdrop { opacity: 0; transition: opacity var(--motion-out) ease, overlay var(--motion-out) allow-discrete, display var(--motion-out) allow-discrete; }
+:where(dialog[open])::backdrop { opacity: 1; transition-duration: var(--motion-in); }
+@starting-style { :where(dialog[open])::backdrop { opacity: 0; } }
+
+/* Pop-ups (menus, pickers) drop in from where they open. */
+:where([popover]) {
+  opacity: 0;
+  translate: 0 -6px;
+  transition: opacity var(--motion-out) var(--motion-ease-in), translate var(--motion-out) var(--motion-ease-in), overlay var(--motion-out) allow-discrete, display var(--motion-out) allow-discrete;
+}
+:where([popover]:popover-open) { opacity: 1; translate: 0 0; transition-duration: var(--motion-in); transition-timing-function: var(--motion-ease-out); }
+@starting-style { :where([popover]:popover-open) { opacity: 0; translate: 0 -6px; } }
+
+/* Buttons answer a press. */
+:where(button:not(:disabled), .button, a.primary):active { scale: .98; }
+:where(button, .button, a.primary) { transition-property: background-color, border-color, color, box-shadow, opacity, scale; transition-duration: 160ms; transition-timing-function: ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  :where(dialog, dialog::backdrop, [popover]) { transition-duration: 1ms !important; translate: none !important; scale: none !important; }
+  :where(button, .button, a.primary):active { scale: none; }
+}

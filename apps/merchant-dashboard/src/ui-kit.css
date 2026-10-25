@@ -95,3 +95,11 @@ body.is-logged-in .ui-stat.is-attention { border-color: var(--pg-text); box-shad
 /* A grey note for a caveat that only applies right now. */
 body.is-logged-in .ui-note { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--pg-surface-raised); color: var(--pg-text-muted); font-size: 13px; line-height: 1.5; }
 body.is-logged-in .ui-note[hidden] { display: none; }
+
+/* A dialog's own close button, top right on every step (owner 2026-10-25: the Shopify import had no way out mid-way). */
+.dialog-close { position: absolute; top: 14px; right: 14px; z-index: 2; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--pg-muted, #6b6b70); cursor: pointer; transition: background-color 160ms ease, color 160ms ease, scale 160ms ease; }
+.dialog-close svg { width: 18px; height: 18px; }
+.dialog-close:hover { background: color-mix(in srgb, currentColor 10%, transparent); color: var(--pg-ink, #18181b); }
+.dialog-close:active { scale: .92; }
+.dialog-close:focus-visible { outline: 2px solid var(--pg-ink, #18181b); outline-offset: 2px; }
+dialog:has(> .dialog-close) { position: fixed; }
