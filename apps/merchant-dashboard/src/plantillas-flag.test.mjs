@@ -7,7 +7,6 @@ test('the Plantillas pill shows only with the flag', () => {
   const js = readFileSync(new URL('./dashboard.js', import.meta.url), 'utf8');
   assert.match(js, /api\("\/store-templates\/settings"\)/);
   assert.match(js, /hiddenViews: plantillasOn \? new Set\(\) : new Set\(\["templates"\]\)/);
-  assert.match(js, /\.\.\.\(plantillasOn \? \{ onTemplates:/);
 });
 
 test('a product double-clicked in the Studio preview opens its editor', () => {

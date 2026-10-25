@@ -308,7 +308,6 @@ body.is-logged-in .workspace-yapi textarea { border: 0; border-radius: 0; backgr
 body.is-logged-in .workspace-yapi textarea:focus-visible { box-shadow: none; }
 body.is-logged-in .workspace-yapi:focus-within { border-color: var(--pg-border-strong); box-shadow: var(--calm-shadow-lg), 0 0 0 3px var(--pg-focus-ring); }
 
-/* "¿Quién está ingresando?" opens over the login (before body.is-logged-in), so its values are spelled out. */
 
 /* Diseñar sitio owns the whole screen: the sidebar slides away and returns on
    demand — hover the left-edge tab (or the sidebar itself) to peek, click it to

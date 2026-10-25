@@ -1,7 +1,6 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
 import { createStoreBody } from "/src/create-store.mjs";
 import { designFocus } from "/src/design-focus.mjs";
-import { runWalkthrough, showWalkthroughChoice, showWalkthroughMode, walkthroughEntry } from "/src/onboarding-walkthrough.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
 import { mountGrowthPanel } from "/src/growth-panel.mjs";
@@ -262,11 +261,10 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   // Created here, before setDashboardView first runs at load: it calls watchStoreThumbnails/unloadStoreThumbnails.
   const storesPanel = createStoresPanel({
     api, emailEl, errorEl, canLeaveMerchantStudio, syncMerchantStoreWorkspace, setDashboardView, dashboardAssetUrl,
-    openWalkthrough, openCreateStore, selectStore, currentStoreUrl, publicStoreUrl, setButtonBusy, storePublicationState, refresh,
+    openCreateStore, selectStore, currentStoreUrl, publicStoreUrl, setButtonBusy, storePublicationState, refresh,
     storeId: () => currentStoreId,
     stores: () => lastStores,
     setStores: (stores) => { lastStores = stores; },
-    onboardingEnabled: () => onboardingEnabled,
   });
   const { watchStoreThumbnails, unloadStoreThumbnails, openShopifyImport, renderCurrentStoreBanner, renderStoreRows } = storesPanel;
   storesPanel.init();
@@ -732,71 +730,21 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   const { renderAccount, renderLevel, renderTermsPrompt } = accountPanel;
   accountPanel.init();
 
-  let onboardingEnabled = false;
   let onboardingChecked = false;
-  let onboardingResumable = null;
-  // resume: the unfinished store to continue, or null for a fresh run that creates a new store at step 1.
-  function openWalkthrough(resume = null) {
-    const root = document.getElementById("onboardingWalkthrough");
-    root.hidden = false;
-    void runWalkthrough(root, { api, uploadFile, resume, onExit: () => { root.hidden = true; root.innerHTML = ""; void refresh(); }, onDone: async storeId => {
-      root.hidden = true; root.innerHTML = "";
-      selectStore(storeId); await refresh();
-      history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace");
-    } });
-  }
-  // A fresh store starts with the choice: the guided walkthrough, or the short create dialog and YAPI's chat (2026-10-18).
-  function openFreshStart() {
-    const root = document.getElementById("onboardingWalkthrough");
-    root.hidden = false;
-    const close = () => { root._wtAbort?.abort(); root.hidden = true; root.innerHTML = ""; };
-    showWalkthroughMode(root, { onGuided: () => openWalkthrough(null), onChat: () => { close(); openCreateStoreDialog(); },
-      ...(plantillasOn ? { onTemplates: () => { close(); openCreateStoreDialog("templates"); } } : {}), onExit: close });
-  }
-  // "Crear otra tienda" with a half-built walkthrough store: offer to continue it before starting a new one.
-  async function offerUnfinishedOrFresh() {
-    const unfinished = (await api("/stores/onboarding").catch(() => ({ store: null }))).store || null;
-    if (!unfinished) return openFreshStart();
-    const root = document.getElementById("onboardingWalkthrough");
-    root.hidden = false;
-    showWalkthroughChoice(root, { store: unfinished, onContinue: store => openWalkthrough(store), onFresh: openFreshStart, onExit: () => { root.hidden = true; root.innerHTML = ""; } });
-  }
-  // The sidebar stays usable beside the walkthrough (onboarding-walkthrough.css): opening another page or store through it
-  // closes the walkthrough. Every step is already saved, so "Crear otra tienda" offers to continue (owner report 2026-10-15).
-  function closeWalkthroughForNavigation(event) {
-    const root = document.getElementById("onboardingWalkthrough");
-    if (root.hidden || root.contains(event.target)) return;
-    if (event.type === "click" && !event.target.closest(".dashboard-sidebar :is(a, button)")) return;
-    if (event.type === "change" && event.target.id !== "sidebarStorePicker") return;
-    root._wtAbort?.abort();
-    root.hidden = true; root.innerHTML = "";
-    void refresh();
-  }
-  document.addEventListener("click", closeWalkthroughForNavigation, true);
-  document.addEventListener("change", closeWalkthroughForNavigation, true);
-  // The walkthrough's Shopify links hide it first, then open the usual import dialog.
-  document.getElementById("onboardingWalkthrough").addEventListener("click", event => {
-    if (!event.target.closest("[data-open-shopify-import]")) return;
-    document.getElementById("onboardingWalkthrough").hidden = true;
-    void openShopifyImport();
-  });
+  // No walkthrough (owner 2026-10-24): a merchant names the store and talks to YAPI inside it. Without a store, the name
+  // dialog opens at once.
   async function checkOnboardingOnce() {
     if (onboardingChecked) return;
     onboardingChecked = true;
-    const [onboarding, templateSettings] = await Promise.all([api("/stores/onboarding").catch(() => ({ enabled: false, store: null })), api("/store-templates/settings").catch(() => ({ plantillas: false }))]);
+    const templateSettings = await api("/store-templates/settings").catch(() => ({ plantillas: false }));
     // Spec 2026-10-20 Plantillas fill: the Plantillas menu and «Elegir una plantilla» come back with the API flag.
     plantillasOn = templateSettings?.plantillas === true;
     const shown = sectionOf(document.body.dataset.dashboardView, document.getElementById("marketingTabs").dataset.tab);
     renderSectionPills(shown.section, shown.tab);
-    onboardingEnabled = Boolean(onboarding.enabled);
-    onboardingResumable = onboarding.store || null;
-    const entry = walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, resumable: Boolean(onboardingResumable), intent: "boot" });
-    if (entry === "resume") openWalkthrough(onboardingResumable);
-    else if (entry === "fresh") openFreshStart();
+    if (!lastStores.length) openCreateStoreDialog();
   }
 
   function openCreateStore() {
-    if (walkthroughEntry({ enabled: onboardingEnabled, storeCount: lastStores.length, intent: "create" }) === "fresh") return void offerUnfinishedOrFresh();
     openCreateStoreDialog();
   }
   // Where a new store opens: the design workspace, or Plantillas for «Elegir una plantilla».

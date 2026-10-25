@@ -1398,48 +1398,13 @@
     .profile-trigger, .profile-menu { transition-duration: .01ms; }
   }
 
-  .session-profile-dialog {
-    width: min(680px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 0; overflow: auto;
-    border: var(--bento-line) solid var(--bento-keyline); border-radius: var(--bento-radius); background: var(--bento-card); color: var(--pg-text);
-    box-shadow: var(--bento-shadow-lg); animation: session-profile-enter 250ms var(--ease-out-ui) both;
-  }
-  .session-profile-dialog::backdrop { background: rgba(5,5,5,.8); animation: session-profile-backdrop 250ms var(--ease-out-ui) both; }
-  .session-profile-form { display: grid; }
-  .session-profile-head { padding: clamp(22px, 4vw, 34px); border-bottom: 3px solid var(--bento-ink); background: var(--bento-violet); color: #09090b; }
-  .session-profile-head h2 { max-width: 13ch; margin: 0; color: #09090b; font-size: clamp(2rem, 6vw, 4rem); line-height: .9; letter-spacing: -.04em; text-transform: uppercase; }
-  .session-profile-head p { max-width: 56ch; margin: 13px 0 0; color: #24202c; font-size: .72rem; font-weight: 800; line-height: 1.55; }
-  .session-profile-body { display: grid; gap: 20px; padding: clamp(20px, 4vw, 30px); }
-  .session-profile-existing[hidden] { display: none; }
-  .session-profile-existing > strong { display: block; font-size: .68rem; text-transform: uppercase; }
-  .session-profile-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
-  .session-profile-choice { display: grid; justify-items: center; gap: 8px; min-width: 0; min-height: 118px; padding: 12px 8px; border: 2px solid var(--pg-border-strong); background: var(--pg-bg); }
-  .session-profile-choice[aria-pressed="true"] { border-color: var(--bento-keyline); background: var(--pg-accent-soft); box-shadow: var(--bento-shadow-sm); }
-  .session-profile-choice-avatar { display: block; width: 58px; height: 58px; overflow: hidden; border: 2px solid var(--pg-border-strong); border-radius: 50%; }
-  .session-profile-choice-avatar .profile-initials { font-size: 21px; }
   /* A profile's picture is its initials (profile-initials.mjs): quiet, legible, the same in every place it appears. */
   .profile-initials { display: grid; place-items: center; width: 100%; height: 100%; background: #20211e; color: #fff; font-weight: 600; letter-spacing: .02em; line-height: 1; user-select: none; }
-  .session-profile-choice span:last-child { width: 100%; overflow: hidden; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
-  .session-profile-fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 16px; }
-  .session-profile-fields label { margin: 0; font-size: .68rem; font-weight: 900; text-transform: uppercase; }
-  .session-profile-fields input { width: 100%; min-width: 0; min-height: 46px; border: var(--bento-line-soft) solid var(--bento-keyline); border-radius: 1px; font-size: 16px; }
 
-  .session-profile-error { margin: 0; color: var(--pg-error); font-size: .7rem; }
-  .session-profile-error[hidden] { display: none; }
-  .session-profile-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 0 clamp(20px, 4vw, 30px) clamp(20px, 4vw, 30px); }
-  .session-profile-actions span { max-width: 40ch; color: var(--pg-text-muted); font-size: .62rem; line-height: 1.5; }
-  .session-profile-actions button { flex: 0 0 auto; min-height: 48px; background: var(--bento-yellow); color: #09090b; }
-  @keyframes session-profile-enter { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
-  @keyframes session-profile-backdrop { from { opacity: 0; } to { opacity: 1; } }
   @media (max-width: 620px) {
-    .session-profile-dialog { box-shadow: var(--bento-shadow-md); }
-    .session-profile-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .session-profile-fields { grid-template-columns: 1fr; }
 
-    .session-profile-actions { align-items: stretch; flex-direction: column; }
-    .session-profile-actions button { width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .session-profile-dialog, .session-profile-dialog::backdrop { animation: none; }
   }
   .dashboard-shell { grid-template-columns: 250px minmax(0, 1fr); gap: clamp(22px, 3vw, 42px); }
   .dashboard-sidebar {
@@ -1963,12 +1928,7 @@ body.template-focus .store-templates-page .store-resource-frame { position: fixe
 .connect-ai-hero .connect-ai-card__button { width: auto; }
 /* No light panels left on the dark dashboard: the luck wheel's copy side and the session profile picker. */
 
-.session-profile-dialog { background: #141517; color: #f1f1f0; border-color: rgb(255 255 255 / 14%); }
-.session-profile-choice { background: rgb(255 255 255 / 5%); border-color: rgb(255 255 255 / 14%); color: #f1f1f0; }
-.session-profile-choice[aria-pressed="true"] { background: rgb(255 210 63 / 14%); border-color: #ffd23f; }
-.session-profile-fields input { background: rgb(255 255 255 / 7%); color: #f1f1f0; border-color: rgb(255 255 255 / 18%); }
 
-.session-profile-body p, .session-profile-body small { color: #a9a9a6; }
 
 
 .payout-hold-banner {

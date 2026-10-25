@@ -1,5 +1,4 @@
 import { escapeHtml as esc } from "./html.mjs";
-import { isUnfinishedStore } from "./onboarding-walkthrough.mjs";
 import { assumedFactsBadge } from "./assumed-facts-badge.mjs";
 import { countsLine, designStepItems, importStep, parseExchangeRate, progressLabel, summaryLines } from "./store-import.mjs";
 import { openStoreBulkDelete } from "./store-bulk-delete.mjs";
@@ -12,15 +11,14 @@ import { openStoreBulkDelete } from "./store-bulk-delete.mjs";
  * deps:
  *   api(path, options)             authenticated dashboard API call
  *   emailEl, errorEl               the login email input and the dashboard's error banner
- *   canLeaveMerchantStudio, syncMerchantStoreWorkspace, setDashboardView, dashboardAssetUrl, openWalkthrough,
+ *   canLeaveMerchantStudio, syncMerchantStoreWorkspace, setDashboardView, dashboardAssetUrl,
  *   openCreateStore, selectStore, currentStoreUrl, publicStoreUrl, setButtonBusy, storePublicationState, refresh
  *                                  dashboard.js functions this screen calls
  *   storeId()                      the active store id, read at use time
  *   stores(), setStores(stores)    the merchant's stores, read and written at use time
- *   onboardingEnabled()            whether the onboarding walkthrough is on, read at use time
  */
 export function createStoresPanel(deps) {
-  const { api, emailEl, errorEl, canLeaveMerchantStudio, syncMerchantStoreWorkspace, setDashboardView, dashboardAssetUrl, openWalkthrough, openCreateStore, selectStore, currentStoreUrl, publicStoreUrl, setButtonBusy, storePublicationState, refresh } = deps;
+  const { api, emailEl, errorEl, canLeaveMerchantStudio, syncMerchantStoreWorkspace, setDashboardView, dashboardAssetUrl, openCreateStore, selectStore, currentStoreUrl, publicStoreUrl, setButtonBusy, storePublicationState, refresh } = deps;
   // The ids picked in the stores list while "Seleccionar" is on; null when it is off.
   let storeSelection = null, visibleStoreIds = [];
   // Spec 2026-10-14 store voice: facts YAPI assumed and still waiting, by store id (GET /assumed-facts/counts).
@@ -186,8 +184,8 @@ export function createStoresPanel(deps) {
       return `<article class="store-row ${store.id === deps.storeId() ? "active" : ""} ${picked ? "selected" : ""}" data-id="${esc(store.id)}">
         ${storeSelection ? `<input class="store-select" type="checkbox" data-id="${esc(store.id)}" aria-label="Seleccionar ${esc(store.name)}" ${picked ? "checked" : ""}>` : ""}
         <div class="store-card-preview">${preview}</div>
-        <div class="store-card-info"><div><h3 class="store-row-name">${esc(store.name)}</h3><p><span class="store-card-status" data-status="${state}">${stateLabel}</span>${store.id === deps.storeId() ? '<span class="store-card-current">Tienda actual</span>' : ''}${isUnfinishedStore(store, deps.onboardingEnabled()) ? '<span class="store-card-status" data-status="draft">Sin terminar</span>' : ''}${assumedFactsBadge(assumedFactCounts[store.id])}</p></div><details class="store-card-menu"><summary aria-label="Opciones de ${esc(store.name)}">•••</summary><div><a class="store-row-open" href="${esc(publicStoreUrl(store))}" target="_blank" rel="noopener noreferrer">Abrir tienda pública</a><button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}" type="button">Eliminar tienda</button></div></details></div>
-        ${isUnfinishedStore(store, deps.onboardingEnabled()) ? `<button class="primary continue-store store-card-edit" data-id="${esc(store.id)}" type="button">Continuar</button>` : '<span class="store-card-edit">Abrir editor ↗</span>'}
+        <div class="store-card-info"><div><h3 class="store-row-name">${esc(store.name)}</h3><p><span class="store-card-status" data-status="${state}">${stateLabel}</span>${store.id === deps.storeId() ? '<span class="store-card-current">Tienda actual</span>' : ''}${''}${assumedFactsBadge(assumedFactCounts[store.id])}</p></div><details class="store-card-menu"><summary aria-label="Opciones de ${esc(store.name)}">•••</summary><div><a class="store-row-open" href="${esc(publicStoreUrl(store))}" target="_blank" rel="noopener noreferrer">Abrir tienda pública</a><button class="ghost delete-store" data-id="${esc(store.id)}" data-name="${esc(store.name)}" type="button">Eliminar tienda</button></div></details></div>
+        <span class="store-card-edit">Abrir editor ↗</span>
       </article>`;
     }).join("") + (!visible.length ? `<p class="store-library-empty">${stores.length ? "No hay tiendas que coincidan con tu búsqueda." : "Todavía no tienes una tienda. Crea la tuya para comenzar."}</p>` : "");
     document.getElementById("openCreateStore").addEventListener("click", openCreateStore);
@@ -215,12 +213,6 @@ export function createStoresPanel(deps) {
         await refresh();
       });
     });
-    document.querySelectorAll(".continue-store").forEach(btn => btn.addEventListener("click", async event => {
-      event.stopPropagation();
-      // The list carries only the progress marker; the full answers come from the lookup.
-      const found = (await api(`/stores/onboarding?storeId=${encodeURIComponent(btn.dataset.id)}`).catch(() => ({ store: null }))).store;
-      if (found) openWalkthrough(found); else void refresh();
-    }));
     document.querySelectorAll(".delete-store").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
