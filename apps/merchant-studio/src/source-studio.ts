@@ -309,7 +309,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let buildSession: SourceBuildSession = { phase: 'idle' };
   // YAPI's glass window over the preview (spec 2026-10-21 Part C): request, plan, step, summary.
   const narratorWindow = mountNarrator(document, { onNoticeDismissed: () => storeNewsFeed.snooze() });
-  const narrator = narratorBridge(narratorWindow, pillMode);
+  // Owner 2026-10-25: builds no longer write into the glass window (the floating «YAPI · Ahora: …» card); the chat panel already
+  // shows the request, its steps and the reply. The window stays only for the occasional store news.
+  const narrator = narratorBridge({ open() {}, show() {} }, pillMode);
   // Now and then YAPI brings one piece of news about the store (owner 2026-10-22); a build always comes first.
   const storeNewsFeed = storeNewsTicker({
     storeId: () => storeId,
