@@ -135,6 +135,8 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
           if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return null;
           const stack = document.elementsFromPoint(x, y);
           if (!stack.length) return null;
+          // Text under another layer (the calm checkout over the store's footer) is covered, not low-contrast.
+          if (!stack.some(layer => layer === el || el.contains(layer))) return null;
           for (const layer of stack) {
             const style = getComputedStyle(layer);
             // Esencial paints its full-width bands with border-image, not a background: unknown too.
