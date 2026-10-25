@@ -1841,21 +1841,6 @@
   .board-tile { display: grid; place-items: center; border-radius: 10px; font-size: clamp(14px, 3.4vw, 22px); background: var(--tile-color); box-shadow: inset 0 -3px 0 rgb(0 0 0 / .12); }
   .board-tile-ai_credits_25, .board-tile-sticker_rare, .board-tile-xp_200, .board-tile-ai_credits_5 { outline: 2px solid #ffd76a; box-shadow: 0 0 12px rgb(255 201 86 / .7), inset 0 -3px 0 rgb(0 0 0 / .12); }
 
-/* Plantillas sits straight on the dashboard background: the frame is transparent (the gallery document is transparent
-   and dark too) and grows to the gallery's height, so the page has one scroll and no empty band. YAPI stays out of it. */
-body .store-templates-page .store-resource-frame { background: transparent; color-scheme: dark; min-height: 0; }
-body.is-logged-in[data-dashboard-view="templates"] .workspace-yapi { display: none !important; }
-/* The bottom room kept for the YAPI dock is not needed here. */
-body.is-logged-in[data-dashboard-view="templates"] .dashboard-workspace { padding-bottom: 40px; }
-/* A previewed template gets the whole screen beside the sidebar on an opaque navy (nothing behind shows through while
-   the preview eases in). */
-html:has(body.template-focus) { overflow: hidden; }
-/* The page's entrance animation leaves a transform on the section, which would trap the fixed frame inside it. */
-body.template-focus .store-templates-page { transform: none !important; animation: none !important; }
-body.template-focus .store-templates-page .store-resource-frame { position: fixed; inset: 0 auto 0 0; width: 100vw; height: 100dvh !important; z-index: 4010; background: radial-gradient(70% 60% at 92% 96%, hsl(198 85% 72% / .35), transparent 70%), hsl(222 70% 7%); animation: template-focus-in .2s ease both; }
-@media (min-width: 1000px) { body.template-focus .store-templates-page .store-resource-frame { left: var(--sidebar-w, 196px); width: calc(100vw - var(--sidebar-w, 196px)); } }
-@keyframes template-focus-in { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { body.template-focus .store-templates-page .store-resource-frame { animation: none; } }
 .mcp-connect form.mcp-create { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin: 12px 0; }
 .mcp-connect form.mcp-create label { display: grid; gap: 4px; flex: 1 1 240px; font-size: .85rem; }
 .mcp-connect button { min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid currentColor; background: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }

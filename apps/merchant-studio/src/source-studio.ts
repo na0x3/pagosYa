@@ -13,7 +13,7 @@ import { createDirectEditor } from './source-direct-editor';
 import { bocetoRevealY, createBocetoPanel } from './source-boceto';
 import { closeBocetoMenu } from './boceto-menu';
 import { renderInspiration } from './source-inspiration';
-import { openTemplateGallery, renderTemplateChoices, type TemplateChoice } from './source-templates';
+import { renderTemplateChoices, type TemplateChoice } from './source-templates';
 import { inlineProductChange, inlineProducts, keepEdges, matchInlineField, type InlineProductField } from './source-inline-text';
 import { createProductForm } from './source-create-product';
 import { renderBuildProgress, type BuildProgress } from './source-build-progress';
@@ -920,7 +920,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   function storeTools(locked: boolean) {
     const unavailable = disabled(locked || !storeId);
     return `<details class="source-store-menu source-disclosure"><summary>Mi tienda</summary><nav class="source-disclosure-panel" aria-label="Herramientas de mi tienda">
-      <section><h2>Diseño y contenido</h2>${plantillasOn ? `<button data-open-templates ${disabled(locked || !storeId || historical() || dirty())}>Plantillas</button>` : ''}<button id="source-brand" ${unavailable}>Identidad de mi marca</button><button id="source-content" ${unavailable}>Contenido y ofertas</button><button id="source-pages" ${disabled(locked || !storeId || !version)}>Páginas de mi tienda</button><button data-start-photo ${disabled(locked || !storeId || historical() || assets.length > 0)}>Diseñar desde una foto</button></section>
+      <section><h2>Diseño y contenido</h2><button id="source-brand" ${unavailable}>Identidad de mi marca</button><button id="source-content" ${unavailable}>Contenido y ofertas</button><button id="source-pages" ${disabled(locked || !storeId || !version)}>Páginas de mi tienda</button><button data-start-photo ${disabled(locked || !storeId || historical() || assets.length > 0)}>Diseñar desde una foto</button></section>
       <section><h2>Marketing</h2><button id="source-retention" ${unavailable}>Correos, Comeback y promociones</button>${embedded ? `<button data-business-view="integrations" ${unavailable}>Integraciones</button><button data-business-view="experiments" ${unavailable}>Pruebas A/B</button>` : ''}</section>
       <section><h2>Configuración</h2><button id="source-shipping" ${unavailable}>Envíos y retiro</button><button id="source-domain" ${unavailable}>Tu propio dominio</button><button id="source-arrangement" ${unavailable}>Cómo se ven tus productos</button><button id="source-recommendations" ${unavailable}>Recomendaciones</button></section>
       <section><h2>Productos</h2><button id="source-digital" ${unavailable}>Archivos digitales</button></section>
@@ -1306,10 +1306,6 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('#source-content')?.addEventListener('click', () => { if (!busy && storeId) { void openCommerceContent(api, storeId); } });
     app.querySelector('#source-shipping')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'shipping'}); else void openShippingSettings(api, storeId, () => void refreshCatalog()); } });
     app.querySelector('#source-domain')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'domain'}); else void openDomainShop(api, storeId, () => void refreshCatalog()); } });
-    app.querySelectorAll('[data-open-templates]').forEach(button => button.addEventListener('click', () => {
-      if (busy || !storeId || dirty() || historical() || !plantillasOn) return;
-      void openTemplateGallery(api, { storeId, revision: state.revision, hasSite: Boolean(version) && !templateUntouched(), fill: true, applied: async revision => { mode = 'preview'; await load(revision, true); toast = 'Plantilla lista con tus textos. Doble clic en cualquier texto para cambiarlo.'; render(); } });
-    }));
     app.querySelector('#source-recommendations')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openRecommendations(api, storeId); } });
     app.querySelector('#source-arrangement')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'integrations'}); else void openCatalogArrangement(api, storeId, () => void refreshCatalog()); } });
     app.querySelector('#source-brand')?.addEventListener('click', () => { if (!busy && storeId) { if (embedded) notifyParent({type:'pagosya:workspace',view:'store-settings',section:'brand'}); else void openBrandProfile(api, storeId); } });

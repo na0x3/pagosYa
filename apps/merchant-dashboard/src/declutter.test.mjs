@@ -77,9 +77,8 @@ test('assistant look and email editors are full-nav only', () => {
   assert.match(emails, /data-email-bold data-full-nav-only/);
 });
 
-test('the Tienda link opens Productos, and the Plantillas flag redraws only the pills', () => {
+test('the Tienda link opens Productos', () => {
   assert.match(nav, /href="#dashboard-products" data-dashboard-view="products" data-nav-section="tienda"/);
-  assert.match(js, /plantillasOn = templateSettings\?\.plantillas === true;\n\s+const shown = sectionOf\(document\.body\.dataset\.dashboardView, document\.getElementById\("marketingTabs"\)\.dataset\.tab\);\n\s+renderSectionPills\(shown\.section, shown\.tab\);/);
 });
 
 test('the store link bar on Productos is gone (the top bar already has «Ver mi tienda»)', () => {

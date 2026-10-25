@@ -478,7 +478,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/templates/${encodeURIComponent(templateId)}/preview`);
   }
 
-  /** Spec 2026-10-20 Plantillas fill: whether curated Plantillas, «Elegir una plantilla» and double-click editing are on. */
+  /** Spec 2026-10-20 Plantillas fill: whether double-click text editing is on. */
   templateSettings(): Promise<{ plantillas: boolean }> {
     return this.request(`/store-templates/settings`);
   }

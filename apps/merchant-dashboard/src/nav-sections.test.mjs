@@ -13,7 +13,7 @@ test('every tab key belongs to exactly one section', () => {
 });
 
 test('every view the dashboard opens today is known', () => {
-  for (const view of ['overview', 'growth', 'stores', 'workspace', 'templates', 'products', 'media', 'charge-links', 'inbox', 'payments', 'subscriptions', 'payouts', 'cobros', 'proposals', 'contracts', 'marketing', 'abandoned-carts', 'assistant', 'experiments', 'integrations', 'compliance', 'connect-ai', 'store-settings', 'account']) {
+  for (const view of ['overview', 'growth', 'stores', 'workspace', 'products', 'media', 'charge-links', 'inbox', 'payments', 'subscriptions', 'payouts', 'cobros', 'proposals', 'contracts', 'marketing', 'abandoned-carts', 'assistant', 'experiments', 'integrations', 'compliance', 'connect-ai', 'store-settings', 'account']) {
     assert.ok(KNOWN_VIEWS.has(view), view);
   }
 });

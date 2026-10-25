@@ -455,7 +455,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     frame.removeAttribute("src");
   }
   function syncStoreResourceViews(view) {
-    for (const [kind, id] of [["media", "storeMediaFrame"], ["templates", "storeTemplatesFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
+    for (const [kind, id] of [["media", "storeMediaFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
       const frame = document.getElementById(id);
       if (frame.dataset.storeId && frame.dataset.storeId !== currentStoreId) { unloadFrame(frame); delete frame.dataset.storeId; delete frame.dataset.ready; delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
       if (view !== kind) continue;
@@ -477,7 +477,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   });
   window.addEventListener("message", event => {
     if (event.origin !== location.origin) return;
-    const frame = ["storeMediaFrame", "storeTemplatesFrame", "productGuideFrame", "storeMarketingFrame", "storeExperimentsFrame", "storeIntegrationsFrame"].map(id => document.getElementById(id)).find(frame => frame.contentWindow === event.source);
+    const frame = ["storeMediaFrame", "productGuideFrame", "storeMarketingFrame", "storeExperimentsFrame", "storeIntegrationsFrame"].map(id => document.getElementById(id)).find(frame => frame.contentWindow === event.source);
     if (!frame || frame.dataset.storeId !== currentStoreId || event.data?.storeId !== currentStoreId) return;
     if (event.data.type === "pagosya:workspace" && ["marketing", "integrations", "experiments", "workspace"].includes(event.data.view)) {
       if (!canLeaveMerchantStudio()) return;
@@ -491,10 +491,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
       history.pushState(null, "", "#dashboard-workspace"); setDashboardView("workspace"); return;
     }
     if (event.data.type === "pagosya:source-publication-changed") { void refresh(); return; }
-    // A previewed template takes the whole screen beside the sidebar (dashboard.css, body.template-focus).
-    if (event.data.type === "pagosya:template-focus" && frame.id === "storeTemplatesFrame") { document.body.classList.toggle("template-focus", Boolean(event.data.open)); return; }
-    // The template gallery is one long page of cards; other resource pages stay capped.
-    if (event.data.type === "pagosya:resource-height" && Number.isFinite(event.data.height)) frame.style.height = `${Math.min(frame.id === "storeTemplatesFrame" ? 30000 : 4000, Math.max(340, event.data.height))}px`;
+    if (event.data.type === "pagosya:resource-height" && Number.isFinite(event.data.height)) frame.style.height = `${Math.min(4000, Math.max(340, event.data.height))}px`;
     if (event.data.type === "pagosya:product-guide-ready") {
       frame.dataset.ready = "true";
       if (frame.dataset.pendingProduct) { frame.contentWindow?.postMessage({type:"pagosya:product-guide-edit", storeId:currentStoreId, product:JSON.parse(frame.dataset.pendingProduct), ...(frame.dataset.pendingStep ? { step: frame.dataset.pendingStep } : {})}, location.origin); delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
@@ -505,9 +502,6 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     }
   });
   function syncMerchantStoreWorkspace(view = document.body.dataset.dashboardView) {
-    // Plantillas reads the store's current revision, which the design editor may have changed: reload it on entry.
-    if (view === "templates") { const templatesFrame = document.getElementById("storeTemplatesFrame"); templatesFrame.removeAttribute("src"); delete templatesFrame.dataset.storeId; }
-    document.body.classList.remove("template-focus");
     if (view !== "workspace") document.body.classList.remove("design-focus");
     syncStoreResourceViews(view);
     const store = lastStores.find(candidate => candidate.id === currentStoreId);
@@ -564,15 +558,15 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     }
   });
 
-  let plantillasOn = false;
   function renderSectionPills(section, activeTab) {
     const host = document.getElementById("sectionTabs");
-    host.innerHTML = renderSectionTabs(section, activeTab, { fullNav: fullNavOn(), hiddenViews: plantillasOn ? new Set() : new Set(["templates"]) });
+    host.innerHTML = renderSectionTabs(section, activeTab, { fullNav: fullNavOn() });
     host.hidden = !host.innerHTML;
   }
 
   function setDashboardView(view, { remember = true } = {}) {
-    if (view === "content") view = "workspace";
+    // Plantillas is gone (owner 2026-10-25): an old #dashboard-templates link opens the design workspace.
+    if (view === "content" || view === "templates") view = "workspace";
     if (view === "discounts") { view = "marketing"; selectMarketingTab("promotions"); }
     const nextView = resolveView(view, fullNavOn());
     const viewChanged = document.body.dataset.dashboardView !== nextView;
@@ -736,9 +730,6 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   async function checkOnboardingOnce() {
     if (onboardingChecked) return;
     onboardingChecked = true;
-    const templateSettings = await api("/store-templates/settings").catch(() => ({ plantillas: false }));
-    // Spec 2026-10-20 Plantillas fill: the Plantillas menu and «Elegir una plantilla» come back with the API flag.
-    plantillasOn = templateSettings?.plantillas === true;
     const shown = sectionOf(document.body.dataset.dashboardView, document.getElementById("marketingTabs").dataset.tab);
     renderSectionPills(shown.section, shown.tab);
     if (!lastStores.length) openCreateStoreDialog();

@@ -295,7 +295,6 @@ export function createStoresPanel(deps) {
       catch (err) { document.getElementById("shopifyImportError").textContent = err.message; }
     });
     shopifyImportDialog.querySelectorAll("[data-design]").forEach(button => button.addEventListener("click", async () => {
-      if (button.dataset.design === "template") return openImportedStore("templates");
       showShopifyImportMessage("shopifyImportDesignError", "");
       try { renderShopifyImport(await api(`/store-imports/${shopifyImport.id}/design`, { method: "POST", body: JSON.stringify({ option: button.dataset.design }) })); }
       catch (err) { showShopifyImportMessage("shopifyImportDesignError", err.message); }

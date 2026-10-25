@@ -2,11 +2,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-// Spec 2026-10-19 §5.1 hid Plantillas; spec 2026-10-20 brought it back behind the API flag; spec 2026-10-21 made it a Tienda pill.
-test('the Plantillas pill shows only with the flag', () => {
+// Plantillas was removed from the dashboard (owner 2026-10-25): no tab, no page, no import option.
+test('the dashboard has no Plantillas section', () => {
   const js = readFileSync(new URL('./dashboard.js', import.meta.url), 'utf8');
-  assert.match(js, /api\("\/store-templates\/settings"\)/);
-  assert.match(js, /hiddenViews: plantillasOn \? new Set\(\) : new Set\(\["templates"\]\)/);
+  const nav = readFileSync(new URL('./nav-sections.mjs', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(nav, /label: "Plantillas"/);
+  assert.doesNotMatch(html, /storeTemplatesFrame|data-design="template"/);
+  assert.match(js, /view === "templates"\) view = "workspace"/);
 });
 
 test('a product double-clicked in the Studio preview opens its editor', () => {
