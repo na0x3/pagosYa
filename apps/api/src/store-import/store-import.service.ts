@@ -13,7 +13,9 @@ import { writeImport } from './import-writer';
 import { copyPhotos } from './photo-copier';
 import { readShopifyCsv } from './shopify-csv';
 import { buildPreview, mapArticle, mapProduct, MAX_PHOTOS, photoSources, storeName, type ImportProduct } from './shopify-mapping';
-import { readShopifyStore, ShopifyReadError } from './shopify-reader';
+import { ShopifyReadError } from './shopify-reader';
+import { readAnyStore } from './store-reader';
+import { readPlatformCsv } from './platform-csv';
 import type { ShopifyStoreData } from './shopify-types';
 
 const LEASE_MS = 5 * 60_000;
@@ -63,16 +65,24 @@ export class StoreImportService {
 
   async previewUrl(merchantId: string, url: string) {
     let data: ShopifyStoreData;
-    try { data = await readShopifyStore(url); }
+    // Shopify, WooCommerce, or any shop's sitemap (owner 2026-10-25: Wix, Tiendanube and the rest too).
+    try { data = await readAnyStore(url); }
     catch (error) { if (error instanceof ShopifyReadError) throw new BadRequestException({ message: error.message, code: error.code }); throw error; }
-    return this.create(merchantId, 'SHOPIFY_URL', data, true);
+    return this.create(merchantId, (data as { platform?: string }).platform === 'Shopify' ? 'SHOPIFY_URL' : 'STORE_URL', data, true);
   }
 
   async previewCsv(merchantId: string, csv: string, name: string, host?: string) {
     let data: ShopifyStoreData;
-    try { data = readShopifyCsv(csv, name.trim() || 'Mi tienda', (host || 'csv.shopify').toLowerCase()); }
+    let source = 'SHOPIFY_CSV';
+    try {
+      // A Wix, WooCommerce or Tiendanube export is recognised by its columns; anything else is read as Shopify's, which says
+      // what it expected.
+      const other = readPlatformCsv(csv, name.trim() || 'Mi tienda', (host || 'csv.tienda').toLowerCase());
+      if (other) { data = other; source = 'STORE_CSV'; }
+      else data = readShopifyCsv(csv, name.trim() || 'Mi tienda', (host || 'csv.shopify').toLowerCase());
+    }
     catch (error) { if (error instanceof ShopifyReadError) throw new BadRequestException({ message: error.message, code: error.code }); throw error; }
-    return this.create(merchantId, 'SHOPIFY_CSV', data, Boolean(host));
+    return this.create(merchantId, source, data, Boolean(host));
   }
 
   private async create(merchantId: string, source: string, data: ShopifyStoreData, reusable: boolean) {
@@ -185,7 +195,7 @@ export class StoreImportService {
   async requestDesign(merchantId: string, id: string, option: 'same' | 'redesign') {
     const row = await this.owned(merchantId, id);
     if (row.status !== 'COMPLETED' || !row.storeId) throw new BadRequestException('Primero termina de importar tu tienda.');
-    if (option === 'same' && row.source === 'SHOPIFY_CSV') throw new BadRequestException('Para recrear tu tienda de Shopify necesitamos su dirección; elige el rediseño o una plantilla.');
+    if (option === 'same' && String(row.source ?? '').endsWith('_CSV')) throw new BadRequestException('Para recrear tu tienda necesitamos su dirección; elige el rediseño o una plantilla.');
     await this.prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM "Merchant" WHERE id = ${merchantId} FOR UPDATE`;
       const merchant = await tx.merchant.findUnique({ where: { id: merchantId }, select: { importBuildUsedAt: true } });

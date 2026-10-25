@@ -361,18 +361,18 @@
             <div><label for="createStoreName">Nombre de tu tienda</label><input id="createStoreName" name="name" placeholder="Mi Tienda de Ropa" required maxlength="120"></div>
             <div><label for="createStoreLogo">Logo <span class="faint">(opcional)</span></label><input id="createStoreLogo" name="logo" type="file" accept="image/png,image/jpeg,image/webp"><p class="faint">Lo usaremos en tu tienda y como ícono en la pestaña del navegador.</p></div>
             <p id="createStoreError" role="alert" hidden></p>
-            <p class="faint">¿Vienes de Shopify? <button class="link" type="button" data-open-shopify-import>Trae tu tienda</button></p>
+            <p class="faint">¿Ya vendes en Shopify, Wix, WooCommerce o Tiendanube? <button class="link" type="button" data-open-shopify-import>Trae tu tienda</button></p>
             <footer><button class="ghost" id="cancelCreateStore" type="button">Cancelar</button><button class="primary" type="submit">Crear tienda</button></footer>
           </form>
         </dialog>
         <dialog id="shopifyImportDialog" class="create-store-dialog shopify-import-dialog" aria-labelledby="shopifyImportTitle">
           <button class="dialog-close" type="button" data-close aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
           <div class="shopify-import" data-step="start">
-            <header><h2 id="shopifyImportTitle">Trae tu tienda de Shopify</h2><p>Importamos tus productos, fotos, colecciones y páginas. Nada se publica sin que lo decidas.</p></header>
+            <header><h2 id="shopifyImportTitle">Trae tu tienda</h2><p>Desde Shopify, Wix, WooCommerce, Tiendanube, Squarespace y otras: importamos tus productos, fotos y categorías. Nada se publica sin que lo decidas.</p></header>
             <section data-panel="start">
               <form id="shopifyImportUrlForm"><label for="shopifyImportUrl">Dirección de tu tienda</label><input id="shopifyImportUrl" name="url" placeholder="mitienda.com" required maxlength="300" autocomplete="url"><p id="shopifyImportUrlError" role="alert" hidden></p><button class="primary" type="submit">Revisar</button></form>
-              <details id="shopifyImportCsv"><summary>¿Tu tienda tiene contraseña? Sube el CSV de Shopify</summary>
-                <form id="shopifyImportCsvForm"><p class="faint">En Shopify: Productos → Exportar → "Todos los productos" → CSV para Excel, Numbers u otros.</p>
+              <details id="shopifyImportCsv"><summary>¿Prefieres un archivo, o tu tienda tiene contraseña? Sube el CSV de tus productos</summary>
+                <form id="shopifyImportCsvForm"><p class="faint">Shopify: Productos → Exportar → CSV. Wix: Tienda → Productos → Más acciones → Exportar. WooCommerce: Productos → Exportar. Tiendanube: Productos → Exportar productos.</p>
                   <label for="shopifyImportCsvName">Nombre de tu tienda</label><input id="shopifyImportCsvName" name="name" required maxlength="120">
                   <label for="shopifyImportCsvFile">Archivo CSV</label><input id="shopifyImportCsvFile" name="file" type="file" accept=".csv,text/csv" required>
                   <button class="primary" type="submit">Revisar archivo</button></form></details>
@@ -381,7 +381,7 @@
             <section data-panel="review" hidden>
               <p id="shopifyImportCounts" class="shopify-import-counts"></p>
               <ul id="shopifyImportWarnings" class="shopify-import-warnings"></ul>
-              <p class="faint">No se importan clientes, pedidos, cupones ni apps de Shopify.</p>
+              <p class="faint">No se importan clientes, pedidos, cupones ni apps de tu plataforma anterior.</p>
               <label id="shopifyImportRateRow" class="shopify-import-rate" hidden>1 <span id="shopifyImportCurrency"></span> = <input id="shopifyImportRate" inputmode="decimal" size="6" aria-label="Bolivianos por unidad"> Bs</label>
               <ul id="shopifyImportProducts" class="shopify-import-products"></ul>
               <p id="shopifyImportConfirmError" role="alert" hidden></p>
@@ -393,7 +393,7 @@
               <ul class="shopify-import-warnings" data-import-summary></ul>
               <p>¿Cómo quieres que se vea tu tienda nueva?</p>
               <div class="shopify-import-choices">
-                <button type="button" data-design="same"><strong>Igual que mi Shopify</strong><span>YAPI la recrea con tu estilo actual.</span><em data-free>Gratis la primera vez</em></button>
+                <button type="button" data-design="same"><strong>Igual que mi tienda actual</strong><span>YAPI la recrea con tu estilo actual.</span><em data-free>Gratis la primera vez</em></button>
                 <button type="button" data-design="redesign"><strong>Rediseño con mi marca</strong><span>Un diseño nuevo con tu logo, colores y fotos.</span><em data-free>Gratis la primera vez</em></button>
                 
               </div>
@@ -404,7 +404,7 @@
             <section data-panel="done" hidden>
               <p><strong>Tu tienda está lista para revisar.</strong></p>
               <ul class="shopify-import-warnings" data-import-summary></ul>
-              <ol class="shopify-import-next"><li>Revisa el diseño y publícalo.</li><li>Conecta tu dominio (cambia los DNS que hoy apuntan a Shopify).</li><li>Revisa el stock y configura tus envíos.</li><li>No canceles Shopify hasta que tu dominio apunte aquí.</li></ol>
+              <ol class="shopify-import-next"><li>Revisa el diseño y publícalo.</li><li>Conecta tu dominio (cambia los DNS que hoy apuntan a tu plataforma anterior).</li><li>Revisa el stock y configura tus envíos.</li><li>No canceles tu plataforma anterior hasta que tu dominio apunte aquí.</li></ol>
               <footer><button class="primary" type="button" id="shopifyImportOpen">Ver mi tienda</button></footer>
             </section>
           </div>
