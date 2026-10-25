@@ -30,7 +30,16 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
     const url = `${apiBaseUrl.replace(/\/$/, '')}/uploads/${filename}`;
     if (!cache.has(url)) {
       const pending = (async () => {
-        const response = await fetch(url, { credentials: 'omit', redirect: 'error', signal: AbortSignal.timeout(15_000) });
+        // The API restarts on every save and stalls during long builds: a refused or failed request is tried again
+        // over ~10 s, or the logo stays a blocked upload URL and shows as a broken image (owner 2026-10-24).
+        let response: Response | undefined;
+        for (const wait of [0, 1_500, 3_000, 5_000]) {
+          if (wait) await new Promise(resolve => setTimeout(resolve, wait));
+          try { response = await fetch(url, { credentials: 'omit', redirect: 'error', signal: AbortSignal.timeout(15_000) }); }
+          catch (error) { if (error instanceof DOMException && error.name === 'TimeoutError') throw error; continue; }
+          if (response.status < 500) break;
+        }
+        if (!response) throw new Error('Imagen no disponible');
         if (!response.ok || !/^image\/(png|jpeg|webp|avif|gif)(?:;|$)/i.test(response.headers.get('content-type') || '')) throw new Error('Imagen no disponible');
         const blob = await response.blob();
         if (blob.size > 10 * 1024 * 1024) throw new Error('Imagen demasiado grande');

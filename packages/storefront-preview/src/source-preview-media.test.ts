@@ -38,6 +38,27 @@ describe('preview variant photography', () => {
     const result = await createPreviewImageLoader('http://localhost:3001/v1')({ files: [{ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ data: { logoUrl: logo, items: [] } })};` }] } as SourceSnapshot);
     expect(JSON.parse(result.files[0].content.replace('window.PAGOSYA_CONFIG = ', '').replace(/;$/, '')).data.logoUrl).toBe('data:http://localhost:3001' + logo);
   });
+  // The API restarts on every save and stalls during long YAPI builds; one failed fetch left the logo as a blocked
+  // upload URL, a broken image with its alt text beside it (owner 2026-10-24, Remolino in the editor).
+  it('retries an upload the API could not serve before giving up on it', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('location', { href: 'http://localhost:5175' });
+    vi.stubGlobal('FileReader', class {
+      result = ''; onload?: () => void;
+      readAsDataURL(blob: Blob) { void blob.text().then(value => { this.result = 'data:' + value; this.onload?.(); }); }
+    });
+    let calls = 0;
+    vi.stubGlobal('fetch', vi.fn((url: string) => ++calls < 3
+      ? Promise.reject(new TypeError('Failed to fetch'))
+      : Promise.resolve(new Response(new Blob([url], { type: 'image/webp' }), { headers: { 'content-type': 'image/webp' } }))));
+    const logo = '/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.webp';
+    const pending = createPreviewImageLoader('http://localhost:3001/v1')({ files: [{ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ data: { logoUrl: logo, items: [] } })};` }] } as SourceSnapshot);
+    await vi.advanceTimersByTimeAsync(10_000);
+    const result = await pending;
+    vi.useRealTimers();
+    expect(calls).toBe(3);
+    expect(JSON.parse(result.files[0].content.replace('window.PAGOSYA_CONFIG = ', '').replace(/;$/, '')).data.logoUrl).toBe('data:http://localhost:3001' + logo);
+  });
   // A template's photo slots are string literals in its compiled components, not catalog data; the sandbox cannot
   // fetch them, so a template applied to a store showed its hero as a broken image.
   it('inlines upload photos quoted in compiled pages, leaving everything else alone', async () => {

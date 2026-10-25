@@ -26,7 +26,8 @@ test('subscription popup matches the photo/form reference, remembers dismissal a
   await page.screenshot({ path: '.test-artifacts/subscription-popup-desktop.png' });
   await page.keyboard.press('Escape'); await expect(dialog).toBeHidden();
   await mount(); await expect(page.getByRole('dialog')).toBeHidden();
-  await page.getByRole('button', { name: 'Comunidad', exact: true }).click();
+  // No in-page Comunidad block reopens it any more (owner 2026-10-24): a design's own opener does, as here.
+  await page.locator('dialog.pagosya-signup-dialog').evaluate((el: HTMLDialogElement) => el.showModal());
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   await page.screenshot({ path: '.test-artifacts/subscription-popup-mobile.png' });
@@ -38,7 +39,7 @@ test('subscription popup matches the photo/form reference, remembers dismissal a
   await dialog.getByLabel('Quiero recibir novedades', { exact: false }).check();
   await dialog.getByRole('button', { name: 'Quiero ser parte' }).click();
   await expect(dialog.getByRole('status')).toContainText('comunidad');
-  expect(payload).toEqual({ email: 'doris@example.com', name: 'Doris', phone: '+591 70000000', interests: ['Snacks'], consent: true });
+  expect(payload).toEqual({ email: 'doris@example.com', name: 'Doris', phone: '+591 70000000', interests: ['Snacks'], consent: true, source: 'popup' });
   await expect(dialog.locator('form')).toBeHidden();
   await dialog.getByRole('button', { name: 'Cerrar suscripción' }).click();
   await expect(page.getByRole('button', { name: 'Comunidad', exact: true })).toBeHidden();
@@ -124,12 +125,12 @@ test('storefront inherits brand, captures consent, preserves recovery token thro
   await page.addScriptTag({ content: commerce + '\n' + retention });
   await expect(page.getByRole('heading', { name: 'Tu tarjeta Comeback' })).toBeVisible();
   expect(await page.locator('[data-pagosya-comeback]').evaluate(el => getComputedStyle(el).fontFamily)).toContain('Georgia');
-  await page.getByRole('button', { name: 'Comunidad', exact: true }).click();
+  await page.locator('dialog.pagosya-signup-dialog').evaluate((el: HTMLDialogElement) => el.showModal());
   const subscription = page.locator('[data-pagosya-subscribe]');
   await subscription.getByLabel('Tu correo', { exact: true }).fill('cliente@example.com');
   await subscription.getByRole('checkbox').check(); await subscription.getByRole('button', { name: 'Unirme al club' }).click();
   await expect(subscription.getByRole('status')).toContainText('comunidad');
-  expect(payloads.at(-1).body).toEqual({ email: 'cliente@example.com', consent: true });
+  expect(payloads.at(-1).body).toEqual({ email: 'cliente@example.com', consent: true, source: 'popup' });
   await page.getByRole('button', { name: 'Cerrar suscripción' }).click();
   await page.getByRole('button', { name: 'Añadir Café de origen', exact: true }).click();
   const recovery = page.locator('[data-retention-recovery]').first();
