@@ -8,6 +8,7 @@ import { PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SendSourceMessageDto, type SourceMessageInput } from './dto/send-source-message.dto';
 import { sourceRequestContext } from './source-request-context';
 import { MODEL_LIMIT, MODEL_LIMIT_MERCHANT_FAILURE, merchantFacingSourceFailure } from './source-validation-error';
+import { continuesRequest, pendingRequestIn, unfinishedNote } from './source-unfinished-request';
 
 const LEASE_MS = 45_000;
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -28,7 +29,7 @@ const isAbort = (error: unknown) => ['AbortError', 'TimeoutError'].includes((err
 /** Where a waiting request stands: requests running or queued before it, and the running store when it is the merchant's own. */
 export type ChatJobQueue = { ahead: number; runningStore?: string };
 export function chatJobView(job: StoreSourceChatJob, queue?: ChatJobQueue) {
-  return { ...(queue ? { queue } : {}), background: Boolean((job.input as { personalTouch?: boolean } | null)?.personalTouch), id: job.id, requestId: job.requestId, status: job.status, sequence: job.sequence, progress: job.progress, attempt: job.attempt, result: job.result, error: job.error, lastCommittedRevision: job.lastCommittedRevision, createdAt: job.createdAt, updatedAt: job.updatedAt };
+  return { ...(queue ? { queue } : {}), background: Boolean((job.input as unknown as SourceMessageInput | null)?.personalTouch && !(job.input as unknown as SourceMessageInput).ownRequest), id: job.id, requestId: job.requestId, status: job.status, sequence: job.sequence, progress: job.progress, attempt: job.attempt, result: job.result, error: job.error, lastCommittedRevision: job.lastCommittedRevision, createdAt: job.createdAt, updatedAt: job.updatedAt };
 }
 @Injectable()
 export class SourceChatJobsService implements OnModuleDestroy {
@@ -42,9 +43,10 @@ export class SourceChatJobsService implements OnModuleDestroy {
   }
   async create(merchantId: string, storeId: string, input: SourceMessageInput) {
     await this.owner(merchantId, storeId);
-    if (!input.requestId) throw new BadRequestException('La solicitud necesita un requestId.');
+    const requestId = input.requestId;
+    if (!requestId) throw new BadRequestException('La solicitud necesita un requestId.');
     const inputDigest = chatRequestDigest(input);
-    const existing = await this.prisma.storeSourceChatJob.findUnique({ where: { storeId_requestId: { storeId, requestId: input.requestId } } });
+    const existing = await this.prisma.storeSourceChatJob.findUnique({ where: { storeId_requestId: { storeId, requestId } } });
     if (existing) {
       if (existing.inputDigest !== inputDigest) throw new ConflictException('Este requestId ya corresponde a otro pedido.');
       return chatJobView(existing);
@@ -53,15 +55,20 @@ export class SourceChatJobsService implements OnModuleDestroy {
     // Variety spec §5: the merchant's own request wins — a queued or running personal touch on the store is cancelled.
     if (!input.personalTouch) {
       const active = await this.prisma.storeSourceChatJob.findMany({ where: { storeId, status: { in: ['QUEUED', 'RUNNING'] } }, select: { id: true, input: true } });
-      for (const job of active) if ((job.input as { personalTouch?: boolean } | null)?.personalTouch) await this.cancel(merchantId, storeId, job.id).catch(() => undefined);
+      // The merchant's own request riding on a new store's follow-up is not a touch: it is never cancelled for them.
+      for (const job of active) if ((job.input as unknown as SourceMessageInput | null)?.personalTouch && !(job.input as unknown as SourceMessageInput).ownRequest) await this.cancel(merchantId, storeId, job.id).catch(() => undefined);
     }
     const history = await this.prisma.storeAgentMessage.findMany({ where: { thread: { storeId }, channel: 'source', role: 'ASSISTANT' }, orderBy: { createdAt: 'desc' }, take: 30, select: { id: true, metadata: true } });
+    // Owner 2026-10-22: «sigue» after a request that did not finish runs that request again, as it was kept.
+    // A new store (revision 0) resumes too: a failed first plan keeps its request and its setup action (final review 2026-10-22).
+    const pending = !input.personalTouch && continuesRequest(input.instruction) ? pendingRequestIn(history) : undefined;
+    if (pending) input = { ...input, instruction: pending.instruction, resumeWords: input.instruction.trim(), ...(pending.setupAction ? { setupAction: pending.setupAction as SourceMessageInput['setupAction'] } : {}), ...(pending.direct ? { personalTouch: true, ownRequest: true } : {}) };
     const contextAnchor = history.find(message => !(message.metadata as any)?.failed && !(message.metadata as any)?.adaptationFailed)?.id;
     try {
-      return chatJobView(await this.prisma.storeSourceChatJob.create({ data: { merchantId, storeId, requestId: input.requestId, inputDigest, input: json({ ...input, merchantRequest: sourceMerchantRequest(input, contextAnchor) }), activeStoreId: storeId } }));
+      return chatJobView(await this.prisma.storeSourceChatJob.create({ data: { merchantId, storeId, requestId, inputDigest, input: json({ ...input, merchantRequest: sourceMerchantRequest(input, contextAnchor) }), activeStoreId: storeId } }));
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        const duplicate = await this.prisma.storeSourceChatJob.findUnique({ where: { storeId_requestId: { storeId, requestId: input.requestId } } });
+        const duplicate = await this.prisma.storeSourceChatJob.findUnique({ where: { storeId_requestId: { storeId, requestId } } });
         if (duplicate?.inputDigest === inputDigest) return chatJobView(duplicate);
         throw new ConflictException('Ya hay un pedido de YAPI en curso en esta tienda.');
       }
@@ -101,7 +108,22 @@ export class SourceChatJobsService implements OnModuleDestroy {
     for (const job of expired) await this.prisma.$transaction(async tx => {
       const changed = await tx.storeSourceChatJob.updateMany({ where: { id: job.id, status: 'RUNNING', leaseUntil: { lt: new Date() } }, data: { status: 'INTERRUPTED', activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 }, error: 'La conexión de trabajo se interrumpió. Tu diseño y el borrador se conservan. Reintenta para continuar.' } });
       if (changed.count) await tx.storeSourceGeneration.updateMany({ where: { requestJobId: job.id, status: 'RUNNING' }, data: { status: 'INTERRUPTED', activeStoreId: null, completedAt: new Date() } });
-    });
+      return changed.count;
+    }).then(count => count ? this.noteInterrupted(job.id) : undefined);
+  }
+  /** Owner 2026-10-22: a request cut off (the computer shut off, the server restarted) says so in the chat and keeps the request
+   * for «sigue», so neither the merchant nor YAPI takes the store for finished. A personal touch of YAPI's own stays silent. */
+  private async noteInterrupted(jobId: string) {
+    try {
+      const job = await this.prisma.storeSourceChatJob.findUnique({ where: { id: jobId } });
+      const input = job?.input as unknown as SourceMessageInput | null;
+      if (!job || !input || input.personalTouch && !input.ownRequest) return;
+      const thread = await this.prisma.storeAgentThread.findUnique({ where: { storeId: job.storeId }, select: { id: true } });
+      if (!thread) return;
+      if (input.personalTouch && !input.resumeWords) await this.prisma.storeAgentMessage.deleteMany({ where: { threadId: thread.id, role: 'USER', content: 'Toque personal', metadata: { path: ['requestId'], equals: job.requestId } } });
+      await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: unfinishedNote('interrupted', Boolean(input.ownRequest)),
+        metadata: { failed: true, interrupted: true, pendingRequest: { instruction: input.instruction, direct: Boolean(input.personalTouch) } } } });
+    } catch (error) { this.logger.warn(`interrupted note not written for ${jobId}: ${String(error).slice(0, 200)}`); }
   }
   private fence(job: StoreSourceChatJob) { return { id: job.id, status: 'RUNNING', leaseToken: job.leaseToken, leaseUntil: { gt: new Date() } }; }
   @Interval(1000)
@@ -151,7 +173,8 @@ export class SourceChatJobsService implements OnModuleDestroy {
       const detail = `YAPI job ${job.id} failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`;
       // A cancelled or interrupted job is not a fault.
       if (message === null) { if (controller.signal.aborted || isAbort(error)) this.logger.warn(detail); else this.logger.error(detail); }
-      await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: controller.signal.aborted ? 'INTERRUPTED' : outcome, activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 }, error: (message ?? FAILED_JOB_MESSAGE).slice(0, 1000) } }).catch(() => {});
+      const closed = await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: controller.signal.aborted ? 'INTERRUPTED' : outcome, activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 }, error: (message ?? FAILED_JOB_MESSAGE).slice(0, 1000) } }).catch(() => ({ count: 0 }));
+      if (closed.count && controller.signal.aborted) await this.noteInterrupted(job.id);
     } finally { clearInterval(heartbeat); if (this.controller === controller) this.controller = undefined; }
   }
 }

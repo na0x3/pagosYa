@@ -12,6 +12,16 @@ export function merchantAsksForPhotoGroup(instruction: string): boolean {
     .some(match => !/(?:\bno|\bsin|without|avoid|nada de|ningun[ao]?)\b[^.!?]{0,24}$/.test(text.slice(0, match.index)));
 }
 
+/** Owner 2026-10-23 (goodProtein: eight brand marquees in a row): two scrolling strips together at most, one is better.
+ *  Runs in the page on every change, not only whole designs. A block counts when it holds a marquee or ticker. */
+export function evaluateStripRuns(): string[] {
+  const strip = '[data-pya-motion="marquee"], .es-marquee, .ui-marquee, marquee';
+  const blocks = Array.from(document.querySelectorAll('main > *')).filter(block => getComputedStyle(block).display !== 'none' && (block as HTMLElement).offsetHeight > 0);
+  let run = 0, longest = 0;
+  for (const block of blocks) { run = block.matches(strip) || block.querySelector(strip) ? run + 1 : 0; longest = Math.max(longest, run); }
+  return longest >= 3 ? [`[composition:strip-run] ${longest} franjas que se desplazan seguidas (marquesinas). Deja una sola, o dos juntas como máximo: reúne las demás en una sección con contenido o quítalas.`] : [];
+}
+
 /** Server-owned scope: local copy edits do not silently redesign an existing gallery. */
 export function sourceMediaPolicy(purpose: string, wholeDesign: boolean, instruction: string, compositionPlan?: SourceCompositionPlan): SourceMediaPolicy | undefined {
   if (purpose !== 'shop' || !wholeDesign) return undefined;

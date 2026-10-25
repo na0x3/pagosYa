@@ -44,8 +44,9 @@ export function sourceRequestProfile(instruction: string, _hasExistingSite: bool
   add('cart', /carrito|cart|pedido|order/);
   add('checkout', /checkout|pago|payment|compra|comprar/);
   const fullVisual = redesign || vagueVisual || (visual && domains.length === 0);
-  const scope = contentChange ? 'functional-or-content' : redesign ? 'full-redesign' : fullVisual ? 'visual-refinement' : domains.length ? 'targeted-visual' : 'functional-or-content';
-  const visualDomains = contentChange ? [] : fullVisual ? ALL_VISUAL_DOMAINS : domains;
+  // An explicit redesign wins: a brief that also names products is still a redesign (live 2026-10-23, goodProtein).
+  const scope = redesign ? 'full-redesign' : contentChange ? 'functional-or-content' : fullVisual ? 'visual-refinement' : domains.length ? 'targeted-visual' : 'functional-or-content';
+  const visualDomains = redesign ? ALL_VISUAL_DOMAINS : contentChange ? [] : fullVisual ? ALL_VISUAL_DOMAINS : domains;
   const preserve = ['real products, prices, stock and business facts', 'uploaded photos and confirmed asset roles', 'cart, payment, checkout and platform-owned commerce hooks', 'working links, accessibility and readable content'];
   const acceptanceCriteria = [
     'Use one coherent visual language across homepage, product page, cart, checkout, header and footer.',

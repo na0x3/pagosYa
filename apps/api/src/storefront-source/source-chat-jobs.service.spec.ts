@@ -187,3 +187,59 @@ describe('review fixes: background jobs', () => {
     expect((chatJobView({ ...job, status: 'QUEUED', input }) as any).background).toBe(false);
   });
 });
+describe('unfinished requests (owner 2026-10-22: the computer shut off mid-build)', () => {
+  const kept = { metadata: { failed: true, pendingRequest: { instruction: 'Esta tienda empezó desde la plantilla Esencial…', direct: true } } };
+  it('an interrupted request leaves a note in the chat that keeps it for «sigue»', async () => {
+    const { service, prisma, chat } = setup();
+    prisma.storeSourceChatJob.findMany.mockResolvedValue([{ id: 'job' }]);
+    prisma.storeSourceChatJob.findUnique.mockResolvedValue({ ...job, input: { ...input, personalTouch: true, ownRequest: true } });
+    prisma.storeAgentThread = { findUnique: jest.fn().mockResolvedValue({ id: 't' }) };
+    prisma.storeAgentMessage = { create: jest.fn(), deleteMany: jest.fn() };
+    await service.expire();
+    expect(prisma.storeAgentMessage.deleteMany).toHaveBeenCalledWith({ where: expect.objectContaining({ content: 'Toque personal' }) });
+    const note = prisma.storeAgentMessage.create.mock.calls[0][0].data;
+    expect(note.content).toMatch(/se cortó antes de terminar.*base de la plantilla.*«sigue»/);
+    expect(note.metadata).toMatchObject({ failed: true, interrupted: true, pendingRequest: { instruction: input.instruction, direct: true } });
+    expect(chat.send).not.toHaveBeenCalled();
+  });
+  it('a personal touch of YAPI\'s own stays silent when interrupted', async () => {
+    const { service, prisma } = setup();
+    prisma.storeSourceChatJob.findMany.mockResolvedValue([{ id: 'job' }]);
+    prisma.storeSourceChatJob.findUnique.mockResolvedValue({ ...job, input: { ...input, personalTouch: true } });
+    prisma.storeAgentThread = { findUnique: jest.fn().mockResolvedValue({ id: 't' }) };
+    prisma.storeAgentMessage = { create: jest.fn(), deleteMany: jest.fn() };
+    await service.expire();
+    expect(prisma.storeAgentMessage.create).not.toHaveBeenCalled();
+  });
+  it('«sigue» after the note runs the kept request, showing the merchant\'s words', async () => {
+    const { service, prisma } = setup();
+    prisma.storeAgentMessage = { findMany: jest.fn().mockResolvedValue([kept]) };
+    prisma.storeSourceChatJob.create.mockImplementation(async ({ data }: any) => ({ ...job, ...data }));
+    await service.create('m', 's', { ...input, instruction: 'sigue con lo que estábamos haciendo' });
+    expect(prisma.storeSourceChatJob.create.mock.calls[0][0].data.input).toMatchObject({ instruction: kept.metadata.pendingRequest.instruction, resumeWords: 'sigue con lo que estábamos haciendo', personalTouch: true, ownRequest: true });
+  });
+  it('any other message, or one after a saved build, is a new request', async () => {
+    const { service, prisma } = setup();
+    prisma.storeSourceChatJob.create.mockImplementation(async ({ data }: any) => ({ ...job, ...data }));
+    prisma.storeAgentMessage = { findMany: jest.fn().mockResolvedValue([kept]) };
+    await service.create('m', 's', input);
+    prisma.storeAgentMessage.findMany.mockResolvedValue([{ metadata: { sourceRevision: 3 } }, kept]);
+    await service.create('m', 's', { ...input, requestId: 'r2', instruction: 'sigue' });
+    expect(prisma.storeSourceChatJob.create.mock.calls.map((call: any) => call[0].data.input.instruction)).toEqual([input.instruction, 'sigue']);
+  });
+  it('the merchant\'s own request on a new store is shown as theirs and never cancelled by their next message', async () => {
+    const { service, prisma } = setup();
+    expect(chatJobView({ ...job, input: { ...input, personalTouch: true, ownRequest: true } }).background).toBe(false);
+    prisma.storeSourceChatJob.findMany.mockImplementation(async ({ where }: any) => where.status?.in ? [{ id: 'own', input: { personalTouch: true, ownRequest: true } }] : []);
+    await service.create('m', 's', input).catch(() => undefined);
+    expect(prisma.storeSourceChatJob.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'CANCELLED' }) }));
+  });
+});
+
+it('F5: «sigue» on a new store (revision 0) resumes the kept request with its setup action', async () => {
+  const { service, prisma } = setup();
+  prisma.storeAgentMessage = { findMany: jest.fn().mockResolvedValue([{ metadata: { failed: true, pendingRequest: { instruction: 'Hazme una tienda de velas', direct: false, setupAction: 'generate' } } }]) };
+  prisma.storeSourceChatJob.create.mockImplementation(async ({ data }: any) => ({ ...job, ...data }));
+  await service.create('m', 's', { requestId: 'r0', revision: 0, instruction: 'sigue' });
+  expect(prisma.storeSourceChatJob.create.mock.calls[0][0].data.input).toMatchObject({ instruction: 'Hazme una tienda de velas', resumeWords: 'sigue', setupAction: 'generate' });
+});

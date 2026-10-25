@@ -6,6 +6,7 @@ import { clashesWith, clashWords, fingerprintOf, makeUnique } from './plan/store
 import { catalogFacts, otherFingerprints } from './plan/store-plan-data';
 import type { PlanCatalogue, StorePlan } from './plan/store-plan';
 import type { AppliedPlan } from './source-templates.service';
+import { merchantAsksForPhotoGroup } from './source-media-design';
 
 /** Where the catalogue and the dice come from; a seam so tests do not load the template package. */
 export class StorePlanParts {
@@ -23,7 +24,7 @@ export class SourceStorePlanService {
     const catalogue = this.parts.catalogue();
     const [catalog, others, store] = await Promise.all([this.data.catalogFacts(this.prisma, storeId), this.data.otherFingerprints(this.prisma, storeId),
       this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true } }).catch(() => null)]);
-    const facts: CatalogFacts = { ...catalog, shownPhotos: input.photos.slice(0, 8).length };
+    const facts: CatalogFacts = { ...catalog, shownPhotos: input.photos.slice(0, 8).length, photoGroups: merchantAsksForPhotoGroup(input.request) };
     const ask = (clash?: string) => this.dialogue.planStore(merchantId, { storeId, storeName: store?.name ?? '', what: input.what, request: input.request, products: facts.productNames,
       facts, photos: input.photos, catalogue, revision: input.revision, ...(input.current ? { current: input.current } : {}), ...(input.previous ? { previous: input.previous } : {}), ...(clash ? { clash } : {}) });
     // An edit starts from the store as it is; a new store from the dice, told the real catalog (final review 2026-10-22).
@@ -63,6 +64,6 @@ export class SourceStorePlanService {
     const motif = plan.motif ? `- Motivo de marca: ${plan.motif.what}, sacado de ${plan.motif.from}; con función, nunca solo adorno.` : '';
     if (!custom.length && !motif) return null;
     return ['Construye sobre esta tienda las secciones propias del plan que el comercio aprobó:', ...custom, motif,
-      'Cada bloque con su propio layout según lo que dice, y movimiento con las piezas data-pya-motion del kit. Nunca inventes un color: usa solo el color indicado (de esa foto o del logo) o el fondo de la tienda. Tarjetas de producto normales. Nada de bandas oscuras solo de texto.'].filter(Boolean).join('\n');
+      'Cada bloque con su propio layout según lo que dice, y movimiento con las piezas data-pya-motion del kit. Nunca inventes un color: usa solo el color indicado (de esa foto o del logo) o el fondo de la tienda. Tarjetas de producto normales. Nada de bandas oscuras solo de texto. Nunca más de dos franjas en marquesina seguidas (mejor una): varias marcas van juntas en una sección con contenido, no una franja por marca.'].filter(Boolean).join('\n');
   }
 }

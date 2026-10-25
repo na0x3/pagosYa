@@ -13,7 +13,6 @@ apps/
   consumer-dashboard/  "Mi pagosYa": marketplace + buyer account.
   ops/                 Internal console for support, KYC review, and audit (no build step).
   demo/                Minimal merchant backend showing the SDK + widget integration.
-  matcho-showcase/     Stand-alone reference storefront (vinext), built and tested in CI.
 packages/
   shared-types/        Types shared by api, checkout, and widget. No runtime dependencies on apps.
   sdk-node/            Public Node SDK for merchant backends.

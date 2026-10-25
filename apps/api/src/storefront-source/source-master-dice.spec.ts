@@ -1,5 +1,5 @@
 import { templateManifest } from '@pagosya/store-templates';
-import { distinctPhotoCount, menuVariant, rollVariants } from './source-master-dice';
+import { distinctPhotoCount, esencialDiceSettings, menuVariant, rollStarterDice, rollVariants } from './source-master-dice';
 
 const settings = templateManifest('esencial')!.master!;
 const calm = { tone: 'calm', temperature: 'warm', lead: 'photo', exclude: [] as string[] } as const;
@@ -35,8 +35,8 @@ it('photo-hungry variants need enough photos', () => {
   }
 });
 
-it('keeps the chosen business sections (at most 2, only catalogued ones)', () => {
-  expect(roll('s3', { sections: ['process', 'nope', 'faq', 'visit'] }).variants.sections).toEqual(['process', 'faq']);
+it('keeps the chosen business sections (at most 4 since 2026-10-24, only catalogued ones)', () => {
+  expect(roll('s3', { sections: ['process', 'nope', 'faq', 'visit'] }).variants.sections).toEqual(['process', 'faq', 'visit']);
 });
 
 it('a bold character leans to bold palettes', () => {
@@ -49,7 +49,9 @@ it('over many stores every palette, font pair and hero gets used', () => {
   const seeds = Array.from({ length: 300 }, (_, i) => `store-${i}`);
   const rolls = seeds.map(seed => roll(seed, { character: { ...calm, tone: seed.endsWith('0') ? 'bold' : 'calm', temperature: (['warm', 'cool', 'neutral'] as const)[seed.length % 3] } }));
   expect(new Set(rolls.map(r => r.fonts)).size).toBe(settings.fonts.length);
-  expect(new Set(rolls.map(r => r.variants.hero)).size).toBe(10);
+  // Every cover except the two multi-photo ones (collage, strip), which need the merchant to ask (owner 2026-10-23), and the
+  // text-only one, which a store with photos never gets (owner 2026-10-24).
+  expect(new Set(rolls.map(r => r.variants.hero)).size).toBe(7);
   expect(new Set(rolls.map(r => r.palette)).size).toBeGreaterThanOrEqual(14);
 });
 
@@ -199,4 +201,84 @@ describe('feature part', () => {
 // Owner 2026-10-22: «clients cant see product and price at same time» — no roll gives a full-screen photo before name, price and buy.
 it('never rolls a photo-first product page', () => {
   for (let i = 0; i < 200; i++) expect(['stacked', 'editorial']).not.toContain(roll(`pdp-${i}`).variants.pdp);
+});
+
+// Owner 2026-10-23: one photo at most on the cover; more only when the merchant asks.
+it('never rolls a multi-photo cover unless the merchant asked for more photos', () => {
+  const heroes = Array.from({ length: 60 }, (_, i) => roll(`seed-${i}`, { photoCount: 12 }).variants.hero);
+  expect(heroes.filter(hero => hero === 'collage' || hero === 'strip')).toEqual([]);
+  const asked = Array.from({ length: 60 }, (_, i) => roll(`seed-${i}`, { photoCount: 12, photoGroups: true }).variants.hero);
+  expect(asked.some(hero => hero === 'collage' || hero === 'strip')).toBe(true);
+});
+
+describe('starter dice (spec 2026-10-24-starter-dice §1)', () => {
+  const master = templateManifest('esencial')!.master!;
+  const calm = { tone: 'calm' as const, temperature: 'neutral' as const, lead: 'photo' as const, exclude: [] };
+  const dice = { hero: ['stack', 'framed', 'split-left'], grid: ['side-title', 'grid3'], palettes: ['linen', 'sand', 'terracotta'], fonts: ['gallery', 'editorial', 'literary'] };
+  const roll = (seed: string, extra: Partial<Parameters<typeof rollStarterDice>[0]> = {}) => rollStarterDice({ seed, settings: master, dice, character: calm, photoCount: 6, recent: [], ...extra });
+
+  it('rolls only the parts and ids the starter lists', () => {
+    for (const seed of ['a', 'b', 'c', 'd', 'e', 'f']) {
+      const out = roll(seed);
+      expect(Object.keys(out.variants).sort()).toEqual(['grid', 'hero']);
+      expect(dice.hero).toContain(out.variants.hero);
+      expect(dice.grid).toContain(out.variants.grid);
+      expect(dice.palettes).toContain(out.palette);
+      expect(dice.fonts).toContain(out.fonts);
+    }
+  });
+
+  it('two stores get different looks', () => {
+    const looks = new Set(['s1', 's2', 's3', 's4', 's5', 's6'].map(seed => JSON.stringify(roll(seed))));
+    expect(looks.size).toBeGreaterThan(2);
+  });
+
+  it('never rolls a cover the store has no photos for', () => {
+    const out = rollStarterDice({ seed: 'x', settings: master, dice: { hero: ['collage', 'strip', 'framed'] }, character: calm, photoCount: 1, recent: [] });
+    expect(out.variants.hero).toBe('framed');
+  });
+
+  it('does not repeat the merchant’s last store when another combination is free', () => {
+    const first = roll('same');
+    const second = roll('same', { recent: [{ hero: first.variants.hero!, palette: first.palette!, fonts: first.fonts! }] });
+    expect(`${second.variants.hero}|${second.palette}|${second.fonts}`).not.toBe(`${first.variants.hero}|${first.palette}|${first.fonts}`);
+  });
+
+  it('a dice list without palettes or fonts leaves the starter’s own', () => {
+    const out = rollStarterDice({ seed: 'x', settings: master, dice: { hero: ['stack', 'framed'] }, character: calm, photoCount: 6, recent: [] });
+    expect(out.palette).toBeUndefined();
+    expect(out.fonts).toBeUndefined();
+  });
+
+  it('Esencial-random never sees starter-only palettes or fonts', () => {
+    const withExtras = { ...master, palettes: [...master.palettes, { ...master.palettes[0], id: 'cereza', starterOnly: true }], fonts: [...master.fonts, { ...master.fonts[0], id: 'alegre', starterOnly: true }] };
+    const plain = esencialDiceSettings(withExtras);
+    expect(plain.palettes.map(p => p.id)).not.toContain('cereza');
+    expect(plain.fonts.map(f => f.id)).not.toContain('alegre');
+    expect(plain.palettes.filter(p => !p.starterOnly)).toHaveLength(master.palettes.filter(p => !p.starterOnly).length);
+  });
+});
+
+// Owner 2026-10-24 («only stores I don't like are these where it starts with a blank screen»): a store with photos never
+// opens on the text-only cover, from Esencial's dice or a starter's.
+describe('no text-only cover for a store with photos', () => {
+  const master = templateManifest('esencial')!.master!;
+  const calm = { tone: 'calm' as const, temperature: 'neutral' as const, lead: 'photo' as const, exclude: [] };
+  it('Esencial never rolls «type» when the store has a photo', () => {
+    for (let i = 0; i < 40; i++) expect(rollVariants({ seed: `s${i}`, settings: master, character: calm, photoCount: 1, sections: [], recent: [] }).variants.hero).not.toBe('type');
+  });
+  it('a starter listing «type» does not roll it when the store has a photo', () => {
+    for (let i = 0; i < 20; i++) expect(rollStarterDice({ seed: `s${i}`, settings: master, dice: { hero: ['type', 'framed', 'split-left'] }, character: calm, photoCount: 2, recent: [] }).variants.hero).not.toBe('type');
+  });
+  it('a store with no photo at all still gets the text-only cover', () => {
+    expect(rollStarterDice({ seed: 'x', settings: master, dice: { hero: ['type', 'framed'] }, character: calm, photoCount: 0, recent: [] }).variants.hero).toBe('type');
+  });
+});
+
+// Owner 2026-10-24 («make stores fuller, more sections»): a store keeps up to four business sections, not two.
+it('a store keeps up to four business sections', () => {
+  const master = templateManifest('esencial')!.master!;
+  const calm = { tone: 'calm' as const, temperature: 'neutral' as const, lead: 'photo' as const, exclude: [] };
+  const out = rollVariants({ seed: 's', settings: master, character: calm, photoCount: 4, sections: ['faq', 'process', 'materials', 'visit', 'quotes'], recent: [] });
+  expect(out.variants.sections).toEqual(['faq', 'process', 'materials', 'visit']);
 });

@@ -107,26 +107,37 @@ describe('gallery list', () => {
 });
 
 // Starters (spec 2026-10-24): a starter applied through the copy-slot fill is named as a style and takes the merchant's brand.
+// Vitrina became master-kind on 2026-10-24 (spec 2026-10-24-starter-dice §2); a copy-slots starter is pinned here with a fixture
+// built on the «obra» Plantilla, as a future copy-slots starter would be.
 describe('applyPlantillaFilled with a starter', () => {
-  it('saves «Estilo: Vitrina» and records the starter in the brief', async () => {
+  const slotsStarter = (templates: SourceTemplatesService) => {
+    const obra = real.templateManifest('obra');
+    const fixture = { ...obra, id: 'tanda', name: 'Tanda', hidden: true, starter: { description: 'Tandas pequeñas.', fits: ['salsas', 'dulces', 'snacks'], order: 9 } };
+    templates.registry = { ...templates.registry, templateManifest: (id: string) => (id === 'tanda' ? fixture : real.templateManifest(id)), templateSourceFiles: (id: string) => real.templateSourceFiles(id === 'tanda' ? 'obra' : id) };
+  };
+
+  it('saves «Estilo: Tanda» and records the starter in the brief', async () => {
     const { templates, saved } = service(0);
-    await templates.applyPlantillaFilled('m1', 'store-1', 'vitrina', 0, async () => ({}));
-    expect(saved().label).toBe('Estilo: Vitrina');
-    expect((saved().brief as { starterId?: string }).starterId).toBe('vitrina');
+    slotsStarter(templates);
+    await templates.applyPlantillaFilled('m1', 'store-1', 'tanda', 0, async () => ({}));
+    expect(saved().label).toBe('Estilo: Tanda');
+    expect((saved().brief as { starterId?: string }).starterId).toBe('tanda');
   });
 
   it("takes the merchant's confirmed brand colours over the starter's own", async () => {
     const { templates, saved } = service(0);
+    slotsStarter(templates);
     (templates as any).brands = { get: async () => ({ data: { confirmed: [{ field: 'accent', value: '#123456' }, { field: 'background', value: '#FAFAF0' }] } }) };
-    await templates.applyPlantillaFilled('m1', 'store-1', 'vitrina', 0, async () => ({}));
+    await templates.applyPlantillaFilled('m1', 'store-1', 'tanda', 0, async () => ({}));
     const css = saved().files.find(file => file.path === 'styles/globals.css')!.content;
     expect(css).toMatch(/\/\* pagosya-brand \*\/ :root\{[^}]*--store-accent:#123456[^}]*--store-background:#fafaf0/);
-    expect(css.lastIndexOf('/* pagosya-brand */')).toBeGreaterThan(css.lastIndexOf('--store-accent:#d7261e'));
+    expect(css.lastIndexOf('/* pagosya-brand */')).toBeGreaterThan(css.lastIndexOf('--store-accent:#1c1d1f'));
   });
 
   it('a starter with no brand keeps its own colours', async () => {
     const { templates, saved } = service(0);
-    await templates.applyPlantillaFilled('m1', 'store-1', 'vitrina', 0, async () => ({}));
+    slotsStarter(templates);
+    await templates.applyPlantillaFilled('m1', 'store-1', 'tanda', 0, async () => ({}));
     expect(saved().files.find(file => file.path === 'styles/globals.css')!.content).not.toContain('/* pagosya-brand */');
   });
 });

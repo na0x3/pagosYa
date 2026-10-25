@@ -109,9 +109,16 @@ export interface AppConfig {
   yapiEsencialDice: boolean;
   /** Variety spec 2026-10-19 §5: a background personal touch after each new master store. Default on; YAPI_PERSONAL_TOUCH=off disables. */
   yapiPersonalTouch: boolean;
+  /** The PEPPA recipe (owner 2026-10-23): after the template, YAPI writes a rich brief and redesigns the new store freely with
+   *  expressive motion, as PEPPA please was made on 2026-10-20. Default on; YAPI_PEPPA_REDESIGN=off keeps the add-on follow-up. */
+  yapiPeppaRedesign: boolean;
+  /** Starters (spec 2026-10-24): a new store starts from the finished store closest to the business (PEPPA, BOXY, NOA…), and
+   *  «Probar otro estilo» swaps it while the store is still on its first build. Default off; YAPI_STARTERS=on enables. */
+  yapiStarters: boolean;
   /** YAPI plan card (spec 2026-10-22): short and vague requests show a plan before building. Default on; YAPI_PLAN_CARD=off disables. */
   yapiPlanCard: boolean;
-  /** Free-first (owner 2026-10-22): an approved plan for a new store is designed freely; Esencial is the fallback. Default on; YAPI_FREE_FIRST=off disables. */
+  /** Free-first (2026-10-22): an approved plan for a new store is designed freely; Esencial is the fallback. Default OFF since
+   *  2026-10-23 (owner: free stores came out as plain HTML without the templates PEPPA, NOA and Remolino use); YAPI_FREE_FIRST=on enables. */
   yapiFreeFirst: boolean;
   /** Spec 2026-10-20 Plantillas fill: curated Plantillas filled by one call, «Elegir una plantilla», the Plantillas menu and
    *  double-click text editing in the Studio. Default off; YAPI_PLANTILLAS_FILL=1. */
@@ -468,8 +475,10 @@ export default (): { app: AppConfig } => {
     yapiMasterTemplate: process.env.YAPI_MASTER_TEMPLATE !== 'off',
     yapiEsencialDice: process.env.YAPI_ESENCIAL_DICE !== 'off',
     yapiPersonalTouch: process.env.YAPI_PERSONAL_TOUCH !== 'off',
+    yapiPeppaRedesign: process.env.YAPI_PEPPA_REDESIGN !== 'off',
+    yapiStarters: process.env.YAPI_STARTERS === 'on',
     yapiPlanCard: process.env.YAPI_PLAN_CARD !== 'off',
-    yapiFreeFirst: process.env.YAPI_FREE_FIRST !== 'off',
+    yapiFreeFirst: process.env.YAPI_FREE_FIRST === 'on',
     yapiPlantillasFill: process.env.YAPI_PLANTILLAS_FILL === '1',
     yapiAuthoredBold: process.env.YAPI_AUTHORED_BOLD !== 'off',
     yapiCommerceSurfaces: process.env.YAPI_COMMERCE_SURFACES === '1',

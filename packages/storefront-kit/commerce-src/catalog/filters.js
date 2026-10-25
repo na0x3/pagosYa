@@ -1,6 +1,8 @@
   /* Sort & filter (spec 2026-10-19 showcase commerce §4): only on full catalog pages with 6 or more products; a filter appears
    * only when the store's data has it; the state lives in the URL so a filtered page can be shared and the back button works. */
-  const filterFold = text => String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  // A hoisted function, not a const: buscar.html (pages/standard.js, an earlier part) searches before this part has run
+  // (owner 2026-10-22: «la lupa del header nunca sirve» — «Cannot access 'filterFold' before initialization»).
+  function filterFold(text) { return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
   const SORTS = [['destacados', 'Destacados'], ['precio-asc', 'Precio ↑'], ['precio-desc', 'Precio ↓'], ['novedades', 'Novedades'], ['mejor-oferta', 'Mejor oferta']];
   const FILTER_TOGGLES = ['descuento', 'disponible', 'ofertas'];
   /** Search (amendment 2026-10-21): the words of a query, folded; the catalogue and buscar.html match with the same rule —

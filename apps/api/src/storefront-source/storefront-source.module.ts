@@ -4,6 +4,8 @@ import { StoreVoiceService } from './store-voice.service';
 import { SketchStudioController } from './sketch-studio.controller';
 import { SketchStudioService } from './sketch-studio.service';
 import { SourceChatJobsController } from './source-chat-jobs.controller';
+import { SourceStartersController } from './source-starters.controller';
+import { SourceStartersService } from './source-starters.service';
 import { SourceFontsController } from './source-fonts.controller';
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
@@ -34,13 +36,13 @@ import { SourceTemplatesService } from "./source-templates.service";
 import { templateManifest } from "@pagosya/store-templates";
 import { SourceStorePlanService, StorePlanParts } from "./source-store-plan.service";
 import { MASTER_TEMPLATE_ID } from "./source-master";
-import { rollVariants } from "./source-master-dice";
+import { esencialDiceSettings, rollVariants } from "./source-master-dice";
 
 /** YAPI plan card (spec 2026-10-22): Esencial's catalogue and the dice the plan falls back to, part by part. */
-const esencialSettings = () => templateManifest(MASTER_TEMPLATE_ID)!.master!;
+const esencialSettings = () => esencialDiceSettings(templateManifest(MASTER_TEMPLATE_ID)!.master!);
 const storePlanParts = new StorePlanParts(
   () => { const master = esencialSettings(); return { variants: master.variants ?? {}, sections: master.sections ?? [], palettes: master.palettes.map(p => p.id), fonts: master.fonts.map(f => f.id) }; },
-  (storeId, facts) => { const { sections: _sections, ...variants } = rollVariants({ seed: storeId, settings: esencialSettings(), character: { tone: "calm", temperature: "neutral", lead: "photo", exclude: [] }, photoCount: facts.photoCount, categoryCount: facts.categorySizes.length, sections: [], recent: [] }).variants; return variants as Record<string, string>; },
+  (storeId, facts) => { const { sections: _sections, ...variants } = rollVariants({ seed: storeId, settings: esencialSettings(), character: { tone: "calm", temperature: "neutral", lead: "photo", exclude: [] }, photoCount: facts.photoCount, photoGroups: facts.photoGroups, categoryCount: facts.categorySizes.length, sections: [], recent: [] }).variants; return variants as Record<string, string>; },
 );
 
 /** AI-generated storefront source projects (Studio): YAPI chat, generation, design jobs,
@@ -48,8 +50,8 @@ const storePlanParts = new StorePlanParts(
 import { ProductPageModule } from '../product-content/product-page.module';
 @Module({
   imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule, StoreEmailModule, ProductPageModule],
-  controllers: [SketchStudioController, SourceChatJobsController, SourceFontsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController, StoreVoiceController, AssumedFactCountsController],
-  providers: [SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService, StoreVoiceService, SourceStorePlanService, { provide: StorePlanParts, useValue: storePlanParts }],
+  controllers: [SketchStudioController, SourceChatJobsController, SourceFontsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController, StoreVoiceController, AssumedFactCountsController, SourceStartersController],
+  providers: [SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService, StoreVoiceService, SourceStorePlanService, SourceStartersService, { provide: StorePlanParts, useValue: storePlanParts }],
   exports: [SourceProjectsService, SourceTemplatesService, SourceChatService],
 })
 export class StorefrontSourceModule {}

@@ -220,6 +220,22 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
       const state = { items: [] }; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart', { detail: state }));
       parent.postMessage({ type: 'pagosya:source-navigate', page: path, query: url.search, fragment: url.hash, theme: document.documentElement.dataset.theme, newTab: link.target === '_blank' || link.dataset.previewNewTab === 'true' || event.ctrlKey || event.metaKey, cart: state.items }, '*');
     }, true);
+    // A GET form aimed at a store page (the search on buscar.html, which the header's magnifier opens) navigates like a
+    // link, carrying its fields as the query: the CSP's form-action 'none' blocks a real submit in the editor and in the
+    // published store alike (owner 2026-10-22: «la lupa del header nunca sirve»).
+    document.addEventListener('submit', function(event) {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement) || (form.getAttribute('method') || 'get').toLowerCase() !== 'get') return;
+      const url = new URL(form.getAttribute('action') || ${encoded(page)}, ${encoded(`https://source.invalid/${page}`)});
+      const path = decodeURIComponent(url.pathname.slice(1));
+      if (url.origin !== 'https://source.invalid' || !${encoded(snapshot.files.filter(f => f.path.endsWith('.html')).map(f => f.path))}.includes(path)) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      const params = new URLSearchParams();
+      new FormData(form).forEach(function(value, key) { if (typeof value === 'string') params.append(key, value.slice(0, 200)); });
+      const query = params.toString();
+      const state = { items: [] }; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart', { detail: state }));
+      parent.postMessage({ type: 'pagosya:source-navigate', page: path, query: query ? '?' + query : '', theme: document.documentElement.dataset.theme, cart: state.items }, '*');
+    }, true);
     window.addEventListener('load', function() {
       const fragment = ${encoded(navigation.fragment || '')};
       if (fragment) { try { document.getElementById(decodeURIComponent(fragment.slice(1)))?.scrollIntoView(); } catch {} }

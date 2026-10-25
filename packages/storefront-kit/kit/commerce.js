@@ -1256,17 +1256,18 @@
     [data-pagosya-product] .offer-squares__label{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--pd-muted)}
     [data-pagosya-product] .offer-squares__group{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,104px),1fr));gap:12px 8px;padding-top:6px}
     [data-pagosya-product] .offer-squares[data-offer-layout=rows] .offer-squares__group{grid-template-columns:1fr}
-    [data-pagosya-product] .offer-square{position:relative;display:grid;gap:2px;justify-items:center;align-content:start;min-width:0;overflow-wrap:anywhere;padding:14px 8px 10px;border:1.5px solid var(--pd-line);border-radius:var(--pd-radius,12px);background:var(--pd-surface);color:var(--pd-ink);font:inherit;text-align:center;cursor:pointer}
-    [data-pagosya-product] .offer-squares[data-offer-layout=rows] .offer-square{grid-template-columns:minmax(0,1fr) auto;justify-items:start;text-align:left;padding:14px}
+    [data-pagosya-product] .offer-squares{--offer-warm:#ffb27a}
+    [data-pagosya-product] .offer-square{position:relative;display:grid;gap:2px;justify-items:center;align-content:start;min-width:0;overflow-wrap:anywhere;padding:16px 10px 12px;border:1.5px solid color-mix(in srgb,var(--pd-accent) 22%,var(--pd-line));border-radius:18px;background:color-mix(in srgb,var(--offer-warm) 9%,var(--pd-surface));color:var(--pd-ink);font:inherit;text-align:center;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease}
+    [data-pagosya-product] .offer-square:hover{transform:translateY(-1px);box-shadow:0 8px 18px -12px color-mix(in srgb,var(--pd-accent) 60%,transparent)}
+    [data-pagosya-product] .offer-squares[data-offer-layout=rows] .offer-square{grid-template-columns:minmax(0,1fr) auto;justify-items:start;text-align:left;padding:14px 16px;border-radius:16px}
     [data-pagosya-product] .offer-squares[data-offer-layout=rows] .offer-square__total{grid-column:2;grid-row:1;justify-self:end}
-    [data-pagosya-product] .offer-square[aria-checked=true]{border-color:var(--pd-accent);box-shadow:inset 0 0 0 1.5px var(--pd-accent)}
-    [data-pagosya-product] .offer-squares[data-offer-layout=grid] .offer-square[aria-checked=true]{background:var(--pd-accent);color:var(--pd-on-accent)}
+    [data-pagosya-product] .offer-square[aria-checked=true]{border:2px solid var(--pd-accent);background:color-mix(in srgb,var(--pd-accent) 12%,color-mix(in srgb,var(--offer-warm) 16%,var(--pd-surface)));box-shadow:0 10px 22px -14px color-mix(in srgb,var(--pd-accent) 70%,transparent)}
     [data-pagosya-product] .offer-square:focus-visible{outline:2px solid var(--pd-accent);outline-offset:2px}
+    @media (prefers-reduced-motion:reduce){[data-pagosya-product] .offer-square{transition:none}[data-pagosya-product] .offer-square:hover{transform:none}}
     [data-pagosya-product] .offer-square__title{font-weight:700}
     [data-pagosya-product] .offer-square__total{font-size:1.15em;font-weight:800}
     [data-pagosya-product] .offer-square__regular,[data-pagosya-product] .offer-square__line{font-size:12px;opacity:.75}
-    [data-pagosya-product] .offer-square__save{font-size:11px;font-weight:700;color:var(--pd-accent)}
-    [data-pagosya-product] .offer-square[aria-checked=true] .offer-square__save{color:inherit}
+    [data-pagosya-product] .offer-square__save{margin-top:4px;padding:2px 9px;border-radius:99px;background:color-mix(in srgb,var(--offer-warm) 22%,var(--pd-surface));color:color-mix(in srgb,var(--pd-accent) 72%,#6b3410);font-size:11px;font-weight:700}
     [data-pagosya-product] .offer-square__tag{position:absolute;top:-9px;left:50%;transform:translateX(-50%);max-width:calc(100% - 8px);padding:2px 8px;border-radius:99px;background:var(--pd-accent);color:var(--pd-on-accent);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     [data-pagosya-product] .offer-squares[data-offer-layout=rows] .offer-square__tag{left:auto;right:12px;transform:none}
     [data-pagosya-product] [data-subscription-choice][data-offer-driven]>:is(legend,label,select){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -1542,9 +1543,11 @@
     return wanted === 'steps' ? 'grid' : wanted;
   }
   function offerSquareMarkup(p, option, selected) {
-    const tag = option.label || (option.best ? 'Mejor precio' : '');
     const title = option.kind === 'once' ? '1 unidad' : option.kind === 'pack' ? `Pack x${option.quantity}` : (CADENCE_TEXT[option.cadence] || 'Suscripción').replace(/^./, c => c.toUpperCase());
-    const line = option.kind === 'pack' ? `${money(option.perUnit, p.currency)} c/u` : option.kind === 'sub' ? 'Suscripción · cancela cuando quieras' : '';
+    // Owner 2026-10-23: a tag that only repeats the title («CADA MES» over «Cada mes») says nothing; the deal line speaks instead.
+    const label = option.label && option.label.toLowerCase() !== title.toLowerCase() ? option.label : '';
+    const tag = label || (option.best ? 'Mejor precio' : '');
+    const line = option.kind === 'pack' ? `${money(option.perUnit, p.currency)} c/u` : option.kind === 'sub' ? 'Te llega sola · cancela cuando quieras' : 'Para probar';
     return `<button type="button" role="radio" class="offer-square" data-offer-square="${escape(option.key)}" aria-checked="${selected}">`
       + (tag ? `<span class="offer-square__tag">${escape(tag)}</span>` : '')
       + `<span class="offer-square__title">${escape(title)}</span><span class="offer-square__total">${money(option.total, p.currency)}</span>`
@@ -4268,7 +4271,9 @@
   }
   /* Sort & filter (spec 2026-10-19 showcase commerce §4): only on full catalog pages with 6 or more products; a filter appears
    * only when the store's data has it; the state lives in the URL so a filtered page can be shared and the back button works. */
-  const filterFold = text => String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  // A hoisted function, not a const: buscar.html (pages/standard.js, an earlier part) searches before this part has run
+  // (owner 2026-10-22: «la lupa del header nunca sirve» — «Cannot access 'filterFold' before initialization»).
+  function filterFold(text) { return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
   const SORTS = [['destacados', 'Destacados'], ['precio-asc', 'Precio ↑'], ['precio-desc', 'Precio ↓'], ['novedades', 'Novedades'], ['mejor-oferta', 'Mejor oferta']];
   const FILTER_TOGGLES = ['descuento', 'disponible', 'ofertas'];
   /** Search (amendment 2026-10-21): the words of a query, folded; the catalogue and buscar.html match with the same rule —

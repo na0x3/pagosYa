@@ -55,7 +55,6 @@ jobs:
       - name: Audit production dependencies
         run: |
           pnpm audit --prod --audit-level moderate
-          npm audit --omit=dev --package-lock-only --audit-level=moderate --prefix apps/matcho-showcase
 
       - name: Build
         run: pnpm build

@@ -7,8 +7,13 @@ import { fingerprintOf, type Fingerprint } from './store-plan-fingerprint';
 
 type Variant = { options?: Array<{ name?: unknown; value?: unknown }>; imageUrls?: unknown };
 const COLOUR = /^(colou?r|tono)$/i;
-const SIZE = /^(talla|tamaño|size|medida)$/i;
+const SIZE = /^(talla|size)$/i;
+// «Tamaño» / «medida» also name a loaf, a cake or a box (BAEK 2026-10-23): they count only with wearable values (S, XL, 38, 40.5).
+const MEASURE = /^(tamaño|medida)$/i;
+const WEARABLE = /^(xxs|xs|s|m|l|xl|xxl|xxxl|\d{1,2}([.,]5)?)$/i;
 const has = (variants: Variant[], pattern: RegExp) => variants.some(v => (v.options ?? []).some(o => typeof o.name === 'string' && pattern.test(o.name.trim())));
+const hasSizes = (variants: Variant[]) => has(variants, SIZE)
+  || variants.some(v => (v.options ?? []).some(o => typeof o.name === 'string' && MEASURE.test(o.name.trim()) && typeof o.value === 'string' && WEARABLE.test(o.value.trim())));
 
 export async function catalogFacts(prisma: PrismaService, storeId: string): Promise<CatalogFacts> {
   const products = await prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, select: { name: true, imageUrls: true, categoryId: true, variants: true }, orderBy: { createdAt: 'asc' }, take: 200 });
@@ -22,7 +27,7 @@ export async function catalogFacts(prisma: PrismaService, storeId: string): Prom
       colourProducts++;
       if (variants.filter(v => Array.isArray(v.imageUrls) && v.imageUrls.length).length >= 2) colourPhotoProducts++;
     }
-    if (has(variants, SIZE)) sizeProducts++;
+    if (hasSizes(variants)) sizeProducts++;
   }
   return { productNames: products.map(p => p.name), productCount: products.length, photoCount, categorySizes: [...categories.values()], colourProducts, colourPhotoProducts, sizeProducts };
 }

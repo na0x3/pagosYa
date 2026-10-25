@@ -9,6 +9,10 @@ describe('agent instructions', () => {
     const redesign = agentInstructions('CONTRATOS', 'service', false, true);
     expect(redesign).toContain('SIGNATURE.');
   });
+  // BAEK 2026-10-23: --es-paper and --store-background named each other on .es and the menu opened transparent.
+  it('tells every run to give colours real values, never variables that name each other', () => {
+    for (const isNew of [true, false]) expect(agentInstructions('CONTRATOS', 'shop', isNew, false)).toContain('Never make two CSS variables name each other');
+  });
   it('leaves local edits exactly as before', () => {
     const local = agentInstructions('CONTRATOS', 'shop', false, false);
     expect(local).not.toContain('SIGNATURE.');
@@ -55,6 +59,28 @@ describe('agent instructions', () => {
       expect(prompt).toContain('<Illustration');
       expect(prompt).toContain('set_motif_pack');
     }
+  });
+  it('tells YAPI the Studio tools float over the store and its own floating parts belong elsewhere', () => {
+    for (const prompt of [agentInstructions('CONTRATOS', 'shop', true, true), agentInstructions('CONTRATOS', 'shop', false, false)]) {
+      expect(prompt).toContain('EDITOR OVERLAY.');
+      expect(prompt).toContain('Vista previa');
+      expect(prompt).toContain('never part of the store');
+      expect(prompt).toContain('choose another good place');
+    }
+  });
+  it('shows the catalog once per page (live 2026-10-23: «Compara antes de elegir» repeated all nine products)', () => {
+    expect(agentInstructions('CONTRATOS', 'shop', true, true)).toContain('Show the full product list once per page');
+  });
+  // Owner 2026-10-23 (Oh Belly): the «1 unidad / Cada mes» choices came out as hard olive boxes with a double frame.
+  it('keeps the purchase options friendly — round, warm, platform words — on shops only', () => {
+    for (const prompt of [agentInstructions('CONTRATOS', 'shop', true, true), agentInstructions('CONTRATOS', 'shop', false, false)]) {
+      expect(prompt).toContain('PURCHASE OPTIONS.');
+      expect(prompt).toContain('never square boxes, solid dark blocks or double frames');
+    }
+    expect(agentInstructions('CONTRATOS', 'service', true, true)).not.toContain('PURCHASE OPTIONS.');
+  });
+  it('caps scrolling strips at two in a row, for new stores and edits', () => {
+    for (const prompt of [agentInstructions('CONTRATOS', 'shop', true, true), agentInstructions('CONTRATOS', 'shop', false, false)]) expect(prompt).toContain('at most two in a row');
   });
   it('keep local edits to the requested change', () => {
     const local = agentInstructions('CONTRATOS', 'shop', false, false);

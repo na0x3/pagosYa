@@ -44,7 +44,7 @@ export function createAccountPanel(deps) {
     // Sessions are only fetched when the profile popover opens, so the page asks
     // for them itself the first time it is shown.
     const countEl = document.getElementById("accountSessionCount");
-    const paint = (payload) => { countEl.textContent = payload ? `${payload.active} / ${payload.limit}` : "No disponible"; };
+    const paint = (payload) => { countEl.textContent = payload ? String(Math.max(Number(payload.active) || 0, 1)) : "No disponible"; };
     if (deps.profileSessionsPayload()) paint(deps.profileSessionsPayload());
     else {
       countEl.textContent = "…";

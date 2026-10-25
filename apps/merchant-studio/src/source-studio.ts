@@ -1,4 +1,8 @@
 import { buildIsActive, sourceBuildTransition, type SourceBuildSession, type SourceBuildEvent } from './source-build-session';
+import { loadPlace, nudge, placePill, savePlace, spinState } from './source-yapi-pill';
+import { fadeWhenIdle } from './source-toolbar-fade';
+import { needsAnswer, renderExit, renderHistory, renderPill } from './source-yapi-pill-view';
+import './source-yapi-pill.css';
 import { assumedFactsCheck, pageLabel, renderAssumedFacts, type AssumedFactView } from './source-assumed-facts';
 import { renderPagePicker, bindPagePicker } from './source-page-picker';
 import { mountCodeHighlight } from './source-code-highlight';
@@ -39,6 +43,8 @@ import { QUICK_ACTIONS, createSelectionState, matchEditableText } from './source
 import { sourcePreviewDocument, receivePreviewNavigation, receivePreviewSelection, receivePreviewContact, openPreviewContact, type PreviewNavigation, createPreviewImageLoader } from '@pagosya/storefront-preview';
 import { escapeHtml as escape, icon, renderStudioLogin, renderStudioComposer, studioModeNav } from './studio-ui';
 import { applySuggestion, dismissSuggestions, renderSuggestions, suggestionCards, type SuggestionCard } from './source-suggestions';
+import { bindStarterSwap, renderStarterSwap, showsStarterSwap, type StarterAlternative } from './source-starter-swap';
+import { planCardOf, planIntro, renderPlanCard } from './source-plan-card';
 import './source-studio.css';
 import './source-browser.css';
 import './source-workspace-design.css';
@@ -46,6 +52,7 @@ import { bindSourcePaymentPreview } from './source-payment-preview';
 import { bindAssistantPreview } from './source-assistant-preview';
 import { focusDebugEnabled, recordFocusLoss, watchComposerFocus } from './source-focus-debug';
 import { mountNarrator, narratorBridge } from './source-narrator';
+import { storeNewsTicker } from './source-store-news';
 
 const SOURCE_MODEL_OPTIONS = [['auto', 'Auto · OpenAI'], ['gpt-5.6-luna', 'Luna · económico'], ['gpt-5.6-terra', 'Terra · equilibrado'], ['gpt-5.6-sol', 'Sol · avanzado'], ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5 · económico'], ['claude-sonnet-5', 'Claude Sonnet 5 · equilibrado'], ['claude-opus-5-5', 'Claude Opus 5.5 · avanzado']] as const;
 const SOURCE_MODEL_STORAGE = "pagosya_source_model";
@@ -59,10 +66,19 @@ const PREMIUM_SOURCE_MODELS = ['gpt-5.6-sol', 'gpt-5.6-terra', 'claude-sonnet-5'
 const PREMIUM_MODEL_TTL_MS = 2 * 60 * 60 * 1000;
 
 type Attachment = { file: File; src: string; url?: string };
-type RetrySubmission = { text: string; assetUrls: string[]; setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo'; currentPage: string; selection?: { sectionId: string }; templateId?: string; directionId?: string; resumeDraft?: boolean; stylePick?: { generationId: string; index?: number; auto?: boolean } };
+type RetrySubmission = { text: string; assetUrls: string[]; setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo'; currentPage: string; selection?: { sectionId: string }; templateId?: string; directionId?: string; resumeDraft?: boolean; stylePick?: { generationId: string; index?: number; auto?: boolean }; planId?: string };
 export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const params = new URLSearchParams(location.search);
   const embedded = params.get('embedded') === '1' && window.parent !== window;
+  // YAPI in design mode (spec 2026-10-22 v2): the dashboard's design mode shows the store full screen and YAPI as a movable pill.
+  const pillMode = embedded ? params.get('layout') !== 'classic' : params.get('layout') === 'pill';
+  const safeStorage = () => { try { return window.localStorage; } catch { return null; } };
+  let historyOpen = false, plusOpen = false, pillPlace = loadPlace(safeStorage()), cardsHiddenFor = '';
+  // Full screen (owner 2026-10-23): the left panel tucks away and only the top controls stay over the store; remembered.
+  const DOCK_HIDDEN_KEY = 'pagosya_yapi_dock_hidden';
+  let dockHidden = (() => { try { return safeStorage()?.getItem(DOCK_HIDDEN_KEY) === '1'; } catch { return false; } })();
+  const saveDockHidden = () => { try { if (dockHidden) safeStorage()?.setItem(DOCK_HIDDEN_KEY, '1'); else safeStorage()?.removeItem(DOCK_HIDDEN_KEY); } catch { /* best effort */ } };
+  let stopFade: (() => void) | undefined;
   const notifyParent = (data: JsonRecord) => { if (embedded) window.parent.postMessage(data, location.origin); };
   let checks: SourceCheck[] | null = null, checksKey = '', checking = false;
   /** Spec 2026-10-14 store voice: «Datos que YAPI supuso» for the shown revision, and the fact being edited. */
@@ -174,7 +190,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   });
   // In the Boceto the panel also forgets the block, so picking it again brings the chip back.
   function clearSelection() { selection.clear(); platformHint = false; editableField = null; selectionRequest++; if (bocetoOpen) bocetoPanel.forgetSelection(); }
-  function renderSelection() { const host = app.querySelector<HTMLElement>('[data-selection-host]'); if (host) host.innerHTML = selectionMarkup(); syncSelectMode(); }
+  function renderSelection() { if (pillMode) { render(); syncSelectMode(); return; } const host = app.querySelector<HTMLElement>('[data-selection-host]'); if (host) host.innerHTML = selectionMarkup(); syncSelectMode(); }
   function takeSelection(picked: { kind: 'section' | 'platform'; sectionId: string; label: string; text?: string }) {
     if (!selectMode) return;
     clearSelection();
@@ -292,7 +308,22 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let messages: AgentMessage[] = [], assets: Attachment[] = [];
   let buildSession: SourceBuildSession = { phase: 'idle' };
   // YAPI's glass window over the preview (spec 2026-10-21 Part C): request, plan, step, summary.
-  const narrator = narratorBridge(mountNarrator(document));
+  const narratorWindow = mountNarrator(document, { onNoticeDismissed: () => storeNewsFeed.snooze() });
+  const narrator = narratorBridge(narratorWindow, pillMode);
+  // Now and then YAPI brings one piece of news about the store (owner 2026-10-22); a build always comes first.
+  const storeNewsFeed = storeNewsTicker({
+    storeId: () => storeId,
+    busy: () => building() || busy || document.hidden,
+    load: async id => {
+      const [finances, orders, products, carts] = await Promise.all([
+        api.storeFinances(id), api.storeOrders(id), api.storeProducts(id), api.abandonedCarts(id).catch(() => null),
+      ]);
+      return { finances, orders, products, carts };
+    },
+    show: item => narratorWindow.notice(item.title, item.line),
+    storage: (() => { try { return window.localStorage; } catch { return null; } })(),
+  });
+  storeNewsFeed.start();
   const transitionBuild = (event: SourceBuildEvent) => {
     const wasBuilding = buildIsActive(buildSession);
     buildSession = sourceBuildTransition(buildSession, event);
@@ -400,6 +431,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   const historical = () => false;
   // YAPI's next-step cards (spec 2026-10-19 §2): hidden for good after «No, gracias»; a popup card answers with a note.
   let suggestionsHidden = false, suggestionNote = '';
+  // «Probar otro estilo» (spec 2026-10-24 §2): asked for on each load while a build reply has no merchant message after it.
+  let starterAlternatives: StarterAlternative[] = [], starterNote = '';
   const suggestionIndex = new Map<string, SuggestionCard>();
   const disabled = (condition: boolean) => condition ? 'disabled' : '';
   const clearAssets = () => { productPhoto = false; assets.forEach(a => URL.revokeObjectURL(a.src)); assets = []; };
@@ -459,6 +492,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (settings) plantillasOn = (await settings)?.plantillas === true;
     liveCatalog = catalog;
     state = project; messages = conversation.messages; setup = conversation.setup || null;
+    if (!messages.some(message => showsStarterSwap(messages, message.id))) starterAlternatives = [];
+    else void api.starterAlternatives(storeId).then(result => { starterAlternatives = result.alternatives; render(); }).catch(() => undefined);
     version = state.revision ? await api.sourceVersion(storeId, state.revision) : null;
     assumedFacts = version ? await api.assumedFacts(storeId, version.revision).then(result => result.facts).catch(() => null) : null;
     factEditing = null;
@@ -482,24 +517,28 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     stores = await api.listStores();
     storeId = embedded ? stores.find(s => s.id === params.get('store'))?.id || '' : stores.find(s => s.id === sessionStorage.getItem('pagosya_current_store_id'))?.id || stores[0]?.id || '';
     if (storeId) await load();
+    if (pillMode && embedded) notifyParent({ type: 'pagosya:design-focus', open: true });
     if (storeId) void api.retention(storeId).then(r => { if (r?.settings?.suggestionsDismissedAt) { suggestionsHidden = true; render(); } }).catch(() => undefined);
     if (storeId) {
       const selectedStore = storeId;
       const latest = await api.latestSourceChatJob(selectedStore).catch(() => ({ job: null }));
       // A background personal touch is followed quietly: the merchant keeps the chat, and a message they send cancels it.
       if (latest.job && ['QUEUED', 'RUNNING'].includes(latest.job.status) && latest.job.background) void followBackgroundJob(selectedStore, '');
-      else if (latest.job && ['QUEUED', 'RUNNING'].includes(latest.job.status)) {
-        const job = latest.job;
-        // Boot's action finishes first, then the restored job owns the editor state.
-        window.setTimeout(() => { if (storeId !== selectedStore) return; void action(async () => {
-          transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); narrator.submitted(''); buildStatus = 'YAPI sigue trabajando en tu pedido…'; render();
-          const stop = watchBuildProgress(selectedStore, job.requestId);
-          try { await api.waitSourceChatJob(selectedStore, job, showQueue); transitionBuild({ type: 'complete' }); await load(); narrator.completed([...messages].reverse().find(m => m.role === 'ASSISTANT') ?? ''); }
-          finally { stop(); stopStylePoll(); if (building()) transitionBuild({ type: 'interrupt' }); await refreshInterruptedDraft().catch(() => {}); void loadStyleProposal(); }
-        }); }, 0);
-      }
+      else if (latest.job && ['QUEUED', 'RUNNING'].includes(latest.job.status)) followRunningJob(selectedStore, latest.job);
     }
     if (storeId) void loadStyleProposal();
+  }
+  /** A request still running on the server (the merchant came back, or a new store's follow-up carries their own request)
+   * owns the editor state as if it had just been sent. Boot's action finishes first. */
+  function followRunningJob(selectedStore: string, job: SourceChatJob) {
+    // Waits out the action that is finishing (the reply that queued the follow-up), which would otherwise drop this one.
+    const start = () => { if (storeId !== selectedStore || building()) return; if (busy) { window.setTimeout(start, 250); return; } void action(async () => {
+      transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); narrator.submitted(''); buildStatus = 'YAPI sigue trabajando en tu pedido…'; render();
+      const stop = watchBuildProgress(selectedStore, job.requestId);
+      try { await api.waitSourceChatJob(selectedStore, job, showQueue); transitionBuild({ type: 'complete' }); await load(); narrator.completed([...messages].reverse().find(m => m.role === 'ASSISTANT') ?? ''); }
+      finally { stop(); stopStylePoll(); if (building()) transitionBuild({ type: 'interrupt' }); await refreshInterruptedDraft().catch(() => {}); void loadStyleProposal(); }
+    }); };
+    window.setTimeout(start, 0);
   }
   // Variety spec §5: a new store's background personal touch saves a newer revision. The open Studio follows it quietly
   // (no build lock, the merchant keeps chatting; a request they send cancels the touch on the server) and reloads when it lands.
@@ -507,6 +546,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const latest = await api.latestSourceChatJob(selectedStore).catch(() => ({ job: null }));
     const job = latest.job;
     if (!job || job.requestId === finishedRequestId || !['QUEUED', 'RUNNING'].includes(job.status)) return;
+    // Owner 2026-10-22: the follow-up that applies the merchant's own request is their request, shown with its progress.
+    if (!job.background) { if (storeId === selectedStore) followRunningJob(selectedStore, job); return; }
     await api.waitSourceChatJob(selectedStore, job).catch(() => undefined);
     if (storeId !== selectedStore || building()) return;
     await load().catch(() => {});
@@ -690,7 +731,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const requestId = crypto.randomUUID();
         buildStatus = 'Esperando la respuesta de YAPI…'; updateBuildProgress();
         stopProgress = watchBuildProgress(storeId, requestId);
-        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, submittedPage, job => { accepted = true; transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); render(); }, { ...(retry?.resumeDraft ? { resumeDraft: true } : {}), ...(retry?.stylePick ? { stylePick: retry.stylePick } : {}), onUpdate: showQueue });
+        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, submittedPage, job => { accepted = true; transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); render(); }, { ...(retry?.resumeDraft ? { resumeDraft: true } : {}), ...(retry?.stylePick ? { stylePick: retry.stylePick } : {}), ...(retry?.planId ? { planId: retry.planId } : {}), onUpdate: showQueue });
         stopProgress();
         succeeded = true; if (selection.get()?.sectionId === submittedSelection?.sectionId) clearSelection(); pendingSubmission = null; transitionBuild({ type: 'complete' }); liveDraft = null;
         productPhoto = false; navigationChoice = '';
@@ -850,18 +891,20 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const clarification = metadata.clarification as { options?: Array<{ label: string; value: string }> } | undefined;
     // merchantSafeText runs last: it is the guard for messages stored before the
     // API gate existed, whose diagnostics no rewording above can make readable.
-    const visibleContent = user ? message.content : merchantMessageText(message.content
+    const visibleContent = user ? message.content : planCardOf(message, state.revision) ? planIntro(message.content) : merchantMessageText(message.content
       .replaceAll('Guardé el borrador', 'Guardé los cambios de tu tienda')
       .replaceAll('Tu revisión anterior sigue guardada.', 'Tus cambios anteriores siguen guardados.')
       .replaceAll('No se guardó ninguna revisión nueva.', 'No se guardaron cambios nuevos.'), metadata);
     return `<article class="${user ? 'message message--remote-user' : 'agent-note remote-agent-note'}"><div class="${user ? 'message-meta' : 'agent-note__meta'}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? 'Tú' : 'YAPI'}</strong></div>${user ? sentAttachments(metadata) : ''}<p>${escape(visibleContent)}</p>
-      ${!user ? renderBuildProgress(metadata.progress, false, metadata.sourceRevision ? 'saved' : 'reply') : ''}
+      ${!user && !pillMode ? renderBuildProgress(metadata.progress, false, metadata.sourceRevision ? 'saved' : 'reply') : ''}
       ${clarification?.options ? `<div class="clarification-options">${clarification.options.map(o => `<button type="button" data-clarification="${escape(o.value)}" ${disabled(busy || dirty() || historical())}>${escape(o.label)}</button>`).join('')}</div>` : ''}
+      ${!user ? (() => { const card = planCardOf(message, state.revision); return card ? renderPlanCard(card, busy || dirty() || historical()) : ''; })() : ''}
       ${!user && !suggestionsHidden ? (() => { const cards = suggestionCards(metadata); cards.forEach(card => suggestionIndex.set(card.id, card)); return renderSuggestions(cards, busy || dirty() || historical()) + (cards.length && suggestionNote ? `<p class="source-suggestions__note" role="status">${escape(suggestionNote)}</p>` : ''); })() : ''}
+      ${!user && starterAlternatives.length && showsStarterSwap(messages, message.id) ? renderStarterSwap(starterAlternatives, import.meta.env.BASE_URL, busy || dirty() || historical()) + (starterNote ? `<p class="source-suggestions__note" role="status">${escape(starterNote)}</p>` : '') : ''}
       ${!user && (metadata.startChoices || Array.isArray(metadata.templateChoices)) && !state.revision ? `<div class="source-empty-actions"><button type="button" class="button" data-start-scratch ${disabled(busy || dirty())}>Crear desde cero</button>${metadata.startChoices ? `<button type="button" class="button button--secondary" data-choose-template ${disabled(busy || dirty())}>Usar una plantilla</button>` : ''}</div>` : ''}
       ${!user && Array.isArray(metadata.templateChoices) ? renderTemplateChoices(metadata.templateChoices as TemplateChoice[], import.meta.env.BASE_URL, busy || dirty() || historical() || (state.revision > 0 && !templateUntouched()) || message.id !== latestTemplateChoicesId()) : ''}
-      ${metadata.generation ? `<p class="source-chat-hint">${escape(String((metadata.generation as JsonRecord).model))} · ${escape(String((metadata.generation as JsonRecord).credits))} créditos</p>` : ''}
-      ${typeof metadata.sourceRevision === 'number' ? '<p class="source-chat-hint">Cambios guardados en tu tienda.</p>' : ''}
+      ${metadata.generation && !pillMode ? `<p class="source-chat-hint">${escape(String((metadata.generation as JsonRecord).model))} · ${escape(String((metadata.generation as JsonRecord).credits))} créditos</p>` : ''}
+      ${typeof metadata.sourceRevision === 'number' && !pillMode ? '<p class="source-chat-hint">Cambios guardados en tu tienda.</p>' : ''}
     </article>`;
   }
   /** Untouched: the current revision is the one a template produced, so another template can replace it freely. */
@@ -888,6 +931,87 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   function sendProductPhoto() {
     if (!productPhoto || assets.length !== 1 || assets[0].file.type === 'video/mp4') return;
     void send(`Construye un borrador completo de mi tienda a partir del único producto de esta foto. Te delego el diseño, los colores y la composición. Usa esta imagen como foto del producto, conserva los datos confirmados y no inventes precio, stock, reseñas ni condiciones de entrega. No publiques. ${instruction.trim().slice(0, 11000)}`, 'product-photo');
+  }
+  /** YAPI in design mode: the cards waiting for an answer, the conversation sheet and the pill (spec 2026-10-22 v2). */
+  function pillParts() {
+    const latest = [...messages].reverse().find(m => m.role === 'ASSISTANT');
+    // The merchant can put the cards away; the next YAPI message brings them back.
+    const waiting = latest && latest.id !== cardsHiddenFor && needsAnswer(latest, state.revision) ? chatMessage(latest) : '';
+    const locked = busy || visualEditPending || dirty() || Boolean(productForm);
+    // From 900px the parts stack in a glass panel fixed at the left (owner 2026-10-23); narrower, the panel is display:contents.
+    return `<button type="button" class="yapi-dock-open${waiting ? ' has-news' : ''}" data-yapi-dock-open aria-label="Mostrar a YAPI"><img src="${import.meta.env.BASE_URL}logo-mark.png" alt="" width="22" height="22">YAPI</button><aside class="yapi-dock" aria-label="YAPI"><button type="button" class="yapi-dock-hide" data-yapi-dock-hide aria-label="Ver la tienda en pantalla completa" title="Pantalla completa"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>${renderHistory(historyOpen, messages.map(chatMessage).join(''))}${waiting || error ? `<div class="yapi-cards${waiting ? ' is-waiting' : ''}" data-yapi-cards>${waiting ? '<button type="button" class="yapi-cards__hide" data-yapi-cards-hide aria-label="Ocultar">×</button>' : ''}${waiting}${error ? `<p class="auth-error" role="alert">${escape(merchantSafeText(error))}</p>` : ''}</div>` : ''}
+      ${productForm ? '<div class="yapi-sheet" data-yapi-product-host></div>' : ''}
+      ${renderPill({ instruction, busy: locked || historical() || !storeId, spin: yapiSpin(), selectionLabel: selection.get()?.label, attachments: productPhoto ? '' : attachmentBatch(), menuOpen: plusOpen, logo: `${import.meta.env.BASE_URL}logo-mark.png` })}</aside>`;
+  }
+  const docked = () => window.matchMedia?.('(min-width: 900px)').matches ?? false;
+  const yapiSpin = () => spinState({ building: building(), followingOwnRequest: false, reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false });
+  /** The pill, the cards above it and YAPI's bubble, placed together after every render, drag and resize. */
+  function placeYapi() {
+    const box = app.querySelector<HTMLElement>('[data-yapi-pill]');
+    if (!box) return;
+    if (docked() && dockHidden) { if (!narratorWindow.element.isConnected) document.body.append(narratorWindow.element); narratorWindow.anchor(null); narratorWindow.spinning(yapiSpin()); return; }
+    if (docked()) {
+      // The panel's CSS lays its parts out. YAPI's words (progress, store news) sit inside it above the composer, never as a
+      // window over the conversation (owner 2026-10-23); the anchor only keeps the window's corner pill away.
+      const parts = [box, app.querySelector<HTMLElement>('[data-yapi-product-host]'), app.querySelector<HTMLElement>('[data-yapi-cards]')].filter((el): el is HTMLElement => Boolean(el));
+      for (const el of parts) for (const key of ['left', 'top', 'bottom', 'width'] as const) el.style[key] = '';
+      if (narratorWindow.element.nextElementSibling !== box) box.before(narratorWindow.element);
+      narratorWindow.anchor({ left: 0, top: 0, width: box.offsetWidth });
+      narratorWindow.spinning(yapiSpin());
+      return;
+    }
+    if (!narratorWindow.element.isConnected || narratorWindow.element.closest('.yapi-dock')) document.body.append(narratorWindow.element);
+    const at = placePill(pillPlace, { width: box.offsetWidth, height: box.offsetHeight }, { width: innerWidth, height: innerHeight });
+    Object.assign(box.style, at.docked ? { left: '0px', top: `${at.top}px`, width: '100%' } : { left: `${at.left}px`, top: `${at.top}px`, width: '' });
+    // Cards and YAPI's bubble stack above the pill, held by their bottom edge; below it when the pill is near the top.
+    const above = at.top >= 220;
+    let block = { top: at.top, height: box.offsetHeight };
+    for (const sheet of [app.querySelector<HTMLElement>('[data-yapi-product-host]'), app.querySelector<HTMLElement>('[data-yapi-cards]')]) {
+      if (!sheet) continue;
+      sheet.style.left = `${at.left + box.offsetWidth / 2}px`;
+      if (above) Object.assign(sheet.style, { top: 'auto', bottom: `${innerHeight - block.top + 12}px` });
+      else Object.assign(sheet.style, { bottom: 'auto', top: `${block.top + block.height + 12}px` });
+      const r = sheet.getBoundingClientRect();
+      block = { top: r.top, height: r.height };
+    }
+    narratorWindow.anchor(above ? { left: at.left, top: block.top, width: box.offsetWidth } : { left: at.left, top: Math.min(block.top, 159), width: box.offsetWidth, height: block.top + block.height - Math.min(block.top, 159) });
+    narratorWindow.spinning(yapiSpin());
+  }
+  function bindPill() {
+    // Publicar stands alone at the top right, outside the fading tools bar (review 2026-10-22).
+    const publishControls = app.querySelector<HTMLElement>('.canvas-toolbar .source-publish-controls');
+    if (publishControls) { const corner = document.createElement('div'); corner.className = 'yapi-publish'; corner.append(publishControls); app.querySelector('.studio-shell')?.append(corner); }
+    const star = app.querySelector<HTMLElement>('[data-yapi-star]');
+    const box = app.querySelector<HTMLElement>('[data-yapi-pill]');
+    let drag: { id: number; dx: number; dy: number } | null = null;
+    star?.addEventListener('pointerdown', event => { if (!box || docked()) return; const r = box.getBoundingClientRect(); drag = { id: event.pointerId, dx: event.clientX - r.left, dy: event.clientY - r.top }; star.setPointerCapture?.(event.pointerId); event.preventDefault(); });
+    star?.addEventListener('pointermove', event => { if (drag?.id !== event.pointerId) return; pillPlace = { x: event.clientX - drag.dx, y: event.clientY - drag.dy }; placeYapi(); });
+    star?.addEventListener('pointerup', event => { if (drag?.id !== event.pointerId) return; drag = null; savePlace(safeStorage(), pillPlace); });
+    star?.addEventListener('dblclick', () => { if (docked()) return; pillPlace = null; savePlace(safeStorage(), null); placeYapi(); });
+    star?.addEventListener('keydown', event => { if (!box || docked()) return; const next = nudge(pillPlace, event.key, { width: box.offsetWidth, height: box.offsetHeight }, { width: innerWidth, height: innerHeight }); if (next !== pillPlace) { event.preventDefault(); pillPlace = next; savePlace(safeStorage(), pillPlace); placeYapi(); } });
+    app.querySelector('[data-yapi-plus]')?.addEventListener('click', () => { plusOpen = !plusOpen; render(); });
+    app.querySelector('[data-yapi-history-open]')?.addEventListener('click', () => { historyOpen = true; render(); });
+    app.querySelector('[data-yapi-dock-hide]')?.addEventListener('click', () => { dockHidden = true; saveDockHidden(); render(); });
+    app.querySelector('[data-yapi-dock-open]')?.addEventListener('click', () => { dockHidden = false; saveDockHidden(); render(); app.querySelector<HTMLTextAreaElement>('#agent-command')?.focus(); });
+    app.querySelector('[data-yapi-cards-hide]')?.addEventListener('click', () => { cardsHiddenFor = [...messages].reverse().find(m => m.role === 'ASSISTANT')?.id ?? ''; render(); });
+    app.querySelector('[data-yapi-history-close]')?.addEventListener('click', () => { historyOpen = false; render(); });
+    app.querySelector('[data-yapi-exit]')?.addEventListener('click', () => { notifyParent({ type: 'pagosya:design-focus', open: false }); notifyParent({ type: 'pagosya:workspace', view: 'stores' }); });
+    app.querySelector<HTMLTextAreaElement>('#agent-command')?.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); app.querySelector<HTMLFormElement>('[data-yapi-pill]')?.requestSubmit(); } });
+    stopFade?.();
+    const tools = app.querySelector<HTMLElement>('.canvas-toolbar');
+    stopFade = tools ? fadeWhenIdle(tools) : undefined;
+    // The panel's conversation is always open: show its latest message.
+    const list = docked() ? app.querySelector<HTMLElement>('.yapi-dock .yapi-history__list') : null;
+    if (list) list.scrollTop = list.scrollHeight;
+    placeYapi();
+  }
+  if (pillMode) {
+    window.addEventListener('resize', () => placeYapi());
+    document.addEventListener('keydown', event => {
+      const field = event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
+      if (event.key === 'Escape' && (historyOpen || plusOpen)) { historyOpen = false; plusOpen = false; render(); return; }
+      if (event.key === '/' && !field) { event.preventDefault(); app.querySelector<HTMLTextAreaElement>('#agent-command')?.focus(); }
+    });
   }
   function render() {
     renderedAt = performance.now();
@@ -920,15 +1044,15 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       return;
     }
     const store = stores.find(s => s.id === storeId);
-    app.innerHTML = `<div class="studio-shell source-mode ${embedded ? 'source-embedded' : ''}">
-      <header class="topbar connected-topbar">
+    app.innerHTML = `<div class="studio-shell source-mode ${embedded ? 'source-embedded' : ''}${pillMode ? ' is-yapi-pill' : ''}${pillMode && dockHidden ? ' is-dock-hidden' : ''}">
+      ${pillMode ? renderExit() : `<header class="topbar connected-topbar">
         <a class="product-mark" href="/" aria-label="pagosYa Merchant Studio"><img src="${import.meta.env.BASE_URL}logo-mark.png" alt=""><span>pagosYa</span><i></i><strong>Merchant Studio</strong></a>
         <div class="connected-store-select"><span>Mi tienda</span><strong>${escape(store?.name || 'Sin tienda')}</strong></div>
         <div class="save-state">${icon('check')} ${dirty() ? 'Cambios sin guardar' : version ? version.revision === state.publication?.revision && state.publication.active ? 'Diseño publicado' : 'Diseño guardado' : 'Conectado'}</div>
         <div class="top-actions"><button class="button button--ghost" id="source-logout" ${disabled(locked)}>Salir</button><button class="button button--publish" id="${embedded ? 'source-top-export' : 'source-export'}" ${disabled(locked || !version || showingDraft())}>Descargar ZIP</button></div>
-      </header>
+      </header>`}
       <div class="studio-workspace${inBoceto ? ' is-boceto is-boceto-left-yapi' : ''}">
-        <aside class="agent-panel ${chatExpanded || building() || error || (!version && !productPhoto) ? 'is-chat-expanded' : ''} ${productForm ? 'is-creating-product' : ''}" aria-label="${productForm ? 'Crear producto' : 'Conversación con YAPI'}">
+        ${pillMode ? '' : `<aside class="agent-panel ${chatExpanded || building() || error || (!version && !productPhoto) ? 'is-chat-expanded' : ''} ${productForm ? 'is-creating-product' : ''}" aria-label="${productForm ? 'Crear producto' : 'Conversación con YAPI'}">
           <header class="agent-header"><div>${embedded ? '<button type="button" id="source-back-stores">← Mis tiendas</button>' : ''}<span class="agent-wordmark">YAPI</span><span class="online"><i></i> Sitio a medida</span></div><div class="agent-header-actions"><button type="button" id="source-chat-toggle" aria-expanded="${Boolean(chatExpanded || building() || error || !version)}" aria-controls="source-chat-history">${chatExpanded ? 'Ocultar conversación' : 'Ver conversación'}</button><button class="icon-button" id="source-reload" aria-label="Actualizar conversación" ${disabled(locked)}>${icon('undo')}</button></div></header>
           <div class="agent-stream" id="source-chat-history" data-agent-stream><div data-source-readiness></div><div data-assumed-facts>${renderAssumedFacts({ facts: assumedFacts, editing: factEditing, locked })}</div>
             ${messages.length ? messages.map(chatMessage).join('') : version
@@ -951,13 +1075,13 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
             { label: 'Presentar mi negocio', instruction: 'Quiero un sitio para dar a conocer mi negocio. Te cuento lo que hago: ' },
             { label: 'Vender mis productos', instruction: 'Quiero crear una tienda para vender mis productos. Mi negocio es: ' },
           ] })}</div>
-        </aside>
+        </aside>`}
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
           <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${inBoceto ? `<span class="boceto-mode-badge">Boceto</span><button class="button" id="source-boceto-close" aria-pressed="true" title="Desactivar edición manual" ${disabled(locked)}>Editar en Boceto</button><div class="boceto-page-tabs" role="tablist" aria-label="Páginas del boceto">${[['index.html', 'Inicio'], ['product.html', 'Producto'], ['checkout.html', 'Pedido'], ...(version!.snapshot.files.some(f => f.path === 'components/auth/login.tsx') ? [['acceso-ingresar.html', 'Cuenta']] : [])].map(([file, label]) => `<button type="button" data-boceto-page="${file}" aria-pressed="${page === file}">${label}</button>`).join('')}</div><button class="button button--publish" id="source-boceto-generate" ${disabled(locked)}>Generar sitio</button>` : `${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">${icon('eye')} Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version || showingDraft() || bocetoPhase())}><span class="source-code-symbol" aria-hidden="true">&lt;/&gt;</span> Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || showingDraft() || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button>${bocetoPhase() ? `<button id="source-boceto-tab" aria-pressed="false" title="Activar edición manual" ${disabled(locked || showingDraft() || historical())}>Editar en Boceto</button>` : ''}</div>${version && mode === 'preview' ? renderPagePicker(showingDraft() ? liveDraft!.snapshot.files : version.snapshot.files, page, locked) : ''}<button class="button" id="source-open-browser" title="${browserHint()}" ${disabled(locked || !version)}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${bocetoPhase() ? `<button class="button button--publish" id="source-boceto-generate" ${disabled(locked || historical() || showingDraft())}>Generar sitio</button>` : `${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked: locked || showingDraft(), checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || showingDraft() || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}`}</div>`}</header>
-          <div class="source-canvas-notice">${building() ? `<div class="source-job-status" role="status"><span>${buildSession.phase === 'running' ? 'Tu pedido sigue guardado aunque cierres esta página.' : 'Enviando tu pedido…'}</span><button class="button" id="source-cancel-job" ${disabled(buildSession.phase !== 'running')}>Cancelar pedido</button></div>` : ''}${liveDraft?.interrupted && !building() ? `<div class="source-draft-recovery" role="status"><span>${draftRetry ? 'Este borrador todavía no está guardado. Guárdalo para seguir trabajando sobre él.' : 'Tu borrador está conservado. Reintenta para completar la verificación antes de publicarlo.'}</span>${draftRetry ? `<button class="button button--primary" id="source-save-draft" ${disabled(locked)}>Guardar borrador</button>` : ''}<button class="button" id="source-toggle-saved">${showSavedRevision ? 'Ver borrador conservado' : 'Ver diseño guardado'}</button></div>` : ''}${reviewNoteMarkup(Boolean(state.reviewPending) && !building())}</div>
+          <div class="source-canvas-notice">${building() && !pillMode ? `<div class="source-job-status" role="status"><span>${buildSession.phase === 'running' ? 'Tu pedido sigue guardado aunque cierres esta página.' : 'Enviando tu pedido…'}</span><button class="button" id="source-cancel-job" ${disabled(buildSession.phase !== 'running')}>Cancelar pedido</button></div>` : ''}${liveDraft?.interrupted && !building() ? `<div class="source-draft-recovery" role="status"><span>${draftRetry ? 'Este borrador todavía no está guardado. Guárdalo para seguir trabajando sobre él.' : 'Tu borrador está conservado. Reintenta para completar la verificación antes de publicarlo.'}</span>${draftRetry ? `<button class="button button--primary" id="source-save-draft" ${disabled(locked)}>Guardar borrador</button>` : ''}<button class="button" id="source-toggle-saved">${showSavedRevision ? 'Ver borrador conservado' : 'Ver diseño guardado'}</button></div>` : ''}${reviewNoteMarkup(Boolean(state.reviewPending) && !building())}</div>
           ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showStyles ? renderStylePicker(styleView, { open: styleOpen, device: styleDevice, storeName: store?.name || '', busy: locked }) : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? (bocetoOpen ? `<div class="boceto-canvas"><div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div><div class="boceto-canvas__hud"><button type="button" data-canvas-out>−</button><span data-canvas-zoom>82%</span><button type="button" data-canvas-in>+</button><button type="button" data-canvas-fit>Ajustar</button></div></div>` : `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>`) : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
-        </main>
+        </main>${pillMode ? pillParts() : ''}
       </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${bocetoOpen && version && mode === 'preview' ? '<div data-source-boceto></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}${bocetoPhase() && bocetoConfirm ? `<div class="boceto-confirm" role="dialog" aria-modal="true" aria-labelledby="boceto-confirm-title"><div class="boceto-confirm__card"><h2 id="boceto-confirm-title">Generar sitio</h2><p>Tu boceto se convertirá en sitio web. Después ya no podrás editarlo por bloques; podrás pedirle cambios a YAPI y ver el código.</p><div class="boceto-confirm__actions"><button type="button" class="button" data-boceto-confirm="cancel">Cancelar</button><button type="button" class="button button--publish" data-boceto-confirm="go">Generar sitio</button></div></div></div>` : ''}
     </div>`;
     const pageMenu = app.querySelector<HTMLDetailsElement>('.source-page-menu');
@@ -969,7 +1093,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     // render() replaced the DOM, so the previous stage's timer and game are gone.
     buildStage?.destroy();
     const stageHost = app.querySelector<HTMLElement>('[data-build-stage-host]');
-    buildStage = stageHost ? mountBuildStage(stageHost) : null;
+    buildStage = stageHost ? mountBuildStage(stageHost, { plain: pillMode }) : null;
     buildStage?.update({ status: buildStatus, progress: buildProgress });
     // The idle canvas runs the same face as the build stage, so the wait
     // before a site exists and the wait while one is built speak one language.
@@ -1017,6 +1141,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
 
     const stream = app.querySelector<HTMLElement>('[data-agent-stream]');
     if (stream && productForm) { stream.append(productForm.element); stream.scrollTop = oldScroll; }
+    const productHost = app.querySelector<HTMLElement>('[data-yapi-product-host]');
+    if (productHost && productForm) productHost.append(productForm.element);
     else if (stream) stream.scrollTop = nearBottom ? stream.scrollHeight : oldScroll;
     const editor = app.querySelector<HTMLTextAreaElement>('#source-code');
     if (editor) { const file = version!.snapshot.files.find(f => f.path === filePath); editor.value = file?.encoding === 'base64' ? `Recurso multimedia: ${file.path}` : draft ?? file?.content ?? ''; mountCodeHighlight(editor, file?.encoding === 'base64' ? '' : filePath); }
@@ -1034,6 +1160,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   }
 const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElement>('#agent-command'); field?.focus(); field?.scrollIntoView({ block: 'nearest' }); };
   function bind() {
+    if (pillMode) bindPill();
     app.querySelectorAll<HTMLButtonElement>('[data-style-card]').forEach(button => button.addEventListener('click', () => { styleOpen = Number(button.dataset.styleCard); render(); }));
     app.querySelector('[data-style-close]')?.addEventListener('click', () => { styleOpen = null; render(); });
     // «Datos que YAPI supuso» (spec 2026-10-14): Confirmar and Editar save at once; Quitar asks YAPI for a short edit.
@@ -1134,6 +1261,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('#source-chat-toggle')?.addEventListener('click', () => { chatExpanded = !chatExpanded; render(); app.querySelector<HTMLElement>('#source-chat-toggle')?.focus(); });
     app.querySelector('[data-composer-action="create-product"]')?.addEventListener('click', () => {
       if (busy || dirty() || historical() || !storeId || productForm) return;
+      plusOpen = false;
       productForm = createProductForm(api, storeId, () => void refreshCatalog(), () => {
         productForm?.dispose(); productForm = null; render();
         app.querySelector<HTMLButtonElement>('[data-composer-action="create-product"]')?.focus();
@@ -1265,6 +1393,16 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
       const card = suggestionIndex.get(button.dataset.suggestionCard || ''); if (!card || busy) return;
       void applySuggestion(card, { send: text => send(text), api, storeId }).then(note => { if (note) { suggestionNote = note; render(); } }).catch(error => { suggestionNote = error instanceof Error ? error.message : 'No se pudo completar.'; render(); });
     }));
+    // YAPI plan card (spec 2026-10-22): «Construir» / «Hacer cambios» builds the saved plan; «Cambiar» asks what to change.
+    app.querySelectorAll<HTMLButtonElement>('[data-plan-build]').forEach(button => button.addEventListener('click', () => {
+      if (busy) return;
+      void send(button.textContent?.trim() || 'Construir', undefined, undefined, undefined, undefined, { text: button.textContent?.trim() || 'Construir', assetUrls: [], currentPage: page, planId: button.dataset.planBuild });
+    }));
+    app.querySelectorAll<HTMLButtonElement>('[data-plan-change]').forEach(button => button.addEventListener('click', () => {
+      const field = app.querySelector<HTMLTextAreaElement>('#agent-command');
+      if (field) { field.placeholder = 'Dime qué cambiar del plan…'; field.focus(); }
+    }));
+    bindStarterSwap(app, { post: starterId => api.swapStarter(storeId, starterId, state.revision), onDone: () => { starterNote = ''; void load().then(() => render()).catch(() => undefined); }, onError: message => { starterNote = message; render(); } });
     app.querySelector<HTMLButtonElement>('[data-suggestions-dismiss]')?.addEventListener('click', () => { suggestionsHidden = true; render(); void dismissSuggestions(api, storeId).catch(() => undefined); });
     app.querySelectorAll<HTMLButtonElement>('[data-template-choice]').forEach(button => button.addEventListener('click', () => void send(`Usar ${button.dataset.templateName || ''}`, undefined, undefined, button.dataset.templateChoice)));
     app.querySelector('[data-action="open-upload"]')?.addEventListener('click', () => app.querySelector<HTMLInputElement>('[data-image-input]')?.click());
@@ -1291,7 +1429,7 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     app.querySelector('#source-code')?.addEventListener('input', event => {
       if (!version || !codeFileEditable(version.snapshot.files, filePath)) return;
       draft = (event.target as HTMLTextAreaElement).value;
-      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-code-file], [data-composer] button, [data-suggestion], [data-clarification], [data-template-choice], [data-direction-choice], [data-style-card], [data-style-use], [data-style-auto], [data-style-retry], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
+      app.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement>('#agent-command, [data-code-file], [data-composer] button, [data-suggestion], [data-clarification], [data-template-choice], [data-direction-choice], [data-style-card], [data-style-use], [data-style-auto], [data-style-retry], [data-starter-swap], #source-reload, #source-logout, #source-export, #source-open-browser, #source-file, #source-model, #source-credit-limit, #source-build-now, #source-usage, #source-contact-form, #source-visibility').forEach(control => { control.disabled = busy || dirty(); });
       app.querySelector<HTMLButtonElement>('#source-save')!.disabled = busy || !dirty() || historical();
       app.querySelector<HTMLButtonElement>('#source-discard')!.disabled = busy || !dirty();
     });

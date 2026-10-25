@@ -315,7 +315,7 @@ export class MerchantSessionService {
       active: sessions.length,
       profiles,
       currentSessionId: currentSession?.id ?? null,
-      canManageSessions: currentSession?.isPrimary ?? false,
+      canManageSessions: Boolean(currentSession),
       blobSeed: profileBlobSeed(merchantUserId),
       sessions: sessions.map((session) => ({
         id: session.id,
@@ -346,10 +346,8 @@ export class MerchantSessionService {
     });
     if (!session) return { revoked: false, current: false };
 
+    // One owner per account (owner 2026-10-22): any of the owner's sessions may close the others.
     const current = session.id === requester.id;
-    if (!current && !requester.isPrimary) {
-      throw new ForbiddenException("Solo la sesión principal puede cerrar otros perfiles");
-    }
     await this.revokeStoredSession(session);
     return { revoked: true, current };
   }

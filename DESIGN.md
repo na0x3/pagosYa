@@ -392,7 +392,6 @@ Both admin workspaces deliberately break from that softness: primary containers 
 - The donut rotates/scales in and product bars grow from their baseline only when the finance view renders. Remove both reveals under reduced motion.
 
 ### MATCHO Hosted Showcase
-- `apps/matcho-showcase` is the expressive proof of the hosted-storefront system: retain its tactile coverflow, diagonal image marquee, locally sourced photo-derived video scroller, and bold bento dashboard as four distinct signature moments rather than flattening them into ordinary grids.
 - Use only repository-local MATCHO photos and derived video assets for its moving media. Preserve keyboard controls, readable labels, touch interaction, and reduced-motion fallbacks while keeping the merchant story ahead of the product and analytics demonstrations.
 - Keep the flavor rail static and directly navigable; it is orientation and wayfinding, not a decorative ticker. Let the featured product span the catalog width on larger screens, then collapse every product to the same readable single-column sequence on small screens.
 

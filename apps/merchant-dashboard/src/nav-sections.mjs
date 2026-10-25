@@ -32,7 +32,7 @@ export const NAV_SECTIONS = [
     tabs: [
       { view: "store-settings", label: "Tu tienda" },
       { view: "compliance", label: "Cuenta y facturación" },
-      { view: "marketing", marketingTab: "staff", label: "Equipo" },
+      { view: "marketing", marketingTab: "staff", label: "Notificaciones" },
       { view: "marketing", marketingTab: "domain", label: "Remitente" },
       { view: "connect-ai", label: "Conecta tu IA" },
       { view: "integrations", label: "Integraciones" },

@@ -2,7 +2,7 @@
  *  the business's character and what does not fit; the roll chooses everything else, and never repeats the hero +
  *  palette + font pair of the last master stores. */
 import { createHash } from 'node:crypto';
-import type { MasterSettings } from '@pagosya/store-templates';
+import type { MasterSettings, TemplateStarterDice } from '@pagosya/store-templates';
 import type { MasterCharacter, MasterVariants } from './source-master';
 import { uploadPath } from './source-product-photos';
 import { rollFeatures } from './source-master-features';
@@ -28,6 +28,8 @@ const pick = <T>(next: () => number, list: readonly T[]): T => list[Math.floor(n
 const DICE_ONLY = new Set(['cards', 'offers', 'menu', 'filters', 'feature']);
 /** Owner 2026-10-22: product pages that open on a full-screen photo hide the name, price and buy button; the dice never picks them. */
 const PHOTO_FIRST_PDP = new Set(['stacked', 'editorial']);
+/** Owner 2026-10-23: the cover shows one photo at most; a collage or strip of photos only when the merchant asks for one. */
+export const MULTI_PHOTO_HERO = new Set(['collage', 'strip']);
 
 /** Fashion look spec 2026-10-21: the fashion card and product page belong to fashion stores only, and fashion stores always get them. */
 const FASHION_PARTS = ['cards', 'pdp'] as const;
@@ -48,6 +50,8 @@ export function menuVariant(rolled: string | undefined, chosen: string | undefin
 export type RecentRoll = { hero: string; palette: string; fonts: string };
 
 export function rollVariants(input: { seed: string; settings: MasterSettings; character: MasterCharacter; photoCount: number; sections: string[]; recent: RecentRoll[]; categoryCount?: number;
+  /** The merchant's own words asked for a gallery or collage (merchantAsksForPhotoGroup); otherwise the cover has one photo at most. */
+  photoGroups?: boolean;
   /** John Smedley sections (spec 2026-10-21): the sections this store can have; without it the roll is left to the page assembly. */
   featureEligible?: string[] }): { variants: MasterVariants; palette: string; fonts: string } {
   const catalogue = (input.settings.variants ?? {}) as Record<string, readonly string[]>;
@@ -58,7 +62,9 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   const owners = (id: string) => Object.keys(catalogue).filter(part => catalogue[part].includes(id)).length;
   const excluded = (part: string, id: string) => input.character.exclude.includes(`${part}:${id}`) || (input.character.exclude.includes(id) && owners(id) === 1);
   const allowed = (part: string) => {
-    const fits = catalogue[part].filter(id => id !== 'fashion' && !(part === 'pdp' && PHOTO_FIRST_PDP.has(id)) && (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
+    // Owner 2026-10-24: a store with photos never opens on the text-only cover («a blank screen»).
+    const fits = catalogue[part].filter(id => id !== 'fashion' && !(part === 'pdp' && PHOTO_FIRST_PDP.has(id)) && !(part === 'hero' && !input.photoGroups && MULTI_PHOTO_HERO.has(id))
+      && !(part === 'hero' && id === 'type' && input.photoCount > 0) && (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
     const honoured = DICE_ONLY.has(part) ? [] : fits.filter(id => excluded(part, id)).slice(0, Math.floor(fits.length / 2));
     const list = fits.filter(id => !honoured.includes(id));
     return list.length ? list : [catalogue[part].find(id => id !== 'fashion') ?? catalogue[part][0]];
@@ -71,7 +77,8 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   const palettePool = without(fitting.length >= 2 ? fitting : sameTone.length ? sameTone : palettes, input.recent.slice(0, 2).map(r => r.palette));
   const fonts = without(input.settings.fonts.map(f => f.id), input.recent.slice(0, 6).map(r => r.fonts));
   const taken = new Set(input.recent.map(r => `${r.hero}|${r.palette}|${r.fonts}`));
-  const sections = input.sections.filter(id => (input.settings.sections ?? []).includes(id)).slice(0, 2);
+  // Owner 2026-10-24 («make stores fuller»): up to four business sections.
+  const sections = input.sections.filter(id => (input.settings.sections ?? []).includes(id)).slice(0, 4);
   let last: { variants: MasterVariants; palette: string; fonts: string } | undefined;
   for (let attempt = 0; attempt < 20; attempt++) {
     const next = rng(`${input.seed}#${attempt}`);
@@ -95,4 +102,23 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
     if (!taken.has(`${last.variants.hero}|${last.palette}|${last.fonts}`)) return last;
   }
   return last!;
+}
+
+/** Spec 2026-10-24-starter-dice: palettes and fonts kept for starters are never rolled for plain Esencial stores. */
+export function esencialDiceSettings(settings: MasterSettings): MasterSettings {
+  return { ...settings, palettes: settings.palettes.filter(p => !p.starterOnly), fonts: settings.fonts.filter(f => !f.starterOnly) };
+}
+
+/** Spec 2026-10-24-starter-dice §1: a starter rolls only the parts it lists, among the ids it allows, with Esencial's rules. */
+export function rollStarterDice(input: { seed: string; settings: MasterSettings; dice: TemplateStarterDice; character: MasterCharacter; photoCount: number;
+  photoGroups?: boolean; recent: RecentRoll[]; categoryCount?: number }): { variants: Partial<MasterVariants>; palette?: string; fonts?: string } {
+  const { palettes, fonts, ...parts } = input.dice;
+  const catalogue = Object.fromEntries(Object.entries(parts).filter((entry): entry is [string, readonly string[]] => Array.isArray(entry[1]) && entry[1].length > 0));
+  const narrowed: MasterSettings = { ...input.settings, variants: catalogue,
+    palettes: palettes?.length ? input.settings.palettes.filter(p => palettes.includes(p.id)) : input.settings.palettes.slice(0, 1),
+    fonts: fonts?.length ? input.settings.fonts.filter(f => fonts.includes(f.id)) : input.settings.fonts.slice(0, 1) };
+  const rolled = rollVariants({ seed: input.seed, settings: narrowed, character: input.character, photoCount: input.photoCount, photoGroups: input.photoGroups,
+    sections: [], recent: input.recent, categoryCount: input.categoryCount });
+  const variants = Object.fromEntries(Object.keys(catalogue).map(part => [part, (rolled.variants as unknown as Record<string, string>)[part]])) as Partial<MasterVariants>;
+  return { variants, ...(palettes?.length ? { palette: rolled.palette } : {}), ...(fonts?.length ? { fonts: rolled.fonts } : {}) };
 }

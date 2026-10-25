@@ -149,3 +149,32 @@ describe("UploadsService streaming reads", () => {
     await expect((service as any).getStream("../../etc/passwd")).resolves.toBeNull();
   });
 });
+
+// 2026-10-24: 488 of 1,350 dev photos were gone. A store or product delete removed its photo files even when another store
+// (a catalogue copy), another product or the merchant's media library still used them.
+describe("UploadsService deleteFiles keeps files still in use", () => {
+  const fs = require("fs") as typeof import("fs");
+  const used = "123e4567-e89b-12d3-a456-426614174001.jpg", orphan = "123e4567-e89b-12d3-a456-426614174002.jpg";
+  let dir: string;
+  beforeEach(async () => {
+    dir = await fs.promises.mkdtemp("/tmp/pagosya-delete-test-");
+    for (const name of [used, orphan]) await fs.promises.writeFile(`${dir}/${name}`, "x");
+  });
+  afterEach(async () => { await fs.promises.rm(dir, { recursive: true, force: true }); });
+
+  it("deletes only the files nothing else references", async () => {
+    const prisma = { $queryRaw: jest.fn().mockResolvedValue([{ name: used }]) };
+    const service = new UploadsService({ get: (key: string) => key === "app.uploadsDir" ? dir : undefined } as any, prisma as any);
+    await service.deleteFiles([`/v1/uploads/${used}`, `http://localhost:3001/v1/uploads/${orphan}`]);
+    expect(fs.existsSync(`${dir}/${used}`)).toBe(true);
+    expect(fs.existsSync(`${dir}/${orphan}`)).toBe(false);
+  });
+
+  it("keeps every file when it cannot check (a failed lookup never deletes)", async () => {
+    const prisma = { $queryRaw: jest.fn().mockRejectedValue(new Error("db down")) };
+    const service = new UploadsService({ get: (key: string) => key === "app.uploadsDir" ? dir : undefined } as any, prisma as any);
+    await service.deleteFiles([`/v1/uploads/${used}`, `/v1/uploads/${orphan}`]);
+    expect(fs.existsSync(`${dir}/${used}`)).toBe(true);
+    expect(fs.existsSync(`${dir}/${orphan}`)).toBe(true);
+  });
+});

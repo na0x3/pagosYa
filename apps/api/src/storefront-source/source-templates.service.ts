@@ -16,7 +16,9 @@ import type { SourceProjectSnapshot } from './source-project';
 import { assembleTemplateRevision, readMasterState, refillMasterFiles, refillPlantillaFiles, resolvePresetTemplate, starterBrandBlock, templateDemoRevision, TEMPLATE_STORE_DATA_PATH, withPreset, type StarterBrandColours } from './source-templates';
 import { plantillaFallback, plantillaFillFromRead } from './source-plantilla-fill';
 import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
-import { distinctPhotoCount, menuVariant, rollVariants, type RecentRoll } from './source-master-dice';
+import { distinctPhotoCount, esencialDiceSettings, menuVariant, rollStarterDice, rollVariants, type RecentRoll } from './source-master-dice';
+import { palettesForPhoto, photoTone } from './source-starter-palette';
+import { DEFAULT_RETENTION } from '../retention/retention.dto';
 
 /** What the master template's filler is told about a store (spec 2026-10-19 §2.3). */
 export type MasterFacts = { storeName: string; products: string[]; photos: string[];
@@ -41,6 +43,14 @@ export class SourceTemplatesService {
 
   constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly config: ConfigService, @Optional() private readonly uploads?: UploadsService, @Optional() private readonly pageWriter?: ProductPageWriterService, @Optional() private readonly brands?: BrandProfileService) {}
 
+  /** A store's first build: payments on, and (owner 2026-10-24, «make stores fuller … bot, email form on footer») the footer
+   *  newsletter signup — the popup only on leaving the page, never on arrival — and the store bot. A merchant's own settings stay. */
+  private async firstBuild(storeId: string) {
+    await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
+    await this.prisma.storeRetention?.upsert({ where: { storeId }, update: {}, create: { storeId, settings: { ...DEFAULT_RETENTION, signupEnabled: true, popupTrigger: 'exit' } } }).catch(() => undefined);
+    if (this.config.get<boolean>('app.assistant.enabled') === true) await this.prisma.storeAssistant?.upsert({ where: { storeId }, create: { storeId, enabled: true }, update: {} }).catch(() => undefined);
+  }
+
   /** The logo's colours as a palette (variety spec §4); replaceable in tests. */
   logoPalette = async (merchantId: string, url: string): Promise<SourcePalette | undefined> => {
     const path = uploadPath(url);
@@ -57,13 +67,23 @@ export class SourceTemplatesService {
   }
 
   /** The pieces `apply` saves and `preview` shows: the template filled with this store's name, products and photos. */
-  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[], variants?: MasterVariants, plantillaCopy?: Record<string, string>, dna?: Record<string, string>) {
+  private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[], variants?: MasterVariants, plantillaCopy?: Record<string, string>, dna?: Record<string, string>,
+    starterRoll?: { variants: Partial<MasterVariants>; palette?: string; fonts?: string }) {
     const chosen = this.registry.templateManifest(templateId);
     if (!chosen) throw new NotFoundException('Esa plantilla no existe.');
     // Plantillas presets (2026-10-22): a preset is saved as its master (Esencial) with the preset's look and starting words,
     // so every master path (refill, chat edits, menus, sections) keeps working on the store.
     const { manifest, preset, sourceId } = resolvePresetTemplate(chosen, id => this.registry.templateManifest(id));
-    if (preset) { fill = withPreset(preset, fill, Boolean(chosen.starter)); variants = variants ? { ...variants, ...preset.variants } as MasterVariants : preset.variants as MasterVariants; }
+    if (preset) {
+      fill = withPreset(preset, fill, Boolean(chosen.starter));
+      variants = variants ? { ...variants, ...preset.variants } as MasterVariants : preset.variants as MasterVariants;
+      // Starter dice (spec 2026-10-24-starter-dice): the roll goes over the starter's preset; the preset keeps every other part,
+      // and the brand colours (look.colors) stay as withPreset left them.
+      if (starterRoll) {
+        variants = { ...variants, ...starterRoll.variants } as MasterVariants;
+        fill = { ...fill, look: { ...(fill.look ?? {}), ...(starterRoll.palette ? { palette: starterRoll.palette } : {}), ...(starterRoll.fonts ? { fonts: starterRoll.fonts } : {}) } };
+      }
+    }
     const current = await this.projects.current(merchantId, storeId);
     if (expectedRevision !== undefined && current.revision !== expectedRevision) throw new ConflictException('El proyecto cambió. Recarga antes de aplicar la plantilla.');
     const previous = current.revision ? await this.projects.version(merchantId, storeId, current.revision) : null;
@@ -81,7 +101,8 @@ export class SourceTemplatesService {
 
   /** Spec 2026-10-19 §2: the master template applied to a new store and filled in one call; the store is saved even when
    *  the filler fails. The filler sees what the apply sees: the store's name, product names and photos. */
-  async applyMaster(merchantId: string, storeId: string, revision: number, filler: (facts: MasterFacts) => Promise<MasterFill | null>, presetId?: string, plan?: AppliedPlan, starterId?: string) {
+  /** `carried`: files of an earlier build the fill points at (a «Probar otro estilo» swap keeps the bundled hero and story photos). */
+  async applyMaster(merchantId: string, storeId: string, revision: number, filler: (facts: MasterFacts) => Promise<MasterFill | null>, presetId?: string, plan?: AppliedPlan, starterId?: string, carried: SourceProjectFileDto[] = []) {
     const presetManifest = presetId ? this.registry.templateManifest(presetId) : undefined;
     if (presetId && !presetManifest?.preset) throw new NotFoundException('Esa plantilla no existe.');
     // Starters (spec 2026-10-24): a finished store that extends Esencial — its own files and look, no dice, still the merchant's brand.
@@ -98,7 +119,9 @@ export class SourceTemplatesService {
       categoryCount: publicStore.categories.filter(category => publicStore.items.some(item => item.categoryId === category.id)).length,
       menuTargets: storeMenuTargetList(storeMenuContext(sourceStoreConfigData(publicStore, sourcePublicApiUrl(this.config), false), [])),
       ...(confirmed.get('voice') || confirmed.get('avoid') || confirmed.get('headlineExamples') ? { brand: { voice: confirmed.get('voice'), headlineExamples: confirmed.get('headlineExamples'), avoid: confirmed.get('avoid') } } : {}) };
-    const filled = await filler(facts).catch(() => null);
+    const read = await filler(facts).catch(() => null);
+    // Owner 2026-10-24 («a blank screen»): a store with photos never opens without one; no cover pick means its first photo.
+    const filled = read && !read.heroPhoto && facts.photos.length ? { ...read, heroPhoto: facts.photos[0] } : read;
     // Live 2026-10-19: a fill that timed out left the template's placeholder story and an API-hosted hero, and that hero then
     // failed every later design edit's checks («Imagen no disponible»). The merchant's own words and photos stand in.
     const fallback = filled ? null : await this.masterFallback(storeId, facts);
@@ -114,7 +137,7 @@ export class SourceTemplatesService {
     } else if (!presetManifest && !starterManifest && this.config.get<boolean>('app.yapiEsencialDice') !== false) {
       // Counted before bundling: a bundled hero is an asset path and would count its product photo twice (review fix).
       const photoCount = distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]);
-      const rolled = rollVariants({ seed: storeId, settings: manifest.master, character: fill?.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] },
+      const rolled = rollVariants({ seed: storeId, settings: esencialDiceSettings(manifest.master), character: fill?.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] },
         photoCount, sections: (fill?.sections ?? []).map(section => section.id), recent: await this.recentMasterRolls(storeId), categoryCount: facts.categoryCount });
       variants = rolled.variants;
       // Dropdown menu spec 2026-10-21: the fill picks panel or dropdowns; the roll decides whether a non-fashion store has one.
@@ -124,13 +147,26 @@ export class SourceTemplatesService {
     const brandColours = Object.fromEntries(([['paper', 'background'], ['ink', 'foreground'], ['accent', 'accent'], ['muted', 'surface']] as const)
       .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
     const logo = (presetManifest && !starterManifest) || plan?.accent || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
-    const colours = Object.keys(brandColours).length ? brandColours : logo ? { paper: logo.paper, ink: logo.ink, accent: logo.accent, muted: logo.surface } : undefined;
+    // A/B comparison 2026-10-24: on a starter the logo gives the accent only; its paper and ink are the starter's character.
+    const colours = Object.keys(brandColours).length ? brandColours : logo ? (starterManifest ? { accent: logo.accent } : { paper: logo.paper, ink: logo.ink, accent: logo.accent, muted: logo.surface }) : undefined;
     // The merchant's confirmed brand colours always win over a plan's accent (final review 2026-10-22).
     if (colours && plan?.accent && !Object.keys(brandColours).length) colours.accent = plan.accent;
     if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours, ...(fill?.look?.palette ? { palette: paletteForBrand(manifest.master, fill.look.palette, colours) } : {}) } };
-    const { assembled } = await this.assemble(merchantId, storeId, starterManifest?.id ?? presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, bundled.files, variants, undefined, plan?.dna);
+    const files = [...bundled.files, ...carried.filter(file => !bundled.files.some(own => own.path === file.path))];
+    // Starter dice (spec 2026-10-24-starter-dice §1): a starter with dice rolls its own lists, seeded by the store.
+    // A/B comparison 2026-10-24: the rolled palette sits with the hero photo (PEPPA's red bottles got a blue accent).
+    let dice = starterManifest?.starter?.dice;
+    const heroFile = dice?.palettes?.length && fill?.heroPhoto ? files.find(file => file.path === fill?.heroPhoto) : undefined;
+    if (dice?.palettes?.length && heroFile) dice = { ...dice, palettes: palettesForPhoto(manifest.master.palettes, dice.palettes, await photoTone(Buffer.from(heroFile.content, 'base64'))) };
+    const rolledStarter = dice ? rollStarterDice({ seed: storeId, settings: manifest.master, dice,
+      character: fill?.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] },
+      photoCount: distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]), recent: await this.recentMasterRolls(storeId), categoryCount: facts.categoryCount }) : undefined;
+    // Owner 2026-10-24 (the NOA atelier's dropdown menu): the menu style the merchant asked for wins over the starter's preset.
+    const askedMenu = starterManifest && fill?.menu?.style ? menuVariant(starterManifest.preset?.variants.menu ?? 'panel', fill.menu.style, fill.character?.kind === 'fashion') : undefined;
+    const starterRoll = rolledStarter || askedMenu ? { ...(rolledStarter ?? {}), variants: { ...(rolledStarter?.variants ?? {}), ...(askedMenu ? { menu: askedMenu } : {}) } as Partial<MasterVariants> } : undefined;
+    const { assembled } = await this.assemble(merchantId, storeId, starterManifest?.id ?? presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, files, variants, undefined, plan?.dna, starterRoll);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
-    if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
+    if (revision === 0) await this.firstBuild(storeId);
     // Variety spec §2b: every product's own page content (highlights, story, faq…), written in the background.
     void Promise.resolve().then(() => this.pageWriter?.fillStore(storeId)).catch(() => undefined);
     return { ...saved, filled: Boolean(fill) };
@@ -175,7 +211,7 @@ export class SourceTemplatesService {
     const brandBlock = manifest.starter ? starterBrandBlock(await this.starterBrandColours(merchantId, storeId, publicStore.logoUrl).catch(() => ({}))) : '';
     if (brandBlock) assembled.files = assembled.files.map(file => file.path === 'styles/globals.css' ? { ...file, content: `${file.content}\n${brandBlock}\n` } : file);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
-    if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
+    if (revision === 0) await this.firstBuild(storeId);
     void Promise.resolve().then(() => this.pageWriter?.fillStore(storeId)).catch(() => undefined);
     return { ...saved, filled: Object.keys(filled).length > 0 };
   }
@@ -280,7 +316,7 @@ export class SourceTemplatesService {
     const { assembled } = await this.assemble(merchantId, storeId, templateId, revision);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     // A first site takes payments, as a first YAPI generation does.
-    if (revision === 0) await this.prisma.store.update({ where: { id: storeId }, data: { checkoutMode: 'payment' } });
+    if (revision === 0) await this.firstBuild(storeId);
     return saved;
   }
 }

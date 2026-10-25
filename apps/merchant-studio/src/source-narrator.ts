@@ -9,17 +9,29 @@ import './source-narrator.css';
  * Owner 2026-10-21: the merchant can drag it by its header, make it smaller or bigger, and close it with one click; the
  * pagosYa star sits in its header, spins now and then, and comes back after every five lines YAPI writes.
  */
-export type Narrator = { open(request: string): void; show(narration: Narration): void; close(): void; element: HTMLElement };
+export type Narrator = {
+  open(request: string): void; show(narration: Narration): void; close(): void;
+  /** Store news (owner 2026-10-22): one short line, typed, then the window hides by itself. False while YAPI is busy in it. */
+  notice(title: string, line: string): boolean;
+  /** YAPI in design mode: sit just above the pill (null: back to its own place). */
+  anchor(rect: { left: number; top: number; width: number; height?: number } | null): void;
+  /** The star turns while YAPI changes something. */
+  spinning(state: 'spin' | 'pulse' | 'idle'): void;
+  element: HTMLElement;
+};
 export type NarratorSize = 'small' | 'normal' | 'large';
 
 const PILL_AFTER_MS = 2600;
+const NOTICE_HIDE_MS = 10_000;
 const LOGO_EVERY_LINES = 5;
 const SIZES: readonly NarratorSize[] = ['small', 'normal', 'large'];
 const STORAGE_KEY = 'pagosya_yapi_window';
 const EDGE = 8;
-type Saved = { size?: NarratorSize; x?: number; y?: number };
+const DRAG_SLOP = 4;
+/** x/y place the window; px/py the «YAPI · Resumen» pill, which the merchant moves on its own (owner 2026-10-22). */
+type Saved = { size?: NarratorSize; x?: number; y?: number; px?: number; py?: number };
 
-export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boolean } = {}): Narrator {
+export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boolean; onNoticeDismissed?: () => void } = {}): Narrator {
   const win = doc.defaultView!;
   const reduced = opts.reducedMotion ?? (() => win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
   const logo = `${import.meta.env?.BASE_URL ?? '/'}logo-mark.png`;
@@ -60,22 +72,57 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
   };
   setSize(SIZES.includes(saved.size as NarratorSize) ? saved.size! : 'normal');
 
-  /** Keeps the header on screen so the window can always be grabbed again. */
-  function place(x: number, y: number) {
-    const width = element.offsetWidth || 320;
+  /** Keeps the header (or the whole pill) on screen so it can always be grabbed again. */
+  function clampTo(node: HTMLElement, x: number, y: number, fallbackWidth: number, keep: number) {
+    const width = node.offsetWidth || fallbackWidth;
     const left = Math.round(Math.min(Math.max(EDGE, x), Math.max(EDGE, win.innerWidth - width - EDGE)));
-    const top = Math.round(Math.min(Math.max(EDGE, y), Math.max(EDGE, win.innerHeight - 56)));
-    for (const node of [element, pill]) Object.assign(node.style, { left: `${left}px`, top: `${top}px`, right: 'auto', bottom: 'auto' });
+    const top = Math.round(Math.min(Math.max(EDGE, y), Math.max(EDGE, win.innerHeight - keep)));
+    Object.assign(node.style, { left: `${left}px`, top: `${top}px`, right: 'auto', bottom: 'auto' });
+    return { left, top };
+  }
+  function place(x: number, y: number) {
+    const { left, top } = clampTo(element, x, y, 320, 56);
     return { x: left, y: top };
   }
+  function placePill(x: number, y: number) {
+    const { left, top } = clampTo(pill, x, y, 150, 52);
+    return { px: left, py: top };
+  }
   function toCorner() {
-    for (const node of [element, pill]) for (const side of ['left', 'top', 'right', 'bottom']) node.style.removeProperty(side);
+    for (const side of ['left', 'top', 'right', 'bottom']) element.style.removeProperty(side);
     delete saved.x; delete saved.y; remember({});
   }
-  const placeSaved = () => { if (saved.x !== undefined && saved.y !== undefined) place(saved.x, saved.y); };
+  function pillToCorner() {
+    for (const side of ['left', 'top', 'right', 'bottom']) pill.style.removeProperty(side);
+    delete saved.px; delete saved.py; remember({});
+  }
+  // YAPI in design mode (spec 2026-10-22 v2 §3): anchored, the window is the bubble just above the pill and follows it.
+  let anchored: { left: number; top: number; width: number; height?: number } | null = null;
+  /** Held by its bottom edge so new lines grow it upward; below the block when there is no room above (review 2026-10-22). */
+  function placeAnchored() {
+    if (!anchored) return;
+    element.style.width = `${Math.min(anchored.width, 440)}px`;
+    Object.assign(element.style, { left: `${anchored.left}px`, right: 'auto' });
+    if (anchored.top < 160) Object.assign(element.style, { top: `${anchored.top + (anchored.height ?? 64) + 12}px`, bottom: 'auto' });
+    else Object.assign(element.style, { top: 'auto', bottom: `${win.innerHeight - anchored.top + 12}px` });
+  }
+  const placeSaved = () => { if (anchored) placeAnchored(); else if (saved.x !== undefined && saved.y !== undefined) place(saved.x, saved.y); };
+  const placeSavedPill = () => { if (saved.px !== undefined && saved.py !== undefined) placePill(saved.px, saved.py); };
+  const showPill = () => { if (anchored) return; pill.hidden = false; placeSavedPill(); };
+  function anchor(rect: { left: number; top: number; width: number; height?: number } | null) {
+    anchored = rect;
+    element.classList.toggle('yapi-narrator--bubble', Boolean(rect));
+    if (rect) { pill.hidden = true; placeAnchored(); } else { element.style.width = ''; placeSaved(); }
+  }
+  function spinning(state: 'spin' | 'pulse' | 'idle') {
+    const mark = element.querySelector('[data-narrator-logo]');
+    mark?.classList.toggle('is-spin', state === 'spin');
+    mark?.classList.toggle('is-pulse', state === 'pulse');
+  }
 
   let drag: { id: number; dx: number; dy: number; at?: { x: number; y: number } } | null = null;
   head.addEventListener('pointerdown', event => {
+    if (anchored) return;
     if (event.button !== 0 || (event.target as Element).closest('button')) return;
     const box = element.getBoundingClientRect();
     drag = { id: event.pointerId, dx: event.clientX - box.left, dy: event.clientY - box.top };
@@ -94,7 +141,33 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
   head.addEventListener('pointerup', endDrag);
   head.addEventListener('pointercancel', endDrag);
   head.addEventListener('dblclick', event => { if (!(event.target as Element).closest('button')) toCorner(); });
-  win.addEventListener('resize', placeSaved);
+  // The pill moves the same way (owner 2026-10-22: it sat in the middle of the screen); a press that never moves opens it.
+  let pillDrag: { id: number; dx: number; dy: number; x0: number; y0: number; moved: boolean; at?: { px: number; py: number } } | null = null;
+  let pillDragged = false;
+  pill.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    const box = pill.getBoundingClientRect();
+    pillDrag = { id: event.pointerId, dx: event.clientX - box.left, dy: event.clientY - box.top, x0: event.clientX, y0: event.clientY, moved: false };
+    pill.setPointerCapture?.(event.pointerId);
+  });
+  pill.addEventListener('pointermove', event => {
+    if (pillDrag?.id !== event.pointerId) return;
+    if (!pillDrag.moved && Math.hypot(event.clientX - pillDrag.x0, event.clientY - pillDrag.y0) < DRAG_SLOP) return;
+    if (!pillDrag.moved) { pillDrag.moved = true; pill.classList.add('is-dragging'); }
+    pillDrag.at = placePill(event.clientX - pillDrag.dx, event.clientY - pillDrag.dy);
+  });
+  const endPillDrag = (event: PointerEvent) => {
+    if (pillDrag?.id !== event.pointerId) return;
+    const { moved, at } = pillDrag;
+    pillDrag = null;
+    pill.classList.remove('is-dragging');
+    pillDragged = moved;
+    if (at) remember(at);
+  };
+  pill.addEventListener('pointerup', endPillDrag);
+  pill.addEventListener('pointercancel', endPillDrag);
+  pill.addEventListener('dblclick', () => pillToCorner());
+  win.addEventListener('resize', () => { placeSaved(); placeSavedPill(); });
   shrinkButton.addEventListener('click', () => step(-1));
   growButton.addEventListener('click', () => step(1));
 
@@ -123,6 +196,9 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
   let current: { p: HTMLElement; line: string } | null = null;
   let pillTimer = 0;
   let phase: Narration['phase'] = 'work';
+  // A news line borrows the window: what it showed before (a finished summary) comes back when the news leaves.
+  let notice: { request: string; nodes: Node[]; shown: string[]; phase: Narration['phase']; pill: boolean; hidden: boolean } | null = null;
+  let noticeTimer = 0;
 
   const clearTimers = () => { timers.forEach(t => win.clearTimeout(t)); timers = []; };
   const announce = (line: string) => { liveEl.textContent = line; };
@@ -136,9 +212,10 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
     next();
   };
   const settled = () => {
+    if (notice) { win.clearTimeout(noticeTimer); noticeTimer = win.setTimeout(() => endNotice(), NOTICE_HIDE_MS); return; }
     if (phase !== 'done') return;
     win.clearTimeout(pillTimer);
-    pillTimer = win.setTimeout(() => { element.hidden = true; pill.hidden = false; }, PILL_AFTER_MS);
+    pillTimer = win.setTimeout(() => { element.hidden = true; showPill(); }, PILL_AFTER_MS);
   };
   const follow = () => { element.scrollTop = element.scrollHeight; };
   function next() {
@@ -167,6 +244,7 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
   }
 
   function show(narration: Narration) {
+    if (notice) endNotice();
     phase = narration.phase;
     win.clearTimeout(pillTimer);
     // A new stage changes only the last line («Ahora: …»): retype that line, never the whole plan above it.
@@ -190,7 +268,40 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
     else if (!fresh.length) settled();
   }
 
+  /** The news leaves: the window goes back to what it held, hidden again unless it was open before. */
+  function endNotice(restore = true) {
+    if (!notice) return;
+    const was = notice; notice = null;
+    win.clearTimeout(noticeTimer);
+    clearTimers(); current = null; queue = [];
+    if (!restore) return;
+    requestEl.textContent = was.request;
+    textEl.replaceChildren(...was.nodes);
+    shown = was.shown; phase = was.phase;
+    element.classList.remove('is-notice');
+    element.hidden = was.hidden;
+    if (was.pill) showPill();
+  }
+  function showNotice(title: string, line: string) {
+    // Never over YAPI at work or a summary the merchant is reading; a news line already showing gives way to the next.
+    if (notice) endNotice();
+    if (!element.hidden || queue.length || current) return false;
+    notice = { request: requestEl.textContent || '', nodes: [...textEl.childNodes], shown, phase, pill: !pill.hidden, hidden: element.hidden };
+    win.clearTimeout(pillTimer);
+    pill.hidden = true;
+    shown = []; textEl.replaceChildren(); liveEl.textContent = '';
+    requestEl.textContent = title;
+    element.classList.add('is-notice');
+    element.hidden = false;
+    placeSaved();
+    spin(headLogo);
+    queue = [line];
+    next();
+    return true;
+  }
+
   function open(request: string) {
+    endNotice(false); element.classList.remove('is-notice');
     clearTimers(); current = null; queue = []; shown = []; phase = 'work';
     win.clearTimeout(pillTimer);
     textEl.replaceChildren(); liveEl.textContent = '';
@@ -202,29 +313,36 @@ export function mountNarrator(doc: Document, opts: { reducedMotion?: () => boole
   }
   function close() { element.hidden = true; win.clearTimeout(pillTimer); }
   /** One way out for the close button and Escape: a finished summary stays reachable through the pill. */
-  const dismiss = () => { close(); if (phase === 'done') pill.hidden = false; };
+  const dismiss = () => {
+    if (notice) { endNotice(); element.hidden = true; opts.onNoticeDismissed?.(); return; }
+    close(); if (phase === 'done') showPill();
+  };
 
   textEl.addEventListener('click', finishCurrent);
   element.querySelector('[data-narrator-close]')!.addEventListener('click', dismiss);
-  pill.addEventListener('click', () => { pill.hidden = true; element.hidden = false; placeSaved(); });
+  pill.addEventListener('click', () => {
+    if (pillDragged) { pillDragged = false; return; }
+    if (notice) endNotice();
+    pill.hidden = true; element.hidden = false; placeSaved();
+  });
   doc.addEventListener('keydown', event => {
     // Escape belongs to an open dialog first.
     if (event.key !== 'Escape' || element.hidden || event.defaultPrevented || doc.querySelector('dialog[open], [aria-modal="true"]')) return;
     dismiss();
   });
 
-  return { open, show, close, element };
+  return { open, show, close, notice: showNotice, element, anchor, spinning };
 }
 
 /** Connects the window to the Studio's build lifecycle; a poll that says nothing new types nothing. */
-export function narratorBridge(narrator: Pick<Narrator, 'open' | 'show'>) {
+export function narratorBridge(narrator: Pick<Narrator, 'open' | 'show'>, plain = false) {
   let last = '';
   let active = false;
   const show = (n: Narration) => { const key = JSON.stringify(n); if (key === last) return; last = key; narrator.show(n); };
   return {
     /** The merchant's words only: the Studio's own instructions («Navegación elegida: …») stay out of the window. */
     submitted(text: string) { last = ''; active = true; narrator.open(text.split(/\n\s*\nNavegación elegida:/)[0].trim()); },
-    progress(progress: BuildProgress | null) { if (active) show(narrationFromProgress(progress)); },
+    progress(progress: BuildProgress | null) { if (active) show(narrationFromProgress(progress, plain)); },
     completed(reply: string | { content?: unknown; metadata?: Record<string, unknown> | null }) { active = false; show(typeof reply === 'string' ? narrationFromReply(reply) : narrationFromMessage(reply)); },
     /** Only a build this window is following can stop; a later failure (an «Alternativa») never replaces the summary. */
     interrupted(reason?: string) { if (!active) return; active = false; show(stoppedNarration(reason)); },

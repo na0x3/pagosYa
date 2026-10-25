@@ -49,4 +49,6 @@ export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolea
   /** The follow-up carries the merchant's own request (pages, look) rather than a touch of YAPI's: it fails out loud. */
   ownRequest?: boolean;
   /** «sigue» after an unfinished request: what the merchant typed, shown in the chat while the kept request runs. */
-  resumeWords?: string };
+  resumeWords?: string;
+  /** The PEPPA recipe (owner 2026-10-23): the follow-up is a full redesign of the new template store, not a minimal edit. */
+  redesign?: boolean };

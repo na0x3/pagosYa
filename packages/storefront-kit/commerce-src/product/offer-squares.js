@@ -63,9 +63,11 @@
     return wanted === 'steps' ? 'grid' : wanted;
   }
   function offerSquareMarkup(p, option, selected) {
-    const tag = option.label || (option.best ? 'Mejor precio' : '');
     const title = option.kind === 'once' ? '1 unidad' : option.kind === 'pack' ? `Pack x${option.quantity}` : (CADENCE_TEXT[option.cadence] || 'Suscripción').replace(/^./, c => c.toUpperCase());
-    const line = option.kind === 'pack' ? `${money(option.perUnit, p.currency)} c/u` : option.kind === 'sub' ? 'Suscripción · cancela cuando quieras' : '';
+    // Owner 2026-10-23: a tag that only repeats the title («CADA MES» over «Cada mes») says nothing; the deal line speaks instead.
+    const label = option.label && option.label.toLowerCase() !== title.toLowerCase() ? option.label : '';
+    const tag = label || (option.best ? 'Mejor precio' : '');
+    const line = option.kind === 'pack' ? `${money(option.perUnit, p.currency)} c/u` : option.kind === 'sub' ? 'Te llega sola · cancela cuando quieras' : 'Para probar';
     return `<button type="button" role="radio" class="offer-square" data-offer-square="${escape(option.key)}" aria-checked="${selected}">`
       + (tag ? `<span class="offer-square__tag">${escape(tag)}</span>` : '')
       + `<span class="offer-square__title">${escape(title)}</span><span class="offer-square__total">${money(option.total, p.currency)}</span>`

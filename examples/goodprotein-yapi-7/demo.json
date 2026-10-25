@@ -1,0 +1,41 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvjy0ajn000113t5bp70z4xi",
+  "slug": "rwkkmi3l",
+  "photos": {
+    "0b4b6a242f36b42da6dab55fd972b2b9.jpg": "/v1/uploads/456d8fe5-1333-42dc-b559-1c7054be09ba.jpg",
+    "293aeb1969701531dfebf7b9a24a66d7.jpg": "/v1/uploads/d3d3a959-95e8-47d2-aa3e-214a8cb1ca88.jpg",
+    "3206d4abe69364304fd7201a33e44a86.jpg": "/v1/uploads/bcb24cfc-d4b7-4b01-b2aa-d58f5ca6ba55.jpg",
+    "623036a45a1786a2db96183a395d12b5.jpg": "/v1/uploads/7becc7ba-0427-437e-8892-0ecaa1ea4a80.jpg",
+    "78cfb4ed2959fd2d7884c0f3846e59df.jpg": "/v1/uploads/ebdd7587-0e08-4ffc-9c79-de35e55b79b7.jpg",
+    "8e094c06a195f34a41b84259d67c5bba.jpg": "/v1/uploads/6157da34-2901-4899-86f1-1b3ef14e1b5e.jpg",
+    "ad6c073e6ae0333d0d2d3017cdace62d.jpg": "/v1/uploads/4354b696-5697-46bb-88ac-fa6b0d68a6e1.jpg",
+    "c15c016861dcff174d2d2e995c67a5e0.jpg": "/v1/uploads/19721712-ec18-4e9b-a1d3-a0ad8e21d0c9.jpg",
+    "e7761d4c30859f9d4f772ed84d2adb4e.jpg": "/v1/uploads/a888ca92-d682-40a4-a0c4-50db04b6fc39.jpg",
+    "eeb4e3ede36b5e6d2aad677d02103ac7.jpg": "/v1/uploads/8af667aa-7c96-4c09-a2de-fbd41fe67dd1.jpg",
+    "f5cbfa60160ea69127243cc1c6e53bff.jpg": "/v1/uploads/5af67298-bb6b-457c-bc97-8c29a7187e24.jpg",
+    "gg.jpg": "/v1/uploads/3396c269-b2f6-48e6-bf05-086a335829c6.jpg"
+  },
+  "categories": {
+    "Proteínas": "cmvjy0aou000r13t59l98shzn",
+    "Recuperación y energía": "cmvjy0apm000t13t5nlkwkka9",
+    "Snacks proteicos": "cmvjy0apo000v13t5uq9cmp6f"
+  },
+  "products": {
+    "Best Behavior Cereal Proteico": "cmvjy0aqd000x13t553up05on",
+    "MAGNUS Performance Recovery": "cmvjy0arx000z13t5qybj0s7s",
+    "Equip Prime Protein": "cmvjy0as8001113t5f79vzgjx",
+    "goodprotein All-in-One Shake": "cmvjy0ask001313t5gl4j9gxh",
+    "Bloom Clear Protein": "cmvjy0asw001513t5mlaot00f",
+    "Bloom Pre-Entreno": "cmvjy0at3001713t5btxor9s8",
+    "Love Sweat Fitness Plant Protein": "cmvjy0atb001913t55i56iz3i",
+    "Protein Pulver Vegano": "cmvjy0ath001b13t5nauddz3q",
+    "Body Tone & Glow": "cmvjy0atn001d13t503glmt8d"
+  },
+  "done": {
+    "settings": true,
+    "subscriptions": true,
+    "promo-codes": true,
+    "shipping": true
+  }
+}

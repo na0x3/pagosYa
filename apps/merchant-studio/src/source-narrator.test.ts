@@ -78,13 +78,44 @@ describe('YAPI glass window', () => {
     // An interruption after the reply is ignored (review fix): the summary stays.
     expect(shown).toEqual(['open:Hazme una tienda', 'work', 'done']);
   });
+
+  it('as the pill\'s bubble it sits just above the pill and its star follows the build', () => {
+    const narrator = mountNarrator(document, { reducedMotion: () => true });
+    narrator.anchor({ left: 200, top: 700, width: 560 });
+    narrator.open('Hazme una tienda');
+    const el = narrator.element;
+    expect(el.classList.contains('yapi-narrator--bubble')).toBe(true);
+    expect(el.style.left).toBe('200px');
+    expect(el.style.width).toBe('440px');
+    expect(el.style.bottom).toBe(`${window.innerHeight - 700 + 12}px`);
+    narrator.spinning('spin');
+    expect(el.querySelector('[data-narrator-logo]')!.classList.contains('is-spin')).toBe(true);
+    narrator.spinning('idle');
+    expect(el.querySelector('[data-narrator-logo]')!.classList.contains('is-spin')).toBe(false);
+    narrator.notice('Por reponer', 'Protein Pulver Vegano está agotado.');
+    expect(el.style.left).toBe('200px');
+    narrator.anchor(null);
+    expect(el.classList.contains('yapi-narrator--bubble')).toBe(false);
+  });
+
+  it('review: the bubble is held by its bottom edge so new lines grow it upward, and sits below a pill near the top', () => {
+    const narrator = mountNarrator(document, { reducedMotion: () => true });
+    narrator.anchor({ left: 200, top: 700, width: 560 });
+    const el = narrator.element;
+    expect(el.style.top).toBe('auto');
+    expect(el.style.bottom).toBe(`${window.innerHeight - 700 + 12}px`);
+    narrator.anchor({ left: 200, top: 40, width: 560, height: 60 });
+    expect(el.style.bottom).toBe('auto');
+    expect(el.style.top).toBe('112px');
+  });
 });
 
 describe('the Studio feeds the window', () => {
   it('opens it on submit, updates it on progress, finishes it on the reply and stops it on an interrupt', async () => {
     const { readFileSync } = await import('node:fs');
     const studio = readFileSync(`${process.cwd()}/src/source-studio.ts`, 'utf8');
-    expect(studio).toMatch(/const narrator = narratorBridge\(mountNarrator\(document\)\);/);
+    expect(studio).toMatch(/const narratorWindow = mountNarrator\(document, \{ onNoticeDismissed: \(\) => storeNewsFeed\.snooze\(\) \}\);\n\s+const narrator = narratorBridge\(narratorWindow, pillMode\);/);
+    expect(studio).toMatch(/show: item => narratorWindow\.notice\(item\.title, item\.line\)/);
     expect(studio).toMatch(/if \(event\.type === 'interrupt' && wasBuilding\) narrator\.interrupted\(error\);/);
     expect(studio).toMatch(/transitionBuild\(\{ type: 'submit' \}\); narrator\.submitted\(text\);/);
     expect(studio).toMatch(/function updateBuildProgress\(\) \{\n\s+narrator\.progress\(buildProgress\);/);

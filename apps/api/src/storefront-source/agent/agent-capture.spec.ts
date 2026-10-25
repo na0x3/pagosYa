@@ -28,6 +28,12 @@ describe('agent capture', () => {
     const snapshot = { brief: {}, files: [{ path: 'index.html', content: '<html><head><style>[data-pagosya-catalog]{display:none}</style></head><body><h1>Tienda</h1><div data-pagosya-catalog></div></body></html>' }] } as any;
     expect((await captureAgentDraft(snapshot, 390)).errors).toContain('El catálogo está oculto. Mantén visible data-pagosya-catalog incluso sin productos; el runtime controla su estado vacío y los productos futuros.');
   });
+  // BAEK 2026-10-23: «[data-pagosya-catalog]:not(:has(.es-card)){height:1px;overflow:hidden}» meant to hide an empty catalog,
+  // but the products page draws .menu-item cards, so the whole list was clipped to 1px and shipped blank.
+  it('rejects a catalog clipped to almost no height', async () => {
+    const snapshot = { brief: {}, files: [{ path: 'index.html', content: '<html><head><style>[data-pagosya-catalog]{height:1px;max-height:1px;overflow:hidden}</style></head><body><h1>Tienda</h1><section data-pagosya-catalog><article style="height:400px">Hogaza</article></section></body></html>' }] } as any;
+    expect((await captureAgentDraft(snapshot, 390)).errors).toContain('El catálogo está oculto. Mantén visible data-pagosya-catalog incluso sin productos; el runtime controla su estado vacío y los productos futuros.');
+  });
   it('ignores the runtime second photo that waits for the shopper but still rejects an authored image with no path', async () => {
     const snapshot = (extra: string) => ({ brief: {}, files: [{ path: 'index.html', content: `<html><head><meta charset="utf-8"></head><body><h1>Tienda</h1><div data-pagosya-catalog><article class="menu-item" style="position:relative"><img class="menu-item__image-alt" data-src="assets/second.jpg" alt="" aria-hidden="true" style="position:absolute;width:100%;opacity:0"></article></div>${extra}</body></html>` }] }) as any;
     expect((await captureAgentDraft(snapshot(''), 390)).errors).toEqual([]);
@@ -78,6 +84,16 @@ describe('agent capture', () => {
     const over = page('.hero{position:relative;height:300px}.index{position:absolute;right:20px;bottom:20px;margin:0;font-size:32px}.cta{position:absolute;right:20px;bottom:20px;padding:12px 24px}', '<section class="hero"><a class="cta" href="#">Abrir pedido</a><p class="index">01 / MH</p></section>');
     expect((await captureAgentDraft(over, 1280)).errors).toEqual(expect.arrayContaining([expect.stringContaining('«01 / MH» sobre «Abrir pedido»')]));
   });
+  // BAEK 2026-10-23: a card's «Nuevo» badge scrolled under the kit's viewport-pinned «Contacto» launcher failed four
+  // verifies in a row and threw away a finished edit. A floating control rides over the page by design; text in the same
+  // fixed bar as the control is still a real overlap.
+  it('does not count page text that only scrolls under a fixed control, but still reports an overlap inside a fixed bar', async () => {
+    const page = (css: string, body: string) => ({ brief: {}, files: [{ path: 'index.html', content: `<html><head><meta charset="utf-8"><style>${css}</style></head><body><h1>Pan</h1>${body}</body></html>` }] }) as any;
+    const floating = page('main{height:2000px}.card{position:fixed;right:30px;bottom:30px;width:200px;height:120px}.badge{position:absolute;right:0;bottom:0;margin:0}.launcher{position:fixed;right:24px;bottom:24px;z-index:9;padding:12px 20px}', '<main><article class="card"><p class="badge">Nuevo</p></article></main><section class="contact"><button class="launcher" type="button">Contacto</button></section>');
+    expect((await captureAgentDraft(floating, 390)).errors.filter(e => /Texto encima/.test(e))).toEqual([]);
+    const bar = page('header{position:fixed;top:0;left:0;right:0;height:60px}.stamp{position:absolute;left:100px;top:20px;margin:0}header a{position:absolute;left:96px;top:16px;padding:8px}', '<header><a href="#visita">Visítanos</a><p class="stamp">빵집</p></header>');
+    expect((await captureAgentDraft(bar, 1280)).errors).toEqual(expect.arrayContaining([expect.stringContaining('«빵집» sobre «Visítanos»')]));
+  });
   // PEPPA please 2026-10-20: the older checkout form was pasted over the kit's, so every [data-part] check came back
   // empty and the account theme being edited never showed in the agent's own screenshots.
   it('lets the kit draw the themed account form, so [data-part] checks see it', async () => {
@@ -89,6 +105,15 @@ describe('agent capture', () => {
       { id: 'r2', description: 'La tarjeta sin borde', page: 'acceso-registro.html', check: 'style', selector: '[data-account-gate] [data-part="card"]', expected: 'border-top-width:0px' },
     ]);
     expect(shot.evidence.map(e => [e.id, e.passed])).toEqual([['r1', true], ['r2', true]]);
+  });
+  // BAEK 2026-10-23: YAPI's identity wrote `.es{--es-paper:var(--store-background)}` over Esencial's `.es{--store-background:
+  // var(--es-paper)}`. The two point at each other, so both resolve to nothing and the menu panel, header and cart lost their
+  // background: the side menu opened transparent over the page.
+  it('names colour variables that point at each other, but not an ordinary chain', async () => {
+    const page = (css: string) => ({ brief: {}, files: [{ path: 'index.html', content: `<html><head><meta charset="utf-8"><style>:root{--store-background:#f3ebdd}${css}.menu{background:var(--es-paper)}</style></head><body><div class="es"><h1>Pan</h1><nav class="menu">Panes</nav></div></body></html>` }] }) as any;
+    expect((await captureAgentDraft(page('.es{--store-background:var(--es-paper)}.es{--es-paper:var(--store-background)}'), 390)).errors)
+      .toEqual(expect.arrayContaining([expect.stringContaining('Variables de color sin valor en «.es»: --store-background, --es-paper')]));
+    expect((await captureAgentDraft(page('.es{--es-paper:var(--store-background);--es-ink:var(--es-paper);--es-gap: }'), 390)).errors).toEqual([]);
   });
   it('compiles an edited draft over the store runtime and screenshots it on a phone', async () => {
     const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, literalTemplateSource('pausa'));

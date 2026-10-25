@@ -3,7 +3,9 @@ import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
 import { Readable } from "stream";
-import { BadRequestException, Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, OnModuleInit, Optional } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
+import { PrismaService } from "../prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
@@ -183,7 +185,7 @@ export class UploadsService implements OnModuleInit {
   private readonly s3: S3Client | null;
   private readonly bucket: string;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(private readonly config: ConfigService, @Optional() private readonly prisma?: PrismaService) {
     this.bucket = config.get<string>("app.objectStorage.bucket") ?? "";
     const endpoint = config.get<string>("app.objectStorage.endpoint") ?? "";
     const accessKeyId = config.get<string>("app.objectStorage.accessKeyId") ?? "";
@@ -354,11 +356,32 @@ export class UploadsService implements OnModuleInit {
     return fs.existsSync(this.resolvePath(filename));
   }
 
+  /** The upload files a store, product, category or the merchant's media library still uses. 2026-10-24: 488 of 1,350 dev photos
+   *  were gone because a delete removed files a catalogue copy or the media library still used. A failed lookup keeps everything. */
+  private async stillUsed(filenames: string[]): Promise<Set<string> | null> {
+    if (!this.prisma || !filenames.length) return new Set();
+    const patterns = filenames.map((name) => `%/${name}`);
+    try {
+      const rows = await this.prisma.$queryRaw<Array<{ name: string }>>(Prisma.sql`
+        SELECT DISTINCT regexp_replace(u, '^.*/', '') AS name FROM (
+          SELECT url AS u FROM "MediaAsset"
+          UNION ALL SELECT unnest("imageUrls") FROM "PaymentLink"
+          UNION ALL SELECT unnest(ARRAY["logoUrl", "bannerUrl", "backgroundImageUrl", "aboutImageUrl"]) FROM "Store"
+          UNION ALL SELECT "bannerUrl" FROM "Category"
+        ) refs WHERE u LIKE ANY(${patterns}::text[])`);
+      return new Set(rows.map((row) => row.name));
+    } catch (error) {
+      this.logger.warn(`Kept ${filenames.length} upload(s): could not check who still uses them (${(error as Error).message})`);
+      return null;
+    }
+  }
+
+  /** Deletes upload files nothing else still uses (see `stillUsed`). */
   async deleteFiles(urls: (string | null | undefined)[]): Promise<void> {
-    await Promise.all(urls.map(async (url) => {
-      if (!url) return;
-      const filename = url.split("/").pop();
-      if (!filename || !UPLOAD_FILENAME_PATTERN.test(filename)) return;
+    const filenames = [...new Set(urls.flatMap((url) => { const name = url?.split("/").pop(); return name && UPLOAD_FILENAME_PATTERN.test(name) ? [name] : []; }))];
+    const used = await this.stillUsed(filenames);
+    if (!used) return;
+    await Promise.all(filenames.filter((filename) => !used.has(filename)).map(async (filename) => {
       try {
         if (this.s3) await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: filename }));
         else await fs.promises.unlink(this.resolvePath(filename));

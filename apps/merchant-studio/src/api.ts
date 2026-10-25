@@ -183,6 +183,11 @@ export class MerchantStudioApi {
   listStores(): Promise<MerchantStore[]> {
     return this.request("/stores");
   }
+  /** YAPI's store news (owner 2026-10-22) reads the same figures the dashboard's Inicio shows. */
+  storeFinances(storeId: string): Promise<any> { return this.request(`/merchants/finances?storeId=${encodeURIComponent(storeId)}`); }
+  storeOrders(storeId: string): Promise<any[]> { return this.request(`/merchants/orders?storeId=${encodeURIComponent(storeId)}`); }
+  storeProducts(storeId: string): Promise<any[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/payment_links`); }
+  abandonedCarts(storeId: string): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/abandoned-carts?days=7`); }
 
   businessWorkspace(storeId: string, path = '', method = 'GET', body?: unknown): Promise<any> { return this.request(`/stores/${encodeURIComponent(storeId)}/email-workspace${path}`, {method,...(body === undefined ? {} : {body:JSON.stringify(body)})}); }
   integrationConnections(storeId: string): Promise<any[]> { return this.request(`/stores/${encodeURIComponent(storeId)}/operations/integrations`); }
@@ -328,14 +333,21 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/conversation`);
   }
 
-  async sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string, selection?: { sectionId: string }, currentPage?: string, onAccepted?: (job: SourceChatJob) => void, options?: { resumeDraft?: boolean; stylePick?: { generationId: string; index?: number; auto?: boolean }; onUpdate?: (job: SourceChatJob) => void }): Promise<SourceChatResult> {
-    const job = await this.request<SourceChatJob>(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}), ...(selection ? { selection } : {}), ...(currentPage ? { currentPage } : {}), ...(options?.resumeDraft ? { resumeDraft: true } : {}), ...(options?.stylePick ? { stylePick: options.stylePick } : {}) }) });
+  async sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string, selection?: { sectionId: string }, currentPage?: string, onAccepted?: (job: SourceChatJob) => void, options?: { resumeDraft?: boolean; stylePick?: { generationId: string; index?: number; auto?: boolean }; planId?: string; onUpdate?: (job: SourceChatJob) => void }): Promise<SourceChatResult> {
+    const job = await this.request<SourceChatJob>(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}), ...(selection ? { selection } : {}), ...(currentPage ? { currentPage } : {}), ...(options?.resumeDraft ? { resumeDraft: true } : {}), ...(options?.stylePick ? { stylePick: options.stylePick } : {}), ...(options?.planId ? { planId: options.planId } : {}) }) });
     onAccepted?.(job);
     return this.waitSourceChatJob(storeId, job, options?.onUpdate);
   }
 
   styleProposal(storeId: string): Promise<{ proposal: import('./source-style-pick').StyleProposalView | null }> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/style-proposal`);
+  }
+  /** «Probar otro estilo» (spec 2026-10-24 §2): the next-best starters while the store is still on its first build. */
+  starterAlternatives(storeId: string): Promise<{ current: string | null; alternatives: import('./source-starter-swap').StarterAlternative[] }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/starters/alternatives`);
+  }
+  swapStarter(storeId: string, starterId: string, revision: number): Promise<{ revision: number }> {
+    return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/starters/${encodeURIComponent(starterId)}`, { method: 'POST', body: JSON.stringify({ revision }) });
   }
   /** Stops YAPI's background polish (spec 2026-10-12), when the merchant starts editing. */
   cancelSourceReview(storeId: string): Promise<{ cancelled: boolean }> {

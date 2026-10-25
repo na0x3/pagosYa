@@ -42,3 +42,11 @@ describe('natural language request profile', () => {
     expect(prompt).toContain('Current request copy:\nCambia la marquesina a una con patitas y animaciones');
   });
 });
+
+// Live 2026-10-23 (goodProtein): YAPI's redesign brief said «crea una sección por marca … productos» and was read as a
+// content change, so the redesign was told it had no visual domains. A redesign the words ask for is a redesign.
+it('an explicit redesign stays a full redesign even when it also names products', () => {
+  const profile = sourceRequestProfile('Rediseña la tienda con la misma sensación que una tienda deportiva. Sigue esta estructura:\n- Marcas: crea una sección por marca con sus productos reales.', true);
+  expect(profile.scope).toBe('full-redesign');
+  expect(profile.visualDomains.length).toBeGreaterThan(5);
+});

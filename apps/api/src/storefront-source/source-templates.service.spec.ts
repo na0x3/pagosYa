@@ -371,12 +371,12 @@ describe('plan card final review fixes (2026-10-22)', () => {
 
 // Starters (spec 2026-10-24): a starter that extends Esencial is built from its own files with its own look, and keeps the brand.
 describe('applyMaster from a starter', () => {
-  function starter(brandConfirmed: Array<{ field: string; value: string }> = []) {
+  function starter(brandConfirmed: Array<{ field: string; value: string }> = [], dice?: Record<string, string[]>) {
     const real = jest.requireActual('@pagosya/store-templates');
     const esencial = real.templateManifest('esencial');
     const dulce = { id: 'dulce', name: 'Dulce', category: 'comida', description: 'Dulces.', tags: [], sitePurpose: 'shop', order: 900, extends: 'esencial',
       preset: { palette: esencial.master.palettes[1].id, fonts: esencial.master.fonts[1].id, variants: { hero: esencial.master.variants.hero[0] } },
-      starter: { description: 'Postres y dulces.', fits: ['postres', 'dulces', 'tortas'], order: 1 }, photos: esencial.photos };
+      starter: { description: 'Postres y dulces.', fits: ['postres', 'dulces', 'tortas'], order: 1, ...(dice ? { dice } : {}) }, photos: esencial.photos };
     const own = () => real.templateSourceFiles('esencial').map((file: { path: string; content: string }) => file.path === 'components/home.tsx' ? { ...file, content: `// dulce home\n${file.content}` } : file);
     const projects = { current: jest.fn(async () => ({ slug: 'dulce', revision: 0, updatedAt: null })), version: jest.fn(async () => ({ snapshot: { brief: undefined, files: [] } })), save: jest.fn(async (_m: string, _s: string, input: any) => ({ revision: input.revision + 1, label: input.label })) };
     const publicStores = { getStorePublic: jest.fn(async () => publicStore([item])) };
@@ -406,6 +406,106 @@ describe('applyMaster from a starter', () => {
     const { templates, saved } = starter([{ field: 'accent', value: '#123456' }]);
     await templates.applyMaster('m1', 'store-1', 0, async () => null, undefined, undefined, 'dulce');
     expect(readMasterState(saved().files).look?.colors?.accent).toBe('#123456');
+  });
+
+  // Live check 2026-10-24: a swap re-pointed the hero at /v1/uploads; the build's bundled photo files now travel with it.
+  it('keeps photo files a swap carries over, with the hero still pointing at them', async () => {
+    const { templates, saved } = starter();
+    const photo = { path: 'assets/image-1d87bb3f91c7.jpg', content: 'aGVsbG8=', encoding: 'base64' as const };
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Hola' }, heroPhoto: photo.path }), undefined, undefined, 'dulce', [photo]);
+    expect(saved().files.find(f => f.path === photo.path)).toMatchObject({ content: 'aGVsbG8=' });
+    expect(readMasterState(saved().files).photos.hero).toBe(photo.path);
+  });
+
+  it('a starter with dice saves a rolled look over its preset (spec 2026-10-24-starter-dice)', async () => {
+    const real = jest.requireActual('@pagosya/store-templates');
+    const master = real.templateManifest('esencial').master;
+    const dice = { hero: ['framed', 'split-left'], palettes: [master.palettes[2].id, master.palettes[3].id], fonts: [master.fonts[2].id, master.fonts[3].id] };
+    const { templates, saved, dulce } = starter([], dice);
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Hola' } }), undefined, undefined, 'dulce');
+    const state = readMasterState(saved().files);
+    expect(dice.hero).toContain(state.variants?.hero);
+    expect(dice.palettes).toContain(state.look?.palette);
+    expect(dice.fonts).toContain(state.look?.fonts);
+    expect(state.look?.palette).not.toBe(dulce.preset.palette);
+    expect(saved().label).toBe('Estilo: Dulce');
+    expect(saved().brief).toMatchObject({ starterId: 'dulce' });
+  });
+
+  it('brand colours still win over a rolled palette', async () => {
+    const real = jest.requireActual('@pagosya/store-templates');
+    const master = real.templateManifest('esencial').master;
+    const { templates, saved } = starter([{ field: 'accent', value: '#123456' }], { hero: ['framed', 'split-left'], palettes: [master.palettes[2].id, master.palettes[3].id] });
+    await templates.applyMaster('m1', 'store-1', 0, async () => null, undefined, undefined, 'dulce');
+    expect(readMasterState(saved().files).look?.colors?.accent).toBe('#123456');
+  });
+
+  it('plain Esencial never rolls a starter-only palette or font', async () => {
+    const dice = jest.requireActual('./source-master-dice');
+    const rollSpy = jest.spyOn(dice, 'rollVariants');
+    const { templates } = starter();
+    // A starter-only palette and font pair in Esencial's catalogue, as Vitrina's are.
+    const real = jest.requireActual('@pagosya/store-templates');
+    const esencial = real.templateManifest('esencial');
+    const withExtras = { ...esencial, master: { ...esencial.master, palettes: [...esencial.master.palettes, { ...esencial.master.palettes[0], id: 'cereza', starterOnly: true }], fonts: [...esencial.master.fonts, { ...esencial.master.fonts[0], id: 'alegre', starterOnly: true }] } };
+    const lookup = templates.registry.templateManifest;
+    templates.registry = { ...templates.registry, templateManifest: (id: string) => (id === 'esencial' ? withExtras : lookup(id)) };
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Hola' } }));
+    const settings = (rollSpy.mock.calls[0] as any[])[0].settings;
+    expect(settings.palettes.some((p: { starterOnly?: boolean }) => p.starterOnly)).toBe(false);
+    expect(settings.fonts.some((f: { starterOnly?: boolean }) => f.starterOnly)).toBe(false);
+    rollSpy.mockRestore();
+  });
+
+  // Owner 2026-10-24 («make stores fuller … bot, email form on footer»): a new store comes with signup and the store bot on.
+  it('a first build switches on the newsletter signup (no popup on arrival) and the store bot', async () => {
+    const { templates } = starter();
+    const prisma = (templates as any).prisma;
+    prisma.storeRetention = { upsert: jest.fn(async () => ({})) };
+    prisma.storeAssistant = { upsert: jest.fn(async () => ({})) };
+    (templates as any).config = { get: (key: string) => key === 'app.assistant.enabled' ? true : undefined };
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Hola' } }), undefined, undefined, 'dulce');
+    expect(prisma.storeRetention.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { storeId: 'store-1' }, update: {},
+      create: expect.objectContaining({ storeId: 'store-1', settings: expect.objectContaining({ signupEnabled: true, popupTrigger: 'exit' }) }) }));
+    expect(prisma.storeAssistant.upsert).toHaveBeenCalledWith({ where: { storeId: 'store-1' }, create: { storeId: 'store-1', enabled: true }, update: {} });
+  });
+
+  // Owner 2026-10-24 (the NOA atelier's dropdown menu): a merchant who asks for dropdowns gets them on a starter too.
+  it('a starter takes the menu style the merchant asked for', async () => {
+    const { templates, saved } = starter([], { hero: ['framed', 'split-left'] });
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Hola' }, menu: { style: 'dropdowns', groups: [] } }), undefined, undefined, 'dulce');
+    expect(readMasterState(saved().files).variants?.menu).toBe('dropdowns');
+  });
+
+  // Owner 2026-10-24 («a blank screen»): when the fill picks no cover photo, a store with photos opens on its first product photo.
+  it('a fill that picks no cover photo still opens on a photo', async () => {
+    const { templates, saved } = starter();
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Hola' }, heroPhoto: '' }), undefined, undefined, 'dulce');
+    expect(readMasterState(saved().files).photos.hero).toBeTruthy();
+  });
+
+  // A/B comparison 2026-10-24: PEPPA's red bottles got a blue accent. With a warm hero photo the cool-accent palettes sit out.
+  it('a warm hero photo never rolls a cool-accent palette', async () => {
+    const sharp = jest.requireActual('sharp');
+    const red = await sharp({ create: { width: 64, height: 64, channels: 3, background: { r: 200, g: 40, b: 30 } } }).jpeg().toBuffer();
+    const hero = { path: 'assets/image-0123456789ab.jpg', content: red.toString('base64'), encoding: 'base64' as const };
+    for (const seed of ['store-1', 'store-2', 'store-3', 'store-4']) {
+      const { templates, saved } = starter([], { hero: ['framed', 'split-left'], palettes: ['cereza', 'limon'] });
+      await templates.applyMaster('m1', seed, 0, async () => ({ copy: { headline: 'Hola' }, heroPhoto: hero.path }), undefined, undefined, 'dulce', [hero]);
+      expect(readMasterState(saved().files).look?.palette).toBe('cereza');
+    }
+  });
+
+  // A/B comparison 2026-10-24: BOXY's logo colours turned Calle (white, sober) terracotta. On a starter the logo only gives the
+  // accent; the starter keeps its own paper and ink.
+  it('a logo gives a starter its accent only, never its paper or ink', async () => {
+    const { templates, saved, dulce } = starter();
+    (templates as any).publicStores.getStorePublic = jest.fn(async () => ({ ...publicStore([item]), logoUrl: '/v1/uploads/logo.png' }));
+    (templates as any).logoPalette = jest.fn(async () => ({ paper: '#9b4a2c', ink: '#fff7f0', accent: '#c0392b', surface: '#7a3a22', onAccent: '#ffffff' }));
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Hola' } }), undefined, undefined, 'dulce');
+    const look = readMasterState(saved().files).look;
+    expect(look?.colors).toEqual({ accent: '#c0392b' });
+    expect(look?.palette).toBe(dulce.preset.palette);
   });
 
   it('refuses a starter that does not exist', async () => {

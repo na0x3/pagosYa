@@ -109,8 +109,8 @@ test("merchant can sign in with a configured Google account", async ({ page }) =
       active: 1,
       currentSessionId: "session_current",
       canManageSessions: true,
-      // Two people already use this account, so the dialog asks who is signing in (spec 2026-10-21 A5).
-      profiles: [{ profileName: "Dueño" }, { profileName: "Ana" }],
+      // One owner per account (2026-10-22): the last real name the account used, never a «who is signing in» question.
+      profiles: [{ profileName: "María José" }],
       sessions: [{ id: "session_current", ...selectedProfile, isPrimary: true, current: true, createdAt: "2026-08-21T12:00:00.000Z", expiresAt: "2026-08-22T12:00:00.000Z" }],
     };
     if (path === "/dashboard/sessions/session_current" && request.method() === "PATCH") {
@@ -122,18 +122,14 @@ test("merchant can sign in with a configured Google account", async ({ page }) =
   await page.goto("/");
   await page.locator("#fakeGoogleButton").click();
 
-  await expect(page.locator("#sessionProfileDialog")).toBeVisible();
-  // A profile is a name; its picture is the name's initials, with nothing to choose.
-  await expect(page.locator("#sessionProfileDialog [data-login-avatar]")).toHaveCount(0);
-  await page.locator("#sessionProfileName").fill("María José");
-  await page.locator("#sessionProfileContinue").click();
+  await expect(page.locator("#sessionProfileDialog")).toHaveCount(0);
   await expect(page.locator("#app")).toBeVisible();
   await expect(page.locator("#profileMenuTrigger")).toBeVisible();
   await expect(page.locator("#logout")).not.toBeVisible();
   await page.locator("#profileMenuTrigger").click();
   await expect(page.locator("#profileMenu")).toBeVisible();
   await expect(page.locator("#loggedInAs")).toContainText("owner@gmail.com");
-  await expect(page.locator("#profileSessionCount")).toHaveText("1 / 3");
+  await expect(page.locator("#profileSessions")).toHaveText("Abierta solo en este dispositivo");
   await expect(page.locator("#profileDisplayName")).toHaveText("María José");
   await expect(page.locator("#profileTriggerAvatar")).toHaveText("MJ");
   await expect(page.locator("#profileMenuAvatar")).toHaveText("MJ");
@@ -141,7 +137,7 @@ test("merchant can sign in with a configured Google account", async ({ page }) =
   await page.locator("#moneyVisibilityToggle").click();
   await expect(page.locator("#moneyVisibilityLabel")).toHaveText("Mostrar montos");
   expect(requests).toContainEqual({ path: "/dashboard/google", method: "POST", body: { credential: "google-id-token" } });
-  expect(requests).toContainEqual({ path: "/dashboard/sessions/session_current", method: "PATCH", body: { profileName: "María José", profileAvatarId: 1 } });
+  expect(requests.some((entry) => entry.method === "PATCH")).toBe(false);
   expect(await page.evaluate(() => sessionStorage.getItem("pagosya_merchant_session"))).toBe("dash_google");
 });
 
@@ -169,7 +165,7 @@ test("merchant deletion requires typed confirmation and clears the session", asy
   expect(await page.evaluate(() => sessionStorage.getItem("pagosya_merchant_session"))).toBeNull();
 });
 
-test("profile menu can close another active session", async ({ page }) => {
+test("profile menu closes the owner's other devices", async ({ page }) => {
   await page.addInitScript(() => {
     if (window !== window.top) return; // sandboxed email previews cannot read storage
     sessionStorage.setItem("pagosya_merchant_session", "dash_test");
@@ -194,47 +190,29 @@ test("profile menu can close another active session", async ({ page }) => {
   await page.goto("/");
   if (await page.locator("dialog[open]").count()) await page.locator("dialog[open]").evaluate((dialog) => dialog.close());
   await page.locator("#profileMenuTrigger").click();
-  await expect(page.locator("#profileSessionCount")).toHaveText("2 / 3");
-  await expect(page.locator(".profile-session-current")).toHaveText("Esta sesión");
-  await page.locator('[data-revoke-session="session_other"]').click();
+  await expect(page.locator("#profileSessions")).toContainText("Abierta en 2 dispositivos");
+  await expect(page.locator("#profileMenu")).not.toContainText("Ana");
+  await page.locator("[data-close-other-sessions]").click();
 
   await expect.poll(() => requests.some((entry) => entry.path === "/dashboard/sessions/session_other" && entry.method === "DELETE")).toBe(true);
 });
 
-test("main session can rename another logged-in profile", async ({ page }) => {
+test("design mode: the Studio's design-focus covers the dashboard and never outlives the session", async ({ page }) => {
   await page.addInitScript(() => {
-    if (window !== window.top) return; // sandboxed email previews cannot read storage
-    sessionStorage.setItem("pagosya_merchant_session", "dash_main");
+    if (window !== window.top) return;
+    sessionStorage.setItem("pagosya_merchant_session", "dash_test");
     sessionStorage.setItem("pagosya_merchant_email", "owner@example.com");
   });
-  let otherProfile = { profileName: "Invitado", profileAvatarId: 2 };
-  const requests = await mockDashboardApi(page, ({ path, request }) => {
-    if (path === "/dashboard/sessions" && request.method() === "GET") return {
-      limit: 3,
-      active: 2,
-      currentSessionId: "session_main",
-      canManageSessions: true,
-      sessions: [
-        { id: "session_main", profileName: "Dueño", profileAvatarId: 1, isPrimary: true, current: true, createdAt: "2026-08-21T02:15:00.000Z", expiresAt: "2026-08-22T02:15:00.000Z" },
-        { id: "session_other", ...otherProfile, isPrimary: false, current: false, createdAt: "2026-08-20T16:30:00.000Z", expiresAt: "2026-08-21T16:30:00.000Z" },
-      ],
-    };
-    if (path === "/dashboard/sessions/session_other" && request.method() === "PATCH") {
-      otherProfile = request.postDataJSON();
-      return { session: { id: "session_other", ...otherProfile, isPrimary: false } };
-    }
-  });
-
+  await mockDashboardApi(page);
   await page.goto("/");
-  if (await page.locator("dialog[open]").count()) await page.locator("dialog[open]").evaluate((dialog) => dialog.close());
-  await page.locator("#profileMenuTrigger").click();
-  await page.locator('[data-edit-session="session_other"]').click();
-  await page.locator('[data-session-edit-form="session_other"] input[name="profileName"]').fill("Carlos");
-  await expect(page.locator('[data-session-edit-form="session_other"] [data-edit-avatar]')).toHaveCount(0);
-  await page.locator('[data-session-edit-form="session_other"] button[type="submit"]').click();
-
-  await expect(page.locator(".profile-session-row", { hasText: "Carlos" })).toBeVisible();
-  await expect(page.locator(".profile-session-row", { hasText: "Carlos" }).locator(".profile-session-avatar")).toHaveText("C");
-  // The API still stores an avatar number; renaming keeps the one the session had.
-  expect(requests).toContainEqual({ path: "/dashboard/sessions/session_other", method: "PATCH", body: { profileName: "Carlos", profileAvatarId: 2 } });
+  await expect(page.locator("#app")).toBeVisible();
+  const post = (data) => page.evaluate((payload) => {
+    const frame = document.getElementById("merchantStudioFrame");
+    window.dispatchEvent(new MessageEvent("message", { data: payload, origin: location.origin, source: frame.contentWindow }));
+  }, data);
+  await post({ type: "pagosya:design-focus", open: true });
+  await expect(page.locator("body")).toHaveClass(/design-focus/);
+  await post({ type: "pagosya:session-expired" });
+  await expect(page.locator("body")).not.toHaveClass(/design-focus/);
 });
+

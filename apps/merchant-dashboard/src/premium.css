@@ -177,3 +177,21 @@ body.is-logged-in .restock-row { display: grid; grid-template-columns: minmax(0,
 body.is-logged-in .restock-name { font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 body.is-logged-in .restock-left { color: var(--pg-text-muted); font-size: 14px; }
 body.is-logged-in .restock-left.is-out { color: var(--pg-error); font-weight: 550; }
+
+/* One owner, minimal profile menu (owner 2026-10-22): a plain light popover, no band, no session cards. */
+body.is-logged-in .profile-menu { width: min(320px, calc(100vw - 24px)); padding: 0; overflow: hidden; }
+body.is-logged-in .profile-menu-head { grid-template-columns: 40px minmax(0, 1fr) 32px; gap: 12px; padding: 18px 18px 14px; background: none; border: 0; color: var(--pg-text, #18181b); }
+body.is-logged-in .profile-menu-main-avatar { width: 40px; height: 40px; border: 0; background: var(--pg-surface-muted, #f4f4f5); }
+body.is-logged-in .profile-menu-main-avatar .profile-initials { font-size: 15px; }
+body.is-logged-in .profile-identity strong { font-size: 15px; font-weight: 600; letter-spacing: -.01em; text-transform: none; }
+body.is-logged-in .profile-identity span { display: block; margin-top: 2px; overflow: hidden; color: var(--pg-text-muted, #71717a); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+body.is-logged-in .profile-menu-close { width: 32px; height: 32px; padding: 6px; background: none; border: 0; border-radius: 999px; box-shadow: none; color: var(--pg-text-muted, #71717a); }
+body.is-logged-in .profile-menu-close:hover { background: var(--pg-surface-muted, #f4f4f5); color: var(--pg-text, #18181b); }
+body.is-logged-in .profile-menu-actions { display: grid; gap: 2px; padding: 6px; border-top: 1px solid var(--pg-border, #e7e5e4); }
+body.is-logged-in #profileMenu .profile-menu-actions > button { justify-content: flex-start; gap: 10px; min-height: 38px; padding: 0 12px; background: none; border: 0; border-radius: 10px; box-shadow: none; color: var(--pg-text, #18181b); font-size: 14px; font-weight: 500; text-transform: none; }
+body.is-logged-in #profileMenu .profile-menu-actions > button:hover { background: var(--pg-surface-muted, #f4f4f5); transform: none; }
+body.is-logged-in .profile-menu-actions > button svg { width: 16px; height: 16px; color: var(--pg-text-muted, #71717a); }
+body.is-logged-in #profileMenu .profile-menu-actions > .account-delete-trigger { min-height: 32px; color: #b42318; font-size: 13px; }
+body.is-logged-in .profile-menu-actions > .account-delete-trigger svg { color: currentColor; }
+body.is-logged-in .profile-devices { margin: 6px 6px 2px; padding-top: 10px; border-top: 1px solid var(--pg-border, #e7e5e4); color: var(--pg-text-muted, #71717a); font-size: 12.5px; line-height: 1.5; }
+body.is-logged-in #profileMenu .profile-devices button { display: inline; width: auto; min-height: 0; border-radius: 0; padding: 0; background: none; border: 0; box-shadow: none; color: var(--pg-text, #18181b); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

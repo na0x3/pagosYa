@@ -29,6 +29,11 @@ describe("Independent source artifacts", () => {
     const invalid = sourceProjectSnapshot({ ...sourceFixture(), brief: { ...sourceFixture().brief, templateId: '../x', templateRevision: 0 } as any });
     expect(invalid.brief).toEqual(sourceFixture().brief);
   });
+  // Live check 2026-10-24: the save dropped starterId, so «Probar otro estilo» could not tell which starter a store came from.
+  it('keeps the starter a store was built from, and drops an unsafe one', () => {
+    expect(sourceProjectSnapshot({ ...sourceFixture(), brief: { ...sourceFixture().brief, starterId: 'calle' } }).brief).toMatchObject({ starterId: 'calle' });
+    expect(sourceProjectSnapshot({ ...sourceFixture(), brief: { ...sourceFixture().brief, starterId: '../x' } as any }).brief).toEqual(sourceFixture().brief);
+  });
   it('holds the files of a template store with its standard pages: up to 250 files, not one more', () => {
     const many = (count: number) => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, ...Array.from({ length: count - sourceFixture().files.length }, (_, i) => ({ path: `components/pages/p${i}.tsx`, content: 'x' }))] });
     expect(() => many(250)).not.toThrow();

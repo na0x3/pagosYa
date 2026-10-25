@@ -127,6 +127,31 @@ describe('offer squares', () => {
     expect(q('[data-pagosya-product] [data-offer-square="pack:2"]')).not.toBeNull();
   });
 
+  it('a label that only repeats the title gives way to «Mejor precio» (owner 2026-10-23: «CADA MES» over «Cada mes»)', async () => {
+    const { q } = await page({ items: [coffee({ subscriptionOptions: [{ cadence: 'MONTHLY', discountPercent: 15, label: 'Cada mes' }] })] });
+    const square = q('[data-pagosya-product] [data-offer-square="sub:MONTHLY"]');
+    expect(square.querySelector('.offer-square__title').textContent).toBe('Cada mes');
+    expect(square.querySelector('.offer-square__tag').textContent).toBe('Mejor precio');
+  });
+
+  it('friendly words inside: 1 unidad is «Para probar», a subscription says it arrives by itself', async () => {
+    const { q } = await page({ items: [coffee({ subscriptionOptions: [{ cadence: 'MONTHLY', discountPercent: 15 }] })] });
+    expect(q('[data-pagosya-product] [data-offer-square="once:1"] .offer-square__line').textContent).toBe('Para probar');
+    expect(q('[data-pagosya-product] [data-offer-square="sub:MONTHLY"] .offer-square__line').textContent).toBe('Te llega sola · cancela cuando quieras');
+  });
+
+  it('round and warm whatever the store radius: never square, the picked one a warm tint, never a solid block (owner 2026-10-23)', async () => {
+    const { w } = await page({ settings: { bundles: [pack(2, 10)] } });
+    const css = [...w.document.querySelectorAll('style')].map((style: any) => style.textContent).join('');
+    expect(css).toMatch(/\.offer-square\{[^}]*border-radius:18px/);
+    expect(css).not.toMatch(/\.offer-square\{[^}]*border-radius:var\(--pd-radius/);
+    expect(css).toMatch(/\.offer-square\{[^}]*background:color-mix\(in srgb,var\(--offer-warm\)/);
+    expect(css).toMatch(/\.offer-square\[aria-checked=true\]\{[^}]*background:color-mix\(in srgb,var\(--pd-accent\)/);
+    expect(css).not.toMatch(/\.offer-square\[aria-checked=true\]\{[^}]*background:var\(--pd-accent\)/);
+    expect(css).not.toMatch(/\.offer-square\[aria-checked=true\]\{[^}]*inset/);
+    expect(css).toMatch(/\.offer-square__save\{[^}]*border-radius:99px/);
+  });
+
   it('long labels never widen the square — Review Focus 5', async () => {
     const { w } = await page({ settings: { bundles: [pack(2, 10, { label: 'El favorito de la casa!' })] } });
     const css = [...w.document.querySelectorAll('style')].map((style: any) => style.textContent).join('');

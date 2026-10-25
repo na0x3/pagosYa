@@ -1,0 +1,41 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvlllqmr0001b0vqv6s4d5kl",
+  "slug": "nykzd29i",
+  "photos": {
+    "4be456a2e973560c3bf1ee4ec56c71f3.jpg": "/v1/uploads/2da0031b-1e0f-4e82-a7a3-28ecab2903c6.jpg",
+    "73c866436950ae6bf59f31a6abc935a2.jpg": "/v1/uploads/1bd33697-c18a-4076-ba7a-7b486b794313.jpg",
+    "7678c5c5da3c90d9a567db7d62dd65f8.jpg": "/v1/uploads/ed91a8b4-c6d5-4a43-b234-f62da11f20fc.jpg",
+    "98d044f2c43fa474a808f0bd7f87d9fa.jpg": "/v1/uploads/f5bb55a2-c70b-425e-bdee-03532094c254.jpg",
+    "d1da82a1b1a4a4219b122d8a547ce25a.jpg": "/v1/uploads/790aa124-f884-452a-85a6-9a2a1f4bb9ef.jpg",
+    "dc25c70c7cd63986310d5a46d4549158.jpg": "/v1/uploads/b460e41b-3215-4300-8075-99f65bff900f.jpg",
+    "ee8e49e17d5ff2dae518b8974ae95a8a.jpg": "/v1/uploads/92d5e1d5-ae27-491e-9d1c-28f95e36c47a.jpg",
+    "3EE9BA51-FD2E-4778-BA3E-A9EBDA8D9682.mp4": "/v1/uploads/d2354b83-d7a4-40a8-b16d-525a0f1320bf.mp4",
+    "logo.jpg": "/v1/uploads/f77b1cb8-e38e-4a86-89a3-2f2498df4abb.jpg",
+    "wordmark.jpg": "/v1/uploads/4e6a55c4-25b5-4833-994c-723233c77a3e.jpg",
+    "flavour-0.jpg": "/v1/uploads/3fd4654c-ecab-4b25-b5b9-b4250e302897.jpg",
+    "flavour-1.jpg": "/v1/uploads/a0bbd4a0-961b-4bd9-84eb-cf9f196b1e75.jpg",
+    "flavour-2.jpg": "/v1/uploads/aedfb9c5-0642-44ae-8372-5e31bf1c58d9.jpg",
+    "flavour-3.jpg": "/v1/uploads/d2f6b450-70e7-4ed2-905f-27c0a0be5c87.jpg",
+    "flavour-4.jpg": "/v1/uploads/a4c7f26f-7377-4d52-bd72-10b32e022009.jpg"
+  },
+  "categories": {
+    "Sodas": "cmvlllqzj000xb0vqf2k0hflr",
+    "Packs": "cmvlllqzl000zb0vqdwv770jh",
+    "Regalos": "cmvlllqzl0011b0vqh1jv9gs4"
+  },
+  "products": {
+    "Oh Belly soda prebiótica": "cmvlllqzu0013b0vq9107cvjq",
+    "Pack surtido x6": "cmvlllr0i0015b0vq0buqirop",
+    "Caja nevera x12": "cmvlllr0m0017b0vqylfgpvdk",
+    "Caja regalo Oh Belly": "cmvlllr0q0019b0vqro0acl4i",
+    "Póster Oh Belly": "cmvlllr0u001bb0vq90rsbp2j"
+  },
+  "done": {
+    "settings": true,
+    "subscriptions": true,
+    "promo-codes": true,
+    "recommendations": true,
+    "shipping": true
+  }
+}

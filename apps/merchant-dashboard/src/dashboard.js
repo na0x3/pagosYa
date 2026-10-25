@@ -1,5 +1,6 @@
 // Merchant dashboard behavior. The current website editor is mounted in Studio.
 import { createStoreBody } from "/src/create-store.mjs";
+import { designFocus } from "/src/design-focus.mjs";
 import { runWalkthrough, showWalkthroughChoice, showWalkthroughMode, walkthroughEntry } from "/src/onboarding-walkthrough.mjs";
 import { mountCobrosPanel } from "/src/cobros-panel.mjs";
 import { mountSubscriptionsPanel } from "/src/subscriptions-panel.mjs";
@@ -57,14 +58,6 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   const accountAvatarEl = document.getElementById("accountAvatar");
   const profileDisplayNameEl = document.getElementById("profileDisplayName");
   const profileSessionsEl = document.getElementById("profileSessions");
-  const profileSessionCountEl = document.getElementById("profileSessionCount");
-  const sessionProfileDialogEl = document.getElementById("sessionProfileDialog");
-  const sessionProfileFormEl = document.getElementById("sessionProfileForm");
-  const sessionProfileExistingEl = document.getElementById("sessionProfileExisting");
-  const sessionProfileChoicesEl = document.getElementById("sessionProfileChoices");
-  const sessionProfileNameEl = document.getElementById("sessionProfileName");
-  const sessionProfileErrorEl = document.getElementById("sessionProfileError");
-  const sessionProfileContinueEl = document.getElementById("sessionProfileContinue");
 
   // In production the API base is the server's: a saved developer value is never used (security audit 2026-10-21).
   const savedApiBase = document.documentElement.hasAttribute("data-production") ? null : sessionStorage.getItem("pagosya_merchant_api_base");
@@ -74,10 +67,10 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   let sessionToken = sessionStorage.getItem("pagosya_merchant_session") || "";
   let currentProfileName = "";
   let lastProfileSessionsPayload = null;
-  // Perfil y sesiones: the profile menu, active sessions and the profile picker after login (src/profile-sessions.mjs).
+  // Perfil: the owner's profile menu and devices line (src/profile-sessions.mjs).
   const profilePanel = createProfileSessions({
     api, setButtonBusy, emailEl,
-    elements: { loggedInAsEl, profileMenuEl, profileMenuTriggerEl, profileTriggerAvatarEl, profileMenuAvatarEl, accountAvatarEl, profileDisplayNameEl, profileSessionsEl, profileSessionCountEl, sessionProfileDialogEl, sessionProfileFormEl, sessionProfileExistingEl, sessionProfileChoicesEl, sessionProfileNameEl, sessionProfileErrorEl, sessionProfileContinueEl },
+    elements: { loggedInAsEl, profileMenuEl, profileMenuTriggerEl, profileTriggerAvatarEl, profileMenuAvatarEl, accountAvatarEl, profileDisplayNameEl, profileSessionsEl },
     profileName: () => currentProfileName,
     setProfileName: (name) => { currentProfileName = name; },
     profileSessionsPayload: () => lastProfileSessionsPayload,
@@ -459,6 +452,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   // Removing src leaves the old page on screen: the previous store's editor (its YAPI chat) showed until the next store's
   // one booted (owner 2026-10-22). Blank it first; the frame stays same-origin, so its window can be navigated.
   function unloadFrame(frame) {
+    if (frame?.id === "merchantStudioFrame") document.body.classList.remove("design-focus");
     try { frame.contentWindow?.location.replace("about:blank"); } catch { /* A frame that never loaded has nothing to clear. */ }
     frame.removeAttribute("src");
   }
@@ -516,6 +510,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     // Plantillas reads the store's current revision, which the design editor may have changed: reload it on entry.
     if (view === "templates") { const templatesFrame = document.getElementById("storeTemplatesFrame"); templatesFrame.removeAttribute("src"); delete templatesFrame.dataset.storeId; }
     document.body.classList.remove("template-focus");
+    if (view !== "workspace") document.body.classList.remove("design-focus");
     syncStoreResourceViews(view);
     const store = lastStores.find(candidate => candidate.id === currentStoreId);
     const views = ["workspace", "products", "charge-links", "payments", "compliance"];
@@ -552,6 +547,9 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
       if (pendingStudioAction?.action === "compose" && !["growth", "ask"].includes(pendingStudioAction.origin)) document.getElementById("workspaceYapiDraft").value = "";
       pendingStudioAction = null; return;
     }
+    // YAPI in design mode (spec 2026-10-22 v2 §6): the Studio covers the dashboard while the merchant designs.
+    const focus = designFocus(event, frame.id);
+    if (focus !== null) { document.body.classList.toggle("design-focus", focus); return; }
     if (event.data?.type === "pagosya:session-expired") { sessionToken = ""; showLoggedOut(); return; }
     if (event.data?.type === "pagosya:workspace" && ["stores", "products", "charge-links", "marketing", "integrations", "experiments", "store-settings"].includes(event.data.view)) {
       // A product name or price double-clicked in the Studio preview (spec 2026-10-20 §6): that product's editor.
@@ -1159,6 +1157,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   function stopLoginShader() { disposeLoginShader?.(); disposeLoginShader = null; }
 
   function showLoggedOut() {
+    document.body.classList.remove("design-focus");
     const studioFrame = document.getElementById("merchantStudioFrame");
     unloadFrame(studioFrame); delete studioFrame.dataset.storeId;
     dashboardRefreshVersion += 1;

@@ -44,7 +44,7 @@ test('subscription popup matches the photo/form reference, remembers dismissal a
   await expect(page.getByRole('button', { name: 'Comunidad', exact: true })).toBeHidden();
 });
 
-test('preview renders Comunidad inline without a fixed control covering storefront copy', async ({ page }) => {
+test('preview draws no in-page signup block and no popup', async ({ page }) => {
   const runtime = readFileSync(kitPath('retention.js'), 'utf8');
   const retention = { ...settings, signupEnabled: true, signupTitle: 'Un lugar para tus favoritos', signupBody: 'Súmate a la comunidad y recibe novedades de la tienda.', signupButton: 'Quiero ser parte', signupVisual: { brand: { name: 'PEANU', background: '#f3eddf', foreground: '#26221c', fontStyle: 'editorial' }, imageUrl: 'https://commerce.example/product.webp' } };
   await page.route('https://commerce.example/product.webp', route => route.fulfill({ body: readFileSync(new URL('./fixtures/retention-product.webp', import.meta.url)), contentType: 'image/webp' }));
@@ -52,12 +52,9 @@ test('preview renders Comunidad inline without a fixed control covering storefro
   await page.setContent('<main><h1>Una tienda que se siente cercana</h1><p>El catálogo conserva su lectura aunque cambie el contenido.</p><section data-pagosya-subscribe></section><footer>Volver pronto</footer></main>');
   await page.addScriptTag({ content: runtime });
   await page.evaluate(retention => (window as any).PAGOSYA_RETENTION_MOUNT({ slug: 'preview-test', preview: true, data: { retention } }), retention);
-  await expect(page.locator('.pagosya-signup-launcher')).toBeVisible();
   await expect(page.locator('dialog')).toHaveCount(0);
-  const metrics = await page.locator('.signup-reopen').evaluate(el => ({ position: getComputedStyle(el).position, disabled: (el as HTMLButtonElement).disabled, top: el.getBoundingClientRect().top, bottom: el.getBoundingClientRect().bottom }));
-  expect(metrics.position).toBe('static');
-  expect(metrics.disabled).toBe(true);
-  expect(metrics.bottom).toBeLessThanOrEqual(await page.evaluate(() => document.body.scrollHeight));
+  await expect(page.locator('[data-pagosya-subscribe]')).toBeEmpty();
+  await expect(page.getByText('Un lugar para tus favoritos')).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });

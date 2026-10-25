@@ -105,3 +105,13 @@ it('reads a gallery request only from the merchant, never from a refusal', () =>
   expect(merchantAsksForPhotoGroup('no quiero ningún mosaico de fotos')).toBe(false);
   expect(merchantAsksForPhotoGroup('Crea una tienda limpia')).toBe(false);
 });
+
+// Owner 2026-10-23 (goodProtein: eight brand marquees in a row): two scrolling strips together at most, one is better.
+it('rejects three scrolling strips in a row on any change, and accepts one or two', async () => {
+  const strip = (name: string) => `<section><div data-pya-motion="marquee"><span>${name} · ${name} · ${name}</span></div></section>`;
+  const text = '<section><h2>Elige tu proteína</h2><p>Tres familias para tu rutina.</p></section>';
+  for (const selected of [policy, undefined]) {
+    expect(await check([strip('A'), strip('B'), strip('C')].join(''), selected)).toEqual(expect.arrayContaining([expect.stringContaining('franjas que se desplazan seguidas')]));
+    expect((await check([strip('A'), strip('B'), text, strip('C')].join(''), selected)).filter(error => error.includes('franjas'))).toEqual([]);
+  }
+});

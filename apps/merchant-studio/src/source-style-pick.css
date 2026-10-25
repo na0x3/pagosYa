@@ -22,3 +22,11 @@
 @media (prefers-reduced-motion: reduce) { .style-card--empty, .style-frame--empty { animation: none; } }
 @keyframes style-pulse { 50% { opacity: .55; } }
 .style-preview__commerce { margin: 14px 0 0; font-size: 13px; line-height: 1.45; color: var(--muted, #666); }
+/* «Probar otro estilo» (spec 2026-10-24 §2): the next-best starters under a new store's first build, in the chat column. */
+.source-starter-swap { display: grid; gap: 10px; margin-top: 12px; }
+.source-starter-swap h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.source-starter-swap .style-grid { gap: 10px; }
+.source-starter-swap .style-card img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; object-position: top; background: var(--line, #f2f2f2); }
+.source-starter-swap .style-card__meta { grid-template-columns: 1fr; padding: 0 10px 10px; }
+.source-starter-swap .style-card__meta small { font-size: 12px; line-height: 1.35; }
+.source-starter-swap .style-card[aria-busy="true"] { border-color: var(--ink, #111); }

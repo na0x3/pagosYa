@@ -3,9 +3,9 @@ import path from "node:path";
 
 const projectRoot = path.resolve(import.meta.dirname, "../../..");
 const uploads = [
-  path.join(projectRoot, "apps/matcho-showcase/public/matcho/hero.png"),
-  path.join(projectRoot, "apps/matcho-showcase/public/matcho/gallery-1.jpg"),
-  path.join(projectRoot, "apps/matcho-showcase/public/matcho/gallery-2.png"),
+  path.join(import.meta.dirname, "fixtures/hero.png"),
+  path.join(import.meta.dirname, "fixtures/gallery-1.jpg"),
+  path.join(import.meta.dirname, "fixtures/gallery-2.png"),
 ];
 
 test("one selection fills all three image slots and checkout requires approval", async ({ page }) => {

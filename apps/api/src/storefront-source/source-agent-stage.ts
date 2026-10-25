@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { agentLabel } from './agent/agent-label';
 import { productRuntimeDna } from './design-engine/product-draw';
 import { BadGatewayException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -176,6 +177,6 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
   live.agentMotifPack = toolbox.pendingMotifPack;
   live.agentPolicies = toolbox.pendingPolicies;
   const summary = toolbox.finished?.summary.trim() || 'Cambios de YAPI';
-  live.generated.label = summary.split('\n')[0].slice(0, 120);
+  live.generated.label = agentLabel(summary);
   live.agentOutcome = { summary, requirements: toolbox.requirements, evidence: toolbox.evidence, sections: toolbox.finished?.sections ?? [], steps: toolbox.steps.map(({ thumbnail: _thumbnail, ...step }) => step) };
 }

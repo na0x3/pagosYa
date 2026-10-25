@@ -179,7 +179,7 @@ describe('Source chat in the existing store conversation infrastructure', () => 
     const { service, generation } = setup();
     generation.generate.mockResolvedValueOnce({ revision: 1, label: 'Portada nueva', agent: { summary: 'Construí tu portada nueva.', sections: ['Portada', 'Productos'], steps: [] } });
     const result = await service.send('m', 's', request);
-    expect(result.assistantMessage.content).toMatch(/^Construí tu portada nueva\.\n\n• Portada\n• Productos\n\nLo revisé en computadora y celular y lo guardé como «/);
+    expect(result.assistantMessage.content).toMatch(/^Construí tu portada nueva\.\n\n• Portada\n• Productos\n\nLo revisé en computadora y celular y lo guardé\. Ya lo ves/);
     expect(result.assistantMessage.metadata).toMatchObject({ agentSummary: 'Construí tu portada nueva.', agentSections: ['Portada', 'Productos'] });
   });
   it('passes the selection to chat and generation and reinterprets after switching providers', async () => {

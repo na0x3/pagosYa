@@ -10,8 +10,9 @@ const file = path => source.find(f => f.path === path)?.content ?? '';
 
 test('esencial is the hidden master template', () => {
   assert.equal(esencial.hidden, true);
-  assert.equal(esencial.master.palettes.length, 16);
-  assert.equal(esencial.master.fonts.length, 14);
+  // Starter-only entries (spec 2026-10-24-starter-dice §2) are Vitrina's; Esencial's own catalogue is what its dice roll.
+  assert.equal(esencial.master.palettes.filter(p => !p.starterOnly).length, 16);
+  assert.equal(esencial.master.fonts.filter(f => !f.starterOnly).length, 14);
   assert.equal(esencial.master.variants.hero.length, 10);
   assert.equal(esencial.master.sections.length, 12);
   assert.deepEqual(esencial.photos.map(p => p.slot), ['hero', 'story', 'p1', 'p2', 'p3', 'p4']);
@@ -135,4 +136,15 @@ test('Esencial rolls card and offer styles, and its card fills the kit fields (s
   const css = file('styles/globals.css');
   for (const id of esencial.master.variants.cards) assert.match(css, new RegExp(`data-es-cards="${id}"`), id);
   assert.match(css, /--store-foreground:var\(--es-ink\)/);
+});
+
+// Owner 2026-10-22 (NOA VARGAS #3): «this button is all blacked out». Dashed buttons are transparent with the band's own
+// colour, but the accent/dark/newsletter closing bands painted .es-btn--light's background after the dashed rule had made
+// its text inherit the same colour: black on black. Inside the hero and the closing band, dashed must also own the background.
+test('a dashed button stays transparent in the hero and every closing band', () => {
+  const css = file('styles/globals.css');
+  const rule = css.match(/\.es\[data-es-button="dashed"\] \.es-hero \.es-btn,\.es\[data-es-button="dashed"\] \.es-closing \.es-btn\{([^}]*)\}/);
+  assert.ok(rule, 'the dashed hero/closing rule exists');
+  assert.match(rule[1], /background:transparent/);
+  assert.match(rule[1], /color:inherit/);
 });

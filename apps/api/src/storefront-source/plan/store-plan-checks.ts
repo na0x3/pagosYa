@@ -4,7 +4,9 @@ import type { StorePlan } from './store-plan';
 export type CatalogFacts = { productNames: string[]; productCount: number; photoCount: number; categorySizes: number[];
   colourProducts: number; colourPhotoProducts: number; sizeProducts: number;
   /** How many photos the plan call was shown; «foto N» is checked against these (final review 2026-10-22). */
-  shownPhotos?: number };
+  shownPhotos?: number;
+  /** The merchant's own words asked for a gallery or collage; otherwise the cover has one photo at most (owner 2026-10-23). */
+  photoGroups?: boolean };
 export type CheckedPlan = { plan: StorePlan; dna: Record<string, string>; variants: Record<string, string>; sections: string[] };
 
 /** Owner 2026-10-22: «no random circles». A reason that names nothing of this store is no reason. */
@@ -27,7 +29,8 @@ export function enforceRules(input: Record<string, string>, facts: CatalogFacts)
   // Owner 2026-10-22: product pages that open on a full-screen photo hide the name, price and buy button.
   if (variants.pdp === 'stacked' || variants.pdp === 'editorial') variants.pdp = 'gallery-left';
   // Photo groups need the photos (and the owner allows them only when asked); a text hero when there are none.
-  if ((variants.hero === 'collage' || variants.hero === 'strip') && facts.photoCount < 3) variants.hero = facts.photoCount ? 'split-right' : 'type';
+  // Owner 2026-10-23: one photo at most on the cover; a collage or strip only when the merchant asks for one.
+  if ((variants.hero === 'collage' || variants.hero === 'strip') && (facts.photoCount < 3 || !facts.photoGroups)) variants.hero = facts.photoCount ? 'split-right' : 'type';
   if (variants.story === 'pair' && facts.photoCount < 2) variants.story = facts.photoCount ? 'split' : 'quote';
   if (variants.filters === 'sidebar' && facts.productCount < 12) variants.filters = 'bar';
   if (facts.productCount >= 12) variants.filters = 'sidebar';
@@ -92,5 +95,7 @@ export function checkPlan(input: StorePlan, facts: CatalogFacts, rolled: Record<
   }
 
   plan.card = cardLines(plan, sections, lines, shown);
+  // The card never promises a photo collage the rules took away (live 2026-10-23: «Portada: collage con las 12 fotos»).
+  if (!facts.photoGroups) plan.card = plan.card.filter(line => !/collage|mosaico|galer[ií]a|\b\d+ fotos\b/i.test(line));
   return { plan, dna, variants, sections: sections.slice(0, 4) };
 }

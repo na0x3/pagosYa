@@ -1,6 +1,6 @@
 import { randomUUID as uuid } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
+import { MASTER_EDIT_RULES, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
 import { sourceRequestContext } from './source-request-context';
 import { sourceMerchantRequest } from './source-merchant-request';
@@ -16,7 +16,8 @@ beforeEach(() => {
   prisma = {
     store: { findFirst: jest.fn().mockResolvedValue({ name: 'Café Buna', logoUrl: null, onboarding: { what: 'Café de especialidad', story: 'Tostamos en casa', contact: { city: 'La Paz' }, photos: ['https://x/u1.jpg'] }, _count: { paymentLinks: 0 }, paymentLinks: [] }), update: jest.fn() },
     storeAgentThread: { findUnique: jest.fn().mockImplementation(async () => ({ id: 't1', messages: [...messages].reverse() })), upsert: jest.fn().mockResolvedValue({ id: 't1' }) },
-    storeAgentMessage: { create: jest.fn().mockImplementation(async ({ data }) => { const message = { ...data, id: String(messages.length), createdAt: new Date() }; messages.push(message); return message; }), update: jest.fn(), delete: jest.fn().mockResolvedValue({}) },
+    storeAgentMessage: { create: jest.fn().mockImplementation(async ({ data }) => { const message = { ...data, id: String(messages.length), createdAt: new Date() }; messages.push(message); return message; }), update: jest.fn(), delete: jest.fn().mockResolvedValue({}),
+      findMany: jest.fn().mockImplementation(async ({ where }) => messages.filter(m => m.threadId === where.threadId && m.role === where.role).reverse()) },
     storeSourceVersion: { count: jest.fn().mockResolvedValue(1) },
     storeSourceGeneration: { findFirst: jest.fn().mockResolvedValue(null), updateMany: jest.fn() },
     storeSourceChatJob: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -62,6 +63,20 @@ it('a specific request without «desde cero» rides on the follow-up too (owner 
   expect(applyMaster).toHaveBeenCalled();
   expect(out.followUp.instruction).toMatch(/^Esta tienda empezó desde la plantilla/);
   expect(out.followUp.instruction).toContain('qué aporta cada marca');
+});
+
+// Energy goes in motion, type and one accent; a merchant who names their colours still gets them.
+it('every design edit keeps the colours calm and the product cards normal-sized (owner 2026-10-22, goodProtein #6: «too colored everywhere»)', () => {
+  expect(MASTER_EDIT_RULES).toMatch(/como mucho un color de acento/);
+  expect(MASTER_EDIT_RULES).toMatch(/no pintes cada sección, bloque o tarjeta de un color distinto/);
+  expect(MASTER_EDIT_RULES).toMatch(/3 o 4 por fila/);
+});
+
+it('the personal touch never invents a dark text-only band (owner 2026-10-22, NOA #3: «i dont like sections like these»)', () => {
+  expect(PERSONAL_TOUCH_BRIEF).toMatch(/foto real/);
+  expect(PERSONAL_TOUCH_BRIEF).toMatch(/fondo claro/);
+  expect(PERSONAL_TOUCH_BRIEF).toMatch(/nunca una banda oscura o negra solo de texto/);
+  expect(PERSONAL_TOUCH_BRIEF).toMatch(/detalle de firma pequeño dentro de una sección que ya existe/);
 });
 
 it('a bare «crea mi tienda» keeps the usual personal touch', async () => {
@@ -228,6 +243,52 @@ describe('edits on a master store', () => {
     expect(refill).not.toHaveBeenCalled();
   });
 
+  it('a vague edit shows a «Hacer cambios» card and changes nothing yet (plan card, 2026-10-22)', async () => {
+    const plans = { draft: jest.fn().mockResolvedValue({ plan: { version: 1, card: ['Portada con el nombre en grande'], revision: 2 }, applied: { variants: { hero: 'type' }, sections: [], palette: 'linen', fonts: 'grotesk', dna: {} }, exhausted: false }), followUpBrief: jest.fn() };
+    chat = new SourceChatService(prisma, (chat as any).projects, generation(), { decide, fillMaster } as any, (chat as any).templates, (chat as any).config, undefined, plans as any);
+    decide.mockResolvedValueOnce({ action: 'generate', reply: '', summary: 's', generationInstruction: 'x', imageUses: [], startFrom: 'unknown', editKind: 'design', vague: true });
+    const out = await edit('Ponlo más bonito');
+    expect(plans.draft.mock.calls[0][2]).toMatchObject({ revision: 2, request: 'Ponlo más bonito', current: { palette: expect.any(String) } });
+    expect(generate).not.toHaveBeenCalled();
+    expect(refill).not.toHaveBeenCalled();
+    expect(out.assistantMessage.metadata.planKind).toBe('edit');
+    expect(out.assistantMessage.content).toMatch(/Esto es lo que voy a cambiar/);
+  });
+
+  it('«Hacer cambios» saves the plan as data in one refill (plan card, 2026-10-22)', async () => {
+    const plans = { draft: jest.fn(), followUpBrief: jest.fn().mockReturnValue(null) };
+    chat = new SourceChatService(prisma, (chat as any).projects, generation(), { decide, fillMaster } as any, (chat as any).templates, (chat as any).config, undefined, plans as any);
+    messages.push({ id: 'plan2bbbb', threadId: 't1', channel: 'source', role: 'ASSISTANT', content: 'plan', metadata: { plan: { version: 1, card: ['Cambio'], revision: 2, custom: [] }, appliedPlan: { variants: { hero: 'type' }, sections: ['faq'], palette: 'linen', fonts: 'grotesk', dna: {} }, planKind: 'edit' }, createdAt: new Date() });
+    const out: any = await chat.send('m1', 's1', { revision: 2, instruction: 'Hacer cambios', planId: 'plan2bbbb', requestId: uuid() });
+    expect(refill.mock.calls[0][3]).toMatchObject({ variants: { hero: 'type' }, look: { palette: 'linen', fonts: 'grotesk' } });
+    // A section the store lacks needs words: the follow-up writes it (final review 2026-10-22).
+    expect(out.followUp?.instruction).toMatch(/«faq»/);
+    expect(out.assistantMessage.content).toMatch(/^Listo: hice los cambios del plan/);
+  });
+
+  it('F7: a vague word on a selected section stays a scoped edit, never a whole-store plan', async () => {
+    const plans = { draft: jest.fn(), followUpBrief: jest.fn() };
+    chat = new SourceChatService(prisma, (chat as any).projects, generation(), { decide, fillMaster } as any, (chat as any).templates, (chat as any).config, undefined, plans as any);
+    decide.mockResolvedValueOnce({ action: 'generate', reply: '', summary: 's', generationInstruction: 'x', imageUses: [], startFrom: 'unknown', editKind: 'design', vague: true });
+    await chat.send('m1', 's1', { revision: 2, instruction: 'mejóralo', selection: { sectionId: 'hero' }, requestId: uuid() });
+    expect(plans.draft).not.toHaveBeenCalled();
+  });
+
+  it('F2: «Hacer cambios» keeps the store\'s colours beside the new accent, saves the swatches and hands new sections to the follow-up', async () => {
+    const plans = { draft: jest.fn(), followUpBrief: jest.fn().mockReturnValue(null) };
+    chat = new SourceChatService(prisma, (chat as any).projects, generation(), { decide, fillMaster } as any, (chat as any).templates, (chat as any).config, undefined, plans as any);
+    const projects = (chat as any).projects;
+    const saved = await projects.version();
+    projects.version.mockResolvedValue({ snapshot: { ...saved.snapshot, files: saved.snapshot.files.map((f: any) => f.path === 'components/store-data.tsx' ? { ...f, content: storeData.replace('"colors":{}', '"colors":{"paper":"#fbf7ef","ink":"#1a1a1a"}') } : f) } });
+    messages.push({ id: 'plan3cccc', threadId: 't1', channel: 'source', role: 'ASSISTANT', content: 'plan', metadata: { plan: { version: 1, card: ['Cambio'], revision: 2, custom: [] }, appliedPlan: { variants: { hero: 'type' }, sections: ['faq', 'journal'], palette: 'linen', fonts: 'grotesk', accent: '#f26b1d', dna: { card: 'swatch-swap' } }, planKind: 'edit' }, createdAt: new Date() });
+    const out: any = await chat.send('m1', 's1', { revision: 2, instruction: 'Hacer cambios', planId: 'plan3cccc', requestId: uuid() });
+    const change = refill.mock.calls[0][3];
+    expect(Object.keys(change.look.colors).length).toBeGreaterThan(1);
+    expect(change.look.colors.accent).toBe('#f26b1d');
+    expect(change.dna).toEqual({ card: 'swatch-swap' });
+    expect(out.followUp?.instruction).toMatch(/journal/);
+  });
+
   it('a design edit goes to the agent with the minimal-edit rules', async () => {
     decided('design');
     generate.mockResolvedValueOnce({ revision: 3, label: 'Reseñas arriba' });
@@ -246,6 +307,16 @@ describe('edits on a master store', () => {
     expect(messages.find(message => message.role === 'USER')?.content).toBe('Toque personal');
   });
 
+  // Owner 2026-10-23: «the model that made PEPPA please back». PEPPA's second step was a full redesign, free to rework the
+  // template, not a minimal edit of its components.
+  it('the PEPPA recipe: a redesign follow-up runs as a full redesign, not a minimal template edit', async () => {
+    generate.mockResolvedValueOnce({ revision: 3, label: 'Rediseño' });
+    await chat.send('m1', 's1', { revision: 2, instruction: 'Rediseña la tienda con una sensación cálida y chunky. Sigue esta estructura: …', personalTouch: true, ownRequest: true, redesign: true, motion: 'expressive', requestId: uuid() } as any);
+    expect(decide).not.toHaveBeenCalled();
+    expect(generate.mock.calls[0][2].instruction).not.toContain('Edita el componente que ya existe');
+    expect(generate.mock.calls[0][2].instruction).toContain('Rediseña la tienda');
+  });
+
   it('a personal touch is skipped when the store moved on', async () => {
     await expect(chat.send('m1', 's1', { revision: 1, instruction: PERSONAL_TOUCH_BRIEF, personalTouch: true, requestId: uuid() })).rejects.toBeInstanceOf(PersonalTouchSkipped);
     expect(generate).not.toHaveBeenCalled();
@@ -257,6 +328,22 @@ describe('edits on a master store', () => {
     await expect(touch()).rejects.toBeInstanceOf(PersonalTouchSkipped);
     expect(messages.filter(message => message.role === 'ASSISTANT')).toHaveLength(0);
     expect(prisma.storeAgentMessage.delete).toHaveBeenCalled();
+  });
+
+  it('the merchant\'s own request on the follow-up fails out loud and is kept for «sigue» (owner 2026-10-22)', async () => {
+    generate.mockRejectedValueOnce(new Error('model down'));
+    await expect(chat.send('m1', 's1', { revision: 2, instruction: 'Mensajes del comercio: una sección por marca', personalTouch: true, ownRequest: true, requestId: uuid() })).rejects.not.toBeInstanceOf(PersonalTouchSkipped);
+    const note = messages.find(message => message.role === 'ASSISTANT');
+    expect(note?.content).toMatch(/No terminé de aplicar lo que me pediste.*«sigue»/);
+    expect(note?.metadata).toMatchObject({ failed: true, pendingRequest: { instruction: 'Mensajes del comercio: una sección por marca', direct: true } });
+  });
+
+  it('«sigue» runs the kept request with the merchant\'s words in the chat', async () => {
+    generate.mockResolvedValueOnce({ revision: 3, label: 'Tu pedido' });
+    await chat.send('m1', 's1', { revision: 2, instruction: 'Mensajes del comercio: una sección por marca', personalTouch: true, ownRequest: true, resumeWords: 'sigue', requestId: uuid() });
+    expect(decide).not.toHaveBeenCalled();
+    expect(generate.mock.calls[0][2].instruction).toContain('una sección por marca');
+    expect(messages.find(message => message.role === 'USER')?.content).toBe('sigue');
   });
 
   it('tells the conversation step the store is a master store', async () => {
@@ -358,4 +445,233 @@ describe('the store menu on a master store', () => {
     expect(generate).toHaveBeenCalled();
   });
 
+});
+
+/** YAPI plan card (spec 2026-10-22): short and vague requests show a plan; Construir builds the saved one. */
+describe('the plan card', () => {
+  const PLAN: any = { version: 1, parts: {}, sections: [], custom: [], colour: { palette: 'linen', from: '' }, fonts: { id: 'grotesk', why: '' }, brands: [], card: ['Portada con el nombre en grande'], revision: 0 };
+  const APPLIED = { variants: { hero: 'type' }, sections: ['faq'], palette: 'linen', fonts: 'grotesk', dna: {} };
+  let plans: { draft: jest.Mock; followUpBrief: jest.Mock; freeBrief: jest.Mock };
+  const withPlans = (projects: any, templates: any) => new SourceChatService(prisma, projects, generation(), { decide, fillMaster } as any, templates, { get: (key: string) => config.get(key) } as unknown as ConfigService, undefined, plans as any);
+  beforeEach(() => {
+    plans = { draft: jest.fn(), followUpBrief: jest.fn().mockReturnValue(null), freeBrief: jest.fn().mockReturnValue('Diseña esta tienda desde cero') };
+    config.set('app.yapiFreeFirst', false);
+    chat = withPlans({ current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() }, { apply: jest.fn(), applyMaster });
+  });
+  const tapped = (revision: number) => {
+    messages.push({ id: 'plan1aaaa', threadId: 't1', channel: 'source', role: 'ASSISTANT', content: 'plan', metadata: { plan: PLAN, appliedPlan: APPLIED, planKind: 'new' }, createdAt: new Date() });
+    return chat.send('m1', 's1', { revision, instruction: 'Construir', planId: 'plan1aaaa', requestId: uuid() }) as Promise<any>;
+  };
+
+  it('a short first request shows the plan card and builds nothing', async () => {
+    plans.draft.mockResolvedValueOnce({ plan: PLAN, applied: APPLIED, exhausted: false });
+    const out = await send('Hazme una tienda de velas');
+    expect(applyMaster).not.toHaveBeenCalled();
+    expect(out.assistantMessage.metadata).toMatchObject({ plan: PLAN, appliedPlan: APPLIED, planKind: 'new' });
+    expect(out.assistantMessage.content).toMatch(/Esto es lo que voy a hacer/);
+    expect(out.revision).toBeUndefined();
+  });
+
+  it('the PEPPA recipe: Construir queues a full redesign from the brief YAPI wrote, with expressive motion', async () => {
+    const redesignBrief = jest.fn().mockResolvedValue('Rediseña la tienda con una sensación fresca y deportiva. Sigue esta estructura:\n- Portada con una sola foto');
+    plans.followUpBrief.mockReturnValue('Construye sobre esta tienda las secciones propias del plan');
+    chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() } as any, generation(), { decide, fillMaster, redesignBrief } as any, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService, undefined, plans as any);
+    // Oh Belly 2026-10-23: the attached video rode only on the build's fill, so the redesign could not bundle it and the hero
+    // pointed at /v1/uploads, which the preview cannot load. The follow-up carries what the merchant attached.
+    messages.push({ id: 'ask1', threadId: 't1', channel: 'source', role: 'USER', content: 'Crea mi tienda', metadata: { assetUrls: ['/v1/uploads/a.jpg', '/v1/uploads/b.mp4'] }, createdAt: new Date() });
+    const out = await tapped(0);
+    expect(redesignBrief).toHaveBeenCalledWith('m1', expect.objectContaining({ storeId: 's1', plan: PLAN.card }));
+    expect(out.followUp).toMatchObject({ personalTouch: true, ownRequest: true, redesign: true, motion: 'expressive', assetUrls: ['/v1/uploads/a.jpg', '/v1/uploads/b.mp4'] });
+    expect(out.followUp.instruction).toMatch(/^Rediseña la tienda con una sensación fresca/);
+  });
+
+  it('without a written brief the follow-up keeps the plan\'s own brief', async () => {
+    const redesignBrief = jest.fn().mockResolvedValue(null);
+    plans.followUpBrief.mockReturnValue('Construye sobre esta tienda las secciones propias del plan');
+    chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() } as any, generation(), { decide, fillMaster, redesignBrief } as any, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService, undefined, plans as any);
+    const out = await tapped(0);
+    expect(out.followUp.redesign).toBeUndefined();
+    expect(out.followUp.instruction).toMatch(/^Construye sobre esta tienda/);
+  });
+
+  it('Construir builds from the saved plan without a new plan call', async () => {
+    const out = await tapped(0);
+    expect(plans.draft).not.toHaveBeenCalled();
+    expect(applyMaster.mock.calls[0][5]).toEqual(APPLIED);
+    expect(applyMaster.mock.calls[0][4]).toBeUndefined();
+    expect(out.assistantMessage.content).toMatch(/^Esto es lo que hice:\n• Portada con el nombre en grande/);
+  });
+
+  it('an outdated plan is refused in plain words', async () => {
+    chat = withPlans({ current: jest.fn().mockResolvedValue({ revision: 2 }), version: jest.fn() }, { apply: jest.fn(), applyMaster });
+    const out = await tapped(2);
+    expect(out.assistantMessage.content).toMatch(/La tienda cambió desde este plan/);
+    expect(applyMaster).not.toHaveBeenCalled();
+  });
+
+  it('a failed plan call keeps the request for «sigue»', async () => {
+    plans.draft.mockResolvedValueOnce(null);
+    const out = await send('Hazme una tienda de velas');
+    expect(out.assistantMessage.metadata).toMatchObject({ failed: true, pendingRequest: { instruction: 'Hazme una tienda de velas', direct: false } });
+    expect(applyMaster).not.toHaveBeenCalled();
+  });
+
+  it('a detailed first request builds the plan at once, its own sections on the follow-up', async () => {
+    plans.draft.mockResolvedValueOnce({ plan: PLAN, applied: APPLIED, exhausted: false });
+    plans.followUpBrief.mockReturnValueOnce('Construye sobre esta tienda las secciones propias');
+    const out = await send('Diseña la tienda goodProtein. Quiero algo con mucha energía y movimiento: tú eliges la estructura. Cuenta en pocas palabras qué aporta cada marca.');
+    expect(applyMaster.mock.calls[0][5]).toEqual(APPLIED);
+    expect(out.followUp).toMatchObject({ personalTouch: true, ownRequest: true });
+    expect(out.followUp.instruction).toMatch(/^Construye sobre esta tienda las secciones propias[\s\S]*qué aporta cada marca/);
+  });
+
+  it('YAPI_PLAN_CARD=off keeps today\'s path', async () => {
+    config.set('app.yapiPlanCard', false);
+    await send('Hazme una tienda de velas');
+    expect(plans.draft).not.toHaveBeenCalled();
+    expect(applyMaster).toHaveBeenCalled();
+  });
+
+  it('F6: answering a card re-plans with the previous plan and shows the card again', async () => {
+    messages.push({ id: 'plan4dddd', threadId: 't1', channel: 'source', role: 'ASSISTANT', content: 'plan', metadata: { plan: { ...PLAN, revision: 0 }, appliedPlan: APPLIED, planKind: 'new' }, createdAt: new Date() });
+    plans.draft.mockResolvedValueOnce({ plan: { ...PLAN, card: ['Colores tierra'] }, applied: APPLIED, exhausted: false });
+    const out = await send('quiero colores tierra y una sección de preguntas');
+    expect(plans.draft.mock.calls[0][2]).toMatchObject({ previous: expect.objectContaining({ card: PLAN.card }), request: 'quiero colores tierra y una sección de preguntas' });
+    expect(applyMaster).not.toHaveBeenCalled();
+    expect(out.assistantMessage.metadata.planKind).toBe('new');
+  });
+
+  it('«dale» answering the newest card builds it', async () => {
+    messages.push({ id: 'plan5eeee', threadId: 't1', channel: 'source', role: 'ASSISTANT', content: 'plan', metadata: { plan: { ...PLAN, revision: 0 }, appliedPlan: APPLIED, planKind: 'new' }, createdAt: new Date() });
+    await send('dale');
+    expect(plans.draft).not.toHaveBeenCalled();
+    expect(applyMaster.mock.calls[0][5]).toEqual(APPLIED);
+  });
+
+  it('free-first: Construir on a new store designs freely from the plan, no template', async () => {
+    config.set('app.yapiFreeFirst', true);
+    plans.freeBrief = jest.fn().mockReturnValue('Diseña esta tienda desde cero siguiendo el plan aprobado');
+    await tapped(0);
+    expect(applyMaster).not.toHaveBeenCalled();
+    expect(generate).toHaveBeenCalled();
+    expect(generate.mock.calls[0][2].instruction).toContain('Diseña esta tienda desde cero siguiendo el plan aprobado');
+  });
+
+  it('free-first: a failed free build falls back to the template with the same plan', async () => {
+    config.set('app.yapiFreeFirst', true);
+    plans.freeBrief = jest.fn().mockReturnValue('Diseña esta tienda desde cero');
+    generate.mockRejectedValueOnce(new Error('model down'));
+    await tapped(0);
+    expect(applyMaster.mock.calls[0][5]).toEqual(APPLIED);
+  });
+
+  it('free-first: a detailed first request also waits for the card', async () => {
+    config.set('app.yapiFreeFirst', true);
+    plans.draft.mockResolvedValueOnce({ plan: PLAN, applied: APPLIED, exhausted: false });
+    const out = await send('Diseña la tienda goodProtein. Quiero algo con mucha energía y movimiento: tú eliges la estructura. Cuenta en pocas palabras qué aporta cada marca.');
+    expect(applyMaster).not.toHaveBeenCalled();
+    expect(out.assistantMessage.metadata.planKind).toBe('new');
+  });
+});
+
+
+// Starters (spec 2026-10-24, plan Task 8): with YAPI_STARTERS on, a new store starts from the finished store closest to it.
+describe('starters', () => {
+  let applyPlantillaFilled: jest.Mock, fillPlantilla: jest.Mock;
+  const store = (name: string, what: string) => prisma.store.findFirst.mockResolvedValue({ name, logoUrl: null, onboarding: { what, story: '', contact: {}, photos: [] }, _count: { paymentLinks: 0 }, paymentLinks: [] });
+  beforeEach(() => {
+    config.set('app.yapiStarters', true);
+    prisma.$queryRaw = jest.fn().mockResolvedValue([]);
+    fillPlantilla = jest.fn().mockResolvedValue({ hero: 'Salsas con carácter' });
+    applyPlantillaFilled = jest.fn().mockImplementation(async (_m, _s, _t, _r, filler) => { await filler({ storeName: 'Fuego', products: ['Salsa roja'], photos: [], slots: [] }); return { revision: 1, label: 'Estilo: Vitrina', filled: true }; });
+    chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { businessInformation: 'Tienda' }, files: [] } }) } as any, generation(), { decide, fillMaster, fillPlantilla } as any, { apply: jest.fn(), applyMaster, applyPlantillaFilled } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
+  });
+
+  it('a fashion store starts from a fashion starter, built on Esencial with no preset', async () => {
+    store('Norte', 'Ropa urbana: poleras y streetwear');
+    await send('Crea mi tienda.');
+    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), undefined, undefined, 'calle');
+  });
+
+  // Spec 2026-10-24-starter-dice §2: Vitrina is built on Esencial now, so a salsas brand takes the master fill.
+  it('a salsas brand starts from Vitrina on Esencial, and the reply and follow-up still come', async () => {
+    store('Fuego', 'Salsas picantes y dulces artesanales');
+    const out = await send('Crea mi tienda.');
+    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), undefined, undefined, 'vitrina');
+    expect(applyPlantillaFilled).not.toHaveBeenCalled();
+    expect(out.revision).toMatchObject({ revision: 1 });
+    expect(out.assistantMessage.content).toContain('Fuego');
+  });
+
+  it('a business no starter fits keeps Esencial with its closest preset', async () => {
+    await send('Crea mi tienda.');
+    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), 'horno');
+  });
+
+  it("the merchant's last stores are not repeated when another starter fits", async () => {
+    prisma.$queryRaw.mockResolvedValue([{ starter: 'calle' }]);
+    store('Norte', 'Ropa urbana, poleras y streetwear de diseño');
+    await send('Crea mi tienda.');
+    expect(applyMaster.mock.calls[0][6]).toBe('taller');
+  });
+
+  it('a swap to a master starter keeps the words and bundles the walkthrough photos again', async () => {
+    store('Norte', 'Ropa urbana');
+    prisma.store.findFirst.mockResolvedValue({ name: 'Norte', onboarding: { what: 'Ropa urbana', photos: ['https://x/u1.jpg', 'https://x/u2.jpg'] } });
+    const words = { copy: { headline: 'Ropa con calle' }, sections: [] };
+    await chat.rebuildFromStarter('m1', 's1', { id: 'taller', kind: 'master', fits: [], order: 3 }, 2, words);
+    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 2, expect.any(Function), undefined, undefined, 'taller');
+    expect(fillMaster).not.toHaveBeenCalled();
+    const fill = await applyMaster.mock.calls[0][3]({ storeName: 'Norte', products: ['Polera'], photos: [] });
+    expect(fill).toMatchObject({ copy: { headline: 'Ropa con calle' }, heroPhoto: 'https://x/u1.jpg', storyPhoto: 'https://x/u2.jpg', character: { kind: 'fashion' } });
+  });
+
+  it('a swap keeps the photos the first build bundled', async () => {
+    const files = [{ path: 'assets/image-1d87bb3f91c7.jpg', content: 'aGVsbG8=', encoding: 'base64' as const }];
+    await chat.rebuildFromStarter('m1', 's1', { id: 'taller', kind: 'master', fits: [], order: 3 }, 2, { copy: { headline: 'Ropa' } }, { heroPhoto: files[0].path, files });
+    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 2, expect.any(Function), undefined, undefined, 'taller', files);
+    const fill = await applyMaster.mock.calls[0][3]({ storeName: 'Norte', products: [], photos: [] });
+    expect(fill.heroPhoto).toBe(files[0].path);
+  });
+
+  it('a swap to Esencial carries the bundled photo files too', async () => {
+    const files = [{ path: 'assets/image-1d87bb3f91c7.jpg', content: 'aGVsbG8=', encoding: 'base64' as const }];
+    await chat.rebuildFromStarter('m1', 's1', { id: 'esencial', kind: 'master', fits: [], order: 99 }, 2, { copy: { headline: 'Café' } }, { heroPhoto: files[0].path, files });
+    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 2, expect.any(Function), 'horno', undefined, undefined, files);
+  });
+
+  // Live check 2026-10-24: a build whose fill chose no hero photo kept none; the swap must not put a product photo there.
+  it('a swap keeps «no hero photo» as it was', async () => {
+    await chat.rebuildFromStarter('m1', 's1', { id: 'calle', kind: 'master', fits: [], order: 2 }, 2, { copy: { headline: 'Ropa' } }, { heroPhoto: '', storyPhoto: 'http://localhost:3001/v1/uploads/x.jpg', files: [] });
+    expect(applyMaster.mock.calls[0]).toHaveLength(7);
+    const fill = await applyMaster.mock.calls[0][3]({ storeName: 'Norte', products: [], photos: [] });
+    expect(fill).toMatchObject({ heroPhoto: '', storyPhoto: 'http://localhost:3001/v1/uploads/x.jpg' });
+  });
+
+  it('a swap without words runs the fill again; Esencial keeps its closest preset; a slots starter fills its slots', async () => {
+    await chat.rebuildFromStarter('m1', 's1', { id: 'esencial', kind: 'master', fits: [], order: 99 }, 2);
+    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 2, expect.any(Function), 'horno');
+    expect(fillMaster).toHaveBeenCalled();
+    // Vitrina is master-kind now (spec 2026-10-24-starter-dice); «obra» is a copy-slots Plantilla, as a future slots starter would be.
+    await chat.rebuildFromStarter('m1', 's1', { id: 'obra', kind: 'slots', fits: [], order: 1 }, 2);
+    expect(applyPlantillaFilled).toHaveBeenCalledWith('m1', 's1', 'obra', 2, expect.any(Function));
+  });
+
+  // Owner 2026-10-24: with starters on, a new store's first build starts from its starter; the plan card is for later edits.
+  it('a new store skips the plan card and starts from its starter', async () => {
+    const plans = { draft: jest.fn(), followUpBrief: jest.fn().mockReturnValue(null) };
+    chat = new SourceChatService(prisma, (chat as any).projects, generation(), { decide, fillMaster, fillPlantilla } as any, (chat as any).templates, (chat as any).config, undefined, plans as any);
+    store('Norte', 'Ropa urbana: poleras y streetwear');
+    const out = await send('Crea mi tienda.');
+    expect(plans.draft).not.toHaveBeenCalled();
+    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), undefined, undefined, 'calle');
+    expect(out.assistantMessage.metadata.plan).toBeUndefined();
+  });
+
+  it('with YAPI_STARTERS off, the first build is exactly today’s', async () => {
+    config.set('app.yapiStarters', false);
+    store('Norte', 'Ropa urbana: poleras y streetwear');
+    await send('Crea mi tienda.');
+    expect(applyMaster.mock.calls[0]).toHaveLength(5);
+  });
 });

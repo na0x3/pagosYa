@@ -99,15 +99,12 @@
       catch { status.textContent = 'No se pudo solicitar el envío. Intenta de nuevo.'; button.disabled = false; }
     });
   };
-  function mountSignup(host, settings, config, state, api, preview, query, launcher = true, demo = false) {
+  function mountSignup(host, settings, config, state, api, preview, query, demo = false) {
     host.className = 'pagosya-signup-host';
     if (!document.getElementById('pagosya-signup-style')) {
       const style = document.createElement('style'); style.id = 'pagosya-signup-style';
       style.textContent = `
         .pagosya-signup-host{--signup-paper:var(--store-background,#f3eddf);--signup-ink:var(--store-foreground,#26221c);--signup-accent:var(--store-accent,var(--signup-ink));--signup-accent-ink:var(--store-accent-foreground,var(--signup-paper));--signup-heading:var(--store-heading-font,Georgia,serif);--signup-body:var(--store-body-font,system-ui,sans-serif);--signup-radius:min(var(--store-radius,3px),24px);display:block;width:100%;font:inherit;color:inherit}.pagosya-signup-host *{box-sizing:border-box}
-        .pagosya-signup-launcher{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);width:min(1100px,calc(100% - 40px));min-height:360px;margin:48px auto;overflow:hidden;border:1px solid var(--signup-ink,#26221c);border-radius:var(--signup-radius);background:var(--signup-paper,#f3eddf);color:var(--signup-ink,#26221c);isolation:isolate;box-shadow:0 18px 56px #0002}
-        .pagosya-signup-launcher-media{position:relative;min-height:360px;overflow:hidden;background:color-mix(in srgb,var(--signup-paper),var(--signup-accent) 22%)}.pagosya-signup-launcher-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.pagosya-signup-launcher-media .signup-monogram{display:grid;place-items:center;height:100%;min-height:360px;font:clamp(80px,14vw,180px)/1 var(--signup-heading);color:var(--signup-accent);opacity:.85}
-        .pagosya-signup-launcher-copy{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center;min-width:0;padding:clamp(30px,5vw,64px)}.pagosya-signup-launcher-copy .signup-eyebrow{margin:0 0 18px;font:600 11px/1.5 var(--signup-body);letter-spacing:.17em;text-transform:uppercase;overflow-wrap:anywhere}.pagosya-signup-launcher-copy h2{margin:0 0 18px;font:400 clamp(30px,4vw,52px)/1.08 var(--signup-heading);letter-spacing:-.025em;text-wrap:balance;overflow-wrap:anywhere}.pagosya-signup-launcher-copy .signup-description{max-width:42ch;margin:0 0 24px;font:16px/1.6 var(--signup-body);overflow-wrap:anywhere}.pagosya-signup-launcher-copy .signup-reopen{align-self:flex-start;min-height:46px;padding:11px 18px;border:0;border-radius:var(--store-radius,3px);background:var(--signup-accent);color:var(--signup-accent-ink);font:700 14px/1.4 var(--signup-body);cursor:pointer}.pagosya-signup-launcher-copy .signup-reopen:hover{filter:brightness(.9)}.pagosya-signup-launcher-copy .signup-reopen:disabled{opacity:.65;cursor:default;filter:none}.pagosya-signup-preview-note{margin:16px 0 0;font:12px/1.5 var(--signup-body);opacity:.72}
         .pagosya-signup-dialog{position:fixed;inset:0;width:min(1000px,calc(100% - 48px));max-width:none;max-height:calc(100dvh - 48px);margin:auto;padding:0;border:0;border-radius:var(--signup-radius);background:var(--signup-paper,#f3eddf);color:var(--signup-ink,#26221c);font:16px/1.6 var(--signup-body);overflow:auto;overscroll-behavior:contain;box-shadow:0 24px 80px #0003}
         .pagosya-signup-dialog::backdrop{background:rgb(24 22 17 / .6)}
         .pagosya-signup-layout{display:grid;grid-template-columns:1fr 1fr;min-height:580px}
@@ -126,7 +123,7 @@
         @media(max-width:700px){.pagosya-signup-dialog{inset:auto 0 0 0;width:100%;max-height:85dvh;margin:0;border-radius:20px 20px 0 0}.pagosya-signup-layout{grid-template-columns:1fr;min-height:0}.pagosya-signup-photo{display:none}}
         @media(max-width:700px) and (prefers-reduced-motion:no-preference){.pagosya-signup-dialog[open]{animation:pagosya-sheet-up .28s cubic-bezier(.32,.72,0,1)}}@keyframes pagosya-sheet-up{from{transform:translateY(100%)}to{transform:none}}
         .signup-code{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 0}.signup-code strong{padding:4px 10px;border:1px dashed currentColor;border-radius:6px;letter-spacing:.08em}.signup-code button{min-height:36px;padding:0 12px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}
-        @media(max-width:700px){.pagosya-signup-launcher{grid-template-columns:1fr;width:calc(100% - 24px);min-height:0;margin:32px auto}.pagosya-signup-launcher-media{min-height:220px;height:220px}.pagosya-signup-launcher-media .signup-monogram{min-height:220px;font-size:80px}.pagosya-signup-launcher-copy{padding:28px 24px 32px}.pagosya-signup-launcher-copy h2{font-size:34px}.pagosya-signup-dialog{width:calc(100% - 24px);max-height:calc(100dvh - 24px)}.pagosya-signup-layout{grid-template-columns:1fr;min-height:0}.pagosya-signup-photo{min-height:150px;height:150px}.pagosya-signup-photo .signup-monogram{min-height:150px;font-size:80px}.pagosya-signup-copy{padding:26px 24px 28px}.pagosya-signup-copy .signup-eyebrow{margin-bottom:12px}.pagosya-signup-copy h2{font-size:30px;margin-bottom:16px}.pagosya-signup-copy .signup-description{font-size:14px;margin-bottom:20px}.pagosya-signup-copy form{gap:16px}.pagosya-signup-dialog .signup-close{top:12px;right:12px}}
+        @media(max-width:700px){.pagosya-signup-dialog{width:calc(100% - 24px);max-height:calc(100dvh - 24px)}.pagosya-signup-layout{grid-template-columns:1fr;min-height:0}.pagosya-signup-photo{min-height:150px;height:150px}.pagosya-signup-photo .signup-monogram{min-height:150px;font-size:80px}.pagosya-signup-copy{padding:26px 24px 28px}.pagosya-signup-copy .signup-eyebrow{margin-bottom:12px}.pagosya-signup-copy h2{font-size:30px;margin-bottom:16px}.pagosya-signup-copy .signup-description{font-size:14px;margin-bottom:20px}.pagosya-signup-copy form{gap:16px}.pagosya-signup-dialog .signup-close{top:12px;right:12px}}
         @media print{.pagosya-signup-host{display:none}}
       `;
       document.head.append(style);
@@ -141,13 +138,8 @@
     const demoBase = document.querySelector('script[src*="commerce.js"],script[src*="retention.js"]')?.src || location.href;
     const image = safeImage(visual.imageUrl) || safeImage(itemImage, demo ? demoBase : undefined);
     const interests = Array.isArray(visual.interests) ? visual.interests.slice(0, 8) : [];
-    const launcherImage = image ? `<img src="${escape(image)}" alt="Selección de ${escape(name)}" referrerpolicy="no-referrer">` : `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`;
-    const launcherAction = preview ? `<button type="button" class="signup-reopen" disabled>${escape(settings.signupButton)}</button><p class="pagosya-signup-preview-note">Vista previa: el formulario se activa al publicar tu tienda.</p>` : '<button type="button" class="signup-reopen" aria-haspopup="dialog">Comunidad</button>';
-    // A design that draws its own signup entry keeps only the dialog; the launcher would repeat it.
-    host.innerHTML = `${launcher ? `<section class="pagosya-signup-launcher" aria-label="Comunidad">
-        <figure class="pagosya-signup-launcher-media">${launcherImage}</figure>
-        <div class="pagosya-signup-launcher-copy"><p class="signup-eyebrow">${escape(name)}</p><h2>${escape(settings.signupTitle)}</h2><p class="signup-description">${escape(settings.signupBody)}</p>${launcherAction}</div>
-      </section>` : ''}${preview && !demo ? '' : `<dialog class="pagosya-signup-dialog" aria-label="${escape(settings.signupTitle)}">
+    // Only the popup: the in-page Comunidad block is gone (owner 2026-10-24); a design may still draw its own opener.
+    host.innerHTML = `${preview && !demo ? '' : `<dialog class="pagosya-signup-dialog" aria-label="${escape(settings.signupTitle)}">
         <button type="button" class="signup-close" aria-label="Cerrar suscripción">×</button>
         <div class="pagosya-signup-layout">
           <figure class="pagosya-signup-photo">${image ? `<img src="${escape(image)}" alt="Selección de ${escape(name)}" referrerpolicy="no-referrer">` : `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`}</figure>
@@ -166,13 +158,7 @@
     // The page's own store tokens win; the API's brand colours and font style fill in for a page without them.
     for (const [property, token, value] of [['--signup-paper', '--store-background', brand.background], ['--signup-ink', '--store-foreground', brand.foreground]]) if (/^#[a-f\d]{6}$/i.test(value || '')) host.style.setProperty(property, `var(${token},${value})`);
     if (brand.fontStyle && !['classic', 'editorial'].includes(brand.fontStyle)) host.style.setProperty('--signup-heading', 'var(--store-heading-font,system-ui,sans-serif)');
-    if (preview && !demo) {
-      host.querySelector('.pagosya-signup-launcher-media img')?.addEventListener('error', event => {
-        const photo = event.currentTarget;
-        photo.parentElement.innerHTML = `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`;
-      }, { once: true });
-      return null;
-    }
+    if (preview && !demo) return null;
     const dialog = host.querySelector('dialog');
     // Closed or answered, the popup stays away 30 days for this visitor and store (plan 2026-10-20-store-popup).
     const popupKey = `pagosya:popup:${config.slug}`;
@@ -181,7 +167,6 @@
     dialog.addEventListener('close', remember);
     dialog.querySelector('.signup-close').addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', event => { if (event.target !== dialog) return; const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); });
-    host.querySelector('.signup-reopen')?.addEventListener('click', open);
     const photo = host.querySelector('.pagosya-signup-photo img');
     photo?.addEventListener('error', () => { photo.parentElement.innerHTML = `<span class="signup-monogram" aria-hidden="true">${escape(name.slice(0, 1))}</span>`; }, { once: true });
     secureFields(dialog.querySelector('form'));
@@ -196,7 +181,7 @@
           ...(String(data.get('name') ?? '').trim() ? { name: String(data.get('name')).trim() } : {}),
           ...(String(data.get('phone') ?? '').trim() ? { phone: String(data.get('phone')).trim() } : {}),
           ...(data.getAll('interests').length ? { interests: data.getAll('interests') } : {}) });
-        remember(); state.subscribed = true; form.hidden = true; host.querySelector('.signup-reopen')?.setAttribute('hidden', '');
+        remember(); state.subscribed = true; form.hidden = true;
         status.textContent = '¡Ya formas parte de nuestra comunidad! Revisa tu correo para recibir nuestras novedades.';
         if (result?.code) {
           status.insertAdjacentHTML('afterend', `<p class="signup-code">Tu código de bienvenida: <strong>${escape(result.code)}</strong> <button type="button" data-copy>Copiar</button></p>`);
@@ -207,7 +192,6 @@
     });
     let dismissed = state.signupDismissed;
     try { dismissed ||= sessionStorage.getItem(dismissedKey) === '1'; } catch {}
-    if (state.subscribed) host.querySelector('.signup-reopen')?.setAttribute('hidden', '');
     // Never cover a receipt, private card, recovery link, or merchant preview.
     // The popup waits for its moment (plan 2026-10-20-store-popup): on arrival, after a delay, on exit intent (pointer
     // devices only) or both; never over a checkout, another dialog, a receipt or recovery link, or the Studio preview.
@@ -289,7 +273,7 @@
     let openSignup = null;
     if (settings.signupEnabled) {
       document.querySelectorAll('.store-site-newsletter').forEach(el => el.hidden = true);
-      openSignup = mountSignup(slot('data-pagosya-subscribe'), settings, config, state, api, preview, query, !openers.length, demo);
+      openSignup = mountSignup(slot('data-pagosya-subscribe'), settings, config, state, api, preview, query, demo);
     }
     // The editor preview keeps the drawn block visible so the merchant sees the design before turning subscriptions on.
     openers.forEach(el => { block(el).hidden = !settings.signupEnabled && !preview; });

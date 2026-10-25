@@ -371,15 +371,15 @@ describe("MerchantSessionService active-session management", () => {
     });
   });
 
-  it("does not let a secondary session close another session", async () => {
+  it("lets any of the owner's sessions close another one (one owner per account, 2026-10-22)", async () => {
     const prisma = makeFakePrisma();
     prisma.merchantSession.findFirst
       .mockResolvedValueOnce({ id: "session_secondary", isPrimary: false })
       .mockResolvedValueOnce({ id: "session_other", merchantUserId: "user_1", isPrimary: false });
 
     const service = new MerchantSessionService(prisma as any);
-    await expect(service.revokeSessionById("user_1", "session_other", "dash_secondary")).rejects.toThrow(ForbiddenException);
-    expect(prisma.merchantSession.update).not.toHaveBeenCalled();
+    await expect(service.revokeSessionById("user_1", "session_other", "dash_secondary")).resolves.toEqual({ revoked: true, current: false });
+    expect(prisma.merchantSession.findFirst.mock.calls[1][0].where).toMatchObject({ id: "session_other", merchantUserId: "user_1" });
   });
 
   it("allows the primary session to rename another active session", async () => {

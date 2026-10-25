@@ -51,16 +51,6 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
         </div>
-        <section class="profile-sessions" aria-labelledby="profileSessionsTitle">
-          <div class="profile-sessions-head">
-            <strong id="profileSessionsTitle">Sesiones activas</strong>
-            <span id="profileSessionCount">— / 3</span>
-          </div>
-          <div class="profile-session-list" id="profileSessions" aria-live="polite">
-            <p class="profile-session-state">Abre el perfil para revisar tus sesiones.</p>
-          </div>
-          <p class="profile-session-note">Máximo 3 sesiones. Al ingresar en una cuarta, se cierra automáticamente la más antigua.</p>
-        </section>
         <div class="profile-menu-actions">
         <button class="ghost" id="openAccountPage" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
@@ -75,6 +65,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></svg>
           Cerrar sesión
         </button>
+        <p class="profile-devices" id="profileSessions" aria-live="polite">Revisando dispositivos…</p>
         <button class="ghost account-delete-trigger" id="deleteMerchantAccount" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg>
           Eliminar cuenta
@@ -551,7 +542,7 @@
     </section>
 
     <section class="block marketing-workspace" data-dashboard-page="marketing" hidden>
-      <nav class="marketing-tabs" id="marketingTabs" aria-label="Herramientas de marketing" data-tab="emails" hidden><button type="button" data-marketing-tab="emails" aria-pressed="true">Correos</button><button type="button" data-marketing-tab="staff" aria-pressed="false">Equipo</button><button type="button" data-marketing-tab="domain" aria-pressed="false">Remitente</button><button type="button" data-marketing-tab="logs" aria-pressed="false">Registros</button><button type="button" data-marketing-tab="program" aria-pressed="false">Comeback Card</button><button type="button" data-marketing-tab="campaigns" aria-pressed="false">Campañas</button><button type="button" data-marketing-tab="customers" aria-pressed="false">Clientes</button><button type="button" data-marketing-tab="promotions" aria-pressed="false">Códigos promocionales</button></nav>
+      <nav class="marketing-tabs" id="marketingTabs" aria-label="Herramientas de marketing" data-tab="emails" hidden><button type="button" data-marketing-tab="emails" aria-pressed="true">Correos</button><button type="button" data-marketing-tab="staff" aria-pressed="false">Notificaciones</button><button type="button" data-marketing-tab="domain" aria-pressed="false">Remitente</button><button type="button" data-marketing-tab="logs" aria-pressed="false">Registros</button><button type="button" data-marketing-tab="program" aria-pressed="false">Comeback Card</button><button type="button" data-marketing-tab="campaigns" aria-pressed="false">Campañas</button><button type="button" data-marketing-tab="customers" aria-pressed="false">Clientes</button><button type="button" data-marketing-tab="promotions" aria-pressed="false">Códigos promocionales</button></nav>
       <iframe id="storeMarketingFrame" title="Correos y marketing de la tienda" class="store-resource-frame"></iframe>
       <p data-resource-empty="marketing" hidden>Selecciona una tienda para configurar su marketing.</p>
       <div id="marketingEmails"><div class="panel"><div id="marketingEmailsRoot"></div></div></div>
@@ -758,7 +749,7 @@
         </article>
         <article class="account-card" aria-labelledby="accountAccessTitle">
           <h3 id="accountAccessTitle">Acceso</h3>
-          <p class="account-figure"><span id="accountSessionCount">—</span> <small>sesiones activas</small></p>
+          <p class="account-figure"><span id="accountSessionCount">—</span> <small>dispositivos con tu sesión</small></p>
           <p class="account-note" id="accountSessionNote">Cada sesión es un perfil con su propio nombre. Puedes renombrarlas o cerrarlas a distancia.</p>
           <button class="account-link" type="button" id="accountManageSessions">Administrar sesiones →</button>
         </article>
@@ -943,31 +934,6 @@
       </main>
     </div>
   </section>
-
-  <dialog class="session-profile-dialog" id="sessionProfileDialog" aria-labelledby="sessionProfileTitle">
-    <form class="session-profile-form" id="sessionProfileForm">
-      <header class="session-profile-head">
-        <h2 id="sessionProfileTitle">¿Quién está ingresando?</h2>
-        <p>Elige el nombre que identificará esta sesión. Así la sesión principal sabrá quién está usando el panel.</p>
-      </header>
-      <div class="session-profile-body">
-        <section class="session-profile-existing" id="sessionProfileExisting" hidden aria-labelledby="sessionProfileExistingTitle">
-          <strong id="sessionProfileExistingTitle">Perfiles en uso</strong>
-          <div class="session-profile-choices" id="sessionProfileChoices"></div>
-        </section>
-        <div class="session-profile-fields">
-          <label for="sessionProfileName">Nombre de esta sesión
-            <input id="sessionProfileName" maxlength="32" autocomplete="nickname" placeholder="Ej. Ana" required>
-          </label>
-        </div>
-        <p class="session-profile-error" id="sessionProfileError" role="alert" hidden></p>
-      </div>
-      <footer class="session-profile-actions">
-        <span>Este nombre solo identifica quién usa cada sesión; no crea otra cuenta ni cambia permisos.</span>
-        <button class="primary" id="sessionProfileContinue" type="submit">Entrar al panel</button>
-      </footer>
-    </form>
-  </dialog>
 
   <dialog class="account-delete-dialog" id="merchantDeleteDialog" aria-labelledby="merchantDeleteTitle">
     <form id="merchantDeleteForm">

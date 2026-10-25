@@ -1,4 +1,4 @@
-import { evaluateSourceMediaDesign, type SourceMediaPolicy } from '../source-media-design';
+import { evaluateSourceMediaDesign, evaluateStripRuns, type SourceMediaPolicy } from '../source-media-design';
 /// <reference lib="dom" />
 import sharp from 'sharp';
 import { evaluateRequirements } from './agent-checks';
@@ -102,17 +102,49 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
       textOverButton: Array.from(document.querySelectorAll<HTMLElement>('body *')).filter(el => ['absolute', 'fixed'].includes(getComputedStyle(el).position) && Array.from(el.childNodes).some(node => node.nodeType === 3 && node.textContent!.trim())).flatMap(el => {
         const box = el.getBoundingClientRect();
         if (!box.width || !box.height || getComputedStyle(el).visibility === 'hidden' || Number(getComputedStyle(el).opacity) < 0.2) return [];
+        // A viewport-pinned control (the kit's «Contacto» launcher, BAEK 2026-10-23) floats over whatever scrolls under it:
+        // only text in the same fixed holder can collide with it for real.
+        const pinned = (node: Element) => { for (let at: Element | null = node; at; at = at.parentElement) if (getComputedStyle(at).position === 'fixed') return at; return null; };
         const hit = Array.from(document.querySelectorAll<HTMLElement>('a, button')).find(control => {
           if (control.contains(el) || el.contains(control) || !(control.textContent || '').trim()) return false;
+          const fixed = pinned(control);
+          if (fixed && !fixed.contains(el)) return false;
           const r = control.getBoundingClientRect();
           const w = Math.min(box.right, r.right) - Math.max(box.left, r.left), h = Math.min(box.bottom, r.bottom) - Math.max(box.top, r.top);
           return w > 0 && h > 0 && w * h > 0.15 * r.width * r.height;
         });
         return hit ? [`«${(el.textContent || '').trim().slice(0, 30)}» sobre «${(hit.textContent || '').trim().slice(0, 30)}»`] : [];
       }).slice(0, 4),
+      // A custom property declared with a value that computes to nothing: two variables pointing at each other (BAEK
+      // 2026-10-23, --es-paper ↔ --store-background on .es) or one leaning on a variable no rule defines. Everything painted
+      // with it goes transparent — the menu panel opened see-through over the page.
+      unresolvedVars: (() => {
+        const found = new Map<string, Set<string>>();
+        const visit = (rules: CSSRuleList) => {
+          for (const rule of Array.from(rules)) {
+            if ('cssRules' in rule && !(rule instanceof CSSStyleRule)) { visit((rule as CSSGroupingRule).cssRules); continue; }
+            if (!(rule instanceof CSSStyleRule)) continue;
+            // Colours only: the kit's own font and size variables may lean on store tokens a template never sets, and fall back.
+            const names = Array.from(rule.style).filter(name => /^--.*(?:paper|ink|background|bg|surface|colou?r|accent|foreground|muted|deep|border)/.test(name)
+              && !/^\s*(?:initial)?\s*$/.test(rule.style.getPropertyValue(name)));
+            if (!names.length) continue;
+            let el: Element | null = null;
+            try { el = document.querySelector(rule.selectorText); } catch { continue; }
+            if (!el) continue;
+            const style = getComputedStyle(el), empty = names.filter(name => !style.getPropertyValue(name).trim());
+            if (!empty.length) continue;
+            const seen = found.get(rule.selectorText) ?? new Set<string>();
+            empty.forEach(name => seen.add(name)); found.set(rule.selectorText, seen);
+          }
+        };
+        for (const sheet of Array.from(document.styleSheets)) { try { visit(sheet.cssRules); } catch { /* a cross-origin sheet cannot be read */ } }
+        return [...found].slice(0, 4).map(([selector, names]) => ({ selector, names: [...names].slice(0, 6) }));
+      })(),
       hiddenCatalog: Array.from(document.querySelectorAll<HTMLElement>('[data-pagosya-catalog]')).some(el => {
         const style = getComputedStyle(el);
-        return el.hidden || style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0;
+        // Clipped to a sliver hides it as surely (BAEK 2026-10-23: height:1px;overflow:hidden on the products page).
+        const clipped = /hidden|clip/.test(style.overflow) && el.getBoundingClientRect().height < 4;
+        return el.hidden || style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0 || clipped;
       }),
       staleCatalogCopy: Boolean(document.querySelector('[data-pagosya-catalog]')) && Array.from(document.querySelectorAll('h1,h2,h3,p,[role=status]')).some(el => {
         if (el.closest('[data-pagosya-catalog],[data-pagosya-product-page],[data-pagosya-checkout-page],[data-pagosya-cart],[data-pagosya-status]')) return false;
@@ -134,6 +166,7 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
       }),
     }));
     if (mediaPolicy && !['product.html', 'checkout.html', 'productos.html'].includes(entry)) errors.push(...await page.evaluate(evaluateSourceMediaDesign, { ...mediaPolicy, page: entry }));
+    if (!['product.html', 'checkout.html'].includes(entry)) errors.push(...await page.evaluate(evaluateStripRuns));
     errors.push(...health.missing.filter(path => !STORE_UPLOAD.test(path)).map(path => 'Imagen no disponible: ' + path));
     // A store-colour illustration is a CSS mask: a wrong path draws nothing and raises no image error.
     errors.push(...[...new Set(health.illustrations)].filter(src => !snapshot.files.some(file => '/' + file.path === src || file.path === src)).slice(0, 8).map(src => 'Ilustración no disponible: ' + src));
@@ -145,6 +178,7 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
     errors.push(...health.textOverButton.map(pair => `Texto encima de un botón: ${pair}. Muévelo para que no se toquen.`));
     if (health.staleCatalogCopy) errors.push('Texto permanente de catálogo vacío fuera del runtime. Usa texto de marca que siga siendo válido al añadir productos; el catálogo administra su estado vacío.');
     if (health.designProcessCopy) errors.push('Texto del proceso de diseño visible para compradores. Sustituye explicaciones de composición, runtime o catálogo real/vivo por texto breve sobre los productos o la marca, sin inventar datos.');
+    errors.push(...health.unresolvedVars.map(({ selector, names }) => `Variables de color sin valor en «${selector}»: ${names.join(', ')}. Se apuntan entre sí o usan una variable que no existe, y todo lo pintado con ellas queda transparente (menú, encabezado, carrito). Da a cada una un valor real, sin que una variable apunte a otra que la vuelve a nombrar.`));
     if (health.hiddenCatalog) errors.push('El catálogo está oculto. Mantén visible data-pagosya-catalog incluso sin productos; el runtime controla su estado vacío y los productos futuros.');
     evidence = await page.evaluate(evaluateRequirements, { requirements: requirements.map(r => ({ ...r, imagePaths: r.check === 'image' ? agentImagePaths(r.expected) : [] })), entry, width, profile });
     for (const requirement of requirements.filter(r => r.page === entry && r.check === 'navigation' && (r.profile || 'normal') === profile)) {

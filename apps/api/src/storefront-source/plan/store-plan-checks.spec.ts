@@ -88,3 +88,14 @@ describe('the card says what the store will look like (live check 2026-10-22)', 
   });
 });
 
+
+// Owner 2026-10-23: the cover shows one photo at most unless the merchant asks; the card never promises a collage.
+it('turns a plan\'s collage or strip cover into a one-photo cover unless the merchant asked', () => {
+  for (const hero of ['collage', 'strip']) {
+    const out = checkPlan({ ...base, parts: { hero: { id: hero, why: 'mostrar las marcas del catálogo juntas' } }, card: ['Portada: collage con las 12 fotos reales del catálogo'] }, facts, rolled);
+    expect(['collage', 'strip']).not.toContain(out.variants.hero);
+    expect(out.plan.card.join(' ')).not.toMatch(/collage|\d+ fotos/i);
+  }
+  const asked = checkPlan({ ...base, parts: { hero: { id: 'collage', why: 'el comercio pidió un collage' } } }, { ...facts, photoGroups: true }, rolled);
+  expect(asked.variants.hero).toBe('collage');
+});

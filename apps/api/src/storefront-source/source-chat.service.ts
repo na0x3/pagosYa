@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { agentReport as agentReportText } from './agent/agent-label';
 import { closestPreset } from './source-preset-pick';
 import { sourceRequestContext } from './source-request-context';
+import { continuesRequest, unfinishedNote } from './source-unfinished-request';
+import { SourceStorePlanService } from './source-store-plan.service';
+import type { StorePlan } from './plan/store-plan';
+import type { AppliedPlan } from './source-templates.service';
 import { styleReleaseWaitMs } from './source-style-release';
 import { sourceMerchantRequest, type SourceMerchantRequest } from './source-merchant-request';
 import { agentDraftPreviews } from './agent/agent-draft-previews';
@@ -34,7 +39,9 @@ import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { galleryTemplates, templateManifest, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
-import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook, type MasterFill } from './source-master';
+import { buildStarters, pickStarter, recentStarters, type StarterEntry } from './source-starter-pick';
+import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook, type MasterFill, type MasterVariants } from './source-master';
 import { isFashionStore } from './source-master-fashion';
 import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy } from './source-templates';
@@ -77,8 +84,9 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
 
 /** The merchant's own words asking for a store designed from nothing (spec 2026-10-19 §2.1). */
 /** Spec 2026-10-19 §3.2: how the agent edits a master store — the Amboras rule set, in YAPI's words. */
-/** Variety spec §5: the brief of the background personal touch that follows a new master store. */
-export const PERSONAL_TOUCH_BRIEF = 'Toque personal para este negocio: agrega UNA sección que las variantes no tienen y que nazca de sus datos reales (por ejemplo «Lo que nos hace distintos» o una guía breve de uso), UN detalle de firma (un sello con la ciudad o la idea del negocio, un subrayado dibujado en el titular o un separador propio) y, si una sección suena genérica, reescribe solo esa. No quites secciones, no cambies la estructura de store-data, no inventes datos, precios ni reseñas, no toques carrito ni pago.';
+/** Variety spec §5: the brief of the background personal touch that follows a new master store. Owner 2026-10-22 (NOA #3,
+ *  «i dont like sections like these»): what it adds carries a real photo on the store's light ground, never a dark text-only band. */
+export const PERSONAL_TOUCH_BRIEF = 'Toque personal para este negocio: agrega UNA sección que las variantes no tienen y que nazca de sus datos reales (por ejemplo «Lo que nos hace distintos» o una guía breve de uso), con una foto real de la tienda junto al texto y sobre el fondo claro de la tienda: nunca una banda oscura o negra solo de texto, ni filas de columnas de texto sueltas; UN detalle de firma pequeño dentro de una sección que ya existe (un sello con la ciudad o la idea del negocio, un subrayado dibujado en el titular o un separador propio) y, si una sección suena genérica, reescribe solo esa. No quites secciones, no cambies la estructura de store-data, no inventes datos, precios ni reseñas, no toques carrito ni pago.';
 
 /** Owner 2026-10-22: «siempre tiene que ser desde la plantilla, yapi desde cero siempre falla». A merchant who asked for their own
  *  design, their own pages or «sin plantilla» still starts from Esencial; this follow-up then does what they asked, on top of it. */
@@ -90,7 +98,7 @@ export const OWN_REQUEST_BRIEF = 'Esta tienda empezó desde la plantilla Esencia
 /** A personal touch that was dropped (the store moved on, or the edit failed): the job ends quietly, with no message. */
 export class PersonalTouchSkipped extends Error {}
 
-export const MASTER_EDIT_RULES = 'Esta tienda usa la plantilla base «Esencial». Edita el componente que ya existe; cambia solo lo que el comercio pidió; nunca reescribas una página completa ni cambies secciones que no nombró. Los textos visibles viven en components/store-data.tsx (copy): úsalos, no los copies dentro de los componentes. No toques el bloque /* pagosya:master-theme */ de styles/globals.css. Íconos: solo los de components/icons.tsx. Sin emojis.';
+export const MASTER_EDIT_RULES = 'Esta tienda usa la plantilla base «Esencial». Edita el componente que ya existe; cambia solo lo que el comercio pidió; nunca reescribas una página completa ni cambies secciones que no nombró. Los textos visibles viven en components/store-data.tsx (copy): úsalos, no los copies dentro de los componentes. No toques el bloque /* pagosya:master-theme */ de styles/globals.css. Íconos: solo los de components/icons.tsx. Sin emojis. Color: el fondo, la tinta y como mucho un color de acento de la marca; no pintes cada sección, bloque o tarjeta de un color distinto, salvo que el comercio nombre esos colores. Si pide energía o colores vivos, ponla en el movimiento, la tipografía y ese único acento. Tarjetas de producto de tamaño normal: 3 o 4 por fila en computadora, nunca una tarjeta estirada a media página.';
 const MASTER_SCRATCH = /\b(?:diseñ\w*|crea\w*|cré\w*|arm\w*|haz|hacer|hagas|constru\w*)\b[^.!?\n]{0,30}\bdesde (?:cero|0)\b|\b(?:tienda|página|pagina|web|sitio|diseño)\b[^.!?\n]{0,20}\bdesde (?:cero|0)\b|from scratch|diseño propio|sin (?:usar )?plantillas?|\b(?:ni|nada de|no (?:quiero|uses|usar|usen))\s+(?:una?\s+)?(?:plantillas?|templates?)\b/i;
 /** Stress test 2026-10-21: a merchant who lays out their own pages (the Studio's «Páginas separadas» choice, or «necesito
  *  estas páginas: …») gets them built; Esencial's fill writes words only and silently dropped all seven. */
@@ -200,7 +208,8 @@ export class SourceChatService {
   /** Measures the saved home page like the reference (polish 2026-10-18); a spec replaces it. */
   homeMeasurer = measureBuiltHome;
   private readonly productLogger = new Logger('ProductSource');
-  constructor(private readonly prisma: PrismaService, private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly dialogue: SourceConversationService, private readonly templates: SourceTemplatesService, private readonly config: ConfigService, @Optional() private readonly uploads?: UploadsService) {}
+  constructor(private readonly prisma: PrismaService, private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly dialogue: SourceConversationService, private readonly templates: SourceTemplatesService, private readonly config: ConfigService, @Optional() private readonly uploads?: UploadsService,
+    @Optional() private readonly plans?: SourceStorePlanService) {}
   /** Spec 2026-10-12: how long a pick or a new request waits for a style run that is stopping to let go of the store. */
   /** Computed on first use from the deadlines the style run awaits (source-style-release.ts); tests set it directly. */
   protected styleReleaseWaitMs?: number;
@@ -301,39 +310,169 @@ export class SourceChatService {
 
   /** Spec 2026-09-26 §1.3: v1 is the template as applied today; v2 is a free adaptation. A failed adaptation keeps v1. */
   /** Spec 2026-10-19 §2: Esencial applied and filled in one call; the store is saved even when the call fails. */
-  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[] = [], merchantRequest?: string, replyPrefix = '') {
+  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[] = [], merchantRequest?: string, replyPrefix = '', planned?: { plan: StorePlan; applied: AppliedPlan }) {
     await workflow.report('saving');
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true } });
     const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; contact?: { city?: string }; photos?: string[] };
     const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
     // Owner 2026-10-22: start from the Plantillas preset closest to the business (its words and product names), not a random roll.
     const productNames = await Promise.resolve(this.prisma.paymentLink?.findMany?.({ where: { storeId }, select: { name: true }, take: 30 })).catch(() => undefined) ?? [];
-    const presetId = closestPreset([store?.name, onboarding.what, onboarding.story, draft.answers?.context, merchantRequest ?? userMessage.content, ...productNames.map((product: { name: string }) => product.name)].filter(Boolean).join('\n'));
-    const saved = await this.templates.applyMaster(merchantId, storeId, revision, async facts => {
-      const photos = [...new Set([...(onboarding.photos ?? []), ...chatPhotos, ...facts.photos])].slice(0, 8);
-      const read = await this.dialogue.fillMaster(merchantId, {
-        storeId, storeName: facts.storeName, ...(facts.brand ? { brand: facts.brand } : {}), what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '', city: onboarding.contact?.city ?? '',
-        products: facts.products, photos, palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: manifest.master!.sections,
-        ...(facts.menuTargets ? { menuTargets: facts.menuTargets } : {}),
-      });
-      const base: MasterFill = read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: (onboarding.what ?? '').slice(0, 160) } };
-      // Fashion look spec 2026-10-21: the read's kind, backed by the store's own words, decides the fashion card and page.
-      const fashion = isFashionStore({ kind: read?.kind, storeName: facts.storeName, what: onboarding.what ?? draft.answers?.context ?? '', products: facts.products });
-      return { ...base, character: { ...(base.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] }), kind: fashion ? 'fashion' : 'other' } };
-    }, presetId);
+    const businessWords = [store?.name, onboarding.what, onboarding.story, draft.answers?.context, merchantRequest ?? userMessage.content, ...productNames.map((product: { name: string }) => product.name)].filter(Boolean).join('\n');
+    const presetId = closestPreset(businessWords);
+    // Starters (spec 2026-10-24): with YAPI_STARTERS on, a new store starts from the finished store closest to the business, picked
+    // from the same words before the fill so the right fill runs. Esencial, with its closest preset, stays the fallback.
+    const starter = planned || !this.startersOn() ? undefined : await this.firstStarter(merchantId, storeId, businessWords,
+      isFashionStore({ storeName: store?.name ?? '', what: onboarding.what ?? draft.answers?.context ?? '', products: productNames.map((product: { name: string }) => product.name) }));
+    let briefPhotos: string[] = [...new Set([...(onboarding.photos ?? []), ...chatPhotos])].slice(0, 8);
+    // YAPI plan card (spec 2026-10-22): the fill writes the words for the sections the plan chose.
+    const filler = this.masterFiller(merchantId, storeId, onboarding, draft.answers?.context, chatPhotos,
+      planned ? (manifest.master!.sections ?? []).filter(id => planned.applied.sections.includes(id)) : manifest.master!.sections, photos => { briefPhotos = photos; });
+    // YAPI plan card (spec 2026-10-22): a planned build carries its checked plan and no preset.
+    const saved = planned ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned.applied)
+      : starter?.kind === 'slots' ? await this.applyPlantilla(merchantId, storeId, starter.id, revision, { about: draft.answers?.context, assetUrls: chatPhotos })
+      : starter ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, undefined, starter.id)
+      : await this.templates.applyMaster(merchantId, storeId, revision, filler, presetId);
     await workflow.finish('completed');
     // Variety spec §5: one background personal touch per new master store. The reply carries it; the job runner queues it
     // once this request's job is closed (a store has one active job at a time).
     // The merchant's own request (pages, their own look) rides on the follow-up whatever the personal-touch switch says.
-    const touching = this.config.get<boolean>('app.yapiPersonalTouch') === true || Boolean(merchantRequest);
-    const followUp: SourceMessageInput | undefined = touching ? { instruction: merchantRequest ? `${OWN_REQUEST_BRIEF}\n\nMensajes del comercio:\n${merchantRequest}` : PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, requestId: randomUUID(), model: 'auto' } : undefined;
+    const planBrief = planned ? this.plans?.followUpBrief(planned.plan) ?? null : null;
+    const touching = this.config.get<boolean>('app.yapiPersonalTouch') === true || Boolean(merchantRequest) || Boolean(planBrief);
+    // Owner 2026-10-23, «the model that made PEPPA please back»: PEPPA's second step was a full redesign with expressive motion
+    // from a rich brief (feel, every section, colours from the labels, copy in the brand's voice), never a minimal template edit.
+    const written = this.config.get<boolean>('app.yapiPeppaRedesign') === false ? null : await Promise.resolve(this.dialogue.redesignBrief?.(merchantId, {
+      storeId, storeName: store?.name ?? '', what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '',
+      products: productNames.map((product: { name: string }) => product.name), photos: briefPhotos, plan: planned?.plan.card ?? [], ...(merchantRequest ? { request: merchantRequest } : {}),
+    })).catch(() => null) ?? null;
+    // Owner 2026-10-23, Oh Belly: the photos and the video the merchant attached reached only the fill above, so the redesign could
+    // not bundle the video and pointed the hero at /v1/uploads, which the preview cannot load. The follow-up carries them.
+    const attached = await this.requestAssets(threadId);
+    const withAssets = attached.length ? { assetUrls: attached } : {};
+    const followUp: SourceMessageInput | undefined = written ? { instruction: merchantRequest ? `${written}\n\nMensajes del comercio:\n${merchantRequest}` : written, revision: saved.revision, personalTouch: true, ownRequest: true, redesign: true, motion: 'expressive', requestId: randomUUID(), model: 'auto', ...withAssets }
+      : planBrief ? { instruction: merchantRequest ? `${planBrief}\n\nMensajes del comercio:\n${merchantRequest}` : planBrief, revision: saved.revision, personalTouch: true, ownRequest: true, requestId: randomUUID(), model: 'auto', ...withAssets }
+      : touching ? { instruction: merchantRequest ? `${OWN_REQUEST_BRIEF}\n\nMensajes del comercio:\n${merchantRequest}` : PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, ...(merchantRequest ? { ownRequest: true } : {}), requestId: randomUUID(), model: 'auto', ...withAssets } : undefined;
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId, channel: 'source', role: 'ASSISTANT',
-      content: `${replyPrefix}Tu tienda ${store?.name ?? ''} está lista.${merchantRequest ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
+      content: `${planned ? `Esto es lo que hice:\n${planned.plan.card.map(line => `• ${line}`).join('\n')}\n` : ''}${replyPrefix}Tu tienda ${store?.name ?? ''} está lista.${merchantRequest ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : written ? ' Ahora la estoy rediseñando con un estilo propio para tu marca; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
       metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
     } });
     // Spec 2026-10-19 §2: with no personal touch coming, the cards ride on this reply; otherwise on the touch's.
-    if (!touching) await this.attachSuggestions(merchantId, storeId, saved.revision, assistantMessage);
+    if (!touching && !written) await this.attachSuggestions(merchantId, storeId, saved.revision, assistantMessage);
+    return { userMessage, assistantMessage, revision: saved, ...(followUp ? { followUp } : {}) };
+  }
+
+  /** Spec 2026-10-19 §2: the one call that writes a master store's words, look and photos from the walkthrough and the catalogue. */
+  private masterFiller(merchantId: string, storeId: string, onboarding: { what?: string; story?: string; contact?: { city?: string }; photos?: string[] }, context: string | undefined, chatPhotos: string[],
+    sectionCatalogue: readonly string[] | undefined, onPhotos: (photos: string[]) => void = () => undefined): Parameters<SourceTemplatesService['applyMaster']>[3] {
+    const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
+    return async facts => {
+      const photos = [...new Set([...(onboarding.photos ?? []), ...chatPhotos, ...facts.photos])].slice(0, 8);
+      onPhotos(photos);
+      const read = await this.dialogue.fillMaster(merchantId, {
+        storeId, storeName: facts.storeName, ...(facts.brand ? { brand: facts.brand } : {}), what: onboarding.what ?? context ?? '', story: onboarding.story ?? '', city: onboarding.contact?.city ?? '',
+        products: facts.products, photos, palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants,
+        sectionCatalogue, ...(facts.menuTargets ? { menuTargets: facts.menuTargets } : {}),
+      });
+      const base: MasterFill = read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: (onboarding.what ?? '').slice(0, 160) } };
+      // Fashion look spec 2026-10-21: the read's kind, backed by the store's own words, decides the fashion card and page.
+      const fashion = isFashionStore({ kind: read?.kind, storeName: facts.storeName, what: onboarding.what ?? context ?? '', products: facts.products });
+      return { ...base, character: { ...(base.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] }), kind: fashion ? 'fashion' : 'other' } };
+    };
+  }
+
+  /** «Probar otro estilo» (spec 2026-10-24 §2): the store rebuilt from another starter. Master to master keeps the words YAPI
+   *  already wrote and redoes colours and photos for the new layout; any other pair runs that starter's fill call again. */
+  async rebuildFromStarter(merchantId: string, storeId: string, starter: StarterEntry, revision: number, words?: Pick<MasterFill, 'copy' | 'sections' | 'featureCopy'>,
+    photos?: { heroPhoto?: string; storyPhoto?: string; files: SourceProjectFileDto[] }) {
+    if (starter.kind === 'slots') return this.applyPlantilla(merchantId, storeId, starter.id, revision);
+    const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { name: true, onboarding: true } });
+    const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; contact?: { city?: string }; photos?: string[] };
+    const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
+    const filler: Parameters<SourceTemplatesService['applyMaster']>[3] = words?.copy ? async facts => {
+      // The photos the build bundled travel with their files; otherwise the walkthrough uploads are bundled again.
+      const [upload, second] = onboarding.photos ?? [];
+      const hero = photos?.heroPhoto ?? upload, story = photos?.storyPhoto ?? second;
+      const fashion = isFashionStore({ storeName: facts.storeName, what: onboarding.what ?? '', products: facts.products });
+      return { ...words, ...(hero !== undefined ? { heroPhoto: hero } : {}), ...(story !== undefined ? { storyPhoto: story } : {}), character: { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [], kind: fashion ? 'fashion' : 'other' } };
+    } : this.masterFiller(merchantId, storeId, onboarding, undefined, [], manifest.master!.sections);
+    const carried = photos?.files.length ? [photos.files] as const : [] as const;
+    if (starter.id !== MASTER_TEMPLATE_ID) return this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, undefined, starter.id, ...carried);
+    // Esencial keeps its closest preset, as on a first build.
+    const presetId = closestPreset([store?.name, onboarding.what, onboarding.story].filter(Boolean).join('\n'));
+    return carried.length ? this.templates.applyMaster(merchantId, storeId, revision, filler, presetId, undefined, undefined, ...carried) : this.templates.applyMaster(merchantId, storeId, revision, filler, presetId);
+  }
+
+  /** Starters (spec 2026-10-24 §2): the starter a new store starts from; undefined when Esencial is the best fit. */
+  private async firstStarter(merchantId: string, storeId: string, text: string, fashion: boolean) {
+    const starters = buildStarters();
+    const id = pickStarter({ text, fashion, starters, recent: await recentStarters(this.prisma, merchantId, storeId) });
+    return id === MASTER_TEMPLATE_ID ? undefined : starters.find(starter => starter.id === id);
+  }
+
+  /** The files of the merchant's latest message that had any: the request itself, or the one before a «Construir» tap. */
+  private async requestAssets(threadId: string): Promise<string[]> {
+    const recent: { metadata: unknown }[] = await Promise.resolve(this.prisma.storeAgentMessage?.findMany?.({ where: { threadId, role: 'USER' }, orderBy: { createdAt: 'desc' }, take: 12, select: { metadata: true } })).catch(() => undefined) ?? [];
+    for (const message of recent) {
+      const urls = (message.metadata as { assetUrls?: unknown } | null)?.assetUrls;
+      const kept = Array.isArray(urls) ? urls.filter((url): url is string => typeof url === 'string') : [];
+      if (kept.length) return kept.slice(0, 24);
+    }
+    return [];
+  }
+
+  private planOn() { return this.config.get<boolean>('app.yapiPlanCard') !== false && Boolean(this.plans); }
+  private startersOn() { return this.config.get<boolean>('app.yapiStarters') === true; }
+  private freeFirst() { return this.planOn() && this.config.get<boolean>('app.yapiFreeFirst') !== false; }
+
+  /** YAPI plan card (spec 2026-10-22): the card — what YAPI will do, line by line; the message id is the plan's id. */
+  private async planCard(threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, drafted: { plan: StorePlan; applied: AppliedPlan }, kind: 'new' | 'edit') {
+    await workflow.finish('completed');
+    const intro = kind === 'new' ? 'Esto es lo que voy a hacer con tu tienda:' : 'Esto es lo que voy a cambiar:';
+    const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+      content: `${intro}\n${drafted.plan.card.map(line => `• ${line}`).join('\n')}\nToca ${kind === 'new' ? '«Construir»' : '«Hacer cambios»'} o dime qué cambiar.`,
+      metadata: { progress: workflow.value, plan: drafted.plan, appliedPlan: drafted.applied, planKind: kind } as unknown as Prisma.InputJsonValue } });
+    return { userMessage, assistantMessage, setup: null };
+  }
+
+  /** A failed plan call keeps the request for «sigue» (unfinished requests, 2026-10-22). */
+  private async planFailed(threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, instruction: string, setupAction?: string) {
+    await workflow.finish('failed');
+    const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+      content: unfinishedNote('No pude preparar el plan de tu tienda.', false), metadata: { failed: true, progress: workflow.value, pendingRequest: { instruction, direct: false, ...(setupAction ? { setupAction } : {}) } } } });
+    return { userMessage, assistantMessage, setup: null };
+  }
+
+  /** A new store: a short request shows the plan card; a detailed one builds the plan at once (spec 2026-10-22). */
+  private async firstBuild(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[], instruction: string, merchantRequest?: string, replyPrefix = '', setupAction?: string) {
+    // Owner 2026-10-24: with starters on, a new store starts from its starter at once; the plan card is for later edits.
+    if (!this.planOn() || this.startersOn()) return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix);
+    const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } }).catch(() => null);
+    const what = ((store?.onboarding ?? {}) as { what?: string }).what ?? draft.answers?.context ?? '';
+    const drafted = await this.plans!.draft(merchantId, storeId, { revision, request: merchantRequest ?? instruction, what, photos: chatPhotos });
+    if (!drafted) return this.planFailed(threadId, userMessage, workflow, instruction, setupAction);
+    // Free-first: every first build waits for «Construir», so the approved plan is what YAPI designs from.
+    if (!merchantRequest || this.freeFirst()) return this.planCard(threadId, userMessage, workflow, drafted, 'new');
+    return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix, drafted);
+  }
+
+  /** «Hacer cambios»: the plan's parts, look and sections saved as data; its own sections go to the follow-up. */
+  private async buildPlanEdit(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, plan: StorePlan, applied: AppliedPlan, revision: number) {
+    await workflow.report('saving');
+    // Final review 2026-10-22: the store's colours stay beside a new accent, the plan's kit surfaces are saved, and sections the plan
+    // adds need words, so the follow-up writes them.
+    const state = readMasterState(((await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot).files);
+    const added = applied.sections.filter(id => !(state.variants?.sections ?? []).includes(id));
+    const saved = await this.templates.refill(merchantId, storeId, revision, {
+      variants: applied.variants as Partial<MasterVariants>,
+      look: { palette: applied.palette, fonts: applied.fonts, ...(applied.accent ? { colors: { ...(state.look?.colors ?? {}), accent: applied.accent } } : {}) },
+      dna: applied.dna,
+    }, 'Cambios del plan');
+    await workflow.finish('completed');
+    const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+      content: `Listo: hice los cambios del plan.\n${plan.card.map(line => `• ${line}`).join('\n')}`,
+      metadata: { progress: workflow.value, sourceRevision: saved.revision, label: 'Cambios del plan' } } });
+    const brief = [this.plans!.followUpBrief(plan), ...added.map(id => `Agrega a la portada la sección «${id}» de la plantilla Esencial, con el contenido real de esta tienda.`)].filter(Boolean).join('\n') || null;
+    const followUp: SourceMessageInput | undefined = brief ? { instruction: brief, revision: saved.revision, personalTouch: true, ownRequest: true, requestId: randomUUID(), model: 'auto' } : undefined;
     return { userMessage, assistantMessage, revision: saved, ...(followUp ? { followUp } : {}) };
   }
 
@@ -523,7 +662,7 @@ export class SourceChatService {
     if (input.directionId && (!tappedDirection || current.revision)) throw new BadRequestException('Elige una de las direcciones sugeridas en el último mensaje de YAPI.');
     const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: { updatedAt: new Date() } });
     const userMessage = await this.prisma.storeAgentMessage.create({ data: {
-      threadId: thread.id, channel: 'source', role: 'USER', content: input.personalTouch ? 'Toque personal' : input.instruction.trim(),
+      threadId: thread.id, channel: 'source', role: 'USER', content: input.resumeWords?.trim() || (input.personalTouch ? 'Toque personal' : input.instruction.trim()),
       metadata: { assetUrls: input.assetUrls || [], revision: input.revision, ...(input.requestId ? { requestId: input.requestId } : {}) },
     } });
     // Store voice (spec 2026-10-14): the message right after YAPI's kind question is its answer. It is kept word for word on the
@@ -536,6 +675,37 @@ export class SourceChatService {
         metadata: { assetUrls: input.assetUrls || [], revision: input.revision, requestId: input.requestId, progress },
       } });
     });
+    let freePlan: { plan: StorePlan; applied: AppliedPlan } | undefined;
+    // «Cambiar» / «dale» (final review 2026-10-22): a message answering YAPI's newest card works on that plan.
+    const lastAnswer = [...history.messages].reverse().find(message => message.role === 'ASSISTANT');
+    const openPlan = (lastAnswer?.metadata ?? {}) as { plan?: StorePlan; planKind?: 'new' | 'edit' };
+    if (this.planOn() && !input.planId && !input.personalTouch && !input.resumeWords && openPlan.plan && lastAnswer && continuesRequest(input.instruction)) input = { ...input, planId: lastAnswer.id };
+    if (input.planId && this.planOn()) {
+      const saved = history.messages.find(message => message.id === input.planId && message.role === 'ASSISTANT');
+      const meta = (saved?.metadata ?? {}) as { plan?: StorePlan; appliedPlan?: AppliedPlan; planKind?: 'new' | 'edit' };
+      if (!meta.plan || !meta.appliedPlan || meta.plan.revision !== current.revision) {
+        await workflow.finish('completed');
+        const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT',
+          content: 'La tienda cambió desde este plan. Dime otra vez qué quieres y preparo uno nuevo.', metadata: { progress: workflow.value } } });
+        return { userMessage, assistantMessage, setup: null };
+      }
+      if (meta.planKind === 'edit') return await this.buildPlanEdit(merchantId, storeId, thread.id, userMessage, workflow, meta.plan, meta.appliedPlan, current.revision);
+      if (!this.freeFirst()) return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, [], undefined, '', { plan: meta.plan, applied: meta.appliedPlan });
+      // Free-first (owner 2026-10-22): the plan becomes the brief of a store designed from scratch; Esencial is the fallback.
+      freePlan = { plan: meta.plan, applied: meta.appliedPlan };
+      const earlier = [...history.messages].reverse().find(message => message.role === 'USER' && message.content.trim() && message.content.trim() !== input.instruction.trim())?.content;
+      input = { ...input, instruction: this.plans!.freeBrief(meta.plan, earlier), setupAction: 'generate', planId: undefined };
+    }
+    // «Cambiar»: any other answer to the newest card re-plans with that plan and shows the card again.
+    if (this.planOn() && !freePlan && !input.planId && !input.personalTouch && !input.resumeWords && !input.selection && openPlan.plan && openPlan.plan.revision === current.revision) {
+      const onboarding = ((await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } }).catch(() => null))?.onboarding ?? {}) as { what?: string };
+      const state = openPlan.planKind === 'edit' && current.revision ? readMasterState(((await this.projects.version(merchantId, storeId, current.revision)).snapshot as unknown as SourceProjectSnapshot).files) : undefined;
+      const { sections: currentSections = [], ...currentVariants } = state?.variants ?? { sections: [] };
+      const drafted = await this.plans!.draft(merchantId, storeId, { revision: current.revision, request: input.instruction, what: onboarding.what ?? '', photos: (input.assetUrls || []).slice(0, 8), previous: openPlan.plan,
+        ...(state ? { current: { variants: currentVariants as Record<string, string>, sections: currentSections, palette: state.look?.palette ?? '', fonts: state.look?.fonts ?? '' } } : {}) });
+      if (!drafted) return await this.planFailed(thread.id, userMessage, workflow, input.instruction, input.setupAction);
+      return await this.planCard(thread.id, userMessage, workflow, drafted, openPlan.planKind === 'edit' ? 'edit' : 'new');
+    }
     const styleOn = this.config.get<boolean>('app.yapiStylePick') === true;
     if (styleOn && input.stylePick) return this.buildFromStyle(merchantId, storeId, input, thread, userMessage, workflow, setupDraft);
     const latestProposal = styleOn ? await this.prisma.storeSourceGeneration.findFirst({ where: { storeId, proposal: { not: Prisma.DbNull } }, orderBy: { createdAt: 'desc' }, select: { id: true, status: true, heartbeatAt: true, proposal: true } }) : null;
@@ -581,14 +751,14 @@ export class SourceChatService {
     }
     // Variety spec §1: a walkthrough store's answers are already known, so it skips the conversation step.
     // A pasted link (a site to copy, a product link) keeps its own flow, which the conversation step reads (craverly test).
-    if (this.config.get<boolean>('app.yapiMasterTemplate') === true && input.setupAction === 'generate' && !current.revision
+    if (this.config.get<boolean>('app.yapiMasterTemplate') === true && !freePlan && input.setupAction === 'generate' && !current.revision
       && !/https?:\/\/|www\./i.test(input.instruction) && !setupDraft.websiteCopyUrl
 ) {
       const walkthrough = await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } });
       const onboarding = walkthrough?.onboarding as { purpose?: string } | null | undefined;
       if (onboarding && onboarding.purpose !== 'showcase') {
         await workflow.report('interpreting');
-        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, (input.assetUrls || []).slice(0, 8), ownDesignRequest(input.instruction, history.messages));
+        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, (input.assetUrls || []).slice(0, 8), input.instruction, ownDesignRequest(input.instruction, history.messages), '', input.setupAction);
       }
     }
     let retryDecision: SourceConversationDecision | undefined;
@@ -636,7 +806,7 @@ export class SourceChatService {
       const productSource = productRead?.earlier
         ? { site: productRead.site, name: productRead.earlier.product.name, description: productRead.earlier.listingDescription, price: productRead.earlier.product.amount / 100, currency: productRead.earlier.product.currency, options: [] }
         : productListing ? { site: productRead!.site, name: productListing.name, description: productListing.description.slice(0, 1500), price: productListing.price, currency: productListing.currency, options: productListing.options } : undefined;
-      const decision: SourceConversationDecision = input.personalTouch ? { action: 'generate', reply: '', summary: 'Toque personal', generationInstruction: input.instruction, imageUses: [], startFrom: 'unknown', editKind: 'design' } : productFailure ? { action: 'reply', reply: productFailure, summary: setupDraft.answers.context ?? '', generationInstruction: '', imageUses: [] } : { ...(reusable ? savedRetry.decision : await this.dialogue.decide(merchantId, {
+      const decision: SourceConversationDecision = input.personalTouch ? { action: 'generate', reply: '', summary: 'Toque personal', generationInstruction: input.instruction, imageUses: [], startFrom: 'unknown', editKind: input.redesign ? 'redesign' : 'design' } : productFailure ? { action: 'reply', reply: productFailure, summary: setupDraft.answers.context ?? '', generationInstruction: '', imageUses: [] } : { ...(reusable ? savedRetry.decision : await this.dialogue.decide(merchantId, {
         storeId, model: input.model, instruction: input.instruction, productPhoto, ...(productSource ? { productSource } : {}), buildNow: ['generate', 'quick'].includes(input.setupAction || '') || Boolean(productSource),
         revision: current.revision, store, draft: setupDraft, site, budget, catalog: store.paymentLinks || [], knowledge: await loadStoreKnowledge(this.prisma, merchantId, storeId).catch(() => null),
         messages: [...history.messages, userMessage], assetUrls: allAssets, browserReview: input.browserReview,
@@ -850,8 +1020,18 @@ export class SourceChatService {
         const done = await this.plantillaContentEdit(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous!, plantilla.copy);
         if (done) return done;
       }
+      // YAPI plan card (spec 2026-10-22): a change of look the merchant did not spell out gets a plan to approve first.
+      if (this.planOn() && masterStore && decision.vague && !input.personalTouch && !input.selection && previous) {
+        const state = readMasterState((previous.snapshot as unknown as SourceProjectSnapshot).files);
+        const { sections: currentSections = [], ...currentVariants } = state.variants ?? { sections: [] };
+        const drafted = await this.plans!.draft(merchantId, storeId, { revision: current.revision, request: input.instruction, what: '', photos: [],
+          current: { variants: currentVariants as Record<string, string>, sections: currentSections, palette: state.look?.palette ?? '', fonts: state.look?.fonts ?? '' } });
+        if (!drafted) return await this.planFailed(thread.id, userMessage, workflow, input.instruction);
+        return await this.planCard(thread.id, userMessage, workflow, drafted, 'edit');
+      }
       const masterDesign = masterStore && decision.editKind === 'design';
-      if (input.personalTouch && !masterDesign) throw new Error('personal touch on a store that is no longer Esencial');
+      // The merchant's own request still runs, as an ordinary edit, on a store that has left Esencial since.
+      if (input.personalTouch && !input.ownRequest && !masterDesign) throw new Error('personal touch on a store that is no longer Esencial');
       // A full redesign or «más única» leaves Esencial: later edits are ordinary edits, not data refills.
       const leavesMaster = previousBrief?.templateId === MASTER_TEMPLATE_ID && !masterDesign && (decision.editKind === 'redesign' || decision.rework === true || sourceRedesignRequested(input.instruction));
       const brief = { ...(previousBrief || {
@@ -875,7 +1055,7 @@ export class SourceChatService {
       // Master template (spec 2026-10-19): a new shop starts from Esencial unless the merchant asked, in their own words, for a design
       // from scratch. A website copy, a product link and a listing screenshot keep their own flows.
       // Owner 2026-10-22: «desde cero» no longer skips Esencial; it rides on the follow-up instead.
-      const askedScratch = false;
+      const askedScratch = Boolean(freePlan);
       // Products typed with prices in a chat-only setup are created by the designer's catalog step; that flow keeps them.
       const chatCatalog = this.config.get<boolean>('app.yapiMasterTemplate') === true && newShop && statesPrices(catalogInstruction)
         && !(await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } }))?.onboarding;
@@ -885,11 +1065,11 @@ export class SourceChatService {
         const chatPhotos = assetUrls.filter(url => ['product', 'business', 'team', 'background'].includes(decision.imageUses.find(use => use.url === url)?.role ?? ''));
         const ownRequest = ownDesignRequest(input.instruction, history.messages);
         const productRequest = productImport ? `${ownRequest ?? input.instruction}\n\n${productSourcePrompt(productImport.product, productImport.listingDescription, productImport.videoUrls?.length ?? 0)}\nConstruye la tienda alrededor de este producto.` : undefined;
-        return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos, productRequest ?? ownRequest, productNote);
+        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos, input.instruction, productRequest ?? ownRequest, productNote);
       }
       // "Elige tu estilo": new stores and full redesigns get two styles to pick from (one calm, one bold); a kept template stays its own style.
       // A copy follows its blueprint: no style cards (spec 2026-10-18 B §3).
-      const proposeStyle = styleOn && !keepTemplate && !websiteCopy && (!current.revision || reworkTemplate || sourceRedesignRequested(input.instruction));
+      const proposeStyle = styleOn && !freePlan && !keepTemplate && !websiteCopy && !input.redesign && (!current.revision || reworkTemplate || sourceRedesignRequested(input.instruction));
       // The chat answers as soon as the cards are choosable (spec 2026-10-12); the style run then finishes its heroes alone.
       let offerCards!: (result: StyleProposalResult) => void;
       const cardsOffered = new Promise<StyleProposalResult>(resolve => { offerCards = resolve; });
@@ -899,6 +1079,8 @@ export class SourceChatService {
       }, budget, decision.imageUses, workflow.report, { referenceCaptures: copyCaptures ?? sourceWebsiteReferenceCaptures(websiteReferences), ...(websiteCopy ? { websiteCopy: true, ...(copyHeaderShape(websiteCopy) ? { copyHeader: copyHeaderShape(websiteCopy) } : {}) } : {}), ...(brandSource ? { brandSource } : {}), ...(reworkTemplate ? { redesign: true } : {}), ...(keepTemplate ? { keepTemplate: true } : {}), ...(input.resumeDraft ? { resumeDraft: true } : {}), ...(proposeStyle ? { styleProposal: true as const, onPickable: offerCards } : {}) }));
       // What the style run does after the cards were offered never fails this reply (the run records its own failure).
       run.catch(() => undefined);
+      // Free-first: a free build that fails falls back to Esencial with the same approved plan.
+      if (freePlan) { const settled = await run.then(value => ({ value }), () => null); if (!settled) return await this.useMasterTemplate(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, [], undefined, 'Probé un diseño propio y no salió; usé la plantilla con tu plan. ', freePlan); }
       const revision = proposeStyle ? await Promise.race([run, cardsOffered]) : await run;
       if ('styleProposal' in revision) {
         await workflow.finish('completed');
@@ -948,17 +1130,20 @@ export class SourceChatService {
     } catch (error) {
       await workflow.finish('failed');
       // Variety spec §5: a failed personal touch keeps the first version and says nothing.
-      if (input.personalTouch) {
+      if (input.personalTouch && !input.ownRequest) {
         await this.prisma.storeAgentMessage.delete({ where: { id: userMessage.id } }).catch(() => undefined);
         throw new PersonalTouchSkipped('the personal touch failed');
       }
+      // The merchant's own request on a new store fails out loud (owner 2026-10-22); an interrupted one is noted by the job runner.
+      if (input.personalTouch && !input.resumeWords) await this.prisma.storeAgentMessage.delete({ where: { id: userMessage.id } }).catch(() => undefined);
+      if (input.personalTouch && (sourceRequestContext.getStore()?.signal?.aborted || ['AbortError', 'TimeoutError'].includes((error as { name?: string } | null)?.name ?? ''))) throw error;
       // The same default-deny gate the generation path uses. Chat also wraps the
       // conversation step, the catalog request and the save path, whose validators
       // never had their diagnostics rewritten for a merchant.
       const shown = merchantFacingSourceFailure(error);
       const failureReason = shown instanceof SourceConversationFailure || shown instanceof SourceProviderQuotaException || shown instanceof HttpException && (shown.getStatus() < 500 || shown.getStatus() === 502) ? shown.message : 'No pude completar tu pedido.';
       await this.prisma.storeAgentMessage.create({ data: {
-        threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: `${failureReason} Tu mensaje y los archivos quedaron guardados; no necesitas volver a adjuntarlos. ${this.generation.usesChatGptPlan ? 'Un nuevo intento usa tu saldo del plan de ChatGPT, sin recurrir a una API de pago.' : 'Un nuevo intento puede consumir créditos de IA.'}`, metadata: { failed: true, progress: workflow.value, ...(error instanceof SourceConversationFailure ? { failure: { stage: 'conversation', ...safeConversationDiagnostic(error.diagnostic) } } : {}), ...(retryDecision ? { sourceRetry: { fingerprint: retryFingerprint, decision: retryDecision } } : {}), sourceSetup: { ...setupDraft, assetUrls: error instanceof BadRequestException ? setupDraft.assetUrls : allAssets } },
+        threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: input.ownRequest ? unfinishedNote(failureReason, true) : `${failureReason} Tu mensaje y los archivos quedaron guardados; no necesitas volver a adjuntarlos. ${this.generation.usesChatGptPlan ? 'Un nuevo intento usa tu saldo del plan de ChatGPT, sin recurrir a una API de pago.' : 'Un nuevo intento puede consumir créditos de IA.'}`, metadata: { failed: true, progress: workflow.value, pendingRequest: { instruction: input.instruction, direct: Boolean(input.personalTouch) }, ...(error instanceof SourceConversationFailure ? { failure: { stage: 'conversation', ...safeConversationDiagnostic(error.diagnostic) } } : {}), ...(retryDecision ? { sourceRetry: { fingerprint: retryFingerprint, decision: retryDecision } } : {}), sourceSetup: { ...setupDraft, assetUrls: error instanceof BadRequestException ? setupDraft.assetUrls : allAssets } },
       } });
       // Throw what the merchant may read, not the original diagnostic. The gate
       // returns aborts, timeouts and Prisma faults unchanged, so callers that
@@ -1102,9 +1287,9 @@ export class SourceChatService {
     const brandReport = (revision.generation as { brandNote?: string } | undefined)?.brandNote ? `${(revision.generation as { brandNote?: string }).brandNote}\n\n` : '';
     // Spec 2026-10-15 free commerce surfaces: what YAPI designed, or which part fell back, with a retry per part.
     const surfacesReport = revision.generation?.surfacesNote ? `${revision.generation.surfacesNote}\n\n` : '';
-    const agentReport = revision.agent ? `${revision.agent.summary}\n\n${revision.agent.sections.map(section => `• ${section}`).join('\n')}\n\n` : '';
+    const agentReport = revision.agent ? agentReportText(revision.agent.summary, revision.agent.sections) : '';
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
-      threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: `${prefix}${designReport}${brandReport}${controlsReport}${surfacesReport}${agentReport}${revision.agent ? `Lo revisé en computadora y celular y lo guardé como «${revision.label}».` : `Listo: guardé «${revision.label}».`} Ya lo ves a la derecha; publícalo cuando te guste.${referenceOnlyNotice(imageUses, assetUrls)}${revision.createdProducts?.length ? ` Creé ${revision.createdProducts.length} productos en tu catálogo; también aparecen en la tienda publicada.` : ''}${revision.updatedProducts?.length ? ` Actualicé ${revision.updatedProducts.length} productos de tu catálogo.` : ''}${revision.deletedProducts?.length ? ` Eliminé ${revision.deletedProducts.length} productos de tu catálogo.` : ''}${revision.createdProducts?.length || revision.updatedProducts?.length || revision.deletedProducts?.length ? ' Puedes seguir administrándolos en Productos.' : ''}${revision.optionChanges?.length ? ` Opciones guardadas: ${revision.optionChanges.map(change=>`${change.productName}: ${change.count} combinaciones`).join('; ')}.` : ''}${voiceNote}`,
+      threadId: thread.id, channel: 'source', role: 'ASSISTANT', content: `${prefix}${designReport}${brandReport}${controlsReport}${surfacesReport}${agentReport}${revision.agent ? 'Lo revisé en computadora y celular y lo guardé.' : `Listo: guardé «${revision.label}».`} Ya lo ves a la derecha; publícalo cuando te guste.${referenceOnlyNotice(imageUses, assetUrls)}${revision.createdProducts?.length ? ` Creé ${revision.createdProducts.length} productos en tu catálogo; también aparecen en la tienda publicada.` : ''}${revision.updatedProducts?.length ? ` Actualicé ${revision.updatedProducts.length} productos de tu catálogo.` : ''}${revision.deletedProducts?.length ? ` Eliminé ${revision.deletedProducts.length} productos de tu catálogo.` : ''}${revision.createdProducts?.length || revision.updatedProducts?.length || revision.deletedProducts?.length ? ' Puedes seguir administrándolos en Productos.' : ''}${revision.optionChanges?.length ? ` Opciones guardadas: ${revision.optionChanges.map(change=>`${change.productName}: ${change.count} combinaciones`).join('; ')}.` : ''}${voiceNote}`,
       metadata: { progress: workflow.value, sourceSetup: { ...setupDraft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, ...(revision.generation?.surfacesRetry?.length ? { clarification: { options: revision.generation.surfacesRetry } } : {}), sourceRevision: revision.revision, label: revision.label, ...(revision.agent ? { agentSummary: revision.agent.summary, agentSections: revision.agent.sections } : {}), createdProductIds: revision.createdProducts?.map(p => p.id) || [], ...(revision.generation ? { generation: revision.generation } : {}), ...(kindQuestion ? { kindQuestion } : {}) },
     } });
     return { userMessage, assistantMessage, revision };

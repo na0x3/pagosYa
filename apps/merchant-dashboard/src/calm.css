@@ -309,28 +309,6 @@ body.is-logged-in .workspace-yapi textarea:focus-visible { box-shadow: none; }
 body.is-logged-in .workspace-yapi:focus-within { border-color: var(--pg-border-strong); box-shadow: var(--calm-shadow-lg), 0 0 0 3px var(--pg-focus-ring); }
 
 /* "¿Quién está ingresando?" opens over the login (before body.is-logged-in), so its values are spelled out. */
-.session-profile-dialog { width: min(520px, calc(100% - 32px)); padding: 0; background: #fff; color: #18181b; border: 1px solid #e7e5e4; border-radius: 16px; box-shadow: 0 24px 64px -20px rgb(0 0 0 / .45); font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; overflow: hidden; }
-.session-profile-dialog * { font-family: inherit; }
-.session-profile-dialog::backdrop { background: rgb(9 9 11 / .55); }
-.session-profile-head { padding: 28px 28px 4px; border: 0; background: #fff; color: #18181b; }
-.session-profile-head h2 { max-width: none; color: #18181b; font-size: 22px; font-weight: 650; line-height: 1.25; letter-spacing: -.02em; text-transform: none; }
-.session-profile-head p { margin-top: 6px; color: #57575e; font-size: 14px; font-weight: 400; line-height: 1.5; }
-.session-profile-body { gap: 18px; padding: 20px 28px; }
-.session-profile-body p, .session-profile-body small { color: #57575e; }
-.session-profile-existing > strong, .session-profile-fields label { color: #57575e; font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: 0; }
-.session-profile-choice { min-height: 0; padding: 14px 8px; background: #fff; color: #18181b; border: 1px solid #e7e5e4; border-radius: 12px; box-shadow: 0 1px 2px rgb(24 24 27 / .04); cursor: pointer; }
-.session-profile-choice:hover { border-color: #d6d3d1; background: #fafaf9; }
-.session-profile-choice[aria-pressed="true"] { background: #fafaf9; border-color: #18181b; box-shadow: 0 0 0 1px #18181b; }
-.session-profile-choice-avatar { width: 44px; height: 44px; border: 0; background: #f4f4f5; }
-.session-profile-choice-avatar .profile-initials { font-size: 16px; }
-.session-profile-choice span:last-child { font-size: 13px; font-weight: 600; }
-.session-profile-fields input { margin-top: 6px; min-height: 44px; background: #fff; color: #18181b; border: 1px solid #d6d3d1; border-radius: 8px; }
-.session-profile-fields input:focus-visible { outline: none; border-color: #18181b; box-shadow: 0 0 0 3px rgb(24 24 27 / .14); }
-.session-profile-body button:not(.session-profile-choice):not(.session-profile-avatar-option):not(.primary) { color: #3f3f46; }
-.session-profile-actions { padding: 16px 28px 24px; border-top: 1px solid #e7e5e4; background: #fafaf9; }
-.session-profile-actions span { color: #7a7a82; font-size: 12px; }
-.session-profile-actions button { min-height: 42px; padding: 0 18px; background: #18181b; color: #fff; border: 1px solid #18181b; border-radius: 8px; box-shadow: none; font-weight: 600; text-transform: none; }
-.session-profile-actions button:hover:not(:disabled) { background: #2f2f35; transform: none; box-shadow: none; }
 
 /* Diseñar sitio owns the whole screen: the sidebar slides away and returns on
    demand — hover the left-edge tab (or the sidebar itself) to peek, click it to

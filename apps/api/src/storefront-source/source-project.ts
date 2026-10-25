@@ -47,6 +47,8 @@ export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjec
     // The Plantilla a design started from: without it YAPI cannot keep, adapt or rework the template (spec 2026-09-26).
     ...(typeof input.brief.templateId === 'string' && /^[a-z0-9-]{1,40}$/.test(input.brief.templateId) ? { templateId: input.brief.templateId } : {}),
     ...(Number.isInteger(input.brief.templateRevision) && input.brief.templateRevision! >= 1 ? { templateRevision: input.brief.templateRevision } : {}),
+    // Starters (spec 2026-10-24): the finished store this one started from, for «Probar otro estilo» and the no-repeat rule.
+    ...(typeof input.brief.starterId === 'string' && /^[a-z0-9-]{1,40}$/.test(input.brief.starterId) ? { starterId: input.brief.starterId } : {}),
   };
   const paths = new Set<string>();
   let total = 0, videoTotal = 0;
