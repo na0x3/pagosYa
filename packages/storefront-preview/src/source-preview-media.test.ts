@@ -25,6 +25,21 @@ describe('preview variant photography', () => {
     expect(hosted.contentBlocks[1]).toMatchObject({ beforeUrl: 'https://api.test' + a, afterUrl: 'https://api.test' + b });
     expect(hosted.contentBlocks[2].items?.[0]?.imageUrl).toBe('https://api.test' + b);
   });
+  // Remolino 2026-10-25: the menu's «Más para explorar» tiles keep their photos in config.header.menu, outside data.
+  it('inlines upload photos anywhere else in config.js, such as the menu tiles', async () => {
+    vi.stubGlobal('location', { href: 'http://localhost:5175' });
+    vi.stubGlobal('FileReader', class {
+      result = ''; onload?: () => void;
+      readAsDataURL(blob: Blob) { void blob.text().then(value => { this.result = 'data:' + value; this.onload?.(); }); }
+    });
+    vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve(new Response(new Blob([url], { type: 'image/jpeg' }), { headers: { 'content-type': 'image/jpeg' } }))));
+    const tile = 'http://localhost:3001/v1/uploads/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';
+    const config = { data: { items: [] }, header: { menu: { groups: [{ label: 'Club', tiles: [{ label: 'Club Remolino', image: tile, href: 'product.html' }] }] } } };
+    const result = await createPreviewImageLoader('http://localhost:3001/v1')({ files: [{ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify(config)};` }] } as SourceSnapshot);
+    const parsed = JSON.parse(result.files[0].content.replace('window.PAGOSYA_CONFIG = ', '').replace(/;$/, ''));
+    expect(parsed.header.menu.groups[0].tiles[0].image).toBe('data:' + tile);
+    expect(parsed.header.menu.groups[0].tiles[0].href).toBe('product.html');
+  });
   // The calm checkout draws the store's logo from config data; left as a URL it was blocked in the check frame, and
   // every store with a logo failed «Imágenes cargadas» on checkout.html (Remolino 2026-10-21).
   it('inlines the store logo kept in config data', async () => {

@@ -63,6 +63,13 @@
       if (set) { photo.srcset = set; photo.sizes = photo.getAttribute('sizes') || CARD_SIZES; } else { photo.removeAttribute('srcset'); photo.removeAttribute('sizes'); }
       photo.src = swatch.dataset.cardSwatch; photo.style.objectPosition = '';
       card.querySelectorAll('[data-card-swatch]').forEach(button => button.setAttribute('aria-pressed', String(button === swatch)));
+      // The card's links open the product in the colour the shopper picked (owner 2026-10-25).
+      const colour = swatch.dataset.cardColour;
+      if (colour) card.querySelectorAll('a.menu-item__details[href],a[data-product-link][href]').forEach(link => {
+        const [path, hash] = link.getAttribute('href').split('#'), [base, query = ''] = path.split('?'), params = new URLSearchParams(query);
+        params.set('color', colour);
+        link.setAttribute('href', `${base}?${params}${hash !== undefined ? '#' + hash : ''}`);
+      });
     }, true);
     // Tilt follows a fine pointer only, and never with reduced motion.
     const tiltAllowed = () => cardMode() === 'tilt' && config.motion !== 'off' && matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches;

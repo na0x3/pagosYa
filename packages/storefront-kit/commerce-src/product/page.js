@@ -152,7 +152,10 @@
     analytics('product_view', { productId: p.id }, 'view:' + p.id);
     selectedProduct = p; selectedImage = 0; selectedQuantity = 1; detailTrigger = trigger; selectionNote = ''; selectedPicks = [];
     activeGallery = null;
-    selectedOptions = completeSelection(p, []);
+    // A card's colour swatch sends the shopper here with ?color=: that colour starts chosen (owner 2026-10-25).
+    const linkedColour = fullProductPage ? new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('color') : null;
+    const linkedGroups = linkedColour ? optionGroups(p) : null;
+    selectedOptions = completeSelection(p, linkedGroups ? linkedGroups.map(group => /^colou?r$/i.test(group.name.trim()) && group.values.includes(linkedColour) ? linkedColour : undefined) : []);
     const images = galleryImages(p), box = boxGroup(p), complex = !box && (p.variants?.length || p.extras?.length), groups = optionGroups(p);
     const style = productPageStyle();
     // Atelier (2026-10-19, the Amboras product page): a short first sentence becomes the subtitle under the title.

@@ -106,6 +106,17 @@ export function createPreviewImageLoader(apiBaseUrl: string) {
     }
     // The calm checkout draws the store's logo from config data, which the file pass above leaves alone (Remolino 2026-10-21).
     if (typeof config.data.logoUrl === 'string') tasks.push(async () => { config.data.logoUrl = await image(config.data.logoUrl); });
+    // Upload photos elsewhere in config.js (the menu's tiles in header.menu) go through the same loader (owner 2026-10-25:
+    // Remolino's «Más para explorar» tiles were blank in the editor).
+    const UPLOAD_URL = /^(?:https?:\/\/[^"'()\s]+)?\/(?:api\/)?v1\/uploads\/[a-f0-9-]+\.(?:png|jpe?g|webp|avif|gif)$/i;
+    const visit = (node: Record<string, unknown>) => {
+      for (const [key, value] of Object.entries(node)) {
+        if (node === config && key === 'data') continue;
+        if (typeof value === 'string' && UPLOAD_URL.test(value)) tasks.push(async () => { const inlined = await image(value); if (inlined) node[key] = inlined; });
+        else if (value && typeof value === 'object') visit(value as Record<string, unknown>);
+      }
+    };
+    visit(config);
     let next = 0;
     await Promise.all(Array.from({ length: Math.min(4, tasks.length) }, async () => {
       while (next < tasks.length) await tasks[next++]();

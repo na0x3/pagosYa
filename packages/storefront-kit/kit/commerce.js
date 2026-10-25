@@ -2547,7 +2547,10 @@
     analytics('product_view', { productId: p.id }, 'view:' + p.id);
     selectedProduct = p; selectedImage = 0; selectedQuantity = 1; detailTrigger = trigger; selectionNote = ''; selectedPicks = [];
     activeGallery = null;
-    selectedOptions = completeSelection(p, []);
+    // A card's colour swatch sends the shopper here with ?color=: that colour starts chosen (owner 2026-10-25).
+    const linkedColour = fullProductPage ? new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('color') : null;
+    const linkedGroups = linkedColour ? optionGroups(p) : null;
+    selectedOptions = completeSelection(p, linkedGroups ? linkedGroups.map(group => /^colou?r$/i.test(group.name.trim()) && group.values.includes(linkedColour) ? linkedColour : undefined) : []);
     const images = galleryImages(p), box = boxGroup(p), complex = !box && (p.variants?.length || p.extras?.length), groups = optionGroups(p);
     const style = productPageStyle();
     // Atelier (2026-10-19, the Amboras product page): a short first sentence becomes the subtitle under the title.
@@ -3845,7 +3848,9 @@
       const url = variantPhotos(v)[0];
       if (!url || seen.has(url) || typeof v.name !== 'string' || !v.name.trim()) continue;
       seen.add(url);
-      list.push({ url, name: v.name, color: (Array.isArray(v.options) ? v.options : []).map(o => typeof o?.name === 'string' && typeof o?.value === 'string' ? swatchColor(o.name, o.value) : '').find(Boolean) || '' });
+      // The colour option's own value travels to the product page (owner 2026-10-25: a picked colour opened another one).
+      const colourValue = (Array.isArray(v.options) ? v.options : []).find(o => typeof o?.name === 'string' && /^colou?r$/i.test(o.name.trim()) && typeof o.value === 'string')?.value;
+      list.push({ url, name: v.name, ...(colourValue ? { value: colourValue } : {}), color: (Array.isArray(v.options) ? v.options : []).map(o => typeof o?.name === 'string' && typeof o?.value === 'string' ? swatchColor(o.name, o.value) : '').find(Boolean) || '' });
       if (list.length === 4) break;
     }
     return list.length > 1 ? list : [];
@@ -3862,7 +3867,7 @@
   const CARD_SIZES = '(max-width: 820px) 50vw, 25vw';
   const cardAltMarkup = url => `<img class="menu-item__image-alt" data-src="${escape(url)}"${responsiveSrcset(url) ? ` data-srcset="${escape(responsiveSrcset(url))}" data-sizes="${CARD_SIZES}"` : ''} alt="" aria-hidden="true" decoding="async">`;
   // Swatch thumbnails are 22px: the smallest rendition is enough.
-  const cardSwatchMarkup = (p, swatches) => `<div class="menu-item__swatches" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => `<button type="button" data-card-swatch="${escape(s.url)}" aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${s.color ? ` style="--swatch:${escape(s.color)}"` : ''}>${s.color ? '' : `<img src="${escape(s.url)}"${responsiveAttrs(s.url, '22px')} alt="" loading="lazy" decoding="async">`}</span></button>`).join('')}</div>`;
+  const cardSwatchMarkup = (p, swatches) => `<div class="menu-item__swatches" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => `<button type="button" data-card-swatch="${escape(s.url)}"${s.value ? ` data-card-colour="${escape(s.value)}"` : ''} aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${s.color ? ` style="--swatch:${escape(s.color)}"` : ''}>${s.color ? '' : `<img src="${escape(s.url)}"${responsiveAttrs(s.url, '22px')} alt="" loading="lazy" decoding="async">`}</span></button>`).join('')}</div>`;
   // A sale's old price sits inside the price element, so an authored card layout gains no new item to place. The space before
   // it lets it drop to its own line on a narrow card instead of running into the add button.
   const cardOriginalMarkup = p => !isMembership(p) && price(p) < p.amount ? ` <del class="menu-item__original" aria-label="Precio anterior">${money(p.amount, p.currency)}</del>` : '';
@@ -4044,7 +4049,7 @@
       ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>`
       : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`;
     const photo = image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, '(max-width: 820px) 50vw, 33vw')} alt="${escape(p.name)}" loading="lazy" decoding="async" />` : '';
-    const barsHtml = bars.length > 1 ? `<div class="menu-item__bars">${bars.map(bar => `<button type="button" data-card-swatch="${escape(bar.photo)}" aria-label="Ver en ${escape(bar.value)}" aria-pressed="false" style="--swatch:${escape(bar.color)}"></button>`).join('')}</div>` : '';
+    const barsHtml = bars.length > 1 ? `<div class="menu-item__bars">${bars.map(bar => `<button type="button" data-card-swatch="${escape(bar.photo)}" data-card-colour="${escape(bar.value)}" aria-label="Ver en ${escape(bar.value)}" aria-pressed="false" style="--swatch:${escape(bar.color)}"></button>`).join('')}</div>` : '';
     const priceText = isMembership(p) ? membershipPriceText(p) : money(price(p), p.currency);
     return `<article class="menu-item" data-product-id="${escape(p.id)}" data-anatomy="fashion">${details}<div class="menu-item__panel">${photo}${tag ? `<p class="menu-item__tag">${escape(tag)}</p>` : ''}${barsHtml}</div><div class="menu-item__row"><h3 class="menu-item__name">${escape(p.name)}</h3><p class="menu-item__price">${escape(priceText)}${cardOriginalMarkup(p)}</p></div>${line ? `<p class="menu-item__colors">${escape(line)}</p>` : ''}</article>`;
   }
@@ -5590,6 +5595,13 @@
       if (set) { photo.srcset = set; photo.sizes = photo.getAttribute('sizes') || CARD_SIZES; } else { photo.removeAttribute('srcset'); photo.removeAttribute('sizes'); }
       photo.src = swatch.dataset.cardSwatch; photo.style.objectPosition = '';
       card.querySelectorAll('[data-card-swatch]').forEach(button => button.setAttribute('aria-pressed', String(button === swatch)));
+      // The card's links open the product in the colour the shopper picked (owner 2026-10-25).
+      const colour = swatch.dataset.cardColour;
+      if (colour) card.querySelectorAll('a.menu-item__details[href],a[data-product-link][href]').forEach(link => {
+        const [path, hash] = link.getAttribute('href').split('#'), [base, query = ''] = path.split('?'), params = new URLSearchParams(query);
+        params.set('color', colour);
+        link.setAttribute('href', `${base}?${params}${hash !== undefined ? '#' + hash : ''}`);
+      });
     }, true);
     // Tilt follows a fine pointer only, and never with reduced motion.
     const tiltAllowed = () => cardMode() === 'tilt' && config.motion !== 'off' && matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches;
