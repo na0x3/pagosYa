@@ -5,6 +5,8 @@
  *  two bundles, promo codes, a gift card, blog articles, the newsletter popup with a welcome code, the loyalty card, the store
  *  assistant, the contact form, policies and delivery. Local database only; idempotent through examples/remolino/demo.json.
  *   npx ts-node --transpile-only scripts/create-remolino-demo.ts [--rebuild] [--variant-b]
+ *   … --record remolino-yapi --catalog-only   a new store with the catalog and features only, for YAPI to design (owner
+ *   2026-10-25: test stores are designed by YAPI; the look below was scripted and is not YAPI's).
  *  The app context's timers are stopped before their first tick, so it never sends emails or claims jobs beside the running API.
  *  The photos are third-party Pinterest images (two are nutribullet adverts): a local demo only, never to be published outside. */
 import 'reflect-metadata';
@@ -66,7 +68,8 @@ const ARTICLES = [
 ];
 
 async function main() {
-  const folder = resolve(__dirname, '../../../examples/remolino');
+  const recordArg = process.argv.indexOf('--record');
+  const folder = resolve(__dirname, `../../../examples/${recordArg > 0 ? process.argv[recordArg + 1] : 'remolino'}`);
   await mkdir(folder, { recursive: true });
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn'] });
   const timers = app.get(SchedulerRegistry);
@@ -98,7 +101,7 @@ async function main() {
     for (const file of PHOTOS) await upload(file, 'image/jpeg');
     const logo = await upload(LOGO, 'image/webp');
     // Page 1 of the PDF, rendered beside this script's data (sips -s format png -Z 1400 <pdf>).
-    const cover = await upload(resolve(folder, 'guia-blender-portada.png'), 'image/png');
+    const cover = await upload(resolve(__dirname, '../../../examples/remolino/guia-blender-portada.png'), 'image/png');
     const photo = (index: number) => record.photos[PHOTOS[index]] as string;
     for (const [order, name] of CATEGORIES.entries()) {
       if (record.categories[name]) continue;
@@ -231,6 +234,10 @@ async function main() {
       await app.get(OperationsService).createDeliveryZone(merchantId, storeId, { name: 'La Paz ciudad', fee: 1500, departments: ['LA_PAZ'], freeAbove: 100000, estimatedMinutes: 240 } as never);
     });
 
+    if (process.argv.includes('--catalog-only')) {
+      console.log(JSON.stringify({ storeId, slug: record.slug, products: Object.keys(record.products).length, giftCard: record.giftCardCode }));
+      return;
+    }
     // The site: the Esencial home built from the current template (no YAPI call: the look's own words below replace the fill's),
     // then the look, then the playful motion personality in config.js.
     const templates = app.get(SourceTemplatesService), projects = app.get(SourceProjectsService);
