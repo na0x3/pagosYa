@@ -103,6 +103,8 @@ export class UploadsController {
     const file = width ? await this.uploads.getResized(filename, width) : await this.uploads.getStream(filename);
     if (!file) throw new NotFoundException(width ? "Esta imagen no tiene versiones de tamaño." : "Archivo no encontrado");
     res.set({ ...headers, "Content-Length": file.byteSize });
+    // A request the browser drops (a video seek, a closed tab) lets go of the file at once.
+    if (typeof (res as { once?: unknown }).once === "function") res.once("close", () => file.stream.destroy());
     return new StreamableFile(file.stream);
   }
 }

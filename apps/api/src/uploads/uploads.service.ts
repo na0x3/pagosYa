@@ -264,15 +264,12 @@ export class UploadsService implements OnModuleInit {
       }
     }
     try {
-      const handle = await fs.promises.open(this.resolvePath(filename), "r");
-      try {
-        const stat = await handle.stat();
-        // The stream owns the open handle and closes it on completion or destroy.
-        return { stream: handle.createReadStream(), byteSize: stat.size };
-      } catch (error) {
-        await handle.close();
-        throw error;
-      }
+      // A path stream, never a FileHandle: a stream the response drops (a video seek, a closed tab) would leave its handle to
+      // the garbage collector, which Node 26 turns into a crash of the whole API (live 2026-10-25, Gramiyaa's videos). The
+      // stream opens its own descriptor and closes it on end, error or destroy.
+      const path = this.resolvePath(filename);
+      const stat = await fs.promises.stat(path);
+      return { stream: fs.createReadStream(path), byteSize: stat.size };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw error;

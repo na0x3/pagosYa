@@ -124,6 +124,15 @@ describe("UploadsService streaming reads", () => {
     expect(readFile).not.toHaveBeenCalled();
   });
 
+  it("never keeps a FileHandle a dropped stream would leak: Node 26 crashes the API when one is collected (live 2026-10-25, Gramiyaa's videos)", async () => {
+    await fs.promises.writeFile(`${dir}/${filename}`, "video");
+    const open = jest.spyOn(fs.promises, "open");
+    const result = await (service as any).getStream(filename);
+    expect(open).not.toHaveBeenCalled();
+    expect(result.byteSize).toBe(5);
+    result.stream.destroy();
+  });
+
   it("passes through the object-storage stream without materializing its bytes", async () => {
     const stream = Object.assign(Readable.from(["video"]), { transformToByteArray: jest.fn() });
     const send = jest.spyOn(S3Client.prototype, "send").mockResolvedValue({ Body: stream, ContentLength: MAX_VIDEO_UPLOAD_BYTES } as never);

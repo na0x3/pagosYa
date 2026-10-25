@@ -29,6 +29,16 @@ describe("UploadsController public assets", () => {
     expect(Reflect.getMetadata("THROTTLER:SKIPdefault", UploadsController.prototype.uploadFile)).not.toBe(true);
   });
 
+  it("lets go of the file when the browser drops the request (a video seek or a closed tab)", async () => {
+    const { EventEmitter } = require("events");
+    const stream = Readable.from(["video"]);
+    uploads.getStream.mockResolvedValue({ stream, byteSize: 5 });
+    const response = Object.assign(new EventEmitter(), res);
+    await controller.getFile(filename, response);
+    response.emit("close");
+    expect(stream.destroyed).toBe(true);
+  });
+
   it("passes the storage stream through with its length and immutable headers", async () => {
     const file = await controller.getFile(filename, res);
     expect(file!.getStream()).toBe((await uploads.getStream.mock.results[0].value).stream);
