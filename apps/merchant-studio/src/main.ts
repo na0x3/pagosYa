@@ -1,4 +1,5 @@
 import "./style.css";
+import "./motion.css";
 import { fitEmbeddedDialogs } from "./embedded-dialogs";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const params = new URLSearchParams(location.search);
