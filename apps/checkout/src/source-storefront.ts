@@ -238,6 +238,10 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       const frameBody = withoutPersonalFields(data.action, data.body && typeof data.body === 'object' ? data.body : {});
       const interactive = ['checkout', 'lead', 'review'].includes(data.action) || (data.action === 'retention' && ['subscribe', 'carts', 'cards'].includes(String(frameBody.path)));
       let previous: { values?: Record<string, string | boolean>; error?: string } | undefined;
+      // A design's own email field (data-pagosya-subscribe-inline, owner 2026-10-25): what the shopper typed only fills
+      // pagosYa's dialog; the request itself never carries it, and the shopper sends it from the dialog.
+      const typedEmail = data.action === 'retention' && frameBody.path === 'subscribe' ? String((data.body as { payload?: { email?: unknown } } | undefined)?.payload?.email ?? '').trim() : '';
+      if (typedEmail.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(typedEmail)) previous = { values: { email: typedEmail } };
       for (let attempt = 0; ; attempt++) {
       if (data.action === 'checkout' && attempt === 0) analytics.record({ type: 'checkout_step', step: 'contact' });
       const personal = interactive ? await collectPersonalFields(data.action, frameBody, { storeName: store.storeName, creditsEnabled: (store as { creditsEnabled?: boolean }).creditsEnabled, carrierRate: typeof frameBody.shippingZoneId === 'string' && carrierRates.has(frameBody.shippingZoneId) }, previous) : {};

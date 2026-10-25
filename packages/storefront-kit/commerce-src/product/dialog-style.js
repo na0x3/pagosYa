@@ -28,6 +28,13 @@
     @layer pagosya-commerce {
       .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}
       .menu-item__original{margin-inline-start:.15em;font-size:.82em;font-weight:400;opacity:.7;white-space:nowrap}
+      /* A card the kit does not lay out (a design's own grid) flows price and button inline: the price keeps a gap after it
+         (BOXY 2026-10-25, «Bs 320,00Elegir opciones»). Zero specificity, so any design rule wins. */
+      :where(.menu-item__price){margin-inline-end:.75em}
+      /* A product page is the photo beside the words, never a full-width photo with the text below it (owner 2026-10-25, Oh Belly:
+         a redesign dropped the template's product layout). Zero specificity: a page whose own CSS lays out the slots wins. */
+      @media (min-width:761px){:where(:has(> [data-product-slot=gallery]):has(> [data-product-slot=buy], > * [data-product-slot=buy])){display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(32px,4vw,64px);align-items:start}}
+      :where([data-product-slot=gallery]) :where(img.product-detail__photo,.product-detail__stage img,.product-detail__stage video){max-height:min(78svh,860px);object-fit:cover}
       .menu-item:not([data-custom-product]) .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
       [data-pagosya-catalog][data-pagosya-grid],[data-pagosya-catalog] .catalog-group__items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:16px;align-items:stretch}
       [data-pagosya-grid]>.menu-item:not([data-custom-product]),[data-pagosya-catalog] .catalog-group__items>.menu-item:not([data-custom-product]){display:flex;flex-direction:column;gap:8px}

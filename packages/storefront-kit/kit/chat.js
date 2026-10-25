@@ -78,8 +78,9 @@
     + '@media (prefers-reduced-motion:no-preference){.pya-panel:not([hidden]){animation:pya-in .18s var(--kit-ease,ease-out)}@keyframes pya-in{from{opacity:0;transform:translateY(8px)}}}'
     + '}'
     // Outside the layer: a store's own button reset (unlayered) beat every layered button rule, so the launcher turned white
+    // A light ring keeps it visible over a band in its own accent colour (BOXY 2026-10-25: navy on navy).
     // and the suggestions, Ver and Enviar read as plain text (Remolino 2026-10-22). Buttons wear the store's accent.
-    + '[data-pagosya-assistant] .pya-launcher{width:56px;height:56px;border:0;border-radius:999px;background:var(--kit-accent,#20211d);color:var(--kit-on-accent,#fff);box-shadow:0 8px 24px rgba(0,0,0,.18)}'
+    + '[data-pagosya-assistant] .pya-launcher{width:56px;height:56px;border:0;border-radius:999px;background:var(--kit-accent,#20211d);color:var(--kit-on-accent,#fff);box-shadow:0 0 0 3px color-mix(in srgb,var(--kit-on-accent,#fff) 75%,transparent),0 8px 24px rgba(0,0,0,.18)}'
     + '[data-pagosya-assistant] .pya-btn{min-height:40px;padding:8px 14px;border:1px solid color-mix(in srgb,var(--kit-accent,#20211d) 45%,transparent);border-radius:999px;background:color-mix(in srgb,var(--kit-accent,#20211d) 10%,var(--kit-paper,#fff));color:var(--kit-accent,#20211d);font:600 14px/1.25 var(--store-body-font,var(--brand-body-font,inherit));text-align:left;cursor:pointer;transition:background-color .15s,filter .15s}'
     + '[data-pagosya-assistant] .pya-btn:hover{background:color-mix(in srgb,var(--kit-accent,#20211d) 18%,var(--kit-paper,#fff))}'
     + '[data-pagosya-assistant] .pya-primary{background:var(--kit-accent,#20211d);color:var(--kit-on-accent,#fff);border-color:transparent}'

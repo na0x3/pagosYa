@@ -298,6 +298,48 @@
       if (!el.pagosyaSubscribe) el.addEventListener('click', event => { event.preventDefault(); el.pagosyaSubscribe(); });
       el.pagosyaSubscribe = () => subscribeFromDesign(el);
     });
+    // An email field in the page itself, e.g. a footer (owner 2026-10-25, BOXY: «directly in the page»). The kit draws it, so
+    // the email is still typed in pagosYa's form; on a published store pagosYa's secure dialog opens with it filled in.
+    document.querySelectorAll('[data-pagosya-subscribe-inline]').forEach(el => {
+      el.hidden = !settings.signupEnabled && !preview;
+      if (el.hidden || el.querySelector('.pagosya-inline-signup')) return;
+      if (!document.getElementById('pagosya-inline-signup-style')) {
+        const style = document.createElement('style'); style.id = 'pagosya-inline-signup-style';
+        style.textContent = ':where(.pagosya-inline-signup){display:grid;gap:10px;max-width:460px;color:inherit;font:inherit}'
+          + ':where(.pagosya-inline-signup__row){display:flex;align-items:stretch;border-bottom:1px solid currentColor}'
+          + ':where(.pagosya-inline-signup__row input){flex:1;min-width:0;min-height:48px;padding:0 4px;border:0;background:transparent;color:inherit;font:inherit;font-size:16px}'
+          + ':where(.pagosya-inline-signup__row input)::placeholder{color:inherit;opacity:.6}'
+          + ':where(.pagosya-inline-signup__row input:focus-visible){outline:2px solid currentColor;outline-offset:2px}'
+          + ':where(.pagosya-inline-signup__row button){min-height:48px;padding:0 4px 0 16px;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;white-space:nowrap}'
+          + ':where(.pagosya-inline-signup__consent){display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.5;opacity:.8;cursor:pointer}'
+          + ':where(.pagosya-inline-signup__consent input){width:16px;height:16px;margin:2px 0 0;flex:0 0 16px;accent-color:currentColor}'
+          + ':where(.pagosya-inline-signup [role=status]){margin:0;font-size:13px}:where(.pagosya-inline-signup [role=status]:empty){display:none}'
+          + '.pagosya-inline-signup__label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}';
+        document.head.append(style);
+      }
+      const id = `pagosya-inline-email-${Math.random().toString(36).slice(2, 8)}`;
+      el.innerHTML = `<form class="pagosya-inline-signup" novalidate><label class="pagosya-inline-signup__label" for="${id}">Tu correo</label><div class="pagosya-inline-signup__row"><input id="${id}" type="email" name="email" autocomplete="email" maxlength="254" placeholder="tu@correo.com" required><button type="submit">${escape(settings.signupButton || 'Suscribirme')}</button></div>${hosted ? '' : '<label class="pagosya-inline-signup__consent"><input type="checkbox" name="consent" required>Quiero recibir novedades por correo. Puedo darme de baja cuando quiera.</label>'}<p role="status" aria-live="polite"></p></form>`;
+      const formEl = el.querySelector('form'), status = el.querySelector('[role=status]'), button = formEl.querySelector('button');
+      formEl.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (button.disabled) return;
+        const email = String(new FormData(formEl).get('email') ?? '').trim();
+        if (!formEl.querySelector('input[name=email]').checkValidity() || !email) { status.textContent = 'Escribe un correo válido.'; return; }
+        if (!hosted && !formEl.querySelector('input[name=consent]').checked) { status.textContent = 'Marca la casilla para recibir novedades.'; return; }
+        if (preview && !demo) { status.textContent = 'Vista previa: la suscripción se activa al publicar tu tienda.'; return; }
+        if (demo) { formEl.querySelector('.pagosya-inline-signup__row').hidden = true; status.textContent = 'Prueba completada: en tu tienda aquí llega el correo de bienvenida.'; return; }
+        button.disabled = true; status.textContent = 'Un momento…';
+        try {
+          // Published: pagosYa's secure dialog opens with this email filled in and asks for consent there.
+          const result = await api('subscribe', hosted ? { consent: true, email } : { email, consent: true });
+          state.subscribed = true; state.signupDismissed = true;
+          formEl.querySelector('.pagosya-inline-signup__row').hidden = true;
+          formEl.querySelector('.pagosya-inline-signup__consent')?.remove();
+          status.textContent = result?.code ? `¡Listo! Tu código de bienvenida: ${result.code}` : '¡Listo! Revisa tu correo para recibir nuestras novedades.';
+        } catch (error) { status.textContent = error.message; }
+        finally { button.disabled = false; }
+      });
+    });
     // Loyalty cards are shown after payment or when reopening a private card link.
     document.querySelectorAll('[data-pagosya-comeback]').forEach(el => { el.replaceChildren(); el.hidden = true; });
     if (settings.comebackEnabled && query.get('comeback')) {

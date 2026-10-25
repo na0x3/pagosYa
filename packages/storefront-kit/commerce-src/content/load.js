@@ -19,7 +19,22 @@
   }
   // The store's published articles; the editor preview draws them from config.data (owner 2026-10-25: BOXY's blog showed
   // only a placeholder line while editing).
-  const blogMarkup = articles => articles.map(article => `<article id="articulo-${escape(article.slug)}"><h2>${escape(article.title)}</h2><p>${escape(article.author)} · ${new Date(article.publishedAt).toLocaleDateString('es-BO')}</p><p>${escape(article.excerpt)}</p><p><a data-article-url href="${escape(new URL(config.apiBaseUrl, config.checkoutOrigin).href.replace(/\/$/, ''))}/stores/public/${encodeURIComponent(config.slug)}/pages/${encodeURIComponent(article.locale)}/${encodeURIComponent(article.slug)}">Abrir artículo</a></p><details><summary>Leer aquí</summary>${article.body.split(/\n\s*\n/).map(paragraph => `<p>${escape(paragraph)}</p>`).join('')}</details></article>`).join('') || '<p>Todavía no hay artículos publicados.</p>';
+  // A list a reader can scan: the title as a heading, date and author small, the summary, then the links (owner 2026-10-25:
+  // BOXY's feed was bare text, titles the size of the dates). Zero-specificity rules, so a design's own blog styles win.
+  const ensureBlogStyle = () => {
+    if (document.getElementById('pagosya-blog-style')) return;
+    const style = document.createElement('style'); style.id = 'pagosya-blog-style';
+    style.textContent = ':where([data-pagosya-blog]:has(.pagosya-article)){display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:8px 32px}'
+      + ':where(.pagosya-article){display:flex;flex-direction:column;gap:10px;padding:20px 0;border-top:1px solid color-mix(in srgb,currentColor 20%,transparent)}'
+      + ':where(.pagosya-article__title){margin:0;font:400 clamp(1.2rem,1.8vw,1.5rem)/1.25 var(--store-heading-font,inherit);letter-spacing:-.01em;text-wrap:balance}'
+      + ':where(.pagosya-article__meta){margin:0;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;opacity:.62}'
+      + ':where(.pagosya-article__excerpt){margin:0;line-height:1.55;opacity:.85}'
+      + ':where(.pagosya-article__links){display:flex;flex-wrap:wrap;gap:16px;margin:4px 0 0;font-size:.9rem}'
+      + ':where(.pagosya-article__links a,.pagosya-article__more summary){color:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}'
+      + ':where(.pagosya-article__more) p{margin:10px 0 0;line-height:1.6}';
+    document.head.append(style);
+  };
+  const blogMarkup = articles => { ensureBlogStyle(); return articles.map(article => `<article class="pagosya-article" id="articulo-${escape(article.slug)}"><h2 class="pagosya-article__title">${escape(article.title)}</h2><p class="pagosya-article__meta">${escape(article.author)} · ${new Date(article.publishedAt).toLocaleDateString('es-BO')}</p>${article.excerpt ? `<p class="pagosya-article__excerpt">${escape(article.excerpt)}</p>` : ''}<details class="pagosya-article__more"><summary>Leer aquí</summary>${article.body.split(/\n\s*\n/).map(paragraph => `<p>${escape(paragraph)}</p>`).join('')}</details><p class="pagosya-article__links"><a data-article-url href="${escape(new URL(config.apiBaseUrl, config.checkoutOrigin).href.replace(/\/$/, ''))}/stores/public/${encodeURIComponent(config.slug)}/pages/${encodeURIComponent(article.locale)}/${encodeURIComponent(article.slug)}">Abrir artículo</a></p></article>`).join('') || '<p>Todavía no hay artículos publicados.</p>'; };
   async function loadCommerceContent() {
     const slots = document.querySelectorAll('[data-pagosya-blog],[data-pagosya-reviews],[data-pagosya-bundles]');
     if (!slots.length && !fullProductPage) return;
