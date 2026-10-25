@@ -540,12 +540,27 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     }); };
     window.setTimeout(start, 0);
   }
+  /** How long the Studio keeps looking for a follow-up the server has not queued yet: 10 × 2 s. */
+  const FOLLOW_ATTEMPTS = 10, FOLLOW_WAIT_MS = 2000;
   // Variety spec §5: a new store's background personal touch saves a newer revision. The open Studio follows it quietly
   // (no build lock, the merchant keeps chatting; a request they send cancels the touch on the server) and reloads when it lands.
   async function followBackgroundJob(selectedStore: string, finishedRequestId: string) {
-    const latest = await api.latestSourceChatJob(selectedStore).catch(() => ({ job: null }));
-    const job = latest.job;
-    if (!job || job.requestId === finishedRequestId || !['QUEUED', 'RUNNING'].includes(job.status)) return;
+    // Owner 2026-10-25 («I need to refresh to see the changes»): the server queues the touch only once the finished request's
+    // job has closed, so right after a reply the latest job is still that one. Look again for a while before giving up.
+    let job: SourceChatJob | null = null;
+    for (let attempt = 0; attempt < FOLLOW_ATTEMPTS && storeId === selectedStore; attempt++) {
+      const latest = await api.latestSourceChatJob(selectedStore).catch(() => ({ job: null }));
+      const found = latest.job;
+      if (found && found.requestId !== finishedRequestId) {
+        if (['QUEUED', 'RUNNING'].includes(found.status)) { job = found; break; }
+        // A follow-up that already finished while the Studio looked still brings its revision in.
+        if (finishedRequestId && !building()) { await load().catch(() => {}); render(); }
+        return;
+      }
+      if (!finishedRequestId) return;
+      await new Promise(resolve => setTimeout(resolve, FOLLOW_WAIT_MS));
+    }
+    if (!job) return;
     // Owner 2026-10-22: the follow-up that applies the merchant's own request is their request, shown with its progress.
     if (!job.background) { if (storeId === selectedStore) followRunningJob(selectedStore, job); return; }
     await api.waitSourceChatJob(selectedStore, job).catch(() => undefined);
