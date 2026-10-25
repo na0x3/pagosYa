@@ -915,11 +915,15 @@ describe('Independent source generation',()=>{
   // baek 2026-10-17: the owner never saw the store bot in Studio. The preview's data is this catalog, which dropped the
   // assistant; only the Studio display routes ask for it, so a saved config.js never carries the bot's settings.
   it('carries the store assistant only when the caller asks for it (the Studio preview)', async () => {
-    const { service, stores } = setup();
+    const { service, stores, prisma } = setup();
     const assistant = { name: 'Asistente de Café', greeting: '¡Hola!', avatarUrl: null, handoff: 'form', suggestions: [] };
+    const articles = [{ slug: 'tallas', locale: 'es', title: 'Tallas', excerpt: '', body: 'Texto', author: 'Equipo', publishedAt: new Date('2026-10-20T00:00:00Z') }];
+    prisma.storeArticle = { findMany: jest.fn().mockResolvedValue(articles) };
     stores.getStorePublic.mockResolvedValue({ storeName: 'Café', items: [], categories: [], assistant });
     expect(await service.catalog('m', 's')).not.toHaveProperty('assistant');
-    expect(await service.catalog('m', 's', { assistant: true })).toEqual(expect.objectContaining({ assistant }));
+    expect(await service.catalog('m', 's')).not.toHaveProperty('articles');
+    // The published articles ride along too (owner 2026-10-25): the preview cannot fetch the blog from the API.
+    expect(await service.catalog('m', 's', { assistant: true })).toEqual(expect.objectContaining({ assistant, articles }));
   });
   it('packages generated files with portable commerce without executing source or exporting secrets',async()=>{
     const fetchMock=jest.spyOn(globalThis,'fetch').mockResolvedValue(new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({design: design(), label:'Café menu',files:files()})}]}]})));

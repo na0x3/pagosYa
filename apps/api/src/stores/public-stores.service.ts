@@ -255,6 +255,7 @@ export class PublicStoresService implements OnModuleDestroy {
       items.some((item) => Array.isArray(item.variants) && item.variants.length > 0),
       Boolean(this.config?.get<boolean>('app.assistant.enabled')),
       new Date(),
+      { ownerPreview: Boolean(options.ownerMerchantId) },
     );
     return {
       storeId: store.id,

@@ -6131,6 +6131,9 @@
     const source = review.source === 'MERCHANT' ? `Reseña de cliente${review.sourceNote ? ` · ${escape(review.sourceNote)}` : ''}` : 'Compra verificada';
     return `<article class="pagosya-review"><p class="pagosya-review__stars" role="img" aria-label="${rating} de 5">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</p><blockquote class="pagosya-review__body"><p>${escape(review.body)}</p></blockquote><p class="pagosya-review__by"><strong>${escape(review.displayName)}</strong> · <span class="pagosya-review__source">${source}</span></p></article>`;
   }
+  // The store's published articles; the editor preview draws them from config.data (owner 2026-10-25: BOXY's blog showed
+  // only a placeholder line while editing).
+  const blogMarkup = articles => articles.map(article => `<article id="articulo-${escape(article.slug)}"><h2>${escape(article.title)}</h2><p>${escape(article.author)} · ${new Date(article.publishedAt).toLocaleDateString('es-BO')}</p><p>${escape(article.excerpt)}</p><p><a data-article-url href="${escape(new URL(config.apiBaseUrl, config.checkoutOrigin).href.replace(/\/$/, ''))}/stores/public/${encodeURIComponent(config.slug)}/pages/${encodeURIComponent(article.locale)}/${encodeURIComponent(article.slug)}">Abrir artículo</a></p><details><summary>Leer aquí</summary>${article.body.split(/\n\s*\n/).map(paragraph => `<p>${escape(paragraph)}</p>`).join('')}</details></article>`).join('') || '<p>Todavía no hay artículos publicados.</p>';
   async function loadCommerceContent() {
     const slots = document.querySelectorAll('[data-pagosya-blog],[data-pagosya-reviews],[data-pagosya-bundles]');
     if (!slots.length && !fullProductPage) return;
@@ -6143,6 +6146,7 @@
           if (section) section.hidden = true;
           return;
         }
+        if (slot.hasAttribute('data-pagosya-blog') && Array.isArray(config.data?.articles)) { slot.innerHTML = blogMarkup(config.data.articles); return; }
         slot.textContent = 'El contenido publicado del comercio aparecerá aquí en la tienda.';
       });
       return;
@@ -6153,7 +6157,7 @@
       const data = await response.json();
       commerceData = data; decorateProductReviews();
       slots.forEach(slot => {
-        if (slot.hasAttribute('data-pagosya-blog')) slot.innerHTML = data.articles.map(article => `<article id="articulo-${escape(article.slug)}"><h2>${escape(article.title)}</h2><p>${escape(article.author)} · ${new Date(article.publishedAt).toLocaleDateString('es-BO')}</p><p>${escape(article.excerpt)}</p><p><a data-article-url href="${escape(new URL(config.apiBaseUrl, config.checkoutOrigin).href.replace(/\/$/, ''))}/stores/public/${encodeURIComponent(config.slug)}/pages/${encodeURIComponent(article.locale)}/${encodeURIComponent(article.slug)}">Abrir artículo</a></p><details><summary>Leer aquí</summary>${article.body.split(/\n\s*\n/).map(paragraph => `<p>${escape(paragraph)}</p>`).join('')}</details></article>`).join('') || '<p>Todavía no hay artículos publicados.</p>';
+        if (slot.hasAttribute('data-pagosya-blog')) slot.innerHTML = blogMarkup(data.articles);
         if (slot.hasAttribute('data-pagosya-reviews')) {
           const reviews = data.reviews.filter(review => !fullProductPage || review.productId === selectedProduct?.id);
           slot.innerHTML = reviews.map(reviewMarkup).join('') || (fullProductPage ? '<p>Todavía no hay reseñas publicadas.</p>' : '');

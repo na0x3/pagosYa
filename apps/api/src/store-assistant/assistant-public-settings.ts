@@ -7,9 +7,11 @@ export type PublicAssistant = { name: string; greeting: string; avatarUrl: strin
 export async function publicAssistant(
   prisma: PrismaService,
   store: { id: string; name: string; logoUrl: string | null; contactPhone: string | null; publishedSourceRevision: number | null; shippingEnabled: boolean },
-  hasVariants: boolean, platformEnabled: boolean, now: Date,
+  hasVariants: boolean, platformEnabled: boolean, now: Date, options: { ownerPreview?: boolean } = {},
 ): Promise<PublicAssistant | null> {
-  if (!platformEnabled || !store.publishedSourceRevision) return null;
+  // The owner's own editor shows the bubble before the first publish (owner 2026-10-25, BOXY: with the assistant on, the
+  // unpublished store's preview showed the contact form in the corner instead).
+  if (!platformEnabled || (!store.publishedSourceRevision && !options.ownerPreview)) return null;
   const row = await prisma.storeAssistant.findUnique({ where: { storeId: store.id } });
   if (!row?.enabled) return null;
   const used = await prisma.assistantConversation.count({ where: { storeId: store.id, preview: false, startedAt: { gte: laPazMonthStart(now) } } });

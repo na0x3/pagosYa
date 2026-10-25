@@ -235,7 +235,10 @@ export class SourceGenerationService {
       contactFormEnabled: data.contactFormEnabled, contactTitle: data.contactTitle, contactSubtitle: data.contactSubtitle,
       categories: data.categories, locations: data.locations, items: data.items,
       cartRecommendationsEnabled: data.cartRecommendationsEnabled, cartRecommendationProductIds: data.cartRecommendationProductIds, bundles: data.bundles,
-      ...(options.assistant && data.assistant ? { assistant: data.assistant } : {}) };
+      ...(options.assistant && data.assistant ? { assistant: data.assistant } : {}),
+      // The editor preview cannot reach the API: it draws the blog from these (owner 2026-10-25, BOXY's blog was a placeholder).
+      ...(options.assistant ? { articles: await this.prisma.storeArticle.findMany({ where: { storeId, locale: 'es', publishedAt: { lte: new Date() } }, orderBy: { publishedAt: 'desc' }, take: 12,
+        select: { slug: true, locale: true, title: true, excerpt: true, body: true, author: true, publishedAt: true } }) } : {}) };
   }
 
   /** The allowance of one request. On the merchant's own ChatGPT plan nothing is billed, so nothing caps the run. */

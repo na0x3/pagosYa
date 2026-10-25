@@ -20,4 +20,11 @@ describe('public assistant settings', () => {
     expect(await publicAssistant(prisma(on), { ...store, publishedSourceRevision: null }, false, true, now)).toBeNull();
     expect(await publicAssistant(prisma(on, 300), store, false, true, now)).toBeNull();
   });
+
+  it('shows in the owner\'s own preview before the first publish, never to visitors', async () => {
+    const unpublished = { ...store, publishedSourceRevision: null };
+    expect(await publicAssistant(prisma(on), unpublished, false, true, now, { ownerPreview: true })).toMatchObject({ name: 'Carla' });
+    expect(await publicAssistant(prisma(on), unpublished, false, true, now)).toBeNull();
+    expect(await publicAssistant(prisma({ ...on, enabled: false }), unpublished, false, true, now, { ownerPreview: true })).toBeNull();
+  });
 });

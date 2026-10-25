@@ -1,0 +1,42 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvnxh0h70001m59co2g8f5yy",
+  "slug": "av398gyh",
+  "photos": {
+    "0d2fb4eb273a61d945c7535f20c444cd.jpg": "/v1/uploads/e9acc6ff-371e-4cc1-be5c-556af8f96291.jpg",
+    "1ed4b3d06c3673919e46c7bf8c9c5fc5.jpg": "/v1/uploads/065634f0-0ded-4d77-9e7b-b1bf86fb238a.jpg",
+    "5467569d269d48c5a3b88b98e3b92c2a.jpg": "/v1/uploads/8f272c72-6b2b-4d04-90cc-710918d66db4.jpg",
+    "6424b9c7fe3b6d038bbf508caf490cc1.jpg": "/v1/uploads/afd7d528-b530-4f00-a15e-a307b9f5e230.jpg",
+    "68b4b99981fb23b898414712a3d2b013.jpg": "/v1/uploads/308501cb-07a7-4242-a59d-4cfb58e30187.jpg",
+    "6b140618c96fd1477562f49698bb2391.jpg": "/v1/uploads/7422c042-7ee4-46dd-8111-6637da8f0360.jpg",
+    "864d7a87e70fcaadf13a4571baf1e8f4.jpg": "/v1/uploads/b3cc9b57-2d3c-4258-adab-e371268eb168.jpg",
+    "b90555ce9c0c12166b4c48999a196bb7.jpg": "/v1/uploads/ad009ef1-8e7a-473a-b483-dee6e19cfca1.jpg",
+    "dce66be07b2360a074241f74e3abbe88.jpg": "/v1/uploads/300ab691-fc44-4ba8-9b21-d386b6e897c2.jpg",
+    "eef5a66fe3744a2667b2fab41eeba4e3.jpg": "/v1/uploads/032f47dc-f7cb-47a3-aaf7-2d631ac1167f.jpg",
+    "From Klickpin.com- Try Aesthetic fall outfit ideas for your next Pinterest save with enough variety to inspire your next creative step-pin-id-9068.mp4": "/v1/uploads/78581435-3d53-4bb7-a8f7-8c559ffa4b79.mp4"
+  },
+  "categories": {
+    "Básicos": "cmvnxh0i8000pm59ctdkrau8k",
+    "Gráficos": "cmvnxh0ic000rm59ca4yo7uh4"
+  },
+  "products": {
+    "Hoodie Boxy Esencial": "cmvnxh0ie000tm59c8mztqvqt",
+    "Hoodie Marino Oversize": "cmvnxh0ij000vm59c27wk8nim",
+    "Hoodie Café Relajado": "cmvnxh0ik000xm59cl7pdsicu",
+    "Hoodie Lavado Niebla": "cmvnxh0il000zm59cco7brq2b",
+    "Hoodie Bagels": "cmvnxh0io0011m59chiwbp9x5",
+    "Hoodie Slow Sunday": "cmvnxh0ip0013m59cbgeqhslp",
+    "Hoodie No Weak Days": "cmvnxh0iq0015m59cw5snkz3r"
+  },
+  "done": {
+    "settings": true,
+    "recommendations": true,
+    "bundle": true,
+    "articles": true,
+    "promo-codes": true,
+    "newsletter": true,
+    "assistant": true,
+    "shipping": true
+  },
+  "welcomeCodeId": "cmvnxh0jq001gm59cxk5p616r"
+}
