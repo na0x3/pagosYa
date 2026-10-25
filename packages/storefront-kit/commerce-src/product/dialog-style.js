@@ -171,6 +171,9 @@
     [data-pagosya-product][data-style] [data-kind=swatch] .product-detail__swatch{width:34px;height:34px}
     [data-pagosya-product][data-style=editorial] [data-kind=swatch] .product-detail__swatch{width:28px;height:28px}
     [data-pagosya-product][data-style=editorial] [data-kind=swatch] .product-detail__option-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+    [data-pagosya-product][data-style] [data-kind=swatch] [data-product-option][data-unavailable]{opacity:.6}
+    [data-pagosya-product][data-style] [data-kind=swatch] [data-unavailable] .product-detail__swatch{position:relative}
+    [data-pagosya-product][data-style] [data-kind=swatch] [data-unavailable] .product-detail__swatch::after{content:"";position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg,transparent 46%,var(--pd-ink) 47% 53%,transparent 54%)}
     [data-pagosya-product][data-style] [data-kind=swatch] [aria-pressed=true] .product-detail__swatch{box-shadow:0 0 0 2px var(--pd-paper),0 0 0 3.5px var(--pd-ink)}
     [data-pagosya-product][data-style=dense] .product-detail__values[data-priced]:not([data-kind=swatch]){display:grid;grid-template-columns:minmax(0,1fr);gap:7px}
     [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option]{display:grid;grid-template-columns:16px minmax(0,1fr) auto;justify-content:stretch;gap:12px;width:100%;min-height:48px;padding:10px 14px;background:var(--pd-surface);font-size:14px;text-align:left}

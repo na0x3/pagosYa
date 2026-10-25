@@ -501,8 +501,30 @@ describe('Inline storefront product options', () => {
     expect(query('.menu-add').disabled).toBe(true);
     expect(query('.menu-add').textContent).toContain('Agotado');
     expect(query('[data-variant-add]').disabled).toBe(true);
-    expect([...w.document.querySelectorAll('[data-product-option]')].every((b: any) => b.disabled)).toBe(true);
+    // Colour circles stay tappable, marked sold out (owner 2026-10-25); other choices (sizes) are still switched off.
+    const colours = [...w.document.querySelectorAll('[data-product-option="0"]')] as any[], sizes = [...w.document.querySelectorAll('[data-product-option="1"]')] as any[];
+    expect(colours.every(b => !b.disabled && b.hasAttribute('data-unavailable'))).toBe(true);
+    expect(sizes.every(b => b.disabled)).toBe(true);
     expect(query('.product-detail__status').textContent).toContain('Sin disponibilidad');
+  });
+
+  it('a sold-out colour is still tappable: it shows its name and photo and says it is sold out (owner 2026-10-25)', async () => {
+    const colour = (id: string, value: string, stock: number, imageUrl: string) => ({ id, name: value, amount: 59000, stock, imageUrl, options: [{ name: 'Color', value }] });
+    const blender = { id: 'shirt', name: 'Licuadora', amount: 59000, currency: 'BOB', stock: 1, imageUrls: ['https://shop.test/rosa.jpg'],
+      variants: [colour('rosa', 'Rosa', 1, 'https://shop.test/rosa.jpg'), colour('crema', 'Crema', 0, 'https://shop.test/crema.jpg')] };
+    const { query, click } = await shop({ items: [blender], fullPage: true });
+    // Circles carry more than the name (a hidden label, a price): pick them by position.
+    click('[data-product-option="0"][data-option-value="1"]');
+    const crema = query('[data-product-option="0"][data-option-value="1"]');
+    expect(crema.getAttribute('aria-pressed')).toBe('true');
+    expect(crema.hasAttribute('data-unavailable')).toBe(true);
+    expect(query('[data-product-selection="0"]').textContent).toBe('Crema');
+    expect(query('.product-detail__status').textContent).toContain('Crema · Agotado');
+    expect(query('[data-variant-add]').disabled).toBe(true);
+    expect(query('.product-detail__photo').getAttribute('src')).toBe('https://shop.test/crema.jpg');
+    click('[data-product-option="0"][data-option-value="0"]');
+    expect(query('[data-product-option="0"][data-option-value="0"]').getAttribute('aria-pressed')).toBe('true');
+    expect(query('[data-variant-add]').disabled).toBe(false);
   });
 
   it('keeps focus on option controls and does not hijack their arrow keys for gallery navigation', async () => {

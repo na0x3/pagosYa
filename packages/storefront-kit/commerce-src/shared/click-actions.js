@@ -74,7 +74,11 @@
       if (!groups) return;
       const previous = [...selectedOptions];
       const chosen = [...selectedOptions]; chosen[index] = groups[index].values[Number(button.dataset.optionValue)];
-      selectedOptions = completeSelection(selectedProduct, chosen);
+      // A sold-out colour is still chosen (owner 2026-10-25): its name, photo and «Agotado» show; the later choices it rules out
+      // are cleared rather than swapped for available ones.
+      selectedOptions = button.hasAttribute('data-unavailable')
+        ? chosen.map((value, i) => i <= index || selectedProduct.variants.some(v => variantValues(v).every((candidate, j) => j > i || candidate === chosen[j])) ? value : undefined)
+        : completeSelection(selectedProduct, chosen);
       // Never change a later choice silently: say which ones availability replaced.
       const replaced = groups.map((group, i) => i > index && previous[i] !== undefined && previous[i] !== selectedOptions[i] ? `${group.name}: ${selectedOptions[i] ?? 'sin elegir'}` : '').filter(Boolean);
       selectionNote = replaced.length ? `Actualizamos ${replaced.join(', ')} por disponibilidad.` : '';

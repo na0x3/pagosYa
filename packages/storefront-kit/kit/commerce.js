@@ -787,6 +787,9 @@
     [data-pagosya-product][data-style] [data-kind=swatch] .product-detail__swatch{width:34px;height:34px}
     [data-pagosya-product][data-style=editorial] [data-kind=swatch] .product-detail__swatch{width:28px;height:28px}
     [data-pagosya-product][data-style=editorial] [data-kind=swatch] .product-detail__option-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+    [data-pagosya-product][data-style] [data-kind=swatch] [data-product-option][data-unavailable]{opacity:.6}
+    [data-pagosya-product][data-style] [data-kind=swatch] [data-unavailable] .product-detail__swatch{position:relative}
+    [data-pagosya-product][data-style] [data-kind=swatch] [data-unavailable] .product-detail__swatch::after{content:"";position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg,transparent 46%,var(--pd-ink) 47% 53%,transparent 54%)}
     [data-pagosya-product][data-style] [data-kind=swatch] [aria-pressed=true] .product-detail__swatch{box-shadow:0 0 0 2px var(--pd-paper),0 0 0 3.5px var(--pd-ink)}
     [data-pagosya-product][data-style=dense] .product-detail__values[data-priced]:not([data-kind=swatch]){display:grid;grid-template-columns:minmax(0,1fr);gap:7px}
     [data-pagosya-product][data-style=dense] [data-priced]:not([data-kind=swatch]) [data-product-option]{display:grid;grid-template-columns:16px minmax(0,1fr) auto;justify-content:stretch;gap:12px;width:100%;min-height:48px;padding:10px 14px;background:var(--pd-surface);font-size:14px;text-align:left}
@@ -2472,7 +2475,11 @@
       const narrowsAll = productPageStyle() === 'fashion';
       const matches = p.variants.filter(v => variantValues(v).every((candidate, i) => i === index ? candidate === value : (i > index && !narrowsAll) || selectedOptions[i] === undefined || candidate === selectedOptions[i]));
       const available = matches.some(v => remaining(p, v) > 0);
-      button.disabled = !available;
+      // Colour circles stay tappable when sold out, marked with a line, so the shopper still sees the colour's name and photo
+      // (owner 2026-10-25); other choices (sizes) are switched off as before.
+      const swatch = Boolean(button.closest('[data-kind="swatch"]'));
+      button.disabled = !available && !swatch;
+      button.toggleAttribute('data-unavailable', !available);
       button.setAttribute('aria-pressed', String(selectedOptions[index] === value));
       button.setAttribute('aria-label', `${value}${available ? '' : matches.length ? ' · Sin disponibilidad' : ' · Combinación no disponible'}`);
     });
@@ -2492,7 +2499,7 @@
     groups.forEach((group, index) => { detail.querySelector(`[data-product-selection="${index}"]`).textContent = selectedOptions[index] || ''; });
     updateQuantity();
     detail.querySelector('.product-detail__status').textContent = variant
-      ? available ? `${selectionNote || variant.name}${preview || config.demo ? ' · Vista previa, sin cobros.' : ''}` : 'Ya añadiste la cantidad disponible de esta combinación.'
+      ? available ? `${selectionNote || variant.name}${preview || config.demo ? ' · Vista previa, sin cobros.' : ''}` : variant.stock === 0 ? `${variant.name} · Agotado` : 'Ya añadiste la cantidad disponible de esta combinación.'
       : p.variants.some(v => remaining(p, v) > 0) ? 'Selecciona una opción de cada grupo.' : 'Sin disponibilidad para añadir más unidades.';
   }
   function showImage(index) {
@@ -5953,7 +5960,11 @@
       if (!groups) return;
       const previous = [...selectedOptions];
       const chosen = [...selectedOptions]; chosen[index] = groups[index].values[Number(button.dataset.optionValue)];
-      selectedOptions = completeSelection(selectedProduct, chosen);
+      // A sold-out colour is still chosen (owner 2026-10-25): its name, photo and «Agotado» show; the later choices it rules out
+      // are cleared rather than swapped for available ones.
+      selectedOptions = button.hasAttribute('data-unavailable')
+        ? chosen.map((value, i) => i <= index || selectedProduct.variants.some(v => variantValues(v).every((candidate, j) => j > i || candidate === chosen[j])) ? value : undefined)
+        : completeSelection(selectedProduct, chosen);
       // Never change a later choice silently: say which ones availability replaced.
       const replaced = groups.map((group, i) => i > index && previous[i] !== undefined && previous[i] !== selectedOptions[i] ? `${group.name}: ${selectedOptions[i] ?? 'sin elegir'}` : '').filter(Boolean);
       selectionNote = replaced.length ? `Actualizamos ${replaced.join(', ')} por disponibilidad.` : '';

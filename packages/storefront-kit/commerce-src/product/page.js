@@ -77,7 +77,11 @@
       const narrowsAll = productPageStyle() === 'fashion';
       const matches = p.variants.filter(v => variantValues(v).every((candidate, i) => i === index ? candidate === value : (i > index && !narrowsAll) || selectedOptions[i] === undefined || candidate === selectedOptions[i]));
       const available = matches.some(v => remaining(p, v) > 0);
-      button.disabled = !available;
+      // Colour circles stay tappable when sold out, marked with a line, so the shopper still sees the colour's name and photo
+      // (owner 2026-10-25); other choices (sizes) are switched off as before.
+      const swatch = Boolean(button.closest('[data-kind="swatch"]'));
+      button.disabled = !available && !swatch;
+      button.toggleAttribute('data-unavailable', !available);
       button.setAttribute('aria-pressed', String(selectedOptions[index] === value));
       button.setAttribute('aria-label', `${value}${available ? '' : matches.length ? ' · Sin disponibilidad' : ' · Combinación no disponible'}`);
     });
@@ -97,7 +101,7 @@
     groups.forEach((group, index) => { detail.querySelector(`[data-product-selection="${index}"]`).textContent = selectedOptions[index] || ''; });
     updateQuantity();
     detail.querySelector('.product-detail__status').textContent = variant
-      ? available ? `${selectionNote || variant.name}${preview || config.demo ? ' · Vista previa, sin cobros.' : ''}` : 'Ya añadiste la cantidad disponible de esta combinación.'
+      ? available ? `${selectionNote || variant.name}${preview || config.demo ? ' · Vista previa, sin cobros.' : ''}` : variant.stock === 0 ? `${variant.name} · Agotado` : 'Ya añadiste la cantidad disponible de esta combinación.'
       : p.variants.some(v => remaining(p, v) > 0) ? 'Selecciona una opción de cada grupo.' : 'Sin disponibilidad para añadir más unidades.';
   }
   function showImage(index) {
