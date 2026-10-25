@@ -212,8 +212,9 @@
     const config = options || window.PAGOSYA_CONFIG || {};
     const hosted = window.PAGOSYA_HOSTED === true;
     const preview = Boolean(config.preview || config.demo || (window.PAGOSYA_PREVIEW && !hosted));
-    // A showcase demo store shows the popup (signup faked); the Studio preview never does.
-    const demo = Boolean(config.demo) && !config.preview;
+    // A showcase demo store shows the popup (signup faked); the Studio editor never does. «Ver en navegador» shows it once
+    // on its first page, faked the same way (window.PAGOSYA_POPUP_DEMO).
+    const demo = (Boolean(config.demo) && !config.preview) || Boolean(window.PAGOSYA_POPUP_DEMO);
     const query = new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search);
     const key = `pagosya:recovery:${config.slug}`;
     // Reuse state only when a previous mount saved it for this same store; a missing slug must not match a missing state.

@@ -29,7 +29,10 @@ export async function mountSourceBrowser(app: HTMLDivElement) {
     const hydrated = await createPreviewImageLoader(API_BASE_URL)(snapshot);
     let cart = [];
     try { cart = JSON.parse(sessionStorage.getItem(cartKey) || '[]'); } catch { /* Start with an empty preview cart. */ }
-    const html = sourcePreviewDocument(hydrated, page, { query: params.get('query') || '', fragment: params.get('anchor') || '', cart: Array.isArray(cart) ? cart : [], paymentForm: true, accountForms: true });
+    const html = sourcePreviewDocument(hydrated, page, { query: params.get('query') || '', fragment: params.get('anchor') || '', cart: Array.isArray(cart) ? cart : [], paymentForm: true, accountForms: true,
+      // The signup popup shows once, on the first page of this tab, with the signup faked (owner 2026-10-25: «i dont see the
+      // popup»); the editor never shows it, and pages opened after this one leave it closed.
+      popupDemo: true });
     document.title = title;
     app.innerHTML = '<iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>';
     const frame = app.querySelector('iframe')!;
