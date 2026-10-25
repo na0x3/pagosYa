@@ -4582,10 +4582,12 @@
       el.hidden = false;
       // Chosen set (showcase commerce §3): only the named products in the merchant's order, a category, or a collection.
       // A deleted product is skipped; a set left empty hides itself.
-      const named = (el.getAttribute('data-products') || '').split(',').map(id => id.trim()).filter(Boolean);
+      // An entry is a product id, or its name (atelier rebuild 2026-10-25: YAPI wrote names joined by «|» and every set
+      // came out empty); names match without case or accents.
+      const named = (el.getAttribute('data-products') || '').split(/[,|]/).map(id => id.trim()).filter(Boolean);
       const byCategory = el.getAttribute('data-category'), byCollection = el.getAttribute('data-collection'), byColor = el.getAttribute('data-color');
       if (named.length || byCategory || byCollection || byColor) {
-        const chosen = named.length ? named.map(id => products().find(item => item.id === id)).filter(Boolean)
+        const chosen = named.length ? named.map(ref => products().find(item => item.id === ref) || products().find(item => filterFold(item.name) === filterFold(ref))).filter(Boolean)
           : byCategory ? products().filter(item => item.categoryId === byCategory)
           : byCollection ? products().filter(item => (collections().find(c => c.slug === byCollection)?.productIds || []).includes(item.id))
           : products();
