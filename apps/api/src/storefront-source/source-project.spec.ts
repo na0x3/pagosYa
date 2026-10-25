@@ -46,6 +46,12 @@ describe("Independent source artifacts", () => {
     expect(() => compiled('_compiled/other/faq.js')).toThrow('Invalid source file content');
     expect(() => compiled('_compiled/pages/deep/faq.js')).toThrow('Invalid source file content');
   });
+  // BOXY 2026-10-25: the compiled layout of 25 pages passed 180 kB and refused a save YAPI had kept small.
+  it('gives the compiled page layout the compiled budget, not an authored JSON file', () => {
+    const layout = (path: string) => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, { path, content: JSON.stringify({ 'index.html': 'x'.repeat(400_000) }) }] });
+    expect(() => layout('source-next-layout.json')).not.toThrow();
+    expect(() => layout('data/layout.json')).toThrow('Invalid source file content');
+  });
   it('gives the platform commerce runtime its own budget while authored files keep theirs', () => {
     const runtime = { path: 'commerce.js', content: '/* runtime */'.padEnd(200_000, ' ') };
     expect(sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, runtime] }).files.some(f => f.path === 'commerce.js')).toBe(true);
