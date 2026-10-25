@@ -115,6 +115,58 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
         });
         return hit ? [`«${(el.textContent || '').trim().slice(0, 30)}» sobre «${(hit.textContent || '').trim().slice(0, 30)}»`] : [];
       }).slice(0, 4),
+      // Text nearly the colour of what is behind it (BOXY 2026-10-25: a white title on a white card over a photo). Only a solid
+      // ground counts: text over a photo or a gradient is left to the screenshot.
+      lowContrast: (() => {
+        // rgb()/rgba(), and color(srgb …) which color-mix() computes to; any other form is unknown (null).
+        const rgb = (value: string) => {
+          const plain = value.match(/^rgba?\(([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+))?\)$/);
+          if (plain) return [Number(plain[1]), Number(plain[2]), Number(plain[3]), plain[4] === undefined ? 1 : Number(plain[4])];
+          const srgb = value.match(/^color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.]+))?\)$/);
+          return srgb ? [Number(srgb[1]) * 255, Number(srgb[2]) * 255, Number(srgb[3]) * 255, srgb[4] === undefined ? 1 : Number(srgb[4])] : null;
+        };
+        const clear = (value: string) => value === 'transparent' || /^rgba\([^)]*,\s*0\)$/.test(value) || /\/ 0\)$/.test(value);
+        const lum = (c: number[]) => { const [r, g, b] = c.slice(0, 3).map(v => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+        // What is painted behind the text's centre: a layer behind it may be a sibling, not a parent (a quote on a dark
+        // panel drawn by a positioned div). The text is scrolled to mid-screen to read the stack there.
+        const ground = (el: Element) => {
+          el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' as ScrollBehavior });
+          const at = el.getBoundingClientRect(), x = at.left + at.width / 2, y = at.top + at.height / 2;
+          if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return null;
+          const stack = document.elementsFromPoint(x, y);
+          if (!stack.length) return null;
+          for (const layer of stack) {
+            const style = getComputedStyle(layer);
+            // Esencial paints its full-width bands with border-image, not a background: unknown too.
+            if (style.backgroundImage !== 'none' || style.borderImageSource !== 'none' || layer instanceof HTMLImageElement || layer instanceof HTMLVideoElement || layer instanceof HTMLCanvasElement || layer instanceof SVGElement) return null;
+            // A decorative layer drawn by ::before/::after (a scrim, a tint) is behind the text too: unknown.
+            if ([getComputedStyle(layer, '::before'), getComputedStyle(layer, '::after')].some(pseudo => pseudo.content !== 'none' && (pseudo.backgroundImage !== 'none' || !clear(pseudo.backgroundColor)))) return null;
+            if (clear(style.backgroundColor)) continue;
+            const colour = rgb(style.backgroundColor);
+            if (!colour) return null;
+            if (colour[3] >= 0.9) return colour;
+            return null;
+          }
+          return [255, 255, 255, 1];
+        };
+        const found: string[] = [];
+        // Photos and scrims often take no clicks (pointer-events:none), which hides them from elementsFromPoint.
+        // …and a smooth-scrolling page would still be moving when the stack is read.
+        const hitAll = document.createElement('style'); hitAll.textContent = '*,*::before,*::after{pointer-events:auto!important}html,body{scroll-behavior:auto!important}'; document.head.append(hitAll);
+        for (const el of Array.from(document.querySelectorAll('h1,h2,h3,h4,p,a,button,li,label,span,strong'))) {
+          if (found.length >= 4) break;
+          const text = Array.from(el.childNodes).filter(node => node.nodeType === 3).map(node => node.textContent).join('').replace(/\s+/g, ' ').trim();
+          if (text.length < 3 || el.closest('[hidden],[aria-hidden="true"],template,dialog:not([open]),.es-skip,[data-pagosya-assistant],:disabled')) continue;
+          const box = el.getBoundingClientRect(), style = getComputedStyle(el);
+          if (box.width < 2 || box.height < 2 || style.visibility === 'hidden' || Number(style.opacity) < 0.3) continue;
+          const ink = rgb(style.color), back = ground(el);
+          if (!ink || !back || ink[3] < 0.5) continue;
+          const a = lum(ink), b = lum(back);
+          if ((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) < 1.6) found.push(`«${text.slice(0, 40)}»`);
+        }
+        hitAll.remove(); window.scrollTo(0, 0);
+        return found;
+      })(),
       // A custom property declared with a value that computes to nothing: two variables pointing at each other (BAEK
       // 2026-10-23, --es-paper ↔ --store-background on .es) or one leaning on a variable no rule defines. Everything painted
       // with it goes transparent — the menu panel opened see-through over the page.
@@ -178,6 +230,7 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
     errors.push(...health.textOverButton.map(pair => `Texto encima de un botón: ${pair}. Muévelo para que no se toquen.`));
     if (health.staleCatalogCopy) errors.push('Texto permanente de catálogo vacío fuera del runtime. Usa texto de marca que siga siendo válido al añadir productos; el catálogo administra su estado vacío.');
     if (health.designProcessCopy) errors.push('Texto del proceso de diseño visible para compradores. Sustituye explicaciones de composición, runtime o catálogo real/vivo por texto breve sobre los productos o la marca, sin inventar datos.');
+    if (health.lowContrast.length) errors.push(`Texto casi invisible, del mismo color que el fondo donde está: ${health.lowContrast.join(', ')}. Dale un color que contraste con ese fondo.`);
     errors.push(...health.unresolvedVars.map(({ selector, names }) => `Variables de color sin valor en «${selector}»: ${names.join(', ')}. Se apuntan entre sí o usan una variable que no existe, y todo lo pintado con ellas queda transparente (menú, encabezado, carrito). Da a cada una un valor real, sin que una variable apunte a otra que la vuelve a nombrar.`));
     if (health.hiddenCatalog) errors.push('El catálogo está oculto. Mantén visible data-pagosya-catalog incluso sin productos; el runtime controla su estado vacío y los productos futuros.');
     evidence = await page.evaluate(evaluateRequirements, { requirements: requirements.map(r => ({ ...r, imagePaths: r.check === 'image' ? agentImagePaths(r.expected) : [] })), entry, width, profile });

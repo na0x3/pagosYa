@@ -115,6 +115,13 @@ describe('agent capture', () => {
       .toEqual(expect.arrayContaining([expect.stringContaining('Variables de color sin valor en «.es»: --store-background, --es-paper')]));
     expect((await captureAgentDraft(page('.es{--es-paper:var(--store-background);--es-ink:var(--es-paper);--es-gap: }'), 390)).errors).toEqual([]);
   });
+  // BOXY 2026-10-25: the story's title was white on a white card laid over a photo; the owner selected the text to read it.
+  it('names text the colour of its own solid ground, but not text over a photo or ordinary dark-on-light', async () => {
+    const page = (css: string) => ({ schemaVersion: 1 as const, brief: {} as any, files: [{ path: 'index.html', content: `<html><head><meta charset="utf-8"><style>body{margin:0;background:#f7f4ee;color:#111820}.card{padding:24px;background:#f7f4ee}.photo{padding:24px;background:#333 url(data:image/gif;base64,R0lGODlhAQABAAAAACw=)}${css}</style></head><body><main><h1>BOXY</h1><section class="card"><h2>Pocas piezas, mucho uso</h2><p>Hacemos hoodies amplios.</p></section><section class="photo"><h2 class="over">Sobre la foto</h2></section></main></body></html>` }] }) as any;
+    expect((await captureAgentDraft(page('.card h2{color:#ffffff}.photo .over{color:#fff}'), 390)).errors)
+      .toEqual(expect.arrayContaining([expect.stringContaining('Texto casi invisible, del mismo color que el fondo donde está: «Pocas piezas, mucho uso»')]));
+    expect((await captureAgentDraft(page('.photo .over{color:#fff}'), 390)).errors.filter(e => e.startsWith('Texto casi invisible'))).toEqual([]);
+  });
   it('compiles an edited draft over the store runtime and screenshots it on a phone', async () => {
     const base = await templateDemoRevision(listTemplates().find(t => t.id === 'pausa')!, literalTemplateSource('pausa'));
     base.files = base.files.filter(f => !f.path.startsWith('assets/icons/'));
