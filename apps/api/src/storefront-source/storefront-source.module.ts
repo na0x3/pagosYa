@@ -26,6 +26,7 @@ import { SourceVisualReviewService } from "./source-visual-review.service";
 import { SourcePublishingController, SourceSiteController } from "./source-publishing.controller";
 import { SourcePublishingService } from "./source-publishing.service";
 import { SourceProjectsController } from "./source-projects.controller";
+import { SourceThumbnailsService } from "./source-thumbnails.service";
 import { SourceProjectsService } from "./source-projects.service";
 import { SourceGenerationService } from "./source-generation.service";
 import { SourceConversationService } from "./source-conversation.service";
@@ -51,7 +52,7 @@ import { ProductPageModule } from '../product-content/product-page.module';
 @Module({
   imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule, StoreEmailModule, ProductPageModule],
   controllers: [SketchStudioController, SourceChatJobsController, SourceFontsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController, StoreVoiceController, AssumedFactCountsController, SourceStartersController],
-  providers: [SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService, StoreVoiceService, SourceStorePlanService, SourceStartersService, { provide: StorePlanParts, useValue: storePlanParts }],
+  providers: [SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceThumbnailsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService, StoreVoiceService, SourceStorePlanService, SourceStartersService, { provide: StorePlanParts, useValue: storePlanParts }],
   exports: [SourceProjectsService, SourceTemplatesService, SourceChatService],
 })
 export class StorefrontSourceModule {}

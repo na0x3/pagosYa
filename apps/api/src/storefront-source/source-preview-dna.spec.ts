@@ -17,7 +17,7 @@ describe.each([
   ['versions/:revision', async (settings: object) => {
     const projects: any = { version: jest.fn().mockResolvedValue({ revision: 2, snapshot: snapshot(settings) }) };
     const generation: any = { catalog: jest.fn().mockResolvedValue({ items: [] }) };
-    const result = await new SourceProjectsController(projects, generation, {} as any).version({ id: 'm' }, 'store-7', 2);
+    const result = await new SourceProjectsController(projects, generation, {} as any, {} as any).version({ id: 'm' }, 'store-7', 2);
     return result.snapshot.files;
   }],
   ['the design-job baseline', async (settings: object) => {

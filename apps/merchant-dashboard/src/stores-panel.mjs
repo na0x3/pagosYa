@@ -23,33 +23,40 @@ export function createStoresPanel(deps) {
   let storeSelection = null, visibleStoreIds = [];
   // Spec 2026-10-14 store voice: facts YAPI assumed and still waiting, by store id (GET /assumed-facts/counts).
   let assumedFactCounts = {};
-  // Each card's thumbnail runs that store's whole live site (scripts, animations, video) in its own Studio. They load
-  // only near the screen, three at a time, and are unloaded when "Mi tienda" is left, so none runs behind other pages.
+  // Each card shows one picture of its store's first screen, drawn by the API once per saved revision (owner 2026-10-26: the
+  // live Studio frames this replaced downloaded 3–24 MB per store and made the whole page lag on every refresh). Pictures load
+  // near the screen, three requests at a time, and stay for the rest of the visit: a revision never changes.
   const THUMBNAIL_LOADS = 3;
+  const thumbnailUrls = new Map();
   let thumbnailObserver = null, thumbnailsLoading = 0;
   const thumbnailQueue = [];
+  function showThumbnail(img, url) { img.src = url; img.closest(".store-card-preview")?.classList.add("loaded"); }
   function loadNextThumbnails() {
     while (thumbnailsLoading < THUMBNAIL_LOADS && thumbnailQueue.length) {
-      const frame = thumbnailQueue.shift();
-      if (!frame.isConnected || frame.getAttribute("src") || document.body.dataset.dashboardView !== "stores") continue;
+      const img = thumbnailQueue.shift();
+      if (!img.isConnected || img.getAttribute("src")) continue;
+      const key = img.dataset.thumbnailKey;
+      if (thumbnailUrls.has(key)) { showThumbnail(img, thumbnailUrls.get(key)); continue; }
       thumbnailsLoading++;
-      frame.addEventListener("load", () => { thumbnailsLoading = Math.max(0, thumbnailsLoading - 1); loadNextThumbnails(); }, { once: true });
-      frame.src = frame.dataset.thumbnailSrc;
+      api(`/stores/${encodeURIComponent(img.dataset.thumbnailStore)}/source-project/thumbnail/${Number(img.dataset.thumbnailRevision)}`, { raw: true })
+        .then(blob => { const url = URL.createObjectURL(blob); thumbnailUrls.set(key, url); showThumbnail(img, url); })
+        .catch(() => img.closest(".store-card-preview")?.classList.add("failed"))
+        .finally(() => { thumbnailsLoading = Math.max(0, thumbnailsLoading - 1); loadNextThumbnails(); });
     }
   }
   function watchStoreThumbnails() {
-    thumbnailObserver?.disconnect(); thumbnailObserver = null; thumbnailQueue.length = 0; thumbnailsLoading = 0;
+    thumbnailObserver?.disconnect(); thumbnailObserver = null; thumbnailQueue.length = 0;
     if (document.body.dataset.dashboardView !== "stores") return;
+    document.querySelectorAll("#storeRows img[data-thumbnail-key]:not([src])").forEach(img => { if (thumbnailUrls.has(img.dataset.thumbnailKey)) showThumbnail(img, thumbnailUrls.get(img.dataset.thumbnailKey)); });
     thumbnailObserver = new IntersectionObserver(entries => {
       for (const entry of entries) if (entry.isIntersecting) { thumbnailObserver.unobserve(entry.target); thumbnailQueue.push(entry.target); }
       loadNextThumbnails();
     }, { rootMargin: "240px 0px" });
-    document.querySelectorAll("#storeRows iframe[data-thumbnail-src]:not([src])").forEach(frame => thumbnailObserver.observe(frame));
+    document.querySelectorAll("#storeRows img[data-thumbnail-key]:not([src])").forEach(img => thumbnailObserver.observe(img));
   }
   function unloadStoreThumbnails() {
-    thumbnailObserver?.disconnect(); thumbnailObserver = null; thumbnailQueue.length = 0; thumbnailsLoading = 0;
-    // Detaching the frame ends its document; a fresh copy without src waits for the next visit.
-    document.querySelectorAll("#storeRows iframe[data-thumbnail-src][src]").forEach(frame => { const fresh = frame.cloneNode(false); fresh.removeAttribute("src"); frame.replaceWith(fresh); });
+    // Pictures are small and already in memory; only stop watching for new ones.
+    thumbnailObserver?.disconnect(); thumbnailObserver = null; thumbnailQueue.length = 0;
   }
   // Traer mi tienda de Shopify (spec 2026-09-27): paste the address or the CSV, review, import, then pick the look.
   const shopifyImportDialog = document.getElementById("shopifyImportDialog");
@@ -178,7 +185,7 @@ export function createStoresPanel(deps) {
     document.getElementById("storeRows").innerHTML = `<button class="store-create-tile" id="openCreateStore" type="button"><span aria-hidden="true">+</span><strong>Crear una tienda</strong><small>YAPI la arma contigo</small></button><button class="store-create-tile" id="openShopifyImport" type="button"><span aria-hidden="true">↧</span><strong>Traer mi tienda</strong><small>Productos, fotos y páginas</small></button>` + visible.map(store => {
       const revision = store.sourceProject?.revision || store.publishedSourceRevision;
       const cover = store.bannerUrl || store.heroSlides?.[0]?.imageUrl || store.publicityImageUrl;
-      const preview = revision ? `<iframe data-thumbnail-src="/studio/?thumbnail=1&embedded=1&store=${encodeURIComponent(store.id)}&revision=${Number(revision)}" title="Vista de ${esc(store.name)}" tabindex="-1" aria-hidden="true"></iframe>` : cover ? `<img src="${esc(dashboardAssetUrl(cover))}" alt="" loading="lazy">` : `<div class="store-card-placeholder"><span aria-hidden="true">${esc(store.name.slice(0,1).toUpperCase())}</span><strong>${esc(store.name)}</strong><small>Tu próximo gran comienzo</small></div>`;
+      const preview = revision ? `<img class="store-card-shot" data-thumbnail-key="${esc(store.id)}:${Number(revision)}" data-thumbnail-store="${esc(store.id)}" data-thumbnail-revision="${Number(revision)}" alt="Vista de ${esc(store.name)}">` : cover ? `<img src="${esc(dashboardAssetUrl(cover))}" alt="" loading="lazy">` : `<div class="store-card-placeholder"><span aria-hidden="true">${esc(store.name.slice(0,1).toUpperCase())}</span><strong>${esc(store.name)}</strong><small>Tu próximo gran comienzo</small></div>`;
       const state = statusFor(store), stateLabel = { published: "Publicada", draft: "Borrador", archived: "Archivada" }[state];
       const picked = !!storeSelection?.has(store.id);
       return `<article class="store-row ${store.id === deps.storeId() ? "active" : ""} ${picked ? "selected" : ""}" data-id="${esc(store.id)}">

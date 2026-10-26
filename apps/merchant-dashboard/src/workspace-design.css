@@ -304,3 +304,7 @@ body.is-logged-in .store-settings-actions button { width: auto; min-width: max-c
 
   body.is-logged-in:not([data-dashboard-view="workspace"]):not([data-dashboard-view="products"]):not([data-dashboard-view="store-settings"]) .workspace-yapi { left:calc(50% + 24px); width:calc(100% - 72px); }
 }
+/* Store cards show a picture of the store's first screen (2026-10-26); a soft tint until it arrives. */
+.store-card-preview > img.store-card-shot { object-position: top center; opacity: 0; transition: opacity .25s ease; }
+.store-card-preview.loaded > img.store-card-shot { opacity: 1; }
+.store-card-preview.failed > img.store-card-shot { display: none; }

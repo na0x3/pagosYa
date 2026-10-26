@@ -17,6 +17,7 @@ import { SourceGenerationService } from "./source-generation.service";
 import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
 import { SourceVisualEditDto } from './dto/source-visual-edit.dto';
 import { CompileBudget, MerchantThrottlerGuard } from './source-compile-budget';
+import { SourceThumbnailsService } from './source-thumbnails.service';
 
 class ContactFormDto extends SourceProjectRevisionDto { @IsBoolean() enabled!: boolean; }
 
@@ -26,7 +27,15 @@ class ContactFormDto extends SourceProjectRevisionDto { @IsBoolean() enabled!: b
 @UseGuards(MerchantAuthGuard, MerchantThrottlerGuard)
 @Controller("v1/stores/:storeId/source-project")
 export class SourceProjectsController {
-  constructor(private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly chat: SourceChatService) {}
+  constructor(private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly chat: SourceChatService, private readonly thumbnails: SourceThumbnailsService) {}
+
+  /** A «Tus tiendas» card: one picture of the store's first screen for this revision, instead of running the whole site. */
+  @Get('thumbnail/:revision')
+  @Header('Content-Type', 'image/jpeg')
+  @Header('Cache-Control', 'private, max-age=31536000, immutable')
+  async thumbnail(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Param('revision', ParseIntPipe) revision: number) {
+    return new StreamableFile(await this.thumbnails.thumbnail(merchant.id, storeId, revision));
+  }
 
   // Recompiles the whole project with eleven new pages, so it has a tight limit like the other compile-heavy routes.
   @Post('standard-pages')
