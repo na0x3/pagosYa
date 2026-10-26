@@ -3973,23 +3973,29 @@
       else { link.textContent = 'Ver detalle'; root.append(link); }
     }
     buy.classList.add('menu-add'); buy.type = 'button';
+    // A round icon button (Esencial's «+») keeps its icon: «Elegir opciones» or «Agotado» squeezed into a 44 px circle spilled out
+    // of it (Gramiyaa 2026-10-26). The aria-label carries the words; the product page opens the same way.
+    const iconOnly = !buy.textContent.trim() && !!buy.querySelector('svg,img');
+    const face = text => { if (!iconOnly) buy.textContent = text; };
     if (isMembership(p)) {
-      buy.dataset.product = p.id; buy.disabled = false; buy.textContent = 'Hacerme miembro';
+      buy.dataset.product = p.id; buy.disabled = false; face('Hacerme miembro');
       buy.setAttribute('aria-label', `Hacerme miembro de ${p.name}`);
     } else {
     buy.dataset.add = p.id; buy.disabled = !ready || soldOut(p) || complex;
     buy.setAttribute('aria-label', `${complex ? 'Elegir opciones de' : 'Añadir'} ${p.name}`);
-    if (soldOut(p)) { buy.textContent = 'Agotado'; root.dataset.soldOut = 'true'; }
+    if (soldOut(p)) { face('Agotado'); if (iconOnly) buy.setAttribute('aria-label', `${p.name} agotado`); root.dataset.soldOut = 'true'; }
     else if (complex && (optionGroups(p) || boxGroup(p))) {
       delete buy.dataset.add; buy.dataset.product = p.id; buy.disabled = false;
-      buy.textContent = 'Elegir opciones';
+      face('Elegir opciones');
     }
     else if (complex) {
-      buy.textContent = 'Elegir opciones';
+      face('Elegir opciones');
       if (!preview && !config.demo) {
         const link = document.createElement('a');
         for (const attr of [...buy.attributes]) if (!['disabled', 'type', 'data-add'].includes(attr.name)) link.setAttribute(attr.name, attr.value);
-        link.href = safeUrl(hostedProduct(p.id)); link.textContent = 'Elegir opciones'; buy.replaceWith(link);
+        link.href = safeUrl(hostedProduct(p.id));
+        if (iconOnly) link.append(...buy.childNodes); else link.textContent = 'Elegir opciones';
+        buy.replaceWith(link);
       }
     }
     }
@@ -6049,8 +6055,12 @@
   carouselStyle.textContent = `@layer pagosya-commerce {
     [data-pagosya-carousel]{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden;scroll-snap-type:x mandatory!important;scrollbar-width:none;overscroll-behavior-x:contain}
     [data-pagosya-carousel]::-webkit-scrollbar{display:none}
-    [data-pagosya-carousel]>*{flex:0 0 100%;box-sizing:border-box;min-width:0;margin:0;scroll-snap-align:start}
+    [data-pagosya-carousel]>*{flex:0 0 calc((100% - (var(--pya-per-view,1) - 1) * 16px) / var(--pya-per-view,1));box-sizing:border-box;min-width:0;margin:0;scroll-snap-align:start}
+    [data-pagosya-carousel][data-carousel-per-view]{gap:16px!important}
     [data-pagosya-carousel] img{display:block;max-width:100%}
+    /* One slide never outgrows the screen: a square photo at full width made Gramiyaa's slider 1,800 px tall (2026-10-26). The
+       store's own limit wins; contain only fills in where the store set no fit of its own, so a photo is never squashed. */
+    [data-pagosya-carousel]>* :is(img,video){max-height:min(72vh,620px);object-fit:contain}
     /* A wall the save turned into a carousel (source-photo-groups.ts) keeps its slides a readable photo height. */
     [data-carousel-repaired]{grid-column:1/-1!important;width:100%!important;min-width:0}
     [data-carousel-repaired] img{width:100%!important;height:min(78vh,680px)!important;max-height:none!important;object-fit:cover}
@@ -6078,6 +6088,9 @@
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     clearInterval(carouselTimers.get(track));
     if (track.nextElementSibling?.classList.contains('pagosya-carousel__controls')) track.nextElementSibling.remove();
+    // Stores hide every slide but the first until the kit has the track (`:not([data-carousel-ready]) > :not(:first-child)`,
+    // Dulce Horno 2026-10-26); without this mark their arrows and dots had nothing to scroll to.
+    track.setAttribute('data-carousel-ready', '');
     const slides = Array.from(track.children).filter(slide => !slide.hidden);
     if (slides.length < 2) return;
     track.setAttribute('role', 'region');
@@ -6131,6 +6144,18 @@
     });
     let frame = 0;
     track.addEventListener('scroll', () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(mark); }, { passive: true });
+    // A slide taller than the screen on a wide track (a store's 4-up card rail turned into one card at 1,240 px, Gramiyaa
+    // 2026-10-26) shows two to four slides at a time instead; a phone keeps one.
+    const fit = () => {
+      track.removeAttribute('data-carousel-per-view'); track.style.removeProperty('--pya-per-view');
+      const tall = Math.max(...slides.map(slide => slide.getBoundingClientRect().height));
+      if (track.clientWidth < 640 || !(tall > innerHeight * 0.9)) return;
+      const perView = Math.min(slides.length, 4, Math.max(2, Math.ceil(tall / (innerHeight * 0.6))));
+      track.setAttribute('data-carousel-per-view', ''); track.style.setProperty('--pya-per-view', String(perView));
+    };
+    fit();
+    if (!track.__pyaFitWired) { track.__pyaFitWired = true; let resize = 0; addEventListener('resize', () => { cancelAnimationFrame(resize); resize = requestAnimationFrame(() => track.__pyaFit?.()); }); }
+    track.__pyaFit = fit;
     mark();
     if (!track.hasAttribute('data-carousel-auto') || reduced) return;
     let paused = false;

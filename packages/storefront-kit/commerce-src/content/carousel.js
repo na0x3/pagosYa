@@ -5,8 +5,12 @@
   carouselStyle.textContent = `@layer pagosya-commerce {
     [data-pagosya-carousel]{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden;scroll-snap-type:x mandatory!important;scrollbar-width:none;overscroll-behavior-x:contain}
     [data-pagosya-carousel]::-webkit-scrollbar{display:none}
-    [data-pagosya-carousel]>*{flex:0 0 100%;box-sizing:border-box;min-width:0;margin:0;scroll-snap-align:start}
+    [data-pagosya-carousel]>*{flex:0 0 calc((100% - (var(--pya-per-view,1) - 1) * 16px) / var(--pya-per-view,1));box-sizing:border-box;min-width:0;margin:0;scroll-snap-align:start}
+    [data-pagosya-carousel][data-carousel-per-view]{gap:16px!important}
     [data-pagosya-carousel] img{display:block;max-width:100%}
+    /* One slide never outgrows the screen: a square photo at full width made Gramiyaa's slider 1,800 px tall (2026-10-26). The
+       store's own limit wins; contain only fills in where the store set no fit of its own, so a photo is never squashed. */
+    [data-pagosya-carousel]>* :is(img,video){max-height:min(72vh,620px);object-fit:contain}
     /* A wall the save turned into a carousel (source-photo-groups.ts) keeps its slides a readable photo height. */
     [data-carousel-repaired]{grid-column:1/-1!important;width:100%!important;min-width:0}
     [data-carousel-repaired] img{width:100%!important;height:min(78vh,680px)!important;max-height:none!important;object-fit:cover}
@@ -34,6 +38,9 @@
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     clearInterval(carouselTimers.get(track));
     if (track.nextElementSibling?.classList.contains('pagosya-carousel__controls')) track.nextElementSibling.remove();
+    // Stores hide every slide but the first until the kit has the track (`:not([data-carousel-ready]) > :not(:first-child)`,
+    // Dulce Horno 2026-10-26); without this mark their arrows and dots had nothing to scroll to.
+    track.setAttribute('data-carousel-ready', '');
     const slides = Array.from(track.children).filter(slide => !slide.hidden);
     if (slides.length < 2) return;
     track.setAttribute('role', 'region');
@@ -87,6 +94,18 @@
     });
     let frame = 0;
     track.addEventListener('scroll', () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(mark); }, { passive: true });
+    // A slide taller than the screen on a wide track (a store's 4-up card rail turned into one card at 1,240 px, Gramiyaa
+    // 2026-10-26) shows two to four slides at a time instead; a phone keeps one.
+    const fit = () => {
+      track.removeAttribute('data-carousel-per-view'); track.style.removeProperty('--pya-per-view');
+      const tall = Math.max(...slides.map(slide => slide.getBoundingClientRect().height));
+      if (track.clientWidth < 640 || !(tall > innerHeight * 0.9)) return;
+      const perView = Math.min(slides.length, 4, Math.max(2, Math.ceil(tall / (innerHeight * 0.6))));
+      track.setAttribute('data-carousel-per-view', ''); track.style.setProperty('--pya-per-view', String(perView));
+    };
+    fit();
+    if (!track.__pyaFitWired) { track.__pyaFitWired = true; let resize = 0; addEventListener('resize', () => { cancelAnimationFrame(resize); resize = requestAnimationFrame(() => track.__pyaFit?.()); }); }
+    track.__pyaFit = fit;
     mark();
     if (!track.hasAttribute('data-carousel-auto') || reduced) return;
     let paused = false;

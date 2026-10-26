@@ -45,6 +45,11 @@ describe('the kit carousel', () => {
     expect(Array.from(track.children, (slide: any) => slide.getAttribute('aria-label'))).toEqual(['1 de 4', '2 de 4', '3 de 4', '4 de 4']);
   });
 
+  it('marks every track ready, so a store that hides the later slides until then shows them (Dulce Horno 2026-10-26)', async () => {
+    const w = await open(`<div data-pagosya-carousel>${slides(3)}</div><div data-pagosya-carousel id="one">${slides(1)}</div>`);
+    expect(Array.from(w.document.querySelectorAll('[data-pagosya-carousel]'), (track: any) => track.hasAttribute('data-carousel-ready'))).toEqual([true, true]);
+  });
+
   it('needs two slides, and never stacks a second set of controls', async () => {
     const w = await open(`<div data-pagosya-carousel>${slides(1)}</div><div data-pagosya-carousel id="two">${slides(2)}</div>`);
     expect(w.document.querySelectorAll('.pagosya-carousel__controls')).toHaveLength(1);
@@ -54,7 +59,7 @@ describe('the kit carousel', () => {
     const w = await open(`<div data-pagosya-carousel>${slides(3)}</div>`);
     const css = Array.from(w.document.querySelectorAll('style'), (style: any) => style.textContent).join('\n');
     expect(css).toContain('[data-pagosya-carousel]{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important');
-    expect(css).toContain('[data-pagosya-carousel]>*{flex:0 0 100%');
+    expect(css).toContain('[data-pagosya-carousel]>*{flex:0 0 calc((100% - (var(--pya-per-view,1) - 1) * 16px) / var(--pya-per-view,1))');
     expect(css).toContain('[data-carousel-repaired]{grid-column:1/-1!important');
   });
 

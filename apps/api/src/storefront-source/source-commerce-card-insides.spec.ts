@@ -90,4 +90,16 @@ describe('card insides', () => {
     expect(card('s').querySelector('.menu-add')?.textContent).toContain('Agregar');
     expect(card('v').querySelector('.menu-add')?.textContent).toContain('Elegir opciones');
   });
+
+  it('an icon-only add button keeps its icon for options and sold out; the words go to its label (Gramiyaa 2026-10-26)', async () => {
+    const TEMPLATE = '<template data-pagosya-product-template><article><a data-product-link href="#"><img data-product-field="image" alt=""></a><h3 data-product-field="name"></h3><p data-product-field="price"></p><button data-product-add aria-label="Agregar"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></article></template>';
+    const { q } = await open([
+      { ...base, id: 'v', name: 'Maní', variants: [{ id: 'x', name: '1 L', amount: 7500, options: [{ name: 'Tamaño', value: '1 L' }] }, { id: 'y', name: '5 L', amount: 33000, options: [{ name: 'Tamaño', value: '5 L' }] }] },
+      { ...base, id: 'o', name: 'Coco', stock: 0 },
+    ], { body: TEMPLATE });
+    const options = q('[data-custom-product][data-product-id="v"] .menu-add'), soldOut = q('[data-custom-product][data-product-id="o"] .menu-add');
+    expect(options.textContent).toBe(''); expect(options.querySelector('svg')).not.toBeNull();
+    expect(options.getAttribute('aria-label')).toBe('Elegir opciones de Maní');
+    expect(soldOut.querySelector('svg')).not.toBeNull(); expect(soldOut.getAttribute('aria-label')).toBe('Coco agotado');
+  });
 });

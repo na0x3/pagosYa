@@ -127,23 +127,29 @@
       else { link.textContent = 'Ver detalle'; root.append(link); }
     }
     buy.classList.add('menu-add'); buy.type = 'button';
+    // A round icon button (Esencial's «+») keeps its icon: «Elegir opciones» or «Agotado» squeezed into a 44 px circle spilled out
+    // of it (Gramiyaa 2026-10-26). The aria-label carries the words; the product page opens the same way.
+    const iconOnly = !buy.textContent.trim() && !!buy.querySelector('svg,img');
+    const face = text => { if (!iconOnly) buy.textContent = text; };
     if (isMembership(p)) {
-      buy.dataset.product = p.id; buy.disabled = false; buy.textContent = 'Hacerme miembro';
+      buy.dataset.product = p.id; buy.disabled = false; face('Hacerme miembro');
       buy.setAttribute('aria-label', `Hacerme miembro de ${p.name}`);
     } else {
     buy.dataset.add = p.id; buy.disabled = !ready || soldOut(p) || complex;
     buy.setAttribute('aria-label', `${complex ? 'Elegir opciones de' : 'Añadir'} ${p.name}`);
-    if (soldOut(p)) { buy.textContent = 'Agotado'; root.dataset.soldOut = 'true'; }
+    if (soldOut(p)) { face('Agotado'); if (iconOnly) buy.setAttribute('aria-label', `${p.name} agotado`); root.dataset.soldOut = 'true'; }
     else if (complex && (optionGroups(p) || boxGroup(p))) {
       delete buy.dataset.add; buy.dataset.product = p.id; buy.disabled = false;
-      buy.textContent = 'Elegir opciones';
+      face('Elegir opciones');
     }
     else if (complex) {
-      buy.textContent = 'Elegir opciones';
+      face('Elegir opciones');
       if (!preview && !config.demo) {
         const link = document.createElement('a');
         for (const attr of [...buy.attributes]) if (!['disabled', 'type', 'data-add'].includes(attr.name)) link.setAttribute(attr.name, attr.value);
-        link.href = safeUrl(hostedProduct(p.id)); link.textContent = 'Elegir opciones'; buy.replaceWith(link);
+        link.href = safeUrl(hostedProduct(p.id));
+        if (iconOnly) link.append(...buy.childNodes); else link.textContent = 'Elegir opciones';
+        buy.replaceWith(link);
       }
     }
     }
