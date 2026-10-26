@@ -15,7 +15,7 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiConsumes, ApiOkResponse, ApiTags } from "@nestjs/swagger";
-import { Throttle } from "@nestjs/throttler";
+import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type { Response } from "express";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
 import { CurrentMerchant } from "../auth/decorators/current-merchant.decorator";
@@ -64,9 +64,12 @@ export class UploadsController {
     return { url: stored.url, assetId: asset.id };
   }
 
-  /** Public — buyers on a checkout/storefront page must be able to load product photos and the merchant logo without any credential. */
+  /** Public — buyers on a checkout/storefront page must be able to load product photos and the merchant logo without any credential.
+   *  Not rate limited: the files are immutable and cached for a year, and a merchant's «Tus tiendas» page alone (one live preview
+   *  per store, every product photo and its sizes) used the hourly 7,200 in a few visits, after which photos «disappeared»
+   *  (owner 2026-10-26). Uploads stay limited. */
   @Get(":filename")
-  @Throttle({ default: { limit: 600, ttl: 60_000 } })
+  @SkipThrottle({ default: true, sustained: true })
   async getFile(
     @Param("filename") filename: string,
     @Res({ passthrough: true }) res: Response,
