@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { merchantAsksForPhotoGroup } from './source-media-design';
 import { firstVideo, withHeroVideo } from './source-master-video';
 import { ANIMATED_FONTS, animatedVariants, asksForAnimatedStore } from './source-master-animated';
+import { effectsFor, effectVariants } from './source-master-effects';
 import { agentReport as agentReportText } from './agent/agent-label';
 import { closestPreset } from './source-preset-pick';
 import { sourceRequestContext } from './source-request-context';
@@ -351,7 +352,10 @@ export class SourceChatService {
       // Owner 2026-10-25 (Gramiyaa): the video the merchant attached plays as the cover, whether the build follows the plan card or not.
       firstVideo(await this.requestAssets(threadId)));
     // Owner 2026-10-27 (PEPPA please): «animada», «divertida», «con movimiento» make the build itself lively.
-    if (asksForAnimatedStore(askedWords)) { const plain = filler; filler = async facts => { const read = await plain(facts); return read ? { ...read, animated: true } : read; }; }
+    const animated = asksForAnimatedStore(askedWords);
+    // Owner 2026-10-27: the motion effects from the merchant's words and, for an animated store, from what it sells.
+    const effects = effectsFor({ words: askedWords, business: [askedWords, store?.name, onboarding.what, onboarding.story, ...productNames.map((product: { name: string }) => product.name)].filter(Boolean).join('\n'), animated });
+    if (animated || Object.keys(effects).length) { const plain = filler; filler = async facts => { const read = await plain(facts); return read ? { ...read, ...(animated ? { animated: true } : {}), ...(Object.keys(effects).length ? { effects } : {}) } : read; }; }
     // YAPI plan card (spec 2026-10-22): a planned build carries its checked plan and no preset.
     const saved = planned ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned.applied)
       : starter?.kind === 'slots' ? await this.applyPlantilla(merchantId, storeId, starter.id, revision, { about: draft.answers?.context, assetUrls: chatPhotos })
@@ -569,6 +573,9 @@ export class SourceChatService {
       : { ...filled, menu: asked ? { style: filled.menu && filled.menu.style !== 'none' ? filled.menu.style : currentMenu?.style ?? 'panel', groups: filled.menu?.groups.length ? filled.menu.groups : currentMenu?.groups ?? [] } : { style: 'none', groups: [] } };
     // Owner 2026-10-27: «hazla más animada» on a store gives it the lively parts and the playful motion (a polish never does).
     const lively = !options.polish && asksForAnimatedStore(request) ? animatedVariants(photos.length, manifest.master!.variants) : null;
+    // Owner 2026-10-27: «agrega burbujas», «quita los pétalos»: an effect the merchant names, on any edit.
+    const namedEffects = !options.polish ? effectVariants(effectsFor({ words: request, business: '', animated: false }), manifest.master!.variants) : {};
+    if (Object.keys(namedEffects).length) change = { ...(change ?? {}), variants: { ...(change?.variants ?? {}), ...namedEffects } };
     if (lively) change = { ...(change ?? {}), animated: true, variants: { ...(change?.variants ?? {}), ...lively },
       ...(manifest.master!.fonts.some(font => font.id === ANIMATED_FONTS) ? { look: { ...(change?.look ?? {}), fonts: ANIMATED_FONTS } } : {}) };
     // Nothing in the data to change: the caller turns the request into a minimal design edit.
@@ -1090,7 +1097,8 @@ export class SourceChatService {
         || (Boolean(readStoreMenu((previous!.snapshot as unknown as SourceProjectSnapshot).files)) && instructionTouchesStoreMenu(input.instruction)));
       const menuOnly = menuWords && instructionOnlyAboutStoreMenu(input.instruction);
       // Owner 2026-10-27: «hazla más animada» is a data change on a master store (lively parts and playful motion), never the agent.
-      const livelyAsk = masterStore && !input.redesign && asksForAnimatedStore(input.instruction) && !sourceRedesignRequested(input.instruction);
+      const livelyAsk = masterStore && !input.redesign && !sourceRedesignRequested(input.instruction)
+        && (asksForAnimatedStore(input.instruction) || Boolean(effectsFor({ words: input.instruction, business: '', animated: false }).effect));
       if (masterStore && (decision.editKind === 'content' || menuOnly || livelyAsk)) {
         const done = await this.masterContentEdit(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous!);
         if (done) return done;

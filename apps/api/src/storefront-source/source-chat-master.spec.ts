@@ -253,6 +253,15 @@ describe('edits on a master store', () => {
     expect(refill).toHaveBeenCalledWith('m1', 's1', 2, expect.objectContaining({ animated: true, variants: expect.objectContaining({ announce: 'ticker', bands: 'blocks', card: 'hover2' }) }), expect.any(String));
   });
 
+  // Owner 2026-10-27: «agrega burbujas» is a data change with the effect, never the agent.
+  it('an edit that names an effect sets it through the fill, even when the decision says design', async () => {
+    decided('design');
+    fillMaster.mockResolvedValueOnce({ changed: [], values: [], palette: 'terracotta', fonts: 'classic', colors: {}, heroPhoto: -1, storyPhoto: -1 });
+    await edit('Agrega burbujas que suben en la portada');
+    expect(generate).not.toHaveBeenCalled();
+    expect(refill).toHaveBeenCalledWith('m1', 's1', 2, expect.objectContaining({ variants: expect.objectContaining({ effect: 'bubbles' }) }), expect.any(String));
+  });
+
   // Owner 2026-10-27 (B): the PEPPA please redesign, only when the merchant asks for it.
   it('an explicit redesign of a master store runs on a written brief with expressive motion', async () => {
     const redesignBrief = jest.fn().mockResolvedValue('Rediseña la tienda atrevida y divertida. Sigue esta estructura:\n- Portada con la foto grande');
@@ -823,4 +832,12 @@ it('a first build asked to be animated marks the fill animated; a plain one does
   expect(reads[0]?.animated).toBe(true);
   await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
   expect(reads[1]?.animated).toBeUndefined();
+});
+
+// Owner 2026-10-27: an animated drinks store gets bubbles and confetti on its first build.
+it('a first build of an animated store carries the effect its products suggest', async () => {
+  const reads: any[] = [];
+  applyMaster.mockImplementation(async (_m, _s, _r, filler) => { reads.push(await filler({ storeName: 'Oh Belly', products: ['Soda'], photos: ['https://x/p1.jpg'] })); return { revision: 1, label: 'Plantilla: Esencial' }; });
+  await send('Mi negocio se llama Oh Belly.\nQué hacemos: soda prebiótica.\nQuiero una tienda muy animada.\nCrea mi tienda.');
+  expect(reads[0]?.effects).toEqual({ effect: 'bubbles', confetti: 'on' });
 });

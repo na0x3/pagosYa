@@ -82,7 +82,7 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   let last: { variants: MasterVariants; palette: string; fonts: string } | undefined;
   for (let attempt = 0; attempt < 20; attempt++) {
     const next = rng(`${input.seed}#${attempt}`);
-    const variants = Object.fromEntries(Object.keys(catalogue).filter(part => part !== 'menu' && part !== 'filters' && part !== 'feature' && part !== 'outline').map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
+    const variants = Object.fromEntries(Object.keys(catalogue).filter(part => part !== 'menu' && part !== 'filters' && part !== 'feature' && part !== 'outline' && part !== 'effect' && part !== 'confetti').map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
     if (input.character.kind === 'fashion') for (const part of FASHION_PARTS) if (catalogue[part]?.includes('fashion')) variants[part] = 'fashion';
     if (catalogue.menu?.length) {
       variants.menu = input.character.kind === 'fashion' ? 'panel'

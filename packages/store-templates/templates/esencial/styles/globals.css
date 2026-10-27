@@ -697,3 +697,32 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es[data-es-outline="chunky"] [data-account-gate] [data-layout=split] [data-part=media] img{border:var(--es-chunk);border-radius:24px;box-shadow:var(--es-chunk-pop)}
 @media (prefers-reduced-motion:reduce){.es[data-es-outline="chunky"] :is(.es-card,.es-btn){transition:none}.es[data-es-outline="chunky"] .es-card:hover{transform:none}}
 
+/* Owner 2026-10-27: motion effects in the hero and the closing band — bubbles, floating shapes, petals, steam, sparkles — and
+   confetti from an add button. A layer between the photo and the words; none for reduced motion or a store with motion off. */
+.es-closing{position:relative;overflow:hidden}
+.es-closing__inner{position:relative;z-index:2}
+.es-fx{position:absolute;inset:0;z-index:2;overflow:hidden;pointer-events:none}
+.es-fx>i{position:absolute;left:var(--fx-x);display:block;font-style:normal;line-height:1}
+.es-fx[data-es-fx="bubbles"]>i{bottom:-60px;width:calc(24px*var(--fx-s));height:calc(24px*var(--fx-s));border-radius:50%;border:2px solid rgba(255,255,255,.8);background:radial-gradient(circle at 32% 30%,rgba(255,255,255,.85) 0 12%,rgba(255,255,255,.14) 13% 62%,transparent 63%);animation:es-fx-rise var(--fx-d) linear var(--fx-delay) infinite}
+@keyframes es-fx-rise{0%{transform:translate(0,0);opacity:0}10%{opacity:.95}50%{transform:translate(16px,-50vh)}100%{transform:translate(-10px,-105vh);opacity:0}}
+.es-fx[data-es-fx="shapes"]>i{top:var(--fx-y);font-size:calc(30px*var(--fx-s));color:var(--es-accent);animation:es-fx-float var(--fx-d) ease-in-out var(--fx-delay) infinite alternate}
+.es-fx[data-es-fx="shapes"]>i::before{content:'\2726'}
+.es-fx[data-es-fx="shapes"]>i[data-fx-n="1"]{color:var(--es-muted)}.es-fx[data-es-fx="shapes"]>i[data-fx-n="1"]::before{content:'\25CF'}
+.es-fx[data-es-fx="shapes"]>i[data-fx-n="2"]{color:#fff}.es-fx[data-es-fx="shapes"]>i[data-fx-n="2"]::before{content:'\273F'}
+.es-fx[data-es-fx="shapes"]>i[data-fx-n="3"]::before{content:'\25C6'}
+@keyframes es-fx-float{from{transform:translateY(-16px) rotate(calc(var(--fx-r) - 14deg))}to{transform:translateY(16px) rotate(calc(var(--fx-r) + 14deg))}}
+.es-fx[data-es-fx="petals"]>i{top:-40px;width:calc(14px*var(--fx-s));height:calc(20px*var(--fx-s));border-radius:80% 0 80% 0;background:color-mix(in srgb,var(--es-accent) 55%,#fff);opacity:.9;animation:es-fx-fall var(--fx-d) linear var(--fx-delay) infinite}
+@keyframes es-fx-fall{0%{transform:translate(0,0) rotate(var(--fx-r))}50%{transform:translate(-30px,50vh) rotate(calc(var(--fx-r) + 180deg))}100%{transform:translate(20px,105vh) rotate(calc(var(--fx-r) + 360deg))}}
+.es-fx[data-es-fx="steam"]>i{bottom:-20px;left:calc(30% + var(--fx-s) * 25%);width:44px;height:180px;border-radius:50%;background:linear-gradient(to top,rgba(255,255,255,.55),transparent);filter:blur(10px);animation:es-fx-steam var(--fx-d) ease-out var(--fx-delay) infinite}
+@keyframes es-fx-steam{0%{transform:translateY(0) scaleX(1);opacity:0}30%{opacity:.7}100%{transform:translateY(-220px) scaleX(1.8);opacity:0}}
+.es-fx[data-es-fx="sparkles"]>i{top:var(--fx-y);font-size:calc(22px*var(--fx-s));color:#fff;text-shadow:0 0 12px rgba(255,255,255,.9);animation:es-fx-twinkle calc(var(--fx-d) / 3) ease-in-out var(--fx-delay) infinite}
+.es-fx[data-es-fx="sparkles"]>i::before{content:'\2726'}
+.es-fx[data-es-fx="sparkles"]>i[data-fx-n="2"]{color:var(--es-accent)}
+@keyframes es-fx-twinkle{0%,100%{transform:scale(.2) rotate(0);opacity:0}50%{transform:scale(1) rotate(45deg);opacity:1}}
+.es-confetti{position:fixed;z-index:9999;width:0;height:0;pointer-events:none}
+.es-confetti>i{position:absolute;left:-4px;top:-6px;width:8px;height:12px;border-radius:2px;background:var(--es-accent);animation:es-fx-pop .9s cubic-bezier(.2,.7,.3,1) forwards}
+.es-confetti>i:nth-child(3n+1){background:var(--es-muted)}.es-confetti>i:nth-child(3n+2){background:var(--es-ink)}
+@keyframes es-fx-pop{from{transform:rotate(var(--a)) translateY(0);opacity:1}to{transform:rotate(var(--a)) translateY(calc(var(--d) * -1)) rotate(200deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.es-fx,.es-confetti{display:none}}
+:root[data-pagosya-motion="off"] .es-fx{display:none}
+

@@ -4,6 +4,7 @@ import Shell from './Shell';
 import { copy, photos, sections, store } from './store-data';
 import { variant } from './Shell';
 import { FeatureSlot } from './features';
+import { EffectLayer } from './effects';
 import { IconArrowRight, IconArrowUpRight, IconCheck, IconMessageCircle, IconPlus, IconShieldCheck, IconStar, IconTruck } from './icons';
 
 const VALUE_ICONS = [IconStar, IconTruck, IconShieldCheck];
@@ -51,6 +52,7 @@ export default function Home() {
       <section id="inicio" className={hero === 'type' ? 'es-hero es-hero--plain' : 'es-hero'} data-es-hero={hero} aria-labelledby="es-hero-title">
         {layered ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}>{heroImage}</Parallax>
           : hero !== 'type' ? <div className="es-hero__media">{multi ? heroPhotos.slice(0, 3).map(src => <img key={src} src={src} alt="" aria-hidden="true" />) : heroImage}</div> : null}
+        <EffectLayer />
         <div className="es-hero__copy">
           {hero === 'poster' && store.logo ? <img className="es-hero__logo" src={store.logo} alt="" aria-hidden="true" /> : null}
           {copy.eyebrow ? <p className="es-eyebrow">{copy.eyebrow}</p> : null}
@@ -127,6 +129,7 @@ export default function Home() {
       <FeatureSlot at="closing" />
 
       <section id="cierre" className="es-closing" data-es-closing={closing} aria-labelledby="es-closing-title">
+        <EffectLayer />
         {closing === 'photo' ? <img className="es-closing__photo" src={closingPhoto} alt="" aria-hidden="true" /> : null}
         <Reveal className="es-closing__inner">
           <h2 id="es-closing-title" className="es-h2">{copy.closingLine}</h2>

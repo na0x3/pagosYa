@@ -4,6 +4,7 @@ import { store, copy, variants, photos } from './store-data';
 
 /** The rolled variant of a part (variety spec §2); the first catalogue id when the store has none. */
 export const variant = (part: string, fallback: string) => { const value = variants[part]; return typeof value === 'string' && value ? value : fallback; };
+import { Confetti } from './effects';
 import { IconLogIn, IconMapPin, IconMenu, IconMessageCircle, IconSearch, IconShoppingBag, IconX } from './icons';
 
 const links = [{ label: 'Inicio', href: 'index.html' }, { label: 'Productos', href: 'productos.html' }, { label: 'Nuestra historia', href: 'index.html#historia' }];
@@ -122,7 +123,7 @@ export function Footer() {
 }
 
 export default function Shell({ children }: { children: ReactNode }) {
-  return <div className="es" data-es-outline={variant('outline', 'none')} data-es-button={variant('button', 'pill')} data-es-corners={variant('corners', 'soft')} data-es-density={variant('density', 'regular')} data-es-texture={variant('texture', 'none')} data-es-photos={variant('photos', 'natural')}>
+  return <div className="es" data-es-outline={variant('outline', 'none')} data-es-button={variant('button', 'pill')} data-es-corners={variant('corners', 'soft')} data-es-density={variant('density', 'regular')} data-es-texture={variant('texture', 'none')} data-es-photos={variant('photos', 'natural')}><Confetti />
     <a className="es-skip" href="#contenido">Ir al contenido</a>
     <Header />
     {children}

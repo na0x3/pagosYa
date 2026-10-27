@@ -479,6 +479,18 @@
         "none",
         "chunky"
       ],
+      "effect": [
+        "none",
+        "bubbles",
+        "shapes",
+        "petals",
+        "steam",
+        "sparkles"
+      ],
+      "confetti": [
+        "off",
+        "on"
+      ],
       "photos": [
         "natural",
         "rounded",

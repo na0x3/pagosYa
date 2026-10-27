@@ -188,3 +188,15 @@ test('the chunky look and the branded sign-in pages', () => {
   assert.match(css, /\.es \[data-account-gate\] \[data-part=title\]\{font-family:var\(--es-heading\)/);
   assert.match(css, /\.es\[data-es-outline="chunky"\] \[data-account-gate\] \[data-part=input\]\{border:var\(--es-chunk\)/);
 });
+
+// Owner 2026-10-27: motion effects in the hero and the closing band, confetti from add buttons; never rolled by the dice.
+test('the motion effects', () => {
+  const { templateManifest, templateSourceFiles } = require('../index.js');
+  assert.deepEqual(templateManifest('esencial').master.variants.effect, ['none', 'bubbles', 'shapes', 'petals', 'steam', 'sparkles']);
+  const files = templateSourceFiles('esencial');
+  const home = files.find(file => file.path === 'components/home.tsx').content;
+  assert.equal((home.match(/<EffectLayer \/>/g) ?? []).length, 2);
+  assert.match(files.find(file => file.path === 'components/Shell.tsx').content, /<Confetti \/>/);
+  const css = files.find(file => file.path === 'styles/globals.css').content;
+  assert.match(css, /@media \(prefers-reduced-motion:reduce\)\{\.es-fx,\.es-confetti\{display:none\}\}/);
+});
