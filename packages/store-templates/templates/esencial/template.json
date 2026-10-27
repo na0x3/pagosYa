@@ -365,6 +365,14 @@
       }
     ],
     "variants": {
+      "family": [
+        "esencial",
+        "pop",
+        "revista",
+        "heroe",
+        "boutique",
+        "menu"
+      ],
       "header": [
         "classic",
         "centered",

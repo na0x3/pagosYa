@@ -25,6 +25,8 @@ export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook
   animated?: boolean;
   /** Owner 2026-10-27: the motion effects the merchant's words and products chose (source-master-effects.ts). */
   effects?: Partial<Record<'effect' | 'confetti', string>>;
+  /** Owner 2026-10-27: the template family the merchant's words and business chose (source-master-family.ts). */
+  family?: string;
   /** Variety spec: the business's character, its sections and any variant the merchant named. */
   character?: MasterCharacter; sections?: MasterSection[]; variants?: Partial<MasterVariants>;
   /** The uploads the bundled hero/story photos came from, so product slots holding the same photo can point at the bundle. */

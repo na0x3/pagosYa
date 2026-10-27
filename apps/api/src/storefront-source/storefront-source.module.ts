@@ -42,7 +42,8 @@ import { esencialDiceSettings, rollVariants } from "./source-master-dice";
 /** YAPI plan card (spec 2026-10-22): Esencial's catalogue and the dice the plan falls back to, part by part. */
 const esencialSettings = () => esencialDiceSettings(templateManifest(MASTER_TEMPLATE_ID)!.master!);
 const storePlanParts = new StorePlanParts(
-  () => { const master = esencialSettings(); return { variants: master.variants ?? {}, sections: master.sections ?? [], palettes: master.palettes.map(p => p.id), fonts: master.fonts.map(f => f.id) }; },
+  // Owner 2026-10-27: the family, the chunky outline and the motion effects come from the merchant's words, never from the plan.
+  () => { const master = esencialSettings(); return { variants: Object.fromEntries(Object.entries(master.variants ?? {}).filter(([part]) => !['family', 'outline', 'effect', 'confetti'].includes(part))), sections: master.sections ?? [], palettes: master.palettes.map(p => p.id), fonts: master.fonts.map(f => f.id) }; },
   (storeId, facts) => { const { sections: _sections, ...variants } = rollVariants({ seed: storeId, settings: esencialSettings(), character: { tone: "calm", temperature: "neutral", lead: "photo", exclude: [] }, photoCount: facts.photoCount, photoGroups: facts.photoGroups, categoryCount: facts.categorySizes.length, sections: [], recent: [] }).variants; return variants as Record<string, string>; },
 );
 

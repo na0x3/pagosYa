@@ -5,6 +5,7 @@ import { copy, photos, sections, store } from './store-data';
 import { variant } from './Shell';
 import { FeatureSlot } from './features';
 import { EffectLayer } from './effects';
+import { EditionIndex, FAMILIES, LoyaltyCard, PopMedia, RevistaTop, TrustRow } from './families';
 import { IconArrowRight, IconArrowUpRight, IconCheck, IconMessageCircle, IconPlus, IconShieldCheck, IconStar, IconTruck } from './icons';
 
 const VALUE_ICONS = [IconStar, IconTruck, IconShieldCheck];
@@ -36,6 +37,11 @@ export default function Home() {
   const closingPhoto = unique([photos.p4, photos.p3, photos.p2]).find(src => src !== photos.hero && src !== photos.story);
   const closing = rolledClosing === 'photo' && !closingPhoto ? 'accent' : rolledClosing;
   const phone: string = store.phone;
+  // Owner 2026-10-27: template families (families.tsx) — the family changes the hero's inside, adds its own blocks and reorders the
+  // page with CSS order; the sections stay direct children of <main>, so YAPI still finds every section by its id.
+  const family = FAMILIES.includes(variant('family', 'esencial')) ? variant('family', 'esencial') : 'esencial';
+  const headlineWords = copy.headline.split(/\s+/).filter(Boolean);
+  const headlineCut = family === 'pop' && headlineWords.length > 2 ? Math.ceil(headlineWords.length * 0.55) : headlineWords.length;
   // Colour bands (2026-10-19): cream-on-cream pages read as wireframes; the sections after the catalog sit on coloured bands.
   const bands = variant('bands', 'alternate');
   // Blocks: story deep, then muted and accent; a band never matches its neighbour (QA: mono's accent is its deep colour,
@@ -48,15 +54,16 @@ export default function Home() {
   const valuesTone = bands !== 'blocks' ? band(1 + sections.length)
     : ['photo', 'newsletter'].includes(closing) && beforeValues !== 'accent' ? 'accent' : beforeValues === 'muted' ? 'paper' : 'muted';
   return <Shell>
-    <main id="contenido" data-es-bands={bands}>
-      <section id="inicio" className={hero === 'type' ? 'es-hero es-hero--plain' : 'es-hero'} data-es-hero={hero} aria-labelledby="es-hero-title">
-        {layered ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}>{heroImage}</Parallax>
+    <main id="contenido" data-es-bands={bands} data-es-family={family}>
+      <section id="inicio" className={hero === 'type' ? 'es-hero es-hero--plain' : 'es-hero'} data-es-hero={family === 'pop' ? 'pop' : family === 'revista' ? 'cover' : hero} aria-labelledby="es-hero-title">
+        {family === 'revista' ? <RevistaTop /> : null}
+        {family === 'pop' ? <PopMedia>{heroImage}</PopMedia> : layered || family === 'revista' ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}>{heroImage}</Parallax>
           : hero !== 'type' ? <div className="es-hero__media">{multi ? heroPhotos.slice(0, 3).map(src => <img key={src} src={src} alt="" aria-hidden="true" />) : heroImage}</div> : null}
         <EffectLayer />
         <div className="es-hero__copy">
           {hero === 'poster' && store.logo ? <img className="es-hero__logo" src={store.logo} alt="" aria-hidden="true" /> : null}
           {copy.eyebrow ? <p className="es-eyebrow">{copy.eyebrow}</p> : null}
-          <h1 id="es-hero-title" className="es-display">{copy.headline}</h1>
+          <h1 id="es-hero-title" className="es-display">{headlineWords.slice(0, headlineCut).join(' ')}{headlineCut < headlineWords.length ? <> <em>{headlineWords.slice(headlineCut).join(' ')}</em></> : null}</h1>
           {copy.subcopy ? <p className="es-hero__sub">{copy.subcopy}</p> : null}
           <div className="es-actions">
             <a className="es-btn es-btn--accent" href="productos.html">{copy.primaryCta}</a>
@@ -64,6 +71,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {family === 'pop' ? <TrustRow /> : null}
+      {family === 'revista' ? <EditionIndex /> : null}
 
       {bands === 'blocks' && copy.values.length ? <div className={hero === 'type' ? 'es-marquee es-marquee--line' : 'es-marquee'} aria-hidden="true">
         <p className="es-marquee__track">{[0, 1].map(round => <span key={round}>{[0, 1, 2].flatMap(copyIndex => copy.values.map(value => <span key={`${copyIndex}-${value.title}`}>{value.title}<i>✦</i></span>))}</span>)}</p>
@@ -120,6 +130,8 @@ export default function Home() {
         <ol>{copy.values.map((value, index) => <li key={value.title}><Reveal delay={index * 90}>{values === 'icons' ? (() => { const Icon = VALUE_ICONS[index % 3]; return <Icon className="es-values__icon" />; })()
           : values === 'checklist' ? <IconCheck className="es-values__icon" /> : <span className="es-values__n">{String(index + 1).padStart(2, '0')}</span>}<h3 className="es-h3">{value.title}</h3><p>{value.text}</p></Reveal></li>)}</ol>
       </section>
+
+      {family === 'pop' ? <LoyaltyCard /> : null}
 
       <section id="resenas" className="es-section es-reviews" data-pagosya-reviews-section data-es-band={bands === 'blocks' ? (valuesTone === 'muted' ? 'paper' : 'muted') : band(2 + sections.length)} aria-labelledby="es-reviews-title">
         <h2 id="es-reviews-title" className="es-h2">Lo que dicen nuestros clientes</h2>

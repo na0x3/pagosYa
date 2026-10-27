@@ -200,3 +200,27 @@ test('the motion effects', () => {
   const css = files.find(file => file.path === 'styles/globals.css').content;
   assert.match(css, /@media \(prefers-reduced-motion:reduce\)\{\.es-fx,\.es-confetti\{display:none\}\}/);
 });
+
+// Owner 2026-10-27: template families — one template, different skeletons; the sections stay direct children of <main>.
+test('every family reorders the home with CSS, and the home keeps its literal sections', () => {
+  const { templateManifest, templateSourceFiles } = require('../index.js');
+  const families = templateManifest('esencial').master.variants.family;
+  assert.deepEqual(families, ['esencial', 'pop', 'revista', 'heroe', 'boutique', 'menu']);
+  const files = templateSourceFiles('esencial');
+  const css = files.find(file => file.path === 'styles/globals.css').content;
+  for (const family of families.slice(1)) assert.match(css, new RegExp(`main\\[data-es-family="${family}"\\]>`), family);
+  const home = files.find(file => file.path === 'components/home.tsx').content;
+  assert.match(home, /data-es-family=\{family\}/);
+  assert.equal((home.match(/<h1\b/g) ?? []).length, 1);
+  assert.equal((files.find(file => file.path === 'components/families.tsx').content.match(/<h1\b/g) ?? []).length, 0);
+});
+
+// 2026-10-27: a syntax slip in home.tsx failed five live builds while every text test passed — every component must compile.
+test('every Esencial component compiles', () => {
+  const ts = require('typescript');
+  const { templateSourceFiles } = require('../index.js');
+  for (const file of templateSourceFiles('esencial').filter(file => file.path.endsWith('.tsx'))) {
+    const out = ts.transpileModule(file.content, { reportDiagnostics: true, fileName: file.path, compilerOptions: { jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2020 } });
+    assert.deepEqual(out.diagnostics.map(d => ts.flattenDiagnosticMessageText(d.messageText, ' ')), [], file.path);
+  }
+});

@@ -1,5 +1,6 @@
 import { ANIMATED_DNA, ANIMATED_FONTS, animatedVariants } from './source-master-animated';
 import { effectVariants } from './source-master-effects';
+import { familyLook, familyVariants, FAMILIES, type Family } from './source-master-family';
 import { Prisma } from '@prisma/client';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import sharp from 'sharp';
@@ -148,6 +149,14 @@ export class SourceTemplatesService {
     }
     // Owner 2026-10-27: an animated store keeps its roll or plan but takes the lively parts and the playful motion.
     if (fill?.animated && variants) variants = { ...variants, ...animatedVariants(distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]), manifest.master.variants) } as MasterVariants;
+    // Owner 2026-10-27: the template family over the roll or the plan — its fixed parts, its allowed ids, its fonts and a light page
+    // for a magazine; the dice keep everything else.
+    if (fill?.family && (FAMILIES as readonly string[]).includes(fill.family) && variants) {
+      const family = fill.family as Family;
+      variants = { ...variants, ...familyVariants(family, variants as unknown as Record<string, unknown>, storeId, manifest.master.variants) } as MasterVariants;
+      const look = familyLook(family, { palette: fill.look?.palette, fonts: fill.look?.fonts }, storeId, manifest.master);
+      if (Object.keys(look).length) fill = { ...fill, look: { ...(fill.look ?? {}), ...look } };
+    }
     // Owner 2026-10-27: the motion effects the merchant's words and products chose win over the roll too.
     if (fill?.effects && variants) variants = { ...variants, ...effectVariants(fill.effects, manifest.master.variants) } as MasterVariants;
     const dna = fill?.animated ? { ...(plan?.dna ?? {}), ...ANIMATED_DNA } : plan?.dna;

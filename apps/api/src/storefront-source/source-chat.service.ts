@@ -3,6 +3,7 @@ import { merchantAsksForPhotoGroup } from './source-media-design';
 import { firstVideo, withHeroVideo } from './source-master-video';
 import { ANIMATED_FONTS, animatedVariants, asksForAnimatedStore } from './source-master-animated';
 import { effectsFor, effectVariants } from './source-master-effects';
+import { familyFor } from './source-master-family';
 import { agentReport as agentReportText } from './agent/agent-label';
 import { closestPreset } from './source-preset-pick';
 import { sourceRequestContext } from './source-request-context';
@@ -355,7 +356,10 @@ export class SourceChatService {
     const animated = asksForAnimatedStore(askedWords);
     // Owner 2026-10-27: the motion effects from the merchant's words and, for an animated store, from what it sells.
     const effects = effectsFor({ words: askedWords, business: [askedWords, store?.name, onboarding.what, onboarding.story, ...productNames.map((product: { name: string }) => product.name)].filter(Boolean).join('\n'), animated });
-    if (animated || Object.keys(effects).length) { const plain = filler; filler = async facts => { const read = await plain(facts); return read ? { ...read, ...(animated ? { animated: true } : {}), ...(Object.keys(effects).length ? { effects } : {}) } : read; }; }
+    // Owner 2026-10-27: the template family — from the merchant's words, the business and a store-seeded pick among those that fit.
+    const family = familyFor({ words: askedWords, business: [store?.name, onboarding.what, onboarding.story, ...productNames.map((product: { name: string }) => product.name)].filter(Boolean).join('\n'),
+      animated, fashion: isFashionStore({ storeName: store?.name ?? '', what: onboarding.what ?? draft.answers?.context ?? '', products: productNames.map((product: { name: string }) => product.name) }), productCount: productNames.length, seed: storeId });
+    { const plain = filler; filler = async facts => { const read = await plain(facts); return read ? { ...read, family, ...(animated ? { animated: true } : {}), ...(Object.keys(effects).length ? { effects } : {}) } : read; }; }
     // YAPI plan card (spec 2026-10-22): a planned build carries its checked plan and no preset.
     const saved = planned ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned.applied)
       : starter?.kind === 'slots' ? await this.applyPlantilla(merchantId, storeId, starter.id, revision, { about: draft.answers?.context, assetUrls: chatPhotos })
