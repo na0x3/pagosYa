@@ -114,6 +114,11 @@
     const copy = layout.querySelector(':scope > .product-detail__copy');
     const pieces = [...[...layout.children].filter(child => child !== copy), ...(copy ? [...copy.children] : []),
       ...[...detail.children].filter(child => child.matches('.product-detail__bundles,.product-detail__bundle-links,.product-detail__related,.product-detail__reviews'))];
+    // YAPI's long page (features, story, details, compare, questions): the half drawn before the reviews and the half after them.
+    const reviewsPiece = detail.querySelector(':scope > .product-detail__reviews');
+    const longParts = [...detail.children].filter(child => child.matches('.product-long'));
+    const longBefore = longParts.filter(part => !reviewsPiece || Boolean(part.compareDocumentPosition(reviewsPiece) & Node.DOCUMENT_POSITION_FOLLOWING));
+    const longAfter = longParts.filter(part => !longBefore.includes(part));
     const root = template.make();
     const slot = name => root.querySelector(`[data-product-slot="${name}"]`);
     root.querySelectorAll('[data-product-slot]').forEach(node => node.replaceChildren());
@@ -130,6 +135,11 @@
       else followers.push(piece);
     }
     if (followers.length) slot('buy').after(...followers);
+    // Owner 2026-10-27 (Esencial): with no place of its own the long page fell after the template's reviews and related products.
+    // A "long" slot takes it whole; otherwise it goes around the template's reviews, as on the kit's own page.
+    const anchor = root.querySelector('[data-product-slot="bundles"],[data-product-slot="reviews"],[data-product-slot="related"]');
+    if (slot('long')) slot('long').append(...longBefore, ...longAfter);
+    else if (anchor) { anchor.before(...longBefore); if (slot('reviews')) slot('reviews').after(...longAfter); else anchor.before(...longAfter); }
     layout.replaceWith(root);
     root.setAttribute('data-product-page-root', '');
     detail.setAttribute('data-page-template', '');

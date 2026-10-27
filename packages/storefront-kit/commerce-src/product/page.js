@@ -340,11 +340,13 @@
     if (featureItems.length >= 3) parts.push(`<section class="product-long__features" data-part="features"><h2>${escape(nonEmpty(features.title) || 'Lo que lo hace especial')}</h2><ul data-count="${featureItems.length}">${featureItems.map(item => { const icon = highlightIcons[item.icon]; return `<li data-part="feature"><svg class="pd-icon pd-${escape(icon.motion)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon.paths}</svg><strong>${escape(item.label)}</strong>${nonEmpty(item.detail) ? `<span>${escape(item.detail)}</span>` : ''}</li>`; }).join('')}</ul></section>`);
     const story = pageBlock(p, 'story');
     if (story && nonEmpty(story.problem) && nonEmpty(story.tried) && nonEmpty(story.solution)) parts.push(`<section class="product-long__story" data-part="story">${nonEmpty(story.title) ? `<h2>${escape(story.title)}</h2>` : ''}<p data-part="story-problem">${escape(story.problem)}</p><p data-part="story-tried">${escape(story.tried)}</p><p data-part="story-solution">${escape(story.solution)}</p></section>`);
-    const details = (pageBlock(p, 'details')?.items || []).map(item => ({ ...item, url: safeUrl(item?.imageUrl) })).filter(item => item.url && nonEmpty(item.title) && nonEmpty(item.alt));
+    // Owner 2026-10-27: the gallery already shows the main photo; a details row on it was the same photo again, huge.
+    const mainPhoto = safeUrl(Array.isArray(p?.imageUrls) ? p.imageUrls[0] : '');
+    const details = (pageBlock(p, 'details')?.items || []).map(item => ({ ...item, url: safeUrl(item?.imageUrl) })).filter(item => item.url && item.url !== mainPhoto && nonEmpty(item.title) && nonEmpty(item.alt));
     // Atelier (2026-10-19, pawfectt.com): two or more photographed details become story steps, a sticky frame whose photo
     // follows the step being read, instead of a row of small photos.
     if (details.length >= 2 && productPageStyle() === 'atelier') parts.push(storyStepsMarkup(p, details.slice(0, 6)));
-    else if (details.length) parts.push(`<section class="product-long__details" data-part="details">${details.map(item => `<figure data-part="detail"><img src="${escape(item.url)}" alt="${escape(item.alt)}" loading="lazy"><figcaption><strong>${escape(item.title)}</strong>${nonEmpty(item.text) ? `<span>${escape(item.text)}</span>` : ''}</figcaption></figure>`).join('')}</section>`);
+    else if (details.length) parts.push(`<section class="product-long__details" data-part="details" data-count="${Math.min(details.length, 3)}">${details.map(item => `<figure data-part="detail"><img src="${escape(item.url)}" alt="${escape(item.alt)}" loading="lazy"><figcaption><strong>${escape(item.title)}</strong>${nonEmpty(item.text) ? `<span>${escape(item.text)}</span>` : ''}</figcaption></figure>`).join('')}</section>`);
     const versus = pageBlock(p, 'versus');
     const rows = (versus?.rows || []).filter(row => row && nonEmpty(row.label) && typeof row.ours === 'boolean' && typeof row.theirs === 'boolean');
     const hasVersus = Boolean(versus && rows.length >= 2 && nonEmpty(versus.ours) && nonEmpty(versus.theirs));

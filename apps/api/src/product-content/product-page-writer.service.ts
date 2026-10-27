@@ -31,11 +31,14 @@ export class ProductPageWriterService {
   private async write(storeId: string, productId: string, mode: 'auto' | 'regenerate', merchantId?: string): Promise<'written' | 'skipped'> {
     const product = await this.prisma.paymentLink.findFirst({
       where: { id: productId, storeId, ...(merchantId ? { store: { merchantId } } : {}) },
-      select: { id: true, updatedAt: true, cardEyebrow: true, name: true, description: true, specifications: true, tags: true, imageUrls: true, highlights: true, contentBlocks: true, category: { select: { name: true } }, store: { select: { name: true } } },
+      select: { id: true, updatedAt: true, cardEyebrow: true, name: true, description: true, specifications: true, tags: true, imageUrls: true, highlights: true, contentBlocks: true, category: { select: { name: true } }, store: { select: { name: true, onboarding: true } } },
     });
     if (!product) throw new NotFoundException('Producto no encontrado.');
     if (mode === 'auto' && !autoFillable(product)) return 'skipped';
-    const facts: ProductPageFacts = { name: product.name, description: product.description, specifications: Array.isArray(product.specifications) ? product.specifications as ProductPageFacts['specifications'] : [], tags: product.tags, category: product.category?.name ?? null };
+    // Owner 2026-10-27: the merchant's own words about the business, which usually describe each product.
+    const onboarding = (product.store.onboarding ?? {}) as { what?: unknown; story?: unknown };
+    const storeWords = [onboarding.what, onboarding.story].filter((text): text is string => typeof text === 'string' && Boolean(text.trim())).join('\n');
+    const facts: ProductPageFacts = { store: storeWords || null, name: product.name, description: product.description, specifications: Array.isArray(product.specifications) ? product.specifications as ProductPageFacts['specifications'] : [], tags: product.tags, category: product.category?.name ?? null };
     const photoUrls = (product.imageUrls || []).slice(0, 4);
     const model = this.config.get<string>('app.openAi.inventoryModel') ?? 'gpt-5.6-luna';
     const plan = chatgptPlanProvider(this.config, model);

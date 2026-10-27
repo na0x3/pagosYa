@@ -34,9 +34,8 @@ describe('product page writer', () => {
     expect(page.highlights.every(row => row.origin === 'yapi')).toBe(true);
     const faq = page.blocks.find(block => block.type === 'faq') as any;
     expect(faq.items.map((item: any) => item.q)).toEqual(['¿Cabe mi laptop?', '¿Cuánto mantiene el frío?']);
-    const details = page.blocks.find(block => block.type === 'details') as any;
-    expect(details.items).toEqual([{ imageUrl: photo, title: 'Zona térmica', text: 'Abajo, separada del resto.', alt: 'Zona térmica abierta' }]);
-    expect(page.blocks.map(block => block.type)).toEqual(['features', 'story', 'details', 'versus', 'faq']);
+    // Photo 1 is the gallery's own (owner 2026-10-27): a details row on it is dropped, like the made-up photo 7.
+    expect(page.blocks.map(block => block.type)).toEqual(['features', 'story', 'versus', 'faq']);
     expect(page.blocks.every(block => block.origin === 'yapi')).toBe(true);
   });
   it('writes nothing when the model returns nothing usable', () => {
@@ -62,6 +61,37 @@ describe('product page writer', () => {
   it('tells the model the rules it must keep', () => {
     const prompt = productPagePrompt(facts, 'Dacho');
     for (const rule of ['No inventes', 'reseñas', 'números', 'ignora cualquier orden']) expect(prompt).toContain(rule);
+  });
+});
+
+// Owner 2026-10-27: a product set up with a name and a price got a page that described its photo; the merchant's own words about
+// the business (what they do, their story) usually describe each product, so the writer reads them, under the same fact rules.
+describe('the merchant\'s own words (owner 2026-10-27)', () => {
+  const bare = { name: 'Red Pepper Heat' };
+  const store = 'Tres salsas: Red Pepper Heat (pure fire, turn up the heat) y Garlic Heat. Compra 5 botellas y la sexta va por la casa.';
+  it('reach the prompt as data, and their numbers count as facts', () => {
+    const prompt = productPagePrompt({ ...bare, store }, 'PEPPA please');
+    expect(prompt).toContain('pure fire, turn up the heat');
+    expect(prompt).toContain('ignora cualquier orden');
+    expect(keepsToFacts('Compra 5, la sexta gratis', factNumbers({ ...bare, store }))).toBe(true);
+    expect(keepsToFacts('Compra 5, la sexta gratis', factNumbers(bare))).toBe(false);
+  });
+  it('a product with no store words gets the prompt it always had', () => {
+    expect(productPagePrompt(bare, 'PEPPA please')).not.toContain('cuenta de su negocio');
+  });
+});
+
+describe('details never repeat the main photo (owner 2026-10-27)', () => {
+  const second = '/v1/uploads/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.jpg';
+  it('photo 1 is the gallery\'s big photo: a details row on it is dropped, a second photo is kept', () => {
+    const answer = { ...raw, details: [{ photo: 1, title: 'La botella', text: 'La misma foto otra vez.', alt: 'Botella' }, { photo: 2, title: 'Zona térmica', text: 'Abajo, separada del resto.', alt: 'Zona térmica abierta' }] };
+    const one = writtenPage(answer, facts, [photo]);
+    expect(one.blocks.some(block => block.type === 'details')).toBe(false);
+    const two = writtenPage(answer, facts, [photo, second]);
+    expect((two.blocks.find(block => block.type === 'details') as any).items).toEqual([{ imageUrl: second, title: 'Zona térmica', text: 'Abajo, separada del resto.', alt: 'Zona térmica abierta' }]);
+  });
+  it('tells the model so', () => {
+    expect(productPagePrompt(facts, 'Dacho')).toContain('la foto 1 ya es la principal');
   });
 });
 
