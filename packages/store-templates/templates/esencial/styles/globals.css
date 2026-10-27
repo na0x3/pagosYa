@@ -649,3 +649,6 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-footer__news h2{margin:0;font-size:20px}.es-footer__news p{margin:4px 0 0;opacity:.8}.es-footer__news .es-footer__status:empty{display:none}
 .es-footer__signup{flex:1 1 320px;max-width:460px}
 .es-footer[data-es-footer="column"] .es-footer__news{position:relative;max-width:560px;margin:16px auto 0;padding:24px clamp(28px,4vw,48px);background:var(--es-paper);color:var(--es-ink);border:0}
+
+/* Owner 2026-10-25: the cover video fills the hero like its photo. */
+.es-hero__video{display:block;width:100%;height:100%;object-fit:cover}

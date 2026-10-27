@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { merchantAsksForPhotoGroup } from './source-media-design';
+import { firstVideo, withHeroVideo } from './source-master-video';
 import { agentReport as agentReportText } from './agent/agent-label';
 import { closestPreset } from './source-preset-pick';
 import { sourceRequestContext } from './source-request-context';
@@ -345,7 +346,9 @@ export class SourceChatService {
     let briefPhotos: string[] = [...new Set([...(onboarding.photos ?? []), ...chatPhotos])].slice(0, 8);
     // YAPI plan card (spec 2026-10-22): the fill writes the words for the sections the plan chose.
     const filler = this.masterFiller(merchantId, storeId, onboarding, draft.answers?.context, chatPhotos,
-      planned ? (manifest.master!.sections ?? []).filter(id => planned!.applied.sections.includes(id)) : withoutPhotoGroups(manifest.master!.sections ?? [], askedWords), photos => { briefPhotos = photos; });
+      planned ? (manifest.master!.sections ?? []).filter(id => planned!.applied.sections.includes(id)) : withoutPhotoGroups(manifest.master!.sections ?? [], askedWords), photos => { briefPhotos = photos; },
+      // Owner 2026-10-25 (Gramiyaa): the video the merchant attached plays as the cover, whether the build follows the plan card or not.
+      firstVideo(await this.requestAssets(threadId)));
     // YAPI plan card (spec 2026-10-22): a planned build carries its checked plan and no preset.
     const saved = planned ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned.applied)
       : starter?.kind === 'slots' ? await this.applyPlantilla(merchantId, storeId, starter.id, revision, { about: draft.answers?.context, assetUrls: chatPhotos })
@@ -386,7 +389,7 @@ export class SourceChatService {
 
   /** Spec 2026-10-19 §2: the one call that writes a master store's words, look and photos from the walkthrough and the catalogue. */
   private masterFiller(merchantId: string, storeId: string, onboarding: { what?: string; story?: string; contact?: { city?: string }; photos?: string[] }, context: string | undefined, chatPhotos: string[],
-    sectionCatalogue: readonly string[] | undefined, onPhotos: (photos: string[]) => void = () => undefined): Parameters<SourceTemplatesService['applyMaster']>[3] {
+    sectionCatalogue: readonly string[] | undefined, onPhotos: (photos: string[]) => void = () => undefined, video?: string): Parameters<SourceTemplatesService['applyMaster']>[3] {
     const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
     return async facts => {
       const photos = [...new Set([...(onboarding.photos ?? []), ...chatPhotos, ...facts.photos])].slice(0, 8);
@@ -399,7 +402,7 @@ export class SourceChatService {
       const base: MasterFill = read ? masterFillFromRead(read, photos, false) : { copy: { headline: facts.storeName, subcopy: (onboarding.what ?? '').slice(0, 160) } };
       // Fashion look spec 2026-10-21: the read's kind, backed by the store's own words, decides the fashion card and page.
       const fashion = isFashionStore({ kind: read?.kind, storeName: facts.storeName, what: onboarding.what ?? context ?? '', products: facts.products });
-      return { ...base, character: { ...(base.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] }), kind: fashion ? 'fashion' : 'other' } };
+      return withHeroVideo({ ...base, character: { ...(base.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] }), kind: fashion ? 'fashion' : 'other' } }, video);
     };
   }
 

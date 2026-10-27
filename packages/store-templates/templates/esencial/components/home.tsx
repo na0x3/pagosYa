@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { copy, photos, sections, store } from './store-data';
@@ -45,8 +46,8 @@ export default function Home() {
   return <Shell>
     <main id="contenido" data-es-bands={bands}>
       <section id="inicio" className={hero === 'type' ? 'es-hero es-hero--plain' : 'es-hero'} data-es-hero={hero} aria-labelledby="es-hero-title">
-        {layered ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}><img src={photos.hero} alt="" aria-hidden="true" /></Parallax>
-          : hero !== 'type' ? <div className="es-hero__media">{(multi ? heroPhotos.slice(0, 3) : [photos.hero]).map(src => <img key={src} src={src} alt="" aria-hidden="true" />)}</div> : null}
+        {layered ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}>{photos.heroVideo ? <HeroVideo /> : <img src={photos.hero} alt="" aria-hidden="true" />}</Parallax>
+          : hero !== 'type' ? <div className="es-hero__media">{photos.heroVideo && !multi ? <HeroVideo /> : (multi ? heroPhotos.slice(0, 3) : [photos.hero]).map(src => <img key={src} src={src} alt="" aria-hidden="true" />)}</div> : null}
         <div className="es-hero__copy">
           {hero === 'poster' && store.logo ? <img className="es-hero__logo" src={store.logo} alt="" aria-hidden="true" /> : null}
           {copy.eyebrow ? <p className="es-eyebrow">{copy.eyebrow}</p> : null}
@@ -134,6 +135,17 @@ export default function Home() {
       </section>
     </main>
   </Shell>;
+}
+
+/** Owner 2026-10-25 (Gramiyaa): a video the merchant attached plays as the cover — muted, looping, the cover photo as its
+ *  poster — and stays on that still frame for visitors who asked for less motion or a store with motion off. */
+function HeroVideo() {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.pagosyaMotion === 'off';
+    if (still) ref.current?.pause();
+  }, []);
+  return <video ref={ref} className="es-hero__video" src={photos.heroVideo} autoPlay muted loop playsInline poster={photos.hero} aria-hidden="true" />;
 }
 
 // Below the home on purpose: YAPI reads the file's first <section> as «la sección principal», which must be the hero.

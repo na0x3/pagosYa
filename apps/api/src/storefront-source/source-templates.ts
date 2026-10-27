@@ -398,7 +398,9 @@ export async function assembleTemplateRevision(input: {
   const filled = fillTemplatePhotos(manifest, data.items, input.demoPhotos !== false);
   const photos: Record<string, string> = sameAsBundled({ ...filled.photos,
     ...(settings && input.fill?.heroPhoto !== undefined ? { hero: masterPhotoUrl(input.fill.heroPhoto, input.apiUrl) } : {}),
-    ...(settings && input.fill?.storyPhoto !== undefined ? { story: masterPhotoUrl(input.fill.storyPhoto, input.apiUrl) } : {}) }, input.fill?.photoSources);
+    ...(settings && input.fill?.storyPhoto !== undefined ? { story: masterPhotoUrl(input.fill.storyPhoto, input.apiUrl) } : {}),
+    // Owner 2026-10-25: a video the merchant attached plays as the cover, its photo the poster.
+    ...(settings && input.fill?.heroVideo ? { heroVideo: masterPhotoUrl(input.fill.heroVideo, input.apiUrl) } : {}) }, input.fill?.photoSources);
   const demoSlots = filled.demoSlots.filter(slot => photos[slot] === templateDemoPath(manifest, slot));
   const copy = settings ? masterCopy(settings, input.fill?.copy) : undefined;
   const look = settings ? masterLook(settings, input.fill?.look) : undefined;

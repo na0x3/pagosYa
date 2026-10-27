@@ -156,3 +156,10 @@ test('the closing photo is never the hero photo', () => {
   assert.doesNotMatch(home, /es-closing__photo" src=\{photos\.hero\}/);
   assert.match(home, /closingPhoto = unique\(\[photos\.p4, photos\.p3, photos\.p2\]\)\.find\(src => src !== photos\.hero && src !== photos\.story\)/);
 });
+
+test('a store with a video plays it as the cover, muted and looping, still for reduced motion (owner 2026-10-25)', () => {
+  const home = file('components/home.tsx');
+  assert.match(home, /<video[^>]*src=\{photos\.heroVideo\}/);
+  assert.match(home, /autoPlay muted loop playsInline poster=\{photos\.hero\}/);
+  assert.match(home, /prefers-reduced-motion: reduce/);
+});

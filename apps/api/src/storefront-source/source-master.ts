@@ -19,6 +19,8 @@ export type MasterColour = 'paper' | 'ink' | 'muted' | 'accent' | 'deep';
 export const MASTER_COLOURS: readonly MasterColour[] = ['paper', 'ink', 'muted', 'accent', 'deep'];
 export type MasterLook = { palette: string; fonts: string; colors: Partial<Record<MasterColour, string>> };
 export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null;
+  /** Owner 2026-10-25: a video the merchant attached, played as the cover (store-data photos.heroVideo). */
+  heroVideo?: string;
   /** Variety spec: the business's character, its sections and any variant the merchant named. */
   character?: MasterCharacter; sections?: MasterSection[]; variants?: Partial<MasterVariants>;
   /** The uploads the bundled hero/story photos came from, so product slots holding the same photo can point at the bundle. */
