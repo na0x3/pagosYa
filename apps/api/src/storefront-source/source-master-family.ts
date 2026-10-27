@@ -31,11 +31,15 @@ export function familyFor(input: { words: string; business: string; animated: bo
 /** What each family fixes, and which ids of a part it allows (the roll keeps its pick when it is allowed). */
 const RULES: Record<Family, { fixed?: Record<string, string>; allowed?: Record<string, readonly string[]>; fonts?: readonly string[]; light?: boolean }> = {
   esencial: {},
-  pop: { fixed: { outline: 'chunky', bands: 'blocks', button: 'pill', corners: 'round' }, allowed: { grid: ['grid3', 'grid4'] }, fonts: ['alegre'] },
+  // Owner 2026-10-27 (PEPPA please · pop, «i dont really like it»): the colour lives on the hero box, the cards and the steps — a calm
+  // page, never full-width colour bands (the original PEPPA's cream page).
+  pop: { fixed: { outline: 'chunky', bands: 'calm', button: 'pill', corners: 'round' }, allowed: { grid: ['grid3', 'grid4'], closing: ['accent', 'newsletter'] }, fonts: ['alegre'] },
   revista: { fixed: { outline: 'none', bands: 'calm', button: 'underline', header: 'centered' }, allowed: { grid: ['feature', 'grid3', 'masonry'], story: ['split', 'quote', 'note'], closing: ['photo', 'dark', 'accent'] },
     fonts: ['editorial', 'luxury', 'gallery', 'classic', 'literary'], light: true },
   heroe: { allowed: { hero: ['split-left', 'split-right', 'arch', 'framed', 'full'], bands: ['blocks', 'alternate'] } },
-  boutique: { fixed: { bands: 'calm' }, allowed: { hero: ['split-left', 'split-right', 'stack', 'framed'], grid: ['grid3', 'masonry', 'side-title'], story: ['quote', 'overlay', 'split'], header: ['centered', 'minimal', 'classic'] } },
+  boutique: { fixed: { bands: 'calm' }, allowed: { hero: ['split-left', 'split-right', 'stack', 'framed'], grid: ['grid3', 'masonry', 'side-title'], story: ['quote', 'overlay', 'split'], header: ['centered', 'minimal', 'classic'],
+    // BOXY · boutique 2026-10-27: split cards in three columns came out as thumbnails.
+    cards: ['compact', 'fashion'] } },
   menu: { fixed: { grid: 'list' }, allowed: { hero: ['split-left', 'split-right', 'type', 'arch'], bands: ['alternate', 'blocks'] } },
 };
 

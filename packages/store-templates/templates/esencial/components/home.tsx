@@ -41,6 +41,8 @@ export default function Home() {
   // page with CSS order; the sections stay direct children of <main>, so YAPI still finds every section by its id.
   const family = FAMILIES.includes(variant('family', 'esencial')) ? variant('family', 'esencial') : 'esencial';
   const headlineWords = copy.headline.split(/\s+/).filter(Boolean);
+  // Boutique: a lookbook hero — two tall photos with the words between them (one store photo besides the hero, never three).
+  const lookPhoto = family === 'boutique' && !photos.heroVideo ? unique([photos.story, photos.p1, photos.p2]).find(src => src !== photos.hero) : undefined;
   const headlineCut = family === 'pop' && headlineWords.length > 2 ? Math.ceil(headlineWords.length * 0.55) : headlineWords.length;
   // Colour bands (2026-10-19): cream-on-cream pages read as wireframes; the sections after the catalog sit on coloured bands.
   const bands = variant('bands', 'alternate');
@@ -55,9 +57,10 @@ export default function Home() {
     : ['photo', 'newsletter'].includes(closing) && beforeValues !== 'accent' ? 'accent' : beforeValues === 'muted' ? 'paper' : 'muted';
   return <Shell>
     <main id="contenido" data-es-bands={bands} data-es-family={family}>
-      <section id="inicio" className={hero === 'type' ? 'es-hero es-hero--plain' : 'es-hero'} data-es-hero={family === 'pop' ? 'pop' : family === 'revista' ? 'cover' : hero} aria-labelledby="es-hero-title">
+      <section id="inicio" className={hero === 'type' ? 'es-hero es-hero--plain' : 'es-hero'} data-es-hero={family === 'pop' ? 'pop' : family === 'revista' ? 'cover' : lookPhoto && photos.hero ? 'lookbook' : hero} aria-labelledby="es-hero-title">
         {family === 'revista' ? <RevistaTop /> : null}
-        {family === 'pop' ? <PopMedia>{heroImage}</PopMedia> : layered || family === 'revista' ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}>{heroImage}</Parallax>
+        {lookPhoto && photos.hero ? <><img className="es-look__a" src={photos.hero} alt="" aria-hidden="true" /><img className="es-look__b" src={lookPhoto} alt="" aria-hidden="true" /></>
+          : family === 'pop' ? <PopMedia>{heroImage}</PopMedia> : layered || family === 'revista' ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}>{heroImage}</Parallax>
           : hero !== 'type' ? <div className="es-hero__media">{multi ? heroPhotos.slice(0, 3).map(src => <img key={src} src={src} alt="" aria-hidden="true" />) : heroImage}</div> : null}
         <EffectLayer />
         <div className="es-hero__copy">
@@ -75,7 +78,7 @@ export default function Home() {
       {family === 'pop' ? <TrustRow /> : null}
       {family === 'revista' ? <EditionIndex /> : null}
 
-      {bands === 'blocks' && copy.values.length ? <div className={hero === 'type' ? 'es-marquee es-marquee--line' : 'es-marquee'} aria-hidden="true">
+      {(bands === 'blocks' || family === 'pop') && copy.values.length ? <div className={hero === 'type' ? 'es-marquee es-marquee--line' : 'es-marquee'} aria-hidden="true">
         <p className="es-marquee__track">{[0, 1].map(round => <span key={round}>{[0, 1, 2].flatMap(copyIndex => copy.values.map(value => <span key={`${copyIndex}-${value.title}`}>{value.title}<i>✦</i></span>))}</span>)}</p>
       </div> : null}
 

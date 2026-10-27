@@ -793,8 +793,35 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es main[data-es-family="boutique"] #productos .es-card__media{aspect-ratio:3/4}
 .es main[data-es-family="boutique"] #productos .es-card__name{font:500 13px/1.3 var(--es-body);letter-spacing:.16em;text-transform:uppercase}
 .es main[data-es-family="boutique"] #productos :is(.es-card__points,.es-card__chips){display:none}
-/* Menú (cafés, bakeries): the products as a price list with dotted rules. */
-.es main[data-es-family="menu"] #productos .es-grid[data-es-grid="list"]{max-width:960px;margin:0 auto}
-.es main[data-es-family="menu"] #productos .es-card__name{font-size:clamp(20px,2vw,26px)}
-.es main[data-es-family="menu"] #productos .es-card__row{border-top:2px dotted color-mix(in srgb,var(--es-ink) 35%,transparent);padding-top:8px}
+/* Menú (cafés, bakeries): a menu board — two columns, a small round photo, the name, a dotted line and the price. */
+.es main[data-es-family="menu"] #productos .es-section__head{justify-content:center;text-align:center}
+.es main[data-es-family="menu"] #productos .es-grid[data-pagosya-catalog]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:0 56px!important;max-width:1100px;margin:0 auto}
+.es main[data-es-family="menu"] #productos .es-card{display:grid;grid-template-columns:64px minmax(0,1fr) auto;column-gap:16px;row-gap:2px;align-items:center;padding:18px 0;background:transparent;border:0;border-bottom:1px solid color-mix(in srgb,var(--es-ink) 12%,transparent);border-radius:0;box-shadow:none}
+.es main[data-es-family="menu"] #productos .es-card>*{grid-column:2}
+.es main[data-es-family="menu"] #productos .es-card>.es-card__media{grid-column:1;grid-row:1 / span 3;width:64px;height:64px;aspect-ratio:1;border-radius:50%;overflow:hidden}
+.es main[data-es-family="menu"] #productos .es-card__media img{width:100%;height:100%;object-fit:cover;border-radius:0}
+.es main[data-es-family="menu"] #productos .es-card__name{display:flex;gap:10px;align-items:baseline;margin:0;font-size:clamp(18px,1.6vw,22px)}
+.es main[data-es-family="menu"] #productos .es-card__name::after{content:'';flex:1;min-width:24px;border-bottom:2px dotted color-mix(in srgb,var(--es-ink) 40%,transparent);transform:translateY(-4px)}
+.es main[data-es-family="menu"] #productos .es-card__row{grid-column:3;grid-row:1;display:flex;gap:8px;align-items:center;margin:0;padding:0;border:0}
+.es main[data-es-family="menu"] #productos :is(.es-card__eyebrow,.es-card__chips){display:none}
+.es main[data-es-family="menu"] #productos .es-card__points{font-size:13px;opacity:.75}
+.es main[data-es-family="menu"] #productos .es-card:hover{transform:none;box-shadow:none}
+@media (max-width:760px){.es main[data-es-family="menu"] #productos .es-grid[data-pagosya-catalog]{grid-template-columns:1fr!important}}
+
+/* Owner 2026-10-27 (PEPPA please · pop): Pop's hero box is the store's dark ink, like the original PEPPA; the closing is a rounded
+   card, not a full-width band. */
+.es-hero[data-es-hero="pop"]{background:var(--es-ink);color:var(--es-paper)}
+.es main[data-es-family="pop"]>#cierre{margin:clamp(12px,2vw,24px);border-radius:28px}
+.es[data-es-outline="chunky"] main[data-es-family="pop"]>#cierre{border:var(--es-chunk);box-shadow:var(--es-chunk-pop)}
+/* Boutique: the lookbook hero — two tall photos with the words between them. */
+.es-hero[data-es-hero="lookbook"]{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.8fr) minmax(0,1fr);gap:clamp(12px,2vw,24px);align-items:stretch;min-height:min(86vh,860px);padding:clamp(12px,2vw,24px);background:var(--es-paper);color:var(--es-ink)}
+.es-hero[data-es-hero="lookbook"]::after{display:none}
+.es-hero[data-es-hero="lookbook"] :is(.es-look__a,.es-look__b){width:100%;height:100%;min-height:420px;object-fit:cover}
+.es-hero[data-es-hero="lookbook"] .es-look__a{order:0}.es-hero[data-es-hero="lookbook"] .es-hero__copy{order:1;align-self:center;width:auto;margin:0;padding:24px 8px;text-align:center}
+.es-hero[data-es-hero="lookbook"] .es-look__b{order:2}
+.es-hero[data-es-hero="lookbook"] .es-hero__copy>*{margin-inline:auto}
+.es-hero[data-es-hero="lookbook"] .es-display{font-size:clamp(34px,4vw,60px)}
+.es-hero[data-es-hero="lookbook"] .es-actions{justify-content:center}
+.es-hero[data-es-hero="lookbook"] .es-btn--ghost{color:var(--es-ink);border-color:currentColor}
+@media (max-width:760px){.es-hero[data-es-hero="lookbook"]{grid-template-columns:1fr 1fr}.es-hero[data-es-hero="lookbook"] .es-hero__copy{grid-column:1 / -1;order:3}.es-hero[data-es-hero="lookbook"] :is(.es-look__a,.es-look__b){min-height:300px}}
 
