@@ -163,3 +163,16 @@ test('a store with a video plays it as the cover, muted and looping, still for r
   assert.match(home, /autoPlay muted loop playsInline poster=\{photos\.hero\}/);
   assert.match(home, /prefers-reduced-motion: reduce/);
 });
+
+// Owner 2026-10-27: «que en la portada las fotos pasen lentamente de una a otra» — a rollable hero option, a video always wins,
+// still for reduced motion.
+test('the hero can fade its photos into one another', () => {
+  const { templateManifest, templateSourceFiles } = require('../index.js');
+  assert.deepEqual(templateManifest('esencial').master.variants.heroFade, ['still', 'fade']);
+  const home = templateSourceFiles('esencial').find(file => file.path === 'components/home.tsx').content;
+  assert.match(home, /function HeroFade/);
+  assert.match(home, /variant\('heroFade', 'still'\) === 'fade' && !photos\.heroVideo/);
+  assert.match(home, /prefers-reduced-motion: reduce/);
+  const css = templateSourceFiles('esencial').find(file => file.path === 'styles/globals.css').content;
+  assert.match(css, /\.es-hero__fade>img\{grid-area:1\/1/);
+});

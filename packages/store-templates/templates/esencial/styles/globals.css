@@ -652,3 +652,10 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 
 /* Owner 2026-10-25: the cover video fills the hero like its photo. */
 .es-hero__video{display:block;width:100%;height:100%;object-fit:cover}
+
+/* Owner 2026-10-27: hero photos that pass slowly into one another; all share one cell, so each keeps the layout's shape. */
+.es-hero__fade{display:grid;height:100%}
+.es-hero__fade>img{grid-area:1/1;opacity:0;transform:scale(1.04);transition:opacity 1.8s ease,transform 8s linear}
+.es-hero__fade>img[data-active]{opacity:1;transform:none}
+.es-hero[data-es-hero="framed"] .es-hero__fade>img,.es-hero[data-es-hero="arch"] .es-hero__fade>img{transform:none}
+@media (prefers-reduced-motion:reduce){.es-hero__fade>img{transition:none;transform:none}}

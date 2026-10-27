@@ -390,6 +390,10 @@
         "arch",
         "stack"
       ],
+      "heroFade": [
+        "still",
+        "fade"
+      ],
       "grid": [
         "grid4",
         "grid3",

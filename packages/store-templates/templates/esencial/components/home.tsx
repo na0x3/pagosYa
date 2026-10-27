@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
 import { copy, photos, sections, store } from './store-data';
@@ -18,6 +18,9 @@ export default function Home() {
   const multi = rolled === 'collage' || rolled === 'strip';
   const hero = !photos.hero || (multi && heroPhotos.length < 3) ? 'type' : rolled;
   const layered = hero === 'full' || hero === 'poster';
+  // Owner 2026-10-27: a hero whose photos slowly pass into one another (2–4 of the store's photos); a video always wins.
+  const fadePhotos = variant('heroFade', 'still') === 'fade' && !photos.heroVideo && !multi ? heroPhotos.slice(0, 4) : [];
+  const heroImage = photos.heroVideo ? <HeroVideo /> : fadePhotos.length > 1 ? <HeroFade list={fadePhotos} /> : <img src={photos.hero} alt="" aria-hidden="true" />;
   // Showcase commerce: the card design (showcase | compact | split); the older card looks apply to compact cards only.
   const cards = variant('cards', 'compact');
   const card = cards === 'compact' ? variant('card', 'plain') : 'plain';
@@ -46,8 +49,8 @@ export default function Home() {
   return <Shell>
     <main id="contenido" data-es-bands={bands}>
       <section id="inicio" className={hero === 'type' ? 'es-hero es-hero--plain' : 'es-hero'} data-es-hero={hero} aria-labelledby="es-hero-title">
-        {layered ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}>{photos.heroVideo ? <HeroVideo /> : <img src={photos.hero} alt="" aria-hidden="true" />}</Parallax>
-          : hero !== 'type' ? <div className="es-hero__media">{photos.heroVideo && !multi ? <HeroVideo /> : (multi ? heroPhotos.slice(0, 3) : [photos.hero]).map(src => <img key={src} src={src} alt="" aria-hidden="true" />)}</div> : null}
+        {layered ? <Parallax className="es-hero__media" strength={60} mobileStrength={16}>{heroImage}</Parallax>
+          : hero !== 'type' ? <div className="es-hero__media">{multi ? heroPhotos.slice(0, 3).map(src => <img key={src} src={src} alt="" aria-hidden="true" />) : heroImage}</div> : null}
         <div className="es-hero__copy">
           {hero === 'poster' && store.logo ? <img className="es-hero__logo" src={store.logo} alt="" aria-hidden="true" /> : null}
           {copy.eyebrow ? <p className="es-eyebrow">{copy.eyebrow}</p> : null}
@@ -139,6 +142,18 @@ export default function Home() {
 
 /** Owner 2026-10-25 (Gramiyaa): a video the merchant attached plays as the cover — muted, looping, the cover photo as its
  *  poster — and stays on that still frame for visitors who asked for less motion or a store with motion off. */
+/** Owner 2026-10-27: the hero's photos pass slowly into one another — one every six seconds with a soft zoom; visitors who asked for
+ *  less motion, or a store with motion off, keep the first photo. The photos share one grid cell, so each keeps the layout's shape. */
+function HeroFade({ list }: { list: string[] }) {
+  const [active, setActive] = useState(0);
+  useEffect(() => {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.pagosyaMotion === 'off') return;
+    const timer = setInterval(() => setActive(index => (index + 1) % list.length), 6000);
+    return () => clearInterval(timer);
+  }, [list.length]);
+  return <div className="es-hero__fade">{list.map((src, index) => <img key={src} src={src} alt="" aria-hidden="true" data-active={index === active ? '' : undefined} />)}</div>;
+}
+
 function HeroVideo() {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
