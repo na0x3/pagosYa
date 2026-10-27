@@ -107,6 +107,14 @@ describe('runAgent', () => {
     expect(result).toEqual({ status: 'limit' });
     expect(run).toHaveBeenCalledTimes(1);
   });
+  it('hands the model every slice of a screenshot, in order, in one message (Gramiyaa 2026-10-26)', async () => {
+    const box = toolbox();
+    jest.spyOn(box, 'run').mockResolvedValue({ output: 'captura adjunta en 2 partes', images: ['data:image/jpeg;base64,AAA', 'data:image/jpeg;base64,BBB'] });
+    const seen: unknown[][] = [];
+    await runAgent({ toolbox: box, instructions: 'x', opening: [], limits: { toolCalls: 2 }, model: async ({ transcript }) => { seen.push(transcript); return { calls: [call('screenshot', {})] }; } });
+    const message = (seen.at(-1) as any[]).find(item => item.role === 'user' && Array.isArray(item.content) && item.content.some((part: any) => part.type === 'input_image'));
+    expect(message.content.map((part: any) => part.image_url)).toEqual(['data:image/jpeg;base64,AAA', 'data:image/jpeg;base64,BBB']);
+  });
   it('answers skipped batch calls before asking the model to finish a verified draft', async () => {
     const box = toolbox();
     const verify = call('verify', {});
@@ -130,7 +138,7 @@ describe('runAgent', () => {
     const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], sleep: async ms => { pauses.push(ms); }, model: async () => { calls++; throw new Error('provider down'); } });
     expect(calls).toBe(3);
     expect(pauses).toEqual([2000, 6000]);
-    expect(result).toEqual({ status: 'failed', reason: 'provider down' });
+    expect(result).toEqual({ status: 'failed', reason: 'provider down', provider: true });
   });
   it('carries on when a retry succeeds', async () => {
     let calls = 0;

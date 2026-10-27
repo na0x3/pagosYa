@@ -3,7 +3,8 @@ import { AGENT_TOOLS, type AgentStep, type AgentToolbox } from './agent-tools';
 export type AgentModelCall = { name: string; arguments: string; callId: string };
 export type AgentModelTurn = { calls: AgentModelCall[]; text?: string; output?: unknown[] };
 export type AgentModel = (input: { instructions: string; transcript: unknown[]; tools: typeof AGENT_TOOLS }) => Promise<AgentModelTurn>;
-export type AgentRunResult = { status: 'finished' | 'limit' | 'failed'; reason?: string };
+/** `provider`: the model stopped answering (a plan's usage limit, an outage) — the draft is whatever was mid-edit, never checked. */
+export type AgentRunResult = { status: 'finished' | 'limit' | 'failed'; reason?: string; provider?: boolean };
 export const AGENT_LIMITS = { toolCalls: 40, wallMs: 360_000, screenshots: 8 };
 /** A run on the merchant's own ChatGPT plan is free but slower than a paid API (calls of 20-90 s), so it gets twice the time. */
 export const agentLimits = (chatgptPlan: boolean) => chatgptPlan ? { ...AGENT_LIMITS, wallMs: AGENT_LIMITS.wallMs * 2 } : AGENT_LIMITS;
@@ -68,12 +69,12 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
         if (input.signal?.aborted) return { status: 'failed', reason: 'cancelled' };
         // The merchant's credit limit is a limit like the step count: the caller preserves a private checkpoint; retrying buys nothing.
         if ((error as { agentLimit?: boolean })?.agentLimit) return { status: 'limit', reason: 'credits' };
-        if (pause === 6000) return { status: 'failed', reason: (error as Error).message };
+        if (pause === 6000) return { status: 'failed', reason: (error as Error).message, provider: true };
       }
     }
     if (input.signal?.aborted) return { status: 'failed', reason: 'cancelled' };
     if (now() - started >= limits.wallMs) return { status: 'limit' };
-    if (!turn) return { status: 'failed', reason: 'El proveedor de IA no respondió.' };
+    if (!turn) return { status: 'failed', reason: 'El proveedor de IA no respondió.', provider: true };
     if (!turn.calls.length) {
       if (++idle >= 2) return { status: 'failed', reason: 'El agente dejó de usar herramientas.' };
       if (turn.output?.length) transcript.push(...turn.output);
@@ -98,6 +99,7 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
       toolCalls++;
       transcript.push({ type: 'function_call_output', call_id: call.callId, output: result.output });
       if (result.image) images.push(result.image);
+      if (result.images) images.push(...result.images);
       for (const step of toolbox.steps.slice(before)) await input.onStep?.(step);
       if (call.name === 'verify' && !toolbox.draftIsClean()) {
         // Review wording may change between passes; its stable identity must not buy another repair loop.

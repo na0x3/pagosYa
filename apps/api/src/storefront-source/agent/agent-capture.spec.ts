@@ -2,10 +2,28 @@ import { listTemplates } from '@pagosya/store-templates';
 import { literalTemplateSource } from '../fixtures/literal-template';
 import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
-import { agentPreviewSnapshot, captureAgentDraft } from './agent-capture';
+import sharp from 'sharp';
+import { agentPreviewSnapshot, agentShotSections, captureAgentDraft } from './agent-capture';
 import { snapshotWithAccountTheme } from '../account-theme';
 
 jest.setTimeout(120_000);
+
+describe('agent screenshot slices (Gramiyaa 2026-10-26)', () => {
+  const page = (width: number, height: number) => sharp({ create: { width, height, channels: 3, background: '#f5efe6' } }).png().toBuffer();
+  const size = async (slice: string) => sharp(Buffer.from(slice.replace(/^data:[^,]+,/, ''), 'base64')).metadata();
+  it('cuts a tall desktop page into at most six slices that stay readable, top to bottom', async () => {
+    const slices = await agentShotSections(await page(1280, 9500));
+    expect(slices).toHaveLength(6);
+    for (const slice of slices) expect((await size(slice)).width).toBe(1024);
+    expect((await size(slices[0])).height).toBeGreaterThan(1200);
+  });
+  it('keeps a short page whole and never enlarges a phone page', async () => {
+    expect(await agentShotSections(await page(1280, 900))).toHaveLength(1);
+    const phone = await agentShotSections(await page(390, 2000));
+    expect(phone).toHaveLength(3);
+    expect((await size(phone[0])).width).toBe(390);
+  });
+});
 
 describe('agent capture', () => {
   it('rejects stale authored catalog copy but permits the runtime-owned empty state', async () => {

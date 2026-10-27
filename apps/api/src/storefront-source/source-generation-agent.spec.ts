@@ -210,6 +210,15 @@ describe('generate() with the agent engine', () => {
     await service.generate('m', 's', input(brief), new SourceRequestBudget(50));
     expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'components/home.tsx').content).toContain('para tu mente');
   });
+  it('does not save a half-made draft when the model stops answering mid-run (Dulce Horno 2026-10-26, plan quota)', async () => {
+    const { service, projects, brief } = await setup();
+    let calls = 0;
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => ++calls === 1
+      ? turn([['edit_file', { path: 'components/home.tsx', search: 'para tu cuerpo', replacement: 'para tu mente' }]])
+      : new Response(JSON.stringify({ error: { message: 'subscription_sharing_usage_limit_exceeded' } }), { status: 429 }));
+    await expect(service.generate('m', 's', input(brief), new SourceRequestBudget(50))).rejects.toThrow();
+    expect(projects.save).not.toHaveBeenCalled();
+  });
   it('still fails without saving when the draft the agent left does not compile', async () => {
     const { service, projects, brief } = await setup();
     jest.spyOn(globalThis, 'fetch').mockImplementation(async () => turn([['edit_file', { path: 'components/home.tsx', search: 'para tu cuerpo', replacement: '{<Missing />' }]]));

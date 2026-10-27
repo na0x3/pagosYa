@@ -51,7 +51,8 @@ export type GenerateExecution = { /** Spec 2026-10-18 website copy: the build fo
 /** The run's generated files as the acceptance chain sees them. */
 export type GeneratedSource = { label: string; files: SourceProjectFileDto[]; products?: unknown; productOperations?: unknown; design?: SourceDesign };
 /** What the agent reports with its revision. */
-export type AgentOutcome = { summary: string; sections: string[]; steps: Array<Omit<AgentStep, 'thumbnail'>>; requirements: AgentToolbox['requirements']; evidence: AgentToolbox['evidence'] };
+/** `unchecked`: the agent never called a passing finish; its draft was kept because it builds, so the chat must not say it was reviewed. */
+export type AgentOutcome = { summary: string; sections: string[]; steps: Array<Omit<AgentStep, 'thumbnail'>>; requirements: AgentToolbox['requirements']; evidence: AgentToolbox['evidence']; unchecked?: boolean };
 
 /** A generate() run's fixed values, built once inside generate() after its last `let` is declared. Every field is a `const`
  *  (or a parameter never reassigned after that point), so a stage may destructure it. */

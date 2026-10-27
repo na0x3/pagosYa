@@ -15,7 +15,23 @@ import { withSourceAssets } from '../source-asset-library';
 const STORE_UPLOAD = /^https?:\/\/[^/]+\/(?:api\/)?v1\/uploads\/[0-9a-f-]{36}\.(?:jpe?g|png|webp|gif)$/i;
 
 export type AgentPreviewBase = { brief: SourceProjectBriefDto; files: SourceProjectFileDto[] };
-export type AgentShot = { width: 1280 | 820 | 390; image: string; thumbnail: string; errors: string[]; evidence: RequirementEvidence[] };
+/** `sections`: the same page cut top to bottom into at most six readable slices, for the agent's own look at its work. */
+export type AgentShot = { width: 1280 | 820 | 390; image: string; thumbnail: string; errors: string[]; evidence: RequirementEvidence[]; sections?: string[] };
+
+/** One full-page image shrunk to 2400 px tall made a 9,500 px desktop page 323 px wide, and the agent signed off a title sitting on
+ *  a photo (Gramiyaa 2026-10-26). Even slices, each at most 1024 px wide and never enlarged, keep text and edges readable. */
+export async function agentShotSections(png: Buffer, max = 6): Promise<string[]> {
+  const { width = 0, height = 0 } = await sharp(png).metadata();
+  if (!width || !height) return [];
+  const count = Math.min(max, Math.max(1, Math.ceil(height / (width > 600 ? width * 1.1 : width * 2.2))));
+  const tall = Math.ceil(height / count);
+  const slices: string[] = [];
+  for (let top = 0; top < height; top += tall) {
+    const slice = await sharp(png).extract({ left: 0, top, width, height: Math.min(tall, height - top) }).resize({ width: Math.min(width, 1024), withoutEnlargement: true }).jpeg({ quality: 70 }).toBuffer();
+    slices.push(`data:image/jpeg;base64,${slice.toString('base64')}`);
+  }
+  return slices;
+}
 
 /** The draft as a site the sandbox can open: the store's runtime files with this draft's pages, compiled by prepare(). */
 export async function agentPreviewSnapshot(base: AgentPreviewBase, authored: SourceProjectFileDto[]) {
@@ -261,5 +277,5 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
   }, profile === 'reduced-motion' ? 'reduce' : 'no-preference');
   const image = await sharp(png).resize({ width: Math.min(width, 1024), height: 2400, fit: 'inside' }).jpeg({ quality: 70 }).toBuffer();
   const thumbnail = await sharp(png).resize({ width: 320, height: 640, fit: 'cover', position: 'top' }).jpeg({ quality: 65 }).toBuffer();
-  return { width, errors, evidence, image: `data:image/jpeg;base64,${image.toString('base64')}`, thumbnail: `data:image/jpeg;base64,${thumbnail.toString('base64')}` };
+  return { width, errors, evidence, image: `data:image/jpeg;base64,${image.toString('base64')}`, thumbnail: `data:image/jpeg;base64,${thumbnail.toString('base64')}`, sections: await agentShotSections(png) };
 }

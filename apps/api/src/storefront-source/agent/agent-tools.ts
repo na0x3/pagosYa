@@ -226,13 +226,13 @@ export class AgentToolbox {
     return [...messages.map(message => ({ source: 'theme' as const, message })), ...notes.map(message => ({ source: 'theme' as const, message }))];
   }
 
-  async run(name: string, rawArgs: string): Promise<{ output: string; image?: string }> {
+  async run(name: string, rawArgs: string): Promise<{ output: string; image?: string; images?: string[] }> {
     const started = Date.now();
     const version = this.workspace.version;
     const theme = this.pendingTheme;
     const pack = this.pendingMotifPack;
     const policies = this.pendingPolicies;
-    let result: { output: string; image?: string };
+    let result: { output: string; image?: string; images?: string[] };
     try { result = await this.execute(name, rawArgs); }
     catch (error) { result = { output: `No se pudo ejecutar ${name}: ${(error as Error).message.slice(0, 1500)}` }; }
     // Show each renderable stage without waiting for acceptance checks. An incomplete
@@ -244,7 +244,7 @@ export class AgentToolbox {
     if (!['read_file','list_files','inspect_project'].includes(name)) this.ctx.onDiagnostic?.({ tool: name, digest: workspaceDigest(this.workspace.files()), durationMs: Date.now() - started, output: result.output.split('\nInicio del archivo actual:')[0].slice(0, 3000) });
     return result;
   }
-  private async execute(name: string, rawArgs: string): Promise<{ output: string; image?: string }> {
+  private async execute(name: string, rawArgs: string): Promise<{ output: string; image?: string; images?: string[] }> {
     let args: any;
     try { args = JSON.parse(rawArgs || '{}'); } catch { return { output: 'Herramienta o argumentos inválidos: los argumentos no son JSON.' }; }
     if (!args || typeof args !== 'object') return { output: 'Herramienta o argumentos inválidos: se esperaba un objeto.' };
@@ -347,7 +347,10 @@ export class AgentToolbox {
           if (!shot.errors.length) this.ctx.onPreview?.(snapshot.files);
           this.shots++;
           step('screenshot', `Capturó ${args.page || 'index.html'} (${VIEW[width]})`, shot.thumbnail);
-          return { output: shot.errors.length ? `captura adjunta. Errores de la página: ${shot.errors.join(' | ')}` : 'captura adjunta', image: shot.image };
+          // The page in readable slices, top to bottom, so a title on a photo halfway down is seen (Gramiyaa 2026-10-26).
+          const parts = shot.sections?.length ? shot.sections : [shot.image];
+          const attached = parts.length > 1 ? `captura adjunta en ${parts.length} partes, de arriba abajo; revisa cada parte: textos encima de fotos, elementos que se tapan o se salen, huecos vacíos` : 'captura adjunta';
+          return { output: shot.errors.length ? `${attached}. Errores de la página: ${shot.errors.join(' | ')}` : attached, ...(parts.length > 1 ? { images: parts } : { image: parts[0] }) };
         } catch (error) { return { output: `No se pudo capturar el borrador: ${(error as Error).message.slice(0, 1500)}` }; }
       }
       case 'verify': {
