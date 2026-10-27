@@ -475,6 +475,10 @@
         "grain",
         "lines"
       ],
+      "outline": [
+        "none",
+        "chunky"
+      ],
       "photos": [
         "natural",
         "rounded",

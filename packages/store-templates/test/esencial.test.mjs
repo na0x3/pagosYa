@@ -176,3 +176,15 @@ test('the hero can fade its photos into one another', () => {
   const css = templateSourceFiles('esencial').find(file => file.path === 'styles/globals.css').content;
   assert.match(css, /\.es-hero__fade>img\{grid-area:1\/1/);
 });
+
+// Owner 2026-10-27 (PEPPA please): the chunky sticker look for animated stores, and sign-in pages in the store's own look.
+test('the chunky look and the branded sign-in pages', () => {
+  const { templateManifest, templateSourceFiles } = require('../index.js');
+  assert.deepEqual(templateManifest('esencial').master.variants.outline, ['none', 'chunky']);
+  const shell = templateSourceFiles('esencial').find(file => file.path === 'components/Shell.tsx').content;
+  assert.match(shell, /data-es-outline=\{variant\('outline', 'none'\)\}/);
+  const css = templateSourceFiles('esencial').find(file => file.path === 'styles/globals.css').content;
+  assert.match(css, /\.es\[data-es-outline="chunky"\] \.es-card\{border:var\(--es-chunk\)/);
+  assert.match(css, /\.es \[data-account-gate\] \[data-part=title\]\{font-family:var\(--es-heading\)/);
+  assert.match(css, /\.es\[data-es-outline="chunky"\] \[data-account-gate\] \[data-part=input\]\{border:var\(--es-chunk\)/);
+});

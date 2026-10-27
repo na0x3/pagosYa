@@ -659,3 +659,41 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-hero__fade>img[data-active]{opacity:1;transform:none}
 .es-hero[data-es-hero="framed"] .es-hero__fade>img,.es-hero[data-es-hero="arch"] .es-hero__fade>img{transform:none}
 @media (prefers-reduced-motion:reduce){.es-hero__fade>img{transition:none;transform:none}}
+
+/* Owner 2026-10-27: the sign-in and account pages in the store's own look — its photo beside the form (config.accountTheme split),
+   its fonts, colours, corners and buttons. */
+.es [data-account-gate] [data-part=account]{width:min(1120px,100%);margin:0 auto;padding:clamp(32px,6vw,80px) 24px;gap:clamp(24px,5vw,72px);align-items:center;color:var(--es-ink);box-sizing:border-box}
+.es [data-account-gate] [data-layout=split] [data-part=media] img{aspect-ratio:4/5;height:auto;min-height:0;max-height:680px;border-radius:var(--es-radius,12px)}
+.es [data-account-gate] [data-part=card]{gap:20px;max-width:520px;background:transparent;border:0;padding:0}
+.es [data-account-gate] [data-part=title]{font-family:var(--es-heading);font-size:clamp(36px,4.6vw,60px);line-height:1;letter-spacing:-.02em;color:var(--es-ink)}
+.es [data-account-gate] [data-part=lead]{font:400 18px/1.5 var(--es-body);opacity:.75}
+.es [data-account-gate] [data-part=label]{font:600 12px/1.2 var(--es-body);letter-spacing:.12em;text-transform:uppercase}
+.es [data-account-gate] [data-part=input]{min-height:56px;border:1px solid color-mix(in srgb,var(--es-ink) 35%,transparent);border-radius:var(--es-radius,12px);background:var(--es-paper);color:var(--es-ink);font:16px var(--es-body)}
+.es [data-account-gate] [data-part=input]:focus-visible{outline:2px solid var(--es-accent);outline-offset:2px}
+.es [data-account-gate] [data-part=submit]{min-height:56px;border:0;border-radius:var(--es-button-radius,999px);background:var(--es-accent);color:var(--es-on-accent);font:600 16px var(--es-body)}
+.es [data-account-gate] [data-part=link]{font-weight:600;color:var(--es-ink)}
+.es [data-account-gate] [data-part=notice]{border-radius:var(--es-radius,12px)}
+
+/* Owner 2026-10-27 (PEPPA please): the chunky sticker look of an animated store — thick ink outlines and hard offset shadows on
+   the hero, cards, photos, questions, steps and buttons; steps in the store's colours. Only with data-es-outline="chunky". */
+.es[data-es-outline="chunky"]{--es-chunk:2.5px solid var(--es-ink);--es-chunk-shadow:6px 6px 0 var(--es-ink);--es-chunk-pop:8px 8px 0 var(--es-accent)}
+.es[data-es-outline="chunky"] :is(h1,h2,.es-display,.es-h2,.es-footer__name,.es-footer__big,[data-account-gate] [data-part=title]){font-weight:700;letter-spacing:-.02em}
+.es[data-es-outline="chunky"] .es-hero[data-es-hero="full"],.es[data-es-outline="chunky"] .es-hero[data-es-hero="poster"]{margin:clamp(12px,2vw,24px);border:var(--es-chunk);border-radius:28px;box-shadow:var(--es-chunk-pop);overflow:hidden}
+.es[data-es-outline="chunky"] .es-hero:not([data-es-hero="full"]):not([data-es-hero="poster"]) .es-hero__media :is(img,video){border:var(--es-chunk);border-radius:22px;box-shadow:var(--es-chunk-pop)}
+.es[data-es-outline="chunky"] .es-card{border:var(--es-chunk);border-radius:20px;box-shadow:var(--es-chunk-shadow);background:var(--es-muted);overflow:hidden;transition:transform .25s var(--motion-ease,ease),box-shadow .25s var(--motion-ease,ease)}
+.es[data-es-outline="chunky"] .es-card:hover{transform:translate(-3px,-3px);box-shadow:9px 9px 0 var(--es-ink)}
+.es[data-es-outline="chunky"] .es-card__media img{border-radius:14px}
+.es[data-es-outline="chunky"] .es-btn{border:var(--es-chunk);box-shadow:3px 3px 0 var(--es-ink);transition:transform .15s,box-shadow .15s}
+.es[data-es-outline="chunky"] .es-btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--es-ink)}
+.es[data-es-outline="chunky"] :is(.es-cart-btn,.es-card__add){border:var(--es-chunk);box-shadow:3px 3px 0 var(--es-ink)}
+.es[data-es-outline="chunky"] :is(.es-story__media img,.es-biz__pick>img,.es-biz__statement-photo img,.es-closing__photo){border:var(--es-chunk);border-radius:22px;box-shadow:var(--es-chunk-pop)}
+.es[data-es-outline="chunky"] .es-closing__photo{border-radius:0;box-shadow:none;border:0}
+.es[data-es-outline="chunky"] .es-biz__faq details{border:var(--es-chunk);border-radius:16px;box-shadow:4px 4px 0 var(--es-ink);padding:0 20px;margin-bottom:14px;background:var(--es-paper);color:var(--es-ink)}
+.es[data-es-outline="chunky"] :is(.es-values ol>li,.es-biz__steps>li){border:var(--es-chunk);border-radius:18px;box-shadow:var(--es-chunk-shadow);padding:22px;background:var(--es-paper);color:var(--es-ink)}
+.es[data-es-outline="chunky"] :is(.es-values ol>li,.es-biz__steps>li):nth-child(3n+2){background:var(--es-accent);color:var(--es-on-accent)}
+.es[data-es-outline="chunky"] :is(.es-values ol>li,.es-biz__steps>li):nth-child(3n){background:var(--es-muted)}
+.es[data-es-outline="chunky"] [data-account-gate] [data-part=input]{border:var(--es-chunk);border-radius:16px}
+.es[data-es-outline="chunky"] [data-account-gate] [data-part=submit]{border:var(--es-chunk);box-shadow:4px 4px 0 var(--es-ink)}
+.es[data-es-outline="chunky"] [data-account-gate] [data-layout=split] [data-part=media] img{border:var(--es-chunk);border-radius:24px;box-shadow:var(--es-chunk-pop)}
+@media (prefers-reduced-motion:reduce){.es[data-es-outline="chunky"] :is(.es-card,.es-btn){transition:none}.es[data-es-outline="chunky"] .es-card:hover{transform:none}}
+

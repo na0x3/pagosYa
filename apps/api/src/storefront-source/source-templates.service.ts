@@ -1,4 +1,4 @@
-import { ANIMATED_DNA, animatedVariants } from './source-master-animated';
+import { ANIMATED_DNA, ANIMATED_FONTS, animatedVariants } from './source-master-animated';
 import { Prisma } from '@prisma/client';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import sharp from 'sharp';
@@ -148,6 +148,7 @@ export class SourceTemplatesService {
     // Owner 2026-10-27: an animated store keeps its roll or plan but takes the lively parts and the playful motion.
     if (fill?.animated && variants) variants = { ...variants, ...animatedVariants(distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]), manifest.master.variants) } as MasterVariants;
     const dna = fill?.animated ? { ...(plan?.dna ?? {}), ...ANIMATED_DNA } : plan?.dna;
+    if (fill?.animated && manifest.master.fonts.some(font => font.id === ANIMATED_FONTS)) fill = { ...fill, look: { ...(fill.look ?? {}), fonts: ANIMATED_FONTS } };
     const brandColours = Object.fromEntries(([['paper', 'background'], ['ink', 'foreground'], ['accent', 'accent'], ['muted', 'surface']] as const)
       .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
     const logo = (presetManifest && !starterManifest) || plan?.accent || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);

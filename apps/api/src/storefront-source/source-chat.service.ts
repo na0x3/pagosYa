@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { merchantAsksForPhotoGroup } from './source-media-design';
 import { firstVideo, withHeroVideo } from './source-master-video';
-import { animatedVariants, asksForAnimatedStore } from './source-master-animated';
+import { ANIMATED_FONTS, animatedVariants, asksForAnimatedStore } from './source-master-animated';
 import { agentReport as agentReportText } from './agent/agent-label';
 import { closestPreset } from './source-preset-pick';
 import { sourceRequestContext } from './source-request-context';
@@ -569,7 +569,8 @@ export class SourceChatService {
       : { ...filled, menu: asked ? { style: filled.menu && filled.menu.style !== 'none' ? filled.menu.style : currentMenu?.style ?? 'panel', groups: filled.menu?.groups.length ? filled.menu.groups : currentMenu?.groups ?? [] } : { style: 'none', groups: [] } };
     // Owner 2026-10-27: «hazla más animada» on a store gives it the lively parts and the playful motion (a polish never does).
     const lively = !options.polish && asksForAnimatedStore(request) ? animatedVariants(photos.length, manifest.master!.variants) : null;
-    if (lively) change = { ...(change ?? {}), animated: true, variants: { ...(change?.variants ?? {}), ...lively } };
+    if (lively) change = { ...(change ?? {}), animated: true, variants: { ...(change?.variants ?? {}), ...lively },
+      ...(manifest.master!.fonts.some(font => font.id === ANIMATED_FONTS) ? { look: { ...(change?.look ?? {}), fonts: ANIMATED_FONTS } } : {}) };
     // Nothing in the data to change: the caller turns the request into a minimal design edit.
     if (change && !Object.keys(change).length) return null;
     if (!change && options.polish) throw new PersonalTouchSkipped('the polish fill failed');

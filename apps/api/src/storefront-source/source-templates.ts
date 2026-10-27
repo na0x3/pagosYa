@@ -441,6 +441,8 @@ export async function assembleTemplateRevision(input: {
     ...(settings ? masterProductStyle(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) : {}),
     ...(settings ? masterFilterStyle(input.variants ?? (input.fill?.variants as MasterVariants | undefined)) : {}),
     ...(menu ? { header: { menu } } : {}),
+    // Owner 2026-10-27: the sign-in pages show the store's own photo beside the form; Esencial's CSS gives them its look.
+    ...(settings ? { accountTheme: { layout: 'split', ...(photos.story || photos.hero ? { photo: photos.story || photos.hero } : {}) } } : {}),
     productPage: 'product.html', checkoutPage: 'checkout.html', sitePurpose: 'shop', demo: false, slug: input.slug,
     apiBaseUrl: input.apiUrl.href.replace(/\/$/, ''), checkoutOrigin: input.checkoutOrigin, data,
   };

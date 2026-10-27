@@ -16,3 +16,7 @@ it('gives the lively parts the template has, and the fading hero only with two p
   expect(animatedVariants(1, catalogue)).toEqual({ announce: 'ticker', bands: 'blocks', card: 'hover2' });
   expect(animatedVariants(3, { announce: ['plain'] })).toEqual({});
 });
+
+it('an animated store takes the chunky outline when the template has it; the dice never roll it', () => {
+  expect(animatedVariants(2, { outline: ['none', 'chunky'] })).toEqual({ outline: 'chunky' });
+});

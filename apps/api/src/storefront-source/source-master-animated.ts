@@ -16,6 +16,9 @@ export const ANIMATED_DNA = { motion: 'playful', hover: 'lift', press: 'pop' } a
 /** Esencial's lively parts: a moving announcement bar, colour bands, cards that show their second photo on hover and, with two
  *  photos or more, a hero whose photos pass into one another. Only ids the template's catalogue has. */
 export function animatedVariants(photoCount: number, catalogue: Record<string, readonly string[]> = {}): Partial<MasterVariants> {
-  const wanted: Record<string, string> = { announce: 'ticker', bands: 'blocks', card: 'hover2', ...(photoCount >= 2 ? { heroFade: 'fade' } : {}) };
+  const wanted: Record<string, string> = { outline: 'chunky', announce: 'ticker', bands: 'blocks', card: 'hover2', ...(photoCount >= 2 ? { heroFade: 'fade' } : {}) };
   return Object.fromEntries(Object.entries(wanted).filter(([part, id]) => (catalogue[part] ?? []).includes(id))) as Partial<MasterVariants>;
 }
+
+/** The rounded heavy pairing of an animated store (Fredoka over DM Sans), when the template has it. */
+export const ANIMATED_FONTS = 'alegre';
