@@ -21,6 +21,6 @@
   },
   "dependencies": {
     "@pagosya/variant-editor": "workspace:*",
-    "@paper-design/shaders": "0.0.81"
+    "@paper-design/shaders": "0.0.82"
   }
 }
