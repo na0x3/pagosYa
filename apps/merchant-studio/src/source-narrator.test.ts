@@ -115,9 +115,10 @@ describe('the Studio feeds the window', () => {
     const { readFileSync } = await import('node:fs');
     const studio = readFileSync(`${process.cwd()}/src/source-studio.ts`, 'utf8');
     // Owner 2026-10-25: builds feed a silent bridge; the window only shows store news.
-    expect(studio).toMatch(/const narratorWindow = mountNarrator\(document, \{ onNoticeDismissed: \(\) => storeNewsFeed\.snooze\(\) \}\);/);
+    // Owner 2026-10-27: no store news in the window — it is mounted but never opened.
+    expect(studio).toMatch(/const narratorWindow = mountNarrator\(document\);/);
+    expect(studio).not.toMatch(/storeNewsTicker|narratorWindow\.notice\(/);
     expect(studio).toMatch(/const narrator = narratorBridge\(\{ open\(\) \{\}, show\(\) \{\} \}, pillMode\);/);
-    expect(studio).toMatch(/show: item => narratorWindow\.notice\(item\.title, item\.line\)/);
     expect(studio).toMatch(/if \(event\.type === 'interrupt' && wasBuilding\) narrator\.interrupted\(error\);/);
     expect(studio).toMatch(/transitionBuild\(\{ type: 'submit' \}\); narrator\.submitted\(text\);/);
     expect(studio).toMatch(/function updateBuildProgress\(\) \{\n\s+narrator\.progress\(buildProgress\);/);

@@ -52,7 +52,6 @@ import { bindSourcePaymentPreview } from './source-payment-preview';
 import { bindAssistantPreview } from './source-assistant-preview';
 import { focusDebugEnabled, recordFocusLoss, watchComposerFocus } from './source-focus-debug';
 import { mountNarrator, narratorBridge } from './source-narrator';
-import { storeNewsTicker } from './source-store-news';
 
 const SOURCE_MODEL_OPTIONS = [['auto', 'Auto · OpenAI'], ['gpt-5.6-luna', 'Luna · económico'], ['gpt-5.6-terra', 'Terra · equilibrado'], ['gpt-5.6-sol', 'Sol · avanzado'], ['claude-haiku-4-5-20251001', 'Claude Haiku 4.5 · económico'], ['claude-sonnet-5', 'Claude Sonnet 5 · equilibrado'], ['claude-opus-5-5', 'Claude Opus 5.5 · avanzado']] as const;
 const SOURCE_MODEL_STORAGE = "pagosya_source_model";
@@ -308,24 +307,12 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let messages: AgentMessage[] = [], assets: Attachment[] = [];
   let buildSession: SourceBuildSession = { phase: 'idle' };
   // YAPI's glass window over the preview (spec 2026-10-21 Part C): request, plan, step, summary.
-  const narratorWindow = mountNarrator(document, { onNoticeDismissed: () => storeNewsFeed.snooze() });
+  const narratorWindow = mountNarrator(document);
   // Owner 2026-10-25: builds no longer write into the glass window (the floating «YAPI · Ahora: …» card); the chat panel already
   // shows the request, its steps and the reply. The window stays only for the occasional store news.
   const narrator = narratorBridge({ open() {}, show() {} }, pillMode);
-  // Now and then YAPI brings one piece of news about the store (owner 2026-10-22); a build always comes first.
-  const storeNewsFeed = storeNewsTicker({
-    storeId: () => storeId,
-    busy: () => building() || busy || document.hidden,
-    load: async id => {
-      const [finances, orders, products, carts] = await Promise.all([
-        api.storeFinances(id), api.storeOrders(id), api.storeProducts(id), api.abandonedCarts(id).catch(() => null),
-      ]);
-      return { finances, orders, products, carts };
-    },
-    show: item => narratorWindow.notice(item.title, item.line),
-    storage: (() => { try { return window.localStorage; } catch { return null; } })(),
-  });
-  storeNewsFeed.start();
+  // Owner 2026-10-27: no store news in a little YAPI window over the store («eliminate this little yapi window»); the figures
+  // live in the dashboard. The window is mounted but never opened.
   const transitionBuild = (event: SourceBuildEvent) => {
     const wasBuilding = buildIsActive(buildSession);
     buildSession = sourceBuildTransition(buildSession, event);
