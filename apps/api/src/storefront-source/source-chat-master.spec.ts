@@ -1,6 +1,6 @@
 import { randomUUID as uuid } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { MASTER_EDIT_RULES, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
+import { MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, OWN_REQUEST_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
 import { sourceRequestContext } from './source-request-context';
 import { sourceMerchantRequest } from './source-merchant-request';
@@ -181,6 +181,39 @@ it('queues one personal touch after a new master store (variety spec §5)', asyn
   expect(out.assistantMessage.content).toContain('toque personal');
 });
 
+// Owner 2026-10-27: the agent redesign rewrote the base and failed 3 of 4; a cheap data-only polish follows the base instead.
+it('with the polish on, a new master store queues one polish carrying the merchant\'s words', async () => {
+  config.set('app.yapiPersonalTouch', false);
+  config.set('app.yapiPeppaRedesign', false);
+  config.set('app.yapiMasterPolish', true);
+  const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+  expect(out.followUp).toMatchObject({ personalTouch: true, polish: true, revision: 1 });
+  expect(out.followUp.instruction.startsWith(MASTER_POLISH_BRIEF)).toBe(true);
+  expect(out.followUp.instruction).toContain('Mi negocio se llama Café Buna.');
+  expect(out.followUp.redesign).toBeUndefined();
+  expect(out.assistantMessage.content).not.toContain('rediseñando');
+});
+
+it('with the polish on, a merchant\'s own wishes ride on the polish, not on the agent (owner 2026-10-27)', async () => {
+  config.set('app.yapiPersonalTouch', false);
+  config.set('app.yapiPeppaRedesign', false);
+  config.set('app.yapiMasterPolish', true);
+  const out = await send('Quiero crear mi tienda desde cero, con una página de recetas.');
+  expect(out.followUp).toMatchObject({ personalTouch: true, polish: true });
+  expect(out.followUp.instruction.startsWith(MASTER_POLISH_BRIEF)).toBe(true);
+  expect(out.followUp.instruction).toContain('página de recetas');
+  expect(out.assistantMessage.content).toContain('pídemelas aquí');
+  expect(out.assistantMessage.content).not.toContain('Ahora estoy aplicando lo que me pediste');
+});
+
+it('the polish never replaces a touch or redesign that is switched on', async () => {
+  config.set('app.yapiPersonalTouch', true);
+  config.set('app.yapiMasterPolish', true);
+  const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+  expect(out.followUp.polish).toBeUndefined();
+  expect(out.followUp.instruction).toBe(PERSONAL_TOUCH_BRIEF);
+});
+
 it('no personal touch when the flag is off', async () => {
   config.set('app.yapiPersonalTouch', false);
   const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
@@ -297,6 +330,53 @@ describe('edits on a master store', () => {
   });
 
   const touch = () => chat.send('m1', 's1', { revision: 2, instruction: PERSONAL_TOUCH_BRIEF, personalTouch: true, requestId: uuid() }) as Promise<any>;
+
+  const polish = (revision = 2) => chat.send('m1', 's1', { revision, instruction: `${MASTER_POLISH_BRIEF}\n\nMensaje del comercio:\nCafé de altura`, personalTouch: true, polish: true, requestId: uuid() } as any) as Promise<any>;
+  const read = (extra: Record<string, unknown>) => ({ changed: [], values: [], palette: 'oscuro', fonts: 'moderna', colors: { accent: '#ff0000' }, heroPhoto: -1, storyPhoto: -1, ...extra });
+
+  it('a polish refills words only, from the merchant\'s facts, without the conversation step or the agent', async () => {
+    fillMaster.mockResolvedValueOnce(read({ headline: 'Café de altura, tostado en casa', changed: ['headline', 'palette', 'fonts', 'colors'] }));
+    const out = await polish();
+    expect(decide).not.toHaveBeenCalled();
+    expect(generate).not.toHaveBeenCalled();
+    expect(fillMaster.mock.calls[0][1]).toMatchObject({ what: 'Café de especialidad', story: 'Tostamos en casa', current: { copy: { headline: 'Hecho con cuidado' } } });
+    expect(fillMaster.mock.calls[0][1].request).toContain('Café de altura');
+    // The look, the variants and the menu are the base's: a polish changes words and photo choices only.
+    expect(refill).toHaveBeenCalledWith('m1', 's1', 2, { copy: { headline: 'Café de altura, tostado en casa' } }, expect.any(String));
+    expect(out.revision).toMatchObject({ revision: 3 });
+    expect(messages.find(message => message.role === 'USER')?.content).toBe('Toque personal');
+  });
+
+  it('a polish with nothing to change, or a failed fill, keeps the base and says nothing', async () => {
+    fillMaster.mockResolvedValueOnce(read({ changed: ['palette'] }));
+    await expect(polish()).rejects.toBeInstanceOf(PersonalTouchSkipped);
+    fillMaster.mockResolvedValueOnce(null);
+    await expect(polish()).rejects.toBeInstanceOf(PersonalTouchSkipped);
+    expect(refill).not.toHaveBeenCalled();
+    expect(generate).not.toHaveBeenCalled();
+    expect(messages.filter(message => message.role === 'ASSISTANT')).toHaveLength(0);
+  });
+
+  // Gramiyaa 2026-10-27: the polish read named no usable photo and the refill saved none, so the store lost its hero and story.
+  it('a polish never takes a photo away, and never offers a video as a photo', async () => {
+    prisma.mediaAsset.findMany.mockResolvedValueOnce([{ url: 'https://x/clip.mp4' }, { url: 'https://x/b.jpg' }]);
+    fillMaster.mockResolvedValueOnce(read({ headline: 'Café de altura', changed: ['headline', 'heroPhoto', 'storyPhoto'], heroPhoto: -1, storyPhoto: 9 }));
+    await polish();
+    expect(fillMaster.mock.calls[0][1].photos).toEqual(['https://x/h.jpg', 'https://x/b.jpg']);
+    expect(refill).toHaveBeenCalledWith('m1', 's1', 2, { copy: { headline: 'Café de altura' } }, expect.any(String));
+    refill.mockClear();
+    fillMaster.mockResolvedValueOnce(read({ changed: ['storyPhoto'], storyPhoto: 0 }));
+    await polish();
+    expect(refill).toHaveBeenCalledWith('m1', 's1', 2, { storyPhoto: 'https://x/h.jpg' }, expect.any(String));
+  });
+
+  it('a polish is skipped when the store moved on or left Esencial', async () => {
+    await expect(polish(1)).rejects.toBeInstanceOf(PersonalTouchSkipped);
+    homeTsx = 'export default function Home() { return <main />; }';
+    await expect(polish()).rejects.toBeInstanceOf(PersonalTouchSkipped);
+    expect(fillMaster).not.toHaveBeenCalled();
+    expect(generate).not.toHaveBeenCalled();
+  });
 
   it('a personal touch runs as a design edit with the touch brief, without the conversation step', async () => {
     generate.mockResolvedValueOnce({ revision: 3, label: 'Toque personal' });

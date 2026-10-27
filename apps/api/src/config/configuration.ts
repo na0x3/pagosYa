@@ -112,6 +112,9 @@ export interface AppConfig {
   /** The PEPPA recipe (owner 2026-10-23): after the template, YAPI writes a rich brief and redesigns the new store freely with
    *  expressive motion, as PEPPA please was made on 2026-10-20. Default on; YAPI_PEPPA_REDESIGN=off keeps the add-on follow-up. */
   yapiPeppaRedesign: boolean;
+  /** Owner 2026-10-27 (ported to Oct-24): after a new master store, one data-only polish (words and photo choices) instead of
+   *  the agent redesign. Default off; YAPI_MASTER_POLISH=1 turns it on. */
+  yapiMasterPolish: boolean;
   /** Starters (spec 2026-10-24): a new store starts from the finished store closest to the business (PEPPA, BOXY, NOA…), and
    *  «Probar otro estilo» swaps it while the store is still on its first build. Default off; YAPI_STARTERS=on enables. */
   yapiStarters: boolean;
@@ -476,6 +479,7 @@ export default (): { app: AppConfig } => {
     yapiEsencialDice: process.env.YAPI_ESENCIAL_DICE !== 'off',
     yapiPersonalTouch: process.env.YAPI_PERSONAL_TOUCH !== 'off',
     yapiPeppaRedesign: process.env.YAPI_PEPPA_REDESIGN !== 'off',
+    yapiMasterPolish: process.env.YAPI_MASTER_POLISH === '1',
     yapiStarters: process.env.YAPI_STARTERS === 'on',
     yapiPlanCard: process.env.YAPI_PLAN_CARD !== 'off',
     yapiFreeFirst: process.env.YAPI_FREE_FIRST === 'on',

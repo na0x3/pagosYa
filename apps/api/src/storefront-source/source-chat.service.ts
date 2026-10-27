@@ -87,6 +87,14 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
 /** Variety spec §5: the brief of the background personal touch that follows a new master store. Owner 2026-10-22 (NOA #3,
  *  «i dont like sections like these»): what it adds carries a real photo on the store's light ground, never a dark text-only band. */
 export const PERSONAL_TOUCH_BRIEF = 'Toque personal para este negocio: agrega UNA sección que las variantes no tienen y que nazca de sus datos reales (por ejemplo «Lo que nos hace distintos» o una guía breve de uso), con una foto real de la tienda junto al texto y sobre el fondo claro de la tienda: nunca una banda oscura o negra solo de texto, ni filas de columnas de texto sueltas; UN detalle de firma pequeño dentro de una sección que ya existe (un sello con la ciudad o la idea del negocio, un subrayado dibujado en el titular o un separador propio) y, si una sección suena genérica, reescribe solo esa. No quites secciones, no cambies la estructura de store-data, no inventes datos, precios ni reseñas, no toques carrito ni pago.';
+/** Owner 2026-10-27: the polish after a new master store — one fill call that may change words and photo choices only. */
+export const MASTER_POLISH_BRIEF = 'Pulido automático de la tienda recién creada desde la plantilla. Conserva paleta, fuentes, variantes, menú y estructura. '
+  + 'Revisa cada texto y reescribe solo los que suenan genéricos, repetidos o de relleno («una propuesta minimalista», «hecho con cuidado», '
+  + 'la misma frase en dos secciones) con las palabras, productos, ciudad y datos reales del comercio; cada sección dice algo distinto. '
+  + 'Si el comercio escribió un eslogan o frases suyas, úsalas tal cual. Elige para la portada y la historia dos fotos distintas que muestren '
+  + 'su producto o su negocio. No inventes datos, precios, reseñas ni premios.';
+/** Owner 2026-10-27: what a polish may change; the look, variants and menu stay the base's. */
+const POLISH_FIELDS: ReadonlyArray<keyof MasterFill> = ['copy', 'heroPhoto', 'storyPhoto', 'photoSources', 'sections', 'featureCopy'];
 
 /** Owner 2026-10-22: «siempre tiene que ser desde la plantilla, yapi desde cero siempre falla». A merchant who asked for their own
  *  design, their own pages or «sin plantilla» still starts from Esencial; this follow-up then does what they asked, on top of it. */
@@ -336,8 +344,10 @@ export class SourceChatService {
     // Variety spec §5: one background personal touch per new master store. The reply carries it; the job runner queues it
     // once this request's job is closed (a store has one active job at a time).
     // The merchant's own request (pages, their own look) rides on the follow-up whatever the personal-touch switch says.
-    const planBrief = planned ? this.plans?.followUpBrief(planned.plan) ?? null : null;
-    const touching = this.config.get<boolean>('app.yapiPersonalTouch') === true || Boolean(merchantRequest) || Boolean(planBrief);
+    // Owner 2026-10-27: with the polish on, the merchant's wishes and the plan ride on it, not on the agent that rewrote the base.
+    const polishing = this.config.get<boolean>('app.yapiMasterPolish') === true;
+    const planBrief = planned && !polishing ? this.plans?.followUpBrief(planned.plan) ?? null : null;
+    const touching = this.config.get<boolean>('app.yapiPersonalTouch') === true || (Boolean(merchantRequest) && !polishing) || Boolean(planBrief);
     // Owner 2026-10-23, «the model that made PEPPA please back»: PEPPA's second step was a full redesign with expressive motion
     // from a rich brief (feel, every section, colours from the labels, copy in the brand's voice), never a minimal template edit.
     const written = this.config.get<boolean>('app.yapiPeppaRedesign') === false ? null : await Promise.resolve(this.dialogue.redesignBrief?.(merchantId, {
@@ -350,10 +360,12 @@ export class SourceChatService {
     const withAssets = attached.length ? { assetUrls: attached } : {};
     const followUp: SourceMessageInput | undefined = written ? { instruction: merchantRequest ? `${written}\n\nMensajes del comercio:\n${merchantRequest}` : written, revision: saved.revision, personalTouch: true, ownRequest: true, redesign: true, motion: 'expressive', requestId: randomUUID(), model: 'auto', ...withAssets }
       : planBrief ? { instruction: merchantRequest ? `${planBrief}\n\nMensajes del comercio:\n${merchantRequest}` : planBrief, revision: saved.revision, personalTouch: true, ownRequest: true, requestId: randomUUID(), model: 'auto', ...withAssets }
-      : touching ? { instruction: merchantRequest ? `${OWN_REQUEST_BRIEF}\n\nMensajes del comercio:\n${merchantRequest}` : PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, ...(merchantRequest ? { ownRequest: true } : {}), requestId: randomUUID(), model: 'auto', ...withAssets } : undefined;
+      : touching ? { instruction: merchantRequest ? `${OWN_REQUEST_BRIEF}\n\nMensajes del comercio:\n${merchantRequest}` : PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, ...(merchantRequest ? { ownRequest: true } : {}), requestId: randomUUID(), model: 'auto', ...withAssets }
+      // Owner 2026-10-27: no touch or redesign → the cheap data-only polish, with the merchant's first message.
+      : polishing ? { instruction: `${MASTER_POLISH_BRIEF}${userMessage.content.trim() ? `\n\nMensaje del comercio:\n${userMessage.content.trim().slice(0, 3000)}` : ''}`, revision: saved.revision, personalTouch: true, polish: true, requestId: randomUUID(), model: 'auto' } : undefined;
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId, channel: 'source', role: 'ASSISTANT',
-      content: `${planned ? `Esto es lo que hice:\n${planned.plan.card.map(line => `• ${line}`).join('\n')}\n` : ''}${replyPrefix}Tu tienda ${store?.name ?? ''} está lista.${merchantRequest ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : written ? ' Ahora la estoy rediseñando con un estilo propio para tu marca; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
+      content: `${planned ? `Esto es lo que hice:\n${planned.plan.card.map(line => `• ${line}`).join('\n')}\n` : ''}${replyPrefix}Tu tienda ${store?.name ?? ''} está lista.${merchantRequest && touching ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : written ? ' Ahora la estoy rediseñando con un estilo propio para tu marca; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : polishing ? ` Ahora pulo los textos y las fotos con tus palabras; aparecerá en un momento.${merchantRequest ? ' Si pediste páginas o secciones nuevas, pídemelas aquí y las agrego.' : ''}` : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
       metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
     } });
     // Spec 2026-10-19 §2: with no personal touch coming, the cards ride on this reply; otherwise on the touch's.
@@ -477,7 +489,20 @@ export class SourceChatService {
   }
 
   /** Spec 2026-10-19 §3.1: a words/colours/fonts/photos change on a master store — one fill call, data only, seconds. */
-  private async masterContentEdit(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, request: string, revision: number, previous: { snapshot: unknown }) {
+  /** Owner 2026-10-27: the polish after a new master store. The base's content edit with the merchant's facts, keeping only words and
+   *  photo choices; a failed fill or nothing to change keeps the base silently (PersonalTouchSkipped, like a failed touch). */
+  private async masterPolish(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, request: string, revision: number, previous: { snapshot: unknown } | null) {
+    const snapshot = previous?.snapshot as SourceProjectSnapshot | undefined;
+    if (!snapshot || snapshot.brief?.templateId !== MASTER_TEMPLATE_ID || !readsMasterData(snapshot.files)) throw new PersonalTouchSkipped('the store is no longer Esencial');
+    const record = await Promise.resolve(this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true, paymentLinks: { select: { name: true }, take: 12 } } })).catch(() => null);
+    const onboarding = (record?.onboarding ?? {}) as { what?: string; story?: string };
+    const facts = { what: onboarding.what ?? '', story: onboarding.story ?? '', products: (record?.paymentLinks ?? []).map(product => product.name) };
+    const done = await this.masterContentEdit(merchantId, storeId, threadId, userMessage, workflow, request, revision, previous!, { polish: facts });
+    if (!done) throw new PersonalTouchSkipped('nothing to polish');
+    return done;
+  }
+
+  private async masterContentEdit(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, request: string, revision: number, previous: { snapshot: unknown }, options: { polish?: { what: string; story: string; products: string[] } } = {}) {
     const files = (previous.snapshot as SourceProjectSnapshot).files;
     const state = readMasterState(files);
     // Dropdown menu spec 2026-10-21: the fill call sees the store's menu and what it may link.
@@ -487,18 +512,22 @@ export class SourceChatService {
     const menuTargets = storeMenuTargetList(storeMenuContext(liveCatalog ?? readConfigFile(files).data ?? {}, files));
     const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
     const recent = await Promise.resolve(this.prisma.mediaAsset.findMany({ where: { merchantId }, orderBy: { createdAt: 'desc' }, take: 8, select: { url: true } })).catch(() => [] as Array<{ url: string }>);
-    const photos = [...new Set([...Object.values(state.photos).filter(Boolean), ...(recent ?? []).map(asset => asset.url)])].slice(0, 8);
-    const read = await this.dialogue.fillMaster(merchantId, { storeId, storeName: state.store?.name ?? '', what: '', story: '', city: state.store?.city ?? '', products: [], photos,
+    // Photos only: the hero video sits in the same record, and a video chosen as the hero photo draws a broken image.
+    const photos = [...new Set([...Object.values(state.photos), ...(recent ?? []).map(asset => asset.url)])].filter(url => url && !/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url)).slice(0, 8);
+    const read = await this.dialogue.fillMaster(merchantId, { storeId, storeName: state.store?.name ?? '', what: options.polish?.what ?? '', story: options.polish?.story ?? '', city: state.store?.city ?? '', products: options.polish?.products ?? [], photos,
       palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: manifest.master!.sections,
       current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? ''), menu: currentMenu, featureCopy: ((state.features ?? {}) as { copy?: object }).copy ?? {} }, request, menuTargets });
     // The merchant's clear words win over a read that missed them: «quiero un menú desplegable» turns it on, «quita…» off.
     const asked = instructionAsksStoreMenu(request);
-    const filled = read ? masterFillFromRead(read, photos, true) : null;
+    const fullFill = read ? masterFillFromRead(read, photos, true) : null;
+    // A polish keeps the base's look, variants and menu, and never takes a photo away (Gramiyaa 2026-10-27).
+    const filled = fullFill && options.polish ? Object.fromEntries(Object.entries(fullFill).filter(([key, value]) => (POLISH_FIELDS as readonly string[]).includes(key) && !((key === 'heroPhoto' || key === 'storyPhoto') && !value))) as MasterFill : fullFill;
     const contradicts = (style: string | undefined) => asked === true ? !style || style === 'none' : asked === false ? style !== 'none' : false;
     const change: MasterFill | null = !filled || asked === undefined || (filled.menu && !contradicts(filled.menu.style)) ? filled
       : { ...filled, menu: asked ? { style: filled.menu && filled.menu.style !== 'none' ? filled.menu.style : currentMenu?.style ?? 'panel', groups: filled.menu?.groups.length ? filled.menu.groups : currentMenu?.groups ?? [] } : { style: 'none', groups: [] } };
     // Nothing in the data to change: the caller turns the request into a minimal design edit.
     if (change && !Object.keys(change).length) return null;
+    if (!change && options.polish) throw new PersonalTouchSkipped('the polish fill failed');
     if (!change) {
       await workflow.finish('failed');
       const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
@@ -506,10 +535,10 @@ export class SourceChatService {
       return { userMessage, assistantMessage, setup: null };
     }
     await workflow.report('saving');
-    const saved = await this.templates.refill(merchantId, storeId, revision, change, 'Textos y estilo actualizados');
+    const saved = await this.templates.refill(merchantId, storeId, revision, change, options.polish ? 'Pulido de YAPI' : 'Textos y estilo actualizados');
     await workflow.finish('completed');
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
-      content: 'Listo, ya está aplicado. Revisa la vista previa.', metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label } } });
+      content: options.polish ? 'Pulí los textos y las fotos de tu tienda con tus palabras. Revisa la vista previa.' : 'Listo, ya está aplicado. Revisa la vista previa.', metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label } } });
     return { userMessage, assistantMessage, revision: saved };
   }
 
@@ -766,6 +795,7 @@ export class SourceChatService {
     try {
       const budget = this.generation.newBudget(input.maxCredits);
       const previous = current.revision ? await this.projects.version(merchantId, storeId, current.revision) : null;
+      if (input.polish) return await this.masterPolish(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous);
       if (tappedChoice) return await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, tappedChoice, setupDraft, allAssets, current.revision);
       if (previous && input.sitePurpose && input.sitePurpose !== sourceSitePurpose((previous.snapshot as unknown as SourceProjectSnapshot)?.brief) && !sourceRedesignRequested(input.instruction)) {
         throw new BadRequestException('Cambiar el tipo de sitio requiere un rediseño explícito. Las ediciones locales conservan el tipo actual.');

@@ -51,4 +51,5 @@ export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolea
   /** «sigue» after an unfinished request: what the merchant typed, shown in the chat while the kept request runs. */
   resumeWords?: string;
   /** The PEPPA recipe (owner 2026-10-23): the follow-up is a full redesign of the new template store, not a minimal edit. */
-  redesign?: boolean };
+  redesign?: boolean;
+  /** Owner 2026-10-27 (ported to Oct-24): the follow-up is the data-only polish of a new master store. */ polish?: boolean };
