@@ -21,6 +21,8 @@ export type MasterLook = { palette: string; fonts: string; colors: Partial<Recor
 export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null;
   /** Owner 2026-10-25: a video the merchant attached, played as the cover (store-data photos.heroVideo). */
   heroVideo?: string;
+  /** Owner 2026-10-27: the merchant asked for an animated store (source-master-animated.ts). */
+  animated?: boolean;
   /** Variety spec: the business's character, its sections and any variant the merchant named. */
   character?: MasterCharacter; sections?: MasterSection[]; variants?: Partial<MasterVariants>;
   /** The uploads the bundled hero/story photos came from, so product slots holding the same photo can point at the bundle. */

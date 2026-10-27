@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { merchantAsksForPhotoGroup } from './source-media-design';
 import { firstVideo, withHeroVideo } from './source-master-video';
+import { animatedVariants, asksForAnimatedStore } from './source-master-animated';
 import { agentReport as agentReportText } from './agent/agent-label';
 import { closestPreset } from './source-preset-pick';
 import { sourceRequestContext } from './source-request-context';
@@ -345,10 +346,12 @@ export class SourceChatService {
       isFashionStore({ storeName: store?.name ?? '', what: onboarding.what ?? draft.answers?.context ?? '', products: productNames.map((product: { name: string }) => product.name) }));
     let briefPhotos: string[] = [...new Set([...(onboarding.photos ?? []), ...chatPhotos])].slice(0, 8);
     // YAPI plan card (spec 2026-10-22): the fill writes the words for the sections the plan chose.
-    const filler = this.masterFiller(merchantId, storeId, onboarding, draft.answers?.context, chatPhotos,
+    let filler = this.masterFiller(merchantId, storeId, onboarding, draft.answers?.context, chatPhotos,
       planned ? (manifest.master!.sections ?? []).filter(id => planned!.applied.sections.includes(id)) : withoutPhotoGroups(manifest.master!.sections ?? [], askedWords), photos => { briefPhotos = photos; },
       // Owner 2026-10-25 (Gramiyaa): the video the merchant attached plays as the cover, whether the build follows the plan card or not.
       firstVideo(await this.requestAssets(threadId)));
+    // Owner 2026-10-27 (PEPPA please): «animada», «divertida», «con movimiento» make the build itself lively.
+    if (asksForAnimatedStore(askedWords)) { const plain = filler; filler = async facts => { const read = await plain(facts); return read ? { ...read, animated: true } : read; }; }
     // YAPI plan card (spec 2026-10-22): a planned build carries its checked plan and no preset.
     const saved = planned ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned.applied)
       : starter?.kind === 'slots' ? await this.applyPlantilla(merchantId, storeId, starter.id, revision, { about: draft.answers?.context, assetUrls: chatPhotos })
@@ -433,6 +436,16 @@ export class SourceChatService {
     const starters = buildStarters();
     const id = pickStarter({ text, fashion, starters, recent: await recentStarters(this.prisma, merchantId, storeId) });
     return id === MASTER_TEMPLATE_ID ? undefined : starters.find(starter => starter.id === id);
+  }
+
+  /** Owner 2026-10-27 (B): the brief of an on-demand redesign — the store's facts, products and photos, the merchant's words last. */
+  private async redesignOnDemand(merchantId: string, storeId: string, request: string): Promise<string | null> {
+    const store = await Promise.resolve(this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true, paymentLinks: { select: { name: true, imageUrls: true }, take: 12 } } })).catch(() => null);
+    const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string };
+    const products = (store?.paymentLinks ?? []) as Array<{ name: string; imageUrls?: string[] }>;
+    const written = await Promise.resolve(this.dialogue.redesignBrief?.(merchantId, { storeId, storeName: store?.name ?? '', what: onboarding.what ?? '', story: onboarding.story ?? '',
+      products: products.map(product => product.name), photos: [...new Set(products.flatMap(product => product.imageUrls ?? []))].slice(0, 8), plan: [], request })).catch(() => null);
+    return written ? `${written}\n\nMensajes del comercio:\n${request}` : null;
   }
 
   /** The files of the merchant's latest message that had any: the request itself, or the one before a «Construir» tap. */
@@ -552,8 +565,11 @@ export class SourceChatService {
     // A polish keeps the base's look, variants and menu, and never takes a photo away (Gramiyaa 2026-10-27).
     const filled = fullFill && options.polish ? Object.fromEntries(Object.entries(fullFill).filter(([key, value]) => (POLISH_FIELDS as readonly string[]).includes(key) && !((key === 'heroPhoto' || key === 'storyPhoto') && !value))) as MasterFill : fullFill;
     const contradicts = (style: string | undefined) => asked === true ? !style || style === 'none' : asked === false ? style !== 'none' : false;
-    const change: MasterFill | null = !filled || asked === undefined || (filled.menu && !contradicts(filled.menu.style)) ? filled
+    let change: MasterFill | null = !filled || asked === undefined || (filled.menu && !contradicts(filled.menu.style)) ? filled
       : { ...filled, menu: asked ? { style: filled.menu && filled.menu.style !== 'none' ? filled.menu.style : currentMenu?.style ?? 'panel', groups: filled.menu?.groups.length ? filled.menu.groups : currentMenu?.groups ?? [] } : { style: 'none', groups: [] } };
+    // Owner 2026-10-27: «hazla más animada» on a store gives it the lively parts and the playful motion (a polish never does).
+    const lively = !options.polish && asksForAnimatedStore(request) ? animatedVariants(photos.length, manifest.master!.variants) : null;
+    if (lively) change = { ...(change ?? {}), animated: true, variants: { ...(change?.variants ?? {}), ...lively } };
     // Nothing in the data to change: the caller turns the request into a minimal design edit.
     if (change && !Object.keys(change).length) return null;
     if (!change && options.polish) throw new PersonalTouchSkipped('the polish fill failed');
@@ -826,6 +842,13 @@ export class SourceChatService {
       const previous = current.revision ? await this.projects.version(merchantId, storeId, current.revision) : null;
       if (input.polish) return await this.masterPolish(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous);
       if (tappedChoice) return await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, tappedChoice, setupDraft, allAssets, current.revision);
+      // Owner 2026-10-27 (B): the PEPPA please redesign on demand. No longer after every new store ($3–5 each); a merchant who asks to
+      // redesign an Esencial store gets PEPPA's second step — a rich brief from the store's facts and photos, expressive motion.
+      if (previous && !input.personalTouch && !input.redesign && (previous.snapshot as unknown as SourceProjectSnapshot)?.brief?.templateId === MASTER_TEMPLATE_ID
+        && sourceRedesignRequested(input.instruction)) {
+        const written = await this.redesignOnDemand(merchantId, storeId, input.instruction);
+        if (written) input = { ...input, instruction: written, redesign: true, ownRequest: true, motion: 'expressive' };
+      }
       if (previous && input.sitePurpose && input.sitePurpose !== sourceSitePurpose((previous.snapshot as unknown as SourceProjectSnapshot)?.brief) && !sourceRedesignRequested(input.instruction)) {
         throw new BadRequestException('Cambiar el tipo de sitio requiere un rediseño explícito. Las ediciones locales conservan el tipo actual.');
       }
@@ -1065,7 +1088,9 @@ export class SourceChatService {
       const menuWords = masterStore && (menuAsk !== undefined
         || (Boolean(readStoreMenu((previous!.snapshot as unknown as SourceProjectSnapshot).files)) && instructionTouchesStoreMenu(input.instruction)));
       const menuOnly = menuWords && instructionOnlyAboutStoreMenu(input.instruction);
-      if (masterStore && (decision.editKind === 'content' || menuOnly)) {
+      // Owner 2026-10-27: «hazla más animada» is a data change on a master store (lively parts and playful motion), never the agent.
+      const livelyAsk = masterStore && !input.redesign && asksForAnimatedStore(input.instruction) && !sourceRedesignRequested(input.instruction);
+      if (masterStore && (decision.editKind === 'content' || menuOnly || livelyAsk)) {
         const done = await this.masterContentEdit(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous!);
         if (done) return done;
         // Words Esencial has no field for (a heading a design edit added, «Lo que dicen nuestros clientes»): a minimal design edit.

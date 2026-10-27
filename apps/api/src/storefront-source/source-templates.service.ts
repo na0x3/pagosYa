@@ -1,3 +1,4 @@
+import { ANIMATED_DNA, animatedVariants } from './source-master-animated';
 import { Prisma } from '@prisma/client';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import sharp from 'sharp';
@@ -144,6 +145,9 @@ export class SourceTemplatesService {
       if (variants.menu !== undefined) variants.menu = menuVariant(variants.menu, fill?.menu?.style, fill?.character?.kind === 'fashion')!;
       fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), palette: rolled.palette, fonts: rolled.fonts } };
     }
+    // Owner 2026-10-27: an animated store keeps its roll or plan but takes the lively parts and the playful motion.
+    if (fill?.animated && variants) variants = { ...variants, ...animatedVariants(distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]), manifest.master.variants) } as MasterVariants;
+    const dna = fill?.animated ? { ...(plan?.dna ?? {}), ...ANIMATED_DNA } : plan?.dna;
     const brandColours = Object.fromEntries(([['paper', 'background'], ['ink', 'foreground'], ['accent', 'accent'], ['muted', 'surface']] as const)
       .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
     const logo = (presetManifest && !starterManifest) || plan?.accent || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
@@ -164,7 +168,7 @@ export class SourceTemplatesService {
     // Owner 2026-10-24 (the NOA atelier's dropdown menu): the menu style the merchant asked for wins over the starter's preset.
     const askedMenu = starterManifest && fill?.menu?.style ? menuVariant(starterManifest.preset?.variants.menu ?? 'panel', fill.menu.style, fill.character?.kind === 'fashion') : undefined;
     const starterRoll = rolledStarter || askedMenu ? { ...(rolledStarter ?? {}), variants: { ...(rolledStarter?.variants ?? {}), ...(askedMenu ? { menu: askedMenu } : {}) } as Partial<MasterVariants> } : undefined;
-    const { assembled } = await this.assemble(merchantId, storeId, starterManifest?.id ?? presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, files, variants, undefined, plan?.dna, starterRoll);
+    const { assembled } = await this.assemble(merchantId, storeId, starterManifest?.id ?? presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, files, variants, undefined, dna, starterRoll);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.firstBuild(storeId);
     // Variety spec §2b: every product's own page content (highlights, story, faq…), written in the background.

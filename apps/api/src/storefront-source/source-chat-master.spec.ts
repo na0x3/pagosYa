@@ -244,6 +244,28 @@ describe('edits on a master store', () => {
     expect(fillMaster.mock.calls[0][1]).toMatchObject({ request: 'Cambia el título a «Café de altura»', current: { copy: { headline: 'Hecho con cuidado' } } });
   });
 
+  // Owner 2026-10-27: «hazla más animada» is the lively parts and the playful motion through the fill, never the agent.
+  it('an animated-store request on a master store is a data change with the lively parts, even when the decision says design', async () => {
+    decided('design');
+    fillMaster.mockResolvedValueOnce({ changed: [], values: [], palette: 'terracotta', fonts: 'classic', colors: {}, heroPhoto: -1, storyPhoto: -1 });
+    await edit('Hazla más animada y divertida');
+    expect(generate).not.toHaveBeenCalled();
+    expect(refill).toHaveBeenCalledWith('m1', 's1', 2, expect.objectContaining({ animated: true, variants: expect.objectContaining({ announce: 'ticker', bands: 'blocks', card: 'hover2' }) }), expect.any(String));
+  });
+
+  // Owner 2026-10-27 (B): the PEPPA please redesign, only when the merchant asks for it.
+  it('an explicit redesign of a master store runs on a written brief with expressive motion', async () => {
+    const redesignBrief = jest.fn().mockResolvedValue('Rediseña la tienda atrevida y divertida. Sigue esta estructura:\n- Portada con la foto grande');
+    const projects = { current: jest.fn().mockResolvedValue({ revision: 2 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files: [{ path: 'components/store-data.tsx', content: storeData }, { path: 'components/home.tsx', content: homeTsx }] } }) };
+    chat = new SourceChatService(prisma, projects as any, generation(), { decide, fillMaster, redesignBrief } as any, { apply: jest.fn(), applyMaster, refill } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
+    decided('redesign');
+    generate.mockResolvedValueOnce({ revision: 3, label: 'Rediseño' });
+    await edit('Rediseña la tienda con más estilo, que se sienta como mi marca');
+    expect(redesignBrief).toHaveBeenCalledWith('m1', expect.objectContaining({ storeId: 's1', request: 'Rediseña la tienda con más estilo, que se sienta como mi marca' }));
+    expect(generate.mock.calls[0][2]).toMatchObject({ motion: 'expressive' });
+    expect(generate.mock.calls[0][2].instruction).toContain('Rediseña la tienda atrevida y divertida');
+  });
+
   it('a word change Esencial has no field for goes to a design edit instead of a dead end (review fix 8)', async () => {
     decided('content');
     fillMaster.mockResolvedValueOnce({ changed: [], values: [], palette: 'terracotta', fonts: 'classic', colors: {}, heroPhoto: -1, storyPhoto: -1 });
@@ -791,4 +813,14 @@ describe('owner 2026-10-25: a shirt shop gets its sizes on the first build witho
     expect(out.revision).toMatchObject({ revision: 1 });
     expect(out.assistantMessage.content).not.toContain('Agregué las tallas');
   });
+});
+
+// Owner 2026-10-27 (PEPPA please): an animated store is decided by the merchant's words on the first build.
+it('a first build asked to be animated marks the fill animated; a plain one does not', async () => {
+  const reads: any[] = [];
+  applyMaster.mockImplementation(async (_m, _s, _r, filler) => { reads.push(await filler({ storeName: 'Café Buna', products: ['Coroico'], photos: ['https://x/p1.jpg'] })); return { revision: 1, label: 'Plantilla: Esencial' }; });
+  await send('Mi negocio se llama Café Buna.\nQuiero una tienda animada y divertida.\nCrea mi tienda.');
+  expect(reads[0]?.animated).toBe(true);
+  await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+  expect(reads[1]?.animated).toBeUndefined();
 });
