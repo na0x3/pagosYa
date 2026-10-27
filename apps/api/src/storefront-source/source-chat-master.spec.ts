@@ -764,3 +764,31 @@ it('offers the gallery section only when the merchant asks for one or the store 
   expect(withoutPhotoGroups(all, 'Nada de galería, por favor.')).toEqual(['steps', 'faq']);
   expect(withoutPhotoGroups(all, 'Cambia el título', true)).toEqual(all);
 });
+describe('owner 2026-10-25: a shirt shop gets its sizes on the first build without asking', () => {
+  beforeEach(() => {
+    prisma.paymentLink = {
+      findMany: jest.fn().mockResolvedValue([
+        { id: 'p1', name: 'Polera Andina', amount: 12000, variants: [] },
+        { id: 'p2', name: 'Buzo Illimani', amount: 20000, variants: [{ id: 'v', name: 'Única', amount: 20000 }] },
+        { id: 'p3', name: 'Gorra bordada', amount: 6000, variants: [] },
+      ]),
+      update: jest.fn().mockResolvedValue({}),
+    };
+  });
+  it('adds S–XL to a clothing product with no options, leaves products with options or without sizes alone, and says so', async () => {
+    const out = await send('Crea mi tienda.');
+    expect(prisma.paymentLink.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ storeId: 's1', status: 'ACTIVE' }) }));
+    expect(prisma.paymentLink.update).toHaveBeenCalledTimes(1);
+    const { where, data } = prisma.paymentLink.update.mock.calls[0][0];
+    expect(where).toEqual({ id: 'p1' });
+    expect(data.variants.map((v: any) => [v.name, v.amount, v.stock])).toEqual([['S', 12000, null], ['M', 12000, null], ['L', 12000, null], ['XL', 12000, null]]);
+    expect(prisma.paymentLink.update.mock.invocationCallOrder[0]).toBeLessThan(applyMaster.mock.invocationCallOrder[0]);
+    expect(out.assistantMessage.content).toContain('Agregué las tallas de siempre a Polera Andina');
+  });
+  it('a failed write never stops the build, and the reply claims nothing', async () => {
+    prisma.paymentLink.update.mockRejectedValue(new Error('db down'));
+    const out = await send('Crea mi tienda.');
+    expect(out.revision).toMatchObject({ revision: 1 });
+    expect(out.assistantMessage.content).not.toContain('Agregué las tallas');
+  });
+});

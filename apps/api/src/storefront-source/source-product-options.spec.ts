@@ -212,3 +212,13 @@ it("describes subscriptions as pay-link renewals, never automatic charges", () =
   expect(SOURCE_PRODUCT_SUBSCRIPTIONS).toContain("Never claim or imply automatic charging");
   expect(SOURCE_PRODUCT_SUBSCRIPTIONS).not.toContain("customer enrollment, recurring orders and automatic charging are not implemented");
 });
+
+it('a shirt YAPI creates gets the usual sizes without the merchant asking; a candle gets none (owner 2026-10-25)', () => {
+  const [shirt, candle] = requestedSourceProducts([
+    { name: 'Polera Andina', description: '', amount: 12000, currency: 'BOB', priceText: 'Bs 120', imageUrls: [] },
+    { name: 'Vela de soya', description: '', amount: 5000, currency: 'BOB', priceText: 'Bs 50', imageUrls: [] },
+  ], 'Crea los productos Polera Andina Bs 120 y Vela de soya Bs 50', new Set());
+  expect(shirt.variants?.map(v => [v.name, v.amount, v.stock])).toEqual([['S', 12000, null], ['M', 12000, null], ['L', 12000, null], ['XL', 12000, null]]);
+  expect(candle.variants).toBeUndefined();
+  expect(SOURCE_PRODUCT_OPTIONS).toContain('get the usual sizes automatically');
+});

@@ -1,3 +1,4 @@
+import { usualVariants } from './source-usual-options';
 import { requestedSourceVariants, requestedVariantOperations, sourceVariantsSchema, sourceVariantOperationsSchema, sourceOptionRequest, type SourceVariantOperation } from './source-product-options';
 import { requestedSourceSubscriptions, requestedSubscriptionOperations, sourceSubscriptionsSchema, sourceSubscriptionOperationsSchema, sourceSubscriptionRequest } from './source-product-options';
 import type { ProductSubscriptionOptionDto } from '../payment-links/dto/update-product-subscriptions.dto';
@@ -181,7 +182,8 @@ export function requestedSourceProducts(value: unknown, instruction: string, all
     if (!price || Math.round(Number((price[1] || price[2]).replace(',', '.')) * 100) !== item.amount || item.currency !== currency) throw new BadRequestException('Escribe precios claros, por ejemplo «Bs 35» o «USD 12.50».');
     if (!Array.isArray(item.imageUrls) || item.imageUrls.some((url: string) => !allowedImages.has(url))) throw new BadRequestException('Usa únicamente fotos adjuntas de este comercio para los productos.');
     if (typeof item.name !== 'string' || !item.name.trim() || !Number.isSafeInteger(item.amount) || item.amount > 2147483647) throw new BadRequestException('Revisa el nombre y precio del producto.');
-    const variants = requestedSourceVariants(item.variants, current, item.amount, item.currency, allowedImages);
+    // Owner 2026-10-25: a clothing or shoe product gets the usual sizes when the merchant named none.
+    const variants = requestedSourceVariants(item.variants, current, item.amount, item.currency, allowedImages) ?? usualVariants({ name: item.name, amount: item.amount });
     const product = plainToInstance(CreatePaymentLinkDto, { name: item.name, description: item.description, amount: item.amount, currency: item.currency, imageUrls: item.imageUrls, ...(variants ? { variants } : {}) });
     if (validateSync(product, { whitelist: true, forbidNonWhitelisted: true }).length) throw new BadRequestException('Revisa el nombre, descripción y precio del producto.');
     const subscriptionOptions = requestedSourceSubscriptions(item.subscriptionOptions, current);

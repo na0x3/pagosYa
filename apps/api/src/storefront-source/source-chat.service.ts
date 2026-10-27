@@ -66,6 +66,7 @@ import { PRODUCT_SOURCE_USER_AGENT } from './product-source/product-source-rende
 import { cropListingPhoto, parseListingRead } from './product-source/product-screenshot';
 import { MAX_SOURCE_VIDEO_BYTES } from './source-media';
 import { normalizeProductVariants } from '../payment-links/product-variants';
+import { usualOptionsNote, usualVariants } from './source-usual-options';
 import { websiteCopyAsked, websiteCopyWording } from './website-copy/copy-intent';
 import { captureWebsiteBlueprint, measureBuiltHome } from './website-copy/copy-capture';
 import { copyBlueprintPrompt, copyHeaderShape, copyLayoutCheck, copyReplyNote, copyStructureCheck, type WebsiteBlueprint } from './website-copy/copy-blueprint';
@@ -329,6 +330,8 @@ export class SourceChatService {
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true } });
     const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; contact?: { city?: string }; photos?: string[] };
     const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
+    // Owner 2026-10-25: a shop's first build gives its clothing and shoes the usual sizes, before the catalog is read.
+    const sized = revision === 0 ? await this.addUsualOptions(storeId).catch(() => [] as string[]) : [];
     const askedWords = [merchantRequest, userMessage.content, draft.answers?.context].filter(Boolean).join('\n');
     if (planned) planned = { ...planned, applied: { ...planned.applied, sections: withoutPhotoGroups(planned.applied.sections, askedWords) } };
     // Owner 2026-10-22: start from the Plantillas preset closest to the business (its words and product names), not a random roll.
@@ -373,7 +376,7 @@ export class SourceChatService {
       : polishing ? { instruction: `${MASTER_POLISH_BRIEF}${userMessage.content.trim() ? `\n\nMensaje del comercio:\n${userMessage.content.trim().slice(0, 3000)}` : ''}`, revision: saved.revision, personalTouch: true, polish: true, requestId: randomUUID(), model: 'auto' } : undefined;
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId, channel: 'source', role: 'ASSISTANT',
-      content: `${planned ? `Esto es lo que hice:\n${planned.plan.card.map(line => `• ${line}`).join('\n')}\n` : ''}${replyPrefix}Tu tienda ${store?.name ?? ''} está lista.${merchantRequest && touching ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : written ? ' Ahora la estoy rediseñando con un estilo propio para tu marca; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : polishing ? ` Ahora pulo los textos y las fotos con tus palabras; aparecerá en un momento.${merchantRequest ? ' Si pediste páginas o secciones nuevas, pídemelas aquí y las agrego.' : ''}` : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
+      content: `${planned ? `Esto es lo que hice:\n${planned.plan.card.map(line => `• ${line}`).join('\n')}\n` : ''}${replyPrefix}Tu tienda ${store?.name ?? ''} está lista.${sized.length ? ` ${usualOptionsNote(sized)}` : ''}${merchantRequest && touching ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : written ? ' Ahora la estoy rediseñando con un estilo propio para tu marca; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : polishing ? ` Ahora pulo los textos y las fotos con tus palabras; aparecerá en un momento.${merchantRequest ? ' Si pediste páginas o secciones nuevas, pídemelas aquí y las agrego.' : ''}` : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
       metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
     } });
     // Spec 2026-10-19 §2: with no personal touch coming, the cards ride on this reply; otherwise on the touch's.
@@ -494,6 +497,21 @@ export class SourceChatService {
     const brief = [this.plans!.followUpBrief(plan), ...added.map(id => `Agrega a la portada la sección «${id}» de la plantilla Esencial, con el contenido real de esta tienda.`)].filter(Boolean).join('\n') || null;
     const followUp: SourceMessageInput | undefined = brief ? { instruction: brief, revision: saved.revision, personalTouch: true, ownRequest: true, requestId: randomUUID(), model: 'auto' } : undefined;
     return { userMessage, assistantMessage, revision: saved, ...(followUp ? { followUp } : {}) };
+  }
+
+  /** The store's active clothing and shoe products with no options get the usual sizes (source-usual-options.ts); the names
+   *  of the ones that did. A write that fails leaves that product as it was and never stops the build. */
+  private async addUsualOptions(storeId: string): Promise<string[]> {
+    const products = await this.prisma.paymentLink.findMany({ where: { storeId, status: 'ACTIVE' }, select: { id: true, name: true, amount: true, variants: true }, take: 60 });
+    const sized: string[] = [];
+    for (const product of products) {
+      if (Array.isArray(product.variants) && product.variants.length) continue;
+      const usual = usualVariants(product);
+      if (!usual) continue;
+      const saved = await this.prisma.paymentLink.update({ where: { id: product.id }, data: { variants: normalizeProductVariants(usual) as unknown as Prisma.InputJsonValue } }).then(() => true, () => false);
+      if (saved) sized.push(product.name);
+    }
+    return sized;
   }
 
   /** Spec 2026-10-19 §3.1: a words/colours/fonts/photos change on a master store — one fill call, data only, seconds. */
