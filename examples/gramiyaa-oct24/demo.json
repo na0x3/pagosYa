@@ -1,0 +1,40 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvqu9w0h0001zwzkluelju9s",
+  "slug": "2uyzy7ey",
+  "photos": {
+    "2b7b39e506bc08bd324aedd4d422315b.jpg": "/v1/uploads/a78639e6-e637-4f90-b70e-a14dd64562ed.jpg",
+    "9517dd3657ecca843cdea4180834bc79.jpg": "/v1/uploads/96f61c43-19cc-4269-aa14-1e4d2ee19b38.jpg",
+    "75de7bf4f505528f84070f2cd3b83889.jpg": "/v1/uploads/744cd53e-b6b0-44c8-9ed5-0dd9c92b3f84.jpg",
+    "d73dc78e70de1ad13cd2da04dc84b541.jpg": "/v1/uploads/18b39947-fc28-437b-a040-55a87966375e.jpg",
+    "cdd3b0af3f022038e35af7d0b5ad89de.jpg": "/v1/uploads/d1626c5d-bcc8-42e8-8d4c-ed719635c6ad.jpg",
+    "basket.jpg": "/v1/uploads/a80a7354-ed33-472b-8703-a54603b0295d.jpg",
+    "20139e99e9031b8b099e6c878bbbba36.jpg": "/v1/uploads/94bdf57a-38f3-4ca0-aec5-9d2e33eeccf7.jpg",
+    "72560d72e46d293e08b89e4b218ab2d8.jpg": "/v1/uploads/61583050-1e49-48c4-b354-c83b85bb19fc.jpg",
+    "9ae2dfc279d10b92354486d521b90a76.jpg": "/v1/uploads/2ee7e886-a2f6-44c3-9702-49adef430490.jpg",
+    "c0e1a19bc4a78b0321f737f813b7dd07.jpg": "/v1/uploads/d511439e-6326-4ef2-a198-fa0ed0217b46.jpg",
+    "9bd96312acc48db8f38d4c27058c31c2.jpg": "/v1/uploads/30dc2a69-b4df-47ea-928b-e99163616899.jpg",
+    "50e579f381805d31fbe75049452b34ab.jpg": "/v1/uploads/a325ff87-d951-4a6c-93d7-2376d64a0434.jpg",
+    "1881e5c95ce9c0333b2cc2350d09f388.jpg": "/v1/uploads/31510361-e5c8-4c15-a7ba-5a66d462a96b.jpg",
+    "From Klickpin.com- Build these clever launch checklist tips to make your next project easier and prettier with aesthetic touches that photograph b.mp4": "/v1/uploads/c5867653-25b7-4900-be6c-902f04b6810b.mp4",
+    "9da7e7f969fb5c3b60e7288ad783a624_720w.mp4": "/v1/uploads/eb8b81dc-d386-4e64-8785-7c0ee358fd9d.mp4"
+  },
+  "categories": {
+    "Aceites": "cmvqu9wad000xzwzkcmrdg6gp",
+    "Packs": "cmvqu9wai000zzwzk6kg6u7rq"
+  },
+  "products": {
+    "Aceite de maní prensado en madera": "cmvqu9wat0011zwzkw21fly7p",
+    "Aceite de mostaza prensado en madera": "cmvqu9wbk0013zwzks1yheikb",
+    "Aceite de sésamo prensado en madera": "cmvqu9wbp0015zwzkin3dqya3",
+    "Aceite de coco prensado en madera": "cmvqu9wbs0017zwzka64sjf6v",
+    "Pack degustación 4 aceites": "cmvqu9wbw0019zwzkfd2a78pk"
+  },
+  "done": {
+    "settings": true,
+    "subscriptions": true,
+    "promo-codes": true,
+    "recommendations": true,
+    "shipping": true
+  }
+}
