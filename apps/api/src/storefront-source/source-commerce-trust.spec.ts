@@ -28,7 +28,8 @@ const points = (doc: any) => Array.from(doc.querySelectorAll('.pagosya-trust__ca
 
 describe('the kit trust block', () => {
   it('lists only what the store settings make true, keeps the heading, and links contact and returns', async () => {
-    const doc = await open({ checkoutMode: 'payment', shippingPickupEnabled: true, shippingEnabled: false, contactPhone: '+591 7735 5093', policies: { returns: 'Cambios en 7 días.' } });
+    // Pickup is offered only at a place with an address (calm checkout, 2026-10-22).
+    const doc = await open({ checkoutMode: 'payment', shippingPickupEnabled: true, shippingEnabled: false, contactPhone: '+591 7735 5093', policies: { returns: 'Cambios en 7 días.' }, locations: [{ id: 'l1', name: 'Taller', address: 'Calle Sucre 12', pickupEnabled: true }] });
     expect(doc.querySelector('[data-pagosya-trust] h2').textContent).toBe('Compra con tranquilidad');
     expect(points(doc)).toEqual(['🔒Pago seguroProcesado por pagosYa', '🧾Sin sorpresasRevisas tu pedido y el total antes de pagar', '🛍️Retiro en tiendaLo eliges al revisar tu pedido', '↩️Cambios y devolucionesLee la política antes de comprar', '💬Escríbenos por WhatsApp+591 7735 5093']);
     expect(doc.querySelector('a.pagosya-trust__card').getAttribute('href')).toBe('https://wa.me/59177355093');

@@ -4,7 +4,9 @@ import { kitPath } from '@pagosya/storefront-kit';
 const files = ['commerce.js', 'privacy.js', 'retention.js', 'motion.js', 'video.js'].map(name => ({ name, source: readFileSync(kitPath(name), 'utf8') }));
 // Storage prefixes the runtime may touch, each covered by a line of the cookies page (commerce.js, COOKIES_BODY).
 // `funnel` and `analytics` are only cleared by privacy.js when a visitor declines statistics.
-const DISCLOSED = ['cart', 'privacy', 'source-visitor', 'source-visit', 'partner', 'signup-dismissed', 'recovery', 'funnel', 'analytics'];
+const DISCLOSED = ['cart', 'privacy', 'source-visitor', 'source-visit', 'partner', 'signup-dismissed', 'recovery', 'funnel', 'analytics',
+  // retention.js: when the signup popup was last seen or closed, so it is not shown again at once («Ventana de novedades»).
+  'popup'];
 
 describe('the cookies page tells the truth about browser storage', () => {
   it('the runtime writes no cookies', () => {
@@ -20,6 +22,6 @@ describe('the cookies page tells the truth about browser storage', () => {
 
   it('the page mentions each kind of stored data in words', () => {
     const body = readFileSync(kitPath('commerce.js'), 'utf8').match(/const COOKIES_BODY = '([^']*(?:\\'[^']*)*)'/)![1];
-    for (const word of ['carrito', 'privacidad', 'Estadísticas', 'referido', 'Avisos']) expect(body).toContain(word);
+    for (const word of ['carrito', 'privacidad', 'Estadísticas', 'referido', 'Avisos', 'Ventana de novedades']) expect(body).toContain(word);
   });
 });

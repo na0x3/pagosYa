@@ -82,7 +82,7 @@ describe('information pages in the storefront runtime', () => {
   });
 
   it('shows the delivery policy and the places that deliver or allow pickup on the shipping page', async () => {
-    const w = await shop('shipping', { policies: { delivery: 'Entregamos en 48 horas.' }, locations: [{ id: 'l1', name: 'Centro', pickupEnabled: true, deliveryEnabled: true, openingHours: [] }] });
+    const w = await shop('shipping', { policies: { delivery: 'Entregamos en 48 horas.' }, locations: [{ id: 'l1', name: 'Centro', address: 'Calle Sucre 12', pickupEnabled: true, deliveryEnabled: true, openingHours: [] }] });
     expect(mount(w).textContent).toContain('Entregamos en 48 horas.');
     expect(mount(w).textContent).toContain('Retiro en tienda · Entrega a domicilio');
     const none = await shop('shipping', {});
