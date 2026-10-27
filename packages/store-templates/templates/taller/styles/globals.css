@@ -667,4 +667,5 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 /* Newsletter entry in the footer (owner 2026-10-24): a full-width strip under the columns; pagosYa's form takes the email. */
 .es-footer__news{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 32px;margin-top:40px;padding:24px 0;border-top:1px solid color-mix(in srgb,currentColor 18%,transparent)}
 .es-footer__news h2{margin:0;font-size:20px}.es-footer__news p{margin:4px 0 0;opacity:.8}.es-footer__news .es-footer__status:empty{display:none}
+.es-footer__signup{flex:1 1 320px;max-width:460px}
 .es-footer[data-es-footer="column"] .es-footer__news{position:relative;max-width:560px;margin:16px auto 0;padding:24px clamp(28px,4vw,48px);background:var(--es-paper);color:var(--es-ink);border:0}

@@ -78,8 +78,8 @@ test('Esencial and its starters draw the newsletter entry in the footer', () => 
   const { listTemplates, templateSourceFiles } = require('../index.js');
   for (const id of ['esencial', ...listTemplates().filter(m => m.starter && m.extends === 'esencial').map(m => m.id)]) {
     const shell = templateSourceFiles(id).find(file => file.path === 'components/Shell.tsx').content;
+    // Owner 2026-10-25 (4b38eb98): the email is typed in the footer itself; pagosYa's secure dialog takes it from there.
     assert.match(shell, /data-pagosya-subscribe-block/, id);
-    assert.match(shell, /data-pagosya-subscribe-open/, id);
-    assert.doesNotMatch(shell, /<input[^>]*type="email"/, id);
+    assert.match(shell, /data-pagosya-subscribe-inline/, id);
   }
 });
