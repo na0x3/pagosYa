@@ -26,7 +26,10 @@ export default function Home() {
     : rolledStory === 'pair' && (!photos.p1 || photos.p1 === photos.story) ? 'split' : rolledStory === 'timeline' && sentences.length < 2 ? 'note' : rolledStory;
   const values = variant('values', 'numbered');
   const rolledClosing = variant('closing', 'dark');
-  const closing = rolledClosing === 'photo' && !photos.hero ? 'dark' : rolledClosing;
+  // Owner 2026-10-27 (NOA, Dulce Horno): the closing photo is one the page has not shown yet, never the hero again; with none
+  // left the closing is the coloured band.
+  const closingPhoto = unique([photos.p4, photos.p3, photos.p2]).find(src => src !== photos.hero && src !== photos.story);
+  const closing = rolledClosing === 'photo' && !closingPhoto ? 'accent' : rolledClosing;
   const phone: string = store.phone;
   // Colour bands (2026-10-19): cream-on-cream pages read as wireframes; the sections after the catalog sit on coloured bands.
   const bands = variant('bands', 'alternate');
@@ -120,7 +123,7 @@ export default function Home() {
       <FeatureSlot at="closing" />
 
       <section id="cierre" className="es-closing" data-es-closing={closing} aria-labelledby="es-closing-title">
-        {closing === 'photo' ? <img className="es-closing__photo" src={photos.hero} alt="" aria-hidden="true" /> : null}
+        {closing === 'photo' ? <img className="es-closing__photo" src={closingPhoto} alt="" aria-hidden="true" /> : null}
         <Reveal className="es-closing__inner">
           <h2 id="es-closing-title" className="es-h2">{copy.closingLine}</h2>
           <div className="es-actions">

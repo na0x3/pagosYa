@@ -148,3 +148,11 @@ test('a dashed button stays transparent in the hero and every closing band', () 
   assert.match(rule[1], /background:transparent/);
   assert.match(rule[1], /color:inherit/);
 });
+
+// Owner 2026-10-27: the closing banner never repeats the hero photo; with no unused photo it is the coloured band.
+test('the closing photo is never the hero photo', () => {
+  const { templateSourceFiles } = require('../index.js');
+  const home = templateSourceFiles('esencial').find(file => file.path === 'components/home.tsx').content;
+  assert.doesNotMatch(home, /es-closing__photo" src=\{photos\.hero\}/);
+  assert.match(home, /closingPhoto = unique\(\[photos\.p4, photos\.p3, photos\.p2\]\)\.find\(src => src !== photos\.hero && src !== photos\.story\)/);
+});

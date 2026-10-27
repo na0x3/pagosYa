@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { merchantAsksForPhotoGroup } from './source-media-design';
 import { agentReport as agentReportText } from './agent/agent-label';
 import { closestPreset } from './source-preset-pick';
 import { sourceRequestContext } from './source-request-context';
@@ -95,6 +96,11 @@ export const MASTER_POLISH_BRIEF = 'Pulido automático de la tienda recién crea
   + 'su producto o su negocio. No inventes datos, precios, reseñas ni premios.';
 /** Owner 2026-10-27: what a polish may change; the look, variants and menu stay the base's. */
 const POLISH_FIELDS: ReadonlyArray<keyof MasterFill> = ['copy', 'heroPhoto', 'storyPhoto', 'photoSources', 'sections', 'featureCopy'];
+/** Owner 2026-10-15 (no photo groups), seen again 2026-10-27 on BOXY, Dulce Horno and PEPPA: Esencial's row of 3–4 photos is
+ *  offered only when the merchant asks for a gallery, or when the store already has one. */
+export function withoutPhotoGroups(sections: readonly string[], words: string, kept = false): string[] {
+  return kept || merchantAsksForPhotoGroup(words) ? [...sections] : sections.filter(id => id !== 'gallery');
+}
 
 /** Owner 2026-10-22: «siempre tiene que ser desde la plantilla, yapi desde cero siempre falla». A merchant who asked for their own
  *  design, their own pages or «sin plantilla» still starts from Esencial; this follow-up then does what they asked, on top of it. */
@@ -323,6 +329,8 @@ export class SourceChatService {
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true } });
     const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; contact?: { city?: string }; photos?: string[] };
     const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
+    const askedWords = [merchantRequest, userMessage.content, draft.answers?.context].filter(Boolean).join('\n');
+    if (planned) planned = { ...planned, applied: { ...planned.applied, sections: withoutPhotoGroups(planned.applied.sections, askedWords) } };
     // Owner 2026-10-22: start from the Plantillas preset closest to the business (its words and product names), not a random roll.
     const productNames = await Promise.resolve(this.prisma.paymentLink?.findMany?.({ where: { storeId }, select: { name: true }, take: 30 })).catch(() => undefined) ?? [];
     const businessWords = [store?.name, onboarding.what, onboarding.story, draft.answers?.context, merchantRequest ?? userMessage.content, ...productNames.map((product: { name: string }) => product.name)].filter(Boolean).join('\n');
@@ -334,7 +342,7 @@ export class SourceChatService {
     let briefPhotos: string[] = [...new Set([...(onboarding.photos ?? []), ...chatPhotos])].slice(0, 8);
     // YAPI plan card (spec 2026-10-22): the fill writes the words for the sections the plan chose.
     const filler = this.masterFiller(merchantId, storeId, onboarding, draft.answers?.context, chatPhotos,
-      planned ? (manifest.master!.sections ?? []).filter(id => planned.applied.sections.includes(id)) : manifest.master!.sections, photos => { briefPhotos = photos; });
+      planned ? (manifest.master!.sections ?? []).filter(id => planned!.applied.sections.includes(id)) : withoutPhotoGroups(manifest.master!.sections ?? [], askedWords), photos => { briefPhotos = photos; });
     // YAPI plan card (spec 2026-10-22): a planned build carries its checked plan and no preset.
     const saved = planned ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned.applied)
       : starter?.kind === 'slots' ? await this.applyPlantilla(merchantId, storeId, starter.id, revision, { about: draft.answers?.context, assetUrls: chatPhotos })
@@ -406,7 +414,7 @@ export class SourceChatService {
       const hero = photos?.heroPhoto ?? upload, story = photos?.storyPhoto ?? second;
       const fashion = isFashionStore({ storeName: facts.storeName, what: onboarding.what ?? '', products: facts.products });
       return { ...words, ...(hero !== undefined ? { heroPhoto: hero } : {}), ...(story !== undefined ? { storyPhoto: story } : {}), character: { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [], kind: fashion ? 'fashion' : 'other' } };
-    } : this.masterFiller(merchantId, storeId, onboarding, undefined, [], manifest.master!.sections);
+    } : this.masterFiller(merchantId, storeId, onboarding, undefined, [], withoutPhotoGroups(manifest.master!.sections ?? [], ''));
     const carried = photos?.files.length ? [photos.files] as const : [] as const;
     if (starter.id !== MASTER_TEMPLATE_ID) return this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, undefined, starter.id, ...carried);
     // Esencial keeps its closest preset, as on a first build.
@@ -515,7 +523,7 @@ export class SourceChatService {
     // Photos only: the hero video sits in the same record, and a video chosen as the hero photo draws a broken image.
     const photos = [...new Set([...Object.values(state.photos), ...(recent ?? []).map(asset => asset.url)])].filter(url => url && !/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url)).slice(0, 8);
     const read = await this.dialogue.fillMaster(merchantId, { storeId, storeName: state.store?.name ?? '', what: options.polish?.what ?? '', story: options.polish?.story ?? '', city: state.store?.city ?? '', products: options.polish?.products ?? [], photos,
-      palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: manifest.master!.sections,
+      palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: withoutPhotoGroups(manifest.master!.sections ?? [], request, (state.sections ?? []).some(section => section.id === 'gallery')),
       current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? ''), menu: currentMenu, featureCopy: ((state.features ?? {}) as { copy?: object }).copy ?? {} }, request, menuTargets });
     // The merchant's clear words win over a read that missed them: «quiero un menú desplegable» turns it on, «quita…» off.
     const asked = instructionAsksStoreMenu(request);

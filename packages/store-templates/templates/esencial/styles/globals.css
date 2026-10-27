@@ -549,6 +549,10 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es[data-es-density="airy"] .es-section{padding-top:128px;padding-bottom:128px}
 .es[data-es-density="compact"] .es-section{padding-top:64px;padding-bottom:64px}
 @media (max-width:760px){.es[data-es-density="airy"] .es-section{padding-top:64px;padding-bottom:64px}.es[data-es-density="compact"] .es-section{padding-top:36px;padding-bottom:36px}}
+/* Owner 2026-10-27 (NOA, BOXY, Dulce Horno): the catalog's padding plus the next section's read as an empty band, worse under a
+   half-full last row of cards; the catalog keeps half its bottom space. */
+.es .es-section:has(> .es-grid){padding-bottom:48px}.es[data-es-density="airy"] .es-section:has(> .es-grid){padding-bottom:64px}.es[data-es-density="compact"] .es-section:has(> .es-grid){padding-bottom:32px}
+@media (max-width:760px){.es .es-section:has(> .es-grid){padding-bottom:24px}.es[data-es-density="airy"] .es-section:has(> .es-grid){padding-bottom:32px}.es[data-es-density="compact"] .es-section:has(> .es-grid){padding-bottom:18px}}
 .es[data-es-texture="none"]{}
 .es[data-es-texture="paper"]{background-color:var(--es-paper);background-image:radial-gradient(color-mix(in srgb,var(--es-ink) 5%,transparent) .6px,transparent .6px);background-size:5px 5px}
 .es[data-es-texture="grain"]{background-color:var(--es-paper);background-image:radial-gradient(color-mix(in srgb,var(--es-ink) 9%,transparent) .7px,transparent .7px),radial-gradient(color-mix(in srgb,var(--es-ink) 6%,transparent) .6px,transparent .6px);background-size:3px 3px,7px 7px;background-position:0 0,1px 2px}

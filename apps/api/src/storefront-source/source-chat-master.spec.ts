@@ -1,6 +1,6 @@
 import { randomUUID as uuid } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, OWN_REQUEST_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
+import { withoutPhotoGroups, MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, OWN_REQUEST_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
 import { sourceRequestContext } from './source-request-context';
 import { sourceMerchantRequest } from './source-merchant-request';
@@ -754,4 +754,13 @@ describe('starters', () => {
     await send('Crea mi tienda.');
     expect(applyMaster.mock.calls[0]).toHaveLength(5);
   });
+});
+
+// Owner 2026-10-15 / 2026-10-27: no row of photos unless the merchant asks for one or the store already has it.
+it('offers the gallery section only when the merchant asks for one or the store has it', () => {
+  const all = ['steps', 'gallery', 'faq'];
+  expect(withoutPhotoGroups(all, 'Crea mi tienda de hoodies.')).toEqual(['steps', 'faq']);
+  expect(withoutPhotoGroups(all, 'Quiero una galería con mis fotos.')).toEqual(all);
+  expect(withoutPhotoGroups(all, 'Nada de galería, por favor.')).toEqual(['steps', 'faq']);
+  expect(withoutPhotoGroups(all, 'Cambia el título', true)).toEqual(all);
 });
