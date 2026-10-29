@@ -34,7 +34,8 @@ test('vitrina is built on Esencial with its own starter-only look and dice', () 
   const vitrina = templateManifest('vitrina');
   const master = templateManifest('esencial').master;
   assert.equal(vitrina.extends, 'esencial');
-  assert.equal(vitrina.hidden, undefined);
+  // Owner 2026-10-29: starters are off; Vitrina stays for stores already built from it.
+  assert.equal(vitrina.hidden, true);
   assert.ok(master.fonts.find(f => f.id === vitrina.preset.fonts).starterOnly);
   assert.ok(master.palettes.find(p => p.id === vitrina.preset.palette).starterOnly);
   assert.ok(vitrina.starter.dice.palettes.every(id => master.palettes.find(p => p.id === id).starterOnly));

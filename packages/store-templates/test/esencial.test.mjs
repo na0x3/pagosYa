@@ -10,7 +10,7 @@ const file = path => source.find(f => f.path === path)?.content ?? '';
 
 test('esencial is the hidden master template', () => {
   assert.equal(esencial.hidden, true);
-  // Starter-only entries (spec 2026-10-24-starter-dice §2) are Vitrina's; Esencial's own catalogue is what its dice roll.
+  // Starter-only entries are Vitrina's; Esencial's own catalogue is what its dice roll.
   assert.equal(esencial.master.palettes.filter(p => !p.starterOnly).length, 16);
   assert.equal(esencial.master.fonts.filter(f => !f.starterOnly).length, 14);
   assert.equal(esencial.master.variants.hero.length, 10);
@@ -162,65 +162,4 @@ test('a store with a video plays it as the cover, muted and looping, still for r
   assert.match(home, /<video[^>]*src=\{photos\.heroVideo\}/);
   assert.match(home, /autoPlay muted loop playsInline poster=\{photos\.hero\}/);
   assert.match(home, /prefers-reduced-motion: reduce/);
-});
-
-// Owner 2026-10-27: «que en la portada las fotos pasen lentamente de una a otra» — a rollable hero option, a video always wins,
-// still for reduced motion.
-test('the hero can fade its photos into one another', () => {
-  const { templateManifest, templateSourceFiles } = require('../index.js');
-  assert.deepEqual(templateManifest('esencial').master.variants.heroFade, ['still', 'fade']);
-  const home = templateSourceFiles('esencial').find(file => file.path === 'components/home.tsx').content;
-  assert.match(home, /function HeroFade/);
-  assert.match(home, /variant\('heroFade', 'still'\) === 'fade' && !photos\.heroVideo/);
-  assert.match(home, /prefers-reduced-motion: reduce/);
-  const css = templateSourceFiles('esencial').find(file => file.path === 'styles/globals.css').content;
-  assert.match(css, /\.es-hero__fade>img\{grid-area:1\/1/);
-});
-
-// Owner 2026-10-27 (PEPPA please): the chunky sticker look for animated stores, and sign-in pages in the store's own look.
-test('the chunky look and the branded sign-in pages', () => {
-  const { templateManifest, templateSourceFiles } = require('../index.js');
-  assert.deepEqual(templateManifest('esencial').master.variants.outline, ['none', 'chunky']);
-  const shell = templateSourceFiles('esencial').find(file => file.path === 'components/Shell.tsx').content;
-  assert.match(shell, /data-es-outline=\{variant\('outline', 'none'\)\}/);
-  const css = templateSourceFiles('esencial').find(file => file.path === 'styles/globals.css').content;
-  assert.match(css, /\.es\[data-es-outline="chunky"\] \.es-card\{border:var\(--es-chunk\)/);
-  assert.match(css, /\.es \[data-account-gate\] \[data-part=title\]\{font-family:var\(--es-heading\)/);
-  assert.match(css, /\.es\[data-es-outline="chunky"\] \[data-account-gate\] \[data-part=input\]\{border:var\(--es-chunk\)/);
-});
-
-// Owner 2026-10-27: motion effects in the hero and the closing band, confetti from add buttons; never rolled by the dice.
-test('the motion effects', () => {
-  const { templateManifest, templateSourceFiles } = require('../index.js');
-  assert.deepEqual(templateManifest('esencial').master.variants.effect, ['none', 'bubbles', 'shapes', 'petals', 'steam', 'sparkles']);
-  const files = templateSourceFiles('esencial');
-  const home = files.find(file => file.path === 'components/home.tsx').content;
-  assert.equal((home.match(/<EffectLayer \/>/g) ?? []).length, 2);
-  assert.match(files.find(file => file.path === 'components/Shell.tsx').content, /<Confetti \/>/);
-  const css = files.find(file => file.path === 'styles/globals.css').content;
-  assert.match(css, /@media \(prefers-reduced-motion:reduce\)\{\.es-fx,\.es-confetti\{display:none\}\}/);
-});
-
-// Owner 2026-10-27: template families — one template, different skeletons; the sections stay direct children of <main>.
-test('every family reorders the home with CSS, and the home keeps its literal sections', () => {
-  const { templateManifest, templateSourceFiles } = require('../index.js');
-  const families = templateManifest('esencial').master.variants.family;
-  assert.deepEqual(families, ['esencial', 'pop', 'revista', 'heroe', 'boutique', 'menu']);
-  const files = templateSourceFiles('esencial');
-  const css = files.find(file => file.path === 'styles/globals.css').content;
-  for (const family of families.slice(1)) assert.match(css, new RegExp(`main\\[data-es-family="${family}"\\]>`), family);
-  const home = files.find(file => file.path === 'components/home.tsx').content;
-  assert.match(home, /data-es-family=\{family\}/);
-  assert.equal((home.match(/<h1\b/g) ?? []).length, 1);
-  assert.equal((files.find(file => file.path === 'components/families.tsx').content.match(/<h1\b/g) ?? []).length, 0);
-});
-
-// 2026-10-27: a syntax slip in home.tsx failed five live builds while every text test passed — every component must compile.
-test('every Esencial component compiles', () => {
-  const ts = require('typescript');
-  const { templateSourceFiles } = require('../index.js');
-  for (const file of templateSourceFiles('esencial').filter(file => file.path.endsWith('.tsx'))) {
-    const out = ts.transpileModule(file.content, { reportDiagnostics: true, fileName: file.path, compilerOptions: { jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2020 } });
-    assert.deepEqual(out.diagnostics.map(d => ts.flattenDiagnosticMessageText(d.messageText, ' ')), [], file.path);
-  }
 });

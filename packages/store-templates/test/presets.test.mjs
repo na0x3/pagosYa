@@ -7,7 +7,8 @@ const require = createRequire(import.meta.url);
 const templates = require('../index.js');
 
 // Plantillas presets (owner 2026-10-22): the gallery is now looks of Esencial, one or more per kind of business.
-const presets = () => templates.loadTemplates().filter(entry => entry.manifest.preset);
+// Owner 2026-10-29: hidden skeletons and starters keep their own copied source; the live presets are the ones that read Esencial's.
+const presets = () => templates.loadTemplates().filter(entry => entry.manifest.preset && entry.manifest.hidden !== true);
 
 test('the gallery shows only presets, and the old templates are hidden but still resolve', () => {
   const gallery = templates.galleryTemplates();

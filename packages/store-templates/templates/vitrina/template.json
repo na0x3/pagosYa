@@ -117,5 +117,6 @@
       "role": "product",
       "demo": "p4.jpg"
     }
-  ]
+  ],
+  "hidden": true
 }

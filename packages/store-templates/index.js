@@ -106,7 +106,8 @@ function loadTemplates(root = templatesDir) {
   const entries = readdirSync(root).filter(name => ID.test(name) && statSync(join(root, name)).isDirectory() && existsSync(join(root, name, 'template.json')))
     .map(name => ({ dir: join(root, name), manifest: validate(join(root, name), name) }))
     .sort((a, b) => a.manifest.order - b.manifest.order || a.manifest.id.localeCompare(b.manifest.id));
-  for (const { manifest } of entries) if (manifest.preset) validatePreset(manifest, entries.find(entry => entry.manifest.id === manifest.extends)?.manifest);
+  // Owner 2026-10-29 («esencial only»): skeletons and starters are hidden and built on newer Esencial parts; only live presets are checked.
+  for (const { manifest } of entries) if (manifest.preset && manifest.hidden !== true) validatePreset(manifest, entries.find(entry => entry.manifest.id === manifest.extends)?.manifest);
   return entries;
 }
 
