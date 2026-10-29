@@ -1,8 +1,11 @@
 import "./style.css";
 import "./motion.css";
+import "./studio-dark.css";
 import { fitEmbeddedDialogs } from "./embedded-dialogs";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const params = new URLSearchParams(location.search);
+// Owner 2026-10-29: the dashboard is dark grey; its embedded Studio panels follow (the store preview keeps its own look).
+if (params.get('embedded') === '1' && window.parent !== window) document.documentElement.dataset.theme = 'dark';
 async function mount() {
   if (params.get('library') === 'settings') return (await import('./source-settings-page')).mountSettingsPage(app, params.get('section') as 'brand' | 'shipping' | 'domain');
   if (['marketing','integrations','experiments'].includes(params.get('library') || '')) return (await import('./source-business-workspace')).mountBusinessWorkspace(app);

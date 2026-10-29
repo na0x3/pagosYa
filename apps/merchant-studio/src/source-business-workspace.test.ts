@@ -11,7 +11,7 @@ vi.mock('./api', () => ({ SESSION_STORAGE_KEY: 'test-session', API_BASE_URL: 'ht
         integrationMappings = mocks.mappings;
         saveIntegrationMapping = mocks.saveMapping;
         deleteIntegrationMapping = mocks.deleteMapping;
-        startSourceTest = mocks.start;
+        startSourceTest = mocks.start; recordSourceChecks = vi.fn().mockResolvedValue({});
         finishSourceTest = mocks.finish;
         extensions = mocks.extensions;
         saveExtension = mocks.saveExtension;
@@ -19,7 +19,7 @@ vi.mock('./api', () => ({ SESSION_STORAGE_KEY: 'test-session', API_BASE_URL: 'ht
         removeExtension = mocks.removeExtension;
         sourceVersion = vi.fn().mockResolvedValue({ snapshot: { files: [] } });
     } }));
-vi.mock('./source-checks', () => ({ checkSourceWebsite: mocks.checks, sourceChecksBlockPublishing: (checks: any[]) => checks.some(row => row.status === 'failed') }));
+vi.mock('./source-checks', () => ({ checkSourceWebsite: mocks.checks, sourceCheckResult: (checks: any[]) => checks, sourceChecksBlockPublishing: (checks: any[]) => checks.some(row => row.status === 'failed') }));
 vi.mock('./commerce-platform', () => ({ openCommercePlatform: vi.fn() }));
 vi.mock('./commerce-content', () => ({ openCommerceContent: vi.fn() }));
 vi.mock('./shipping-settings', () => ({ openShippingSettings: vi.fn() }));

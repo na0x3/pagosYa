@@ -10,7 +10,9 @@ describe('personal touch follow-up', () => {
     expect(source).toMatch(/void followBackgroundJob\(storeId, requestId\)/);
   });
   it('it never takes the build lock and reloads only when the merchant is not building', () => {
-    const body = source.slice(source.indexOf('async function followBackgroundJob('), source.indexOf('async function followBackgroundJob(') + 900);
+    // Overnight 2026-10-28: the follow-up search moved into followNextJob; followBackgroundJob only wraps it for the cover.
+    const start = source.indexOf('async function followBackgroundJob(');
+    const body = source.slice(start, source.indexOf('// A request waiting behind another store', start));
     expect(body).not.toContain('transitionBuild');
     expect(body).toContain('building()');
   });
