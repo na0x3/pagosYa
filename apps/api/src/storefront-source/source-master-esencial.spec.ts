@@ -116,10 +116,24 @@ describe('Esencial', () => {
     demo.items = demo.items.map((item: any, index: number) => ({ ...item, categoryId: index % 2 ? 'k2' : 'k1' }));
     const assembled = await assemble(demo, { variants: { ...variants, feature: 'explore' } });
     const data = assembled.files.find((f: any) => f.path === 'components/store-data.tsx')!.content;
-    expect(data).toMatch(/"feature":"explore"/);
+    // Owner 2026-10-29: a first build with two spare photos also gets the duo.
+    expect(data).toMatch(/"feature":"duo,explore"/);
     expect(JSON.parse(data.match(/^export const features: Record<string, any> = (.*);$/m)![1]).explore.categories).toEqual([{ id: 'k1', name: 'Velas' }, { id: 'k2', name: 'Jabones' }]);
     const rolled = await assemble(templateDemoPublicStore(), { variants });
     expect(rolled.files.find((f: any) => f.path === 'components/store-data.tsx')!.content).toMatch(/"feature":"[a-z,]*"/);
+  });
+
+  // Owner 2026-10-29 («full picture hero», «picture | picture»): the plan card picked a words-only cover and story for NOA although
+  // it had the photos, and no duo. A first build with a cover photo shows it, a story photo too, and the duo comes when it can.
+  it('a first build never hides the cover or story photo it has, and always gets the duo when there are two spare photos', async () => {
+    const variants = { ...Object.fromEntries(Object.entries(manifest.master!.variants!).map(([part, ids]) => [part, (ids as string[])[0]])), hero: 'type', story: 'note', feature: 'origin', sections: [] };
+    const assembled = await assemble(templateDemoPublicStore(), { variants });
+    const data = assembled.files.find((f: any) => f.path === 'components/store-data.tsx')!.content;
+    expect(data).toMatch(/"hero":"full"/);
+    expect(data).toMatch(/"story":"split"/);
+    expect(data).toMatch(/"feature":"duo,origin"/);
+    const later = await assemble(templateDemoPublicStore(), { variants, firstRevision: false });
+    expect(later.files.find((f: any) => f.path === 'components/store-data.tsx')!.content).toMatch(/"feature":"origin"/);
   });
 
   it('the John Smedley sections render with real text, the explore chip switches the rail, and phones do not overflow (spec 2026-10-21)', async () => {

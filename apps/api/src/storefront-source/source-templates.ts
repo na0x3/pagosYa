@@ -423,12 +423,21 @@ export async function assembleTemplateRevision(input: {
   const city = (data.locations as Array<{ city?: string | null }> | undefined)?.[0]?.city ?? '';
   // John Smedley sections (spec 2026-10-21): rolled here, where the store's photos are known, unless the dice already did.
   let builtVariants = input.variants ?? (input.fill?.variants as MasterVariants | undefined);
+  // Owner 2026-10-29 («full picture hero»): a first build that has a cover or story photo never shows the words-only cover or story
+  // (the plan card chose both for NOA although it had the photos).
+  if (input.firstRevision && builtVariants) {
+    if (builtVariants.hero === 'type' && photos.hero) builtVariants = Object.assign({}, builtVariants, { hero: 'full' });
+    if (builtVariants.story === 'note' && photos.story) builtVariants = Object.assign({}, builtVariants, { story: 'split' });
+  }
   let features: Record<string, unknown> = {};
   if (settings && builtVariants && (settings.variants?.feature ?? []).length) {
     const facts = featureFacts(data, photos, city);
     const fashion = input.fill?.character?.kind === 'fashion' || builtVariants.cards === 'fashion';
-    const ids = typeof builtVariants.feature === 'string' ? builtVariants.feature.split(',').filter(Boolean)
-      : rollFeatures({ seed: input.storeId, eligible: eligibleFeatures(facts, fashion), fashion, exclude: input.fill?.character?.exclude ?? [] });
+    const eligible = eligibleFeatures(facts, fashion);
+    let ids = typeof builtVariants.feature === 'string' ? builtVariants.feature.split(',').filter(Boolean)
+      : rollFeatures({ seed: input.storeId, eligible, fashion, exclude: input.fill?.character?.exclude ?? [] });
+    // Owner 2026-10-29 («picture | picture»): a first build gets the duo whenever it has two spare photos, whoever chose the list.
+    if (input.firstRevision && eligible.includes('duo') && !ids.includes('duo')) ids = ['duo', ...ids];
     builtVariants = Object.assign({}, builtVariants, { feature: ids.join(',') });
     features = buildFeatures(ids, facts, input.fill?.featureCopy ?? {}, { productsTitle: copy!.productsTitle, storyTitle: copy!.storyTitle, subcopy: copy!.subcopy });
   }
