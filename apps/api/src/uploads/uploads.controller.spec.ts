@@ -18,11 +18,12 @@ describe("UploadsController public assets", () => {
     controller = new UploadsController(uploads, {} as any);
   });
 
-  it("applies a dedicated 600/minute throttle to public reads", () => {
+  // be3da5c7 (2026-10-26): a store page loads dozens of photos at once, so public reads skip the API throttle; production
+  // rate-limits them at the edge (docs/security/2026-10-29-audit.md).
+  it("public reads skip the API throttle", () => {
     const handler = UploadsController.prototype.getFile;
-    expect(Reflect.getMetadata("THROTTLER:SKIPdefault", handler)).not.toBe(true);
-    expect(Reflect.getMetadata("THROTTLER:LIMITdefault", handler)).toBe(600);
-    expect(Reflect.getMetadata("THROTTLER:TTLdefault", handler)).toBe(60_000);
+    expect(Reflect.getMetadata("THROTTLER:SKIPdefault", handler)).toBe(true);
+    expect(Reflect.getMetadata("THROTTLER:SKIPsustained", handler)).toBe(true);
   });
 
   it("keeps authenticated upload writes behind the global rate limit", () => {
