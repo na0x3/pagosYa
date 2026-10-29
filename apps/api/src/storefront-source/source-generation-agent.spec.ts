@@ -55,7 +55,7 @@ describe('generate() with the agent engine', () => {
     expect(JSON.parse((fetchMock.mock.calls[0] as any)[1].body).tools.map((t: any) => t.name)).toContain('screenshot');
     const saved = projects.save.mock.calls[0][2];
     expect(saved.files.find((f: any) => f.path === 'components/home.tsx').content).toContain('Tu calma');
-    expect(saved.label).toBe('Cambié el título principal.');
+    expect(saved.label).toBe('Cambié el título principal'); // agentLabel drops the closing period (agent-label.ts)
     expect(result.agent).toEqual(expect.objectContaining({ summary: 'Cambié el título principal.', sections: ['Portada'] }));
     expect(result.generation.attempts.filter((a: any) => a.phase === 'agent')).toHaveLength(3);
     expect(review).not.toHaveBeenCalled();
