@@ -212,6 +212,14 @@ describe('SourceTemplatesService', () => {
       expect(savedLook(projects).colors).toMatchObject({ paper: '#fbf6ef', ink: '#2a1a12', accent: '#b5651d', muted: '#efe6db' });
     });
 
+    // Owner 2026-10-29 («most lack … brand colors»): an industry preset (most new stores get one) no longer hides the brand's colours.
+    it('a store built from an industry preset still wears its photos\' colours', async () => {
+      const { templates, projects } = build([]);
+      (templates as any).photosPalette = jest.fn(async () => ({ paper: '#fbf6ef', ink: '#2a1a12', accent: '#b5651d', surface: '#efe6db', onAccent: '#ffffff' }));
+      await templates.applyMaster('m1', 'store-1', 0, async () => ({}), 'horno');
+      expect(savedLook(projects).colors).toMatchObject({ paper: '#fbf6ef', ink: '#2a1a12', accent: '#b5651d', muted: '#efe6db' });
+    });
+
     it('hands the brand\'s voice to the filler', async () => {
       const { templates } = build([{ field: 'voice', value: 'Cercana y alegre' }, { field: 'avoid', value: 'Jerga técnica' }]);
       const filler = jest.fn(async () => ({}));

@@ -89,7 +89,8 @@ export class SourceTemplatesService {
     // so every master path (refill, chat edits, menus, sections) keeps working on the store.
     const { manifest, preset, sourceId } = resolvePresetTemplate(chosen, id => this.registry.templateManifest(id));
     if (preset) {
-      fill = withPreset(preset, fill, Boolean(chosen.starter));
+      // Owner 2026-10-29 («most lack … brand colors»): presets are picked for the merchant now, not chosen, so they keep the brand's colours too.
+      fill = withPreset(preset, fill, true);
       variants = variants ? { ...variants, ...preset.variants } as MasterVariants : preset.variants as MasterVariants;
       // Starter dice (spec 2026-10-24-starter-dice): the roll goes over the starter's preset; the preset keeps every other part,
       // and the brand colours (look.colors) stay as withPreset left them.
@@ -161,12 +162,13 @@ export class SourceTemplatesService {
     const dna = plan?.dna;
     const brandColours = Object.fromEntries(([['paper', 'background'], ['ink', 'foreground'], ['accent', 'accent'], ['muted', 'surface']] as const)
       .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
-    const logo = (presetManifest && !starterManifest) || plan?.accent || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
+    // Owner 2026-10-29 («most lack … brand colors»): an industry preset no longer hides the brand's logo, named or photo colours.
+    const logo = plan?.accent || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
     // Owner 2026-10-28 («uniqueness from the brand, not the dice… logo colours»): with no logo, the store's own product photos give the
     // colours — the goods, not the table they sit on — so two stores on one template never share a palette by roll.
     // Owner 2026-10-28: the colours the merchant named («Colores de la marca: rosa pálido, rojo-naranja…») come right after a logo.
-    const named = logo || Object.keys(brandColours).length || plan?.accent || (presetManifest && !starterManifest) ? undefined : paletteFromNamed(fill?.namedColours ?? []);
-    const photosPalette = named || logo || Object.keys(brandColours).length || plan?.accent || (presetManifest && !starterManifest) ? undefined
+    const named = logo || Object.keys(brandColours).length || plan?.accent ? undefined : paletteFromNamed(fill?.namedColours ?? []);
+    const photosPalette = named || logo || Object.keys(brandColours).length || plan?.accent ? undefined
       : await this.photosPalette(merchantId, facts.photos).catch(() => undefined);
     const brandPalette = logo ?? named ?? photosPalette;
     // The whole brand palette on every template now (paper and ink only tinted by the brand's hue, so the page stays calm and readable),

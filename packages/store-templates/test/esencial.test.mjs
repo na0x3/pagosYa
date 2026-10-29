@@ -197,3 +197,11 @@ test('no photo twice on the home: business sections skip the photos the feature 
   assert.match(home, /const pickPhoto = unique\(\[photos\.p1, photos\.p2, photos\.p3, photos\.p4\]\)\.find\(src => !taken\(src\)\)/);
   assert.match(home, /const statementPhoto = unique\(\[photos\.p2, photos\.p4, photos\.p1, photos\.p3\]\)\.find\(src => !taken\(src\) && src !== pickPhoto && src !== notePhoto\)/);
 });
+
+// Owner 2026-10-29 («most lack marquesines moving»): the moving band of the store's values shows on every store that has values,
+// not only when the bands roll «blocks».
+test('the values marquee shows whenever the store has values', () => {
+  const home = file('components/home.tsx');
+  assert.match(home, /\{copy\.values\.length \? <div className=\{hero === 'type' \? 'es-marquee es-marquee--line' : 'es-marquee'\}/);
+  assert.doesNotMatch(home, /bands === 'blocks' && copy\.values\.length \? <div className=\{hero === 'type'/);
+});

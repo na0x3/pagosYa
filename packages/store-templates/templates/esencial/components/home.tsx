@@ -62,7 +62,8 @@ export default function Home() {
         </div>
       </section>
 
-      {bands === 'blocks' && copy.values.length ? <div className={hero === 'type' ? 'es-marquee es-marquee--line' : 'es-marquee'} aria-hidden="true">
+      {/* Owner 2026-10-29 («most lack marquesines moving»): every store with values gets the moving band. */}
+      {copy.values.length ? <div className={hero === 'type' ? 'es-marquee es-marquee--line' : 'es-marquee'} aria-hidden="true">
         <p className="es-marquee__track">{[0, 1].map(round => <span key={round}>{[0, 1, 2].flatMap(copyIndex => copy.values.map(value => <span key={`${copyIndex}-${value.title}`}>{value.title}<i>✦</i></span>))}</span>)}</p>
       </div> : null}
 
