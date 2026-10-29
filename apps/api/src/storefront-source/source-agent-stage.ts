@@ -22,7 +22,7 @@ import { sourceRequestContext } from './source-request-context';
 import { sourceMediaPolicy } from './source-media-design';
 import { reviewSourceComposition } from './source-composition-review';
 import { sourceProvider } from './source-provider';
-import { sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
+import { agentStepModel, sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
 import { instructionConcernsProductCard } from './product-theme';
 import { instructionConcernsKitSurfaces } from './kit-touch';
 import { normalizeAccountTheme } from './account-theme';
@@ -145,19 +145,21 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
     if (execution?.candidate || !toolbox.requirements.length) return;
     await prisma.storeSourceGeneration.updateMany({ where: { id: runId, status: 'RUNNING' }, data: { checkpoint: { key: checkpointKey, ...(live.committedDesign ? { design: live.committedDesign } : {}), ...(requestKey ? { requestKey } : {}), assetUrls, ...(renderablePreview ? { preview: renderablePreview } : {}), ...(!previous ? { base: { brief: previewBase.brief, files: previewBase.files.filter(file => !file.path.startsWith('assets/')) } } : {}), requirements: toolbox.requirements, files: workspace.files(), theme: toolbox.pendingTheme, accountTheme: toolbox.pendingAccountTheme, ...(toolbox.pendingMotifPack !== undefined ? { motifPack: toolbox.pendingMotifPack } : {}), ...(Object.keys(toolbox.pendingPolicies).length ? { policies: toolbox.pendingPolicies } : {}), evidence: toolbox.evidence } as unknown as Prisma.InputJsonValue } });
   };
+  // Spec 2026-10-29 (agent cost): the build steps run on the step model; planning and the composition review keep plan.model.
+  const stepModel = agentProvider ? plan.model : agentStepModel(plan, config.get<string>('app.yapiAgentStepModel'));
   const onTurn = async ({ body, durationMs, status, prefixTokens }: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED'; prefixTokens?: number }) => {
     // The tools this turn asked for, so a slow or failed run can be explained afterwards (OpenAI `output`, Anthropic `content`).
     const tools = [...(Array.isArray(body?.output) ? body.output : []), ...(Array.isArray(body?.content) ? body.content : [])].filter((item: any) => item?.type === 'function_call' || item?.type === 'tool_use').map((item: any) => String(item.name));
-    attempts.push({ model: plan.model, phase: 'agent', durationMs, status, usage: sourceUsage(plan.model, body?.usage), reasoningEffort: plan.reasoningEffort, tools, ...(prefixTokens !== undefined ? { prefixTokens } : {}), ...(typeof body?.status === 'string' ? { responseStatus: body.status } : {}),
+    attempts.push({ model: stepModel, phase: 'agent', durationMs, status, usage: sourceUsage(stepModel, body?.usage), reasoningEffort: plan.reasoningEffort, tools, ...(prefixTokens !== undefined ? { prefixTokens } : {}), ...(typeof body?.status === 'string' ? { responseStatus: body.status } : {}),
       // The provider's own words, for us: the merchant sees only the status and code.
       ...(body?.error ? { failureReason: [body.error.code || body.error.type, body.error.message].filter(part => typeof part === 'string' && part).join(': ').slice(0, 300) } : {}) });
     await prisma.storeSourceGeneration.updateMany({ where:{id:runId,status:'RUNNING'}, data:{attempts:attempts as unknown as Prisma.InputJsonValue} });
-    await metering?.record(storeId, 'source-generation', plan.model, body, durationMs, status);
+    await metering?.record(storeId, 'source-generation', stepModel, body, durationMs, status);
   };
   const agentModel = agentProvider
     ? anthropicAgentModel({ endpoint: agentProvider.endpoint, apiKey: agentProvider.apiKey, model: plan.model, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), signal, onTurn })
     : openAiAgentModel({
-      endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: leanDesign ? 'low' : plan.reasoningEffort, signal,
+      endpoint: provider.endpoint, apiKey, model: stepModel, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: leanDesign ? 'low' : plan.reasoningEffort, signal,
       // Every turn resends the growing transcript; a stable key lets the provider bill that prefix at the cached rate.
       promptCacheKey: sourcePromptCacheKey('agent', stablePrompt, storeId),
       onTurn,

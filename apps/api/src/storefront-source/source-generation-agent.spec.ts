@@ -325,6 +325,21 @@ describe('generate() with the agent engine', () => {
     expect(result.generation.attempts.every((a: any) => a.model === 'claude-sonnet-5')).toBe(true);
   });
 
+  // Spec 2026-10-29 (agent cost): an «auto» request that plans on sol builds on the step model; a named model is kept.
+  it('builds an auto request on the step model and keeps a model the merchant named', async () => {
+    for (const [model, expected] of [['auto', 'gpt-5.6-terra'], ['gpt-5.6-sol', 'gpt-5.6-sol']] as const) {
+      const { service, prisma, brief } = await setup();
+      const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => turn([['list_files', {}]]));
+      await service.generate('m', 's', { ...input(brief), model, instruction: 'Cambia el título y agrega una sección de reseñas' }, new SourceRequestBudget(500)).catch(() => undefined);
+      const agentBodies = fetchMock.mock.calls.map(c => JSON.parse(String((c as any)[1]?.body))).filter(body => Array.isArray(body.tools));
+      expect(agentBodies.length).toBeGreaterThan(0);
+      expect(agentBodies.every(body => body.model === expected)).toBe(true);
+      const attempts = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0].data.attempts).filter(Boolean).at(-1);
+      expect(attempts.filter((a: any) => a.phase === 'agent').every((a: any) => a.model === expected)).toBe(true);
+      jest.restoreAllMocks();
+    }
+  });
+
   it('retains an incomplete private draft and resumes only the matching request', async () => {
     const {service,projects,prisma,brief}=await setup();
     jest.spyOn(globalThis,'fetch')

@@ -135,6 +135,11 @@ export interface AppConfig {
   /** Owner 2026-10-28: the tool-call cap of a new store's first design (it spends the ChatGPT plan quota). 15 was too tight
    *  (overnight 2026-10-29: three designs out of steps before their final check); 30 by default. */
   yapiRedesignToolCalls: number;
+  /** Spec 2026-10-29 (agent cost): the model of the agent's build steps on an «auto» request; design planning and the
+   *  composition review keep the plan's model. Never upgrades a cheaper pick. YAPI_AGENT_STEP_MODEL=gpt-5.6-sol restores sol. */
+  yapiAgentStepModel: string;
+  /** Spec 2026-10-29: tool calls of the one continuation after a run used its steps unfinished; 0 turns it off. */
+  yapiAgentContinueCalls: number;
   /** The capped edit that builds what the check found missing. Off by default (Remolino 2026-10-27: the agent drew giant combo
    *  cards and the layout repair after it emptied the home, $3.58); YAPI_CHECKLIST_FIX=1 turns it on. */
   yapiChecklistFix: boolean;
@@ -513,6 +518,8 @@ export default (): { app: AppConfig } => {
     yapiTouchModel: process.env.YAPI_TOUCH_MODEL || 'gpt-5.6-sol',
     yapiTouchToolCalls: Number(process.env.YAPI_TOUCH_TOOL_CALLS) > 0 ? Math.floor(Number(process.env.YAPI_TOUCH_TOOL_CALLS)) : 14,
     yapiRedesignToolCalls: Number(process.env.YAPI_REDESIGN_TOOL_CALLS) > 0 ? Math.floor(Number(process.env.YAPI_REDESIGN_TOOL_CALLS)) : 30,
+    yapiAgentStepModel: process.env.YAPI_AGENT_STEP_MODEL || 'gpt-5.6-terra',
+    yapiAgentContinueCalls: process.env.YAPI_AGENT_CONTINUE_CALLS?.trim() && Number.isFinite(Number(process.env.YAPI_AGENT_CONTINUE_CALLS)) ? Math.max(0, Math.floor(Number(process.env.YAPI_AGENT_CONTINUE_CALLS))) : 12,
     yapiChecklistFix: process.env.YAPI_CHECKLIST_FIX === '1',
     yapiChecklistModel: process.env.YAPI_CHECKLIST_MODEL || 'gpt-5.6-terra',
     yapiChecklistMaxCredits: Math.max(1, Math.min(500, Number(process.env.YAPI_CHECKLIST_MAX_CREDITS) || 80)),

@@ -1,4 +1,4 @@
-import { sourceConversationModel, sourceGenerationPlan, sourceGenerationEstimate, sourceImageMicroUsd, sourceOutputBudget, sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
+import { agentStepModel, sourceConversationModel, sourceGenerationPlan, sourceGenerationEstimate, sourceImageMicroUsd, sourceOutputBudget, sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { SendSourceMessageDto } from './dto/send-source-message.dto';
@@ -79,4 +79,27 @@ it('routes the observed multi-part dog-food request as substantial work, not a c
 it('routes new independent pages and account changes to a capable model',()=>{
   expect(sourceGenerationPlan('auto',7,'Crea páginas Servicios y Galería y añádelas al menú').model).toBe('gpt-5.6-sol');
   expect(sourceGenerationPlan('auto',7,'Cambia el color del botón del login').model).toBe('gpt-5.6-sol');
+});
+
+// Spec 2026-10-29 (agent cost): the build steps run on a cheaper model; planning and review keep the plan's model.
+describe('agentStepModel', () => {
+  const sol = sourceGenerationPlan('auto', 1, 'Rediseña toda la tienda');
+  it('builds an auto sol plan on terra by default, or on the configured model', () => {
+    expect(sol.model).toBe('gpt-5.6-sol');
+    expect(agentStepModel(sol, undefined)).toBe('gpt-5.6-terra');
+    expect(agentStepModel(sol, 'gpt-5.6-luna')).toBe('gpt-5.6-luna');
+    expect(agentStepModel(sol, 'gpt-5.6-sol')).toBe('gpt-5.6-sol');
+  });
+  it('keeps a named model', () => {
+    expect(agentStepModel(sourceGenerationPlan('gpt-5.6-sol', 1, 'Rediseña toda la tienda'), 'gpt-5.6-terra')).toBe('gpt-5.6-sol');
+  });
+  it('never upgrades a cheaper auto pick', () => {
+    const luna = sourceGenerationPlan('auto', 1, 'Cambia el color del botón');
+    expect(luna.model).toBe('gpt-5.6-luna');
+    expect(agentStepModel(luna, 'gpt-5.6-terra')).toBe('gpt-5.6-luna');
+  });
+  it('ignores an unknown or non-GPT step model', () => {
+    expect(agentStepModel(sol, 'gpt-4o')).toBe('gpt-5.6-terra');
+    expect(agentStepModel(sol, 'claude-sonnet-5')).toBe('gpt-5.6-terra');
+  });
 });

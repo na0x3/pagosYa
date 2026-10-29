@@ -40,6 +40,14 @@ export function sourceGenerationPlan(choice: SourceModelChoice = 'auto', revisio
     reason: choice !== 'auto' ? 'Modelo elegido por ti.' : complex && revision > 0 ? 'Cambio de funcionalidad.' : simple ? 'Ajuste puntual.' : 'Diseño y composición del sitio.' };
 }
 
+/** Spec 2026-10-29 (agent cost): the model of the agent's build steps. Only an «auto» request changes, and only to a
+ *  cheaper GPT model; a named model and a cheaper auto pick are kept. Unknown values fall back to terra. */
+export function agentStepModel(plan: { requestedModel: SourceModelChoice; model: SourceModel }, configured: string | undefined): SourceModel {
+  if (plan.requestedModel !== 'auto') return plan.model;
+  const step: SourceModel = configured?.startsWith('gpt-5.6-') && configured in SOURCE_MODELS ? configured as SourceModel : 'gpt-5.6-terra';
+  return SOURCE_MODELS[step].input < SOURCE_MODELS[plan.model].input ? step : plan.model;
+}
+
 export function sourceUsage(model: SourceModel, raw: any) {
   const integer = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
   if (!integer(raw?.input_tokens) || !integer(raw?.output_tokens)) return null;
