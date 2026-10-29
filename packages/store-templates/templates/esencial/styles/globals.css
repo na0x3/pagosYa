@@ -159,6 +159,8 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
   .es-header[data-es-header="centered"] .es-header__start{justify-self:start}
   .es-header[data-es-header="centered"] .es-logo{position:absolute;left:50%;transform:translateX(-50%);margin:0;max-width:calc(100vw - 420px)}
   .es-header[data-es-header="centered"] .es-header__end{justify-self:end;grid-column:3}
+  /* DooBoo 2026-10-28: the centered logo sits over the middle of the bar, so inline links there would run under it; they stay in the menu. */
+  .es-header[data-es-header="centered"] .es-header__links{display:none}
 }
 .es-header[data-es-header="minimal"] .es-header__end a[href="buscar.html"]{display:none}
 @media (min-width:900px){
@@ -203,13 +205,12 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-explore__photo{width:100%;aspect-ratio:4/5;object-fit:cover}
 .es-explore__main>.es-link{justify-self:start}
 .es-explore__rail[hidden],.es-capsule__cards[hidden]{display:none}
-.es-capsule{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:start}
+.es-capsule{display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);gap:clamp(24px,5vw,64px);align-items:start}
 .es-capsule__media img{width:100%;aspect-ratio:3/4;object-fit:cover}
 @media (min-width:900px){.es-capsule__media{position:sticky;top:96px}}
 .es-capsule__copy{display:grid;gap:24px;justify-items:start}
 .es-capsule__text{margin:0;max-width:46ch;font-size:clamp(17px,1.4vw,20px);line-height:1.6}
-.es-capsule__cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;width:100%;align-items:start}
-@media (min-width:900px){.es-capsule__cards>:nth-child(2){margin-top:56px}.es-capsule__cards>:nth-child(3){margin-top:112px}}
+.es-capsule__cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:20px;width:100%;align-items:start}
 .es-origin{background:var(--es-muted);color:var(--es-ink)}
 .es-origin__figure{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;margin:0}
 .es-origin__figure img{display:block;width:100%;height:clamp(420px,50vw,680px);object-fit:cover;object-position:50% 20%}
@@ -655,3 +656,16 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 
 /* Owner 2026-10-25: the cover video fills the hero like its photo. */
 .es-hero__video{display:block;width:100%;height:100%;object-fit:cover}
+/* Owner 2026-10-27: the sign-in and account pages in the store's own look — its photo beside the form (config.accountTheme split),
+   its fonts, colours, corners and buttons. */
+.es [data-account-gate] [data-part=account]{width:min(1120px,100%);margin:0 auto;padding:clamp(32px,6vw,80px) 24px;gap:clamp(24px,5vw,72px);align-items:center;color:var(--es-ink);box-sizing:border-box}
+.es [data-account-gate] [data-layout=split] [data-part=media] img{aspect-ratio:4/5;height:auto;min-height:0;max-height:680px;border-radius:var(--es-radius,12px)}
+.es [data-account-gate] [data-part=card]{gap:20px;max-width:520px;background:transparent;border:0;padding:0}
+.es [data-account-gate] [data-part=title]{font-family:var(--es-heading);font-size:clamp(36px,4.6vw,60px);line-height:1;letter-spacing:-.02em;color:var(--es-ink)}
+.es [data-account-gate] [data-part=lead]{font:400 18px/1.5 var(--es-body);opacity:.75}
+.es [data-account-gate] [data-part=label]{font:600 12px/1.2 var(--es-body);letter-spacing:.12em;text-transform:uppercase}
+.es [data-account-gate] [data-part=input]{min-height:56px;border:1px solid color-mix(in srgb,var(--es-ink) 35%,transparent);border-radius:var(--es-radius,12px);background:var(--es-paper);color:var(--es-ink);font:16px var(--es-body)}
+.es [data-account-gate] [data-part=input]:focus-visible{outline:2px solid var(--es-accent);outline-offset:2px}
+.es [data-account-gate] [data-part=submit]{min-height:56px;border:0;border-radius:var(--es-button-radius,999px);background:var(--es-accent);color:var(--es-on-accent);font:600 16px var(--es-body)}
+.es [data-account-gate] [data-part=link]{font-weight:600;color:var(--es-ink)}
+.es [data-account-gate] [data-part=notice]{border-radius:var(--es-radius,12px)}

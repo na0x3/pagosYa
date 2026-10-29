@@ -163,3 +163,21 @@ test('a store with a video plays it as the cover, muted and looping, still for r
   assert.match(home, /autoPlay muted loop playsInline poster=\{photos\.hero\}/);
   assert.match(home, /prefers-reduced-motion: reduce/);
 });
+
+// Final review 2026-10-29: fixes made after Oct 22 that the template swap must keep — refills rewrite a built store's sections block
+// from the template, so a lost fix would also reach stores built Oct 27–29.
+test('capsule cards keep a readable width (Oct 27 fix), never three squeezed staggered columns', () => {
+  const css = file('styles/globals.css');
+  assert.match(css, /\.es-capsule__cards\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(210px,1fr\)\)/);
+  assert.doesNotMatch(css, /\.es-capsule__cards>:nth-child\(3\)\{margin-top:112px\}/);
+});
+
+test('a centered header keeps its inline links in the menu, never under the centered logo (DooBoo 2026-10-28)', () => {
+  assert.match(file('styles/globals.css'), /\.es-header\[data-es-header="centered"\] \.es-header__links\{display:none\}/);
+});
+
+test('the sign-in and account pages wear the store\'s fonts and colours (config.accountTheme split)', () => {
+  const css = file('styles/globals.css');
+  assert.match(css, /\.es \[data-account-gate\] \[data-part=title\]\{font-family:var\(--es-heading\)/);
+  assert.match(css, /\.es \[data-account-gate\] \[data-part=submit\]\{[^}]*background:var\(--es-accent\)/);
+});

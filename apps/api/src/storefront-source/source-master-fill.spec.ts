@@ -1,5 +1,6 @@
 import { masterFillFromRead, type MasterRead } from './source-master';
-import { SourceConversationService } from './source-conversation.service';
+import { MASTER_FILL_PROMPT, SourceConversationService } from './source-conversation.service';
+import { templateManifest } from '@pagosya/store-templates';
 
 const read = (over: Partial<MasterRead> = {}): MasterRead => ({ announcement: '', eyebrow: 'Café de altura', headline: 'Café de Coroico', subcopy: 'Tostado cada semana.', primaryCta: 'Ver cafés', secondaryCta: 'Nuestra historia', productsTitle: 'Nuestros cafés', storyTitle: 'De la finca a tu taza', storyBody: 'Cuerpo',
   values: [{ title: 'a', text: 'b' }, { title: 'c', text: 'd' }, { title: 'e', text: 'f' }], closingLine: 'Pide el tuyo', closingCta: 'Ver todo', tagline: '',
@@ -117,5 +118,16 @@ describe('fillMaster', () => {
     const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false, status: 502, json: async () => ({}) } as any);
     expect(await service().fillMaster('m1', input)).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// Final review 2026-10-29: the template went back to Oct 22; an example the fill prompt still gives must name a part and id Esencial
+// offers, or a merchant asking for it gets an unchanged revision and a «listo» reply.
+describe('MASTER_FILL_PROMPT examples', () => {
+  it('every «→ part id» layout example names a variant Esencial offers', () => {
+    const variants = templateManifest('esencial')!.master!.variants as Record<string, readonly string[]>;
+    const examples = [...MASTER_FILL_PROMPT.matchAll(/→ ([a-zA-Z]+) ([a-z0-9-]+)/g)].map(match => [match[1], match[2]] as const);
+    expect(examples.length).toBeGreaterThan(0);
+    for (const [part, id] of examples) expect({ part, id, offered: (variants[part] ?? []).includes(id) }).toEqual({ part, id, offered: true });
   });
 });
