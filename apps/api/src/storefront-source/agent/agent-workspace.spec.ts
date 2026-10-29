@@ -99,3 +99,28 @@ describe('design file budget and delete_file (stress test 2026-10-21)', () => {
     expect(plain.files().map(f => f.path)).toContain('components/Part1.tsx');
   });
 });
+
+describe('a first-design redesign (2026-10-28)', () => {
+  it('cannot write, edit or delete the Shell; it restyles the header and footer from the CSS', () => {
+    const ws = new AgentWorkspace([{ path: 'components/Shell.tsx', content: 'export default 1' }, { path: 'styles/globals.css', content: '.es-header{}' }], { redesign: true, lockedShell: true });
+    expect(ws.write('components/Shell.tsx', 'x')).toMatchObject({ ok: false, reason: 'protected' });
+    expect(ws.edit('components/Shell.tsx', 'export', 'x')).toMatchObject({ ok: false, reason: 'protected' });
+    expect(ws.remove('components/Shell.tsx')).toMatchObject({ ok: false, reason: 'protected' });
+    expect(ws.edit('styles/globals.css', '.es-header{}', '.es-header{color:red}')).toEqual({ ok: true });
+  });
+  // Review fix 2026-10-28 (I4): PEPPA's failure was a home page that stopped rendering <Shell> and drew its own header.
+  it('a page that rendered the Shell keeps rendering it under the lock', () => {
+    const home = "import Shell from './Shell';\nexport default function Home() { return <Shell><h1>Hola</h1></Shell>; }";
+    const ws = new AgentWorkspace([{ path: 'components/home.tsx', content: home }, { path: 'components/Hero.tsx', content: 'export default 1' }], { redesign: true, lockedShell: true });
+    expect(ws.write('components/home.tsx', 'export default function Home() { return <header>Mío</header>; }')).toMatchObject({ ok: false, reason: 'protected' });
+    expect(ws.edit('components/home.tsx', '<Shell><h1>Hola</h1></Shell>', '<main><h1>Hola</h1></main>')).toMatchObject({ ok: false, reason: 'protected' });
+    expect(ws.edit('components/home.tsx', '<h1>Hola</h1>', '<h1>Hola, bienvenida</h1>')).toEqual({ ok: true });
+    expect(ws.write('components/Hero.tsx', 'export default 2')).toEqual({ ok: true });
+    const free = new AgentWorkspace([{ path: 'components/home.tsx', content: home }], { redesign: true });
+    expect(free.write('components/home.tsx', 'export default function Home() { return <header>Mío</header>; }')).toEqual({ ok: true });
+  });
+  it('a later redesign the merchant asks for may still rewrite the Shell', () => {
+    const ws = new AgentWorkspace([{ path: 'components/Shell.tsx', content: 'export default 1' }], { redesign: true });
+    expect(ws.write('components/Shell.tsx', 'export default 2')).toEqual({ ok: true });
+  });
+});

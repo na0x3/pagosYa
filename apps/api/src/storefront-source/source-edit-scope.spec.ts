@@ -1,7 +1,7 @@
 import { nextStoreFiles } from './fixtures/next-store';
 import { sourceSectionScope, validateSourceEditScope, validateSourceArtwork, sourceHomeRegions, sourceDesignAfterSectionEdit, requestsArtwork } from './source-edit-scope';
 
-import { sourceSectionScopePrompt } from './source-edit-scope';
+import { sourceSectionScopePrompt, lostHomeSections, asksToRemoveSections } from './source-edit-scope';
 
 describe('an explicit section selection', () => {
   const withPrep = () => { const files = nextStoreFiles(); files[1].content = files[1].content.replace('</main>', '<section id="preparacion" className="prep"><h2>Preparación</h2></section></main>'); return files; };
@@ -157,5 +157,30 @@ describe('a Boceto store (sketch-born)', () => {
   });
   it('scopes a chat request to the block picked in the Boceto', () => {
     expect(sourceSectionScope(files(), 'Pedido actual del comercio: hazlo más grande', 'skb-faq')).toMatchObject({ targets: ['skb-faq'], selected: 'skb-faq' });
+  });
+});
+
+// Owner 2026-10-27 (Remolino rev 4): a layout repair rewrote the home down to the product grid.
+it('names the home sections a new version lost, and reads a request to remove one', () => {
+  const home = (sections: string) => [{ path: 'components/home.tsx', content: `export default function Home() { return <main>${sections}</main>; }` }];
+  const before = home('<section id="inicio">a</section><section id="catalogo">b</section><section id="club">c</section>');
+  expect(lostHomeSections(before as never, home('<section id="catalogo">b</section>') as never)).toEqual(['inicio', 'club']);
+  expect(lostHomeSections(before as never, before as never)).toEqual([]);
+  expect(asksToRemoveSections('Pedido actual del comercio: quita la sección del club')).toBe(true);
+  expect(asksToRemoveSections('Pedido actual del comercio: agrega combos')).toBe(false);
+});
+
+// ZARA 563cjthm 2026-10-28: a whole redesign was thrown away for dropping one photo.
+describe('a redesign and the store\'s photos (2026-10-28)', () => {
+  const page = (photos: string[]) => [{ path: 'components/home.tsx', content: `export default function Home() { return <main>${photos.map(p => `<img src="assets/${p}.jpg" alt="" />`).join('')}</main>; }` }];
+  const before = page(['a', 'b', 'c', 'd']);
+  it('may move or drop a photo while most of the brand\'s stay', () => {
+    expect(() => validateSourceEditScope(before, page(['a', 'b', 'c']), 'rediseña la tienda', undefined, { redesign: true })).not.toThrow();
+  });
+  it('an ordinary edit still keeps every photo', () => {
+    expect(() => validateSourceEditScope(before, page(['a', 'b', 'c']), 'cambia el color del botón')).toThrow('Se retiró una foto');
+  });
+  it('a redesign that keeps almost none of the brand\'s photos is refused', () => {
+    expect(() => validateSourceEditScope(before, page(['a']), 'rediseña la tienda', undefined, { redesign: true })).toThrow('Un rediseño debe conservar las fotos de tu marca');
   });
 });

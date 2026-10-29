@@ -8,6 +8,10 @@ import { PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SendSourceMessageDto, type SourceMessageInput } from './dto/send-source-message.dto';
 import { sourceRequestContext } from './source-request-context';
 import { MODEL_LIMIT, MODEL_LIMIT_MERCHANT_FAILURE, merchantFacingSourceFailure } from './source-validation-error';
+import { SourceProviderQuotaException } from './source-provider-error';
+/** Spec 2026-10-28 §1: a new store's first design waits out a spent ChatGPT plan — 12 tries, 10 minutes apart — instead of failing. */
+export const FIRST_DESIGN_MAX_ATTEMPTS = 12;
+export const QUOTA_PAUSE_MS = 10 * 60_000;
 import { continuesRequest, pendingRequestIn, unfinishedNote } from './source-unfinished-request';
 
 const LEASE_MS = 45_000;
@@ -29,15 +33,28 @@ const isAbort = (error: unknown) => ['AbortError', 'TimeoutError'].includes((err
 /** Where a waiting request stands: requests running or queued before it, and the running store when it is the merchant's own. */
 export type ChatJobQueue = { ahead: number; runningStore?: string };
 export function chatJobView(job: StoreSourceChatJob, queue?: ChatJobQueue) {
-  return { ...(queue ? { queue } : {}), background: Boolean((job.input as unknown as SourceMessageInput | null)?.personalTouch && !(job.input as unknown as SourceMessageInput).ownRequest), id: job.id, requestId: job.requestId, status: job.status, sequence: job.sequence, progress: job.progress, attempt: job.attempt, result: job.result, error: job.error, lastCommittedRevision: job.lastCommittedRevision, createdAt: job.createdAt, updatedAt: job.updatedAt };
+  const input = job.input as unknown as SourceMessageInput | null;
+  // Spec 2026-10-28 §1: the Studio covers the canvas while a new store's first design is pending or running.
+  const design = { firstDesign: Boolean(input?.firstDesign), designNext: Boolean((job.result as { followUp?: { firstDesign?: boolean } } | null)?.followUp?.firstDesign) };
+  return { ...(queue ? { queue } : {}), ...design, background: Boolean(input?.personalTouch && !input.ownRequest), id: job.id, requestId: job.requestId, status: job.status, sequence: job.sequence, progress: job.progress, attempt: job.attempt, result: job.result, error: job.error, lastCommittedRevision: job.lastCommittedRevision, createdAt: job.createdAt, updatedAt: job.updatedAt };
+}
+/** Review fix 2026-10-28 (I2): a first design that a spent quota would send back to the queue says so to the chat, which then
+ *  writes no failure note for that try; the last try fails out loud. */
+function withQuotaRetry(job: StoreSourceChatJob): SourceMessageInput {
+  const input = job.input as unknown as SourceMessageInput;
+  return input?.firstDesign && job.attempt < FIRST_DESIGN_MAX_ATTEMPTS ? { ...input, quotaRetry: true } : input;
 }
 @Injectable()
 export class SourceChatJobsService implements OnModuleDestroy {
   private busy = false;
+  /** Spec 2026-10-28: when a first design hit a spent quota, the worker rests until then. */
+  private pausedUntil = 0;
   private controller?: AbortController;
   private readonly logger = new Logger(SourceChatJobsService.name);
   constructor(private readonly prisma: PrismaService, private readonly chat: SourceChatService) {}
-  onModuleDestroy() { this.controller?.abort(); }
+  /** The API is shutting down (a deploy, a dev restart): a running first design goes back to the queue instead of ending. */
+  private stopping = false;
+  onModuleDestroy() { this.stopping = true; this.controller?.abort(); }
   private async owner(merchantId: string, storeId: string) {
     if (!await this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { id: true } })) throw new NotFoundException('Tienda no encontrada.');
   }
@@ -132,6 +149,7 @@ export class SourceChatJobsService implements OnModuleDestroy {
     this.busy = true;
     try {
       await this.expire();
+      if (Date.now() < this.pausedUntil) return;
       // A merchant's request goes before any background personal touch (review fix): touches run when nothing else waits.
       const waiting = await this.prisma.storeSourceChatJob.findMany({ where: { status: 'QUEUED' }, orderBy: { createdAt: 'asc' }, take: 25 });
       const queued = waiting.find(candidate => !(candidate.input as { personalTouch?: boolean } | null)?.personalTouch) ?? waiting[0];
@@ -158,8 +176,8 @@ export class SourceChatJobsService implements OnModuleDestroy {
         // The row lock fences cancellation and competing workers in the same transaction as the revision.
         const held = await tx.storeSourceChatJob.updateMany({ where: this.fence(job), data: { lastCommittedRevision: revision, sequence: { increment: 1 } } });
         if (!held.count) throw new ConflictException('Este pedido perdió su turno; el diseño anterior se conserva.');
-      } }, () => this.chat.send(job.merchantId, job.storeId, job.input as unknown as SendSourceMessageDto)
-        .catch(error => { if (error instanceof PersonalTouchSkipped) return { skipped: true as const }; throw error; }));
+      } }, () => this.chat.send(job.merchantId, job.storeId, withQuotaRetry(job))
+        .catch(error => { if (error instanceof PersonalTouchSkipped) return { skipped: true as const, ...(error.followUp ? { followUp: error.followUp } : {}) }; throw error; }));
       const failed = (result as any).assistantMessage?.metadata?.failed || (result as any).assistantMessage?.metadata?.adaptationFailed;
       await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: failed ? 'FAILED' : 'skipped' in result || 'revision' in result && result.revision ? 'COMPLETED' : 'AWAITING_INPUT', result: json(result), activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 } } });
       // Variety spec §5: a reply can carry a follow-up request (the personal touch). A store has one active job at a time,
@@ -171,6 +189,20 @@ export class SourceChatJobsService implements OnModuleDestroy {
       const outcome = generation && ['PARTIAL', 'BLOCKED'].includes(generation.status) ? generation.status : 'FAILED';
       const message = merchantJobError(error);
       const detail = `YAPI job ${job.id} failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`;
+      const input = job.input as unknown as SourceMessageInput | null;
+      if (input?.firstDesign && (message === MODEL_LIMIT_MERCHANT_FAILURE || error instanceof SourceProviderQuotaException) && job.attempt < FIRST_DESIGN_MAX_ATTEMPTS && !controller.signal.aborted) {
+        // The ChatGPT plan ran out mid-design: the merchant keeps «YAPI está diseñando», the store keeps its one active slot, and
+        // every worker rests until the quota may be back (every call would fail the same way meanwhile).
+        this.pausedUntil = Date.now() + QUOTA_PAUSE_MS;
+        this.logger.warn(`first design ${job.id} waits for the model quota (try ${job.attempt} of ${FIRST_DESIGN_MAX_ATTEMPTS})`);
+        await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: 'QUEUED', activeStoreId: job.storeId, leaseToken: null, leaseUntil: null, sequence: { increment: 1 } } });
+        return;
+      }
+      // Live check 2026-10-28 (Remolino): a restart mid-design left the new store on its template; it resumes once the API is back.
+      if (input?.firstDesign && this.stopping && controller.signal.aborted) {
+        const requeued = await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: 'QUEUED', activeStoreId: job.storeId, leaseToken: null, leaseUntil: null, sequence: { increment: 1 } } });
+        if (requeued.count) { this.logger.warn(`first design ${job.id} goes back to the queue: the API is restarting`); return; }
+      }
       // A cancelled or interrupted job is not a fault.
       if (message === null) { if (controller.signal.aborted || isAbort(error)) this.logger.warn(detail); else this.logger.error(detail); }
       const closed = await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: controller.signal.aborted ? 'INTERRUPTED' : outcome, activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 }, error: (message ?? FAILED_JOB_MESSAGE).slice(0, 1000) } }).catch(() => ({ count: 0 }));

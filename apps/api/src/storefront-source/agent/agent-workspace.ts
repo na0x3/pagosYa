@@ -7,6 +7,12 @@ export type AgentEditResult = { ok: true } | { ok: false; reason: 'path' | 'miss
 export const AGENT_READ_ONLY = ['components/store-data.tsx'];
 /** Every store needs these; delete_file never removes them. */
 const AGENT_REQUIRED = ['components/home.tsx', 'components/product.tsx', 'components/checkout.tsx', 'styles/globals.css'];
+/** The template's header and footer (logo, menu, search, account, cart). Spec 2026-10-28 §2: a new store's first redesign
+ *  restyles them from the CSS but never rebuilds them — PEPPA and Remolino lost their menu, search and account that way. */
+export const SHELL_PATH = 'components/Shell.tsx';
+const SHELL_LOCKED: AgentEditResult = { ok: false, reason: 'protected', message: 'El encabezado y el pie de página son de la plataforma (menú, buscador, cuenta, carrito, logo). Cambia su aspecto desde styles/globals.css con sus clases (.es-header, .es-logo, .es-header__links, .es-footer…); no los reescribas.' };
+
+const SHELL_DROPPED: AgentEditResult = { ok: false, reason: 'protected', message: 'Esta página debe seguir dentro de <Shell>: el encabezado y el pie son de la plataforma. Cambia su aspecto desde styles/globals.css, no dibujes otro encabezado.' };
 
 /** The agent's in-memory draft. Nothing here is saved; `files()` hands the result to the save gate. */
 export class AgentWorkspace {
@@ -15,8 +21,10 @@ export class AgentWorkspace {
   version = 0;
   /** rewriteComponents: a store kept on its template may replace whole components (copy, sections) for a new business,
    *  while styles/globals.css, where the template's look lives, still takes only local edits. */
-  constructor(files: SourceProjectFileDto[], private readonly options: { redesign: boolean; rewriteComponents?: boolean }) {
-    for (const file of files) this.map.set(file.path, { ...file });
+  /** Files that rendered the Shell when the run began (review fix 2026-10-28, I4). */
+  private readonly shellUsers = new Set<string>();
+  constructor(files: SourceProjectFileDto[], private readonly options: { redesign: boolean; rewriteComponents?: boolean; lockedShell?: boolean }) {
+    for (const file of files) { this.map.set(file.path, { ...file }); if (/<Shell[\s>]/.test(file.content)) this.shellUsers.add(file.path); }
   }
   list() { return [...this.map.keys()].filter(nextSourceFile); }
   read(path: string) {
@@ -29,6 +37,7 @@ export class AgentWorkspace {
   }
   /** Apply exact replacements in order, committing only when every search is unique. */
   editBatch(path: string, edits: Array<{ search: string; replacement: string }>): AgentEditResult {
+    if (this.shellLocked(path)) return SHELL_LOCKED;
     if (!this.writable(path) || !this.map.has(path)) return { ok: false, reason: 'path', message: `No existe un archivo editable ${path}.` };
     const original = this.map.get(path)!.content;
     let content = original;
@@ -38,11 +47,14 @@ export class AgentWorkspace {
       if (content.indexOf(search, start + 1) !== -1) return { ok: false, reason: 'ambiguous', message: `El texto a reemplazar aparece más de una vez en ${path}; usa un fragmento único.`, excerpt: original.slice(0, 1500) };
       content = content.slice(0, start) + replacement + content.slice(start + search.length);
     }
+    if (this.shellDropped(path, content)) return SHELL_DROPPED;
     this.set(path, content);
     return { ok: true };
   }
   write(path: string, content: string): AgentEditResult {
+    if (this.shellLocked(path)) return SHELL_LOCKED;
     if (!this.writable(path)) return { ok: false, reason: 'path', message: `Solo se pueden escribir componentes y styles/globals.css (no ${path}).` };
+    if (this.shellDropped(path, content)) return SHELL_DROPPED;
     const existing = this.map.get(path);
     const rewritable = this.options.redesign || this.options.rewriteComponents === true && path.startsWith('components/');
     if (existing && !rewritable && sourceLinesKept(existing.content, content) < LOCAL_REWRITE_KEPT_LINES) {
@@ -58,6 +70,7 @@ export class AgentWorkspace {
   }
   /** Removes a component the draft no longer needs. Required files and the platform's standard pages stay. */
   remove(path: string): AgentEditResult {
+    if (this.shellLocked(path)) return SHELL_LOCKED;
     const file = this.map.get(path);
     if (!this.writable(path) || !file) return { ok: false, reason: 'path', message: `No existe un archivo editable ${path}.` };
     if (AGENT_REQUIRED.includes(path) || standardPageRoute(path)) return { ok: false, reason: 'protected', message: `${path} es parte fija de la tienda y no se puede borrar.` };
@@ -77,6 +90,9 @@ export class AgentWorkspace {
   }
   private designFiles() { return [...this.map.values()].filter(file => nextSourceFile(file.path)); }
   changedPaths() { return [...this.changed]; }
+  private shellLocked(path: string) { return this.options.lockedShell === true && path === SHELL_PATH; }
+  /** Under the lock a page that rendered <Shell> keeps it: a header drawn by the page would bypass the platform's. */
+  private shellDropped(path: string, content: string) { return this.options.lockedShell === true && this.shellUsers.has(path) && !/<Shell[\s>]/.test(content); }
   private writable(path: string) { return nextSourceFile(path) && !AGENT_READ_ONLY.includes(path); }
   private set(path: string, content: string) {
     this.map.set(path, { ...(this.map.get(path) || {}), path, content });

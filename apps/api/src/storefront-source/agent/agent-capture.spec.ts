@@ -155,3 +155,31 @@ describe('agent capture', () => {
     expect(shot.evidence[0].passed).toBe(true);
   });
 });
+
+// PEPPA 4hkfxhw9 and Remolino jkdcjgqi 2026-10-28: the first redesign dropped the search, the account link and the menu.
+describe('the template header keeps its parts (2026-10-28)', () => {
+  const header = (css: string, logo = true, extra = '<nav class="es-header__links"><a href="productos.html">Productos</a></nav>') => ({ brief: {}, files: [{ path: 'index.html', content: `<html><head><meta charset="utf-8"><style>.es-header{display:flex;gap:12px;padding:12px}.es-header a,.es-header button{display:inline-block;width:32px;height:32px}.es-logo img{width:80px;height:32px}${css}</style></head><body><header class="es-header"><a class="es-logo" href="index.html">${logo ? '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="Marca">' : 'Marca'}</a>${extra}<a href="buscar.html" aria-label="Buscar">B</a><a data-pagosya-account="login" href="acceso-ingresar.html" aria-label="Cuenta">C</a><button data-cart-open aria-label="Carrito">K</button></header><main><h1>Hola</h1></main></body></html>` }] });
+  it('names a search icon hidden by the CSS', async () => {
+    expect((await captureAgentDraft(header('.es-header a[href$="buscar.html"]{display:none}') as any, 1280)).errors)
+      .toEqual(expect.arrayContaining([expect.stringContaining('Encabezado incompleto: buscador')]));
+  });
+  // Review fix 2026-10-28 (I3): Catálogo hides its search icon at desktop and shows a search form instead.
+  it('takes a visible search form for the search', async () => {
+    const form = '<nav class="es-header__links"><a href="productos.html">Productos</a></nav><form action="buscar.html" role="search"><input name="q" style="width:160px;height:28px"></form>';
+    expect((await captureAgentDraft(header('.es-header a[href$="buscar.html"]{display:none}', true, form) as any, 1280)).errors.filter(e => /Encabezado incompleto/.test(e))).toEqual([]);
+  });
+  // Review fix 2026-10-28 (I4): spec §2 lists the menu; the links, the store menu or the menu button must show.
+  it('names a header with no visible menu, and takes the menu button for it', async () => {
+    expect((await captureAgentDraft(header('.es-header__links{display:none}') as any, 1280)).errors).toEqual(expect.arrayContaining([expect.stringContaining('menú')]));
+    const burger = '<nav class="es-header__links" style="display:none"></nav><button type="button" aria-controls="es-menu" aria-label="Abrir menú">M</button>';
+    expect((await captureAgentDraft(header('', true, burger) as any, 1280)).errors.filter(e => /Encabezado incompleto/.test(e))).toEqual([]);
+    // Maison and Catálogo: their own link rows, marked as the menu the store's menu replaces.
+    const maison = '<div class="at-header__links" data-store-menu-replaces><a href="productos.html">Productos</a></div>';
+    expect((await captureAgentDraft(header('', true, maison) as any, 1280)).errors.filter(e => /Encabezado incompleto/.test(e))).toEqual([]);
+  });
+  it('names a hidden logo, and stays quiet on a whole header or a store without a logo', async () => {
+    expect((await captureAgentDraft(header('.es-logo img{visibility:hidden}') as any, 1280)).errors).toEqual(expect.arrayContaining([expect.stringContaining('logo')]));
+    expect((await captureAgentDraft(header('') as any, 1280)).errors.filter(e => /Encabezado incompleto/.test(e))).toEqual([]);
+    expect((await captureAgentDraft(header('', false) as any, 1280)).errors.filter(e => /Encabezado incompleto/.test(e))).toEqual([]);
+  });
+});

@@ -3,7 +3,7 @@ import * as ts from 'typescript';
 import { templateManifest, type TemplateManifest } from '@pagosya/store-templates';
 import { compileNextPreview } from './source-next';
 import { nextStoreFiles } from './fixtures/next-store';
-import { fillTemplatePhotos, templateDemoAssets, templateStoreDataFile } from './source-templates';
+import { fillTemplatePhotos, templateDemoAssets, templateStoreDataFile, withStoreLogo } from './source-templates';
 
 // These compile real React stores with esbuild; next to the browser contract suite that takes longer than 5 s.
 jest.setTimeout(60_000);
@@ -79,5 +79,23 @@ describe('demo assets', () => {
     const assets = templateDemoAssets(aurora, ['hero', 'ritual']);
     expect(assets.map(a => a.path)).toEqual(['assets/template-aurora-hero.jpg', 'assets/template-aurora-ritual.jpg']);
     expect(assets.every(a => a.encoding === 'base64' && a.content.length > 100)).toBe(true);
+  });
+});
+
+// Review fix 2026-10-28 (I1): the logo the cover pick found after rev 1 reaches the first design's header and footer.
+describe('withStoreLogo', () => {
+  const files = (logo: string) => [templateStoreDataFile({ name: 'Dulce', logo }, { hero: '/h.jpg' }), { path: 'index.html', content: '<p>x</p>' }];
+  const storeLine = (all: Array<{ path: string; content: string }>) => JSON.parse(/^export const store = (.*) as const;$/m.exec(all[0].content)![1]);
+  it('writes the logo into an empty store line and leaves every other line', () => {
+    const before = files('');
+    const after = withStoreLogo(before, 'https://api.test/v1/uploads/logo.png');
+    expect(storeLine(after)).toEqual({ ...storeLine(before), logo: 'https://api.test/v1/uploads/logo.png' });
+    expect(after[0].content.replace(/^export const store = .*$/m, '')).toBe(before[0].content.replace(/^export const store = .*$/m, ''));
+    expect(after[1]).toBe(before[1]);
+  });
+  it('keeps a logo the store already has, and changes nothing without a logo', () => {
+    const before = files('https://api.test/v1/uploads/old.png');
+    expect(withStoreLogo(before, 'https://api.test/v1/uploads/new.png')).toEqual(before);
+    expect(withStoreLogo(files(''), '')).toEqual(files(''));
   });
 });

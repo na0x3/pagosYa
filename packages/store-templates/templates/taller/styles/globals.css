@@ -141,6 +141,8 @@ a{color:inherit}
 .es-footer a{text-decoration:none}
 .es-footer a:hover{text-decoration:underline}
 .es-footer__name{margin:0;font:400 28px/1.1 var(--es-heading)}
+.es-footer__logo{display:inline-block}
+.es-footer__logo img{display:block;max-height:56px;max-width:220px;width:auto;height:auto;object-fit:contain}
 .es-footer__brand p{margin:0}
 .es-footer .pagosya-info-nav{display:grid;gap:10px;margin:0;padding:0;font:inherit}
 .es-footer .pagosya-info-nav a{font:inherit;color:inherit}
@@ -669,3 +671,70 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-footer__news h2{margin:0;font-size:20px}.es-footer__news p{margin:4px 0 0;opacity:.8}.es-footer__news .es-footer__status:empty{display:none}
 .es-footer__signup{flex:1 1 320px;max-width:460px}
 .es-footer[data-es-footer="column"] .es-footer__news{position:relative;max-width:560px;margin:16px auto 0;padding:24px clamp(28px,4vw,48px);background:var(--es-paper);color:var(--es-ink);border:0}
+
+/* ── Store modules (owner 2026-10-27, «things that have to do with each store»): measurements, table, compare, frame, bouquet. ─ */
+.md-module{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(24px,5vw,80px);align-items:start;width:min(1280px,100%);margin:0 auto;padding:clamp(56px,8vw,104px) 24px;box-sizing:border-box}
+.md-module--solo{grid-template-columns:minmax(0,1fr)}
+.md-module__media img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block;border-radius:var(--es-radius,0)}
+.md-kicker{margin:0 0 12px;font:600 12px/1 var(--es-body);letter-spacing:.22em;text-transform:uppercase;color:var(--es-accent)}
+.md-title{margin:0;font-family:var(--es-heading);font-weight:400;font-size:clamp(32px,4vw,56px);line-height:1.05}
+.md-lead{margin:16px 0 28px;max-width:56ch;font-size:17px;line-height:1.6;opacity:.85}
+.md-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px;max-width:760px}
+.md-field{display:grid;gap:8px;font:600 12px/1.2 var(--es-body);letter-spacing:.12em;text-transform:uppercase}
+.md-field small{font:400 13px/1 var(--es-body);letter-spacing:0;text-transform:none;opacity:.7}
+.md-field--wide{grid-column:1/-1}
+.md-field input,.md-field select,.md-field textarea{width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid color-mix(in srgb,var(--es-ink) 22%,transparent);border-radius:calc(var(--es-radius,10px) * .6);background:var(--es-paper);color:var(--es-ink);font:400 16px/1.4 var(--es-body);letter-spacing:0;text-transform:none;outline:none}
+.md-field input:focus,.md-field select:focus,.md-field textarea:focus{border-color:var(--es-ink)}
+.md-send{grid-column:1/-1;justify-self:start;margin-top:6px}
+.md-chips{display:flex;flex-wrap:wrap;gap:8px}
+.md-chip{position:relative;display:inline-flex}
+.md-chip input{position:absolute;opacity:0;pointer-events:none}
+.md-chip span,.md-chip--button{display:inline-grid;place-items:center;min-width:46px;padding:10px 14px;border:1px solid color-mix(in srgb,var(--es-ink) 22%,transparent);border-radius:999px;background:var(--es-paper);color:var(--es-ink);font:600 14px/1 var(--es-body);letter-spacing:0;text-transform:none;cursor:pointer}
+.md-chip input:checked+span,.md-chip--button[aria-pressed="true"]{background:var(--es-ink);border-color:var(--es-ink);color:var(--es-paper)}
+.md-swatches{display:flex;flex-wrap:wrap;gap:10px}
+.md-swatch{width:40px;height:40px;border-radius:50%;border:2px solid var(--es-paper);box-shadow:0 0 0 1px color-mix(in srgb,var(--es-ink) 25%,transparent);cursor:pointer}
+.md-swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--es-ink)}
+.md-compare{display:grid;gap:18px}
+.md-compare__head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,2fr);gap:16px;align-items:end}
+.md-compare__pick{display:grid;gap:10px}
+.md-compare__pick img{width:100%;aspect-ratio:1;object-fit:contain;background:var(--es-muted);border-radius:var(--es-radius,10px)}
+.md-compare__pick select{padding:10px 12px;border:1px solid color-mix(in srgb,var(--es-ink) 22%,transparent);border-radius:8px;background:var(--es-paper);color:var(--es-ink);font:600 15px/1.3 var(--es-body)}
+.md-compare__price{margin:0;font-weight:700}
+.md-compare__table{width:100%;border-collapse:collapse}
+.md-compare__table th,.md-compare__table td{padding:12px 10px;text-align:left;border-bottom:1px solid color-mix(in srgb,var(--es-ink) 12%,transparent);width:33%}
+.md-compare__table tr:nth-child(odd){background:var(--es-muted)}
+.md-frame{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(24px,4vw,56px);align-items:center}
+.md-frame__wall{display:grid;place-items:center;min-height:440px;padding:40px;border-radius:var(--es-radius,10px);background:linear-gradient(180deg,color-mix(in srgb,var(--es-muted) 70%,#fff) 0%,var(--es-muted) 100%)}
+.md-frame__piece{border:18px solid #b98a5a;box-shadow:0 18px 40px rgba(0,0,0,.25),inset 0 0 0 10px #fff;background:#fff;transition:border-color .3s ease,width .3s ease;width:52%}
+.md-frame__piece[data-size="1"]{width:66%}.md-frame__piece[data-size="2"]{width:84%}
+.md-frame__piece img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;padding:10px;box-sizing:border-box;background:#fff}
+.md-frame__controls{display:grid;gap:22px}
+@media (max-width:900px){
+  .md-module,.md-frame{grid-template-columns:minmax(0,1fr);padding-left:16px;padding-right:16px}
+  .md-frame{padding:0}
+  .md-frame__wall{min-height:300px;padding:24px}
+  .md-compare__head{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.md-compare__head>span{display:none}
+  .md-compare__table th{width:30%}
+}
+
+/* ── Motion kit (owner 2026-10-27, «I want motion… not ordinary things»): springs on scroll, words that drop in, tilt, parallax.
+   Only after the script runs (.mo-ready), never for reduced motion. Lively stores (chunky) move more than calm ones. ────────── */
+.mo-words{display:inline}
+.mo-w{display:inline-block}
+.mo-ready .mo-w{animation:mo-word .9s cubic-bezier(.2,1.5,.35,1) both;animation-delay:calc(var(--i) * 75ms + 120ms)}
+@keyframes mo-word{from{opacity:0;transform:translateY(.7em) rotate(4deg)}to{opacity:1;transform:none}}
+.mo-ready [data-mo="rise"]:not([data-mo-in]){opacity:0;translate:0 48px;scale:.97}
+.mo-ready [data-mo="rise"]{transition:opacity .7s ease,translate .95s cubic-bezier(.2,1.35,.35,1),scale .95s cubic-bezier(.2,1.35,.35,1)}
+.mo-ready [data-mo="rise"] [data-mo-item]{transition:opacity .6s ease calc(var(--mo-i,0) * 70ms),translate .85s cubic-bezier(.2,1.45,.35,1) calc(var(--mo-i,0) * 70ms)}
+.mo-ready [data-mo="rise"]:not([data-mo-in]) [data-mo-item]{opacity:0;translate:0 36px}
+.mo-ready [data-mo="tilt"]{transform:perspective(900px) rotateX(var(--mo-rx,0deg)) rotateY(var(--mo-ry,0deg)) scale(1.02);transition:transform .35s cubic-bezier(.2,.9,.3,1.2);will-change:transform}
+.mo-ready [data-mo="parallax"]{translate:0 var(--mo-p,0px);will-change:translate}
+.es:not([data-es-outline="chunky"]) .mo-w{animation-duration:1.1s;animation-timing-function:cubic-bezier(.2,.8,.2,1)}
+.es:not([data-es-outline="chunky"]) [data-mo="rise"]{transition-timing-function:ease,cubic-bezier(.2,.8,.2,1),cubic-bezier(.2,.8,.2,1)}
+@media (prefers-reduced-motion:reduce){.mo-w{animation:none!important}.mo-ready [data-mo]{opacity:1!important;translate:none!important;scale:none!important;transform:none!important}}
+
+/* Photo focus (owner 2026-10-28, «well framed, never stretched»): the cover photo sits on its subject, read from the photo at build. */
+.es[data-hero-focus] #inicio :is(img,video){object-position:50% 50%}
+.es[data-hero-focus="tl"] #inicio :is(img,video){object-position:22% 18%}.es[data-hero-focus="tc"] #inicio :is(img,video){object-position:50% 18%}.es[data-hero-focus="tr"] #inicio :is(img,video){object-position:78% 18%}
+.es[data-hero-focus="cl"] #inicio :is(img,video){object-position:22% 50%}.es[data-hero-focus="cr"] #inicio :is(img,video){object-position:78% 50%}
+.es[data-hero-focus="bl"] #inicio :is(img,video){object-position:22% 82%}.es[data-hero-focus="bc"] #inicio :is(img,video){object-position:50% 82%}.es[data-hero-focus="br"] #inicio :is(img,video){object-position:78% 82%}

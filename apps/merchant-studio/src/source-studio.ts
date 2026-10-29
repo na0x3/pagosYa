@@ -105,6 +105,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let productForm: ReturnType<typeof createProductForm> | null = null;
   let buildProgress: BuildProgress | null = null;
   let buildStatus = '';
+  // Spec 2026-10-28 §1: while a new store's first design is queued or running the canvas says so instead of showing rev 1.
+  let designing = false;
   let styleView: StyleProposalView | null = null; let styleOpen: number | null = null; let styleDevice: 'desktop' | 'phone' = 'desktop'; let stylePoll: number | undefined; let stylePollStarted = 0; let reviewTimer: number | undefined;
   window.addEventListener('resize', () => fitStyleFrames(app));
   app.addEventListener('click', event => {
@@ -290,6 +292,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   let disposeAccountPreview: (() => void) | undefined;
   // Where the preview was scrolled, per store, page and query (owner 2026-10-21: saves reloaded it from the top).
   let previewScroll = { key: '', y: 0 }, shownScrollKey = '';
+  /** The page each preview frame shows, without its scroll position, so a redraw can keep a frame that would not change. */
+  const shownPreviews = new WeakMap<HTMLIFrameElement, string>();
   async function renderPreview(frame: HTMLIFrameElement) {
     const request = ++previewRender;
     const selectedPage = page;
@@ -298,7 +302,14 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     const scrollY = !bocetoOpen && !previewNavigation.fragment && previewScroll.key === scrollKey ? previewScroll.y : 0;
     try {
       const snapshot = await loadPreviewImages(previewSnapshot());
-      if (frame.isConnected && request === previewRender) { frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing, inlineText: plantillasOn && !visualEditing && !bocetoOpen && !historical(), inlineProducts: plantillasOn ? inlineProducts(liveCatalog) : undefined, scrollY }); shownScrollKey = scrollKey; if (!visualEditing) disposeAccountPreview = mountSourceAccountDemo(frame); }
+      if (frame.isConnected && request === previewRender) {
+        const doc = sourcePreviewDocument(snapshot, selectedPage, { ...previewNavigation, paymentForm: true, accountForms: !visualEditing, editing: visualEditing, inlineText: plantillasOn && !visualEditing && !bocetoOpen && !historical(), inlineProducts: plantillasOn ? inlineProducts(liveCatalog) : undefined, scrollY });
+        // Owner 2026-10-28 («way too many refreshes»): a redraw that would show the same page keeps the one already loaded.
+        const key = doc.replace(/var wanted = \d+, restoring/, 'var wanted = 0, restoring');
+        // The kept page still takes the current modes (select, boceto, canvas) a fresh load would have applied.
+        if (shownPreviews.get(frame) === key) { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); return; }
+        shownPreviews.set(frame, key);
+        frame.addEventListener('load', () => { syncSelectMode(frame); syncBocetoMode(frame); if (bocetoOpen) bocetoPanel.resync(); applyCanvas(); }, { once: true }); disposeAccountPreview?.(); frame.srcdoc = doc; shownScrollKey = scrollKey; if (!visualEditing) disposeAccountPreview = mountSourceAccountDemo(frame); }
     } catch (e) {
       if (frame.isConnected && request === previewRender) frame.replaceWith(document.createTextNode(e instanceof Error ? e.message : 'No se pudo abrir la vista previa.'));
     }
@@ -505,12 +516,14 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   async function boot() {
     stores = await api.listStores();
     storeId = embedded ? stores.find(s => s.id === params.get('store'))?.id || '' : stores.find(s => s.id === sessionStorage.getItem('pagosya_current_store_id'))?.id || stores[0]?.id || '';
+    const latestJob = storeId ? await api.latestSourceChatJob(storeId).catch(() => ({ job: null })) : { job: null };
+    designing = Boolean(latestJob.job?.firstDesign && ['QUEUED', 'RUNNING'].includes(latestJob.job.status));
     if (storeId) await load();
     if (pillMode && embedded) notifyParent({ type: 'pagosya:design-focus', open: true });
     if (storeId) void api.retention(storeId).then(r => { if (r?.settings?.suggestionsDismissedAt) { suggestionsHidden = true; render(); } }).catch(() => undefined);
     if (storeId) {
       const selectedStore = storeId;
-      const latest = await api.latestSourceChatJob(selectedStore).catch(() => ({ job: null }));
+      const latest = latestJob;
       // A background personal touch is followed quietly: the merchant keeps the chat, and a message they send cancels it.
       if (latest.job && ['QUEUED', 'RUNNING'].includes(latest.job.status) && latest.job.background) void followBackgroundJob(selectedStore, '');
       else if (latest.job && ['QUEUED', 'RUNNING'].includes(latest.job.status)) followRunningJob(selectedStore, latest.job);
@@ -520,20 +533,39 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   /** A request still running on the server (the merchant came back, or a new store's follow-up carries their own request)
    * owns the editor state as if it had just been sent. Boot's action finishes first. */
   function followRunningJob(selectedStore: string, job: SourceChatJob) {
+    // Only a first design keeps the cover; any other request the Studio follows shows the store (review fix M2).
+    designing = Boolean(job.firstDesign);
+    let designNext = false, handedOn = false;
+    // A first design cut by a spent quota goes back to QUEUED and resumes on its own (spec 2026-10-28 §1).
+    let ran = false;
+    const onUpdate = (update: SourceChatJob) => {
+      // The template build followed after a reload queues the first design as it ends (review fix I5).
+      if (update.designNext) { designNext = true; designing = true; }
+      if (job.firstDesign && update.status === 'RUNNING') ran = true;
+      if (job.firstDesign && ran && update.status === 'QUEUED') { if (buildStatus !== DESIGN_WAIT) { buildStatus = DESIGN_WAIT; updateBuildProgress(); } return; }
+      showQueue(update);
+    };
     // Waits out the action that is finishing (the reply that queued the follow-up), which would otherwise drop this one.
-    const start = () => { if (storeId !== selectedStore || building()) return; if (busy) { window.setTimeout(start, 250); return; } void action(async () => {
+    const start = () => { if (storeId !== selectedStore || building()) { if (job.firstDesign && designing) { designing = false; render(); } return; } if (busy) { window.setTimeout(start, 250); return; } void action(async () => {
       transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); narrator.submitted(''); buildStatus = 'YAPI sigue trabajando en tu pedido…'; render();
       const stop = watchBuildProgress(selectedStore, job.requestId);
-      try { await api.waitSourceChatJob(selectedStore, job, showQueue); transitionBuild({ type: 'complete' }); await load(); narrator.completed([...messages].reverse().find(m => m.role === 'ASSISTANT') ?? ''); }
-      finally { stop(); stopStylePoll(); if (building()) transitionBuild({ type: 'interrupt' }); await refreshInterruptedDraft().catch(() => {}); void loadStyleProposal(); }
+      try { await api.waitSourceChatJob(selectedStore, job, onUpdate); transitionBuild({ type: 'complete' }); designing = designNext; await load(); if (designNext) { handedOn = true; void followBackgroundJob(selectedStore, job.requestId); } narrator.completed([...messages].reverse().find(m => m.role === 'ASSISTANT') ?? ''); }
+      finally { stop(); stopStylePoll(); if (!handedOn) designing = false; if (building()) transitionBuild({ type: 'interrupt' }); await refreshInterruptedDraft().catch(() => {}); void loadStyleProposal(); }
     }); };
     window.setTimeout(start, 0);
   }
+  const DESIGN_WAIT = 'YAPI sigue diseñando; termina en un rato.';
   /** How long the Studio keeps looking for a follow-up the server has not queued yet: 10 × 2 s. */
   const FOLLOW_ATTEMPTS = 10, FOLLOW_WAIT_MS = 2000;
   // Variety spec §5: a new store's background personal touch saves a newer revision. The open Studio follows it quietly
   // (no build lock, the merchant keeps chatting; a request they send cancels the touch on the server) and reloads when it lands.
   async function followBackgroundJob(selectedStore: string, finishedRequestId: string) {
+    let handedOver = false;
+    try { handedOver = await followNextJob(selectedStore, finishedRequestId); }
+    finally { if (!handedOver && designing) { designing = false; render(); } }
+  }
+  /** True when the next job became the merchant's own followed request. */
+  async function followNextJob(selectedStore: string, finishedRequestId: string): Promise<boolean> {
     // Owner 2026-10-25 («I need to refresh to see the changes»): the server queues the touch only once the finished request's
     // job has closed, so right after a reply the latest job is still that one. Look again for a while before giving up.
     let job: SourceChatJob | null = null;
@@ -543,19 +575,21 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       if (found && found.requestId !== finishedRequestId) {
         if (['QUEUED', 'RUNNING'].includes(found.status)) { job = found; break; }
         // A follow-up that already finished while the Studio looked still brings its revision in.
-        if (finishedRequestId && !building()) { await load().catch(() => {}); render(); }
-        return;
+        if (finishedRequestId && !building()) { designing = false; await load().catch(() => {}); render(); }
+        return false;
       }
-      if (!finishedRequestId) return;
+      if (!finishedRequestId) return false;
       await new Promise(resolve => setTimeout(resolve, FOLLOW_WAIT_MS));
     }
-    if (!job) return;
+    if (!job) return false;
     // Owner 2026-10-22: the follow-up that applies the merchant's own request is their request, shown with its progress.
-    if (!job.background) { if (storeId === selectedStore) followRunningJob(selectedStore, job); return; }
+    if (!job.background) { if (storeId !== selectedStore) return false; followRunningJob(selectedStore, job); return true; }
+    designing = false;
     await api.waitSourceChatJob(selectedStore, job).catch(() => undefined);
-    if (storeId !== selectedStore || building()) return;
+    if (storeId !== selectedStore || building()) return false;
     await load().catch(() => {});
     render();
+    return false;
   }
   // A request waiting behind another store's run says so instead of looking frozen (owner report 2026-10-15).
   function showQueue(job: SourceChatJob) {
@@ -570,6 +604,8 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   function updateBuildProgress() {
     narrator.progress(buildProgress);
     buildStage?.update({ status: buildStatus, progress: buildProgress });
+    const designStep = app.querySelector<HTMLElement>('[data-designing-step]');
+    if (designStep) designStep.textContent = buildStatus;
     const host = app.querySelector<HTMLElement>('[data-build-progress]');
     if (!host) return;
     const stream = app.querySelector<HTMLElement>('[data-agent-stream]');
@@ -735,7 +771,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         const requestId = crypto.randomUUID();
         buildStatus = 'Esperando la respuesta de YAPI…'; updateBuildProgress();
         stopProgress = watchBuildProgress(storeId, requestId);
-        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, submittedPage, job => { accepted = true; transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); render(); }, { ...(retry?.resumeDraft ? { resumeDraft: true } : {}), ...(retry?.stylePick ? { stylePick: retry.stylePick } : {}), ...(retry?.planId ? { planId: retry.planId } : {}), onUpdate: showQueue });
+        const result = await api.sendSourceMessage(storeId, text, submittedUrls, state.revision, setup?.step, setupAction, generationSettings, browserReview, requestId, templateId, directionId, submittedSelection ? { sectionId: submittedSelection.sectionId } : undefined, submittedPage, job => { accepted = true; transitionBuild({ type: 'accepted', jobId: job.id, requestId: job.requestId }); render(); }, { ...(retry?.resumeDraft ? { resumeDraft: true } : {}), ...(retry?.stylePick ? { stylePick: retry.stylePick } : {}), ...(retry?.planId ? { planId: retry.planId } : {}), onUpdate: job => { if (job.designNext) designing = true; showQueue(job); } });
         stopProgress();
         succeeded = true; if (selection.get()?.sectionId === submittedSelection?.sectionId) clearSelection(); pendingSubmission = null; transitionBuild({ type: 'complete' }); liveDraft = null;
         productPhoto = false; navigationChoice = '';
@@ -756,6 +792,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
           });
         }
       } catch (e) {
+        designing = false;
         // A failed generation may still have saved the message. Do not put that
         // message back in the composer; keep an explicit retry with the same URLs.
         let persisted = Boolean(retryAssetUrls), answered = false;
@@ -1017,6 +1054,27 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       if (event.key === '/' && !field) { event.preventDefault(); app.querySelector<HTMLTextAreaElement>('#agent-command')?.focus(); }
     });
   }
+  /** Owner 2026-10-28 («way too many refreshes»): every redraw rebuilt the preview frame, so a check finishing or a cost
+   *  estimate reloaded the whole store. The loaded frame is moved aside before the redraw and put back in place of the new
+   *  one; renderPreview then leaves it alone when its page has not changed. Browsers without moveBefore reload as before. */
+  type MovableParent = ParentNode & { moveBefore?: (node: Node, child: Node | null) => void };
+  function carryPreviewOut(): HTMLIFrameElement | null {
+    const frame = app.querySelector<HTMLIFrameElement>('iframe');
+    const body = document.body as MovableParent;
+    if (!frame || !shownPreviews.has(frame) || typeof body.moveBefore !== 'function') return null;
+    try { frame.style.display = 'none'; body.moveBefore(frame, null); return frame; } catch { return null; }
+  }
+  function carryPreviewIn(kept: HTMLIFrameElement | null) {
+    if (!kept) return;
+    const fresh = app.querySelector<HTMLIFrameElement>('iframe');
+    const parent = fresh?.parentNode as MovableParent | null;
+    if (!fresh || !parent?.moveBefore || fresh.title !== kept.title || fresh.getAttribute('sandbox') !== kept.getAttribute('sandbox')) { kept.remove(); return; }
+    try {
+      for (const name of fresh.getAttributeNames()) if (name !== 'srcdoc' && name !== 'src') kept.setAttribute(name, fresh.getAttribute(name)!);
+      kept.style.cssText = fresh.style.cssText;
+      parent.moveBefore(kept, fresh); fresh.remove();
+    } catch { kept.remove(); }
+  }
   function render() {
     renderedAt = performance.now();
     const pageMenuOpen = Boolean(app.querySelector<HTMLDetailsElement>('.source-page-menu')?.open);
@@ -1048,6 +1106,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       return;
     }
     const store = stores.find(s => s.id === storeId);
+    const keptPreview = carryPreviewOut();
     app.innerHTML = `<div class="studio-shell source-mode ${embedded ? 'source-embedded' : ''}${pillMode ? ' is-yapi-pill' : ''}${pillMode && dockHidden ? ' is-dock-hidden' : ''}">
       ${pillMode ? renderExit() : `<header class="topbar connected-topbar">
         <a class="product-mark" href="/" aria-label="pagosYa Merchant Studio"><img src="${import.meta.env.BASE_URL}logo-mark.png" alt=""><span>pagosYa</span><i></i><strong>Merchant Studio</strong></a>
@@ -1083,11 +1142,12 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
         <main class="canvas-panel connected-canvas source-canvas" aria-label="Sitio a medida">
           <header class="canvas-toolbar">${embedded ? `<div class="source-store-menu-host" hidden>${storeTools(locked)}</div>` : storeTools(locked)}${inBoceto ? `<span class="boceto-mode-badge">Boceto</span><button class="button" id="source-boceto-close" aria-pressed="true" title="Desactivar edición manual" ${disabled(locked)}>Editar en Boceto</button><div class="boceto-page-tabs" role="tablist" aria-label="Páginas del boceto">${[['index.html', 'Inicio'], ['product.html', 'Producto'], ['checkout.html', 'Pedido'], ...(version!.snapshot.files.some(f => f.path === 'components/auth/login.tsx') ? [['acceso-ingresar.html', 'Cuenta']] : [])].map(([file, label]) => `<button type="button" data-boceto-page="${file}" aria-pressed="${page === file}">${label}</button>`).join('')}</div><button class="button button--publish" id="source-boceto-generate" ${disabled(locked)}>Generar sitio</button>` : `${embedded ? '' : studioModeNav('source', locked || Boolean(instruction.trim()))}<div class="source-view-controls"><button id="source-preview-tab" aria-pressed="${Boolean(version) && mode === 'preview'}">${icon('eye')} Vista previa</button><button id="source-code-tab" aria-pressed="${mode === 'code'}" ${disabled(!version || showingDraft() || bocetoPhase())}><span class="source-code-symbol" aria-hidden="true">&lt;/&gt;</span> Código</button><button id="source-select-mode" title="Toca una sección de la vista previa para pedirle un cambio a YAPI" aria-pressed="${selectMode && mode === 'preview'}" ${disabled(!version || showingDraft() || mode !== 'preview' || visualEditing || locked)}>Seleccionar</button>${bocetoPhase() ? `<button id="source-boceto-tab" aria-pressed="false" title="Activar edición manual" ${disabled(locked || showingDraft() || historical())}>Editar en Boceto</button>` : ''}</div>${version && mode === 'preview' ? renderPagePicker(showingDraft() ? liveDraft!.snapshot.files : version.snapshot.files, page, locked) : ''}<button class="button" id="source-open-browser" title="${browserHint()}" ${disabled(locked || !version)}>${icon('external')} Ver en navegador</button><button class="icon-button" id="source-width" aria-label="${mobile ? 'Ver escritorio' : 'Ver móvil'}" aria-pressed="${mobile}">${icon('desktop')}</button><div class="source-publish-controls">${bocetoPhase() ? `<button class="button button--publish" id="source-boceto-generate" ${disabled(locked || historical() || showingDraft())}>Generar sitio</button>` : `${state.publication?.revision ? `<button id="source-visibility" class="source-visibility" role="switch" aria-label="Tienda publicada" aria-checked="${state.publication.active}" ${disabled(locked)}><span aria-hidden="true"></span>${state.publication.active ? 'Publicado' : 'Sin publicar'}</button>` : ''}${version ? renderSourcePublication(state, version, { locked: locked || showingDraft(), checking, failed: !checksPassed(), slug: store?.slug || '', expanded: testsExpanded, detailsOpen: publicationOpen }) : ''}${!version || version.revision !== state.publication?.revision ? `<button class="button button--publish" id="source-publish" ${disabled(locked || showingDraft() || checking || !checks || Boolean(checks.some(c => c.status === 'failed')) || !version || state.publication?.experiment?.status === 'RUNNING')}>${state.publication?.revision ? 'Publicar estos cambios' : 'Publicar este diseño'}</button>` : ''}`}</div>`}</header>
           <div class="source-canvas-notice">${building() && !pillMode ? `<div class="source-job-status" role="status"><span>${buildSession.phase === 'running' ? 'Tu pedido sigue guardado aunque cierres esta página.' : 'Enviando tu pedido…'}</span><button class="button" id="source-cancel-job" ${disabled(buildSession.phase !== 'running')}>Cancelar pedido</button></div>` : ''}${liveDraft?.interrupted && !building() ? `<div class="source-draft-recovery" role="status"><span>${draftRetry ? 'Este borrador todavía no está guardado. Guárdalo para seguir trabajando sobre él.' : 'Tu borrador está conservado. Reintenta para completar la verificación antes de publicarlo.'}</span>${draftRetry ? `<button class="button button--primary" id="source-save-draft" ${disabled(locked)}>Guardar borrador</button>` : ''}<button class="button" id="source-toggle-saved">${showSavedRevision ? 'Ver borrador conservado' : 'Ver diseño guardado'}</button></div>` : ''}${reviewNoteMarkup(Boolean(state.reviewPending) && !building())}</div>
-          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showStyles ? renderStylePicker(styleView, { open: styleOpen, device: styleDevice, storeName: store?.name || '', busy: locked }) : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? (bocetoOpen ? `<div class="boceto-canvas"><div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div><div class="boceto-canvas__hud"><button type="button" data-canvas-out>−</button><span data-canvas-zoom>82%</span><button type="button" data-canvas-in>+</button><button type="button" data-canvas-fit>Ajustar</button></div></div>` : `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>`) : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
+          ${productPhoto && assets[0] ? `<section class="preview-frame source-photo-preview" aria-label="Crear tienda desde un producto"><img src="${escape(assets[0].src)}" alt="Foto del producto para crear tu tienda"><div class="source-photo-ready"><h1>De un producto a tu tienda.</h1><p>YAPI usará esta foto para proponer el diseño, los colores y la composición. Puedes añadir detalles en el chat.</p><p>Completa el nombre, el precio y los datos de venta antes de publicar.</p><button class="button button--publish" id="source-create-photo" ${disabled(locked || !storeId)}>Crear tienda desde esta foto</button><button class="text-button" id="source-photo-cancel" ${disabled(locked)}>Usar como adjunto normal</button><button class="text-button" data-remove-asset="0" ${disabled(locked)}>Quitar foto</button></div></section>` : showStyles ? renderStylePicker(styleView, { open: styleOpen, device: styleDevice, storeName: store?.name || '', busy: locked }) : designing ? `<div class="source-designing" role="status"><p class="source-designing__title">YAPI está diseñando tu tienda</p><p class="source-designing__step" data-designing-step>${escape(buildStatus)}</p></div>` : showingDraft() ? `<div class="preview-frame remote-preview source-frame-wrap is-live-draft ${mobile ? 'is-mobile' : ''}"><span class="live-draft-badge" data-live-draft-badge role="status">${building() ? 'Borrador en vivo · YAPI sigue trabajando' : 'Borrador conservado · Falta completar la verificación'}</span><iframe title="Vista previa del borrador" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>` : version ? mode === 'preview' ? (bocetoOpen ? `<div class="boceto-canvas"><div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div><div class="boceto-canvas__hud"><button type="button" data-canvas-out>−</button><span data-canvas-zoom>82%</span><button type="button" data-canvas-in>+</button><button type="button" data-canvas-fit>Ajustar</button></div></div>` : `<div class="preview-frame remote-preview source-frame-wrap ${mobile ? 'is-mobile' : ''}"><iframe title="Vista previa del sitio" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>`) : renderCodeBrowser(version.snapshot.files, filePath, busy, Boolean(dirty())) : building() ? `<section class="source-empty-preview source-build-canvas" aria-label="YAPI está creando tu sitio"><div data-build-stage-host>${renderBuildStage({ status: buildStatus, progress: buildProgress })}</div></section>` : renderInspiration({ busy: building(), disabled: locked || !storeId || assets.length > 0, commerce: generationSettings.sitePurpose === 'shop' })}
           <footer class="canvas-status"><span>${icon('lock')} Vista previa · sin cobros</span><span>${dirty() ? 'Edición sin guardar' : version ? 'Diseño actual' : 'Esperando tu idea'}</span></footer>
         </main>${pillMode ? pillParts() : ''}
       </div>${visualEditing && version ? '<div data-source-direct-edit></div>' : ''}${bocetoOpen && version && mode === 'preview' ? '<div data-source-boceto></div>' : ''}${toast ? `<div class="toast" role="status">${escape(toast)}</div>` : ''}${bocetoPhase() && bocetoConfirm ? `<div class="boceto-confirm" role="dialog" aria-modal="true" aria-labelledby="boceto-confirm-title"><div class="boceto-confirm__card"><h2 id="boceto-confirm-title">Generar sitio</h2><p>Tu boceto se convertirá en sitio web. Después ya no podrás editarlo por bloques; podrás pedirle cambios a YAPI y ver el código.</p><div class="boceto-confirm__actions"><button type="button" class="button" data-boceto-confirm="cancel">Cancelar</button><button type="button" class="button button--publish" data-boceto-confirm="go">Generar sitio</button></div></div></div>` : ''}
     </div>`;
+    carryPreviewIn(keptPreview);
     const pageMenu = app.querySelector<HTMLDetailsElement>('.source-page-menu');
     if (pageMenu) pageMenu.open = pageMenuOpen;
     bind(); updateChecks(); fitStyleFrames(app);
@@ -1437,7 +1497,9 @@ const focusComposer = () => { const field = app.querySelector<HTMLTextAreaElemen
     on('source-discard', () => { draft = null; render(); });
   }
   render();
-  if (sessionStorage.getItem(SESSION_STORAGE_KEY)) { await action(boot); if (embedded && storeId) void refreshCatalog(); }
+  // The first load already read the catalog and the conversation; reading them again rebuilt the preview and reran the checks
+  // a few seconds after a store opened (owner 2026-10-28: «way too many refreshes»). Only a failed catalog read is retried.
+  if (sessionStorage.getItem(SESSION_STORAGE_KEY)) { await action(boot); if (embedded && storeId && !liveCatalog) void refreshCatalog(); }
   else loading = false;
   if (embedded && storeId) notifyParent({ type: 'pagosya:studio-ready', storeId });
 }

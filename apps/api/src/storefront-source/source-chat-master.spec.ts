@@ -1,3 +1,4 @@
+import { BadGatewayException } from '@nestjs/common';
 import { randomUUID as uuid } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { withoutPhotoGroups, MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, OWN_REQUEST_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
@@ -27,7 +28,8 @@ beforeEach(() => {
   decide = jest.fn().mockResolvedValue({ action: 'generate', reply: '', summary: 'Cafetería en Sopocachi.', generationInstruction: 'Crea la tienda.', imageUses: [], startFrom: 'scratch', editKind: 'none' });
   fillMaster = jest.fn().mockResolvedValue(null);
   applyMaster = jest.fn().mockImplementation(async (_m, _s, _r, filler) => { await filler({ storeName: 'Café Buna', products: ['Coroico'], photos: ['https://x/p1.jpg'] }); return { revision: 1, label: 'Plantilla: Esencial', filled: false }; });
-  config = new Map<string, unknown>([['app.yapiMasterTemplate', true], ['app.yapiStylePick', true]]);
+  // Industry skeletons (owner 2026-10-27) have their own tests below; the rest of this file is about Esencial and the starters.
+  config = new Map<string, unknown>([['app.yapiMasterTemplate', true], ['app.yapiStylePick', true], ['app.yapiSkeletons', false]]);
   chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() } as any, generation(), { decide, fillMaster } as any, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
 });
 
@@ -275,6 +277,17 @@ describe('edits on a master store', () => {
     expect(generate.mock.calls[0][2].instruction).toContain('Rediseña la tienda atrevida y divertida');
   });
 
+  // Live check 2026-10-28 (PEPPA l8iq7eqp): the follow-up's own decision never said «rework», so the Shell lock and the logo
+  // never reached the agent.
+  it('a first design reaches the agent as a locked redesign', async () => {
+    generate.mockResolvedValueOnce({ revision: 3, label: 'Diseño' });
+    await chat.send('m1', 's1', { revision: 2, instruction: 'Rediseña la tienda con la misma sensación que la marca', personalTouch: true, ownRequest: true, redesign: true, firstDesign: true, requestId: uuid() });
+    const execution = generate.mock.calls[0].find((arg: unknown) => arg && typeof arg === 'object' && 'referenceCaptures' in (arg as object));
+    expect(execution).toMatchObject({ redesign: true, firstDesign: true });
+    // Owner 2026-10-28 («they eat the gpt credits»): a first design stops after a capped number of steps.
+    expect(execution.agentToolCalls).toBe(15);
+  });
+
   it('a word change Esencial has no field for goes to a design edit instead of a dead end (review fix 8)', async () => {
     decided('content');
     fillMaster.mockResolvedValueOnce({ changed: [], values: [], palette: 'terracotta', fonts: 'classic', colors: {}, heroPhoto: -1, storyPhoto: -1 });
@@ -449,6 +462,18 @@ describe('edits on a master store', () => {
     expect(note?.metadata).toMatchObject({ failed: true, pendingRequest: { instruction: 'Mensajes del comercio: una sección por marca', direct: true } });
   });
 
+  // Review fix 2026-10-28 (I2): a first-design try the job runner will retry after the quota leaves no note; the last one does.
+  it('a first design cut by a spent quota leaves no note while it will be retried', async () => {
+    const { MODEL_LIMIT_MERCHANT_FAILURE } = jest.requireActual('./source-validation-error');
+    const design = { revision: 2, instruction: 'Rediseña', personalTouch: true, ownRequest: true, redesign: true, firstDesign: true };
+    generate.mockRejectedValueOnce(new BadGatewayException(MODEL_LIMIT_MERCHANT_FAILURE));
+    await expect(chat.send('m1', 's1', { ...design, quotaRetry: true, requestId: uuid() })).rejects.toThrow(MODEL_LIMIT_MERCHANT_FAILURE);
+    expect(messages.filter(message => message.role === 'ASSISTANT')).toHaveLength(0);
+    generate.mockRejectedValueOnce(new BadGatewayException(MODEL_LIMIT_MERCHANT_FAILURE));
+    await expect(chat.send('m1', 's1', { ...design, requestId: uuid() })).rejects.toThrow(MODEL_LIMIT_MERCHANT_FAILURE);
+    expect(messages.filter(message => message.role === 'ASSISTANT')).toHaveLength(1);
+  });
+
   it('«sigue» runs the kept request with the merchant\'s words in the chat', async () => {
     generate.mockResolvedValueOnce({ revision: 3, label: 'Tu pedido' });
     await chat.send('m1', 's1', { revision: 2, instruction: 'Mensajes del comercio: una sección por marca', personalTouch: true, ownRequest: true, resumeWords: 'sigue', requestId: uuid() });
@@ -591,9 +616,22 @@ describe('the plan card', () => {
     // pointed at /v1/uploads, which the preview cannot load. The follow-up carries what the merchant attached.
     messages.push({ id: 'ask1', threadId: 't1', channel: 'source', role: 'USER', content: 'Crea mi tienda', metadata: { assetUrls: ['/v1/uploads/a.jpg', '/v1/uploads/b.mp4'] }, createdAt: new Date() });
     const out = await tapped(0);
-    expect(redesignBrief).toHaveBeenCalledWith('m1', expect.objectContaining({ storeId: 's1', plan: PLAN.card }));
-    expect(out.followUp).toMatchObject({ personalTouch: true, ownRequest: true, redesign: true, motion: 'expressive', assetUrls: ['/v1/uploads/a.jpg', '/v1/uploads/b.mp4'] });
+    expect(redesignBrief).toHaveBeenCalledWith('m1', expect.objectContaining({ storeId: 's1', plan: PLAN.card, recent: expect.any(Array) }));
+    // Spec 2026-10-28: the first redesign of a new store is marked, so the Studio shows only its result and the header stays.
+    expect(out.followUp).toMatchObject({ personalTouch: true, ownRequest: true, redesign: true, firstDesign: true, motion: 'expressive', assetUrls: ['/v1/uploads/a.jpg', '/v1/uploads/b.mp4'] });
     expect(out.followUp.instruction).toMatch(/^Rediseña la tienda con una sensación fresca/);
+  });
+
+  it('the first redesign gets the chosen cover photo, and the logo the merchant attached becomes the store logo (2026-10-28)', async () => {
+    const redesignBrief = jest.fn().mockResolvedValue('Rediseña la tienda con una sensación fresca y deportiva. Sigue esta estructura:\n- Portada con una sola foto');
+    const pickCoverAndLogo = jest.fn().mockResolvedValue({ cover: '/v1/uploads/scene.jpg', logo: '/v1/uploads/logo.png' });
+    chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() } as any, generation(), { decide, fillMaster, redesignBrief, pickCoverAndLogo } as any, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService, undefined, plans as any);
+    messages.push({ id: 'ask2', threadId: 't1', channel: 'source', role: 'USER', content: 'Crea mi tienda', metadata: { assetUrls: ['/v1/uploads/logo.png', '/v1/uploads/scene.jpg'] }, createdAt: new Date() });
+    const out = await tapped(0);
+    expect(pickCoverAndLogo).toHaveBeenCalledWith('m1', expect.objectContaining({ storeId: 's1', photos: expect.arrayContaining(['/v1/uploads/logo.png', '/v1/uploads/scene.jpg']) }));
+    expect(redesignBrief).toHaveBeenCalledWith('m1', expect.objectContaining({ cover: '/v1/uploads/scene.jpg', logo: '/v1/uploads/logo.png' }));
+    expect(prisma.store.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 's1' }, data: { logoUrl: '/v1/uploads/logo.png' } }));
+    expect(out.followUp.instruction).toMatch(/Foto de portada: \/v1\/uploads\/scene\.jpg/);
   });
 
   it('without a written brief the follow-up keeps the plan\'s own brief', async () => {

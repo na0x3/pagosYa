@@ -101,11 +101,13 @@ export function Footer() {
   const phone: string = store.phone;
   const footer = variant('footer', 'columns');
   // John Smedley sections (spec 2026-10-21): the `column` footer sits on a band of the store's hero photo.
-  const band = footer === 'column' && photos.hero ? { ['--es-footer-photo' as string]: `url("${photos.hero}")` } as CSSProperties : undefined;
+  // Owner 2026-10-28 («the footer is always the same»): the photo footer sits beside the store's cover photo too.
+  const band = (footer === 'column' || footer === 'photo') && photos.hero ? { ['--es-footer-photo' as string]: `url("${photos.hero}")` } as CSSProperties : undefined;
   return <footer className="es-footer" data-es-footer={footer} style={band}>
     {footer === 'bigname' ? <p className="es-footer__big" aria-hidden="true">{store.name}</p> : null}
+    {footer === 'statement' ? <div className="es-footer__statement"><p className="es-footer__say">{tagline || store.name}</p><a className="es-btn es-btn--accent" href="productos.html">{copy.closingCta || 'Ver productos'}</a></div> : null}
     <div className="es-footer__grid">
-      <div className="es-footer__brand"><p className="es-footer__name">{store.name}</p>{tagline ? <p>{tagline}</p> : null}</div>
+      <div className="es-footer__brand">{store.logo ? <a className="es-footer__logo" href="index.html"><img src={store.logo} alt={store.name} /></a> : <p className="es-footer__name">{store.name}</p>}{tagline ? <p>{tagline}</p> : null}</div>
       <div><h2>Tienda</h2><nav aria-label="Tienda"><a href="productos.html">Todos los productos</a><a href="index.html#historia">Nuestra historia</a></nav></div>
       <div><h2>Ayuda</h2><nav data-pagosya-pages className="pagosya-info-nav es-footer__pages" aria-label="Información" /></div>
       {store.city || phone ? <div><h2>Contacto</h2>
@@ -123,7 +125,7 @@ export function Footer() {
 }
 
 export default function Shell({ children }: { children: ReactNode }) {
-  return <div className="es" data-es-outline={variant('outline', 'none')} data-es-button={variant('button', 'pill')} data-es-corners={variant('corners', 'soft')} data-es-density={variant('density', 'regular')} data-es-texture={variant('texture', 'none')} data-es-photos={variant('photos', 'natural')}><Confetti />
+  return <div className="es" data-hero-focus={variant('heroFocus', 'cc')} data-es-outline={variant('outline', 'none')} data-es-sticker={variant('sticker', 'offset')} data-es-button={variant('button', 'pill')} data-es-corners={variant('corners', 'soft')} data-es-density={variant('density', 'regular')} data-es-texture={variant('texture', 'none')} data-es-photos={variant('photos', 'natural')}><Confetti />
     <a className="es-skip" href="#contenido">Ir al contenido</a>
     <Header />
     {children}

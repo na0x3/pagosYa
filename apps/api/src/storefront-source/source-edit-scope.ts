@@ -55,6 +55,18 @@ export function sourceHomeRegions(files: File[]): Region[] {
   visit(source);
   return regions;
 }
+/** Owner 2026-10-27 (Remolino rev 4: a layout repair rewrote the home from 20 KB to the product grid alone): the home sections a new
+ *  version lost — literal sections of <main> before that are gone after. */
+export function lostHomeSections(before: File[], after: File[]): string[] {
+  const kept = new Set(sourceHomeRegions(after).map(region => region.id));
+  return sourceHomeRegions(before).map(region => region.id).filter(id => !kept.has(id));
+}
+
+/** The merchant's words ask to take something off the page, so a lost section may be what they wanted. */
+export function asksToRemoveSections(instruction: string): boolean {
+  return /\b(?:quit[aeo]r?|quitale|elimin[aeo]r?|borr[aeo]r?|sac[aeo]r?|remove|delete|menos secciones|simplific[aeo]r?)\b/.test(currentRequest(instruction));
+}
+
 export type SectionScope = { add: boolean; targets: string[]; original: Region[]; selected?: string };
 /** `selectedSectionId` is a section the merchant picked in the preview: it names the target, so the request needs no section words. */
 export function sourceSectionScope(files: File[], instruction: string, selectedSectionId?: string): SectionScope | undefined {
@@ -108,7 +120,7 @@ function protectedCss(css: string, allowed: Set<string>): string {
     return clean(node);
   }));
 }
-export function validateSourceEditScope(previous: File[], next: File[], instruction: string, scope?: SectionScope) {
+export function validateSourceEditScope(previous: File[], next: File[], instruction: string, scope?: SectionScope, options: { redesign?: boolean } = {}) {
   if (!requestsImageChange(instruction)) {
     const authored = (files: File[]) => files.filter(f => /\.(tsx|html|css|js)$/.test(f.path) && !f.path.startsWith('_compiled/')).map(f => f.content).join('\n');
     const refs = (text: string) => new Set(text.match(/(?:\/?assets\/|\/v1\/uploads\/)[\w/.-]+\.(?:png|jpe?g|webp|avif|gif|mp4)/gi) || []);
@@ -116,7 +128,12 @@ export function validateSourceEditScope(previous: File[], next: File[], instruct
     // A Plantilla's demo photos (assets/template-<id>-<slot>) are placeholders the template ships to be replaced by the
     // merchant's own photos; letting one go never removes the merchant's content.
     const placeholder = (ref: string) => /(?:^|\/)assets\/template-[\w-]+\.\w+$/.test(ref);
-    for (const ref of refs(authored(previous))) if (!after.has(ref) && !placeholder(ref)) throw new SourceScopeConflict('Se retiró una foto o video existente sin que lo pidieras.');
+    const before = [...refs(authored(previous))].filter(ref => !placeholder(ref));
+    const removed = before.filter(ref => !after.has(ref));
+    if (options.redesign) {
+      // Spec 2026-10-28 §4 (ZARA 563cjthm was discarded for it): a redesign may move or drop photos while most of the brand's stay.
+      if (removed.length && before.length - removed.length < Math.min(3, before.length)) throw new SourceScopeConflict('Un rediseño debe conservar las fotos de tu marca.');
+    } else if (removed.length) throw new SourceScopeConflict('Se retiró una foto o video existente sin que lo pidieras.');
   }
   if (!scope) return;
   const updated = sourceHomeRegions(next);

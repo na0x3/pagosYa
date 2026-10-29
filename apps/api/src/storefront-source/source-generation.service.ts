@@ -234,6 +234,8 @@ export class SourceGenerationService {
       contactPhone: data.contactPhone, leadCaptureUrl: data.leadCaptureUrl,
       contactFormEnabled: data.contactFormEnabled, contactTitle: data.contactTitle, contactSubtitle: data.contactSubtitle,
       categories: data.categories, locations: data.locations, items: data.items,
+      // Owner 2026-10-28: the collections too, for the menu per collection and the collection pages (source-store-config.ts).
+      collections: data.collections,
       cartRecommendationsEnabled: data.cartRecommendationsEnabled, cartRecommendationProductIds: data.cartRecommendationProductIds, bundles: data.bundles,
       ...(options.assistant && data.assistant ? { assistant: data.assistant } : {}),
       // The editor preview cannot reach the API: it draws the blog from these (owner 2026-10-25, BOXY's blog was a placeholder).
@@ -984,7 +986,7 @@ export class SourceGenerationService {
         motifFiles = [...motifFiles.filter(file => !motifs.motifs.some(motif => motif.path === file.path)), ...motifs.motifs];
         autoRepairs.push(...motifs.repairs);
         if (!lenient) validateSourceArtwork(oldFiles, generated.files, dto.instruction, sourceMotifPaths(declaredMotifs));
-        if (previous && !lenient) validateSourceEditScope(oldFiles, generated.files, dto.instruction, sectionScope);
+        if (previous && !lenient) validateSourceEditScope(oldFiles, generated.files, dto.instruction, sectionScope, { redesign });
         // This platform-owned floor is applied before React compilation and
         // before every browser gate. Local edits keep untouched styles byte
         // stable; the runtime still supplies the floor to older revisions.

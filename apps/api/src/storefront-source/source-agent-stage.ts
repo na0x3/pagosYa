@@ -28,6 +28,8 @@ import { instructionConcernsKitSurfaces } from './kit-touch';
 import { normalizeAccountTheme } from './account-theme';
 import { readConfigFile } from './store-look';
 import { AGENT_POLICY_KINDS } from './source-agent-policies';
+import { withStoreLogo } from './source-templates';
+import { masterPhotoUrl } from './source-master';
 import { SOURCE_SHOPPING_FLOW } from './source-shopping-flow';
 import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { SOURCE_FONT_CHOICES } from './source-fonts';
@@ -49,10 +51,15 @@ export type AgentStageContext = {
 export async function runAgentStage(context: AgentStageContext): Promise<void> {
   const { facts, live, acceptCandidate, resume } = context;
   const { resumable, checkpoint, checkpointKey, requestKey, merchantRequest } = resume;
-  const { prisma, config, metering, storeId, runId, slug, dto, execution, progress, plan, chatgptPlan, provider, apiKey, agentProvider, budget, signal, attempts, autoRepairs, started, runTimeout, stablePrompt, signatureOn, apiUrl, data, images, assets, assetUrls, previous, previousFiles, oldFiles, sectionScope, sitePurpose, scrollFeel, redesign, editExisting } = facts;
+  const { prisma, config, metering, storeId, runId, slug, dto, execution, progress, plan, chatgptPlan, provider, apiKey, agentProvider, budget, signal, attempts, autoRepairs, started, runTimeout, stablePrompt, signatureOn, apiUrl, data, images, assets, assetUrls, previous, previousFiles, oldFiles: givenFiles, sectionScope, sitePurpose, scrollFeel, redesign, editExisting } = facts;
   await progress?.('building');
   const isNew = !previous;
-  const workspace = new AgentWorkspace(oldFiles, { redesign: isNew || redesign, rewriteComponents: execution?.keepTemplate === true });
+  // Review fix 2026-10-28 (I1): the store-data line the locked Shell reads gets the logo the cover pick saved after rev 1.
+  const oldFiles = redesign && execution?.firstDesign ? withStoreLogo(givenFiles, masterPhotoUrl((data as { logoUrl?: string | null }).logoUrl, apiUrl)) : givenFiles;
+  // Owner 2026-10-28 («they eat the gpt credits»): a first design runs leaner — low reasoning, no location or font-list
+  // instructions (its brief already names the fonts), and the merchant's photos at low detail on every turn.
+  const leanDesign = redesign && execution?.firstDesign === true;
+  const workspace = new AgentWorkspace(oldFiles, { redesign: isNew || redesign, rewriteComponents: execution?.keepTemplate === true, lockedShell: redesign && execution?.firstDesign === true });
 
 
   // What the sandbox needs besides the draft: the saved store, or for a new store its catalog config and the commerce runtime.
@@ -92,7 +99,7 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
   };
   const lenientGate = async (files: SourceProjectFileDto[]) => { live.lenient = true; try { return await gate(files); } finally { live.lenient = false; } };
   let renderablePreview = resumable ? checkpoint.preview : undefined;
-  const toolbox = new AgentToolbox({ workspace, previous: oldFiles, base: previewBase, instruction: dto.instruction, merchantInstruction: sourceRequestContext.getStore()?.request.instruction, purpose: sitePurpose, maxScreenshots: AGENT_LIMITS.screenshots, signal, sectionScope, gate, lenientGate, taskRequired: true,
+  const toolbox = new AgentToolbox({ lockedShell: redesign && execution?.firstDesign === true, workspace, previous: oldFiles, base: previewBase, instruction: dto.instruction, merchantInstruction: sourceRequestContext.getStore()?.request.instruction, purpose: sitePurpose, maxScreenshots: AGENT_LIMITS.screenshots, signal, sectionScope, redesign: isNew || redesign, gate, lenientGate, taskRequired: true,
     mediaPolicy: sourceMediaPolicy(sitePurpose, isNew || redesign, merchantRequest?.instruction || dto.instruction, live.committedDesign?.concepts[live.committedDesign.selected]?.composition),
     ...((isNew || redesign) ? { reviewComposition: async (input: Parameters<typeof reviewSourceComposition>[0]) => {
       // The existing vision-capable planning provider reviews independently of the writing transcript.
@@ -150,7 +157,7 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
   const agentModel = agentProvider
     ? anthropicAgentModel({ endpoint: agentProvider.endpoint, apiKey: agentProvider.apiKey, model: plan.model, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), signal, onTurn })
     : openAiAgentModel({
-      endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: plan.reasoningEffort, signal,
+      endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: leanDesign ? 'low' : plan.reasoningEffort, signal,
       // Every turn resends the growing transcript; a stable key lets the provider bill that prefix at the cached rate.
       promptCacheKey: sourcePromptCacheKey('agent', stablePrompt, storeId),
       onTurn,
@@ -160,8 +167,8 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
   let accepted: boolean;
   try {
     // Measured against the run's hard stop, so the agent stops itself (warned, and its draft rescued) before the run is aborted.
-    const runLimits = agentWallWithin(agentLimits(chatgptPlan), started + runTimeout);
-    outcome = await runAgent({ model: agentModel, toolbox, signal, limits: runLimits, instructions: agentInstructions([SOURCE_VISUAL_COHERENCE_CONTRACT, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_NEXT_INSTRUCTIONS, SOURCE_SHOPPING_FLOW, SOURCE_LOCATION_INSTRUCTIONS, SOURCE_FONT_CHOICES.replaceAll('styles.css', 'styles/globals.css')].join('\n\n'), sitePurpose, isNew, isNew || redesign, runLimits.wallMs / 60_000, signatureOn, [live.frame.paragraph, live.playbookText].filter(Boolean).join('\n')), opening: agentOpening(live.taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), [...workspace.files(), ...previewBase.files.filter(f => f.path.startsWith('assets/'))], images), onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); if (['create_page','edit_file','edit_file_batch','write_file','delete_file','set_product_card_theme','set_account_theme','set_motif_pack','set_store_policy','verify'].includes(step.kind)) await saveCheckpoint(); } });
+    const runLimits = { ...agentWallWithin(agentLimits(chatgptPlan), started + runTimeout), ...(execution?.agentToolCalls ? { toolCalls: execution.agentToolCalls } : {}) };
+    outcome = await runAgent({ model: agentModel, toolbox, signal, limits: runLimits, instructions: agentInstructions([SOURCE_VISUAL_COHERENCE_CONTRACT, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_NEXT_INSTRUCTIONS, SOURCE_SHOPPING_FLOW, ...(leanDesign ? [] : [SOURCE_LOCATION_INSTRUCTIONS, SOURCE_FONT_CHOICES.replaceAll('styles.css', 'styles/globals.css')])].join('\n\n'), sitePurpose, isNew, isNew || redesign, runLimits.wallMs / 60_000, signatureOn, [live.frame.paragraph, live.playbookText].filter(Boolean).join('\n')), opening: agentOpening(live.taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), [...workspace.files(), ...previewBase.files.filter(f => f.path.startsWith('assets/'))], leanDesign ? images.map(image => ({ ...image, detail: 'low' as const })) : images), onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); if (['create_page','edit_file','edit_file_batch','write_file','delete_file','set_product_card_theme','set_account_theme','set_motif_pack','set_store_policy','verify'].includes(step.kind)) await saveCheckpoint(); } });
     accepted = outcome.status === 'finished' && !!toolbox.finished;
     // Soft checks (palette, visual review, template structure, the model's own requirements) must never discard a draft that builds.
     // A model that stopped answering is not a soft check: Dulce Horno 2026-10-26 lost its ChatGPT plan quota between writing new

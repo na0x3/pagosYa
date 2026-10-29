@@ -1,6 +1,6 @@
 jest.setTimeout(90_000);
 import { contrastRatio } from './source-scorecard';
-import { paletteFromSamples, proposeStorePalette, type SourcePalette } from './source-palette';
+import { coloursFromWords, deepFromAccent, paletteFromNamed, paletteFromSamples, proposeStorePalette, type SourcePalette } from './source-palette';
 import { png } from './fixtures/png';
 
 const rgb = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -88,5 +88,30 @@ describe('proposeStorePalette: real pixels through the photo sampler', () => {
     const logo = image('flat', png(8, 8, () => orange));
     expect(await proposeStorePalette({ logo }, { sample: async () => { throw new Error('no chromium'); } })).toBeUndefined();
     expect(await proposeStorePalette({ logo }, { sample: async () => new Map() })).toBeUndefined();
+  });
+});
+
+// Owner 2026-10-28: Oh Belly named its colours and got mustard from its pears; Brillo Rosa's name is not a colour request.
+it('reads the colours a merchant names for the brand, and only those', () => {
+  expect(coloursFromWords('Usa el logo OH BELLY. Colores de la marca: rosa pálido, rojo-naranja, verde oliva y morado.')).toEqual(['#f2c4cc', '#e4572e', '#6b7a2a', '#6d3fa0']);
+  expect(coloursFromWords('Crea la tienda de Remolino: licuadoras.\nMi logo es el espiral rojo. En el catálogo, selector de colores.')).toEqual(['#d62828']);
+  expect(coloursFromWords('Mi negocio se llama Brillo Rosa. Ramos con flores blancas.')).toEqual([]);
+  expect(coloursFromWords(undefined)).toEqual([]);
+  const ohBelly = paletteFromNamed(['#f2c4cc', '#e4572e', '#6b7a2a', '#6d3fa0'])!;
+  expect(ohBelly.accent).toMatch(/^#e[45][56]/); // the red-orange, only nudged for its text's contrast
+  expect(contrastRatio(rgb(ohBelly.onAccent), rgb(ohBelly.accent))).toBeGreaterThanOrEqual(4.5);
+  expect(paletteFromNamed(['#f6efdf', '#ffffff'])).toBeUndefined();
+});
+
+describe('brand paper and deep colour (2026-10-28 unique first build)', () => {
+  it('uses a light tinted backdrop from the photos as the paper', () => {
+    const palette = paletteFromSamples({ photos: [{ dominant: ['#7b1e3a', '#f3e9d6'], backdropHex: '#f3e9d6', uniformity: .9 }] });
+    expectReadable(palette);
+    expect(palette!.paper).toBe('#f3e9d6');
+  });
+  it('keeps red and maroon apart in the deep colour', () => {
+    // PEPPA and DooBoo came out #3b1616 and #3b1621: the same near-black on two brands.
+    const [red, maroon] = [deepFromAccent('#d62828')!, deepFromAccent('#7b1e3a')!].map(rgb);
+    expect(Math.hypot(red[0] - maroon[0], red[1] - maroon[1], red[2] - maroon[2])).toBeGreaterThan(30);
   });
 });

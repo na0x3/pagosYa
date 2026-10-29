@@ -199,7 +199,17 @@ describe('SourceTemplatesService', () => {
       const { templates, projects } = build([], '/v1/uploads/aaaaaaaa-0000-0000-0000-000000000009.png');
       (templates as any).logoPalette = jest.fn(async () => ({ paper: '#ffffff', ink: '#101010', accent: '#c0392b', surface: '#f4f4f4', onAccent: '#ffffff' }));
       await templates.applyMaster('m1', 'store-1', 0, async () => ({}));
-      expect(savedLook(projects).colors).toEqual({ paper: '#ffffff', ink: '#101010', accent: '#c0392b', muted: '#f4f4f4' });
+      // Owner 2026-10-28: the deep colour (dark bands) comes from the brand's accent too.
+      expect(savedLook(projects).colors).toMatchObject({ paper: '#ffffff', ink: '#101010', accent: '#c0392b', muted: '#f4f4f4' });
+      expect(savedLook(projects).colors?.deep).toMatch(/^#[0-9a-f]{6}$/);
+    });
+
+    // Owner 2026-10-28 («uniqueness from the brand, not the dice»): no logo — the store's own product photos give the colours.
+    it('with no logo, the product photos\' colours become the palette', async () => {
+      const { templates, projects } = build([]);
+      (templates as any).photosPalette = jest.fn(async () => ({ paper: '#fbf6ef', ink: '#2a1a12', accent: '#b5651d', surface: '#efe6db', onAccent: '#ffffff' }));
+      await templates.applyMaster('m1', 'store-1', 0, async () => ({}));
+      expect(savedLook(projects).colors).toMatchObject({ paper: '#fbf6ef', ink: '#2a1a12', accent: '#b5651d', muted: '#efe6db' });
     });
 
     it('hands the brand\'s voice to the filler', async () => {
@@ -498,18 +508,46 @@ describe('applyMaster from a starter', () => {
 
   // A/B comparison 2026-10-24: BOXY's logo colours turned Calle (white, sober) terracotta. On a starter the logo only gives the
   // accent; the starter keeps its own paper and ink.
-  it('a logo gives a starter its accent only, never its paper or ink', async () => {
+  // Owner 2026-10-28 («uniqueness from the brand, not the dice»): a skeleton wears the whole brand palette, not just its accent.
+  it('a logo gives a starter its whole palette', async () => {
     const { templates, saved, dulce } = starter();
     (templates as any).publicStores.getStorePublic = jest.fn(async () => ({ ...publicStore([item]), logoUrl: '/v1/uploads/logo.png' }));
     (templates as any).logoPalette = jest.fn(async () => ({ paper: '#9b4a2c', ink: '#fff7f0', accent: '#c0392b', surface: '#7a3a22', onAccent: '#ffffff' }));
     await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Hola' } }), undefined, undefined, 'dulce');
     const look = readMasterState(saved().files).look;
-    expect(look?.colors).toEqual({ accent: '#c0392b' });
+    expect(look?.colors).toMatchObject({ paper: '#9b4a2c', ink: '#fff7f0', accent: '#c0392b', muted: '#7a3a22' });
     expect(look?.palette).toBe(dulce.preset.palette);
   });
 
   it('refuses a starter that does not exist', async () => {
     const { templates } = starter();
     await expect(templates.applyMaster('m1', 'store-1', 0, async () => null, undefined, undefined, 'nada')).rejects.toThrow('Ese estilo no existe.');
+  });
+});
+
+describe('unique first build (2026-10-28)', () => {
+  it('animated stores of one family keep their per-store playful font, not one font for all (PEPPA and DooBoo both Fredoka)', async () => {
+    const real = jest.requireActual('@pagosya/store-templates');
+    const fonts = new Set<string | undefined>();
+    for (const storeId of ['s1', 's2', 's3', 's4', 's5', 's6']) {
+      const projects = { current: jest.fn(async () => ({ slug: 'tostado', revision: 0, updatedAt: null })), version: jest.fn(), save: jest.fn(async (_m: string, _s: string, input: any) => ({ revision: input.revision + 1 })) };
+      const templates = new SourceTemplatesService({ store: { update: jest.fn(async () => ({})) } } as any, { getStorePublic: jest.fn(async () => publicStore([item])) } as any, projects as any,
+        { get: (key: string) => ({ 'app.checkoutOrigin': 'https://pagar.pagosya.test' } as any)[key] } as any);
+      templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+      await templates.applyMaster('m1', storeId, 0, async () => ({ animated: true, family: 'pop' } as any));
+      fonts.add(readMasterState((projects.save.mock.calls[0] as any[])[2].files).look?.fonts);
+    }
+    expect(fonts.size).toBeGreaterThan(1);
+  });
+});
+
+describe('the brand logo in every template footer (2026-10-28)', () => {
+  it.each(['esencial', 'catalogo', 'maison', 'mesa', 'tecno', 'ritual', 'taller', 'vitrina'])('%s draws the store logo in its footer, the name only without one', id => {
+    const real = jest.requireActual('@pagosya/store-templates');
+    const shell = (real.templateSourceFiles(id) as Array<{ path: string; content: string }>).find(file => file.path === 'components/Shell.tsx')!.content;
+    const footer = shell.slice(shell.indexOf('export function Footer'));
+    expect(footer).toMatch(/store\.logo \? <a className="es-footer__logo" href="index\.html"><img src=\{store\.logo\}/);
+    const css = (real.templateSourceFiles(id) as Array<{ path: string; content: string }>).find(file => file.path === 'styles/globals.css')!.content;
+    expect(css).toContain('.es-footer__logo img{');
   });
 });

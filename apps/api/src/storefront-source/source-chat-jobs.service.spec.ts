@@ -243,3 +243,61 @@ it('F5: «sigue» on a new store (revision 0) resumes the kept request with its 
   await service.create('m', 's', { requestId: 'r0', revision: 0, instruction: 'sigue' });
   expect(prisma.storeSourceChatJob.create.mock.calls[0][0].data.input).toMatchObject({ instruction: 'Hazme una tienda de velas', resumeWords: 'sigue', setupAction: 'generate' });
 });
+
+// Remolino ty78citn 2026-10-28: the ChatGPT plan ran out mid-redesign and the new store stayed on its template.
+describe('a first design and a spent quota (2026-10-28)', () => {
+  const { MODEL_LIMIT_MERCHANT_FAILURE } = jest.requireActual('./source-validation-error');
+  const design = { ...job, attempt: 1, input: { ...input, personalTouch: true, ownRequest: true, redesign: true, firstDesign: true } };
+  it('goes back to the queue and the worker rests before trying again', async () => {
+    const { service, prisma, chat } = setup();
+    chat.send.mockRejectedValue(new BadGatewayException(MODEL_LIMIT_MERCHANT_FAILURE));
+    await service.run(design);
+    expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'QUEUED', activeStoreId: 's' }) }));
+    expect(prisma.storeSourceChatJob.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED' }) }));
+    prisma.storeSourceChatJob.findMany.mockClear();
+    await service.tick();
+    // Expired runs are still tidied; no waiting job is taken.
+    expect(prisma.storeSourceChatJob.findMany).not.toHaveBeenCalledWith(expect.objectContaining({ where: { status: 'QUEUED' } }));
+  });
+  // Review fix 2026-10-28 (I2): a try that will be retried leaves no «escríbeme sigue» note in the chat; the last one does.
+  it('tells the chat when a spent quota will be retried, and not on the last try', async () => {
+    const { service, chat } = setup();
+    chat.send.mockRejectedValue(new BadGatewayException(MODEL_LIMIT_MERCHANT_FAILURE));
+    await service.run(design);
+    expect(chat.send).toHaveBeenLastCalledWith('m', 's', expect.objectContaining({ firstDesign: true, quotaRetry: true }));
+    await service.run({ ...design, attempt: 12 });
+    expect(chat.send.mock.calls.at(-1)[2].quotaRetry).toBeUndefined();
+    await service.run(job);
+    expect(chat.send.mock.calls.at(-1)[2].quotaRetry).toBeUndefined();
+  });
+  it('after twelve tries it fails with the quota note', async () => {
+    const { service, prisma, chat } = setup();
+    chat.send.mockRejectedValue(new BadGatewayException(MODEL_LIMIT_MERCHANT_FAILURE));
+    await service.run({ ...design, attempt: 12 });
+    expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED', error: MODEL_LIMIT_MERCHANT_FAILURE }) }));
+  });
+  // Live check 2026-10-28 (Remolino 6f2bikgu): an API restart left the first design INTERRUPTED and the store on its template.
+  it('an API shutdown sends a running first design back to the queue; any other request is interrupted', async () => {
+    const stop = (service: SourceChatJobsService) => async () => { service.onModuleDestroy(); throw Object.assign(new Error('This operation was aborted'), { name: 'AbortError' }); };
+    const first = setup();
+    first.chat.send.mockImplementation(stop(first.service));
+    await first.service.run(design);
+    expect(first.prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'QUEUED', activeStoreId: 's' }) }));
+    expect(first.prisma.storeSourceChatJob.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'INTERRUPTED' }) }));
+    const other = setup();
+    other.chat.send.mockImplementation(stop(other.service));
+    await other.service.run(job);
+    expect(other.prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'INTERRUPTED' }) }));
+  });
+  it('an ordinary request still fails on a spent quota', async () => {
+    const { service, prisma, chat } = setup();
+    chat.send.mockRejectedValue(new BadGatewayException(MODEL_LIMIT_MERCHANT_FAILURE));
+    await service.run(job);
+    expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED' }) }));
+  });
+  it('the job view says when a first design runs and when one comes next', () => {
+    expect((chatJobView({ ...design, status: 'RUNNING' }) as any).firstDesign).toBe(true);
+    expect((chatJobView({ ...job, status: 'COMPLETED', result: { followUp: { firstDesign: true } } }) as any).designNext).toBe(true);
+    expect((chatJobView({ ...job, status: 'COMPLETED' }) as any)).toMatchObject({ firstDesign: false, designNext: false });
+  });
+});

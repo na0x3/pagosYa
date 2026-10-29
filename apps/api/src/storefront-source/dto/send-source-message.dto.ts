@@ -52,4 +52,18 @@ export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolea
   resumeWords?: string;
   /** The PEPPA recipe (owner 2026-10-23): the follow-up is a full redesign of the new template store, not a minimal edit. */
   redesign?: boolean;
-  /** Owner 2026-10-27 (ported to Oct-24): the follow-up is the data-only polish of a new master store. */ polish?: boolean };
+  /** Spec 2026-10-28: the redesign that follows a new store's template build; the merchant sees only its result. */
+  firstDesign?: boolean;
+  /** Set by the job runner, never by a client: a spent quota on this first-design try sends it back to the queue. */
+  quotaRetry?: boolean;
+  /** Owner 2026-10-27 (ported to Oct-24): the follow-up is the data-only polish of a new master store. */ polish?: boolean;
+  /** Owner 2026-10-27 («more accurateness»): the merchant's first message, checked point by point after the last build step. */
+  checklistWords?: string;
+  /** The check itself: 1 after the polish (may queue a fix), 2 after the fix (says what is left). */
+  briefCheck?: 1 | 2;
+  /** The capped edit that adds what the check found missing; the final check follows it. */
+  checklistFix?: boolean;
+  /** What that edit was asked to add, named in the chat when it could not. */
+  checklistMissing?: string[];
+  /** Owner 2026-10-27: the follow-up is a guarded personal touch (source-guarded-touch.ts). */
+  guardedTouch?: boolean };

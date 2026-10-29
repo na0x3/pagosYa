@@ -2,7 +2,7 @@ import { configCatalog, findProducts } from '../source-product-placements';
 import type { SourceMediaPolicy } from '../source-media-design';
 import { CARD_PARTS, CART_PARTS, CATALOG_PARTS, COSMETIC_PARTS } from '../product-theme-css';
 import sharp from 'sharp';
-import { agentProjectIndex, assertMerchantTaskCoverage, assertTaskFeasibility, validateTaskRequirements, workspaceDigest, type AgentRequirement, type RequirementEvidence } from './agent-task';
+import { agentProjectIndex, assertMerchantTaskCoverage, assertTaskFeasibility, requirementFitsWidth, validateTaskRequirements, workspaceDigest, type AgentRequirement, type RequirementEvidence, type ValidationProfile } from './agent-task';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import type { SourceSitePurpose } from '../source-site-purpose';
 import { nextSourceFile } from '../source-next';
@@ -26,7 +26,7 @@ export type AgentStep = { kind: AgentToolName; label: string; at: number; thumbn
 export type AgentCompositionFinding = { id: string; page: string; section: string; severity: 'major' | 'minor'; observation: string; correction: string };
 export type AgentCompositionReview = { findings: AgentCompositionFinding[]; summary: string };
 export type AgentCompositionReviewInput = { snapshot: Awaited<ReturnType<typeof agentPreviewSnapshot>>; captures: Array<{ page: string; width: number; image: string }>; signal?: AbortSignal };
-export type AgentToolboxContext = { workspace: AgentWorkspace; previous: SourceProjectFileDto[]; base: AgentPreviewBase; instruction: string; merchantInstruction?: string; purpose: SourceSitePurpose; maxScreenshots: number; signal?: AbortSignal; sectionScope?: Parameters<typeof verifyAgentDraft>[0]['sectionScope']; gate?: (files: SourceProjectFileDto[]) => Promise<string | null>; lenientGate?: (files: SourceProjectFileDto[]) => Promise<string | null>; onPreview?: (files: SourceProjectFileDto[]) => void;
+export type AgentToolboxContext = { /** Spec 2026-10-28: a new store's first design; its header and footer must keep their parts. */ lockedShell?: boolean; workspace: AgentWorkspace; previous: SourceProjectFileDto[]; base: AgentPreviewBase; instruction: string; merchantInstruction?: string; purpose: SourceSitePurpose; maxScreenshots: number; signal?: AbortSignal; sectionScope?: Parameters<typeof verifyAgentDraft>[0]['sectionScope']; /** A new store or a redesign: photos may move (spec 2026-10-28 §4). */ redesign?: boolean; gate?: (files: SourceProjectFileDto[]) => Promise<string | null>; lenientGate?: (files: SourceProjectFileDto[]) => Promise<string | null>; onPreview?: (files: SourceProjectFileDto[]) => void;
   /** Independent visual review for whole-site design, configured by the caller; at most two calls per run. */
   reviewComposition?: (input: AgentCompositionReviewInput) => Promise<AgentCompositionReview>;
   /** False when the merchant's request does not concern the product page (a local edit elsewhere); the theme tool then refuses. */
@@ -126,17 +126,35 @@ export class AgentToolbox {
    */
   async acceptIfBuildable(): Promise<boolean> {
     if (this.finished) return true;
-    if (this.modelStopped) return false;
+    // Live check 2026-10-29 (Atelier): a first design that ran out of steps calls itself partial; it is saved when it builds and its
+    // header is whole (checked below), never thrown away. A blocked one, or any other request, keeps today's rule.
+    const lockedPartial = Boolean(this.ctx.lockedShell && this.stopped?.status === 'partial');
+    if (this.modelStopped && !lockedPartial) return false;
     if (this.lastVerify?.version === this.workspace.version && this.lastVerify.pageErrors) return false;
     const ws = this.workspace;
-    const result = await verifyAgentDraft({ previous: this.ctx.previous, draft: ws.files(), instruction: this.ctx.instruction, purpose: this.ctx.purpose, sectionScope: this.ctx.sectionScope });
+    const result = await verifyAgentDraft({ previous: this.ctx.previous, draft: ws.files(), instruction: this.ctx.instruction, purpose: this.ctx.purpose, sectionScope: this.ctx.sectionScope, redesign: this.ctx.redesign });
     if (result.findings.some(f => f.source === 'contract' || f.source === 'typescript' || f.source === 'runtime')) return false;
     for (const file of result.files) if (ws.list().includes(file.path) && ws.read(file.path) !== file.content) ws.write(file.path, file.content);
     this.repairs.push(...result.repairs);
     // The service gate also fills the candidate the save carries; its lenient mode keeps only the build-level checks.
     if (this.ctx.lenientGate && await this.ctx.lenientGate(ws.files())) return false;
+    // Live check 2026-10-28 (Remolino): a first design out of steps is never saved with its header's menu, search, account or cart gone.
+    if (this.ctx.lockedShell && (await this.headerGaps()).length) return false;
+    if (lockedPartial) { this.stopped = null; this.modelStopped = false; }
     this.finished = { summary: '', sections: [] };
     return true;
+  }
+  /** The home page's header gaps at desktop and phone, minus any the saved store already had (first-design lock only). */
+  private async headerGaps(): Promise<string[]> {
+    const snapshot = await this.previewSnapshot();
+    const gaps: string[] = [];
+    for (const width of [1280, 390] as const) {
+      const shot = await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', this.ctx.mediaPolicy);
+      const header = shot.errors.filter(message => message.startsWith('Encabezado incompleto'));
+      const known = header.length ? await this.knownPageErrors('index.html', width, 'normal') : new Set<string>();
+      gaps.push(...header.filter(message => !known.has(message)).map(message => `index.html (${width}): ${message}`));
+    }
+    return gaps;
   }
   draftIsClean() { return Boolean(!this.stopped && this.lastVerify?.clean && this.lastVerify.version === this.workspace.version && (!this.ctx.reviewComposition || this.compositionVerifiedVersion === this.workspace.version)); }
 
@@ -163,6 +181,20 @@ export class AgentToolbox {
     if (!major.length) this.compositionVerifiedVersion = this.workspace.version;
     else if (this.compositionCalls >= 2 && !this.stopped) this.stopped = { status: 'partial', summary: 'La revisión visual sigue detectando problemas tras una corrección; se conservó el borrador sin aprobarlo.', remaining: major.map(f => `composition:${f.id}`) };
     return review;
+  }
+
+  private baselineErrors = new Map<string, Promise<Set<string>>>();
+  /** DooBoo 2026-10-28: problems the saved version already shows on a page (a «Nuevo» badge on the product page) are not this
+   *  request's; a header-only fix failed on them every time. Captured once per page and width, only when the draft has errors. */
+  private knownPageErrors(page: string, width: 1280 | 390, profile: ValidationProfile) {
+    const key = `${page}|${width}|${profile}`;
+    if (!this.baselineErrors.has(key)) this.baselineErrors.set(key, (async () => {
+      const previous = this.ctx.previous.filter(file => nextSourceFile(file.path));
+      if (!previous.length) return new Set<string>();
+      const shot = await captureAgentDraft(await agentPreviewSnapshot(this.ctx.base, previous), width, this.ctx.signal, page, [], profile, this.ctx.mediaPolicy);
+      return new Set(shot.errors);
+    })().catch(() => new Set<string>()));
+    return this.baselineErrors.get(key)!;
   }
 
   private async previewSnapshot() {
@@ -356,7 +388,7 @@ export class AgentToolbox {
       case 'verify': {
         this.lastVerify = null;
         this.compositionVerifiedVersion = null;
-        const result = await verifyAgentDraft({ previous: this.ctx.previous, draft: ws.files(), instruction: this.ctx.instruction, purpose: this.ctx.purpose, sectionScope: this.ctx.sectionScope });
+        const result = await verifyAgentDraft({ previous: this.ctx.previous, draft: ws.files(), instruction: this.ctx.instruction, purpose: this.ctx.purpose, sectionScope: this.ctx.sectionScope, redesign: this.ctx.redesign });
         // Code-only repairs are applied to the draft before the verdict is recorded, so finish sees the same version.
         for (const file of result.files) if (ws.list().includes(file.path) && ws.read(file.path) !== file.content) ws.write(file.path, file.content);
         this.repairs.push(...result.repairs);
@@ -372,6 +404,8 @@ export class AgentToolbox {
           const blocked = await this.ctx.gate?.(ws.files());
           if (blocked) findings.push({ source: 'scope', message: blocked });
         }
+        // Other findings skip the page captures below; under the first-design lock the header is still checked (Remolino 2026-10-28).
+        if (findings.length && this.ctx.lockedShell) findings.push(...(await this.headerGaps()).map(message => ({ source: 'scope' as const, message })));
         this.evidence = [];
         if (!findings.length) {
           const snapshot = await this.previewSnapshot();
@@ -391,11 +425,13 @@ export class AgentToolbox {
             ...(profile === 'normal' ? authoredPages : []),
             ...this.requirements.filter(r => (r.profile || 'normal') === profile).map(r => r.page),
           ])) for (const width of [1280, 390] as const) {
-            const shot = await captureAgentDraft(snapshot, width, this.ctx.signal, page, this.requirements, profile, this.ctx.mediaPolicy);
+            const shot = await captureAgentDraft(snapshot, width, this.ctx.signal, page, this.requirements.filter(r => requirementFitsWidth(r, width)), profile, this.ctx.mediaPolicy);
             if (this.ctx.reviewComposition && profile === 'normal' && compositionPages.has(page)) captures.push({ page, width, image: shot.image });
             this.evidence.push(...shot.evidence);
-            if (shot.errors.length) pageErrors = true;
-            findings.push(...shot.errors.map(message => ({ source: 'scope' as const, message: `${page} (${width}): ${message}` })));
+            const known = shot.errors.length ? await this.knownPageErrors(page, width, profile) : new Set<string>();
+            const errors = shot.errors.filter(message => !known.has(message));
+            if (errors.length) pageErrors = true;
+            findings.push(...errors.map(message => ({ source: 'scope' as const, message: `${page} (${width}): ${message}` })));
           }
           findings.push(...this.evidence.filter(e => !e.passed).map(e => ({ source: 'scope' as const, message: `${e.page} (${e.width}) ${e.id}: ${e.detail}` })));
           if (!findings.length && this.ctx.reviewComposition) {

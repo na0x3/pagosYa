@@ -1,4 +1,4 @@
-import { listTemplates } from '@pagosya/store-templates';
+import { listTemplates, templateManifest, templateSourceFiles } from '@pagosya/store-templates';
 import { literalTemplateSource } from '../fixtures/literal-template';
 import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
@@ -22,6 +22,36 @@ describe('runAgent', () => {
       expect(box.finished).toBeNull();
       expect(await box.acceptIfBuildable()).toBe(true);
       expect(box.finished).toEqual({ summary: '', sections: [] });
+    });
+    // Live check 2026-10-28 (Remolino r1dkaar0): out of steps, a first design that hid the header menu was saved anyway.
+    it('under the first-design lock, never ships a draft whose header lost its menu', async () => {
+      const esencial = await templateDemoRevision(templateManifest('esencial')!, templateSourceFiles('esencial'));
+      const authored = esencial.files.filter(f => nextSourceFile(f.path));
+      const locked = (lockedShell: boolean) => new AgentToolbox({ workspace: new AgentWorkspace(authored, { redesign: true, lockedShell }), previous: authored, base: esencial, instruction: 'rediseña', purpose: 'shop', maxScreenshots: 2, redesign: true, lockedShell });
+      const hide = (box: AgentToolbox) => box.workspace.write('styles/globals.css', `${box.workspace.read('styles/globals.css')}\n[data-store-menu-replaces]{display:none !important}\n`);
+      const box = locked(true);
+      hide(box);
+      expect(await box.acceptIfBuildable()).toBe(false);
+      const free = locked(false);
+      hide(free);
+      expect(await free.acceptIfBuildable()).toBe(true);
+    });
+    // Live check 2026-10-29 (Atelier 0ye4lw4z): out of steps, the first design called itself partial and the work was lost.
+    it('under the first-design lock, ships a partial draft that builds with its header whole; never a blocked one', async () => {
+      const esencial = await templateDemoRevision(templateManifest('esencial')!, templateSourceFiles('esencial'));
+      const authored = esencial.files.filter(f => nextSourceFile(f.path));
+      const make = (lockedShell: boolean) => new AgentToolbox({ workspace: new AgentWorkspace(authored, { redesign: true, lockedShell }), previous: authored, base: esencial, instruction: 'rediseña', purpose: 'shop', maxScreenshots: 2, redesign: true, lockedShell });
+      const stop = async (box: AgentToolbox, status: 'partial' | 'blocked') => {
+        box.workspace.write('styles/globals.css', `${box.workspace.read('styles/globals.css')}\n.es-hero{letter-spacing:.01em}\n`);
+        await box.run('finish', JSON.stringify({ status, summary: 'Se acabaron los pasos' }));
+      };
+      const partial = make(true); await stop(partial, 'partial');
+      expect(await partial.acceptIfBuildable()).toBe(true);
+      expect(partial.stopped).toBeNull();
+      const blocked = make(true); await stop(blocked, 'blocked');
+      expect(await blocked.acceptIfBuildable()).toBe(false);
+      const unlocked = make(false); await stop(unlocked, 'partial');
+      expect(await unlocked.acceptIfBuildable()).toBe(false);
     });
     it('never ships a draft that does not compile', async () => {
       const box = toolbox();

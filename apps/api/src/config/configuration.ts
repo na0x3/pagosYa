@@ -112,9 +112,33 @@ export interface AppConfig {
   /** The PEPPA recipe (owner 2026-10-23): after the template, YAPI writes a rich brief and redesigns the new store freely with
    *  expressive motion, as PEPPA please was made on 2026-10-20. Default on; YAPI_PEPPA_REDESIGN=off keeps the add-on follow-up. */
   yapiPeppaRedesign: boolean;
+  /** Owner 2026-10-28 («can't I do this redesign with a cheaper model?»): the model of that redesign. YAPI_REDESIGN_MODEL
+   *  (e.g. gpt-5.6-terra); unset keeps «auto», which sends a redesign to sol. An explicit model also keeps its repairs. */
+  yapiRedesignModel: string;
   /** Owner 2026-10-27 (ported to Oct-24): after a new master store, one data-only polish (words and photo choices) instead of
    *  the agent redesign. Default off; YAPI_MASTER_POLISH=1 turns it on. */
   yapiMasterPolish: boolean;
+  /** Owner 2026-10-27 («more accurateness per store»): after a new store's last build step, YAPI checks the merchant's first
+   *  message point by point, switches on the settings asked for and has one capped edit add what is missing. Default off;
+   *  YAPI_BRIEF_CHECKLIST=1 turns it on. YAPI_CHECKLIST_MODEL (default terra) reads the list; YAPI_CHECKLIST_MAX_CREDITS (default
+   *  80, 1 credit = $0.01) caps the edit. */
+  yapiBriefChecklist: boolean;
+  /** Owner 2026-10-27: a new store with no template chosen starts from the industry skeleton that fits it (Catálogo, Atelier, Mesa,
+   *  Tecno…). Default on; YAPI_SKELETONS=off keeps Esencial for every store. */
+  yapiSkeletons: boolean;
+  /** Owner 2026-10-27/28 («can cost more, just never the same»): after the polish, one guarded personal touch — a section only this
+   *  business would have, undone if anything else changes (source-guarded-touch.ts). YAPI_GUARDED_TOUCH=1 turns it on;
+   *  YAPI_TOUCH_MODEL (default gpt-5.6-sol) and YAPI_TOUCH_TOOL_CALLS (default 14). */
+  yapiGuardedTouch: boolean;
+  yapiTouchModel: string;
+  yapiTouchToolCalls: number;
+  /** Owner 2026-10-28: the tool-call cap of a new store's first design (it spends the ChatGPT plan quota). */
+  yapiRedesignToolCalls: number;
+  /** The capped edit that builds what the check found missing. Off by default (Remolino 2026-10-27: the agent drew giant combo
+   *  cards and the layout repair after it emptied the home, $3.58); YAPI_CHECKLIST_FIX=1 turns it on. */
+  yapiChecklistFix: boolean;
+  yapiChecklistModel: string;
+  yapiChecklistMaxCredits: number;
   /** Starters (spec 2026-10-24): a new store starts from the finished store closest to the business (PEPPA, BOXY, NOA…), and
    *  «Probar otro estilo» swaps it while the store is still on its first build. Default off; YAPI_STARTERS=on enables. */
   yapiStarters: boolean;
@@ -479,7 +503,18 @@ export default (): { app: AppConfig } => {
     yapiEsencialDice: process.env.YAPI_ESENCIAL_DICE !== 'off',
     yapiPersonalTouch: process.env.YAPI_PERSONAL_TOUCH !== 'off',
     yapiPeppaRedesign: process.env.YAPI_PEPPA_REDESIGN !== 'off',
+    // Owner 2026-10-28 («las quiero únicas nada más»): the dev .env sends the redesign back to sol.
+    yapiRedesignModel: process.env.YAPI_REDESIGN_MODEL || 'auto',
     yapiMasterPolish: process.env.YAPI_MASTER_POLISH === '1',
+    yapiBriefChecklist: process.env.YAPI_BRIEF_CHECKLIST === '1',
+    yapiSkeletons: process.env.YAPI_SKELETONS !== 'off',
+    yapiGuardedTouch: process.env.YAPI_GUARDED_TOUCH === '1',
+    yapiTouchModel: process.env.YAPI_TOUCH_MODEL || 'gpt-5.6-sol',
+    yapiTouchToolCalls: Number(process.env.YAPI_TOUCH_TOOL_CALLS) > 0 ? Math.floor(Number(process.env.YAPI_TOUCH_TOOL_CALLS)) : 14,
+    yapiRedesignToolCalls: Number(process.env.YAPI_REDESIGN_TOOL_CALLS) > 0 ? Math.floor(Number(process.env.YAPI_REDESIGN_TOOL_CALLS)) : 15,
+    yapiChecklistFix: process.env.YAPI_CHECKLIST_FIX === '1',
+    yapiChecklistModel: process.env.YAPI_CHECKLIST_MODEL || 'gpt-5.6-terra',
+    yapiChecklistMaxCredits: Math.max(1, Math.min(500, Number(process.env.YAPI_CHECKLIST_MAX_CREDITS) || 80)),
     yapiStarters: process.env.YAPI_STARTERS === 'on',
     yapiPlanCard: process.env.YAPI_PLAN_CARD !== 'off',
     yapiFreeFirst: process.env.YAPI_FREE_FIRST === 'on',

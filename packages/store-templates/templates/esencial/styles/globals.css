@@ -80,6 +80,8 @@ a{color:inherit}
 .es-footer a{text-decoration:none}
 .es-footer a:hover{text-decoration:underline}
 .es-footer__name{margin:0;font:400 28px/1.1 var(--es-heading)}
+.es-footer__logo{display:inline-block}
+.es-footer__logo img{display:block;max-height:56px;max-width:220px;width:auto;height:auto;object-fit:contain}
 .es-footer__brand p{margin:0}
 .es-footer .pagosya-info-nav{display:grid;gap:10px;margin:0;padding:0;font:inherit}
 .es-footer .pagosya-info-nav a{font:inherit;color:inherit}
@@ -156,6 +158,8 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
   .es-header[data-es-header="centered"] .es-header__start{justify-self:start}
   .es-header[data-es-header="centered"] .es-logo{position:absolute;left:50%;transform:translateX(-50%);margin:0;max-width:calc(100vw - 420px)}
   .es-header[data-es-header="centered"] .es-header__end{justify-self:end;grid-column:3}
+  /* DooBoo 2026-10-28: the centered logo sits over the middle of the bar, so inline links there would run under it; they stay in the menu. */
+  .es-header[data-es-header="centered"] .es-header__links{display:none}
 }
 .es-header[data-es-header="minimal"] .es-header__end a[href="buscar.html"]{display:none}
 @media (min-width:900px){
@@ -697,6 +701,23 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es[data-es-outline="chunky"] [data-account-gate] [data-part=submit]{border:var(--es-chunk);box-shadow:4px 4px 0 var(--es-ink)}
 .es[data-es-outline="chunky"] [data-account-gate] [data-layout=split] [data-part=media] img{border:var(--es-chunk);border-radius:24px;box-shadow:var(--es-chunk-pop)}
 @media (prefers-reduced-motion:reduce){.es[data-es-outline="chunky"] :is(.es-card,.es-btn){transition:none}.es[data-es-outline="chunky"] .es-card:hover{transform:none}}
+/* Owner 2026-10-28 («a dice for PEPPA please like designs, the product card outside always the same»): the chunky look's cards
+   come in five sticker styles, rolled per store. «offset» is the dark border and hard shadow above. */
+.es[data-es-outline="chunky"][data-es-sticker="tilt"] .es-card{box-shadow:6px 6px 0 var(--es-accent);transform:rotate(-1.2deg)}
+.es[data-es-outline="chunky"][data-es-sticker="tilt"] .es-card:nth-child(even){transform:rotate(1.2deg)}
+.es[data-es-outline="chunky"][data-es-sticker="tilt"] .es-card:hover{transform:rotate(0) translate(-3px,-3px);box-shadow:9px 9px 0 var(--es-accent)}
+.es[data-es-outline="chunky"][data-es-sticker="tinted"] .es-card{border:0;box-shadow:none;border-radius:28px;background:color-mix(in srgb,var(--es-accent) 14%,var(--es-paper))}
+.es[data-es-outline="chunky"][data-es-sticker="tinted"] .es-card:hover{transform:translateY(-4px);box-shadow:0 12px 0 -4px color-mix(in srgb,var(--es-accent) 45%,transparent)}
+.es[data-es-outline="chunky"][data-es-sticker="tinted"] .es-card__media img{border-radius:20px}
+.es[data-es-outline="chunky"][data-es-sticker="tinted"] .es-btn{box-shadow:none}
+.es[data-es-outline="chunky"][data-es-sticker="line"] .es-card{box-shadow:none;border-width:3px;background:var(--es-paper)}
+.es[data-es-outline="chunky"][data-es-sticker="line"] .es-card:hover{box-shadow:6px 6px 0 var(--es-accent)}
+.es[data-es-outline="chunky"][data-es-sticker="line"] .es-btn{box-shadow:none}
+.es[data-es-outline="chunky"][data-es-sticker="stamp"] .es-card{border-style:dashed;border-radius:10px;box-shadow:5px 5px 0 var(--es-accent);background:var(--es-paper)}
+.es[data-es-outline="chunky"][data-es-sticker="stamp"] .es-card__media img{border-radius:6px}
+.es[data-es-outline="chunky"][data-es-sticker="stamp"] .es-card:hover{box-shadow:8px 8px 0 var(--es-accent)}
+@media (prefers-reduced-motion:reduce){.es[data-es-outline="chunky"][data-es-sticker] .es-card:hover{transform:none}}
+
 
 /* Owner 2026-10-27: motion effects in the hero and the closing band — bubbles, floating shapes, petals, steam, sparkles — and
    confetti from an add button. A layer between the photo and the words; none for reduced motion or a store with motion off. */
@@ -733,6 +754,9 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es main[data-es-family="pop"]>:is(.es-trust){order:2}.es main[data-es-family="pop"]>.es-marquee{order:3}.es main[data-es-family="pop"]>#productos{order:4}.es main[data-es-family="pop"]>.es-duo{order:5}
 .es main[data-es-family="pop"]>#valores{order:6}.es main[data-es-family="pop"]>.es-loyalty{order:7}.es main[data-es-family="pop"]>#historia{order:8}.es main[data-es-family="pop"]>:is(.es-explore,.es-capsule){order:9}
 .es main[data-es-family="pop"]>.es-biz{order:10}.es main[data-es-family="pop"]>.es-origin{order:11}.es main[data-es-family="pop"]>#resenas{order:12}.es main[data-es-family="pop"]>*:not(#inicio):not(.es-trust):not(.es-marquee):not(#productos):not(.es-duo):not(#valores):not(.es-loyalty):not(#historia):not(.es-explore):not(.es-capsule):not(.es-biz):not(.es-origin):not(#resenas){order:13}
+/* Owner 2026-10-28: the pop page in three orders — products first, the story right after the products, or the values first. */
+.es main[data-es-family="pop"][data-es-pop-order="story"]>#historia{order:5}.es main[data-es-family="pop"][data-es-pop-order="story"]>.es-duo{order:8}
+.es main[data-es-family="pop"][data-es-pop-order="values"]>#valores{order:2}.es main[data-es-family="pop"][data-es-pop-order="values"]>.es-trust{order:6}
 .es main[data-es-family="revista"]>.es-index{order:2}.es main[data-es-family="revista"]>#productos{order:3}.es main[data-es-family="revista"]>.es-duo{order:4}.es main[data-es-family="revista"]>#historia{order:5}
 .es main[data-es-family="revista"]>:is(.es-explore,.es-capsule){order:6}.es main[data-es-family="revista"]>.es-biz{order:7}.es main[data-es-family="revista"]>#resenas{order:8}.es main[data-es-family="revista"]>.es-origin{order:9}.es main[data-es-family="revista"]>#valores{order:10}.es main[data-es-family="revista"]>#cierre{order:12}
 .es main[data-es-family="heroe"]>#valores{order:1}.es main[data-es-family="heroe"]>:is(#historia,.es-explore,.es-capsule,.es-biz,.es-origin,#resenas,#cierre){order:2}
@@ -825,3 +849,96 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-hero[data-es-hero="lookbook"] .es-btn--ghost{color:var(--es-ink);border-color:currentColor}
 @media (max-width:760px){.es-hero[data-es-hero="lookbook"]{grid-template-columns:1fr 1fr}.es-hero[data-es-hero="lookbook"] .es-hero__copy{grid-column:1 / -1;order:3}.es-hero[data-es-hero="lookbook"] :is(.es-look__a,.es-look__b){min-height:300px}}
 
+
+/* ── Store modules (owner 2026-10-27, «things that have to do with each store»): measurements, table, compare, frame, bouquet. ─ */
+.md-module{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(24px,5vw,80px);align-items:start;width:min(1280px,100%);margin:0 auto;padding:clamp(56px,8vw,104px) 24px;box-sizing:border-box}
+.md-module--solo{grid-template-columns:minmax(0,1fr)}
+.md-module__media img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block;border-radius:var(--es-radius,0)}
+.md-kicker{margin:0 0 12px;font:600 12px/1 var(--es-body);letter-spacing:.22em;text-transform:uppercase;color:var(--es-accent)}
+.md-title{margin:0;font-family:var(--es-heading);font-weight:400;font-size:clamp(32px,4vw,56px);line-height:1.05}
+.md-lead{margin:16px 0 28px;max-width:56ch;font-size:17px;line-height:1.6;opacity:.85}
+.md-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px;max-width:760px}
+.md-field{display:grid;gap:8px;font:600 12px/1.2 var(--es-body);letter-spacing:.12em;text-transform:uppercase}
+.md-field small{font:400 13px/1 var(--es-body);letter-spacing:0;text-transform:none;opacity:.7}
+.md-field--wide{grid-column:1/-1}
+.md-field input,.md-field select,.md-field textarea{width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid color-mix(in srgb,var(--es-ink) 22%,transparent);border-radius:calc(var(--es-radius,10px) * .6);background:var(--es-paper);color:var(--es-ink);font:400 16px/1.4 var(--es-body);letter-spacing:0;text-transform:none;outline:none}
+.md-field input:focus,.md-field select:focus,.md-field textarea:focus{border-color:var(--es-ink)}
+.md-send{grid-column:1/-1;justify-self:start;margin-top:6px}
+.md-chips{display:flex;flex-wrap:wrap;gap:8px}
+.md-chip{position:relative;display:inline-flex}
+.md-chip input{position:absolute;opacity:0;pointer-events:none}
+.md-chip span,.md-chip--button{display:inline-grid;place-items:center;min-width:46px;padding:10px 14px;border:1px solid color-mix(in srgb,var(--es-ink) 22%,transparent);border-radius:999px;background:var(--es-paper);color:var(--es-ink);font:600 14px/1 var(--es-body);letter-spacing:0;text-transform:none;cursor:pointer}
+.md-chip input:checked+span,.md-chip--button[aria-pressed="true"]{background:var(--es-ink);border-color:var(--es-ink);color:var(--es-paper)}
+.md-swatches{display:flex;flex-wrap:wrap;gap:10px}
+.md-swatch{width:40px;height:40px;border-radius:50%;border:2px solid var(--es-paper);box-shadow:0 0 0 1px color-mix(in srgb,var(--es-ink) 25%,transparent);cursor:pointer}
+.md-swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--es-ink)}
+.md-compare{display:grid;gap:18px}
+.md-compare__head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,2fr);gap:16px;align-items:end}
+.md-compare__pick{display:grid;gap:10px}
+.md-compare__pick img{width:100%;aspect-ratio:1;object-fit:contain;background:var(--es-muted);border-radius:var(--es-radius,10px)}
+.md-compare__pick select{padding:10px 12px;border:1px solid color-mix(in srgb,var(--es-ink) 22%,transparent);border-radius:8px;background:var(--es-paper);color:var(--es-ink);font:600 15px/1.3 var(--es-body)}
+.md-compare__price{margin:0;font-weight:700}
+.md-compare__table{width:100%;border-collapse:collapse}
+.md-compare__table th,.md-compare__table td{padding:12px 10px;text-align:left;border-bottom:1px solid color-mix(in srgb,var(--es-ink) 12%,transparent);width:33%}
+.md-compare__table tr:nth-child(odd){background:var(--es-muted)}
+.md-frame{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(24px,4vw,56px);align-items:center}
+.md-frame__wall{display:grid;place-items:center;min-height:440px;padding:40px;border-radius:var(--es-radius,10px);background:linear-gradient(180deg,color-mix(in srgb,var(--es-muted) 70%,#fff) 0%,var(--es-muted) 100%)}
+.md-frame__piece{border:18px solid #b98a5a;box-shadow:0 18px 40px rgba(0,0,0,.25),inset 0 0 0 10px #fff;background:#fff;transition:border-color .3s ease,width .3s ease;width:52%}
+.md-frame__piece[data-size="1"]{width:66%}.md-frame__piece[data-size="2"]{width:84%}
+.md-frame__piece img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;padding:10px;box-sizing:border-box;background:#fff}
+.md-frame__controls{display:grid;gap:22px}
+@media (max-width:900px){
+  .md-module,.md-frame{grid-template-columns:minmax(0,1fr);padding-left:16px;padding-right:16px}
+  .md-frame{padding:0}
+  .md-frame__wall{min-height:300px;padding:24px}
+  .md-compare__head{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.md-compare__head>span{display:none}
+  .md-compare__table th{width:30%}
+}
+
+/* ── Motion kit (owner 2026-10-27, «I want motion… not ordinary things»): springs on scroll, words that drop in, tilt, parallax.
+   Only after the script runs (.mo-ready), never for reduced motion. Lively stores (chunky) move more than calm ones. ────────── */
+.mo-words{display:inline}
+.mo-w{display:inline-block}
+.mo-ready .mo-w{animation:mo-word .9s cubic-bezier(.2,1.5,.35,1) both;animation-delay:calc(var(--i) * 75ms + 120ms)}
+@keyframes mo-word{from{opacity:0;transform:translateY(.7em) rotate(4deg)}to{opacity:1;transform:none}}
+.mo-ready [data-mo="rise"]:not([data-mo-in]){opacity:0;translate:0 48px;scale:.97}
+.mo-ready [data-mo="rise"]{transition:opacity .7s ease,translate .95s cubic-bezier(.2,1.35,.35,1),scale .95s cubic-bezier(.2,1.35,.35,1)}
+.mo-ready [data-mo="rise"] [data-mo-item]{transition:opacity .6s ease calc(var(--mo-i,0) * 70ms),translate .85s cubic-bezier(.2,1.45,.35,1) calc(var(--mo-i,0) * 70ms)}
+.mo-ready [data-mo="rise"]:not([data-mo-in]) [data-mo-item]{opacity:0;translate:0 36px}
+.mo-ready [data-mo="tilt"]{transform:perspective(900px) rotateX(var(--mo-rx,0deg)) rotateY(var(--mo-ry,0deg)) scale(1.02);transition:transform .35s cubic-bezier(.2,.9,.3,1.2);will-change:transform}
+.mo-ready [data-mo="parallax"]{translate:0 var(--mo-p,0px);will-change:translate}
+.es:not([data-es-outline="chunky"]) .mo-w{animation-duration:1.1s;animation-timing-function:cubic-bezier(.2,.8,.2,1)}
+.es:not([data-es-outline="chunky"]) [data-mo="rise"]{transition-timing-function:ease,cubic-bezier(.2,.8,.2,1),cubic-bezier(.2,.8,.2,1)}
+@media (prefers-reduced-motion:reduce){.mo-w{animation:none!important}.mo-ready [data-mo]{opacity:1!important;translate:none!important;scale:none!important;transform:none!important}}
+
+/* Photo focus (owner 2026-10-28, «well framed, never stretched»): the cover photo sits on its subject, read from the photo at build. */
+.es[data-hero-focus] #inicio :is(img,video){object-position:50% 50%}
+.es[data-hero-focus="tl"] #inicio :is(img,video){object-position:22% 18%}.es[data-hero-focus="tc"] #inicio :is(img,video){object-position:50% 18%}.es[data-hero-focus="tr"] #inicio :is(img,video){object-position:78% 18%}
+.es[data-hero-focus="cl"] #inicio :is(img,video){object-position:22% 50%}.es[data-hero-focus="cr"] #inicio :is(img,video){object-position:78% 50%}
+.es[data-hero-focus="bl"] #inicio :is(img,video){object-position:22% 82%}.es[data-hero-focus="bc"] #inicio :is(img,video){object-position:50% 82%}.es[data-hero-focus="br"] #inicio :is(img,video){object-position:78% 82%}
+
+/* Owner 2026-10-28 (avril, «longer with more pictures»): a business section with one of the merchant's photos is photo | words,
+   the side alternating down the page; one column on phones. */
+.es-biz--photo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(28px,4vw,64px);align-items:center}
+.es-biz--photo[data-es-side="right"] .es-biz__media{order:2}
+.es-biz__media img{display:block;width:100%;aspect-ratio:4/5;max-height:620px;object-fit:cover;border-radius:var(--es-radius,16px)}
+.es-biz--photo :is(.es-biz__list,.es-biz__steps){grid-template-columns:minmax(0,1fr)}
+@media (max-width:760px){.es-biz--photo{grid-template-columns:minmax(0,1fr);gap:24px}.es-biz--photo[data-es-side="right"] .es-biz__media{order:0}.es-biz__media img{aspect-ratio:4/3}}
+
+/* Owner 2026-10-28 («the footer is always the same»): three footers that look nothing alike — a closing statement, an inset card
+   in the store's colour, and a half-photo footer. */
+.es-footer__statement{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:24px;padding-bottom:clamp(32px,5vw,64px);margin-bottom:clamp(32px,5vw,56px);border-bottom:1px solid color-mix(in srgb,currentColor 14%,transparent)}
+.es-footer__say{margin:0;max-width:20ch;font-family:var(--es-heading);font-size:clamp(34px,5.4vw,76px);line-height:1.02;letter-spacing:-.02em}
+.es-footer[data-es-footer="statement"]{background:var(--es-paper)}
+.es-footer[data-es-footer="card"]{margin:clamp(12px,2vw,24px);border-radius:calc(var(--es-radius,16px) + 12px);background:color-mix(in srgb,var(--es-accent) 13%,var(--es-paper))}
+.es-footer[data-es-footer="card"] .es-footer__news{padding:24px;border:0;border-radius:var(--es-radius,16px);background:var(--es-paper)}
+.es-footer[data-es-footer="photo"]{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);column-gap:clamp(32px,5vw,72px);padding-left:0}
+.es-footer[data-es-footer="photo"]::before{content:"";grid-column:1;grid-row:1/span 6;min-height:420px;margin-top:-72px;margin-bottom:-32px;background:var(--es-deep) var(--es-footer-photo,none) center/cover no-repeat}
+.es-footer[data-es-footer="photo"]>*{grid-column:2}
+.es-footer[data-es-footer="photo"] .es-footer__grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:760px){
+  .es-footer[data-es-footer="photo"]{grid-template-columns:minmax(0,1fr);padding-left:16px}
+  .es-footer[data-es-footer="photo"]::before{grid-row:1;min-height:220px;margin:-72px -16px 32px}
+  .es-footer[data-es-footer="photo"]>*{grid-column:1}
+  .es-footer__statement{align-items:flex-start;flex-direction:column}
+}

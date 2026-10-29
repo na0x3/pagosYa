@@ -126,6 +126,21 @@ const dataLine = (content: string, name: string) => {
   try { return match ? JSON.parse(match[1]) : undefined; } catch { return undefined; }
 };
 
+/** Review fix 2026-10-28 (I1): a logo saved after the template build (the cover pick) reaches the store line the Shell reads;
+ *  a logo the store-data already has stays. */
+export function withStoreLogo<T extends { path: string; content: string }>(files: T[], logo: string): T[] {
+  if (!logo) return files;
+  const line = /^export const store = (.*) as const;$/m;
+  return files.map(file => {
+    if (file.path !== TEMPLATE_STORE_DATA_PATH) return file;
+    const match = line.exec(file.content);
+    if (!match) return file;
+    const store = JSON.parse(match[1]) as { logo?: string };
+    if (store.logo) return file;
+    return { ...file, content: file.content.replace(line, () => `export const store = ${JSON.stringify({ ...store, logo })} as const;`) };
+  });
+}
+
 /** A converted Plantilla's texts as its store-data says now; {} for any other store. */
 export function readPlantillaCopy(files: readonly SourceProjectFileDto[]): Record<string, string> {
   const value = dataLine(files.find(file => file.path === TEMPLATE_STORE_DATA_PATH)?.content ?? '', 'copy');
@@ -401,7 +416,8 @@ export async function assembleTemplateRevision(input: {
     ...(settings && input.fill?.heroPhoto !== undefined ? { hero: masterPhotoUrl(input.fill.heroPhoto, input.apiUrl) } : {}),
     ...(settings && input.fill?.storyPhoto !== undefined ? { story: masterPhotoUrl(input.fill.storyPhoto, input.apiUrl) } : {}),
     // Owner 2026-10-25: a video the merchant attached plays as the cover, its photo the poster.
-    ...(settings && input.fill?.heroVideo ? { heroVideo: masterPhotoUrl(input.fill.heroVideo, input.apiUrl) } : {}) }, input.fill?.photoSources);
+    ...(settings && input.fill?.heroVideo ? { heroVideo: masterPhotoUrl(input.fill.heroVideo, input.apiUrl) } : {}),
+    ...(settings ? Object.fromEntries((input.fill?.brandPhotos ?? []).slice(0, 6).map((url, index) => [`b${index + 1}`, masterPhotoUrl(url, input.apiUrl)])) : {}) }, input.fill?.photoSources);
   const demoSlots = filled.demoSlots.filter(slot => photos[slot] === templateDemoPath(manifest, slot));
   const copy = settings ? masterCopy(settings, input.fill?.copy) : undefined;
   const look = settings ? masterLook(settings, input.fill?.look) : undefined;

@@ -40,6 +40,11 @@
 .source-build-canvas { display: grid; justify-items: center; align-content: center; height: 100%; min-height: 420px; padding: 32px 24px; background: radial-gradient(120% 90% at 78% 8%, #fbf8f2 0%, #f3eee4 46%, #ece6da 100%); }
 /* The width belongs to the host: a centred grid item shrink-wraps its content. */
 .source-build-canvas [data-build-stage-host] { width: min(520px, 100%); }
+/* Spec 2026-10-28 §1: a new store's first design covers the canvas until it lands (never the template, rev 1). */
+.source-designing { display: grid; justify-items: center; align-content: center; gap: 8px; height: 100%; min-height: 420px; padding: 32px 24px; text-align: center; background: radial-gradient(120% 90% at 78% 8%, #fbf8f2 0%, #f3eee4 46%, #ece6da 100%); }
+.source-designing__title { margin: 0; color: #2b2b2b; font: 17px/1.4 Arial, Helvetica, sans-serif; }
+.source-designing__step { margin: 0; max-width: 420px; color: #737373; font: 13px/1.6 Arial, Helvetica, sans-serif; }
+.source-designing__step:empty { display: none; }
 .source-build-canvas .yapi-stage { width: 100%; margin: 0; }
 .source-build-canvas .yapi-stage__status { font-size: 17px; margin: 22px 0 10px; }
 .source-build-canvas .yapi-stage__meta { font-size: 13px; }

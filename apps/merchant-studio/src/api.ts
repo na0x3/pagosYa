@@ -13,7 +13,7 @@ export const API_BASE_URL: string = embedded || ["browser", "thumbnail", "librar
 export { CHECKOUT_ORIGIN };
 
 export type SourceChatResult = { setup?: SourceSetup | null; userMessage: AgentMessage; assistantMessage: AgentMessage; revision?: SourceRevision };
-export type SourceChatJob = { id: string; requestId: string; status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'AWAITING_INPUT' | 'BLOCKED' | 'PARTIAL' | 'FAILED' | 'INTERRUPTED' | 'CANCELLED'; sequence: number; result?: SourceChatResult; error?: string; lastCommittedRevision?: number; /** Only while QUEUED. */ queue?: { ahead: number; runningStore?: string }; /** A background job (the personal touch): never the merchant's own request. */ background?: boolean };
+export type SourceChatJob = { id: string; requestId: string; status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'AWAITING_INPUT' | 'BLOCKED' | 'PARTIAL' | 'FAILED' | 'INTERRUPTED' | 'CANCELLED'; sequence: number; result?: SourceChatResult; error?: string; lastCommittedRevision?: number; /** Only while QUEUED. */ queue?: { ahead: number; runningStore?: string }; /** A background job (the personal touch): never the merchant's own request. */ background?: boolean; /** Spec 2026-10-28: this job is a new store's first design; designNext: it queued one. */ firstDesign?: boolean; designNext?: boolean };
 
 export type JsonRecord = Record<string, unknown>;
 

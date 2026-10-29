@@ -1,4 +1,4 @@
-import { ANIMATED_DNA, ANIMATED_FONTS, animatedVariants } from './source-master-animated';
+import { ANIMATED_DNA, animatedFontFor, animatedVariants } from './source-master-animated';
 import { effectVariants } from './source-master-effects';
 import { familyLook, familyVariants, FAMILIES, type Family } from './source-master-family';
 import { Prisma } from '@prisma/client';
@@ -7,7 +7,8 @@ import sharp from 'sharp';
 import { UploadsService } from '../uploads/uploads.service';
 import { ProductPageWriterService } from '../product-content/product-page-writer.service';
 import { BrandProfileService } from '../brand/brand-profile.service';
-import { proposeStorePalette, type SourcePalette } from './source-palette';
+import { deepFromAccent, paletteFromNamed, proposeStorePalette, type SourcePalette } from './source-palette';
+import { coverForPhoto, photoFitVariants, readPhotoFit, styleForCharacter } from './source-photo-fit';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { BUNDLED_PHOTO, bundledPhotoPath, uploadPath } from './source-product-photos';
 import { ConfigService } from '@nestjs/config';
@@ -19,7 +20,7 @@ import type { SourceProjectSnapshot } from './source-project';
 import { assembleTemplateRevision, readMasterState, refillMasterFiles, refillPlantillaFiles, resolvePresetTemplate, starterBrandBlock, templateDemoRevision, TEMPLATE_STORE_DATA_PATH, withPreset, type StarterBrandColours } from './source-templates';
 import { plantillaFallback, plantillaFillFromRead } from './source-plantilla-fill';
 import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
-import { distinctPhotoCount, esencialDiceSettings, menuVariant, rollStarterDice, rollVariants, type RecentRoll } from './source-master-dice';
+import { distinctPhotoCount, esencialDiceSettings, FASHION_PARTS, menuVariant, rollStarterDice, rollVariants, type RecentRoll } from './source-master-dice';
 import { palettesForPhoto, photoTone } from './source-starter-palette';
 import { DEFAULT_RETENTION } from '../retention/retention.dto';
 
@@ -55,6 +56,19 @@ export class SourceTemplatesService {
   }
 
   /** The logo's colours as a palette (variety spec §4); replaceable in tests. */
+  /** Owner 2026-10-28: the palette of the store's own product photos (up to 8 it owns), for a store with no logo; replaceable in tests. */
+  photosPalette = async (merchantId: string, urls: readonly string[]): Promise<SourcePalette | undefined> => {
+    if (!this.uploads) return undefined;
+    const paths = [...new Set(urls.map(url => uploadPath(url)).filter(path => /^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(path)))].slice(0, 8);
+    if (!paths.length) return undefined;
+    const owned = new Set((await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: paths } }, select: { url: true } })).map(asset => asset.url));
+    const photos = (await Promise.all(paths.filter(path => owned.has(path)).map(async path => {
+      const bytes = await this.uploads!.getBuffer(path.split('/').at(-1)!).catch(() => null);
+      return bytes ? { url: path, path, bytes } : null;
+    }))).filter((photo): photo is { url: string; path: string; bytes: Buffer } => Boolean(photo));
+    return photos.length ? proposeStorePalette({ photos }).catch(() => undefined) : undefined;
+  };
+
   logoPalette = async (merchantId: string, url: string): Promise<SourcePalette | undefined> => {
     const path = uploadPath(url);
     const match = /^\/v1\/uploads\/([a-f0-9-]+\.(png|jpe?g|webp))$/i.exec(path);
@@ -160,12 +174,21 @@ export class SourceTemplatesService {
     // Owner 2026-10-27: the motion effects the merchant's words and products chose win over the roll too.
     if (fill?.effects && variants) variants = { ...variants, ...effectVariants(fill.effects, manifest.master.variants) } as MasterVariants;
     const dna = fill?.animated ? { ...(plan?.dna ?? {}), ...ANIMATED_DNA } : plan?.dna;
-    if (fill?.animated && manifest.master.fonts.some(font => font.id === ANIMATED_FONTS)) fill = { ...fill, look: { ...(fill.look ?? {}), fonts: ANIMATED_FONTS } };
+    // Owner 2026-10-28 (PEPPA and DooBoo both Fredoka): an animated store keeps the playful font its family picked for it.
     const brandColours = Object.fromEntries(([['paper', 'background'], ['ink', 'foreground'], ['accent', 'accent'], ['muted', 'surface']] as const)
       .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
     const logo = (presetManifest && !starterManifest) || plan?.accent || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
-    // A/B comparison 2026-10-24: on a starter the logo gives the accent only; its paper and ink are the starter's character.
-    const colours = Object.keys(brandColours).length ? brandColours : logo ? (starterManifest ? { accent: logo.accent } : { paper: logo.paper, ink: logo.ink, accent: logo.accent, muted: logo.surface }) : undefined;
+    // Owner 2026-10-28 («uniqueness from the brand, not the dice… logo colours»): with no logo, the store's own product photos give the
+    // colours — the goods, not the table they sit on — so two stores on one template never share a palette by roll.
+    // Owner 2026-10-28: the colours the merchant named («Colores de la marca: rosa pálido, rojo-naranja…») come right after a logo.
+    const named = logo || Object.keys(brandColours).length || plan?.accent || (presetManifest && !starterManifest) ? undefined : paletteFromNamed(fill?.namedColours ?? []);
+    const photosPalette = named || logo || Object.keys(brandColours).length || plan?.accent || (presetManifest && !starterManifest) ? undefined
+      : await this.photosPalette(merchantId, facts.photos).catch(() => undefined);
+    const brandPalette = logo ?? named ?? photosPalette;
+    // The whole brand palette on every template now (paper and ink only tinted by the brand's hue, so the page stays calm and readable),
+    // and a deep colour from the accent for the dark bands.
+    const colours = Object.keys(brandColours).length ? brandColours
+      : brandPalette ? { paper: brandPalette.paper, ink: brandPalette.ink, accent: brandPalette.accent, muted: brandPalette.surface, ...(deepFromAccent(brandPalette.accent) ? { deep: deepFromAccent(brandPalette.accent)! } : {}) } : undefined;
     // The merchant's confirmed brand colours always win over a plan's accent (final review 2026-10-22).
     if (colours && plan?.accent && !Object.keys(brandColours).length) colours.accent = plan.accent;
     if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours, ...(fill?.look?.palette ? { palette: paletteForBrand(manifest.master, fill.look.palette, colours) } : {}) } };
@@ -180,7 +203,38 @@ export class SourceTemplatesService {
       photoCount: distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]), recent: await this.recentMasterRolls(storeId), categoryCount: facts.categoryCount }) : undefined;
     // Owner 2026-10-24 (the NOA atelier's dropdown menu): the menu style the merchant asked for wins over the starter's preset.
     const askedMenu = starterManifest && fill?.menu?.style ? menuVariant(starterManifest.preset?.variants.menu ?? 'panel', fill.menu.style, fill.character?.kind === 'fashion') : undefined;
-    const starterRoll = rolledStarter || askedMenu ? { ...(rolledStarter ?? {}), variants: { ...(rolledStarter?.variants ?? {}), ...(askedMenu ? { menu: askedMenu } : {}) } as Partial<MasterVariants> } : undefined;
+    // Owner 2026-10-27: the store's working module, and on an industry skeleton a fashion business keeps the fashion product page
+    // (sizes, details) — the skeleton keeps its own cards.
+    // Owner 2026-10-27 («bakeries… really animated»): on a skeleton the animated parts and the motion effects ride here too —
+    // the dice and family steps above only touch Esencial's own roll.
+    const lively = starterManifest && fill?.animated ? { ...animatedVariants(distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]), manifest.master.variants),
+      ...effectVariants(fill.effects, manifest.master.variants) } as Record<string, string> : starterManifest ? effectVariants(fill?.effects, manifest.master.variants) as Record<string, string> : {};
+    const own: Record<string, string> = { ...lively, ...(fill?.module && fill.module !== 'none' ? { module: fill.module } : {}),
+      ...(starterManifest && fill?.character?.kind === 'fashion' ? Object.fromEntries(FASHION_PARTS.filter(part => part === 'pdp' && manifest.master?.variants?.[part]?.includes('fashion')).map(part => [part, 'fashion'])) : {}) };
+    // Owner 2026-10-28 («the picture is all stretched… well framed, never stretched»): the cover follows the cover photo — its shape, size,
+    // backdrop and subject — and the photo is placed on its subject. The roll stays when the photo can carry it.
+    if (starterManifest) Object.assign(own, Object.fromEntries(Object.entries(styleForCharacter(fill?.character, Boolean(fill?.animated)))
+      .filter(([part, id]) => (manifest.master?.variants?.[part] ?? []).includes(id))));
+    const heroBytes = fill?.heroPhoto ? files.find(file => file.path === fill?.heroPhoto)?.content : undefined;
+    const fit = heroBytes ? await readPhotoFit(Buffer.from(heroBytes, 'base64')) : undefined;
+    if (fit) {
+      Object.assign(own, photoFitVariants(fit));
+      if (starterManifest) {
+        const cover = coverForPhoto(starterManifest.id, (rolledStarter?.variants as Record<string, string> | undefined)?.hero ?? starterManifest.preset?.variants.hero, fit, starterManifest.starter?.dice?.hero ?? []);
+        if (cover) own.hero = cover;
+      } else if (variants) {
+        const cover = coverForPhoto(MASTER_TEMPLATE_ID, (variants as unknown as Record<string, string>).hero, fit, manifest.master.variants?.hero ?? []);
+        variants = { ...variants, ...photoFitVariants(fit), ...(cover ? { hero: cover } : {}) } as unknown as MasterVariants;
+      }
+    }
+    if (variants && own.module) variants = { ...variants, module: own.module } as unknown as MasterVariants;
+    const playfulFont = starterManifest && fill?.animated ? animatedFontFor(storeId, manifest.master.fonts.map(font => font.id)) : undefined;
+    // Owner 2026-10-28 («type that fits»): on a skeleton the font pair the fill picked from the brand (its words, logo and photos) wins over
+    // the dice when the skeleton offers it; the dice only decide when the brand's pick is not one of the skeleton's.
+    const brandFont = starterManifest && !playfulFont && filled?.look?.fonts && (starterManifest.starter?.dice?.fonts ?? []).includes(filled.look.fonts) ? filled.look.fonts : undefined;
+    const animatedFonts = playfulFont ? { fonts: playfulFont } : brandFont ? { fonts: brandFont } : {};
+    const starterRoll = rolledStarter || askedMenu || (starterManifest && (Object.keys(own).length || animatedFonts.fonts)) ? { ...(rolledStarter ?? {}), ...animatedFonts,
+      variants: { ...(rolledStarter?.variants ?? {}), ...(askedMenu ? { menu: askedMenu } : {}), ...(starterManifest ? own : {}) } as Partial<MasterVariants> } : undefined;
     const { assembled } = await this.assemble(merchantId, storeId, starterManifest?.id ?? presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, files, variants, undefined, dna, starterRoll);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.firstBuild(storeId);

@@ -47,7 +47,12 @@ export function paletteFromSamples(input: { logo?: PhotoSample; photos?: PhotoSa
   const backdrop = input.logo?.backdropHex && HEX.test(input.logo.backdropHex) ? toRgb(input.logo.backdropHex) : undefined;
   const dark = options.page ? options.page === 'dark' : !!backdrop && (input.logo?.uniformity ?? 0) >= .8 && toHsl(backdrop)[2] < .2;
   const [hue, saturation] = toHsl(accent);
-  const paper = dark ? fromHsl(hue, Math.min(saturation, .18), .08) : fromHsl(hue, Math.min(saturation, .35), .97);
+  // Owner 2026-10-28 (PEPPA and DooBoo on the same #faf5f5): a light, tinted colour the brand already shows — the logo's or the
+  // photos' backdrop (DooBoo's cream) — is the paper; only without one is the paper a near-white tint of the accent's hue.
+  const lightBrand = [input.logo?.backdropHex, ...(input.photos ?? []).map(sample => sample.backdropHex)]
+    .filter((value): value is string => !!value && HEX.test(value)).map(toRgb)
+    .find(colour => { const [, s, l] = toHsl(colour); return l >= .84 && l <= .97 && s >= .12; });
+  const paper = dark ? fromHsl(hue, Math.min(saturation, .18), .08) : lightBrand ?? fromHsl(hue, Math.min(saturation, .35), .95);
   let ink = dark ? fromHsl(hue, Math.min(saturation, .15), .94) : fromHsl(hue, Math.min(saturation, .3), .13);
   const surface = mix(paper, ink, .06);
   if (contrastRatio(ink, paper) < 4.5 || contrastRatio(ink, surface) < 4.5) ink = dark ? WHITE : BLACK;
@@ -74,4 +79,50 @@ export async function proposeStorePalette(images: { logo?: PaletteImage; photos?
     if (!logo && !photoSamples.length) return undefined;
     return paletteFromSamples({ logo, photos: photoSamples });
   } catch { return undefined; }
+}
+
+/** Owner 2026-10-28 («uniqueness from the brand, not the dice»): the store's deep colour (dark bands, closings) from its own accent —
+ *  the accent's hue, kept dark enough for light text. */
+export function deepFromAccent(accent: string): string | undefined {
+  if (!HEX.test(accent)) return undefined;
+  const [hue, saturation, lightness] = toHsl(toRgb(accent));
+  // 2026-10-28: red and maroon both came out #3b16xx; a darker accent keeps a darker deep, so two brands of one hue stay apart.
+  return toHex(fromHsl(hue, Math.min(saturation, .7), Math.max(.13, Math.min(.24, lightness * .45))));
+}
+
+/** Colour names a merchant writes, longest first so «verde oliva» never reads as «verde». */
+const NAMED_COLOURS: ReadonlyArray<readonly [RegExp, string]> = ([
+  ['rojo[- ]naranja|rojo anaranjado', '#e4572e'], ['rosa p[aá]lido|rosa palo', '#f2c4cc'], ['rosa fuerte|fucsia|magenta', '#d6336c'],
+  ['verde oliva|oliva', '#6b7a2a'], ['verde menta|menta', '#5fbf9a'], ['verde agua|turquesa', '#1fa4a8'], ['azul marino', '#1d3557'],
+  ['vino|burdeos|bord[oó]', '#7b1e3a'], ['terracota', '#c0603a'], ['coral', '#f26b5b'], ['mostaza', '#c99a0e'], ['dorado', '#b8901f'],
+  ['lila|lavanda', '#a98bd4'], ['violeta', '#7c3aed'], ['morado|p[uú]rpura', '#6d3fa0'], ['celeste', '#5aa9dd'], ['azul', '#2457c5'],
+  ['naranja', '#ee7d1f'], ['amarillo', '#f0bd1b'], ['verde', '#2e8b57'], ['rosa(?:do)?', '#e07a95'], ['rojo|roja', '#d62828'],
+  ['caf[eé]|marr[oó]n|chocolate', '#6f4126'], ['beige|arena', '#e3d2b4'], ['crema|marfil', '#f6efdf'], ['blanco|blanca', '#ffffff'],
+  ['negro|negra', '#141414'], ['gris', '#8a8a8a'],
+] as const).map(([words, hex]) => [new RegExp(`(?<![\\p{L}])(?:${words})(?![\\p{L}])`, 'giu'), hex] as const);
+/** Only sentences about the brand's look: «Colores de la marca: …», «Mi logo es el espiral rojo» — never «Brillo Rosa» or «flores blancas». */
+const ABOUT_COLOUR = /(?<![\p{L}])(colou?r(es)?|logo|marca|tonos|paleta)(?![\p{L}])/iu;
+
+/** Owner 2026-10-28 (Oh Belly named «rosa pálido, rojo-naranja, verde oliva y morado» and got mustard from its pears): the colours the
+ *  merchant names for the brand, in the order written. Pure; no model. */
+export function coloursFromWords(text: string | undefined): string[] {
+  const named: Array<{ at: number; hex: string }> = [];
+  let offset = 0;
+  for (const sentence of (text ?? '').split(/(?<=[.!?])\s+|\n+/)) {
+    if (ABOUT_COLOUR.test(sentence)) {
+      let rest = sentence;
+      for (const [pattern, hex] of NAMED_COLOURS) rest = rest.replace(pattern, (match, at: number) => { named.push({ at: offset + at, hex }); return ' '.repeat(match.length); });
+    }
+    offset += sentence.length + 1;
+  }
+  return [...new Set(named.sort((a, b) => a.at - b.at).map(entry => entry.hex))];
+}
+
+/** The named colours as a palette, the way a logo's colours are: the first colour that can carry a brand is the accent. None, none. */
+export function paletteFromNamed(hexes: readonly string[]): SourcePalette | undefined {
+  const valid = hexes.filter(hex => HEX.test(hex));
+  // A pastel («rosa pálido») tints the page; the strong, mid-tone colour («rojo-naranja») carries the buttons.
+  const carries = (hex: string) => { const [, s, l] = toHsl(toRgb(hex)); return s >= .35 && l > .2 && l < .75; };
+  const ordered = [...valid.filter(carries), ...valid.filter(hex => !carries(hex))];
+  return ordered.some(hex => chromatic(toRgb(hex))) ? paletteFromSamples({ logo: { dominant: ordered } }) : undefined;
 }

@@ -210,6 +210,27 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
         for (const sheet of Array.from(document.styleSheets)) { try { visit(sheet.cssRules); } catch { /* a cross-origin sheet cannot be read */ } }
         return [...found].slice(0, 4).map(([selector, names]) => ({ selector, names: [...names].slice(0, 6) }));
       })(),
+      // Spec 2026-10-28 §2 (PEPPA and Remolino lost them in their first redesign): the template header's search, account and cart,
+      // and the brand's logo in the header and the footer, stay visible whatever the store's CSS does to them.
+      headerParts: (() => {
+        const header = document.querySelector('.es-header');
+        if (!header) return [] as string[];
+        const shown = (el: Element | null) => { if (!el) return false; const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 4 && r.height > 4 && s.visibility !== 'hidden' && s.display !== 'none' && Number(s.opacity) > .2; };
+        const missing: string[] = [];
+        // On a phone the search and the account may live in the menu panel; only the cart must always show.
+        const anyShown = (selector: string) => Array.from(header.querySelectorAll(selector)).some(shown);
+        // Catálogo shows a search form at desktop instead of the icon (review fix I3); the menu is the links, the store's own
+        // menu or the menu button (review fix I4).
+        if (innerWidth >= 900 && !anyShown('a[href$="buscar.html"], form[action$="buscar.html"]')) missing.push('buscador');
+        if (!anyShown('.es-header__links a, [data-store-menu-replaces] a, button[data-store-menu-replaces], [data-pagosya-store-menu] a, [data-pagosya-store-menu] button, button[aria-controls="es-menu"]')) missing.push('menú');
+        if (innerWidth >= 900 && !shown(header.querySelector('[data-pagosya-account]'))) missing.push('cuenta');
+        if (!shown(header.querySelector('[data-cart-open]'))) missing.push('carrito');
+        const logo = header.querySelector('.es-logo img');
+        if (logo && !shown(logo)) missing.push('logo');
+        const footLogo = document.querySelector('.es-footer__logo img');
+        if (footLogo && !shown(footLogo)) missing.push('logo del pie');
+        return missing;
+      })(),
       hiddenCatalog: Array.from(document.querySelectorAll<HTMLElement>('[data-pagosya-catalog]')).some(el => {
         const style = getComputedStyle(el);
         // Clipped to a sliver hides it as surely (BAEK 2026-10-23: height:1px;overflow:hidden on the products page).
@@ -249,6 +270,7 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
     if (health.staleCatalogCopy) errors.push('Texto permanente de catálogo vacío fuera del runtime. Usa texto de marca que siga siendo válido al añadir productos; el catálogo administra su estado vacío.');
     if (health.designProcessCopy) errors.push('Texto del proceso de diseño visible para compradores. Sustituye explicaciones de composición, runtime o catálogo real/vivo por texto breve sobre los productos o la marca, sin inventar datos.');
     if (health.lowContrast.length) errors.push(`Texto casi invisible, del mismo color que el fondo donde está: ${health.lowContrast.join(', ')}. Dale un color que contraste con ese fondo.`);
+    if (health.headerParts.length) errors.push(`Encabezado incompleto: ${health.headerParts.join(', ')} no se ve. Vuelve a mostrarlo; del encabezado y el pie solo cambia el aspecto.`);
     errors.push(...health.unresolvedVars.map(({ selector, names }) => `Variables de color sin valor en «${selector}»: ${names.join(', ')}. Se apuntan entre sí o usan una variable que no existe, y todo lo pintado con ellas queda transparente (menú, encabezado, carrito). Da a cada una un valor real, sin que una variable apunte a otra que la vuelve a nombrar.`));
     if (health.hiddenCatalog) errors.push('El catálogo está oculto. Mantén visible data-pagosya-catalog incluso sin productos; el runtime controla su estado vacío y los productos futuros.');
     evidence = await page.evaluate(evaluateRequirements, { requirements: requirements.map(r => ({ ...r, imagePaths: r.check === 'image' ? agentImagePaths(r.expected) : [] })), entry, width, profile });

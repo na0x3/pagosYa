@@ -353,3 +353,25 @@ it('reads «vague» strictly: only a real true counts (plan card, 2026-10-22)', 
   respond({ ...reply(), editKind: 'design', vague: true });
   expect((await service.decide('merchant', input())).vague).toBe(true);
 });
+
+describe('cover photo and logo pick (2026-10-28)', () => {
+  const photos = ['/v1/uploads/logo.png', '/v1/uploads/scene.png', '/v1/uploads/bottle.png'];
+  it('returns the photo the model chose for the cover and the one it read as the logo', async () => {
+    const { service, prisma } = setup();
+    prisma.mediaAsset.findMany.mockResolvedValue(photos.map(url => ({ url })));
+    respond({ cover: 1, logo: 0 });
+    expect(await service.pickCoverAndLogo('m1', { storeId: 's1', storeName: 'PEPPA', photos })).toEqual({ cover: photos[1], logo: photos[0] });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).input[0].content.filter((part: any) => part.type === 'input_image')).toHaveLength(3);
+  });
+  it('without an answer keeps the first candidate and claims no logo', async () => {
+    const { service, prisma } = setup();
+    prisma.mediaAsset.findMany.mockResolvedValue(photos.map(url => ({ url })));
+    fetchMock.mockRejectedValue(new Error('boom'));
+    expect(await service.pickCoverAndLogo('m1', { storeId: 's1', storeName: 'PEPPA', photos })).toEqual({ cover: photos[0] });
+  });
+  it('asks nothing for a store without photos', async () => {
+    const { service } = setup();
+    expect(await service.pickCoverAndLogo('m1', { storeId: 's1', storeName: 'PEPPA', photos: [] })).toEqual({});
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
