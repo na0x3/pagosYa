@@ -121,8 +121,24 @@ export class SourceChatJobsService implements OnModuleDestroy {
   @Interval(5000)
   async expire() {
     // Never automatically repeat a dispatched model call after a process crash.
-    const expired = await this.prisma.storeSourceChatJob.findMany({ where: { status: 'RUNNING', leaseUntil: { lt: new Date() } }, select: { id: true }, take: 50 });
-    for (const job of expired) await this.prisma.$transaction(async tx => {
+    const expired = await this.prisma.storeSourceChatJob.findMany({ where: { status: 'RUNNING', leaseUntil: { lt: new Date() } }, select: { id: true, storeId: true, attempt: true, input: true }, take: 50 });
+    for (const job of expired) {
+      // Oh Belly 2026-10-29: a kill with no shutdown hook (the dev watcher) leaves a first design to expire; like a clean shutdown,
+      // it goes back to the queue under its cap, so the merchant's «YAPI está diseñando» resumes instead of ending on the template.
+      if ((job.input as { firstDesign?: boolean } | null)?.firstDesign && job.attempt < FIRST_DESIGN_MAX_ATTEMPTS) {
+        const requeued = await this.prisma.$transaction(async tx => {
+          const changed = await tx.storeSourceChatJob.updateMany({ where: { id: job.id, status: 'RUNNING', leaseUntil: { lt: new Date() } }, data: { status: 'QUEUED', activeStoreId: job.storeId, leaseToken: null, leaseUntil: null, sequence: { increment: 1 } } });
+          // The dead run's generation gives back the store's active slot, or the next try could not start.
+          if (changed.count) await tx.storeSourceGeneration.updateMany({ where: { requestJobId: job.id, status: 'RUNNING' }, data: { status: 'INTERRUPTED', activeStoreId: null, completedAt: new Date() } });
+          return changed.count;
+        });
+        if (requeued) { this.logger.warn(`first design ${job.id} goes back to the queue: its lease expired`); continue; }
+      }
+      await this.expireOne(job);
+    }
+  }
+  private async expireOne(job: { id: string }) {
+    await this.prisma.$transaction(async tx => {
       const changed = await tx.storeSourceChatJob.updateMany({ where: { id: job.id, status: 'RUNNING', leaseUntil: { lt: new Date() } }, data: { status: 'INTERRUPTED', activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 }, error: 'La conexión de trabajo se interrumpió. Tu diseño y el borrador se conservan. Reintenta para continuar.' } });
       if (changed.count) await tx.storeSourceGeneration.updateMany({ where: { requestJobId: job.id, status: 'RUNNING' }, data: { status: 'INTERRUPTED', activeStoreId: null, completedAt: new Date() } });
       return changed.count;

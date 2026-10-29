@@ -289,6 +289,19 @@ describe('a first design and a spent quota (2026-10-28)', () => {
     await other.service.run(job);
     expect(other.prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'INTERRUPTED' }) }));
   });
+  // Oh Belly cmvtbdl6e 2026-10-29: the watcher killed the API mid-try, so no shutdown hook ran; the lease expired on the next boot.
+  it('a first design whose lease expired goes back to the queue, without a chat note; under the cap only', async () => {
+    const { service, prisma, chat } = setup();
+    prisma.storeSourceChatJob.findMany.mockResolvedValue([{ id: 'job', storeId: 's', attempt: 7, input: { firstDesign: true } }]);
+    await service.expire();
+    expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: 'job', status: 'RUNNING' }), data: expect.objectContaining({ status: 'QUEUED', activeStoreId: 's', leaseToken: null }) }));
+    expect(prisma.storeSourceChatJob.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'INTERRUPTED' }) }));
+    expect(chat.send).not.toHaveBeenCalled();
+    const spent = setup();
+    spent.prisma.storeSourceChatJob.findMany.mockResolvedValue([{ id: 'job', storeId: 's', attempt: 12, input: { firstDesign: true } }]);
+    await spent.service.expire();
+    expect(spent.prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'INTERRUPTED' }) }));
+  });
   it('an ordinary request still fails on a spent quota', async () => {
     const { service, prisma, chat } = setup();
     chat.send.mockRejectedValue(new BadGatewayException(MODEL_LIMIT_MERCHANT_FAILURE));
