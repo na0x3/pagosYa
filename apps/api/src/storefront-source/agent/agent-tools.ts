@@ -150,7 +150,7 @@ export class AgentToolbox {
     const gaps: string[] = [];
     for (const width of [1280, 390] as const) {
       const shot = await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', this.ctx.mediaPolicy);
-      const header = shot.errors.filter(message => message.startsWith('Encabezado incompleto'));
+      const header = shot.errors.filter(message => message.startsWith('Encabezado'));
       const known = header.length ? await this.knownPageErrors('index.html', width, 'normal') : new Set<string>();
       gaps.push(...header.filter(message => !known.has(message)).map(message => `index.html (${width}): ${message}`));
     }

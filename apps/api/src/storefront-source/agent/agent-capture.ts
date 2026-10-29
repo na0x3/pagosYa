@@ -231,6 +231,13 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
         if (footLogo && !shown(footLogo)) missing.push('logo del pie');
         return missing;
       })(),
+      // Atelier 2026-10-29: a closed phone menu whose hide rule sits only under the phone media query shows on desktop.
+      strayMenu: Array.from(document.querySelectorAll('.es-menu:not(.es-menu--open)')).some(menu => Array.from(menu.querySelectorAll('a,button')).some(link => {
+        const r = link.getBoundingClientRect();
+        if (r.width <= 4 || r.height <= 4 || r.right <= 0 || r.bottom <= 0 || r.left >= innerWidth || getComputedStyle(link).visibility === 'hidden') return false;
+        for (let el: Element | null = link; el && el !== menu.parentElement; el = el.parentElement) if (Number(getComputedStyle(el).opacity) < .2) return false;
+        return true;
+      })),
       hiddenCatalog: Array.from(document.querySelectorAll<HTMLElement>('[data-pagosya-catalog]')).some(el => {
         const style = getComputedStyle(el);
         // Clipped to a sliver hides it as surely (BAEK 2026-10-23: height:1px;overflow:hidden on the products page).
@@ -271,6 +278,7 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
     if (health.designProcessCopy) errors.push('Texto del proceso de diseño visible para compradores. Sustituye explicaciones de composición, runtime o catálogo real/vivo por texto breve sobre los productos o la marca, sin inventar datos.');
     if (health.lowContrast.length) errors.push(`Texto casi invisible, del mismo color que el fondo donde está: ${health.lowContrast.join(', ')}. Dale un color que contraste con ese fondo.`);
     if (health.headerParts.length) errors.push(`Encabezado incompleto: ${health.headerParts.join(', ')} no se ve. Vuelve a mostrarlo; del encabezado y el pie solo cambia el aspecto.`);
+    if (health.strayMenu) errors.push('Encabezado: el menú del teléfono está cerrado pero se ve. Ocúltalo en todas las medidas mientras no tenga .es-menu--open (no solo dentro del @media del teléfono).');
     errors.push(...health.unresolvedVars.map(({ selector, names }) => `Variables de color sin valor en «${selector}»: ${names.join(', ')}. Se apuntan entre sí o usan una variable que no existe, y todo lo pintado con ellas queda transparente (menú, encabezado, carrito). Da a cada una un valor real, sin que una variable apunte a otra que la vuelve a nombrar.`));
     if (health.hiddenCatalog) errors.push('El catálogo está oculto. Mantén visible data-pagosya-catalog incluso sin productos; el runtime controla su estado vacío y los productos futuros.');
     evidence = await page.evaluate(evaluateRequirements, { requirements: requirements.map(r => ({ ...r, imagePaths: r.check === 'image' ? agentImagePaths(r.expected) : [] })), entry, width, profile });

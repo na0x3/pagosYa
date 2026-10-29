@@ -182,4 +182,14 @@ describe('the template header keeps its parts (2026-10-28)', () => {
     expect((await captureAgentDraft(header('') as any, 1280)).errors.filter(e => /Encabezado incompleto/.test(e))).toEqual([]);
     expect((await captureAgentDraft(header('', false) as any, 1280)).errors.filter(e => /Encabezado incompleto/.test(e))).toEqual([]);
   });
+  // Atelier 3dsebvvh rev 2, 2026-10-29: the design kept its drawer's hide rule only under the phone media query, so the closed
+  // menu showed on desktop as a bare row of links under the header.
+  it('names a closed phone menu that still shows, and stays quiet when it is hidden or open', async () => {
+    const drawer = (cls: string) => `<nav class="es-header__links"><a href="productos.html">Productos</a></nav><div class="${cls}" id="es-menu" aria-hidden="${cls.includes('open') ? 'false' : 'true'}"><nav class="es-menu__panel"><a href="productos.html" style="display:block;width:120px;height:30px">Productos</a></nav></div>`;
+    expect((await captureAgentDraft(header('', true, drawer('es-menu')) as any, 1280)).errors)
+      .toEqual(expect.arrayContaining([expect.stringContaining('Encabezado: el menú del teléfono está cerrado pero se ve')]));
+    expect((await captureAgentDraft(header('.es-menu{visibility:hidden}', true, drawer('es-menu')) as any, 1280)).errors.filter(e => /menú del teléfono/.test(e))).toEqual([]);
+    expect((await captureAgentDraft(header('.es-menu:not(.es-menu--open){display:none}', true, drawer('es-menu')) as any, 1280)).errors.filter(e => /menú del teléfono/.test(e))).toEqual([]);
+    expect((await captureAgentDraft(header('', true, drawer('es-menu es-menu--open')) as any, 1280)).errors.filter(e => /menú del teléfono/.test(e))).toEqual([]);
+  });
 });
