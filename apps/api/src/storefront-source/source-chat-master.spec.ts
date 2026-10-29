@@ -284,8 +284,9 @@ describe('edits on a master store', () => {
     await chat.send('m1', 's1', { revision: 2, instruction: 'Rediseña la tienda con la misma sensación que la marca', personalTouch: true, ownRequest: true, redesign: true, firstDesign: true, requestId: uuid() });
     const execution = generate.mock.calls[0].find((arg: unknown) => arg && typeof arg === 'object' && 'referenceCaptures' in (arg as object));
     expect(execution).toMatchObject({ redesign: true, firstDesign: true });
-    // Owner 2026-10-28 («they eat the gpt credits»): a first design stops after a capped number of steps.
-    expect(execution.agentToolCalls).toBe(15);
+    // Owner 2026-10-28 («they eat the gpt credits»): a first design stops after a capped number of steps; 15 left three of three
+    // overnight designs out of steps (2026-10-29), 30 finished two of them.
+    expect(execution.agentToolCalls).toBe(30);
   });
 
   it('a word change Esencial has no field for goes to a design edit instead of a dead end (review fix 8)', async () => {

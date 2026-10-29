@@ -132,7 +132,8 @@ export interface AppConfig {
   yapiGuardedTouch: boolean;
   yapiTouchModel: string;
   yapiTouchToolCalls: number;
-  /** Owner 2026-10-28: the tool-call cap of a new store's first design (it spends the ChatGPT plan quota). */
+  /** Owner 2026-10-28: the tool-call cap of a new store's first design (it spends the ChatGPT plan quota). 15 was too tight
+   *  (overnight 2026-10-29: three designs out of steps before their final check); 30 by default. */
   yapiRedesignToolCalls: number;
   /** The capped edit that builds what the check found missing. Off by default (Remolino 2026-10-27: the agent drew giant combo
    *  cards and the layout repair after it emptied the home, $3.58); YAPI_CHECKLIST_FIX=1 turns it on. */
@@ -511,7 +512,7 @@ export default (): { app: AppConfig } => {
     yapiGuardedTouch: process.env.YAPI_GUARDED_TOUCH === '1',
     yapiTouchModel: process.env.YAPI_TOUCH_MODEL || 'gpt-5.6-sol',
     yapiTouchToolCalls: Number(process.env.YAPI_TOUCH_TOOL_CALLS) > 0 ? Math.floor(Number(process.env.YAPI_TOUCH_TOOL_CALLS)) : 14,
-    yapiRedesignToolCalls: Number(process.env.YAPI_REDESIGN_TOOL_CALLS) > 0 ? Math.floor(Number(process.env.YAPI_REDESIGN_TOOL_CALLS)) : 15,
+    yapiRedesignToolCalls: Number(process.env.YAPI_REDESIGN_TOOL_CALLS) > 0 ? Math.floor(Number(process.env.YAPI_REDESIGN_TOOL_CALLS)) : 30,
     yapiChecklistFix: process.env.YAPI_CHECKLIST_FIX === '1',
     yapiChecklistModel: process.env.YAPI_CHECKLIST_MODEL || 'gpt-5.6-terra',
     yapiChecklistMaxCredits: Math.max(1, Math.min(500, Number(process.env.YAPI_CHECKLIST_MAX_CREDITS) || 80)),
