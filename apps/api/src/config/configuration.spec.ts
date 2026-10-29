@@ -375,3 +375,21 @@ describe("storefront assistant configuration", () => {
     expect(configuration().app.assistant).toMatchObject({ enabled: true, ipSalt: "production-salt-value" });
   });
 });
+
+// Owner 2026-10-29 («stick to 1 plan»): with no YAPI switches set, a new store is Esencial + the data-only polish, nothing after it.
+describe('the one build path', () => {
+  const keys = ['YAPI_MASTER_POLISH', 'YAPI_PEPPA_REDESIGN', 'YAPI_PERSONAL_TOUCH', 'YAPI_SKELETONS', 'YAPI_GUARDED_TOUCH', 'YAPI_STARTERS', 'YAPI_FREE_FIRST'];
+  let original: Record<string, string | undefined>;
+  beforeEach(() => { original = Object.fromEntries(keys.map(key => [key, process.env[key]])); for (const key of keys) delete process.env[key]; });
+  afterEach(() => { for (const key of keys) { if (original[key] === undefined) delete process.env[key]; else process.env[key] = original[key]; } });
+  it('defaults to the one build path', () => {
+    const { app } = configuration();
+    expect(app.yapiMasterPolish).toBe(true);
+    expect(app.yapiPeppaRedesign).toBe(false);
+    expect(app.yapiPersonalTouch).toBe(false);
+    expect(app.yapiSkeletons).toBe(false);
+    expect(app.yapiGuardedTouch).toBe(false);
+    expect(app.yapiStarters).toBe(false);
+    expect(app.yapiFreeFirst).toBe(false);
+  });
+});

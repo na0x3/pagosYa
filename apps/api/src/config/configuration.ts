@@ -107,16 +107,16 @@ export interface AppConfig {
   yapiMasterTemplate: boolean;
   /** Variety spec 2026-10-19 §3: the platform rolls Esencial's variants per store. Default on; YAPI_ESENCIAL_DICE=off disables. */
   yapiEsencialDice: boolean;
-  /** Variety spec 2026-10-19 §5: a background personal touch after each new master store. Default on; YAPI_PERSONAL_TOUCH=off disables. */
+  /** Variety spec 2026-10-19 §5: a background personal touch after each new master store. Default off since 2026-10-29 (one build path); YAPI_PERSONAL_TOUCH=on enables. */
   yapiPersonalTouch: boolean;
   /** The PEPPA recipe (owner 2026-10-23): after the template, YAPI writes a rich brief and redesigns the new store freely with
-   *  expressive motion, as PEPPA please was made on 2026-10-20. Default on; YAPI_PEPPA_REDESIGN=off keeps the add-on follow-up. */
+   *  expressive motion, as PEPPA please was made on 2026-10-20. Default off since 2026-10-29 (one build path); YAPI_PEPPA_REDESIGN=on enables. */
   yapiPeppaRedesign: boolean;
   /** Owner 2026-10-28 («can't I do this redesign with a cheaper model?»): the model of that redesign. YAPI_REDESIGN_MODEL
    *  (e.g. gpt-5.6-terra); unset keeps «auto», which sends a redesign to sol. An explicit model also keeps its repairs. */
   yapiRedesignModel: string;
   /** Owner 2026-10-27 (ported to Oct-24): after a new master store, one data-only polish (words and photo choices) instead of
-   *  the agent redesign. Default off; YAPI_MASTER_POLISH=1 turns it on. */
+   *  the agent redesign. Default on since 2026-10-29 (one build path); YAPI_MASTER_POLISH=0 disables. */
   yapiMasterPolish: boolean;
   /** Owner 2026-10-27 («more accurateness per store»): after a new store's last build step, YAPI checks the merchant's first
    *  message point by point, switches on the settings asked for and has one capped edit add what is missing. Default off;
@@ -124,7 +124,7 @@ export interface AppConfig {
    *  80, 1 credit = $0.01) caps the edit. */
   yapiBriefChecklist: boolean;
   /** Owner 2026-10-27: a new store with no template chosen starts from the industry skeleton that fits it (Catálogo, Atelier, Mesa,
-   *  Tecno…). Default on; YAPI_SKELETONS=off keeps Esencial for every store. */
+   *  Tecno…). Default off since 2026-10-29 (owner: «esencial only»; the skeletons are hidden); YAPI_SKELETONS=on enables. */
   yapiSkeletons: boolean;
   /** Owner 2026-10-27/28 («can cost more, just never the same»): after the polish, one guarded personal touch — a section only this
    *  business would have, undone if anything else changes (source-guarded-touch.ts). YAPI_GUARDED_TOUCH=1 turns it on;
@@ -508,13 +508,13 @@ export default (): { app: AppConfig } => {
     yapiStylePick: process.env.YAPI_STYLE_PICK === '1',
     yapiMasterTemplate: process.env.YAPI_MASTER_TEMPLATE !== 'off',
     yapiEsencialDice: process.env.YAPI_ESENCIAL_DICE !== 'off',
-    yapiPersonalTouch: process.env.YAPI_PERSONAL_TOUCH !== 'off',
-    yapiPeppaRedesign: process.env.YAPI_PEPPA_REDESIGN !== 'off',
+    yapiPersonalTouch: process.env.YAPI_PERSONAL_TOUCH === 'on',
+    yapiPeppaRedesign: process.env.YAPI_PEPPA_REDESIGN === 'on',
     // Owner 2026-10-28 («las quiero únicas nada más»): the dev .env sends the redesign back to sol.
     yapiRedesignModel: process.env.YAPI_REDESIGN_MODEL || 'auto',
-    yapiMasterPolish: process.env.YAPI_MASTER_POLISH === '1',
+    yapiMasterPolish: process.env.YAPI_MASTER_POLISH !== '0',
     yapiBriefChecklist: process.env.YAPI_BRIEF_CHECKLIST === '1',
-    yapiSkeletons: process.env.YAPI_SKELETONS !== 'off',
+    yapiSkeletons: process.env.YAPI_SKELETONS === 'on',
     yapiGuardedTouch: process.env.YAPI_GUARDED_TOUCH === '1',
     yapiTouchModel: process.env.YAPI_TOUCH_MODEL || 'gpt-5.6-sol',
     yapiTouchToolCalls: Number(process.env.YAPI_TOUCH_TOOL_CALLS) > 0 ? Math.floor(Number(process.env.YAPI_TOUCH_TOOL_CALLS)) : 14,

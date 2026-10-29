@@ -29,11 +29,17 @@ beforeEach(() => {
   fillMaster = jest.fn().mockResolvedValue(null);
   applyMaster = jest.fn().mockImplementation(async (_m, _s, _r, filler) => { await filler({ storeName: 'Café Buna', products: ['Coroico'], photos: ['https://x/p1.jpg'] }); return { revision: 1, label: 'Plantilla: Esencial', filled: false }; });
   // Industry skeletons (owner 2026-10-27) have their own tests below; the rest of this file is about Esencial and the starters.
-  config = new Map<string, unknown>([['app.yapiMasterTemplate', true], ['app.yapiStylePick', true], ['app.yapiSkeletons', false]]);
+  // Owner 2026-10-29: the one build path is the default — polish on; redesign, personal touch and skeletons off.
+  config = new Map<string, unknown>([['app.yapiMasterTemplate', true], ['app.yapiStylePick', true], ['app.yapiSkeletons', false],
+    ['app.yapiMasterPolish', true], ['app.yapiPeppaRedesign', false], ['app.yapiPersonalTouch', false]]);
   chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() } as any, generation(), { decide, fillMaster } as any, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
 });
 
 const send = (instruction: string) => chat.send('m1', 's1', { revision: 0, instruction, setupAction: 'generate', requestId: uuid() }) as Promise<any>;
+
+// Tests of the follow-ups switched off on 2026-10-29 (personal touch, own-request agent, PEPPA redesign) run with the switches as
+// they were before the one build path: unset.
+const legacyFollowUps = () => { for (const key of ['app.yapiMasterPolish', 'app.yapiPeppaRedesign', 'app.yapiPersonalTouch']) config.delete(key); };
 
 it('a new shop is built from Esencial, never by the designer or the style cards', async () => {
   const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
@@ -52,6 +58,7 @@ it('the filler gets the walkthrough facts and the store photos, walkthrough phot
 // Owner 2026-10-22: «siempre tiene que ser desde la plantilla, yapi desde cero siempre falla». Every new shop starts from
 // Esencial; what the merchant asked for (their pages, their own look) rides on the follow-up, in their own words.
 it('«desde cero» starts from Esencial and the follow-up carries the request', async () => {
+  legacyFollowUps();
   const out = await send('Quiero crear mi tienda desde cero.');
   expect(applyMaster).toHaveBeenCalled();
   expect(generate).not.toHaveBeenCalled();
@@ -61,6 +68,7 @@ it('«desde cero» starts from Esencial and the follow-up carries the request', 
 });
 
 it('a specific request without «desde cero» rides on the follow-up too (owner 2026-10-22, goodProtein #4)', async () => {
+  legacyFollowUps();
   const out = await send('Diseña la tienda goodProtein. Quiero algo con mucha energía y movimiento: tú eliges la estructura. Cuenta en pocas palabras qué aporta cada marca.');
   expect(applyMaster).toHaveBeenCalled();
   expect(out.followUp.instruction).toMatch(/^Esta tienda empezó desde la plantilla/);
@@ -88,6 +96,7 @@ it('a bare «crea mi tienda» keeps the usual personal touch', async () => {
 });
 
 it('an earlier «desde cero» also starts from Esencial and is carried', async () => {
+  legacyFollowUps();
   messages.push({ role: 'USER', content: 'Prefiero un diseño desde cero', metadata: {}, createdAt: new Date(), id: 'x' });
   const out = await send('Listo, créala.');
   expect(applyMaster).toHaveBeenCalled();
@@ -97,6 +106,7 @@ it('an earlier «desde cero» also starts from Esencial and is carried', async (
 
 describe('a merchant who wants their own design or pages (stress test 2026-10-21) starts from Esencial too', () => {
   it('«nada de tienda genérica ni plantilla» gets Esencial and the follow-up transforms it', async () => {
+    legacyFollowUps();
     const out = await send('Quiero una casa de moda de lujo, editorial; nada de tienda genérica ni plantilla.');
     expect(applyMaster).toHaveBeenCalled();
     expect(generate).not.toHaveBeenCalled();
@@ -183,6 +193,15 @@ it('queues one personal touch after a new master store (variety spec §5)', asyn
   expect(out.assistantMessage.content).toContain('toque personal');
 });
 
+// Owner 2026-10-29: the only follow-up of a new store is the polish — never a redesign, a first design or a personal touch brief.
+it('a new store\'s only follow-up is the data-only polish', async () => {
+  const out = await send('Mi negocio se llama Café Buna.\nQuiero una página de recetas y un estilo propio.\nCrea mi tienda.');
+  expect(out.followUp).toMatchObject({ polish: true, revision: 1 });
+  expect(out.followUp.redesign).toBeUndefined();
+  expect(out.followUp.firstDesign).toBeUndefined();
+  expect(out.followUp.instruction.startsWith(MASTER_POLISH_BRIEF)).toBe(true);
+});
+
 // Owner 2026-10-27: the agent redesign rewrote the base and failed 3 of 4; a cheap data-only polish follows the base instead.
 it('with the polish on, a new master store queues one polish carrying the merchant\'s words', async () => {
   config.set('app.yapiPersonalTouch', false);
@@ -217,6 +236,7 @@ it('the polish never replaces a touch or redesign that is switched on', async ()
 });
 
 it('no personal touch when the flag is off', async () => {
+  legacyFollowUps();
   config.set('app.yapiPersonalTouch', false);
   const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
   expect(out.followUp).toBeUndefined();
@@ -592,6 +612,7 @@ describe('the plan card', () => {
   });
 
   it('the PEPPA recipe: Construir queues a full redesign from the brief YAPI wrote, with expressive motion', async () => {
+    legacyFollowUps();
     const redesignBrief = jest.fn().mockResolvedValue('Rediseña la tienda con una sensación fresca y deportiva. Sigue esta estructura:\n- Portada con una sola foto');
     plans.followUpBrief.mockReturnValue('Construye sobre esta tienda las secciones propias del plan');
     chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() } as any, generation(), { decide, fillMaster, redesignBrief } as any, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService, undefined, plans as any);
@@ -606,6 +627,7 @@ describe('the plan card', () => {
   });
 
   it('the first redesign gets the chosen cover photo, and the logo the merchant attached becomes the store logo (2026-10-28)', async () => {
+    legacyFollowUps();
     const redesignBrief = jest.fn().mockResolvedValue('Rediseña la tienda con una sensación fresca y deportiva. Sigue esta estructura:\n- Portada con una sola foto');
     const pickCoverAndLogo = jest.fn().mockResolvedValue({ cover: '/v1/uploads/scene.jpg', logo: '/v1/uploads/logo.png' });
     chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() } as any, generation(), { decide, fillMaster, redesignBrief, pickCoverAndLogo } as any, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService, undefined, plans as any);
@@ -618,6 +640,7 @@ describe('the plan card', () => {
   });
 
   it('without a written brief the follow-up keeps the plan\'s own brief', async () => {
+    legacyFollowUps();
     const redesignBrief = jest.fn().mockResolvedValue(null);
     plans.followUpBrief.mockReturnValue('Construye sobre esta tienda las secciones propias del plan');
     chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() } as any, generation(), { decide, fillMaster, redesignBrief } as any, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService, undefined, plans as any);
@@ -649,6 +672,7 @@ describe('the plan card', () => {
   });
 
   it('a detailed first request builds the plan at once, its own sections on the follow-up', async () => {
+    legacyFollowUps();
     plans.draft.mockResolvedValueOnce({ plan: PLAN, applied: APPLIED, exhausted: false });
     plans.followUpBrief.mockReturnValueOnce('Construye sobre esta tienda las secciones propias');
     const out = await send('Diseña la tienda goodProtein. Quiero algo con mucha energía y movimiento: tú eliges la estructura. Cuenta en pocas palabras qué aporta cada marca.');
