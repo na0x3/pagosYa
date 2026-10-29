@@ -1601,7 +1601,7 @@
   .login-hero-cards span { color: #ffffffc2; font-size: .9rem; line-height: 1.4; }
 
   /* Right: sign-in on a dark panel. */
-  .login-pane { position: relative; display: grid; grid-template-rows: 1fr auto; gap: 18px; padding: clamp(24px, 4vw, 48px); }
+  .login-pane { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr auto; gap: 18px; padding: clamp(24px, 4vw, 48px); }
   /* Two halves exactly one window tall: the page itself never scrolls (it used to grow 57px past a 756px window and
      slide the whole login); only the sign-in column scrolls if a short window cannot hold it. */
   @media (min-width: 861px) {
@@ -1644,7 +1644,8 @@
   .login-foot code { font-size: .7rem; color: #a3a3a0; }
 
   @media (max-width: 860px) {
-    .login-split { grid-template-columns: 1fr; min-height: 100dvh; }
+    /* minmax(0, …): a bare 1fr took the hero's min-content (418px on a 390px phone) and pushed the form card off-centre. */
+    .login-split { grid-template-columns: minmax(0, 1fr); min-height: 100dvh; }
     .login-hero { min-height: 0; }
     .login-hero-copy { padding: 28px 20px; gap: 8px; }
     .login-hero-copy h1 { font-size: 1.7rem; }
