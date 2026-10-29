@@ -9,6 +9,7 @@ import { sourceCanConfigureProduct, SOURCE_PRODUCT_OPTIONS_MARKER } from './sour
 import { createStoreFunnel } from './store-funnel';
 import { createStoreAnalytics } from './store-analytics';
 import { markPrivateStorePage, refreshStoreSeo } from './store-seo';
+import { forwardPixelEvent } from './store-pixels';
 import { privacy } from './privacy';
 import { sourcePreviewDocument, receivePreviewNavigation, type SourceSnapshot, type PreviewNavigation, hostedImageUrls, hostedCatalogImages } from '@pagosya/storefront-preview';
 import { API_BASE_URL, type Store } from './api';
@@ -188,6 +189,8 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
     }
     if (data?.type === 'pagosya:funnel') return; // Older kits still post steps; the steps arrive as pagosya:analytics.
     if (data?.type === 'pagosya:analytics') { if (Array.isArray(data.events)) data.events.slice(0, 40).forEach(analytics.record); return; }
+    // The merchant's ad tags live on this page (overnight 2026-10-29); the sandboxed kit hands its pixel events up here.
+    if (data?.type === 'pagosya:pixel') { if (!merchantPreview) forwardPixelEvent(data, window as unknown as Parameters<typeof forwardPixelEvent>[1]); return; }
     if (data?.type === 'pagosya:source-external' && typeof data.url === 'string') {
       try {
         // Merchant-configured destinations (social links, WhatsApp, phone, email) open for the shopper.

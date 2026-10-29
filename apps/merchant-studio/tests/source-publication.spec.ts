@@ -133,7 +133,10 @@ test('published source navigates in isolation, submits real forms and hands chec
   const frame=page.frameLocator('iframe');await expect(frame.getByRole('heading',{name:'Mi tienda'})).toBeVisible();
   await expect(page.locator('iframe')).toHaveAttribute('sandbox','allow-scripts allow-forms');
   // Contact form steps moved to the pending test below (the form became inline beside the assistant, 2026-10-16).
-  await frame.getByRole('button',{name:'Añadir Café',exact:true}).click();await frame.getByRole('button',{name:/^Pedido/}).click();await frame.getByRole('button',{name:'Continuar con mi pedido',exact:true}).click();
+  // The merchant's ad tags live on this page; the sandboxed kit hands its pixel events up (overnight 2026-10-29).
+  await page.evaluate(()=>{const w=window as any;w.fbqCalls=[];w.fbq=(...args:unknown[])=>w.fbqCalls.push(args);});
+  await frame.getByRole('button',{name:'Añadir Café',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>(window as any).fbqCalls)).toContainEqual(['track','AddToCart',{value:100,currency:'BOB'}]);await frame.getByRole('button',{name:/^Pedido/}).click();await frame.getByRole('button',{name:'Continuar con mi pedido',exact:true}).click();
   await expect(frame.getByRole('heading',{name:'Tu pedido, a tu ritmo',exact:true})).toBeVisible();
   await expect(frame.getByRole('navigation',{name:'Tienda'})).toBeVisible();
   await expect(frame.getByRole('heading',{name:'Revisa tu pedido',exact:true})).toHaveCount(0);

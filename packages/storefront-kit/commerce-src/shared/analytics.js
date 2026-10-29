@@ -9,6 +9,8 @@
     if (!names) return;
     // Amounts are integer centavos here; every provider expects major units.
     const amount = detail?.value ?? (event === 'checkout_started' ? cartValue() : 0);
+    // A hosted store runs sandboxed: the merchant's tags live on pagosYa's page, which applies consent (overnight 2026-10-29).
+    if (hosted) { try { parent.postMessage({ type: 'pagosya:pixel', event, value: amount > 0 ? amount : 0, currency: detail?.currency || cartCurrency() }, '*'); } catch {} return; }
     const payload = amount > 0 ? { value: amount / 100, currency: detail?.currency || cartCurrency() } : {};
     try { window.gtag?.('event', names[0], payload); } catch {}
     try { window.fbq?.('track', names[1], payload); } catch {}
