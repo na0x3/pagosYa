@@ -37,7 +37,9 @@ describe('rollFeatures', () => {
   const all = ['duo', 'explore', 'capsule', 'origin', 'palette'];
   it('picks 0, 1 or 2, the same for a seed, never two that would sit side by side', () => {
     const rolls = Array.from({ length: 80 }, (_, i) => rollFeatures({ seed: `s${i}`, eligible: all, fashion: false, exclude: [] }));
-    expect(new Set(rolls.map(r => r.length))).toEqual(new Set([0, 1, 2]));
+    // Owner 2026-10-29 («picture | picture»): with the duo eligible it is always there, plus 0, 1 or 2 more.
+    expect(new Set(rolls.map(r => r.length))).toEqual(new Set([1, 2, 3]));
+    for (const roll of rolls) expect(roll[0]).toBe('duo');
     expect(rollFeatures({ seed: 's1', eligible: all, fashion: false, exclude: [] })).toEqual(rollFeatures({ seed: 's1', eligible: all, fashion: false, exclude: [] }));
     for (const roll of rolls) for (const pair of [['explore', 'capsule'], ['explore', 'origin'], ['capsule', 'origin']]) expect(pair.every(id => roll.includes(id))).toBe(false);
     for (const roll of rolls) expect(roll.every(id => all.includes(id))).toBe(true);
@@ -109,3 +111,24 @@ it('the built sections keep the words they were given, so an edit can show them 
   expect(built.copy).toEqual({ duoTitles: ['Verano', ''] });
 });
 
+
+// One build path live check 2026-10-29: one photo appeared twice on 4 of 5 homes, the merchant's attached photos went unused (NOA 2
+// of 9) and no store got the two-photo band the owner likes («picture | picture»).
+describe('feature photos (one build path)', () => {
+  const data = { categories: [{ id: 'c1', name: 'Novias' }, { id: 'c2', name: 'Noche' }], items: [{ id: 'i1', categoryId: 'c1' }, { id: 'i2', categoryId: 'c2' }] };
+  it('the merchant\'s brand photos come first, before the product slots', () => {
+    const facts = featureFacts(data, { hero: 'h.jpg', story: 's.jpg', p1: 'p1.jpg', p2: 'p2.jpg', b1: 'b1.jpg', b2: 'b2.jpg' }, 'La Paz');
+    expect(facts.lifestyle.slice(0, 2)).toEqual(['b1.jpg', 'b2.jpg']);
+  });
+  it('never gives a band a photo another band already shows: a duo needs two, an origin with none is left out', () => {
+    const facts = featureFacts(data, { hero: 'h.jpg', story: '', p1: 'p1.jpg' }, 'La Paz');
+    const out = buildFeatures(['duo', 'origin'], facts, {}, { productsTitle: 'Productos', storyTitle: 'Historia', subcopy: '' }) as Record<string, any>;
+    expect(out.duo).toBeUndefined();
+    expect(out.origin?.photo).toBe('p1.jpg');
+    const none = buildFeatures(['origin'], featureFacts(data, { hero: 'h.jpg' }, 'La Paz'), {}, { productsTitle: 'P', storyTitle: 'H', subcopy: '' }) as Record<string, any>;
+    expect(none.origin).toBeUndefined();
+  });
+  it('the duo is always rolled when the store has two spare photos', () => {
+    for (const seed of ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8']) expect(rollFeatures({ seed, eligible: ['duo', 'explore', 'origin'], fashion: false, exclude: [] })).toContain('duo');
+  });
+});

@@ -74,9 +74,11 @@
     if (typeof p.badge === 'string') return p.badge.trim().slice(0, 20);
     if (store.topSellerId && store.topSellerId === p.id) return 'Más vendido';
     if (!isMembership(p) && p.discountPercent && price(p) < p.amount) return `−${p.discountPercent}%`;
-    const created = Date.parse(p.createdAt);
-    return Number.isFinite(created) && Date.now() - created < BADGE_NEW_MS ? 'Nuevo' : '';
+    // One build path live check 2026-10-29: «Nuevo» singles a product out; on a store whose catalog is mostly new (it just opened)
+    // every card said it, so it says nothing there.
+    return isNewProduct(p) && products().filter(isNewProduct).length * 2 <= products().length ? 'Nuevo' : '';
   }
+  function isNewProduct(p) { const created = Date.parse(p.createdAt); return Number.isFinite(created) && Date.now() - created < BADGE_NEW_MS; }
   const badgeMarkup = (p, className) => { const text = productBadge(p); return text ? `<span class="${className}">${escape(text)}</span>` : ''; };
   /* Compra única vs. Suscríbete y ahorra: offered only for plain products of a store that can take the consent at payment. */
   function subscriptionChoice(p) {

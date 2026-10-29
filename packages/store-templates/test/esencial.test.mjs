@@ -154,7 +154,9 @@ test('the closing photo is never the hero photo', () => {
   const { templateSourceFiles } = require('../index.js');
   const home = templateSourceFiles('esencial').find(file => file.path === 'components/home.tsx').content;
   assert.doesNotMatch(home, /es-closing__photo" src=\{photos\.hero\}/);
-  assert.match(home, /closingPhoto = unique\(\[photos\.p4, photos\.p3, photos\.p2\]\)\.find\(src => src !== photos\.hero && src !== photos\.story\)/);
+  // 2026-10-29: through taken(), which also excludes the hero, the story and the feature bands' photos.
+  assert.match(home, /closingPhoto = unique\(\[photos\.p4, photos\.p3, photos\.p2\]\)\.find\(src => !taken\(src\)/);
+  assert.match(home, /const taken = \(src: string \| undefined\) => !src \|\| src === photos\.hero \|\| src === photos\.story/);
 });
 
 test('a store with a video plays it as the cover, muted and looping, still for reduced motion (owner 2026-10-25)', () => {
@@ -180,4 +182,18 @@ test('the sign-in and account pages wear the store\'s fonts and colours (config.
   const css = file('styles/globals.css');
   assert.match(css, /\.es \[data-account-gate\] \[data-part=title\]\{font-family:var\(--es-heading\)/);
   assert.match(css, /\.es \[data-account-gate\] \[data-part=submit\]\{[^}]*background:var\(--es-accent\)/);
+});
+
+// One build path live check 2026-10-29: the home grid drew every product (NOA 11) and one photo appeared twice on 4 of 5 stores.
+test('the home grid shows at most two rows, «Ver todo» has the rest', () => {
+  assert.match(file('components/home.tsx'), /data-pagosya-catalog data-catalog-limit=\{homeLimit\}/);
+  assert.match(file('components/home.tsx'), /const homeLimit = .*grid3.* \? 6 : 8/);
+});
+
+test('no photo twice on the home: business sections skip the photos the feature bands and each other already show', () => {
+  const home = file('components/home.tsx');
+  assert.match(home, /import \{[^}]*\bfeatures\b[^}]*\} from '\.\/store-data'/);
+  assert.match(home, /const bandPhotos: string\[\] = /);
+  assert.match(home, /const pickPhoto = unique\(\[photos\.p1, photos\.p2, photos\.p3, photos\.p4\]\)\.find\(src => !taken\(src\)\)/);
+  assert.match(home, /const statementPhoto = unique\(\[photos\.p2, photos\.p4, photos\.p1, photos\.p3\]\)\.find\(src => !taken\(src\) && src !== pickPhoto && src !== notePhoto\)/);
 });

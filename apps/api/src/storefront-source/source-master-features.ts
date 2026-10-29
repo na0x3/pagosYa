@@ -24,7 +24,8 @@ export function featureFacts(data: StoreData, photos: Record<string, string>, ci
   // The story photo goes last: the story section beside these sections already shows it; one upload counts once, whether it
   // is a path or a full URL (final review 2026-10-21).
   const seen = new Set<string>([hero ? uploadPath(hero) : '']);
-  const lifestyle = [photos.p1, photos.p2, photos.p3, photos.p4, photos.story].filter((src): src is string => {
+  // One build path live check 2026-10-29: the merchant's own brand photos (b1…b6) first — nothing else on the home shows them.
+  const lifestyle = [photos.b1, photos.b2, photos.b3, photos.b4, photos.b5, photos.b6, photos.p1, photos.p2, photos.p3, photos.p4, photos.story].filter((src): src is string => {
     if (!src || seen.has(uploadPath(src))) return false;
     seen.add(uploadPath(src));
     return true;
@@ -67,12 +68,15 @@ export function rollFeatures(input: { seed: string; eligible: readonly string[];
   // The fill call's exclusions are honoured for at most half, like every other part.
   const honoured = input.eligible.filter(id => input.exclude.includes(`feature:${id}`)).slice(0, Math.floor(input.eligible.length / 2));
   const pool = input.eligible.filter(id => !honoured.includes(id));
-  const count = Math.floor(next() * 3);
+  // Owner 2026-10-29 («picture | picture»): the two-photo duo is always there when the store has the photos for it, plus 0–1 more.
+  const duo = input.eligible.includes('duo') && !honoured.includes('duo');
+  const count = Math.floor(next() * 3) + (duo ? 1 : 0);
   const order = input.fashion
     ? [...shuffle(next, pool.filter(id => FASHION_LEAD.includes(id))), ...shuffle(next, pool.filter(id => !FASHION_LEAD.includes(id)))]
     : shuffle(next, pool);
-  const chosen: string[] = [];
+  const chosen: string[] = duo ? ['duo'] : [];
   for (const id of order) {
+    if (chosen.includes(id)) continue;
     if (chosen.length >= count) break;
     if (chosen.some(other => NEIGHBOURS.some(pair => pair.includes(id) && pair.includes(other)))) continue;
     chosen.push(id);
@@ -86,13 +90,16 @@ const categoryHref = (id: string | undefined) => id ? `productos.html?f_categori
 export function buildFeatures(ids: readonly string[], facts: FeatureFacts, copy: Partial<FeatureCopy>, fallback: { productsTitle: string; storyTitle: string; subcopy: string }): Record<string, unknown> {
   const used = new Set<string>();
   const take = () => {
-    const photo = facts.lifestyle.find(src => !used.has(src)) ?? facts.lifestyle[0] ?? facts.hero;
+    // Never a photo another band already shows (one build path live check 2026-10-29: one photo twice on 4 of 5 homes).
+    const photo = facts.lifestyle.find(src => !used.has(src));
     if (photo) used.add(photo);
     return photo ?? '';
   };
   // The words it was given ride along, so an edit can show them back to the fill call (final review 2026-10-21).
   const out: Record<string, unknown> = { copy };
   for (const id of FEATURE_IDS.filter(feature => ids.includes(feature))) {
+    if (id === 'duo' && facts.lifestyle.filter(src => !used.has(src)).length < 2) continue;
+    if (id === 'origin' && !facts.lifestyle.some(src => !used.has(src))) continue;
     if (id === 'duo') out.duo = { halves: [0, 1].map(index => {
       const category = facts.categories[index];
       return { photo: take(), title: clip(copy.duoTitles?.[index], FEATURE_COPY_CAPS.duoTitle) || category?.name || fallback.productsTitle,

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { copy, photos, sections, store } from './store-data';
+import { copy, features, photos, sections, store } from './store-data';
 import { variant } from './Shell';
 import { FeatureSlot } from './features';
 import { IconArrowRight, IconArrowUpRight, IconCheck, IconMessageCircle, IconPlus, IconShieldCheck, IconStar, IconTruck } from './icons';
@@ -29,7 +29,9 @@ export default function Home() {
   const rolledClosing = variant('closing', 'dark');
   // Owner 2026-10-27 (NOA, Dulce Horno): the closing photo is one the page has not shown yet, never the hero again; with none
   // left the closing is the coloured band.
-  const closingPhoto = unique([photos.p4, photos.p3, photos.p2]).find(src => src !== photos.hero && src !== photos.story);
+  // One build path live check 2026-10-29: two rows on the home (NOA showed all 11); «Ver todo» has the rest.
+  const homeLimit = variant('grid', 'grid4') === 'grid3' ? 6 : 8;
+  const closingPhoto = unique([photos.p4, photos.p3, photos.p2]).find(src => !taken(src) && src !== pickPhoto && src !== statementPhoto);
   const closing = rolledClosing === 'photo' && !closingPhoto ? 'accent' : rolledClosing;
   const phone: string = store.phone;
   // Colour bands (2026-10-19): cream-on-cream pages read as wireframes; the sections after the catalog sit on coloured bands.
@@ -86,7 +88,7 @@ export default function Home() {
             {card === 'bar' ? <button type="button" className="es-card__bar" data-product-add>Agregar</button> : null}
           </article>
         </template>}
-        <div className="es-grid" data-es-grid={variant('grid', 'grid4')} data-es-cards={cards} data-pagosya-catalog />
+        <div className="es-grid" data-es-grid={variant('grid', 'grid4')} data-es-cards={cards} data-pagosya-catalog data-catalog-limit={homeLimit} />
       </section>
 
       <FeatureSlot at="products" />
@@ -148,20 +150,29 @@ function HeroVideo() {
   return <video ref={ref} className="es-hero__video" src={photos.heroVideo} autoPlay muted loop playsInline poster={photos.hero} aria-hidden="true" />;
 }
 
+// One build path live check 2026-10-29: one photo appeared twice on 4 of 5 home pages. The feature bands (duo, explore, capsule,
+// origin) claim their photos first; the business sections and the closing band take only photos nobody else shows.
+type Band = { photo?: string; halves?: Array<{ photo?: string }> };
+const bandPhotos: string[] = (() => {
+  const bands = features as unknown as Record<string, Band | undefined>;
+  return [...(bands.duo?.halves ?? []).map(half => half.photo), bands.explore?.photo, bands.capsule?.photo, bands.origin?.photo].filter((src): src is string => Boolean(src));
+})();
+const taken = (src: string | undefined) => !src || src === photos.hero || src === photos.story || bandPhotos.includes(src);
+const pickPhoto = unique([photos.p1, photos.p2, photos.p3, photos.p4]).find(src => !taken(src));
+// The journal's lead note carries one photo the hero, story and pair story do not already show; the other notes are words only.
+const notePhoto = unique([photos.p3, photos.p2, photos.p4]).find(src => !taken(src) && src !== pickPhoto);
+const statementPhoto = unique([photos.p2, photos.p4, photos.p1, photos.p3]).find(src => !taken(src) && src !== pickPhoto && src !== notePhoto);
+
 // Below the home on purpose: YAPI reads the file's first <section> as «la sección principal», which must be the hero.
 type Section = { id: string; title: string; items: Array<{ title: string; text: string }> };
 
 /** Variety spec §2: the business sections the fill call wrote (at most two), each from the merchant's own facts. */
 function BusinessSection({ section, phone, band }: { section: Section; phone: string; band?: string }) {
   const { id, title, items } = section;
-  const gallery = unique([photos.p1, photos.p2, photos.p3, photos.p4, photos.story]).filter(src => src !== photos.hero).slice(0, 4);
-  const pickPhoto = unique([photos.p1, photos.p2, photos.p3]).find(src => src !== photos.story && src !== photos.hero) ?? photos.p1;
-  // The journal's lead note carries one photo the hero, story and pair story do not already show; the other notes are words only.
-  const notePhoto = unique([photos.p3, photos.p2]).find(src => src !== photos.story && src !== photos.hero && src !== photos.p1);
+  const gallery = unique([photos.p1, photos.p2, photos.p3, photos.p4, photos.story]).filter(src => src !== photos.hero && !bandPhotos.includes(src)).slice(0, 4);
   if (id === 'gallery' && gallery.length < 2) return null;
   // Manifesto (owner 2026-10-21: bare centered lines read as plain text): a photo beside the lines on a tinted band.
   if (id === 'manifesto') {
-    const statementPhoto = unique([photos.p2, photos.p4, photos.p1]).find(src => src !== photos.hero && src !== photos.story && src !== notePhoto);
     return <section id={id} className="es-section es-biz" data-es-section={id} data-es-band={band ?? 'muted'} aria-labelledby={`es-${id}-title`}>
       <div className={statementPhoto ? 'es-biz__statement' : 'es-biz__statement es-biz__statement--text'}>
         {statementPhoto ? <img className="es-biz__statement-photo" src={statementPhoto} alt="" aria-hidden="true" loading="lazy" /> : null}

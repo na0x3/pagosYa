@@ -129,7 +129,9 @@
         // Also covers `sections` with no collections yet: a single "Más productos" group holding
         // the whole catalog isn't an arrangement, so it falls back to the same flat grid as `all`.
         // A full catalogue too small for the filters still honours a link's category or colour (final review 2026-10-21).
-        const shown = el.hasAttribute('data-catalog-full') ? applyFilters(selected, readFilterState()) : selected;
+        // One build path live check 2026-10-29: a home grid may cap its cards (data-catalog-limit); «Ver todo» leads to the rest.
+        const limit = el.hasAttribute('data-catalog-full') ? 0 : Number.parseInt(el.getAttribute('data-catalog-limit') || '', 10);
+        const shown = el.hasAttribute('data-catalog-full') ? applyFilters(selected, readFilterState()) : limit > 0 ? selected.slice(0, limit) : selected;
         el.innerHTML = shown.length ? shown.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta categoría.</p>';
       }
       structureCatalog(el);
