@@ -1,4 +1,5 @@
 import { AGENT_TOOLS, type AgentStep, type AgentToolbox } from './agent-tools';
+import { estimateInputTokens } from './agent-model';
 
 export type AgentModelCall = { name: string; arguments: string; callId: string };
 export type AgentModelTurn = { calls: AgentModelCall[]; text?: string; output?: unknown[] };
@@ -32,7 +33,8 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
   const transcript: unknown[] = [...input.opening];
   const { toolbox } = input;
   let closing = false;
-  const ask = () => input.model({ instructions: input.instructions, transcript: compactAgentTranscript(transcript), tools: closing ? AGENT_TOOLS.filter(tool => tool.name === 'finish') : AGENT_TOOLS });
+  const compact = agentTranscriptCompactor();
+  const ask = () => input.model({ instructions: input.instructions, transcript: compact(transcript), tools: closing ? AGENT_TOOLS.filter(tool => tool.name === 'finish') : AGENT_TOOLS });
   const sleep = input.sleep ?? ((ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms)));
   let toolCalls = 0;
   let idle = 0, budgetWarned = false;
@@ -131,15 +133,41 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
   }
 }
 
-/** Preserve calls/results and the original task. Evict stale observations, never instructions or edit history. */
-export function compactAgentTranscript(transcript: unknown[]): unknown[] {
+/** Spec 2026-10-29 (agent cost): stale content waits behind the recent window until this many tokens pile up, then goes in
+ *  one batch, so between batches every request extends the previous one and the provider can bill it at the cached rate. */
+export const AGENT_COMPACT_BATCH_TOKENS = 20_000;
+
+const hasImage = (item: any) => item.role === 'user' && Array.isArray(item.content) && item.content.some((part: any) => part.type === 'input_image');
+/** Stale observations: every screenshot but the latest, and long file reads more than 12 items back. Never instructions,
+ *  the original task, function calls or edit history. */
+function staleIndexes(transcript: any[]): number[] {
   const calls = new Map<string, string>();
-  for (const item of transcript as any[]) if (item.type === 'function_call') calls.set(item.call_id, item.name);
+  for (const item of transcript) if (item.type === 'function_call') calls.set(item.call_id, item.name);
   let latestImage = -1;
-  (transcript as any[]).forEach((item, i) => { if (item.role === 'user' && Array.isArray(item.content) && item.content.some((part: any) => part.type === 'input_image')) latestImage = i; });
-  return (transcript as any[]).map((item, i) => {
-    if (i > 0 && i < latestImage && item.role === 'user' && Array.isArray(item.content) && item.content.some((part: any) => part.type === 'input_image')) return { ...item, content: item.content.filter((part: any) => part.type !== 'input_image').concat({ type:'input_text', text:'Previous screenshot evicted. Use the latest screenshot; recapture if this page changed.' }) };
-    if (i < transcript.length - 12 && item.type === 'function_call_output' && calls.get(item.call_id) === 'read_file' && typeof item.output === 'string' && item.output.length > 1200) return { ...item, output:'Earlier file contents evicted. read_file returns the CURRENT version if needed.' };
-    return item;
-  });
+  transcript.forEach((item, i) => { if (hasImage(item)) latestImage = i; });
+  return transcript.flatMap((item, i) => (i > 0 && i < latestImage && hasImage(item))
+    || (i < transcript.length - 12 && item.type === 'function_call_output' && calls.get(item.call_id) === 'read_file' && typeof item.output === 'string' && item.output.length > 1200) ? [i] : []);
+}
+/** Always the same replacement for the same item, so a compacted item never changes again. */
+function evicted(item: any) {
+  if (item.type === 'function_call_output') return { ...item, output: 'Earlier file contents evicted. read_file returns the CURRENT version if needed.' };
+  return { ...item, content: item.content.filter((part: any) => part.type !== 'input_image').concat({ type: 'input_text', text: 'Previous screenshot evicted. Use the latest screenshot; recapture if this page changed.' }) };
+}
+
+/** Preserve calls/results and the original task. Evict every stale observation at once. */
+export function compactAgentTranscript(transcript: unknown[]): unknown[] {
+  const stale = new Set(staleIndexes(transcript as any[]));
+  return (transcript as any[]).map((item, i) => stale.has(i) ? evicted(item) : item);
+}
+
+/** The loop's compactor: remembers what it compacted and compacts only in batches of AGENT_COMPACT_BATCH_TOKENS.
+ *  The loop only appends to its transcript, so an index keeps naming the same item. */
+export function agentTranscriptCompactor(batchTokens = AGENT_COMPACT_BATCH_TOKENS) {
+  const done = new Set<number>();
+  return (transcript: unknown[]): unknown[] => {
+    const items = transcript as any[];
+    const pending = staleIndexes(items).filter(i => !done.has(i));
+    if (pending.length && estimateInputTokens(pending.map(i => items[i])) >= batchTokens) for (const i of pending) done.add(i);
+    return items.map((item, i) => done.has(i) ? evicted(item) : item);
+  };
 }

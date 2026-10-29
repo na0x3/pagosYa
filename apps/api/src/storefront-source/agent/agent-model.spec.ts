@@ -1,9 +1,20 @@
 import { SourceRequestBudget } from '../source-request-budget';
-import { openAiAgentModel } from './agent-model';
+import { openAiAgentModel, sharedPrefixTokens } from './agent-model';
 
 const make = (fetchImpl: any, onTurn = jest.fn()) => ({ onTurn, model: openAiAgentModel({ endpoint: 'https://api.openai.com/v1/responses', apiKey: 'k', model: 'gpt-5.6-terra', providerName: 'OpenAI', budget: new SourceRequestBudget(50), maxOutputTokens: 4000, reasoningEffort: 'medium', onTurn, fetchImpl }) });
 
 describe('openAiAgentModel', () => {
+  // Spec 2026-10-29 (agent cost): what the provider could have cached, so a full miss can be told from our own prefix break.
+  it('reports the tokens each request shares with the previous one', async () => {
+    const fetchImpl = jest.fn(async () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 10, output_tokens: 10 }, output: [] })));
+    const { model, onTurn } = make(fetchImpl);
+    const first = [{ role: 'user', content: [{ type: 'input_text', text: 'a'.repeat(3500) }] }];
+    await model({ instructions: 'x', transcript: first, tools: [] as any });
+    await model({ instructions: 'x', transcript: [...first, { role: 'user', content: 'b' }], tools: [] as any });
+    expect(onTurn.mock.calls[0][0].prefixTokens).toBe(0);
+    expect(onTurn.mock.calls[1][0].prefixTokens).toBeGreaterThan(1000);
+    expect(sharedPrefixTokens({ instructions: 'x', tools: [], transcript: first }, { instructions: 'y', tools: [], transcript: first })).toBe(0);
+  });
   it('marks an exhausted credit limit as an agent limit and sends the prompt cache key', async () => {
     const fetchImpl = jest.fn(async () => new Response(JSON.stringify({ status: 'completed', usage: { input_tokens: 10, output_tokens: 10 }, output: [] })));
     const cached = openAiAgentModel({ endpoint: 'e', apiKey: 'k', model: 'gpt-5.6-terra', providerName: 'OpenAI', budget: new SourceRequestBudget(50), maxOutputTokens: 2000, reasoningEffort: 'low', promptCacheKey: 'agent-key', fetchImpl: fetchImpl as any });

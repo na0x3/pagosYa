@@ -4,7 +4,7 @@ import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { AgentWorkspace } from './agent-workspace';
 import { AgentToolbox } from './agent-tools';
-import { runAgent, agentLimits, AGENT_LIMITS, AGENT_CLOSE_MS, agentRunHeadroom, agentWallWithin, abortedByTimeout, type AgentModel, type AgentModelTurn } from './agent-loop';
+import { runAgent, agentLimits, AGENT_LIMITS, AGENT_CLOSE_MS, agentRunHeadroom, agentWallWithin, abortedByTimeout, agentTranscriptCompactor, type AgentModel, type AgentModelTurn } from './agent-loop';
 
 jest.setTimeout(120_000);
 let base: Awaited<ReturnType<typeof templateDemoRevision>>;
@@ -265,5 +265,57 @@ describe('runAgent repetition guard', () => {
     const model: AgentModel = async () => ({ calls: [call('read_file', { path: paths[i++ % paths.length] })] });
     const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], limits: { toolCalls: 8 }, model });
     expect(result).toEqual({ status: 'limit' });
+  });
+});
+
+// Spec 2026-10-29 (agent cost): each turn resends the transcript; it must stay a growing prefix between compaction batches.
+describe('cacheable transcript', () => {
+  const instructions = 'i'.repeat(42_000);
+  const opening = [{ role: 'user', content: [{ type: 'input_text', text: 'pedido ' + 'y'.repeat(98_000) }] }];
+  async function record(turns: number) {
+    const box = toolbox();
+    jest.spyOn(box, 'run').mockImplementation(async (name: string) => name === 'read_file' ? { output: '// file\n' + 'x'.repeat(9000) }
+      : name === 'screenshot' ? { output: 'captura adjunta', images: ['data:image/jpeg;base64,' + 'A'.repeat(400)] } : { output: 'ok' });
+    const seen: string[][] = [];
+    const cycle = ['read_file', 'edit_file', 'screenshot', 'read_file', 'edit_file'];
+    let i = 0;
+    await runAgent({ toolbox: box, instructions, opening, limits: { toolCalls: turns }, model: async ({ transcript }) => {
+      seen.push(transcript.map(item => JSON.stringify(item)));
+      const name = cycle[i % cycle.length]; i++;
+      return { calls: [call(name, { path: `components/f${i}.tsx` })] };
+    } });
+    return seen;
+  }
+  const shared = (a: string[], b: string[]) => { let n = 0; while (n < a.length && n < b.length && a[n] === b[n]) n++; return n; };
+  const tokens = (items: string[]) => items.reduce((sum, item) => sum + item.length / 3.5, 0);
+
+  it('lets at least 85% of the input be served from the cache over a long run', async () => {
+    const seen = await record(25);
+    let total = 0, cacheable = 0;
+    seen.forEach((turn, k) => {
+      total += instructions.length / 3.5 + tokens(turn);
+      if (k) cacheable += instructions.length / 3.5 + tokens(turn.slice(0, shared(seen[k - 1], turn)));
+    });
+    expect(cacheable / total).toBeGreaterThanOrEqual(0.85);
+  });
+  it('rewrites earlier items only at a few compaction batches, never every turn', async () => {
+    const seen = await record(25);
+    const breaks = seen.slice(1).filter((turn, k) => shared(seen[k], turn) < seen[k].length).length;
+    expect(breaks).toBeLessThanOrEqual(3);
+  });
+  it('compacts in batches, keeps the latest screenshot, and never rewrites a compacted item differently', () => {
+    const compact = agentTranscriptCompactor(3_000); // one 9k-char read (~2.6k tokens) + one screenshot (1.5k)
+    const read = (id: string) => [{ type: 'function_call', name: 'read_file', call_id: id, arguments: '{}' }, { type: 'function_call_output', call_id: id, output: 'x'.repeat(9000) }];
+    const transcript: any[] = [{ role: 'user', content: [{ type: 'input_text', text: 'pedido' }] }, ...read('a'), { role: 'user', content: [{ type: 'input_image', image_url: 'old' }] }];
+    expect(compact(transcript)).toEqual(transcript); // nothing is behind the recent window yet
+    transcript.push(...Array.from({ length: 14 }, () => ({ role: 'user', content: 'continue' })), { role: 'user', content: [{ type: 'input_image', image_url: 'new' }] });
+    const first: any[] = compact(transcript);
+    expect(first[2].output).toContain('evicted');
+    expect(JSON.stringify(first)).not.toContain('"old"');
+    expect(JSON.stringify(first)).toContain('"new"');
+    transcript.push({ role: 'user', content: 'more' });
+    const second: any[] = compact(transcript);
+    expect(second.slice(0, first.length)).toEqual(first);
+    expect(second[1]).toEqual(transcript[1]); // function calls are never compacted
   });
 });

@@ -3,10 +3,20 @@ import { checkSourceProviderQuota } from '../source-provider-error';
 import type { AgentModel } from './agent-loop';
 
 const IMAGE_TOKENS = 1500;
-function estimateInputTokens(value: unknown) {
+export function estimateInputTokens(value: unknown) {
   const json = JSON.stringify(value);
   const images = json.match(/"input_image"/g)?.length ?? 0;
   return Math.ceil(json.replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+/=]+/g, '').length / 3.5) + images * IMAGE_TOKENS;
+}
+
+type AgentRequest = { instructions: string; tools: unknown; transcript: unknown[] };
+/** Spec 2026-10-29 (agent cost): estimated tokens this request shares, from its start, with the previous one, which is
+ *  what the provider could have served from its cache. A different tool list or instructions share nothing. */
+export function sharedPrefixTokens(previous: AgentRequest | null, next: AgentRequest): number {
+  if (!previous || previous.instructions !== next.instructions || JSON.stringify(previous.tools) !== JSON.stringify(next.tools)) return 0;
+  let n = 0;
+  while (n < previous.transcript.length && n < next.transcript.length && JSON.stringify(previous.transcript[n]) === JSON.stringify(next.transcript[n])) n++;
+  return estimateInputTokens({ instructions: next.instructions, tools: next.tools, transcript: next.transcript.slice(0, n) });
 }
 
 /** A request the provider refused with an error status is not billed. Only a lost response keeps its reservation. */
@@ -19,9 +29,12 @@ export function agentProviderError(status: number, body: any) {
 }
 
 /** One Responses API call per agent turn: one credit reservation, settled with the provider's usage. */
-export function openAiAgentModel(input: { endpoint: string; apiKey: string; model: string; providerName: string; budget: SourceRequestBudget; maxOutputTokens: number; reasoningEffort: string; promptCacheKey?: string; signal?: AbortSignal; onTurn?: (turn: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED' }) => void | Promise<void>; fetchImpl?: typeof fetch }): AgentModel {
+export function openAiAgentModel(input: { endpoint: string; apiKey: string; model: string; providerName: string; budget: SourceRequestBudget; maxOutputTokens: number; reasoningEffort: string; promptCacheKey?: string; signal?: AbortSignal; onTurn?: (turn: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED'; prefixTokens?: number }) => void | Promise<void>; fetchImpl?: typeof fetch }): AgentModel {
   const fetchImpl = input.fetchImpl ?? fetch;
+  let last: AgentRequest | null = null;
   return async ({ instructions, transcript, tools }) => {
+    const prefixTokens = sharedPrefixTokens(last, { instructions, tools, transcript });
+    last = { instructions, tools, transcript: [...transcript] };
     let reserved: ReturnType<SourceRequestBudget['reserve']>;
     try { reserved = input.budget.reserve(input.model, estimateInputTokens({ instructions, transcript, tools }), input.maxOutputTokens, 1024); }
     catch (error) { throw Object.assign(error as Error, { agentLimit: true }); }
@@ -42,7 +55,7 @@ export function openAiAgentModel(input: { endpoint: string; apiKey: string; mode
     } finally {
       reserved.settle(agentRejectedUsage(response, body?.usage));
       const ok = Boolean(response?.ok && (body?.status === 'completed' || body?.status === 'incomplete'));
-      await input.onTurn?.({ body, durationMs: Date.now() - started, status: ok ? 'COMPLETED' : 'FAILED' });
+      await input.onTurn?.({ body, durationMs: Date.now() - started, status: ok ? 'COMPLETED' : 'FAILED', prefixTokens });
     }
     checkSourceProviderQuota(response!.status, body, input.providerName);
     if (!response!.ok || (body?.status !== 'completed' && body?.status !== 'incomplete')) throw agentProviderError(response!.status, body);
