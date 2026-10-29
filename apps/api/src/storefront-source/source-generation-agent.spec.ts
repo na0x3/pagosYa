@@ -340,6 +340,39 @@ describe('generate() with the agent engine', () => {
     }
   });
 
+  const partialStop = () => new Response(JSON.stringify({ status: 'completed', output: [{ type: 'function_call', call_id: 'stop', name: 'finish', arguments: JSON.stringify({ status: 'partial', summary: 'Falta verificar el resultado.', sections: [], remaining: ['r1'] }) }] }));
+  // Spec 2026-10-29 (agent cost): each retry of a first design gets a freshly written brief; it must still resume.
+  it('resumes a failed first design even when its brief was written again', async () => {
+    const { service, projects, prisma, brief } = await setup();
+    jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }]]))
+      .mockResolvedValueOnce(partialStop());
+    await expect(service.generate('m', 's', input(brief), new SourceRequestBudget(50), [], undefined, { firstDesign: true })).rejects.toThrow('Falta verificar');
+    const checkpoint = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0].data.checkpoint).find((v: any) => v?.key);
+    expect(checkpoint.firstDesign).toBe(true);
+    prisma.storeSourceGeneration.findFirst.mockResolvedValue({ checkpoint });
+    jest.restoreAllMocks();
+    jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(turn([['verify', {}]])).mockResolvedValueOnce(turn([['finish', { summary: 'Cambié el título.', sections: ['Portada'] }]]));
+    const rewritten = { ...input(brief), instruction: 'Cambia el título principal a "Tu calma", con calma' };
+    await service.generate('m', 's', rewritten, new SourceRequestBudget(50), [], undefined, { firstDesign: true });
+    expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'components/home.tsx').content).toContain('Tu calma');
+  });
+  it('does not hand a rewritten first design the draft of a run that was not a first design', async () => {
+    const { service, projects, prisma, brief } = await setup();
+    jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }]]))
+      .mockResolvedValueOnce(partialStop());
+    await expect(service.generate('m', 's', input(brief), new SourceRequestBudget(50))).rejects.toThrow('Falta verificar');
+    const checkpoint = prisma.storeSourceGeneration.updateMany.mock.calls.map((c: any[]) => c[0].data.checkpoint).find((v: any) => v?.key);
+    expect(checkpoint.firstDesign).toBeUndefined();
+    prisma.storeSourceGeneration.findFirst.mockResolvedValue({ checkpoint });
+    jest.restoreAllMocks();
+    jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(turn([['verify', {}]])).mockResolvedValueOnce(turn([['finish', { summary: 'Cambié el título.', sections: ['Portada'] }]]));
+    const rewritten = { ...input(brief), instruction: 'Cambia el título principal a "Tu calma", con calma' };
+    await expect(service.generate('m', 's', rewritten, new SourceRequestBudget(50), [], undefined, { firstDesign: true })).rejects.toThrow();
+    expect(projects.save).not.toHaveBeenCalled();
+  });
+
   it('retains an incomplete private draft and resumes only the matching request', async () => {
     const {service,projects,prisma,brief}=await setup();
     jest.spyOn(globalThis,'fetch')

@@ -39,6 +39,7 @@ import { CONTROLS_GUARD_TIMEOUT_MS, captureControlsShots, guardControlsOnSnapsho
 import { controlsDeadlineMs, controlsRequestBudgetMs, CONTROLS_REQUEST_DROPPED_NOTE, instructionConcernsControls, runControlsDesign, type ControlsDesign } from './store-controls-design';
 import { detectKind, pickFamily, playbookDirection, PLAYBOOK, recentForKind, type PlaybookKind } from './design-engine/playbook';
 import { sourceMerchantRequest, sourceMerchantRequestKey } from './source-merchant-request';
+import { checkpointResumable } from './source-resume';
 import { sourceRequestContext } from './source-request-context';
 import { preparedSourceArtifact } from './source-prepared-artifact';
 import { captureAgentDraft } from './agent/agent-capture';
@@ -779,7 +780,7 @@ export class SourceGenerationService {
       const priorRequest = priorJob ? { ...sourceMerchantRequest(priorJob.input as any), ...(priorJob.input as any).merchantRequest } : undefined;
       const matchingRequest = requestKey && (checkpoint?.requestKey === requestKey || priorRequest && sourceMerchantRequestKey(priorRequest) === requestKey);
       const matchingAssets = JSON.stringify([...(checkpoint?.assetUrls || [])].sort()) === JSON.stringify([...assetUrls].sort());
-      const resumable = Boolean((checkpoint?.key === checkpointKey || (matchingRequest || execution?.resumeDraft === true) && matchingAssets) && Array.isArray(checkpoint?.files) && Array.isArray(checkpoint?.requirements));
+      const resumable = checkpointResumable({ checkpoint, checkpointKey, matchingRequest: Boolean(matchingRequest), resumeDraft: execution?.resumeDraft === true, matchingAssets, firstDesign: execution?.firstDesign === true });
       const retainedDesign = resumable && checkpoint?.design ? savedSourceDesign([{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(checkpoint.design) }]) || undefined : undefined;
       // One whole-project call, shared by the author and its self-review (source-sep5-call.ts). `model` is read at each call:
       // the single-call repair may switch it before the chat touch runs.
