@@ -53,8 +53,13 @@ export function paletteFromSamples(input: { logo?: PhotoSample; photos?: PhotoSa
     .filter((value): value is string => !!value && HEX.test(value)).map(toRgb)
     .find(colour => { const [, s, l] = toHsl(colour); return l >= .84 && l <= .97 && s >= .12; });
   const paper = dark ? fromHsl(hue, Math.min(saturation, .18), .08) : lightBrand ?? fromHsl(hue, Math.min(saturation, .35), .95);
-  let ink = dark ? fromHsl(hue, Math.min(saturation, .15), .94) : fromHsl(hue, Math.min(saturation, .3), .13);
-  const surface = mix(paper, ink, .06);
+  // Owner 2026-10-29 (yes to «brand colours like Amboras»: cream page, botanical-green text, mustard accent): on a light page the
+  // brand's own dark colour carries the text when it has one apart from the accent, else a dark clearly in the accent's hue; the
+  // band colour is a visible tint of the brand, not a 6 % grey.
+  const brandDark = dark ? undefined : [...logo, ...photos].find(colour => { const [, s, l] = toHsl(colour); return s >= .18 && l >= .1 && l <= .4 && distance(colour, accent) > 60; });
+  let ink = dark ? fromHsl(hue, Math.min(saturation, .15), .94)
+    : brandDark && contrastRatio(brandDark, paper) >= 4.5 ? brandDark : fromHsl(hue, Math.min(saturation, .55), .16);
+  const surface = dark ? mix(paper, ink, .06) : mix(paper, accent, .16);
   if (contrastRatio(ink, paper) < 4.5 || contrastRatio(ink, surface) < 4.5) ink = dark ? WHITE : BLACK;
   // The accent's text: white, the ink or the paper, whichever reads best; if none reaches 4.5:1, move the accent's
   // lightness away from that text until it does (white or near-black always gets there).

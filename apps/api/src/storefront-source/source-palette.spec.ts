@@ -98,7 +98,7 @@ it('reads the colours a merchant names for the brand, and only those', () => {
   expect(coloursFromWords('Mi negocio se llama Brillo Rosa. Ramos con flores blancas.')).toEqual([]);
   expect(coloursFromWords(undefined)).toEqual([]);
   const ohBelly = paletteFromNamed(['#f2c4cc', '#e4572e', '#6b7a2a', '#6d3fa0'])!;
-  expect(ohBelly.accent).toMatch(/^#e[45][56]/); // the red-orange, only nudged for its text's contrast
+  expect(ohBelly.accent).toMatch(/^#e[4-6][4-6]/); // the red-orange, only nudged for its text's contrast (2026-10-29: the brand ink moves it a step)
   expect(contrastRatio(rgb(ohBelly.onAccent), rgb(ohBelly.accent))).toBeGreaterThanOrEqual(4.5);
   expect(paletteFromNamed(['#f6efdf', '#ffffff'])).toBeUndefined();
 });
@@ -113,5 +113,27 @@ describe('brand paper and deep colour (2026-10-28 unique first build)', () => {
     // PEPPA and DooBoo came out #3b1616 and #3b1621: the same near-black on two brands.
     const [red, maroon] = [deepFromAccent('#d62828')!, deepFromAccent('#7b1e3a')!].map(rgb);
     expect(Math.hypot(red[0] - maroon[0], red[1] - maroon[1], red[2] - maroon[2])).toBeGreaterThan(30);
+  });
+});
+
+// Owner 2026-10-29 (yes to «brand colours like Amboras»: cream page, botanical-green text and buttons, mustard accent): the brand's own
+// dark colour carries the text, and the bands are visibly the brand's, not a 6 % grey.
+describe('the full brand palette', () => {
+  const hsl = (hex: string) => { const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255); const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+    const s = max === min ? 0 : l > .5 ? (max - min) / (2 - max - min) : (max - min) / (max + min); return { s, l }; };
+  it('a brand with a dark colour of its own (green beside mustard) writes its text in that colour', () => {
+    const palette = paletteFromSamples({ logo: { dominant: ['#c99a0e', '#2f5d34'] } })!;
+    expect(palette.accent.toLowerCase()).not.toBe('#2f5d34');
+    expect(palette.ink.toLowerCase()).toBe('#2f5d34');
+  });
+  it('a one-colour brand gets a dark text clearly in its hue, not near-black', () => {
+    const palette = paletteFromSamples({ logo: { dominant: ['#d62828'] } })!;
+    expect(hsl(palette.ink).s).toBeGreaterThan(.4);
+    expect(hsl(palette.ink).l).toBeLessThan(.25);
+  });
+  it('the band colour is a visible tint of the brand', () => {
+    const palette = paletteFromSamples({ logo: { dominant: ['#c99a0e', '#2f5d34'] } })!;
+    expect(hsl(palette.surface).s).toBeGreaterThan(.25);
+    expect(palette.surface.toLowerCase()).not.toBe(palette.paper.toLowerCase());
   });
 });
