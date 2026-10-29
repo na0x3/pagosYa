@@ -29,7 +29,8 @@
     if (navigator.globalPrivacyControl === true) { root.querySelector('[data-privacy-accept]').disabled = true; root.querySelector('[role=status]').textContent = 'Tu navegador ha solicitado desactivar el seguimiento.'; }
     const panel = root.querySelector('[data-privacy-panel]');
     const open = root.querySelector('[data-privacy-open]');
-    if (options.analyticsAvailable && choice(slug) === null) { panel.hidden = false; root.dataset.notice = 'true'; }
+    // Owner 2026-10-29 («a cookies button for the store by default»): every store asks once on the first visit, pixel or not.
+    if (choice(slug) === null) { panel.hidden = false; root.dataset.notice = 'true'; }
     open.onclick = () => { panel.hidden = false; root.querySelector('[data-privacy-reject]').focus(); };
     root.querySelector('[data-privacy-close]').onclick = () => { panel.hidden = true; delete root.dataset.notice; open.focus(); };
     for (const [name, value] of [['reject', false], ['accept', true]]) root.querySelector(`[data-privacy-${name}]`).onclick = () => { save(slug, value); panel.hidden = true; delete root.dataset.notice; open.focus(); options.onChange?.(value); };
