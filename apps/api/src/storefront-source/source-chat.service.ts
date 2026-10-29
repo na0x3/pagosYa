@@ -2,14 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { SOURCE_MODEL_CHOICES } from './source-generation-policy';
 import { merchantAsksForPhotoGroup } from './source-media-design';
 import { firstVideo, withHeroVideo } from './source-master-video';
-import { moduleFor } from './source-master-module';
 import { coloursFromWords } from './source-palette';
 import { GUARDED_TOUCH_BRIEF, touchStaysInside } from './source-guarded-touch';
 import { layoutChangeFor, layoutChangeNote } from './source-master-layout';
 import { recentLooks } from './source-recent-looks';
-import { ANIMATED_FONTS, ANIMATED_OFFER, animatedVariants, asksForAnimatedStore, asksForCalmStore, isTreatBusiness, namesAnimatedLook } from './source-master-animated';
-import { effectsFor, effectVariants } from './source-master-effects';
-import { familyFor } from './source-master-family';
 import { agentReport as agentReportText } from './agent/agent-label';
 import { closestPreset } from './source-preset-pick';
 import { sourceRequestContext } from './source-request-context';
@@ -373,19 +369,11 @@ export class SourceChatService {
       planned ? (manifest.master!.sections ?? []).filter(id => planned!.applied.sections.includes(id)) : withoutPhotoGroups(manifest.master!.sections ?? [], askedWords), photos => { briefPhotos = photos; },
       // Owner 2026-10-25 (Gramiyaa): the video the merchant attached plays as the cover, whether the build follows the plan card or not.
       firstVideo(await this.requestAssets(threadId)));
-    // Owner 2026-10-27 (PEPPA please): «animada» makes the build itself lively; softer words get the calm look and the offer.
-    // Owner 2026-10-27: bakeries, sweets and candy stores are animated by default (warm, chunky); calm words keep them calm.
-    const animated = namesAnimatedLook(askedWords) || (isTreatBusiness(businessWords) && !asksForCalmStore(askedWords));
-    // Owner 2026-10-27: the motion effects from the merchant's words and, for an animated store, from what it sells.
-    const effects = effectsFor({ words: askedWords, business: [askedWords, store?.name, onboarding.what, onboarding.story, ...productNames.map((product: { name: string }) => product.name)].filter(Boolean).join('\n'), animated });
-    // Owner 2026-10-27: the template family — from the merchant's words, the business and a store-seeded pick among those that fit.
-    const family = familyFor({ words: askedWords, business: [store?.name, onboarding.what, onboarding.story, ...productNames.map((product: { name: string }) => product.name)].filter(Boolean).join('\n'),
-      animated, fashion: isFashionStore({ storeName: store?.name ?? '', what: onboarding.what ?? draft.answers?.context ?? '', products: productNames.map((product: { name: string }) => product.name) }), productCount: productNames.length, seed: storeId });
-    // Owner 2026-10-27: the store's working module (measurements, table, compare, frame, bouquet) from what it sells.
-    const storeModule = moduleFor({ words: askedWords, business: [store?.name, onboarding.what, onboarding.story, draft.answers?.context].filter(Boolean).join('\n') });
     // Owner 2026-10-28 («uniqueness from the brand»): the brand colours the merchant wrote come before the photos' colours.
     const namedColours = coloursFromWords(askedWords);
-    { const plain = filler; filler = async facts => { const read = await plain(facts); return read ? { ...read, family, ...(storeModule !== 'none' ? { module: storeModule } : {}), ...(namedColours.length ? { namedColours } : {}), ...(animated ? { animated: true } : {}), ...(Object.keys(effects).length ? { effects } : {}) } : read; }; }
+    // Owner 2026-10-29 («esencial only not families»): the fill's read plus the brand colours the merchant named — no family, effects,
+    // module or animated look.
+    { const plain = filler; filler = async facts => { const read = await plain(facts); return read && namedColours.length ? { ...read, namedColours } : read; }; }
     // YAPI plan card (spec 2026-10-22): a planned build carries its checked plan and no preset.
     const saved = chosen ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned?.applied, chosen.id)
       : planned ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned.applied)
@@ -428,7 +416,7 @@ export class SourceChatService {
       : polishing ? { instruction: `${MASTER_POLISH_BRIEF}${userMessage.content.trim() ? `\n\nMensaje del comercio:\n${userMessage.content.trim().slice(0, 3000)}` : ''}`, revision: saved.revision, personalTouch: true, polish: true, requestId: randomUUID(), model: 'auto', ...(this.checklistOn() && userMessage.content.trim() ? { checklistWords: userMessage.content.trim().slice(0, 4000) } : {}) } : undefined;
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId, channel: 'source', role: 'ASSISTANT',
-      content: `${planned ? `Esto es lo que hice:\n${planned.plan.card.map(line => `• ${line}`).join('\n')}\n` : ''}${replyPrefix}Tu tienda ${store?.name ?? ''} está lista.${sized.length ? ` ${usualOptionsNote(sized)}` : ''}${animated ? '' : ` ${ANIMATED_OFFER}`}${merchantRequest && touching ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : written ? ' Ahora la estoy rediseñando con un estilo propio para tu marca; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : polishing ? ` Ahora pulo los textos y las fotos con tus palabras; aparecerá en un momento.${merchantRequest ? ' Si pediste páginas o secciones nuevas, pídemelas aquí y las agrego.' : ''}` : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
+      content: `${planned ? `Esto es lo que hice:\n${planned.plan.card.map(line => `• ${line}`).join('\n')}\n` : ''}${replyPrefix}Tu tienda ${store?.name ?? ''} está lista.${sized.length ? ` ${usualOptionsNote(sized)}` : ''}${merchantRequest && touching ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : written ? ' Ahora la estoy rediseñando con un estilo propio para tu marca; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : polishing ? ` Ahora pulo los textos y las fotos con tus palabras; aparecerá en un momento.${merchantRequest ? ' Si pediste páginas o secciones nuevas, pídemelas aquí y las agrego.' : ''}` : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
       metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
     } });
     // Spec 2026-10-19 §2: with no personal touch coming, the cards ride on this reply; otherwise on the touch's.
@@ -701,15 +689,8 @@ export class SourceChatService {
     const contradicts = (style: string | undefined) => asked === true ? !style || style === 'none' : asked === false ? style !== 'none' : false;
     let change: MasterFill | null = !filled || asked === undefined || (filled.menu && !contradicts(filled.menu.style)) ? filled
       : { ...filled, menu: asked ? { style: filled.menu && filled.menu.style !== 'none' ? filled.menu.style : currentMenu?.style ?? 'panel', groups: filled.menu?.groups.length ? filled.menu.groups : currentMenu?.groups ?? [] } : { style: 'none', groups: [] } };
-    // Owner 2026-10-27: «hazla más animada» on a store gives it the lively parts and the playful motion (a polish never does).
-    const lively = !options.polish && asksForAnimatedStore(request) ? animatedVariants(photos.length, manifest.master!.variants) : null;
-    // Owner 2026-10-27: «agrega burbujas», «quita los pétalos»: an effect the merchant names, on any edit.
-    const namedEffects = !options.polish ? effectVariants(effectsFor({ words: request, business: '', animated: false }), manifest.master!.variants) : {};
-    if (Object.keys(namedEffects).length) change = { ...(change ?? {}), variants: { ...(change?.variants ?? {}), ...namedEffects } };
     // Owner 2026-10-27 (Oh Belly edit test): the layout switches the merchant's words named, on top of whatever the fill read.
     if (options.layout && Object.keys(options.layout).length) change = { ...(change ?? {}), variants: { ...(change?.variants ?? {}), ...options.layout } };
-    if (lively) change = { ...(change ?? {}), animated: true, variants: { ...(change?.variants ?? {}), ...lively },
-      ...(manifest.master!.fonts.some(font => font.id === ANIMATED_FONTS) ? { look: { ...(change?.look ?? {}), fonts: ANIMATED_FONTS } } : {}) };
     // Nothing in the data to change: the caller turns the request into a minimal design edit.
     if (change && !Object.keys(change).length) return null;
     if (!change && options.polish) throw new PersonalTouchSkipped('the polish fill failed');
@@ -1249,15 +1230,12 @@ export class SourceChatService {
       const menuWords = masterStore && (menuAsk !== undefined
         || (Boolean(readStoreMenu((previous!.snapshot as unknown as SourceProjectSnapshot).files)) && instructionTouchesStoreMenu(input.instruction)));
       const menuOnly = menuWords && instructionOnlyAboutStoreMenu(input.instruction);
-      // Owner 2026-10-27: «hazla más animada» is a data change on a master store (lively parts and playful motion), never the agent.
       // Owner 2026-10-27 (Oh Belly edit test): «quita la cinta», «productos en una fila que se desliza», «foto grande de fondo» are the
       // store's own switches — its skeleton's dice, or Esencial's catalogue — saved as data, never a design rewrite.
       const skeletonId = (previousBrief as { starter?: { id?: string } } | undefined)?.starter?.id;
       const offered: Record<string, readonly string[]> = { announce: ['plain', 'ticker'], ...((skeletonId && templateManifest(skeletonId)?.starter?.dice) as Record<string, readonly string[]> | undefined ?? templateManifest(MASTER_TEMPLATE_ID)?.master?.variants ?? {}) };
       const layoutAsk = masterStore && !input.redesign && !input.personalTouch && !sourceRedesignRequested(input.instruction) ? layoutChangeFor(input.instruction, offered) : {};
-      const livelyAsk = masterStore && !input.redesign && !input.personalTouch && !sourceRedesignRequested(input.instruction)
-        && (asksForAnimatedStore(input.instruction) || Boolean(effectsFor({ words: input.instruction, business: '', animated: false }).effect));
-      if (masterStore && (decision.editKind === 'content' || menuOnly || livelyAsk || Object.keys(layoutAsk).length)) {
+      if (masterStore && (decision.editKind === 'content' || menuOnly || Object.keys(layoutAsk).length)) {
         const done = await this.masterContentEdit(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous!, Object.keys(layoutAsk).length ? { layout: layoutAsk } : {});
         if (done) return done;
         // Words Esencial has no field for (a heading a design edit added, «Lo que dicen nuestros clientes»): a minimal design edit.

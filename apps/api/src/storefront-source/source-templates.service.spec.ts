@@ -525,19 +525,18 @@ describe('applyMaster from a starter', () => {
   });
 });
 
-describe('unique first build (2026-10-28)', () => {
-  it('animated stores of one family keep their per-store playful font, not one font for all (PEPPA and DooBoo both Fredoka)', async () => {
+// Owner 2026-10-29 («esencial only not families»): a fill that still names an old family, effects or the animated look (a stale caller,
+// a stored fill) never reaches the variants.
+describe('one build path (2026-10-29)', () => {
+  it('applyMaster ignores family, effects and animated on a fill', async () => {
     const real = jest.requireActual('@pagosya/store-templates');
-    const fonts = new Set<string | undefined>();
-    for (const storeId of ['s1', 's2', 's3', 's4', 's5', 's6']) {
-      const projects = { current: jest.fn(async () => ({ slug: 'tostado', revision: 0, updatedAt: null })), version: jest.fn(), save: jest.fn(async (_m: string, _s: string, input: any) => ({ revision: input.revision + 1 })) };
-      const templates = new SourceTemplatesService({ store: { update: jest.fn(async () => ({})) } } as any, { getStorePublic: jest.fn(async () => publicStore([item])) } as any, projects as any,
-        { get: (key: string) => ({ 'app.checkoutOrigin': 'https://pagar.pagosya.test' } as any)[key] } as any);
-      templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
-      await templates.applyMaster('m1', storeId, 0, async () => ({ animated: true, family: 'pop' } as any));
-      fonts.add(readMasterState((projects.save.mock.calls[0] as any[])[2].files).look?.fonts);
-    }
-    expect(fonts.size).toBeGreaterThan(1);
+    const projects = { current: jest.fn(async () => ({ slug: 'tostado', revision: 0, updatedAt: null })), version: jest.fn(), save: jest.fn(async (_m: string, _s: string, input: any) => ({ revision: input.revision + 1 })) };
+    const templates = new SourceTemplatesService({ store: { update: jest.fn(async () => ({})) } } as any, { getStorePublic: jest.fn(async () => publicStore([item])) } as any, projects as any,
+      { get: (key: string) => ({ 'app.checkoutOrigin': 'https://pagar.pagosya.test' } as any)[key] } as any);
+    templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+    await templates.applyMaster('m1', 's1', 0, async () => ({ family: 'pop', effects: { effect: 'bubbles', confetti: 'on' }, animated: true, module: 'measure' } as any));
+    const variants = readMasterState((projects.save.mock.calls[0] as any[])[2].files).variants as Record<string, unknown>;
+    for (const part of ['family', 'effect', 'confetti', 'outline', 'sticker', 'module']) expect(variants).not.toHaveProperty(part);
   });
 });
 

@@ -104,7 +104,7 @@ export function Footer() {
   return <footer className="es-footer" data-es-footer={footer} style={band}>
     {footer === 'bigname' ? <p className="es-footer__big" aria-hidden="true">{store.name}</p> : null}
     <div className="es-footer__grid">
-      <div className="es-footer__brand"><p className="es-footer__name">{store.name}</p>{tagline ? <p>{tagline}</p> : null}</div>
+      <div className="es-footer__brand">{store.logo ? <a className="es-footer__logo" href="index.html"><img src={store.logo} alt={store.name} /></a> : <p className="es-footer__name">{store.name}</p>}{tagline ? <p>{tagline}</p> : null}</div>
       <div><h2>Tienda</h2><nav aria-label="Tienda"><a href="productos.html">Todos los productos</a><a href="index.html#historia">Nuestra historia</a></nav></div>
       <div><h2>Ayuda</h2><nav data-pagosya-pages className="pagosya-info-nav es-footer__pages" aria-label="Información" /></div>
       {store.city || phone ? <div><h2>Contacto</h2>

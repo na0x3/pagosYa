@@ -24,14 +24,6 @@ export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook
   /** Owner 2026-10-28 (avril, «longer with more pictures»): the merchant's own pictures the cover and story did not take, in the
    *  order sent; store-data photos.b1…b6, which the templates' sections show before any product photo. */
   brandPhotos?: string[];
-  /** Owner 2026-10-27: the merchant asked for an animated store (source-master-animated.ts). */
-  animated?: boolean;
-  /** Owner 2026-10-27: the motion effects the merchant's words and products chose (source-master-effects.ts). */
-  effects?: Partial<Record<'effect' | 'confetti', string>>;
-  /** Owner 2026-10-27: the template family the merchant's words and business chose (source-master-family.ts). */
-  family?: string;
-  /** Owner 2026-10-27: the store's working module (measurements, table, compare, frame, bouquet), from its business's words. */
-  module?: string;
   /** Owner 2026-10-28: the colours the merchant named for the brand (source-palette.ts coloursFromWords), as hex, in the order written. */
   namedColours?: string[];
   /** Variety spec: the business's character, its sections and any variant the merchant named. */

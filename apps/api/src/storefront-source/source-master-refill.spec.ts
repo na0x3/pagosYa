@@ -70,6 +70,18 @@ describe('master store data', () => {
     expect(readMasterState(out).variants).toMatchObject({ hero: 'split-left', grid: 'grid4' });
   });
 
+  // Owner 2026-10-29: stores built Oct 27–29 keep variants the Oct 22 template no longer reads; a chat edit still saves, and an
+  // asked-for value of a removed part is never written.
+  it('a refill keeps working when the stored variants name parts the template no longer has', () => {
+    const stale = { hero: 'full', grid: 'grid4', family: 'pop', heroFade: 'fade', footer: 'statement', effect: 'bubbles', sections: [] };
+    const files = [templateStoreDataFile({ name: 'Café' }, { hero: '' }, { copy: masterCopy(master), look: masterLook(master), variants: stale as any }), ...storeFiles().slice(1)];
+    const m = { ...manifest, master: { ...master, variants: { hero: ['full', 'split-left'], grid: ['grid4'], footer: ['columns'] } } } as any;
+    let out: ReturnType<typeof refillMasterFiles> = [];
+    expect(() => { out = refillMasterFiles(files, m, { copy: { headline: 'Nuevo título' }, variants: { effect: 'petals' } as any }); }).not.toThrow();
+    expect(readMasterState(out).copy?.headline).toBe('Nuevo título');
+    expect((readMasterState(out).variants as any)?.effect).not.toBe('petals');
+  });
+
   it('round-trips the rolled variants and business sections, and a refill keeps them (variety spec §2)', () => {
     const variants = { hero: 'arch', grid: 'feature', sections: ['process'] } as any;
     const sections = [{ id: 'process', title: 'Del cafetal a tu taza', items: [{ title: 'Cosecha', text: 'A mano.' }] }];

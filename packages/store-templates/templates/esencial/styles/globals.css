@@ -80,6 +80,9 @@ a{color:inherit}
 .es-footer a{text-decoration:none}
 .es-footer a:hover{text-decoration:underline}
 .es-footer__name{margin:0;font:400 28px/1.1 var(--es-heading)}
+/* Owner 2026-10-28, kept 2026-10-29: the store logo in the footer, the name only without one. */
+.es-footer__logo{display:inline-block}
+.es-footer__logo img{display:block;max-height:56px;max-width:220px;width:auto;height:auto;object-fit:contain}
 .es-footer__brand p{margin:0}
 .es-footer .pagosya-info-nav{display:grid;gap:10px;margin:0;padding:0;font:inherit}
 .es-footer .pagosya-info-nav a{font:inherit;color:inherit}

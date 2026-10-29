@@ -1,6 +1,3 @@
-import { ANIMATED_DNA, animatedFontFor, animatedVariants } from './source-master-animated';
-import { effectVariants } from './source-master-effects';
-import { familyLook, familyVariants, FAMILIES, type Family } from './source-master-family';
 import { Prisma } from '@prisma/client';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import sharp from 'sharp';
@@ -161,20 +158,7 @@ export class SourceTemplatesService {
       if (variants.menu !== undefined) variants.menu = menuVariant(variants.menu, fill?.menu?.style, fill?.character?.kind === 'fashion')!;
       fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), palette: rolled.palette, fonts: rolled.fonts } };
     }
-    // Owner 2026-10-27: an animated store keeps its roll or plan but takes the lively parts and the playful motion.
-    if (fill?.animated && variants) variants = { ...variants, ...animatedVariants(distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]), manifest.master.variants) } as MasterVariants;
-    // Owner 2026-10-27: the template family over the roll or the plan — its fixed parts, its allowed ids, its fonts and a light page
-    // for a magazine; the dice keep everything else.
-    if (fill?.family && (FAMILIES as readonly string[]).includes(fill.family) && variants) {
-      const family = fill.family as Family;
-      variants = { ...variants, ...familyVariants(family, variants as unknown as Record<string, unknown>, storeId, manifest.master.variants) } as MasterVariants;
-      const look = familyLook(family, { palette: fill.look?.palette, fonts: fill.look?.fonts }, storeId, manifest.master);
-      if (Object.keys(look).length) fill = { ...fill, look: { ...(fill.look ?? {}), ...look } };
-    }
-    // Owner 2026-10-27: the motion effects the merchant's words and products chose win over the roll too.
-    if (fill?.effects && variants) variants = { ...variants, ...effectVariants(fill.effects, manifest.master.variants) } as MasterVariants;
-    const dna = fill?.animated ? { ...(plan?.dna ?? {}), ...ANIMATED_DNA } : plan?.dna;
-    // Owner 2026-10-28 (PEPPA and DooBoo both Fredoka): an animated store keeps the playful font its family picked for it.
+    const dna = plan?.dna;
     const brandColours = Object.fromEntries(([['paper', 'background'], ['ink', 'foreground'], ['accent', 'accent'], ['muted', 'surface']] as const)
       .flatMap(([key, field]) => HEX.test(confirmed.get(field) ?? '') ? [[key, confirmed.get(field)!.toLowerCase()]] : []));
     const logo = (presetManifest && !starterManifest) || plan?.accent || Object.keys(brandColours).length || !publicStore.logoUrl ? undefined : await this.logoPalette(merchantId, publicStore.logoUrl).catch(() => undefined);
@@ -203,17 +187,12 @@ export class SourceTemplatesService {
       photoCount: distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]), recent: await this.recentMasterRolls(storeId), categoryCount: facts.categoryCount }) : undefined;
     // Owner 2026-10-24 (the NOA atelier's dropdown menu): the menu style the merchant asked for wins over the starter's preset.
     const askedMenu = starterManifest && fill?.menu?.style ? menuVariant(starterManifest.preset?.variants.menu ?? 'panel', fill.menu.style, fill.character?.kind === 'fashion') : undefined;
-    // Owner 2026-10-27: the store's working module, and on an industry skeleton a fashion business keeps the fashion product page
-    // (sizes, details) — the skeleton keeps its own cards.
-    // Owner 2026-10-27 («bakeries… really animated»): on a skeleton the animated parts and the motion effects ride here too —
-    // the dice and family steps above only touch Esencial's own roll.
-    const lively = starterManifest && fill?.animated ? { ...animatedVariants(distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]), manifest.master.variants),
-      ...effectVariants(fill.effects, manifest.master.variants) } as Record<string, string> : starterManifest ? effectVariants(fill?.effects, manifest.master.variants) as Record<string, string> : {};
-    const own: Record<string, string> = { ...lively, ...(fill?.module && fill.module !== 'none' ? { module: fill.module } : {}),
+    // On an industry skeleton a fashion business keeps the fashion product page (sizes, details) — the skeleton keeps its own cards.
+    const own: Record<string, string> = {
       ...(starterManifest && fill?.character?.kind === 'fashion' ? Object.fromEntries(FASHION_PARTS.filter(part => part === 'pdp' && manifest.master?.variants?.[part]?.includes('fashion')).map(part => [part, 'fashion'])) : {}) };
     // Owner 2026-10-28 («the picture is all stretched… well framed, never stretched»): the cover follows the cover photo — its shape, size,
     // backdrop and subject — and the photo is placed on its subject. The roll stays when the photo can carry it.
-    if (starterManifest) Object.assign(own, Object.fromEntries(Object.entries(styleForCharacter(fill?.character, Boolean(fill?.animated)))
+    if (starterManifest) Object.assign(own, Object.fromEntries(Object.entries(styleForCharacter(fill?.character, false))
       .filter(([part, id]) => (manifest.master?.variants?.[part] ?? []).includes(id))));
     const heroBytes = fill?.heroPhoto ? files.find(file => file.path === fill?.heroPhoto)?.content : undefined;
     const fit = heroBytes ? await readPhotoFit(Buffer.from(heroBytes, 'base64')) : undefined;
@@ -227,12 +206,10 @@ export class SourceTemplatesService {
         variants = { ...variants, ...photoFitVariants(fit), ...(cover ? { hero: cover } : {}) } as unknown as MasterVariants;
       }
     }
-    if (variants && own.module) variants = { ...variants, module: own.module } as unknown as MasterVariants;
-    const playfulFont = starterManifest && fill?.animated ? animatedFontFor(storeId, manifest.master.fonts.map(font => font.id)) : undefined;
     // Owner 2026-10-28 («type that fits»): on a skeleton the font pair the fill picked from the brand (its words, logo and photos) wins over
     // the dice when the skeleton offers it; the dice only decide when the brand's pick is not one of the skeleton's.
-    const brandFont = starterManifest && !playfulFont && filled?.look?.fonts && (starterManifest.starter?.dice?.fonts ?? []).includes(filled.look.fonts) ? filled.look.fonts : undefined;
-    const animatedFonts = playfulFont ? { fonts: playfulFont } : brandFont ? { fonts: brandFont } : {};
+    const brandFont = starterManifest && filled?.look?.fonts && (starterManifest.starter?.dice?.fonts ?? []).includes(filled.look.fonts) ? filled.look.fonts : undefined;
+    const animatedFonts = brandFont ? { fonts: brandFont } : {};
     const starterRoll = rolledStarter || askedMenu || (starterManifest && (Object.keys(own).length || animatedFonts.fonts)) ? { ...(rolledStarter ?? {}), ...animatedFonts,
       variants: { ...(rolledStarter?.variants ?? {}), ...(askedMenu ? { menu: askedMenu } : {}), ...(starterManifest ? own : {}) } as Partial<MasterVariants> } : undefined;
     const { assembled } = await this.assemble(merchantId, storeId, starterManifest?.id ?? presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, files, variants, undefined, dna, starterRoll);

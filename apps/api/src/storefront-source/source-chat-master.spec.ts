@@ -246,24 +246,6 @@ describe('edits on a master store', () => {
     expect(fillMaster.mock.calls[0][1]).toMatchObject({ request: 'Cambia el título a «Café de altura»', current: { copy: { headline: 'Hecho con cuidado' } } });
   });
 
-  // Owner 2026-10-27: «hazla más animada» is the lively parts and the playful motion through the fill, never the agent.
-  it('an animated-store request on a master store is a data change with the lively parts, even when the decision says design', async () => {
-    decided('design');
-    fillMaster.mockResolvedValueOnce({ changed: [], values: [], palette: 'terracotta', fonts: 'classic', colors: {}, heroPhoto: -1, storyPhoto: -1 });
-    await edit('Hazla más animada y divertida');
-    expect(generate).not.toHaveBeenCalled();
-    expect(refill).toHaveBeenCalledWith('m1', 's1', 2, expect.objectContaining({ animated: true, variants: expect.objectContaining({ announce: 'ticker', bands: 'blocks', card: 'hover2' }) }), expect.any(String));
-  });
-
-  // Owner 2026-10-27: «agrega burbujas» is a data change with the effect, never the agent.
-  it('an edit that names an effect sets it through the fill, even when the decision says design', async () => {
-    decided('design');
-    fillMaster.mockResolvedValueOnce({ changed: [], values: [], palette: 'terracotta', fonts: 'classic', colors: {}, heroPhoto: -1, storyPhoto: -1 });
-    await edit('Agrega burbujas que suben en la portada');
-    expect(generate).not.toHaveBeenCalled();
-    expect(refill).toHaveBeenCalledWith('m1', 's1', 2, expect.objectContaining({ variants: expect.objectContaining({ effect: 'bubbles' }) }), expect.any(String));
-  });
-
   // Owner 2026-10-27 (B): the PEPPA please redesign, only when the merchant asks for it.
   it('an explicit redesign of a master store runs on a written brief with expressive motion', async () => {
     const redesignBrief = jest.fn().mockResolvedValue('Rediseña la tienda atrevida y divertida. Sigue esta estructura:\n- Portada con la foto grande');
@@ -725,106 +707,8 @@ describe('the plan card', () => {
 });
 
 
-// Starters (spec 2026-10-24, plan Task 8): with YAPI_STARTERS on, a new store starts from the finished store closest to it.
-describe('starters', () => {
-  let applyPlantillaFilled: jest.Mock, fillPlantilla: jest.Mock;
-  const store = (name: string, what: string) => prisma.store.findFirst.mockResolvedValue({ name, logoUrl: null, onboarding: { what, story: '', contact: {}, photos: [] }, _count: { paymentLinks: 0 }, paymentLinks: [] });
-  beforeEach(() => {
-    config.set('app.yapiStarters', true);
-    prisma.$queryRaw = jest.fn().mockResolvedValue([]);
-    fillPlantilla = jest.fn().mockResolvedValue({ hero: 'Salsas con carácter' });
-    applyPlantillaFilled = jest.fn().mockImplementation(async (_m, _s, _t, _r, filler) => { await filler({ storeName: 'Fuego', products: ['Salsa roja'], photos: [], slots: [] }); return { revision: 1, label: 'Estilo: Vitrina', filled: true }; });
-    chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { businessInformation: 'Tienda' }, files: [] } }) } as any, generation(), { decide, fillMaster, fillPlantilla } as any, { apply: jest.fn(), applyMaster, applyPlantillaFilled } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
-  });
-
-  it('a fashion store starts from a fashion starter, built on Esencial with no preset', async () => {
-    store('Norte', 'Ropa urbana: poleras y streetwear');
-    await send('Crea mi tienda.');
-    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), undefined, undefined, 'calle');
-  });
-
-  // Spec 2026-10-24-starter-dice §2: Vitrina is built on Esencial now, so a salsas brand takes the master fill.
-  it('a salsas brand starts from Vitrina on Esencial, and the reply and follow-up still come', async () => {
-    store('Fuego', 'Salsas picantes y dulces artesanales');
-    const out = await send('Crea mi tienda.');
-    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), undefined, undefined, 'vitrina');
-    expect(applyPlantillaFilled).not.toHaveBeenCalled();
-    expect(out.revision).toMatchObject({ revision: 1 });
-    expect(out.assistantMessage.content).toContain('Fuego');
-  });
-
-  it('a business no starter fits keeps Esencial with its closest preset', async () => {
-    await send('Crea mi tienda.');
-    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), 'horno');
-  });
-
-  it("the merchant's last stores are not repeated when another starter fits", async () => {
-    prisma.$queryRaw.mockResolvedValue([{ starter: 'calle' }]);
-    store('Norte', 'Ropa urbana, poleras y streetwear de diseño');
-    await send('Crea mi tienda.');
-    expect(applyMaster.mock.calls[0][6]).toBe('taller');
-  });
-
-  it('a swap to a master starter keeps the words and bundles the walkthrough photos again', async () => {
-    store('Norte', 'Ropa urbana');
-    prisma.store.findFirst.mockResolvedValue({ name: 'Norte', onboarding: { what: 'Ropa urbana', photos: ['https://x/u1.jpg', 'https://x/u2.jpg'] } });
-    const words = { copy: { headline: 'Ropa con calle' }, sections: [] };
-    await chat.rebuildFromStarter('m1', 's1', { id: 'taller', kind: 'master', fits: [], order: 3 }, 2, words);
-    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 2, expect.any(Function), undefined, undefined, 'taller');
-    expect(fillMaster).not.toHaveBeenCalled();
-    const fill = await applyMaster.mock.calls[0][3]({ storeName: 'Norte', products: ['Polera'], photos: [] });
-    expect(fill).toMatchObject({ copy: { headline: 'Ropa con calle' }, heroPhoto: 'https://x/u1.jpg', storyPhoto: 'https://x/u2.jpg', character: { kind: 'fashion' } });
-  });
-
-  it('a swap keeps the photos the first build bundled', async () => {
-    const files = [{ path: 'assets/image-1d87bb3f91c7.jpg', content: 'aGVsbG8=', encoding: 'base64' as const }];
-    await chat.rebuildFromStarter('m1', 's1', { id: 'taller', kind: 'master', fits: [], order: 3 }, 2, { copy: { headline: 'Ropa' } }, { heroPhoto: files[0].path, files });
-    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 2, expect.any(Function), undefined, undefined, 'taller', files);
-    const fill = await applyMaster.mock.calls[0][3]({ storeName: 'Norte', products: [], photos: [] });
-    expect(fill.heroPhoto).toBe(files[0].path);
-  });
-
-  it('a swap to Esencial carries the bundled photo files too', async () => {
-    const files = [{ path: 'assets/image-1d87bb3f91c7.jpg', content: 'aGVsbG8=', encoding: 'base64' as const }];
-    await chat.rebuildFromStarter('m1', 's1', { id: 'esencial', kind: 'master', fits: [], order: 99 }, 2, { copy: { headline: 'Café' } }, { heroPhoto: files[0].path, files });
-    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 2, expect.any(Function), 'horno', undefined, undefined, files);
-  });
-
-  // Live check 2026-10-24: a build whose fill chose no hero photo kept none; the swap must not put a product photo there.
-  it('a swap keeps «no hero photo» as it was', async () => {
-    await chat.rebuildFromStarter('m1', 's1', { id: 'calle', kind: 'master', fits: [], order: 2 }, 2, { copy: { headline: 'Ropa' } }, { heroPhoto: '', storyPhoto: 'http://localhost:3001/v1/uploads/x.jpg', files: [] });
-    expect(applyMaster.mock.calls[0]).toHaveLength(7);
-    const fill = await applyMaster.mock.calls[0][3]({ storeName: 'Norte', products: [], photos: [] });
-    expect(fill).toMatchObject({ heroPhoto: '', storyPhoto: 'http://localhost:3001/v1/uploads/x.jpg' });
-  });
-
-  it('a swap without words runs the fill again; Esencial keeps its closest preset; a slots starter fills its slots', async () => {
-    await chat.rebuildFromStarter('m1', 's1', { id: 'esencial', kind: 'master', fits: [], order: 99 }, 2);
-    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 2, expect.any(Function), 'horno');
-    expect(fillMaster).toHaveBeenCalled();
-    // Vitrina is master-kind now (spec 2026-10-24-starter-dice); «obra» is a copy-slots Plantilla, as a future slots starter would be.
-    await chat.rebuildFromStarter('m1', 's1', { id: 'obra', kind: 'slots', fits: [], order: 1 }, 2);
-    expect(applyPlantillaFilled).toHaveBeenCalledWith('m1', 's1', 'obra', 2, expect.any(Function));
-  });
-
-  // Owner 2026-10-24: with starters on, a new store's first build starts from its starter; the plan card is for later edits.
-  it('a new store skips the plan card and starts from its starter', async () => {
-    const plans = { draft: jest.fn(), followUpBrief: jest.fn().mockReturnValue(null) };
-    chat = new SourceChatService(prisma, (chat as any).projects, generation(), { decide, fillMaster, fillPlantilla } as any, (chat as any).templates, (chat as any).config, undefined, plans as any);
-    store('Norte', 'Ropa urbana: poleras y streetwear');
-    const out = await send('Crea mi tienda.');
-    expect(plans.draft).not.toHaveBeenCalled();
-    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), undefined, undefined, 'calle');
-    expect(out.assistantMessage.metadata.plan).toBeUndefined();
-  });
-
-  it('with YAPI_STARTERS off, the first build is exactly today’s', async () => {
-    config.set('app.yapiStarters', false);
-    store('Norte', 'Ropa urbana: poleras y streetwear');
-    await send('Crea mi tienda.');
-    expect(applyMaster.mock.calls[0]).toHaveLength(5);
-  });
-});
+// Starters (spec 2026-10-24) were hidden 2026-10-29 (owner: «esencial only»): no new store starts from one, so their first-build tests
+// went with them. Stores already built from a starter keep their files and chat edits.
 
 // Owner 2026-10-15 / 2026-10-27: no row of photos unless the merchant asks for one or the store already has it.
 it('offers the gallery section only when the merchant asks for one or the store has it', () => {
@@ -863,20 +747,15 @@ describe('owner 2026-10-25: a shirt shop gets its sizes on the first build witho
   });
 });
 
-// Owner 2026-10-27 (PEPPA please): an animated store is decided by the merchant's words on the first build.
-it('a first build asked to be animated marks the fill animated; a plain one does not', async () => {
+// Owner 2026-10-29 («esencial only not families»): the first build is the Oct 22 Esencial — no family, effect, module or animated look,
+// whatever the business sells or the merchant writes. Platform features (sizes, collections, menu) are untouched.
+it('a first build carries no family, effects, module or animated look, even for a bakery that asks for «animada»', async () => {
   const reads: any[] = [];
-  applyMaster.mockImplementation(async (_m, _s, _r, filler) => { reads.push(await filler({ storeName: 'Café Buna', products: ['Coroico'], photos: ['https://x/p1.jpg'] })); return { revision: 1, label: 'Plantilla: Esencial' }; });
-  await send('Mi negocio se llama Café Buna.\nQuiero una tienda animada y divertida.\nCrea mi tienda.');
-  expect(reads[0]?.animated).toBe(true);
-  await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
-  expect(reads[1]?.animated).toBeUndefined();
-});
-
-// Owner 2026-10-27: an animated drinks store gets bubbles and confetti on its first build.
-it('a first build of an animated store carries the effect its products suggest', async () => {
-  const reads: any[] = [];
-  applyMaster.mockImplementation(async (_m, _s, _r, filler) => { reads.push(await filler({ storeName: 'Oh Belly', products: ['Soda'], photos: ['https://x/p1.jpg'] })); return { revision: 1, label: 'Plantilla: Esencial' }; });
-  await send('Mi negocio se llama Oh Belly.\nQué hacemos: soda prebiótica.\nQuiero una tienda muy animada.\nCrea mi tienda.');
-  expect(reads[0]?.effects).toEqual({ effect: 'bubbles', confetti: 'on' });
+  applyMaster.mockImplementation(async (_m, _s, _r, filler) => { reads.push(await filler({ storeName: 'Dulce Horno', products: ['Torta de chocolate', 'Galletas'], photos: ['https://x/p1.jpg'] })); return { revision: 1, label: 'Plantilla: Esencial' }; });
+  const out = await send('Mi negocio se llama Dulce Horno.\nQué hacemos: pastelería y galletas.\nQuiero una tienda muy animada, como un menú.\nCrea mi tienda.');
+  expect(reads[0]).not.toHaveProperty('family');
+  expect(reads[0]).not.toHaveProperty('effects');
+  expect(reads[0]).not.toHaveProperty('module');
+  expect(reads[0]).not.toHaveProperty('animated');
+  expect(out.assistantMessage.content).not.toContain('hazla animada');
 });
