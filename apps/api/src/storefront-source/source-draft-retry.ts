@@ -16,6 +16,9 @@ const ID = /^[a-z0-9-]{1,40}$/;
 export function sourceDraftRetry(input: unknown): SourceDraftRetry | undefined {
   const job = input && typeof input === 'object' ? input as Record<string, any> : null;
   if (!job || typeof job.instruction !== 'string' || !job.instruction.trim()) return undefined;
+  // DooBoo 2026-10-28: a draft that a «Guardar borrador» resend already tried to finish is not offered again; every visit
+  // (and every new message) resent the same request, which failed the same check each time.
+  if (job.resumeDraft === true) return undefined;
   const sectionId = job.selection?.sectionId;
   return {
     text: job.instruction,

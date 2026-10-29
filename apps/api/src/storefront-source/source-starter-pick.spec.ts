@@ -1,5 +1,6 @@
 import { listTemplates } from '@pagosya/store-templates';
 import { buildStarters, pickStarter, rankStarters } from './source-starter-pick';
+import { pickSkeleton } from './source-starter-pick';
 
 /** Spec 2026-10-24 §2: the starter closest to the business, chosen in code before the fill. */
 const starters = [
@@ -35,4 +36,17 @@ it('the real starter list has Esencial as a master fallback, the harvested start
 it('a store that does not sell clothes never starts from a fashion starter, even with look words', () => {
   const starters = [{ id: 'esencial', fits: ['tienda'], order: 99 }, { id: 'vitrina', fits: ['dulces'], order: 1 }, { id: 'calle', fits: ['ropa', 'minimal'], fashion: true, order: 2 }];
   expect(rankStarters({ text: 'joyería minimalista de lujo', fashion: false, starters, recent: [] })).not.toContain('calle');
+});
+
+// Owner 2026-10-27 («skeletons for fashion, for hardware, for food, for electronics»): the industry skeleton that fits the business.
+it('picks the industry skeleton whose words fit, and none when nothing does', () => {
+  const starters = [
+    { id: 'mesa', fits: ['café', 'panadería', 'restaurante'], order: 6 }, { id: 'tecno', fits: ['licuadoras', 'electrodomésticos'], order: 7 },
+    { id: 'maison', fits: ['vestidos', 'novias', 'flores'], order: 5 }, { id: 'calle', fits: ['ropa'], order: 2 },
+  ];
+  expect(pickSkeleton('Panadería coreana en La Paz: masa madre y café', starters)).toBe('mesa');
+  expect(pickSkeleton('Licuadoras para batidos y electrodomésticos', starters)).toBe('tecno');
+  expect(pickSkeleton('Vestidos de novia de alta costura', starters)).toBe('maison');
+  expect(pickSkeleton('Poleras y ropa urbana', starters)).toBeUndefined();
+  expect(pickSkeleton('Servicios contables', starters)).toBeUndefined();
 });

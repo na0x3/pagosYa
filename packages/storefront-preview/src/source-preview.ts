@@ -223,18 +223,34 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
     // A GET form aimed at a store page (the search on buscar.html, which the header's magnifier opens) navigates like a
     // link, carrying its fields as the query: the CSP's form-action 'none' blocks a real submit in the editor and in the
     // published store alike (owner 2026-10-22: «la lupa del header nunca sirve»).
-    document.addEventListener('submit', function(event) {
-      const form = event.target;
-      if (!(form instanceof HTMLFormElement) || (form.getAttribute('method') || 'get').toLowerCase() !== 'get') return;
+    // Owner 2026-10-28 («the buscar button does not work»): the editor's frame is sandboxed without allow-forms, where the browser
+    // drops a submit before any submit event fires; the button press and Enter in a field therefore navigate the form themselves.
+    const storeForm = function(form) {
+      if (!(form instanceof HTMLFormElement) || (form.getAttribute('method') || 'get').toLowerCase() !== 'get') return null;
       const url = new URL(form.getAttribute('action') || ${encoded(page)}, ${encoded(`https://source.invalid/${page}`)});
       const path = decodeURIComponent(url.pathname.slice(1));
-      if (url.origin !== 'https://source.invalid' || !${encoded(snapshot.files.filter(f => f.path.endsWith('.html')).map(f => f.path))}.includes(path)) return;
+      return url.origin === 'https://source.invalid' && ${encoded(snapshot.files.filter(f => f.path.endsWith('.html')).map(f => f.path))}.includes(path) ? path : null;
+    };
+    const sendForm = function(form, event) {
+      const path = storeForm(form); if (!path) return;
       event.preventDefault(); event.stopImmediatePropagation();
       const params = new URLSearchParams();
       new FormData(form).forEach(function(value, key) { if (typeof value === 'string') params.append(key, value.slice(0, 200)); });
       const query = params.toString();
       const state = { items: [] }; document.dispatchEvent(new CustomEvent('pagosya:serialize-cart', { detail: state }));
       parent.postMessage({ type: 'pagosya:source-navigate', page: path, query: query ? '?' + query : '', theme: document.documentElement.dataset.theme, cart: state.items }, '*');
+    };
+    document.addEventListener('submit', function(event) { sendForm(event.target, event); }, true);
+    document.addEventListener('click', function(event) {
+      const button = event.target.closest && event.target.closest('button,input[type=submit]');
+      // Only a form that names its page (the search box); signup and other forms keep their own handlers.
+      if (!button || !button.form || !button.form.hasAttribute('action') || button.disabled || (button.getAttribute('type') || 'submit').toLowerCase() !== 'submit') return;
+      sendForm(button.form, event);
+    }, true);
+    document.addEventListener('keydown', function(event) {
+      const field = event.target;
+      if (event.key !== 'Enter' || event.isComposing || !(field instanceof HTMLInputElement) || !field.form || !field.form.hasAttribute('action') || ['button', 'checkbox', 'radio', 'submit'].includes(field.type)) return;
+      sendForm(field.form, event);
     }, true);
     window.addEventListener('load', function() {
       const fragment = ${encoded(navigation.fragment || '')};

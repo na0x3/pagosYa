@@ -37,3 +37,19 @@ describe('the usual options a clothing or shoe product gets without being asked'
     expect(usualOptionsNote([])).toBe('');
   });
 });
+
+describe('usual options from the description', () => {
+  it('takes the colours a description lists when the name gives none', () => {
+    const rows = usualVariants({ name: 'Hoodie básico', amount: 35000, description: 'Hoodie de algodón pesado para hombre. Colores: azul, café y gris.' })!;
+    expect([...new Set(rows.map(row => row.options![0].value))]).toEqual(['Azul', 'Café', 'Gris']);
+    expect(rows).toHaveLength(12);
+  });
+});
+
+describe('tailoring gets the usual sizes', () => {
+  it('reads suits, blazers and coats as clothing (Andes Studio 2026-10-28)', () => {
+    expect(usualOptionKind({ name: 'Traje de sastrería gris' })).toBe('clothing');
+    expect(usualOptionKind({ name: 'Blazer cruzado' })).toBe('clothing');
+    expect(usualOptionKind({ name: 'Saco de lana' })).toBe('clothing');
+  });
+});

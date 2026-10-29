@@ -4,6 +4,8 @@ import Shell from './Shell';
 import { copy, photos, sections, store } from './store-data';
 import { variant } from './Shell';
 import { FeatureSlot } from './features';
+import { features } from './store-data';
+import { StoreModule } from './modules';
 import { EffectLayer } from './effects';
 import { EditionIndex, FAMILIES, LoyaltyCard, PopMedia, RevistaTop, TrustRow } from './families';
 import { IconArrowRight, IconArrowUpRight, IconCheck, IconMessageCircle, IconPlus, IconShieldCheck, IconStar, IconTruck } from './icons';
@@ -36,6 +38,7 @@ export default function Home() {
   // left the closing is the coloured band.
   const closingPhoto = unique([photos.p4, photos.p3, photos.p2]).find(src => src !== photos.hero && src !== photos.story);
   const closing = rolledClosing === 'photo' && !closingPhoto ? 'accent' : rolledClosing;
+  const sectionPhotos = useSectionPhotos();
   const phone: string = store.phone;
   // Owner 2026-10-27: template families (families.tsx) — the family changes the hero's inside, adds its own blocks and reorders the
   // page with CSS order; the sections stay direct children of <main>, so YAPI still finds every section by its id.
@@ -44,6 +47,19 @@ export default function Home() {
   // Boutique: a lookbook hero — two tall photos with the words between them (one store photo besides the hero, never three).
   const lookPhoto = family === 'boutique' && !photos.heroVideo ? unique([photos.story, photos.p1, photos.p2]).find(src => src !== photos.hero) : undefined;
   const headlineCut = family === 'pop' && headlineWords.length > 2 ? Math.ceil(headlineWords.length * 0.55) : headlineWords.length;
+  // Owner 2026-10-28 (the quality check: «pick» and «manifesto», «pick» and the origin block showed one photo twice): every photo
+  // the page shows is handed out once — the cover, the story, the boutique look, the closing and the rolled features first, then
+  // the business sections in page order, then the store's module.
+  const featureData = features as unknown as Record<string, { photo?: string; halves?: Array<{ photo?: string }> } | undefined>;
+  const featurePhotos = variant('feature', '').split(',').flatMap(id => [featureData[id]?.photo, ...(featureData[id]?.halves ?? []).map(half => half.photo)]);
+  const taken = new Set(unique([photos.hero, ...fadePhotos, lookPhoto, ['split', 'overlay', 'pair'].includes(story) ? photos.story : undefined,
+    story === 'pair' ? photos.p1 : undefined, closing === 'photo' ? closingPhoto : undefined, ...featurePhotos]));
+  const claim = (list: Array<string | undefined>) => { const src = unique(list).find(candidate => !taken.has(candidate)); if (src) taken.add(src); return src; };
+  const sectionPhoto = sections.map(section => section.id === 'pick' ? claim([photos.p1, photos.p2, photos.p3, ...sectionPhotos])
+    : section.id === 'manifesto' ? claim([photos.p2, photos.p4, photos.p1, ...sectionPhotos])
+    : section.id === 'journal' ? claim([photos.p3, photos.p2, ...sectionPhotos])
+    : OWN_LAYOUT.has(section.id) ? undefined : claim(sectionPhotos));
+  const modulePhoto = claim([closingPhoto, ...sectionPhotos, photos.p4, photos.p3]);
   // Colour bands (2026-10-19): cream-on-cream pages read as wireframes; the sections after the catalog sit on coloured bands.
   const bands = variant('bands', 'alternate');
   // Blocks: story deep, then muted and accent; a band never matches its neighbour (QA: mono's accent is its deep colour,
@@ -56,7 +72,7 @@ export default function Home() {
   const valuesTone = bands !== 'blocks' ? band(1 + sections.length)
     : ['photo', 'newsletter'].includes(closing) && beforeValues !== 'accent' ? 'accent' : beforeValues === 'muted' ? 'paper' : 'muted';
   return <Shell>
-    <main id="contenido" data-es-bands={bands} data-es-family={family}>
+    <main id="contenido" data-es-bands={bands} data-es-family={family} data-es-pop-order={variant('popOrder', 'products')}>
       <section id="inicio" className={hero === 'type' ? 'es-hero es-hero--plain' : 'es-hero'} data-es-hero={family === 'pop' ? 'pop' : family === 'revista' ? 'cover' : lookPhoto && photos.hero ? 'lookbook' : hero} aria-labelledby="es-hero-title">
         {family === 'revista' ? <RevistaTop /> : null}
         {lookPhoto && photos.hero ? <><img className="es-look__a" src={photos.hero} alt="" aria-hidden="true" /><img className="es-look__b" src={lookPhoto} alt="" aria-hidden="true" /></>
@@ -124,7 +140,7 @@ export default function Home() {
 
       <FeatureSlot at="story" />
 
-      {sections.map((section, index) => <BusinessSection key={section.id} section={section} phone={phone} band={band(1 + index)} />)}
+      {sections.map((section, index) => <BusinessSection key={section.id} section={section} phone={phone} band={band(1 + index)} photo={sectionPhoto[index]} side={index % 2 ? 'right' : 'left'} />)}
 
       <FeatureSlot at="values" />
 
@@ -133,6 +149,9 @@ export default function Home() {
         <ol>{copy.values.map((value, index) => <li key={value.title}><Reveal delay={index * 90}>{values === 'icons' ? (() => { const Icon = VALUE_ICONS[index % 3]; return <Icon className="es-values__icon" />; })()
           : values === 'checklist' ? <IconCheck className="es-values__icon" /> : <span className="es-values__n">{String(index + 1).padStart(2, '0')}</span>}<h3 className="es-h3">{value.title}</h3><p>{value.text}</p></Reveal></li>)}</ol>
       </section>
+
+      {/* Owner 2026-10-27: the store's own working module, chosen by the API for its business (none for most stores). */}
+      <StoreModule photo={modulePhoto} />
 
       {family === 'pop' ? <LoyaltyCard /> : null}
 
@@ -185,16 +204,31 @@ function HeroVideo() {
 type Section = { id: string; title: string; items: Array<{ title: string; text: string }> };
 
 /** Variety spec §2: the business sections the fill call wrote (at most two), each from the merchant's own facts. */
-function BusinessSection({ section, phone, band }: { section: Section; phone: string; band?: string }) {
+/** Owner 2026-10-28 (avril, «longer with more pictures»): photos for the business sections that the rest of the page never shows —
+ *  the merchant's own pictures (photos.b1…b6), then each product's second photo (its first is on its card). Each once. */
+function useSectionPhotos(): string[] {
+  const [seconds, setSeconds] = useState<string[]>([]);
+  useEffect(() => {
+    const items = ((window as unknown as { PAGOSYA_CONFIG?: { data?: { items?: Array<{ imageUrls?: string[] }> } } }).PAGOSYA_CONFIG?.data?.items) ?? [];
+    setSeconds(items.map(item => item.imageUrls?.[1]).filter((src): src is string => Boolean(src)));
+  }, []);
+  const shown = new Set([photos.hero, photos.story, photos.p1, photos.p2, photos.p3, photos.p4].filter(Boolean));
+  return unique([photos.b1, photos.b2, photos.b3, photos.b4, photos.b5, photos.b6, ...seconds]).filter(src => !shown.has(src));
+}
+
+/** Sections that already draw their own photo or none on purpose keep their layout. */
+const OWN_LAYOUT = new Set(['gallery', 'manifesto', 'pick', 'journal', 'blog']);
+
+function BusinessSection({ section, phone, band, photo, side = 'left' }: { section: Section; phone: string; band?: string; photo?: string; side?: 'left' | 'right' }) {
   const { id, title, items } = section;
   const gallery = unique([photos.p1, photos.p2, photos.p3, photos.p4, photos.story]).filter(src => src !== photos.hero).slice(0, 4);
-  const pickPhoto = unique([photos.p1, photos.p2, photos.p3]).find(src => src !== photos.story && src !== photos.hero) ?? photos.p1;
+  const pickPhoto = photo;
   // The journal's lead note carries one photo the hero, story and pair story do not already show; the other notes are words only.
-  const notePhoto = unique([photos.p3, photos.p2]).find(src => src !== photos.story && src !== photos.hero && src !== photos.p1);
+  const notePhoto = id === 'journal' ? photo : undefined;
   if (id === 'gallery' && gallery.length < 2) return null;
   // Manifesto (owner 2026-10-21: bare centered lines read as plain text): a photo beside the lines on a tinted band.
   if (id === 'manifesto') {
-    const statementPhoto = unique([photos.p2, photos.p4, photos.p1]).find(src => src !== photos.hero && src !== photos.story && src !== notePhoto);
+    const statementPhoto = photo;
     return <section id={id} className="es-section es-biz" data-es-section={id} data-es-band={band ?? 'muted'} aria-labelledby={`es-${id}-title`}>
       <div className={statementPhoto ? 'es-biz__statement' : 'es-biz__statement es-biz__statement--text'}>
         {statementPhoto ? <img className="es-biz__statement-photo" src={statementPhoto} alt="" aria-hidden="true" loading="lazy" /> : null}
@@ -205,7 +239,10 @@ function BusinessSection({ section, phone, band }: { section: Section; phone: st
       </div>
     </section>;
   }
-  return <section id={id} className="es-section es-biz" data-es-section={id} data-es-band={band} aria-labelledby={`es-${id}-title`}>
+  const framed = Boolean(photo) && !OWN_LAYOUT.has(id);
+  return <section id={id} className={framed ? 'es-section es-biz es-biz--photo' : 'es-section es-biz'} data-es-section={id} data-es-band={band} data-es-side={side} aria-labelledby={`es-${id}-title`}>
+    {framed ? <Reveal className="es-biz__media"><img src={photo} alt="" aria-hidden="true" loading="lazy" /></Reveal> : null}
+    <div className="es-biz__body">
     <Reveal className="es-biz__head">{id === 'journal' ? <p className="es-eyebrow">Diario</p> : null}<h2 id={`es-${id}-title`} className="es-h2">{title}</h2></Reveal>
     {id === 'process' || id === 'howto' ? <ol className="es-biz__steps">{items.map((item, index) => <li key={index}><span className="es-biz__n">{String(index + 1).padStart(2, '0')}</span><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></li>)}</ol>
       : id === 'sizes' ? <table className="es-biz__table"><tbody>{items.map((item, index) => <tr key={index}><th scope="row">{item.title}</th><td>{item.text}</td></tr>)}</tbody></table>
@@ -222,5 +259,6 @@ function BusinessSection({ section, phone, band }: { section: Section; phone: st
       : id === 'blog' ? <div className="es-biz__blog" data-pagosya-blog />
       : id === 'quotes' ? <div className="es-biz__quotes">{items.map((item, index) => <blockquote key={index}><p>{item.text}</p><cite>{item.title}</cite></blockquote>)}</div>
       : <ul className="es-biz__list">{items.map((item, index) => <li key={index}>{id === 'materials' ? <IconCheck className="es-biz__icon" /> : null}<div><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></div></li>)}</ul>}
+    </div>
   </section>;
 }

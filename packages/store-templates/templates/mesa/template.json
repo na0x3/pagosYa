@@ -1,0 +1,162 @@
+{
+  "id": "mesa",
+  "name": "Mesa",
+  "category": "comida",
+  "description": "Para comer: portada para pedir, el menú como lista con fotos y precios, el local y cómo llegar.",
+  "tags": [
+    "comida",
+    "café",
+    "restaurante"
+  ],
+  "sitePurpose": "shop",
+  "order": 204,
+  "curated": true,
+  "extends": "esencial",
+  "preset": {
+    "palette": "terracotta",
+    "fonts": "soft",
+    "variants": {
+      "header": "classic",
+      "announce": "plain",
+      "hero": "split-left",
+      "grid": "list",
+      "card": "plain",
+      "story": "split",
+      "values": "icons",
+      "closing": "accent",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "photos": "natural",
+      "cards": "compact",
+      "offers": "rows",
+      "bands": "calm",
+      "menu": "none",
+      "filters": "chips",
+      "feature": "origin,palette"
+    },
+    "kind": "other"
+  },
+  "starter": {
+    "description": "Cafés, restaurantes, panaderías y comida para pedir: menú en lista con fotos y precios, horario y local.",
+    "fits": [
+      "café",
+      "cafe",
+      "cafetería",
+      "restaurante",
+      "comida",
+      "panadería",
+      "panaderia",
+      "pastelería",
+      "pasteleria",
+      "postres",
+      "pizza",
+      "hamburguesas",
+      "menú",
+      "menu",
+      "almuerzo",
+      "desayuno",
+      "salteñas",
+      "helados",
+      "bakery",
+      "catering",
+      "dulces",
+      "golosinas",
+      "chocolates",
+      "galletas",
+      "cookies",
+      "cupcakes",
+      "donas",
+      "tortas",
+      "alfajores",
+      "brownies",
+      "repostería",
+      "reposteria",
+      "bakehouse",
+      "bebidas",
+      "soda",
+      "sodas",
+      "jugos",
+      "refrescos",
+      "kombucha",
+      "limonadas"
+    ],
+    "order": 6,
+    "dice": {
+      "palettes": [
+        "terracotta",
+        "cereza",
+        "limon",
+        "chicle",
+        "menta",
+        "ember"
+      ],
+      "fonts": [
+        "soft",
+        "classic",
+        "bookish",
+        "modern",
+        "heritage"
+      ],
+      "hero": [
+        "split-left",
+        "poster",
+        "stack"
+      ],
+      "grid": [
+        "list",
+        "grid3",
+        "strip"
+      ],
+      "story": [
+        "split",
+        "overlay",
+        "pair"
+      ],
+      "closing": [
+        "accent",
+        "photo",
+        "newsletter"
+      ],
+      "texture": [
+        "none",
+        "paper",
+        "lines"
+      ]
+    }
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ]
+}

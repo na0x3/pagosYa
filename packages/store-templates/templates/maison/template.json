@@ -1,0 +1,127 @@
+{
+  "id": "maison",
+  "name": "Atelier",
+  "category": "moda",
+  "description": "Una casa de moda: portada alta, la colección como revista, la historia con capitular y secciones como páginas de una revista.",
+  "tags": [
+    "moda",
+    "atelier",
+    "editorial"
+  ],
+  "sitePurpose": "shop",
+  "order": 203,
+  "curated": true,
+  "extends": "esencial",
+  "preset": {
+    "palette": "linen",
+    "fonts": "luxury",
+    "variants": {
+      "header": "centered",
+      "announce": "plain",
+      "hero": "full",
+      "grid": "grid3",
+      "card": "plain",
+      "story": "split",
+      "values": "numbered",
+      "closing": "photo",
+      "footer": "bigname",
+      "button": "underline",
+      "corners": "sharp",
+      "density": "airy",
+      "texture": "none",
+      "photos": "natural",
+      "cards": "compact",
+      "offers": "rows",
+      "bands": "calm",
+      "menu": "dropdowns",
+      "filters": "bar",
+      "feature": "origin,palette",
+      "heroFade": "fade"
+    }
+  },
+  "starter": {
+    "description": "Casa de moda o diseño de autor: portada alta, colección editorial, historia y proceso como una revista.",
+    "fits": [
+      "atelier",
+      "alta costura",
+      "novias",
+      "vestidos",
+      "diseño",
+      "autor",
+      "joyas",
+      "joyería",
+      "flores",
+      "florería",
+      "perfume",
+      "lujo",
+      "editorial",
+      "sastrería",
+      "hecho a mano"
+    ],
+    "order": 5,
+    "dice": {
+      "palettes": [
+        "linen",
+        "sand",
+        "noir",
+        "ink",
+        "wine",
+        "sage"
+      ],
+      "fonts": [
+        "luxury",
+        "editorial",
+        "gallery",
+        "caslon",
+        "literary"
+      ],
+      "hero": [
+        "full",
+        "split-right",
+        "framed"
+      ],
+      "grid": [
+        "grid3",
+        "grid4",
+        "strip"
+      ],
+      "closing": [
+        "photo",
+        "accent",
+        "dark"
+      ]
+    }
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ]
+}

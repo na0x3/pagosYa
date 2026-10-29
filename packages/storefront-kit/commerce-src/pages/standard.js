@@ -44,7 +44,9 @@
     return `<ul class="pagosya-info__cards">${list.map(collection => `<li><a href="${escape(pageHref('coleccion.html', '?c=' + encodeURIComponent(collection.slug)))}"><strong>${escape(collection.name)}</strong><small>${collection.count} ${collection.count === 1 ? 'producto' : 'productos'}</small></a></li>`).join('')}</ul><p><a href="${escape(pageHref('productos.html'))}">Ver todos los productos</a></p>`;
   }
   const searchQuery = () => (new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('q') || '').trim().slice(0, 80);
-  const safeImage = url => (typeof url === 'string' && /^(?:https?:\/\/|\/(?!\/))/.test(url) ? url : '');
+  // Owner 2026-10-28 («things appear without pictures when searched»): the editor's preview hands the photos over as data: and
+  // blob: URLs, which the results dropped; an inline image is a photo too.
+  const safeImage = url => (typeof url === 'string' && /^(?:https?:\/\/|\/(?!\/)|data:image\/|blob:)/.test(url) ? url : '');
   function searchBody() {
     const items = products();
     if (!items.length) return '';
@@ -53,11 +55,62 @@
     if (!q) return `${form}<p>Escribe lo que buscas.</p>`;
     // One match rule with the catalogue's search bar (catalog/filters.js, amendment 2026-10-21).
     const words = searchWords(q);
-    const hits = items.filter(item => matchesSearch(item, words));
-    if (!hits.length) return `${form}<p role="status">No encontramos productos para “${escape(q)}”.</p>`;
+    const found = items.filter(item => matchesSearch(item, words));
+    if (!found.length) return `${form}<p role="status">No encontramos productos para “${escape(q)}”.</p>`;
+    // Owner 2026-10-28 («put like a sorter by category and etc»): the results narrow to one category and sort by price or name.
+    // Both are links that keep the query, so they work in the editor's preview and on the published store alike.
+    const params = new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search);
+    const categories = (Array.isArray(store.categories) ? store.categories : []).filter(c => c && found.some(item => item.categoryId === c.id));
+    const category = categories.find(c => c.id === params.get('c'))?.id || '';
+    const order = ['precio-asc', 'precio-desc', 'nombre'].includes(params.get('orden')) ? params.get('orden') : '';
+    const searchLink = (next = {}) => { const query = new URLSearchParams({ q }); const c = 'c' in next ? next.c : category, o = 'orden' in next ? next.orden : order;
+      if (c) query.set('c', c); if (o) query.set('orden', o); return escape(pageHref('buscar.html', '?' + query.toString())); };
+    const narrowed = category ? found.filter(item => item.categoryId === category) : found;
+    const price = item => Number(item.amount) || 0;
+    const hits = order === 'precio-asc' ? [...narrowed].sort((a, b) => price(a) - price(b)) : order === 'precio-desc' ? [...narrowed].sort((a, b) => price(b) - price(a))
+      : order === 'nombre' ? [...narrowed].sort((a, b) => String(a.name).localeCompare(String(b.name), 'es')) : narrowed;
+    const chip = (label, href, on) => `<a class="pagosya-search__chip" href="${href}"${on ? ' aria-current="true"' : ''}>${escape(label)}</a>`;
+    const cats = categories.length > 1 || category ? `<nav class="pagosya-search__row" aria-label="Categorías">${chip('Todo', searchLink({ c: '' }), !category)}${categories.map(c => chip(c.name, searchLink({ c: c.id }), c.id === category)).join('')}</nav>` : '';
+    const sorts = found.length > 1 ? `<nav class="pagosya-search__row pagosya-search__sort" aria-label="Ordenar"><span>Ordenar</span>${[['', 'Relevancia'], ['precio-asc', 'Precio: menor'], ['precio-desc', 'Precio: mayor'], ['nombre', 'A–Z']].map(([id, label]) => chip(label, searchLink({ orden: id }), id === order)).join('')}</nav>` : '';
+    const tools = cats || sorts ? `<div class="pagosya-search__tools">${cats}${sorts}</div>` : '';
     const cards = hits.slice(0, 48).map(item => { const image = safeImage(Array.isArray(item.imageUrls) ? item.imageUrls[0] : ''); return `<li><a href="${escape(productHref(item))}">${image ? `<img src="${escape(image)}" alt="" loading="lazy">` : ''}<strong>${escape(item.name)}</strong><span>${escape(money(item.amount, item.currency))}</span></a></li>`; });
-    return `${form}<p role="status">${hits.length > 48 ? `Mostrando 48 de ${hits.length} resultados` : `${hits.length} ${hits.length === 1 ? 'resultado' : 'resultados'}`} para “${escape(q)}”.</p><ul class="pagosya-info__cards">${cards.join('')}</ul>`;
+    return `${form}${tools}<p role="status">${hits.length > 48 ? `Mostrando 48 de ${hits.length} resultados` : `${hits.length} ${hits.length === 1 ? 'resultado' : 'resultados'}`} para “${escape(q)}”.</p><ul class="pagosya-info__cards">${cards.join('')}</ul>`;
   }
+  // Owner 2026-10-28 («when searching give suggestions»): a store's search field shows up to six matching products — photo,
+  // name, price — under it while the shopper types, and a line to every result. ↓ moves into the list, Escape closes it.
+  function searchSuggest(field) {
+    const form = field.form; if (!form) return;
+    let box = form.querySelector('.pagosya-suggest');
+    const q = field.value.trim().slice(0, 80);
+    const words = searchWords(q);
+    const hits = words.length ? products().filter(item => matchesSearch(item, words)).slice(0, 6) : [];
+    if (!q) { box?.remove(); field.removeAttribute('aria-expanded'); return; }
+    if (!box) {
+      box = document.createElement('ul'); box.className = 'pagosya-suggest'; box.id = `pagosya-suggest-${Math.random().toString(36).slice(2, 8)}`;
+      box.setAttribute('role', 'listbox'); box.setAttribute('aria-label', 'Sugerencias');
+      form.append(box); field.setAttribute('aria-controls', box.id); field.setAttribute('autocomplete', 'off');
+    }
+    const all = `<li class="pagosya-suggest__all"><a href="${escape(pageHref('buscar.html', '?q=' + encodeURIComponent(q)))}">${hits.length ? 'Ver todos los resultados' : `Buscar “${escape(q)}”`}</a></li>`;
+    box.innerHTML = hits.map(item => { const image = safeImage(Array.isArray(item.imageUrls) ? item.imageUrls[0] : '');
+      return `<li role="option"><a href="${escape(productHref(item))}">${image ? `<img src="${escape(image)}" alt="" loading="lazy">` : '<span class="pagosya-suggest__blank"></span>'}<span><strong>${escape(item.name)}</strong><small>${escape(money(item.amount, item.currency))}</small></span></a></li>`; }).join('') + all;
+    field.setAttribute('aria-expanded', 'true');
+  }
+  const suggestField = target => target instanceof HTMLInputElement && target.name === 'q' && target.closest('form[role=search]') ? target : null;
+  document.addEventListener('input', event => { const field = suggestField(event.target); if (field) searchSuggest(field); });
+  document.addEventListener('keydown', event => {
+    const box = event.target.closest?.('form[role=search]')?.querySelector('.pagosya-suggest'); if (!box) return;
+    const links = [...box.querySelectorAll('a')]; const at = links.indexOf(event.target);
+    if (event.key === 'Escape') { box.remove(); suggestField(event.target)?.removeAttribute('aria-expanded'); return; }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    const next = event.key === 'ArrowDown' ? at + 1 : at - 1;
+    if (next < 0) { box.closest('form').querySelector('input[name=q]')?.focus(); return; }
+    links[Math.min(next, links.length - 1)]?.focus();
+  });
+  document.addEventListener('focusout', event => {
+    const form = event.target.closest?.('form[role=search]'); if (!form) return;
+    setTimeout(() => { if (!form.contains(document.activeElement)) form.querySelector('.pagosya-suggest')?.remove(); }, 150);
+  });
   const COOKIES_BODY = '<p>Esta tienda no usa cookies.</p><p>Para funcionar guarda algunos datos en el almacenamiento de tu navegador. Esos datos no salen de tu dispositivo, salvo lo que envías al hacer un pedido.</p><ul class="pagosya-info__list"><li><strong>Tu carrito:</strong> para que no pierdas lo que elegiste al cambiar de página.</li><li><strong>Tu elección de privacidad:</strong> si aceptaste o rechazaste las estadísticas; se recuerda 180 días.</li><li><strong>Estadísticas de visita</strong> (solo si las aceptas): identificadores anónimos de visitante y de visita para contar cuántas personas ven la tienda.</li><li><strong>Código de referido:</strong> si llegaste con un enlace de un socio, se recuerda durante la visita.</li><li><strong>Avisos de la tienda:</strong> si cerraste un aviso o tienes un enlace para recuperar un pedido, se recuerda durante la visita.</li><li><strong>Ventana de novedades:</strong> cuándo la viste o la cerraste por última vez, para no volver a mostrártela durante 30 días; queda en este dispositivo.</li></ul>';
   const infoBody = kind => ({
     about: () => [infoText(store.tagline) && `<p class="pagosya-info__lead">${escape(infoText(store.tagline))}</p>`, infoText(store.aboutText) && infoParagraphs(infoText(store.aboutText))].filter(Boolean).join(''),

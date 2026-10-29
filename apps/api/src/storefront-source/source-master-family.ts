@@ -33,7 +33,9 @@ const RULES: Record<Family, { fixed?: Record<string, string>; allowed?: Record<s
   esencial: {},
   // Owner 2026-10-27 (PEPPA please · pop, «i dont really like it»): the colour lives on the hero box, the cards and the steps — a calm
   // page, never full-width colour bands (the original PEPPA's cream page).
-  pop: { fixed: { outline: 'chunky', bands: 'calm', button: 'pill', corners: 'round' }, allowed: { grid: ['grid3', 'grid4'], closing: ['accent', 'newsletter'] }, fonts: ['alegre'] },
+  // Owner 2026-10-28 («always the same things»): corners, buttons and the playful font are picked per store, not fixed.
+  pop: { fixed: { outline: 'chunky', bands: 'calm' }, allowed: { grid: ['grid3', 'grid4'], closing: ['accent', 'newsletter'], button: ['pill', 'soft', 'square'], corners: ['round', 'soft'] },
+    fonts: ['alegre', 'poster', 'soft', 'condensed'] },
   revista: { fixed: { outline: 'none', bands: 'calm', button: 'underline', header: 'centered' }, allowed: { grid: ['feature', 'grid3', 'masonry'], story: ['split', 'quote', 'note'], closing: ['photo', 'dark', 'accent'] },
     fonts: ['editorial', 'luxury', 'gallery', 'classic', 'literary'], light: true },
   heroe: { allowed: { hero: ['split-left', 'split-right', 'arch', 'framed', 'full'], bands: ['blocks', 'alternate'] } },

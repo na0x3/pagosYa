@@ -1,4 +1,5 @@
-import { buildSuggestions, filterSuggestions } from './source-suggestions';
+import { buildSuggestions, filterSuggestions, REDESIGN_OFFER, withRedesignOffer } from './source-suggestions';
+import { sourceRedesignRequested } from './source-context';
 import { RetentionService } from '../retention/retention.service';
 import { DEFAULT_RETENTION } from '../retention/retention.dto';
 
@@ -58,5 +59,17 @@ describe('dismissing suggestions', () => {
     const again = service({ ...DEFAULT_RETENTION, suggestionsDismissedAt: '2026-10-20T00:00:00.000Z' });
     await again.s.dismissSuggestions('m1', 's1');
     expect(again.prisma.storeRetention.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('withRedesignOffer', () => {
+  it('puts the redesign card first and keeps three cards in all', () => {
+    const card = (id: string) => ({ id, title: id, instruction: id, kind: 'design' as const });
+    expect(withRedesignOffer([card('s1'), card('s2'), card('s3')]).map(c => c.id)).toEqual(['redesign', 's1', 's2']);
+    expect(withRedesignOffer([]).map(c => c.id)).toEqual(['redesign']);
+  });
+
+  it('offers a request the chat reads as a redesign', () => {
+    expect(sourceRedesignRequested(REDESIGN_OFFER.instruction)).toBe(true);
   });
 });

@@ -2002,7 +2002,9 @@
     return `<ul class="pagosya-info__cards">${list.map(collection => `<li><a href="${escape(pageHref('coleccion.html', '?c=' + encodeURIComponent(collection.slug)))}"><strong>${escape(collection.name)}</strong><small>${collection.count} ${collection.count === 1 ? 'producto' : 'productos'}</small></a></li>`).join('')}</ul><p><a href="${escape(pageHref('productos.html'))}">Ver todos los productos</a></p>`;
   }
   const searchQuery = () => (new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('q') || '').trim().slice(0, 80);
-  const safeImage = url => (typeof url === 'string' && /^(?:https?:\/\/|\/(?!\/))/.test(url) ? url : '');
+  // Owner 2026-10-28 («things appear without pictures when searched»): the editor's preview hands the photos over as data: and
+  // blob: URLs, which the results dropped; an inline image is a photo too.
+  const safeImage = url => (typeof url === 'string' && /^(?:https?:\/\/|\/(?!\/)|data:image\/|blob:)/.test(url) ? url : '');
   function searchBody() {
     const items = products();
     if (!items.length) return '';
@@ -2011,11 +2013,62 @@
     if (!q) return `${form}<p>Escribe lo que buscas.</p>`;
     // One match rule with the catalogue's search bar (catalog/filters.js, amendment 2026-10-21).
     const words = searchWords(q);
-    const hits = items.filter(item => matchesSearch(item, words));
-    if (!hits.length) return `${form}<p role="status">No encontramos productos para “${escape(q)}”.</p>`;
+    const found = items.filter(item => matchesSearch(item, words));
+    if (!found.length) return `${form}<p role="status">No encontramos productos para “${escape(q)}”.</p>`;
+    // Owner 2026-10-28 («put like a sorter by category and etc»): the results narrow to one category and sort by price or name.
+    // Both are links that keep the query, so they work in the editor's preview and on the published store alike.
+    const params = new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search);
+    const categories = (Array.isArray(store.categories) ? store.categories : []).filter(c => c && found.some(item => item.categoryId === c.id));
+    const category = categories.find(c => c.id === params.get('c'))?.id || '';
+    const order = ['precio-asc', 'precio-desc', 'nombre'].includes(params.get('orden')) ? params.get('orden') : '';
+    const searchLink = (next = {}) => { const query = new URLSearchParams({ q }); const c = 'c' in next ? next.c : category, o = 'orden' in next ? next.orden : order;
+      if (c) query.set('c', c); if (o) query.set('orden', o); return escape(pageHref('buscar.html', '?' + query.toString())); };
+    const narrowed = category ? found.filter(item => item.categoryId === category) : found;
+    const price = item => Number(item.amount) || 0;
+    const hits = order === 'precio-asc' ? [...narrowed].sort((a, b) => price(a) - price(b)) : order === 'precio-desc' ? [...narrowed].sort((a, b) => price(b) - price(a))
+      : order === 'nombre' ? [...narrowed].sort((a, b) => String(a.name).localeCompare(String(b.name), 'es')) : narrowed;
+    const chip = (label, href, on) => `<a class="pagosya-search__chip" href="${href}"${on ? ' aria-current="true"' : ''}>${escape(label)}</a>`;
+    const cats = categories.length > 1 || category ? `<nav class="pagosya-search__row" aria-label="Categorías">${chip('Todo', searchLink({ c: '' }), !category)}${categories.map(c => chip(c.name, searchLink({ c: c.id }), c.id === category)).join('')}</nav>` : '';
+    const sorts = found.length > 1 ? `<nav class="pagosya-search__row pagosya-search__sort" aria-label="Ordenar"><span>Ordenar</span>${[['', 'Relevancia'], ['precio-asc', 'Precio: menor'], ['precio-desc', 'Precio: mayor'], ['nombre', 'A–Z']].map(([id, label]) => chip(label, searchLink({ orden: id }), id === order)).join('')}</nav>` : '';
+    const tools = cats || sorts ? `<div class="pagosya-search__tools">${cats}${sorts}</div>` : '';
     const cards = hits.slice(0, 48).map(item => { const image = safeImage(Array.isArray(item.imageUrls) ? item.imageUrls[0] : ''); return `<li><a href="${escape(productHref(item))}">${image ? `<img src="${escape(image)}" alt="" loading="lazy">` : ''}<strong>${escape(item.name)}</strong><span>${escape(money(item.amount, item.currency))}</span></a></li>`; });
-    return `${form}<p role="status">${hits.length > 48 ? `Mostrando 48 de ${hits.length} resultados` : `${hits.length} ${hits.length === 1 ? 'resultado' : 'resultados'}`} para “${escape(q)}”.</p><ul class="pagosya-info__cards">${cards.join('')}</ul>`;
+    return `${form}${tools}<p role="status">${hits.length > 48 ? `Mostrando 48 de ${hits.length} resultados` : `${hits.length} ${hits.length === 1 ? 'resultado' : 'resultados'}`} para “${escape(q)}”.</p><ul class="pagosya-info__cards">${cards.join('')}</ul>`;
   }
+  // Owner 2026-10-28 («when searching give suggestions»): a store's search field shows up to six matching products — photo,
+  // name, price — under it while the shopper types, and a line to every result. ↓ moves into the list, Escape closes it.
+  function searchSuggest(field) {
+    const form = field.form; if (!form) return;
+    let box = form.querySelector('.pagosya-suggest');
+    const q = field.value.trim().slice(0, 80);
+    const words = searchWords(q);
+    const hits = words.length ? products().filter(item => matchesSearch(item, words)).slice(0, 6) : [];
+    if (!q) { box?.remove(); field.removeAttribute('aria-expanded'); return; }
+    if (!box) {
+      box = document.createElement('ul'); box.className = 'pagosya-suggest'; box.id = `pagosya-suggest-${Math.random().toString(36).slice(2, 8)}`;
+      box.setAttribute('role', 'listbox'); box.setAttribute('aria-label', 'Sugerencias');
+      form.append(box); field.setAttribute('aria-controls', box.id); field.setAttribute('autocomplete', 'off');
+    }
+    const all = `<li class="pagosya-suggest__all"><a href="${escape(pageHref('buscar.html', '?q=' + encodeURIComponent(q)))}">${hits.length ? 'Ver todos los resultados' : `Buscar “${escape(q)}”`}</a></li>`;
+    box.innerHTML = hits.map(item => { const image = safeImage(Array.isArray(item.imageUrls) ? item.imageUrls[0] : '');
+      return `<li role="option"><a href="${escape(productHref(item))}">${image ? `<img src="${escape(image)}" alt="" loading="lazy">` : '<span class="pagosya-suggest__blank"></span>'}<span><strong>${escape(item.name)}</strong><small>${escape(money(item.amount, item.currency))}</small></span></a></li>`; }).join('') + all;
+    field.setAttribute('aria-expanded', 'true');
+  }
+  const suggestField = target => target instanceof HTMLInputElement && target.name === 'q' && target.closest('form[role=search]') ? target : null;
+  document.addEventListener('input', event => { const field = suggestField(event.target); if (field) searchSuggest(field); });
+  document.addEventListener('keydown', event => {
+    const box = event.target.closest?.('form[role=search]')?.querySelector('.pagosya-suggest'); if (!box) return;
+    const links = [...box.querySelectorAll('a')]; const at = links.indexOf(event.target);
+    if (event.key === 'Escape') { box.remove(); suggestField(event.target)?.removeAttribute('aria-expanded'); return; }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    const next = event.key === 'ArrowDown' ? at + 1 : at - 1;
+    if (next < 0) { box.closest('form').querySelector('input[name=q]')?.focus(); return; }
+    links[Math.min(next, links.length - 1)]?.focus();
+  });
+  document.addEventListener('focusout', event => {
+    const form = event.target.closest?.('form[role=search]'); if (!form) return;
+    setTimeout(() => { if (!form.contains(document.activeElement)) form.querySelector('.pagosya-suggest')?.remove(); }, 150);
+  });
   const COOKIES_BODY = '<p>Esta tienda no usa cookies.</p><p>Para funcionar guarda algunos datos en el almacenamiento de tu navegador. Esos datos no salen de tu dispositivo, salvo lo que envías al hacer un pedido.</p><ul class="pagosya-info__list"><li><strong>Tu carrito:</strong> para que no pierdas lo que elegiste al cambiar de página.</li><li><strong>Tu elección de privacidad:</strong> si aceptaste o rechazaste las estadísticas; se recuerda 180 días.</li><li><strong>Estadísticas de visita</strong> (solo si las aceptas): identificadores anónimos de visitante y de visita para contar cuántas personas ven la tienda.</li><li><strong>Código de referido:</strong> si llegaste con un enlace de un socio, se recuerda durante la visita.</li><li><strong>Avisos de la tienda:</strong> si cerraste un aviso o tienes un enlace para recuperar un pedido, se recuerda durante la visita.</li><li><strong>Ventana de novedades:</strong> cuándo la viste o la cerraste por última vez, para no volver a mostrártela durante 30 días; queda en este dispositivo.</li></ul>';
   const infoBody = kind => ({
     about: () => [infoText(store.tagline) && `<p class="pagosya-info__lead">${escape(infoText(store.tagline))}</p>`, infoText(store.aboutText) && infoParagraphs(infoText(store.aboutText))].filter(Boolean).join(''),
@@ -3734,6 +3787,28 @@
     .pagosya-info__cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin:16px 0;padding:0;list-style:none}.pagosya-info__cards a{display:grid;gap:6px;color:inherit;text-decoration:none}.pagosya-info__cards img{width:100%;aspect-ratio:1;object-fit:cover}.pagosya-search{display:flex;flex-wrap:wrap;gap:8px;align-items:end}.pagosya-search label{display:grid;gap:4px;flex:1 1 220px}.pagosya-search input{min-height:44px;padding:0 12px;font:inherit}.pagosya-search button{min-height:44px;padding:0 18px;font:inherit;cursor:pointer}
     .pagosya-policy-dialog{box-sizing:border-box;width:min(640px,calc(100% - 32px));max-height:min(80dvh,720px);margin:auto;padding:0;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:min(var(--store-radius,12px),16px);background:var(--store-background,var(--brand-background,Canvas));color:var(--store-foreground,var(--brand-foreground,CanvasText));font:inherit;overflow:auto}
     .pagosya-policy-dialog::backdrop{background:#0008}
+    /* The store's CSS reset clears borders and button fills after these rules load; the search keeps its own (2026-10-28). */
+    form[role=search]{position:relative}
+    .pagosya-suggest{position:absolute;z-index:60;top:calc(100% + 8px);left:0;right:0;min-width:280px;max-height:min(70vh,520px);overflow:auto;margin:0;padding:6px;list-style:none;border-radius:14px;background:var(--es-paper,#fff);color:var(--es-ink,inherit);box-shadow:0 18px 50px -18px #0006,0 0 0 1px color-mix(in srgb,currentColor 10%,transparent);text-align:left}
+    .pagosya-suggest a{display:flex;align-items:center;gap:12px;padding:8px;border-radius:10px;color:inherit;text-decoration:none;outline:none}
+    .pagosya-suggest a:is(:hover,:focus-visible){background:color-mix(in srgb,currentColor 7%,transparent)}
+    .pagosya-suggest img,.pagosya-suggest__blank{flex:none;width:44px;height:44px;border-radius:8px;object-fit:cover;background:color-mix(in srgb,currentColor 8%,transparent)}
+    .pagosya-suggest strong{display:block;font-size:14px;font-weight:600;line-height:1.3}.pagosya-suggest small{display:block;font-size:13px;opacity:.7}
+    .pagosya-suggest__all a{justify-content:center;font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:.25em}
+    .pagosya-info:has(.pagosya-search){max-width:none}
+    .pagosya-search{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin:8px 0 18px}
+    .pagosya-search label{display:grid;gap:8px;flex:1 1 320px;font-size:14px;font-weight:600}
+    .pagosya-search input{box-sizing:border-box;width:100%;min-height:48px;padding:0 18px!important;border:1px solid color-mix(in srgb,currentColor 22%,transparent)!important;border-radius:999px;background:var(--es-paper,transparent)!important;color:inherit;font:inherit;font-weight:400}
+    .pagosya-search input:focus-visible{outline:2px solid var(--es-accent,currentColor);outline-offset:2px}
+    .pagosya-search>button{min-height:48px;padding:0 24px!important;border:0;border-radius:999px;background:var(--es-accent,#111)!important;color:var(--es-on-accent,#fff)!important;font:inherit;font-weight:600;cursor:pointer}
+    .pagosya-info:has(.pagosya-search) .pagosya-info__cards{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:24px;padding:0!important;margin-inline:0!important}
+    .pagosya-info:has(.pagosya-search) .pagosya-info__cards img{border-radius:var(--es-radius,14px)}
+    .pagosya-info:has(.pagosya-search) .pagosya-info__cards strong{font-weight:600;text-decoration:none}
+    .pagosya-search__tools{display:grid;gap:12px;margin:0 0 18px}.pagosya-search__row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+    .pagosya-search__sort>span{margin-right:4px;font-size:13px;font-weight:600;opacity:.7}
+    .pagosya-search__chip{display:inline-flex;align-items:center;min-height:36px;padding:0 16px!important;border:1px solid color-mix(in srgb,currentColor 18%,transparent)!important;border-radius:999px;color:inherit;font-size:14px;text-decoration:none!important;white-space:nowrap}
+    .pagosya-search__chip:hover{border-color:currentColor!important}
+    .pagosya-search__chip[aria-current]{background:var(--es-ink,#111)!important;border-color:var(--es-ink,#111)!important;color:var(--es-paper,#fff)!important}
     .pagosya-policy-dialog header{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;background:inherit;border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent)}
     .pagosya-policy-dialog h2{margin:0;font-size:1.2rem;font-family:var(--store-heading-font,inherit)}.pagosya-policy-dialog header button{width:44px;height:44px;border:0;border-radius:50%;background:none;color:inherit;font-size:26px;cursor:pointer}
     .pagosya-policy-dialog div{padding:8px 20px}.pagosya-policy-dialog div p{margin:12px 0;line-height:1.65;max-width:66ch}
@@ -4402,9 +4477,10 @@
   let filtersDrawerOpen = false, filtersLockedFrom = null, filtersOpener = null;
   const filterStyleFor = (all, groups) => FILTER_STYLES.includes(config.filterStyle) ? config.filterStyle : all.length >= 9 || groups.length >= 3 ? 'sidebar' : 'bar';
   const productsWord = n => `${n} ${n === 1 ? 'producto' : 'productos'}`;
-  function filtersMarkup(all, state, shown) {
+  function filtersMarkup(all, state, shown, forcedStyle) {
     const groups = filterGroups(all);
-    const style = filterStyleFor(all, groups);
+    // Owner 2026-10-28 («que tenga los sorters siempre»): a collection page shows its categories and colours as open chip rows.
+    const style = FILTER_STYLES.includes(forcedStyle) ? forcedStyle : filterStyleFor(all, groups);
     const chosen = key => state.sets[key] || [];
     const chip = (g, v) => `<button type="button" class="cf-chip"${v.color ? ' data-swatch-chip' : ''} data-filter-chip="${escape(g.key)}:${escape(v.value)}" data-key="${escape(g.key)}" data-value="${escape(v.value)}" aria-pressed="${chosen(g.key).includes(v.value)}">${v.color ? `<span data-swatch style="--swatch:${escape(v.color)}" aria-hidden="true"></span>` : ''}<span>${escape(v.text)}</span></button>`;
     const range = g => {
@@ -4658,7 +4734,13 @@
         const heading = current && !titleSlot ? `<h2 class="catalog-group__title">${escape(current.name)}</h2>` : '';
         // The shopper is on a specific collection's page here, not a category filter — "en esta
         // categoría" would describe a page that doesn't exist in this layout.
-        el.innerHTML = tabs + (items.length ? heading + items.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta colección.</p>');
+        // Owner 2026-10-28 («colección Mujer y adentro zapatos, ropa… que tenga los sorters siempre»): a collection with two
+        // products or more gets the catalogue's sort and filters — its categories as chips, colours as swatches, sizes, price.
+        if (items.length >= 2) {
+          const state = readFilterState(), shown = sortItems(applyFilters(items, state), state.orden);
+          el.innerHTML = tabs + heading + filtersMarkup(items, state, shown.length, 'chips') + (shown.length ? shown.map(productCard).join('')
+            : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear="filters">Borrar filtros</button></p>');
+        } else el.innerHTML = tabs + (items.length ? heading + items.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta colección.</p>');
       } else if (layout === 'sections' && collections().length) {
         const groups = collectionGroups(selected);
         el.innerHTML = groups.length
@@ -4667,8 +4749,8 @@
       } else if (layout === 'page' || layout === 'tabs') {
         const tabs = layout === 'tabs' && collections().length ? catalogTabs() : '';
         el.innerHTML = tabs + selected.slice(0, HOME_PREVIEW).map(productCard).join("") + catalogMore(layout);
-      } else if ((el.hasAttribute('data-pagosya-filters') || el.hasAttribute('data-catalog-full')) && selected.length >= 6) {
-        // Showcase commerce §4: the full catalog of a store with 6+ products can be sorted and filtered.
+      } else if ((el.hasAttribute('data-pagosya-filters') || el.hasAttribute('data-catalog-full')) && selected.length >= 2) {
+        // Showcase commerce §4: the full catalog can be sorted and filtered; from two products, not six (owner 2026-10-28: «siempre»).
         const state = readFilterState(), shown = sortItems(applyFilters(selected, state), state.orden);
         // Typing in the search re-renders the grid: the field keeps the focus and the caret (amendment 2026-10-21).
         const typing = document.activeElement?.matches?.('.catalog-search input') && el.contains(document.activeElement) ? document.activeElement.selectionStart : null;
@@ -6412,6 +6494,13 @@
       const category = storeMenuCategories().find(entry => entry.id === value.slice(9));
       return category ? { href: pageHref('productos.html', '?f_categoria=' + encodeURIComponent(filterFold(category.id))), label: category.name } : null;
     }
+    // Owner 2026-10-28: «Mujer → Zapatos» is the Mujer collection showing one category (collection:<slug>/category:<id>).
+    const nested = /^collection:([^/]+)\/category:(.+)$/.exec(value);
+    if (nested) {
+      const collection = infoCollections().find(entry => entry.slug === nested[1]);
+      const category = storeMenuCategories().find(entry => entry.id === nested[2]);
+      return collection && category ? { href: pageHref('coleccion.html', '?c=' + encodeURIComponent(collection.slug) + '&f_categoria=' + encodeURIComponent(filterFold(category.id))), label: category.name } : null;
+    }
     if (value.startsWith('collection:')) {
       const collection = infoCollections().find(entry => entry.slug === value.slice(11));
       return collection ? { href: pageHref('coleccion.html', '?c=' + encodeURIComponent(collection.slug)), label: collection.name } : null;
@@ -6435,6 +6524,21 @@
       .map(anchor => ({ href: anchor.getAttribute('href'), label: anchor.textContent.trim() }))
       .filter(link => link.label && !/^(?:\.\.\/)*(?:index|productos)\.html$/.test(link.href));
     const discover = { label: 'Descubre', links: [...own, ...['about', 'shipping', 'refund', 'faq', 'contact'].map(kind => ({ to: 'page:' + kind }))] };
+    // Owner 2026-10-28 («colección Mujer y adentro zapatos, ropa…»): with two collections or more (Mujer, Hombre, Niños), each is
+    // its own menu — the categories it holds, a photo tile per category, and «Ver todo».
+    const collectionsWithProducts = infoCollections();
+    if (collectionsWithProducts.length >= 2) {
+      const byCollection = collectionsWithProducts.slice(0, 3).map(collection => {
+        const ids = new Set(Array.isArray(collection.productIds) ? collection.productIds : []);
+        const inside = products().filter(item => ids.has(item.id));
+        const cats = categories.filter(category => inside.some(item => item.categoryId === category.id));
+        const tilesHere = cats.map(category => ({ title: category.name, to: `collection:${collection.slug}/category:${category.id}`,
+          image: storeMenuPhoto((inside.find(item => item.categoryId === category.id)?.imageUrls || [])[0]) })).filter(tile => tile.image).slice(0, 3);
+        return { label: collection.name, links: [...cats.map(category => ({ to: `collection:${collection.slug}/category:${category.id}` })), { label: `Ver todo ${collection.name}`, to: `collection:${collection.slug}` }],
+          tilesTitle: 'Por categoría', tiles: tilesHere, footer: { label: `Ver todo ${collection.name}`, to: `collection:${collection.slug}` } };
+      });
+      return [...byCollection, discover];
+    }
     return [shop, discover];
   }
   /** Groups with every link, tile and footer resolved; a repeated label is shown once, and a group with no link left is dropped. */

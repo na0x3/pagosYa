@@ -98,7 +98,13 @@
         const heading = current && !titleSlot ? `<h2 class="catalog-group__title">${escape(current.name)}</h2>` : '';
         // The shopper is on a specific collection's page here, not a category filter — "en esta
         // categoría" would describe a page that doesn't exist in this layout.
-        el.innerHTML = tabs + (items.length ? heading + items.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta colección.</p>');
+        // Owner 2026-10-28 («colección Mujer y adentro zapatos, ropa… que tenga los sorters siempre»): a collection with two
+        // products or more gets the catalogue's sort and filters — its categories as chips, colours as swatches, sizes, price.
+        if (items.length >= 2) {
+          const state = readFilterState(), shown = sortItems(applyFilters(items, state), state.orden);
+          el.innerHTML = tabs + heading + filtersMarkup(items, state, shown.length, 'chips') + (shown.length ? shown.map(productCard).join('')
+            : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear="filters">Borrar filtros</button></p>');
+        } else el.innerHTML = tabs + (items.length ? heading + items.map(productCard).join("") : '<p class="catalog-empty">No hay productos disponibles en esta colección.</p>');
       } else if (layout === 'sections' && collections().length) {
         const groups = collectionGroups(selected);
         el.innerHTML = groups.length
@@ -107,8 +113,8 @@
       } else if (layout === 'page' || layout === 'tabs') {
         const tabs = layout === 'tabs' && collections().length ? catalogTabs() : '';
         el.innerHTML = tabs + selected.slice(0, HOME_PREVIEW).map(productCard).join("") + catalogMore(layout);
-      } else if ((el.hasAttribute('data-pagosya-filters') || el.hasAttribute('data-catalog-full')) && selected.length >= 6) {
-        // Showcase commerce §4: the full catalog of a store with 6+ products can be sorted and filtered.
+      } else if ((el.hasAttribute('data-pagosya-filters') || el.hasAttribute('data-catalog-full')) && selected.length >= 2) {
+        // Showcase commerce §4: the full catalog can be sorted and filtered; from two products, not six (owner 2026-10-28: «siempre»).
         const state = readFilterState(), shown = sortItems(applyFilters(selected, state), state.orden);
         // Typing in the search re-renders the grid: the field keeps the focus and the caret (amendment 2026-10-21).
         const typing = document.activeElement?.matches?.('.catalog-search input') && el.contains(document.activeElement) ? document.activeElement.selectionStart : null;

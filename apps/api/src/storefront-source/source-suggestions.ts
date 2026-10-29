@@ -27,6 +27,15 @@ export function filterSuggestions(cards: readonly Proposed[], input: SuggestionI
   return out;
 }
 
+/** Owner 2026-10-28: the full redesign is a choice, not a step of every new store (ZARA's base was better than its redesign,
+ *  DooBoo's redesign better than its base). The card sends a redesign request, which runs the on-demand redesign. */
+export const REDESIGN_OFFER: SuggestionCard = { id: 'redesign', title: 'Rediseñar con un estilo propio', instruction: 'Rediseña mi tienda con un estilo propio para mi marca, con movimiento.', kind: 'design' };
+
+/** The redesign offer first, then the model's cards, three in all. */
+export function withRedesignOffer(cards: readonly SuggestionCard[]): SuggestionCard[] {
+  return [REDESIGN_OFFER, ...cards.filter(card => card.id !== REDESIGN_OFFER.id).slice(0, 2)];
+}
+
 /** The cards for one reply: none when the store dismissed them, the model fails or it has nothing worth offering. */
 export async function buildSuggestions(o: { dismissed: boolean; input: SuggestionInput; suggest: (input: SuggestionInput) => Promise<readonly Proposed[] | null> }): Promise<SuggestionCard[]> {
   if (o.dismissed) return [];

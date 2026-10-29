@@ -5,7 +5,7 @@
 import type { ProductVariantDto } from '../payment-links/dto/create-payment-link.dto';
 
 const fold = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-const CLOTHING = /\b(?:poleras?|camisetas?|camisas?|blusas?|remeras?|sudaderas?|buzos?|hoodies?|chompas?|sueteres?|sweaters?|jerseys?|chaquetas?|casacas?|camperas?|abrigos?|chalecos?|vestidos?|faldas?|polleras?|pantalon(?:es)?|jeans?|shorts?|bermudas?|leggings?|calzas?|bodys?|tops?|crop tops?|t-?shirts?|shirts?|dress(?:es)?|pants|jackets?|uniformes?|pijamas?|enterizos?|monos?|conjuntos? deportivos?)\b/;
+const CLOTHING = /\b(?:poleras?|camisetas?|camisas?|blusas?|remeras?|sudaderas?|buzos?|hoodies?|chompas?|sueteres?|sweaters?|jerseys?|chaquetas?|casacas?|camperas?|abrigos?|chalecos?|vestidos?|faldas?|polleras?|pantalon(?:es)?|jeans?|shorts?|bermudas?|leggings?|calzas?|bodys?|tops?|crop tops?|t-?shirts?|shirts?|dress(?:es)?|pants|jackets?|blazers?|trajes?|sacos?|ternos?|gabardinas?|trench|cardigans?|kimonos?|overoles?|uniformes?|pijamas?|enterizos?|monos?|conjuntos? deportivos?)\b/;
 const SHOES = /\b(?:zapatos?|zapatillas?|tenis|sneakers?|botas?|botines?|sandalias?|mocasines?|shoes?|boots?)\b/;
 /** Sizes nobody can guess: children's ranges, one-size items, and a size the name already gives. */
 const SKIP = /\b(?:bebes?|baby|ninos?|ninas?|nino|nina|infantil(?:es)?|kids?|talla unica|one size|unitalla|talla (?:xs|s|m|l|xl|xxl|\d{2})|size (?:xs|s|m|l|xl|\d{2}))\b/;
@@ -29,10 +29,14 @@ function listedColours(name: string): string[] {
   return found.length >= 2 ? found.map(colour => colour.value) : [];
 }
 
-export function usualVariants(product: { name: string; amount: number }): ProductVariantDto[] | undefined {
+export function usualVariants(product: { name: string; amount: number; description?: string | null }): ProductVariantDto[] | undefined {
   const kind = usualOptionKind(product);
   if (!kind) return undefined;
-  const sizes = USUAL_SIZES[kind], colours = listedColours(product.name);
+  // Owner 2026-10-28 («adentro de la ropa que tenga opciones de colores»): a name with no colours lets the description's
+  // «Colores: …» line give them.
+  const named = listedColours(product.name);
+  const said = /colou?r(?:es)?\s*[:：]\s*([^.\n]{2,160})/i.exec(product.description ?? '')?.[1] ?? '';
+  const sizes = USUAL_SIZES[kind], colours = named.length ? named : listedColours(said);
   const rows = colours.length ? colours.flatMap(colour => sizes.map(size => [{ name: 'Color', value: colour }, { name: 'Talla', value: size }])) : sizes.map(size => [{ name: 'Talla', value: size }]);
   return rows.map(options => ({ name: options.map(option => option.value).join(' / '), amount: product.amount, stock: null, options }) as ProductVariantDto);
 }

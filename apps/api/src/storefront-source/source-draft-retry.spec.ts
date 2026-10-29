@@ -11,4 +11,8 @@ describe('sourceDraftRetry', () => {
     expect(sourceDraftRetry({ instruction: '  ' })).toBeUndefined();
     expect(sourceDraftRetry(null)).toBeUndefined();
   });
+
+  it('never offers to resend a draft a resend already tried to finish', () => {
+    expect(sourceDraftRetry({ instruction: 'Arregla el encabezado', resumeDraft: true })).toBeUndefined();
+  });
 });

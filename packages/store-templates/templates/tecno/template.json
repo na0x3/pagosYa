@@ -1,0 +1,127 @@
+{
+  "id": "tecno",
+  "name": "Tecno",
+  "category": "tecnologia",
+  "description": "Electrónica y electrodomésticos: portada de lanzamiento, datos clave, el catálogo con especificaciones en cada tarjeta.",
+  "tags": [
+    "tecnología",
+    "electrodomésticos",
+    "electrónica"
+  ],
+  "sitePurpose": "shop",
+  "order": 205,
+  "curated": true,
+  "extends": "esencial",
+  "preset": {
+    "palette": "ink",
+    "fonts": "geometric",
+    "variants": {
+      "header": "classic",
+      "announce": "plain",
+      "hero": "split-left",
+      "grid": "grid4",
+      "card": "plain",
+      "story": "split",
+      "values": "icons",
+      "closing": "dark",
+      "footer": "columns",
+      "button": "soft",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "photos": "natural",
+      "cards": "compact",
+      "offers": "rows",
+      "bands": "calm",
+      "menu": "dropdowns",
+      "filters": "bar",
+      "feature": "origin,palette"
+    },
+    "kind": "other"
+  },
+  "starter": {
+    "description": "Electrónica, electrodomésticos y tecnología: portada de lanzamiento, especificaciones en cada producto.",
+    "fits": [
+      "electrónica",
+      "electronica",
+      "electrodomésticos",
+      "electrodomesticos",
+      "licuadoras",
+      "tecnología",
+      "tecnologia",
+      "celulares",
+      "computadoras",
+      "audio",
+      "audífonos",
+      "parlantes",
+      "cámaras",
+      "gadgets",
+      "accesorios para celular",
+      "smartwatch",
+      "consolas"
+    ],
+    "order": 7,
+    "dice": {
+      "palettes": [
+        "cobalt",
+        "navy",
+        "ember",
+        "ink",
+        "menta",
+        "olive"
+      ],
+      "fonts": [
+        "geometric",
+        "modern",
+        "condensed",
+        "gallery-sans"
+      ],
+      "hero": [
+        "split-left",
+        "full"
+      ],
+      "grid": [
+        "grid4",
+        "grid3",
+        "strip"
+      ],
+      "closing": [
+        "dark",
+        "accent",
+        "newsletter"
+      ]
+    }
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ]
+}

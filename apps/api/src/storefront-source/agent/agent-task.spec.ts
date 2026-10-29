@@ -1,4 +1,4 @@
-import { assertTaskFeasibility } from './agent-task';
+import { assertTaskFeasibility, requirementFitsWidth } from './agent-task';
 import { AgentToolbox } from './agent-tools';
 import { AgentWorkspace } from './agent-workspace';
 import { validateTaskRequirements, agentProjectIndex, workspaceDigest, agentImagePaths } from './agent-task';
@@ -145,4 +145,13 @@ it('asks each plan description in plain Spanish for the merchant', async () => {
   const { AGENT_TOOLS } = await import('./agent-tools');
   const plan = AGENT_TOOLS.find(t => t.name === 'plan_task') as unknown as { parameters: { properties: { requirements: { items: { properties: { description: { description?: string } } } } } } };
   expect(plan.parameters.properties.requirements.items.properties.description.description).toMatch(/palabras simples/);
+});
+
+describe('requirementFitsWidth', () => {
+  it('checks a requirement tied to one screen only at that width', () => {
+    const desktop = { description: 'El enlace «Copas» se ve completo en computadora.' }, phone = { description: 'En el celular el menú se abre con un toque.' }, any = { description: 'El logo se ve en el encabezado.' };
+    expect([1280, 390].map(width => requirementFitsWidth(desktop, width))).toEqual([true, false]);
+    expect([1280, 390].map(width => requirementFitsWidth(phone, width))).toEqual([false, true]);
+    expect([1280, 390].map(width => requirementFitsWidth(any, width))).toEqual([true, true]);
+  });
 });

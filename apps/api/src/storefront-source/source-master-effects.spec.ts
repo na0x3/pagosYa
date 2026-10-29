@@ -8,11 +8,11 @@ describe('motion effects', () => {
     expect(effectsFor({ words: 'quita las burbujas', business: '', animated: false })).toEqual({ effect: 'none' });
     expect(effectsFor({ words: 'Una tienda sobria', business: 'Soda prebiótica', animated: false })).toEqual({});
   });
-  it('gives an animated store the effect its products suggest, shapes otherwise, and confetti', () => {
+  it('gives an animated store the effect its products suggest, none otherwise, and confetti', () => {
     expect(effectsFor({ words: 'muy animada', business: 'Oh Belly\nSoda prebiótica con burbujas', animated: true })).toEqual({ effect: 'bubbles', confetti: 'on' });
     expect(effectsFor({ words: 'divertida', business: 'Antojo Café\nCafé frío y en grano', animated: true })).toEqual({ effect: 'steam', confetti: 'on' });
-    expect(effectsFor({ words: 'divertida', business: 'Florería Lirio\nRamos de rosas', animated: true })).toEqual({ effect: 'petals', confetti: 'on' });
-    expect(effectsFor({ words: 'atrevida', business: 'PEPPA please\nSalsas picantes', animated: true })).toEqual({ effect: 'shapes', confetti: 'on' });
+    expect(effectsFor({ words: 'divertida', business: 'Florería Lirio\nRamos de rosas', animated: true })).toEqual({ confetti: 'on' });
+    expect(effectsFor({ words: 'atrevida', business: 'PEPPA please\nSalsas picantes', animated: true })).toEqual({ confetti: 'on' });
   });
   it('keeps only ids the template has', () => {
     expect(effectVariants({ effect: 'bubbles', confetti: 'on' }, { effect: ['none', 'bubbles'] })).toEqual({ effect: 'bubbles' });

@@ -43,7 +43,7 @@ import { esencialDiceSettings, rollVariants } from "./source-master-dice";
 const esencialSettings = () => esencialDiceSettings(templateManifest(MASTER_TEMPLATE_ID)!.master!);
 const storePlanParts = new StorePlanParts(
   // Owner 2026-10-27: the family, the chunky outline and the motion effects come from the merchant's words, never from the plan.
-  () => { const master = esencialSettings(); return { variants: Object.fromEntries(Object.entries(master.variants ?? {}).filter(([part]) => !['family', 'outline', 'effect', 'confetti'].includes(part))), sections: master.sections ?? [], palettes: master.palettes.map(p => p.id), fonts: master.fonts.map(f => f.id) }; },
+  () => { const master = esencialSettings(); return { variants: Object.fromEntries(Object.entries(master.variants ?? {}).filter(([part]) => !['family', 'outline', 'effect', 'confetti', 'module', 'heroShape', 'heroSize', 'heroPlain', 'heroFocus'].includes(part))), sections: master.sections ?? [], palettes: master.palettes.map(p => p.id), fonts: master.fonts.map(f => f.id) }; },
   (storeId, facts) => { const { sections: _sections, ...variants } = rollVariants({ seed: storeId, settings: esencialSettings(), character: { tone: "calm", temperature: "neutral", lead: "photo", exclude: [] }, photoCount: facts.photoCount, photoGroups: facts.photoGroups, categoryCount: facts.categorySizes.length, sections: [], recent: [] }).variants; return variants as Record<string, string>; },
 );
 

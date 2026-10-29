@@ -4,6 +4,13 @@ import { createHash } from 'node:crypto';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 
 export type ValidationProfile = 'normal' | 'reduced-motion';
+/** DooBoo 2026-10-28: a requirement the merchant tied to one screen («en computadora», «en el celular») is checked only at
+ *  that width; «Copas visible en computadora» failed at 390 px, where the links live in the menu. */
+export function requirementFitsWidth(requirement: Pick<AgentRequirement, 'description'>, width: number) {
+  const desktop = /\b(computadora|escritorio|desktop|pantalla grande)\b/i.test(requirement.description);
+  const phone = /\b(celular|m[oó]vil|tel[eé]fono|phone)\b/i.test(requirement.description);
+  return desktop === phone || (desktop ? width >= 1024 : width < 1024);
+}
 export type AgentRequirement = { id:string; description:string; page:string; check:'text'|'absent_text'|'image'|'element'|'style'|'navigation'|'video'|'video-paused'|'layout'; profile?: ValidationProfile; selector:string; expected:string };
 export type RequirementEvidence = { id:string; passed:boolean; detail:string; page:string; width:number; profile?: ValidationProfile; kind?: 'requirement' | 'checker-error'; expected?: string; observed?: string };
 /** A grouped image requirement means ALL listed assets, never one comma-containing filename. */

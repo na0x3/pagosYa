@@ -1,0 +1,124 @@
+{
+  "id": "catalogo",
+  "name": "Catálogo",
+  "category": "general",
+  "description": "Una tienda para comprar rápido: buscador grande, departamentos con menú desplegable, el catálogo con filtros en la portada.",
+  "tags": [
+    "tienda",
+    "catálogo",
+    "variedad"
+  ],
+  "sitePurpose": "shop",
+  "order": 202,
+  "curated": true,
+  "extends": "esencial",
+  "preset": {
+    "palette": "navy",
+    "fonts": "modern",
+    "variants": {
+      "header": "classic",
+      "announce": "plain",
+      "hero": "split-left",
+      "grid": "grid4",
+      "card": "plain",
+      "story": "split",
+      "values": "icons",
+      "closing": "accent",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "photos": "natural",
+      "cards": "compact",
+      "offers": "rows",
+      "bands": "calm",
+      "menu": "dropdowns",
+      "filters": "bar",
+      "feature": "origin,palette"
+    },
+    "kind": "other"
+  },
+  "starter": {
+    "description": "Para comprar rápido: buscador grande, departamentos con menú desplegable y el catálogo con filtros en la portada.",
+    "fits": [
+      "hogar",
+      "ferreteria",
+      "farmacia",
+      "libreria",
+      "jugueteria",
+      "repuestos",
+      "supermercado",
+      "minimarket"
+    ],
+    "order": 4,
+    "dice": {
+      "card": [
+        "plain",
+        "framed",
+        "hover2"
+      ],
+      "palettes": [
+        "navy",
+        "cobalt",
+        "ember",
+        "cereza",
+        "moss",
+        "sage"
+      ],
+      "fonts": [
+        "modern",
+        "geometric",
+        "soft",
+        "classic",
+        "condensed"
+      ],
+      "hero": [
+        "split-left",
+        "full",
+        "type"
+      ],
+      "grid": [
+        "grid4",
+        "grid3"
+      ],
+      "closing": [
+        "accent",
+        "dark",
+        "newsletter"
+      ]
+    }
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ]
+}

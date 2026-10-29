@@ -89,9 +89,10 @@
   let filtersDrawerOpen = false, filtersLockedFrom = null, filtersOpener = null;
   const filterStyleFor = (all, groups) => FILTER_STYLES.includes(config.filterStyle) ? config.filterStyle : all.length >= 9 || groups.length >= 3 ? 'sidebar' : 'bar';
   const productsWord = n => `${n} ${n === 1 ? 'producto' : 'productos'}`;
-  function filtersMarkup(all, state, shown) {
+  function filtersMarkup(all, state, shown, forcedStyle) {
     const groups = filterGroups(all);
-    const style = filterStyleFor(all, groups);
+    // Owner 2026-10-28 («que tenga los sorters siempre»): a collection page shows its categories and colours as open chip rows.
+    const style = FILTER_STYLES.includes(forcedStyle) ? forcedStyle : filterStyleFor(all, groups);
     const chosen = key => state.sets[key] || [];
     const chip = (g, v) => `<button type="button" class="cf-chip"${v.color ? ' data-swatch-chip' : ''} data-filter-chip="${escape(g.key)}:${escape(v.value)}" data-key="${escape(g.key)}" data-value="${escape(v.value)}" aria-pressed="${chosen(g.key).includes(v.value)}">${v.color ? `<span data-swatch style="--swatch:${escape(v.color)}" aria-hidden="true"></span>` : ''}<span>${escape(v.text)}</span></button>`;
     const range = g => {

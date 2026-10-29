@@ -454,6 +454,14 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     try { frame.contentWindow?.location.replace("about:blank"); } catch { /* A frame that never loaded has nothing to clear. */ }
     frame.removeAttribute("src");
   }
+  /** Loads a store frame without adding a browser history entry. Setting src on a frame that had already loaded added one, so
+   *  Back went back inside the frame and showed the previous store under the new store's name (owner 2026-10-28: «it clicks
+   *  on the other one»). A new frame's first load replaces its blank page instead. */
+  function loadFrame(frame, url) {
+    const fresh = frame.cloneNode(false);
+    fresh.src = url;
+    frame.replaceWith(fresh);
+  }
   function syncStoreResourceViews(view) {
     for (const [kind, id] of [["media", "storeMediaFrame"], ["products", "productGuideFrame"], ["marketing", "storeMarketingFrame"], ["integrations", "storeIntegrationsFrame"], ["experiments", "storeExperimentsFrame"]]) {
       const frame = document.getElementById(id);
@@ -464,7 +472,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
       if (!frame.hidden && !frame.getAttribute("src")) {
         sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, ""));
         frame.dataset.storeId = currentStoreId;
-        frame.src = `/studio/?embedded=1&${kind === "products" ? "productGuide=1" : `library=${kind}${kind === "marketing" ? `&tab=${document.getElementById("marketingTabs").dataset.tab}` : ""}`}&store=${encodeURIComponent(currentStoreId)}`;
+        loadFrame(frame, `/studio/?embedded=1&${kind === "products" ? "productGuide=1" : `library=${kind}${kind === "marketing" ? `&tab=${document.getElementById("marketingTabs").dataset.tab}` : ""}`}&store=${encodeURIComponent(currentStoreId)}`);
       }
     }
     // Correos is drawn here, not in the frame: shown for the selected store (loaded once per store).
@@ -517,7 +525,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     if (view === "workspace" && sessionToken && store && !frame.getAttribute("src")) {
       sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, ""));
       frame.dataset.storeId = store.id;
-      frame.src = `/studio/?source=1&embedded=1&store=${encodeURIComponent(store.id)}`;
+      loadFrame(frame, `/studio/?source=1&embedded=1&store=${encodeURIComponent(store.id)}`);
     }
     if (view === "workspace" && frame.getAttribute("src")) frame.contentWindow?.postMessage({ type: "pagosya:catalog-refresh" }, location.origin);
   }

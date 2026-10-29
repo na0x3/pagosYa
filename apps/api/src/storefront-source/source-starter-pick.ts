@@ -34,6 +34,19 @@ export function rankStarters(input: { text: string; fashion: boolean; starters: 
 
 export const pickStarter = (input: Parameters<typeof rankStarters>[0]): string => rankStarters(input)[0] ?? 'esencial';
 
+/** Owner 2026-10-27 («skeletons for fashion, for hardware, for food, for electronics…»): the industry skeletons — templates of
+ *  their own, not Esencial variants — and the one whose words fit the business best. Undefined when none fits: Esencial stays. */
+export const SKELETONS = ['catalogo', 'maison', 'mesa', 'tecno', 'ritual'] as const;
+
+export function pickSkeleton(text: string, starters: readonly StarterChoice[]): string | undefined {
+  const folded = plain(text);
+  const scored = starters.filter(starter => (SKELETONS as readonly string[]).includes(starter.id))
+    .map(starter => ({ id: starter.id, order: starter.order, score: starter.fits.filter(word => has(folded, word)).length }))
+    .filter(entry => entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.order - b.order);
+  return scored[0]?.id;
+}
+
 /** How a starter is filled: «master» starters extend Esencial and take the master fill; «slots» starters fill copy slots. */
 export type StarterKind = 'master' | 'slots';
 export type StarterEntry = StarterChoice & { kind: StarterKind };
@@ -50,10 +63,12 @@ export function starterEntries(manifests: readonly TemplateManifest[]): StarterE
 
 /** Every starter a new store can start from. Esencial is hidden from the gallery, so `listStarters` leaves it out; it is
  *  added here because it is the fallback when nothing else fits. */
-export const buildStarters = (): StarterEntry[] => {
+/** skeletons: the industry skeletons too (owner 2026-10-27); the older starter pick (YAPI_STARTERS) never sees them. */
+export const buildStarters = (skeletons = false): StarterEntry[] => {
   const listed = listStarters();
   const esencial = listed.some(manifest => manifest.id === MASTER_TEMPLATE_ID) ? undefined : templateManifest(MASTER_TEMPLATE_ID);
-  return starterEntries(esencial ? [...listed, esencial] : listed);
+  const entries = starterEntries(esencial ? [...listed, esencial] : listed);
+  return skeletons ? entries : entries.filter(entry => !(SKELETONS as readonly string[]).includes(entry.id));
 };
 
 /** The starters of the merchant's last two other new stores (revision 1), Esencial for a store built before starters. */

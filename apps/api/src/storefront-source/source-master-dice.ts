@@ -11,7 +11,8 @@ import { rollFeatures } from './source-master-features';
 export const distinctPhotoCount = (urls: Array<string | null | undefined>) => new Set(urls.filter((url): url is string => Boolean(url)).map(uploadPath)).size;
 
 /** Variants that need more than one photo to look right. */
-const PHOTO_NEEDS: Record<string, number> = { collage: 3, strip: 3, pair: 2 };
+// Owner 2026-10-28: the photo footer (and the photo closing, same id) needs one photo.
+const PHOTO_NEEDS: Record<string, number> = { collage: 3, strip: 3, pair: 2, photo: 1 };
 const PALETTE_TONE: Record<string, 'bold' | 'calm'> = { ember: 'bold', cobalt: 'bold', citrus: 'bold', ink: 'bold', wine: 'bold', noir: 'bold' };
 const PALETTE_TEMP: Record<string, 'warm' | 'cool' | 'neutral'> = {
   terracotta: 'warm', olive: 'warm', sand: 'warm', plum: 'warm', ember: 'warm', blush: 'warm', moss: 'warm', citrus: 'warm', wine: 'warm', noir: 'warm',
@@ -32,7 +33,9 @@ const PHOTO_FIRST_PDP = new Set(['stacked', 'editorial']);
 export const MULTI_PHOTO_HERO = new Set(['collage', 'strip']);
 
 /** Fashion look spec 2026-10-21: the fashion card and product page belong to fashion stores only, and fashion stores always get them. */
-const FASHION_PARTS = ['cards', 'pdp'] as const;
+/** Parts the dice never roll: chosen from the merchant's words, the business or the photos (owner 2026-10-27/28). */
+const NEVER_ROLLED = new Set(['menu', 'filters', 'feature', 'outline', 'effect', 'confetti', 'family', 'module', 'heroShape', 'heroSize', 'heroPlain', 'heroFocus']);
+export const FASHION_PARTS = ['cards', 'pdp'] as const;
 
 /** Dropdown menu spec 2026-10-21: a menu needs at least two categories to be worth opening; fashion stores always get one.
  *  It is rolled from its own seed, so adding the part left every other part, palette and font pair as it was. */
@@ -77,12 +80,12 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   const palettePool = without(fitting.length >= 2 ? fitting : sameTone.length ? sameTone : palettes, input.recent.slice(0, 2).map(r => r.palette));
   const fonts = without(input.settings.fonts.map(f => f.id), input.recent.slice(0, 6).map(r => r.fonts));
   const taken = new Set(input.recent.map(r => `${r.hero}|${r.palette}|${r.fonts}`));
-  // Owner 2026-10-24 («make stores fuller»): up to four business sections.
-  const sections = input.sections.filter(id => (input.settings.sections ?? []).includes(id)).slice(0, 4);
+  // Owner 2026-10-24 («make stores fuller»), 2026-10-27 («full stores with many sections»): up to six business sections.
+  const sections = input.sections.filter(id => (input.settings.sections ?? []).includes(id)).slice(0, 6);
   let last: { variants: MasterVariants; palette: string; fonts: string } | undefined;
   for (let attempt = 0; attempt < 20; attempt++) {
     const next = rng(`${input.seed}#${attempt}`);
-    const variants = Object.fromEntries(Object.keys(catalogue).filter(part => part !== 'menu' && part !== 'filters' && part !== 'feature' && part !== 'outline' && part !== 'effect' && part !== 'confetti' && part !== 'family').map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
+    const variants = Object.fromEntries(Object.keys(catalogue).filter(part => !NEVER_ROLLED.has(part)).map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
     if (input.character.kind === 'fashion') for (const part of FASHION_PARTS) if (catalogue[part]?.includes('fashion')) variants[part] = 'fashion';
     if (catalogue.menu?.length) {
       variants.menu = input.character.kind === 'fashion' ? 'panel'

@@ -27,6 +27,9 @@ export function sourceStoreConfigData(publicStore: SourcePublicStore, apiUrl: UR
     aboutText: publicStore.aboutText, contactEmail: publicStore.contactEmail, policies: publicStore.policies,
     contactFormEnabled: publicStore.contactFormEnabled, contactTitle: publicStore.contactTitle, contactSubtitle: publicStore.contactSubtitle,
     categories: publicStore.categories, locations: publicStore.locations,
+    // Owner 2026-10-28 («colección Mujer y adentro zapatos, ropa…»): the collections reach the kit, which builds a menu per
+    // collection and its page with sort and filters; without them every collection link and page was empty.
+    collections: publicStore.collections,
     cartRecommendationsEnabled: publicStore.cartRecommendationsEnabled, cartRecommendationProductIds: publicStore.cartRecommendationProductIds, bundles: publicStore.bundles,
     items: publicStore.items.map((item) => ({ ...item, imageUrls: item.imageUrls.map((url) => new URL(url, apiUrl).href), variants: item.variants?.map(variant => ({ ...variant, ...(variant.imageUrl ? { imageUrl: new URL(variant.imageUrl, apiUrl).href } : {}) })), extras: item.extras?.map(extra => ({ ...extra, ...(extra.imageUrl ? { imageUrl: new URL(extra.imageUrl, apiUrl).href } : {}) })) })),
   };

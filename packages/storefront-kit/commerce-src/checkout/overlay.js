@@ -44,6 +44,28 @@
     .pagosya-info__cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin:16px 0;padding:0;list-style:none}.pagosya-info__cards a{display:grid;gap:6px;color:inherit;text-decoration:none}.pagosya-info__cards img{width:100%;aspect-ratio:1;object-fit:cover}.pagosya-search{display:flex;flex-wrap:wrap;gap:8px;align-items:end}.pagosya-search label{display:grid;gap:4px;flex:1 1 220px}.pagosya-search input{min-height:44px;padding:0 12px;font:inherit}.pagosya-search button{min-height:44px;padding:0 18px;font:inherit;cursor:pointer}
     .pagosya-policy-dialog{box-sizing:border-box;width:min(640px,calc(100% - 32px));max-height:min(80dvh,720px);margin:auto;padding:0;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:min(var(--store-radius,12px),16px);background:var(--store-background,var(--brand-background,Canvas));color:var(--store-foreground,var(--brand-foreground,CanvasText));font:inherit;overflow:auto}
     .pagosya-policy-dialog::backdrop{background:#0008}
+    /* The store's CSS reset clears borders and button fills after these rules load; the search keeps its own (2026-10-28). */
+    form[role=search]{position:relative}
+    .pagosya-suggest{position:absolute;z-index:60;top:calc(100% + 8px);left:0;right:0;min-width:280px;max-height:min(70vh,520px);overflow:auto;margin:0;padding:6px;list-style:none;border-radius:14px;background:var(--es-paper,#fff);color:var(--es-ink,inherit);box-shadow:0 18px 50px -18px #0006,0 0 0 1px color-mix(in srgb,currentColor 10%,transparent);text-align:left}
+    .pagosya-suggest a{display:flex;align-items:center;gap:12px;padding:8px;border-radius:10px;color:inherit;text-decoration:none;outline:none}
+    .pagosya-suggest a:is(:hover,:focus-visible){background:color-mix(in srgb,currentColor 7%,transparent)}
+    .pagosya-suggest img,.pagosya-suggest__blank{flex:none;width:44px;height:44px;border-radius:8px;object-fit:cover;background:color-mix(in srgb,currentColor 8%,transparent)}
+    .pagosya-suggest strong{display:block;font-size:14px;font-weight:600;line-height:1.3}.pagosya-suggest small{display:block;font-size:13px;opacity:.7}
+    .pagosya-suggest__all a{justify-content:center;font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:.25em}
+    .pagosya-info:has(.pagosya-search){max-width:none}
+    .pagosya-search{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin:8px 0 18px}
+    .pagosya-search label{display:grid;gap:8px;flex:1 1 320px;font-size:14px;font-weight:600}
+    .pagosya-search input{box-sizing:border-box;width:100%;min-height:48px;padding:0 18px!important;border:1px solid color-mix(in srgb,currentColor 22%,transparent)!important;border-radius:999px;background:var(--es-paper,transparent)!important;color:inherit;font:inherit;font-weight:400}
+    .pagosya-search input:focus-visible{outline:2px solid var(--es-accent,currentColor);outline-offset:2px}
+    .pagosya-search>button{min-height:48px;padding:0 24px!important;border:0;border-radius:999px;background:var(--es-accent,#111)!important;color:var(--es-on-accent,#fff)!important;font:inherit;font-weight:600;cursor:pointer}
+    .pagosya-info:has(.pagosya-search) .pagosya-info__cards{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:24px;padding:0!important;margin-inline:0!important}
+    .pagosya-info:has(.pagosya-search) .pagosya-info__cards img{border-radius:var(--es-radius,14px)}
+    .pagosya-info:has(.pagosya-search) .pagosya-info__cards strong{font-weight:600;text-decoration:none}
+    .pagosya-search__tools{display:grid;gap:12px;margin:0 0 18px}.pagosya-search__row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+    .pagosya-search__sort>span{margin-right:4px;font-size:13px;font-weight:600;opacity:.7}
+    .pagosya-search__chip{display:inline-flex;align-items:center;min-height:36px;padding:0 16px!important;border:1px solid color-mix(in srgb,currentColor 18%,transparent)!important;border-radius:999px;color:inherit;font-size:14px;text-decoration:none!important;white-space:nowrap}
+    .pagosya-search__chip:hover{border-color:currentColor!important}
+    .pagosya-search__chip[aria-current]{background:var(--es-ink,#111)!important;border-color:var(--es-ink,#111)!important;color:var(--es-paper,#fff)!important}
     .pagosya-policy-dialog header{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;background:inherit;border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent)}
     .pagosya-policy-dialog h2{margin:0;font-size:1.2rem;font-family:var(--store-heading-font,inherit)}.pagosya-policy-dialog header button{width:44px;height:44px;border:0;border-radius:50%;background:none;color:inherit;font-size:26px;cursor:pointer}
     .pagosya-policy-dialog div{padding:8px 20px}.pagosya-policy-dialog div p{margin:12px 0;line-height:1.65;max-width:66ch}

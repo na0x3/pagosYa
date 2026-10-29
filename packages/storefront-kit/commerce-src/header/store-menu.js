@@ -66,6 +66,13 @@
       const category = storeMenuCategories().find(entry => entry.id === value.slice(9));
       return category ? { href: pageHref('productos.html', '?f_categoria=' + encodeURIComponent(filterFold(category.id))), label: category.name } : null;
     }
+    // Owner 2026-10-28: «Mujer → Zapatos» is the Mujer collection showing one category (collection:<slug>/category:<id>).
+    const nested = /^collection:([^/]+)\/category:(.+)$/.exec(value);
+    if (nested) {
+      const collection = infoCollections().find(entry => entry.slug === nested[1]);
+      const category = storeMenuCategories().find(entry => entry.id === nested[2]);
+      return collection && category ? { href: pageHref('coleccion.html', '?c=' + encodeURIComponent(collection.slug) + '&f_categoria=' + encodeURIComponent(filterFold(category.id))), label: category.name } : null;
+    }
     if (value.startsWith('collection:')) {
       const collection = infoCollections().find(entry => entry.slug === value.slice(11));
       return collection ? { href: pageHref('coleccion.html', '?c=' + encodeURIComponent(collection.slug)), label: collection.name } : null;
@@ -89,6 +96,21 @@
       .map(anchor => ({ href: anchor.getAttribute('href'), label: anchor.textContent.trim() }))
       .filter(link => link.label && !/^(?:\.\.\/)*(?:index|productos)\.html$/.test(link.href));
     const discover = { label: 'Descubre', links: [...own, ...['about', 'shipping', 'refund', 'faq', 'contact'].map(kind => ({ to: 'page:' + kind }))] };
+    // Owner 2026-10-28 («colección Mujer y adentro zapatos, ropa…»): with two collections or more (Mujer, Hombre, Niños), each is
+    // its own menu — the categories it holds, a photo tile per category, and «Ver todo».
+    const collectionsWithProducts = infoCollections();
+    if (collectionsWithProducts.length >= 2) {
+      const byCollection = collectionsWithProducts.slice(0, 3).map(collection => {
+        const ids = new Set(Array.isArray(collection.productIds) ? collection.productIds : []);
+        const inside = products().filter(item => ids.has(item.id));
+        const cats = categories.filter(category => inside.some(item => item.categoryId === category.id));
+        const tilesHere = cats.map(category => ({ title: category.name, to: `collection:${collection.slug}/category:${category.id}`,
+          image: storeMenuPhoto((inside.find(item => item.categoryId === category.id)?.imageUrls || [])[0]) })).filter(tile => tile.image).slice(0, 3);
+        return { label: collection.name, links: [...cats.map(category => ({ to: `collection:${collection.slug}/category:${category.id}` })), { label: `Ver todo ${collection.name}`, to: `collection:${collection.slug}` }],
+          tilesTitle: 'Por categoría', tiles: tilesHere, footer: { label: `Ver todo ${collection.name}`, to: `collection:${collection.slug}` } };
+      });
+      return [...byCollection, discover];
+    }
     return [shop, discover];
   }
   /** Groups with every link, tile and footer resolved; a repeated label is shown once, and a group with no link left is dropped. */

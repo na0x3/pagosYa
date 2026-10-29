@@ -2,7 +2,7 @@ import type { MasterVariants } from './source-master';
 
 /** Owner 2026-10-27 («still no motion bubbles like we had before»): the template's ready-made motion effects, chosen from the
  *  merchant's words and what the store sells. Words that name an effect always count; an animated store also takes the one its
- *  products suggest (drinks bubble, flowers drop petals, coffee and bakeries steam, beauty sparkles), floating shapes otherwise. */
+ *  products suggest (drinks bubble, coffee and bakeries steam, beauty sparkles), none otherwise. */
 const fold = (text: string) => String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const NAMED: Array<[string, RegExp]> = [
   ['bubbles', /\bburbuj\w*/], ['petals', /\bpetalo\w*/], ['steam', /\b(?:vapor|humeante)\w*/],
@@ -10,7 +10,6 @@ const NAMED: Array<[string, RegExp]> = [
 ];
 const SOLD: Array<[string, RegExp]> = [
   ['bubbles', /\b(?:sodas?|gaseosas?|refrescos?|bebidas?|kombucha|sparkling|espumos\w*|cervez\w*|prebiotic\w*|limonadas?)\b/],
-  ['petals', /\b(?:flor|flores|floreria|ramos?|rosas)\b/],
   ['steam', /\b(?:cafe|cafeteria|coffee|infusion\w*|panader\w*|pasteler\w*|reposter\w*|horno|horneado\w*|sopas?|caldos?)\b/],
   ['sparkles', /\b(?:belleza|cosmetic\w*|maquillaje|skincare|joyas?|joyeria|perfum\w*|glitter)\b/],
 ];
@@ -28,7 +27,9 @@ const named = (text: string) => {
 export function effectsFor(input: { words: string; business: string; animated: boolean }): Partial<Record<'effect' | 'confetti', string>> {
   const asked = named(input.words);
   const confetti = /\bconfeti\w*/.test(fold(input.words)) ? 'on' : input.animated ? 'on' : undefined;
-  const sold = input.animated && !asked ? SOLD.find(([, pattern]) => pattern.test(fold(input.business)))?.[0] ?? 'shapes' : undefined;
+  // Owner 2026-10-28 («the floating dot and flower look unprofessional»): floating shapes and petals come only when the merchant
+  // names them, never on their own; a store whose products suggest no effect gets none.
+  const sold = input.animated && !asked ? SOLD.find(([, pattern]) => pattern.test(fold(input.business)))?.[0] : undefined;
   const effect = asked ?? sold;
   return { ...(effect ? { effect } : {}), ...(confetti ? { confetti } : {}) };
 }

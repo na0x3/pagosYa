@@ -19,7 +19,8 @@ describe('template families', () => {
   });
   it('fixes the family\'s parts and keeps an allowed roll', () => {
     const catalogue = { family: ['esencial', 'pop', 'revista'], outline: ['none', 'chunky'], bands: ['blocks', 'calm'], grid: ['grid3', 'grid4', 'list'], button: ['pill', 'underline'], corners: ['round'] };
-    expect(familyVariants('pop', { grid: 'grid4' }, 's1', catalogue)).toEqual({ family: 'pop', outline: 'chunky', bands: 'calm', button: 'pill', corners: 'round' });
+    expect(familyVariants('pop', { grid: 'grid4', button: 'pill', corners: 'round' }, 's1', catalogue)).toEqual({ family: 'pop', outline: 'chunky', bands: 'calm' });
+    expect(familyVariants('pop', { grid: 'grid4', button: 'underline' }, 's1', catalogue).button).toBe('pill');
     expect(familyVariants('pop', { grid: 'list' }, 's1', catalogue).grid).toMatch(/^grid[34]$/);
   });
   it('gives a magazine a light page and an editorial font', () => {

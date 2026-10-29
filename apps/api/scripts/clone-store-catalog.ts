@@ -1,7 +1,7 @@
 /** A fresh store with another store's catalog only — categories and products as the merchant entered them (names, prices, stock,
  *  descriptions, photos, specifications), never a design and never YAPI-written product text. For YAPI-only live checks
  *  (owner 2026-10-22: «replicate atelier vargas», test stores are designed by YAPI alone).
- *   npx ts-node --transpile-only scripts/clone-store-catalog.ts --from "NOA VARGAS Atelier" --record noa-yapi-1 [--name "NOA · A"]
+ *   npx ts-node --transpile-only scripts/clone-store-catalog.ts --from "NOA VARGAS Atelier" (or a store id) --record noa-yapi-1 [--name "NOA · A"]
  *  Local database only; idempotent through examples/<record>/demo.json. */
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
@@ -45,7 +45,7 @@ async function main() {
       await prisma.mediaAsset.create({ data: { merchantId, storeId, url: stored.url, storageKey: stored.filename, mimeType: stored.mimeType, byteSize: stored.byteSize } });
       return stored.url;
     }))).filter((url): url is string => Boolean(url));
-    const source = await prisma.store.findFirstOrThrow({ where: { name: from }, orderBy: { createdAt: 'asc' }, select: { id: true, merchantId: true, name: true, tagline: true, policies: true, shippingEnabled: true, shippingPickupEnabled: true, locations: true } });
+    const source = await prisma.store.findFirstOrThrow({ where: /^c[a-z0-9]{24}$/.test(from) ? { id: from } : { name: from }, orderBy: { createdAt: 'asc' }, select: { id: true, merchantId: true, name: true, tagline: true, policies: true, shippingEnabled: true, shippingPickupEnabled: true, locations: true } });
     let record: any = await readFile(resolve(folder, 'demo.json'), 'utf8').then(JSON.parse).catch(() => null);
     const save = () => writeFile(resolve(folder, 'demo.json'), JSON.stringify(record, null, 2) + '\n');
     if (!record) {

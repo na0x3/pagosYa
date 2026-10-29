@@ -21,12 +21,19 @@ export type MasterLook = { palette: string; fonts: string; colors: Partial<Recor
 export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null;
   /** Owner 2026-10-25: a video the merchant attached, played as the cover (store-data photos.heroVideo). */
   heroVideo?: string;
+  /** Owner 2026-10-28 (avril, «longer with more pictures»): the merchant's own pictures the cover and story did not take, in the
+   *  order sent; store-data photos.b1…b6, which the templates' sections show before any product photo. */
+  brandPhotos?: string[];
   /** Owner 2026-10-27: the merchant asked for an animated store (source-master-animated.ts). */
   animated?: boolean;
   /** Owner 2026-10-27: the motion effects the merchant's words and products chose (source-master-effects.ts). */
   effects?: Partial<Record<'effect' | 'confetti', string>>;
   /** Owner 2026-10-27: the template family the merchant's words and business chose (source-master-family.ts). */
   family?: string;
+  /** Owner 2026-10-27: the store's working module (measurements, table, compare, frame, bouquet), from its business's words. */
+  module?: string;
+  /** Owner 2026-10-28: the colours the merchant named for the brand (source-palette.ts coloursFromWords), as hex, in the order written. */
+  namedColours?: string[];
   /** Variety spec: the business's character, its sections and any variant the merchant named. */
   character?: MasterCharacter; sections?: MasterSection[]; variants?: Partial<MasterVariants>;
   /** The uploads the bundled hero/story photos came from, so product slots holding the same photo can point at the bundle. */
@@ -168,7 +175,7 @@ export function masterFillFromRead(read: MasterRead, photos: readonly string[], 
     ...(Object.keys(copy).length ? { copy } : {}),
     ...(keep('look') ? { look: { palette: read.palette, fonts: read.fonts, colors } } : {}),
     ...(read.tone ? { character: { tone: read.tone, temperature: read.temperature ?? 'neutral', lead: read.lead ?? 'photo', exclude: Array.isArray(read.exclude) ? read.exclude : [], ...(read.kind ? { kind: read.kind } : {}) } } : {}),
-    ...(Array.isArray(read.sections) && keep('sections') ? { sections: read.sections.slice(0, 4) } : {}),
+    ...(Array.isArray(read.sections) && keep('sections') ? { sections: read.sections.slice(0, 6) } : {}),
     ...(Array.isArray(read.variantChoices) && read.variantChoices.length && keep('variants') ? { variants: Object.fromEntries(read.variantChoices.map(choice => [choice.part, choice.id])) } : {}),
     ...(read.featureCopy && keep('features') ? { featureCopy: read.featureCopy } : {}),
     ...(read.menuStyle && keep('menu') ? { menu: { style: read.menuStyle, groups: menuGroupsFromRead(read.menuGroups, photos) } } : {}),

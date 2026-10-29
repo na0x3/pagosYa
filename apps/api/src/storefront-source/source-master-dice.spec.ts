@@ -275,10 +275,10 @@ describe('no text-only cover for a store with photos', () => {
   });
 });
 
-// Owner 2026-10-24 («make stores fuller, more sections»): a store keeps up to four business sections, not two.
-it('a store keeps up to four business sections', () => {
+// Owner 2026-10-24 («make stores fuller, more sections»), 2026-10-27 («full stores with many sections»): up to six.
+it('a store keeps up to six business sections', () => {
   const master = templateManifest('esencial')!.master!;
   const calm = { tone: 'calm' as const, temperature: 'neutral' as const, lead: 'photo' as const, exclude: [] };
-  const out = rollVariants({ seed: 's', settings: master, character: calm, photoCount: 4, sections: ['faq', 'process', 'materials', 'visit', 'quotes'], recent: [] });
-  expect(out.variants.sections).toEqual(['faq', 'process', 'materials', 'visit']);
+  const out = rollVariants({ seed: 's', settings: master, character: calm, photoCount: 4, sections: ['faq', 'process', 'materials', 'visit', 'quotes', 'journal', 'team'], recent: [] });
+  expect(out.variants.sections).toEqual(['faq', 'process', 'materials', 'visit', 'quotes', 'journal']);
 });

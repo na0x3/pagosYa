@@ -143,9 +143,9 @@ it('the Esencial theme also sets the store font variables the kit pages read', (
 });
 
 
-// Owner 2026-10-24 («make stores fuller, more sections»): the fill's read keeps up to four business sections.
-it('a fill read keeps up to four business sections', () => {
+// Owner 2026-10-24 («make stores fuller, more sections»), raised to six 2026-10-27 («full stores with many sections»).
+it('a fill read keeps up to six business sections', () => {
   const section = (id: string) => ({ id, title: id, items: [{ title: 'a', text: 'b' }, { title: 'c', text: 'd' }] });
-  const read = { sections: ['faq', 'process', 'materials', 'visit', 'quotes'].map(section) } as any;
-  expect(masterFillFromRead(read, [], false).sections?.map(s => s.id)).toEqual(['faq', 'process', 'materials', 'visit']);
+  const read = { sections: ['faq', 'process', 'materials', 'visit', 'quotes', 'care', 'sizes'].map(section) } as any;
+  expect(masterFillFromRead(read, [], false).sections?.map(s => s.id)).toEqual(['faq', 'process', 'materials', 'visit', 'quotes', 'care']);
 });

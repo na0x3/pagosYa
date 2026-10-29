@@ -1,0 +1,129 @@
+{
+  "id": "ritual",
+  "name": "Ritual",
+  "category": "belleza",
+  "description": "Belleza y cuidado personal: portada suave, promesas de la marca, la rutina por pasos, ingredientes y reseñas.",
+  "tags": [
+    "belleza",
+    "skincare",
+    "cuidado"
+  ],
+  "sitePurpose": "shop",
+  "order": 206,
+  "curated": true,
+  "extends": "esencial",
+  "preset": {
+    "palette": "blush",
+    "fonts": "editorial",
+    "variants": {
+      "header": "centered",
+      "announce": "plain",
+      "hero": "split-left",
+      "grid": "grid4",
+      "card": "plain",
+      "story": "split",
+      "values": "icons",
+      "closing": "accent",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "round",
+      "density": "airy",
+      "texture": "none",
+      "photos": "natural",
+      "cards": "compact",
+      "offers": "rows",
+      "bands": "calm",
+      "menu": "dropdowns",
+      "filters": "chips",
+      "feature": "origin,palette"
+    },
+    "kind": "other"
+  },
+  "starter": {
+    "description": "Belleza, maquillaje y cuidado de la piel: la rutina por pasos, ingredientes y reseñas.",
+    "fits": [
+      "belleza",
+      "maquillaje",
+      "skincare",
+      "cosmética",
+      "cosmetica",
+      "labiales",
+      "labial",
+      "rubor",
+      "serum",
+      "sérum",
+      "cremas",
+      "cuidado de la piel",
+      "perfumes",
+      "uñas",
+      "cabello",
+      "capilar",
+      "spa"
+    ],
+    "order": 8,
+    "dice": {
+      "hero": [
+        "split-left",
+        "full",
+        "stack"
+      ],
+      "grid": [
+        "grid4",
+        "grid3",
+        "strip"
+      ],
+      "closing": [
+        "accent",
+        "dark",
+        "newsletter"
+      ],
+      "palettes": [
+        "blush",
+        "plum",
+        "sand",
+        "linen",
+        "wine",
+        "sage"
+      ],
+      "fonts": [
+        "editorial",
+        "gallery",
+        "soft",
+        "literary",
+        "luxury"
+      ]
+    }
+  },
+  "photos": [
+    {
+      "slot": "hero",
+      "role": "hero",
+      "demo": "hero.jpg"
+    },
+    {
+      "slot": "story",
+      "role": "lifestyle",
+      "demo": "story.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "p4",
+      "role": "product",
+      "demo": "p4.jpg"
+    }
+  ]
+}

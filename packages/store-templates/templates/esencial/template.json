@@ -445,7 +445,7 @@
         "minimal",
         "twotone",
         "column"
-      ],
+      , "statement", "card", "photo"],
       "pdp": [
         "gallery-left",
         "gallery-right",
@@ -487,6 +487,8 @@
         "none",
         "chunky"
       ],
+      "sticker": ["offset", "tilt", "tinted", "line", "stamp"],
+      "popOrder": ["products", "story", "values"],
       "effect": [
         "none",
         "bubbles",
@@ -537,6 +539,38 @@
         "capsule",
         "origin",
         "palette"
+      ],
+      "module": [
+        "none",
+        "measure",
+        "reserve",
+        "compare",
+        "frame",
+        "bouquet"
+      ],
+      "heroShape": [
+        "wide",
+        "tall",
+        "square"
+      ],
+      "heroSize": [
+        "large",
+        "small"
+      ],
+      "heroPlain": [
+        "plain",
+        "scene"
+      ],
+      "heroFocus": [
+        "tl",
+        "tc",
+        "tr",
+        "cl",
+        "cc",
+        "cr",
+        "bl",
+        "bc",
+        "br"
       ]
     },
     "sections": [
