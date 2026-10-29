@@ -6476,6 +6476,13 @@
     .pym-footer{display:flex;align-items:center;justify-content:center;min-height:52px;margin-top:24px;background:var(--store-foreground,#111);color:var(--store-background,#fff);font-size:13px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none}
     .pym-extras{display:flex;flex-wrap:wrap;gap:4px 24px;margin-top:20px;padding-top:16px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
     .pym-extras a{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-size:14px}
+    /* Owner 2026-10-29 («a little menu with the accent of the brand colors, font»): the menu wears the brand where the store sets it. */
+    .pym-panel{background:var(--store-surface,var(--store-background,#fff));border-top:3px solid var(--store-accent,currentColor)}
+    .pym-tab[aria-selected="true"]{background:var(--store-accent,var(--store-foreground,#111));color:var(--store-on-accent,var(--store-background,#fff))}
+    .pym-links a{font-family:var(--store-heading-font,inherit);font-size:19px}
+    .pym-links a:hover{color:var(--store-accent,inherit)}
+    .pym-tiles a{font-family:var(--store-heading-font,inherit)}
+    .pym-footer{background:var(--store-accent,var(--store-foreground,#111));color:var(--store-on-accent,var(--store-background,#fff))}
     .pym-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
     @media (min-width:861px){
       [data-store-menu="dropdowns"][data-store-menu-links] [data-pagosya-store-menu="toggle"]{display:none}
