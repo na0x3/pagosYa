@@ -1,6 +1,6 @@
 # YAPI agent cost: cacheable transcript, terra steps, continue instead of restart
 
-Date: 2026-10-29 · Status: approved in chat by the owner, awaiting spec review · Branch: `oct24-clean`
+Date: 2026-10-29 · Status: approved by the owner 2026-10-29; cache numbers corrected the same day after measuring 850 turns · Branch: `oct24-clean`
 
 ## Why
 
@@ -22,10 +22,13 @@ Prices (`source-generation-policy.ts`): sol $4 / $0.40 cached / $20 out per M; t
 Three findings:
 
 1. **Input is the cost; output is noise.** Each turn resends 40–65k tokens and writes ~300.
-2. **The cache breaks every turn or two.** Cached tokens per turn alternate between the full prefix and 0–12k
-   (instructions only). `compactAgentTranscript` (`agent/agent-loop.ts`) rewrites an old item almost every turn: a
-   `read_file` output is replaced once it falls 12 items behind the end, and every new screenshot evicts the
-   previous one in place. Each rewrite changes the prefix at that point, so the provider cache stops matching there.
+2. **Most turns miss the cache.** Across ~850 agent turns since 2026-10-26, the uncached input came from: turns with
+   nothing cached 65%, turns with only the instructions cached (~12k) 17%, partial hits 15%, full hits 3%. Only the
+   partial hits are explained by the code: `compactAgentTranscript` (`agent/agent-loop.ts`) rewrites an old item almost
+   every turn (a `read_file` output once it falls 12 items behind the end, the previous screenshot whenever a new one
+   arrives), which breaks the cached prefix at that point. The full misses are not explained: the cache key
+   (`sourcePromptCacheKey`) is stable per store and the ChatGPT-plan bridge forwards it (`scripts/chatgpt-plan/transport.mjs`
+   strips `prompt_cache_retention` but not `prompt_cache_key`). They look like provider-side routing or expiry.
 3. **Both retries started over.** The second run on each store opened with `plan_task → screenshot → read_file` and
    rebuilt the store from scratch; the failed run's 15 steps (~$2.2 per store) were thrown away. Resume already
    exists (`source-generation.service.ts`, `priorRun`/`resumable`), but a first design's instruction is a brief
@@ -38,8 +41,11 @@ Estimated cost per first design (assumes ~25 turns at ~55k input):
 |---|---|
 | Today (failed run + full retry) | ~$4.6 |
 | Resume instead of restart | ~$3.0 |
-| + cacheable transcript | ~$1.5 |
-| + terra for build steps | ~$0.8 |
+| + terra for build steps | ~$1.5 |
+| + cacheable transcript (fixes the partial-hit 15% only) | ~$1.3 |
+
+Getting under ~$1 needs the full misses explained; Part 1 adds a probe that measures them (below), and any fix it
+points to is a follow-up, not part of this spec.
 
 ## Scope
 
@@ -74,6 +80,11 @@ Tests (`agent/agent-loop.spec.ts`):
   (in estimated tokens) is at least 85% of total input.
 - The existing compaction guarantees still hold: the latest screenshot is always present, edit history and
   instructions are never evicted, and an evicted read says the file can be read again.
+
+Cache probe: each agent attempt already records `inputTokens` and `cachedInputTokens`. Add one diagnostic per agent
+turn to `attempts[]`: the estimated tokens of the longest prefix shared with the previous turn's request
+(`prefixTokens`). In the live check, a turn whose `prefixTokens` is close to its input but whose `cachedInputTokens` is
+near 0 is a provider-side miss, not ours. That settles whether the remaining misses are ours to fix.
 
 ## Part 2: terra for the build steps
 
@@ -145,8 +156,9 @@ On the ChatGPT plan stack (`pnpm dev:chatgpt`), one first design of a test store
 `~/Downloads`, see the test-store photos reference). Read its `attempts` afterwards:
 
 - agent turns on terra, design and visual on sol;
-- cached share of agent input at least 85%;
-- recorded cost under ~$1;
+- partial-hit breaks gone (every turn's `prefixTokens` covers the previous request except at compaction batches);
+- the share of provider-side misses (high `prefixTokens`, ~0 cached) measured and reported;
+- recorded cost under ~$1.5;
 - if the run reached the cap, a continuation ran instead of a failed run plus a retry.
 
 The owner judges the store against the sol-built ones. Before editing files under `apps/api`, check that no YAPI job
