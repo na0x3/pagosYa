@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { copy, features, photos, sections, store } from './store-data';
+import { copy, photos, sections, store } from './store-data';
+import { bandPhotos, notePhoto, photoSide, pickPhoto, statementPhoto, taken } from './photo-plan';
 import { variant } from './Shell';
 import { FeatureSlot } from './features';
 import { IconArrowRight, IconArrowUpRight, IconCheck, IconMessageCircle, IconPlus, IconShieldCheck, IconStar, IconTruck } from './icons';
@@ -94,7 +95,7 @@ export default function Home() {
 
       <FeatureSlot at="products" />
 
-      <section id="historia" className={story === 'split' && !photos.story ? 'es-section es-story es-story--text' : 'es-section es-story'} data-es-story={story} data-es-band={story === 'overlay' ? undefined : band(0)} aria-labelledby="es-story-title">
+      <section id="historia" className={story === 'split' && !photos.story ? 'es-section es-story es-story--text' : 'es-section es-story'} data-es-story={story} data-es-side={photoSide('story')} data-es-band={story === 'overlay' ? undefined : band(0)} aria-labelledby="es-story-title">
         {['split', 'overlay', 'pair'].includes(story) ? <Reveal className="es-story__media">
           <img src={photos.story} alt="" aria-hidden="true" />{story === 'pair' ? <img src={photos.p1} alt="" aria-hidden="true" /> : null}
         </Reveal> : null}
@@ -151,19 +152,6 @@ function HeroVideo() {
   return <video ref={ref} className="es-hero__video" src={photos.heroVideo} autoPlay muted loop playsInline poster={photos.hero} aria-hidden="true" />;
 }
 
-// One build path live check 2026-10-29: one photo appeared twice on 4 of 5 home pages. The feature bands (duo, explore, capsule,
-// origin) claim their photos first; the business sections and the closing band take only photos nobody else shows.
-type Band = { photo?: string; halves?: Array<{ photo?: string }> };
-const bandPhotos: string[] = (() => {
-  const bands = features as unknown as Record<string, Band | undefined>;
-  return [...(bands.duo?.halves ?? []).map(half => half.photo), bands.explore?.photo, bands.capsule?.photo, bands.origin?.photo].filter((src): src is string => Boolean(src));
-})();
-const taken = (src: string | undefined) => !src || src === photos.hero || src === photos.story || bandPhotos.includes(src);
-const pickPhoto = unique([photos.p1, photos.p2, photos.p3, photos.p4]).find(src => !taken(src));
-// The journal's lead note carries one photo the hero, story and pair story do not already show; the other notes are words only.
-const notePhoto = unique([photos.p3, photos.p2, photos.p4]).find(src => !taken(src) && src !== pickPhoto);
-const statementPhoto = unique([photos.p2, photos.p4, photos.p1, photos.p3]).find(src => !taken(src) && src !== pickPhoto && src !== notePhoto);
-
 // Below the home on purpose: YAPI reads the file's first <section> as «la sección principal», which must be the hero.
 type Section = { id: string; title: string; items: Array<{ title: string; text: string }> };
 
@@ -175,7 +163,7 @@ function BusinessSection({ section, phone, band }: { section: Section; phone: st
   // Manifesto (owner 2026-10-21: bare centered lines read as plain text): a photo beside the lines on a tinted band.
   if (id === 'manifesto') {
     return <section id={id} className="es-section es-biz" data-es-section={id} data-es-band={band ?? 'muted'} aria-labelledby={`es-${id}-title`}>
-      <div className={statementPhoto ? 'es-biz__statement' : 'es-biz__statement es-biz__statement--text'}>
+      <div className={statementPhoto ? 'es-biz__statement' : 'es-biz__statement es-biz__statement--text'} data-es-side={photoSide('manifesto')}>
         {statementPhoto ? <img className="es-biz__statement-photo" src={statementPhoto} alt="" aria-hidden="true" loading="lazy" /> : null}
         <Reveal className="es-biz__statement-copy">
           <h2 id={`es-${id}-title`} className="es-h2">{title}</h2>
@@ -190,7 +178,7 @@ function BusinessSection({ section, phone, band }: { section: Section; phone: st
       : id === 'sizes' ? <table className="es-biz__table"><tbody>{items.map((item, index) => <tr key={index}><th scope="row">{item.title}</th><td>{item.text}</td></tr>)}</tbody></table>
       : id === 'faq' ? <div className="es-biz__faq">{items.map((item, index) => <details key={index}><summary>{item.title}</summary><p>{item.text}</p></details>)}</div>
       : id === 'gallery' ? <div className="es-biz__gallery">{gallery.map(src => <img key={src} src={src} alt="" aria-hidden="true" loading="lazy" />)}</div>
-      : id === 'pick' ? <div className="es-biz__pick">{pickPhoto ? <img src={pickPhoto} alt="" aria-hidden="true" loading="lazy" /> : null}<div>{items.map((item, index) => <div key={index}><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></div>)}<a className="es-btn es-btn--accent" href="productos.html">{copy.primaryCta}</a></div></div>
+      : id === 'pick' ? <div className="es-biz__pick" data-es-side={photoSide('pick')}>{pickPhoto ? <img src={pickPhoto} alt="" aria-hidden="true" loading="lazy" /> : null}<div>{items.map((item, index) => <div key={index}><h3 className="es-h3">{item.title}</h3><p>{item.text}</p></div>)}<a className="es-btn es-btn--accent" href="productos.html">{copy.primaryCta}</a></div></div>
       : id === 'visit' ? <div className="es-biz__visit">{store.city ? <p className="es-biz__city">{store.city}</p> : null}<dl>{items.map((item, index) => <div key={index}><dt>{item.title}</dt><dd>{item.text}</dd></div>)}</dl>{phone ? <a className="es-btn es-btn--accent" href={`https://wa.me/${phone.replace(/\D/g, '')}`}><IconMessageCircle /> WhatsApp</a> : null}</div>
       : id === 'journal' ? <div className="es-biz__journal">
         {notePhoto ? <img className="es-biz__note-photo" src={notePhoto} alt="" aria-hidden="true" loading="lazy" /> : null}

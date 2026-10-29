@@ -156,7 +156,7 @@ test('the closing photo is never the hero photo', () => {
   assert.doesNotMatch(home, /es-closing__photo" src=\{photos\.hero\}/);
   // 2026-10-29: through taken(), which also excludes the hero, the story and the feature bands' photos.
   assert.match(home, /closingPhoto = unique\(\[photos\.p4, photos\.p3, photos\.p2\]\)\.find\(src => !taken\(src\)/);
-  assert.match(home, /const taken = \(src: string \| undefined\) => !src \|\| src === photos\.hero \|\| src === photos\.story/);
+  assert.match(file('components/photo-plan.tsx'), /export const taken = \(src: string \| undefined\) => !src \|\| src === photos\.hero \|\| src === photos\.story/);
 });
 
 test('a store with a video plays it as the cover, muted and looping, still for reduced motion (owner 2026-10-25)', () => {
@@ -191,7 +191,7 @@ test('the home grid shows at most two rows, «Ver todo» has the rest', () => {
 });
 
 test('no photo twice on the home: business sections skip the photos the feature bands and each other already show', () => {
-  const home = file('components/home.tsx');
+  const home = file('components/photo-plan.tsx');
   assert.match(home, /import \{[^}]*\bfeatures\b[^}]*\} from '\.\/store-data'/);
   assert.match(home, /const bandPhotos: string\[\] = /);
   assert.match(home, /const pickPhoto = unique\(\[photos\.p1, photos\.p2, photos\.p3, photos\.p4\]\)\.find\(src => !taken\(src\)\)/);
@@ -204,4 +204,13 @@ test('the values marquee shows whenever the store has values', () => {
   const home = file('components/home.tsx');
   assert.match(home, /\{copy\.values\.length \? <div className=\{hero === 'type' \? 'es-marquee es-marquee--line' : 'es-marquee'\}/);
   assert.doesNotMatch(home, /bands === 'blocks' && copy\.values\.length \? <div className=\{hero === 'type'/);
+});
+
+// Owner 2026-10-29 («at least photo | text, text | photo»).
+test('sections with a photo beside words take turns, photo first then words first', () => {
+  const plan = file('components/photo-plan.tsx');
+  assert.match(plan, /export const photoSide = \(id: string\): 'start' \| 'end' => order\.indexOf\(id\) % 2 === 1 \? 'end' : 'start'/);
+  for (const [path, id] of [['components/home.tsx', 'story'], ['components/home.tsx', 'pick'], ['components/home.tsx', 'manifesto'], ['components/features.tsx', 'capsule'], ['components/features.tsx', 'origin'], ['components/features.tsx', 'explore']])
+    assert.match(file(path), new RegExp(`data-es-side=\\{photoSide\\('${id}'\\)\\}`), `${path} ${id}`);
+  assert.match(file('styles/globals.css'), /\.es-origin\[data-es-side="end"\] \.es-origin__figure>img\{order:2\}/);
 });

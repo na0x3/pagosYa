@@ -669,3 +669,15 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es [data-account-gate] [data-part=submit]{min-height:56px;border:0;border-radius:var(--es-button-radius,999px);background:var(--es-accent);color:var(--es-on-accent);font:600 16px var(--es-body)}
 .es [data-account-gate] [data-part=link]{font-weight:600;color:var(--es-ink)}
 .es [data-account-gate] [data-part=notice]{border-radius:var(--es-radius,12px)}
+/* Owner 2026-10-29 («at least photo | text, text | photo»): sections with a photo beside words take turns (photo-plan.tsx); a phone
+   always shows the photo first. */
+@media (min-width:761px){
+  .es-story[data-es-side="end"] .es-story__media{order:2}
+  .es-biz__pick[data-es-side="end"]>img{order:2}
+  .es-biz__statement[data-es-side="end"]{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+  .es-biz__statement[data-es-side="end"]>.es-biz__statement-photo{order:2}
+  .es-capsule[data-es-side="end"]{grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr)}
+  .es-capsule[data-es-side="end"] .es-capsule__media{order:2}
+  .es-explore[data-es-side="start"] .es-explore__photo{order:-1}
+  .es-origin[data-es-side="end"] .es-origin__figure>img{order:2}
+}

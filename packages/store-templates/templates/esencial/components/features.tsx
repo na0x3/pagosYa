@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { features, variants } from './store-data';
 import { IconArrowRight } from './icons';
+import { photoSide } from './photo-plan';
 
 /** John Smedley sections (spec 2026-10-21): the rolled home sections, drawn from the data the platform wrote to store-data.
  *  Each has a fixed place on the home (a slot), so two of them never sit side by side. */
@@ -21,7 +22,7 @@ function Explore({ photo, categories, colours }: { photo: string; categories: Ar
   const [current, setCurrent] = useState(0);
   const [colour, setColour] = useState('');
   const category = categories[current] ?? categories[0];
-  return <section className="es-section es-explore" aria-labelledby="es-explore-title">
+  return <section className="es-section es-explore" data-es-side={photoSide('explore')} aria-labelledby="es-explore-title">
     <div className="es-explore__main">
       <div className="es-explore__chips" role="group" aria-label="Categorías">
         {categories.map((entry, index) => <button key={entry.id} type="button" aria-pressed={index === current} onClick={() => setCurrent(index)}>{entry.name}</button>)}
@@ -38,7 +39,7 @@ function Explore({ photo, categories, colours }: { photo: string; categories: Ar
 }
 
 function Capsule({ photo, text, cta, products }: { photo: string; text: string; cta: string; products: string[] }) {
-  return <section className="es-section es-capsule" aria-label="Selección">
+  return <section className="es-section es-capsule" data-es-side={photoSide('capsule')} aria-label="Selección">
     {photo ? <div className="es-capsule__media"><img src={photo} alt="" aria-hidden="true" loading="lazy" /></div> : null}
     <div className="es-capsule__copy">
       <p className="es-capsule__text">{text}</p>
@@ -49,7 +50,7 @@ function Capsule({ photo, text, cta, products }: { photo: string; text: string; 
 }
 
 function Origin({ photo, caption, link, href }: { photo: string; caption: string; link: string; href: string }) {
-  return <section className="es-origin" aria-label={caption}>
+  return <section className="es-origin" data-es-side={photoSide('origin')} aria-label={caption}>
     <figure className="es-origin__figure">
       {photo ? <img src={photo} alt="" aria-hidden="true" loading="lazy" /> : null}
       <figcaption><p className="es-origin__caption">{caption}</p><a className="es-origin__link" href={href}>{link}</a></figcaption>
