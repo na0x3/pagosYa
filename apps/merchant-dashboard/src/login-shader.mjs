@@ -3,7 +3,8 @@
  * one light-blue glow and film grain. */
 
 export const LOGIN_GRADIENT = {
-  colors: ["hsl(222, 70%, 7%)", "hsl(216, 78%, 14%)", "hsl(210, 70%, 24%)", "hsl(198, 85%, 72%)"],
+  // Owner 2026-10-29: a dark grey field with the blue glow (was deep navy).
+  colors: ["hsl(240, 4%, 7%)", "hsl(240, 4%, 10%)", "hsl(232, 8%, 15%)", "hsl(216, 72%, 42%)"],
   distortion: 0.55, swirl: 0.06, offsetX: 0.35, offsetY: 0.3, scale: 1.25, rotation: 0,
   grainOverlay: 0.28,
   // A slow drift: it sits behind a form.

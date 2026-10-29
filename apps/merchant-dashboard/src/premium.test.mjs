@@ -13,10 +13,13 @@ test('premium.css is linked last and the serif is served', () => {
   assert.match(css(), /@font-face \{ font-family: "Instrument Serif"; src: url\("\/fonts\/instrument-serif\.ttf"\) format\("truetype"\); font-display: swap; \}/);
 });
 
-test('tokens: warm page, soft lines, rounder corners, serif titles', () => {
+// Owner 2026-10-29: dark grey with a blue gradient (was the warm light page).
+test('tokens: dark grey page with a blue gradient, soft lines, rounder corners, serif titles', () => {
   const s = css();
-  for (const token of ['--pm-serif: "Instrument Serif"', '--pm-ease: cubic-bezier(.22,1,.36,1)', '--pm-glass:', '--pm-blur:', '--calm-radius: 20px', '--calm-radius-sm: 14px', '--pg-bg: var(--pm-bg)', '--pg-border: rgb(40 36 28 / .08)']) assert.ok(s.includes(token), token);
-  assert.match(s, /body\.is-logged-in \{\n\s+background:\n\s+radial-gradient/);
+  for (const token of ['--pm-serif: "Instrument Serif"', '--pm-ease: cubic-bezier(.22,1,.36,1)', '--pm-glass:', '--pm-blur:', '--calm-radius: 20px', '--calm-radius-sm: 14px', '--pg-bg: var(--pm-bg)', '--pm-bg: #121214', 'color-scheme: dark', '--pg-border: rgb(255 255 255 / .08)', '--pg-ink: #3b82f6']) assert.ok(s.includes(token), token);
+  assert.match(s, /body\.is-logged-in \{\n\s+background:\n\s+radial-gradient\(1100px 700px at 8% -10%, rgb\(37 99 235/);
+  // No content surface keeps a hard white: the dark theme reads its surfaces from the tokens.
+  assert.doesNotMatch(s, /:is\(\.panel, \.card\) \{[^}]*background: #fff/);
   assert.match(s, /body\.is-logged-in \.workspace-title \{ font: 400 44px\/1\.05 var\(--pm-serif\)/);
 });
 

@@ -1,6 +1,7 @@
-/* Calm dashboard, Part B (docs/superpowers/specs/2026-10-21-calm-dashboard-yapi-immersive-design.md): warm, roomy,
-   soft and premium in the spirit of granola.ai. Linked after every other dashboard stylesheet so it wins; glass only on
-   the floating layers (top bar, sidebar, section pills, menus, dialogs), content cards stay solid. */
+/* Calm dashboard, Part B (docs/superpowers/specs/2026-10-21-calm-dashboard-yapi-immersive-design.md): roomy, soft and
+   premium. Linked after every other dashboard stylesheet so it wins; glass only on the floating layers (top bar, sidebar,
+   section pills, menus, dialogs), content cards stay solid.
+   Owner 2026-10-29: dark grey with a blue gradient behind everything; blue actions, YAPI keeps its yellow. */
 @font-face { font-family: "Instrument Serif"; src: url("/fonts/instrument-serif.ttf") format("truetype"); font-display: swap; }
 
 /* ── Tokens ──────────────────────────────────────────────
@@ -8,30 +9,36 @@
 body.is-logged-in {
   --pm-serif: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
   --pm-ease: cubic-bezier(.22,1,.36,1);
-  --pm-bg: #f6f4ef;
-  --pm-glass: rgb(255 255 255 / .62);
-  --pm-glass-strong: rgb(255 255 255 / .84);
-  --pm-glass-edge: rgb(255 255 255 / .78);
-  --pm-blur: saturate(1.5) blur(22px);
-  --pm-shadow-float: 0 24px 60px -28px rgb(40 36 28 / .28), 0 2px 10px rgb(40 36 28 / .05);
-  --pm-shadow-card: 0 1px 2px rgb(40 36 28 / .04), 0 10px 30px -18px rgb(40 36 28 / .14);
-  --pm-shadow-lift: 0 1px 2px rgb(40 36 28 / .06), 0 6px 16px -10px rgb(40 36 28 / .26);
-  --pg-bg: var(--pm-bg); --pg-surface: #fff; --pg-surface-raised: #f2efe8; --workspace-sidebar: transparent;
-  --pg-text: #1d1b17; --pg-text-muted: #5f5b53; --pg-text-faint: #77726a;
-  --pg-border: rgb(40 36 28 / .08); --pg-border-strong: rgb(40 36 28 / .14);
-  --pg-ink: #23211c; --pg-ink-hover: #3a3730; --pg-accent: #3a3730; --pg-accent-soft: #f2efe8;
-  --pg-focus-ring: rgb(35 33 28 / .10);
+  color-scheme: dark;
+  --pm-bg: #121214;
+  --pm-glass: rgb(30 30 35 / .62);
+  --pm-glass-strong: rgb(26 26 31 / .88);
+  --pm-glass-edge: rgb(255 255 255 / .08);
+  --pm-blur: saturate(1.4) blur(22px);
+  --pm-shadow-float: 0 24px 60px -24px rgb(0 0 0 / .65), 0 2px 10px rgb(0 0 0 / .25);
+  --pm-shadow-card: 0 1px 2px rgb(0 0 0 / .3), 0 10px 30px -18px rgb(0 0 0 / .55);
+  --pm-shadow-lift: 0 1px 2px rgb(0 0 0 / .35), 0 6px 16px -10px rgb(0 0 0 / .6);
+  --pm-hover: rgb(255 255 255 / .06);
+  --pm-active: #2b2b31;
+  --pm-field: #141417;
+  --pg-bg: var(--pm-bg); --pg-surface: #1b1b1f; --pg-surface-raised: #26262b; --pg-surface-muted: #26262b; --workspace-sidebar: transparent;
+  --pg-text: #ededef; --pg-text-muted: #a1a1aa; --pg-text-faint: #8b8b94;
+  --pg-border: rgb(255 255 255 / .08); --pg-border-strong: rgb(255 255 255 / .15);
+  --pg-ink: #3b82f6; --pg-ink-hover: #2563eb; --pg-accent: #60a5fa; --pg-accent-soft: rgb(59 130 246 / .16);
+  --pg-success: #4ade80; --pg-success-soft: rgb(74 222 128 / .12); --pg-warning: #fbbf24; --pg-warning-soft: rgb(251 191 36 / .12);
+  --pg-error: #f87171; --pg-error-soft: rgb(248 113 113 / .12);
+  --pg-focus-ring: rgb(59 130 246 / .35);
   --calm-radius: 20px; --calm-radius-sm: 14px;
   --calm-shadow: var(--pm-shadow-card); --calm-shadow-lg: var(--pm-shadow-float);
 }
 
 /* ── Page ─────────────────────────────────────────────── */
-html:has(> body.is-logged-in) { background: #f6f4ef; }
+html:has(> body.is-logged-in) { background: #121214; color-scheme: dark; }
 body.is-logged-in {
   background:
-    radial-gradient(1100px 700px at 8% -10%, rgb(205 222 190 / .55), transparent 60%),
-    radial-gradient(900px 600px at 100% 0%, rgb(246 222 196 / .45), transparent 60%),
-    radial-gradient(1000px 800px at 60% 110%, rgb(214 220 236 / .40), transparent 60%),
+    radial-gradient(1100px 700px at 8% -10%, rgb(37 99 235 / .30), transparent 60%),
+    radial-gradient(900px 600px at 100% 0%, rgb(56 189 248 / .14), transparent 60%),
+    radial-gradient(1000px 800px at 60% 110%, rgb(29 78 216 / .24), transparent 60%),
     var(--pm-bg);
   background-attachment: fixed;
   font-size: 15px;
@@ -47,20 +54,20 @@ body.is-logged-in .overview-greeting { font-size: 24px; color: var(--pg-text-mut
 body.is-logged-in .dashboard-sidebar { background: var(--pm-glass); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); border: 1px solid var(--pm-glass-edge); box-shadow: var(--pm-shadow-float); }
 body.is-logged-in .dashboard-nav { gap: 4px; padding: 14px 0; border-top: 0; }
 body.is-logged-in .dashboard-nav-button { min-height: 42px; border: 0; border-radius: 999px; color: var(--pg-text-muted); transition: background-color .2s var(--pm-ease), color .2s var(--pm-ease), box-shadow .2s var(--pm-ease); }
-body.is-logged-in .dashboard-nav-button:hover { background: rgb(255 255 255 / .62); color: var(--pg-text); }
-body.is-logged-in .dashboard-nav-button[aria-current="page"] { background: #fff; color: var(--pg-text); box-shadow: var(--pm-shadow-lift); }
+body.is-logged-in .dashboard-nav-button:hover { background: var(--pm-hover); color: var(--pg-text); }
+body.is-logged-in .dashboard-nav-button[aria-current="page"] { background: var(--pm-active); color: var(--pg-text); box-shadow: var(--pm-shadow-lift); }
 body.is-logged-in > .topbar { background: var(--pm-glass); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); border: 1px solid var(--pm-glass-edge); box-shadow: var(--pm-shadow-float); }
 body.is-logged-in .dashboard-workspace { max-width: 1080px; }
 body.is-logged-in .workspace-header { margin: 0 0 24px; }
 body.is-logged-in .section-tabs { display: inline-flex; flex-wrap: nowrap; gap: 4px; padding: 5px; margin: 0 0 40px; border-radius: 999px; background: var(--pm-glass); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); border: 1px solid var(--pm-glass-edge); box-shadow: var(--pm-shadow-card); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 body.is-logged-in .section-tabs::-webkit-scrollbar { display: none; }
 body.is-logged-in .section-tab { padding: 9px 16px; font-size: 14.5px; white-space: nowrap; border: 0; }
-body.is-logged-in .section-tab:hover { background: rgb(255 255 255 / .55); }
-body.is-logged-in .section-tab[aria-current="page"] { background: #fff; box-shadow: var(--pm-shadow-lift); }
+body.is-logged-in .section-tab:hover { background: var(--pm-hover); }
+body.is-logged-in .section-tab[aria-current="page"] { background: var(--pm-active); color: var(--pg-text); box-shadow: var(--pm-shadow-lift); }
 body.is-logged-in :is(.profile-menu, .profile-menu[popover]) { background: var(--pm-glass-strong); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); border: 1px solid var(--pm-glass-edge); border-radius: 22px; box-shadow: var(--pm-shadow-float); }
 /* The MCP dialog (Conecta tu IA) is dark by design: it keeps its own surface. */
 body.is-logged-in dialog:not(.mcp-dialog) { border: 1px solid var(--pm-glass-edge); border-radius: 28px; background: var(--pm-glass-strong); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); box-shadow: var(--pm-shadow-float); }
-body.is-logged-in dialog:not(.mcp-dialog)::backdrop { background: rgb(40 36 28 / .18); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+body.is-logged-in dialog:not(.mcp-dialog)::backdrop { background: rgb(0 0 0 / .55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   body.is-logged-in :is(.dashboard-sidebar, .topbar, .section-tabs, .profile-menu, dialog:not(.mcp-dialog)) { background: var(--pm-glass-strong); }
 }
@@ -78,18 +85,18 @@ body.is-logged-in dialog:not(.mcp-dialog)::backdrop { background: rgb(40 36 28 /
 }
 
 /* ── Surfaces and controls: soft, roomy, pill-shaped ── */
-body.is-logged-in :is(.panel, .card) { border: 0; border-radius: 20px; box-shadow: var(--pm-shadow-card); padding: 28px; background: #fff; }
-body.is-logged-in :is(.card:nth-child(3n+1), .card:nth-child(3n+2)) { background: #fff; color: var(--pg-text); }
+body.is-logged-in :is(.panel, .card) { border: 0; border-radius: 20px; box-shadow: var(--pm-shadow-card); padding: 28px; background: var(--pg-surface); color: var(--pg-text); }
+body.is-logged-in :is(.card:nth-child(3n+1), .card:nth-child(3n+2)) { background: var(--pg-surface); color: var(--pg-text); }
 body.is-logged-in :is(.overview-grid, .cards) { gap: 20px; }
 body.is-logged-in [data-dashboard-page]:not([hidden]) ~ [data-dashboard-page]:not([hidden]) { margin-top: 24px; }
 body.is-logged-in button:is(.primary, .secondary, .ghost), body.is-logged-in .button-like { min-height: 40px; padding: 0 18px; border-radius: 999px; font-size: 14.5px; font-weight: 550; box-shadow: none; transition: background-color .2s var(--pm-ease), border-color .2s var(--pm-ease), color .2s var(--pm-ease), transform .2s var(--pm-ease); }
 body.is-logged-in button.primary { background: var(--pg-ink); border: 1px solid var(--pg-ink); color: #fff; }
 body.is-logged-in button.primary:hover { background: var(--pg-ink-hover); border-color: var(--pg-ink-hover); }
-body.is-logged-in :is(button.secondary, button.ghost, .button-like.ghost) { background: #fff; border: 1px solid var(--pg-border-strong); color: var(--pg-text); }
-body.is-logged-in :is(button.secondary, button.ghost, .button-like.ghost):hover { background: var(--pg-surface-raised); }
+body.is-logged-in :is(button.secondary, button.ghost, .button-like.ghost) { background: var(--pg-surface-raised); border: 1px solid var(--pg-border-strong); color: var(--pg-text); }
+body.is-logged-in :is(button.secondary, button.ghost, .button-like.ghost):hover { background: var(--pm-active); }
 body.is-logged-in button:is(.primary, .secondary, .ghost):active { transform: scale(.98); }
 /* :where() keeps this at element weight, so components that style their own fields (the YAPI dock) still win. */
-body.is-logged-in :is(input:where(:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not(.ui-switch)), select, textarea) { min-height: 44px; padding: 10px 14px; border: 1px solid var(--pg-border-strong); border-radius: 14px; background: #fff; color: var(--pg-text); font-size: 15px; transition: border-color .2s var(--pm-ease), box-shadow .2s var(--pm-ease); }
+body.is-logged-in :is(input:where(:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not(.ui-switch)), select, textarea) { min-height: 44px; padding: 10px 14px; border: 1px solid var(--pg-border-strong); border-radius: 14px; background: var(--pm-field); color: var(--pg-text); font-size: 15px; transition: border-color .2s var(--pm-ease), box-shadow .2s var(--pm-ease); }
 body.is-logged-in :is(input, select, textarea):focus-visible { outline: none; border-color: var(--pg-ink); box-shadow: 0 0 0 4px var(--pg-focus-ring); }
 body.is-logged-in textarea { min-height: 96px; line-height: 1.55; }
 body.is-logged-in table { border-collapse: separate; border-spacing: 0; }
@@ -101,7 +108,7 @@ body.is-logged-in .badge { border-radius: 999px; padding: 4px 10px; font-size: 1
 body.is-logged-in .ui-tab { border-radius: 999px; padding: 8px 16px; }
 body.is-logged-in .ui-head-icon { border-radius: 12px; border-color: transparent; background: var(--pg-surface-raised); }
 body.is-logged-in .ui-switch { width: 40px; min-width: 40px; height: 24px; background-size: 22px 22px; background-image: radial-gradient(circle, #fff 0 8.5px, transparent 9px); }
-body.is-logged-in .overview-kpis { border: 0; border-radius: 20px; background: #fff; box-shadow: var(--pm-shadow-card); overflow: hidden; }
+body.is-logged-in .overview-kpis { border: 0; border-radius: 20px; background: var(--pg-surface); box-shadow: var(--pm-shadow-card); overflow: hidden; }
 body.is-logged-in .overview-kpi { padding: 22px 24px; }
 body.is-logged-in .overview-kpi dd { font: 400 34px/1.1 var(--pm-serif); letter-spacing: 0; }
 /* workspace-design.css gives .marketing-tabs display:flex, which beats the hidden attribute; the Clientes pills replace it. */
@@ -122,7 +129,7 @@ body.is-logged-in .panel .section-head > :not(:first-child):not(.section-toggle)
   body.is-logged-in .panel .section-head > :not(:first-child):not(.section-toggle) :is(label, input, select, button, .button-like) { width: 100% !important; max-width: none !important; min-width: 0; margin: 0; }
   body.is-logged-in :is(.panel, .card) { padding: 22px; }
 }
-body.is-logged-in .catalog-import-disclosure > summary { display: inline-flex; align-items: center; min-height: 40px; padding: 0 18px; border: 1px solid var(--pg-border-strong); border-radius: 999px; background: #fff; font-size: 14.5px; font-weight: 550; cursor: pointer; list-style: none; }
+body.is-logged-in .catalog-import-disclosure > summary { display: inline-flex; align-items: center; min-height: 40px; padding: 0 18px; border: 1px solid var(--pg-border-strong); border-radius: 999px; background: var(--pg-surface-raised); color: var(--pg-text); font-size: 14.5px; font-weight: 550; cursor: pointer; list-style: none; }
 body.is-logged-in .catalog-import-disclosure > summary::-webkit-details-marker { display: none; }
 body.is-logged-in .dashboard-workspace a:not([class]) { color: var(--pg-text); text-decoration: underline; text-decoration-color: var(--pg-border-strong); text-underline-offset: 3px; transition: text-decoration-color .2s var(--pm-ease); }
 body.is-logged-in .dashboard-workspace a:not([class]):hover { text-decoration-color: var(--pg-text); }
@@ -162,9 +169,9 @@ body.is-logged-in .workspace-yapi-status { position: absolute; left: 58px; botto
 body.is-logged-in .workspace-yapi-status:empty { display: none; }
 .yapi-ghost {
   position: fixed; z-index: 2147483000; box-sizing: border-box; overflow: hidden; pointer-events: none; transform-origin: top left;
-  padding: 16px 20px; border: 1px solid rgb(255 255 255 / .75); border-radius: 24px; color: #1d1b17;
-  background: rgb(255 255 255 / .7); -webkit-backdrop-filter: saturate(1.6) blur(24px); backdrop-filter: saturate(1.6) blur(24px);
-  box-shadow: 0 30px 70px -30px rgb(40 36 28 / .4); font: italic 400 18px/1.35 "Instrument Serif", ui-serif, Georgia, serif;
+  padding: 16px 20px; border: 1px solid rgb(255 255 255 / .1); border-radius: 24px; color: #ededef;
+  background: rgb(30 30 35 / .78); -webkit-backdrop-filter: saturate(1.6) blur(24px); backdrop-filter: saturate(1.6) blur(24px);
+  box-shadow: 0 30px 70px -30px rgb(0 0 0 / .7); font: italic 400 18px/1.35 "Instrument Serif", ui-serif, Georgia, serif;
 }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 600ms; animation-timing-function: cubic-bezier(.22,1,.36,1); }
 @media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
@@ -191,7 +198,7 @@ body.is-logged-in .profile-menu-actions { display: grid; gap: 2px; padding: 6px;
 body.is-logged-in #profileMenu .profile-menu-actions > button { justify-content: flex-start; gap: 10px; min-height: 38px; padding: 0 12px; background: none; border: 0; border-radius: 10px; box-shadow: none; color: var(--pg-text, #18181b); font-size: 14px; font-weight: 500; text-transform: none; }
 body.is-logged-in #profileMenu .profile-menu-actions > button:hover { background: var(--pg-surface-muted, #f4f4f5); transform: none; }
 body.is-logged-in .profile-menu-actions > button svg { width: 16px; height: 16px; color: var(--pg-text-muted, #71717a); }
-body.is-logged-in #profileMenu .profile-menu-actions > .account-delete-trigger { min-height: 32px; color: #b42318; font-size: 13px; }
+body.is-logged-in #profileMenu .profile-menu-actions > .account-delete-trigger { min-height: 32px; color: var(--pg-error); font-size: 13px; }
 body.is-logged-in .profile-menu-actions > .account-delete-trigger svg { color: currentColor; }
 body.is-logged-in .profile-devices { margin: 6px 6px 2px; padding-top: 10px; border-top: 1px solid var(--pg-border, #e7e5e4); color: var(--pg-text-muted, #71717a); font-size: 12.5px; line-height: 1.5; }
 body.is-logged-in #profileMenu .profile-devices button { display: inline; width: auto; min-height: 0; border-radius: 0; padding: 0; background: none; border: 0; box-shadow: none; color: var(--pg-text, #18181b); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
