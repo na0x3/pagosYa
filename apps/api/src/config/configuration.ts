@@ -136,7 +136,8 @@ export interface AppConfig {
    *  (overnight 2026-10-29: three designs out of steps before their final check); 30 by default. */
   yapiRedesignToolCalls: number;
   /** Spec 2026-10-29 (agent cost): the model of the agent's build steps on an «auto» request; design planning and the
-   *  composition review keep the plan's model. Never upgrades a cheaper pick. YAPI_AGENT_STEP_MODEL=gpt-5.6-sol restores sol. */
+   *  composition review keep the plan's model. Never upgrades a cheaper pick. YAPI_AGENT_STEP_MODEL=gpt-5.6-sol restores sol.
+   *  A first design follows it only while YAPI_REDESIGN_MODEL is auto: a named redesign model is kept for every step. */
   yapiAgentStepModel: string;
   /** Spec 2026-10-29: tool calls of the one continuation after a run used its steps unfinished; 0 turns it off. */
   yapiAgentContinueCalls: number;
