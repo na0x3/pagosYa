@@ -409,6 +409,10 @@ Write in `2026-10-29-one-build-path-findings.md`, per store:
 - what is wrong (broken, repeated photo, empty box, words that ignore the merchant)
 - whether the template or the polish caused it
 - whether a dropdown menu, filters, search, zoom, sizes and collections are present
+- whether the two-photo options the owner likes appear: the «duo» band (two photos side by side, each with its title and button,
+  linking to a category — needs 2+ lifestyle photos, leads on fashion stores) and the «pair» story (story photo + a second photo).
+  Owner 2026-10-29: «i liked the picture | picture options». If NOA, with its collections and moodboard photos, has no duo, find out
+  why (source-master-features.ts `duo: facts.lifestyle.length >= 2`) and put it on the findings list.
 
 List the size-guide and policy pages as asked-for-but-missing items: they are the next small plan, not this one. Add a «One build path (Oct 29)» section to the comparison page (https://claude.ai/artifact/5v5TAbCg1Y4tpyegmJFEsF) with the screenshots. Show the list to the owner before fixing anything in it.
 
