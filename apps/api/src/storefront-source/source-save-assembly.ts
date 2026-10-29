@@ -44,6 +44,14 @@ export type SaveAssemblyContext = {
   agentPolicyChange: boolean;
 };
 
+/** Store settings config.js keeps from the previous revision whatever YAPI redraws: the header record (dropdown menu, account
+ *  button) and the card design. Hoodies and Atelier 2026-10-29: the first design rebuilt config.js and lost both. A merchant's
+ *  menu request still rewrites header after this (withStoreMenuConfig). */
+export function carriedStoreConfig(previous: Record<string, unknown>): { header?: Record<string, unknown>; showcase?: Record<string, unknown> } {
+  const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  return { ...(record(previous.header) ? { header: previous.header } : {}), ...(record(previous.showcase) ? { showcase: previous.showcase } : {}) };
+}
+
 /** Everything a save carries besides the model's authored files: kit files, assets, design and visual-system files,
  *  config.js. Built from `live.generated` as it is when called: once for revision N, and again by the background review. */
 export async function assembleSourceSave(context: SaveAssemblyContext, assembleSignal: AbortSignal = context.facts.signal, lookChoice: LookChoice = {}) {
@@ -121,7 +129,7 @@ export async function assembleSourceSave(context: SaveAssemblyContext, assembleS
   const sheet = facts.voice.sheet;
   const voiceToSave = sheet ? voiceForSave(sheet, files) : undefined;
   const carriedVoice = voiceToSave ? undefined : previousFiles.find(file => file.path === VOICE_FILE);
-  const config = { ...sourceCommerceRoutes([...files, ...kitFiles], previousConfig), ...(voiceToSave ? { voiceLine: voiceToSave.voice } : {}), ...(productPageStyle ? { productPageStyle } : {}), ...(sketchAssurances.length ? { productAssurances: sketchAssurances }
+  const config = { ...carriedStoreConfig(previousConfig), ...sourceCommerceRoutes([...files, ...kitFiles], previousConfig), ...(voiceToSave ? { voiceLine: voiceToSave.voice } : {}), ...(productPageStyle ? { productPageStyle } : {}), ...(sketchAssurances.length ? { productAssurances: sketchAssurances }
     // The agent replaces ([] clears) or, untouched, the store's saved lines carry over like its theme.
     : live.agentTheme?.assurances !== undefined ? (live.agentTheme.assurances.length ? { productAssurances: live.agentTheme.assurances } : {})
     : Array.isArray(previousConfig.productAssurances) && previousConfig.productAssurances.length ? { productAssurances: previousConfig.productAssurances } : {}), dna, ...(accountTheme ? { accountTheme } : {}), ...(drawnCommerce.checkoutPhoto ? { checkoutPhoto: drawnCommerce.checkoutPhoto } : {}), ...(drawnCommerce.cartWord ? { cartWord: drawnCommerce.cartWord } : {}), ...(motifPack ? { motifPack } : {}), ...(runtimeMotifs.length ? { motifs: runtimeMotifs } : {}), ...(useNext && sitePurpose === 'shop' ? { productPage: 'product.html', checkoutPage: 'checkout.html' } : {}), ...(primaryAction ? { primaryAction } : {}), sitePurpose, scrollFeel, demo: false, slug: slug, apiBaseUrl: apiUrl.href.replace(/\/$/, ""), checkoutOrigin: appConfig.get<string>("app.checkoutOrigin"), data };
