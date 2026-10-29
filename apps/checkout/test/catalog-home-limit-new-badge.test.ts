@@ -44,3 +44,13 @@ it('«Nuevo» still marks the one new product of an older catalog', async () => 
   const grid = await render('<div data-pagosya-catalog></div>', [item('p1', old), item('p2', old), item('p3', old), item('p4', recent)]);
   expect(grid.textContent?.match(/Nuevo/g)?.length).toBe(1);
 });
+
+// Owner 2026-10-29 («things like color picker, sorter»): the home grid can carry the sort and colour filters and still keep its cap.
+it('a home grid with filters shows the sort and colour picker and still draws at most its limit', async () => {
+  const colours = ['Rojo', 'Azul', 'Verde', 'Negro'];
+  const items = colours.map((colour, n) => ({ ...item(`p${n}`, old), variants: [{ id: `v${n}`, amount: 10000, options: [{ name: 'Color', value: colour }] }] }));
+  const grid = await render('<div data-pagosya-catalog data-pagosya-filters data-filters-style="chips" data-catalog-limit="2"></div>', items);
+  expect(grid.querySelector('[data-sort], [data-sort-toggle]')).not.toBeNull();
+  expect(grid.querySelectorAll('[data-swatch], [data-swatch-chip]').length).toBeGreaterThan(0);
+  expect(grid.querySelectorAll('[data-product-id]').length).toBe(2);
+});

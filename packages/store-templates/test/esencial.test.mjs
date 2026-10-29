@@ -214,3 +214,8 @@ test('sections with a photo beside words take turns, photo first then words firs
     assert.match(file(path), new RegExp(`data-es-side=\\{photoSide\\('${id}'\\)\\}`), `${path} ${id}`);
   assert.match(file('styles/globals.css'), /\.es-origin\[data-es-side="end"\] \.es-origin__figure>img\{order:2\}/);
 });
+
+// Owner 2026-10-29 («things like color picker, sorter»): the home grid carries the sort and colour chips.
+test('the home grid has the sort and colour picker', () => {
+  assert.match(file('components/home.tsx'), /data-pagosya-catalog data-catalog-limit=\{homeLimit\} data-pagosya-filters data-filters-style="chips"/);
+});

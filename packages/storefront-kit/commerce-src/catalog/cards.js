@@ -218,7 +218,11 @@
     const photo = image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, '(max-width: 820px) 50vw, 33vw')} alt="${escape(p.name)}" loading="lazy" decoding="async" />` : '';
     const barsHtml = bars.length > 1 ? `<div class="menu-item__bars">${bars.map(bar => `<button type="button" data-card-swatch="${escape(bar.photo)}" data-card-colour="${escape(bar.value)}" aria-label="Ver en ${escape(bar.value)}" aria-pressed="false" style="--swatch:${escape(bar.color)}"></button>`).join('')}</div>` : '';
     const priceText = isMembership(p) ? membershipPriceText(p) : money(price(p), p.currency);
-    return `<article class="menu-item" data-product-id="${escape(p.id)}" data-anatomy="fashion">${details}<div class="menu-item__panel">${photo}${tag ? `<p class="menu-item__tag">${escape(tag)}</p>` : ''}${barsHtml}</div><div class="menu-item__row"><h3 class="menu-item__name">${escape(p.name)}</h3><p class="menu-item__price">${escape(priceText)}${cardOriginalMarkup(p)}</p></div>${line ? `<p class="menu-item__colors">${escape(line)}</p>` : ''}</article>`;
+    // Owner 2026-10-29 («the rounded sizes that existed before»): the sizes as round chips under the name; colours stay as bars.
+    const optionList = optionGroups(p) || [], colourAt = colourGroupIndex(optionList);
+    const sizeChips = optionList.filter((group, index) => index !== colourAt).flatMap(group => group.values).slice(0, 6);
+    const sizesHtml = sizeChips.length ? `<p class="menu-item__chips">${sizeChips.map(value => `<span>${escape(value)}</span>`).join('')}</p>` : '';
+    return `<article class="menu-item" data-product-id="${escape(p.id)}" data-anatomy="fashion">${details}<div class="menu-item__panel">${photo}${tag ? `<p class="menu-item__tag">${escape(tag)}</p>` : ''}${barsHtml}</div><div class="menu-item__row"><h3 class="menu-item__name">${escape(p.name)}</h3><p class="menu-item__price">${escape(priceText)}${cardOriginalMarkup(p)}</p></div>${line ? `<p class="menu-item__colors">${escape(line)}</p>` : ''}${sizesHtml}</article>`;
   }
   // Hovering a bar shows that colour's photo; leaving the card brings the first photo back.
   document.addEventListener('pointerover', event => {

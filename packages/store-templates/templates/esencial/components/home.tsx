@@ -90,7 +90,7 @@ export default function Home() {
             {card === 'bar' ? <button type="button" className="es-card__bar" data-product-add>Agregar</button> : null}
           </article>
         </template>}
-        <div className="es-grid" data-es-grid={variant('grid', 'grid4')} data-es-cards={cards} data-pagosya-catalog data-catalog-limit={homeLimit} />
+        <div className="es-grid" data-es-grid={variant('grid', 'grid4')} data-es-cards={cards} data-pagosya-catalog data-catalog-limit={homeLimit} data-pagosya-filters data-filters-style="chips" />
       </section>
 
       <FeatureSlot at="products" />

@@ -122,7 +122,11 @@
         const empty = state.q
           ? `<p class="catalog-empty">Sin resultados para “${escape(state.q)}”. <button type="button" data-search-clear>Borrar búsqueda</button>${filtered ? ' <button type="button" data-filters-clear="filters">Borrar filtros</button>' : ''}</p>`
           : '<p class="catalog-empty">No hay productos con estos filtros. <button type="button" data-filters-clear="filters">Borrar filtros</button></p>';
-        el.innerHTML = filtersMarkup(selected, state, shown.length) + (shown.length ? shown.map(productCard).join('') : empty);
+        // Owner 2026-10-29 («color picker, sorter» on the home): a home grid keeps its cap (data-catalog-limit) and may name its
+        // filter style (data-filters-style); «Ver todo» has the rest.
+        const cap = el.hasAttribute('data-catalog-full') ? 0 : Number.parseInt(el.getAttribute('data-catalog-limit') || '', 10);
+        const drawn = cap > 0 ? shown.slice(0, cap) : shown;
+        el.innerHTML = filtersMarkup(selected, state, shown.length, el.getAttribute('data-filters-style') || undefined) + (drawn.length ? drawn.map(productCard).join('') : empty);
         const field = typing === null ? null : el.querySelector('.catalog-search input');
         if (field) { field.focus({ preventScroll: true }); try { field.setSelectionRange(typing, typing); } catch { /* search inputs without selection support */ } }
       } else {
