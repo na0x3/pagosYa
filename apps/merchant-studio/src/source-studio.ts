@@ -516,7 +516,10 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   async function boot() {
     stores = await api.listStores();
     storeId = embedded ? stores.find(s => s.id === params.get('store'))?.id || '' : stores.find(s => s.id === sessionStorage.getItem('pagosya_current_store_id'))?.id || stores[0]?.id || '';
-    const latestJob = storeId ? await api.latestSourceChatJob(storeId).catch(() => ({ job: null })) : { job: null };
+    // Asked before the first canvas render so a returning merchant never sees rev 1 under a pending first design, but never
+    // allowed to hold the Studio: a slow or unanswered request falls back to «no job» after 2.5 s (A/B test suite 2026-10-29).
+    const noJob = { job: null } as { job: SourceChatJob | null };
+    const latestJob = storeId ? await Promise.race([api.latestSourceChatJob(storeId).catch(() => noJob), new Promise<typeof noJob>(resolve => window.setTimeout(() => resolve(noJob), 2500))]) : noJob;
     designing = Boolean(latestJob.job?.firstDesign && ['QUEUED', 'RUNNING'].includes(latestJob.job.status));
     if (storeId) await load();
     if (pillMode && embedded) notifyParent({ type: 'pagosya:design-focus', open: true });
