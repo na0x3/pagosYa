@@ -139,6 +139,8 @@ export interface AppConfig {
    *  composition review keep the plan's model. Never upgrades a cheaper pick. YAPI_AGENT_STEP_MODEL=gpt-5.6-sol restores sol.
    *  A first design follows it only while YAPI_REDESIGN_MODEL is auto: a named redesign model is kept for every step. */
   yapiAgentStepModel: string;
+  /** Amboras test 2026-10-29: the reasoning of a first design's build steps (low, medium or high). Default low; YAPI_FIRST_DESIGN_EFFORT=high. */
+  yapiFirstDesignEffort: 'low' | 'medium' | 'high';
   /** Spec 2026-10-29: tool calls of the one continuation after a run used its steps unfinished; 0 turns it off. */
   yapiAgentContinueCalls: number;
   /** The capped edit that builds what the check found missing. Off by default (Remolino 2026-10-27: the agent drew giant combo
@@ -520,6 +522,7 @@ export default (): { app: AppConfig } => {
     yapiTouchToolCalls: Number(process.env.YAPI_TOUCH_TOOL_CALLS) > 0 ? Math.floor(Number(process.env.YAPI_TOUCH_TOOL_CALLS)) : 14,
     yapiRedesignToolCalls: Number(process.env.YAPI_REDESIGN_TOOL_CALLS) > 0 ? Math.floor(Number(process.env.YAPI_REDESIGN_TOOL_CALLS)) : 30,
     yapiAgentStepModel: process.env.YAPI_AGENT_STEP_MODEL || 'gpt-5.6-terra',
+    yapiFirstDesignEffort: (['medium', 'high'] as const).find(effort => effort === process.env.YAPI_FIRST_DESIGN_EFFORT) ?? 'low',
     yapiAgentContinueCalls: process.env.YAPI_AGENT_CONTINUE_CALLS?.trim() && Number.isFinite(Number(process.env.YAPI_AGENT_CONTINUE_CALLS)) ? Math.max(0, Math.floor(Number(process.env.YAPI_AGENT_CONTINUE_CALLS))) : 12,
     yapiChecklistFix: process.env.YAPI_CHECKLIST_FIX === '1',
     yapiChecklistModel: process.env.YAPI_CHECKLIST_MODEL || 'gpt-5.6-terra',

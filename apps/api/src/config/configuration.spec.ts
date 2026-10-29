@@ -393,3 +393,17 @@ describe('the one build path', () => {
     expect(app.yapiFreeFirst).toBe(false);
   });
 });
+
+// Amboras test 2026-10-29 (their store was made with «GPT-5.6 Terra Thinking»; ours runs a first design's steps at low reasoning).
+describe('first design reasoning', () => {
+  const original = process.env.YAPI_FIRST_DESIGN_EFFORT;
+  afterEach(() => { if (original === undefined) delete process.env.YAPI_FIRST_DESIGN_EFFORT; else process.env.YAPI_FIRST_DESIGN_EFFORT = original; });
+  it('stays low unless set, and takes only low, medium or high', () => {
+    delete process.env.YAPI_FIRST_DESIGN_EFFORT;
+    expect(configuration().app.yapiFirstDesignEffort).toBe('low');
+    process.env.YAPI_FIRST_DESIGN_EFFORT = 'high';
+    expect(configuration().app.yapiFirstDesignEffort).toBe('high');
+    process.env.YAPI_FIRST_DESIGN_EFFORT = 'max';
+    expect(configuration().app.yapiFirstDesignEffort).toBe('low');
+  });
+});

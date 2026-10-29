@@ -159,7 +159,7 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
   const agentModel = agentProvider
     ? anthropicAgentModel({ endpoint: agentProvider.endpoint, apiKey: agentProvider.apiKey, model: plan.model, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), signal, onTurn })
     : openAiAgentModel({
-      endpoint: provider.endpoint, apiKey, model: stepModel, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: leanDesign ? 'low' : plan.reasoningEffort, signal,
+      endpoint: provider.endpoint, apiKey, model: stepModel, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: leanDesign ? config.get<'low' | 'medium' | 'high'>('app.yapiFirstDesignEffort') ?? 'low' : plan.reasoningEffort, signal,
       // Every turn resends the growing transcript; a stable key lets the provider bill that prefix at the cached rate.
       promptCacheKey: sourcePromptCacheKey('agent', stablePrompt, storeId),
       onTurn,
