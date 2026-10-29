@@ -332,14 +332,20 @@ describe('agent continuation', () => {
     const result = await runAgent({ toolbox: box, instructions: 'x', opening: [], limits: { toolCalls: 2 }, model: async () => ({ calls: [call(i++ ? 'list_files' : 'verify', {})] }) });
     expect(result).toEqual({ status: 'limit', reason: 'steps', finding: 'Falta el título' });
   });
-  it('continues only after a step-limit stop with calls and time left', () => {
-    const ok = { calls: 12, wallMs: AGENT_CONTINUE_MIN_MS, aborted: false, finished: false };
+  it('continues only after a step-limit or time stop with calls and time left', () => {
+    const ok = { calls: 12, wallMs: AGENT_CONTINUE_MIN_MS, aborted: false, finished: false, clean: false };
     expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, ok)).toBe(true);
-    for (const outcome of [{ status: 'limit' as const }, { status: 'limit' as const, reason: 'credits' }, { status: 'limit' as const, reason: 'loop' }, { status: 'limit' as const, reason: 'soft' }, { status: 'failed' as const, reason: 'cancelled' }, { status: 'finished' as const }])
+    // Live check 2026-10-29 (Andes y3xbfye5): the first leg ran out of time, which the merchant also reads as «límite de pasos».
+    expect(agentShouldContinue({ status: 'limit' }, ok)).toBe(true);
+    for (const outcome of [{ status: 'limit' as const, reason: 'credits' }, { status: 'limit' as const, reason: 'loop' }, { status: 'limit' as const, reason: 'soft' }, { status: 'failed' as const, reason: 'cancelled' }, { status: 'finished' as const }])
       expect(agentShouldContinue(outcome, ok)).toBe(false);
     expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, { ...ok, calls: 0 })).toBe(false);
     expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, { ...ok, wallMs: AGENT_CONTINUE_MIN_MS - 1 })).toBe(false);
     expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, { ...ok, aborted: true })).toBe(false);
     expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, { ...ok, finished: true })).toBe(false);
+  });
+  // Review 2026-10-29: a verified draft whose finish-only turn went wrong is saved as it is, never reopened for edits.
+  it('never continues a draft that already passed its checks', () => {
+    expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, { calls: 12, wallMs: AGENT_CONTINUE_MIN_MS, aborted: false, finished: false, clean: true })).toBe(false);
   });
 });

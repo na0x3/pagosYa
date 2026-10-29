@@ -179,7 +179,7 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
     // failed run and a full retry. The same toolbox and workspace; the earlier turns stay out of the request.
     const continueCalls = config.get<number>('app.yapiAgentContinueCalls') ?? 12;
     const continueLimits = { ...agentWallWithin(agentLimits(chatgptPlan), started + runTimeout), toolCalls: continueCalls };
-    if (agentShouldContinue(outcome, { calls: continueCalls, wallMs: continueLimits.wallMs, aborted: Boolean(signal?.aborted), finished: Boolean(toolbox.finished) })) {
+    if (agentShouldContinue(outcome, { calls: continueCalls, wallMs: continueLimits.wallMs, aborted: Boolean(signal?.aborted), finished: Boolean(toolbox.finished), clean: toolbox.draftIsClean() })) {
       outcome = await runAgent({ model: agentModel, toolbox, signal, limits: continueLimits, instructions, opening: agentOpening(agentContinuationTask(task, toolbox.requirements, outcome.finding), [...workspace.files(), ...assetFiles], []), onStep });
     }
     accepted = outcome.status === 'finished' && !!toolbox.finished;

@@ -24,9 +24,11 @@ export const AGENT_CONTINUE_MS = 240_000;
 export const AGENT_CONTINUE_MIN_MS = 150_000;
 /** The run's hard stop for the agent engine: the agent's own budget plus room before and after it, and for one continuation. */
 export const agentRunHeadroom = (wallMs: number) => wallMs + AGENT_PRE_AGENT_MS + AGENT_CLOSE_MS + AGENT_CONTINUE_MS;
-/** Only a stop on the tool-call cap continues: never time, credits, a cancel, a loop, a soft finding or a finished draft. */
-export function agentShouldContinue(outcome: AgentRunResult, input: { calls: number; wallMs: number; aborted: boolean; finished: boolean }): boolean {
-  return outcome.status === 'limit' && outcome.reason === 'steps' && input.calls > 0 && input.wallMs >= AGENT_CONTINUE_MIN_MS && !input.aborted && !input.finished;
+/** A stop on the tool-call cap or the first leg's clock continues (the merchant reads both as «límite de pasos»; live check
+ *  2026-10-29, Andes ran out of time). Never credits, a cancel, a loop, a soft finding, a finished draft, or a draft that
+ *  already passed its checks (review 2026-10-29: the continuation would reopen it for edits and could ship a worse one). */
+export function agentShouldContinue(outcome: AgentRunResult, input: { calls: number; wallMs: number; aborted: boolean; finished: boolean; clean: boolean }): boolean {
+  return outcome.status === 'limit' && (outcome.reason === 'steps' || outcome.reason === undefined) && input.calls > 0 && input.wallMs >= AGENT_CONTINUE_MIN_MS && !input.aborted && !input.finished && !input.clean;
 }
 /** The agent's budget measured against the run's hard stop: it stops on its own, warned and rescuable, before the run is aborted. */
 export function agentWallWithin<T extends { wallMs: number }>(limits: T, runDeadline: number, now = Date.now()): T {
