@@ -183,10 +183,12 @@ describe('feature part', () => {
     expect(settings.variants?.button).toContain('dashed');
     expect(settings.variants?.footer).toContain('column');
   });
-  it('rolls 0–2 eligible sections as a comma list, from its own seed', () => {
+  it('rolls the eligible sections as a comma list, from its own seed', () => {
     const rolled = Array.from({ length: 40 }, (_, i) => roll(`s${i}`, { featureEligible: ['duo', 'origin'] }).variants.feature);
     for (const value of rolled) expect(value.split(',').filter(Boolean).every(id => ['duo', 'origin'].includes(id))).toBe(true);
-    expect(new Set(rolled.map(value => value.split(',').filter(Boolean).length))).toEqual(new Set([0, 1, 2]));
+    // Owner 2026-10-29 («picture | picture»): with the duo eligible it is always rolled, plus 0–1 more.
+    expect(new Set(rolled.map(value => value.split(',').filter(Boolean).length))).toEqual(new Set([1, 2]));
+    for (const value of rolled) expect(value.split(',')).toContain('duo');
     const { feature: _f, ...variants } = settings.variants as Record<string, readonly string[]>;
     const before = rollVariants({ seed: 'x', settings: { ...settings, variants } as typeof settings, character: calm, photoCount: 6, sections: [], recent: [] });
     const { feature: _rolled, ...rest } = roll('x', { featureEligible: ['duo'] }).variants;
@@ -281,4 +283,15 @@ it('a store keeps up to six business sections', () => {
   const calm = { tone: 'calm' as const, temperature: 'neutral' as const, lead: 'photo' as const, exclude: [] };
   const out = rollVariants({ seed: 's', settings: master, character: calm, photoCount: 4, sections: ['faq', 'process', 'materials', 'visit', 'quotes', 'journal', 'team'], recent: [] });
   expect(out.variants.sections).toEqual(['faq', 'process', 'materials', 'visit', 'quotes', 'journal']);
+});
+
+// Owner 2026-10-29 (yes to «the centered header and the square hero», «full picture hero», «the title a little different»): the dice
+// lean towards the looks the owner liked; every other look can still come.
+describe('favoured looks', () => {
+  const rolls = Array.from({ length: 240 }, (_, i) => roll(`fav${i}`).variants as Record<string, string>);
+  const share = (part: string, ids: string[]) => rolls.filter(v => ids.includes(v[part])).length / rolls.length;
+  it('a boxed or centered header on more than half of the stores', () => expect(share('header', ['boxed', 'centered'])).toBeGreaterThan(0.5));
+  it('a full, framed or stacked photo cover on more than half of the stores', () => expect(share('hero', ['full', 'framed', 'stack'])).toBeGreaterThan(0.5));
+  it('uppercase titles on some stores, not all', () => { const upper = share('titles', ['upper']); expect(upper).toBeGreaterThan(0.3); expect(upper).toBeLessThan(0.7); });
+  it('the other headers still come', () => expect(new Set(rolls.map(v => v.header)).size).toBeGreaterThanOrEqual(5));
 });

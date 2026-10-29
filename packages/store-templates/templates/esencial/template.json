@@ -509,6 +509,10 @@
         "capsule",
         "origin",
         "palette"
+      ],
+      "titles": [
+        "normal",
+        "upper"
       ]
     },
     "sections": [

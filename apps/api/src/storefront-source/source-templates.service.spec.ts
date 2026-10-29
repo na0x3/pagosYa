@@ -336,7 +336,8 @@ describe('applyMaster with a plan', () => {
     expect(rollSpy).not.toHaveBeenCalled();
     const files = saved(projects);
     const state = readMasterState(files);
-    expect(state.variants).toMatchObject({ hero: 'type', grid: 'grid3', menu: 'dropdowns', filters: 'sidebar', sections: ['faq', 'sizes'] });
+    // Owner 2026-10-29 («full picture hero»): a plan's words-only cover becomes the photo cover when the store has a cover photo.
+    expect(state.variants).toMatchObject({ hero: 'full', grid: 'grid3', menu: 'dropdowns', filters: 'sidebar', sections: ['faq', 'sizes'] });
     expect(state.look).toMatchObject({ palette: 'linen', fonts: plan.fonts });
     expect(state.look?.colors?.accent).toBe('#f26b1d');
     const config = files.find(f => f.path === 'config.js')!.content;

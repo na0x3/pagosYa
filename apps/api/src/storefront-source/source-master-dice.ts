@@ -24,6 +24,10 @@ function rng(seed: string) {
   return () => createHash('sha256').update(`${seed}:${counter++}`).digest().readUInt32BE(0) / 0x100000000;
 }
 const pick = <T>(next: () => number, list: readonly T[]): T => list[Math.floor(next() * list.length)];
+/** Owner 2026-10-29 (the boxed/centered header, the square, full and stacked covers, uppercase titles): these come three times as often
+ *  as the other looks of their part, which all still come. */
+const FAVOURED: Record<string, readonly string[]> = { header: ['boxed', 'centered'], hero: ['full', 'framed', 'stack'] };
+const weighted = (part: string, list: readonly string[]) => list.flatMap(id => (FAVOURED[part]?.includes(id) ? [id, id, id] : [id]));
 
 /** Commerce displays fit any business; the fill call's exclusions skipped them every time (live 2026-10-19: offers «steps» never rolled). */
 const DICE_ONLY = new Set(['cards', 'offers', 'menu', 'filters', 'feature']);
@@ -85,7 +89,7 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   let last: { variants: MasterVariants; palette: string; fonts: string } | undefined;
   for (let attempt = 0; attempt < 20; attempt++) {
     const next = rng(`${input.seed}#${attempt}`);
-    const variants = Object.fromEntries(Object.keys(catalogue).filter(part => !NEVER_ROLLED.has(part)).map(part => [part, pick(next, allowed(part))])) as Record<string, string>;
+    const variants = Object.fromEntries(Object.keys(catalogue).filter(part => !NEVER_ROLLED.has(part)).map(part => [part, pick(next, weighted(part, allowed(part)))])) as Record<string, string>;
     if (input.character.kind === 'fashion') for (const part of FASHION_PARTS) if (catalogue[part]?.includes('fashion')) variants[part] = 'fashion';
     if (catalogue.menu?.length) {
       variants.menu = input.character.kind === 'fashion' ? 'panel'

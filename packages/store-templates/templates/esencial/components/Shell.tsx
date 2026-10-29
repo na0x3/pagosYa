@@ -122,7 +122,7 @@ export function Footer() {
 }
 
 export default function Shell({ children }: { children: ReactNode }) {
-  return <div className="es" data-es-button={variant('button', 'pill')} data-es-corners={variant('corners', 'soft')} data-es-density={variant('density', 'regular')} data-es-texture={variant('texture', 'none')} data-es-photos={variant('photos', 'natural')}>
+  return <div className="es" data-es-button={variant('button', 'pill')} data-es-corners={variant('corners', 'soft')} data-es-density={variant('density', 'regular')} data-es-texture={variant('texture', 'none')} data-es-photos={variant('photos', 'natural')} data-es-titles={variant('titles', 'normal')}>
     <a className="es-skip" href="#contenido">Ir al contenido</a>
     <Header />
     {children}
