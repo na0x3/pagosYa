@@ -373,6 +373,29 @@ describe('generate() with the agent engine', () => {
     expect(projects.save).not.toHaveBeenCalled();
   });
 
+  // Spec 2026-10-29 (agent cost): out of steps with an unchecked draft, the same run continues on a short fresh transcript.
+  it('continues once on a fresh transcript when the steps run out before the draft is checked', async () => {
+    const { service, projects, brief } = await setup('agent', { 'app.yapiAgentContinueCalls': 4 });
+    const fetchMock = jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }]]))
+      .mockResolvedValueOnce(turn([['verify', {}]]))
+      .mockResolvedValueOnce(turn([['finish', { summary: 'Cambié el título.', sections: ['Portada'] }]]));
+    const result: any = await service.generate('m', 's', input(brief), new SourceRequestBudget(50), [], undefined, { agentToolCalls: 2 });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const continued = JSON.parse((fetchMock.mock.calls[1] as any)[1].body);
+    expect(continued.input.some((item: any) => item.type === 'function_call')).toBe(false);
+    expect(JSON.stringify(continued.input)).toContain('Continuation of this same request');
+    expect(projects.save.mock.calls[0][2].files.find((f: any) => f.path === 'components/home.tsx').content).toContain('Tu calma');
+    expect(result.agent.unchecked).toBeUndefined();
+  });
+  it('does not continue when the continuation is switched off', async () => {
+    const { service, brief } = await setup('agent', { 'app.yapiAgentContinueCalls': 0 });
+    const fetchMock = jest.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(turn([['edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Tu calma' }]]));
+    await service.generate('m', 's', input(brief), new SourceRequestBudget(50), [], undefined, { agentToolCalls: 2 }).catch(() => undefined);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('retains an incomplete private draft and resumes only the matching request', async () => {
     const {service,projects,prisma,brief}=await setup();
     jest.spyOn(globalThis,'fetch')

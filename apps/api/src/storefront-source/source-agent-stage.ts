@@ -6,13 +6,13 @@ import { Prisma } from '@prisma/client';
 import { kitPath } from '@pagosya/storefront-kit';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { AgentWorkspace } from './agent/agent-workspace';
-import { AgentToolbox, recordTellsKept } from './agent/agent-tools';
-import { abortedByTimeout, AGENT_LIMITS, agentLimits, agentWallWithin, runAgent } from './agent/agent-loop';
+import { AgentToolbox, recordTellsKept, type AgentStep } from './agent/agent-tools';
+import { abortedByTimeout, AGENT_LIMITS, agentLimits, agentShouldContinue, agentWallWithin, runAgent } from './agent/agent-loop';
 import { assertMerchantTaskCoverage, assertTaskFeasibility, validateTaskRequirements, workspaceDigest } from './agent/agent-task';
 import { agentDraftPreviews } from './agent/agent-draft-previews';
 import { anthropicAgentModel } from './agent/agent-model-anthropic';
 import { openAiAgentModel } from './agent/agent-model';
-import { agentInstructions, agentOpening } from './agent/agent-prompt';
+import { agentContinuationTask, agentInstructions, agentOpening } from './agent/agent-prompt';
 import { SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_VISUAL_SYSTEM_FILE, sourceProductPageStyle } from './source-visual-system';
 import { sourceRuntimeDna } from './source-dna';
 import { SOURCE_DESIGN_FILE, SOURCE_VISUAL_COHERENCE_CONTRACT } from './source-design';
@@ -170,7 +170,18 @@ export async function runAgentStage(context: AgentStageContext): Promise<void> {
   try {
     // Measured against the run's hard stop, so the agent stops itself (warned, and its draft rescued) before the run is aborted.
     const runLimits = { ...agentWallWithin(agentLimits(chatgptPlan), started + runTimeout), ...(execution?.agentToolCalls ? { toolCalls: execution.agentToolCalls } : {}) };
-    outcome = await runAgent({ model: agentModel, toolbox, signal, limits: runLimits, instructions: agentInstructions([SOURCE_VISUAL_COHERENCE_CONTRACT, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_NEXT_INSTRUCTIONS, SOURCE_SHOPPING_FLOW, ...(leanDesign ? [] : [SOURCE_LOCATION_INSTRUCTIONS, SOURCE_FONT_CHOICES.replaceAll('styles.css', 'styles/globals.css')])].join('\n\n'), sitePurpose, isNew, isNew || redesign, runLimits.wallMs / 60_000, signatureOn, [live.frame.paragraph, live.playbookText].filter(Boolean).join('\n')), opening: agentOpening(live.taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose), [...workspace.files(), ...previewBase.files.filter(f => f.path.startsWith('assets/'))], leanDesign ? images.map(image => ({ ...image, detail: 'low' as const })) : images), onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); if (['create_page','edit_file','edit_file_batch','write_file','delete_file','set_product_card_theme','set_account_theme','set_motif_pack','set_store_policy','verify'].includes(step.kind)) await saveCheckpoint(); } });
+    const instructions = agentInstructions([SOURCE_VISUAL_COHERENCE_CONTRACT, SOURCE_VISUAL_SYSTEM_CONTRACT, SOURCE_NEXT_INSTRUCTIONS, SOURCE_SHOPPING_FLOW, ...(leanDesign ? [] : [SOURCE_LOCATION_INSTRUCTIONS, SOURCE_FONT_CHOICES.replaceAll('styles.css', 'styles/globals.css')])].join('\n\n'), sitePurpose, isNew, isNew || redesign, runLimits.wallMs / 60_000, signatureOn, [live.frame.paragraph, live.playbookText].filter(Boolean).join('\n'));
+    const task = live.taskPrompt + '\n' + sourceSitePurposePrompt(sitePurpose);
+    const assetFiles = previewBase.files.filter(f => f.path.startsWith('assets/'));
+    const onStep = async (step: AgentStep) => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); if (['create_page','edit_file','edit_file_batch','write_file','delete_file','set_product_card_theme','set_account_theme','set_motif_pack','set_store_policy','verify'].includes(step.kind)) await saveCheckpoint(); };
+    outcome = await runAgent({ model: agentModel, toolbox, signal, limits: runLimits, instructions, opening: agentOpening(task, [...workspace.files(), ...assetFiles], leanDesign ? images.map(image => ({ ...image, detail: 'low' as const })) : images), onStep });
+    // Spec 2026-10-29 (agent cost): out of steps with the draft unchecked, one short leg on a fresh transcript instead of a
+    // failed run and a full retry. The same toolbox and workspace; the earlier turns stay out of the request.
+    const continueCalls = config.get<number>('app.yapiAgentContinueCalls') ?? 12;
+    const continueLimits = { ...agentWallWithin(agentLimits(chatgptPlan), started + runTimeout), toolCalls: continueCalls };
+    if (agentShouldContinue(outcome, { calls: continueCalls, wallMs: continueLimits.wallMs, aborted: Boolean(signal?.aborted), finished: Boolean(toolbox.finished) })) {
+      outcome = await runAgent({ model: agentModel, toolbox, signal, limits: continueLimits, instructions, opening: agentOpening(agentContinuationTask(task, toolbox.requirements, outcome.finding), [...workspace.files(), ...assetFiles], []), onStep });
+    }
     accepted = outcome.status === 'finished' && !!toolbox.finished;
     // Soft checks (palette, visual review, template structure, the model's own requirements) must never discard a draft that builds.
     // A model that stopped answering is not a soft check: Dulce Horno 2026-10-26 lost its ChatGPT plan quota between writing new

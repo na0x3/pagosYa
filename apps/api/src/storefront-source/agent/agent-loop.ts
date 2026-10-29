@@ -4,8 +4,9 @@ import { estimateInputTokens } from './agent-model';
 export type AgentModelCall = { name: string; arguments: string; callId: string };
 export type AgentModelTurn = { calls: AgentModelCall[]; text?: string; output?: unknown[] };
 export type AgentModel = (input: { instructions: string; transcript: unknown[]; tools: typeof AGENT_TOOLS }) => Promise<AgentModelTurn>;
-/** `provider`: the model stopped answering (a plan's usage limit, an outage) — the draft is whatever was mid-edit, never checked. */
-export type AgentRunResult = { status: 'finished' | 'limit' | 'failed'; reason?: string; provider?: boolean };
+/** `provider`: the model stopped answering (a plan's usage limit, an outage) — the draft is whatever was mid-edit, never checked.
+ *  `reason: 'steps'`: the tool-call cap stopped it; `finding` is the last failing verify output, if any. */
+export type AgentRunResult = { status: 'finished' | 'limit' | 'failed'; reason?: string; provider?: boolean; finding?: string };
 export const AGENT_LIMITS = { toolCalls: 40, wallMs: 360_000, screenshots: 8 };
 /** A run on the merchant's own ChatGPT plan is free but slower than a paid API (calls of 20-90 s), so it gets twice the time. */
 export const agentLimits = (chatgptPlan: boolean) => chatgptPlan ? { ...AGENT_LIMITS, wallMs: AGENT_LIMITS.wallMs * 2 } : AGENT_LIMITS;
@@ -16,8 +17,17 @@ export const AGENT_CLOSE_MS = 180_000;
 /** Design planning runs before the agent on the same run clock (106 s measured on 2026-10-08, when a 30 s margin
  *  aborted a finished store as "cancelled"). */
 const AGENT_PRE_AGENT_MS = 240_000;
-/** The run's hard stop for the agent engine: the agent's own budget plus room before and after it. */
-export const agentRunHeadroom = (wallMs: number) => wallMs + AGENT_PRE_AGENT_MS + AGENT_CLOSE_MS;
+/** Spec 2026-10-29 (agent cost): a run that used its steps unfinished gets one short continuation; the run's hard stop
+ *  makes room for it… */
+export const AGENT_CONTINUE_MS = 240_000;
+/** …and it does not start with less than one long turn (112 s measured) plus a verify left. */
+export const AGENT_CONTINUE_MIN_MS = 150_000;
+/** The run's hard stop for the agent engine: the agent's own budget plus room before and after it, and for one continuation. */
+export const agentRunHeadroom = (wallMs: number) => wallMs + AGENT_PRE_AGENT_MS + AGENT_CLOSE_MS + AGENT_CONTINUE_MS;
+/** Only a stop on the tool-call cap continues: never time, credits, a cancel, a loop, a soft finding or a finished draft. */
+export function agentShouldContinue(outcome: AgentRunResult, input: { calls: number; wallMs: number; aborted: boolean; finished: boolean }): boolean {
+  return outcome.status === 'limit' && outcome.reason === 'steps' && input.calls > 0 && input.wallMs >= AGENT_CONTINUE_MIN_MS && !input.aborted && !input.finished;
+}
 /** The agent's budget measured against the run's hard stop: it stops on its own, warned and rescuable, before the run is aborted. */
 export function agentWallWithin<T extends { wallMs: number }>(limits: T, runDeadline: number, now = Date.now()): T {
   return { ...limits, wallMs: Math.max(0, Math.min(limits.wallMs, runDeadline - now - AGENT_CLOSE_MS)) };
@@ -42,12 +52,13 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
   // burns the whole clock. Told once on the second repeat, stopped on the third, without claiming unfinished work is saved.
   let repeats = 0, lastSignature = '', warn = false;
   let repeatedFinding = '', findingCount = 0;
+  const stepLimit = (): AgentRunResult => ({ status: 'limit', reason: 'steps', ...(repeatedFinding ? { finding: repeatedFinding } : {}) });
   const compositionAppearances = new Map<string, number>();
   while (true) {
     if (input.signal?.aborted) return { status: 'failed', reason: 'cancelled' };
     if (now() - started >= limits.wallMs) return { status: 'limit' };
     if (toolCalls >= limits.toolCalls) {
-      if (closing || !toolbox.draftIsClean()) return { status: 'limit' };
+      if (closing || !toolbox.draftIsClean()) return stepLimit();
       // One bounded, finish-only turn can attest an already verified draft. No edits or implicit success.
       closing = true;
       transcript.push({ role: 'user', content: [{ type: 'input_text', text: 'Se agotaron las herramientas de edición. El borrador actual está verificado. Usa únicamente finish para informar completed si cumple todo el pedido, o partial/blocked con lo pendiente. No hay más ediciones disponibles.' }] });
@@ -89,7 +100,7 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
     for (const call of turn.calls) {
       if (input.signal?.aborted) return { status: 'failed', reason: 'cancelled' };
       if (now() - started >= limits.wallMs) return { status: 'limit' };
-      if (closing && call.name !== 'finish') return { status: 'limit' };
+      if (closing && call.name !== 'finish') return stepLimit();
       if (!closing && toolCalls >= limits.toolCalls) {
         // Every announced call needs a result before the finish-only model turn.
         // Do not execute leftover calls or let them mutate the verified draft.

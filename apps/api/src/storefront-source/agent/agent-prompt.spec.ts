@@ -1,4 +1,4 @@
-import { agentInstructions, agentOpening } from './agent-prompt';
+import { agentContinuationTask, agentInstructions, agentOpening } from './agent-prompt';
 
 describe('agent instructions', () => {
   it('gives new stores and redesigns the signature direction and the advisory tells check', () => {
@@ -145,5 +145,18 @@ describe('products anywhere (showcase commerce; live 2026-10-19: YAPI typed «Bs
     expect(shop).toContain('find_products');
     expect(shop).toContain('Never type a price');
     expect(agentInstructions('CONTRATOS', 'service', false, false)).not.toContain('PRODUCTS ANYWHERE');
+  });
+});
+
+describe('agentContinuationTask', () => {
+  it('carries the original task, the unreduced requirements and the last failing check', () => {
+    const text = agentContinuationTask('Rediseña la tienda', [{ id: 'r1', description: 'Portada con foto' }], 'Falta el título');
+    expect(text).toContain('Rediseña la tienda');
+    expect(text).toContain('Continuation of this same request');
+    expect(text).toContain('"r1"');
+    expect(text).toContain('Falta el título');
+  });
+  it('asks for verify first when no check failed yet', () => {
+    expect(agentContinuationTask('Rediseña', [])).toContain('Run verify first');
   });
 });

@@ -4,7 +4,7 @@ import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { AgentWorkspace } from './agent-workspace';
 import { AgentToolbox } from './agent-tools';
-import { runAgent, agentLimits, AGENT_LIMITS, AGENT_CLOSE_MS, agentRunHeadroom, agentWallWithin, abortedByTimeout, agentTranscriptCompactor, type AgentModel, type AgentModelTurn } from './agent-loop';
+import { runAgent, agentLimits, AGENT_LIMITS, AGENT_CLOSE_MS, agentRunHeadroom, agentWallWithin, abortedByTimeout, agentTranscriptCompactor, agentShouldContinue, AGENT_CONTINUE_MIN_MS, type AgentModel, type AgentModelTurn } from './agent-loop';
 
 jest.setTimeout(120_000);
 let base: Awaited<ReturnType<typeof templateDemoRevision>>;
@@ -80,7 +80,7 @@ describe('runAgent', () => {
   });
   it('stops at the tool-call limit', async () => {
     const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], limits: { toolCalls: 3 }, model: scripted([{ calls: [call('list_files', {})] }]) });
-    expect(result).toEqual({ status: 'limit' });
+    expect(result).toEqual({ status: 'limit', reason: 'steps' });
   });
   it('reserves one finish-only turn for an already verified draft instead of losing it to the step limit', async () => {
     const box = toolbox();
@@ -99,7 +99,7 @@ describe('runAgent', () => {
     box.workspace.edit('components/home.tsx', 'Un respiro', 'Tu calma');
     let turn = 0;
     const model: AgentModel = async () => ({ calls: [turn++ ? call('edit_file', { path: 'components/home.tsx', search: 'Un respiro', replacement: 'Changed' }) : call('verify', {})] });
-    expect(await runAgent({ toolbox: box, instructions: 'x', opening: [], limits: { toolCalls: 1 }, model })).toEqual({ status: 'limit' });
+    expect(await runAgent({ toolbox: box, instructions: 'x', opening: [], limits: { toolCalls: 1 }, model })).toEqual({ status: 'limit', reason: 'steps' });
     expect(box.workspace.read('components/home.tsx')).toContain('Tu calma');
     expect(box.finished).toBeNull();
   });
@@ -173,7 +173,7 @@ describe('runAgent', () => {
   it('carries on when a retry succeeds', async () => {
     let calls = 0;
     const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], limits: { toolCalls: 1 }, sleep: async () => {}, model: async () => { if (++calls < 3) throw new Error('blip'); return { calls: [{ name: 'list_files', arguments: '{}', callId: 'r1' }] }; } });
-    expect(result).toEqual({ status: 'limit' });
+    expect(result).toEqual({ status: 'limit', reason: 'steps' });
   });
   it('treats running out of credits as a limit, without a retry', async () => {
     let calls = 0;
@@ -205,9 +205,9 @@ describe('agent limits', () => {
     const designDone = 106_000, agentStop = designDone + agentWallWithin(plan, deadline, designDone).wallMs;
     expect(deadline - agentStop).toBeGreaterThanOrEqual(AGENT_CLOSE_MS);
     // A design phase that overruns its allowance shortens the agent instead of letting the run be aborted.
-    const late = agentWallWithin(plan, deadline, 400_000);
+    const late = agentWallWithin(plan, deadline, 650_000);
     expect(late.wallMs).toBeLessThan(plan.wallMs);
-    expect(deadline - (400_000 + late.wallMs)).toBe(AGENT_CLOSE_MS);
+    expect(deadline - (650_000 + late.wallMs)).toBe(AGENT_CLOSE_MS);
     expect(agentWallWithin(plan, deadline, deadline).wallMs).toBe(0);
     expect(agentWallWithin(plan, deadline, 0).toolCalls).toBe(plan.toolCalls);
   });
@@ -264,7 +264,7 @@ describe('runAgent repetition guard', () => {
     let i = 0;
     const model: AgentModel = async () => ({ calls: [call('read_file', { path: paths[i++ % paths.length] })] });
     const result = await runAgent({ toolbox: toolbox(), instructions: 'x', opening: [], limits: { toolCalls: 8 }, model });
-    expect(result).toEqual({ status: 'limit' });
+    expect(result).toEqual({ status: 'limit', reason: 'steps' });
   });
 });
 
@@ -317,5 +317,29 @@ describe('cacheable transcript', () => {
     const second: any[] = compact(transcript);
     expect(second.slice(0, first.length)).toEqual(first);
     expect(second[1]).toEqual(transcript[1]); // function calls are never compacted
+  });
+});
+
+// Spec 2026-10-29 (agent cost): only a run that used its steps continues; never one stopped by time, credits, a cancel or a loop.
+describe('agent continuation', () => {
+  it('reports the last failing check when the steps run out', async () => {
+    const box = toolbox();
+    jest.spyOn(box, 'run').mockImplementation(async (name: string) => {
+      if (name === 'verify') { box.lastVerify = { version: box.workspace.version, clean: false, hard: true }; return { output: 'Falta el título' }; }
+      return { output: 'ok' };
+    });
+    let i = 0;
+    const result = await runAgent({ toolbox: box, instructions: 'x', opening: [], limits: { toolCalls: 2 }, model: async () => ({ calls: [call(i++ ? 'list_files' : 'verify', {})] }) });
+    expect(result).toEqual({ status: 'limit', reason: 'steps', finding: 'Falta el título' });
+  });
+  it('continues only after a step-limit stop with calls and time left', () => {
+    const ok = { calls: 12, wallMs: AGENT_CONTINUE_MIN_MS, aborted: false, finished: false };
+    expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, ok)).toBe(true);
+    for (const outcome of [{ status: 'limit' as const }, { status: 'limit' as const, reason: 'credits' }, { status: 'limit' as const, reason: 'loop' }, { status: 'limit' as const, reason: 'soft' }, { status: 'failed' as const, reason: 'cancelled' }, { status: 'finished' as const }])
+      expect(agentShouldContinue(outcome, ok)).toBe(false);
+    expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, { ...ok, calls: 0 })).toBe(false);
+    expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, { ...ok, wallMs: AGENT_CONTINUE_MIN_MS - 1 })).toBe(false);
+    expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, { ...ok, aborted: true })).toBe(false);
+    expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, { ...ok, finished: true })).toBe(false);
   });
 });
