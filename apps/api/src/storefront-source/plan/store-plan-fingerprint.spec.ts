@@ -42,3 +42,11 @@ describe('final review fixes (2026-10-22)', () => {
     expect(fingerprint.sections).toContain('sizes');
   });
 });
+
+// Review 2026-10-30: the brand mood rides with a saved store's variants (home writer variety); it is not a look the eye compares.
+describe('fingerprint and the brand mood', () => {
+  it('ignores variants.mood', () => {
+    const fingerprint = fingerprintOf({ variants: { hero: 'full', mood: 'bold' }, sections: [], palette: 'linen', fonts: 'soft' });
+    expect(fingerprint.variants).toEqual({ hero: 'full' });
+  });
+});

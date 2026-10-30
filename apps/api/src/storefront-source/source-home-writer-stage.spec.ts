@@ -8,6 +8,7 @@ import { masterThemeBlock, withMasterTheme } from './source-master';
 import { SOURCE_FONT_IDS } from './source-font-catalog';
 import { SourceRequestBudget } from './source-request-budget';
 import { openAiAgentModel } from './agent/agent-model';
+import { validateNextSources } from './source-next';
 
 jest.mock('./agent/agent-model', () => ({ ...jest.requireActual('./agent/agent-model'), openAiAgentModel: jest.fn() }));
 
@@ -113,5 +114,30 @@ describe('home writer opening', () => {
     let first = '';
     await runHomeWriterLoop({ model: async ({ transcript }) => { first ||= JSON.stringify(transcript); return { calls: [] }; }, files: authored(), base, gate: async () => null, task: 'x', limits: { toolCalls: 2 } });
     expect(first).not.toContain('export default function Home');
+  });
+});
+
+// Review 2026-10-30 (critical): the direction file rode in the AI-written files, and the real React-file check rejected every run.
+describe('the writer stage and the real save check', () => {
+  it('keeps home-direction.json out of the written files and hands it to the save instead', async () => {
+    let n2 = 0;
+    const turn = (name: string, args: object) => ({ calls: [{ name, arguments: JSON.stringify(args), callId: `s${n2++}` }] });
+    const home = authored().find(f => f.path === HOME_PATH)!.content.replace('export default function Home', 'export default function Home /* stage */');
+    const font = 'placeholder';
+    const turns: any[] = [turn('read_chassis', {}), turn('write_home', { content: home }), null, turn('check', {}), turn('finish', { summary: 'Listo.' })];
+    let i = 0;
+    (openAiAgentModel as jest.Mock).mockImplementation(() => async ({ transcript }: any) => {
+      const next = turns[Math.min(i++, turns.length - 1)];
+      if (next) return next;
+      const id = /fuentes: ([a-z0-9-]+) \(/.exec(JSON.stringify(transcript))?.[1] ?? font;
+      return turn('set_tokens', { paper: '#f4efe6', ink: '#1d2a22', muted: '#e8e1d4', accent: '#b5562b', deep: '#2f4a33', heading: id, body: id });
+    });
+    const facts: any = { prisma: { storeSourceGeneration: { updateMany: jest.fn() } }, config: { get: () => undefined }, metering: undefined, storeId: 's1', runId: 'r1', dto: { brief: base.brief, instruction: 'Diseña la portada' },
+      plan: { model: 'gpt-5.6-terra', maxOutputTokens: 8000 }, provider: { endpoint: 'e', name: 'OpenAI' }, apiKey: 'k', agentProvider: null, budget: new SourceRequestBudget(50), signal: undefined, attempts: [],
+      progress: undefined, previousFiles: base.files, oldFiles: base.files, assets: [], images: [], data: { storeName: 'x' }, chatgptPlan: false, started: Date.now(), runTimeout: 3_600_000 };
+    const live: any = { generated: { label: '', files: [] }, lenient: false };
+    await runHomeWriterStage({ facts, live, acceptCandidate: async () => { validateNextSources(live.generated.files.filter((f: any) => !f.path.startsWith('assets/'))); }, resume: {} as any });
+    expect(live.generated.files.some((f: any) => f.path === 'home-direction.json')).toBe(false);
+    expect(JSON.parse(live.homeDirectionFile.content)).toMatchObject({ direction: expect.any(String), animated: expect.any(Boolean) });
   });
 });

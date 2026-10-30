@@ -54,5 +54,7 @@ describe('the briefs', () => {
   it('each direction names its cover, and the motion brief names the kit parts', () => {
     for (const id of IDS) expect(HOME_DIRECTIONS[id]).toMatch(/Portada:/);
     for (const part of ['ScrollScale', 'ParallaxStack', 'Statement', 'Marquee', 'EntranceGroup', 'ProductShowcase', 'scrollGrow']) expect(HOME_MOTION_BRIEF).toContain(part);
+    // Review 2026-10-30: words stay editable with a double click — literal JSX text, never strings in props.
+    expect(HOME_MOTION_BRIEF).toMatch(/texto JSX/);
   });
 });

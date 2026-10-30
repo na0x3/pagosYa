@@ -97,6 +97,8 @@ describe('HomeWriterToolbox', () => {
     const b = await branded(box());
     const result = await b.run('check', '{}');
     expect(result.images).toHaveLength(2);
+    // Review 2026-10-30: the merchant's progress shows the check's capture now that screenshot calls are rare.
+    expect(b.steps.find(step => step.kind === 'check')?.thumbnail).toBeTruthy();
   });
   it('stops screenshots after four', async () => {
     const b = box();

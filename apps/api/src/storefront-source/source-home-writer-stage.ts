@@ -1,4 +1,4 @@
-import { BadGatewayException } from '@nestjs/common';
+import { BadGatewayException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { AgentWorkspace } from './agent/agent-workspace';
@@ -48,12 +48,13 @@ async function recentHomeDirections(prisma: { $queryRaw: (query: Prisma.Sql) => 
     const rows = await prisma.$queryRaw(Prisma.sql`
       SELECT v."storeId" AS "storeId", (SELECT f->>'content' FROM jsonb_array_elements(v.snapshot->'files') f WHERE f->>'path' = 'home-direction.json' LIMIT 1) AS data
       FROM "StoreSourceVersion" v
-      WHERE v."storeId" <> ${storeId} AND v.snapshot->'files' @> '[{"path":"home-direction.json"}]'::jsonb
+      WHERE v."storeId" <> ${storeId} AND v.label = 'Portada de YAPI' AND v."createdAt" > now() - interval '60 days'
+        AND v.snapshot->'files' @> '[{"path":"home-direction.json"}]'::jsonb
       ORDER BY v."createdAt" DESC LIMIT 40`) as Array<{ storeId: string; data: string | null }>;
     const seen = new Set<string>(), out: HomeDirectionId[] = [];
     for (const row of rows) { if (seen.has(row.storeId)) continue; seen.add(row.storeId); const choice = parseHomeDirection(row.data ?? undefined); if (choice) out.push(choice.direction); }
     return out.slice(0, 6);
-  } catch { return []; }
+  } catch (error) { new Logger('HomeWriter').warn(`recent home directions unavailable: ${String((error as Error)?.message).slice(0, 200)}`); return []; }
 }
 
 /** Live check 2026-10-29 (PEPPA): the store's look (product page, cards, cart, checkout) stays the previous revision's; only the
@@ -97,7 +98,9 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
   const looks = await recentLooks(prisma as never, storeId, 6).catch(() => []);
   // The same acceptance chain every build passes, in its lenient form (artwork and edit-scope rules are for chat edits).
   const gate = async (files: SourceProjectFileDto[]) => {
-    live.generated = { label: 'Portada de YAPI', files: [...files.filter(file => file.path !== 'home-direction.json').map(file => ({ ...file })), { path: 'home-direction.json', content: JSON.stringify(choice) }] };
+    live.generated = { label: 'Portada de YAPI', files: files.map(file => ({ ...file })) };
+    // Review 2026-10-30 (critical): the direction is a platform file the save adds, never one of the files the AI wrote.
+    live.homeDirectionFile = { path: 'home-direction.json', content: JSON.stringify(choice) };
     live.keptDna = homeWriterDna(readConfigFile(previousFiles).dna, files.find(file => file.path === 'styles/globals.css')?.content ?? '');
     live.lenient = true;
     try { await acceptCandidate(); return null; }

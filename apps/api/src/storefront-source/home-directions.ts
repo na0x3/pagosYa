@@ -35,10 +35,11 @@ export const HOME_MOTION_BRIEF = `MOVIMIENTO (esta tienda tiene una portada anim
 - <Hero ... scrollGrow /> o envuelve la foto de portada en <ScrollScale from={0.82}> — la foto crece al bajar.
 - <ParallaxStack images={[{ src, alt }, ...]} /> — dos fotos en capas que se mueven a distinto ritmo (nunca 3 fotos o más).
 - <ScrollScale from={0.82}>…</ScrollScale> — un bloque que se agranda al entrar.
-- <ProductShowcase image={...} title="..." body="..." action={...} /> — un producto que crece al bajar.
+- <ProductShowcase image={...} title={<>Nombre</>} body={<>Frase</>} action={...} /> — un producto que crece al bajar.
 - <Statement>frase</Statement> — una frase que se rellena palabra a palabra al bajar.
 - <Marquee items={['...', '...']} /> — una franja de palabras que se desplaza.
 - <EntranceGroup stagger={80}>…</EntranceGroup> — los elementos entran uno tras otro.
+Las palabras van como texto JSX dentro de las piezas (<Statement>Hecho a mano.</Statement>, <h2>…</h2> dentro de <ScrollScale>), nunca dentro de props ni arreglos: así el comercio las edita con doble clic. <Marquee> solo con palabras cortas de la marca.
 Quien pidió menos movimiento en su teléfono no lo ve: el kit ya lo respeta.`;
 
 const IDS = Object.keys(HOME_DIRECTIONS) as HomeDirectionId[];

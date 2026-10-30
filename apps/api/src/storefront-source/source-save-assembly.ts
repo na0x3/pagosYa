@@ -37,7 +37,7 @@ export type LookChoice = { reuse?: { look: StoreLook | undefined }; fallback?: S
 
 export type SaveAssemblyContext = {
   facts: Pick<GenerationRunFacts, 'prisma' | 'config' | 'logger' | 'storeId' | 'runId' | 'slug' | 'dto' | 'brand' | 'apiUrl' | 'data' | 'assets' | 'retainedAssets' | 'assetLegend' | 'imageUses' | 'photoFacts' | 'fontPaths' | 'previous' | 'previousFiles' | 'previousDesign' | 'previousScene' | 'sectionScope' | 'sitePurpose' | 'scrollFeel' | 'motion' | 'primaryAction' | 'creative' | 'useNext' | 'signal' | 'voice'>;
-  live: Pick<GenerationLive, 'generated' | 'agentTheme' | 'visualSystem' | 'frame' | 'compiledNext' | 'sketchFile' | 'websiteDesignFile' | 'kitTouch' | 'motifFiles' | 'agentAccountTheme' | 'agentMotifPack' | 'agentPolicies' | 'keptDna'>;
+  live: Pick<GenerationLive, 'generated' | 'agentTheme' | 'visualSystem' | 'frame' | 'compiledNext' | 'sketchFile' | 'websiteDesignFile' | 'kitTouch' | 'motifFiles' | 'agentAccountTheme' | 'agentMotifPack' | 'agentPolicies' | 'keptDna' | 'homeDirectionFile'>;
   /** generate()'s platformHeader: draws the platform header on every static page and logs its notes once per run. */
   platformHeader: (files: SourceProjectFileDto[], platformPages: string[]) => SourceProjectFileDto[];
   /** YAPI rewrote at least one store policy this run (computed once after the engine branch). */
@@ -138,6 +138,8 @@ export async function assembleSourceSave(context: SaveAssemblyContext, assembleS
     ...(acceptedDesign ? [{ path: SOURCE_DESIGN_FILE, content: JSON.stringify(acceptedDesign, null, 2) + '\n' }] : []),
     ...(live.sketchFile ? [live.sketchFile] : []),
     ...(live.websiteDesignFile ? [live.websiteDesignFile] : []),
+    // Spec 2026-10-30: the home writer's direction — this run's, else the store's own carried forward so a later edit keeps it.
+    ...(live.homeDirectionFile ? [live.homeDirectionFile] : previousFiles.filter(file => file.path === 'home-direction.json')),
     ...(live.frame.file ? [live.frame.file] : []),
     ...(voiceToSave ? [voiceFile(voiceToSave)] : carriedVoice ? [carriedVoice] : []),
     { path: SOURCE_VISUAL_SYSTEM_FILE, content: JSON.stringify(withSourceStyleTokens(live.visualSystem, files, previousScene), null, 2) + '\n' },

@@ -71,6 +71,13 @@ describe('store menu', () => {
     expect(all('.pym-tiles a').map(a => a.textContent.trim())).toEqual(['Vestidos', 'Sastrería']);
   });
 
+  // Review 2026-10-30: «Ver todo» (the whole collection) and the first category point at the same photo; each photo shows once.
+  it('a dropdown fallback never shows the same photo twice', async () => {
+    const data = { ...DATA, collections: [{ id: 'k1', slug: 'mujer', name: 'Mujer', productIds: ['a', 'b'] }] };
+    const { all } = await open({ data, menu: { style: 'dropdowns', groups: [{ label: 'Mujer', links: [{ label: 'Vestidos', to: 'collection:mujer/category:C1' }, { label: 'Sastrería', to: 'collection:mujer/category:c2' }, { label: 'Ver todo', to: 'collection:mujer' }, { label: 'Vestidos otra vez', to: 'category:C1' }] }] } });
+    expect(all('.pym-tiles img').map(img => img.getAttribute('src'))).toEqual(['https://api.test/a.jpg', 'https://api.test/b.jpg']);
+  });
+
   it('shows tiles in the Studio preview, where photos are data URLs (live check 2026-10-21, NOA VARGAS)', async () => {
     const photo = 'data:image/jpeg;base64,/9j/AA==';
     const data = { ...DATA, items: DATA.items.map(entry => ({ ...entry, imageUrls: [photo] })) };

@@ -5,7 +5,8 @@ export type Fingerprint = { variants: Record<string, string>; sections: string[]
 const MIN_DISTANCE = 0.35;
 const SECTION_WEIGHT = 3;
 // Parts the eye does not use to tell two stores apart.
-const IGNORED = new Set(['density', 'corners', 'button', 'pdpOrder', 'texture']);
+// The brand mood (home writer variety, 2026-10-30) is not a look the eye compares either.
+const IGNORED = new Set(['density', 'corners', 'button', 'pdpOrder', 'texture', 'mood']);
 
 function hue(hex: string): number | null {
   const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);

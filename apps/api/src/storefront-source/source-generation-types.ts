@@ -110,6 +110,8 @@ export type GenerationLive = {
   agentOutcome: AgentOutcome | undefined;
   /** Live check 2026-10-29: the home writer's save keeps the previous look and takes only the writer's fonts. */
   keptDna?: Record<string, unknown>;
+  /** Spec 2026-10-30: the home writer's page direction, saved beside the store's files. */
+  homeDirectionFile?: SourceProjectFileDto;
   unfinishedStatus: 'PARTIAL' | 'BLOCKED' | null;
   taskPrompt: string;
   /** Spec 2026-10-16 brand source: the BRAND SOURCE block for the Sep-5 author, '' without brand material. */

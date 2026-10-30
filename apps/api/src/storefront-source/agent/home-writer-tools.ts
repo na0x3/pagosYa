@@ -73,11 +73,12 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           return { output: `Colores y fuentes guardados.${ink.toLowerCase() !== colours.ink.toLowerCase() ? ` El texto no se leía sobre el fondo; usé ${ink}.` : ''}` };
         }
         case 'check': {
-          step('check', 'Comprobando la portada');
           const snapshot = await agentPreviewSnapshot(this.ctx.base, this.workspace.files());
-          const captures: Array<{ width: number; errors: string[]; image: string }> = [];
+          const captures: Array<{ width: number; errors: string[]; image: string; thumbnail?: string }> = [];
           for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules]));
           const verdict = homeWriterVerdict(captures);
+          // Review 2026-10-30: the merchant's progress shows the check's capture, now that screenshot calls are rare.
+          step('check', 'Comprobando la portada', (captures[0] as { thumbnail?: string } | undefined)?.thumbnail);
           // Owner 2026-10-29 («things like color picker, sorter»): the home's product grid keeps the kit's sort and filter chips.
           // Spec 2026-10-30: an animated store is reminded, never blocked, when it moves fewer than three parts.
           if (this.ctx.animated && motionPartsUsed(this.workspace.read(HOME_PATH)).length < 3) verdict.advice.push('La portada animada usa menos de 3 movimientos del kit (ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase, scrollGrow).');
