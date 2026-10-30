@@ -948,17 +948,72 @@ export function SectionSequence({ children, className, label }: { children: Reac
 /** A statement whose words light up as it is read. */
 export function Statement({ children, align = 'start', as: Tag = 'p' }: { children: string; align?: 'start' | 'center'; as?: 'p' | 'span' }) {
   const words = children.split(/\s+/).filter(Boolean);
-  return <Tag className="ui-statement ui-words" data-align={align === 'center' ? 'center' : undefined}>
+  return <><MotionStyles /><Tag className="ui-statement ui-words" data-align={align === 'center' ? 'center' : undefined}>
     {words.map((word, index) => <span key={index}>{word}{index < words.length - 1 ? ' ' : ''}</span>)}
-  </Tag>;
+  </Tag></>;
 }
 export function TextFillStatement(props: { children: string; align?: 'start' | 'center' }) { return <Statement {...props} />; }
 export function Marquee({ items, speed = 38 }: { items: string[]; speed?: number }) {
   const list = items.filter(Boolean).slice(0, 12);
   const run = (hidden: boolean) => <div className="ui-marquee__item" aria-hidden={hidden || undefined}>{list.map((item, i) => <span key={i}>{item}</span>)}</div>;
-  return <div className="ui-marquee" style={{ '--ui-marquee-duration': `${Math.min(90, Math.max(12, speed))}s` } as CSSProperties}>
+  return <><MotionStyles /><div className="ui-marquee" style={{ '--ui-marquee-duration': `${Math.min(90, Math.max(12, speed))}s` } as CSSProperties}>
     <div className="ui-marquee__track">{run(false)}{run(true)}</div>
-  </div>;
+  </div></>;
+}
+
+/* Owner 2026-10-30 («stores that should be animated are plain still»): a template Shell (Esencial) never mounts StoreTheme,
+ * so the CSS-driven parts (Marquee, Statement, scrollGrow) had no styles there and stood still. Each part brings this block;
+ * React hoists it into <head> once. Colours and fonts fall back to the template's --es-* tokens. */
+const MOTION_CSS = `
+.ui-marquee{overflow:hidden;border-block:1px solid var(--ui-line,color-mix(in srgb,currentColor 18%,transparent));padding-block:var(--ui-s4,16px);font-family:var(--ui-display-font,var(--es-heading,inherit));font-size:clamp(22px,2.4vw,40px);white-space:nowrap}
+.ui-marquee__track{display:inline-flex;animation:ui-marquee var(--ui-marquee-duration,38s) linear infinite}.ui-marquee:hover .ui-marquee__track{animation-play-state:paused}
+.ui-marquee__item{display:inline-flex;align-items:center}.ui-marquee__item>span{display:inline-flex;align-items:center;gap:var(--ui-s6,32px);padding-right:var(--ui-s6,32px)}
+.ui-marquee__item>span::after{content:"✦";font-size:.5em;color:var(--ui-accent,var(--es-accent,currentColor));font-style:normal}
+@keyframes ui-marquee{to{transform:translateX(-50%)}}
+.ui-statement{font-family:var(--ui-display-font,var(--es-heading,inherit));font-size:clamp(26px,3.4vw,56px);line-height:1.18;letter-spacing:-.015em;max-width:22ch;margin:0;text-wrap:balance}
+.ui-statement[data-align=center]{margin-inline:auto;text-align:center}
+@supports (animation-timeline: view()){
+  :root:not([data-ui-motion=off]) .ui-words>span{animation:ui-word linear both;animation-timeline:view();animation-range:cover 10% cover 45%}
+  :root:not([data-ui-motion=off]) .ui-scroll-grow{animation:ui-grow-media linear both;animation-timeline:view();animation-range:entry 0% cover 50%}
+}
+@keyframes ui-word{from{opacity:.38}to{opacity:1}}
+@keyframes ui-grow-media{from{transform:scale(.8)}to{transform:none}}
+.ui-float{display:inline-block;animation:ui-float var(--ui-float-time,4.2s) ease-in-out var(--ui-float-delay,0ms) infinite}
+@keyframes ui-float{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(calc(-1 * var(--ui-float-lift,14px))) rotate(1.5deg)}}
+.ui-sticker{--ui-sticker-size:clamp(84px,9vw,128px);position:relative;display:inline-grid;place-items:center;width:var(--ui-sticker-size);aspect-ratio:1;border-radius:50%;background:var(--ui-accent,var(--es-accent,#111));color:var(--ui-accent-foreground,var(--es-on-accent,#fff));font-family:var(--ui-display-font,var(--es-heading,inherit));font-weight:700;font-size:calc(var(--ui-sticker-size) * .15);line-height:1.05;text-align:center;padding:14%;box-shadow:0 6px 18px rgb(0 0 0 / .14);animation:ui-sticker-spin 14s linear infinite}
+.ui-sticker::before{content:"";position:absolute;inset:6%;border-radius:50%;border:2px dashed currentColor;opacity:.55}
+.ui-sticker>span{position:relative;animation:ui-sticker-spin 14s linear infinite reverse}
+@keyframes ui-sticker-spin{to{transform:rotate(360deg)}}
+.ui-wiggle{display:inline-block}.ui-wiggle:hover,.ui-wiggle:focus-within{animation:ui-wiggle .6s cubic-bezier(.34,1.56,.64,1)}
+@keyframes ui-wiggle{0%,100%{transform:none}20%{transform:rotate(-4deg) scale(1.03)}45%{transform:rotate(3deg) scale(1.03)}70%{transform:rotate(-2deg)}}
+.ui-bounce__word{display:inline-block;white-space:nowrap}.ui-bounce__word>span{display:inline-block;animation:ui-bounce .7s cubic-bezier(.34,1.56,.64,1) both;animation-delay:calc(min(var(--i),24) * 45ms)}
+.ui-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+@keyframes ui-bounce{0%{opacity:0;transform:translateY(.6em) scale(.7)}60%{opacity:1;transform:translateY(-.12em) scale(1.06)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.ui-marquee__track,.ui-float,.ui-sticker,.ui-sticker>span,.ui-wiggle:hover,.ui-wiggle:focus-within,.ui-bounce__word>span{animation:none}}
+:root[data-ui-motion=off] :is(.ui-marquee__track,.ui-float,.ui-sticker,.ui-sticker>span,.ui-wiggle:hover,.ui-wiggle:focus-within,.ui-bounce__word>span){animation:none}
+`;
+function MotionStyles() {
+  return <style href="pagosya-ui-motion" precedence="default">{MOTION_CSS}</style>;
+}
+
+/** Bobs gently up and down without end: a cut-out product, a can, a sweet. Decoration; still with reduced motion. */
+export function Float({ children, delay = 0, lift = 14, className }: { children: ReactNode; delay?: number; lift?: number; className?: string }) {
+  return <><MotionStyles /><span className={['ui-float', className].filter(Boolean).join(' ')} style={{ '--ui-float-delay': `${clamp(delay, 0, 3000, 0)}ms`, '--ui-float-lift': `${clamp(lift, 4, 28, 14)}px`, '--ui-float-time': `${4.2 + (clamp(delay, 0, 3000, 0) % 900) / 1000}s` } as CSSProperties}>{children}</span></>;
+}
+/** A round badge in the brand colour that turns slowly; its words stay upright. Two or three words. */
+export function Sticker({ children, className, style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
+  return <><MotionStyles /><span className={['ui-sticker', className].filter(Boolean).join(' ')} style={style}><span>{children}</span></span></>;
+}
+/** Wobbles once when pointed at or focused: buttons, product photos, cards. */
+export function Wiggle({ children, className }: { children: ReactNode; className?: string }) {
+  return <><MotionStyles /><span className={['ui-wiggle', className].filter(Boolean).join(' ')}>{children}</span></>;
+}
+/** A short headline whose letters bounce in one after another. Words never break inside; screen readers read the whole text. */
+export function BounceText({ children }: { children: string }) {
+  let index = 0;
+  const words = String(children ?? '').split(/(\s+)/);
+  return <><MotionStyles /><span className="ui-bounce"><span className="ui-sr">{children}</span>{words.map((word, w) => /^\s+$/.test(word) || !word ? word
+    : <span key={w} className="ui-bounce__word" aria-hidden="true">{Array.from(word).map((char, c) => <span key={c} style={{ '--i': index++ } as CSSProperties}>{char}</span>)}</span>)}</span></>;
 }
 
 export function SectionHead({ eyebrow, title, body, action, align = 'start' }: { eyebrow?: ReactNode; title: ReactNode; body?: ReactNode; action?: ReactNode; align?: 'start' | 'center' }) {

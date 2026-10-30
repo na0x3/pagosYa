@@ -6,10 +6,13 @@ import { agentPreviewSnapshot, captureAgentDraft, type AgentPreviewBase } from '
 import type { AgentStep } from './agent-tools';
 import type { AgentWorkspace } from './agent-workspace';
 import { evaluateHomeWriterRules, homeWriterVerdict } from './home-writer-checks';
-import { HOME_MOTION_BRIEF, motionPartsUsed } from '../home-directions';
+import { AMBIENT_PARTS, HOME_MOTION_BRIEF, ambientPartsUsed, motionPartsUsed } from '../home-directions';
+import { SHELL_PATH } from './agent-workspace';
 
 /* Spec 2026-10-29 home page writer: Amboras's recipe on the locked Esencial chassis — one home file and the tokens. */
 export const HOME_PATH = 'components/home.tsx';
+/** Owner 2026-10-30 («the footer always is the same»): YAPI writes each store's footer; the Shell renders it. */
+export const FOOTER_PATH = 'components/footer.tsx';
 export const HOME_WRITER_LIMITS = { toolCalls: 24, wallMs: 360_000, screenshots: 4 };
 const GLOBALS = 'styles/globals.css';
 const strictTool = (name: string, description: string, properties: Record<string, object>): AgentToolDefinition =>
@@ -20,6 +23,7 @@ const hex = { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' };
 export const HOME_WRITER_TOOLS: readonly AgentToolDefinition[] = [
   strictTool('read_chassis', 'Lee lo que la portada puede usar: partes del kit, datos de la tienda (store-data), fotos, fuentes y la portada actual.', {}),
   strictTool('write_home', 'Escribe components/home.tsx COMPLETO (reemplaza el archivo). Mantén <Shell>. Los textos van como texto JSX literal.', { content: text }),
+  strictTool('write_footer', 'Escribe components/footer.tsx COMPLETO: export default function StoreFooter() con el pie de la tienda. Los textos van como texto JSX literal.', { content: text }),
   strictTool('set_tokens', 'Fija los 5 colores de la tienda (hex) y dos fuentes del catálogo (ids de read_chassis).', { paper: hex, ink: hex, muted: hex, accent: hex, deep: hex, heading: text, body: text }),
   strictTool('check', 'Comprueba la portada en escritorio y celular: lo que debes corregir, los consejos y las dos capturas.', {}),
   strictTool('screenshot', 'Otra captura de la portada, solo si check no bastó (máximo 4 en total).', { width: { type: 'integer', enum: [1280, 390] } }),
@@ -28,12 +32,58 @@ export const HOME_WRITER_TOOLS: readonly AgentToolDefinition[] = [
 
 /** What the kit and the template give the home; the writer composes with these instead of inventing commerce parts. */
 const KIT_BRIEF = `PARTES DISPONIBLES (no inventes otras partes de comercio):
-- import Shell from './Shell' — envuelve SIEMPRE toda la portada: <Shell>…</Shell> (encabezado, menú, carrito y pie son de la plataforma).
+- import Shell from './Shell' — envuelve SIEMPRE toda la portada: <Shell>…</Shell> (encabezado, menú y carrito son de la plataforma; el pie lo escribes tú con write_footer).
 - import { Parallax, Reveal } from '@pagosya/ui' — <Reveal> anima al entrar; <Parallax> mueve una foto al hacer scroll.
 - Grilla de productos: copia la de la portada actual tal cual — data-pagosya-catalog con data-pagosya-filters data-filters-style="chips" (ordenar, color y talla) y data-es-cards={variant('cards', 'compact')} (import { variant } from './Shell'), para que las tarjetas de moda muestren sus tallas. El kit dibuja tarjetas, precios y el botón de agregar.
 - Un producto destacado: <div data-pagosya-spotlight="ID"></div> con un id real de los productos.
 - import { FeatureSlot } from './features' — secciones listas (preguntas, newsletter, marquee, pasos), como en la portada actual.
 - Clases de la plantilla en styles/globals.css (.es-section, .es-h2, .es-display, .es-link, …) y style={{…}} para tamaños y espacios.`;
+
+/** What every footer must keep: the platform fills these hooks (info pages, email signup) and the legal line. */
+export const FOOTER_BRIEF = `PIE (${'components/footer.tsx'}, con write_footer): export default function StoreFooter() { return <footer className="es-footer" …>…</footer>; }
+Es tuyo: diséñalo para esta tienda, distinto del de la plantilla. Imports: { store, copy, photos } de './store-data', íconos de './icons' (IconMapPin, IconMessageCircle…) y, si quieres, piezas de '@pagosya/ui'. Debe tener SIEMPRE:
+- <nav data-pagosya-pages aria-label="Información" /> — la plataforma pone ahí las políticas, términos y contacto.
+- <div data-pagosya-subscribe-block>…<div data-pagosya-subscribe-inline data-track="newsletter" /></div> — el correo para novedades.
+- enlaces a productos.html y al inicio; {store.city} y WhatsApp (https://wa.me/ con {store.phone}) solo si existen.
+- la línea final: {'\\u00a9'} {new Date().getFullYear()} {store.name} · Pagos seguros con pagosYa
+Usa el logo ({store.logo}) o el nombre; colores con var(--es-…). Nunca negro solo con texto.`;
+
+/** The Shell with the template's footer swapped for the one YAPI wrote; null when this Shell has no <Footer /> to swap. */
+export function shellWithStoreFooter(shell: string): string | null {
+  if (/import StoreFooter from '\.\/footer'/.test(shell)) return shell;
+  if ((shell.match(/<Footer\s*\/>/g) ?? []).length !== 1) return null;
+  const lines = shell.split('\n');
+  const lastImport = lines.reduce((at, line, index) => /^import\s/.test(line) ? index : at, -1);
+  lines.splice(lastImport + 1, 0, "import StoreFooter from './footer';");
+  return lines.join('\n').replace(/<Footer\s*\/>/, '<StoreFooter />');
+}
+
+/** What the footer misses of FOOTER_BRIEF's musts. */
+export function footerProblems(footer: string): string[] {
+  const missing: string[] = [];
+  if (!/export default function StoreFooter\b/.test(footer)) missing.push('export default function StoreFooter()');
+  if (!/<footer[\s>]/.test(footer)) missing.push('un elemento <footer>');
+  if (!/data-pagosya-pages/.test(footer)) missing.push('<nav data-pagosya-pages …/> (políticas y términos)');
+  if (!/data-pagosya-subscribe-block/.test(footer) || !/data-pagosya-subscribe-inline/.test(footer)) missing.push('el correo para novedades (data-pagosya-subscribe-block con data-pagosya-subscribe-inline dentro)');
+  if (!/\{store\.name\}/.test(footer) || !/\\u00a9|©|&copy;/.test(footer) || !/Pagos seguros con pagosYa/.test(footer)) missing.push('la línea final © año {store.name} · Pagos seguros con pagosYa');
+  return missing;
+}
+
+/** Owner 2026-10-30 (BOXY «too shouty»): a calm brand's titles are never written all in capitals; capitals are for small labels. */
+export function shoutedHeadings(code: string): string[] {
+  const found: string[] = [];
+  for (const match of code.matchAll(/<(h1|h2)\b([^>]*)>([\s\S]*?)<\/\1>/g)) {
+    const words = match[3].replace(/<[^>]*>/g, ' ').replace(/\{[^}]*\}/g, ' ').replace(/\s+/g, ' ').trim();
+    const letters = words.replace(/[^\p{L}]/gu, '');
+    const capsStyle = /textTransform:\s*['"]uppercase['"]/.test(match[2]);
+    if (letters.length >= 8 && words.split(' ').length >= 2 && (capsStyle || letters === letters.toUpperCase() && letters !== letters.toLowerCase())) found.push(words.slice(0, 60));
+  }
+  return found;
+}
+
+const rgb = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+/** Near enough to read as the same colour (RGB distance). */
+export const nearColour = (a: string, b: string, within = 40) => { const [x, y] = [rgb(a), rgb(b)]; return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) <= within; };
 
 export class HomeWriterToolbox implements AgentLoopToolbox {
   steps: AgentStep[] = [];
@@ -41,7 +91,10 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
   finished: { summary: string } | null = null;
   stopped = null;
   private shots = 0;
-  constructor(private readonly ctx: { workspace: AgentWorkspace; base: AgentPreviewBase; signal?: AbortSignal; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; /** Spec 2026-10-30: the store's home is animated. */ animated?: boolean }) {}
+  constructor(private readonly ctx: { workspace: AgentWorkspace; base: AgentPreviewBase; signal?: AbortSignal; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; /** Spec 2026-10-30: the store's home is animated. */ animated?: boolean;
+    /** Owner 2026-10-30: YAPI writes the footer (a must before finish); a playful store moves without scrolling; a calm brand
+     *  never shouts; the brand's own accent/deep colours (store-data look.colors) stay. */
+    footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[] }) {}
   get workspace() { return this.ctx.workspace; }
   draftIsClean() { return Boolean(this.lastVerify?.clean && this.lastVerify.version === this.workspace.version); }
 
@@ -60,11 +113,29 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           catch (error) { return { output: `Portada escrita, pero no compila: ${(error as Error).message.slice(0, 1500)}` }; }
           return { output: 'Portada escrita y compilada. Llama check o screenshot.' };
         }
+        case 'write_footer': {
+          const content = String(args.content ?? '');
+          const shell = shellWithStoreFooter(this.workspace.read(SHELL_PATH));
+          if (!shell) return { output: 'Esta tienda no admite un pie propio; deja el de la plataforma y termina la portada.' };
+          const written = this.workspace.write(FOOTER_PATH, content);
+          if (!written.ok) return { output: written.message };
+          this.workspace.setShell(shell);
+          step('write_home', 'Escribiendo el pie de página');
+          const missing = footerProblems(content);
+          try { await agentPreviewSnapshot(this.ctx.base, this.workspace.files()); }
+          catch (error) { return { output: `Pie escrito, pero no compila: ${(error as Error).message.slice(0, 1500)}` }; }
+          return { output: missing.length ? `Pie escrito y compilado, pero le falta: ${missing.join('; ')}.` : 'Pie escrito y compilado.' };
+        }
         case 'set_tokens': {
           const fonts = [String(args.heading), String(args.body)];
           const unknown = fonts.find(id => !SOURCE_FONT_CATALOG.some(font => font.id === id));
           if (unknown) return { output: `La fuente ${unknown} no está en el catálogo; usa un id de read_chassis.` };
           const colours = { paper: String(args.paper), ink: String(args.ink), muted: String(args.muted), accent: String(args.accent), deep: String(args.deep) };
+          // Owner 2026-10-30 (BOXY lost its navy for terracotta): the brand's own accent or dark colour stays one of the five.
+          const brand = this.ctx.brandColours ?? [];
+          if (brand.length && ![colours.accent, colours.deep].some(colour => brand.some(own => nearColour(colour, own)))) {
+            return { output: `Esta marca tiene sus propios colores (${brand.join(', ')}): usa uno de ellos (o uno muy cercano) como accent o deep. Varía el fondo y la fuente, no el color de la marca.` };
+          }
           const block = masterThemeBlock(colours, fonts[0], fonts[1]);
           const written = this.workspace.write(GLOBALS, withMasterTheme(this.workspace.read(GLOBALS), block));
           if (!written.ok) return { output: written.message };
@@ -85,6 +156,19 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           const moving = this.ctx.animated ? motionPartsUsed(this.workspace.read(HOME_PATH)).length : 3;
           if (moving < 2) verdict.blocking.push('Esta tienda tiene portada animada y usa menos de 2 movimientos del kit: agrega al menos dos de ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase o Hero scrollGrow (importados de \'@pagosya/ui\').');
           else if (moving < 3) verdict.advice.push('La portada animada usa menos de 3 movimientos del kit (ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase, scrollGrow).');
+          if (this.ctx.playful) {
+            const ambient = ambientPartsUsed(`${this.workspace.read(HOME_PATH)}\n${this.footerCode()}`).length;
+            if (ambient < 2) verdict.blocking.push(`Esta tienda es divertida y su portada debe moverse sin esperar al scroll: usa al menos dos de ${AMBIENT_PARTS.join(', ')} (importados de '@pagosya/ui').`);
+          }
+          if (this.ctx.footer) {
+            const footer = this.footerCode();
+            if (!footer) verdict.blocking.push('Falta el pie: escríbelo con write_footer.');
+            else { const missing = footerProblems(footer); if (missing.length) verdict.blocking.push(`Al pie le falta: ${missing.join('; ')}.`); }
+          }
+          if (this.ctx.calm) {
+            const shouted = shoutedHeadings(`${this.workspace.read(HOME_PATH)}\n${this.footerCode()}`);
+            if (shouted.length) verdict.blocking.push(`Esta marca es tranquila: escribe los títulos con mayúscula inicial, no todo en mayúsculas («${shouted.slice(0, 3).join('», «')}»). Las mayúsculas solo para etiquetas pequeñas.`);
+          }
           if (!/data-pagosya-catalog[^>]*data-pagosya-filters|data-pagosya-filters[^>]*data-pagosya-catalog/.test(this.workspace.read(HOME_PATH))) verdict.blocking.push('La grilla de productos perdió ordenar y filtrar por color y talla: deja data-pagosya-filters data-filters-style="chips" en el elemento data-pagosya-catalog, como en la portada de la plantilla.');
           this.lastVerify = { version: this.workspace.version, clean: !verdict.blocking.length, hard: verdict.blocking.length > 0 };
           return { output: [verdict.blocking.length ? `Debes corregir:\n- ${verdict.blocking.join('\n- ')}` : 'Nada que corregir.',
@@ -114,6 +198,8 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
     } catch (error) { return { output: `Falló ${name}: ${(error as Error).message.slice(0, 800)}` }; }
   }
 
+  private footerCode() { try { return this.workspace.changedPaths().includes(FOOTER_PATH) ? this.workspace.read(FOOTER_PATH) : ''; } catch { return ''; } }
+
   /** Out of steps or time: a changed draft whose last check had nothing blocking still ships through the gate. */
   async acceptIfBuildable(): Promise<boolean> {
     if (this.finished) return true;
@@ -128,7 +214,8 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
     const exported = [...data.matchAll(/export const (\w+)/g)].map(match => match[1]);
     const photos = this.ctx.base.files.filter(file => file.path.startsWith('assets/') && /\.(jpe?g|png|webp|mp4)$/i.test(file.path)).map(file => file.path);
     const fonts = SOURCE_FONT_CATALOG.map(font => `${font.id} (${font.family}, ${font.role})`).join(', ');
-    return [KIT_BRIEF, ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []),
+    const templateFooter = /export function Footer\(\)[\s\S]*?\n\}\n/.exec(this.workspace.read(SHELL_PATH))?.[0];
+    return [KIT_BRIEF, ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []), ...(this.ctx.footer ? [FOOTER_BRIEF, templateFooter ? `El pie actual de la plantilla (solo como referencia de los ganchos; el tuyo debe verse distinto):\n${templateFooter}` : ''] : []),
       `import { … } from './store-data' — exporta: ${exported.join(', ')}. Productos, precios, fotos y logo salen de ahí; nunca los escribas a mano.`,
       `Archivos de fotos: ${photos.join(', ') || 'ninguno (portada solo tipográfica)'}`,
       `fuentes: ${fonts}`,

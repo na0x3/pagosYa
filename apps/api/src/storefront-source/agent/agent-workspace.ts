@@ -79,6 +79,8 @@ export class AgentWorkspace {
     this.version++;
     return { ok: true };
   }
+  /** The platform's own change to the locked Shell (spec 2026-10-30: it renders the footer YAPI wrote); never an agent tool. */
+  setShell(content: string) { if (this.map.has(SHELL_PATH)) this.set(SHELL_PATH, content); }
   /** Design files counted against MAX_DESIGN_FILES, for the agent's project index. */
   designBudget() { return { used: designFileCount(this.designFiles()), max: MAX_DESIGN_FILES }; }
   files() { return [...this.map.values()].map(file => ({ ...file })); }

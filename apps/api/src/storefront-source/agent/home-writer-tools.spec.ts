@@ -3,7 +3,7 @@ import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { MASTER_THEME_END, MASTER_THEME_START } from '../source-master';
 import { AgentWorkspace } from './agent-workspace';
-import { HomeWriterToolbox, HOME_PATH, HOME_WRITER_TOOLS } from './home-writer-tools';
+import { FOOTER_PATH, HomeWriterToolbox, HOME_PATH, HOME_WRITER_TOOLS, footerProblems, nearColour, shellWithStoreFooter, shoutedHeadings } from './home-writer-tools';
 
 // Spec 2026-10-29 home page writer §2: five tools plus finish, on the locked Esencial chassis.
 jest.setTimeout(240_000);
@@ -23,8 +23,8 @@ const branded = async (b: HomeWriterToolbox) => {
 const tokens = (font: string) => JSON.stringify({ paper: '#f4efe6', ink: '#1d2a22', muted: '#e8e1d4', accent: '#b5562b', deep: '#2f4a33', heading: font, body: font });
 
 describe('HomeWriterToolbox', () => {
-  it('offers exactly the six tools', () => {
-    expect(HOME_WRITER_TOOLS.map(t => t.name)).toEqual(['read_chassis', 'write_home', 'set_tokens', 'check', 'screenshot', 'finish']);
+  it('offers exactly the seven tools', () => {
+    expect(HOME_WRITER_TOOLS.map(t => t.name)).toEqual(['read_chassis', 'write_home', 'write_footer', 'set_tokens', 'check', 'screenshot', 'finish']);
   });
   it('read_chassis names the kit parts, the store data, the fonts and the current home', async () => {
     const out = (await box().run('read_chassis', '{}')).output;
@@ -115,5 +115,74 @@ describe('HomeWriterToolbox', () => {
     expect(await b.acceptIfBuildable()).toBe(false);
     await b.run('check', '{}');
     expect(await b.acceptIfBuildable()).toBe(true);
+  });
+});
+
+// Owner 2026-10-30: YAPI writes each footer; calm brands never shout; the brand's own colour stays; fun stores move on their own.
+const FOOTER = `import { store } from './store-data';
+export default function StoreFooter() {
+  return <footer className="es-footer"><p>{store.name}</p><nav data-pagosya-pages aria-label="Información" />
+    <div data-pagosya-subscribe-block><div data-pagosya-subscribe-inline data-track="newsletter" /></div>
+    <p>{'\\u00a9'} {new Date().getFullYear()} {store.name} · Pagos seguros con pagosYa</p></footer>;
+}
+`;
+const extra = (ctx: object) => {
+  const authored = base.files.filter(f => nextSourceFile(f.path));
+  return new HomeWriterToolbox({ workspace: new AgentWorkspace(authored, { redesign: true, lockedShell: true }), base, gate: async () => null, ...ctx });
+};
+
+describe('the footer YAPI writes', () => {
+  it('swaps the template footer in the Shell once, and leaves a Shell it cannot read alone', () => {
+    const shell = "import { a } from 'b';\nimport { store } from './store-data';\nexport default function Shell() { return <div><Header />{children}<Footer /></div>; }";
+    const swapped = shellWithStoreFooter(shell)!;
+    expect(swapped).toContain("import { store } from './store-data';\nimport StoreFooter from './footer';");
+    expect(swapped).toContain('<StoreFooter />');
+    expect(shellWithStoreFooter(swapped)).toBe(swapped);
+    expect(shellWithStoreFooter('export default function Shell() { return <div />; }')).toBeNull();
+  });
+  it('names each must the footer misses', () => {
+    expect(footerProblems(FOOTER)).toEqual([]);
+    expect(footerProblems('export default function StoreFooter() { return <footer><p>Hola</p></footer>; }').join(' ')).toMatch(/data-pagosya-pages.*correo.*línea final/);
+  });
+  it('write_footer saves the file and points the locked Shell at it; check blocks until the footer exists', async () => {
+    const b = await branded(extra({ footer: true }));
+    expect((await b.run('check', '{}')).output).toMatch(/Falta el pie/);
+    expect((await b.run('write_footer', JSON.stringify({ content: FOOTER }))).output).toMatch(/^Pie escrito y compilado\.$/);
+    expect(b.workspace.read(FOOTER_PATH)).toBe(FOOTER);
+    expect(b.workspace.read('components/Shell.tsx')).toContain('<StoreFooter />');
+    expect((await b.run('check', '{}')).output).not.toMatch(/pie/i);
+  });
+});
+
+describe('calm brands and brand colours', () => {
+  it('finds titles written all in capitals, not labels or normal titles', () => {
+    expect(shoutedHeadings('<h1 className="x">EL ESPACIO TAMBIÉN ES ESTILO.</h1><h2>Menos ajuste.</h2><p className="es-eyebrow">01 / MANIFIESTO</p>')).toEqual(['EL ESPACIO TAMBIÉN ES ESTILO.']);
+    expect(shoutedHeadings("<h2 style={{ textTransform: 'uppercase' }}>Hecho para durar</h2>")).toHaveLength(1);
+    expect(shoutedHeadings('<h2>BOXY</h2><h1>Hoodies <br />para diario</h1>')).toEqual([]);
+  });
+  it('check blocks a shouted title only for a calm brand', async () => {
+    const shout = (b: HomeWriterToolbox) => b.workspace.write(HOME_PATH, b.workspace.read(HOME_PATH).replace(/<h1([^>]*)>[\s\S]*?<\/h1>/, '<h1$1>HOODIES PARA TODOS LOS DÍAS</h1>'));
+    const calm = await branded(extra({ calm: true })); shout(calm);
+    expect((await calm.run('check', '{}')).output).toMatch(/Esta marca es tranquila/);
+    const bold = await branded(extra({})); shout(bold);
+    expect((await bold.run('check', '{}')).output).not.toMatch(/tranquila/);
+  });
+  it('set_tokens keeps the brand accent or deep', async () => {
+    const b = extra({ brandColours: ['#1b1d33'] });
+    const font = (await b.run('read_chassis', '{}')).output.match(/fuentes: ([a-z0-9-]+) \(/)![1];
+    expect((await b.run('set_tokens', tokens(font))).output).toMatch(/sus propios colores \(#1b1d33\)/);
+    expect((await b.run('set_tokens', JSON.stringify({ ...JSON.parse(tokens(font)), deep: '#20223a' }))).output).toMatch(/^Colores y fuentes guardados/);
+    expect(nearColour('#1b1d33', '#c45b3c')).toBe(false);
+  });
+});
+
+describe('playful stores', () => {
+  it('check blocks a fun store whose home only moves on scroll, until two always-moving parts are used', async () => {
+    const b = await branded(extra({ playful: true, animated: true }));
+    expect((await b.run('check', '{}')).output).toMatch(/Esta tienda es divertida/);
+    const home = b.workspace.read(HOME_PATH).replace(/import \{([^}]*)\} from '@pagosya\/ui';/, "import {$1, Float, Sticker, ScrollScale, Marquee } from '@pagosya/ui';")
+      .replace('</main>', '<Float><Sticker>Nuevo sabor</Sticker></Float><Marquee items={["Burbujas"]} /><ScrollScale><p>Hola</p></ScrollScale></main>');
+    expect((await b.run('write_home', JSON.stringify({ content: home }))).output).toMatch(/compilada/);
+    expect((await b.run('check', '{}')).output).not.toMatch(/divertida/);
   });
 });

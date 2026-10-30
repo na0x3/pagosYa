@@ -1,8 +1,8 @@
 import { templateManifest, templateSourceFiles } from '@pagosya/store-templates';
 import { templateDemoRevision } from './source-templates';
 import { nextSourceFile } from './source-next';
-import { homeWriterDna, homeWriterInstructions, homeWriterLimits, homeWriterTask, runHomeWriterLoop, runHomeWriterStage } from './source-home-writer-stage';
-import { HOME_DIRECTIONS } from './home-directions';
+import { brandColoursOf, homeWriterDna, homeWriterInstructions, homeWriterLimits, homeWriterTask, runHomeWriterLoop, runHomeWriterStage } from './source-home-writer-stage';
+import { HOME_DIRECTIONS, HOME_FOOTERS, HOME_PLAYFUL_BRIEF } from './home-directions';
 import { HOME_PATH, HOME_WRITER_LIMITS } from './agent/home-writer-tools';
 import { masterThemeBlock, withMasterTheme } from './source-master';
 import { SOURCE_FONT_IDS } from './source-font-catalog';
@@ -105,6 +105,21 @@ describe('homeWriterTask', () => {
   });
   it('adds the motion brief only to an animated store', () => {
     expect(homeWriterTask({ instruction: 'x', storeName: 'y', direction: 'bandas', animated: true, avoid: { fonts: [], papers: [] } })).toContain('MOVIMIENTO');
+  });  it('keeps the brand colours instead of avoiding the recent backgrounds, and carries the calm, footer and playful briefs (owner 2026-10-30)', () => {
+    const task = homeWriterTask({ instruction: 'x', storeName: 'BOXY', direction: 'editorial', animated: false, avoid, brandColours: ['#1b1d33'], calm: true, footer: 'carta' });
+    expect(task).toContain('Colores de la marca: #1b1d33');
+    expect(task).not.toContain('#f4efe6');
+    expect(task).toMatch(/Marca tranquila/);
+    expect(task).toContain(HOME_FOOTERS.carta);
+    expect(homeWriterTask({ instruction: 'x', storeName: 'y', direction: 'bandas', animated: true, avoid, playful: true })).toContain(HOME_PLAYFUL_BRIEF);
+  });
+});
+
+describe('brandColoursOf', () => {
+  it('reads the accent and deep the brand gave, never the rolled palette', () => {
+    expect(brandColoursOf('export const look = {"palette":"navy","fonts":"editorial","colors":{"paper":"#ebe6e2","ink":"#000000","accent":"#1B1D33","deep":"#17192b"}} as const;')).toEqual(['#1b1d33', '#17192b']);
+    expect(brandColoursOf('export const look = {"palette":"navy","fonts":"editorial","colors":{}} as const;')).toEqual([]);
+    expect(brandColoursOf('')).toEqual([]);
   });
 });
 
@@ -118,13 +133,26 @@ describe('home writer opening', () => {
 });
 
 // Review 2026-10-30 (critical): the direction file rode in the AI-written files, and the real React-file check rejected every run.
+const FOOTER = `import { store } from './store-data';
+
+export default function StoreFooter() {
+  return <footer className="es-footer" style={{ background: 'var(--es-accent)', color: 'var(--es-on-accent)' }}>
+    <p className="es-footer__big">{store.name}</p>
+    <nav aria-label="Tienda"><a href="productos.html">Productos</a><a href="index.html">Inicio</a></nav>
+    <nav data-pagosya-pages className="pagosya-info-nav" aria-label="Información" />
+    <div data-pagosya-subscribe-block><h2>Novedades</h2><div data-pagosya-subscribe-inline data-track="newsletter" /></div>
+    <p>{'\\u00a9'} {new Date().getFullYear()} {store.name} · Pagos seguros con pagosYa</p>
+  </footer>;
+}
+`;
+
 describe('the writer stage and the real save check', () => {
   it('keeps home-direction.json out of the written files and hands it to the save instead', async () => {
     let n2 = 0;
     const turn = (name: string, args: object) => ({ calls: [{ name, arguments: JSON.stringify(args), callId: `s${n2++}` }] });
     const home = authored().find(f => f.path === HOME_PATH)!.content.replace('export default function Home', 'export default function Home /* stage */');
     const font = 'placeholder';
-    const turns: any[] = [turn('read_chassis', {}), turn('write_home', { content: home }), null, turn('check', {}), turn('finish', { summary: 'Listo.' })];
+    const turns: any[] = [turn('read_chassis', {}), turn('write_home', { content: home }), turn('write_footer', { content: FOOTER }), null, turn('check', {}), turn('finish', { summary: 'Listo.' })];
     let i = 0;
     (openAiAgentModel as jest.Mock).mockImplementation(() => async ({ transcript }: any) => {
       const next = turns[Math.min(i++, turns.length - 1)];
@@ -138,6 +166,12 @@ describe('the writer stage and the real save check', () => {
     const live: any = { generated: { label: '', files: [] }, lenient: false };
     await runHomeWriterStage({ facts, live, acceptCandidate: async () => { validateNextSources(live.generated.files.filter((f: any) => !f.path.startsWith('assets/'))); }, resume: {} as any });
     expect(live.generated.files.some((f: any) => f.path === 'home-direction.json')).toBe(false);
-    expect(JSON.parse(live.homeDirectionFile.content)).toMatchObject({ direction: expect.any(String), animated: expect.any(Boolean) });
+    expect(JSON.parse(live.homeDirectionFile.content)).toMatchObject({ direction: expect.any(String), animated: expect.any(Boolean), footer: expect.any(String) });
+    // Owner 2026-10-30: the footer YAPI wrote is saved and the Shell renders it; it passed the real save check above.
+    expect(live.generated.files.find((f: any) => f.path === 'components/footer.tsx')?.content).toBe(FOOTER);
+    const shell = live.generated.files.find((f: any) => f.path === 'components/Shell.tsx').content;
+    expect(shell).toContain("import StoreFooter from './footer';");
+    expect(shell).toContain('<StoreFooter />');
+    expect(shell).not.toMatch(/<Footer\s*\/>/);
   });
 });

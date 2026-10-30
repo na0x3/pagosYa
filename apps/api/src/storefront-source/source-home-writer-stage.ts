@@ -8,21 +8,21 @@ import type { AgentPreviewBase } from './agent/agent-capture';
 import type { AgentStep } from './agent/agent-tools';
 import { openAiAgentModel } from './agent/agent-model';
 import { anthropicAgentModel } from './agent/agent-model-anthropic';
-import { HomeWriterToolbox, HOME_PATH, HOME_WRITER_LIMITS, HOME_WRITER_TOOLS } from './agent/home-writer-tools';
+import { HomeWriterToolbox, FOOTER_PATH, HOME_PATH, HOME_WRITER_LIMITS, HOME_WRITER_TOOLS } from './agent/home-writer-tools';
 import { nextSourceFile } from './source-next';
 import { sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
 import type { AgentStageContext } from './source-agent-stage';
 import { readConfigFile } from './store-look';
-import { HOME_DIRECTIONS, HOME_MOTION_BRIEF, parseHomeDirection, pickHomeDirection, type HomeDirectionChoice, type HomeDirectionId } from './home-directions';
+import { HOME_DIRECTIONS, HOME_FOOTERS, HOME_MOTION_BRIEF, HOME_PLAYFUL_BRIEF, isPlayfulBusiness, parseHomeDirection, pickHomeDirection, pickHomeFooter, type HomeDirectionChoice, type HomeDirectionId, type HomeFooterId } from './home-directions';
 import { recentLooks } from './source-recent-looks';
 import { readMasterState } from './source-templates';
 import { MASTER_THEME_END, MASTER_THEME_START } from './source-master';
 
 /** Spec 2026-10-29 §2–3: Amboras's recipe, our rules. */
 export function homeWriterInstructions(): string {
-  return `Eres el diseñador de la PORTADA de una tienda pagosYa. Solo cambias ${HOME_PATH} (completo, con write_home) y los colores y fuentes (set_tokens).
-El encabezado, el menú, el pie, la ficha de producto, el carrito y el checkout son de la plataforma: no los dibujes ni los imites. Toda la portada va dentro de <Shell>.
-Orden: read_chassis (trae la portada actual); escribe la portada entera en una sola llamada; set_tokens con los colores y las fuentes de la marca; check (devuelve lo que debes corregir y las capturas de escritorio y celular); corrige; check; finish. Usa screenshot solo si necesitas otra vista.
+  return `Eres el diseñador de la PORTADA y el PIE de una tienda pagosYa. Solo cambias ${HOME_PATH} (completo, con write_home), ${FOOTER_PATH} (completo, con write_footer) y los colores y fuentes (set_tokens).
+El encabezado, el menú, la ficha de producto, el carrito y el checkout son de la plataforma: no los dibujes ni los imites. Toda la portada va dentro de <Shell>.
+Orden: read_chassis (trae la portada actual); escribe la portada entera en una sola llamada; write_footer con el pie; set_tokens con los colores y las fuentes de la marca; check (devuelve lo que debes corregir y las capturas de escritorio y celular); corrige; check; finish. Usa screenshot solo si necesitas otra vista.
 Estilo (como Amboras): titulares de 72 px o más en escritorio con interlineado apretado, etiquetas pequeñas en mayúsculas (por ejemplo «01 / 04»), una portada amplia donde el texto tiene espacio, bandas del color de la marca, al menos 6 secciones (portada, productos con data-pagosya-catalog, historia, beneficios, preguntas, cierre).
 Reglas que bloquean: cada foto una sola vez; nunca 3 fotos o más juntas; nunca una banda oscura (negra) solo con texto — usa una foto real, un fondo claro o el color de la marca; la portada muestra productos (data-pagosya-catalog, o data-pagosya-spotlight con ids reales).
 Las bandas de la plantilla se pintan con --es-deep: si es casi negro, dale con set_tokens el color oscuro de la marca (un verde, un vino, un azul), nunca negro.
@@ -31,19 +31,36 @@ Productos, precios, fotos y logo vienen de './store-data'. Los consejos de check
 }
 
 type LoopInput = { model: AgentModel; files: SourceProjectFileDto[]; base: AgentPreviewBase; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; task: string;
-  images?: unknown[]; signal?: AbortSignal; limits?: Partial<typeof AGENT_LIMITS>; onStep?: (step: AgentStep) => void | Promise<void>; animated?: boolean };
+  images?: unknown[]; signal?: AbortSignal; limits?: Partial<typeof AGENT_LIMITS>; onStep?: (step: AgentStep) => void | Promise<void>; animated?: boolean;
+  footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[] };
 
 /** Spec 2026-10-30 home writer variety: the writer's task — the merchant's words, the store's page direction, what the last
  *  stores already used, and the motion brief only for an animated store. */
-export function homeWriterTask(input: { instruction: string; storeName: string; direction: HomeDirectionId; animated: boolean; avoid: { fonts: string[]; papers: string[] } }): string {
-  const avoid = [input.avoid.fonts.length ? `fuentes de titular ${input.avoid.fonts.join(', ')}` : '', input.avoid.papers.length ? `colores de fondo ${input.avoid.papers.join(', ')}` : ''].filter(Boolean).join('; ');
+export function homeWriterTask(input: { instruction: string; storeName: string; direction: HomeDirectionId; animated: boolean; avoid: { fonts: string[]; papers: string[] };
+  footer?: HomeFooterId; playful?: boolean; calm?: boolean; brandColours?: string[] }): string {
+  // Owner 2026-10-30 (BOXY): variety never replaces the brand's own colours — the recent backgrounds are only avoided without them.
+  const brand = input.brandColours ?? [];
+  const avoid = [input.avoid.fonts.length ? `fuentes de titular ${input.avoid.fonts.join(', ')}` : '', !brand.length && input.avoid.papers.length ? `colores de fondo ${input.avoid.papers.join(', ')}` : ''].filter(Boolean).join('; ');
   return [input.instruction, `Tienda: ${input.storeName}`, HOME_DIRECTIONS[input.direction],
-    avoid ? `Las últimas tiendas ya usaron ${avoid}: elige otra fuente de titular y otro fondo que también vayan con esta marca.` : '',
-    input.animated ? HOME_MOTION_BRIEF : 'Movimiento: tranquilo — solo <Reveal> y, como mucho, un <Parallax>.'].filter(Boolean).join('\n\n');
+    avoid ? `Las últimas tiendas ya usaron ${avoid}: elige otra${brand.length ? '' : ' fuente de titular y otro fondo'} que también vaya con esta marca.` : '',
+    brand.length ? `Colores de la marca: ${brand.join(', ')}. Mantenlos: el accent o el deep es uno de ellos.` : '',
+    input.calm ? 'Marca tranquila: títulos con mayúscula inicial (nunca todo en mayúsculas), titular de 64 a 110 px con interlineado de 0.95 o más y sin letras apretadas; fuente de titular sobria; mucho aire.' : '',
+    input.footer ? HOME_FOOTERS[input.footer] : '',
+    input.animated ? HOME_MOTION_BRIEF : 'Movimiento: tranquilo — solo <Reveal> y, como mucho, un <Parallax>.',
+    input.playful ? HOME_PLAYFUL_BRIEF : ''].filter(Boolean).join('\n\n');
+}
+
+/** The brand's own accent and dark colours: store-data `look.colors` (logo, photos or named by the merchant), never the rolled palette. */
+export function brandColoursOf(storeData: string): string[] {
+  const match = /export const look = (\{[\s\S]*?\}) as const;/.exec(storeData);
+  try {
+    const colors = (JSON.parse(match?.[1] ?? '{}') as { colors?: Record<string, unknown> }).colors ?? {};
+    return [...new Set(['accent', 'deep'].map(key => colors[key]).filter((value): value is string => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)).map(value => value.toLowerCase()))];
+  } catch { return []; }
 }
 
 /** The page directions of the last stores that have one, newest first (their latest revision's home-direction.json). */
-async function recentHomeDirections(prisma: { $queryRaw: (query: Prisma.Sql) => Promise<unknown> }, storeId: string): Promise<HomeDirectionId[]> {
+async function recentHomeDirections(prisma: { $queryRaw: (query: Prisma.Sql) => Promise<unknown> }, storeId: string): Promise<{ directions: HomeDirectionId[]; footers: HomeFooterId[] }> {
   try {
     const rows = await prisma.$queryRaw(Prisma.sql`
       SELECT v."storeId" AS "storeId", (SELECT f->>'content' FROM jsonb_array_elements(v.snapshot->'files') f WHERE f->>'path' = 'home-direction.json' LIMIT 1) AS data
@@ -51,10 +68,15 @@ async function recentHomeDirections(prisma: { $queryRaw: (query: Prisma.Sql) => 
       WHERE v."storeId" <> ${storeId} AND v.label = 'Portada de YAPI' AND v."createdAt" > now() - interval '60 days'
         AND v.snapshot->'files' @> '[{"path":"home-direction.json"}]'::jsonb
       ORDER BY v."createdAt" DESC LIMIT 40`) as Array<{ storeId: string; data: string | null }>;
-    const seen = new Set<string>(), out: HomeDirectionId[] = [];
-    for (const row of rows) { if (seen.has(row.storeId)) continue; seen.add(row.storeId); const choice = parseHomeDirection(row.data ?? undefined); if (choice) out.push(choice.direction); }
-    return out.slice(0, 6);
-  } catch (error) { new Logger('HomeWriter').warn(`recent home directions unavailable: ${String((error as Error)?.message).slice(0, 200)}`); return []; }
+    const seen = new Set<string>(), directions: HomeDirectionId[] = [], footers: HomeFooterId[] = [];
+    for (const row of rows) {
+      if (seen.has(row.storeId)) continue;
+      seen.add(row.storeId);
+      const choice = parseHomeDirection(row.data ?? undefined);
+      if (choice) { directions.push(choice.direction); if (choice.footer) footers.push(choice.footer); }
+    }
+    return { directions: directions.slice(0, 6), footers: footers.slice(0, 6) };
+  } catch (error) { new Logger('HomeWriter').warn(`recent home directions unavailable: ${String((error as Error)?.message).slice(0, 200)}`); return { directions: [], footers: [] }; }
 }
 
 /** Live check 2026-10-29 (PEPPA): the store's look (product page, cards, cart, checkout) stays the previous revision's; only the
@@ -75,7 +97,8 @@ export function homeWriterLimits(chatgptPlan: boolean, runDeadline: number, now 
 /** The writer's loop on its own: testable without a generation run. */
 export async function runHomeWriterLoop(input: LoopInput) {
   const workspace = new AgentWorkspace(input.files, { redesign: true, lockedShell: true });
-  const toolbox = new HomeWriterToolbox({ workspace, base: input.base, gate: input.gate, ...(input.signal ? { signal: input.signal } : {}), ...(input.animated ? { animated: true } : {}) });
+  const toolbox = new HomeWriterToolbox({ workspace, base: input.base, gate: input.gate, ...(input.signal ? { signal: input.signal } : {}), ...(input.animated ? { animated: true } : {}),
+    ...(input.footer ? { footer: true } : {}), ...(input.playful ? { playful: true } : {}), ...(input.calm ? { calm: true } : {}), ...(input.brandColours?.length ? { brandColours: input.brandColours } : {}) });
   const outcome = await runAgent({ model: input.model, toolbox, tools: HOME_WRITER_TOOLS, verifyTool: 'check', instructions: homeWriterInstructions(), signal: input.signal, onStep: input.onStep,
     limits: { ...HOME_WRITER_LIMITS, ...input.limits }, opening: agentOpening(input.task, [], input.images ?? []) });
   // A run that changed nothing is not a new design (review 2026-10-29): the store keeps its template home and says nothing.
@@ -93,8 +116,16 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
   // Spec 2026-10-30: the store's page direction — reused when this store already has one, else picked against the last stores.
   const master = readMasterState(previousFiles);
   const variants = (master.variants ?? {}) as Record<string, unknown>;
-  const choice: HomeDirectionChoice = parseHomeDirection(previousFiles.find(file => file.path === 'home-direction.json')?.content)
-    ?? pickHomeDirection({ seed: storeId, recent: await recentHomeDirections(prisma as never, storeId), fashion: variants.cards === 'fashion', mood: variants.mood === 'bold' ? 'bold' : 'calm' });
+  // Owner 2026-10-30: fun businesses (sweets, fizzy drinks, toys, games, kids) are always animated and move without scrolling.
+  const storeData = previousFiles.find(file => file.path === 'components/store-data.tsx')?.content ?? '';
+  const playful = isPlayfulBusiness(`${dto.instruction}\n${storeData}`);
+  const calm = variants.mood !== 'bold' && !playful;
+  const saved = parseHomeDirection(previousFiles.find(file => file.path === 'home-direction.json')?.content);
+  const recent = saved?.footer ? null : await recentHomeDirections(prisma as never, storeId);
+  const choice: HomeDirectionChoice = saved
+    ? { ...saved, animated: saved.animated || playful, footer: saved.footer ?? pickHomeFooter(storeId, recent?.footers ?? [], playful), ...(playful ? { playful: true } : {}) }
+    : pickHomeDirection({ seed: storeId, recent: recent?.directions ?? [], recentFooters: recent?.footers ?? [], fashion: variants.cards === 'fashion', mood: calm ? 'calm' : 'bold', playful });
+  const brandColours = brandColoursOf(storeData);
   const looks = await recentLooks(prisma as never, storeId, 6).catch(() => []);
   // The same acceptance chain every build passes, in its lenient form (artwork and edit-scope rules are for chat edits).
   const gate = async (files: SourceProjectFileDto[]) => {
@@ -120,8 +151,10 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
       // Every turn resends the transcript; a stable key lets the provider bill that prefix at the cached rate (review 2026-10-29).
       promptCacheKey: sourcePromptCacheKey('home-writer', homeWriterInstructions(), storeId) });
   const task = homeWriterTask({ instruction: dto.instruction, storeName: (data as { storeName?: string }).storeName ?? '', direction: choice.direction, animated: choice.animated,
+    footer: choice.footer, playful, calm, brandColours,
     avoid: { fonts: [...new Set(looks.map(look => look.heading).filter((font): font is string => Boolean(font)))], papers: [...new Set(looks.map(look => look.paper).filter((paper): paper is string => Boolean(paper)))] } });
-  const out = await runHomeWriterLoop({ model, files: oldFiles.filter(file => nextSourceFile(file.path)), base, gate, task, signal, animated: choice.animated, limits: homeWriterLimits(chatgptPlan, started + runTimeout),
+  const out = await runHomeWriterLoop({ model, files: oldFiles.filter(file => nextSourceFile(file.path)), base, gate, task, signal, animated: choice.animated,
+    footer: Boolean(choice.footer), playful, calm, brandColours, limits: homeWriterLimits(chatgptPlan, started + runTimeout),
     images: images.map(image => ({ ...(image as object), detail: 'low' })),
     onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); } });
   if (!out.accepted) throw new BadGatewayException(`YAPI no pudo terminar la portada${out.outcome.reason ? `: ${out.outcome.reason}` : ''}`);
