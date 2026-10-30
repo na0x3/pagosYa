@@ -37,6 +37,7 @@ const KIT_BRIEF = `PARTES DISPONIBLES (no inventes otras partes de comercio):
 - Grilla de productos: copia la de la portada actual tal cual — data-pagosya-catalog con data-pagosya-filters data-filters-style="chips" (ordenar, color y talla) y data-es-cards={variant('cards', 'compact')} (import { variant } from './Shell'), para que las tarjetas de moda muestren sus tallas. El kit dibuja tarjetas, precios y el botón de agregar.
 - Un producto destacado: <div data-pagosya-spotlight="ID"></div> con un id real de los productos.
 - import { FeatureSlot } from './features' — secciones listas (preguntas, newsletter, marquee, pasos), como en la portada actual.
+- Preguntas frecuentes: <div className="es-biz__faq"><details><summary>Pregunta</summary><p>Respuesta</p></details>…</div> — ya tienen diseño (tarjetas, signo que gira); no les pongas clases ni estilos propios.
 - Clases de la plantilla en styles/globals.css (.es-section, .es-h2, .es-display, .es-link, …) y style={{…}} para tamaños y espacios.`;
 
 /** What every footer must keep: the platform fills these hooks (info pages, email signup) and the legal line. */

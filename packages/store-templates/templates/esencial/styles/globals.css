@@ -477,12 +477,27 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-biz__table th,.es-biz__table td{padding:16px 12px;text-align:left;border-bottom:1px solid color-mix(in srgb,var(--es-ink) 14%,transparent);vertical-align:top}
 .es-biz__table th{font-weight:500;width:40%}
 .es-section[data-es-section="faq"]{max-width:920px}
-.es-biz__faq details{border-bottom:1px solid color-mix(in srgb,var(--es-ink) 14%,transparent)}
-.es-biz__faq summary{display:flex;justify-content:space-between;gap:16px;padding:20px 0;font:400 20px/1.3 var(--es-heading);cursor:pointer;list-style:none}
-.es-biz__faq summary::-webkit-details-marker{display:none}
-.es-biz__faq summary::after{content:"+";font-family:var(--es-body)}
-.es-biz__faq details[open] summary::after{content:"\2212"}
-.es-biz__faq p{margin:0 0 20px}
+/* FAQ (owner 2026-10-30: «i like the faq but … it looks like plain html»): each question is a soft card in the store's colours,
+   a round brand-colour sign that turns, and the answer slides open. Bare <details> a writer leaves outside .es-biz__faq get it too. */
+.es-biz__faq{display:grid;gap:12px;max-width:880px;margin-top:clamp(24px,3vw,40px)}
+:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details)){max-width:880px;margin:0 0 12px;border-radius:calc(var(--es-radius,6px) * 2);background:color-mix(in srgb,var(--es-ink) 5%,var(--es-paper));transition:background-color .25s ease}
+.es-biz__faq details{margin:0}
+:is(h2,h3,[data-ui-reveal],.es-biz__head)+:is(:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details)),div:not([class*="es-"]):has(>details:not([class]))){margin-top:clamp(24px,3vw,40px)}
+:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details)):hover{background:color-mix(in srgb,var(--es-ink) 8%,var(--es-paper))}
+:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))[open]{background:color-mix(in srgb,var(--es-accent) 12%,var(--es-paper))}
+:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))>summary{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 22px 20px 26px;font:500 clamp(17px,1.5vw,21px)/1.3 var(--es-heading);color:var(--es-ink);cursor:pointer;list-style:none}
+:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))>summary::-webkit-details-marker{display:none}
+:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))>summary::marker{content:""}
+:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))>summary::after{content:"+";flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--es-accent);color:var(--es-on-accent);font:300 24px/1 var(--es-body);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))[open]>summary::after{transform:rotate(45deg)}
+:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))>summary:focus-visible{outline:2px solid var(--es-accent);outline-offset:3px;border-radius:inherit}
+:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))>:not(summary){margin:0;padding:0 26px 22px;max-width:64ch;line-height:1.6;color:color-mix(in srgb,var(--es-ink) 82%,var(--es-paper))}
+@supports (interpolate-size:allow-keywords){
+  :is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details)){interpolate-size:allow-keywords}
+  :is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))::details-content{height:0;overflow:clip;transition:height .35s ease,content-visibility .35s allow-discrete}
+  :is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))[open]::details-content{height:auto}
+}
+@media (prefers-reduced-motion:reduce){:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))::details-content,:is(.es-biz__faq details,main details:not([class]):not(:is([data-pagosya-catalog],[data-pagosya-filters],[data-pagosya-blog],[data-pagosya-spotlight],.es-biz__blog) details))>summary::after{transition:none}}
 .es-section[data-es-section="gallery"]{}
 .es-biz__gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .es-biz__gallery img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:var(--es-radius,6px)}
