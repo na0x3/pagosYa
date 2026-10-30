@@ -63,6 +63,14 @@ describe('store menu', () => {
     expect(discover).toContain('Contacto');
   });
 
+  // Owner 2026-10-30 («dropdown menus now dont have pictures»): a group the build wrote without tiles shows the first product
+  // photo of each category or collection its links point to.
+  it('a dropdown group without tiles shows a photo for each category it links to', async () => {
+    const { all } = await open({ menu: { style: 'dropdowns', groups: [{ label: 'Novias', links: [{ label: 'Vestidos', to: 'category:C1' }, { label: 'Sastrería', to: 'category:c2' }, { label: 'Vacía', to: 'category:empty' }, { to: 'all' }] }] } });
+    expect(all('.pym-tiles img').map(img => img.getAttribute('src'))).toEqual(['https://api.test/a.jpg', 'https://api.test/b.jpg']);
+    expect(all('.pym-tiles a').map(a => a.textContent.trim())).toEqual(['Vestidos', 'Sastrería']);
+  });
+
   it('shows tiles in the Studio preview, where photos are data URLs (live check 2026-10-21, NOA VARGAS)', async () => {
     const photo = 'data:image/jpeg;base64,/9j/AA==';
     const data = { ...DATA, items: DATA.items.map(entry => ({ ...entry, imageUrls: [photo] })) };

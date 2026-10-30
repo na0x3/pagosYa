@@ -120,6 +120,16 @@
     }
     return [shop, discover];
   }
+  /** The first product photo behind a «category:id», «collection:slug» or «collection:slug/category:id» link; '' otherwise. */
+  function storeMenuLinkPhoto(to) {
+    const match = /^(?:collection:([^/]+))?\/?(?:category:(.+))?$/.exec(to);
+    if (!match || (!match[1] && !match[2])) return '';
+    const collection = match[1] ? collections().find(c => c.slug === match[1]) : null;
+    if (match[1] && !collection) return '';
+    const ids = collection ? new Set(Array.isArray(collection.productIds) ? collection.productIds : []) : null;
+    const item = products().find(product => (!ids || ids.has(product.id)) && (!match[2] || product.categoryId === match[2]) && storeMenuPhoto((product.imageUrls || [])[0]));
+    return item ? storeMenuPhoto(item.imageUrls[0]) : '';
+  }
   /** Groups with every link, tile and footer resolved; a repeated label is shown once, and a group with no link left is dropped. */
   function resolveStoreMenuGroups(groups) {
     return (Array.isArray(groups) ? groups : []).slice(0, 4).map(group => {
@@ -129,7 +139,14 @@
         const target = storeMenuTarget(link.to);
         return target && (link.label || target.label) ? { href: target.href, label: String(link.label || target.label).slice(0, 28) } : null;
       }).filter(link => link && !seen.has(link.label.toLowerCase()) && seen.add(link.label.toLowerCase())).slice(0, 12);
-      const tiles = (Array.isArray(group.tiles) ? group.tiles : []).map(tile => { const target = storeMenuTarget(tile.to); return target && storeMenuPhoto(tile.image) ? { href: target.href, title: String(tile.title || target.label).slice(0, 28), image: tile.image } : null; }).filter(Boolean).slice(0, 3);
+      const named = (Array.isArray(group.tiles) ? group.tiles : []).map(tile => { const target = storeMenuTarget(tile.to); return target && storeMenuPhoto(tile.image) ? { href: target.href, title: String(tile.title || target.label).slice(0, 28), image: tile.image } : null; }).filter(Boolean).slice(0, 3);
+      // Owner 2026-10-30 («dropdown menus now dont have pictures»): a group written without tiles shows the first product photo
+      // of each category or collection its links point to, as the default menu does.
+      const tiles = named.length ? named : (Array.isArray(group.links) ? group.links : []).map(link => {
+        const target = typeof link.to === 'string' ? storeMenuTarget(link.to) : null;
+        const image = target ? storeMenuLinkPhoto(link.to) : '';
+        return target && image ? { href: target.href, title: String(link.label || target.label).slice(0, 28), image } : null;
+      }).filter(Boolean).slice(0, 3);
       const footerTarget = group.footer ? storeMenuTarget(group.footer.to) : null;
       return { label: String(group.label || '').slice(0, 28), links, tilesTitle: tiles.length ? String(group.tilesTitle || '') : '', tiles, footer: footerTarget ? { href: footerTarget.href, label: String(group.footer.label || footerTarget.label).slice(0, 28) } : null };
     }).filter(group => group.label && group.links.length);
