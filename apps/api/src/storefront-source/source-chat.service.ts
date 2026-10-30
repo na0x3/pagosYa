@@ -32,7 +32,8 @@ import { SourceConversationService, type SourceConversationDecision } from './so
 import { createHash } from 'node:crypto';
 import { sourceSiteContext } from './source-context';
 import { SourceProviderQuotaException } from './source-provider-error';
-import { MODEL_LIMIT_MERCHANT_FAILURE, merchantFacingSourceFailure } from './source-validation-error';
+import { MODEL_LIMIT, MODEL_LIMIT_MERCHANT_FAILURE, merchantFacingSourceFailure } from './source-validation-error';
+import { nextSourceFile } from './source-next';
 import { sourceRequestExecutionPrompt, sourceRequestProfile } from './source-request-profile';
 import { SendSourceMessageDto, type SourceMessageInput } from './dto/send-source-message.dto';
 import { sourceSitePurpose } from './source-site-purpose';
@@ -100,6 +101,8 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
  *  «i dont like sections like these»): what it adds carries a real photo on the store's light ground, never a dark text-only band. */
 export const PERSONAL_TOUCH_BRIEF = 'Toque personal para este negocio: agrega UNA sección que las variantes no tienen y que nazca de sus datos reales (por ejemplo «Lo que nos hace distintos» o una guía breve de uso), con una foto real de la tienda junto al texto y sobre el fondo claro de la tienda: nunca una banda oscura o negra solo de texto, ni filas de columnas de texto sueltas; UN detalle de firma pequeño dentro de una sección que ya existe (un sello con la ciudad o la idea del negocio, un subrayado dibujado en el titular o un separador propio) y, si una sección suena genérica, reescribe solo esa. No quites secciones, no cambies la estructura de store-data, no inventes datos, precios ni reseñas, no toques carrito ni pago.';
 /** Owner 2026-10-27: the polish after a new master store — one fill call that may change words and photo choices only. */
+/** Spec 2026-10-29: what the home writer is asked; the merchant's first message follows it. */
+const HOME_WRITER_BRIEF = 'Diseña la portada de esta tienda nueva al estilo de Amboras: titulares grandes, mucho recorrido, los colores de la marca, con sus fotos y productos reales.';
 export const MASTER_POLISH_BRIEF = 'Pulido automático de la tienda recién creada desde la plantilla. Conserva paleta, fuentes, variantes, menú y estructura. '
   + 'Revisa cada texto y reescribe solo los que suenan genéricos, repetidos o de relleno («una propuesta minimalista», «hecho con cuidado», '
   + 'la misma frase en dos secciones) con las palabras, productos, ciudad y datos reales del comercio; cada sección dice algo distinto. '
@@ -585,6 +588,23 @@ export class SourceChatService {
   /** Spec 2026-10-19 §3.1: a words/colours/fonts/photos change on a master store — one fill call, data only, seconds. */
   /** Owner 2026-10-27: the polish after a new master store. The base's content edit with the merchant's facts, keeping only words and
    *  photo choices; a failed fill or nothing to change keeps the base silently (PersonalTouchSkipped, like a failed touch). */
+  /** Spec 2026-10-29: the home page writer — generate() with execution.homeWriter: no conversation call, no planner. */
+  private async homeWriter(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, input: SourceMessageInput, previous: { snapshot: unknown }, budget: ReturnType<SourceGenerationService['newBudget']>) {
+    const before = previous.snapshot as unknown as SourceProjectSnapshot;
+    const revision = await this.generation.generate(merchantId, storeId, { revision: input.revision, brief: before.brief, instruction: input.instruction, model: input.model,
+      ...(input.assetUrls?.length ? { assetUrls: input.assetUrls } : {}) }, budget, [], workflow.report, { homeWriter: true, redesign: true, firstDesign: true });
+    if ('styleProposal' in revision) throw new Error('home writer: unexpected style proposal');
+    // Spec §1: the writer changes only the home and the theme block; anything else undoes the run.
+    const after = (await this.projects.version(merchantId, storeId, revision.revision)).snapshot as unknown as SourceProjectSnapshot;
+    const strayed = after.files.filter(file => nextSourceFile(file.path) && !['components/home.tsx', 'styles/globals.css', 'components/store-data.tsx'].includes(file.path)
+      && before.files.find(old => old.path === file.path)?.content !== file.content).map(file => file.path);
+    if (strayed.length) { await this.projects.restore(merchantId, storeId, input.revision, revision.revision); throw new Error(`home writer changed ${strayed.join(', ')}`); }
+    await workflow.finish('completed');
+    const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+      content: 'Diseñé una portada nueva para tu tienda, con tus fotos y tus productos. Revisa la vista previa.', metadata: { progress: workflow.value, sourceRevision: revision.revision } } });
+    return { userMessage, assistantMessage, revision };
+  }
+
   private async masterPolish(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, request: string, revision: number, previous: { snapshot: unknown } | null) {
     const snapshot = previous?.snapshot as SourceProjectSnapshot | undefined;
     if (!snapshot || snapshot.brief?.templateId !== MASTER_TEMPLATE_ID || !readsMasterData(snapshot.files)) throw new PersonalTouchSkipped('the store is no longer Esencial');
@@ -969,7 +989,12 @@ export class SourceChatService {
           revision, personalTouch: true, guardedTouch: true, ...(input.checklistWords ? { checklistWords: input.checklistWords } : {}), requestId: randomUUID(),
           model: (this.config.get<string>('app.yapiTouchModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] });
         const touchOn = this.config.get<boolean>('app.yapiGuardedTouch') === true;
-        const next = (revision: number) => touchOn ? touchFollowUp(revision) : input.checklistWords && this.checklistOn() ? checkFollowUp(revision) : undefined;
+        // Spec 2026-10-29: with the home writer on, the polished store goes to the writer; the check follows the writer.
+        const writerFollowUp = (revision: number): SourceMessageInput => ({ instruction: `${HOME_WRITER_BRIEF}${input.checklistWords ? `\n\nMensaje del comercio:\n${input.checklistWords}` : ''}`,
+          revision, personalTouch: true, homeWriter: true, firstDesign: true, redesign: true, ...(input.checklistWords ? { checklistWords: input.checklistWords } : {}), requestId: randomUUID(),
+          model: (this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-terra') as SourceMessageInput['model'] });
+        const writerOn = this.config.get<boolean>('app.yapiHomeWriter') === true;
+        const next = (revision: number) => writerOn ? writerFollowUp(revision) : touchOn ? touchFollowUp(revision) : input.checklistWords && this.checklistOn() ? checkFollowUp(revision) : undefined;
         // A polish with nothing to change (NOA on Atelier 2026-10-27) still hands the store to the check.
         const polished = await this.masterPolish(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous).catch(async error => {
           if (!(error instanceof PersonalTouchSkipped) || !next(current.revision)) throw error;
@@ -980,6 +1005,20 @@ export class SourceChatService {
         const polishedRevision = (polished as { revision?: { revision?: number } }).revision?.revision;
         const after = polishedRevision ? next(polishedRevision) : undefined;
         return after ? { ...polished, followUp: after } : polished;
+      }
+      if (input.homeWriter && previous) {
+        const checkAfter = (revision: number) => input.checklistWords && this.checklistOn() ? { instruction: 'Revisión del pedido', revision, personalTouch: true, briefCheck: 1 as const,
+          checklistWords: input.checklistWords, requestId: randomUUID(), model: 'auto' as const } satisfies SourceMessageInput : undefined;
+        let written: Awaited<ReturnType<SourceChatService['homeWriter']>>;
+        try { written = await this.homeWriter(merchantId, storeId, thread.id, userMessage, workflow, input, previous, budget); }
+        catch (error) {
+          // A spent quota goes back to the queue (FIRST_DESIGN_MAX_ATTEMPTS); anything else keeps the polished store as it is.
+          if (error instanceof SourceProviderQuotaException || MODEL_LIMIT.test(String((error as Error)?.message))) throw error;
+          this.productLogger.warn(JSON.stringify({ event: 'home_writer_kept_template', storeId, reason: String((error as Error)?.message).slice(0, 300) }));
+          throw new PersonalTouchSkipped('home writer kept the template', checkAfter(current.revision));
+        }
+        const after = checkAfter(written.revision.revision);
+        return after ? { ...written, followUp: after } : written;
       }
       if (input.briefCheck) return await this.briefCheck(merchantId, storeId, thread.id, userMessage, workflow, input, current.revision, previous);
       if (tappedChoice) return await this.useTemplate(merchantId, storeId, thread.id, userMessage, workflow, tappedChoice, setupDraft, allAssets, current.revision);
@@ -1387,6 +1426,13 @@ export class SourceChatService {
       return reply;
     } catch (error) {
       await workflow.finish('failed');
+      // Spec 2026-10-29: a skip that names its next step (the check after a skipped polish or a failed home writer) keeps it,
+      // and the home writer's spent quota goes back to the queue like any first design's.
+      if (input.personalTouch && error instanceof PersonalTouchSkipped && error.followUp) {
+        await this.prisma.storeAgentMessage.delete({ where: { id: userMessage.id } }).catch(() => undefined);
+        throw error;
+      }
+      if (input.homeWriter && (error instanceof SourceProviderQuotaException || MODEL_LIMIT.test(String((error as Error)?.message)))) throw error;
       // Variety spec §5: a failed personal touch keeps the first version and says nothing.
       if (input.personalTouch && !input.ownRequest) {
         await this.prisma.storeAgentMessage.delete({ where: { id: userMessage.id } }).catch(() => undefined);

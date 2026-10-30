@@ -3,6 +3,7 @@ import { randomUUID as uuid } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { withoutPhotoGroups, MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, OWN_REQUEST_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
+import { SourceProviderQuotaException } from './source-provider-error';
 import { sourceRequestContext } from './source-request-context';
 import { sourceMerchantRequest } from './source-merchant-request';
 import { sourceRequestProfile } from './source-request-profile';
@@ -782,4 +783,71 @@ it('a first build carries no family, effects, module or animated look, even for 
   expect(reads[0]).not.toHaveProperty('module');
   expect(reads[0]).not.toHaveProperty('animated');
   expect(out.assistantMessage.content).not.toContain('hazla animada');
+});
+
+// Spec 2026-10-29 home page writer: after the polish, a small agent rewrites only the home; a failed writer keeps the template.
+describe('the home page writer', () => {
+  let refill: jest.Mock, projects: any, briefChecklist: jest.Mock;
+  const shell = 'export default function Shell() { return null; }';
+  const storeData = 'export const store = {"name":"Café Buna","tagline":"","city":"","logo":"","phone":""} as const;\nexport const photos: Record<string, string> = {"hero":"https://x/h.jpg","story":""};\nexport const copy = {"headline":"Hecho con cuidado"} as const;\nexport const look = {"palette":"terracotta","fonts":"classic","colors":{}} as const;\n';
+  const files = (home: string, shellFile = shell) => [{ path: 'components/store-data.tsx', content: storeData },
+    { path: 'components/home.tsx', content: `import { copy, photos } from './store-data';\n${home}` }, { path: 'components/Shell.tsx', content: shellFile }, { path: 'styles/globals.css', content: 'body{}' }];
+  const snapshot = (home: string, shellFile?: string) => ({ snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files: files(home, shellFile) } });
+  beforeEach(() => {
+    refill = jest.fn().mockResolvedValue({ revision: 3, label: 'Pulido de YAPI' });
+    briefChecklist = jest.fn();
+    projects = { current: jest.fn().mockResolvedValue({ revision: 3 }), restore: jest.fn().mockResolvedValue({ revision: 5 }),
+      version: jest.fn().mockImplementation(async (_m: string, _s: string, revision: number) => revision >= 4 ? snapshot('export default function Home() { return 1; }') : snapshot('export default function Home() { return 0; }')) };
+    config.set('app.yapiBriefChecklist', true);
+    config.set('app.yapiHomeWriter', true);
+    chat = new SourceChatService(prisma, projects, generation(), { decide, fillMaster, briefChecklist } as any, { apply: jest.fn(), applyMaster, refill } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
+  });
+  const polish = () => chat.send('m1', 's1', { revision: 3, instruction: `${MASTER_POLISH_BRIEF}\n\nMensaje del comercio:\nCafé de altura`, personalTouch: true, polish: true, checklistWords: 'Café de altura', requestId: uuid() } as any) as Promise<any>;
+  const writer = () => chat.send('m1', 's1', { revision: 3, instruction: 'Diseña la portada', personalTouch: true, homeWriter: true, firstDesign: true, redesign: true, checklistWords: 'Café de altura', requestId: uuid(), model: 'gpt-5.6-terra' } as any) as Promise<any>;
+  const read = { headline: 'Café de altura, tostado en casa', changed: ['headline'], values: [], palette: 'oscuro', fonts: 'moderna', colors: {}, heroPhoto: -1, storyPhoto: -1 };
+
+  it('with the switch on, the polish hands the store to the writer, which carries the merchant\'s words', async () => {
+    fillMaster.mockResolvedValueOnce(read);
+    const out = await polish();
+    expect(out.followUp).toMatchObject({ homeWriter: true, firstDesign: true, redesign: true, revision: 3, model: 'gpt-5.6-terra', checklistWords: 'Café de altura' });
+    expect(out.followUp.briefCheck).toBeUndefined();
+  });
+  it('with the switch off, the polish goes straight to the check as before', async () => {
+    config.set('app.yapiHomeWriter', false);
+    fillMaster.mockResolvedValueOnce(read);
+    const out = await polish();
+    expect(out.followUp).toMatchObject({ briefCheck: 1, revision: 3 });
+    expect(out.followUp.homeWriter).toBeUndefined();
+  });
+  it('the writer runs generate() as the home writer, with no conversation step, and hands its revision to the check', async () => {
+    generate.mockResolvedValueOnce({ revision: 4, label: 'Portada de YAPI' });
+    const out = await writer();
+    expect(decide).not.toHaveBeenCalled();
+    expect(generate.mock.calls[0][6]).toMatchObject({ homeWriter: true, redesign: true, firstDesign: true });
+    expect(out.revision).toMatchObject({ revision: 4 });
+    expect(out.followUp).toMatchObject({ briefCheck: 1, revision: 4 });
+    expect(messages.filter(message => message.role === 'ASSISTANT')).toHaveLength(1);
+  });
+  it('a writer that fails keeps the polished store, says nothing and still queues the check', async () => {
+    generate.mockRejectedValueOnce(new Error('YAPI no pudo terminar la portada: steps'));
+    await expect(writer()).rejects.toMatchObject({ followUp: { briefCheck: 1, revision: 3 } });
+    await expect(Promise.resolve()).resolves.toBeUndefined();
+    expect(prisma.storeAgentMessage.delete).toHaveBeenCalled();
+    expect(messages.filter(message => message.role === 'ASSISTANT')).toHaveLength(0);
+  });
+  it('a polish with nothing to change still hands the store to the check (its follow-up survives the outer catch)', async () => {
+    config.set('app.yapiHomeWriter', false);
+    fillMaster.mockResolvedValueOnce({ ...read, changed: ['palette'] });
+    await expect(polish()).rejects.toMatchObject({ followUp: { briefCheck: 1, revision: 3 } });
+  });
+  it('a spent quota is not swallowed, so the job runner retries the first design', async () => {
+    generate.mockRejectedValueOnce(new SourceProviderQuotaException());
+    await expect(writer()).rejects.toBeInstanceOf(SourceProviderQuotaException);
+  });
+  it('a writer run that changed the header is undone, and the template stays', async () => {
+    generate.mockResolvedValueOnce({ revision: 4, label: 'Portada de YAPI' });
+    projects.version.mockImplementation(async (_m: string, _s: string, revision: number) => revision >= 4 ? snapshot('export default function Home() { return 1; }', 'export default function Shell() { return 2; }') : snapshot('export default function Home() { return 0; }'));
+    await expect(writer()).rejects.toBeInstanceOf(PersonalTouchSkipped);
+    expect(projects.restore).toHaveBeenCalledWith('m1', 's1', 3, 4);
+  });
 });

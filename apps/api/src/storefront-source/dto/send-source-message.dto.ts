@@ -65,5 +65,7 @@ export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolea
   checklistFix?: boolean;
   /** What that edit was asked to add, named in the chat when it could not. */
   checklistMissing?: string[];
+  /** Spec 2026-10-29: the home page writer that follows the polish of a new master store. */
+  homeWriter?: boolean;
   /** Owner 2026-10-27: the follow-up is a guarded personal touch (source-guarded-touch.ts). */
   guardedTouch?: boolean };
