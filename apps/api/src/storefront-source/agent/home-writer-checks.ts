@@ -41,6 +41,21 @@ export function evaluateHomeWriterRules(): string[] {
     const blank = bg.length < 3 || (page.length >= 3 && [0, 1, 2].every(i => Math.abs(bg[i] - page[i]) < 6));
     if (words && blank) out.push(`BLOQUEA: Sección de solo texto sobre fondo liso («${words.slice(0, 40)}»). Dale una foto real a su lado o muestra los productos (data-pagosya-catalog data-products="Nombre|Nombre"); si no queda una foto libre, quítala.`);
   }
+  // Live check 2026-10-30 (BOXY eajm1flt): a template class painted the cover title white on the light paper and nothing caught
+  // it. Words must read on what is really behind them; words over a photo are left to the eye.
+  // Nothing painted up to the root: the browser's white canvas.
+  const behind = (el: Element): number[] => { for (let node: Element | null = el; node; node = node.parentElement) { const fill = paint(node); if (fill.length >= 3) return fill; } return [255, 255, 255]; };
+  const overPhoto = (el: Element) => { const r = el.getBoundingClientRect(); const section = el.closest('section') ?? main;
+    for (let node: Element | null = el; node && node !== document.body; node = node.parentElement) if (getComputedStyle(node).backgroundImage !== 'none') return true;
+    return Array.from(section.querySelectorAll('img,video,picture')).some(media => { const m = media.getBoundingClientRect(); return m.width > 40 && m.left < r.right && m.right > r.left && m.top < r.bottom && m.bottom > r.top; }); };
+  const ratio = (a: number[], b: number[]) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  for (const el of Array.from(document.querySelectorAll('main h1, main h2, main p, footer h2, footer p'))) {
+    const words = (el.textContent || '').trim();
+    const r = el.getBoundingClientRect();
+    if (!words || r.width < 20 || r.height < 8 || el.closest(productish) || getComputedStyle(el).visibility === 'hidden' || overPhoto(el)) continue;
+    const colour = rgb(getComputedStyle(el).color);
+    if (colour.length >= 3 && ratio(colour, behind(el)) < 2.2) out.push(`BLOQUEA: Texto que no se lee sobre su fondo («${words.slice(0, 40)}»): dale un color de texto que contraste (var(--es-ink) sobre fondo claro) o pon un fondo de marca detrás.`);
+  }
   // Each photo once.
   const seen = new Map<string, number>();
   for (const el of photos) { const src = (el as HTMLImageElement).currentSrc || (el as HTMLImageElement).src || ''; if (src) seen.set(src, (seen.get(src) || 0) + 1); }
@@ -63,6 +78,26 @@ export function evaluateHomeWriterRules(): string[] {
     if (cover && box && box !== cover && box.getBoundingClientRect().width < 0.4 * cover.getBoundingClientRect().width) out.push('CONSEJO: El texto de la portada ocupa menos del 40 % del ancho; dale más espacio.');
   }
   return out;
+}
+
+/** Owner 2026-10-30 (BOXY «too shouty»): a calm brand's titles never show in capitals — written so, or by a template rule. Runs in the page. */
+export function evaluateCalmTitles(): string[] {
+  const out: string[] = [];
+  for (const el of Array.from(document.querySelectorAll('main h1, main h2, footer h2'))) {
+    const words = (el.textContent || '').replace(/\s+/g, ' ').trim();
+    const letters = words.replace(/[^\p{L}]/gu, '');
+    const r = el.getBoundingClientRect();
+    if (letters.length < 8 || words.split(' ').length < 2 || r.width < 20) continue;
+    if (getComputedStyle(el).textTransform === 'uppercase' || (letters === letters.toUpperCase() && letters !== letters.toLowerCase())) out.push(`BLOQUEA: Marca tranquila: el título «${words.slice(0, 40)}» se ve en mayúsculas. Escríbelo con mayúscula inicial y ponle style={{ textTransform: 'none' }}.`);
+  }
+  return out;
+}
+
+/** Owner 2026-10-30 («oh belly … plain still»): a fun store keeps something moving on the first screen — a floating or turning
+ *  piece, not only letters that bounce once. Runs in the page. */
+export function evaluatePlayfulCover(): string[] {
+  const moving = Array.from(document.querySelectorAll('main .ui-float, main .ui-sticker')).some(el => { const r = el.getBoundingClientRect(); return r.width > 20 && r.top < window.innerHeight && r.bottom > 0; });
+  return moving ? [] : ['BLOQUEA: Tienda divertida: en la primera pantalla nada se mueve sin parar. Pon un <Float> o un <Sticker> dentro de la portada (junto al titular o sobre la foto), visible sin bajar.'];
 }
 
 const HEADER = /^Encabezado/;

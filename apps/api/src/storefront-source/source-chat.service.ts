@@ -59,6 +59,7 @@ import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy } from './source-templates';
 import { instructionAsksStoreMenu, instructionOnlyAboutStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList } from './source-store-menu';
 import { readConfigFile } from './store-look';
+import { FOOTER_PATH, shellWithStoreFooter } from './agent/home-writer-tools';
 import { buildSuggestions, withRedesignOffer } from './source-suggestions';
 import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
@@ -598,8 +599,12 @@ export class SourceChatService {
     if ('styleProposal' in revision) throw new Error('home writer: unexpected style proposal');
     // Spec §1: the writer changes only the home and the theme block; anything else undoes the run.
     const after = (await this.projects.version(merchantId, storeId, revision.revision)).snapshot as unknown as SourceProjectSnapshot;
-    const strayed = after.files.filter(file => nextSourceFile(file.path) && !['components/home.tsx', 'styles/globals.css', 'components/store-data.tsx'].includes(file.path)
-      && before.files.find(old => old.path === file.path)?.content !== file.content).map(file => file.path);
+    // Owner 2026-10-30: the writer also writes the footer; the Shell may change only by pointing at it (live check BOXY eajm1flt
+    // was undone here because footer.tsx and the Shell counted as strays).
+    const swappedShell = (file: { path: string; content: string }) => { const old = before.files.find(entry => entry.path === file.path)?.content;
+      return file.path === 'components/Shell.tsx' && old !== undefined && shellWithStoreFooter(old) === file.content; };
+    const strayed = after.files.filter(file => nextSourceFile(file.path) && !['components/home.tsx', 'styles/globals.css', 'components/store-data.tsx', FOOTER_PATH].includes(file.path)
+      && !swappedShell(file) && before.files.find(old => old.path === file.path)?.content !== file.content).map(file => file.path);
     // Review I4: the product page, cart, checkout and account look live outside the components (config.js, brand.css, frame-draw.json).
     const look = (files: SourceProjectSnapshot['files']) => { const config = readConfigFile(files); const { display: _display, text: _text, ...dna } = (config.dna ?? {}) as Record<string, unknown>;
       // The fonts follow the writer's brand fonts on every page; the rest of the look is the template's.

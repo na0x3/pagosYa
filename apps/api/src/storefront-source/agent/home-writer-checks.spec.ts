@@ -1,15 +1,15 @@
 import { chromium, type Browser } from 'playwright';
-import { evaluateHomeWriterRules, homeWriterVerdict } from './home-writer-checks';
+import { evaluateCalmTitles, evaluateHomeWriterRules, evaluatePlayfulCover, homeWriterVerdict } from './home-writer-checks';
 
 // Spec 2026-10-29 home page writer §3: few checks block, the rest is advice.
 jest.setTimeout(60_000);
 let browser: Browser;
 beforeAll(async () => { browser = await chromium.launch({ headless: true }); });
 afterAll(async () => { await browser?.close(); });
-const rules = async (body: string, width = 1280) => {
+const rules = async (body: string, width = 1280, check: () => string[] = evaluateHomeWriterRules) => {
   const page = await browser.newPage({ viewport: { width, height: 900 } });
   await page.setContent(`<!doctype html><html><body style="margin:0;font-family:sans-serif">${body}</body></html>`);
-  const out = await page.evaluate(evaluateHomeWriterRules);
+  const out = await page.evaluate(check);
   await page.close();
   return out;
 };
@@ -76,5 +76,26 @@ describe('homeWriterVerdict', () => {
       'Ilustración sin color visible: assets/a.svg',
     ] }]);
     expect(v).toEqual({ blocking: [], advice: [] });
+  });
+});
+
+// Live check 2026-10-30: BOXY's cover title was white on its light paper and in capitals; Oh Belly's moving sticker sat below the fold.
+describe('the checks added 2026-10-30', () => {
+  it('blocks words that do not read on what is behind them, but not words over a photo', async () => {
+    const white = await rules(`<main style="background:#ebe6e2"><section style="height:500px"><h1 style="color:#fff">El volumen justo</h1></section>${product}</main>`);
+    expect(blocking(white).some(l => /no se lee/.test(l))).toBe(true);
+    const ink = await rules(`<main style="background:#ebe6e2"><section style="height:500px"><h1 style="color:#1b1d33">El volumen justo</h1></section>${product}</main>`);
+    expect(ink.some(l => /no se lee/.test(l))).toBe(false);
+    const overPhoto = await rules(`<main style="background:#ebe6e2"><section style="position:relative;height:500px">${img('333').replace('style="', 'style="position:absolute;inset:0;width:100%;height:100%;')}<h1 style="position:relative;color:#fff">Sobre la foto</h1></section>${product}</main>`);
+    expect(overPhoto.some(l => /no se lee/.test(l))).toBe(false);
+  });
+  it('blocks a calm brand\'s title shown in capitals, written so or by CSS, never a short name', async () => {
+    expect(await rules('<main><h1 style="text-transform:uppercase">El volumen justo</h1></main>', 1280, evaluateCalmTitles)).toHaveLength(1);
+    expect(await rules('<main><h2>HECHO EN LA PAZ</h2></main>', 1280, evaluateCalmTitles)).toHaveLength(1);
+    expect(await rules('<main><h1>El volumen justo</h1><h2>BOXY</h2></main>', 1280, evaluateCalmTitles)).toEqual([]);
+  });
+  it('a fun store needs a floating or turning piece on the first screen', async () => {
+    expect(await rules('<main><section style="height:1000px"><h1>Hola</h1></section><span class="ui-float" style="display:inline-block;width:80px;height:80px"></span></main>', 1280, evaluatePlayfulCover)).toHaveLength(1);
+    expect(await rules('<main><section style="height:800px"><h1>Hola</h1><span class="ui-sticker" style="display:inline-block;width:80px;height:80px"></span></section></main>', 1280, evaluatePlayfulCover)).toEqual([]);
   });
 });

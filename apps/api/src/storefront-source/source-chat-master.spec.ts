@@ -1,4 +1,5 @@
 import { BadGatewayException } from '@nestjs/common';
+import { shellWithStoreFooter } from './agent/home-writer-tools';
 import { randomUUID as uuid } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { withoutPhotoGroups, MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, OWN_REQUEST_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
@@ -852,6 +853,28 @@ describe('the home page writer', () => {
     projects.current.mockImplementation(async () => ({ revision: restored ? 5 : 3 }));
     projects.version.mockImplementation(async (_m: string, _s: string, revision: number) => revision >= 4 ? snapshot('export default function Home() { return 1; }', 'export default function Shell() { return 2; }') : snapshot('export default function Home() { return 0; }'));
     await expect(writer()).rejects.toMatchObject({ followUp: { briefCheck: 1, revision: 5 } });
+    expect(projects.restore).toHaveBeenCalledWith('m1', 's1', 3, 4);
+  });
+  // Owner 2026-10-30: the writer writes the footer; footer.tsx and the Shell's one-line swap to it are not strays (live check
+  // BOXY eajm1flt was undone here), while any other Shell change still is.
+  it('a writer run that wrote the footer and pointed the Shell at it is kept', async () => {
+    const templateShell = "import { store } from './store-data';\nexport default function Shell() { return <div><Footer /></div>; }";
+    const withFooter = (home: string, shellFile: string, footer?: string) => { const snap = snapshot(home, shellFile); if (footer) snap.snapshot.files.push({ path: 'components/footer.tsx', content: footer } as any); return snap; };
+    generate.mockResolvedValueOnce({ revision: 4, label: 'Portada de YAPI' });
+    projects.version.mockImplementation(async (_m: string, _s: string, revision: number) => revision >= 4
+      ? withFooter('export default function Home() { return 1; }', shellWithStoreFooter(templateShell)!, 'export default function StoreFooter() { return null; }')
+      : withFooter('export default function Home() { return 0; }', templateShell));
+    const out = await writer();
+    expect(out.revision).toMatchObject({ revision: 4 });
+    expect(projects.restore).not.toHaveBeenCalled();
+  });
+  it('a writer run that changed the Shell beyond the footer swap is still undone', async () => {
+    const templateShell = "import { store } from './store-data';\nexport default function Shell() { return <div><Footer /></div>; }";
+    generate.mockResolvedValueOnce({ revision: 4, label: 'Portada de YAPI' });
+    projects.version.mockImplementation(async (_m: string, _s: string, revision: number) => revision >= 4
+      ? snapshot('export default function Home() { return 1; }', shellWithStoreFooter(templateShell)!.replace('<div>', '<section>'))
+      : snapshot('export default function Home() { return 0; }', templateShell));
+    await expect(writer()).rejects.toBeDefined();
     expect(projects.restore).toHaveBeenCalledWith('m1', 's1', 3, 4);
   });
   // Review 2026-10-29 (I4): the product page, cart, checkout and account look live in config.js, brand.css and frame-draw.json.

@@ -181,7 +181,7 @@ describe('playful stores', () => {
     const b = await branded(extra({ playful: true, animated: true }));
     expect((await b.run('check', '{}')).output).toMatch(/Esta tienda es divertida/);
     const home = b.workspace.read(HOME_PATH).replace(/import \{([^}]*)\} from '@pagosya\/ui';/, "import {$1, Float, Sticker, ScrollScale, Marquee } from '@pagosya/ui';")
-      .replace('</main>', '<Float><Sticker>Nuevo sabor</Sticker></Float><Marquee items={["Burbujas"]} /><ScrollScale><p>Hola</p></ScrollScale></main>');
+      .replace(/(<main[^>]*>)/, '$1<Float><Sticker>Nuevo sabor</Sticker></Float>').replace('</main>', '<Marquee items={["Burbujas"]} /><ScrollScale><p>Hola</p></ScrollScale></main>');
     expect((await b.run('write_home', JSON.stringify({ content: home }))).output).toMatch(/compilada/);
     expect((await b.run('check', '{}')).output).not.toMatch(/divertida/);
   });

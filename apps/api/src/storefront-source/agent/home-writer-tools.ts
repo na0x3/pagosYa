@@ -5,7 +5,7 @@ import type { AgentLoopToolbox, AgentToolDefinition } from './agent-loop';
 import { agentPreviewSnapshot, captureAgentDraft, type AgentPreviewBase } from './agent-capture';
 import type { AgentStep } from './agent-tools';
 import type { AgentWorkspace } from './agent-workspace';
-import { evaluateHomeWriterRules, homeWriterVerdict } from './home-writer-checks';
+import { evaluateCalmTitles, evaluateHomeWriterRules, evaluatePlayfulCover, homeWriterVerdict } from './home-writer-checks';
 import { AMBIENT_PARTS, HOME_MOTION_BRIEF, ambientPartsUsed, motionPartsUsed } from '../home-directions';
 import { SHELL_PATH } from './agent-workspace';
 
@@ -146,7 +146,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
         case 'check': {
           const snapshot = await agentPreviewSnapshot(this.ctx.base, this.workspace.files());
           const captures: Array<{ width: number; errors: string[]; image: string; thumbnail?: string }> = [];
-          for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules]));
+          for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules, ...(this.ctx.calm ? [evaluateCalmTitles] : []), ...(this.ctx.playful ? [evaluatePlayfulCover] : [])]));
           const verdict = homeWriterVerdict(captures);
           // Review 2026-10-30: the merchant's progress shows the check's capture, now that screenshot calls are rare.
           step('check', 'Comprobando la portada', (captures[0] as { thumbnail?: string } | undefined)?.thumbnail);

@@ -58,7 +58,7 @@ export const HOME_PLAYFUL_BRIEF = `JUGUETÓN (esta tienda es divertida — dulce
 - <Sticker>Nuevo sabor</Sticker> — una calcomanía redonda del color de la marca que gira lento, sobre una foto o junto al titular (2 a 3 palabras).
 - <Wiggle>…</Wiggle> — se tambalea al pasar el mouse: botones, fotos de producto, tarjetas.
 - <BounceText>Burbujas felices</BounceText> — las letras del titular entran saltando una tras otra (solo en el h1 o un h2 corto).
-Portada con producto o foto, nunca solo texto sobre un color. Colores vivos pero un solo acento fuerte; movimiento alegre, nunca mareante.`;
+Al menos un <Float> o <Sticker> va DENTRO de la portada, visible sin bajar (check lo exige). Portada con producto o foto, nunca solo texto sobre un color. Colores vivos pero un solo acento fuerte; movimiento alegre, nunca mareante.`;
 
 const IDS = Object.keys(HOME_DIRECTIONS) as HomeDirectionId[];
 const FOOTER_IDS = Object.keys(HOME_FOOTERS) as HomeFooterId[];
