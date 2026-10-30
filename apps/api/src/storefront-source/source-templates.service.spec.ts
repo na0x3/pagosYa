@@ -355,6 +355,20 @@ describe('applyMaster with a plan', () => {
     expect(readMasterState(saved(projects)).variants).toMatchObject({ cards: 'fashion', pdp: 'fashion' });
   });
 
+  // Spec 2026-10-30 home writer variety: the writer's animated look reads the brand mood the first build saved.
+  it('saves the brand mood with the variants, under a plan and under the dice; no character is calm', async () => {
+    const bold = { tone: 'bold', temperature: 'warm', lead: 'photo', exclude: [] };
+    const planned = master();
+    await planned.templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Soda' }, character: bold } as any), undefined, { variants: {}, sections: [], palette: 'linen', fonts: planned.templates.registry.templateManifest('esencial')!.master!.fonts[0].id, dna: {} } as any);
+    expect(readMasterState(saved(planned.projects)).variants).toMatchObject({ mood: 'bold' });
+    const rolled = master();
+    await rolled.templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Soda' }, character: bold } as any));
+    expect(readMasterState(saved(rolled.projects)).variants).toMatchObject({ mood: 'bold' });
+    const plain = master();
+    await plain.templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Té' } }));
+    expect(readMasterState(saved(plain.projects)).variants).toMatchObject({ mood: 'calm' });
+  });
+
   it('without a plan the dice still rolls', async () => {
     const dice = jest.requireActual('./source-master-dice');
     const rollSpy = jest.spyOn(dice, 'rollVariants');

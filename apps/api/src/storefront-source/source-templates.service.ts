@@ -216,6 +216,8 @@ export class SourceTemplatesService {
     const animatedFonts = brandFont ? { fonts: brandFont } : {};
     const starterRoll = rolledStarter || askedMenu || (starterManifest && (Object.keys(own).length || animatedFonts.fonts)) ? { ...(rolledStarter ?? {}), ...animatedFonts,
       variants: { ...(rolledStarter?.variants ?? {}), ...(askedMenu ? { menu: askedMenu } : {}), ...(starterManifest ? own : {}) } as Partial<MasterVariants> } : undefined;
+    // Spec 2026-10-30 home writer variety: the brand mood rides with the variants; the writer's animated look reads it.
+    if (variants) variants = { ...variants, mood: fill?.character?.tone === 'bold' ? 'bold' : 'calm' } as unknown as MasterVariants;
     const { assembled } = await this.assemble(merchantId, storeId, starterManifest?.id ?? presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, files, variants, undefined, dna, starterRoll);
     const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.firstBuild(storeId);
