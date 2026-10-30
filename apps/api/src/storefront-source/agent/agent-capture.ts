@@ -42,7 +42,7 @@ export async function agentPreviewSnapshot(base: AgentPreviewBase, authored: Sou
   return new SourceProjectsService({} as any).prepare({ revision: 0, label: 'Borrador de YAPI', brief: base.brief, files } as any);
 }
 
-export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agentPreviewSnapshot>>, width: 1280 | 820 | 390, signal?: AbortSignal, entry = 'index.html', requirements: AgentRequirement[] = [], profile: ValidationProfile = 'normal', mediaPolicy?: SourceMediaPolicy): Promise<AgentShot> {
+export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agentPreviewSnapshot>>, width: 1280 | 820 | 390, signal?: AbortSignal, entry = 'index.html', requirements: AgentRequirement[] = [], profile: ValidationProfile = 'normal', mediaPolicy?: SourceMediaPolicy, extraChecks: Array<() => string[]> = []): Promise<AgentShot> {
   if (!/^[a-z0-9-]+\.html$/.test(entry) || !snapshot.files.some(f => f.path === entry)) throw new Error('La página solicitada no existe: ' + entry);
   const errors: string[] = [];
   let evidence: RequirementEvidence[] = [];
@@ -301,6 +301,8 @@ export async function captureAgentDraft(snapshot: Awaited<ReturnType<typeof agen
       evidence.push({ id:requirement.id, page:entry, width, profile, passed, detail });
       await page.goto(`https://preview.invalid/${entry}`, { waitUntil:'load', timeout:12000 });
     }
+    // Spec 2026-10-29: the home writer's own page rules.
+    for (const check of extraChecks) errors.push(...await page.evaluate(check));
     const shot = await page.screenshot({ type: 'png', fullPage: true, timeout: 12_000 });
     await page.close();
     return shot;
