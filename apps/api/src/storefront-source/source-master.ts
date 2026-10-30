@@ -83,6 +83,11 @@ export function paletteForBrand(settings: MasterSettings, rolled: string, colour
 export function masterColours(settings: MasterSettings, look: MasterLook) {
   const base = settings.palettes.find(p => p.id === look.palette) ?? settings.palettes[0];
   const merged = { paper: base.paper, ink: base.ink, muted: base.muted, accent: base.accent, deep: base.deep, ...look.colors };
+  return readableColours(merged);
+}
+
+/** Unreadable ink or muted are replaced; the accent and deep get their own readable text colour. */
+function readableColours(merged: Record<MasterColour, string>) {
   const ink = contrastRatio(merged.paper, merged.ink) >= 4.5 ? merged.ink : bestInkFor(merged.paper, merged.ink);
   // The footer, empty cart and hovers put ink on muted: a muted the ink cannot be read on becomes a tint of the paper.
   const muted = contrastRatio(merged.muted, ink) >= 4.5 ? merged.muted : mixHex(merged.paper, ink, 0.06);
@@ -96,15 +101,21 @@ const catalogFont = (id: string) => {
 };
 const face = (id: string) => { const font = catalogFont(id); return `@font-face{font-family:'${font.family}';src:url(assets/${font.id}.ttf) format('truetype');font-weight:${font.weights.replace('–', ' ')};font-display:swap}`; };
 
-export function masterThemeCss(settings: MasterSettings, look: MasterLook): string {
-  const pair = settings.fonts.find(f => f.id === look.fonts) ?? settings.fonts[0];
-  const c = masterColours(settings, look);
+/** Spec 2026-10-29 (home writer): the theme block from five colours and two catalog fonts. */
+export function masterThemeBlock(colours: Record<MasterColour, string>, headingFont: string, bodyFont: string): string {
+  const c = readableColours(colours);
   const vars = `:root{--es-paper:${c.paper};--es-ink:${c.ink};--es-muted:${c.muted};--es-accent:${c.accent};--es-deep:${c.deep};--es-on-accent:${c.onAccent};--es-on-deep:${c.onDeep};`
-    + `--es-heading:'${catalogFont(pair.heading).family}',Georgia,serif;--es-body:'${catalogFont(pair.body).family}',system-ui,sans-serif;`
+    + `--es-heading:'${catalogFont(headingFont).family}',Georgia,serif;--es-body:'${catalogFont(bodyFont).family}',system-ui,sans-serif;`
     + `--store-background:var(--es-paper);--store-foreground:var(--es-ink);--store-accent:var(--es-accent);--store-accent-foreground:var(--es-on-accent);`
     // Sort & filter styles spec 2026-10-21: kit pages (checkout fallback, info pages) read these, so they show the store's fonts.
     + `--store-heading-font:var(--es-heading);--store-body-font:var(--es-body)}`;
-  return [MASTER_THEME_START, face(pair.heading), pair.body !== pair.heading ? face(pair.body) : '', vars, MASTER_THEME_END].filter(Boolean).join('\n');
+  return [MASTER_THEME_START, face(headingFont), bodyFont !== headingFont ? face(bodyFont) : '', vars, MASTER_THEME_END].filter(Boolean).join('\n');
+}
+
+export function masterThemeCss(settings: MasterSettings, look: MasterLook): string {
+  const pair = settings.fonts.find(f => f.id === look.fonts) ?? settings.fonts[0];
+  const c = masterColours(settings, look);
+  return masterThemeBlock({ paper: c.paper, ink: c.ink, muted: c.muted, accent: c.accent, deep: c.deep }, pair.heading, pair.body);
 }
 
 export function withMasterTheme(css: string, block: string): string {
