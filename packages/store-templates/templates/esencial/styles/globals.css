@@ -492,6 +492,13 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-biz__pick{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
 .es-biz__pick img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:var(--es-radius,6px)}
 .es-biz__pick p{margin:8px 0 24px}
+/* Owner 2026-10-29 (DooBoo): words sections stand beside their own photo; the pick shows real products and hides when none match. */
+.es-biz__split{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(28px,5vw,72px);align-items:center}
+.es-biz__split-photo{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:var(--es-radius,6px)}
+.es-biz__split[data-es-side="end"] .es-biz__split-photo{order:2}
+.es-biz__split .es-biz__head{margin-bottom:24px}
+.es-biz[data-es-section="pick"]:has([data-pagosya-catalog][hidden]){display:none}
+@media (max-width:760px){.es-biz__split{grid-template-columns:1fr}.es-biz__split[data-es-side="end"] .es-biz__split-photo{order:0}}
 .es-section[data-es-section="visit"]{text-align:center}
 .es-biz__visit{display:grid;justify-items:center;gap:20px}
 .es-biz__city{margin:0;font:400 clamp(28px,4vw,44px)/1.1 var(--es-heading)}

@@ -10,10 +10,20 @@ export const bandPhotos: string[] = (() => {
   return [...(bands.duo?.halves ?? []).map(half => half.photo), bands.explore?.photo, bands.capsule?.photo, bands.origin?.photo].filter((src): src is string => Boolean(src));
 })();
 export const taken = (src: string | undefined) => !src || src === photos.hero || src === photos.story || bandPhotos.includes(src);
-export const pickPhoto = unique([photos.p1, photos.p2, photos.p3, photos.p4]).find(src => !taken(src));
-// The journal's lead note carries one photo the hero, story and pair story do not already show; the other notes are words only.
-export const notePhoto = unique([photos.p3, photos.p2, photos.p4]).find(src => !taken(src) && src !== pickPhoto);
-export const statementPhoto = unique([photos.p2, photos.p4, photos.p1, photos.p3]).find(src => !taken(src) && src !== pickPhoto && src !== notePhoto);
+// Owner 2026-10-29 (DooBoo «Sabores para descubrir»: «i dont like these sections of all text and blank background»): every words
+// section takes, in page order, the next photo nobody else shows — the products first, then the brand photos. The pick shows the
+// real products instead, FAQ, sizes, blog and gallery are what they are; a section left without a photo is not drawn.
+const WORDS = (sections as unknown as Array<{ id: string }>).map(section => section.id).filter(id => !['faq', 'sizes', 'blog', 'gallery', 'pick'].includes(id));
+const pool = unique(Object.keys(photos).filter(key => /^[pb]\d+$/.test(key)).sort((a, b) => a[0] === b[0] ? Number(a.slice(1)) - Number(b.slice(1)) : a[0] === 'p' ? -1 : 1)
+  .map(key => (photos as Record<string, string | undefined>)[key]));
+export const sectionPhotos: Record<string, string> = (() => {
+  const used = new Set<string>(), out: Record<string, string> = {};
+  for (const id of WORDS) { const src = pool.find(src => !taken(src) && !used.has(src)); if (src) { used.add(src); out[id] = src; } }
+  return out;
+})();
+/** Kept names for the sections that had their own photo before the plan above. */
+export const notePhoto = sectionPhotos.journal;
+export const statementPhoto = sectionPhotos.manifesto;
 
 
 // Owner 2026-10-29 («many photo | text, photo | text together — at least photo | text, text | photo»): the sections that put a photo
@@ -24,7 +34,7 @@ const storyLayout = String((variants as Record<string, unknown>).story ?? 'split
 const order: string[] = [
   ...(['split', 'pair'].includes(storyLayout) && photos.story ? ['story'] : []),
   ...['explore', 'capsule'].filter(id => featureIds.includes(id) && bandPhoto(id)),
-  ...(sections as unknown as Array<{ id: string }>).flatMap(section => section.id === 'pick' && pickPhoto ? ['pick'] : section.id === 'manifesto' && statementPhoto ? ['manifesto'] : []),
+  ...WORDS.filter(id => sectionPhotos[id]),
   ...(featureIds.includes('origin') && bandPhoto('origin') ? ['origin'] : []),
 ];
 /** «start»: the photo first; «end»: the photo after the words (desktop only — a phone always shows the photo first). */

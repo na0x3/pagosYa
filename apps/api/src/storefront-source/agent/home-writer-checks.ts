@@ -9,16 +9,37 @@ export function evaluateHomeWriterRules(): string[] {
   const visible = (el: Element) => { const r = (el as HTMLElement).getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 40 && r.height > 40 && s.display !== 'none' && s.visibility !== 'hidden' && Number(s.opacity) > 0.05; };
   const rgb = (value: string) => (value.match(/[\d.]+/g) || []).map(Number);
   const lum = (c: number[]) => [c[0], c[1], c[2]].map(v => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }).reduce((sum, x, i) => sum + x * [0.2126, 0.7152, 0.0722][i], 0);
+  // A band's colour: its background, or the colour of a full-bleed border-image gradient (how Esencial paints its bands).
+  const paint = (el: Element): number[] => {
+    const style = getComputedStyle(el);
+    const bg = rgb(style.backgroundColor);
+    if (bg.length >= 3 && !(bg.length > 3 && bg[3] < 0.5)) return bg;
+    const image = /rgba?\([^)]*\)/.exec(style.borderImageSource || '');
+    const fill = image ? rgb(image[0]) : [];
+    return fill.length >= 3 && !(fill.length > 3 && fill[3] < 0.5) ? fill : [];
+  };
   const photos = Array.from(main.querySelectorAll('img,video')).filter(el => visible(el) && !el.closest(productish) && !el.closest('header,footer'));
 
   // A band painted near-black (neutral and dark) that carries only words: owner rule 2026-10-22. Brand colours pass.
   for (const band of Array.from(main.children)) {
     if (!visible(band) || band.matches(productish)) continue;
-    const bg = rgb(getComputedStyle(band).backgroundColor);
-    if (bg.length < 3 || (bg.length > 3 && bg[3] < 0.5)) continue;
+    const bg = paint(band);
+    if (bg.length < 3) continue;
     const neutral = Math.max(bg[0], bg[1], bg[2]) - Math.min(bg[0], bg[1], bg[2]) < 24;
     const words = (band.textContent || '').trim();
     if (neutral && lum(bg) < 0.05 && !band.querySelector('img,video,picture') && words) out.push(`BLOQUEA: Banda oscura solo con texto («${words.slice(0, 40)}»). Dale una foto real, un fondo claro o el color de la marca.`);
+  }
+  // Owner 2026-10-29 (DooBoo «Sabores para descubrir»): no section of only words on a light background either. The cover, FAQ
+  // accordions, tables, forms, the store's articles and anything with products or photos are not that.
+  const bands = Array.from(main.children).filter(visible);
+  for (const band of bands.slice(1)) {
+    if (band.matches(productish) || band.querySelector(`img,video,picture,details,table,form,[data-pagosya-blog],${productish}`)) continue;
+    const words = (band.textContent || '').trim();
+    // «Blank»: the band shows the page's own background (transparent, or painted the same colour as the page).
+    const bg = paint(band);
+    const page = rgb(getComputedStyle(document.body).backgroundColor);
+    const blank = bg.length < 3 || (page.length >= 3 && [0, 1, 2].every(i => Math.abs(bg[i] - page[i]) < 6));
+    if (words && blank) out.push(`BLOQUEA: Sección de solo texto sobre fondo liso («${words.slice(0, 40)}»). Dale una foto real a su lado o muestra los productos (data-pagosya-catalog data-products="Nombre|Nombre"); si no queda una foto libre, quítala.`);
   }
   // Each photo once.
   const seen = new Map<string, number>();

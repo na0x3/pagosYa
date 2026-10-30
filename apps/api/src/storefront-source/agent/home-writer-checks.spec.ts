@@ -33,6 +33,23 @@ describe('evaluateHomeWriterRules', () => {
     expect(blocking(await rules('<main><section><h1>Hola</h1></section></main>')).some(l => /ningún producto/i.test(l))).toBe(true);
     expect(blocking(await rules('<main><section><h1 style="font-size:96px">Hola</h1></section><div data-pagosya-catalog></div></main>'))).toEqual([]);
   });
+  // Owner 2026-10-29 (DooBoo «Sabores para descubrir»): no section of only words on a plain light background either.
+  it('blocks a light section of only words; the cover, FAQ, forms, products and photo sections pass', async () => {
+    const cover = '<section><h1 style="font-size:96px">Hola</h1></section>';
+    const words = '<section style="height:300px"><h2>Sabores para descubrir</h2><h3>Clásico</h3><p>Gelato de tofu clásico.</p></section>';
+    expect(blocking(await rules(`<main>${cover}${words}${product}</main>`)).some(l => /solo texto/i.test(l))).toBe(true);
+    const fine = [`<section style="height:300px"><h2>Preguntas</h2><details><summary>¿Envíos?</summary><p>Sí.</p></details></section>`,
+      `<section style="height:300px"><h2>Novedades</h2><form><input type="email"></form></section>`,
+      `<section style="height:300px"><h2>Historia</h2>${img('444')}<p>Desde 2019.</p></section>`];
+    expect(blocking(await rules(`<main>${cover}${fine.join('')}${product}</main>`)).filter(l => /solo texto/i.test(l))).toEqual([]);
+    // A band in the brand's colour is not the plain page (owner allowed Amboras's green and ochre bands).
+    const tinted = '<section style="height:300px;background:#e3cdd3"><h2>Lo que nos importa</h2><p>Hecho a mano.</p></section>';
+    expect(blocking(await rules(`<main>${cover}${tinted}${product}</main>`)).filter(l => /solo texto/i.test(l))).toEqual([]);
+    // Esencial paints its full-width bands with border-image, not background-color: the colour is read from either.
+    const painted = (colour: string) => `<section style="height:300px;border-image:conic-gradient(${colour} 0 0) fill 0//0 100vw"><h2>Lo que nos importa</h2><p>Hecho a mano.</p></section>`;
+    expect(blocking(await rules(`<main>${cover}${painted('#e3cdd3')}${product}</main>`))).toEqual([]);
+    expect(blocking(await rules(`<main>${cover}${painted('#111111')}${product}</main>`)).some(l => /banda oscura/i.test(l))).toBe(true);
+  });
   it('advises on a small headline and a short page at desktop width only', async () => {
     const small = await rules(`<main><section><h1 style="font-size:40px">Hola</h1></section>${product}</main>`);
     expect(small.some(l => l.startsWith('CONSEJO: ') && /72/.test(l))).toBe(true);

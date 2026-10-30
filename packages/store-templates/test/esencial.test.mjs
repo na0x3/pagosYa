@@ -191,11 +191,32 @@ test('the home grid shows at most two rows, «Ver todo» has the rest', () => {
 });
 
 test('no photo twice on the home: business sections skip the photos the feature bands and each other already show', () => {
-  const home = file('components/photo-plan.tsx');
-  assert.match(home, /import \{[^}]*\bfeatures\b[^}]*\} from '\.\/store-data'/);
-  assert.match(home, /const bandPhotos: string\[\] = /);
-  assert.match(home, /const pickPhoto = unique\(\[photos\.p1, photos\.p2, photos\.p3, photos\.p4\]\)\.find\(src => !taken\(src\)\)/);
-  assert.match(home, /const statementPhoto = unique\(\[photos\.p2, photos\.p4, photos\.p1, photos\.p3\]\)\.find\(src => !taken\(src\) && src !== pickPhoto && src !== notePhoto\)/);
+  const plan = file('components/photo-plan.tsx');
+  assert.match(plan, /import \{[^}]*\bfeatures\b[^}]*\} from '\.\/store-data'/);
+  assert.match(plan, /const bandPhotos: string\[\] = /);
+  // Each text section takes the next photo nobody else shows, in page order; the gallery skips them too.
+  assert.match(plan, /export const sectionPhotos: Record<string, string> = /);
+  assert.match(plan, /!taken\(src\) && !used\.has\(src\)/);
+  assert.match(file('components/home.tsx'), /const gallery = unique\([^;]*\.filter\(src => [^;]*!Object\.values\(sectionPhotos\)\.includes\(src\)/);
+});
+
+// Owner 2026-10-29 (DooBoo «Sabores para descubrir»: «i dont like these sections of all text and blank background»).
+test('no business section is only words on the plain paper: a photo beside it, the real products, or not drawn', () => {
+  const home = file('components/home.tsx');
+  // The pick shows the merchant's real products (the kit's cards, by name), never a list of names; an unmatched set hides the section.
+  assert.match(home, /id === 'pick' \? <div className="es-grid"[^>]*data-pagosya-catalog data-products=\{items\.map\(item => item\.title\)\.join\('\|'\)\}/);
+  assert.match(file('styles/globals.css'), /\.es-biz\[data-es-section="pick"\]:has\(\[data-pagosya-catalog\]\[hidden\]\)\{display:none\}/);
+  // Every other words-only section needs its own photo, or is left out; FAQ, sizes, blog and the gallery are what they are.
+  assert.match(home, /const WORDS_ONLY_OK = \['faq', 'sizes', 'blog', 'gallery', 'pick'\]/);
+  assert.match(home, /if \(!WORDS_ONLY_OK\.includes\(id\) && !photo\) return null;/);
+  assert.match(home, /className="es-biz__split" data-es-side=\{photoSide\(id\)\}/);
+  assert.match(file('styles/globals.css'), /\.es-biz__split\{/);
+});
+
+test('the values band never sits on the plain page (owner 2026-10-29: no words on a blank background)', () => {
+  const home = file('components/home.tsx');
+  assert.match(home, /const valuesBand = valuesTone && valuesTone !== 'paper' \? valuesTone : beforeValues === 'muted' \? \(closing === 'accent' \? 'deep' : 'accent'\) : 'muted';/);
+  assert.match(home, /data-es-band=\{valuesBand\}/);
 });
 
 // Owner 2026-10-29 («most lack marquesines moving»): the moving band of the store's values shows on every store that has values,
@@ -210,7 +231,7 @@ test('the values marquee shows whenever the store has values', () => {
 test('sections with a photo beside words take turns, photo first then words first', () => {
   const plan = file('components/photo-plan.tsx');
   assert.match(plan, /export const photoSide = \(id: string\): 'start' \| 'end' => order\.indexOf\(id\) % 2 === 1 \? 'end' : 'start'/);
-  for (const [path, id] of [['components/home.tsx', 'story'], ['components/home.tsx', 'pick'], ['components/home.tsx', 'manifesto'], ['components/features.tsx', 'capsule'], ['components/features.tsx', 'origin'], ['components/features.tsx', 'explore']])
+  for (const [path, id] of [['components/home.tsx', 'story'], ['components/home.tsx', 'manifesto'], ['components/features.tsx', 'capsule'], ['components/features.tsx', 'origin'], ['components/features.tsx', 'explore']])
     assert.match(file(path), new RegExp(`data-es-side=\\{photoSide\\('${id}'\\)\\}`), `${path} ${id}`);
   assert.match(file('styles/globals.css'), /\.es-origin\[data-es-side="end"\] \.es-origin__figure>img\{order:2\}/);
 });
