@@ -1,7 +1,8 @@
 import { templateManifest, templateSourceFiles } from '@pagosya/store-templates';
 import { templateDemoRevision } from './source-templates';
 import { nextSourceFile } from './source-next';
-import { homeWriterDna, homeWriterInstructions, homeWriterLimits, runHomeWriterLoop, runHomeWriterStage } from './source-home-writer-stage';
+import { homeWriterDna, homeWriterInstructions, homeWriterLimits, homeWriterTask, runHomeWriterLoop, runHomeWriterStage } from './source-home-writer-stage';
+import { HOME_DIRECTIONS } from './home-directions';
 import { HOME_PATH, HOME_WRITER_LIMITS } from './agent/home-writer-tools';
 import { masterThemeBlock, withMasterTheme } from './source-master';
 import { SOURCE_FONT_IDS } from './source-font-catalog';
@@ -88,5 +89,20 @@ describe('homeWriterDna', () => {
     expect(homeWriterDna(previous, one)).toMatchObject({ display: SOURCE_FONT_IDS[2], text: SOURCE_FONT_IDS[2], border: 'hairline' });
     expect(homeWriterDna(previous, 'body{}')).toEqual(previous);
     expect(homeWriterDna(undefined, 'body{}')).toBeUndefined();
+  });
+});
+
+// Spec 2026-10-30 home writer variety: the task carries the store's direction, what recent stores used, and motion only when animated.
+describe('homeWriterTask', () => {
+  const avoid = { fonts: ['Fraunces', 'Gloock'], papers: ['#f4efe6'] };
+  it('carries the direction brief and the recent looks to avoid', () => {
+    const task = homeWriterTask({ instruction: 'Diseña la portada', storeName: 'Oh Belly', direction: 'lookbook', animated: false, avoid });
+    expect(task).toContain(HOME_DIRECTIONS.lookbook);
+    expect(task).toMatch(/Fraunces[\s\S]*Gloock/);
+    expect(task).toContain('#f4efe6');
+    expect(task).not.toContain('MOVIMIENTO');
+  });
+  it('adds the motion brief only to an animated store', () => {
+    expect(homeWriterTask({ instruction: 'x', storeName: 'y', direction: 'bandas', animated: true, avoid: { fonts: [], papers: [] } })).toContain('MOVIMIENTO');
   });
 });

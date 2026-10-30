@@ -1,5 +1,5 @@
 import { BadGatewayException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { AgentWorkspace } from './agent/agent-workspace';
 import { agentWallWithin, runAgent, type AgentModel, type AGENT_LIMITS } from './agent/agent-loop';
@@ -13,6 +13,9 @@ import { nextSourceFile } from './source-next';
 import { sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
 import type { AgentStageContext } from './source-agent-stage';
 import { readConfigFile } from './store-look';
+import { HOME_DIRECTIONS, HOME_MOTION_BRIEF, parseHomeDirection, pickHomeDirection, type HomeDirectionChoice, type HomeDirectionId } from './home-directions';
+import { recentLooks } from './source-recent-looks';
+import { readMasterState } from './source-templates';
 import { MASTER_THEME_END, MASTER_THEME_START } from './source-master';
 
 /** Spec 2026-10-29 §2–3: Amboras's recipe, our rules. */
@@ -28,7 +31,30 @@ Productos, precios, fotos y logo vienen de './store-data'. Los consejos de check
 }
 
 type LoopInput = { model: AgentModel; files: SourceProjectFileDto[]; base: AgentPreviewBase; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; task: string;
-  images?: unknown[]; signal?: AbortSignal; limits?: Partial<typeof AGENT_LIMITS>; onStep?: (step: AgentStep) => void | Promise<void> };
+  images?: unknown[]; signal?: AbortSignal; limits?: Partial<typeof AGENT_LIMITS>; onStep?: (step: AgentStep) => void | Promise<void>; animated?: boolean };
+
+/** Spec 2026-10-30 home writer variety: the writer's task — the merchant's words, the store's page direction, what the last
+ *  stores already used, and the motion brief only for an animated store. */
+export function homeWriterTask(input: { instruction: string; storeName: string; direction: HomeDirectionId; animated: boolean; avoid: { fonts: string[]; papers: string[] } }): string {
+  const avoid = [input.avoid.fonts.length ? `fuentes de titular ${input.avoid.fonts.join(', ')}` : '', input.avoid.papers.length ? `colores de fondo ${input.avoid.papers.join(', ')}` : ''].filter(Boolean).join('; ');
+  return [input.instruction, `Tienda: ${input.storeName}`, HOME_DIRECTIONS[input.direction],
+    avoid ? `Las últimas tiendas ya usaron ${avoid}: elige otra fuente de titular y otro fondo que también vayan con esta marca.` : '',
+    input.animated ? HOME_MOTION_BRIEF : 'Movimiento: tranquilo — solo <Reveal> y, como mucho, un <Parallax>.'].filter(Boolean).join('\n\n');
+}
+
+/** The page directions of the last stores that have one, newest first (their latest revision's home-direction.json). */
+async function recentHomeDirections(prisma: { $queryRaw: (query: Prisma.Sql) => Promise<unknown> }, storeId: string): Promise<HomeDirectionId[]> {
+  try {
+    const rows = await prisma.$queryRaw(Prisma.sql`
+      SELECT v."storeId" AS "storeId", (SELECT f->>'content' FROM jsonb_array_elements(v.snapshot->'files') f WHERE f->>'path' = 'home-direction.json' LIMIT 1) AS data
+      FROM "StoreSourceVersion" v
+      WHERE v."storeId" <> ${storeId} AND v.snapshot->'files' @> '[{"path":"home-direction.json"}]'::jsonb
+      ORDER BY v."createdAt" DESC LIMIT 40`) as Array<{ storeId: string; data: string | null }>;
+    const seen = new Set<string>(), out: HomeDirectionId[] = [];
+    for (const row of rows) { if (seen.has(row.storeId)) continue; seen.add(row.storeId); const choice = parseHomeDirection(row.data ?? undefined); if (choice) out.push(choice.direction); }
+    return out.slice(0, 6);
+  } catch { return []; }
+}
 
 /** Live check 2026-10-29 (PEPPA): the store's look (product page, cards, cart, checkout) stays the previous revision's; only the
  *  fonts follow the ones the writer chose in the theme block (heading face first, body second). */
@@ -48,7 +74,7 @@ export function homeWriterLimits(chatgptPlan: boolean, runDeadline: number, now 
 /** The writer's loop on its own: testable without a generation run. */
 export async function runHomeWriterLoop(input: LoopInput) {
   const workspace = new AgentWorkspace(input.files, { redesign: true, lockedShell: true });
-  const toolbox = new HomeWriterToolbox({ workspace, base: input.base, gate: input.gate, ...(input.signal ? { signal: input.signal } : {}) });
+  const toolbox = new HomeWriterToolbox({ workspace, base: input.base, gate: input.gate, ...(input.signal ? { signal: input.signal } : {}), ...(input.animated ? { animated: true } : {}) });
   const outcome = await runAgent({ model: input.model, toolbox, tools: HOME_WRITER_TOOLS, verifyTool: 'check', instructions: homeWriterInstructions(), signal: input.signal, onStep: input.onStep,
     limits: { ...HOME_WRITER_LIMITS, ...input.limits }, opening: agentOpening(input.task, input.files.filter(file => file.path === HOME_PATH), input.images ?? []) });
   // A run that changed nothing is not a new design (review 2026-10-29): the store keeps its template home and says nothing.
@@ -63,9 +89,15 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
   const { prisma, config, metering, storeId, runId, dto, plan, provider, apiKey, agentProvider, budget, signal, attempts, progress, previousFiles, oldFiles, assets, images, data, chatgptPlan, started, runTimeout } = facts;
   await progress?.('building');
   const base: AgentPreviewBase = { brief: dto.brief, files: [...previousFiles.filter(file => !assets.some(asset => asset.path === file.path)), ...assets] };
+  // Spec 2026-10-30: the store's page direction — reused when this store already has one, else picked against the last stores.
+  const master = readMasterState(previousFiles);
+  const variants = (master.variants ?? {}) as Record<string, unknown>;
+  const choice: HomeDirectionChoice = parseHomeDirection(previousFiles.find(file => file.path === 'home-direction.json')?.content)
+    ?? pickHomeDirection({ seed: storeId, recent: await recentHomeDirections(prisma as never, storeId), fashion: variants.cards === 'fashion', mood: variants.mood === 'bold' ? 'bold' : 'calm' });
+  const looks = await recentLooks(prisma as never, storeId, 6).catch(() => []);
   // The same acceptance chain every build passes, in its lenient form (artwork and edit-scope rules are for chat edits).
   const gate = async (files: SourceProjectFileDto[]) => {
-    live.generated = { label: 'Portada de YAPI', files: files.map(file => ({ ...file })) };
+    live.generated = { label: 'Portada de YAPI', files: [...files.filter(file => file.path !== 'home-direction.json').map(file => ({ ...file })), { path: 'home-direction.json', content: JSON.stringify(choice) }] };
     live.keptDna = homeWriterDna(readConfigFile(previousFiles).dna, files.find(file => file.path === 'styles/globals.css')?.content ?? '');
     live.lenient = true;
     try { await acceptCandidate(); return null; }
@@ -84,8 +116,9 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
     : openAiAgentModel({ endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: effort, signal, onTurn,
       // Every turn resends the transcript; a stable key lets the provider bill that prefix at the cached rate (review 2026-10-29).
       promptCacheKey: sourcePromptCacheKey('home-writer', homeWriterInstructions(), storeId) });
-  const task = `${dto.instruction}\n\nTienda: ${(data as { storeName?: string }).storeName ?? ''}`;
-  const out = await runHomeWriterLoop({ model, files: oldFiles.filter(file => nextSourceFile(file.path)), base, gate, task, signal, limits: homeWriterLimits(chatgptPlan, started + runTimeout),
+  const task = homeWriterTask({ instruction: dto.instruction, storeName: (data as { storeName?: string }).storeName ?? '', direction: choice.direction, animated: choice.animated,
+    avoid: { fonts: [...new Set(looks.map(look => look.heading).filter((font): font is string => Boolean(font)))], papers: [...new Set(looks.map(look => look.paper).filter((paper): paper is string => Boolean(paper)))] } });
+  const out = await runHomeWriterLoop({ model, files: oldFiles.filter(file => nextSourceFile(file.path)), base, gate, task, signal, animated: choice.animated, limits: homeWriterLimits(chatgptPlan, started + runTimeout),
     images: images.map(image => ({ ...(image as object), detail: 'low' })),
     onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); } });
   if (!out.accepted) throw new BadGatewayException(`YAPI no pudo terminar la portada${out.outcome.reason ? `: ${out.outcome.reason}` : ''}`);

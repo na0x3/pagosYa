@@ -81,6 +81,17 @@ describe('HomeWriterToolbox', () => {
     await b.run('write_home', JSON.stringify({ content: home.replace(/ data-pagosya-filters data-filters-style="chips"/g, '') }));
     expect((await b.run('check', '{}')).output).toMatch(/Debes corregir:[\s\S]*ordenar/);
   });
+  // Spec 2026-10-30 home writer variety: the kit's motion parts are offered only to an animated store, and advised when unused.
+  it('an animated store reads the motion parts and is advised to use three; a still store never sees them', async () => {
+    const authored = base.files.filter(f => nextSourceFile(f.path));
+    const animated = new HomeWriterToolbox({ workspace: new AgentWorkspace(authored, { redesign: true, lockedShell: true }), base, gate: async () => null, animated: true });
+    expect((await animated.run('read_chassis', '{}')).output).toContain('ScrollScale');
+    expect((await box().run('read_chassis', '{}')).output).not.toContain('ScrollScale');
+    await branded(animated);
+    expect((await animated.run('check', '{}')).output).toMatch(/Consejos[\s\S]*menos de 3 movimientos/);
+    const still = await branded(box());
+    expect((await still.run('check', '{}')).output).not.toMatch(/movimientos/);
+  });
   it('stops screenshots after four', async () => {
     const b = box();
     for (let i = 0; i < 4; i++) expect((await b.run('screenshot', JSON.stringify({ width: 390 }))).image).toBeTruthy();

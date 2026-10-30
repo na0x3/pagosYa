@@ -6,6 +6,7 @@ import { agentPreviewSnapshot, captureAgentDraft, type AgentPreviewBase } from '
 import type { AgentStep } from './agent-tools';
 import type { AgentWorkspace } from './agent-workspace';
 import { evaluateHomeWriterRules, homeWriterVerdict } from './home-writer-checks';
+import { HOME_MOTION_BRIEF, motionPartsUsed } from '../home-directions';
 
 /* Spec 2026-10-29 home page writer: Amboras's recipe on the locked Esencial chassis — one home file and the tokens. */
 export const HOME_PATH = 'components/home.tsx';
@@ -40,7 +41,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
   finished: { summary: string } | null = null;
   stopped = null;
   private shots = 0;
-  constructor(private readonly ctx: { workspace: AgentWorkspace; base: AgentPreviewBase; signal?: AbortSignal; gate: (files: SourceProjectFileDto[]) => Promise<string | null> }) {}
+  constructor(private readonly ctx: { workspace: AgentWorkspace; base: AgentPreviewBase; signal?: AbortSignal; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; /** Spec 2026-10-30: the store's home is animated. */ animated?: boolean }) {}
   get workspace() { return this.ctx.workspace; }
   draftIsClean() { return Boolean(this.lastVerify?.clean && this.lastVerify.version === this.workspace.version); }
 
@@ -78,6 +79,8 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules]));
           const verdict = homeWriterVerdict(captures);
           // Owner 2026-10-29 («things like color picker, sorter»): the home's product grid keeps the kit's sort and filter chips.
+          // Spec 2026-10-30: an animated store is reminded, never blocked, when it moves fewer than three parts.
+          if (this.ctx.animated && motionPartsUsed(this.workspace.read(HOME_PATH)).length < 3) verdict.advice.push('La portada animada usa menos de 3 movimientos del kit (ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase, scrollGrow).');
           if (!/data-pagosya-catalog[^>]*data-pagosya-filters|data-pagosya-filters[^>]*data-pagosya-catalog/.test(this.workspace.read(HOME_PATH))) verdict.blocking.push('La grilla de productos perdió ordenar y filtrar por color y talla: deja data-pagosya-filters data-filters-style="chips" en el elemento data-pagosya-catalog, como en la portada de la plantilla.');
           this.lastVerify = { version: this.workspace.version, clean: !verdict.blocking.length, hard: verdict.blocking.length > 0 };
           return { output: [verdict.blocking.length ? `Debes corregir:\n- ${verdict.blocking.join('\n- ')}` : 'Nada que corregir.',
@@ -119,7 +122,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
     const exported = [...data.matchAll(/export const (\w+)/g)].map(match => match[1]);
     const photos = this.ctx.base.files.filter(file => file.path.startsWith('assets/') && /\.(jpe?g|png|webp|mp4)$/i.test(file.path)).map(file => file.path);
     const fonts = SOURCE_FONT_CATALOG.map(font => `${font.id} (${font.family}, ${font.role})`).join(', ');
-    return [KIT_BRIEF,
+    return [KIT_BRIEF, ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []),
       `import { … } from './store-data' — exporta: ${exported.join(', ')}. Productos, precios, fotos y logo salen de ahí; nunca los escribas a mano.`,
       `Archivos de fotos: ${photos.join(', ') || 'ninguno (portada solo tipográfica)'}`,
       `fuentes: ${fonts}`,

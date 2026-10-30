@@ -871,6 +871,18 @@ describe('the home page writer', () => {
     expect(projects.restore).not.toHaveBeenCalled();
     expect(out.revision).toMatchObject({ revision: 4 });
   });
+  // Spec 2026-10-30: the writer saves its page direction beside the home; that file is not a stray change.
+  it('a writer run that saved home-direction.json is kept', async () => {
+    generate.mockResolvedValueOnce({ revision: 4, label: 'Portada de YAPI' });
+    projects.version.mockImplementation(async (_m: string, _s: string, revision: number) => {
+      const snap = snapshot(revision >= 4 ? 'export default function Home() { return 1; }' : 'export default function Home() { return 0; }');
+      if (revision >= 4) snap.snapshot.files.push({ path: 'home-direction.json', content: '{"direction":"lookbook","animated":true}' } as any);
+      return snap;
+    });
+    const out = await writer();
+    expect(projects.restore).not.toHaveBeenCalled();
+    expect(out.revision).toMatchObject({ revision: 4 });
+  });
   // Review 2026-10-29 (I1): the real quota failure reaches chat as generate()'s merchant-facing BadGatewayException, not the quota class.
   it('a spent quota as generate() really reports it goes back to the queue, without leaving a message behind', async () => {
     generate.mockRejectedValueOnce(new BadGatewayException(LIMIT_REPLY));
