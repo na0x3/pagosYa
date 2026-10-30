@@ -41,7 +41,7 @@ describe('evaluateHomeWriterRules', () => {
     const fine = [`<section style="height:300px"><h2>Preguntas</h2><details><summary>¿Envíos?</summary><p>Sí.</p></details></section>`,
       `<section style="height:300px"><h2>Novedades</h2><form><input type="email"></form></section>`,
       `<section style="height:300px"><h2>Historia</h2>${img('444')}<p>Desde 2019.</p></section>`];
-    expect(blocking(await rules(`<main>${cover}${fine.join('')}${product}</main>`)).filter(l => /solo texto/i.test(l))).toEqual([]);
+    expect(blocking(await rules(`<main>${cover}${fine.join('')}${product}</main>`)).filter(l => /Sección de solo texto/i.test(l))).toEqual([]);
     // A band in the brand's colour is not the plain page (owner allowed Amboras's green and ochre bands).
     const tinted = '<section style="height:300px;background:#e3cdd3"><h2>Lo que nos importa</h2><p>Hecho a mano.</p></section>';
     expect(blocking(await rules(`<main>${cover}${tinted}${product}</main>`)).filter(l => /solo texto/i.test(l))).toEqual([]);
@@ -106,5 +106,15 @@ describe('words cut in half (live check 2026-10-30, Oh Belly)', () => {
     expect(blocking(cut).some(l => /Palabras cortadas/.test(l))).toBe(true);
     const fine = await rules(`<main><section><h2 style="width:400px;font-size:48px">Burbujas para sentirte bien</h2></section>${product}</main>`);
     expect(fine.some(l => /Palabras cortadas/.test(l))).toBe(false);
+  });
+});
+
+describe('a cover of words alone (owner 2026-10-24, live check 2026-10-30)', () => {
+  it('blocks a text-only cover when the page has photos, not a cover with a photo or a store with none', async () => {
+    const lonely = await rules(`<main><section style="height:500px"><h1 style="font-size:96px">Hola</h1></section><section>${img('111')}</section>${product}</main>`);
+    expect(blocking(lonely).some(l => /portada es solo texto/.test(l))).toBe(true);
+    const pictured = await rules(`<main><section style="height:500px"><h1 style="font-size:96px">Hola</h1>${img('222')}</section><section>${img('111')}</section>${product}</main>`);
+    expect(pictured.some(l => /portada es solo texto/.test(l))).toBe(false);
+    expect((await rules(`<main><section style="height:500px"><h1 style="font-size:96px">Hola</h1></section>${product}</main>`)).some(l => /portada es solo texto/.test(l))).toBe(false);
   });
 });

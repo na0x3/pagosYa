@@ -71,6 +71,10 @@ export function evaluateHomeWriterRules(): string[] {
     }
   }
   if (broken.size) out.push(`BLOQUEA: Palabras cortadas a la mitad (${[...broken].map(word => `«${word}»`).join(', ')}): el texto es más ancho que su caja. Baja el tamaño o dale más ancho.`);
+  // Owner 2026-10-24 («a blank screen»): a store with photos never opens on words alone (live check 2026-10-30, Oh Belly ujy3rqxr).
+  const cover = bands[0];
+  const pictured = (el: Element) => Boolean(el.querySelector(`img,video,picture,[data-pagosya-catalog],[data-pagosya-spotlight]`)) || [el, ...Array.from(el.querySelectorAll('*'))].some(node => getComputedStyle(node).backgroundImage.includes('url('));
+  if (cover && photos.length && !pictured(cover)) out.push('BLOQUEA: La portada es solo texto y la tienda tiene fotos. Pon una foto o un producto en la portada, junto al titular o detrás de él.');
   // Each photo once.
   const seen = new Map<string, number>();
   for (const el of photos) { const src = (el as HTMLImageElement).currentSrc || (el as HTMLImageElement).src || ''; if (src) seen.set(src, (seen.get(src) || 0) + 1); }
