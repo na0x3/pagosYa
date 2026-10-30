@@ -50,7 +50,7 @@ writes one file, the home page, on top of the locked Esencial chassis.
 |---|---|
 | `read_chassis` | One compact brief: the kit components the home may use, with their props (Reveal, Parallax, product grid, FeatureSlot sections, FAQ, newsletter, marquee); the `store-data` exports; the store's products, photos (with sizes and which are still unused) and brand profile; the font list (`SOURCE_FONT_CATALOG`); the current `home.tsx` from the template. |
 | `write_home` | Replaces `home.tsx` with the full new file. Compiles at once and returns the errors, if any. |
-| `set_tokens` | Sets the Esencial colour tokens (`--es-paper`, `--es-ink`, `--es-accent`, `--es-on-accent`, `--es-deep`, `--es-on-deep`, `--es-muted`, `--es-band-bg`) and the heading and body fonts from the catalog. Validated for contrast; a bad pair is refused with the reason. |
+| `set_tokens` | Sets the Esencial colour tokens (`--es-paper`, `--es-ink`, `--es-accent`, `--es-on-accent`, `--es-deep`, `--es-on-deep`, `--es-muted`, `--es-band-bg`) and the heading and body fonts from the catalog. Unreadable text colours are replaced as the template fill does today, and the reply says so; a font outside the catalog is refused. |
 | `check` | Runs the hard checks (§3) plus the advice list. |
 | `screenshot` | Phone (390) and desktop (1280) captures of the home, at most 4 captures per run. |
 | `finish` | Ends the run with a one-line summary for the merchant. |
@@ -75,7 +75,8 @@ Brand-tinted colour bands (Amboras's green and ochre) are allowed.
 - at least 6 sections
 - body text contrast
 - the cover text box not narrower than ~40 % of the cover
-- every unused brand photo considered
+
+(«every unused brand photo considered» was dropped at planning: the home names photos through `store-data`, not file paths, so a check cannot tell which are unused.)
 
 This is the Amboras «design plan» equivalent.
 
@@ -109,11 +110,11 @@ now.
 
 Under 5 minutes and about $0.50–1 per store on the API plan. The live check reports the real numbers.
 
-## Open item for the plan
+## Inline text editing (resolved at planning)
 
-Confirm Studio inline text editing (double-click) still saves when the words live as literals in `home.tsx` rather than in
-`store-data`. If it does not, the writer puts its copy into a `copy` object at the top of `home.tsx` that the save path can
-find.
+`source-visual-edit.ts` already treats literal JSX text in `components/*.tsx` as editable fields, so words the writer puts
+straight into `home.tsx` keep double-click editing. The writer is told to use literal JSX text, never arrays or objects. The
+live check confirms it once.
 
 ## Out of scope
 
