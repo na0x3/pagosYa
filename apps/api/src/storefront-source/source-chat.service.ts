@@ -101,6 +101,8 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
  *  «i dont like sections like these»): what it adds carries a real photo on the store's light ground, never a dark text-only band. */
 export const PERSONAL_TOUCH_BRIEF = 'Toque personal para este negocio: agrega UNA sección que las variantes no tienen y que nazca de sus datos reales (por ejemplo «Lo que nos hace distintos» o una guía breve de uso), con una foto real de la tienda junto al texto y sobre el fondo claro de la tienda: nunca una banda oscura o negra solo de texto, ni filas de columnas de texto sueltas; UN detalle de firma pequeño dentro de una sección que ya existe (un sello con la ciudad o la idea del negocio, un subrayado dibujado en el titular o un separador propio) y, si una sección suena genérica, reescribe solo esa. No quites secciones, no cambies la estructura de store-data, no inventes datos, precios ni reseñas, no toques carrito ni pago.';
 /** Owner 2026-10-27: the polish after a new master store — one fill call that may change words and photo choices only. */
+/** Review 2026-10-29 (I1): a spent model quota as it reaches chat — the provider's class, or generate()'s merchant-facing reply. */
+const quotaSpent = (error: unknown) => error instanceof SourceProviderQuotaException || (error instanceof Error && (error.message === MODEL_LIMIT_MERCHANT_FAILURE || MODEL_LIMIT.test(error.message)));
 /** Spec 2026-10-29: what the home writer is asked; the merchant's first message follows it. */
 const HOME_WRITER_BRIEF = 'Diseña la portada de esta tienda nueva al estilo de Amboras: titulares grandes, mucho recorrido, los colores de la marca, con sus fotos y productos reales.';
 export const MASTER_POLISH_BRIEF = 'Pulido automático de la tienda recién creada desde la plantilla. Conserva paleta, fuentes, variantes, menú y estructura. '
@@ -598,6 +600,10 @@ export class SourceChatService {
     const after = (await this.projects.version(merchantId, storeId, revision.revision)).snapshot as unknown as SourceProjectSnapshot;
     const strayed = after.files.filter(file => nextSourceFile(file.path) && !['components/home.tsx', 'styles/globals.css', 'components/store-data.tsx'].includes(file.path)
       && before.files.find(old => old.path === file.path)?.content !== file.content).map(file => file.path);
+    // Review I4: the product page, cart, checkout and account look live outside the components (config.js, brand.css, frame-draw.json).
+    const look = (files: SourceProjectSnapshot['files']) => { const config = readConfigFile(files); return JSON.stringify([config.productPageStyle, config.dna, config.accountTheme,
+      ...['brand.css', 'frame-draw.json'].map(path => files.find(file => file.path === path)?.content)]); };
+    if (look(after.files) !== look(before.files)) strayed.push('config.js / brand.css');
     if (strayed.length) { await this.projects.restore(merchantId, storeId, input.revision, revision.revision); throw new Error(`home writer changed ${strayed.join(', ')}`); }
     await workflow.finish('completed');
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
@@ -1012,10 +1018,13 @@ export class SourceChatService {
         let written: Awaited<ReturnType<SourceChatService['homeWriter']>>;
         try { written = await this.homeWriter(merchantId, storeId, thread.id, userMessage, workflow, input, previous, budget); }
         catch (error) {
-          // A spent quota goes back to the queue (FIRST_DESIGN_MAX_ATTEMPTS); anything else keeps the polished store as it is.
-          if (error instanceof SourceProviderQuotaException || MODEL_LIMIT.test(String((error as Error)?.message))) throw error;
+          // A spent quota goes back to the queue (FIRST_DESIGN_MAX_ATTEMPTS); a cancelled or shut-down run is the job runner's to
+          // requeue or stop (review I1, I2). Anything else keeps the polished store as it is.
+          if (quotaSpent(error) || sourceRequestContext.getStore()?.signal?.aborted) throw error;
           this.productLogger.warn(JSON.stringify({ event: 'home_writer_kept_template', storeId, reason: String((error as Error)?.message).slice(0, 300) }));
-          throw new PersonalTouchSkipped('home writer kept the template', checkAfter(current.revision));
+          // An undone run appended a restored revision (review I3): the check runs on the store as it is now.
+          const latest = await this.projects.current(merchantId, storeId).catch(() => null);
+          throw new PersonalTouchSkipped('home writer kept the template', checkAfter(latest?.revision ?? current.revision));
         }
         const after = checkAfter(written.revision.revision);
         return after ? { ...written, followUp: after } : written;
@@ -1432,7 +1441,10 @@ export class SourceChatService {
         await this.prisma.storeAgentMessage.delete({ where: { id: userMessage.id } }).catch(() => undefined);
         throw error;
       }
-      if (input.homeWriter && (error instanceof SourceProviderQuotaException || MODEL_LIMIT.test(String((error as Error)?.message)))) throw error;
+      if (input.homeWriter && (quotaSpent(error) || sourceRequestContext.getStore()?.signal?.aborted)) {
+        await this.prisma.storeAgentMessage.delete({ where: { id: userMessage.id } }).catch(() => undefined);
+        throw error;
+      }
       // Variety spec §5: a failed personal touch keeps the first version and says nothing.
       if (input.personalTouch && !input.ownRequest) {
         await this.prisma.storeAgentMessage.delete({ where: { id: userMessage.id } }).catch(() => undefined);

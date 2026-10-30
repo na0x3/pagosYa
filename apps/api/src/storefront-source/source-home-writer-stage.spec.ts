@@ -1,8 +1,14 @@
 import { templateManifest, templateSourceFiles } from '@pagosya/store-templates';
 import { templateDemoRevision } from './source-templates';
 import { nextSourceFile } from './source-next';
-import { homeWriterInstructions, runHomeWriterLoop } from './source-home-writer-stage';
-import { HOME_PATH } from './agent/home-writer-tools';
+import { homeWriterInstructions, homeWriterLimits, runHomeWriterLoop, runHomeWriterStage } from './source-home-writer-stage';
+import { HOME_PATH, HOME_WRITER_LIMITS } from './agent/home-writer-tools';
+import { masterThemeBlock, withMasterTheme } from './source-master';
+import { SOURCE_FONT_IDS } from './source-font-catalog';
+import { SourceRequestBudget } from './source-request-budget';
+import { openAiAgentModel } from './agent/agent-model';
+
+jest.mock('./agent/agent-model', () => ({ ...jest.requireActual('./agent/agent-model'), openAiAgentModel: jest.fn() }));
 
 // Spec 2026-10-29 home page writer §5: the loop on its own, with a scripted model and the real Esencial files.
 jest.setTimeout(240_000);
@@ -37,5 +43,35 @@ describe('home writer stage', () => {
     const bad = `import Shell from './Shell';\nexport default function Home() { return <Shell><main><section><h1>Sin productos</h1></section></main></Shell>; }`;
     const out = await runHomeWriterLoop({ model: async () => ({ calls: [call('write_home', { content: bad })] }), files: authored(), base, gate: async () => null, task: 'x', limits: { toolCalls: 3 } });
     expect(out.accepted).toBe(false);
+  });
+});
+
+describe('home writer review fixes (2026-10-29)', () => {
+  // A store whose deep is already the brand's: its template home has nothing blocking.
+  const branded = () => authored().map(f => f.path === 'styles/globals.css' ? { ...f, content: withMasterTheme(f.content, masterThemeBlock({ paper: '#f4efe6', ink: '#1d2a22', muted: '#e8e1d4', accent: '#b5562b', deep: '#2f4a33' }, SOURCE_FONT_IDS[0], SOURCE_FONT_IDS[0])) } : f);
+  it('a run that changes nothing is not a new design', async () => {
+    const files = branded();
+    const turns = [{ calls: [call('read_chassis', {})] }, { calls: [call('check', {})] }, { calls: [call('finish', { summary: 'Listo.' })] }];
+    let i = 0;
+    const out = await runHomeWriterLoop({ model: async () => turns[Math.min(i++, turns.length - 1)], files, base: { ...base, files: [...base.files.filter(f => f.path !== 'styles/globals.css'), files.find(f => f.path === 'styles/globals.css')!] }, gate: async () => null, task: 'x', limits: { toolCalls: 6 } });
+    expect(out.accepted).toBe(false);
+  });
+  it('its wall clock doubles on the ChatGPT plan and never passes the run\'s own deadline', () => {
+    const now = 1_000_000;
+    expect(homeWriterLimits(false, now + 3_600_000, now).wallMs).toBe(HOME_WRITER_LIMITS.wallMs);
+    expect(homeWriterLimits(true, now + 3_600_000, now).wallMs).toBe(HOME_WRITER_LIMITS.wallMs * 2);
+    expect(homeWriterLimits(true, now + 400_000, now).wallMs).toBeLessThan(400_000);
+    expect(homeWriterLimits(true, now + 400_000, now).toolCalls).toBe(HOME_WRITER_LIMITS.toolCalls);
+  });
+  it('the stage asks the model with a prompt cache key, low reasoning and the run\'s limits', async () => {
+    const options: any[] = [];
+    (openAiAgentModel as jest.Mock).mockImplementation((opts: any) => { options.push(opts); return async () => { throw Object.assign(new Error('stop'), {}); }; });
+    const facts: any = { prisma: { storeSourceGeneration: { updateMany: jest.fn() } }, config: { get: () => undefined }, metering: undefined, storeId: 's1', runId: 'r1', dto: { brief: base.brief, instruction: 'Diseña la portada' },
+      plan: { model: 'gpt-5.6-terra', maxOutputTokens: 8000 }, provider: { endpoint: 'e', name: 'OpenAI' }, apiKey: 'k', agentProvider: null, budget: new SourceRequestBudget(50), signal: undefined, attempts: [],
+      progress: undefined, previousFiles: base.files, oldFiles: base.files, assets: [], images: [], data: { storeName: 'x' }, chatgptPlan: true, started: Date.now(), runTimeout: 3_600_000 };
+    const live: any = { generated: { label: '', files: [] }, lenient: false };
+    await expect(runHomeWriterStage({ facts, live, acceptCandidate: async () => undefined, resume: {} as any })).rejects.toThrow(/portada/);
+    expect(options[0]).toMatchObject({ reasoningEffort: 'low', model: 'gpt-5.6-terra' });
+    expect(typeof options[0].promptCacheKey).toBe('string');
   });
 });

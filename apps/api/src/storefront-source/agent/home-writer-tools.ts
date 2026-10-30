@@ -90,6 +90,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           return { output: `Captura de ${width === 390 ? 'celular' : 'escritorio'} adjunta.`, image: shot.image };
         }
         case 'finish': {
+          if (!this.workspace.changedPaths().length) return { output: 'Todavía no cambiaste la portada: escríbela con write_home antes de terminar.' };
           if (!this.draftIsClean()) return { output: 'Antes de terminar, llama check sobre la versión actual y corrige lo que bloquea.' };
           const diagnostic = await this.ctx.gate(this.workspace.files());
           if (diagnostic) { this.lastVerify = { version: this.workspace.version, clean: false, hard: true }; return { output: `La tienda no se puede guardar todavía: ${diagnostic.slice(0, 1500)}` }; }

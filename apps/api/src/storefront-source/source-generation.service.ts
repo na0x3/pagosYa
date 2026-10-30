@@ -513,7 +513,8 @@ export class SourceGenerationService {
     const sketchEdit = agentEngine && !execution?.candidate && sketchFlag && !sketchFirst && editExisting && sketchBorn;
     // Spec 2026-10-10: the platform rolls the frame and hero; the model alone always lands on one header.
     // Each decision below lives in design-engine/frame-draw.ts, where it is tested; this only passes values through.
-    const frameNow = frameFresh({ sep5Author, agentEngine, sketchFirst, hasPrevious: Boolean(previous), redesign });
+    // Review 2026-10-29 (I4): the home writer keeps the template's frame — product page, cart, checkout and account untouched.
+    const frameNow = frameFresh({ sep5Author, agentEngine, sketchFirst, hasPrevious: Boolean(previous), redesign }) && !execution?.homeWriter;
     // Spec 2026-10-18: two or more published reviews let the draw place a reviews section; a failed count is none.
     // Merchant-entered reviews count too; their table may not be migrated yet.
     const publishedReviewCount = frameNow ? (await Promise.all([
@@ -1653,7 +1654,7 @@ Candidate source: ${JSON.stringify(repairSource)}` : '';
     // The store's email look is made with its first site (spec 2026-10-07): in the background, so the site never waits for it or fails on it.
     void afterReview.then(() => this.emailKits?.designAfterSite(storeId)).catch(() => undefined);
     // New stores and redesigns get long product pages for products that have none (spec 2026-10-09), in the background.
-    if (fillsProductPagesAfterSave(!previous, redesign)) void afterReview.then(() => this.pageWriter?.fillStore(storeId)).catch(() => undefined);
+    if (fillsProductPagesAfterSave(!previous, redesign) && !execution?.homeWriter) void afterReview.then(() => this.pageWriter?.fillStore(storeId)).catch(() => undefined);
     await this.prisma.storeSourceGeneration.updateMany({ where: { storeId, OR: [{ baseRevision: { lte: dto.revision } }, { createdAt: { lt: new Date(Date.now() - 24 * 60 * 60_000) } }] }, data: { checkpoint: Prisma.DbNull } }).catch(() => { this.logger.warn('No se pudieron limpiar los borradores privados antiguos; la revisión ya está guardada.'); });
     receipt.rewardCreditsCovered = freeRun ? 0 : await this.coverWithRewardCredits(merchantId, run.id, credits);
     return { ...saved, generation: receipt, ...(agentOutcome ? { agent: agentOutcome } : {}), ...({} as { candidate?: SourceProjectSnapshot; agent?: typeof agentOutcome }) };

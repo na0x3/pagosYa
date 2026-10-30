@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { withoutPhotoGroups, MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, OWN_REQUEST_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
 import { SourceProviderQuotaException } from './source-provider-error';
+import { MODEL_LIMIT_MERCHANT_FAILURE as LIMIT_REPLY } from './source-validation-error';
 import { sourceRequestContext } from './source-request-context';
 import { sourceMerchantRequest } from './source-merchant-request';
 import { sourceRequestProfile } from './source-request-profile';
@@ -844,10 +845,38 @@ describe('the home page writer', () => {
     generate.mockRejectedValueOnce(new SourceProviderQuotaException());
     await expect(writer()).rejects.toBeInstanceOf(SourceProviderQuotaException);
   });
-  it('a writer run that changed the header is undone, and the template stays', async () => {
+  it('a writer run that changed the header is undone, the template stays, and the check runs on the restored revision', async () => {
     generate.mockResolvedValueOnce({ revision: 4, label: 'Portada de YAPI' });
+    let restored = false;
+    projects.restore.mockImplementation(async () => { restored = true; return { revision: 5 }; });
+    projects.current.mockImplementation(async () => ({ revision: restored ? 5 : 3 }));
     projects.version.mockImplementation(async (_m: string, _s: string, revision: number) => revision >= 4 ? snapshot('export default function Home() { return 1; }', 'export default function Shell() { return 2; }') : snapshot('export default function Home() { return 0; }'));
+    await expect(writer()).rejects.toMatchObject({ followUp: { briefCheck: 1, revision: 5 } });
+    expect(projects.restore).toHaveBeenCalledWith('m1', 's1', 3, 4);
+  });
+  // Review 2026-10-29 (I4): the product page, cart, checkout and account look live in config.js, brand.css and frame-draw.json.
+  it('a writer run that redrew the product page or the brand frame is undone too', async () => {
+    const withPlatform = (home: string, style: string) => { const snap = snapshot(home); snap.snapshot.files.push({ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ productPageStyle: style, dna: { button: 'pill' }, data: { items: [] } })};\n` } as any); return snap; };
+    generate.mockResolvedValueOnce({ revision: 4, label: 'Portada de YAPI' });
+    projects.version.mockImplementation(async (_m: string, _s: string, revision: number) => revision >= 4 ? withPlatform('export default function Home() { return 1; }', 'fashion') : withPlatform('export default function Home() { return 0; }', 'classic'));
     await expect(writer()).rejects.toBeInstanceOf(PersonalTouchSkipped);
     expect(projects.restore).toHaveBeenCalledWith('m1', 's1', 3, 4);
+  });
+  // Review 2026-10-29 (I1): the real quota failure reaches chat as generate()'s merchant-facing BadGatewayException, not the quota class.
+  it('a spent quota as generate() really reports it goes back to the queue, without leaving a message behind', async () => {
+    generate.mockRejectedValueOnce(new BadGatewayException(LIMIT_REPLY));
+    const failure = await writer().catch(error => error);
+    expect(failure).not.toBeInstanceOf(PersonalTouchSkipped);
+    expect(failure.message).toBe(LIMIT_REPLY);
+    expect(prisma.storeAgentMessage.delete).toHaveBeenCalled();
+  });
+  // Review 2026-10-29 (I2): a cancelled or shut-down run is not a failed writer; the job runner requeues or stops it.
+  it('a cancelled run is not turned into a skip with a check', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    generate.mockRejectedValueOnce(new Error('cancelled'));
+    const failure = await sourceRequestContext.run({ signal: controller.signal, jobId: 'j1', request: sourceMerchantRequest({ instruction: 'x' } as any), assertLease: jest.fn() } as any,
+      () => writer()).catch(error => error);
+    expect(failure).not.toBeInstanceOf(PersonalTouchSkipped);
   });
 });

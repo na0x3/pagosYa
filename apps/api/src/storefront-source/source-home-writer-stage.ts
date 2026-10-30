@@ -2,7 +2,7 @@ import { BadGatewayException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { AgentWorkspace } from './agent/agent-workspace';
-import { runAgent, type AgentModel, type AGENT_LIMITS } from './agent/agent-loop';
+import { agentWallWithin, runAgent, type AgentModel, type AGENT_LIMITS } from './agent/agent-loop';
 import { agentOpening } from './agent/agent-prompt';
 import type { AgentPreviewBase } from './agent/agent-capture';
 import type { AgentStep } from './agent/agent-tools';
@@ -10,7 +10,7 @@ import { openAiAgentModel } from './agent/agent-model';
 import { anthropicAgentModel } from './agent/agent-model-anthropic';
 import { HomeWriterToolbox, HOME_PATH, HOME_WRITER_LIMITS, HOME_WRITER_TOOLS } from './agent/home-writer-tools';
 import { nextSourceFile } from './source-next';
-import { sourceUsage } from './source-generation-policy';
+import { sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
 import type { AgentStageContext } from './source-agent-stage';
 
 /** Spec 2026-10-29 §2–3: Amboras's recipe, our rules. */
@@ -28,20 +28,28 @@ Productos, precios, fotos y logo vienen de './store-data'. Los consejos de check
 type LoopInput = { model: AgentModel; files: SourceProjectFileDto[]; base: AgentPreviewBase; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; task: string;
   images?: unknown[]; signal?: AbortSignal; limits?: Partial<typeof AGENT_LIMITS>; onStep?: (step: AgentStep) => void | Promise<void> };
 
+/** Review 2026-10-29: twice the time on the ChatGPT plan (turns there take 20–90 s), as the main agent gets, and never past the
+ *  run's own deadline, so the writer stops itself before the run is aborted. */
+export function homeWriterLimits(chatgptPlan: boolean, runDeadline: number, now = Date.now()) {
+  return agentWallWithin({ ...HOME_WRITER_LIMITS, wallMs: HOME_WRITER_LIMITS.wallMs * (chatgptPlan ? 2 : 1) }, runDeadline, now);
+}
+
 /** The writer's loop on its own: testable without a generation run. */
 export async function runHomeWriterLoop(input: LoopInput) {
   const workspace = new AgentWorkspace(input.files, { redesign: true, lockedShell: true });
   const toolbox = new HomeWriterToolbox({ workspace, base: input.base, gate: input.gate, ...(input.signal ? { signal: input.signal } : {}) });
   const outcome = await runAgent({ model: input.model, toolbox, tools: HOME_WRITER_TOOLS, verifyTool: 'check', instructions: homeWriterInstructions(), signal: input.signal, onStep: input.onStep,
     limits: { ...HOME_WRITER_LIMITS, ...input.limits }, opening: agentOpening(input.task, input.files.filter(file => file.path === HOME_PATH), input.images ?? []) });
-  const accepted = (outcome.status === 'finished' && Boolean(toolbox.finished)) || (!outcome.provider && outcome.reason !== 'cancelled' && !input.signal?.aborted && await toolbox.acceptIfBuildable());
+  // A run that changed nothing is not a new design (review 2026-10-29): the store keeps its template home and says nothing.
+  const accepted = workspace.changedPaths().length > 0
+    && ((outcome.status === 'finished' && Boolean(toolbox.finished)) || (!outcome.provider && outcome.reason !== 'cancelled' && !input.signal?.aborted && await toolbox.acceptIfBuildable()));
   return { accepted, outcome, summary: toolbox.finished?.summary ?? '', changed: workspace.changedPaths(), steps: toolbox.steps };
 }
 
 /** Inside generate(): runs instead of runAgentStage for execution.homeWriter (spec 2026-10-29 §6). */
 export async function runHomeWriterStage(context: AgentStageContext): Promise<void> {
   const { facts, live, acceptCandidate } = context;
-  const { prisma, config, metering, storeId, runId, dto, plan, provider, apiKey, agentProvider, budget, signal, attempts, progress, previousFiles, oldFiles, assets, images, data } = facts;
+  const { prisma, config, metering, storeId, runId, dto, plan, provider, apiKey, agentProvider, budget, signal, attempts, progress, previousFiles, oldFiles, assets, images, data, chatgptPlan, started, runTimeout } = facts;
   await progress?.('building');
   const base: AgentPreviewBase = { brief: dto.brief, files: [...previousFiles.filter(file => !assets.some(asset => asset.path === file.path)), ...assets] };
   // The same acceptance chain every build passes, in its lenient form (artwork and edit-scope rules are for chat edits).
@@ -61,9 +69,11 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
   const effort = config.get<'low' | 'medium' | 'high'>('app.yapiFirstDesignEffort') ?? 'low';
   const model = agentProvider
     ? anthropicAgentModel({ endpoint: agentProvider.endpoint, apiKey: agentProvider.apiKey, model: plan.model, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), signal, onTurn })
-    : openAiAgentModel({ endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: effort, signal, onTurn });
+    : openAiAgentModel({ endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: effort, signal, onTurn,
+      // Every turn resends the transcript; a stable key lets the provider bill that prefix at the cached rate (review 2026-10-29).
+      promptCacheKey: sourcePromptCacheKey('home-writer', homeWriterInstructions(), storeId) });
   const task = `${dto.instruction}\n\nTienda: ${(data as { storeName?: string }).storeName ?? ''}`;
-  const out = await runHomeWriterLoop({ model, files: oldFiles.filter(file => nextSourceFile(file.path)), base, gate, task, signal,
+  const out = await runHomeWriterLoop({ model, files: oldFiles.filter(file => nextSourceFile(file.path)), base, gate, task, signal, limits: homeWriterLimits(chatgptPlan, started + runTimeout),
     images: images.map(image => ({ ...(image as object), detail: 'low' })),
     onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); } });
   if (!out.accepted) throw new BadGatewayException(`YAPI no pudo terminar la portada${out.outcome.reason ? `: ${out.outcome.reason}` : ''}`);
