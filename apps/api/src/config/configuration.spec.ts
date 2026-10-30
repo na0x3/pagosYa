@@ -407,3 +407,23 @@ describe('first design reasoning', () => {
     expect(configuration().app.yapiFirstDesignEffort).toBe('low');
   });
 });
+
+// Spec 2026-10-29 home page writer: off unless YAPI_HOME_WRITER=1; terra unless named.
+describe('home page writer switch', () => {
+  const original = { on: process.env.YAPI_HOME_WRITER, model: process.env.YAPI_HOME_WRITER_MODEL };
+  afterEach(() => {
+    if (original.on === undefined) delete process.env.YAPI_HOME_WRITER; else process.env.YAPI_HOME_WRITER = original.on;
+    if (original.model === undefined) delete process.env.YAPI_HOME_WRITER_MODEL; else process.env.YAPI_HOME_WRITER_MODEL = original.model;
+  });
+  it('is off unless set to 1, and runs on terra unless a model is named', () => {
+    delete process.env.YAPI_HOME_WRITER; delete process.env.YAPI_HOME_WRITER_MODEL;
+    expect(configuration().app.yapiHomeWriter).toBe(false);
+    expect(configuration().app.yapiHomeWriterModel).toBe('gpt-5.6-terra');
+    process.env.YAPI_HOME_WRITER = 'on';
+    expect(configuration().app.yapiHomeWriter).toBe(false);
+    process.env.YAPI_HOME_WRITER = '1';
+    process.env.YAPI_HOME_WRITER_MODEL = 'gpt-5.6-sol';
+    expect(configuration().app.yapiHomeWriter).toBe(true);
+    expect(configuration().app.yapiHomeWriterModel).toBe('gpt-5.6-sol');
+  });
+});

@@ -139,6 +139,7 @@ import { assembleSourceSave, designMotifs, type LookChoice, type SaveAssemblyCon
 import { runSep5AuthorStage } from './source-sep5-stage';
 import { runChatKitTouch, type ReviewControls } from './source-sep5-review';
 import { runAgentStage } from './source-agent-stage';
+import { runHomeWriterStage } from './source-home-writer-stage';
 export type { SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
 
 // The run's constants and credit rule, and the generated-source checks, live in their own modules; re-exported for existing importers.
@@ -610,7 +611,8 @@ export class SourceGenerationService {
     const copiedHeader = execution?.websiteCopy && execution.copyHeader ? FRAME_CATALOGUE.header.find(entry => entry.id === execution.copyHeader) : undefined;
     if (copiedHeader) frame = { ...frame, file: { path: FRAME_DRAW_FILE, content: JSON.stringify({ header: copiedHeader.id }) }, paragraph: `${copiedHeader.desktop} ${copiedHeader.phone}` };
     let playbookText = playbookEntry && playbookFamily && frameNow ? playbookDirection(playbookEntry, playbookFamily, { bold: boldAsked, palette: frame.palette, button: frame.dna?.button, brandColours: brandHasColours(brand?.data), evidence: playbookEvidence }) : '';
-    const exploration = creative && !sketchFirst ? this.exploreDesign() : null;
+    // Spec 2026-10-29: the home writer plans nothing — it writes one file on the template's chassis.
+    const exploration = creative && !sketchFirst && !execution?.homeWriter ? this.exploreDesign() : null;
     // "Elige tu estilo" (spec 2026-10-11, amendment "two cards"): a fresh design shows a calm and a bold drawn concept before anything is built.
     const styleAsked = execution?.styleProposal === true && this.config.get<boolean>('app.yapiStylePick') === true;
     const designDrawOn = this.config.get<boolean>('app.yapiDesignDraw') === true;
@@ -1391,6 +1393,9 @@ export class SourceGenerationService {
         sketchFile = { path: 'sketch.json', content: JSON.stringify(edited.sketch, null, 2) + '\n' };
         lenient = true;
         try { await acceptCandidate(); } finally { lenient = false; }
+      } else if (useNext && execution?.homeWriter) {
+        // Spec 2026-10-29: the home page writer — one file and the tokens on the locked chassis, with its own five tools.
+        await runHomeWriterStage({ facts, live, acceptCandidate, resume: { resumable, checkpoint, checkpointKey, requestKey, merchantRequest } });
       } else if (agentEngine) {
         // The tool-using agent (source-agent-stage.ts). It writes the agent's theme, policies, outcome and unfinished status
         // through `live`, the last one before it throws, so the catch below records PARTIAL/BLOCKED as before.
