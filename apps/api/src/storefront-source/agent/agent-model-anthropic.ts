@@ -73,7 +73,7 @@ export function anthropicAgentModel(input: { endpoint: string; apiKey: string; m
         body: JSON.stringify({
           model: input.model, max_tokens: reserved.outputTokens,
           system: [{ type: 'text', text: instructions, cache_control: { type: 'ephemeral' } }],
-          tools: (tools as Array<{ name: string; description: string; parameters: object }>).map(tool => ({ name: tool.name, description: tool.description, input_schema: tool.parameters })),
+          tools: (tools as ReadonlyArray<{ name: string; description: string; parameters: object }>).map(tool => ({ name: tool.name, description: tool.description, input_schema: tool.parameters })),
           messages: messages.length ? messages : [{ role: 'user', content: [{ type: 'text', text: 'Continúa.' }] }],
         }),
       });

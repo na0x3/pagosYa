@@ -1,9 +1,12 @@
-import { AGENT_TOOLS, type AgentStep, type AgentToolbox } from './agent-tools';
+import { AGENT_TOOLS, type AgentStep } from './agent-tools';
 import { estimateInputTokens } from './agent-model';
 
 export type AgentModelCall = { name: string; arguments: string; callId: string };
 export type AgentModelTurn = { calls: AgentModelCall[]; text?: string; output?: unknown[] };
-export type AgentModel = (input: { instructions: string; transcript: unknown[]; tools: typeof AGENT_TOOLS }) => Promise<AgentModelTurn>;
+export type AgentToolDefinition = typeof AGENT_TOOLS[number] | { type: 'function'; name: string; description: string; parameters: object; strict: true };
+export type AgentModel = (input: { instructions: string; transcript: unknown[]; tools: readonly AgentToolDefinition[] }) => Promise<AgentModelTurn>;
+/** What the loop needs from a toolbox: AgentToolbox, or the home writer's (spec 2026-10-29). */
+export type AgentLoopToolbox = { steps: AgentStep[]; run(name: string, rawArgs: string): Promise<{ output: string; image?: string; images?: string[] }>; draftIsClean(): boolean; lastVerify: { hard?: boolean } | null; finished: unknown; stopped: { summary: string } | null };
 /** `provider`: the model stopped answering (a plan's usage limit, an outage) — the draft is whatever was mid-edit, never checked.
  *  `reason: 'steps'`: the tool-call cap stopped it; `finding` is the last failing verify output, if any. */
 export type AgentRunResult = { status: 'finished' | 'limit' | 'failed'; reason?: string; provider?: boolean; finding?: string };
@@ -38,7 +41,7 @@ export function agentWallWithin<T extends { wallMs: number }>(limits: T, runDead
 export const abortedByTimeout = (signal?: AbortSignal) => Boolean(signal?.aborted && (signal.reason as { name?: string } | undefined)?.name === 'TimeoutError');
 
 /** Model ↔ tools until a gated finish, a limit, exhausted retries or cancellation. Never saves anything itself. */
-export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox; instructions: string; opening: unknown[]; limits?: Partial<typeof AGENT_LIMITS>; signal?: AbortSignal; onStep?: (step: AgentStep) => void | Promise<void>; now?: () => number; sleep?: (ms: number) => Promise<void> }): Promise<AgentRunResult> {
+export async function runAgent(input: { model: AgentModel; toolbox: AgentLoopToolbox; tools?: readonly AgentToolDefinition[]; verifyTool?: string; instructions: string; opening: unknown[]; limits?: Partial<typeof AGENT_LIMITS>; signal?: AbortSignal; onStep?: (step: AgentStep) => void | Promise<void>; now?: () => number; sleep?: (ms: number) => Promise<void> }): Promise<AgentRunResult> {
   const limits = { ...AGENT_LIMITS, ...input.limits };
   const now = input.now ?? Date.now;
   const started = now();
@@ -46,7 +49,9 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
   const { toolbox } = input;
   let closing = false;
   const compact = agentTranscriptCompactor();
-  const ask = () => input.model({ instructions: input.instructions, transcript: compact(transcript), tools: closing ? AGENT_TOOLS.filter(tool => tool.name === 'finish') : AGENT_TOOLS });
+  const tools = input.tools ?? AGENT_TOOLS;
+  const verifyTool = input.verifyTool ?? 'verify';
+  const ask = () => input.model({ instructions: input.instructions, transcript: compact(transcript), tools: closing ? tools.filter(tool => tool.name === 'finish') : tools });
   const sleep = input.sleep ?? ((ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms)));
   let toolCalls = 0;
   let idle = 0, budgetWarned = false;
@@ -116,7 +121,7 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
       if (result.image) images.push(result.image);
       if (result.images) images.push(...result.images);
       for (const step of toolbox.steps.slice(before)) await input.onStep?.(step);
-      if (call.name === 'verify' && !toolbox.draftIsClean()) {
+      if (call.name === verifyTool && !toolbox.draftIsClean()) {
         // Review wording may change between passes; its stable identity must not buy another repair loop.
         for (const id of new Set([...result.output.matchAll(/\[composition:([a-zA-Z0-9_-]+)\]/g)].map(match => match[1]))) {
           const count = (compositionAppearances.get(id) || 0) + 1;
@@ -130,7 +135,7 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
         const soft = toolbox.lastVerify?.hard === false;
         if (soft && findingCount >= 2) return { status: 'limit', reason: 'soft' };
         if (findingCount >= 3) return { status:'failed', reason:'La misma comprobación sigue fallando: ' + finding.slice(0,800) };
-      } else if (call.name === 'verify') { repeatedFinding = ''; findingCount = 0; }
+      } else if (call.name === verifyTool) { repeatedFinding = ''; findingCount = 0; }
       if (toolbox.finished) return { status: 'finished' };
       if (toolbox.stopped) return { status: 'failed', reason: toolbox.stopped.summary || 'Quedan requisitos pendientes.' };
       if (toolCalls >= limits.toolCalls) continue;
@@ -149,6 +154,8 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentToolbox
 /** Spec 2026-10-29 (agent cost): stale content waits behind the recent window until this many tokens pile up, then goes in
  *  one batch, so between batches every request extends the previous one and the provider can bill it at the cached rate. */
 export const AGENT_COMPACT_BATCH_TOKENS = 20_000;
+/** Spec 2026-10-29 (home writer): a whole-file write replaced by a newer one is resent as this fixed line. */
+export const AGENT_HOME_STUB = 'versión anterior de components/home.tsx reemplazada por una más nueva';
 
 const hasImage = (item: any) => item.role === 'user' && Array.isArray(item.content) && item.content.some((part: any) => part.type === 'input_image');
 /** Stale observations: every screenshot but the latest, and long file reads more than 12 items back. Never instructions,
@@ -158,11 +165,15 @@ function staleIndexes(transcript: any[]): number[] {
   for (const item of transcript) if (item.type === 'function_call') calls.set(item.call_id, item.name);
   let latestImage = -1;
   transcript.forEach((item, i) => { if (hasImage(item)) latestImage = i; });
+  let latestHome = -1;
+  transcript.forEach((item, i) => { if (item.type === 'function_call' && item.name === 'write_home') latestHome = i; });
   return transcript.flatMap((item, i) => (i > 0 && i < latestImage && hasImage(item))
+    || (item.type === 'function_call' && item.name === 'write_home' && i < latestHome)
     || (i < transcript.length - 12 && item.type === 'function_call_output' && calls.get(item.call_id) === 'read_file' && typeof item.output === 'string' && item.output.length > 1200) ? [i] : []);
 }
 /** Always the same replacement for the same item, so a compacted item never changes again. */
 function evicted(item: any) {
+  if (item.type === 'function_call') return { ...item, arguments: JSON.stringify({ content: AGENT_HOME_STUB }) };
   if (item.type === 'function_call_output') return { ...item, output: 'Earlier file contents evicted. read_file returns the CURRENT version if needed.' };
   return { ...item, content: item.content.filter((part: any) => part.type !== 'input_image').concat({ type: 'input_text', text: 'Previous screenshot evicted. Use the latest screenshot; recapture if this page changed.' }) };
 }

@@ -21,7 +21,8 @@ import { ASSURANCE_ICONS } from '../product-theme';
 import { PRESET_IDS, type ProductCardParams } from '../source-product-card-presets';
 import { resolveProductTheme, snapshotWithProductTheme, type ProductThemeInput, type ProductThemeResult } from '../product-theme';
 
-export type AgentToolName = 'inspect_asset' | 'find_products' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_theme' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'delete_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme' | 'search_illustrations' | 'set_motif_pack' | 'set_store_policy';
+export type AgentToolName = 'inspect_asset' | 'find_products' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_theme' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'delete_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme' | 'search_illustrations' | 'set_motif_pack' | 'set_store_policy'
+  /* Spec 2026-10-29 home page writer */ | 'read_chassis' | 'write_home' | 'set_tokens' | 'check';
 export type AgentStep = { kind: AgentToolName; label: string; at: number; thumbnail?: string };
 export type AgentCompositionFinding = { id: string; page: string; section: string; severity: 'major' | 'minor'; observation: string; correction: string };
 export type AgentCompositionReview = { findings: AgentCompositionFinding[]; summary: string };

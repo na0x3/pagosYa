@@ -4,7 +4,7 @@ import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { AgentWorkspace } from './agent-workspace';
 import { AgentToolbox } from './agent-tools';
-import { runAgent, agentLimits, AGENT_LIMITS, AGENT_CLOSE_MS, agentRunHeadroom, agentWallWithin, abortedByTimeout, agentTranscriptCompactor, agentShouldContinue, AGENT_CONTINUE_MIN_MS, type AgentModel, type AgentModelTurn } from './agent-loop';
+import { runAgent, agentLimits, AGENT_LIMITS, AGENT_CLOSE_MS, agentRunHeadroom, agentWallWithin, abortedByTimeout, agentTranscriptCompactor, agentShouldContinue, AGENT_CONTINUE_MIN_MS, AGENT_HOME_STUB, type AgentModel, type AgentModelTurn } from './agent-loop';
 
 jest.setTimeout(120_000);
 let base: Awaited<ReturnType<typeof templateDemoRevision>>;
@@ -347,5 +347,36 @@ describe('agent continuation', () => {
   // Review 2026-10-29: a verified draft whose finish-only turn went wrong is saved as it is, never reopened for edits.
   it('never continues a draft that already passed its checks', () => {
     expect(agentShouldContinue({ status: 'limit', reason: 'steps' }, { calls: 12, wallMs: AGENT_CONTINUE_MIN_MS, aborted: false, finished: false, clean: true })).toBe(false);
+  });
+});
+
+// Spec 2026-10-29 home page writer: the loop with its own tools, check tool and history.
+describe('runAgent custom tools', () => {
+  const fn = (name: string) => ({ type: 'function' as const, name, description: name, parameters: { type: 'object', additionalProperties: false, properties: {}, required: [] }, strict: true as const });
+  it('offers the given tools and treats the named check tool like verify', async () => {
+    const seen: string[][] = [];
+    const box = { steps: [], finished: null as unknown, stopped: null, lastVerify: { hard: false } as { hard?: boolean } | null,
+      draftIsClean: () => false,
+      run: async (name: string) => ({ output: name === 'check' ? 'Consejo: titular pequeño' : 'ok' }) };
+    const model: AgentModel = async ({ tools }) => { seen.push(tools.map(t => t.name)); return { calls: [call('check', {})] }; };
+    const out = await runAgent({ model, toolbox: box, tools: [fn('check'), fn('finish')], verifyTool: 'check', instructions: 'x', opening: [], limits: { toolCalls: 10, wallMs: 60_000 } });
+    expect(seen[0]).toEqual(['check', 'finish']);
+    // A soft finding seen twice ships the draft (reason soft), exactly as verify does today.
+    expect(out).toEqual({ status: 'limit', reason: 'soft' });
+  });
+});
+
+describe('agentTranscriptCompactor home writes', () => {
+  const write = (id: string, content: string) => ({ type: 'function_call', call_id: id, name: 'write_home', arguments: JSON.stringify({ content }) });
+  it('keeps only the newest write_home in full, with a stable stub for older ones', () => {
+    const compact = agentTranscriptCompactor(0);
+    const t: unknown[] = [{ role: 'user', content: [{ type: 'input_text', text: 'tarea' }] }, write('a', 'A'.repeat(5000)), { type: 'function_call_output', call_id: 'a', output: 'ok' }];
+    expect(JSON.stringify(compact(t))).toContain('A'.repeat(5000));
+    t.push(write('b', 'B'.repeat(5000)), { type: 'function_call_output', call_id: 'b', output: 'ok' });
+    const first = compact(t) as any[];
+    expect(first[1].arguments).toBe(JSON.stringify({ content: AGENT_HOME_STUB }));
+    expect(first[3].arguments).toContain('B'.repeat(5000));
+    t.push({ type: 'function_call_output', call_id: 'x', output: 'later' });
+    expect((compact(t) as any[])[1]).toEqual(first[1]);
   });
 });
