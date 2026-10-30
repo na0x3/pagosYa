@@ -56,6 +56,21 @@ export function evaluateHomeWriterRules(): string[] {
     const colour = rgb(getComputedStyle(el).color);
     if (colour.length >= 3 && ratio(colour, behind(el)) < 2.2) out.push(`BLOQUEA: Texto que no se lee sobre su fondo («${words.slice(0, 40)}»): dale un color de texto que contraste (var(--es-ink) sobre fondo claro) o pon un fondo de marca detrás.`);
   }
+  // Live check 2026-10-30 (Oh Belly hnqosmrt: «BURBUJA / S PARA», «Prebiót / icos»): a big title in a narrow box wraps inside a word.
+  const broken = new Set<string>();
+  for (const el of Array.from(document.querySelectorAll('main h1, main h2, main h3, main p, footer h2, footer h3, footer p'))) {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node && broken.size < 3; node = walker.nextNode()) {
+      const text = node.textContent || '';
+      for (const match of text.matchAll(/[\p{L}\p{N}]{4,}/gu)) {
+        const range = document.createRange();
+        range.setStart(node, match.index!); range.setEnd(node, match.index! + match[0].length);
+        const tops = new Set(Array.from(range.getClientRects()).filter(r => r.width > 0).map(r => Math.round(r.top)));
+        if (tops.size > 1) broken.add(match[0]);
+      }
+    }
+  }
+  if (broken.size) out.push(`BLOQUEA: Palabras cortadas a la mitad (${[...broken].map(word => `«${word}»`).join(', ')}): el texto es más ancho que su caja. Baja el tamaño o dale más ancho.`);
   // Each photo once.
   const seen = new Map<string, number>();
   for (const el of photos) { const src = (el as HTMLImageElement).currentSrc || (el as HTMLImageElement).src || ''; if (src) seen.set(src, (seen.get(src) || 0) + 1); }

@@ -99,3 +99,12 @@ describe('the checks added 2026-10-30', () => {
     expect(await rules('<main><section style="height:800px"><h1>Hola</h1><span class="ui-sticker" style="display:inline-block;width:80px;height:80px"></span></section></main>', 1280, evaluatePlayfulCover)).toEqual([]);
   });
 });
+
+describe('words cut in half (live check 2026-10-30, Oh Belly)', () => {
+  it('blocks a title that wraps inside a word, not one that wraps between words', async () => {
+    const cut = await rules(`<main><section><h2 style="width:160px;font-size:48px;overflow-wrap:anywhere">Burbujas para sentirte bien</h2></section>${product}</main>`);
+    expect(blocking(cut).some(l => /Palabras cortadas/.test(l))).toBe(true);
+    const fine = await rules(`<main><section><h2 style="width:400px;font-size:48px">Burbujas para sentirte bien</h2></section>${product}</main>`);
+    expect(fine.some(l => /Palabras cortadas/.test(l))).toBe(false);
+  });
+});
