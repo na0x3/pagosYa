@@ -28,6 +28,14 @@ describe('isFashionStore', () => {
     expect(isFashionStore({ kind: 'other', storeName: 'Atelier Cerámica', products: ['Taza', 'Plato'] })).toBe(false);
     expect(isFashionStore({ kind: 'other', storeName: 'Florería Lis', products: ['Ramo para novias', 'Accesorios florales'] })).toBe(false);
   });
+  // NOA VARGAS 2026-10-29: «Falda Flores Bordadas» and a «collar de flores de seda» read as a florist, so the bridal atelier lost
+  // its fashion card and size chips. Two different garments are a clothing store whatever else its words say.
+  it('a store selling two kinds of garment is fashion even with flowers in its product names', () => {
+    expect(isFashionStore({ kind: 'other', storeName: 'NOA VARGAS Atelier', what: 'Atelier de novias y vestidos de noche',
+      products: ['Vestido Cala', 'Vestido Escultura', 'Corsé Anturio', 'Falda Globo de Seda', 'Falda Flores Bordadas', 'Collar de Calas'] })).toBe(true);
+    // One garment word in another trade still is not.
+    expect(isFashionStore({ kind: 'other', storeName: 'Florería Lis', products: ['Ramo de novia', 'Flores para el vestido'] })).toBe(false);
+  });
   it('Bolivian knitwear words are fashion', () => expect(isFashionStore({ storeName: 'Wari', products: ['Chompa de alpaca', 'Gorro', 'Bufanda'] })).toBe(true));
 });
 

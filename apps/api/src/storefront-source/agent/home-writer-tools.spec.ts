@@ -73,6 +73,14 @@ describe('HomeWriterToolbox', () => {
     expect((await refused.run('finish', JSON.stringify({ summary: 's' }))).output).toContain('El build falló');
     expect(refused.finished).toBeNull();
   });
+  // NOA 2026-10-29: the writer's grid dropped the sort and colour picker the owner asked for on the home (data-pagosya-filters).
+  it('a home whose product grid lost the sort and colour picker must be fixed', async () => {
+    const b = await branded(box());
+    const home = b.workspace.read(HOME_PATH);
+    expect(home).toContain('data-pagosya-filters');
+    await b.run('write_home', JSON.stringify({ content: home.replace(/ data-pagosya-filters data-filters-style="chips"/g, '') }));
+    expect((await b.run('check', '{}')).output).toMatch(/Debes corregir:[\s\S]*ordenar/);
+  });
   it('stops screenshots after four', async () => {
     const b = box();
     for (let i = 0; i < 4; i++) expect((await b.run('screenshot', JSON.stringify({ width: 390 }))).image).toBeTruthy();

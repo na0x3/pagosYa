@@ -29,7 +29,7 @@ export const HOME_WRITER_TOOLS: readonly AgentToolDefinition[] = [
 const KIT_BRIEF = `PARTES DISPONIBLES (no inventes otras partes de comercio):
 - import Shell from './Shell' — envuelve SIEMPRE toda la portada: <Shell>…</Shell> (encabezado, menú, carrito y pie son de la plataforma).
 - import { Parallax, Reveal } from '@pagosya/ui' — <Reveal> anima al entrar; <Parallax> mueve una foto al hacer scroll.
-- Grilla de productos: un elemento con el atributo data-pagosya-catalog (el kit dibuja tarjetas, precios y el botón de agregar). Puede quedar vacío.
+- Grilla de productos: copia la de la portada actual tal cual — data-pagosya-catalog con data-pagosya-filters data-filters-style="chips" (ordenar, color y talla) y data-es-cards={variant('cards', 'compact')} (import { variant } from './Shell'), para que las tarjetas de moda muestren sus tallas. El kit dibuja tarjetas, precios y el botón de agregar.
 - Un producto destacado: <div data-pagosya-spotlight="ID"></div> con un id real de los productos.
 - import { FeatureSlot } from './features' — secciones listas (preguntas, newsletter, marquee, pasos), como en la portada actual.
 - Clases de la plantilla en styles/globals.css (.es-section, .es-h2, .es-display, .es-link, …) y style={{…}} para tamaños y espacios.`;
@@ -77,6 +77,8 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           const captures: Array<{ width: number; errors: string[] }> = [];
           for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules]));
           const verdict = homeWriterVerdict(captures);
+          // Owner 2026-10-29 («things like color picker, sorter»): the home's product grid keeps the kit's sort and filter chips.
+          if (!/data-pagosya-catalog[^>]*data-pagosya-filters|data-pagosya-filters[^>]*data-pagosya-catalog/.test(this.workspace.read(HOME_PATH))) verdict.blocking.push('La grilla de productos perdió ordenar y filtrar por color y talla: deja data-pagosya-filters data-filters-style="chips" en el elemento data-pagosya-catalog, como en la portada de la plantilla.');
           this.lastVerify = { version: this.workspace.version, clean: !verdict.blocking.length, hard: verdict.blocking.length > 0 };
           return { output: [verdict.blocking.length ? `Debes corregir:\n- ${verdict.blocking.join('\n- ')}` : 'Nada que corregir.',
             verdict.advice.length ? `Consejos (opcionales):\n- ${verdict.advice.join('\n- ')}` : ''].filter(Boolean).join('\n') };

@@ -14,6 +14,9 @@ export function isFashionStore(input: { kind?: 'fashion' | 'other'; storeName?: 
   const words = plain([input.storeName, input.what, ...(input.categories ?? []), ...(input.products ?? [])].filter(Boolean).join(' · '));
   const otherTrade = OTHER_TRADES.test(words);
   // The read said other and the store names another trade: a clothing word alone does not overrule it (review 2026-10-21).
+  // NOA VARGAS 2026-10-29: two different garments (vestido and falda) are a clothing store, whatever the read and the flowers say.
+  const garments = new Set((words.match(new RegExp(STRONG.source, 'g')) ?? []).map(word => word.replace(/(es|s)$/, '')));
+  if (garments.size >= 2) return true;
   if (STRONG.test(words)) return !(input.kind === 'other' && otherTrade);
   return !otherTrade && new Set((words.match(WEAK) ?? []).map(word => word.replace(/s$/, ''))).size >= 2;
 }
