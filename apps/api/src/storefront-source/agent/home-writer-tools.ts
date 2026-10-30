@@ -82,6 +82,14 @@ export function shoutedHeadings(code: string): string[] {
   return found;
 }
 
+/** Class names in the home or footer outside the template (es-), kit (ui-) and platform (pagosya-) names that no stylesheet defines. */
+export function inventedClasses(code: string, css: string): string[] {
+  const names = new Set<string>();
+  for (const match of code.matchAll(/className=(?:"([^"]*)"|'([^']*)'|\{\s*['"`]([^'"`]*)['"`]\s*\})/g)) for (const name of (match[1] ?? match[2] ?? match[3] ?? '').split(/\s+/)) if (name) names.add(name);
+  // The template's own es- names include hooks with no rule of their own (es-reviews), so only names outside it are checked.
+  return [...names].filter(name => !/^(es-|ui-|pagosya-)/.test(name) && !new RegExp(`\\.${name.replace(/[-]/g, '\\-')}(?![\\w-])`).test(css));
+}
+
 const rgb = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
 /** Near enough to read as the same colour (RGB distance). */
 export const nearColour = (a: string, b: string, within = 40) => { const [x, y] = [rgb(a), rgb(b)]; return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) <= within; };
@@ -157,6 +165,9 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           const moving = this.ctx.animated ? motionPartsUsed(this.workspace.read(HOME_PATH)).length : 3;
           if (moving < 2) verdict.blocking.push('Esta tienda tiene portada animada y usa menos de 2 movimientos del kit: agrega al menos dos de ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase o Hero scrollGrow (importados de \'@pagosya/ui\').');
           else if (moving < 3) verdict.advice.push('La portada animada usa menos de 3 movimientos del kit (ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase, scrollGrow).');
+          // Live check 2026-10-30 (Oh Belly ujy3rqxr): the writer cannot write CSS, so a class it invents (oh-grid) does nothing.
+          const invented = inventedClasses(`${this.workspace.read(HOME_PATH)}\n${this.footerCode()}`, this.workspace.read(GLOBALS));
+          if (invented.length) verdict.blocking.push(`Estas clases no existen en styles/globals.css y no hacen nada: ${invented.slice(0, 6).join(', ')}. Usa clases es- de la plantilla o style={{…}} para el diseño.`);
           if (this.ctx.playful) {
             const ambient = ambientPartsUsed(`${this.workspace.read(HOME_PATH)}\n${this.footerCode()}`).length;
             if (ambient < 2) verdict.blocking.push(`Esta tienda es divertida y su portada debe moverse sin esperar al scroll: usa al menos dos de ${AMBIENT_PARTS.join(', ')} (importados de '@pagosya/ui').`);

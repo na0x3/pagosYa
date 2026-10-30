@@ -118,3 +118,12 @@ describe('a cover of words alone (owner 2026-10-24, live check 2026-10-30)', () 
     expect((await rules(`<main><section style="height:500px"><h1 style="font-size:96px">Hola</h1></section>${product}</main>`)).some(l => /portada es solo texto/.test(l))).toBe(false);
   });
 });
+
+describe('a cover whose photo is below the first screen (live check 2026-10-30, Oh Belly)', () => {
+  it('blocks a cover whose only photo sits under the fold, not one with the photo beside the title', async () => {
+    const below = await rules(`<main><section><h1 style="font-size:96px;margin:0 0 900px">Hola</h1>${img('111')}</section>${product}</main>`);
+    expect(blocking(below).some(l => /primera pantalla no se ve/.test(l))).toBe(true);
+    const beside = await rules(`<main><section style="display:flex"><h1 style="font-size:96px">Hola</h1>${img('111')}</section>${product}</main>`);
+    expect(beside.some(l => /primera pantalla no se ve/.test(l))).toBe(false);
+  });
+});

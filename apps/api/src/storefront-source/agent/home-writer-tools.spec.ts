@@ -3,7 +3,7 @@ import { templateDemoRevision } from '../source-templates';
 import { nextSourceFile } from '../source-next';
 import { MASTER_THEME_END, MASTER_THEME_START } from '../source-master';
 import { AgentWorkspace } from './agent-workspace';
-import { FOOTER_PATH, HomeWriterToolbox, HOME_PATH, HOME_WRITER_TOOLS, footerProblems, nearColour, shellWithStoreFooter, shoutedHeadings } from './home-writer-tools';
+import { FOOTER_PATH, HomeWriterToolbox, HOME_PATH, HOME_WRITER_TOOLS, footerProblems, inventedClasses, nearColour, shellWithStoreFooter, shoutedHeadings } from './home-writer-tools';
 
 // Spec 2026-10-29 home page writer §2: five tools plus finish, on the locked Esencial chassis.
 jest.setTimeout(240_000);
@@ -184,5 +184,14 @@ describe('playful stores', () => {
       .replace(/(<main[^>]*>)/, '$1<Float><Sticker>Nuevo sabor</Sticker></Float>').replace('</main>', '<Marquee items={["Burbujas"]} /><ScrollScale><p>Hola</p></ScrollScale></main>');
     expect((await b.run('write_home', JSON.stringify({ content: home }))).output).toMatch(/compilada/);
     expect((await b.run('check', '{}')).output).not.toMatch(/divertida/);
+  });
+});
+
+// Live check 2026-10-30 (Oh Belly ujy3rqxr): the writer cannot write CSS, so its own class names (oh-grid) styled nothing.
+describe('inventedClasses', () => {
+  it('finds class names no stylesheet defines, and none in the template\'s own home, Shell or catalogue pages', () => {
+    const css = base.files.find(f => f.path === 'styles/globals.css')!.content;
+    for (const path of ['components/home.tsx', 'components/Shell.tsx', 'components/page-productos.tsx']) expect([path, inventedClasses(base.files.find(f => f.path === path)!.content, css)]).toEqual([path, []]);
+    expect(inventedClasses('<div className="oh-grid"><div className="es-section oh-media ui-float pagosya-info-nav" /></div>', css)).toEqual(['oh-grid', 'oh-media']);
   });
 });

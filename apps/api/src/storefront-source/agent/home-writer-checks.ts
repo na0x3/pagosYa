@@ -75,6 +75,11 @@ export function evaluateHomeWriterRules(): string[] {
   const cover = bands[0];
   const pictured = (el: Element) => Boolean(el.querySelector(`img,video,picture,[data-pagosya-catalog],[data-pagosya-spotlight]`)) || [el, ...Array.from(el.querySelectorAll('*'))].some(node => getComputedStyle(node).backgroundImage.includes('url('));
   if (cover && photos.length && !pictured(cover)) out.push('BLOQUEA: La portada es solo texto y la tienda tiene fotos. Pon una foto o un producto en la portada, junto al titular o detrás de él.');
+  // Live check 2026-10-30 (Oh Belly ujy3rqxr): the cover's video sat in a column below the fold, so the first screen showed words only.
+  const media = Array.from(main.querySelectorAll('img,video,picture'));
+  const seenFirst = media.some(el => { const r = el.getBoundingClientRect(); return r.width > 80 && r.height > 80 && r.top < window.innerHeight && r.bottom > 0; })
+    || [cover, ...Array.from(cover?.querySelectorAll('*') ?? [])].some(node => node && getComputedStyle(node).backgroundImage.includes('url(') && node.getBoundingClientRect().top < window.innerHeight);
+  if (cover && media.length && pictured(cover) && !seenFirst) out.push('BLOQUEA: En la primera pantalla no se ve ninguna foto ni video: la foto de la portada quedó más abajo. Ponla al lado del titular o detrás, visible sin bajar.');
   // Each photo once.
   const seen = new Map<string, number>();
   for (const el of photos) { const src = (el as HTMLImageElement).currentSrc || (el as HTMLImageElement).src || ''; if (src) seen.set(src, (seen.get(src) || 0) + 1); }
