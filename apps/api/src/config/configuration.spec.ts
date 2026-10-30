@@ -415,11 +415,12 @@ describe('home page writer switch', () => {
     if (original.on === undefined) delete process.env.YAPI_HOME_WRITER; else process.env.YAPI_HOME_WRITER = original.on;
     if (original.model === undefined) delete process.env.YAPI_HOME_WRITER_MODEL; else process.env.YAPI_HOME_WRITER_MODEL = original.model;
   });
-  it('is off unless set to 1, and runs on terra unless a model is named', () => {
+  // Owner 2026-10-30 («its really good»): the writer is the default build path; YAPI_HOME_WRITER=0 turns it off.
+  it('is on unless set to 0, and runs on terra unless a model is named', () => {
     delete process.env.YAPI_HOME_WRITER; delete process.env.YAPI_HOME_WRITER_MODEL;
-    expect(configuration().app.yapiHomeWriter).toBe(false);
+    expect(configuration().app.yapiHomeWriter).toBe(true);
     expect(configuration().app.yapiHomeWriterModel).toBe('gpt-5.6-terra');
-    process.env.YAPI_HOME_WRITER = 'on';
+    process.env.YAPI_HOME_WRITER = '0';
     expect(configuration().app.yapiHomeWriter).toBe(false);
     process.env.YAPI_HOME_WRITER = '1';
     process.env.YAPI_HOME_WRITER_MODEL = 'gpt-5.6-sol';

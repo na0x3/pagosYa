@@ -141,7 +141,8 @@ export interface AppConfig {
   yapiAgentStepModel: string;
   /** Amboras test 2026-10-29: the reasoning of a first design's build steps (low, medium or high). Default low; YAPI_FIRST_DESIGN_EFFORT=high. */
   yapiFirstDesignEffort: 'low' | 'medium' | 'high';
-  /** Spec 2026-10-29: after a new store's polish, a small agent rewrites only its home (YAPI_HOME_WRITER=1). */
+  /** Spec 2026-10-29: after a new store's polish, a small agent rewrites only its home. On by default since 2026-10-30 (owner
+   *  approved); YAPI_HOME_WRITER=0 turns it off. */
   yapiHomeWriter: boolean;
   yapiHomeWriterModel: string;
   /** Spec 2026-10-29: tool calls of the one continuation after a run used its steps unfinished; 0 turns it off. */
@@ -526,7 +527,7 @@ export default (): { app: AppConfig } => {
     yapiRedesignToolCalls: Number(process.env.YAPI_REDESIGN_TOOL_CALLS) > 0 ? Math.floor(Number(process.env.YAPI_REDESIGN_TOOL_CALLS)) : 30,
     yapiAgentStepModel: process.env.YAPI_AGENT_STEP_MODEL || 'gpt-5.6-terra',
     yapiFirstDesignEffort: (['medium', 'high'] as const).find(effort => effort === process.env.YAPI_FIRST_DESIGN_EFFORT) ?? 'low',
-    yapiHomeWriter: process.env.YAPI_HOME_WRITER === '1',
+    yapiHomeWriter: process.env.YAPI_HOME_WRITER !== '0',
     yapiHomeWriterModel: process.env.YAPI_HOME_WRITER_MODEL || 'gpt-5.6-terra',
     yapiAgentContinueCalls: process.env.YAPI_AGENT_CONTINUE_CALLS?.trim() && Number.isFinite(Number(process.env.YAPI_AGENT_CONTINUE_CALLS)) ? Math.max(0, Math.floor(Number(process.env.YAPI_AGENT_CONTINUE_CALLS))) : 12,
     yapiChecklistFix: process.env.YAPI_CHECKLIST_FIX === '1',
