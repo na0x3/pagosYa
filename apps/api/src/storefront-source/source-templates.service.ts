@@ -148,6 +148,8 @@ export class SourceTemplatesService {
     // YAPI plan card (spec 2026-10-22): a checked plan replaces the dice.
     if (plan) {
       variants = { ...plan.variants, sections: plan.sections } as MasterVariants;
+      // NOA 2 2026-10-30: a fashion store keeps the fashion card (round size chips) and product page under a plan too.
+      if (fill?.character?.kind === 'fashion') for (const part of FASHION_PARTS) if (manifest.master?.variants?.[part]?.includes('fashion')) (variants as Record<string, unknown>)[part] = 'fashion';
       fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), palette: plan.palette, fonts: plan.fonts, ...(plan.accent ? { colors: { ...(fill?.look?.colors ?? {}), accent: plan.accent } } : {}) } };
     } else if (!presetManifest && !starterManifest && this.config.get<boolean>('app.yapiEsencialDice') !== false) {
       // Counted before bundling: a bundled hero is an asset path and would count its product photo twice (review fix).

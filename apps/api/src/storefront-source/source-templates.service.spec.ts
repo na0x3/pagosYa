@@ -346,6 +346,15 @@ describe('applyMaster with a plan', () => {
     rollSpy.mockRestore();
   });
 
+  // NOA 2 2026-10-30: a detailed first message went through the plan card, whose look replaced the dice — and with it the
+  // fashion card and product page, so the bridal atelier had no round size chips.
+  it('a fashion store keeps the fashion card and product page under a plan', async () => {
+    const { templates, projects } = master();
+    const plan = { variants: { hero: 'full', cards: 'split', pdp: 'gallery-left' }, sections: ['sizes'], palette: 'linen', fonts: master().templates.registry.templateManifest('esencial')!.master!.fonts[0].id, dna: {} };
+    await templates.applyMaster('m1', 'store-1', 0, async () => ({ copy: { headline: 'Novias' }, character: { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [], kind: 'fashion' } } as any), undefined, plan as any);
+    expect(readMasterState(saved(projects)).variants).toMatchObject({ cards: 'fashion', pdp: 'fashion' });
+  });
+
   it('without a plan the dice still rolls', async () => {
     const dice = jest.requireActual('./source-master-dice');
     const rollSpy = jest.spyOn(dice, 'rollVariants');
