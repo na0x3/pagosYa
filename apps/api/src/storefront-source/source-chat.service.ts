@@ -102,7 +102,7 @@ export function referenceOnlyNotice(uses: Array<{ url: string; role: string }>, 
 export const PERSONAL_TOUCH_BRIEF = 'Toque personal para este negocio: agrega UNA sección que las variantes no tienen y que nazca de sus datos reales (por ejemplo «Lo que nos hace distintos» o una guía breve de uso), con una foto real de la tienda junto al texto y sobre el fondo claro de la tienda: nunca una banda oscura o negra solo de texto, ni filas de columnas de texto sueltas; UN detalle de firma pequeño dentro de una sección que ya existe (un sello con la ciudad o la idea del negocio, un subrayado dibujado en el titular o un separador propio) y, si una sección suena genérica, reescribe solo esa. No quites secciones, no cambies la estructura de store-data, no inventes datos, precios ni reseñas, no toques carrito ni pago.';
 /** Owner 2026-10-27: the polish after a new master store — one fill call that may change words and photo choices only. */
 /** Review 2026-10-29 (I1): a spent model quota as it reaches chat — the provider's class, or generate()'s merchant-facing reply. */
-const quotaSpent = (error: unknown) => error instanceof SourceProviderQuotaException || (error instanceof Error && (error.message === MODEL_LIMIT_MERCHANT_FAILURE || MODEL_LIMIT.test(error.message)));
+const quotaSpent = (error: unknown) => error instanceof SourceProviderQuotaException || (error instanceof Error && (error.message.includes(MODEL_LIMIT_MERCHANT_FAILURE) || MODEL_LIMIT.test(error.message)));
 /** Spec 2026-10-29: what the home writer is asked; the merchant's first message follows it. */
 const HOME_WRITER_BRIEF = 'Diseña la portada de esta tienda nueva al estilo de Amboras: titulares grandes, mucho recorrido, los colores de la marca, con sus fotos y productos reales.';
 export const MASTER_POLISH_BRIEF = 'Pulido automático de la tienda recién creada desde la plantilla. Conserva paleta, fuentes, variantes, menú y estructura. '
@@ -601,7 +601,9 @@ export class SourceChatService {
     const strayed = after.files.filter(file => nextSourceFile(file.path) && !['components/home.tsx', 'styles/globals.css', 'components/store-data.tsx'].includes(file.path)
       && before.files.find(old => old.path === file.path)?.content !== file.content).map(file => file.path);
     // Review I4: the product page, cart, checkout and account look live outside the components (config.js, brand.css, frame-draw.json).
-    const look = (files: SourceProjectSnapshot['files']) => { const config = readConfigFile(files); return JSON.stringify([config.productPageStyle, config.dna, config.accountTheme,
+    const look = (files: SourceProjectSnapshot['files']) => { const config = readConfigFile(files); const { display: _display, text: _text, ...dna } = (config.dna ?? {}) as Record<string, unknown>;
+      // The fonts follow the writer's brand fonts on every page; the rest of the look is the template's.
+      return JSON.stringify([config.productPageStyle, dna, config.accountTheme,
       ...['brand.css', 'frame-draw.json'].map(path => files.find(file => file.path === path)?.content)]); };
     if (look(after.files) !== look(before.files)) strayed.push('config.js / brand.css');
     if (strayed.length) { await this.projects.restore(merchantId, storeId, input.revision, revision.revision); throw new Error(`home writer changed ${strayed.join(', ')}`); }

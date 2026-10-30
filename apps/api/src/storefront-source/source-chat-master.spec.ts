@@ -862,6 +862,15 @@ describe('the home page writer', () => {
     await expect(writer()).rejects.toBeInstanceOf(PersonalTouchSkipped);
     expect(projects.restore).toHaveBeenCalledWith('m1', 's1', 3, 4);
   });
+  // Live check 2026-10-29 (PEPPA): the product page wears the writer's brand fonts; only a font change is not a redraw.
+  it('a writer run whose save only changed the look\'s fonts is kept', async () => {
+    const withDna = (home: string, dna: object) => { const snap = snapshot(home); snap.snapshot.files.push({ path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ productPageStyle: 'classic', dna, data: { items: [] } })};\n` } as any); return snap; };
+    generate.mockResolvedValueOnce({ revision: 4, label: 'Portada de YAPI' });
+    projects.version.mockImplementation(async (_m: string, _s: string, revision: number) => revision >= 4 ? withDna('export default function Home() { return 1; }', { display: 'outfit', text: 'space-grotesk', border: 'hairline' }) : withDna('export default function Home() { return 0; }', { display: 'bebas-neue', text: 'manrope', border: 'hairline' }));
+    const out = await writer();
+    expect(projects.restore).not.toHaveBeenCalled();
+    expect(out.revision).toMatchObject({ revision: 4 });
+  });
   // Review 2026-10-29 (I1): the real quota failure reaches chat as generate()'s merchant-facing BadGatewayException, not the quota class.
   it('a spent quota as generate() really reports it goes back to the queue, without leaving a message behind', async () => {
     generate.mockRejectedValueOnce(new BadGatewayException(LIMIT_REPLY));
@@ -869,6 +878,12 @@ describe('the home page writer', () => {
     expect(failure).not.toBeInstanceOf(PersonalTouchSkipped);
     expect(failure.message).toBe(LIMIT_REPLY);
     expect(prisma.storeAgentMessage.delete).toHaveBeenCalled();
+  });
+  // Live check 2026-10-29 (DooBoo g31pnb87): the stage wraps the plan's limit reply in its own words; it is still a spent quota.
+  it('a spent quota wrapped by the writer stage still goes back to the queue', async () => {
+    generate.mockRejectedValueOnce(new BadGatewayException(`YAPI no pudo terminar la portada: ${LIMIT_REPLY}`));
+    const failure = await writer().catch(error => error);
+    expect(failure).not.toBeInstanceOf(PersonalTouchSkipped);
   });
   // Review 2026-10-29 (I2): a cancelled or shut-down run is not a failed writer; the job runner requeues or stops it.
   it('a cancelled run is not turned into a skip with a check', async () => {

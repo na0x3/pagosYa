@@ -1,7 +1,7 @@
 import { templateManifest, templateSourceFiles } from '@pagosya/store-templates';
 import { templateDemoRevision } from './source-templates';
 import { nextSourceFile } from './source-next';
-import { homeWriterInstructions, homeWriterLimits, runHomeWriterLoop, runHomeWriterStage } from './source-home-writer-stage';
+import { homeWriterDna, homeWriterInstructions, homeWriterLimits, runHomeWriterLoop, runHomeWriterStage } from './source-home-writer-stage';
 import { HOME_PATH, HOME_WRITER_LIMITS } from './agent/home-writer-tools';
 import { masterThemeBlock, withMasterTheme } from './source-master';
 import { SOURCE_FONT_IDS } from './source-font-catalog';
@@ -73,5 +73,20 @@ describe('home writer review fixes (2026-10-29)', () => {
     await expect(runHomeWriterStage({ facts, live, acceptCandidate: async () => undefined, resume: {} as any })).rejects.toThrow(/portada/);
     expect(options[0]).toMatchObject({ reasoningEffort: 'low', model: 'gpt-5.6-terra' });
     expect(typeof options[0].promptCacheKey).toBe('string');
+  });
+});
+
+// Live check 2026-10-29 (PEPPA c6vo5nuz): the writer's save re-rolled border and frame; it keeps every look key but the fonts.
+describe('homeWriterDna', () => {
+  const previous = { version: 1, display: 'bebas-neue', text: 'manrope', border: 'hairline', frame: 'bleed', button: 'pill', radius: 'round' };
+  it('keeps the previous look and takes the fonts the writer chose', () => {
+    const css = withMasterTheme('body{}', masterThemeBlock({ paper: '#f4efe6', ink: '#1d2a22', muted: '#e8e1d4', accent: '#b5562b', deep: '#2f4a33' }, SOURCE_FONT_IDS[0], SOURCE_FONT_IDS[1]));
+    expect(homeWriterDna(previous, css)).toEqual({ ...previous, display: SOURCE_FONT_IDS[0], text: SOURCE_FONT_IDS[1] });
+  });
+  it('one font for both, or no theme block, behaves', () => {
+    const one = withMasterTheme('', masterThemeBlock({ paper: '#f4efe6', ink: '#1d2a22', muted: '#e8e1d4', accent: '#b5562b', deep: '#2f4a33' }, SOURCE_FONT_IDS[2], SOURCE_FONT_IDS[2]));
+    expect(homeWriterDna(previous, one)).toMatchObject({ display: SOURCE_FONT_IDS[2], text: SOURCE_FONT_IDS[2], border: 'hairline' });
+    expect(homeWriterDna(previous, 'body{}')).toEqual(previous);
+    expect(homeWriterDna(undefined, 'body{}')).toBeUndefined();
   });
 });

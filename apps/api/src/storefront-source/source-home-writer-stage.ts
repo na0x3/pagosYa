@@ -12,6 +12,8 @@ import { HomeWriterToolbox, HOME_PATH, HOME_WRITER_LIMITS, HOME_WRITER_TOOLS } f
 import { nextSourceFile } from './source-next';
 import { sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
 import type { AgentStageContext } from './source-agent-stage';
+import { readConfigFile } from './store-look';
+import { MASTER_THEME_END, MASTER_THEME_START } from './source-master';
 
 /** Spec 2026-10-29 §2–3: Amboras's recipe, our rules. */
 export function homeWriterInstructions(): string {
@@ -27,6 +29,15 @@ Productos, precios, fotos y logo vienen de './store-data'. Los consejos de check
 
 type LoopInput = { model: AgentModel; files: SourceProjectFileDto[]; base: AgentPreviewBase; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; task: string;
   images?: unknown[]; signal?: AbortSignal; limits?: Partial<typeof AGENT_LIMITS>; onStep?: (step: AgentStep) => void | Promise<void> };
+
+/** Live check 2026-10-29 (PEPPA): the store's look (product page, cards, cart, checkout) stays the previous revision's; only the
+ *  fonts follow the ones the writer chose in the theme block (heading face first, body second). */
+export function homeWriterDna(previous: Record<string, unknown> | undefined, globalsCss: string): Record<string, unknown> | undefined {
+  if (!previous || typeof previous !== 'object') return undefined;
+  const start = globalsCss.indexOf(MASTER_THEME_START), end = globalsCss.indexOf(MASTER_THEME_END);
+  const faces = start >= 0 && end > start ? [...globalsCss.slice(start, end).matchAll(/url\(assets\/([a-z0-9-]+)\.ttf\)/g)].map(match => match[1]) : [];
+  return faces.length ? { ...previous, display: faces[0], text: faces[1] ?? faces[0] } : { ...previous };
+}
 
 /** Review 2026-10-29: twice the time on the ChatGPT plan (turns there take 20–90 s), as the main agent gets, and never past the
  *  run's own deadline, so the writer stops itself before the run is aborted. */
@@ -55,6 +66,7 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
   // The same acceptance chain every build passes, in its lenient form (artwork and edit-scope rules are for chat edits).
   const gate = async (files: SourceProjectFileDto[]) => {
     live.generated = { label: 'Portada de YAPI', files: files.map(file => ({ ...file })) };
+    live.keptDna = homeWriterDna(readConfigFile(previousFiles).dna, files.find(file => file.path === 'styles/globals.css')?.content ?? '');
     live.lenient = true;
     try { await acceptCandidate(); return null; }
     catch (error) { return (error as Error).message; }

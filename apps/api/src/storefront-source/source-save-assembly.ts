@@ -37,7 +37,7 @@ export type LookChoice = { reuse?: { look: StoreLook | undefined }; fallback?: S
 
 export type SaveAssemblyContext = {
   facts: Pick<GenerationRunFacts, 'prisma' | 'config' | 'logger' | 'storeId' | 'runId' | 'slug' | 'dto' | 'brand' | 'apiUrl' | 'data' | 'assets' | 'retainedAssets' | 'assetLegend' | 'imageUses' | 'photoFacts' | 'fontPaths' | 'previous' | 'previousFiles' | 'previousDesign' | 'previousScene' | 'sectionScope' | 'sitePurpose' | 'scrollFeel' | 'motion' | 'primaryAction' | 'creative' | 'useNext' | 'signal' | 'voice'>;
-  live: Pick<GenerationLive, 'generated' | 'agentTheme' | 'visualSystem' | 'frame' | 'compiledNext' | 'sketchFile' | 'websiteDesignFile' | 'kitTouch' | 'motifFiles' | 'agentAccountTheme' | 'agentMotifPack' | 'agentPolicies'>;
+  live: Pick<GenerationLive, 'generated' | 'agentTheme' | 'visualSystem' | 'frame' | 'compiledNext' | 'sketchFile' | 'websiteDesignFile' | 'kitTouch' | 'motifFiles' | 'agentAccountTheme' | 'agentMotifPack' | 'agentPolicies' | 'keptDna'>;
   /** generate()'s platformHeader: draws the platform header on every static page and logs its notes once per run. */
   platformHeader: (files: SourceProjectFileDto[], platformPages: string[]) => SourceProjectFileDto[];
   /** YAPI rewrote at least one store policy this run (computed once after the engine branch). */
@@ -113,7 +113,7 @@ export async function assembleSourceSave(context: SaveAssemblyContext, assembleS
   // The picked card's account, checkout, fields and cart path (spec 2026-10-11 commerce surfaces); nothing without a draw.
   const keptCheckoutPhoto = typeof previousConfig.checkoutPhoto === 'string' && assets.some(file => file.path === previousConfig.checkoutPhoto) ? previousConfig.checkoutPhoto : undefined;
   const drawnCommerce = commerceConfig({ commerce: live.frame.commerce, photos: storePhotoPaths({ assetLegend, imageUses, logoUrl: (data as { logoUrl?: string | null }).logoUrl }), keptPhoto: keptCheckoutPhoto });
-  const dna = { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...carriedTouch(previousConfig.dna, creative), ...productRuntimeDna(live.frame.product?.draw ?? {}), ...(live.agentTheme ? productThemeRuntime(live.agentTheme) : sketchTheme ?? {}), ...(live.frame.dna ?? {}), ...drawnCommerce.dna, ...(live.kitTouch && Object.keys(live.kitTouch).length ? { ...live.kitTouch, touch: 1 } : {}) };
+  const dna = live.keptDna ?? { ...sourceRuntimeDna(conceptDna, storeId, productPageStyle), ...carriedDna, ...carriedTouch(previousConfig.dna, creative), ...productRuntimeDna(live.frame.product?.draw ?? {}), ...(live.agentTheme ? productThemeRuntime(live.agentTheme) : sketchTheme ?? {}), ...(live.frame.dna ?? {}), ...drawnCommerce.dna, ...(live.kitTouch && Object.keys(live.kitTouch).length ? { ...live.kitTouch, touch: 1 } : {}) };
   // Only the accepted design's motifs are kept; a store without any gets no files and no config key.
   const acceptedMotifPaths = sourceMotifPaths(designMotifs(acceptedDesign));
   const acceptedMotifFiles = live.motifFiles.filter(file => acceptedMotifPaths.includes(file.path));

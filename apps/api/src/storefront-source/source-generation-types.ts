@@ -108,6 +108,8 @@ export type GenerationLive = {
   agentMotifPack: AgentToolbox['pendingMotifPack'];
   agentPolicies: PendingPolicies;
   agentOutcome: AgentOutcome | undefined;
+  /** Live check 2026-10-29: the home writer's save keeps the previous look and takes only the writer's fonts. */
+  keptDna?: Record<string, unknown>;
   unfinishedStatus: 'PARTIAL' | 'BLOCKED' | null;
   taskPrompt: string;
   /** Spec 2026-10-16 brand source: the BRAND SOURCE block for the Sep-5 author, '' without brand material. */
