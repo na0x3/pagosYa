@@ -31,7 +31,7 @@ Ritmo: un recorrido largo de cómo se hace — pasos con foto, el origen, la not
 Tipo: cálido y cercano, en primera persona del plural. Evita inventar datos o fechas que la tienda no dio.`,
 };
 
-export const HOME_MOTION_BRIEF = `MOVIMIENTO (esta tienda tiene una portada animada; usa al menos tres de estas piezas, importadas de '@pagosya/ui'):
+export const HOME_MOTION_BRIEF = `MOVIMIENTO (esta tienda tiene una portada animada: usa al menos tres de estas piezas, importadas de '@pagosya/ui' — con menos de dos, check no te deja terminar; Reveal y Parallax no cuentan):
 - <Hero ... scrollGrow /> o envuelve la foto de portada en <ScrollScale from={0.82}> — la foto crece al bajar.
 - <ParallaxStack images={[{ src, alt }, ...]} /> — dos fotos en capas que se mueven a distinto ritmo (nunca 3 fotos o más).
 - <ScrollScale from={0.82}>…</ScrollScale> — un bloque que se agranda al entrar.

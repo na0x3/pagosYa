@@ -88,7 +88,8 @@ describe('HomeWriterToolbox', () => {
     expect((await animated.run('read_chassis', '{}')).output).toContain('ScrollScale');
     expect((await box().run('read_chassis', '{}')).output).not.toContain('ScrollScale');
     await branded(animated);
-    expect((await animated.run('check', '{}')).output).toMatch(/Consejos[\s\S]*menos de 3 movimientos/);
+    // Live check 2026-10-30 (Oh Belly i20pm2rq): advice alone was ignored — an animated home with fewer than 2 kit motion parts must be fixed.
+    expect((await animated.run('check', '{}')).output).toMatch(/Debes corregir:[\s\S]*movimiento/);
     const still = await branded(box());
     expect((await still.run('check', '{}')).output).not.toMatch(/movimientos/);
   });

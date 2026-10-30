@@ -81,7 +81,10 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           step('check', 'Comprobando la portada', (captures[0] as { thumbnail?: string } | undefined)?.thumbnail);
           // Owner 2026-10-29 («things like color picker, sorter»): the home's product grid keeps the kit's sort and filter chips.
           // Spec 2026-10-30: an animated store is reminded, never blocked, when it moves fewer than three parts.
-          if (this.ctx.animated && motionPartsUsed(this.workspace.read(HOME_PATH)).length < 3) verdict.advice.push('La portada animada usa menos de 3 movimientos del kit (ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase, scrollGrow).');
+          // Live check 2026-10-30 (Oh Belly): the advice alone was ignored. Fewer than 2 kit motion parts must be fixed; 3+ is the aim.
+          const moving = this.ctx.animated ? motionPartsUsed(this.workspace.read(HOME_PATH)).length : 3;
+          if (moving < 2) verdict.blocking.push('Esta tienda tiene portada animada y usa menos de 2 movimientos del kit: agrega al menos dos de ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase o Hero scrollGrow (importados de \'@pagosya/ui\').');
+          else if (moving < 3) verdict.advice.push('La portada animada usa menos de 3 movimientos del kit (ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase, scrollGrow).');
           if (!/data-pagosya-catalog[^>]*data-pagosya-filters|data-pagosya-filters[^>]*data-pagosya-catalog/.test(this.workspace.read(HOME_PATH))) verdict.blocking.push('La grilla de productos perdió ordenar y filtrar por color y talla: deja data-pagosya-filters data-filters-style="chips" en el elemento data-pagosya-catalog, como en la portada de la plantilla.');
           this.lastVerify = { version: this.workspace.version, clean: !verdict.blocking.length, hard: verdict.blocking.length > 0 };
           return { output: [verdict.blocking.length ? `Debes corregir:\n- ${verdict.blocking.join('\n- ')}` : 'Nada que corregir.',
