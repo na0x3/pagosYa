@@ -156,6 +156,8 @@ export async function runAgent(input: { model: AgentModel; toolbox: AgentLoopToo
 export const AGENT_COMPACT_BATCH_TOKENS = 20_000;
 /** Spec 2026-10-29 (home writer): a whole-file write replaced by a newer one is resent as this fixed line. */
 export const AGENT_HOME_STUB = 'versión anterior de components/home.tsx reemplazada por una más nueva';
+/** Token cut 2026-10-30: the chassis brief, once the writer has written its home. */
+export const AGENT_CHASSIS_STUB = 'Resumen de read_chassis retirado: la portada ya está escrita. Llama read_chassis si lo necesitas otra vez.';
 
 const hasImage = (item: any) => item.role === 'user' && Array.isArray(item.content) && item.content.some((part: any) => part.type === 'input_image');
 /** Stale observations: every screenshot but the latest, and long file reads more than 12 items back. Never instructions,
@@ -169,11 +171,15 @@ function staleIndexes(transcript: any[]): number[] {
   transcript.forEach((item, i) => { if (item.type === 'function_call' && item.name === 'write_home') latestHome = i; });
   return transcript.flatMap((item, i) => (i > 0 && i < latestImage && hasImage(item))
     || (item.type === 'function_call' && item.name === 'write_home' && i < latestHome)
+    || (item.type === 'function_call_output' && calls.get(item.call_id) === 'read_chassis' && i < latestHome)
     || (i < transcript.length - 12 && item.type === 'function_call_output' && calls.get(item.call_id) === 'read_file' && typeof item.output === 'string' && item.output.length > 1200) ? [i] : []);
 }
+/** The call ids of read_chassis calls, whose outputs get their own stub. */
+const chassisCalls = (items: any[]) => new Set(items.filter(item => item.type === 'function_call' && item.name === 'read_chassis').map(item => item.call_id));
 /** Always the same replacement for the same item, so a compacted item never changes again. */
-function evicted(item: any) {
+function evicted(item: any, chassis = false) {
   if (item.type === 'function_call') return { ...item, arguments: JSON.stringify({ content: AGENT_HOME_STUB }) };
+  if (item.type === 'function_call_output' && chassis) return { ...item, output: AGENT_CHASSIS_STUB };
   if (item.type === 'function_call_output') return { ...item, output: 'Earlier file contents evicted. read_file returns the CURRENT version if needed.' };
   return { ...item, content: item.content.filter((part: any) => part.type !== 'input_image').concat({ type: 'input_text', text: 'Previous screenshot evicted. Use the latest screenshot; recapture if this page changed.' }) };
 }
@@ -181,7 +187,8 @@ function evicted(item: any) {
 /** Preserve calls/results and the original task. Evict every stale observation at once. */
 export function compactAgentTranscript(transcript: unknown[]): unknown[] {
   const stale = new Set(staleIndexes(transcript as any[]));
-  return (transcript as any[]).map((item, i) => stale.has(i) ? evicted(item) : item);
+  const chassis = chassisCalls(transcript as any[]);
+  return (transcript as any[]).map((item, i) => stale.has(i) ? evicted(item, chassis.has(item.call_id)) : item);
 }
 
 /** The loop's compactor: remembers what it compacted and compacts only in batches of AGENT_COMPACT_BATCH_TOKENS.
@@ -192,6 +199,7 @@ export function agentTranscriptCompactor(batchTokens = AGENT_COMPACT_BATCH_TOKEN
     const items = transcript as any[];
     const pending = staleIndexes(items).filter(i => !done.has(i));
     if (pending.length && estimateInputTokens(pending.map(i => items[i])) >= batchTokens) for (const i of pending) done.add(i);
-    return items.map((item, i) => done.has(i) ? evicted(item) : item);
+    const chassis = chassisCalls(items);
+    return items.map((item, i) => done.has(i) ? evicted(item, chassis.has(item.call_id)) : item);
   };
 }

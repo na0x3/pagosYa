@@ -380,3 +380,17 @@ describe('agentTranscriptCompactor home writes', () => {
     expect((compact(t) as any[])[1]).toEqual(first[1]);
   });
 });
+
+// Token cut 2026-10-30: the chassis brief is resent only until the writer has written its home.
+describe('agentTranscriptCompactor chassis', () => {
+  it('replaces the read_chassis output with a stub once a write_home follows it', () => {
+    const compact = agentTranscriptCompactor(0);
+    const t: unknown[] = [{ role: 'user', content: [{ type: 'input_text', text: 'tarea' }] },
+      { type: 'function_call', call_id: 'r', name: 'read_chassis', arguments: '{}' }, { type: 'function_call_output', call_id: 'r', output: 'C'.repeat(4000) }];
+    expect(JSON.stringify(compact(t))).toContain('C'.repeat(4000));
+    t.push({ type: 'function_call', call_id: 'w', name: 'write_home', arguments: JSON.stringify({ content: 'x' }) }, { type: 'function_call_output', call_id: 'w', output: 'ok' });
+    const out = compact(t) as any[];
+    expect(out[2].output).not.toContain('C'.repeat(4000));
+    expect(out[2].output).toMatch(/read_chassis/);
+  });
+});

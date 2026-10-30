@@ -92,6 +92,12 @@ describe('HomeWriterToolbox', () => {
     const still = await branded(box());
     expect((await still.run('check', '{}')).output).not.toMatch(/movimientos/);
   });
+  // Token cut 2026-10-30: check hands back its desktop and phone captures, so a run needs no separate screenshot calls.
+  it('check returns the desktop and phone captures it took', async () => {
+    const b = await branded(box());
+    const result = await b.run('check', '{}');
+    expect(result.images).toHaveLength(2);
+  });
   it('stops screenshots after four', async () => {
     const b = box();
     for (let i = 0; i < 4; i++) expect((await b.run('screenshot', JSON.stringify({ width: 390 }))).image).toBeTruthy();

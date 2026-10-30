@@ -21,8 +21,8 @@ export const HOME_WRITER_TOOLS: readonly AgentToolDefinition[] = [
   strictTool('read_chassis', 'Lee lo que la portada puede usar: partes del kit, datos de la tienda (store-data), fotos, fuentes y la portada actual.', {}),
   strictTool('write_home', 'Escribe components/home.tsx COMPLETO (reemplaza el archivo). Mantén <Shell>. Los textos van como texto JSX literal.', { content: text }),
   strictTool('set_tokens', 'Fija los 5 colores de la tienda (hex) y dos fuentes del catálogo (ids de read_chassis).', { paper: hex, ink: hex, muted: hex, accent: hex, deep: hex, heading: text, body: text }),
-  strictTool('check', 'Comprueba la portada en escritorio y celular: lo que debes corregir y los consejos.', {}),
-  strictTool('screenshot', 'Captura la portada para mirarla (máximo 4 en total).', { width: { type: 'integer', enum: [1280, 390] } }),
+  strictTool('check', 'Comprueba la portada en escritorio y celular: lo que debes corregir, los consejos y las dos capturas.', {}),
+  strictTool('screenshot', 'Otra captura de la portada, solo si check no bastó (máximo 4 en total).', { width: { type: 'integer', enum: [1280, 390] } }),
   strictTool('finish', 'Termina: resumen para el comercio en español, 1–2 frases simples, sin términos técnicos.', { summary: text }),
 ];
 
@@ -45,7 +45,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
   get workspace() { return this.ctx.workspace; }
   draftIsClean() { return Boolean(this.lastVerify?.clean && this.lastVerify.version === this.workspace.version); }
 
-  async run(name: string, rawArgs: string): Promise<{ output: string; image?: string }> {
+  async run(name: string, rawArgs: string): Promise<{ output: string; image?: string; images?: string[] }> {
     let args: Record<string, unknown>;
     try { args = JSON.parse(rawArgs || '{}'); } catch { return { output: 'Argumentos JSON no válidos.' }; }
     const step = (kind: AgentStep['kind'], label: string, thumbnail?: string) => { this.steps.push({ kind, label, at: Date.now(), ...(thumbnail ? { thumbnail } : {}) }); };
@@ -75,7 +75,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
         case 'check': {
           step('check', 'Comprobando la portada');
           const snapshot = await agentPreviewSnapshot(this.ctx.base, this.workspace.files());
-          const captures: Array<{ width: number; errors: string[] }> = [];
+          const captures: Array<{ width: number; errors: string[]; image: string }> = [];
           for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules]));
           const verdict = homeWriterVerdict(captures);
           // Owner 2026-10-29 («things like color picker, sorter»): the home's product grid keeps the kit's sort and filter chips.
@@ -84,7 +84,9 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           if (!/data-pagosya-catalog[^>]*data-pagosya-filters|data-pagosya-filters[^>]*data-pagosya-catalog/.test(this.workspace.read(HOME_PATH))) verdict.blocking.push('La grilla de productos perdió ordenar y filtrar por color y talla: deja data-pagosya-filters data-filters-style="chips" en el elemento data-pagosya-catalog, como en la portada de la plantilla.');
           this.lastVerify = { version: this.workspace.version, clean: !verdict.blocking.length, hard: verdict.blocking.length > 0 };
           return { output: [verdict.blocking.length ? `Debes corregir:\n- ${verdict.blocking.join('\n- ')}` : 'Nada que corregir.',
-            verdict.advice.length ? `Consejos (opcionales):\n- ${verdict.advice.join('\n- ')}` : ''].filter(Boolean).join('\n') };
+            verdict.advice.length ? `Consejos (opcionales):\n- ${verdict.advice.join('\n- ')}` : '', 'Capturas de escritorio y celular adjuntas.'].filter(Boolean).join('\n'),
+            // Token cut 2026-10-30: the captures check already took, so a run needs no separate screenshot calls.
+            images: captures.map(capture => capture.image) };
         }
         case 'screenshot': {
           if (this.shots >= HOME_WRITER_LIMITS.screenshots) return { output: 'No quedan capturas. Usa check y termina.' };

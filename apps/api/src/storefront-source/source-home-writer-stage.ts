@@ -22,7 +22,7 @@ import { MASTER_THEME_END, MASTER_THEME_START } from './source-master';
 export function homeWriterInstructions(): string {
   return `Eres el diseñador de la PORTADA de una tienda pagosYa. Solo cambias ${HOME_PATH} (completo, con write_home) y los colores y fuentes (set_tokens).
 El encabezado, el menú, el pie, la ficha de producto, el carrito y el checkout son de la plataforma: no los dibujes ni los imites. Toda la portada va dentro de <Shell>.
-Orden: read_chassis; escribe la portada entera en una sola llamada; set_tokens con los colores y las fuentes de la marca; check; una captura de escritorio y una de celular; corrige; finish.
+Orden: read_chassis (trae la portada actual); escribe la portada entera en una sola llamada; set_tokens con los colores y las fuentes de la marca; check (devuelve lo que debes corregir y las capturas de escritorio y celular); corrige; check; finish. Usa screenshot solo si necesitas otra vista.
 Estilo (como Amboras): titulares de 72 px o más en escritorio con interlineado apretado, etiquetas pequeñas en mayúsculas (por ejemplo «01 / 04»), una portada amplia donde el texto tiene espacio, bandas del color de la marca, al menos 6 secciones (portada, productos con data-pagosya-catalog, historia, beneficios, preguntas, cierre).
 Reglas que bloquean: cada foto una sola vez; nunca 3 fotos o más juntas; nunca una banda oscura (negra) solo con texto — usa una foto real, un fondo claro o el color de la marca; la portada muestra productos (data-pagosya-catalog, o data-pagosya-spotlight con ids reales).
 Las bandas de la plantilla se pintan con --es-deep: si es casi negro, dale con set_tokens el color oscuro de la marca (un verde, un vino, un azul), nunca negro.
@@ -76,7 +76,7 @@ export async function runHomeWriterLoop(input: LoopInput) {
   const workspace = new AgentWorkspace(input.files, { redesign: true, lockedShell: true });
   const toolbox = new HomeWriterToolbox({ workspace, base: input.base, gate: input.gate, ...(input.signal ? { signal: input.signal } : {}), ...(input.animated ? { animated: true } : {}) });
   const outcome = await runAgent({ model: input.model, toolbox, tools: HOME_WRITER_TOOLS, verifyTool: 'check', instructions: homeWriterInstructions(), signal: input.signal, onStep: input.onStep,
-    limits: { ...HOME_WRITER_LIMITS, ...input.limits }, opening: agentOpening(input.task, input.files.filter(file => file.path === HOME_PATH), input.images ?? []) });
+    limits: { ...HOME_WRITER_LIMITS, ...input.limits }, opening: agentOpening(input.task, [], input.images ?? []) });
   // A run that changed nothing is not a new design (review 2026-10-29): the store keeps its template home and says nothing.
   const accepted = workspace.changedPaths().length > 0
     && ((outcome.status === 'finished' && Boolean(toolbox.finished)) || (!outcome.provider && outcome.reason !== 'cancelled' && !input.signal?.aborted && await toolbox.acceptIfBuildable()));

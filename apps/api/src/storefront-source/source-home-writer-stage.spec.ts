@@ -106,3 +106,12 @@ describe('homeWriterTask', () => {
     expect(homeWriterTask({ instruction: 'x', storeName: 'y', direction: 'bandas', animated: true, avoid: { fonts: [], papers: [] } })).toContain('MOVIMIENTO');
   });
 });
+
+// Token cut 2026-10-30: the home goes to the model once, through read_chassis, not also in the opening message.
+describe('home writer opening', () => {
+  it('the first request carries no copy of the home', async () => {
+    let first = '';
+    await runHomeWriterLoop({ model: async ({ transcript }) => { first ||= JSON.stringify(transcript); return { calls: [] }; }, files: authored(), base, gate: async () => null, task: 'x', limits: { toolCalls: 2 } });
+    expect(first).not.toContain('export default function Home');
+  });
+});
