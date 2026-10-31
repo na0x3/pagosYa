@@ -526,6 +526,13 @@
         "heading": "dm-sans",
         "body": "space-mono",
         "starterOnly": true
+      },
+      {
+        "id": "grano",
+        "name": "Grano",
+        "heading": "libre-caslon-text",
+        "body": "figtree",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -703,7 +710,8 @@
         "conecta",
         "despensa",
         "bazar",
-        "sorbo"
+        "sorbo",
+        "grano"
       ],
       "icons": [
         "line",

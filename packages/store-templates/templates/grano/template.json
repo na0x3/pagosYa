@@ -1,0 +1,278 @@
+{
+  "id": "grano",
+  "name": "Grano",
+  "category": "comida",
+  "description": "Café y cosas simples: gris claro, títulos con serif pequeños y centrados, mucho aire, fotos con bordes suaves y una franja verde oscura.",
+  "tags": [
+    "café",
+    "minimal",
+    "tazas",
+    "artesanal"
+  ],
+  "sitePurpose": "shop",
+  "order": 47,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Craft",
+    "url": "https://theme-craft-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "to-hero",
+      "role": "hero",
+      "demo": "to-hero.jpg"
+    },
+    {
+      "slot": "to-origen",
+      "role": "lifestyle",
+      "demo": "to-origen.jpg"
+    },
+    {
+      "slot": "to-p2",
+      "role": "lifestyle",
+      "demo": "to-p2.jpg"
+    },
+    {
+      "slot": "to-p3",
+      "role": "lifestyle",
+      "demo": "to-p3.jpg"
+    },
+    {
+      "slot": "to-taza",
+      "role": "hero",
+      "demo": "to-taza.jpg"
+    },
+    {
+      "slot": "al-taller",
+      "role": "lifestyle",
+      "demo": "al-taller.jpg"
+    },
+    {
+      "slot": "al-mesa",
+      "role": "lifestyle",
+      "demo": "al-mesa.jpg"
+    },
+    {
+      "slot": "to-p1",
+      "role": "product",
+      "demo": "to-p1.jpg"
+    },
+    {
+      "slot": "al-p2",
+      "role": "product",
+      "demo": "al-p2.jpg"
+    },
+    {
+      "slot": "al-p4",
+      "role": "product",
+      "demo": "al-p4.jpg"
+    },
+    {
+      "slot": "me-p1",
+      "role": "product",
+      "demo": "me-p1.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "grano",
+    "colors": {
+      "paper": "#f4f3ef",
+      "ink": "#26302b",
+      "muted": "#e8e6df",
+      "accent": "#26302b",
+      "deep": "#2c332e"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "grano",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "soft",
+      "density": "airy",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Mira nuestros sets de café"
+    },
+    "layout": [
+      {
+        "type": "categories-tiles",
+        "look": "caption",
+        "items": [
+          {
+            "title": "Café en grano",
+            "photo": "slot:to-p1",
+            "link": "products"
+          },
+          {
+            "title": "Tazas",
+            "photo": "slot:al-p2",
+            "link": "products"
+          },
+          {
+            "title": "Para preparar",
+            "photo": "slot:al-p4",
+            "link": "products"
+          },
+          {
+            "title": "Regalos",
+            "photo": "slot:to-taza",
+            "link": "products"
+          }
+        ],
+        "title": "Café tostado con calma, para tu *mañana* de cada día"
+      },
+      {
+        "type": "promo-banner",
+        "look": "rounded",
+        "title": "Los detalles importan",
+        "text": "Del grano a tu taza, cuidamos cada paso.",
+        "photo": "slot:to-p2"
+      },
+      {
+        "type": "products-grid",
+        "card": "classic",
+        "title": "Lo más pedido",
+        "link": "products"
+      },
+      {
+        "type": "reviews-cards",
+        "title": "Lo que dicen"
+      },
+      {
+        "type": "story-collage",
+        "title": "Descubre nuestros *sets*",
+        "text": "Café, taza y todo para prepararlo, listo para regalar.",
+        "cta": "Ver sets",
+        "link": "products",
+        "photo": "slot:to-hero",
+        "photo2": "slot:al-mesa",
+        "items": [
+          {
+            "title": "3",
+            "photo": "slot:to-p3"
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Tostado responsable",
+            "text": "En pequeños lotes.",
+            "icon": "flame"
+          },
+          {
+            "title": "Precio justo",
+            "text": "Para quien lo cultiva.",
+            "icon": "hand"
+          },
+          {
+            "title": "Origen conocido",
+            "text": "Sabes de qué finca viene.",
+            "icon": "pin"
+          },
+          {
+            "title": "Nos importa",
+            "text": "Empaque que se recicla.",
+            "icon": "recycle"
+          }
+        ]
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "deep",
+        "title": "No te lo pierdas",
+        "text": "Lanzamientos de cosecha y ofertas en tu correo."
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "look": "cards",
+        "title": "Cómo prepararlo",
+        "items": [
+          {
+            "title": "Muele al momento",
+            "text": "Molienda media."
+          },
+          {
+            "title": "Agua a 92 °C",
+            "text": "Justo antes de hervir."
+          },
+          {
+            "title": "Cuatro minutos",
+            "text": "Y sirve."
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "De la finca *a tu taza*",
+        "text": "Compramos directo a familias productoras y tostamos cada semana.",
+        "photo": "slot:to-origen"
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Lo muelen?",
+            "text": "Sí, dinos tu cafetera."
+          },
+          {
+            "title": "¿Cuánto dura fresco?",
+            "text": "Un mes cerrado."
+          },
+          {
+            "title": "¿Hacen envíos?",
+            "text": "A todo el país."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Grano",
+      "tagline": "Café de origen, tostado cada semana",
+      "products": [
+        {
+          "name": "Café de Origen 250 g",
+          "price": 75,
+          "description": "Notas de cacao y frutos rojos.",
+          "category": "Café"
+        },
+        {
+          "name": "Taza Moteada",
+          "price": 65,
+          "description": "Gres hecho a mano.",
+          "category": "Tazas"
+        },
+        {
+          "name": "Jarra para Servir",
+          "price": 140,
+          "description": "Terracota esmaltada.",
+          "category": "Para preparar"
+        },
+        {
+          "name": "Taza Clásica",
+          "price": 60,
+          "description": "Gres crema.",
+          "category": "Tazas"
+        }
+      ]
+    }
+  }
+}

@@ -2835,3 +2835,33 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="sorbo"] .es-footer{background:#121212;color:#fff}
 [data-es-theme="sorbo"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 /* /theme:sorbo */
+
+/* theme:grano */
+/* Grano (after Craft): a pale warm grey page, small centred serif titles, lots of air, photos with soft corners, pill buttons, a
+ * deep green-black newsletter band and footer. Measured: no scroll motion (Dawn family). */
+[data-es-theme="grano"]{--es-radius:12px;--es-t-weight:400;--es-t-track:0}
+[data-es-theme="grano"] .es-announce{background:#26302b;color:#f4f3ef;font-size:12px}
+[data-es-theme="grano"] .es-header{border-bottom:0}
+[data-es-theme="grano"] .es-logo{font:400 22px/1 var(--es-heading)}
+[data-es-theme="grano"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:400;letter-spacing:0;text-transform:none}
+[data-es-theme="grano"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(20px,1.8vw,26px);line-height:1.3}
+[data-es-theme="grano"] .lb-head{justify-items:center;text-align:center}
+[data-es-theme="grano"] .lb-statement-reveal[data-lb-look="center"] .lb-title{font-size:clamp(22px,2.2vw,32px);max-width:28ch;margin-inline:auto}
+[data-es-theme="grano"] .lb-em{color:inherit;font-style:italic}
+[data-es-theme="grano"] .es-btn,[data-es-theme="grano"] .lb-card__buy{border-radius:99px;background:#26302b;border-color:#26302b;color:#f4f3ef;font:500 13px/1 var(--es-body);letter-spacing:0;text-transform:none}
+[data-es-theme="grano"] :is(.lb-banner,[data-lb-band="deep"],[data-es-band="deep"]) .es-btn{background:#f4f3ef;border-color:#f4f3ef;color:#26302b}
+[data-es-theme="grano"] .es-btn *{color:inherit}
+[data-es-theme="grano"] .es-btn svg{display:none}
+[data-es-theme="grano"] .lb-tiles__tile{border-radius:12px}
+[data-es-theme="grano"] .lb-categories-tiles[data-lb-look="caption"] .lb-tiles__label{font:400 15px/1.2 var(--es-heading)}
+[data-es-theme="grano"] .lb-card .lb-card__media{border-radius:12px;background:#ebe9e3}
+[data-es-theme="grano"] :is(.es-card__name,.lb-card .es-card__name){font:400 15px/1.3 var(--es-heading);text-transform:none;letter-spacing:0}
+[data-es-theme="grano"] .lb-columns__icon{color:#26302b;opacity:.7}
+[data-es-theme="grano"] .lb-columns{text-align:center}
+[data-es-theme="grano"] .lb-columns li>*{justify-items:center}
+[data-es-theme="grano"] .lb-columns__title{font:400 16px/1.2 var(--es-heading);text-transform:none;letter-spacing:0}
+[data-es-theme="grano"] .es-footer{background:#2c332e;color:#f4f3ef}
+[data-es-theme="grano"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+[data-es-theme="grano"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
+[data-es-theme="grano"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* /theme:grano */
