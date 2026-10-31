@@ -38,3 +38,14 @@ describe('Plantillas presets', () => {
     expect(assembled.files.some(file => file.path === 'assets/template-voltio-hero.jpg')).toBe(true);
   });
 });
+
+describe('34 templates', () => {
+  it('a business fill keeps the template home (layout) and its theme', () => {
+    const preset = presetFill(templateManifest('paloalto')!.preset!);
+    expect(preset.layout?.length).toBeGreaterThan(10);
+    const merged = withPreset(preset, { copy: { headline: 'Tienda de Ana' }, variants: { hero: 'poster' } as never });
+    expect(merged.layout).toBe(preset.layout);
+    expect((merged.variants as Record<string, unknown>).theme).toBe('paloalto');
+  });
+});
+

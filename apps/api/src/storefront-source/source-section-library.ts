@@ -63,6 +63,10 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'social-posts', role: 'proof', use: 'Publicaciones de la tienda: fotos (items.photo) con su @cuenta y «Ver el look». Solo si la tienda enlazó su Instagram o TikTok.', needs: { social: true, items: [3, 8], itemPhotos: 3 }, templateOnly: true },
   { id: 'social-marquee', role: 'proof', use: 'Titular con una palabra en *asteriscos* (va en letra manuscrita) y fotos que corren con «síguenos» y la @cuenta. Solo con cuenta enlazada.', needs: { social: true, items: [3, 6], itemPhotos: 3 }, templateOnly: true },
   { id: 'shop-look', role: 'products', use: 'Foto con puntos sobre los productos que aparecen en ella (items.title = nombre exacto del producto; x, y = posición en % sobre la foto).', needs: { photos: 1, items: [1, 4], pins: true }, templateOnly: true },
+  { id: 'cover-shoppable', role: 'cover', use: 'Portada de foto completa con un + sobre cada producto que aparece en ella (items.title = nombre exacto, x, y = posición en %) y el titular abajo a la izquierda.', needs: { photos: 1, items: [0, 4], pins: true }, templateOnly: true },
+  { id: 'cover-video', role: 'cover', use: 'El video de la tienda de fondo con un titular centrado (solo se ve si la tienda subió un video).', needs: {}, templateOnly: true },
+  { id: 'categories-mosaic', role: 'products', use: 'Mosaico de 3 a 6 fotos con su nombre al centro y enlace (items con photo).', needs: { items: [3, 6], itemPhotos: 3 }, templateOnly: true },
+  { id: 'icon-columns', role: 'benefits', use: '2 a 4 columnas con icono, título y una frase (items) de cualidades reales de la tienda.', needs: { items: [2, 4] }, templateOnly: true },
   { id: 'press-quotes', role: 'proof', use: 'Lo que dijo la prensa: items.title = el medio, items.text = su frase. Solo medios y frases que el comercio escribió.', needs: { items: [1, 5], press: true }, templateOnly: true },
 ];
 const BY_ID = new Map(LIBRARY_CATALOG.map(section => [section.id, section]));
@@ -277,9 +281,10 @@ const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 
 export function libraryOfferEnd(value: unknown, merchantWords: string, now: number): string | undefined {
   const at = Date.parse(String(value ?? ''));
   if (!Number.isFinite(at) || at <= now || at - now > 120 * 86_400_000) return undefined;
-  const date = new Date(at - 4 * 3_600_000);
-  const day = date.getUTCDate(), month = MONTHS[date.getUTCMonth()];
-  return new RegExp(`\\b${day}\\s*(de\\s+)?${month}`).test(merchantWords) || new RegExp(`\\b${day}/${date.getUTCMonth() + 1}\\b`).test(merchantWords) ? new Date(at).toISOString() : undefined;
+  // The day as written: a bare date («2026-11-30») is that day; a time in La Paz is read there (UTC-4).
+  const days = [new Date(at), new Date(at - 4 * 3_600_000)];
+  const named = days.some(date => new RegExp(`\\b${date.getUTCDate()}\\s*(de\\s+)?${MONTHS[date.getUTCMonth()]}`).test(merchantWords) || new RegExp(`\\b${date.getUTCDate()}/${date.getUTCMonth() + 1}\\b`).test(merchantWords));
+  return named ? new Date(/T\d/.test(String(value)) ? at : at + 28 * 3_600_000 - 60_000).toISOString() : undefined;
 }
 
 const defaultCard = (facts: LibraryFacts) => facts.tone === 'bold' ? 'soft' : 'classic';

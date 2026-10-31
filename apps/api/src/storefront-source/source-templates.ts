@@ -32,7 +32,8 @@ export const templateDemoPath = (manifest: Pick<TemplateManifest, 'id' | 'photos
   return demo ? `assets/template-${manifest.photoSource ?? manifest.id}-${slot}.${demo.split('.').pop()}` : '';
 };
 
-/** Plantillas presets (2026-10-22): the master a preset is a look of, carrying the preset's photos, and the fill that gives
+/** (34 templates 2026-10-31: a preset may carry a whole theme — its style block, motion and home; see presetFill's layout.)
+ *  Plantillas presets (2026-10-22): the master a preset is a look of, carrying the preset's photos, and the fill that gives
  *  it the preset's look, parts, sections and starting words. Any other template resolves to itself. */
 export function resolvePresetTemplate(manifest: TemplateManifest, master: (id: string) => TemplateManifest | undefined): { manifest: TemplateManifest; preset?: MasterFill; sourceId: string } {
   // sourceId: whose files the store is built from — a preset's master, or a starter's own (spec 2026-10-24).
@@ -63,7 +64,9 @@ export function withPreset(preset: MasterFill, fill?: MasterFill | null, keepBra
   return { ...fill, look, variants: preset.variants,
     copy: { ...(preset.copy ?? {}), ...(fill.copy ?? {}) }, sections: fill.sections?.length ? fill.sections : preset.sections,
     featureCopy: { ...(preset.featureCopy ?? {}), ...(fill.featureCopy ?? {}) },
-    character: { ...(fill.character ?? preset.character!), kind: preset.character?.kind ?? fill.character?.kind } };
+    character: { ...(fill.character ?? preset.character!), kind: preset.character?.kind ?? fill.character?.kind },
+    // 34 templates: the template's home is part of its design — a business fill never drops it (live check 2026-10-31).
+    ...(preset.layout?.length ? { layout: preset.layout } : {}) };
 }
 
 /**

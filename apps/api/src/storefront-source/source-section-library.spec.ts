@@ -192,6 +192,8 @@ describe('template fill mode (34 templates)', () => {
     expect(librarySocial([{ label: 'post', url: 'https://instagram.com/p/abc' }])).toBeUndefined();
     expect(libraryOfferEnd('2026-11-15T23:59:00-04:00', 'oferta hasta el 15 de noviembre', now)).toBeDefined();
     expect(libraryOfferEnd('2026-11-15T23:59:00-04:00', 'oferta por tiempo limitado', now)).toBeUndefined();
+    // A bare date is the day the merchant named, and runs to its end in La Paz.
+    expect(libraryOfferEnd('2026-11-30', '20% hasta el 30 de noviembre', now)).toBe('2026-12-01T03:59:00.000Z');
   });
 });
 

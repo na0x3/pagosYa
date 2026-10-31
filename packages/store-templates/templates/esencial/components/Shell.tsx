@@ -22,6 +22,8 @@ export function Header() {
       <p className="es-announce__text">{copy.announcement}</p>
       {variant('announce', 'plain') === 'ticker' ? <p className="es-announce__track" aria-hidden="true">{[1, 2, 3, 4].map(n => <span key={n}>{copy.announcement}</span>)}</p> : null}
     </div> : null}
+    {/* Impulse (34 templates): a thin bar of the store's own pages above the header. */}
+    {variant('utility', 'off') === 'pages' ? <div className="es-utility"><nav data-pagosya-pages className="pagosya-info-nav es-utility__pages" aria-label="Ayuda" /></div> : null}
     <header className="es-header" data-es-header={variant('header', 'classic')}>
       <div className="es-header__start">
         <div className="es-store-menu" data-pagosya-store-menu="toggle" />

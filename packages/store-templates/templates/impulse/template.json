@@ -1,0 +1,284 @@
+{
+  "id": "impulse",
+  "name": "Impulse",
+  "category": "moda",
+  "description": "Moda tranquila: portada con productos señalados, grilla limpia, video, diario con foto en arco y mosaico de colecciones.",
+  "tags": [
+    "moda",
+    "ropa",
+    "básicos",
+    "neutros"
+  ],
+  "sitePurpose": "shop",
+  "order": 41,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Impulse",
+    "url": "https://impulse-theme-fashion.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "piel-juntas",
+      "role": "hero",
+      "demo": "piel-juntas.jpg"
+    },
+    {
+      "slot": "piel-hero",
+      "role": "lifestyle",
+      "demo": "piel-hero.jpg"
+    },
+    {
+      "slot": "piel-p1",
+      "role": "product",
+      "demo": "piel-p1.jpg"
+    },
+    {
+      "slot": "piel-p2",
+      "role": "product",
+      "demo": "piel-p2.jpg"
+    },
+    {
+      "slot": "piel-p3",
+      "role": "product",
+      "demo": "piel-p3.jpg"
+    },
+    {
+      "slot": "piel-tonos",
+      "role": "lifestyle",
+      "demo": "piel-tonos.jpg"
+    },
+    {
+      "slot": "barrio-p1",
+      "role": "product",
+      "demo": "barrio-p1.jpg"
+    },
+    {
+      "slot": "barrio-p2",
+      "role": "product",
+      "demo": "barrio-p2.jpg"
+    },
+    {
+      "slot": "barrio-p3",
+      "role": "lifestyle",
+      "demo": "barrio-p3.jpg"
+    },
+    {
+      "slot": "barrio-calle",
+      "role": "lifestyle",
+      "demo": "barrio-calle.jpg"
+    },
+    {
+      "slot": "paso-caminar",
+      "role": "lifestyle",
+      "demo": "paso-caminar.jpg"
+    },
+    {
+      "slot": "paso-material",
+      "role": "detail",
+      "demo": "paso-material.jpg"
+    },
+    {
+      "slot": "aro-mano",
+      "role": "detail",
+      "demo": "aro-mano.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "impulse",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#1c1d1d",
+      "muted": "#f3f1ee",
+      "accent": "#1c1d1d",
+      "deep": "#2b3640"
+    },
+    "kind": "fashion",
+    "variants": {
+      "theme": "impulse",
+      "icons": "line",
+      "utility": "pages",
+      "header": "split",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "sharp",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en compras desde Bs 500"
+    },
+    "layout": [
+      {
+        "type": "cover-shoppable",
+        "title": "Fácil por diseño",
+        "text": "Texturas suaves, siluetas que se mueven y piezas pensadas para el día a día.",
+        "cta": "Ver básicos",
+        "link": "products",
+        "photo": "slot:piel-juntas",
+        "items": [
+          {
+            "title": "Producto estrella",
+            "x": 28,
+            "y": 46
+          },
+          {
+            "title": "Edición de temporada",
+            "x": 58,
+            "y": 38
+          },
+          {
+            "title": "El clásico",
+            "x": 78,
+            "y": 60
+          }
+        ]
+      },
+      {
+        "type": "categories-tiles",
+        "look": "caption",
+        "items": [
+          {
+            "title": "Tops",
+            "photo": "slot:barrio-p1",
+            "link": "products"
+          },
+          {
+            "title": "Pantalones",
+            "photo": "slot:piel-p3",
+            "link": "products"
+          },
+          {
+            "title": "Vestidos",
+            "photo": "slot:piel-hero",
+            "link": "products"
+          },
+          {
+            "title": "Capas",
+            "photo": "slot:barrio-p2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-grid",
+        "card": "classic",
+        "title": "Esenciales de cada día",
+        "cta": "Ver todo",
+        "link": "products"
+      },
+      {
+        "type": "promo-pair",
+        "look": "center",
+        "cta": "Comprar",
+        "items": [
+          {
+            "title": "Para cada día",
+            "text": "Siluetas fáciles para moverte, de la mañana a la noche.",
+            "photo": "slot:paso-caminar",
+            "link": "products"
+          },
+          {
+            "title": "Capas pensadas",
+            "text": "Tejidos suaves y piezas ligeras para sumar y quitar.",
+            "photo": "slot:aro-mano",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-slider",
+        "title": "Lo nuevo",
+        "cta": "Ver todo",
+        "link": "products"
+      },
+      {
+        "type": "cover-video",
+        "title": "Hecho para moverse contigo",
+        "cta": "Ver colección",
+        "link": "products"
+      },
+      {
+        "type": "story-split",
+        "look": "arch",
+        "title": "Desde el diario",
+        "text": "Ideas para vestir, notas de temporada e historias que acercan nuestras colecciones a tu vida.",
+        "cta": "Leer más",
+        "link": "products",
+        "photo": "slot:piel-tonos",
+        "photo2": "slot:paso-material"
+      },
+      {
+        "type": "promo-banner",
+        "look": "parallax",
+        "title": "Fácil de usar, fácil de volver a elegir",
+        "text": "Formas suaves y detalles discretos para el día a día y las ocasiones pequeñas.",
+        "cta": "Ver vestidos",
+        "link": "products",
+        "photo": "slot:barrio-calle"
+      },
+      {
+        "type": "categories-mosaic",
+        "items": [
+          {
+            "title": "Lo esencial",
+            "photo": "slot:piel-p1",
+            "link": "products"
+          },
+          {
+            "title": "Neutros suaves",
+            "photo": "slot:piel-p2",
+            "link": "products"
+          },
+          {
+            "title": "Para salir",
+            "photo": "slot:barrio-p3",
+            "link": "products"
+          },
+          {
+            "title": "Capas",
+            "photo": "slot:piel-tonos",
+            "link": "products"
+          },
+          {
+            "title": "El lookbook",
+            "photo": "slot:piel-hero",
+            "link": "products"
+          },
+          {
+            "title": "Diario",
+            "photo": "slot:paso-material",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Pensado en silencio",
+            "text": "Detalles discretos que suman sin pedir atención.",
+            "icon": "sparkles"
+          },
+          {
+            "title": "Texturas que se sienten",
+            "text": "Del lino al punto suave, cada tela suma calidez y profundidad.",
+            "icon": "hand"
+          },
+          {
+            "title": "Para usar una y otra vez",
+            "text": "Piezas simples y capas pensadas para un clóset que se siente natural.",
+            "icon": "heart"
+          }
+        ]
+      }
+    ]
+  }
+}

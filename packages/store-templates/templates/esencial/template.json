@@ -370,6 +370,13 @@
         "body": "archivo",
         "mono": "space-mono",
         "starterOnly": true
+      },
+      {
+        "id": "impulse",
+        "name": "Impulse",
+        "heading": "plus-jakarta-sans",
+        "body": "plus-jakarta-sans",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -524,7 +531,8 @@
       ],
       "theme": [
         "none",
-        "paloalto"
+        "paloalto",
+        "impulse"
       ],
       "icons": [
         "line",
@@ -532,6 +540,10 @@
         "cart",
         "basket",
         "text"
+      ],
+      "utility": [
+        "off",
+        "pages"
       ]
     },
     "sections": [

@@ -631,10 +631,17 @@ export class SourceChatService {
     const home = snapshot.files.find(file => file.path === 'components/home.tsx')?.content ?? '';
     if (!snapshot.files.some(file => file.path === 'components/library.tsx') || !/\blayout\b/.test(home)) throw new PersonalTouchSkipped('the store predates the section library');
     const state = readMasterState(snapshot.files);
+    // 34 templates: a store wearing a whole template (variants.theme) keeps that template's home; YAPI only fills it, from a larger
+    // pool of the store's photos (a template home has many photo places).
+    const theme = String((state.variants as Record<string, unknown> | undefined)?.theme ?? 'none');
+    const template = theme !== 'none' && (state.layout ?? []).length ? state.layout as LayoutBlock[] : undefined;
     const [record, catalog, uploads, codes, reviews, retention, links] = await Promise.all([
       this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true, contactPhone: true } }),
       this.generation.catalog(merchantId, storeId),
-      this.prisma.mediaAsset.findMany({ where: { merchantId, mimeType: { in: ['image/jpeg', 'image/png', 'image/webp'] } }, orderBy: { createdAt: 'desc' }, take: 16, select: { url: true } }),
+      // This store's own uploads; uploads tied to no store only when the merchant has just this one (live check 2026-10-31: a demo
+      // account with 174 stores lent other stores' photos).
+      this.prisma.store.count({ where: { merchantId } }).then(count => this.prisma.mediaAsset.findMany({ where: { merchantId, mimeType: { in: ['image/jpeg', 'image/png', 'image/webp'] },
+        OR: [{ storeId }, ...(count <= 1 ? [{ storeId: null }] : [])] }, orderBy: { createdAt: 'desc' }, take: 24, select: { url: true } })),
       // Only codes the merchant already shows (emails, the assistant, the signup window): a private code never reaches the page.
       this.prisma.promoCode.findMany({ where: { storeId, isActive: true }, orderBy: { createdAt: 'desc' }, take: 10, select: { id: true, code: true, discountType: true, discountValue: true, showInEmails: true, showInAssistant: true } }),
       this.prisma.storeReview.count({ where: { storeId, status: 'PUBLISHED' } }).catch(() => 0),
@@ -649,12 +656,9 @@ export class SourceChatService {
     const facts = buildLibraryFacts({ storeName: state.store?.name || catalog.storeName, what: onboarding.what ?? '', story: onboarding.story ?? '', city: state.store?.city ?? '', request, tone: bold ? 'bold' : 'calm',
       items: catalog.items as never, categories: catalog.categories ?? [], locations: catalog.locations as never, shippingEnabled: catalog.shippingEnabled, shippingPickupEnabled: catalog.shippingPickupEnabled,
       contactPhone: record?.contactPhone ?? catalog.contactPhone, uploads: uploads.map(asset => asset.url),
-      codes: codes.filter(code => code.showInEmails || code.showInAssistant || code.id === popupCode), reviews, links });
+      codes: codes.filter(code => code.showInEmails || code.showInAssistant || code.id === popupCode), reviews, links }, template ? 24 : 14);
     if (!facts.photos.length) throw new PersonalTouchSkipped('no photos for the library');
     await workflow.report('design');
-    // 34 templates: a store wearing a whole template (variants.theme) keeps that template's home; YAPI only fills it.
-    const theme = String((state.variants as Record<string, unknown> | undefined)?.theme ?? 'none');
-    const template = theme !== 'none' && (state.layout ?? []).length ? state.layout as LayoutBlock[] : undefined;
     const answer = await this.dialogue.composeLibrary(merchantId, { storeId, facts, ...(template ? { template } : {}) });
     if (!answer) throw new Error('the library call failed');
     const layout = validateLibraryLayout(answer as never, facts, template ? { fixed: template } : {});

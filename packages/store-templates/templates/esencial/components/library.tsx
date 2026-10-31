@@ -395,11 +395,12 @@ function StorySplit({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.photo) return null;
   return <Band block={block} index={index}>
     <div className="lb-split" data-side={block.look === 'right' ? 'right' : 'left'}>
-      <Reveal className="lb-split__media"><Photo src={block.photo} /></Reveal>
+      {/* Impulse (look arch): the second photo stands beside the first in an arch, inside the photo side. */}
+      <Reveal className="lb-split__media"><Photo src={block.photo} />{block.look === 'arch' && block.photo2 ? <Photo src={block.photo2} className="lb-split__inset" /> : null}</Reveal>
       <Reveal className="lb-split__copy" delay={120}>
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
         {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
-        {block.photo2 ? <Photo src={block.photo2} className="lb-split__inset" /> : null}
+        {block.photo2 && block.look !== 'arch' ? <Photo src={block.photo2} className="lb-split__inset" /> : null}
         {block.text ? <p className="lb-body">{block.text}</p> : null}
         <Actions block={block} />
       </Reveal>
@@ -604,7 +605,8 @@ function PromoPair({ block, index }: { block: LibraryBlock; index: number }) {
 
 function PromoBanner({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.photo) return null;
-  return <Bleed block={block} index={index} className="lb-cover--dark">
+  // Impulse (look parallax): the photo drifts with the scroll and the words rise in from below their line.
+  return <Bleed block={block} index={index} className="lb-cover--dark" extra={block.look === 'parallax' ? { 'data-lb-progress': '' } : undefined}>
     <Photo src={block.photo} className="lb-banner__photo" />
     <Reveal className="lb-banner__copy">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
@@ -929,6 +931,66 @@ function PressQuotes({ block, index }: { block: LibraryBlock; index: number }) {
   </Band>;
 }
 
+
+/** Impulse «Easy by design»: the cover photo with a pulsing + on each product in it (the open one shows its card), the words low left. */
+function CoverShoppable({ block, index }: { block: LibraryBlock; index: number }) {
+  const pins = (block.items ?? []).filter(item => item.title && Number.isFinite(item.x) && Number.isFinite(item.y)).slice(0, 4);
+  const [open, setOpen] = useState(-1);
+  if (!block.photo) return null;
+  return <Bleed block={block} index={index} id="inicio" className="lb-cover lb-cover--dark">
+    <Photo src={block.photo} className="lb-cover-full__photo" eager />
+    {pins.map((pin, at) => <div key={at} className="lb-look__spot lb-shop__spot" data-open={open === at ? '' : undefined} style={{ left: `${pin.x}%`, top: `${pin.y}%` }}>
+      <button type="button" className="lb-shop__pin" aria-expanded={open === at} aria-label={pin.title} onClick={() => setOpen(open === at ? -1 : at)}><Icons.IconPlus /></button>
+      <div className="lb-look__card"><div className="lb-look__product" data-pagosya-catalog data-products={pin.title} data-catalog-limit={1} /></div>
+    </div>)}
+    <div className="lb-cover-full__copy">
+      <Head block={{ ...block, text: undefined }} index={index} level={1} />
+      {block.text ? <p className="lb-cover__sub">{block.text}</p> : null}
+      <Actions block={block} tone="light" second="ghost" />
+    </div>
+  </Bleed>;
+}
+
+/** Impulse «Made to move with ease»: the store's own video playing behind a centred title. Nothing without a video. */
+function CoverVideo({ block, index }: { block: LibraryBlock; index: number }) {
+  const video = (photos as Record<string, string | undefined>).heroVideo;
+  if (!video) return null;
+  return <Bleed block={block} index={index} className="lb-cover--dark lb-video">
+    <video className="lb-banner__photo" src={video} autoPlay muted loop playsInline poster={block.photo} aria-hidden="true" />
+    <Reveal className="lb-banner__copy lb-banner__copy--center">
+      {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+      {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+      {block.text ? <p className="lb-lede">{block.text}</p> : null}
+      <Actions block={block} tone="light" />
+    </Reveal>
+  </Bleed>;
+}
+
+/** Impulse image grid: four small photos over two large ones, each with its name in the middle and a link. */
+function CategoriesMosaic({ block, index }: { block: LibraryBlock; index: number }) {
+  const tiles = (block.items ?? []).filter(item => item.photo && item.title).slice(0, 6);
+  if (tiles.length < 3) return null;
+  return <Band block={block} index={index}>
+    {block.title ? <Head block={block} index={index} align="center" /> : null}
+    <ul className="lb-mosaic" data-count={tiles.length}>{tiles.map((tile, at) => <li key={at}><a className="lb-mosaic__tile" href={href(tile.link)}>
+      <Photo src={tile.photo} /><span className="lb-mosaic__label">{tile.title}</span>
+    </a></li>)}</ul>
+  </Band>;
+}
+
+/** Impulse «Quietly considered»: three short columns, each a line icon, a title and a sentence. */
+function IconColumns({ block, index }: { block: LibraryBlock; index: number }) {
+  const columns = (block.items ?? []).filter(item => item.title).slice(0, 4);
+  if (columns.length < 2) return null;
+  return <Band block={block} index={index}>
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    <ul className="lb-columns" data-count={columns.length}>{columns.map((column, at) => <li key={at}><Reveal delay={at * 90}>
+      <Icon name={column.icon || 'sparkles'} className="lb-columns__icon" />
+      <h3 className="lb-columns__title">{column.title}</h3>{column.text ? <p>{column.text}</p> : null}
+    </Reveal></li>)}</ul>
+  </Band>;
+}
+
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
   'cover-split': CoverSplit, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
@@ -941,6 +1003,7 @@ const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) =
   'closing-photo': ClosingPhoto, 'closing-wordmark': ClosingWordmark,
   'bar-note': BarNote, 'cover-stage': CoverStage, 'promo-countdown': PromoCountdown, 'story-stack': StoryStack, 'statement-reveal': StatementReveal,
   'categories-list': CategoriesList, 'marquee-photo': MarqueePhoto, 'story-overlap': StoryOverlap, 'promo-trio': PromoTrio,
+  'cover-shoppable': CoverShoppable, 'cover-video': CoverVideo, 'categories-mosaic': CategoriesMosaic, 'icon-columns': IconColumns,
   'products-slider': ProductsSlider, 'social-posts': SocialPosts, 'social-marquee': SocialMarquee, 'shop-look': ShopLook, 'press-quotes': PressQuotes,
 };
 export const LIBRARY_SECTIONS = Object.keys(SECTIONS);
