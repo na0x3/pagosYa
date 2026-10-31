@@ -416,7 +416,7 @@ function CategoriesTiles({ block, index }: { block: LibraryBlock; index: number 
 function StorySplit({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.photo) return null;
   return <Band block={block} index={index}>
-    <div className="lb-split" data-side={block.look === 'right' ? 'right' : 'left'}>
+    <div className="lb-split" data-side={block.look === 'right' || block.look === 'circle' ? 'right' : 'left'}>
       {/* Impulse (look arch): the second photo stands beside the first in an arch, inside the photo side. */}
       <Reveal className="lb-split__media"><Photo src={block.photo} />{(block.look === 'arch' || block.look === 'wavy') && block.photo2 ? <Photo src={block.photo2} className="lb-split__inset" /> : null}</Reveal>
       <Reveal className="lb-split__copy" delay={120}>
@@ -1239,6 +1239,8 @@ function StatsRings({ block, index }: { block: LibraryBlock; index: number }) {
 /** Shrine's wave edge between bands: layered waves drifting sideways (measured: 10s and 8s, opposite ways), in the colour of the
  *  band they lead into (band), turned over (look flip) where a band ends. Decoration only: no words. */
 function WaveDivider({ block, index }: { block: LibraryBlock; index: number }) {
+  // fodyfoods: a band's edge made of small round scallops — «ripple» rises into the band below, «ripple-flip» hangs from the one above.
+  if (block.look === 'ripple' || block.look === 'ripple-flip') return <div id={`lb-${index}`} className="lb lb-wave lb-ripple" data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look} aria-hidden="true" />;
   if (block.look === 'sway' || block.look === 'sway-flip') return <div id={`lb-${index}`} className="lb lb-wave lb-wave--sway" data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look} aria-hidden="true"><span /></div>;
   return <div id={`lb-${index}`} className="lb lb-wave" data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look || undefined} aria-hidden="true">
     <svg viewBox="0 24 150 28" preserveAspectRatio="none">

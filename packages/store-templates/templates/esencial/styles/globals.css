@@ -1930,6 +1930,24 @@ main[data-lb-home]{overflow-x:clip}
 .lb-story-overlay[data-lb-look="card"]::after,.lb-story-overlay[data-lb-look="card"] .lb-overlay__photo::after{opacity:.15}
 /* /lb:story-overlay */
 
+/* lb:wave-divider */
+.lb-ripple{height:14px;background:currentColor;-webkit-mask:radial-gradient(14px at 50% 100%,#000 97%,transparent) 0 0/28px 14px repeat-x;mask:radial-gradient(14px at 50% 100%,#000 97%,transparent) 0 0/28px 14px repeat-x}
+.lb-ripple[data-lb-look="ripple-flip"]{-webkit-mask:radial-gradient(14px at 50% 0,#000 97%,transparent) 0 0/28px 14px repeat-x;mask:radial-gradient(14px at 50% 0,#000 97%,transparent) 0 0/28px 14px repeat-x}
+/* /lb:wave-divider */
+/* lb:cover-split */
+.lb-cover-split[data-lb-look="flip"] .lb-cover-split__media{order:-1;aspect-ratio:1;border-radius:22px;box-shadow:none}
+.lb-cover-split[data-lb-look="flip"] .lb-cover-split__inner{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:760px){.lb-cover-split[data-lb-look="flip"] .lb-cover-split__media{order:0}}
+/* /lb:cover-split */
+/* lb:story-split */
+.lb-story-split[data-lb-look="circle"] .lb-split__media{justify-self:center;width:min(380px,80%);aspect-ratio:1;border-radius:50%;max-height:none}
+.lb-story-split[data-lb-look="circle"] .lb-split__media img{border-radius:50%}
+/* /lb:story-split */
+/* lb:products-slider */
+.lb-products-slider[data-lb-look="center"] .lb-head{text-align:center;justify-items:center;grid-template-columns:1fr}
+.lb-products-slider[data-lb-look="center"] .lb-head>:last-child:is(a){display:none}
+/* /lb:products-slider */
+
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
  * ground blown up to the page width (BAEK cover) reads as a mistake; the boxes keep their shape up to a height, then crop. */
 .lb-cover-centered__media{width:min(1080px,calc(100% - 48px));aspect-ratio:2/1;max-height:min(56vh,520px)}
@@ -2406,7 +2424,8 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="mordisco"] [data-lb-band="deep"] .lb-em{color:var(--es-muted)}
 [data-es-theme="mordisco"] .lb-cover-split :is(h1,.lb-title){font-size:clamp(40px,4.6vw,68px);line-height:1.02}
 [data-es-theme="mordisco"] .es-btn{border-radius:99px;background:var(--es-accent);border-color:var(--es-accent);color:#fff;font-weight:800;letter-spacing:0;text-transform:none}
-[data-es-theme="mordisco"] [data-lb-band="accent"] .es-btn{background:#fff;border-color:#fff;color:var(--es-accent)}
+[data-es-theme="mordisco"] [data-lb-band="accent"] .es-btn{background:#fff;border-color:#fff;color:var(--es-base-accent)}
+[data-es-theme="mordisco"] [data-lb-band="accent"] .es-btn *{color:inherit}
 [data-es-theme="mordisco"] .es-btn svg{display:none}
 [data-es-theme="mordisco"] .lb-columns__icon{width:64px;height:64px;padding:16px;border-radius:50%;background:var(--es-accent);color:#fff}
 [data-es-theme="mordisco"] .lb-columns__title{color:var(--es-accent);font:800 17px/1.2 var(--es-heading);text-transform:none;letter-spacing:0}
@@ -2421,3 +2440,32 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="mordisco"] .lb-press-marquee li,[data-es-theme="mordisco"] .lb-press :is(li,span){font-family:var(--es-heading);font-weight:800;font-style:normal;color:var(--es-accent);text-transform:none;letter-spacing:-.01em}
 @media (max-width:760px){[data-es-theme="mordisco"] .lb-columns{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:24px 12px}[data-es-theme="mordisco"] .lb-columns li>*{justify-items:center;text-align:center}}
 /* /theme:mordisco */
+
+/* theme:pancita */
+/* Pancita (after fodyfoods.com — layout and motion only): violet bands with small scalloped edges alternating with white, a heavy
+ * rounded sans, white pill buttons on violet, a photo in a circle, lavender for the featured product, a violet header and footer.
+ * Measured: no scroll motion beyond the sliders (Splide) and a fade on the trust row. */
+[data-es-theme="pancita"]{--es-radius:18px}
+[data-es-theme="pancita"] .es-announce{background:#f5d44b;color:var(--es-ink);font:700 12px/1 var(--es-body)}
+[data-es-theme="pancita"] .es-header{background:var(--es-accent);color:#fff;border-bottom:0}
+[data-es-theme="pancita"] .es-header :is(a,button,.es-logo){color:#fff}
+[data-es-theme="pancita"] .es-logo{font:700 26px/1 var(--es-heading);font-style:italic}
+[data-es-theme="pancita"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:700;letter-spacing:-.01em;text-transform:none;color:var(--es-accent)}
+[data-es-theme="pancita"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(28px,3.1vw,46px);line-height:1.1}
+[data-es-theme="pancita"] .lb-em{color:inherit;font-style:normal;background:no-repeat 0 100%/100% .22em url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' preserveAspectRatio='none'%3E%3Cpath d='M2 12c25-9 25 9 50 0s25 9 50 0 25 9 50 0 25 9 46 0' fill='none' stroke='%23f5d44b' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E");padding-bottom:.05em}
+[data-es-theme="pancita"] [data-lb-band="accent"] :is(.es-h2,.lb-title,.lb-head h2,h1,p,.lb-lede,.lb-body,h3){color:#fff}
+[data-es-theme="pancita"] .lb-cover-split :is(h1,.lb-title){font-size:clamp(40px,4.4vw,64px);line-height:1.04}
+[data-es-theme="pancita"] .es-btn{border-radius:99px;background:var(--es-accent);border-color:var(--es-accent);color:#fff;font-weight:700;letter-spacing:0;text-transform:none}
+[data-es-theme="pancita"] [data-lb-band="accent"] .es-btn{background:#fff;border-color:#fff;color:var(--es-base-accent)}
+[data-es-theme="pancita"] [data-lb-band="accent"] .es-btn *{color:inherit}
+[data-es-theme="pancita"] .es-btn svg{display:none}
+[data-es-theme="pancita"] :is(.es-card__name,.lb-card .es-card__name){color:var(--es-accent);font:700 15px/1.3 var(--es-heading);text-transform:none;letter-spacing:0;text-align:center}
+[data-es-theme="pancita"] .lb-card[data-lb-card="soft"]{background:none;box-shadow:none;text-align:center}
+[data-es-theme="pancita"] .lb-card[data-lb-card="soft"] .lb-card__media{background:none}
+[data-es-theme="pancita"] .lb-card__buy{border-radius:99px;background:var(--es-accent);color:#fff}
+[data-es-theme="pancita"] .lb-products-spotlight .es-eyebrow{width:max-content;padding:6px 14px;border-radius:99px;background:#2bd1c9;color:#fff;letter-spacing:.04em}
+[data-es-theme="pancita"] .lb-faq-grid .lb-faq__item{border-color:var(--es-accent);border-width:0 0 2px;border-radius:0;padding:0}
+[data-es-theme="pancita"] .lb-faq-grid summary{color:var(--es-accent);font-family:var(--es-heading)}
+[data-es-theme="pancita"] .es-footer{background:var(--es-accent);color:#fff}
+[data-es-theme="pancita"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:pancita */

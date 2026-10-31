@@ -455,6 +455,13 @@
         "heading": "plus-jakarta-sans",
         "body": "dm-sans",
         "starterOnly": true
+      },
+      {
+        "id": "pancita",
+        "name": "Pancita",
+        "heading": "outfit",
+        "body": "nunito",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -622,7 +629,8 @@
         "amigos",
         "majestuoso",
         "energia",
-        "mordisco"
+        "mordisco",
+        "pancita"
       ],
       "icons": [
         "line",
