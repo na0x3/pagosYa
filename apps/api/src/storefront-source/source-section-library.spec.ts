@@ -63,7 +63,7 @@ describe('section library', () => {
       { type: 'products-cards', title: 'Favoritos', products: ['galleta de chocolate', 'Brownie', 'Pastel inventado'] },
       { type: 'products-spotlight', title: 'Del mes', product: 'p2' },
       { type: 'promo-code', title: 'Oferta', code: 'dulce10', cta: 'Comprar', link: 'category:galletas' },
-    ] as never }, facts());
+    ] as never }, facts({ products: [...facts().products, ...Array.from({ length: 7 }, (_, at) => ({ id: `x${at}`, name: `Extra ${at}` }))] }));
     expect(layout.find(block => block.type === 'products-cards')!.products).toEqual(['Galleta de chocolate', 'Brownie']);
     expect(layout.find(block => block.type === 'products-spotlight')!.product).toBe('p2');
     const promo = layout.find(block => block.type === 'promo-code')!;
@@ -100,6 +100,16 @@ describe('section library', () => {
     expect(validateLibraryLayout({ blocks: [] }, facts()).find(block => block.type === 'products-grid')!.card).toBe('classic');
     expect(validateLibraryLayout({ blocks: [{ type: 'products-grid', card: 'nope' }] as never }, facts({ tone: 'bold' })).find(block => block.type === 'products-grid')!.card).toBe('soft');
     expect(validateLibraryLayout({ blocks: [{ type: 'story-split', title: 'Hola', photo: 1, card: 'ribbon' }] as never }, facts()).find(block => block.type === 'story-split')!.card).toBeUndefined();
+  });
+
+  it('drops what only repeats: a marquee under the ribbon cover, a picked row on a catalogue the grid already shows', () => {
+    const layout = validateLibraryLayout({ blocks: [
+      { type: 'cover-ribbon', title: 'Burbujas', photo: 0, items: [{ title: 'Uno' }, { title: 'Dos' }] },
+      { type: 'strip-marquee', items: [{ title: 'a' }, { title: 'b' }, { title: 'c' }] },
+      { type: 'products-cards', title: 'Favoritos', products: ['Brownie', 'Caja surtida'] },
+    ] as never }, facts({ tone: 'bold' }));
+    expect(types(layout)).not.toContain('strip-marquee');
+    expect(types(layout)).not.toContain('products-cards');
   });
 
   it('strip-services always carries the platform facts, never the model words', () => {

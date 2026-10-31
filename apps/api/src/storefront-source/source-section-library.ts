@@ -100,7 +100,8 @@ Reglas de contenido:
 - Tono: marca tranquila (tone calm) → nada de cover-poster ni cover-ribbon, titulares en minúsculas con mayúscula inicial.
   Marca atrevida o divertida (tone bold) → puede usar cover-poster, cover-ribbon, strip-marquee look tilt, colores de banda accent y deep.
 - Textos en español natural, con la voz de la marca y sus palabras: eyebrow 1 a 4 palabras; title 2 a 8 palabras; text 1 o 2 frases
-  cortas; cta 1 a 3 palabras. Cada sección dice algo distinto: nunca repitas un titular ni una idea.
+  cortas; cta 1 a 3 palabras. Cada sección dice algo distinto: nunca repitas un titular ni una idea. Envío, recojo y pago ya
+  los dice strip-services: no los repitas en beneficios, bento ni preguntas si esa franja va.
 - link y link2: products, #productos, category:Nombre, product:id o whatsapp. Vacío = sin botón (deja cta vacío también).
 - band: el fondo de la sección (paper, muted, accent, deep o vacío = el de la página). Alterna fondos; nunca dos seguidas con el mismo
   color de banda. accent y deep solo en secciones con foto, nunca en las de productos (sus tarjetas van sobre fondo claro).
@@ -154,6 +155,10 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (needs.services && facts.services.length < 2) continue;
     if (needs.categories && facts.categories.length < needs.categories) continue;
     if (blocks.some(block => block.type === section.id)) continue;
+    // Live 2026-10-31 (Oh Belly): the ribbon cover already runs its words; a marquee after it is the same band twice.
+    if (section.id === 'strip-marquee' && (answer?.blocks ?? []).some(other => other.type === 'cover-ribbon')) continue;
+    // The main grid shows up to 8 products: on a smaller catalogue a hand-picked row only repeats it (Oh Belly, 5 products).
+    if (section.id === 'products-cards' && facts.products.length <= 8) continue;
     if (section.role === 'cover' && blocks.some(block => BY_ID.get(block.type)?.role === 'cover')) continue;
     if (section.role === 'products' && ['products-grid', 'products-tabs'].includes(section.id) && blocks.some(block => ['products-grid', 'products-tabs'].includes(block.type))) continue;
     const block: LayoutBlock = { type: section.id };
