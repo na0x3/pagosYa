@@ -801,6 +801,11 @@ function CategoriesList({ block, index }: { block: LibraryBlock; index: number }
   const [active, setActive] = useState(0);
   if (rows.length < 2) return null;
   const photo = rows[active]?.photo ?? rows.find(row => row.photo)?.photo ?? block.photo;
+  if (block.look === 'big') return <Bleed block={block} index={index} className="lb-cover--dark lb-bigcats">
+    {photo ? <img key={photo} className="lb-banner__photo lb-bigcats__photo" src={photo} alt="" aria-hidden="true" loading="lazy" decoding="async" /> : null}
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    <ul className="lb-bigcats__list">{rows.map((row, at) => <li key={at}><a href={href(row.link)} data-active={at === active ? '' : undefined} onMouseEnter={() => setActive(at)} onFocus={() => setActive(at)}>{row.title}</a></li>)}</ul>
+  </Bleed>;
   return <Band block={{ ...block, band: block.band ?? 'muted' }} index={index}>
     <div className="lb-edits">
       <div className="lb-edits__words">
@@ -1088,6 +1093,32 @@ function StoryTimeline({ block, index }: { block: LibraryBlock; index: number })
   </Band>;
 }
 
+
+/** Broadcast «Made-to-order jewelry»: three photos in a row, each with its title, a line and a link under it. */
+function ImageColumns({ block, index }: { block: LibraryBlock; index: number }) {
+  const columns = (block.items ?? []).filter(item => item.photo && item.title).slice(0, 4);
+  if (columns.length < 2) return null;
+  return <Band block={block} index={index}>
+    {block.title || block.eyebrow ? <Head block={block} index={index} align="center" /> : null}
+    <ul className="lb-imgcols" data-count={columns.length}>{columns.map((column, at) => <li key={at}><Reveal delay={at * 150}>
+      <a className="lb-imgcols__photo" href={href(column.link)}><Photo src={column.photo} /></a>
+      <h3 className="lb-imgcols__title">{column.title}</h3>{column.text ? <p>{column.text}</p> : null}
+      <a className="lb-imgcols__go" href={href(column.link)}>{block.cta || 'Ver más'} <Icons.IconArrowRight /></a>
+    </Reveal></li>)}</ul>
+  </Band>;
+}
+
+/** Broadcast «Wear every moment»: a few words running huge across a dark band, then a sentence and a button. */
+function StatementMarquee({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.title) return null;
+  const run = (key: number) => <span key={key} className="lb-bigrun__run">{[0, 1, 2].map(n => <span key={n}>{block.title}</span>)}</span>;
+  return <Bleed block={block} index={index} className="lb-bigrun-band">
+    <p className="lb-bigrun" aria-hidden="true">{[0, 1].map(run)}</p>
+    <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2>
+    <Reveal className="lb-bigrun__words">{block.text ? <p>{block.text}</p> : null}<Actions block={block} tone="ink" /></Reveal>
+  </Bleed>;
+}
+
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
   'cover-split': CoverSplit, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
@@ -1100,6 +1131,7 @@ const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) =
   'closing-photo': ClosingPhoto, 'closing-wordmark': ClosingWordmark,
   'bar-note': BarNote, 'cover-stage': CoverStage, 'promo-countdown': PromoCountdown, 'story-stack': StoryStack, 'statement-reveal': StatementReveal,
   'categories-list': CategoriesList, 'marquee-photo': MarqueePhoto, 'story-overlap': StoryOverlap, 'promo-trio': PromoTrio,
+  'image-columns': ImageColumns, 'statement-marquee': StatementMarquee,
   'photo-scroller': PhotoScroller, 'story-timeline': StoryTimeline,
   'story-collage': StoryCollage, 'newsletter-split': NewsletterSplit,
   'cover-shoppable': CoverShoppable, 'cover-video': CoverVideo, 'categories-mosaic': CategoriesMosaic, 'icon-columns': IconColumns,

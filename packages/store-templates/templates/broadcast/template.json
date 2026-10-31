@@ -1,0 +1,350 @@
+{
+  "id": "broadcast",
+  "name": "Broadcast",
+  "category": "moda",
+  "description": "Joyería y accesorios: palabras con fotos, columnas de foto, categorías enormes sobre una foto y una banda que corre.",
+  "tags": [
+    "joyería",
+    "accesorios",
+    "lujo",
+    "regalos"
+  ],
+  "sitePurpose": "shop",
+  "order": 45,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Broadcast",
+    "url": "https://broadcast-theme-main.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "ar-hero",
+      "role": "hero",
+      "demo": "ar-hero.jpg"
+    },
+    {
+      "slot": "pl-p1",
+      "role": "hero",
+      "demo": "pl-p1.jpg"
+    },
+    {
+      "slot": "ar-p1",
+      "role": "product",
+      "demo": "ar-p1.jpg"
+    },
+    {
+      "slot": "ar-p2",
+      "role": "product",
+      "demo": "ar-p2.jpg"
+    },
+    {
+      "slot": "ar-p3",
+      "role": "product",
+      "demo": "ar-p3.jpg"
+    },
+    {
+      "slot": "pl-p2",
+      "role": "product",
+      "demo": "pl-p2.jpg"
+    },
+    {
+      "slot": "pl-p3",
+      "role": "product",
+      "demo": "pl-p3.jpg"
+    },
+    {
+      "slot": "br-p1",
+      "role": "product",
+      "demo": "br-p1.jpg"
+    },
+    {
+      "slot": "ar-caja",
+      "role": "lifestyle",
+      "demo": "ar-caja.jpg"
+    },
+    {
+      "slot": "ar-mano",
+      "role": "lifestyle",
+      "demo": "ar-mano.jpg"
+    },
+    {
+      "slot": "pl-detalle",
+      "role": "detail",
+      "demo": "pl-detalle.jpg"
+    },
+    {
+      "slot": "pl-estudio",
+      "role": "lifestyle",
+      "demo": "pl-estudio.jpg"
+    },
+    {
+      "slot": "pl-p4",
+      "role": "lifestyle",
+      "demo": "pl-p4.jpg"
+    },
+    {
+      "slot": "br-detalle",
+      "role": "detail",
+      "demo": "br-detalle.jpg"
+    },
+    {
+      "slot": "br-hero",
+      "role": "lifestyle",
+      "demo": "br-hero.jpg"
+    },
+    {
+      "slot": "br-p2",
+      "role": "lifestyle",
+      "demo": "br-p2.jpg"
+    },
+    {
+      "slot": "br-p3",
+      "role": "lifestyle",
+      "demo": "br-p3.jpg"
+    },
+    {
+      "slot": "br-regalo",
+      "role": "lifestyle",
+      "demo": "br-regalo.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "broadcast",
+    "colors": {
+      "paper": "#f6f3ee",
+      "ink": "#1b1b1b",
+      "muted": "#ece7df",
+      "accent": "#1b1b1b",
+      "deep": "#1f1f1f"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "broadcast",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "bigname",
+      "button": "pill",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "upper",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en compras desde Bs 500"
+    },
+    "layout": [
+      {
+        "type": "cover-stage",
+        "look": "low",
+        "title": "Lujo de todos los días",
+        "text": "Piezas hechas para acompañarte siempre.",
+        "cta": "Ver todo",
+        "link": "products",
+        "cta2": "Ver ofertas",
+        "link2": "products",
+        "photo": "slot:ar-hero",
+        "items": [
+          {
+            "title": "2",
+            "photo": "slot:pl-p1"
+          }
+        ]
+      },
+      {
+        "type": "statement-inline",
+        "eyebrow": "Las joyas más elegidas",
+        "title": "Moderno, heredado y elegante para cada día",
+        "photo": "slot:ar-p1",
+        "photo2": "slot:br-p1",
+        "cta": "Ver colección",
+        "link": "products"
+      },
+      {
+        "type": "image-columns",
+        "cta": "Comprar",
+        "items": [
+          {
+            "title": "Joyas a pedido",
+            "text": "Piezas hechas a mano y con cuidado, para quererlas toda la vida.",
+            "photo": "slot:ar-mano",
+            "link": "products"
+          },
+          {
+            "title": "Luz esculpida",
+            "text": "Formas inspiradas en la naturaleza, refinadas para hoy.",
+            "photo": "slot:pl-estudio",
+            "link": "products"
+          },
+          {
+            "title": "Lo esencial",
+            "text": "Nuestras piezas firma, para usar todos los días.",
+            "photo": "slot:br-hero",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-overlap",
+        "look": "pair",
+        "eyebrow": "Tendencia y tradición",
+        "title": "Para usar todos los días",
+        "text": "De lo clásico a lo nuevo: piezas que suman a tu estilo sin esfuerzo.",
+        "cta": "Ver todos los productos",
+        "link": "products",
+        "photo": "slot:br-detalle",
+        "photo2": "slot:ar-caja"
+      },
+      {
+        "type": "strip-marquee",
+        "look": "solid",
+        "band": "muted",
+        "items": [
+          {
+            "title": "Piezas para atesorar"
+          },
+          {
+            "title": "Origen responsable"
+          },
+          {
+            "title": "Joyas atemporales"
+          },
+          {
+            "title": "Hecho a mano"
+          }
+        ]
+      },
+      {
+        "type": "products-tabs",
+        "card": "classic",
+        "title": "Piezas excepcionales",
+        "text": "Básicos que querrás usar siempre.",
+        "link": "products"
+      },
+      {
+        "type": "cover-video",
+        "title": "Detrás del brillo",
+        "text": "Cómo nacen nuestras joyas: del origen responsable a un diseño que dura.",
+        "cta": "Conocer más",
+        "link": "products"
+      },
+      {
+        "type": "press-quotes",
+        "look": "logos",
+        "eyebrow": "Como nos vieron",
+        "items": [
+          {
+            "title": "Revista Moda",
+            "text": "Lujo sostenible en su forma más refinada."
+          },
+          {
+            "title": "Diario Estilo",
+            "text": "Joyas que se vuelven parte de tu día."
+          },
+          {
+            "title": "Blog Tendencia",
+            "text": "Piezas simples que brillan solas."
+          }
+        ]
+      },
+      {
+        "type": "categories-list",
+        "look": "big",
+        "title": "Categorías",
+        "items": [
+          {
+            "title": "Collares",
+            "photo": "slot:pl-detalle",
+            "link": "products"
+          },
+          {
+            "title": "Anillos",
+            "photo": "slot:pl-p4",
+            "link": "products"
+          },
+          {
+            "title": "Aretes",
+            "photo": "slot:br-p2",
+            "link": "products"
+          },
+          {
+            "title": "Pulseras",
+            "photo": "slot:br-p3",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-lookbook",
+        "eyebrow": "Compra el look",
+        "title": "Joyas que se vuelven parte de tu día",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:ar-mano",
+        "products": [
+          "Producto estrella",
+          "Edición de temporada"
+        ]
+      },
+      {
+        "type": "social-posts",
+        "eyebrow": "Síguenos",
+        "title": "En nuestras redes",
+        "handle": "@tumarca",
+        "social": "https://instagram.com/",
+        "items": [
+          {
+            "title": "1",
+            "photo": "slot:ar-p2"
+          },
+          {
+            "title": "2",
+            "photo": "slot:br-regalo"
+          },
+          {
+            "title": "3",
+            "photo": "slot:pl-p2"
+          },
+          {
+            "title": "4",
+            "photo": "slot:ar-p3"
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Origen responsable",
+            "text": "Cadena de abastecimiento que se puede seguir.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Devolvemos",
+            "text": "Una parte de cada venta va a proyectos de la comunidad.",
+            "icon": "heart"
+          },
+          {
+            "title": "Asesoría",
+            "text": "Te ayudamos a elegir la pieza ideal.",
+            "icon": "message"
+          }
+        ]
+      },
+      {
+        "type": "statement-marquee",
+        "title": "Brilla cada momento",
+        "text": "Celebra lo cotidiano y lo extraordinario con piezas hechas para acompañarte, capítulo tras capítulo.",
+        "cta": "Ver la colección",
+        "link": "products",
+        "band": "muted"
+      }
+    ]
+  }
+}

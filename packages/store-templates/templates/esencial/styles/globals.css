@@ -1477,6 +1477,48 @@ main[data-lb-home]{overflow-x:clip}
 }
 @media (prefers-reduced-motion:reduce){.lb-press-run__run{animation:none}}
 
+/* Broadcast parts (34 templates): photo columns, huge category names over a photo, a huge running band, a photo pair, a low cover. */
+.lb-imgcols{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:clamp(16px,2vw,28px);margin:0;padding:0;list-style:none}
+.lb-imgcols[data-count="2"]{--n:2}.lb-imgcols[data-count="4"]{--n:4}
+.lb-imgcols__photo{display:block;aspect-ratio:4/5;overflow:hidden;border-radius:var(--es-radius,6px)}
+.lb-imgcols__photo img{width:100%;height:100%;object-fit:cover;transition:transform .8s ease}
+@media (hover:hover){.lb-imgcols li:hover .lb-imgcols__photo img{transform:scale(1.04)}}
+.lb-imgcols__title{margin:16px 0 6px;font:600 15px/1.3 var(--es-heading);letter-spacing:.04em;text-transform:uppercase}
+.lb-imgcols p{margin:0 0 12px;font-size:14px;line-height:1.55;opacity:.75}
+.lb-imgcols__go{display:inline-flex;align-items:center;gap:6px;color:var(--es-ink);font:600 11px/1 var(--es-body);letter-spacing:.12em;text-transform:uppercase;text-decoration:none}
+.lb-imgcols__go svg{width:14px;height:14px}
+.lb-bigcats{display:grid;place-items:center;min-height:min(80vh,700px);background:#111}
+.lb-bigcats__photo{animation:lb-fade .6s ease}
+.lb-bigcats::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,.18);pointer-events:none}
+.lb-bigcats__list{position:relative;z-index:1;display:flex;flex-wrap:wrap;justify-content:center;gap:4px clamp(18px,3vw,44px);max-width:1100px;margin:0;padding:24px;list-style:none}
+.lb-bigcats__list a{color:#fff;font:600 clamp(32px,5.4vw,78px)/1.05 var(--es-heading);letter-spacing:-.01em;text-transform:uppercase;text-decoration:none;opacity:.55;transition:opacity .3s}
+.lb-bigcats__list a[data-active],.lb-bigcats__list a:hover,.lb-bigcats__list a:focus-visible{opacity:1}
+.lb-bigrun-band{display:grid;justify-items:center;gap:24px;padding:clamp(56px,7vw,96px) 0;background:var(--es-muted);color:var(--es-ink);text-align:center}
+.lb-bigrun{display:flex;width:max-content;margin:0;overflow:hidden}
+.lb-bigrun__run{display:flex;gap:.6em;padding-right:.6em;animation:lb-marquee 30s linear infinite;font:600 clamp(48px,8vw,120px)/1 var(--es-heading);text-transform:uppercase;white-space:nowrap;background:linear-gradient(90deg,var(--es-ink),var(--es-accent) 45%,var(--es-ink) 85%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lb-bigrun__words{display:grid;justify-items:center;gap:20px;max-width:620px;padding:0 24px}
+.lb-bigrun__words p{margin:0;font-size:15px;line-height:1.6;opacity:.85}
+.lb-story-overlap[data-lb-look="pair"] .lb-overlap{grid-template-columns:1.2fr 1fr}
+.lb-story-overlap[data-lb-look="pair"] .lb-overlap__photos{min-height:clamp(380px,42vw,600px)}
+.lb-story-overlap[data-lb-look="pair"] .lb-overlap__a{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto}
+.lb-story-overlap[data-lb-look="pair"] .lb-overlap__b{position:absolute;left:auto;top:auto;right:-30%;bottom:6%;z-index:2;width:34%;transform:none;box-shadow:0 24px 40px -24px rgba(0,0,0,.45)}
+.lb-story-overlap[data-lb-look="pair"] .lb-overlap__photos{overflow:visible}
+.lb-story-overlap[data-lb-look="pair"] .lb-overlap__words{padding-bottom:clamp(120px,14vw,200px)}
+.lb-story-overlap[data-lb-look="pair"] .lb-overlap__words{display:grid;justify-items:center;text-align:center}
+.lb-cover-stage[data-lb-look="low"]{align-items:end}
+.lb-cover-stage[data-lb-look="low"] .lb-stage__copy{justify-items:start;margin:0 0 clamp(36px,5vw,64px) max(24px,calc((100% - 1280px)/2 + 24px));text-align:left;width:min(560px,calc(100% - 48px))}
+.lb-cover-stage[data-lb-look="low"] .lb-stage__buttons{grid-auto-flow:column;justify-content:start;width:auto}
+.lb-cover-stage[data-lb-look="low"] .lb-stage__btn{min-height:40px;padding:0 18px;border-radius:99px;font-size:11px}
+.lb-cover-stage[data-lb-look="low"] .lb-mark svg{display:none}
+@media (max-width:760px){
+  .lb-imgcols{grid-template-columns:1fr}
+  .lb-story-overlap[data-lb-look="pair"] .lb-overlap{grid-template-columns:1fr}
+  .lb-story-overlap[data-lb-look="pair"] .lb-overlap__b{right:6%;bottom:-12%;width:38%}
+  .lb-story-overlap[data-lb-look="pair"] .lb-overlap__words{padding-bottom:0;padding-top:48px}
+  .lb-cover-stage[data-lb-look="low"] .lb-stage__buttons{grid-auto-flow:row}
+}
+@media (prefers-reduced-motion:reduce){.lb-bigrun__run{animation:none}}
+
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
  * ground blown up to the page width (BAEK cover) reads as a mistake; the boxes keep their shape up to a height, then crop. */
 .lb-cover-centered__media{width:min(1080px,calc(100% - 48px));aspect-ratio:2/1;max-height:min(56vh,520px)}
@@ -1735,3 +1777,29 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="symmetry"] main .lb[data-in] :is(.lb-head,.lb-quote,.lb-tiles li,.lb-countdown,.lb-overlap__words,.lb-posts__post,.lb-trio li,.lb-stack__row){animation:sy-up .8s ease both}
 [data-es-theme="symmetry"] main .lb[data-in] :is(li,.lb-stack__row):nth-child(2){animation-delay:.12s}[data-es-theme="symmetry"] main .lb[data-in] :is(li,.lb-stack__row):nth-child(3){animation-delay:.24s}[data-es-theme="symmetry"] main .lb[data-in] li:nth-child(n+4){animation-delay:.36s}
 /* /theme:symmetry */
+
+/* theme:broadcast */
+/* Broadcast (themes.shopify.com/themes/broadcast): warm off-white ground, a mint bar, a centred logo, uppercase sans titles, pill
+ * buttons, dark ticker bands, a light footer under a huge wordmark. Measured on the demo: heroFadeIn 1s ease rising 15px, staggered
+ * .15s; cover title .15s, text .3s; parallax photos; tickers 16s / 66s. */
+@keyframes br-up{0%{opacity:.001;transform:translateY(15px)}100%{opacity:1;transform:none}}
+[data-es-theme="broadcast"] .es-announce{background:#a6d8bd;color:#1b1b1b;font-size:12px}
+[data-es-theme="broadcast"] .es-header{min-height:70px;background:var(--es-paper);border-bottom:0}
+[data-es-theme="broadcast"] .es-logo{font:400 24px/1 'Instrument Serif',var(--es-heading);letter-spacing:.02em}
+[data-es-theme="broadcast"] .es-header__links a{font-size:13px}
+[data-es-theme="broadcast"] :is(.es-h2,.lb-title,.lb-head h2,.lb-stage__title){font-weight:600;letter-spacing:.01em;text-transform:uppercase}
+[data-es-theme="broadcast"] .lb-stage__title{font-size:clamp(36px,4.4vw,60px)}
+[data-es-theme="broadcast"] .es-btn{min-height:40px;padding:0 20px;border-radius:99px;font-size:11px;letter-spacing:.12em}
+[data-es-theme="broadcast"] .es-btn svg{display:none}
+/* Owner rule (2026-10-22, no dark band of words alone): Broadcast's dark tickers sit on the warm light ground here. */
+[data-es-theme="broadcast"] .lb-strip-marquee{background:var(--es-muted);color:var(--es-ink);border-block:1px solid color-mix(in srgb,var(--es-ink) 10%,transparent);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+[data-es-theme="broadcast"] .lb-bigrun-band{background:var(--es-muted);color:var(--es-ink)}
+[data-es-theme="broadcast"] .lb-bigrun__run{background:linear-gradient(90deg,var(--es-ink),#b98ba3 45%,var(--es-ink) 85%);-webkit-background-clip:text;background-clip:text}
+[data-es-theme="broadcast"] .es-footer{background:var(--es-muted)}
+[data-es-theme="broadcast"] .es-footer__big{font:500 clamp(80px,18vw,260px)/.9 var(--es-heading);letter-spacing:-.04em;text-transform:none;color:var(--es-ink)}
+[data-es-theme="broadcast"] .lb-stage__copy>*{animation:br-up 1s ease .15s both}
+[data-es-theme="broadcast"] .lb-stage__copy>:nth-child(2){animation-delay:.3s}[data-es-theme="broadcast"] .lb-stage__copy>:nth-child(3){animation-delay:.45s}
+:root:not([data-es-still]) [data-es-theme="broadcast"] main .lb:not([data-in]) :is(.lb-head,.lb-imgcols li,.lb-overlap__words,.lb-columns li,.lb-posts__post,.lb-press,.lb-bigrun__words,.lb-statement){opacity:.001}
+[data-es-theme="broadcast"] main .lb[data-in] :is(.lb-head,.lb-imgcols li,.lb-overlap__words,.lb-columns li,.lb-posts__post,.lb-press,.lb-bigrun__words,.lb-statement){animation:br-up 1s ease both}
+[data-es-theme="broadcast"] main .lb[data-in] li:nth-child(2){animation-delay:.15s}[data-es-theme="broadcast"] main .lb[data-in] li:nth-child(3){animation-delay:.3s}[data-es-theme="broadcast"] main .lb[data-in] li:nth-child(n+4){animation-delay:.45s}
+/* /theme:broadcast */

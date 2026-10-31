@@ -398,6 +398,13 @@
         "heading": "outfit",
         "body": "outfit",
         "starterOnly": true
+      },
+      {
+        "id": "broadcast",
+        "name": "Broadcast",
+        "heading": "manrope",
+        "body": "dm-sans",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -556,7 +563,8 @@
         "impulse",
         "motion",
         "focal",
-        "symmetry"
+        "symmetry",
+        "broadcast"
       ],
       "icons": [
         "line",
