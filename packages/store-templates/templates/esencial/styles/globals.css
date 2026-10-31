@@ -2927,3 +2927,31 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="claro"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="claro"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
 /* /theme:claro */
+
+/* theme:hoja */
+/* Hoja (after Sense): white with a soft lime, everything in rounded cards (20px), a light rounded sans, a gradient lime panel on the
+ * cover, pill buttons, a centred founder quote. Measured: no scroll motion (Dawn family). */
+[data-es-theme="hoja"]{--es-radius:20px;--es-t-weight:500;--es-t-track:-.01em}
+[data-es-theme="hoja"] .es-announce{background:#dff0a8;color:#2b2e2a;font-size:12px}
+[data-es-theme="hoja"] .es-header{border-bottom:0}
+[data-es-theme="hoja"] .es-logo{font:600 20px/1 var(--es-heading);letter-spacing:.18em;text-transform:uppercase}
+[data-es-theme="hoja"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:500;letter-spacing:-.01em;text-transform:none}
+[data-es-theme="hoja"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(22px,2.2vw,32px)}
+[data-es-theme="hoja"] .lb-em{color:var(--es-base-accent,#5f7a2e);font-style:normal}
+[data-es-theme="hoja"] .lb-cover-split .lb-cover-split__inner{width:min(1280px,calc(100% - 32px));margin:24px auto;padding:clamp(24px,3vw,48px);border-radius:24px;background:linear-gradient(135deg,#e8f5c8,#f6fbe9 55%,#fff)}
+[data-es-theme="hoja"] .lb-cover-split[data-lb-band="muted"]{background:none}
+[data-es-theme="hoja"] .lb-cover-split .lb-cover-split__media{border-radius:20px;box-shadow:none}
+[data-es-theme="hoja"] .lb-story-split[data-lb-look="right"] .lb-title{font-size:clamp(20px,2vw,28px);line-height:1.35}
+[data-es-theme="hoja"] .es-btn,[data-es-theme="hoja"] .lb-card__buy{border-radius:99px;background:#2b2e2a;border-color:#2b2e2a;color:#fff;font:500 13px/1 var(--es-body);letter-spacing:0;text-transform:none}
+[data-es-theme="hoja"] .es-btn *{color:inherit}
+[data-es-theme="hoja"] .es-btn svg{display:none}
+[data-es-theme="hoja"] .lb-card .lb-card__media,[data-es-theme="hoja"] .lb-tiles__tile,[data-es-theme="hoja"] .lb-split__media,[data-es-theme="hoja"] .lb-pair__tile{border-radius:20px}
+[data-es-theme="hoja"] :is(.es-card__name,.lb-card .es-card__name){font:500 14px/1.3 var(--es-body);text-transform:none;letter-spacing:0}
+[data-es-theme="hoja"] .lb-columns{text-align:center}
+[data-es-theme="hoja"] .lb-columns li>*{justify-items:center}
+[data-es-theme="hoja"] .lb-columns__icon{color:var(--es-base-accent,#5f7a2e)}
+[data-es-theme="hoja"] .lb-columns__title{font:500 15px/1.2 var(--es-heading);text-transform:none;letter-spacing:0}
+[data-es-theme="hoja"] .es-footer{background:#fff;border-top:1px solid #eef0ea}
+[data-es-theme="hoja"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
+[data-es-theme="hoja"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* /theme:hoja */

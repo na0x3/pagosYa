@@ -1,0 +1,286 @@
+{
+  "id": "hoja",
+  "name": "Hoja",
+  "category": "belleza",
+  "description": "Cosmética natural: blanco con verde lima suave, tarjetas redondeadas, una cita de la fundadora, íconos de lo que importa y mosaicos suaves.",
+  "tags": [
+    "belleza",
+    "natural",
+    "cosmética",
+    "vegano"
+  ],
+  "sitePurpose": "shop",
+  "order": 50,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Sense",
+    "url": "https://theme-sense-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "pe-p1",
+      "role": "hero",
+      "demo": "pe-p1.jpg"
+    },
+    {
+      "slot": "pe-rutina",
+      "role": "hero",
+      "demo": "pe-rutina.jpg"
+    },
+    {
+      "slot": "pe-textura",
+      "role": "lifestyle",
+      "demo": "pe-textura.jpg"
+    },
+    {
+      "slot": "pi-juntas",
+      "role": "lifestyle",
+      "demo": "pi-juntas.jpg"
+    },
+    {
+      "slot": "gl-story",
+      "role": "lifestyle",
+      "demo": "gl-story.jpg"
+    },
+    {
+      "slot": "pe-p2",
+      "role": "product",
+      "demo": "pe-p2.jpg"
+    },
+    {
+      "slot": "pe-p3",
+      "role": "product",
+      "demo": "pe-p3.jpg"
+    },
+    {
+      "slot": "pe-p4",
+      "role": "product",
+      "demo": "pe-p4.jpg"
+    },
+    {
+      "slot": "gl-p2",
+      "role": "product",
+      "demo": "gl-p2.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "hoja",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#2b2e2a",
+      "muted": "#eef6d8",
+      "accent": "#5f7a2e",
+      "deep": "#2b2e2a"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "hoja",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis desde Bs 200"
+    },
+    "layout": [
+      {
+        "type": "cover-split",
+        "look": "flip",
+        "band": "muted",
+        "title": "Piel radiante, *natural*",
+        "text": "Fórmulas de origen vegetal para resultados que se notan.",
+        "cta": "Comprar",
+        "link": "products",
+        "photo": "slot:pe-rutina"
+      },
+      {
+        "type": "products-slider",
+        "card": "soft",
+        "title": "Nuestras fórmulas favoritas",
+        "link": "products"
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "«Hacemos cosmética de calidad, sin probar en animales y cuidando el planeta.»",
+        "text": "Nuestra fundadora",
+        "photo": "slot:pi-juntas"
+      },
+      {
+        "type": "promo-pair",
+        "look": "uneven",
+        "items": [
+          {
+            "title": "Rutina de noche",
+            "text": "Para despertar luminosa.",
+            "photo": "slot:gl-story",
+            "link": "products"
+          },
+          {
+            "title": "Texturas suaves",
+            "text": "Que se sienten bien.",
+            "photo": "slot:pe-textura",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Vegano",
+            "text": "Nada de origen animal.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Natural",
+            "text": "Ingredientes de plantas.",
+            "icon": "sprout"
+          },
+          {
+            "title": "Reciclable",
+            "text": "Envases que vuelven.",
+            "icon": "recycle"
+          },
+          {
+            "title": "Compostable",
+            "text": "El envío también.",
+            "icon": "heart"
+          }
+        ]
+      },
+      {
+        "type": "categories-tiles",
+        "look": "caption",
+        "title": "Explora",
+        "items": [
+          {
+            "title": "Rostro",
+            "photo": "slot:pe-p2",
+            "link": "products"
+          },
+          {
+            "title": "Cuerpo",
+            "photo": "slot:pe-textura",
+            "link": "products"
+          },
+          {
+            "title": "Cabello",
+            "photo": "slot:pe-p4",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "muted",
+        "title": "20% en tu primera compra",
+        "text": "Únete y recibe consejos y ofertas."
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "look": "cards",
+        "title": "Cómo se usa",
+        "items": [
+          {
+            "title": "Limpia",
+            "text": "Rostro limpio."
+          },
+          {
+            "title": "Aplica",
+            "text": "Dos gotas."
+          },
+          {
+            "title": "Masajea",
+            "text": "Hasta absorber."
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "title": "Lo que lleva",
+        "items": [
+          {
+            "title": "Aloe",
+            "text": "Calma.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Vitamina C",
+            "text": "Ilumina.",
+            "icon": "sun"
+          },
+          {
+            "title": "Ácido hialurónico",
+            "text": "Hidrata.",
+            "icon": "droplet"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Sirve para piel sensible?",
+            "text": "Sí, sin perfume."
+          },
+          {
+            "title": "¿Es vegano?",
+            "text": "Sí."
+          },
+          {
+            "title": "¿Cuánto dura?",
+            "text": "Unos dos meses."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Hoja",
+      "tagline": "Cosmética natural",
+      "products": [
+        {
+          "name": "Crema Nutritiva",
+          "price": 180,
+          "description": "50 ml.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Sérum Vitamina C",
+          "price": 160,
+          "description": "30 ml.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Tónico Floral",
+          "price": 120,
+          "description": "Agua de rosas.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Crema Corporal",
+          "price": 140,
+          "description": "Manteca de karité.",
+          "category": "Cuerpo"
+        }
+      ]
+    }
+  }
+}

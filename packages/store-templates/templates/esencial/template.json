@@ -547,6 +547,13 @@
         "heading": "figtree",
         "body": "figtree",
         "starterOnly": true
+      },
+      {
+        "id": "hoja",
+        "name": "Hoja",
+        "heading": "outfit",
+        "body": "figtree",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -727,7 +734,8 @@
         "sorbo",
         "grano",
         "muro",
-        "claro"
+        "claro",
+        "hoja"
       ],
       "icons": [
         "line",
