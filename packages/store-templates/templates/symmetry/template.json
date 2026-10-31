@@ -370,6 +370,42 @@
           }
         ]
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Rosa Mosqueta",
+      "tagline": "Moda femenina con aire de verano",
+      "products": [
+        {
+          "name": "Vestido Flores",
+          "price": 520,
+          "description": "Gasa estampada, mangas globo.",
+          "category": "Vestidos"
+        },
+        {
+          "name": "Cárdigan Perla",
+          "price": 390,
+          "description": "Punto calado con botones de nácar.",
+          "category": "Punto"
+        },
+        {
+          "name": "Sombrero de Paja",
+          "price": 240,
+          "description": "Ala ancha y cinta de seda.",
+          "category": "Accesorios"
+        },
+        {
+          "name": "Suéter Cacao",
+          "price": 360,
+          "description": "Punto waffle.",
+          "category": "Punto"
+        },
+        {
+          "name": "Musculosa Rib",
+          "price": 150,
+          "description": "Algodón acanalado.",
+          "category": "Básicos"
+        }
+      ]
+    }
   }
 }

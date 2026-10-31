@@ -259,6 +259,42 @@
         "title": "Tu primera aventura crocante",
         "text": "Consejos, novedades y sabores nuevos antes que nadie."
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Crocante",
+      "tagline": "Fruta crocante, nada raro",
+      "products": [
+        {
+          "name": "Chips de Cacao",
+          "price": 35,
+          "description": "Con chocolate amargo.",
+          "category": "Chips"
+        },
+        {
+          "name": "Chips de Naranja",
+          "price": 35,
+          "description": "Naranja entera, con cáscara.",
+          "category": "Chips"
+        },
+        {
+          "name": "Chips de Frutilla",
+          "price": 35,
+          "description": "Frutilla real.",
+          "category": "Chips"
+        },
+        {
+          "name": "Mix del Desayuno",
+          "price": 45,
+          "description": "Para el yogur.",
+          "category": "Mixes"
+        },
+        {
+          "name": "Pack Surtido",
+          "price": 150,
+          "description": "Seis bolsas.",
+          "category": "Packs"
+        }
+      ]
+    }
   }
 }

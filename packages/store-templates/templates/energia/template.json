@@ -25,7 +25,7 @@
     },
     {
       "slot": "lo-p1",
-      "role": "product",
+      "role": "lifestyle",
       "demo": "lo-p1.jpg"
     },
     {
@@ -45,7 +45,7 @@
     },
     {
       "slot": "me-p1",
-      "role": "product",
+      "role": "lifestyle",
       "demo": "me-p1.jpg"
     },
     {
@@ -346,6 +346,36 @@
         "link": "products",
         "photo": "slot:hu-p3"
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Nutre",
+      "tagline": "Comer limpio, con energía",
+      "products": [
+        {
+          "name": "Proteína Vegetal 1 kg",
+          "price": 260,
+          "description": "Arveja y arroz.",
+          "category": "Proteína"
+        },
+        {
+          "name": "Cápsulas Verdes",
+          "price": 150,
+          "description": "Espirulina y chlorella.",
+          "category": "Suplementos"
+        },
+        {
+          "name": "Sobres Surtidos",
+          "price": 120,
+          "description": "Diez sabores para probar.",
+          "category": "Snacks"
+        },
+        {
+          "name": "Multivitamínico",
+          "price": 170,
+          "description": "Todo en una cápsula al día.",
+          "category": "Suplementos"
+        }
+      ]
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { useState, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useState, type ReactNode, type CSSProperties } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
 import { store, copy, variants, photos, layout } from './store-data';
 import { CardRibbons, CardTemplate, ThemeMotion, libraryCard, type LibraryBlock } from './library';
@@ -15,8 +15,52 @@ const HEADER_ICONS: Record<string, { account: typeof IconSearch; cart: typeof Ic
 
 const links = [{ label: 'Inicio', href: 'index.html' }, { label: 'Productos', href: 'productos.html' }, { label: 'Nuestra historia', href: 'index.html#historia' }];
 
+/** Owner 2026-10-31 («siguen con el toque de antes… producto, nuestra historia… repetitivo»): a template store's menu and footer are
+ *  its theme's own — the theme's word for the shop, then the store's real categories (read from the live catalogue, so a new one
+ *  shows up), then «Preguntas» when the home has them; never the same Inicio · Productos · Nuestra historia on every store. */
+type NavLink = { label: string; href: string };
+const FRAME: Record<string, { shop: string; footShop: string; footHelp: string; news?: [string, string] }> = {
+  paloalto: { shop: 'Comprar', footShop: 'Comprar', footHelp: 'Servicio al cliente' },
+  impulse: { shop: 'Todo', footShop: 'Colecciones', footHelp: 'Información' },
+  motion: { shop: 'Equipo', footShop: 'Explorar', footHelp: 'Soporte' },
+  focal: { shop: 'Catálogo', footShop: 'Catálogo', footHelp: 'Ayuda' },
+  symmetry: { shop: 'Novedades', footShop: 'Tienda', footHelp: 'Atención' },
+  broadcast: { shop: 'Piezas', footShop: 'Piezas', footHelp: 'Cuidado y envíos' },
+  shrine: { shop: 'Fragancias', footShop: 'Productos', footHelp: 'Soporte' },
+  shrine2: { shop: 'Comprar', footShop: 'Comprar', footHelp: 'Soporte' },
+  gumdrop: { shop: 'Sabores', footShop: 'Snacks', footHelp: 'Hablemos' },
+  amigos: { shop: 'La tienda', footShop: 'La tienda', footHelp: 'Ayuda' },
+  majestuoso: { shop: 'Todo', footShop: 'Categorías', footHelp: 'Ayuda y soporte' },
+  energia: { shop: 'Productos', footShop: 'Nuestra tienda', footHelp: 'Enlaces' },
+  mordisco: { shop: 'Premios', footShop: 'Tienda', footHelp: 'Ayuda' },
+  pancita: { shop: 'Comprar todo', footShop: 'Comprar', footHelp: 'Enlaces' },
+  pecas: { shop: 'Comprar', footShop: 'Comprar', footHelp: 'Info' },
+  crocante: { shop: 'Comprar', footShop: 'Comprar', footHelp: 'Aprende' },
+};
+const fold = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+/** The categories that hold products, as catalogue links (the kit's own category filter). */
+function useCategoryLinks(): NavLink[] {
+  const [list, setList] = useState<NavLink[]>([]);
+  useEffect(() => {
+    const data = (window as unknown as { PAGOSYA_CONFIG?: { data?: { categories?: Array<{ id?: string; name?: string }>; items?: Array<{ categoryId?: string }> } } }).PAGOSYA_CONFIG?.data;
+    const used = new Set((data?.items ?? []).map(item => item.categoryId).filter(Boolean));
+    setList((data?.categories ?? []).filter(category => category.id && category.name && used.has(category.id)).slice(0, 5)
+      .map(category => ({ label: String(category.name), href: `productos.html?f_categoria=${encodeURIComponent(fold(String(category.id)))}` })));
+  }, []);
+  return list;
+}
+const libraryStore = () => (layout as LibraryBlock[]).length > 0;
+const frame = () => FRAME[variant('theme', 'none')] ?? { shop: 'Tienda', footShop: 'Tienda', footHelp: 'Ayuda' };
+function useMenu(): NavLink[] {
+  const categories = useCategoryLinks();
+  if (!libraryStore()) return links;
+  const faq = (layout as LibraryBlock[]).some(block => block.type === 'faq-split');
+  return [{ label: frame().shop, href: 'productos.html' }, ...categories, ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
+}
+
 export function Header() {
   const [open, setOpen] = useState(false);
+  const menu = useMenu();
   return <>
     {copy.announcement ? <div className="es-announce" data-es-announce={variant('announce', 'plain')}>
       <p className="es-announce__text">{copy.announcement}</p>
@@ -33,7 +77,7 @@ export function Header() {
       </div>
       {/* Maximize (34 templates): a big search box in the header itself. */}
       {variant('header', 'classic') === 'search' ? <form className="es-header__search" role="search" method="get" action="buscar.html"><input type="search" name="q" placeholder="¿Qué estás buscando hoy?" aria-label="Buscar productos" /><button type="submit" aria-label="Buscar"><IconSearch /></button></form> : null}
-      <nav className="es-header__links" aria-label="Principal" data-store-menu-replaces>{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
+      <nav className="es-header__links" aria-label="Principal" data-store-menu-replaces>{menu.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
       <div className="es-header__end">
         {variant('icons', 'line') === 'text' ? <>
           <a className="es-text-btn" href="buscar.html">Buscar</a>
@@ -45,7 +89,7 @@ export function Header() {
     <div className={open ? 'es-menu es-menu--open' : 'es-menu'} id="es-menu" aria-hidden={!open} onClick={event => { if (event.target === event.currentTarget) setOpen(false); }}>
       <nav className="es-menu__panel" aria-label="Principal">
         <button type="button" className="es-icon-btn es-menu__close" aria-label="Cerrar menú" onClick={() => setOpen(false)}><IconX /></button>
-        {links.map(link => <a key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</a>)}
+        {menu.map(link => <a key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</a>)}
       </nav>
     </div>
     <CartTemplate>
@@ -114,22 +158,28 @@ export function Footer() {
   const footer = variant('footer', 'columns');
   // John Smedley sections (spec 2026-10-21): the `column` footer sits on a band of the store's hero photo.
   const band = footer === 'column' && photos.hero ? { ['--es-footer-photo' as string]: `url("${photos.hero}")` } as CSSProperties : undefined;
+  const categories = useCategoryLinks();
+  const themed = libraryStore();
+  const words = frame();
+  // A template home with its own newsletter section never shows a second one in the footer.
+  const news = !themed || !(layout as LibraryBlock[]).some(block => block.type === 'newsletter-split');
   return <footer className="es-footer" data-es-footer={footer} style={band}>
     {footer === 'bigname' ? <p className="es-footer__big" aria-hidden="true">{store.name}</p> : null}
     <div className="es-footer__grid">
       <div className="es-footer__brand">{store.logo ? <a className="es-footer__logo" href="index.html"><img src={store.logo} alt={store.name} /></a> : <p className="es-footer__name">{store.name}</p>}{tagline ? <p>{tagline}</p> : null}</div>
-      <div><h2>Tienda</h2><nav aria-label="Tienda"><a href="productos.html">Todos los productos</a><a href="index.html#historia">Nuestra historia</a></nav></div>
-      <div><h2>Ayuda</h2><nav data-pagosya-pages className="pagosya-info-nav es-footer__pages" aria-label="Información" /></div>
+      {themed ? <div><h2>{words.footShop}</h2><nav aria-label={words.footShop}><a href="productos.html">Ver todo</a>{categories.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav></div>
+        : <div><h2>Tienda</h2><nav aria-label="Tienda"><a href="productos.html">Todos los productos</a><a href="index.html#historia">Nuestra historia</a></nav></div>}
+      <div><h2>{themed ? words.footHelp : 'Ayuda'}</h2><nav data-pagosya-pages className="pagosya-info-nav es-footer__pages" aria-label="Información" /></div>
       {store.city || phone ? <div><h2>Contacto</h2>
         {store.city ? <p className="es-footer__line"><IconMapPin /> {store.city}</p> : null}
         {phone ? <a className="es-footer__line" href={`https://wa.me/${phone.replace(/\D/g, '')}`}><IconMessageCircle /> WhatsApp</a> : null}
       </div> : null}
     </div>
     {/* The newsletter: the email is typed right here, in a field the kit draws once signup is on (owner 2026-10-25). */}
-    <div className="es-footer__news" data-pagosya-subscribe-block>
+    {news ? <div className="es-footer__news" data-pagosya-subscribe-block>
       <div><h2>Recibe novedades</h2><p>Lanzamientos y ofertas de {store.name} en tu correo.</p></div>
       <div className="es-footer__signup" data-pagosya-subscribe-inline data-track="newsletter" />
-    </div>
+    </div> : null}
     <p className="es-footer__legal">{'\u00a9'} {new Date().getFullYear()} {store.name} · Pagos seguros con pagosYa</p>
   </footer>;
 }

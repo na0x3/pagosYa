@@ -479,6 +479,36 @@
       {
         "type": "strip-services"
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Atelier Norte",
+      "tagline": "Ropa de autor, hecha para durar",
+      "products": [
+        {
+          "name": "Blazer Noche",
+          "price": 890,
+          "description": "Lana fría, corte recto.",
+          "category": "Abrigos"
+        },
+        {
+          "name": "Camisa Lino Arena",
+          "price": 420,
+          "description": "Lino lavado, suave desde el primer día.",
+          "category": "Camisas"
+        },
+        {
+          "name": "Pantalón Plisado",
+          "price": 560,
+          "description": "Tiro alto y caída amplia.",
+          "category": "Pantalones"
+        },
+        {
+          "name": "Bolso Cuero Miel",
+          "price": 990,
+          "description": "Cuero curtido a mano.",
+          "category": "Accesorios"
+        }
+      ]
+    }
   }
 }

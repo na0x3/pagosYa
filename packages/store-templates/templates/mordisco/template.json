@@ -342,6 +342,42 @@
         "type": "closing-wordmark",
         "band": "accent"
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Colita",
+      "tagline": "Premios sanos para colas felices",
+      "products": [
+        {
+          "name": "Mordedor Trenzado",
+          "price": 49,
+          "description": "Cuerda de algodón.",
+          "category": "Juguetes"
+        },
+        {
+          "name": "Premios de Pollo",
+          "price": 69,
+          "description": "Secado lento, un solo ingrediente.",
+          "category": "Premios"
+        },
+        {
+          "name": "Cama Rosquilla",
+          "price": 229,
+          "description": "Para siestas largas.",
+          "category": "Descanso"
+        },
+        {
+          "name": "Croquetas Naturales",
+          "price": 189,
+          "description": "Sin granos.",
+          "category": "Comida"
+        },
+        {
+          "name": "Caja Sorpresa",
+          "price": 129,
+          "description": "Juguetes y premios del mes.",
+          "category": "Premios"
+        }
+      ]
+    }
   }
 }

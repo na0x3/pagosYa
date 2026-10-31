@@ -44,6 +44,10 @@ export interface TemplatePreset {
   readonly featureCopy?: Readonly<Record<string, unknown>>;
   /** 34 templates (2026-10-31): the theme's fixed home — section-library blocks in order, with demo words and photo slots. */
   readonly layout?: ReadonlyArray<Readonly<Record<string, unknown>>>;
+  /** The template's sections under the product page's buy box (use cases, how to use, comparison…). */
+  readonly productLayout?: ReadonlyArray<Readonly<Record<string, unknown>>>;
+  /** The template's own demo shop (Plantillas › Ver): name, tagline, categories and products in its industry. */
+  readonly demo?: Readonly<{ storeName: string; tagline?: string; products: ReadonlyArray<Readonly<{ name: string; price: number; description?: string; category?: string }>> }>;
 }
 export type TemplateCopyRole = 'headline' | 'title' | 'lead' | 'body' | 'cta' | 'label' | 'item' | 'question' | 'answer' | 'quote' | 'name' | 'alt';
 export interface TemplateCopySlot { readonly key: string; readonly role: TemplateCopyRole; readonly default: string; readonly max: number }

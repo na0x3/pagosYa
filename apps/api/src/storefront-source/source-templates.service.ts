@@ -351,14 +351,16 @@ export class SourceTemplatesService {
       out[key] = done.asset;
     }
     // Section library (spec 2026-10-31): every photo a block shows is bundled too; one that cannot be is left out of its block.
-    if (change.layout?.length) {
+    // The product page's sections (owner 2026-10-31) the same way.
+    for (const key of ['layout', 'productLayout'] as const) {
+      if (!change[key]?.length) continue;
       const swap = async (value: unknown) => typeof value !== 'string' || !value ? undefined : BUNDLED_PHOTO.test(value) ? value : (await bundle(value))?.asset;
-      out.layout = [];
-      for (const raw of change.layout as Array<Record<string, unknown> & { items?: Array<Record<string, unknown>> }>) {
+      const blocks: unknown[] = out[key] = [];
+      for (const raw of change[key] as Array<Record<string, unknown> & { items?: Array<Record<string, unknown>> }>) {
         const block: Record<string, unknown> = { ...raw };
         for (const key of ['photo', 'photo2'] as const) { if (key in block) { const asset = await swap(block[key]); if (asset) block[key] = asset; else delete block[key]; } }
         if (Array.isArray(raw.items)) block.items = await Promise.all(raw.items.map(async item => { if (!('photo' in item)) return item; const asset = await swap(item.photo); const { photo: _photo, ...rest } = item; return asset ? { ...rest, photo: asset } : rest; }));
-        out.layout.push(block);
+        blocks.push(block);
       }
     }
     return { change: out, files };
@@ -374,7 +376,7 @@ export class SourceTemplatesService {
     let pending = this.demos.get(manifest.id);
     if (!pending) {
       const resolved = resolvePresetTemplate(manifest, id => this.registry.templateManifest(id));
-      pending = templateDemoRevision(resolved.manifest, this.registry.templateSourceFiles(resolved.manifest.id), resolved.preset)
+      pending = templateDemoRevision(resolved.manifest, this.registry.templateSourceFiles(resolved.manifest.id), resolved.preset, resolved.demo)
         .then(assembled => this.projects.prepare({ revision: 0, ...assembled }) as Promise<SourceProjectSnapshot>);
       pending.catch(() => this.demos.delete(manifest.id));
       this.demos.set(manifest.id, pending);

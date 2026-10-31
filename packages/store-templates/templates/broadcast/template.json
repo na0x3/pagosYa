@@ -345,6 +345,42 @@
         "link": "products",
         "band": "muted"
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Oro Fino",
+      "tagline": "Joyas para guardar toda la vida",
+      "products": [
+        {
+          "name": "Argollas Clásicas",
+          "price": 460,
+          "description": "Baño de oro 18k.",
+          "category": "Aros"
+        },
+        {
+          "name": "Collar Gota",
+          "price": 380,
+          "description": "Cadena fina con dije.",
+          "category": "Collares"
+        },
+        {
+          "name": "Anillo Sello",
+          "price": 520,
+          "description": "Plata con baño de oro.",
+          "category": "Anillos"
+        },
+        {
+          "name": "Pulsera Granate",
+          "price": 340,
+          "description": "Piedras naturales.",
+          "category": "Pulseras"
+        },
+        {
+          "name": "Aros Finos",
+          "price": 290,
+          "description": "Livianos para todos los días.",
+          "category": "Aros"
+        }
+      ]
+    }
   }
 }

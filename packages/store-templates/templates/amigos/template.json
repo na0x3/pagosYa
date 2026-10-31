@@ -240,6 +240,36 @@
           }
         ]
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Buena Compañía",
+      "tagline": "Cosas lindas para compartir",
+      "products": [
+        {
+          "name": "Hoodie Amigos",
+          "price": 390,
+          "description": "Frisa gruesa, bordado.",
+          "category": "Ropa"
+        },
+        {
+          "name": "Bolsa Balanza",
+          "price": 120,
+          "description": "Lona estampada.",
+          "category": "Accesorios"
+        },
+        {
+          "name": "Taza Mañanera",
+          "price": 110,
+          "description": "Cerámica artesanal.",
+          "category": "Casa"
+        },
+        {
+          "name": "Caja Regalo",
+          "price": 260,
+          "description": "Lista para regalar.",
+          "category": "Regalos"
+        }
+      ]
+    }
   }
 }

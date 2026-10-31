@@ -1,5 +1,6 @@
 import Shell, { variant } from './Shell';
-import { sections } from './store-data';
+import { productLayout, sections } from './store-data';
+import { LibraryHome, type LibraryBlock } from './library';
 import { ProductPageTemplate, KitSlot } from '@pagosya/ui';
 
 export default function Product() {
@@ -22,6 +23,8 @@ export default function Product() {
             <KitSlot kind="product" name="info" className="es-pdp__more" />
           </div>
         </div>
+        {/* The template's own sections under the buy box (owner 2026-10-31: use cases, how to use, comparison…), filled by YAPI. */}
+        {(productLayout as LibraryBlock[]).length ? <div className="es-pdp__sections" data-lb-product><LibraryHome layout={productLayout as LibraryBlock[]} /></div> : null}
         <div className="es-pdp__below">
           <KitSlot kind="product" name="reviews" className="es-pdp__reviews" />
           <KitSlot kind="product" name="related" className="es-pdp__related" />

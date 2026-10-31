@@ -317,6 +317,42 @@
         "type": "wave-divider",
         "band": "accent"
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Glow Lab",
+      "tagline": "Belleza que se nota en segundos",
+      "products": [
+        {
+          "name": "Sérum Rosa",
+          "price": 290,
+          "description": "Hidratación profunda.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Crema Nube",
+          "price": 260,
+          "description": "Textura ligera, sin brillo.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Protector Diario",
+          "price": 220,
+          "description": "FPS 50, toque seco.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Brillo Frutilla",
+          "price": 140,
+          "description": "Labios jugosos.",
+          "category": "Labios"
+        },
+        {
+          "name": "Bálsamo Cacao",
+          "price": 130,
+          "description": "Repara y perfuma.",
+          "category": "Labios"
+        }
+      ]
+    }
   }
 }

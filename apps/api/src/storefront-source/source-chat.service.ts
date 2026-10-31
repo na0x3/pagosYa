@@ -668,8 +668,19 @@ export class SourceChatService {
       // What the model sent for each block (photo indexes, item count): tells a left-out section from one the checks dropped.
       answered: (answer.blocks as Array<{ type?: string; photo?: number; photo2?: number; items?: Array<{ photo?: number }> }> ?? []).map(block => `${block.type}:${block.photo ?? ''}/${block.photo2 ?? ''}/${(block.items ?? []).length}i[${(block.items ?? []).map(item => item.photo ?? '').join(',')}]`),
       photos: facts.photos.length, ...(template ? { template: template.length } : {}) }));
+    // Owner 2026-10-31 («the inside of each product card»): the template's sections under the product page's buy box, filled by a
+    // second call the same way. They speak for every product (the page is shared), so the model is told so; the checks read only
+    // the merchant's words. A failed call leaves the product page without them, never with the demo words.
+    const productTemplate = template && (state.productLayout ?? []).length ? state.productLayout as LayoutBlock[] : undefined;
+    let productLayout: LayoutBlock[] = [];
+    if (productTemplate) {
+      const pageFacts = { ...facts, request: `${facts.request}\n(Página de producto: estas secciones van debajo del botón de compra de CADA producto. Escríbelas para todos los productos de la tienda — para qué sirven, cómo se usan, por qué elegirlos —, nunca para uno solo, y sin repetir la portada.)`.trim() };
+      const pageAnswer = await this.dialogue.composeLibrary(merchantId, { storeId, facts: pageFacts, template: productTemplate }).catch(() => null);
+      productLayout = pageAnswer ? validateLibraryLayout(pageAnswer as never, facts, { fixed: productTemplate }) : [];
+      this.productLogger.log(JSON.stringify({ event: 'section_library_product_page', storeId, asked: productTemplate.length, kept: productLayout.map(block => block.type) }));
+    }
     await workflow.report('saving');
-    const saved = await this.templates.refill(merchantId, storeId, revision, { layout }, 'Portada de YAPI');
+    const saved = await this.templates.refill(merchantId, storeId, revision, { layout, ...(productTemplate ? { productLayout } : {}) }, 'Portada de YAPI');
     await workflow.finish('completed');
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
       content: 'Armé la portada de tu tienda con secciones pensadas para tus productos y tus fotos. Revisa la vista previa.', metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label } } });

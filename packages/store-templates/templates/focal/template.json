@@ -289,6 +289,42 @@
         "text": "Lanzamientos, ofertas y novedades directo a tu correo.",
         "photo": "slot:en-carga"
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Volta",
+      "tagline": "Tecnología simple para tu casa",
+      "products": [
+        {
+          "name": "Audífonos Inalámbricos",
+          "price": 490,
+          "description": "30 h de batería.",
+          "category": "Audio"
+        },
+        {
+          "name": "Cargador Rápido 65 W",
+          "price": 260,
+          "description": "Carga tu laptop y tu teléfono.",
+          "category": "Carga"
+        },
+        {
+          "name": "Enchufe Inteligente",
+          "price": 180,
+          "description": "Controla tus luces desde el teléfono.",
+          "category": "Hogar"
+        },
+        {
+          "name": "Taza Térmica",
+          "price": 120,
+          "description": "Cerámica esmaltada.",
+          "category": "Hogar"
+        },
+        {
+          "name": "Bolsa de Lona",
+          "price": 90,
+          "description": "Algodón grueso.",
+          "category": "Hogar"
+        }
+      ]
+    }
   }
 }

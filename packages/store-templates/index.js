@@ -65,6 +65,7 @@ function validate(dir, id) {
     if (!preset.variants || typeof preset.variants !== 'object' || Object.values(preset.variants).some(value => typeof value !== 'string')) fail(id, 'preset.variants', 'must map parts to variant ids');
     if (preset.copy !== undefined && (typeof preset.copy !== 'object' || Object.entries(preset.copy).some(([key, value]) => key === 'values' ? !Array.isArray(value) : !MASTER_COPY_KEYS.includes(key) || typeof value !== 'string'))) fail(id, 'preset.copy', 'must hold master copy keys');
     if (preset.layout !== undefined && (!Array.isArray(preset.layout) || preset.layout.some(block => !block || typeof block !== 'object' || typeof block.type !== 'string'))) fail(id, 'preset.layout', 'must be a list of section blocks with a type');
+    if (preset.productLayout !== undefined && (!Array.isArray(preset.productLayout) || preset.productLayout.some(block => !block || typeof block !== 'object' || typeof block.type !== 'string'))) fail(id, 'preset.productLayout', 'must be a list of section blocks with a type');
     if (preset.sections !== undefined && (!Array.isArray(preset.sections) || preset.sections.some(section => !section || !SLOT.test(section.id) || typeof section.title !== 'string' || !Array.isArray(section.items)))) fail(id, 'preset.sections', 'must be sections with id, title and items');
   }
   // Starters (spec 2026-10-24): a finished store a new store can start from; fits = the business words it suits.

@@ -398,6 +398,42 @@
         "title": "Suscríbete a nuestros correos",
         "text": "Novedades, ofertas y consejos para tu mascota."
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Patas Reales",
+      "tagline": "Todo para tu mascota, bajo un mismo techo",
+      "products": [
+        {
+          "name": "Mordedor de Cuerda",
+          "price": 59,
+          "description": "Algodón resistente.",
+          "category": "Juguetes"
+        },
+        {
+          "name": "Alimento Natural 3 kg",
+          "price": 189,
+          "description": "Receta con pollo y arroz.",
+          "category": "Comida"
+        },
+        {
+          "name": "Cama Nube",
+          "price": 249,
+          "description": "Relleno suave y lavable.",
+          "category": "Camas"
+        },
+        {
+          "name": "Croquetas Adulto 7 kg",
+          "price": 329,
+          "description": "Para perros grandes.",
+          "category": "Comida"
+        },
+        {
+          "name": "Kit Juego",
+          "price": 99,
+          "description": "Pelota y cuerda.",
+          "category": "Juguetes"
+        }
+      ]
+    }
   }
 }

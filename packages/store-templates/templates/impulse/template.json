@@ -279,6 +279,42 @@
           }
         ]
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Casa Lana",
+      "tagline": "Básicos de punto para todos los días",
+      "products": [
+        {
+          "name": "Suéter Waffle Cacao",
+          "price": 380,
+          "description": "Punto waffle de algodón.",
+          "category": "Punto"
+        },
+        {
+          "name": "Musculosa Rib Arena",
+          "price": 160,
+          "description": "Algodón acanalado.",
+          "category": "Básicos"
+        },
+        {
+          "name": "Jogger Terracota",
+          "price": 290,
+          "description": "Felpa liviana.",
+          "category": "Básicos"
+        },
+        {
+          "name": "Remera Rayas",
+          "price": 190,
+          "description": "Algodón peinado.",
+          "category": "Básicos"
+        },
+        {
+          "name": "Hoodie Noche",
+          "price": 420,
+          "description": "Frisa gruesa.",
+          "category": "Punto"
+        }
+      ]
+    }
   }
 }

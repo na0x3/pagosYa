@@ -295,6 +295,42 @@
         "type": "strip-services",
         "band": "deep"
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Pop & Co",
+      "tagline": "Snacks que se comen a puñados",
+      "products": [
+        {
+          "name": "Pop Chocolate",
+          "price": 45,
+          "description": "Granos inflados con cacao.",
+          "category": "Dulces"
+        },
+        {
+          "name": "Pop Naranja",
+          "price": 45,
+          "description": "Toque cítrico, bien crocante.",
+          "category": "Dulces"
+        },
+        {
+          "name": "Pop Frutilla",
+          "price": 45,
+          "description": "Con frutilla real.",
+          "category": "Dulces"
+        },
+        {
+          "name": "Cereal Mañanero",
+          "price": 60,
+          "description": "Para el desayuno.",
+          "category": "Desayuno"
+        },
+        {
+          "name": "Caja Arcoíris",
+          "price": 150,
+          "description": "Para compartir.",
+          "category": "Regalos"
+        }
+      ]
+    }
   }
 }

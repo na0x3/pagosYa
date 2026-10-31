@@ -304,6 +304,42 @@
         "type": "wave-divider",
         "band": "deep"
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Fuerza",
+      "tagline": "Proteína rica, sin vueltas",
+      "products": [
+        {
+          "name": "Proteína Chocolate",
+          "price": 320,
+          "description": "30 g de proteína por porción.",
+          "category": "Proteína"
+        },
+        {
+          "name": "Snack de Naranja",
+          "price": 90,
+          "description": "Crocante y liviano.",
+          "category": "Snacks"
+        },
+        {
+          "name": "Bocaditos Frutilla",
+          "price": 90,
+          "description": "Fruta real deshidratada.",
+          "category": "Snacks"
+        },
+        {
+          "name": "Pack de la semana",
+          "price": 590,
+          "description": "Doce porciones surtidas.",
+          "category": "Packs"
+        },
+        {
+          "name": "Shot de Energía",
+          "price": 60,
+          "description": "Antes de entrenar.",
+          "category": "Bebidas"
+        }
+      ]
+    }
   }
 }

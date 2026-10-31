@@ -251,6 +251,36 @@
           }
         ]
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Panza Feliz",
+      "tagline": "Comida rica que te cae bien",
+      "products": [
+        {
+          "name": "Huevos de Campo",
+          "price": 38,
+          "description": "Docena de gallinas libres.",
+          "category": "Despensa"
+        },
+        {
+          "name": "Queso Fresco",
+          "price": 45,
+          "description": "Suave y sin lactosa.",
+          "category": "Lácteos"
+        },
+        {
+          "name": "Miel Pura",
+          "price": 60,
+          "description": "De abejas de los valles.",
+          "category": "Despensa"
+        },
+        {
+          "name": "Canasta Semanal",
+          "price": 220,
+          "description": "Verduras de temporada.",
+          "category": "Canastas"
+        }
+      ]
+    }
   }
 }

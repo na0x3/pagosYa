@@ -300,6 +300,36 @@
         "text": "Lanzamientos, notas de ruta y ofertas antes que nadie.",
         "photo": "slot:c-uso1"
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Ruta Alta",
+      "tagline": "Equipo para ir más lejos",
+      "products": [
+        {
+          "name": "Mochila Andes 24 L",
+          "price": 690,
+          "description": "Lona encerada y cuero.",
+          "category": "Mochilas"
+        },
+        {
+          "name": "Morral Cruzado",
+          "price": 420,
+          "description": "Para el día a día.",
+          "category": "Bolsos"
+        },
+        {
+          "name": "Parka Pluma",
+          "price": 1290,
+          "description": "Abriga a -10 °C.",
+          "category": "Abrigo"
+        },
+        {
+          "name": "Mochila Enrollable",
+          "price": 590,
+          "description": "Impermeable, cierre enrollable.",
+          "category": "Mochilas"
+        }
+      ]
+    }
   }
 }

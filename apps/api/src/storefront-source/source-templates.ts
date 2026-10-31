@@ -32,15 +32,15 @@ export const templateDemoPath = (manifest: Pick<TemplateManifest, 'id' | 'photos
   return demo ? `assets/template-${manifest.photoSource ?? manifest.id}-${slot}.${demo.split('.').pop()}` : '';
 };
 
-/** (34 templates 2026-10-31: a preset may carry a whole theme — its style block, motion and home; see presetFill's layout. 11 built so far.)
+/** (34 templates 2026-10-31: a preset may carry a whole theme — its style block, motion and home; see presetFill's layout. 16 built so far.)
  *  Plantillas presets (2026-10-22): the master a preset is a look of, carrying the preset's photos, and the fill that gives
  *  it the preset's look, parts, sections and starting words. Any other template resolves to itself. */
-export function resolvePresetTemplate(manifest: TemplateManifest, master: (id: string) => TemplateManifest | undefined): { manifest: TemplateManifest; preset?: MasterFill; sourceId: string } {
+export function resolvePresetTemplate(manifest: TemplateManifest, master: (id: string) => TemplateManifest | undefined): { manifest: TemplateManifest; preset?: MasterFill; sourceId: string; demo?: NonNullable<TemplateManifest['preset']>['demo'] } {
   // sourceId: whose files the store is built from — a preset's master, or a starter's own (spec 2026-10-24).
   if (!manifest.preset || !manifest.extends) return { manifest, sourceId: manifest.id };
   const base = master(manifest.extends);
   if (!base?.master) throw new TypeError(`Plantilla ${manifest.id}: ${manifest.extends} no es una plantilla base.`);
-  return { manifest: { ...base, photos: manifest.photos, photoSource: manifest.id }, preset: presetFill(manifest.preset), sourceId: manifest.id };
+  return { manifest: { ...base, photos: manifest.photos, photoSource: manifest.id }, preset: presetFill(manifest.preset), sourceId: manifest.id, demo: manifest.preset.demo };
 }
 
 export function presetFill(preset: NonNullable<TemplateManifest['preset']>): MasterFill {
@@ -52,6 +52,7 @@ export function presetFill(preset: NonNullable<TemplateManifest['preset']>): Mas
     sections, featureCopy: (preset.featureCopy ?? {}) as MasterFill['featureCopy'],
     // 34 templates (2026-10-31): the theme's fixed home (section-library blocks with demo words).
     ...(preset.layout?.length ? { layout: preset.layout.map(block => ({ ...block })) } : {}),
+    ...(preset.productLayout?.length ? { productLayout: preset.productLayout.map(block => ({ ...block })) } : {}),
     character: { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [], kind: preset.kind ?? (preset.variants.cards === 'fashion' ? 'fashion' : 'other') },
   };
 }
@@ -66,7 +67,7 @@ export function withPreset(preset: MasterFill, fill?: MasterFill | null, keepBra
     featureCopy: { ...(preset.featureCopy ?? {}), ...(fill.featureCopy ?? {}) },
     character: { ...(fill.character ?? preset.character!), kind: preset.character?.kind ?? fill.character?.kind },
     // 34 templates: the template's home is part of its design — a business fill never drops it (live check 2026-10-31).
-    ...(preset.layout?.length ? { layout: preset.layout } : {}) };
+    ...(preset.layout?.length ? { layout: preset.layout } : {}), ...(preset.productLayout?.length ? { productLayout: preset.productLayout } : {}) };
 }
 
 /**
@@ -108,7 +109,7 @@ export function starterBrandBlock(colours: StarterBrandColours): string {
   return vars.length ? `/* pagosya-brand */ :root{${vars.join(';')}}` : '';
 }
 
-export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[]; features?: Record<string, unknown>; layout?: unknown[] }, plantillaCopy?: Record<string, string>): SourceProjectFileDto {
+export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[]; features?: Record<string, unknown>; layout?: unknown[]; productLayout?: unknown[] }, plantillaCopy?: Record<string, string>): SourceProjectFileDto {
   const data = { name: store.name, tagline: store.tagline ?? '', city: store.city ?? '', logo: store.logo ?? '', phone: store.phone ?? '' };
   return {
     path: TEMPLATE_STORE_DATA_PATH,
@@ -121,7 +122,9 @@ export function templateStoreDataFile(store: { name: string; tagline?: string; c
         // John Smedley sections (spec 2026-10-21): always exported, so a home that imports it compiles with none rolled.
         + `export const features: Record<string, any> = ${JSON.stringify(master.features ?? {})};\n`
         // Section library (spec 2026-10-31): always exported, empty for a store YAPI did not compose from the library.
-        + `export const layout: any[] = ${JSON.stringify(master.layout ?? [])};\n` : '')
+        + `export const layout: any[] = ${JSON.stringify(master.layout ?? [])};\n`
+        // The template's product-page sections (owner 2026-10-31); always exported, so the product page compiles with none.
+        + `export const productLayout: any[] = ${JSON.stringify(master.productLayout ?? [])};\n` : '')
       // A converted Plantilla (spec 2026-10-20): every text it shows, filled for the merchant or the template's own defaults.
       + (plantillaCopy ? `export const copy: Record<string, string> = ${JSON.stringify(plantillaCopy)};\n` : ''),
   };
@@ -181,6 +184,7 @@ export function readMasterState(files: readonly SourceProjectFileDto[]) {
     sections: dataLine(content, 'sections') as MasterSection[] | undefined,
     features: (dataLine(content, 'features') ?? {}) as Record<string, unknown>,
     layout: (dataLine(content, 'layout') ?? []) as unknown[],
+    productLayout: (dataLine(content, 'productLayout') ?? []) as unknown[],
   };
 }
 
@@ -347,7 +351,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   // Sort & filter styles spec 2026-10-21: a fashion store from before the filters part gets the John Smedley chip rows.
   if ((settings.variants?.filters ?? []).includes('chips') && variants.filters === undefined && variants.cards === 'fashion') variants.filters = 'chips';
   const out = withFashionTemplateParts(files.map(file => {
-    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [], features, layout: change.layout ?? state.layout ?? [] });
+    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [], features, layout: change.layout ?? state.layout ?? [], productLayout: change.productLayout ?? state.productLayout ?? [] });
     if (file.path === 'styles/globals.css') return { ...file, content: withMasterTheme(file.content, theme) };
     if (file.path === 'config.js') {
       const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
@@ -451,9 +455,9 @@ export async function assembleTemplateRevision(input: {
   }
   const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city,
     // An uploaded logo as the full API URL, like the photos: the store is served from another origin (Remolino 2026-10-21).
-    logo: masterPhotoUrl(data.logoUrl, input.apiUrl), phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: builtVariants, sections: input.sections ?? input.fill?.sections, features, layout: input.fill?.layout ?? [] } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
+    logo: masterPhotoUrl(data.logoUrl, input.apiUrl), phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: builtVariants, sections: input.sections ?? input.fill?.sections, features, layout: input.fill?.layout ?? [], productLayout: input.fill?.productLayout ?? [] } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
   const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withOnlyTheme(withMasterTheme(file.content, masterThemeCss(settings, look!)), String((builtVariants as Record<string, unknown> | undefined)?.theme ?? ''),
-    new Set(((input.fill?.layout ?? []) as Array<{ type?: string }>).map(block => String(block.type)))) } : file;
+    new Set([...(input.fill?.layout ?? []), ...(input.fill?.productLayout ?? [])].map(block => String((block as { type?: string }).type)))) } : file;
   // A filled Plantilla never shows the demo business's photos; a slot the merchant has no photo for stays empty instead
   // of a broken image showing its description (live check 2026-10-21, Alfar's floating photos).
   const noEmptyPhotos = (file: SourceProjectFileDto) => manifest.copy && input.plantillaCopy && input.demoPhotos === false && file.path === 'styles/globals.css'
@@ -497,8 +501,16 @@ export async function assembleTemplateRevision(input: {
 
 /** The demo store Plantillas are checked and previewed with: four products (so every photo slot shows the template's
  * demo photo), BOB prices, no branches (a branch without a delivery method would stop the simulated checkout). */
-export function templateDemoPublicStore(): SourcePublicStore {
-  const product = (id: string, name: string, amount: number, description: string) => ({ id, name, amount, currency: 'BOB', stock: 12, description, imageUrls: [], variants: [], extras: [], highlights: [] });
+export function templateDemoPublicStore(demo?: TemplateDemo): SourcePublicStore {
+  const product = (id: string, name: string, amount: number, description: string, categoryId?: string) => ({ id, name, amount, currency: 'BOB', stock: 12, description, imageUrls: [], variants: [], extras: [], highlights: [], ...(categoryId ? { categoryId } : {}) });
+  // Owner 2026-10-31 («repetitivo»): a template with its own demo shop shows it — its name, its categories, products of its industry —
+  // instead of the same «Tu marca» and «Producto estrella» on every preview.
+  if (demo?.products?.length) {
+    const names = [...new Set(demo.products.map(item => item.category).filter((name): name is string => Boolean(name)))];
+    const categories = names.map((name, at) => ({ id: `demo-cat-${at + 1}`, name, sortOrder: at }));
+    return ({ ...(templateDemoPublicStore() as unknown as Record<string, unknown>), storeName: demo.storeName, tagline: demo.tagline ?? '', categories,
+      items: demo.products.slice(0, 8).map((item, at) => product(`demo-${at + 1}`, item.name, Math.round(item.price * 100), item.description ?? '', item.category ? `demo-cat-${names.indexOf(item.category) + 1}` : undefined)) }) as unknown as SourcePublicStore;
+  }
   return ({
     storeName: 'Tu marca', tagline: 'Hecho con cuidado en Bolivia', checkoutMode: 'payment', creditsEnabled: false, digitalGoodsEnabled: false,
     shippingEnabled: false, shippingPickupEnabled: false, shippingCarriersEnabled: false, bundlesEnabled: false, subscriptionsEnabled: false, logoUrl: null, contactPhone: null,
@@ -515,8 +527,9 @@ export function templateDemoPublicStore(): SourcePublicStore {
 }
 
 /** A template applied to the demo store, with the demo catalog's cards showing the template's product demo photos. */
-export async function templateDemoRevision(manifest: TemplateManifest, source: SourceProjectFileDto[], fill?: MasterFill) {
-  const assembled = await assembleTemplateRevision({ manifest, source, storeId: `template-${manifest.id}`, slug: manifest.id, publicStore: templateDemoPublicStore(), apiUrl: new URL('https://api.pagosya.test/v1'), checkoutOrigin: 'https://pagar.pagosya.test', firstRevision: true, fill });
+type TemplateDemo = NonNullable<NonNullable<TemplateManifest['preset']>['demo']>;
+export async function templateDemoRevision(manifest: TemplateManifest, source: SourceProjectFileDto[], fill?: MasterFill, demo?: TemplateDemo) {
+  const assembled = await assembleTemplateRevision({ manifest, source, storeId: `template-${manifest.id}`, slug: manifest.id, publicStore: templateDemoPublicStore(demo), apiUrl: new URL('https://api.pagosya.test/v1'), checkoutOrigin: 'https://pagar.pagosya.test', firstRevision: true, fill });
   const productPhotos = manifest.photos.filter(photo => photo.role === 'product' && photo.demo).map(photo => templateDemoPath(manifest, photo.slot));
   const files = assembled.files.map(file => {
     if (file.path !== 'config.js' || !productPhotos.length) return file;

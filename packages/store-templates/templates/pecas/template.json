@@ -181,6 +181,36 @@
         "band": "muted",
         "look": "ripple"
       }
-    ]
+    ],
+    "demo": {
+      "storeName": "Pecas",
+      "tagline": "Cuidado divertido para tu piel",
+      "products": [
+        {
+          "name": "Sérum Brillo",
+          "price": 190,
+          "description": "Niacinamida al 5%.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Crema Nube",
+          "price": 170,
+          "description": "Hidrata sin brillo.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Gel Limpiador",
+          "price": 120,
+          "description": "Espuma suave.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Sérum Calma",
+          "price": 190,
+          "description": "Para piel sensible.",
+          "category": "Rostro"
+        }
+      ]
+    }
   }
 }

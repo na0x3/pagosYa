@@ -21,6 +21,9 @@ export type MasterLook = { palette: string; fonts: string; colors: Partial<Recor
 export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null;
   /** Section library (spec 2026-10-31): the home's blocks, in order (store-data `layout`); photos already bundled. */
   layout?: unknown[];
+  /** Owner 2026-10-31 («the inside of each product card»): the template's sections under the product page's buy box (store-data
+   *  `productLayout`), filled like the home. */
+  productLayout?: unknown[];
   /** Owner 2026-10-25: a video the merchant attached, played as the cover (store-data photos.heroVideo). */
   heroVideo?: string;
   /** Owner 2026-10-28 (avril, «longer with more pictures»): the merchant's own pictures the cover and story did not take, in the
