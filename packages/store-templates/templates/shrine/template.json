@@ -1,0 +1,322 @@
+{
+  "id": "shrine",
+  "name": "Shrine Pro",
+  "category": "belleza",
+  "description": "Belleza y fragancias: rosa y ciruela, títulos con una palabra de color, olas entre secciones, beneficios alrededor de una foto.",
+  "tags": [
+    "belleza",
+    "perfume",
+    "fragancias",
+    "cuidado personal"
+  ],
+  "sitePurpose": "shop",
+  "order": 30,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Shrine Pro",
+    "url": "https://shrine-pro-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "ru-hero",
+      "role": "hero",
+      "demo": "ru-hero.jpg"
+    },
+    {
+      "slot": "ru-p1",
+      "role": "product",
+      "demo": "ru-p1.jpg"
+    },
+    {
+      "slot": "ru-p2",
+      "role": "product",
+      "demo": "ru-p2.jpg"
+    },
+    {
+      "slot": "ru-p3",
+      "role": "product",
+      "demo": "ru-p3.jpg"
+    },
+    {
+      "slot": "au-p1",
+      "role": "product",
+      "demo": "au-p1.jpg"
+    },
+    {
+      "slot": "au-p2",
+      "role": "product",
+      "demo": "au-p2.jpg"
+    },
+    {
+      "slot": "ru-textura",
+      "role": "detail",
+      "demo": "ru-textura.jpg"
+    },
+    {
+      "slot": "au-feature",
+      "role": "lifestyle",
+      "demo": "au-feature.jpg"
+    },
+    {
+      "slot": "au-hero",
+      "role": "lifestyle",
+      "demo": "au-hero.jpg"
+    },
+    {
+      "slot": "au-ritual",
+      "role": "lifestyle",
+      "demo": "au-ritual.jpg"
+    },
+    {
+      "slot": "au-texture",
+      "role": "detail",
+      "demo": "au-texture.jpg"
+    },
+    {
+      "slot": "pe-rutina",
+      "role": "lifestyle",
+      "demo": "pe-rutina.jpg"
+    },
+    {
+      "slot": "pe-p1",
+      "role": "lifestyle",
+      "demo": "pe-p1.jpg"
+    },
+    {
+      "slot": "pe-p2",
+      "role": "lifestyle",
+      "demo": "pe-p2.jpg"
+    },
+    {
+      "slot": "gl-story",
+      "role": "lifestyle",
+      "demo": "gl-story.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "shrine",
+    "colors": {
+      "paper": "#f7eef3",
+      "ink": "#3b1d33",
+      "muted": "#d9b3cd",
+      "accent": "#9c4c80",
+      "deep": "#5a2550"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "shrine",
+      "icons": "text",
+      "header": "split",
+      "announce": "plain",
+      "footer": "bigname",
+      "button": "soft",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "upper",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "layout": [
+      {
+        "type": "promo-countdown",
+        "look": "boxes",
+        "title": "¡Apúrate! La oferta termina en",
+        "endsAt": "2026-12-31T23:59:00-04:00"
+      },
+      {
+        "type": "cover-stage",
+        "look": "right",
+        "title": "Crea esa primera *chispa* ✨",
+        "text": "No es una fragancia cualquiera: está hecha para que no te olviden.",
+        "cta": "Ver fragancias",
+        "link": "products",
+        "photo": "slot:ru-hero"
+      },
+      {
+        "type": "press-quotes",
+        "look": "marquee",
+        "band": "muted",
+        "items": [
+          {
+            "title": "Revista Moda"
+          },
+          {
+            "title": "Diario Estilo"
+          },
+          {
+            "title": "Blog Tendencia"
+          },
+          {
+            "title": "Revista Mujer"
+          }
+        ]
+      },
+      {
+        "type": "wave-divider",
+        "band": "muted",
+        "look": "flip"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "shop",
+        "title": "Transforma tu *esencia*",
+        "cta": "Comprar",
+        "items": [
+          {
+            "title": "Cítrico",
+            "photo": "slot:pe-p1",
+            "link": "products"
+          },
+          {
+            "title": "Noir",
+            "photo": "slot:au-feature",
+            "link": "products"
+          },
+          {
+            "title": "Floral",
+            "photo": "slot:pe-p2",
+            "link": "products"
+          },
+          {
+            "title": "Carmesí",
+            "photo": "slot:gl-story",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "wave-divider",
+        "band": "accent"
+      },
+      {
+        "type": "benefits-orbit",
+        "band": "accent",
+        "title": "Aromas únicos con beneficios únicos",
+        "text": "Cada fragancia ofrece más que un aroma: está pensada para acompañar tu ánimo y tu día.",
+        "photo": "slot:au-ritual",
+        "items": [
+          {
+            "title": "Mejora el ánimo",
+            "text": "Notas que levantan tu día.",
+            "icon": "smile"
+          },
+          {
+            "title": "Aroma duradero",
+            "text": "Te acompaña de la mañana a la noche.",
+            "icon": "clock"
+          },
+          {
+            "title": "Tu sello",
+            "text": "Un perfume que dice quién eres.",
+            "icon": "sparkles"
+          },
+          {
+            "title": "Atracción natural",
+            "text": "Una estela que se recuerda.",
+            "icon": "heart"
+          }
+        ]
+      },
+      {
+        "type": "wave-divider",
+        "band": "accent",
+        "look": "flip"
+      },
+      {
+        "type": "shop-look",
+        "look": "side",
+        "photo": "slot:au-hero",
+        "items": [
+          {
+            "title": "Producto estrella",
+            "x": 28,
+            "y": 40
+          },
+          {
+            "title": "Edición de temporada",
+            "x": 62,
+            "y": 52
+          },
+          {
+            "title": "Calma",
+            "text": "Notas suaves para bajar el ritmo.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Confianza",
+            "text": "Un aroma que te acompaña.",
+            "icon": "award"
+          },
+          {
+            "title": "Energía",
+            "text": "Frescura para empezar el día.",
+            "icon": "zap"
+          },
+          {
+            "title": "Recuerdos",
+            "text": "Cada fragancia, un momento.",
+            "icon": "heart"
+          }
+        ]
+      },
+      {
+        "type": "reviews-wall",
+        "title": "Lo que dicen"
+      },
+      {
+        "type": "compare-table",
+        "title": "Por qué elegirnos: *un paso adelante*",
+        "text": "Calidad, mezclas cuidadas y un compromiso real con lo que hacemos.",
+        "items": [
+          {
+            "title": "Calidad superior",
+            "value": "no"
+          },
+          {
+            "title": "Mezclas propias",
+            "value": "no"
+          },
+          {
+            "title": "Compromiso sostenible",
+            "value": "no"
+          },
+          {
+            "title": "Precio justo",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "type": "stats-rings",
+        "title": "Resultados increíbles",
+        "text": "Según encuestas a nuestras clientas.",
+        "items": [
+          {
+            "title": "1",
+            "value": "94",
+            "text": "dijo sentirse con más confianza al usarla."
+          },
+          {
+            "title": "2",
+            "value": "87",
+            "text": "notó un mejor ánimo durante el día."
+          },
+          {
+            "title": "3",
+            "value": "98",
+            "text": "recibió cumplidos por su aroma."
+          }
+        ]
+      },
+      {
+        "type": "wave-divider",
+        "band": "accent"
+      }
+    ]
+  }
+}

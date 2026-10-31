@@ -405,6 +405,13 @@
         "heading": "manrope",
         "body": "dm-sans",
         "starterOnly": true
+      },
+      {
+        "id": "shrine",
+        "name": "Shrine Pro",
+        "heading": "playfair-display",
+        "body": "newsreader",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -564,7 +571,8 @@
         "motion",
         "focal",
         "symmetry",
-        "broadcast"
+        "broadcast",
+        "shrine"
       ],
       "icons": [
         "line",

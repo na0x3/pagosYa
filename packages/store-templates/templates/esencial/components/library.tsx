@@ -80,12 +80,18 @@ function Bleed({ block, index, children, className = '', id, extra }: { block: L
     data-lb-band={block.band || undefined} aria-labelledby={block.title ? `lb-${index}-title` : undefined} {...extra}>{children}</section>;
 }
 
+/** A title whose *word* the copy marks shows that word in the accent (two-tone titles: Shrine, Palo Alto); no marks, plain text. */
+export function Marked({ text }: { text: string }) {
+  if (!text.includes('*')) return <>{text}</>;
+  return <>{text.split('*').map((part, at) => at % 2 ? <em key={at} className="lb-em">{part}</em> : part)}</>;
+}
+
 function Head({ block, index, align = 'start', level = 2, aside }: { block: LibraryBlock; index: number; align?: 'start' | 'center' | 'split'; level?: 1 | 2; aside?: ReactNode }) {
   const Title = level === 1 ? 'h1' : 'h2';
   if (!block.title && !block.eyebrow && !block.text) return null;
   const words = <>
     {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-    {block.title ? <Title id={`lb-${index}-title`} className={level === 1 ? 'es-display lb-title' : 'es-h2 lb-title'}>{block.title}</Title> : null}
+    {block.title ? <Title id={`lb-${index}-title`} className={level === 1 ? 'es-display lb-title' : 'es-h2 lb-title'}><Marked text={block.title} /></Title> : null}
   </>;
   if (align === 'split') return <Reveal className="lb-head lb-head--split">
     <div>{words}</div>
@@ -338,7 +344,7 @@ function ProductsSpotlight({ block, index }: { block: LibraryBlock; index: numbe
     <div className="lb-spotlight">
       <Reveal className="lb-spotlight__words">
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
         {block.text ? <p className="lb-lede">{block.text}</p> : null}
         {points.length ? <ul className="lb-points lb-points--plain">{points.map((point, at) => <li key={at}><Icon name={point.icon || 'check'} className="lb-points__icon" /><div><strong>{point.title}</strong>{point.text ? <span>{point.text}</span> : null}</div></li>)}</ul> : null}
       </Reveal>
@@ -366,7 +372,7 @@ function ProductsLookbook({ block, index }: { block: LibraryBlock; index: number
         <Photo src={block.photo} />
         <figcaption>
           {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-          {block.title ? <h2 id={`lb-${index}-title`} className="lb-lookbook__title">{block.title}</h2> : null}
+          {block.title ? <h2 id={`lb-${index}-title`} className="lb-lookbook__title"><Marked text={block.title} /></h2> : null}
           <Button label={block.cta} link={block.link} tone="light" />
         </figcaption>
       </figure>
@@ -399,7 +405,7 @@ function StorySplit({ block, index }: { block: LibraryBlock; index: number }) {
       <Reveal className="lb-split__media"><Photo src={block.photo} />{(block.look === 'arch' || block.look === 'wavy') && block.photo2 ? <Photo src={block.photo2} className="lb-split__inset" /> : null}</Reveal>
       <Reveal className="lb-split__copy" delay={120}>
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
         {block.photo2 && block.look !== 'arch' && block.look !== 'wavy' ? <Photo src={block.photo2} className="lb-split__inset" /> : null}
         {block.text ? <p className="lb-body">{block.text}</p> : null}
         <Actions block={block} />
@@ -415,7 +421,7 @@ function StoryChecker({ block, index }: { block: LibraryBlock; index: number }) 
     <div data-tone={tone}><p className="lb-checker__n">{String(at + 1).padStart(2, '0')}</p><h3 className="lb-checker__title">{item.title}</h3>{item.text ? <p>{item.text}</p> : null}</div>
   </Reveal>;
   return <Bleed block={block} index={index}>
-    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
     <div className="lb-checker">
       {tile(first, 'deep', 0)}<div className="lb-checker__photo"><Photo src={block.photo} /></div>
       <div className="lb-checker__photo"><Photo src={block.photo2} /></div>{tile(second, 'accent', 1)}
@@ -431,7 +437,7 @@ function StoryOverlay({ block, index }: { block: LibraryBlock; index: number }) 
     <div className="lb-overlay__inner">
       <Reveal className="lb-overlay__head">
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
         {block.text ? <p className="lb-lede">{block.text}</p> : null}
       </Reveal>
       {items.length ? <ul className="lb-overlay__cols">{items.map((item, at) => <li key={at}><Reveal delay={at * 90}><h3>{item.title}</h3>{item.text ? <p>{item.text}</p> : null}</Reveal></li>)}</ul> : null}
@@ -446,7 +452,7 @@ function StoryList({ block, index }: { block: LibraryBlock; index: number }) {
     <div className="lb-list">
       <Reveal className="lb-list__copy">
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
         <ol className="lb-list__items">{items.map((item, at) => <li key={at}><span className="lb-list__n">{String(at + 1).padStart(2, '0')}</span><div><h3>{item.title}</h3>{item.text ? <p>{item.text}</p> : null}</div></li>)}</ol>
         <Actions block={block} />
       </Reveal>
@@ -513,7 +519,7 @@ function CompareTable({ block, index }: { block: LibraryBlock; index: number }) 
     <div className="lb-compare">
       <Reveal className="lb-compare__copy">
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
         {block.text ? <p className="lb-lede">{block.text}</p> : null}
         <Photo src={block.photo} className="lb-compare__photo" />
         <Actions block={block} />
@@ -576,7 +582,7 @@ function PromoCode({ block, index }: { block: LibraryBlock; index: number }) {
       <Photo src={block.photo} className="lb-promo__photo" />
       <div className="lb-promo__words">
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-        {block.title ? <h2 id={`lb-${index}-title`} className="lb-promo__title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="lb-promo__title"><Marked text={block.title} /></h2> : null}
         {block.text ? <p>{block.text}</p> : null}
       </div>
       <div className="lb-promo__code">
@@ -593,7 +599,7 @@ function PromoPair({ block, index }: { block: LibraryBlock; index: number }) {
   const tiles = (block.items ?? []).filter(item => item.photo).slice(0, 2);
   if (tiles.length < 2) return null;
   return <Band block={block} index={index}>
-    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
     <ul className="lb-pair">{tiles.map((tile, at) => <li key={at}><Reveal delay={at * 100}>
       <a className="lb-pair__tile" href={href(tile.link)}>
         <Photo src={tile.photo} />
@@ -613,7 +619,7 @@ function PromoBanner({ block, index }: { block: LibraryBlock; index: number }) {
     {block.look === 'askew' && block.product ? <div className="lb-askew"><div className="lb-askew__card" data-pagosya-spotlight={block.product} data-side="right" /></div> : null}
     <Reveal className="lb-banner__copy">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-      {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+      {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
       {block.text ? <p className="lb-lede">{block.text}</p> : null}
       <Actions block={block} tone="light" />
     </Reveal>
@@ -650,7 +656,7 @@ function VisitStore({ block, index }: { block: LibraryBlock; index: number }) {
       {block.photo ? <Reveal className="lb-visit__media"><Photo src={block.photo} /></Reveal> : null}
       <Reveal className="lb-visit__card" delay={120}>
         <p className="es-eyebrow lb-eyebrow">{block.eyebrow || 'Visítanos'}</p>
-        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
         {block.text ? <p className="lb-lede">{block.text}</p> : null}
         <dl className="lb-visit__rows">{rows.map((row, at) => <div key={at}><dt><Icon name={row.icon || (at === 0 ? 'pin' : 'clock')} />{row.title}</dt><dd>{row.text}</dd></div>)}</dl>
         {phone ? <Button label={block.cta || 'Escríbenos por WhatsApp'} link="whatsapp" /> : null}
@@ -667,7 +673,7 @@ function ClosingPhoto({ block, index }: { block: LibraryBlock; index: number }) 
     <Photo src={block.photo} className="lb-banner__photo" />
     <Reveal className="lb-banner__copy lb-banner__copy--center">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-      {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+      {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
       {block.text ? <p className="lb-lede">{block.text}</p> : null}
       <Actions block={block} tone="light" />
     </Reveal>
@@ -680,7 +686,7 @@ function ClosingWordmark({ block, index }: { block: LibraryBlock; index: number 
       {block.photo ? <Reveal className="lb-wordmark__photo"><Photo src={block.photo} /></Reveal> : null}
       <Reveal className="lb-wordmark__copy" delay={100}>
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
         {block.text ? <p className="lb-lede">{block.text}</p> : null}
         <Actions block={block} />
       </Reveal>
@@ -709,7 +715,8 @@ function CoverStage({ block, index }: { block: LibraryBlock; index: number }) {
     {slides.length > 1 ? <div className="lb-stage__bars" data-count={slides.length} aria-hidden="true">{slides.map((_, at) => <span key={at} />)}</div> : null}
     <div className="lb-stage__copy">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-      <h1 id={`lb-${index}-title`} className="lb-stage__title"><span className="lb-mark">{first}<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 14c40-8 90-11 194-6" /></svg></span>{rest.length ? ` ${rest.join(' ')}` : ''}</h1>
+      {(block.title ?? '').includes('*') ? <h1 id={`lb-${index}-title`} className="lb-stage__title"><Marked text={block.title ?? ''} /></h1>
+        : <h1 id={`lb-${index}-title`} className="lb-stage__title"><span className="lb-mark">{first}<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 14c40-8 90-11 194-6" /></svg></span>{rest.length ? ` ${rest.join(' ')}` : ''}</h1>}
       {block.text ? <p className="lb-cover__sub">{block.text}</p> : null}
       {block.cta || block.cta2 ? <div className="lb-stage__buttons">
         {block.cta ? <a className="lb-stage__btn" href={href(block.link)}>{block.cta}</a> : null}
@@ -738,7 +745,7 @@ function PromoCountdown({ block, index }: { block: LibraryBlock; index: number }
     <div className="lb-countdown">
       <div className="lb-countdown__words">
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-        <h2 id={`lb-${index}-title`} className="lb-countdown__title">{block.title}</h2>
+        <h2 id={`lb-${index}-title`} className="lb-countdown__title"><Marked text={block.title} /></h2>
         {block.cta ? <a className="lb-underline-link" href={href(block.link)}>{block.cta}</a> : null}
       </div>
       <ol className="lb-countdown__clock" aria-label="Tiempo que queda">{parts.map(([value, label]) => <li key={label}><span className="lb-countdown__n">{String(value).padStart(2, '0')}</span><span className="lb-countdown__unit">{label}</span></li>)}</ol>
@@ -752,7 +759,7 @@ function StoryStack({ block, index }: { block: LibraryBlock; index: number }) {
   const rows = (block.items ?? []).filter(item => item.photo && item.title).slice(0, 3);
   if (rows.length < 2) return null;
   return <Band block={block} index={index} extra={{ 'data-lb-progress': '', 'data-lb-pinned': '', 'data-lb-steps': String(rows.length) }}>
-    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
     <div className="lb-stack" data-count={rows.length}>
       <div className="lb-stack__lines">{rows.map((row, at) => <div key={at} className="lb-stack__row">
         <p className="lb-stack__line">{row.title}</p>{row.text ? <p className="lb-stack__text">{row.text}</p> : null}
@@ -772,7 +779,7 @@ function StatementReveal({ block, index }: { block: LibraryBlock; index: number 
   if (block.look === 'quote') return <Band block={block} index={index}>
     <Reveal className="lb-quote">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-      {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+      {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
       <p className="lb-quote__text">“{block.text.replace(/\*/g, '')}”</p>
     </Reveal>
   </Band>;
@@ -787,7 +794,7 @@ function StatementReveal({ block, index }: { block: LibraryBlock; index: number 
     <div className="lb-reveal__pin">
       <div className="lb-reveal" style={{ ['--n' as string]: words.length } as CSSProperties}>
         <span className="lb-reveal__dots" aria-hidden="true">•••</span>
-        {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
         <p className="lb-reveal__text">{words.map((entry, at) => <span key={at}><span className={entry.marked ? 'lb-reveal__word lb-reveal__marked' : 'lb-reveal__word'} style={{ ['--i' as string]: at } as CSSProperties}>{entry.word}</span>{entry.tail ? <span className="lb-reveal__word" style={{ ['--i' as string]: at } as CSSProperties}>{entry.tail}</span> : null}{' '}</span>)}</p>
         {block.cta ? <a className="es-btn es-btn--ghost lb-btn" href={href(block.link)}>{block.cta}</a> : null}
       </div>
@@ -803,13 +810,13 @@ function CategoriesList({ block, index }: { block: LibraryBlock; index: number }
   const photo = rows[active]?.photo ?? rows.find(row => row.photo)?.photo ?? block.photo;
   if (block.look === 'big') return <Bleed block={block} index={index} className="lb-cover--dark lb-bigcats">
     {photo ? <img key={photo} className="lb-banner__photo lb-bigcats__photo" src={photo} alt="" aria-hidden="true" loading="lazy" decoding="async" /> : null}
-    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
     <ul className="lb-bigcats__list">{rows.map((row, at) => <li key={at}><a href={href(row.link)} data-active={at === active ? '' : undefined} onMouseEnter={() => setActive(at)} onFocus={() => setActive(at)}>{row.title}</a></li>)}</ul>
   </Bleed>;
   return <Band block={{ ...block, band: block.band ?? 'muted' }} index={index}>
     <div className="lb-edits">
       <div className="lb-edits__words">
-        {block.title ? <h2 id={`lb-${index}-title`} className="lb-edits__title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="lb-edits__title"><Marked text={block.title} /></h2> : null}
         {block.text ? <p className="lb-lede">{block.text}</p> : null}
         <ul className="lb-edits__list">{rows.map((row, at) => <li key={at}><a href={href(row.link)} data-active={at === active ? '' : undefined} onMouseEnter={() => setActive(at)} onFocus={() => setActive(at)}>{row.title}</a></li>)}</ul>
       </div>
@@ -841,7 +848,7 @@ function StoryOverlap({ block, index }: { block: LibraryBlock; index: number }) 
       <div className="lb-overlap__photos"><Photo src={block.photo} className="lb-overlap__a" /><Photo src={block.photo2} className="lb-overlap__b" /></div>
       <Reveal className="lb-overlap__words">
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
         {block.text ? <p className="lb-lede">{block.text}</p> : null}
         {points.length ? <ul className="lb-overlap__points">{points.map((point, at) => <li key={at}><i aria-hidden="true">✦</i><span><strong>{point.title}</strong>{point.text ? ` ${point.text}` : ''}</span></li>)}</ul> : null}
         <Actions block={block} tone="ink" />
@@ -858,7 +865,7 @@ function PromoTrio({ block, index }: { block: LibraryBlock; index: number }) {
     if (!block.photo || columns.length < 2) return null;
     return <Bleed block={block} index={index} className="lb-cover--dark">
       <Photo src={block.photo} className="lb-banner__photo" />
-      {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+      {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
       <ul className="lb-trio lb-trio--single" data-count={columns.length}>{columns.map((column, at) => <li key={at}><a className="lb-trio__column" href={href(column.link)}>
         <span className="lb-trio__words">{column.text ? <span className="lb-trio__text">{column.text}</span> : null}<span className="lb-trio__title">{column.title}</span><span className="lb-trio__go">{block.cta || 'Ver más'}</span></span>
       </a></li>)}</ul>
@@ -867,7 +874,7 @@ function PromoTrio({ block, index }: { block: LibraryBlock; index: number }) {
   const tiles = (block.items ?? []).filter(item => item.photo && item.title).slice(0, 3);
   if (tiles.length < 3) return null;
   return <Bleed block={block} index={index}>
-    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
     <ul className="lb-trio">{tiles.map((tile, at) => <li key={at}><a className="lb-trio__tile" href={href(tile.link)}>
       <Photo src={tile.photo} />
       <span className="lb-trio__words"><span className="lb-trio__title">{tile.title}</span>{tile.text ? <span className="lb-trio__text">{tile.text}</span> : null}<span className="lb-trio__go">{block.cta || 'Ver más'}</span></span>
@@ -915,10 +922,26 @@ function SocialMarquee({ block, index }: { block: LibraryBlock; index: number })
 /** Palo Alto «Shop the look»: a photo with pins on the products in it; the open pin shows that product's card. Real products only. */
 function ShopLook({ block, index }: { block: LibraryBlock; index: number }) {
   const pins = (block.items ?? []).filter(item => item.title && Number.isFinite(item.x) && Number.isFinite(item.y)).slice(0, 4);
-  const [open, setOpen] = useState(0);
+  const points = (block.items ?? []).filter(item => item.title && !Number.isFinite(item.x)).slice(0, 4);
+  const [open, setOpen] = useState(-1);
   if (!block.photo || !pins.length) return null;
+  if (block.look === 'side') return <Band block={block} index={index}>
+    <div className="lb-lookside">
+      <div className="lb-look lb-look--framed">
+        <Photo src={block.photo} className="lb-look__photo" />
+        {pins.map((pin, at) => <div key={at} className="lb-look__spot lb-shop__spot" data-open={open === at ? '' : undefined} style={{ left: `${pin.x}%`, top: `${pin.y}%` }}>
+          <button type="button" className="lb-shop__pin" aria-expanded={open === at} aria-label={pin.title} onClick={() => setOpen(open === at ? -1 : at)}><Icons.IconPlus /></button>
+          <div className="lb-look__card"><div className="lb-look__product" data-pagosya-catalog data-products={pin.title} data-catalog-limit={1} /></div>
+        </div>)}
+      </div>
+      <div className="lb-lookside__words">
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
+        {points.length ? <ul className="lb-lookside__points">{points.map((point, at) => <li key={at}><Icon name={point.icon || 'sparkles'} className="lb-columns__icon" /><h3>{point.title}</h3>{point.text ? <p>{point.text}</p> : null}</li>)}</ul> : null}
+      </div>
+    </div>
+  </Band>;
   return <Bleed block={block} index={index}>
-    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
     <div className="lb-look">
       <Photo src={block.photo} className="lb-look__photo" />
       {pins.map((pin, at) => <div key={at} className="lb-look__spot" data-open={open === at ? '' : undefined} style={{ left: `${pin.x}%`, top: `${pin.y}%` }}>
@@ -994,7 +1017,7 @@ function CoverVideo({ block, index }: { block: LibraryBlock; index: number }) {
     <video className="lb-banner__photo" src={video} autoPlay muted loop playsInline poster={block.photo} aria-hidden="true" />
     <Reveal className="lb-banner__copy lb-banner__copy--center">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-      {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+      {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
       {block.text ? <p className="lb-lede">{block.text}</p> : null}
       <Actions block={block} tone="light" />
     </Reveal>
@@ -1018,7 +1041,7 @@ function IconColumns({ block, index }: { block: LibraryBlock; index: number }) {
   const columns = (block.items ?? []).filter(item => item.title).slice(0, 4);
   if (columns.length < 2) return null;
   return <Band block={block} index={index}>
-    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
     <ul className="lb-columns" data-count={columns.length}>{columns.map((column, at) => <li key={at}><Reveal delay={at * 90}>
       <Icon name={column.icon || 'sparkles'} className="lb-columns__icon" />
       <h3 className="lb-columns__title">{column.title}</h3>{column.text ? <p>{column.text}</p> : null}
@@ -1036,7 +1059,7 @@ function StoryCollage({ block, index }: { block: LibraryBlock; index: number }) 
       <div className="lb-collage__prints" data-count={prints.length}>{prints.map((src, at) => <Photo key={at} src={src} className="lb-collage__print" />)}</div>
       <Reveal className="lb-collage__words">
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
         {block.text ? <p className="lb-lede">{block.text}</p> : null}
         <Actions block={block} />
       </Reveal>
@@ -1051,7 +1074,7 @@ function NewsletterSplit({ block, index }: { block: LibraryBlock; index: number 
     <div className="lb-news">
       <Photo src={block.photo} className="lb-news__photo" />
       <div className="lb-news__panel">
-        {block.title ? <h2 id={`lb-${index}-title`} className="lb-news__title">{block.title}</h2> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="lb-news__title"><Marked text={block.title} /></h2> : null}
         {block.text ? <p className="lb-news__text">{block.text}</p> : null}
         <div className="lb-news__form" data-pagosya-subscribe-inline data-track="newsletter" />
       </div>
@@ -1114,9 +1137,42 @@ function StatementMarquee({ block, index }: { block: LibraryBlock; index: number
   const run = (key: number) => <span key={key} className="lb-bigrun__run">{[0, 1, 2].map(n => <span key={n}>{block.title}</span>)}</span>;
   return <Bleed block={block} index={index} className="lb-bigrun-band">
     <p className="lb-bigrun" aria-hidden="true">{[0, 1].map(run)}</p>
-    <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2>
+    <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2>
     <Reveal className="lb-bigrun__words">{block.text ? <p>{block.text}</p> : null}<Actions block={block} tone="ink" /></Reveal>
   </Bleed>;
+}
+
+
+/** Shrine «Incredible results»: a few percentages the merchant measured, each a ring that fills to its number, with its sentence. */
+function StatsRings({ block, index }: { block: LibraryBlock; index: number }) {
+  const stats = (block.items ?? []).map(item => ({ ...item, n: Number(String(item.value ?? '').replace(/[^\d.]/g, '')) })).filter(item => item.text && item.n > 0 && item.n <= 100).slice(0, 4);
+  if (!stats.length) return null;
+  return <Band block={block} index={index}>
+    <div className="lb-stats">
+      {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
+      <ul className="lb-stats__list">{stats.map((stat, at) => <li key={at} style={{ ['--v' as string]: stat.n } as CSSProperties}>
+        <span className="lb-stats__ring"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.9" /><circle cx="18" cy="18" r="15.9" className="lb-stats__fill" /></svg><b>{stat.n}%</b></span>
+        <p>{stat.text}</p>
+      </li>)}</ul>
+      {block.text ? <p className="lb-stats__note">{block.text}</p> : null}
+    </div>
+  </Band>;
+}
+
+
+/** Shrine's wave edge between bands: layered waves drifting sideways (measured: 10s and 8s, opposite ways), in the colour of the
+ *  band they lead into (band), turned over (look flip) where a band ends. Decoration only: no words. */
+function WaveDivider({ block, index }: { block: LibraryBlock; index: number }) {
+  return <div id={`lb-${index}`} className="lb lb-wave" data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look || undefined} aria-hidden="true">
+    <svg viewBox="0 24 150 28" preserveAspectRatio="none">
+      <defs><path id={`lb-wave-${index}`} d="M-160 44c30 0 58-18 88-18s58 18 88 18 58-18 88-18 58 18 88 18v44h-352z" /></defs>
+      <g className="lb-wave__layers">
+        <use href={`#lb-wave-${index}`} x="48" y="0" className="lb-wave__a" />
+        <use href={`#lb-wave-${index}`} x="48" y="3" className="lb-wave__b" />
+        <use href={`#lb-wave-${index}`} x="48" y="5" className="lb-wave__c" />
+      </g>
+    </svg>
+  </div>;
 }
 
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
@@ -1131,6 +1187,7 @@ const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) =
   'closing-photo': ClosingPhoto, 'closing-wordmark': ClosingWordmark,
   'bar-note': BarNote, 'cover-stage': CoverStage, 'promo-countdown': PromoCountdown, 'story-stack': StoryStack, 'statement-reveal': StatementReveal,
   'categories-list': CategoriesList, 'marquee-photo': MarqueePhoto, 'story-overlap': StoryOverlap, 'promo-trio': PromoTrio,
+  'stats-rings': StatsRings, 'wave-divider': WaveDivider,
   'image-columns': ImageColumns, 'statement-marquee': StatementMarquee,
   'photo-scroller': PhotoScroller, 'story-timeline': StoryTimeline,
   'story-collage': StoryCollage, 'newsletter-split': NewsletterSplit,

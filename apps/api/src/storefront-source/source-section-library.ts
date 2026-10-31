@@ -11,7 +11,9 @@ export type LibraryNeeds = { photos?: number; items?: [number, number]; products
   date?: boolean; social?: boolean; pins?: boolean; press?: boolean; text?: boolean };
 export type LibrarySection = { id: string; role: LibraryRole; use: string; needs: LibraryNeeds; looks?: string[];
   /** Only inside a template's fixed home (34 templates): never offered when YAPI composes a home freely. */
-  templateOnly?: boolean };
+  templateOnly?: boolean;
+  /** Decoration with nothing to write (a wave edge): a template keeps it even when the answer leaves it out. */
+  decor?: boolean };
 
 /** What each section is for, in the words the model reads (Spanish, like every YAPI prompt). */
 export const LIBRARY_CATALOG: readonly LibrarySection[] = [
@@ -63,6 +65,8 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'social-posts', role: 'proof', use: 'Publicaciones de la tienda: fotos (items.photo) con su @cuenta y «Ver el look». Solo si la tienda enlazó su Instagram o TikTok.', needs: { social: true, items: [3, 8], itemPhotos: 3 }, templateOnly: true },
   { id: 'social-marquee', role: 'proof', use: 'Titular con una palabra en *asteriscos* (va en letra manuscrita) y fotos que corren con «síguenos» y la @cuenta. Solo con cuenta enlazada.', needs: { social: true, items: [3, 6], itemPhotos: 3 }, templateOnly: true },
   { id: 'shop-look', role: 'products', use: 'Foto con puntos sobre los productos que aparecen en ella (items.title = nombre exacto del producto; x, y = posición en % sobre la foto).', needs: { photos: 1, items: [1, 4], pins: true }, templateOnly: true },
+  { id: 'wave-divider', role: 'strip', use: 'Borde de olas entre secciones (decorativo, sin textos).', needs: {}, templateOnly: true, decor: true },
+  { id: 'stats-rings', role: 'proof', use: '1 a 4 porcentajes que el comercio midió (items.value = el número, items.text = qué significa), cada uno en un anillo. Solo números que el comercio escribió.', needs: { items: [1, 4] }, templateOnly: true },
   { id: 'image-columns', role: 'story', use: '2 a 4 columnas de foto con título, una frase y un enlace (items con photo).', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
   { id: 'statement-marquee', role: 'promo', use: 'Unas pocas palabras (title, 2 a 4 palabras) que corren enormes sobre una banda oscura, una frase (text) y un botón.', needs: {}, templateOnly: true },
   { id: 'photo-scroller', role: 'story', use: 'Fila de 3 a 8 fotos que se desliza, cada una con su frase debajo (items.photo, items.text).', needs: { items: [2, 8], itemPhotos: 2 }, templateOnly: true },
@@ -101,7 +105,7 @@ export function libraryAnswerSchema(photoCount: number) {
   const looks = [...new Set(LIBRARY_CATALOG.flatMap(section => section.looks ?? [])), ''];
   const photo = { type: 'integer', minimum: -1, maximum: Math.max(0, photoCount - 1) };
   const item = { type: 'object', additionalProperties: false, required: ['title', 'text', 'icon', 'photo', 'link', 'value', 'x', 'y'], properties: {
-    title: { type: 'string' }, text: { type: 'string' }, icon: { type: 'string', enum: [...LIBRARY_ICON_NAMES, ''] }, photo, link: { type: 'string' }, value: { type: 'string', enum: ['yes', 'no', ''] },
+    title: { type: 'string' }, text: { type: 'string' }, icon: { type: 'string', enum: [...LIBRARY_ICON_NAMES, ''] }, photo, link: { type: 'string' }, value: { type: 'string' },
     x: { type: 'number' }, y: { type: 'number' } } };
   const block = { type: 'object', additionalProperties: false,
     required: ['type', 'look', 'band', 'eyebrow', 'title', 'text', 'cta', 'link', 'cta2', 'link2', 'photo', 'photo2', 'items', 'products', 'product', 'code', 'card', 'endsAt'],
@@ -153,7 +157,8 @@ Reglas de contenido:
   classic = foto, nombre y precio, sobria (moda, lujo, artesanal); ribbon = una cinta con la oferta corre sobre la foto y el precio
   anterior tachado (tiendas con ofertas, moda rápida, belleza); soft = tarjeta de color suave con botón «Agregar» (snacks, bebidas,
   dulces, marcas alegres); framed = foto enmarcada, nombre centrado y botón «Agregar al carrito» (cuidado personal, regalos, hogar).
-- items.icon: uno de la lista; items.value solo en compare-table.
+- items.icon: uno de la lista; items.value solo en compare-table (yes/no) y stats-rings (el número). items.x e items.y solo en
+  los puntos sobre una foto (shop-look, cover-shoppable), en %; -1 en todo lo demás.
 - Si el comercio pidió algo concreto para la portada (una sección, un tema, una oferta), cúmplelo con estas secciones.`;
 
 const TEXT_CAPS = { eyebrow: 40, title: 80, text: 240, cta: 28, cta2: 28, itemTitle: 56, itemText: 160 } as const;
@@ -217,7 +222,8 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   const answered = [...(answer?.blocks ?? [])];
   const sequence: RawBlock[] = fixedMode ? options.fixed!.flatMap(template => {
     const at = answered.findIndex(raw => raw.type === template.type);
-    if (at < 0) return [];
+    // Decoration (a wave edge) has nothing to write: the template's own block stays when the answer skipped it.
+    if (at < 0) return BY_ID.get(template.type)?.decor ? [{ type: template.type, look: template.look ?? '', band: template.band ?? '', template }] : [];
     const [raw] = answered.splice(at, 1);
     return [{ ...raw, type: template.type, look: template.look ?? '', band: template.band ?? '', card: template.card ?? '', template }];
   }) : answered;
@@ -265,13 +271,17 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       const text = clip(item.text, TEXT_CAPS.itemText); if (text) out.text = text;
       if (item.icon && (LIBRARY_ICON_NAMES as readonly string[]).includes(item.icon)) out.icon = item.icon;
       if (section.id === 'compare-table') out.value = item.value === 'yes' ? 'yes' : 'no';
+      // A percentage ring shows only a number the merchant wrote («94%»).
+      if (section.id === 'stats-rings') { const n = String(item.value ?? '').replace(/[^\d]/g, ''); if (n && new RegExp(`\\b${n}\\s*(%|por ciento)`).test(merchantWords)) out.value = n; }
       if (itemPhoto) { const photo = photoOf(item.photo, needs.categories ? String(item.title ?? '') : undefined); if (photo) out.photo = photo; }
       if (itemPhoto || section.id === 'promo-trio') { const target = link(item.link); if (target) out.link = target; }
-      if (needs.pins && Number.isFinite(item.x) && Number.isFinite(item.y)) { out.x = Math.round(Math.min(94, Math.max(6, Number(item.x)))); out.y = Math.round(Math.min(94, Math.max(6, Number(item.y)))); }
+      if (needs.pins && Number(item.x) >= 0 && Number(item.y) >= 0) { out.x = Math.round(Math.min(94, Math.max(6, Number(item.x)))); out.y = Math.round(Math.min(94, Math.max(6, Number(item.y)))); }
       return out;
     }).filter(item => item.title);
     // Pins name real products; press is only the outlets and words the merchant wrote.
-    if (needs.pins) items = items.filter(item => item.x !== undefined && productByName.has(fold(item.title))).map(item => ({ ...item, title: productByName.get(fold(item.title))!.name }));
+    // Pins name real products; items without a pin are the points beside the photo (Shrine's look side).
+    if (needs.pins) items = items.filter(item => item.x === undefined || productByName.has(fold(item.title))).map(item => item.x === undefined ? item : ({ ...item, title: productByName.get(fold(item.title))!.name }));
+    if (section.id === 'stats-rings') items = items.filter(item => item.value);
     // A marquee of outlet names (Symmetry) needs only the names; quotes must be the merchant's own words too.
     if (needs.press) items = items.filter(item => merchantWords.includes(fold(item.title)) && (raw.look === 'marquee' || (Boolean(item.text) && merchantWords.includes(fold(item.text!).replace(/[«»"“”.]/g, '').trim()))));
     if (section.id === 'promo-trio' && !single) items = items.filter(item => item.photo);
@@ -307,7 +317,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     // Owner rule (no dark band of words alone): accent and deep only behind a photo or products.
     // Product cards are drawn for a light ground (Oh Belly live 2026-10-31: names and prices vanished on a deep grid band).
     if ((block.band === 'deep' || block.band === 'accent') && ['products-grid', 'products-tabs', 'products-cards', 'products-spotlight', 'products-lookbook'].includes(section.id)) delete block.band;
-    if ((block.band === 'deep' || block.band === 'accent') && !block.photo && !block.products && !block.product && !(block.items ?? []).some(item => item.photo) && section.id !== 'categories-tiles') delete block.band;
+    if ((block.band === 'deep' || block.band === 'accent') && !block.photo && !block.products && !block.product && !(block.items ?? []).some(item => item.photo) && section.id !== 'categories-tiles' && !section.decor) delete block.band;
     blocks.push(block);
   }
   return fixedMode ? blocks : frameLayout(blocks, facts, used);
