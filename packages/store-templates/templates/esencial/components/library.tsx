@@ -390,7 +390,7 @@ function ProductsLookbook({ block, index }: { block: LibraryBlock; index: number
 }
 
 function CategoriesTiles({ block, index }: { block: LibraryBlock; index: number }) {
-  const tiles = (block.items ?? []).filter(item => item.photo).slice(0, 4);
+  const tiles = (block.items ?? []).filter(item => item.photo).slice(0, block.look === 'small' ? 8 : 4);
   if (tiles.length < 2) return null;
   return <Band block={block} index={index}>
     <Head block={block} index={index} align="center" />
@@ -1111,6 +1111,12 @@ function StoryCollage({ block, index }: { block: LibraryBlock; index: number }) 
 
 /** Motion «Join the list»: a photo beside a coloured panel with the store's newsletter form (the kit draws the field). */
 function NewsletterSplit({ block, index }: { block: LibraryBlock; index: number }) {
+  if (block.look === 'band') return <Band block={{ ...block, band: block.band ?? 'deep' }} index={index}>
+    <div className="lb-newsband">
+      <div>{block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}{block.text ? <p className="lb-lede">{block.text}</p> : null}</div>
+      <div className="lb-news__form" data-pagosya-subscribe-inline data-track="newsletter" />
+    </div>
+  </Band>;
   if (!block.photo) return null;
   return <Bleed block={block} index={index}>
     <div className="lb-news">
@@ -1187,6 +1193,16 @@ function StatementMarquee({ block, index }: { block: LibraryBlock; index: number
 
 /** Shrine «Incredible results»: a few percentages the merchant measured, each a ring that fills to its number, with its sentence. */
 function StatsRings({ block, index }: { block: LibraryBlock; index: number }) {
+  if (block.look === 'boxes') {
+    const boxes = (block.items ?? []).filter(item => item.value && item.text).slice(0, 4);
+    if (!boxes.length) return null;
+    return <Band block={block} index={index}>
+      <div className="lb-numbers">
+        <div className="lb-numbers__words">{block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}{block.text ? <p className="lb-lede">{block.text}</p> : null}<Actions block={block} /></div>
+        <ul className="lb-numbers__list">{boxes.map((box, at) => <li key={at}><b>{box.value}</b><span>{box.text}</span></li>)}</ul>
+      </div>
+    </Band>;
+  }
   const stats = (block.items ?? []).map(item => ({ ...item, n: Number(String(item.value ?? '').replace(/[^\d.]/g, '')) })).filter(item => item.text && item.n > 0 && item.n <= 100).slice(0, 4);
   if (!stats.length) return null;
   return <Band block={block} index={index}>

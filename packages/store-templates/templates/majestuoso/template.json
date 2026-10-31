@@ -1,0 +1,403 @@
+{
+  "id": "majestuoso",
+  "name": "Majestuoso",
+  "category": "mascotas",
+  "description": "Tienda grande para mascotas: azul marino y verde lima, buscador en el menú, muchas categorías, ofertas y servicios.",
+  "tags": [
+    "mascotas",
+    "perros",
+    "gatos",
+    "tienda grande"
+  ],
+  "sitePurpose": "shop",
+  "order": 34,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Maximize (Tender)",
+    "url": "https://maximize-majestic.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "co-hero",
+      "role": "hero",
+      "demo": "co-hero.jpg"
+    },
+    {
+      "slot": "pa-hero",
+      "role": "hero",
+      "demo": "pa-hero.jpg"
+    },
+    {
+      "slot": "co-p1",
+      "role": "product",
+      "demo": "co-p1.jpg"
+    },
+    {
+      "slot": "co-p2",
+      "role": "product",
+      "demo": "co-p2.jpg"
+    },
+    {
+      "slot": "co-p3",
+      "role": "product",
+      "demo": "co-p3.jpg"
+    },
+    {
+      "slot": "pa-p1",
+      "role": "product",
+      "demo": "pa-p1.jpg"
+    },
+    {
+      "slot": "pa-p2",
+      "role": "product",
+      "demo": "pa-p2.jpg"
+    },
+    {
+      "slot": "co-cachorro",
+      "role": "lifestyle",
+      "demo": "co-cachorro.jpg"
+    },
+    {
+      "slot": "co-comida",
+      "role": "lifestyle",
+      "demo": "co-comida.jpg"
+    },
+    {
+      "slot": "co-gato",
+      "role": "lifestyle",
+      "demo": "co-gato.jpg"
+    },
+    {
+      "slot": "co-perro",
+      "role": "lifestyle",
+      "demo": "co-perro.jpg"
+    },
+    {
+      "slot": "co-senior",
+      "role": "lifestyle",
+      "demo": "co-senior.jpg"
+    },
+    {
+      "slot": "pa-p3",
+      "role": "lifestyle",
+      "demo": "pa-p3.jpg"
+    },
+    {
+      "slot": "pa-p4",
+      "role": "lifestyle",
+      "demo": "pa-p4.jpg"
+    },
+    {
+      "slot": "pa-story",
+      "role": "lifestyle",
+      "demo": "pa-story.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "majestuoso",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#1d2550",
+      "muted": "#f5f1e8",
+      "accent": "#8fcc5c",
+      "deep": "#2b3467"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "majestuoso",
+      "icons": "person",
+      "header": "search",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "soft",
+      "corners": "round",
+      "density": "compact",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en compras desde Bs 300"
+    },
+    "layout": [
+      {
+        "type": "cover-stage",
+        "look": "low",
+        "title": "Cada *mascota* es única",
+        "text": "Todo lo que necesita, elegido con cariño.",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:co-hero",
+        "items": [
+          {
+            "title": "2",
+            "photo": "slot:pa-hero"
+          }
+        ]
+      },
+      {
+        "type": "strip-services"
+      },
+      {
+        "type": "promo-pair",
+        "look": "center",
+        "title": "¿Para quién compras hoy?",
+        "cta": "Ver más",
+        "items": [
+          {
+            "title": "Para perros",
+            "text": "Todo para un perro feliz y sano.",
+            "photo": "slot:co-perro",
+            "link": "products"
+          },
+          {
+            "title": "Para gatos",
+            "text": "Juegos, comida y mimos.",
+            "photo": "slot:co-gato",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "categories-tiles",
+        "look": "small",
+        "items": [
+          {
+            "title": "Comida",
+            "photo": "slot:co-p1",
+            "link": "products"
+          },
+          {
+            "title": "Juguetes",
+            "photo": "slot:co-p2",
+            "link": "products"
+          },
+          {
+            "title": "Accesorios",
+            "photo": "slot:co-p3",
+            "link": "products"
+          },
+          {
+            "title": "Premios",
+            "photo": "slot:pa-p1",
+            "link": "products"
+          },
+          {
+            "title": "Camas",
+            "photo": "slot:pa-p2",
+            "link": "products"
+          },
+          {
+            "title": "Cuidado",
+            "photo": "slot:pa-p3",
+            "link": "products"
+          },
+          {
+            "title": "Paseo",
+            "photo": "slot:pa-p4",
+            "link": "products"
+          },
+          {
+            "title": "Ofertas",
+            "photo": "slot:co-comida",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-slider",
+        "card": "framed",
+        "title": "Los *favoritos* de la casa",
+        "cta": "Ver todo",
+        "link": "products"
+      },
+      {
+        "type": "press-quotes",
+        "look": "row",
+        "title": "Las marcas en las que confía tu mascota",
+        "items": [
+          {
+            "title": "Marca Uno"
+          },
+          {
+            "title": "Mascota Feliz"
+          },
+          {
+            "title": "Patitas"
+          },
+          {
+            "title": "Huellas"
+          }
+        ]
+      },
+      {
+        "type": "categories-tiles",
+        "look": "promo",
+        "title": "Trato real, precios de siempre",
+        "items": [
+          {
+            "title": "Lo de cada semana",
+            "text": "Ahorra 35%",
+            "photo": "slot:co-cachorro",
+            "link": "products"
+          },
+          {
+            "title": "Siestas serias",
+            "text": "Para gatos",
+            "photo": "slot:co-senior",
+            "link": "products"
+          },
+          {
+            "title": "Comida y premios",
+            "text": "Ahorra 35%",
+            "photo": "slot:co-comida",
+            "link": "products"
+          },
+          {
+            "title": "Suscríbete",
+            "text": "Y ahorra",
+            "photo": "slot:pa-story",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "image-columns",
+        "look": "round",
+        "items": [
+          {
+            "title": "Probado",
+            "text": "Cada producto pasa por nuestras manos antes de llegar a la tuya.",
+            "photo": "slot:pa-p3",
+            "link": "products"
+          },
+          {
+            "title": "Fórmula",
+            "text": "Ingredientes pensados para su salud.",
+            "photo": "slot:co-p1",
+            "link": "products"
+          },
+          {
+            "title": "Transparencia",
+            "text": "Sabes siempre qué lleva y de dónde viene.",
+            "photo": "slot:pa-p4",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "image-columns",
+        "band": "deep",
+        "title": "Cuidado completo para mascotas *felices*",
+        "items": [
+          {
+            "title": "Hospedaje",
+            "text": "Seguro y cómodo, de noche.",
+            "photo": "slot:co-perro",
+            "link": "products"
+          },
+          {
+            "title": "Guardería",
+            "text": "Juego, ejercicio y amigos.",
+            "photo": "slot:pa-hero",
+            "link": "products"
+          },
+          {
+            "title": "Baño y corte",
+            "text": "Limpios y felices.",
+            "photo": "slot:co-gato",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "El elegido",
+        "title": "El set para empezar",
+        "product": "demo-1"
+      },
+      {
+        "type": "promo-banner",
+        "title": "Cada perro merece un hogar con amor",
+        "text": "Adoptar cambia dos vidas.",
+        "cta": "Conocer más",
+        "link": "products",
+        "photo": "slot:co-cachorro"
+      },
+      {
+        "type": "products-tabs",
+        "card": "framed",
+        "title": "Encuentra lo ideal para tu *mascota*",
+        "link": "products"
+      },
+      {
+        "type": "stats-rings",
+        "look": "boxes",
+        "band": "deep",
+        "title": "Hay una gran diferencia en cómo cuidamos a las mascotas",
+        "cta": "Qué nos hace distintos",
+        "link": "products",
+        "items": [
+          {
+            "title": "1",
+            "value": "500+",
+            "text": "productos"
+          },
+          {
+            "title": "2",
+            "value": "10+",
+            "text": "marcas de confianza"
+          },
+          {
+            "title": "3",
+            "value": "4.8",
+            "text": "de 2.000 reseñas"
+          },
+          {
+            "title": "4",
+            "value": "30 días",
+            "text": "para cambios"
+          }
+        ]
+      },
+      {
+        "type": "benefits-orbit",
+        "title": "Comida real, hecha cada semana",
+        "photo": "slot:co-comida",
+        "items": [
+          {
+            "title": "A su medida",
+            "text": "Porciones según su peso y edad.",
+            "icon": "heart"
+          },
+          {
+            "title": "Cocinado, no procesado",
+            "text": "Ingredientes de verdad.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Llega fresco",
+            "text": "A tu puerta.",
+            "icon": "truck"
+          },
+          {
+            "title": "Amor al primer plato",
+            "text": "Les encanta desde el inicio.",
+            "icon": "smile"
+          }
+        ]
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "title": "Suscríbete a nuestros correos",
+        "text": "Novedades, ofertas y consejos para tu mascota."
+      }
+    ]
+  }
+}

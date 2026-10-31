@@ -31,6 +31,8 @@ export function Header() {
         <a className="es-logo" href="index.html">{store.logo ? <img src={store.logo} alt={store.name} /> : store.name}</a>
         <div className="es-store-menu-links" data-pagosya-store-menu="links" />
       </div>
+      {/* Maximize (34 templates): a big search box in the header itself. */}
+      {variant('header', 'classic') === 'search' ? <form className="es-header__search" role="search" method="get" action="buscar.html"><input type="search" name="q" placeholder="¿Qué estás buscando hoy?" aria-label="Buscar productos" /><button type="submit" aria-label="Buscar"><IconSearch /></button></form> : null}
       <nav className="es-header__links" aria-label="Principal" data-store-menu-replaces>{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
       <div className="es-header__end">
         {variant('icons', 'line') === 'text' ? <>

@@ -1824,6 +1824,40 @@ main[data-lb-home]{overflow-x:clip}
 .lb-strip-marquee[data-lb-look="flowers"] i::before{content:'✿';font-size:clamp(22px,2.2vw,30px)}
 /* /lb:strip-marquee */
 
+/* lb:categories-tiles */
+.lb-categories-tiles[data-lb-look="small"] .lb-tiles{grid-template-columns:repeat(8,minmax(0,1fr));gap:12px}
+.lb-categories-tiles[data-lb-look="small"] .lb-tiles__tile{display:grid;gap:8px;aspect-ratio:auto;padding:8px;border-radius:14px;background:var(--es-muted);color:var(--es-ink);overflow:visible}
+.lb-categories-tiles[data-lb-look="small"] .lb-tiles__tile img{position:static;aspect-ratio:1;height:auto;border-radius:10px}
+.lb-categories-tiles[data-lb-look="small"] .lb-tiles__tile::after{display:none}
+.lb-categories-tiles[data-lb-look="small"] .lb-tiles__label{position:static;justify-content:center;font:700 13px/1.2 var(--es-body)}
+.lb-categories-tiles[data-lb-look="small"] .lb-tiles__label svg{display:none}
+.lb-categories-tiles[data-lb-look="promo"] .lb-tiles__tile{aspect-ratio:4/5;border-radius:18px}
+.lb-categories-tiles[data-lb-look="promo"] .lb-tiles__label{top:16px;bottom:auto;align-items:flex-start;flex-direction:column;font:800 clamp(18px,1.6vw,24px)/1.1 var(--es-heading)}
+.lb-categories-tiles[data-lb-look="promo"] .lb-tiles__sub{order:-1;width:max-content;margin:0 0 8px;padding:5px 10px;border-radius:99px;background:#e2433b;color:#fff;font:800 12px/1 var(--es-body)}
+.lb-categories-tiles[data-lb-look="promo"] .lb-tiles__label svg{display:none}
+.lb-categories-tiles[data-lb-look="promo"] .lb-tiles__tile::after{background:linear-gradient(180deg,rgba(0,0,0,.45),transparent 50%)}
+@media (max-width:1024px){.lb-categories-tiles[data-lb-look="small"] .lb-tiles{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+@media (max-width:760px){.lb-categories-tiles[data-lb-look="small"] .lb-tiles{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+/* /lb:categories-tiles */
+/* lb:image-columns */
+.lb-image-columns[data-lb-look="round"] .lb-imgcols li>*{display:grid;justify-items:center;text-align:center}
+.lb-image-columns[data-lb-look="round"] .lb-imgcols__photo{width:min(140px,40vw);aspect-ratio:1;border-radius:50%}
+.lb-image-columns[data-lb-look="round"] .lb-imgcols__title{text-transform:none;letter-spacing:0;font-size:18px}
+.lb-image-columns[data-lb-look="round"] .lb-imgcols__go{display:none}
+/* /lb:image-columns */
+/* lb:stats-rings */
+.lb-numbers{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);align-items:center;gap:clamp(24px,4vw,64px)}
+.lb-numbers__list{display:grid;grid-template-columns:1fr 1fr;gap:28px 40px;margin:0;padding:0;list-style:none}
+.lb-numbers__list li{display:grid;gap:6px}
+.lb-numbers__list b{font:800 clamp(36px,4vw,56px)/1 var(--es-heading)}
+.lb-numbers__list span{font-size:14px;opacity:.8}
+@media (max-width:760px){.lb-numbers{grid-template-columns:1fr}}
+/* /lb:stats-rings */
+/* lb:newsletter-split */
+.lb-newsband{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:24px}
+@media (max-width:760px){.lb-newsband{grid-template-columns:1fr}}
+/* /lb:newsletter-split */
+
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
  * ground blown up to the page width (BAEK cover) reads as a mistake; the boxes keep their shape up to a height, then crop. */
 .lb-cover-centered__media{width:min(1080px,calc(100% - 48px));aspect-ratio:2/1;max-height:min(56vh,520px)}
@@ -2225,3 +2259,37 @@ main[data-lb-home]{overflow-x:clip}
 :root:not([data-es-still]) [data-es-theme="amigos"] main .lb:not([data-in]) :is(.lb-head,.lb-paragraph,.lb-press-row,.menu-item){opacity:0}
 [data-es-theme="amigos"] main .lb[data-in] :is(.lb-head,.lb-paragraph,.lb-press-row,.menu-item){animation:am-in .7s ease both}
 /* /theme:amigos */
+
+/* theme:majestuoso */
+/* Majestuoso (after Maximize «Tender»): white and cream, navy bands, lime buttons, a rounded sans, a big search box in the header,
+ * many shopping blocks. Measured on the demo: sections fade in on arrival; sliders fade each slide in .5s; logo rows scroll 100s. */
+@keyframes mj-in{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
+[data-es-theme="majestuoso"]{--es-radius:12px}
+[data-es-theme="majestuoso"] .es-announce{background:var(--es-deep);color:#fff;font-size:12px}
+[data-es-theme="majestuoso"] .es-header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:20px;min-height:72px;border-bottom:1px solid color-mix(in srgb,var(--es-ink) 10%,transparent)}
+[data-es-theme="majestuoso"] .es-header__links{grid-column:1/-1;grid-row:2;justify-content:flex-start;gap:26px;padding-bottom:10px}
+[data-es-theme="majestuoso"] .es-header__links a{font:700 14px/1 var(--es-body)}
+[data-es-theme="majestuoso"] .es-logo{font:900 26px/1 var(--es-heading);color:var(--es-deep)}
+.es-header__search{display:flex;align-items:center;width:100%;max-width:620px;margin:0 auto;border:1.5px solid color-mix(in srgb,var(--es-ink) 18%,transparent);border-radius:99px;overflow:hidden;background:#fff}
+.es-header__search input{flex:1;min-width:0;height:44px;padding:0 18px;border:0;background:none;font:500 14px/1 var(--es-body);color:var(--es-ink)}
+.es-header__search button{display:grid;place-items:center;width:52px;height:44px;border:0;background:var(--es-accent);color:#fff;cursor:pointer}
+.es-header__search svg{width:18px;height:18px}
+@media (max-width:760px){[data-es-theme="majestuoso"] .es-header{grid-template-columns:auto 1fr auto}.es-header__search{grid-column:1/-1;grid-row:2}[data-es-theme="majestuoso"] .es-header__links{display:none}}
+[data-es-theme="majestuoso"] :is(.es-h2,.lb-title,.lb-head h2){font:800 clamp(24px,2.4vw,34px)/1.15 var(--es-heading);letter-spacing:-.01em;text-transform:none}
+[data-es-theme="majestuoso"] .lb-em{color:var(--es-accent)}
+[data-es-theme="majestuoso"] .es-btn{border-radius:10px;font-weight:800;letter-spacing:0;text-transform:none}
+[data-es-theme="majestuoso"] .es-btn--accent,[data-es-theme="majestuoso"] .lb-card__buy{background:var(--es-accent);border-color:var(--es-accent);color:#fff}
+[data-es-theme="majestuoso"] .es-btn svg{display:none}
+[data-es-theme="majestuoso"] .lb-card[data-lb-card="framed"] .lb-card__media{border-radius:12px;border:0;background:#f6f6f4}
+[data-es-theme="majestuoso"] .lb-card[data-lb-card="framed"] .es-card__name{font:700 14px/1.3 var(--es-body);letter-spacing:0;text-transform:none}
+[data-es-theme="majestuoso"] .lb-card[data-lb-card="framed"] .lb-card__buy{border-radius:8px;text-transform:none;letter-spacing:0;font-size:13px}
+[data-es-theme="majestuoso"] .lb-card__badge{border-radius:6px;background:var(--es-deep);color:#fff}
+[data-es-theme="majestuoso"] .lb-press-row li{color:var(--es-deep)}
+[data-es-theme="majestuoso"] .es-footer{background:var(--es-deep);color:#fff}
+[data-es-theme="majestuoso"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+:root:not([data-es-still]) [data-es-theme="majestuoso"] main .lb:not([data-in]) :is(.lb-head,.lb-tiles li,.lb-pair li,.lb-imgcols li,.lb-numbers,.menu-item){opacity:0}
+[data-es-theme="majestuoso"] main .lb[data-in] :is(.lb-head,.lb-tiles li,.lb-pair li,.lb-imgcols li,.lb-numbers,.menu-item){animation:mj-in .5s ease both}
+[data-es-theme="majestuoso"] .lb-card[data-lb-card="framed"] .lb-card__buy{background:var(--es-accent);border-color:var(--es-accent);color:#fff}
+[data-es-theme="majestuoso"] [data-es-band="deep"] .es-btn{background:#8fcc5c;border-color:#8fcc5c;color:#1d2550}
+[data-es-theme="majestuoso"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
+/* /theme:majestuoso */

@@ -267,13 +267,19 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     const itemPhoto = Boolean(needs.itemPhotos) || section.id === 'cover-stage' || (section.id === 'promo-trio' && !single) || Boolean(raw.template?.items?.some(item => item.photo));
     // Social posts are the store's own photos: the answer need not list them.
     const rawItems: RawItem[] = needs.social && (raw.items ?? []).length < (needs.items?.[0] ?? 0) ? Array.from({ length: needs.items![0] + 2 }, () => ({ title: 'post', photo: -1 })) : (raw.items ?? []);
-    let items: LayoutItem[] = rawItems.slice(0, Math.max(maxItems, needs.categories ? 4 : 0)).map(item => {
+    // A template's small category tiles (Maximize) show up to eight.
+    let items: LayoutItem[] = rawItems.slice(0, raw.look === 'small' ? 8 : Math.max(maxItems, needs.categories ? 4 : 0)).map(item => {
       const out: LayoutItem = { title: clip(item.title, TEXT_CAPS.itemTitle) };
       const text = clip(item.text, TEXT_CAPS.itemText); if (text) out.text = text;
       if (item.icon && (LIBRARY_ICON_NAMES as readonly string[]).includes(item.icon)) out.icon = item.icon;
       if (section.id === 'compare-table') out.value = item.value === 'yes' ? 'yes' : 'no';
       // A percentage ring shows only a number the merchant wrote («94%»).
-      if (section.id === 'stats-rings') { const n = String(item.value ?? '').replace(/[^\d]/g, ''); if (n && new RegExp(`\\b${n}\\s*(%|por ciento)`).test(merchantWords)) out.value = n; }
+      if (section.id === 'stats-rings') {
+        // Rings: a percentage the merchant wrote («94%»). Boxes (Maximize): any figure the merchant wrote («500+», «4.8», «30 días»).
+        const n = String(item.value ?? '').replace(/[^\d]/g, '');
+        if (raw.look === 'boxes') { const figure = String(item.value ?? '').trim().slice(0, 12); const digits = figure.match(/\d+(?:[.,]\d+)?/)?.[0]; if (digits && merchantWords.includes(digits)) out.value = figure; }
+        else if (n && new RegExp(`\\b${n}\\s*(%|por ciento)`).test(merchantWords)) out.value = n;
+      }
       if (itemPhoto) { const photo = photoOf(item.photo, needs.categories ? String(item.title ?? '') : undefined); if (photo) out.photo = photo; }
       if (itemPhoto || section.id === 'promo-trio') { const target = link(item.link); if (target) out.link = target; }
       if (needs.pins && Number(item.x) >= 0 && Number(item.y) >= 0) { out.x = Math.round(Math.min(94, Math.max(6, Number(item.x)))); out.y = Math.round(Math.min(94, Math.max(6, Number(item.y)))); }

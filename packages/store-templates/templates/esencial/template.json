@@ -434,6 +434,13 @@
         "body": "newsreader",
         "mono": "anton",
         "starterOnly": true
+      },
+      {
+        "id": "majestuoso",
+        "name": "Majestuoso",
+        "heading": "nunito",
+        "body": "nunito",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -443,7 +450,8 @@
         "links",
         "split",
         "minimal",
-        "boxed"
+        "boxed",
+        "search"
       ],
       "announce": [
         "plain",
@@ -597,7 +605,8 @@
         "shrine",
         "shrine2",
         "gumdrop",
-        "amigos"
+        "amigos",
+        "majestuoso"
       ],
       "icons": [
         "line",
