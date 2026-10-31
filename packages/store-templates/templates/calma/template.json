@@ -1,0 +1,294 @@
+{
+  "id": "calma",
+  "name": "Calma",
+  "category": "moda",
+  "description": "Ropa cómoda y de casa: beige suave, títulos con serif centrados, fotos de ambiente junto a los productos, el look para comprar y colecciones.",
+  "tags": [
+    "moda",
+    "ropa de casa",
+    "básicos",
+    "suave"
+  ],
+  "sitePurpose": "shop",
+  "order": 51,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Pipeline",
+    "url": "https://pipeline-theme-fashion.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "pi-hero",
+      "role": "hero",
+      "demo": "pi-hero.jpg"
+    },
+    {
+      "slot": "pi-juntas",
+      "role": "hero",
+      "demo": "pi-juntas.jpg"
+    },
+    {
+      "slot": "pi-tonos",
+      "role": "lifestyle",
+      "demo": "pi-tonos.jpg"
+    },
+    {
+      "slot": "pa-look1",
+      "role": "lifestyle",
+      "demo": "pa-look1.jpg"
+    },
+    {
+      "slot": "en-jardin",
+      "role": "lifestyle",
+      "demo": "en-jardin.jpg"
+    },
+    {
+      "slot": "pi-p1",
+      "role": "product",
+      "demo": "pi-p1.jpg"
+    },
+    {
+      "slot": "pi-p2",
+      "role": "product",
+      "demo": "pi-p2.jpg"
+    },
+    {
+      "slot": "pi-p3",
+      "role": "product",
+      "demo": "pi-p3.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "calma",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#2a2622",
+      "muted": "#f3ede4",
+      "accent": "#2a2622",
+      "deep": "#2a2622"
+    },
+    "kind": "fashion",
+    "variants": {
+      "theme": "calma",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "square",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "sticky-thumbs",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis y cambios fáciles"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "look": "center",
+        "title": "Estilo que dura, *diseño consciente*",
+        "cta": "Ver productos",
+        "link": "products",
+        "cta2": "Conocer más",
+        "link2": "about",
+        "photo": "slot:pi-hero"
+      },
+      {
+        "type": "products-tabs",
+        "card": "classic",
+        "title": "Tejidos de la casa",
+        "link": "products"
+      },
+      {
+        "type": "products-lookbook",
+        "title": "Una tarde para *quedarse*",
+        "cta": "Ver el look",
+        "link": "products",
+        "photo": "slot:pi-juntas",
+        "products": [
+          "demo-1",
+          "demo-2",
+          "demo-3"
+        ]
+      },
+      {
+        "type": "products-lookbook",
+        "title": "Esenciales para *viajar*",
+        "cta": "Ver el look",
+        "link": "products",
+        "photo": "slot:pa-look1",
+        "products": [
+          "demo-3",
+          "demo-4"
+        ]
+      },
+      {
+        "type": "shop-look",
+        "look": "side",
+        "title": "Compra el look",
+        "photo": "slot:pi-hero",
+        "items": [
+          {
+            "title": "Suéter Cacao",
+            "x": 50,
+            "y": 40
+          },
+          {
+            "title": "Algodón orgánico",
+            "text": "Suave desde el primer día.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Hecho cerca",
+            "text": "En talleres pequeños.",
+            "icon": "hand"
+          }
+        ]
+      },
+      {
+        "type": "categories-tiles",
+        "look": "caption",
+        "title": "Colecciones",
+        "items": [
+          {
+            "title": "Punto",
+            "photo": "slot:pi-p1",
+            "link": "products"
+          },
+          {
+            "title": "Básicos",
+            "photo": "slot:pi-p2",
+            "link": "products"
+          },
+          {
+            "title": "Casa",
+            "photo": "slot:pi-tonos",
+            "link": "products"
+          },
+          {
+            "title": "Todo",
+            "photo": "slot:en-jardin",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "muted",
+        "title": "Siempre *al tanto*",
+        "text": "Novedades, regalos y ofertas antes que nadie."
+      },
+      {
+        "type": "press-quotes",
+        "look": "marquee",
+        "title": "Nos vieron en",
+        "items": [
+          {
+            "title": "Revista Cosas"
+          },
+          {
+            "title": "Vestir"
+          },
+          {
+            "title": "Diario Uno"
+          },
+          {
+            "title": "Estilo"
+          }
+        ]
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Talla y cuidado",
+        "items": [
+          {
+            "title": "¿Cómo calza?",
+            "text": "Holgado: si dudas, elige tu talla."
+          },
+          {
+            "title": "¿Cómo lo lavo?",
+            "text": "En frío y secado plano."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "De 2 a 4 días."
+          },
+          {
+            "title": "¿Puedo cambiarlo?",
+            "text": "Sí, en 30 días."
+          }
+        ]
+      },
+      {
+        "type": "products-lookbook",
+        "title": "Combínalo",
+        "photo": "slot:pi-tonos",
+        "products": [
+          "demo-2",
+          "demo-3"
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Algodón orgánico",
+            "text": "Sin químicos.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Cambios fáciles",
+            "text": "En 30 días.",
+            "icon": "refresh"
+          },
+          {
+            "title": "Envío a todo el país",
+            "text": "De 2 a 4 días.",
+            "icon": "truck"
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Calma",
+      "tagline": "Ropa cómoda, hecha para durar",
+      "products": [
+        {
+          "name": "Suéter Cacao",
+          "price": 380,
+          "description": "Punto waffle.",
+          "category": "Punto"
+        },
+        {
+          "name": "Musculosa Arena",
+          "price": 150,
+          "description": "Algodón acanalado.",
+          "category": "Básicos"
+        },
+        {
+          "name": "Jogger Terracota",
+          "price": 290,
+          "description": "Felpa liviana.",
+          "category": "Básicos"
+        },
+        {
+          "name": "Set Casa",
+          "price": 520,
+          "description": "Suéter y jogger.",
+          "category": "Casa"
+        }
+      ]
+    }
+  }
+}

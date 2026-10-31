@@ -554,6 +554,13 @@
         "heading": "outfit",
         "body": "figtree",
         "starterOnly": true
+      },
+      {
+        "id": "calma",
+        "name": "Calma",
+        "heading": "cormorant-garamond",
+        "body": "figtree",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -735,7 +742,8 @@
         "grano",
         "muro",
         "claro",
-        "hoja"
+        "hoja",
+        "calma"
       ],
       "icons": [
         "line",
