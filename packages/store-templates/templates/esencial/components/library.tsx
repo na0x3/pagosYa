@@ -400,7 +400,7 @@ function ProductsLookbook({ block, index }: { block: LibraryBlock; index: number
 }
 
 function CategoriesTiles({ block, index }: { block: LibraryBlock; index: number }) {
-  const tiles = (block.items ?? []).filter(item => item.photo).slice(0, block.look === 'small' ? 8 : 4);
+  const tiles = (block.items ?? []).filter(item => item.photo).slice(0, block.look === 'small' || block.look === 'circles' ? 8 : 4);
   if (tiles.length < 2) return null;
   return <Band block={block} index={index}>
     <Head block={block} index={index} align="center" />

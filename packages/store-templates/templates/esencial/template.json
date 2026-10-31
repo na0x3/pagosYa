@@ -476,6 +476,13 @@
         "heading": "barlow-condensed",
         "body": "figtree",
         "starterOnly": true
+      },
+      {
+        "id": "amplio",
+        "name": "Amplio",
+        "heading": "figtree",
+        "body": "figtree",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -646,7 +653,8 @@
         "mordisco",
         "pancita",
         "pecas",
-        "crocante"
+        "crocante",
+        "amplio"
       ],
       "icons": [
         "line",

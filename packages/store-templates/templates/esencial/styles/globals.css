@@ -1952,6 +1952,11 @@ main[data-lb-home]{overflow-x:clip}
 @media (prefers-reduced-motion:reduce){.lb-cover-full[data-lb-look="sticker"] .lb-seal{animation:none}}
 /* /lb:cover-full */
 
+/* The header search box (header variant «search»: Majestuoso, Amplio). */
+.es-header__search{display:flex;align-items:center;width:100%;max-width:620px;margin:0 auto;border:1.5px solid color-mix(in srgb,var(--es-ink) 18%,transparent);border-radius:99px;overflow:hidden;background:#fff}
+.es-header__search input{flex:1;min-width:0;height:44px;padding:0 18px;border:0;background:none;font:500 14px/1 var(--es-body);color:var(--es-ink)}
+.es-header__search button{display:grid;place-items:center;width:52px;height:44px;border:0;background:var(--es-accent);color:#fff;cursor:pointer}
+.es-header__search svg{width:18px;height:18px}
 /* Turning things (Energía, Mordisco, Pecas) — used by several sections, so never stripped. */
 @keyframes lb-spin{to{transform:rotate(360deg)}}
 /* lb:cover-split,cover-full */
@@ -1979,6 +1984,18 @@ main[data-lb-home]{overflow-x:clip}
 .lb-categories-tiles[data-lb-look="pastel"] .lb-tiles__tile::after{display:none}
 .lb-categories-tiles[data-lb-look="pastel"] .lb-tiles__label{position:static;justify-content:center;color:var(--es-ink);text-shadow:none;font:600 18px/1.1 var(--es-heading)}
 .lb-categories-tiles[data-lb-look="pastel"] .lb-tiles__label svg{display:none}
+/* /lb:categories-tiles */
+
+/* lb:categories-tiles */
+.lb-categories-tiles[data-lb-look="circles"] .lb-tiles{grid-template-columns:repeat(8,minmax(0,1fr));gap:18px 14px}
+.lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile{display:grid;justify-items:center;gap:10px;aspect-ratio:auto;padding:0;border-radius:0;background:none;color:var(--es-ink);overflow:visible}
+.lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile img{position:static;width:100%;aspect-ratio:1;height:auto;border-radius:50%;background:#f1f1f1;transition:transform .4s ease}
+.lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile:hover img{transform:scale(1.04)}
+.lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile::after{display:none}
+.lb-categories-tiles[data-lb-look="circles"] .lb-tiles__label{position:static;justify-content:center;text-shadow:none;color:var(--es-ink);font:500 14px/1.2 var(--es-body)}
+.lb-categories-tiles[data-lb-look="circles"] .lb-tiles__label svg{display:none}
+@media (max-width:1024px){.lb-categories-tiles[data-lb-look="circles"] .lb-tiles{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+@media (max-width:760px){.lb-categories-tiles[data-lb-look="circles"] .lb-tiles{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
 /* /lb:categories-tiles */
 
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
@@ -2393,10 +2410,6 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="majestuoso"] .es-header__links{grid-column:1/-1;grid-row:2;justify-content:flex-start;gap:26px;padding-bottom:10px}
 [data-es-theme="majestuoso"] .es-header__links a{font:700 14px/1 var(--es-body)}
 [data-es-theme="majestuoso"] .es-logo{font:900 26px/1 var(--es-heading);color:var(--es-deep)}
-.es-header__search{display:flex;align-items:center;width:100%;max-width:620px;margin:0 auto;border:1.5px solid color-mix(in srgb,var(--es-ink) 18%,transparent);border-radius:99px;overflow:hidden;background:#fff}
-.es-header__search input{flex:1;min-width:0;height:44px;padding:0 18px;border:0;background:none;font:500 14px/1 var(--es-body);color:var(--es-ink)}
-.es-header__search button{display:grid;place-items:center;width:52px;height:44px;border:0;background:var(--es-accent);color:#fff;cursor:pointer}
-.es-header__search svg{width:18px;height:18px}
 @media (max-width:760px){[data-es-theme="majestuoso"] .es-header{grid-template-columns:auto 1fr auto}.es-header__search{grid-column:1/-1;grid-row:2}[data-es-theme="majestuoso"] .es-header__links{display:none}}
 [data-es-theme="majestuoso"] :is(.es-h2,.lb-title,.lb-head h2){font:800 clamp(24px,2.4vw,34px)/1.15 var(--es-heading);letter-spacing:-.01em;text-transform:none}
 [data-es-theme="majestuoso"] .lb-em{color:var(--es-accent)}
@@ -2583,3 +2596,35 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="pancita"]{--es-t-weight:700;--es-t-track:-.01em;--es-t-case:none;--es-t-color:var(--es-accent)}
 [data-es-theme="pecas"]{--es-t-weight:300;--es-t-track:-.02em;--es-t-case:none;--es-t-color:#a48ad8}
 [data-es-theme="crocante"]{--es-t-weight:600;--es-t-track:0;--es-t-case:uppercase;--es-t-color:var(--es-ink)}
+
+/* theme:amplio */
+/* Amplio (after Expanse «Urban Living»): a navy header with the search box, white pages with sage and pale-grey panels, a quiet
+ * sans in normal weight, round category photos, navy pill buttons. Measured: sections and photos fade in (data-animate fadein). */
+@keyframes am-in{from{opacity:0}to{opacity:1}}
+[data-es-theme="amplio"]{--es-radius:10px;--es-t-weight:400;--es-t-track:-.01em}
+[data-es-theme="amplio"] .es-announce{background:#1f2227;color:#fff;font-size:12px}
+[data-es-theme="amplio"] .es-header{background:var(--es-base-deep,#2b2f3a);color:#fff;border-bottom:0}
+[data-es-theme="amplio"] .es-header :is(a,button,.es-logo){color:#fff}
+[data-es-theme="amplio"] .es-header__search{background:#fff;border:0}
+[data-es-theme="amplio"] .es-header__search button{background:none;color:#2b2f3a}
+[data-es-theme="amplio"] .es-logo{font:700 18px/1 var(--es-heading);letter-spacing:.12em;text-transform:uppercase}
+[data-es-theme="amplio"] :is(.es-h2,.lb-title,.lb-head h2){font:400 clamp(22px,2vw,30px)/1.2 var(--es-heading);letter-spacing:-.01em;text-transform:none}
+[data-es-theme="amplio"] .lb-cover-split :is(h1,.lb-title){font:400 clamp(32px,3.4vw,48px)/1.1 var(--es-heading)}
+[data-es-theme="amplio"] .lb-em{color:inherit;font-style:italic}
+[data-es-theme="amplio"] .es-btn{border-radius:99px;background:var(--es-base-deep,#2b2f3a);border-color:var(--es-base-deep,#2b2f3a);color:#fff;font-weight:500;letter-spacing:0;text-transform:none;font-size:13px}
+[data-es-theme="amplio"] :is([data-lb-band="deep"],[data-es-band="deep"]) .es-btn{background:#fff;border-color:#fff;color:#2b2f3a}
+[data-es-theme="amplio"] .es-btn *{color:inherit}
+[data-es-theme="amplio"] .es-btn svg{display:none}
+[data-es-theme="amplio"] .lb-card .lb-card__media{background:#f4f4f4;border-radius:6px}
+[data-es-theme="amplio"] :is(.es-card__name,.lb-card .es-card__name){font:400 14px/1.3 var(--es-body);text-transform:none;letter-spacing:0}
+[data-es-theme="amplio"] .lb-cover-split[data-lb-look="flip"] .lb-cover-split__media{border-radius:0}
+[data-es-theme="amplio"] .es-footer{background:#f4f4f4}
+:root:not([data-es-still]) [data-es-theme="amplio"] main .lb:not([data-in]):not(.lb-cover) img{opacity:0}
+[data-es-theme="amplio"] main .lb[data-in] img{animation:am-in .8s ease both}
+[data-es-theme="amplio"] .es-header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:24px}
+[data-es-theme="amplio"] .es-header__search{max-width:560px;margin:0 auto 0 0;border-radius:6px}
+[data-es-theme="amplio"] .es-header__links{grid-column:1/-1;grid-row:2;justify-content:flex-start;gap:24px;padding-bottom:10px;font-size:13px}
+@media (max-width:760px){[data-es-theme="amplio"] .es-header__search{grid-column:1/-1;grid-row:2}[data-es-theme="amplio"] .es-header__links{display:none}}
+[data-es-theme="amplio"] .lb-cover-split[data-lb-band="muted"]{background:linear-gradient(90deg,var(--es-base-paper,#fff) 0 50%,var(--es-base-muted,#dfe5d8) 50%)}
+@media (max-width:760px){[data-es-theme="amplio"] .lb-cover-split[data-lb-band="muted"]{background:var(--es-base-muted,#dfe5d8)}}
+/* /theme:amplio */

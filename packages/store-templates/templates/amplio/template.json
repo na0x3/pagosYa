@@ -1,0 +1,379 @@
+{
+  "id": "amplio",
+  "name": "Amplio",
+  "category": "hogar",
+  "description": "Tienda grande de casa y deco: azul noche y salvia, buscador en el menú, categorías en círculos, ambiente para comprar y marcas.",
+  "tags": [
+    "hogar",
+    "deco",
+    "muebles",
+    "regalos"
+  ],
+  "sitePurpose": "shop",
+  "order": 40,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Expanse",
+    "url": "https://expanse-theme-furniture.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "ni-hero",
+      "role": "hero",
+      "demo": "ni-hero.jpg"
+    },
+    {
+      "slot": "ni-sala",
+      "role": "lifestyle",
+      "demo": "ni-sala.jpg"
+    },
+    {
+      "slot": "ni-cocina",
+      "role": "lifestyle",
+      "demo": "ni-cocina.jpg"
+    },
+    {
+      "slot": "ni-dormitorio",
+      "role": "lifestyle",
+      "demo": "ni-dormitorio.jpg"
+    },
+    {
+      "slot": "ni-exterior",
+      "role": "lifestyle",
+      "demo": "ni-exterior.jpg"
+    },
+    {
+      "slot": "ni-material",
+      "role": "lifestyle",
+      "demo": "ni-material.jpg"
+    },
+    {
+      "slot": "ni-p1",
+      "role": "product",
+      "demo": "ni-p1.jpg"
+    },
+    {
+      "slot": "ni-p2",
+      "role": "product",
+      "demo": "ni-p2.jpg"
+    },
+    {
+      "slot": "ni-p3",
+      "role": "product",
+      "demo": "ni-p3.jpg"
+    },
+    {
+      "slot": "ca-p1",
+      "role": "product",
+      "demo": "ca-p1.jpg"
+    },
+    {
+      "slot": "ca-p2",
+      "role": "product",
+      "demo": "ca-p2.jpg"
+    },
+    {
+      "slot": "ca-story",
+      "role": "lifestyle",
+      "demo": "ca-story.jpg"
+    },
+    {
+      "slot": "ba-manos",
+      "role": "lifestyle",
+      "demo": "ba-manos.jpg"
+    },
+    {
+      "slot": "ve-p1",
+      "role": "product",
+      "demo": "ve-p1.jpg"
+    },
+    {
+      "slot": "al-mesa",
+      "role": "lifestyle",
+      "demo": "al-mesa.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "amplio",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#1f2227",
+      "muted": "#dfe5d8",
+      "accent": "#2b2f3a",
+      "deep": "#2b2f3a"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "amplio",
+      "icons": "person",
+      "header": "search",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "soft",
+      "density": "compact",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Cambios fáciles en 30 días · Envío a domicilio"
+    },
+    "layout": [
+      {
+        "type": "cover-split",
+        "look": "flip",
+        "band": "muted",
+        "title": "Tu casa, *más tuya*",
+        "text": "Piezas bonitas y útiles para cada rincón.",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:ni-hero"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "circles",
+        "title": "Compra por categoría",
+        "items": [
+          {
+            "title": "Sala",
+            "photo": "slot:ni-sala",
+            "link": "products"
+          },
+          {
+            "title": "Cocina",
+            "photo": "slot:ni-cocina",
+            "link": "products"
+          },
+          {
+            "title": "Dormitorio",
+            "photo": "slot:ni-dormitorio",
+            "link": "products"
+          },
+          {
+            "title": "Exterior",
+            "photo": "slot:ni-exterior",
+            "link": "products"
+          },
+          {
+            "title": "Velas",
+            "photo": "slot:ve-p1",
+            "link": "products"
+          },
+          {
+            "title": "Cerámica",
+            "photo": "slot:al-mesa",
+            "link": "products"
+          },
+          {
+            "title": "Textiles",
+            "photo": "slot:ni-material",
+            "link": "products"
+          },
+          {
+            "title": "Regalos",
+            "photo": "slot:ca-p2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-slider",
+        "card": "classic",
+        "title": "Los más vendidos",
+        "link": "products"
+      },
+      {
+        "type": "shop-look",
+        "look": "side",
+        "title": "Arma el ambiente",
+        "photo": "slot:ca-story",
+        "items": [
+          {
+            "title": "Jarrón Arena",
+            "x": 46,
+            "y": 52
+          },
+          {
+            "title": "Hecho a mano",
+            "text": "Cada pieza es única.",
+            "icon": "hand"
+          },
+          {
+            "title": "Materiales nobles",
+            "text": "Madera, lino y barro.",
+            "icon": "leaf"
+          }
+        ]
+      },
+      {
+        "type": "promo-banner",
+        "title": "Crea tu *rincón favorito*",
+        "text": "Ideas y piezas para la sala, el patio y la mesa.",
+        "cta": "Ver la sala",
+        "link": "products",
+        "photo": "slot:ni-sala"
+      },
+      {
+        "type": "press-quotes",
+        "look": "row",
+        "title": "Nuestras marcas",
+        "items": [
+          {
+            "title": "Taller Uno"
+          },
+          {
+            "title": "Barro Vivo"
+          },
+          {
+            "title": "Lino Norte"
+          },
+          {
+            "title": "Casa Alta"
+          }
+        ]
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "muted",
+        "title": "10% en tu primera compra",
+        "text": "Suscríbete y te enviamos tu código."
+      },
+      {
+        "type": "products-tabs",
+        "card": "classic",
+        "title": "Novedades",
+        "link": "products"
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "band": "deep",
+        "title": "Desde siempre, *en tu ciudad*",
+        "text": "Gracias por elegirnos todos estos años. Te esperamos en la tienda o te lo llevamos a casa.",
+        "cta": "Ver la tienda",
+        "link": "contact",
+        "photo": "slot:ba-manos"
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Marcas únicas",
+            "text": "De diseñadores y talleres pequeños.",
+            "icon": "gem"
+          },
+          {
+            "title": "Materiales responsables",
+            "text": "Elegidos con cuidado.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Varias tiendas",
+            "text": "Y envío a domicilio.",
+            "icon": "store"
+          }
+        ]
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Envío a domicilio",
+            "text": "A toda la ciudad.",
+            "icon": "truck"
+          },
+          {
+            "title": "Cambios en 30 días",
+            "text": "Sin preguntas.",
+            "icon": "refresh"
+          },
+          {
+            "title": "Pago seguro",
+            "text": "QR o tarjeta.",
+            "icon": "lock"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "title": "Pensado para *durar*",
+        "text": "Materiales nobles y diseño que no pasa de moda.",
+        "photo": "slot:ni-material"
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas frecuentes",
+        "items": [
+          {
+            "title": "¿Cuánto tarda el envío?",
+            "text": "De 2 a 4 días."
+          },
+          {
+            "title": "¿Puedo retirarlo en la tienda?",
+            "text": "Sí, el mismo día."
+          },
+          {
+            "title": "¿Cómo lo cuido?",
+            "text": "Paño seco y suave."
+          },
+          {
+            "title": "¿Lo envuelven para regalo?",
+            "text": "Sí, sin costo."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Casa Amplia",
+      "tagline": "Diseño útil para tu casa",
+      "products": [
+        {
+          "name": "Jarrón Arena",
+          "price": 180,
+          "description": "Cerámica esmaltada a mano.",
+          "category": "Cerámica"
+        },
+        {
+          "name": "Lámpara Lino",
+          "price": 420,
+          "description": "Pantalla de lino natural.",
+          "category": "Sala"
+        },
+        {
+          "name": "Set de Tazas",
+          "price": 160,
+          "description": "Cuatro tazas de gres.",
+          "category": "Cocina"
+        },
+        {
+          "name": "Cojín Trenzado",
+          "price": 140,
+          "description": "Algodón tejido.",
+          "category": "Textiles"
+        },
+        {
+          "name": "Bandeja Nogal",
+          "price": 230,
+          "description": "Madera maciza.",
+          "category": "Cocina"
+        },
+        {
+          "name": "Vela Cedro",
+          "price": 90,
+          "description": "Cera de soya, 40 h.",
+          "category": "Velas"
+        }
+      ]
+    }
+  }
+}
