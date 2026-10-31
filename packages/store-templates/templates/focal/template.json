@@ -1,0 +1,294 @@
+{
+  "id": "focal",
+  "name": "Focal",
+  "category": "tecnologia",
+  "description": "Tecnología y accesorios: amarillo y negro, letra ancha y fuerte, productos con pestañas, la mirada de un producto, colaboraciones y una línea de tiempo.",
+  "tags": [
+    "tecnología",
+    "accesorios",
+    "gadgets",
+    "diseño"
+  ],
+  "sitePurpose": "shop",
+  "order": 43,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Focal",
+    "url": "https://focal-theme-carbon.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "en-hero",
+      "role": "hero",
+      "demo": "en-hero.jpg"
+    },
+    {
+      "slot": "te-hero",
+      "role": "hero",
+      "demo": "te-hero.jpg"
+    },
+    {
+      "slot": "en-p1",
+      "role": "product",
+      "demo": "en-p1.jpg"
+    },
+    {
+      "slot": "en-p2",
+      "role": "product",
+      "demo": "en-p2.jpg"
+    },
+    {
+      "slot": "en-p3",
+      "role": "product",
+      "demo": "en-p3.jpg"
+    },
+    {
+      "slot": "te-p1",
+      "role": "product",
+      "demo": "te-p1.jpg"
+    },
+    {
+      "slot": "te-p2",
+      "role": "product",
+      "demo": "te-p2.jpg"
+    },
+    {
+      "slot": "en-accesorios",
+      "role": "lifestyle",
+      "demo": "en-accesorios.jpg"
+    },
+    {
+      "slot": "en-audio",
+      "role": "lifestyle",
+      "demo": "en-audio.jpg"
+    },
+    {
+      "slot": "en-carga",
+      "role": "lifestyle",
+      "demo": "en-carga.jpg"
+    },
+    {
+      "slot": "en-escritorio",
+      "role": "lifestyle",
+      "demo": "en-escritorio.jpg"
+    },
+    {
+      "slot": "en-hogar",
+      "role": "lifestyle",
+      "demo": "en-hogar.jpg"
+    },
+    {
+      "slot": "te-story",
+      "role": "lifestyle",
+      "demo": "te-story.jpg"
+    },
+    {
+      "slot": "nu-story",
+      "role": "lifestyle",
+      "demo": "nu-story.jpg"
+    },
+    {
+      "slot": "nu-hero",
+      "role": "lifestyle",
+      "demo": "nu-hero.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "focal",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#1e1e1e",
+      "muted": "#f3f3f3",
+      "accent": "#e8f541",
+      "deep": "#1e1e1e"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "focal",
+      "icons": "line",
+      "header": "links",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "square",
+      "corners": "sharp",
+      "density": "regular",
+      "texture": "none",
+      "titles": "upper",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en compras desde Bs 300"
+    },
+    "layout": [
+      {
+        "type": "cover-stage",
+        "look": "center",
+        "eyebrow": "Conoce la",
+        "title": "Colección Salvia",
+        "cta": "Ver más",
+        "link": "products",
+        "photo": "slot:en-hero",
+        "items": [
+          {
+            "title": "2",
+            "photo": "slot:te-hero"
+          },
+          {
+            "title": "3",
+            "photo": "slot:nu-hero"
+          }
+        ]
+      },
+      {
+        "type": "products-tabs",
+        "card": "framed",
+        "title": "Explora",
+        "link": "products"
+      },
+      {
+        "type": "story-split",
+        "look": "offset",
+        "eyebrow": "Proceso",
+        "title": "Diseñando la colección",
+        "text": "Queríamos una funda que protegiera sin sumar volumen. Probamos telas, costuras y cierres hasta lograr piezas simples, resistentes y bonitas de usar todos los días.",
+        "photo": "slot:en-accesorios"
+      },
+      {
+        "type": "shop-look",
+        "look": "focal",
+        "title": "Define tu estilo",
+        "photo": "slot:en-escritorio",
+        "items": [
+          {
+            "title": "Producto estrella",
+            "x": 30,
+            "y": 45
+          },
+          {
+            "title": "Edición de temporada",
+            "x": 62,
+            "y": 58
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "box",
+        "title": "Buen diseño y calidad",
+        "text": "Nacimos de una pasión por el diseño: piezas pensadas, hechas con cuidado y para durar.",
+        "cta": "Nuestra historia",
+        "link": "products",
+        "photo": "slot:te-story"
+      },
+      {
+        "type": "categories-mosaic",
+        "look": "feature3",
+        "title": "Colaboraciones",
+        "eyebrow": "Descubre nuestras",
+        "items": [
+          {
+            "title": "Audio",
+            "photo": "slot:en-audio",
+            "link": "products"
+          },
+          {
+            "title": "Carga",
+            "photo": "slot:en-carga",
+            "link": "products"
+          },
+          {
+            "title": "Hogar",
+            "photo": "slot:en-hogar",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "Más vendido",
+        "title": "El favorito de la casa",
+        "product": "demo-1"
+      },
+      {
+        "type": "photo-scroller",
+        "eyebrow": "De cerca",
+        "title": "Hecho al detalle",
+        "items": [
+          {
+            "title": "1",
+            "text": "Diseñado con expertos en audio.",
+            "photo": "slot:te-p1"
+          },
+          {
+            "title": "2",
+            "text": "Se integra en cualquier espacio.",
+            "photo": "slot:te-p2"
+          },
+          {
+            "title": "3",
+            "text": "Compatible con todo lo que ya usas.",
+            "photo": "slot:en-p1"
+          },
+          {
+            "title": "4",
+            "text": "Materiales que duran.",
+            "photo": "slot:en-p2"
+          }
+        ]
+      },
+      {
+        "type": "press-quotes",
+        "look": "logos",
+        "eyebrow": "Lo que dicen",
+        "items": [
+          {
+            "title": "Revista Diseño",
+            "text": "Siempre busca darle un toque lujoso y moderno a sus accesorios."
+          },
+          {
+            "title": "Diario Tecno",
+            "text": "Piezas simples que se sienten mejor cada día."
+          }
+        ]
+      },
+      {
+        "type": "story-timeline",
+        "eyebrow": "Dónde estamos",
+        "title": "Nuestra historia",
+        "items": [
+          {
+            "title": "El inicio",
+            "text": "Empezamos en un taller pequeño, probando cada pieza a mano.",
+            "photo": "slot:en-escritorio"
+          },
+          {
+            "title": "La primera tienda",
+            "text": "Abrimos nuestra tienda para que puedas ver y tocar cada producto.",
+            "photo": "slot:nu-story"
+          },
+          {
+            "title": "Hoy",
+            "text": "Enviamos a todo el país y seguimos diseñando cada pieza con el mismo cuidado.",
+            "photo": "slot:en-hogar"
+          }
+        ]
+      },
+      {
+        "type": "strip-services",
+        "band": "accent"
+      },
+      {
+        "type": "newsletter-split",
+        "look": "card",
+        "title": "Suscríbete a novedades",
+        "text": "Lanzamientos, ofertas y novedades directo a tu correo.",
+        "photo": "slot:en-carga"
+      }
+    ]
+  }
+}

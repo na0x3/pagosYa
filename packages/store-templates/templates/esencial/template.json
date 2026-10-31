@@ -384,6 +384,13 @@
         "heading": "schibsted-grotesk",
         "body": "schibsted-grotesk",
         "starterOnly": true
+      },
+      {
+        "id": "focal",
+        "name": "Focal",
+        "heading": "unbounded",
+        "body": "dm-sans",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -540,7 +547,8 @@
         "none",
         "paloalto",
         "impulse",
-        "motion"
+        "motion",
+        "focal"
       ],
       "icons": [
         "line",

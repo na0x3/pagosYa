@@ -705,6 +705,7 @@ function CoverStage({ block, index }: { block: LibraryBlock; index: number }) {
   const [first, ...rest] = (block.title ?? '').split(' ');
   return <Bleed block={block} index={index} id="inicio" className="lb-cover lb-cover--dark">
     <div className="lb-stage__slides" data-count={slides.length}>{slides.map((src, at) => <Photo key={at} src={src} className="lb-stage__photo" eager={at === 0} />)}</div>
+    {slides.length > 1 ? <div className="lb-stage__bars" data-count={slides.length} aria-hidden="true">{slides.map((_, at) => <span key={at} />)}</div> : null}
     <div className="lb-stage__copy">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
       <h1 id={`lb-${index}-title`} className="lb-stage__title"><span className="lb-mark">{first}<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 14c40-8 90-11 194-6" /></svg></span>{rest.length ? ` ${rest.join(' ')}` : ''}</h1>
@@ -925,6 +926,19 @@ function PressQuotes({ block, index }: { block: LibraryBlock; index: number }) {
     return () => window.clearInterval(timer);
   }, [quotes.length]);
   if (!quotes.length) return null;
+  if (block.look === 'logos') return <Band block={block} index={index}>
+    <div className="lb-press lb-press--logos">
+      {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+      <ul className="lb-press__outlets">{quotes.map((quote, n) => <li key={n}><button type="button" data-active={n === at ? '' : undefined} onClick={() => setAt(n)}>{quote.title}</button></li>)}</ul>
+      <div className="lb-press__big"><span className="lb-press__mark" aria-hidden="true">”</span>
+        <div className="lb-press__quotes" aria-live="polite">{quotes.map((quote, n) => <blockquote key={n} className="lb-press__quote" data-active={n === at ? '' : undefined}>{quote.text}<cite>{quote.title}</cite></blockquote>)}</div>
+      </div>
+      {quotes.length > 1 ? <div className="lb-press__arrows">
+        <button type="button" aria-label="Anterior" onClick={() => setAt((at + quotes.length - 1) % quotes.length)}><Icons.IconChevronLeft /></button>
+        <button type="button" aria-label="Siguiente" onClick={() => setAt((at + 1) % quotes.length)}><Icons.IconChevronRight /></button>
+      </div> : null}
+    </div>
+  </Band>;
   return <Band block={block} index={index}>
     <div className="lb-press">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
@@ -1027,6 +1041,40 @@ function NewsletterSplit({ block, index }: { block: LibraryBlock; index: number 
   </Bleed>;
 }
 
+
+/** Focal «PR/01 Speaker»: a row of photos with a caption under each, scrolled sideways, a thin line showing how far along it is. */
+function PhotoScroller({ block, index }: { block: LibraryBlock; index: number }) {
+  const shots = (block.items ?? []).filter(item => item.photo).slice(0, 8);
+  const [seen, setSeen] = useState(0);
+  if (shots.length < 2) return null;
+  return <Band block={block} index={index}>
+    <Head block={block} index={index} align="center" />
+    <ul className="lb-scroller" onScroll={event => { const el = event.currentTarget; setSeen(el.scrollLeft / Math.max(1, el.scrollWidth - el.clientWidth)); }}>
+      {shots.map((shot, at) => <li key={at}><figure><Photo src={shot.photo} />{shot.title || shot.text ? <figcaption>{shot.text || shot.title}</figcaption> : null}</figure></li>)}
+    </ul>
+    <div className="lb-scroller__line" aria-hidden="true"><span style={{ transform: `scaleX(${Math.max(0.2, seen)})` }} /></div>
+  </Band>;
+}
+
+/** Focal «Around the world»: chapters of the store's story (places, years), each a photo beside its text, chosen by a row of tabs. */
+function StoryTimeline({ block, index }: { block: LibraryBlock; index: number }) {
+  const steps = (block.items ?? []).filter(item => item.photo && item.title).slice(0, 5);
+  const [at, setAt] = useState(0);
+  if (steps.length < 2) return null;
+  return <Band block={{ ...block, band: block.band ?? 'deep' }} index={index}>
+    <Head block={block} index={index} align="center" />
+    <div className="lb-timeline">
+      <div className="lb-timeline__track" style={{ transform: `translateX(calc(${-at} * (min(860px, 82vw) + 24px)))` }}>
+        {steps.map((step, n) => <article key={n} className="lb-timeline__card" data-active={n === at ? '' : undefined} aria-hidden={n !== at}>
+          <Photo src={step.photo} className="lb-timeline__photo" />
+          <div className="lb-timeline__words"><h3>{step.title}</h3>{step.text ? <p>{step.text}</p> : null}</div>
+        </article>)}
+      </div>
+      <ol className="lb-timeline__tabs">{steps.map((step, n) => <li key={n}><button type="button" data-active={n === at ? '' : undefined} onClick={() => setAt(n)}>{step.title}</button></li>)}</ol>
+    </div>
+  </Band>;
+}
+
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
   'cover-split': CoverSplit, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
@@ -1039,6 +1087,7 @@ const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) =
   'closing-photo': ClosingPhoto, 'closing-wordmark': ClosingWordmark,
   'bar-note': BarNote, 'cover-stage': CoverStage, 'promo-countdown': PromoCountdown, 'story-stack': StoryStack, 'statement-reveal': StatementReveal,
   'categories-list': CategoriesList, 'marquee-photo': MarqueePhoto, 'story-overlap': StoryOverlap, 'promo-trio': PromoTrio,
+  'photo-scroller': PhotoScroller, 'story-timeline': StoryTimeline,
   'story-collage': StoryCollage, 'newsletter-split': NewsletterSplit,
   'cover-shoppable': CoverShoppable, 'cover-video': CoverVideo, 'categories-mosaic': CategoriesMosaic, 'icon-columns': IconColumns,
   'products-slider': ProductsSlider, 'social-posts': SocialPosts, 'social-marquee': SocialMarquee, 'shop-look': ShopLook, 'press-quotes': PressQuotes,
