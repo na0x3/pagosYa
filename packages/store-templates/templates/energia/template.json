@@ -1,0 +1,351 @@
+{
+  "id": "energia",
+  "name": "Energía",
+  "category": "comida",
+  "description": "Comida sana y suplementos: lila y menta, letra redonda, productos sobre la portada, sellos que giran y cifras de confianza.",
+  "tags": [
+    "comida sana",
+    "suplementos",
+    "proteína",
+    "bienestar"
+  ],
+  "sitePurpose": "shop",
+  "order": 35,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Flux",
+    "url": "https://fuel-theme.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "me-hero",
+      "role": "hero",
+      "demo": "me-hero.jpg"
+    },
+    {
+      "slot": "lo-p1",
+      "role": "product",
+      "demo": "lo-p1.jpg"
+    },
+    {
+      "slot": "lo-p2",
+      "role": "product",
+      "demo": "lo-p2.jpg"
+    },
+    {
+      "slot": "lo-p3",
+      "role": "product",
+      "demo": "lo-p3.jpg"
+    },
+    {
+      "slot": "lo-p4",
+      "role": "product",
+      "demo": "lo-p4.jpg"
+    },
+    {
+      "slot": "me-p1",
+      "role": "product",
+      "demo": "me-p1.jpg"
+    },
+    {
+      "slot": "hu-hero",
+      "role": "lifestyle",
+      "demo": "hu-hero.jpg"
+    },
+    {
+      "slot": "hu-campo",
+      "role": "lifestyle",
+      "demo": "hu-campo.jpg"
+    },
+    {
+      "slot": "hu-canasta",
+      "role": "lifestyle",
+      "demo": "hu-canasta.jpg"
+    },
+    {
+      "slot": "hu-p1",
+      "role": "lifestyle",
+      "demo": "hu-p1.jpg"
+    },
+    {
+      "slot": "hu-p2",
+      "role": "lifestyle",
+      "demo": "hu-p2.jpg"
+    },
+    {
+      "slot": "hu-p3",
+      "role": "lifestyle",
+      "demo": "hu-p3.jpg"
+    },
+    {
+      "slot": "me-p2",
+      "role": "lifestyle",
+      "demo": "me-p2.jpg"
+    },
+    {
+      "slot": "me-p3",
+      "role": "lifestyle",
+      "demo": "me-p3.jpg"
+    },
+    {
+      "slot": "me-p4",
+      "role": "lifestyle",
+      "demo": "me-p4.jpg"
+    },
+    {
+      "slot": "me-story",
+      "role": "lifestyle",
+      "demo": "me-story.jpg"
+    },
+    {
+      "slot": "lo-articulo",
+      "role": "lifestyle",
+      "demo": "lo-articulo.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "energia",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#222222",
+      "muted": "#efe6f5",
+      "accent": "#9b7ec4",
+      "deep": "#2b2b2b"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "energia",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en compras desde Bs 250"
+    },
+    "layout": [
+      {
+        "type": "cover-stage",
+        "look": "flux",
+        "title": "Bondad en *cada* bocado",
+        "text": "Nutre tu cuerpo y alegra tu día.",
+        "cta": "Comprar",
+        "link": "products",
+        "photo": "slot:me-hero"
+      },
+      {
+        "type": "products-slider",
+        "look": "overlap",
+        "card": "soft",
+        "title": "Lo más pedido",
+        "link": "products"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "chips",
+        "title": "Explora las colecciones",
+        "items": [
+          {
+            "title": "Proteína",
+            "photo": "slot:lo-p1",
+            "link": "products"
+          },
+          {
+            "title": "Snacks",
+            "photo": "slot:me-p1",
+            "link": "products"
+          },
+          {
+            "title": "Polvos",
+            "photo": "slot:lo-p2",
+            "link": "products"
+          },
+          {
+            "title": "Comidas listas",
+            "photo": "slot:hu-p1",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "statement-reveal",
+        "look": "center",
+        "title": "Nutre tu cuerpo, *alegra* tu paladar",
+        "text": "Alimentos hechos con ingredientes de verdad, pensados para que comer bien sea fácil y rico todos los días."
+      },
+      {
+        "type": "story-split",
+        "look": "deco",
+        "eyebrow": "Nueva colección",
+        "title": "Delicias naturales",
+        "text": "Ingredientes de origen vegetal, preparados con cuidado para darte energía y sabor sin culpa.",
+        "cta": "Ver comidas",
+        "link": "products",
+        "photo": "slot:hu-hero"
+      },
+      {
+        "type": "products-tabs",
+        "card": "soft",
+        "title": "Energía para tu cuerpo",
+        "link": "products"
+      },
+      {
+        "type": "image-columns",
+        "look": "round",
+        "band": "muted",
+        "items": [
+          {
+            "title": "Sin conservantes",
+            "text": "Natural, sin aditivos.",
+            "photo": "slot:hu-p2",
+            "link": "products"
+          },
+          {
+            "title": "Hecho con plantas",
+            "text": "Ingredientes limpios.",
+            "photo": "slot:hu-p3",
+            "link": "products"
+          },
+          {
+            "title": "Más proteína",
+            "text": "Vegano y bajo en azúcar.",
+            "photo": "slot:me-p2",
+            "link": "products"
+          },
+          {
+            "title": "Simple y rico",
+            "text": "Ingredientes que conoces.",
+            "photo": "slot:me-p3",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "categories-tiles",
+        "look": "promo",
+        "title": "Nuestros favoritos",
+        "items": [
+          {
+            "title": "Suplementos",
+            "text": "Oferta",
+            "photo": "slot:lo-p3",
+            "link": "products"
+          },
+          {
+            "title": "Snacks",
+            "text": "Pídelo ya",
+            "photo": "slot:me-p4",
+            "link": "products"
+          },
+          {
+            "title": "Proteína",
+            "text": "15% menos",
+            "photo": "slot:lo-p4",
+            "link": "products"
+          },
+          {
+            "title": "Polvos",
+            "text": "Nuevo",
+            "photo": "slot:hu-canasta",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "shop-look",
+        "look": "side",
+        "title": "La mejor oferta",
+        "photo": "slot:hu-campo",
+        "items": [
+          {
+            "title": "Producto estrella",
+            "x": 40,
+            "y": 42
+          },
+          {
+            "title": "Ingredientes reales",
+            "text": "Sabes lo que comes.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Hecho fresco",
+            "text": "Preparado cada semana.",
+            "icon": "clock"
+          }
+        ]
+      },
+      {
+        "type": "reviews-cards",
+        "title": "Lo que dicen"
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "El favorito",
+        "title": "Chocolate con sal de mar",
+        "product": "demo-1"
+      },
+      {
+        "type": "story-overlap",
+        "look": "badge",
+        "eyebrow": "Oferta",
+        "title": "Hecho con *amor*",
+        "text": "Disfruta lo orgánico: comidas y snacks llenos de proteína, para un día con más energía.",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:me-story",
+        "photo2": "slot:lo-articulo"
+      },
+      {
+        "type": "stats-rings",
+        "look": "boxes",
+        "title": "Lo que nos respalda",
+        "items": [
+          {
+            "title": "1",
+            "value": "100.000+",
+            "text": "ventas al año",
+            "icon": "package"
+          },
+          {
+            "title": "2",
+            "value": "10+",
+            "text": "años en el mercado",
+            "icon": "award"
+          },
+          {
+            "title": "3",
+            "value": "5000+",
+            "text": "reseñas de 5 estrellas",
+            "icon": "star"
+          },
+          {
+            "title": "4",
+            "value": "70%",
+            "text": "clientes que vuelven",
+            "icon": "heart"
+          }
+        ]
+      },
+      {
+        "type": "promo-banner",
+        "look": "rounded",
+        "title": "Descubre el poder de comer limpio",
+        "text": "Ingredientes naturales para tu energía y tu bienestar.",
+        "cta": "Ver más",
+        "link": "products",
+        "photo": "slot:hu-p3"
+      }
+    ]
+  }
+}

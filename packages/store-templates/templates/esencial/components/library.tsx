@@ -785,9 +785,9 @@ function StoryStack({ block, index }: { block: LibraryBlock; index: number }) {
 function StatementReveal({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.text) return null;
   // Better With Friends (look paragraph): one or two centred paragraphs (split by « / »), a *phrase* in italics.
-  if (block.look === 'paragraph') return <Band block={block} index={index}>
+  if (block.look === 'paragraph' || block.look === 'center') return <Band block={block} index={index}>
     <Reveal className="lb-paragraph">
-      {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+      {block.title ? <h2 id={`lb-${index}-title`} className={block.look === 'center' ? 'es-h2 lb-title' : 'lb-visually-hidden'}><Marked text={block.title} /></h2> : null}
       {block.text.split(' / ').map((part, at) => <p key={at}><Marked text={part} /></p>)}
     </Reveal>
   </Band>;
@@ -867,7 +867,9 @@ function StoryOverlap({ block, index }: { block: LibraryBlock; index: number }) 
   const points = (block.items ?? []).filter(item => item.title).slice(0, 4);
   return <Band block={block} index={index} extra={{ 'data-lb-progress': '' }}>
     <div className="lb-overlap">
-      <div className="lb-overlap__photos"><Photo src={block.photo} className="lb-overlap__a" /><Photo src={block.photo2} className="lb-overlap__b" /></div>
+      <div className="lb-overlap__photos"><Photo src={block.photo} className="lb-overlap__a" /><Photo src={block.photo2} className="lb-overlap__b" />
+        {block.look === 'badge' && block.eyebrow ? <svg className="lb-badge-ring" viewBox="0 0 100 100" aria-hidden="true"><defs><path id={`lb-ring-${index}`} d="M50 50m-38 0a38 38 0 1 1 76 0a38 38 0 1 1-76 0" /></defs>
+          <text><textPath href={`#lb-ring-${index}`}>{`${block.eyebrow} • `.repeat(4)}</textPath></text></svg> : null}</div>
       <Reveal className="lb-overlap__words">
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
         {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
@@ -1199,7 +1201,7 @@ function StatsRings({ block, index }: { block: LibraryBlock; index: number }) {
     return <Band block={block} index={index}>
       <div className="lb-numbers">
         <div className="lb-numbers__words">{block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}{block.text ? <p className="lb-lede">{block.text}</p> : null}<Actions block={block} /></div>
-        <ul className="lb-numbers__list">{boxes.map((box, at) => <li key={at}><b>{box.value}</b><span>{box.text}</span></li>)}</ul>
+        <ul className="lb-numbers__list">{boxes.map((box, at) => <li key={at}>{box.icon ? <Icon name={box.icon} className="lb-numbers__icon" /> : null}<b>{box.value}</b><span>{box.text}</span></li>)}</ul>
       </div>
     </Band>;
   }

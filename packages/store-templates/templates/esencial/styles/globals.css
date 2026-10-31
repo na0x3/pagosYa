@@ -1858,6 +1858,42 @@ main[data-lb-home]{overflow-x:clip}
 @media (max-width:760px){.lb-newsband{grid-template-columns:1fr}}
 /* /lb:newsletter-split */
 
+/* lb:cover-stage */
+.lb-cover-stage[data-lb-look="flux"]{min-height:min(84vh,760px);align-items:center}
+.lb-cover-stage[data-lb-look="flux"] .lb-stage__copy{justify-items:start;text-align:left;margin-left:max(24px,calc((100% - 1280px)/2 + 24px));width:min(560px,calc(100% - 48px));margin-top:-12vh}
+.lb-cover-stage[data-lb-look="flux"] .lb-stage__buttons{justify-items:start}
+.lb-cover-stage[data-lb-look="flux"] .lb-stage__btn{width:auto;min-height:40px;padding:0 20px;border-radius:99px;font-size:12px;letter-spacing:.04em;text-transform:none}
+.lb-cover-stage[data-lb-look="flux"] .lb-mark svg{display:none}
+/* /lb:cover-stage */
+/* lb:products-slider */
+.lb-products-slider[data-lb-look="overlap"]{position:relative;z-index:2;margin-top:clamp(-220px,-16vw,-120px);padding-top:0;background:transparent}
+.lb-products-slider[data-lb-look="overlap"] .lb-head{display:none}
+/* /lb:products-slider */
+/* lb:categories-tiles */
+.lb-categories-tiles[data-lb-look="chips"] .lb-tiles__tile{aspect-ratio:1;border-radius:14px}
+.lb-categories-tiles[data-lb-look="chips"] .lb-tiles__tile::after{display:none}
+.lb-categories-tiles[data-lb-look="chips"] .lb-tiles__label{left:50%;right:auto;bottom:12px;transform:translateX(-50%);padding:6px 14px;border-radius:99px;background:#fff;color:#222;font:600 13px/1 var(--es-body);white-space:nowrap}
+.lb-categories-tiles[data-lb-look="chips"] .lb-tiles__label svg{display:none}
+/* /lb:categories-tiles */
+/* lb:story-split */
+.lb-story-split[data-lb-look="deco"] .lb-split__copy{position:relative}
+.lb-story-split[data-lb-look="deco"] .lb-split__copy::before{content:'';position:absolute;right:-6%;bottom:-18%;z-index:-1;width:clamp(160px,18vw,260px);aspect-ratio:1;border-radius:50%;background:#cfe7dd;animation:lb-spin 6s linear infinite;border:10px dashed rgba(255,255,255,.5)}
+.lb-story-split[data-lb-look="deco"] .lb-eyebrow{writing-mode:vertical-rl;transform:rotate(180deg);position:absolute;left:-36px;top:0}
+@keyframes lb-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.lb-story-split[data-lb-look="deco"] .lb-split__copy::before{animation:none}}
+/* /lb:story-split */
+/* lb:story-overlap */
+.lb-badge-ring{position:absolute;right:-6%;bottom:-6%;z-index:3;width:clamp(110px,11vw,150px);height:auto;border-radius:50%;background:#fff;animation:lb-spin 12s linear infinite}
+.lb-badge-ring text{font:800 11px/1 var(--es-body);letter-spacing:.24em;fill:var(--es-ink);text-transform:uppercase}
+@media (prefers-reduced-motion:reduce){.lb-badge-ring{animation:none}}
+/* /lb:story-overlap */
+/* lb:stats-rings */
+.lb-numbers__icon{width:30px;height:30px;color:var(--es-accent)}
+/* /lb:stats-rings */
+/* lb:promo-banner */
+.lb-promo-banner[data-lb-look="rounded"]{width:min(1280px,calc(100% - 32px));margin:0 auto;border-radius:28px}
+/* /lb:promo-banner */
+
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
  * ground blown up to the page width (BAEK cover) reads as a mistake; the boxes keep their shape up to a height, then crop. */
 .lb-cover-centered__media{width:min(1080px,calc(100% - 48px));aspect-ratio:2/1;max-height:min(56vh,520px)}
@@ -2293,3 +2329,25 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="majestuoso"] [data-es-band="deep"] .es-btn{background:#8fcc5c;border-color:#8fcc5c;color:#1d2550}
 [data-es-theme="majestuoso"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 /* /theme:majestuoso */
+
+/* theme:energia */
+/* Energía (after Flux «Fuel»): white with lilac and mint, a rounded geometric sans, a word underlined with a stroke, black pill
+ * buttons, products overlapping the cover. Measured on the demo: everything rises 50px while growing from .95 (AOS fade-up);
+ * the underlined word fades in 1s at .3s; the deco circle turns every 6s. */
+@keyframes en-up{0%{opacity:.01;transform:translateY(50px) scale(.95)}100%{opacity:1;transform:none}}
+@keyframes en-word{0%{opacity:0}100%{opacity:1}}
+[data-es-theme="energia"]{--es-radius:14px}
+[data-es-theme="energia"] .es-announce{background:var(--es-muted);color:var(--es-ink);font-size:12px}
+[data-es-theme="energia"] .es-header{border-bottom:0}
+[data-es-theme="energia"] .es-logo{font:700 24px/1 var(--es-heading)}
+[data-es-theme="energia"] :is(.es-h2,.lb-title,.lb-head h2,.lb-stage__title){font:600 clamp(26px,2.8vw,40px)/1.15 var(--es-heading);letter-spacing:.01em;text-transform:none}
+[data-es-theme="energia"] .lb-stage__title{font-size:clamp(36px,4.2vw,58px)}
+[data-es-theme="energia"] .lb-em{color:inherit;background:no-repeat 0 100%/100% .28em url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' preserveAspectRatio='none'%3E%3Cpath d='M3 14c40-8 90-11 194-6' fill='none' stroke='%239b7ec4' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E");animation:en-word 1s ease .3s both}
+[data-es-theme="energia"] .es-btn{border-radius:99px;background:#222;border-color:#222;color:#fff;letter-spacing:.02em;text-transform:none}
+[data-es-theme="energia"] .es-btn svg{display:none}
+[data-es-theme="energia"] .lb-card[data-lb-card="soft"]{background:#fff;box-shadow:0 10px 30px -22px rgba(0,0,0,.4)}
+[data-es-theme="energia"] .lb-card[data-lb-card="soft"] .lb-card__media{background:#f6f2ea}
+[data-es-theme="energia"] .es-footer{background:#fff}
+:root:not([data-es-still]) [data-es-theme="energia"] main .lb:not([data-in]):not(.lb-cover){opacity:.01;transform:translateY(50px) scale(.95)}
+[data-es-theme="energia"] main .lb[data-in]:not(.lb-cover){animation:en-up .8s cubic-bezier(.2,.7,.2,1) both}
+/* /theme:energia */

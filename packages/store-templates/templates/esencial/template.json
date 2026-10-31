@@ -441,6 +441,13 @@
         "heading": "nunito",
         "body": "nunito",
         "starterOnly": true
+      },
+      {
+        "id": "energia",
+        "name": "Energía",
+        "heading": "outfit",
+        "body": "figtree",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -606,7 +613,8 @@
         "shrine2",
         "gumdrop",
         "amigos",
-        "majestuoso"
+        "majestuoso",
+        "energia"
       ],
       "icons": [
         "line",
