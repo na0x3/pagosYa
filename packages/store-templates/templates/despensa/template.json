@@ -1,0 +1,379 @@
+{
+  "id": "despensa",
+  "name": "Despensa",
+  "category": "comida",
+  "description": "Supermercado y despensa: azul marino y celeste, mosaicos de color, secciones en círculos, productos en tarjetas, tiendas y ofertas.",
+  "tags": [
+    "supermercado",
+    "mercado",
+    "despensa",
+    "tienda grande"
+  ],
+  "sitePurpose": "shop",
+  "order": 44,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Warehouse",
+    "url": "https://warehouse-theme-metal.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "me-hero",
+      "role": "hero",
+      "demo": "me-hero.jpg"
+    },
+    {
+      "slot": "hu-canasta",
+      "role": "hero",
+      "demo": "hu-canasta.jpg"
+    },
+    {
+      "slot": "hu-p3",
+      "role": "lifestyle",
+      "demo": "hu-p3.jpg"
+    },
+    {
+      "slot": "mi-cocina",
+      "role": "lifestyle",
+      "demo": "mi-cocina.jpg"
+    },
+    {
+      "slot": "gr-granjero",
+      "role": "lifestyle",
+      "demo": "gr-granjero.jpg"
+    },
+    {
+      "slot": "gr-gallinas",
+      "role": "lifestyle",
+      "demo": "gr-gallinas.jpg"
+    },
+    {
+      "slot": "me-p1",
+      "role": "product",
+      "demo": "me-p1.jpg"
+    },
+    {
+      "slot": "me-p2",
+      "role": "product",
+      "demo": "me-p2.jpg"
+    },
+    {
+      "slot": "me-p3",
+      "role": "product",
+      "demo": "me-p3.jpg"
+    },
+    {
+      "slot": "me-p4",
+      "role": "product",
+      "demo": "me-p4.jpg"
+    },
+    {
+      "slot": "mi-p1",
+      "role": "product",
+      "demo": "mi-p1.jpg"
+    },
+    {
+      "slot": "mi-p2",
+      "role": "product",
+      "demo": "mi-p2.jpg"
+    },
+    {
+      "slot": "mi-p3",
+      "role": "product",
+      "demo": "mi-p3.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "despensa",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#1e2d4d",
+      "muted": "#eef2f6",
+      "accent": "#00a8cc",
+      "deep": "#1e2d7d"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "despensa",
+      "icons": "cart",
+      "header": "search",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "soft",
+      "corners": "soft",
+      "density": "compact",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "sticky-thumbs",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en pedidos desde Bs 200"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "look": "right",
+        "title": "Lo fresco *llega a tu casa*",
+        "text": "Frutas, verduras, pan y despensa del día.",
+        "cta": "Hacer mi pedido",
+        "link": "products",
+        "photo": "slot:me-hero"
+      },
+      {
+        "type": "promo-trio",
+        "look": "blocks",
+        "items": [
+          {
+            "title": "Frutas y verduras",
+            "text": "Cosechadas esta semana.",
+            "photo": "slot:me-p4",
+            "link": "products"
+          },
+          {
+            "title": "Panadería",
+            "text": "Horneado cada mañana.",
+            "photo": "slot:mi-p1",
+            "link": "products"
+          },
+          {
+            "title": "Lácteos y huevos",
+            "text": "De granjas cercanas.",
+            "photo": "slot:me-p1",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "strip-services"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "circles",
+        "title": "Nuestras secciones",
+        "items": [
+          {
+            "title": "Verduras",
+            "photo": "slot:hu-p3",
+            "link": "products"
+          },
+          {
+            "title": "Panadería",
+            "photo": "slot:mi-p3",
+            "link": "products"
+          },
+          {
+            "title": "Lácteos",
+            "photo": "slot:me-p2",
+            "link": "products"
+          },
+          {
+            "title": "Despensa",
+            "photo": "slot:me-p3",
+            "link": "products"
+          },
+          {
+            "title": "Dulces",
+            "photo": "slot:mi-p2",
+            "link": "products"
+          },
+          {
+            "title": "Canastas",
+            "photo": "slot:hu-canasta",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-grid",
+        "card": "classic",
+        "title": "Lo más comprado",
+        "link": "products"
+      },
+      {
+        "type": "statement-reveal",
+        "look": "center",
+        "title": "Sobre nosotros",
+        "text": "Llevamos a tu casa lo mejor del mercado: productos frescos, de productores que conocemos, a precio justo.",
+        "cta": "Conócenos",
+        "link": "about"
+      },
+      {
+        "type": "press-quotes",
+        "look": "row",
+        "title": "Productores con los que trabajamos",
+        "items": [
+          {
+            "title": "Granja Sol"
+          },
+          {
+            "title": "Valle Verde"
+          },
+          {
+            "title": "Horno Uno"
+          },
+          {
+            "title": "Miel Andina"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "band": "deep",
+        "title": "Recién cosechado",
+        "text": "Lo nuevo de la semana, directo del campo.",
+        "cta": "Ver lo nuevo",
+        "link": "products",
+        "photo": "slot:gr-granjero"
+      },
+      {
+        "type": "products-slider",
+        "band": "deep",
+        "card": "classic",
+        "title": "Novedades",
+        "link": "products"
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "Destacado",
+        "title": "El favorito de la semana",
+        "product": "demo-1"
+      },
+      {
+        "type": "products-tabs",
+        "card": "classic",
+        "title": "Mejor calificados",
+        "link": "products"
+      },
+      {
+        "type": "visit-store",
+        "title": "Nuestras tiendas",
+        "photo": "slot:mi-cocina"
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "muted",
+        "title": "¡Mantengámonos en contacto!",
+        "text": "Ofertas de la semana en tu correo."
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Fresco del día",
+            "text": "Lo preparamos al pedir.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Entrega a domicilio",
+            "text": "En el horario que elijas.",
+            "icon": "truck"
+          },
+          {
+            "title": "Productores cercanos",
+            "text": "Sabes de dónde viene.",
+            "icon": "hand"
+          }
+        ]
+      },
+      {
+        "type": "image-columns",
+        "title": "Va bien con",
+        "items": [
+          {
+            "title": "Pan del día",
+            "text": "Recién horneado.",
+            "photo": "slot:mi-p1",
+            "link": "products"
+          },
+          {
+            "title": "Queso fresco",
+            "text": "De granja.",
+            "photo": "slot:me-p2",
+            "link": "products"
+          },
+          {
+            "title": "Miel pura",
+            "text": "Del valle.",
+            "photo": "slot:me-p3",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿A qué hora entregan?",
+            "text": "Eliges el horario al pedir."
+          },
+          {
+            "title": "¿Y si algo llega mal?",
+            "text": "Lo cambiamos sin costo."
+          },
+          {
+            "title": "¿Cómo pago?",
+            "text": "QR, tarjeta o al recibir."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Despensa",
+      "tagline": "Lo fresco del mercado, a tu puerta",
+      "products": [
+        {
+          "name": "Huevos de Campo",
+          "price": 38,
+          "description": "Docena.",
+          "category": "Lácteos"
+        },
+        {
+          "name": "Queso Fresco",
+          "price": 45,
+          "description": "Medio kilo.",
+          "category": "Lácteos"
+        },
+        {
+          "name": "Miel Pura",
+          "price": 60,
+          "description": "500 g.",
+          "category": "Despensa"
+        },
+        {
+          "name": "Canasta de Verduras",
+          "price": 120,
+          "description": "Para la semana.",
+          "category": "Verduras"
+        },
+        {
+          "name": "Pan de Masa Madre",
+          "price": 28,
+          "description": "Horneado hoy.",
+          "category": "Panadería"
+        },
+        {
+          "name": "Cupcakes de Frutilla",
+          "price": 40,
+          "description": "Caja de cuatro.",
+          "category": "Dulces"
+        },
+        {
+          "name": "Croissants",
+          "price": 35,
+          "description": "De mantequilla.",
+          "category": "Panadería"
+        }
+      ]
+    }
+  }
+}

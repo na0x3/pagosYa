@@ -505,6 +505,13 @@
         "heading": "inter",
         "body": "inter",
         "starterOnly": true
+      },
+      {
+        "id": "despensa",
+        "name": "Despensa",
+        "heading": "hanken-grotesk",
+        "body": "hanken-grotesk",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -679,7 +686,8 @@
         "amplio",
         "tacon",
         "estreno",
-        "conecta"
+        "conecta",
+        "despensa"
       ],
       "icons": [
         "line",

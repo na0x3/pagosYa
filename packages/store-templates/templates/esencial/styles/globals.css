@@ -1998,6 +1998,21 @@ main[data-lb-home]{overflow-x:clip}
 @media (max-width:760px){.lb-categories-tiles[data-lb-look="circles"] .lb-tiles{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
 /* /lb:categories-tiles */
 
+/* lb:promo-trio */
+.lb-promo-trio[data-lb-look="blocks"] .lb-trio{gap:16px;width:min(1280px,calc(100% - 32px));margin:24px auto}
+.lb-promo-trio[data-lb-look="blocks"] .lb-trio__go{justify-self:start;margin-top:8px;padding:9px 16px;border-radius:3px;background:#fff;color:#1e2d4d;font:700 12px/1 var(--es-body)}
+.lb-promo-trio[data-lb-look="blocks"] .lb-trio__text{opacity:.9;font-size:13px}
+.lb-promo-trio[data-lb-look="blocks"] .lb-trio li:nth-child(1) .lb-trio__tile{--lb-block:var(--es-base-deep,#1e2d7d)}
+.lb-promo-trio[data-lb-look="blocks"] .lb-trio li:nth-child(2) .lb-trio__tile{--lb-block:var(--es-base-deep,#1e2d7d)}
+.lb-promo-trio[data-lb-look="blocks"] .lb-trio li:nth-child(3) .lb-trio__tile{--lb-block:var(--es-base-deep,#1e2d7d)}
+.lb-promo-trio[data-lb-look="blocks"] .lb-trio__tile{position:relative;display:grid;grid-template-columns:1.1fr .9fr;align-items:stretch;min-height:220px;border-radius:6px;overflow:hidden;background:var(--lb-block);color:#fff}
+.lb-promo-trio[data-lb-look="blocks"] .lb-trio__tile img{position:static;width:100%;height:100%;object-fit:cover;order:2}
+.lb-promo-trio[data-lb-look="blocks"] .lb-trio__tile::after{display:none}
+.lb-promo-trio[data-lb-look="blocks"] .lb-trio__words{position:static;display:grid;align-content:start;justify-items:start;gap:8px;padding:22px;color:#fff;text-align:left}
+.lb-promo-trio[data-lb-look="blocks"] .lb-trio__title{font:700 22px/1.1 var(--es-heading);order:-1}
+@media (max-width:760px){.lb-promo-trio[data-lb-look="blocks"] .lb-trio{grid-template-columns:1fr}}
+/* /lb:promo-trio */
+
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
  * ground blown up to the page width (BAEK cover) reads as a mistake; the boxes keep their shape up to a height, then crop. */
 .lb-cover-centered__media{width:min(1080px,calc(100% - 48px));aspect-ratio:2/1;max-height:min(56vh,520px)}
@@ -2725,3 +2740,34 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="conecta"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 [data-es-theme="conecta"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 /* /theme:conecta */
+
+/* theme:despensa */
+/* Despensa (after Warehouse «Metal»): a navy header with a long search box and a cyan search button, a pale grey page where cards
+ * sit in white boxes, colour-block offer tiles, round sections, cyan square-ish buttons. Measured: no scroll motion. */
+[data-es-theme="despensa"]{--es-radius:4px;--es-t-weight:700;--es-t-track:-.01em}
+[data-es-theme="despensa"] .es{background:#f3f5f6}
+[data-es-theme="despensa"] .es-announce{background:var(--es-base-deep,#1e2d7d);color:#fff;font-size:12px}
+[data-es-theme="despensa"] .es-header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:24px;background:var(--es-base-deep,#1e2d7d);color:#fff;border-bottom:0}
+[data-es-theme="despensa"] .es-header :is(a,button,.es-logo){color:#fff}
+[data-es-theme="despensa"] .es-header__search{max-width:620px;margin:0 auto 0 0;background:#fff;border:0;border-radius:3px}
+[data-es-theme="despensa"] .es-header__search button{background:var(--es-base-accent,#00a8cc);color:#fff;border-radius:0}
+[data-es-theme="despensa"] .es-header__links{grid-column:1/-1;grid-row:2;justify-content:flex-start;gap:22px;padding-bottom:10px;font:600 13px/1 var(--es-body)}
+@media (max-width:760px){[data-es-theme="despensa"] .es-header__search{grid-column:1/-1;grid-row:2}[data-es-theme="despensa"] .es-header__links{display:none}}
+[data-es-theme="despensa"] .es-logo{font:800 22px/1 var(--es-heading);letter-spacing:-.02em}
+[data-es-theme="despensa"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:700;letter-spacing:-.01em;text-transform:none}
+[data-es-theme="despensa"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(20px,1.8vw,26px)}
+[data-es-theme="despensa"] .lb-cover-full :is(h1,.lb-title){font-size:clamp(32px,3.6vw,52px)}
+[data-es-theme="despensa"] .lb-em{color:var(--es-base-accent,#00a8cc);font-style:normal}
+[data-es-theme="despensa"] .es-btn,[data-es-theme="despensa"] .lb-card__buy{border-radius:3px;background:var(--es-base-accent,#00a8cc);border-color:var(--es-base-accent,#00a8cc);color:#fff;font:700 13px/1 var(--es-body);letter-spacing:0;text-transform:none}
+[data-es-theme="despensa"] .lb-promo-trio .es-btn,[data-es-theme="despensa"] :is([data-lb-band="deep"],[data-es-band="deep"]) .es-btn{background:#fff;border-color:#fff;color:#1e2d7d}
+[data-es-theme="despensa"] .es-btn *{color:inherit}
+[data-es-theme="despensa"] .es-btn svg{display:none}
+[data-es-theme="despensa"] .lb-card{border:1px solid #e3e7eb;border-radius:4px;padding:12px;background:#fff}
+[data-es-theme="despensa"] :is(.es-card__name,.lb-card .es-card__name){font:600 14px/1.3 var(--es-body);text-transform:none;letter-spacing:0}
+[data-es-theme="despensa"] :is([data-lb-band="deep"],[data-es-band="deep"]) .lb-card{background:#fff;color:#1e2d4d}
+[data-es-theme="despensa"] :is([data-lb-band="deep"],[data-es-band="deep"]) .lb-card :is(.es-card__name,.es-card__price,.es-price){color:#1e2d4d}
+[data-es-theme="despensa"] .lb-press :is(li){background:#fff;border:1px solid #e3e7eb;padding:18px 12px;font-family:var(--es-heading);font-weight:800;font-style:normal;text-transform:none}
+[data-es-theme="despensa"] .es-footer{background:#fff;border-top:1px solid #e3e7eb}
+[data-es-theme="despensa"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
+[data-es-theme="despensa"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* /theme:despensa */
