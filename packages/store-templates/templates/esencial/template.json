@@ -469,6 +469,13 @@
         "heading": "outfit",
         "body": "figtree",
         "starterOnly": true
+      },
+      {
+        "id": "crocante",
+        "name": "Crocante",
+        "heading": "barlow-condensed",
+        "body": "figtree",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -638,7 +645,8 @@
         "energia",
         "mordisco",
         "pancita",
-        "pecas"
+        "pecas",
+        "crocante"
       ],
       "icons": [
         "line",

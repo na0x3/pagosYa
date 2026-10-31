@@ -1,0 +1,264 @@
+{
+  "id": "crocante",
+  "name": "Crocante",
+  "category": "comida",
+  "description": "Snacks alegres: verde lima y oliva, letras altas y angostas, mosaicos pastel con fotos redondas, botones coral y una franja que corre.",
+  "tags": [
+    "snacks",
+    "comida",
+    "divertido",
+    "fruta"
+  ],
+  "sitePurpose": "shop",
+  "order": 39,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "chiwis.co (layout and motion only)",
+    "url": "https://chiwis.co/"
+  },
+  "photos": [
+    {
+      "slot": "cr-hero",
+      "role": "hero",
+      "demo": "cr-hero.jpg"
+    },
+    {
+      "slot": "cr-feature",
+      "role": "lifestyle",
+      "demo": "cr-feature.jpg"
+    },
+    {
+      "slot": "cr-gente1",
+      "role": "lifestyle",
+      "demo": "cr-gente1.jpg"
+    },
+    {
+      "slot": "cr-gente2",
+      "role": "lifestyle",
+      "demo": "cr-gente2.jpg"
+    },
+    {
+      "slot": "cr-gente3",
+      "role": "lifestyle",
+      "demo": "cr-gente3.jpg"
+    },
+    {
+      "slot": "cr-p1",
+      "role": "product",
+      "demo": "cr-p1.jpg"
+    },
+    {
+      "slot": "cr-p2",
+      "role": "product",
+      "demo": "cr-p2.jpg"
+    },
+    {
+      "slot": "cr-p3",
+      "role": "product",
+      "demo": "cr-p3.jpg"
+    },
+    {
+      "slot": "an-story",
+      "role": "lifestyle",
+      "demo": "an-story.jpg"
+    },
+    {
+      "slot": "an-p1",
+      "role": "product",
+      "demo": "an-p1.jpg"
+    },
+    {
+      "slot": "an-p2",
+      "role": "product",
+      "demo": "an-p2.jpg"
+    },
+    {
+      "slot": "an-hero",
+      "role": "hero",
+      "demo": "an-hero.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "crocante",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#1c1c1c",
+      "muted": "#e3f1ec",
+      "accent": "#c6d600",
+      "deep": "#8a9a3a"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "crocante",
+      "icons": "person",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en compras desde Bs 150"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "look": "right",
+        "title": "Fruta crocante, *sin nada raro*.",
+        "text": "Fruta de verdad. Sabor de verdad.",
+        "cta": "Comprar",
+        "link": "products",
+        "photo": "slot:cr-hero"
+      },
+      {
+        "type": "strip-marquee",
+        "look": "solid",
+        "items": [
+          {
+            "title": "Sin nueces"
+          },
+          {
+            "title": "Sin gluten"
+          },
+          {
+            "title": "Sin transgénicos"
+          },
+          {
+            "title": "Fruta real"
+          }
+        ]
+      },
+      {
+        "type": "press-quotes",
+        "look": "row",
+        "title": "Nos vieron en",
+        "items": [
+          {
+            "title": "Diario Uno"
+          },
+          {
+            "title": "Revista Sabor"
+          },
+          {
+            "title": "Radio Fresca"
+          },
+          {
+            "title": "Canal Hogar"
+          }
+        ]
+      },
+      {
+        "type": "products-slider",
+        "card": "soft",
+        "title": "Nuestros snacks favoritos",
+        "link": "products"
+      },
+      {
+        "type": "story-split",
+        "band": "muted",
+        "title": "Picotea mejor.",
+        "text": "Convertimos fruta que nadie quería en snacks crocantes y ricos. Sin vueltas, sin nada raro: snacks que saben a fruta.",
+        "cta": "A picar",
+        "link": "products",
+        "photo": "slot:cr-feature"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "pastel",
+        "items": [
+          {
+            "title": "Para el desayuno",
+            "photo": "slot:cr-p1",
+            "link": "products"
+          },
+          {
+            "title": "Fruta real, más crocante",
+            "photo": "slot:cr-p2",
+            "link": "products"
+          },
+          {
+            "title": "Livianos y ricos",
+            "photo": "slot:an-p1",
+            "link": "products"
+          },
+          {
+            "title": "De fruta imperfecta",
+            "photo": "slot:cr-p3",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "social-posts",
+        "look": "cards",
+        "band": "muted",
+        "title": "Nuestros fans",
+        "items": [
+          {
+            "title": "1",
+            "photo": "slot:cr-gente1"
+          },
+          {
+            "title": "2",
+            "photo": "slot:cr-gente2"
+          },
+          {
+            "title": "3",
+            "photo": "slot:cr-gente3"
+          },
+          {
+            "title": "4",
+            "photo": "slot:an-story"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "band": "accent",
+        "title": "Una marca hecha *por mujeres*",
+        "text": "Somos una empresa pequeña, hecha con cariño por quienes aman comer rico y sano.",
+        "cta": "Nuestra historia",
+        "link": "about",
+        "photo": "slot:an-hero"
+      },
+      {
+        "type": "press-quotes",
+        "look": "row",
+        "title": "Encuéntranos en",
+        "cta": "Ver dónde",
+        "link": "contact",
+        "items": [
+          {
+            "title": "Mercado Central"
+          },
+          {
+            "title": "Tienda Verde"
+          },
+          {
+            "title": "Súper Barrio"
+          },
+          {
+            "title": "Almacén Uno"
+          }
+        ]
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "deep",
+        "title": "Tu primera aventura crocante",
+        "text": "Consejos, novedades y sabores nuevos antes que nadie."
+      }
+    ]
+  }
+}

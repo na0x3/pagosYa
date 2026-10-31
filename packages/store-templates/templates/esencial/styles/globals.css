@@ -1958,6 +1958,26 @@ main[data-lb-home]{overflow-x:clip}
 @media (prefers-reduced-motion:reduce){.lb-seal svg{animation:none}}
 @media (max-width:760px){.lb-seal{left:0;top:-6%}}
 /* /lb:cover-split,cover-full */
+/* lb:cover-full */
+.lb-cover-full[data-lb-look="right"]{min-height:min(64vh,620px);align-items:center;background:var(--es-muted)}
+.lb-cover-full[data-lb-look="right"]::after{background:radial-gradient(60% 80% at 82% 50%,rgba(255,255,255,.82),rgba(255,255,255,0) 70%)}
+.lb-cover-full[data-lb-look="right"] .lb-cover-full__copy{justify-items:end;text-align:right;display:grid}
+.lb-cover-full[data-lb-look="right"] :is(.lb-title,.lb-cover__sub,h1){color:var(--es-ink);text-shadow:none;max-width:20ch;margin-left:auto}
+.lb-cover-full[data-lb-look="right"] .lb-actions{justify-content:flex-end}
+/* /lb:cover-full */
+/* lb:categories-tiles */
+.lb-categories-tiles[data-lb-look="pastel"]{padding-inline:0}
+.lb-categories-tiles[data-lb-look="pastel"] .lb-tiles{gap:0;width:100%;max-width:none}
+.lb-categories-tiles[data-lb-look="pastel"] .lb-tiles__tile{display:grid;justify-items:center;gap:14px;aspect-ratio:auto;padding:28px 16px 22px;border-radius:0;background:#a8dbe6;overflow:hidden}
+.lb-categories-tiles[data-lb-look="pastel"] li:nth-child(2) .lb-tiles__tile{background:#f9c2a2}
+.lb-categories-tiles[data-lb-look="pastel"] li:nth-child(3) .lb-tiles__tile{background:#f7b6b6}
+.lb-categories-tiles[data-lb-look="pastel"] li:nth-child(4) .lb-tiles__tile{background:#d9e021}
+.lb-categories-tiles[data-lb-look="pastel"] .lb-tiles__tile img{position:static;width:min(220px,70%);height:auto;aspect-ratio:1;border-radius:50%}
+.lb-categories-tiles[data-lb-look="pastel"] .lb-tiles__tile::after{display:none}
+.lb-categories-tiles[data-lb-look="pastel"] .lb-tiles__label{position:static;justify-content:center;color:var(--es-ink);text-shadow:none;font:600 18px/1.1 var(--es-heading)}
+.lb-categories-tiles[data-lb-look="pastel"] .lb-tiles__label svg{display:none}
+/* /lb:categories-tiles */
+
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
  * ground blown up to the page width (BAEK cover) reads as a mistake; the boxes keep their shape up to a height, then crop. */
 .lb-cover-centered__media{width:min(1080px,calc(100% - 48px));aspect-ratio:2/1;max-height:min(56vh,520px)}
@@ -2513,3 +2533,33 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="pecas"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="pecas"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
 /* /theme:pecas */
+
+/* theme:crocante */
+/* Crocante (after chiwis.co — layout and motion only): white and pale mint, a lime ticker, olive bands, tall narrow capitals,
+ * four pastel tiles with round photos, coral pill buttons, a squiggle under the «seen in» title. Measured: everything rises 50px
+ * from .95 (AOS fade-up); the ticker moves with the scroll. */
+@keyframes cr-up{0%{opacity:.01;transform:translateY(50px) scale(.95)}100%{opacity:1;transform:none}}
+[data-es-theme="crocante"]{--es-radius:14px}
+[data-es-theme="crocante"] .es-announce{background:var(--es-deep);color:#fff;font:600 12px/1 var(--es-body);text-transform:uppercase;letter-spacing:.04em}
+[data-es-theme="crocante"] .es-header{border-bottom:0;background:var(--es-muted)}
+[data-es-theme="crocante"] .es-logo{font:700 28px/1 var(--es-heading);color:var(--es-deep);text-transform:lowercase}
+[data-es-theme="crocante"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:600;letter-spacing:0;text-transform:uppercase;color:var(--es-ink)}
+[data-es-theme="crocante"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(32px,3.4vw,50px);line-height:1}
+[data-es-theme="crocante"] .lb-cover-full :is(h1,.lb-title){font-family:var(--es-heading);text-transform:none;font-size:clamp(38px,4vw,60px);line-height:1.02;color:#2f3a14}
+[data-es-theme="crocante"] .lb-em{color:inherit;font-style:normal}
+[data-es-theme="crocante"] .lb-head{text-align:center;justify-items:center}
+[data-es-theme="crocante"] .lb-press-quotes .lb-title{position:relative;padding-bottom:12px}
+[data-es-theme="crocante"] .lb-press-quotes .lb-title::after{content:'';position:absolute;left:50%;bottom:0;width:110px;height:10px;transform:translateX(-50%);background:no-repeat center/100% 100% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 110 10'%3E%3Cpath d='M2 6c12-6 24 4 36 0s24-6 36 0 24 4 34-2' fill='none' stroke='%23f4a582' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E")}
+[data-es-theme="crocante"] .es-btn,[data-es-theme="crocante"] .lb-card__buy{border-radius:99px;background:#f4a582;border-color:#f4a582;color:#1c1c1c;font-weight:700;letter-spacing:0;text-transform:none;font-size:13px}
+[data-es-theme="crocante"] .lb-cover-full .es-btn{background:#2f3a14;border-color:#2f3a14;color:#fff;font:600 18px/1 var(--es-heading)}
+[data-es-theme="crocante"] .es-btn *{color:inherit}
+[data-es-theme="crocante"] .lb-strip-marquee{background:var(--es-base-accent,#c6d600);color:#2f3a14;font-family:var(--es-heading);text-transform:uppercase}
+[data-es-theme="crocante"] .lb-card[data-lb-card="soft"]{background:var(--es-muted);box-shadow:0 8px 20px -14px rgba(0,0,0,.35);text-align:center}
+[data-es-theme="crocante"] :is(.es-card__name,.lb-card .es-card__name){font:600 22px/1.05 var(--es-heading);text-transform:none;letter-spacing:0;text-align:center}
+[data-es-theme="crocante"] :is([data-lb-band="deep"],[data-es-band="deep"]) :is(.es-h2,.lb-title,p){color:#fff}
+[data-es-theme="crocante"] .es-footer{background:var(--es-muted)}
+[data-es-theme="crocante"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
+[data-es-theme="crocante"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+:root:not([data-es-still]) [data-es-theme="crocante"] main .lb:not([data-in]):not(.lb-cover):not(.lb-strip-marquee){opacity:.01;transform:translateY(50px) scale(.95)}
+[data-es-theme="crocante"] main .lb[data-in]:not(.lb-cover):not(.lb-strip-marquee){animation:cr-up .8s cubic-bezier(.2,.7,.2,1) both}
+/* /theme:crocante */
