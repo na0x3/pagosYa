@@ -1,0 +1,407 @@
+{
+  "id": "tacon",
+  "name": "Tacón",
+  "category": "moda",
+  "description": "Moda de autor: crema, granate y negro, títulos en mayúsculas finas, portada a todo ancho, frase gigante sobre foto y nombre enorme al pie.",
+  "tags": [
+    "moda",
+    "ropa",
+    "mujer",
+    "elegante"
+  ],
+  "sitePurpose": "shop",
+  "order": 41,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Stiletto",
+    "url": "https://stiletto-theme-stiletto.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "pa-hero1",
+      "role": "hero",
+      "demo": "pa-hero1.jpg"
+    },
+    {
+      "slot": "pa-hero2",
+      "role": "hero",
+      "demo": "pa-hero2.jpg"
+    },
+    {
+      "slot": "pa-hero3",
+      "role": "lifestyle",
+      "demo": "pa-hero3.jpg"
+    },
+    {
+      "slot": "pa-look1",
+      "role": "lifestyle",
+      "demo": "pa-look1.jpg"
+    },
+    {
+      "slot": "pa-look2",
+      "role": "lifestyle",
+      "demo": "pa-look2.jpg"
+    },
+    {
+      "slot": "pa-p1",
+      "role": "product",
+      "demo": "pa-p1.jpg"
+    },
+    {
+      "slot": "pa-p2",
+      "role": "product",
+      "demo": "pa-p2.jpg"
+    },
+    {
+      "slot": "pa-p3",
+      "role": "product",
+      "demo": "pa-p3.jpg"
+    },
+    {
+      "slot": "en-hero",
+      "role": "lifestyle",
+      "demo": "en-hero.jpg"
+    },
+    {
+      "slot": "en-jardin",
+      "role": "lifestyle",
+      "demo": "en-jardin.jpg"
+    },
+    {
+      "slot": "en-p1",
+      "role": "product",
+      "demo": "en-p1.jpg"
+    },
+    {
+      "slot": "ma-story",
+      "role": "lifestyle",
+      "demo": "ma-story.jpg"
+    },
+    {
+      "slot": "fi-story",
+      "role": "lifestyle",
+      "demo": "fi-story.jpg"
+    },
+    {
+      "slot": "at-detalle",
+      "role": "lifestyle",
+      "demo": "at-detalle.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "tacon",
+    "colors": {
+      "paper": "#f6f4ef",
+      "ink": "#141414",
+      "muted": "#e3e7ef",
+      "accent": "#141414",
+      "deep": "#6b2a24"
+    },
+    "kind": "fashion",
+    "variants": {
+      "theme": "tacon",
+      "icons": "line",
+      "header": "links",
+      "announce": "plain",
+      "footer": "bigname",
+      "button": "square",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "sticky-thumbs",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Bienvenida a Tacón"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "title": "Piezas *en movimiento*",
+        "text": "Telas que caen y se mueven contigo.",
+        "cta": "Comprar",
+        "link": "products",
+        "cta2": "Ver el lookbook",
+        "link2": "products",
+        "photo": "slot:pa-hero1"
+      },
+      {
+        "type": "strip-marquee",
+        "look": "solid",
+        "items": [
+          {
+            "title": "Nueva temporada"
+          },
+          {
+            "title": "Hecho para durar"
+          },
+          {
+            "title": "Envío a todo el país"
+          }
+        ]
+      },
+      {
+        "type": "statement-reveal",
+        "look": "paragraph",
+        "title": "Nuestra forma de vestir",
+        "text": "Piezas sencillas y con carácter, pensadas para combinarse entre sí y convertir cualquier día en algo especial.",
+        "cta": "Conócenos",
+        "link": "about"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "shop",
+        "title": "Encuentra tu pieza",
+        "items": [
+          {
+            "title": "Blazers",
+            "photo": "slot:pa-look1",
+            "link": "products"
+          },
+          {
+            "title": "Vestidos",
+            "photo": "slot:en-hero",
+            "link": "products"
+          },
+          {
+            "title": "Chaquetas",
+            "photo": "slot:pa-hero3",
+            "link": "products"
+          },
+          {
+            "title": "Faldas",
+            "photo": "slot:pa-look2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "band": "deep",
+        "eyebrow": "Colección",
+        "title": "Tops que *se notan*",
+        "text": "Texturas lindas y cortes limpios.",
+        "cta": "Ver tops",
+        "link": "products",
+        "photo": "slot:pa-hero2"
+      },
+      {
+        "type": "products-slider",
+        "band": "deep",
+        "card": "classic",
+        "title": "Lo nuevo",
+        "link": "products"
+      },
+      {
+        "type": "products-slider",
+        "card": "classic",
+        "title": "Selección de la casa",
+        "link": "products"
+      },
+      {
+        "type": "shop-look",
+        "look": "side",
+        "title": "Arma el look",
+        "photo": "slot:fi-story",
+        "items": [
+          {
+            "title": "Vestido Noche",
+            "x": 48,
+            "y": 40
+          },
+          {
+            "title": "Hecho a mano",
+            "text": "En taller pequeño.",
+            "icon": "hand"
+          },
+          {
+            "title": "Telas nobles",
+            "text": "Lana, seda y lino.",
+            "icon": "leaf"
+          }
+        ]
+      },
+      {
+        "type": "promo-pair",
+        "look": "center",
+        "items": [
+          {
+            "title": "Inolvidable",
+            "text": "Para dejar huella.",
+            "photo": "slot:en-jardin",
+            "link": "products"
+          },
+          {
+            "title": "Elegancia",
+            "text": "Para cualquier fecha.",
+            "photo": "slot:ma-story",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-tabs",
+        "card": "classic",
+        "title": "Piezas que destacan",
+        "link": "products"
+      },
+      {
+        "type": "press-quotes",
+        "look": "quotes",
+        "title": "Lo que dicen"
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "band": "muted",
+        "eyebrow": "Nosotras",
+        "title": "Una marca hecha por mujeres",
+        "text": "Diseñamos para mujeres reales, que viajan, trabajan y se visten para ellas.",
+        "cta": "Conócenos",
+        "link": "about",
+        "photo": "slot:at-detalle"
+      },
+      {
+        "type": "marquee-photo",
+        "photo": "slot:pa-hero3",
+        "items": [
+          {
+            "title": "Piezas que destacan"
+          },
+          {
+            "title": "Estilo sin esfuerzo"
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Cambios fáciles",
+            "text": "Escríbenos y lo resolvemos.",
+            "icon": "refresh"
+          },
+          {
+            "title": "Envíos a todo el país",
+            "text": "De 3 a 5 días.",
+            "icon": "truck"
+          },
+          {
+            "title": "Calidad de taller",
+            "text": "Materiales premium.",
+            "icon": "award"
+          },
+          {
+            "title": "Paga como quieras",
+            "text": "QR o tarjeta.",
+            "icon": "card"
+          }
+        ]
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Talla, cuidado y envíos",
+        "items": [
+          {
+            "title": "¿Cómo calza?",
+            "text": "Calce normal: elige tu talla de siempre."
+          },
+          {
+            "title": "¿Cómo la cuido?",
+            "text": "Lavado en seco o a mano en frío."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "De 3 a 5 días hábiles."
+          },
+          {
+            "title": "¿Puedo cambiarla?",
+            "text": "Sí, dentro de 30 días."
+          }
+        ]
+      },
+      {
+        "type": "promo-pair",
+        "look": "center",
+        "items": [
+          {
+            "title": "Combínalo",
+            "text": "Piezas que van juntas.",
+            "photo": "slot:pa-look1",
+            "link": "products"
+          },
+          {
+            "title": "Lo nuevo",
+            "text": "Recién llegado.",
+            "photo": "slot:pa-look2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Cambios fáciles",
+            "text": "30 días.",
+            "icon": "refresh"
+          },
+          {
+            "title": "Envío a todo el país",
+            "text": "De 3 a 5 días.",
+            "icon": "truck"
+          },
+          {
+            "title": "Calidad de taller",
+            "text": "Materiales premium.",
+            "icon": "award"
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Tacón",
+      "tagline": "Moda de autor para todos los días",
+      "products": [
+        {
+          "name": "Vestido Noche",
+          "price": 590,
+          "description": "Satén fluido.",
+          "category": "Vestidos"
+        },
+        {
+          "name": "Blazer Raya",
+          "price": 720,
+          "description": "Lana fría.",
+          "category": "Blazers"
+        },
+        {
+          "name": "Falda Plisada",
+          "price": 390,
+          "description": "Caída suave.",
+          "category": "Faldas"
+        },
+        {
+          "name": "Vestido Flores",
+          "price": 540,
+          "description": "Gasa estampada.",
+          "category": "Vestidos"
+        },
+        {
+          "name": "Top Seda",
+          "price": 320,
+          "description": "Seda lavada.",
+          "category": "Tops"
+        }
+      ]
+    }
+  }
+}

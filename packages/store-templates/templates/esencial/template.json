@@ -483,6 +483,13 @@
         "heading": "figtree",
         "body": "figtree",
         "starterOnly": true
+      },
+      {
+        "id": "tacon",
+        "name": "Tacón",
+        "heading": "hanken-grotesk",
+        "body": "dm-sans",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -654,7 +661,8 @@
         "pancita",
         "pecas",
         "crocante",
-        "amplio"
+        "amplio",
+        "tacon"
       ],
       "icons": [
         "line",
