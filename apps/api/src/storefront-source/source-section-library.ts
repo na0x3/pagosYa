@@ -82,7 +82,7 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
 ];
 const BY_ID = new Map(LIBRARY_CATALOG.map(section => [section.id, section]));
 /** The product card, from the same themes (owner 2026-10-31); the main grid carries it and the Shell shows it on every page. */
-export const LIBRARY_CARDS = ['classic', 'ribbon', 'soft', 'framed'] as const;
+export const LIBRARY_CARDS = ['classic', 'ribbon', 'soft', 'framed', 'arch'] as const;
 export const LIBRARY_ICON_NAMES = ['leaf', 'sparkles', 'heart', 'droplet', 'sun', 'gift', 'clock', 'package', 'store', 'lock', 'zap', 'award', 'flame', 'sprout', 'gem',
   'recycle', 'smile', 'badge', 'check', 'hand', 'coffee', 'cookie', 'shirt', 'palette', 'card', 'phone', 'calendar', 'users', 'truck', 'shield', 'star', 'refresh', 'pin', 'message', 'mail'] as const;
 
@@ -284,7 +284,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (needs.pins) items = items.filter(item => item.x === undefined || productByName.has(fold(item.title))).map(item => item.x === undefined ? item : ({ ...item, title: productByName.get(fold(item.title))!.name }));
     if (section.id === 'stats-rings') items = items.filter(item => item.value);
     // A marquee of outlet names (Symmetry) needs only the names; quotes must be the merchant's own words too.
-    if (needs.press) items = items.filter(item => merchantWords.includes(fold(item.title)) && (raw.look === 'marquee' || (Boolean(item.text) && merchantWords.includes(fold(item.text!).replace(/[«»"“”.]/g, '').trim()))));
+    if (needs.press) items = items.filter(item => merchantWords.includes(fold(item.title)) && ((raw.look === 'marquee' || raw.look === 'row') || (Boolean(item.text) && merchantWords.includes(fold(item.text!).replace(/[«»"“”.]/g, '').trim()))));
     if (section.id === 'promo-trio' && !single) items = items.filter(item => item.photo);
     if (section.id === 'categories-list') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));
     if (section.id === 'categories-tiles') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));

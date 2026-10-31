@@ -426,6 +426,14 @@
         "heading": "archivo",
         "body": "figtree",
         "starterOnly": true
+      },
+      {
+        "id": "amigos",
+        "name": "Amigos",
+        "heading": "newsreader",
+        "body": "newsreader",
+        "mono": "anton",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -588,7 +596,8 @@
         "broadcast",
         "shrine",
         "shrine2",
-        "gumdrop"
+        "gumdrop",
+        "amigos"
       ],
       "icons": [
         "line",

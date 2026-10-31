@@ -107,7 +107,7 @@ function Head({ block, index, align = 'start', level = 2, aside }: { block: Libr
  *            struck through, «2 colores».
  *  soft    — CHUG/Shapes: a tinted card with a rounded photo and a full «Agregar» pill.
  *  framed  — Shrine Pro: a framed photo, centred name and price, an outline «Agregar al carrito» bar. */
-export const LIBRARY_CARDS = ['classic', 'ribbon', 'soft', 'framed'] as const;
+export const LIBRARY_CARDS = ['classic', 'ribbon', 'soft', 'framed', 'arch'] as const;
 export type LibraryCard = typeof LIBRARY_CARDS[number];
 export function libraryCard(layout: LibraryBlock[]): LibraryCard {
   const card = layout.find(block => ['products-grid', 'products-tabs', 'products-slider'].includes(block.type))?.card;
@@ -722,7 +722,7 @@ function CoverStage({ block, index }: { block: LibraryBlock; index: number }) {
   return <Bleed block={block} index={index} id="inicio" className="lb-cover lb-cover--dark">
     <div className="lb-stage__slides" data-count={slides.length}>{slides.map((src, at) => <Photo key={at} src={src} className="lb-stage__photo" eager={at === 0} />)}</div>
     {slides.length > 1 ? <div className="lb-stage__bars" data-count={slides.length} aria-hidden="true">{slides.map((_, at) => <span key={at} />)}</div> : null}
-    <div className="lb-stage__copy">
+    <div className={block.look === 'plain' ? 'lb-stage__copy lb-visually-hidden' : 'lb-stage__copy'}>
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
       {(block.title ?? '').includes('*') ? <h1 id={`lb-${index}-title`} className="lb-stage__title"><Marked text={block.title ?? ''} /></h1>
         : <h1 id={`lb-${index}-title`} className="lb-stage__title"><span className="lb-mark">{first}<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 14c40-8 90-11 194-6" /></svg></span>{rest.length ? ` ${rest.join(' ')}` : ''}</h1>}
@@ -784,6 +784,13 @@ function StoryStack({ block, index }: { block: LibraryBlock; index: number }) {
  *  with *asterisks* gets a hand-drawn underline. Fully lit and still without motion. */
 function StatementReveal({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.text) return null;
+  // Better With Friends (look paragraph): one or two centred paragraphs (split by « / »), a *phrase* in italics.
+  if (block.look === 'paragraph') return <Band block={block} index={index}>
+    <Reveal className="lb-paragraph">
+      {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+      {block.text.split(' / ').map((part, at) => <p key={at}><Marked text={part} /></p>)}
+    </Reveal>
+  </Band>;
   // Symmetry (look quote): the store's sentence in quotes, centred, still.
   if (block.look === 'quote') return <Band block={block} index={index}>
     <Reveal className="lb-quote">
@@ -926,6 +933,13 @@ function SocialPosts({ block, index }: { block: LibraryBlock; index: number }) {
 function SocialMarquee({ block, index }: { block: LibraryBlock; index: number }) {
   const photos = (block.items ?? []).map(item => item.photo).filter((src): src is string => Boolean(src)).slice(0, 6);
   if (!block.handle || photos.length < 3) return null;
+  if (block.look === 'photos') {
+    const reel = (key: number) => <span key={key} className="lb-reel__run">{photos.map((src, at) => <img key={at} src={src} alt="" aria-hidden="true" loading="lazy" />)}</span>;
+    return <Bleed block={block} index={index}>
+      {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+      <a className="lb-reel" href={block.social} target="_blank" rel="noopener" aria-label={`${block.cta || 'Síguenos'} ${block.handle}`}>{[0, 1].map(reel)}</a>
+    </Bleed>;
+  }
   const title = (block.title ?? '').split('*').map((part, at) => at % 2 ? <em key={at} className="lb-script">{part}</em> : part);
   const run = (key: number) => <span key={key} className="lb-social__run">{photos.flatMap((src, at) => [<img key={`p${at}`} src={src} alt="" aria-hidden="true" loading="lazy" />, <span key={`w${at}`}>{at % 2 ? block.handle : (block.cta || 'síguenos')}</span>])}</span>;
   return <Band block={block} index={index}>
@@ -970,7 +984,7 @@ function ShopLook({ block, index }: { block: LibraryBlock; index: number }) {
 /** Palo Alto press: what each outlet said about the store, one quote at a time rising in, the outlets' names below with the current one
  *  dark. Only outlets and words the merchant gave. */
 function PressQuotes({ block, index }: { block: LibraryBlock; index: number }) {
-  const quotes = (block.items ?? []).filter(item => item.title && (item.text || block.look === 'marquee')).slice(0, 6);
+  const quotes = (block.items ?? []).filter(item => item.title && (item.text || block.look === 'marquee' || block.look === 'row')).slice(0, 6);
   const [at, setAt] = useState(0);
   useEffect(() => {
     if (quotes.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -978,6 +992,10 @@ function PressQuotes({ block, index }: { block: LibraryBlock; index: number }) {
     return () => window.clearInterval(timer);
   }, [quotes.length]);
   if (!quotes.length) return null;
+  if (block.look === 'row') return <Band block={block} index={index}>
+    <Head block={block} index={index} align="center" />
+    <ul className="lb-press-row">{quotes.map((quote, n) => <li key={n}>{quote.title}</li>)}</ul>
+  </Band>;
   if (block.look === 'marquee') {
     const run = (key: number) => <span key={key} className="lb-press-run__run">{[0, 1, 2].flatMap(round => quotes.map((quote, n) => <span key={`${round}-${n}`}>{quote.title}</span>))}</span>;
     return <Bleed block={block} index={index}><p className="lb-press-run" aria-label={quotes.map(quote => quote.title).join(', ')}>{[0, 1].map(run)}</p></Bleed>;
@@ -1187,6 +1205,7 @@ function StatsRings({ block, index }: { block: LibraryBlock; index: number }) {
 /** Shrine's wave edge between bands: layered waves drifting sideways (measured: 10s and 8s, opposite ways), in the colour of the
  *  band they lead into (band), turned over (look flip) where a band ends. Decoration only: no words. */
 function WaveDivider({ block, index }: { block: LibraryBlock; index: number }) {
+  if (block.look === 'sway' || block.look === 'sway-flip') return <div id={`lb-${index}`} className="lb lb-wave lb-wave--sway" data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look} aria-hidden="true"><span /></div>;
   return <div id={`lb-${index}`} className="lb lb-wave" data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look || undefined} aria-hidden="true">
     <svg viewBox="0 24 150 28" preserveAspectRatio="none">
       <defs><path id={`lb-wave-${index}`} d="M-160 44c30 0 58-18 88-18s58 18 88 18 58-18 88-18 58 18 88 18v44h-352z" /></defs>

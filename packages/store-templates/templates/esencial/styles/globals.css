@@ -1782,6 +1782,48 @@ main[data-lb-home]{overflow-x:clip}
 .lb-cover-ribbon[data-lb-look="gumdrop"] .lb-cover-ribbon__media{border:0;border-radius:var(--lb-r-lg);aspect-ratio:4/5}
 /* /lb:cover-ribbon */
 
+/* lb:wave-divider */
+.lb-wave--sway{position:relative;height:22px;overflow:hidden;color:var(--es-base-accent,var(--es-accent))}
+.lb-wave--sway span{position:absolute;top:0;left:0;width:calc(100% + 400px);height:100%;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 22'%3E%3Cpath d='M0 0h80v8c-10 0-10 12-20 12S50 8 40 8 30 20 20 20 10 8 0 8z'/%3E%3C/svg%3E") 0 0/80px 22px repeat-x;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 22'%3E%3Cpath d='M0 0h80v8c-10 0-10 12-20 12S50 8 40 8 30 20 20 20 10 8 0 8z'/%3E%3C/svg%3E") 0 0/80px 22px repeat-x;
+  animation:lb-sway 9s ease-in-out infinite}
+.lb-wave--sway[data-lb-look="sway-flip"]{transform:rotate(180deg)}
+@keyframes lb-sway{0%{transform:translate(0)}50%{transform:translate(-200px)}100%{transform:translate(0)}}
+@media (prefers-reduced-motion:reduce){.lb-wave--sway span{animation:none}}
+/* /lb:wave-divider */
+/* lb:categories-tiles */
+.lb-categories-tiles[data-lb-look="edge"].es-section{width:100%;max-width:none;padding:0}
+.lb-categories-tiles[data-lb-look="edge"] .lb-tiles{gap:0}
+.lb-categories-tiles[data-lb-look="edge"] .lb-tiles__tile{border-radius:0;aspect-ratio:3/4}
+.lb-categories-tiles[data-lb-look="edge"] .lb-tiles__label{justify-content:center;font:400 clamp(18px,1.6vw,24px)/1.1 var(--es-heading)}
+.lb-categories-tiles[data-lb-look="edge"] .lb-tiles__label svg{display:none}
+/* /lb:categories-tiles */
+/* lb:statement-reveal */
+.lb-paragraph{display:grid;gap:22px;max-width:760px;margin:0 auto;text-align:center}
+.lb-paragraph p{margin:0;font:400 clamp(18px,1.7vw,24px)/1.4 var(--es-heading)}
+.lb-paragraph .lb-em{font-style:italic;color:inherit}
+/* /lb:statement-reveal */
+/* lb:press-quotes */
+.lb-press-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-around;gap:24px 40px;margin:clamp(20px,3vw,40px) 0 0;padding:0;list-style:none}
+.lb-press-row li{font:800 clamp(24px,2.6vw,38px)/1 var(--es-body);letter-spacing:-.02em}
+.lb-press-row li:nth-child(2){font:400 clamp(18px,1.8vw,26px)/1 Georgia,serif;letter-spacing:.06em;text-transform:uppercase}
+.lb-press-row li:nth-child(3){font:700 clamp(30px,3.2vw,46px)/1 var(--es-heading)}
+.lb-press-row li:nth-child(4){font:800 italic clamp(24px,2.6vw,38px)/1 var(--es-heading);text-transform:lowercase}
+/* /lb:press-quotes */
+/* lb:social-marquee */
+.lb-reel{display:flex;width:max-content;overflow:hidden}
+.lb-reel__run{display:flex;animation:lb-marquee 120s linear infinite}
+.lb-reel__run img{width:clamp(220px,20vw,300px);aspect-ratio:4/5;object-fit:cover}
+.lb-social-marquee:has(.lb-reel){overflow:hidden}
+@media (prefers-reduced-motion:reduce){.lb-reel__run{animation:none}}
+/* /lb:social-marquee */
+/* lb:strip-marquee */
+.lb-strip-marquee[data-lb-look="flowers"]{background:var(--es-base-deep,#3a0d1c);color:#f6b3c2;font:400 clamp(22px,2.2vw,32px)/1 var(--es-mono,var(--es-heading));text-transform:uppercase;letter-spacing:.01em}
+.lb-strip-marquee[data-lb-look="flowers"] i{font-style:normal;font-size:0;margin:0 .35em}
+.lb-strip-marquee[data-lb-look="flowers"] i::before{content:'✿';font-size:clamp(22px,2.2vw,30px)}
+/* /lb:strip-marquee */
+
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
  * ground blown up to the page width (BAEK cover) reads as a mistake; the boxes keep their shape up to a height, then crop. */
 .lb-cover-centered__media{width:min(1080px,calc(100% - 48px));aspect-ratio:2/1;max-height:min(56vh,520px)}
@@ -2154,3 +2196,32 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="gumdrop"] main .lb[data-in] :is(.lb-head,.lb-zig li,.lb-compare,.lb-posts__post,.lb-services li,.menu-item){animation:gu-in .5s ease both}
 [data-es-theme="gumdrop"] main .lb[data-in] :is(li,.menu-item):nth-child(2){animation-delay:.075s}[data-es-theme="gumdrop"] main .lb[data-in] :is(li,.menu-item):nth-child(3){animation-delay:.15s}[data-es-theme="gumdrop"] main .lb[data-in] :is(li,.menu-item):nth-child(n+4){animation-delay:.225s}
 /* /theme:gumdrop */
+
+/* theme:amigos */
+/* Amigos (after betterwithfriends.store — its layout and motion only): white ground, wine ink, mustard and pink, serif text, a pink
+ * condensed name over the photos, arch cards, a swaying wavy edge, a wine footer with a pink pill. Measured on the site: the name
+ * marquee 63s, the photo reel 120s, the wavy edge sways 200px back and forth; slides change sideways. */
+@keyframes am-in{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:none}}
+[data-es-theme="amigos"] .es-announce{background:var(--es-deep);color:#fff;font-size:12px}
+[data-es-theme="amigos"] .es-header{background:transparent;border-bottom:0;transition:background .3s}
+[data-es-theme="amigos"] .es-logo{color:#f6b3c2!important;font:400 clamp(26px,2.6vw,36px)/.9 var(--es-mono);letter-spacing:.01em;text-transform:uppercase}
+[data-es-theme="amigos"] .es-header__links a{color:#f6b3c2;font:500 14px/1 var(--es-body)}
+:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="amigos"]:has(main>.lb-cover:first-child) .es-header .es-icon-btn{color:#fff}
+[data-es-theme="amigos"]:has(main>.lb-cover:first-child) main>.lb-cover:first-child{margin-top:-72px}
+:root:is([data-es-scroll="down"],[data-es-scroll="up"]) [data-es-theme="amigos"] .es-header{background:#fff}
+[data-es-theme="amigos"] .lb-cover-stage[data-lb-look="plain"]{min-height:min(92vh,860px)}
+[data-es-theme="amigos"] .lb-cover-stage[data-lb-look="plain"]::after{background:none}
+[data-es-theme="amigos"] :is(.es-h2,.lb-title,.lb-head h2){font:400 clamp(24px,2.4vw,34px)/1.2 var(--es-heading);letter-spacing:0;text-transform:none}
+[data-es-theme="amigos"] .lb-card[data-lb-card="arch"] .lb-card__media{border-radius:999px 999px 0 0;background:#f4f4f2}
+[data-es-theme="amigos"] .lb-card[data-lb-card="arch"] .lb-card__body{justify-items:center;text-align:center}
+[data-es-theme="amigos"] .lb-card[data-lb-card="arch"] .es-card__row{justify-content:center}
+[data-es-theme="amigos"] .lb-card[data-lb-card="arch"] .es-card__name{font:400 15px/1.3 var(--es-body)}
+[data-es-theme="amigos"] .lb-products-grid .catalog-filters{display:none}
+[data-es-theme="amigos"] .lb-products-grid .lb-grid{max-width:900px;margin-inline:auto}
+[data-es-theme="amigos"] .es-btn{border-radius:99px}
+[data-es-theme="amigos"] .es-footer{background:var(--es-deep);color:#fff}
+[data-es-theme="amigos"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+[data-es-theme="amigos"] .es-footer button,[data-es-theme="amigos"] .es-footer [type="submit"]{border-radius:99px;background:#f6b3c2;color:var(--es-deep)}
+:root:not([data-es-still]) [data-es-theme="amigos"] main .lb:not([data-in]) :is(.lb-head,.lb-paragraph,.lb-press-row,.menu-item){opacity:0}
+[data-es-theme="amigos"] main .lb[data-in] :is(.lb-head,.lb-paragraph,.lb-press-row,.menu-item){animation:am-in .7s ease both}
+/* /theme:amigos */

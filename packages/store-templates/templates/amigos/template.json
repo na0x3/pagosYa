@@ -1,0 +1,245 @@
+{
+  "id": "amigos",
+  "name": "Amigos",
+  "category": "moda",
+  "description": "Tienda de diseño independiente: vino, mostaza y rosa, letra con serifa, fotos de borde a borde, marcas que corren y tarjetas en arco.",
+  "tags": [
+    "diseño",
+    "independiente",
+    "regalos",
+    "boutique"
+  ],
+  "sitePurpose": "shop",
+  "order": 33,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Better with Friends (real store: layout and motion only)",
+    "url": "https://betterwithfriends.store/"
+  },
+  "photos": [
+    {
+      "slot": "ur-hero",
+      "role": "hero",
+      "demo": "ur-hero.jpg"
+    },
+    {
+      "slot": "ba-calle",
+      "role": "hero",
+      "demo": "ba-calle.jpg"
+    },
+    {
+      "slot": "ur-p1",
+      "role": "product",
+      "demo": "ur-p1.jpg"
+    },
+    {
+      "slot": "bo-p2",
+      "role": "product",
+      "demo": "bo-p2.jpg"
+    },
+    {
+      "slot": "ma-p1",
+      "role": "product",
+      "demo": "ma-p1.jpg"
+    },
+    {
+      "slot": "ar-caja",
+      "role": "product",
+      "demo": "ar-caja.jpg"
+    },
+    {
+      "slot": "ur-look1",
+      "role": "lifestyle",
+      "demo": "ur-look1.jpg"
+    },
+    {
+      "slot": "bo-calle",
+      "role": "lifestyle",
+      "demo": "bo-calle.jpg"
+    },
+    {
+      "slot": "ma-hero",
+      "role": "lifestyle",
+      "demo": "ma-hero.jpg"
+    },
+    {
+      "slot": "ma-story",
+      "role": "lifestyle",
+      "demo": "ma-story.jpg"
+    },
+    {
+      "slot": "ar-hero",
+      "role": "lifestyle",
+      "demo": "ar-hero.jpg"
+    },
+    {
+      "slot": "pl-p1",
+      "role": "lifestyle",
+      "demo": "pl-p1.jpg"
+    },
+    {
+      "slot": "ba-p2",
+      "role": "lifestyle",
+      "demo": "ba-p2.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "amigos",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#3a0d1c",
+      "muted": "#f6b3c2",
+      "accent": "#d1bd57",
+      "deep": "#3a0d1c"
+    },
+    "kind": "fashion",
+    "variants": {
+      "theme": "amigos",
+      "icons": "person",
+      "header": "split",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid3",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en compras desde Bs 500"
+    },
+    "layout": [
+      {
+        "type": "cover-stage",
+        "look": "plain",
+        "title": "Diseño independiente, hecho con cariño",
+        "photo": "slot:ur-hero",
+        "items": [
+          {
+            "title": "2",
+            "photo": "slot:ba-calle"
+          }
+        ]
+      },
+      {
+        "type": "strip-marquee",
+        "look": "flowers",
+        "band": "deep",
+        "items": [
+          {
+            "title": "Ropa"
+          },
+          {
+            "title": "Accesorios"
+          },
+          {
+            "title": "Hogar"
+          },
+          {
+            "title": "Joyas"
+          },
+          {
+            "title": "Hecho a mano"
+          }
+        ]
+      },
+      {
+        "type": "categories-tiles",
+        "look": "edge",
+        "items": [
+          {
+            "title": "Ropa",
+            "photo": "slot:ur-look1",
+            "link": "products"
+          },
+          {
+            "title": "Accesorios",
+            "photo": "slot:bo-calle",
+            "link": "products"
+          },
+          {
+            "title": "Hogar",
+            "photo": "slot:ma-hero",
+            "link": "products"
+          },
+          {
+            "title": "Joyas",
+            "photo": "slot:ar-hero",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "statement-reveal",
+        "look": "paragraph",
+        "band": "accent",
+        "text": "Olvida las marcas de siempre: aquí encuentras ropa, accesorios y objetos únicos, hechos con cuidado por diseñadores independientes. / Creemos en elegir con conciencia y en apoyar a quien hace las cosas a mano. En un mundo de producción masiva, *esta tienda* es un respiro."
+      },
+      {
+        "type": "wave-divider",
+        "look": "sway",
+        "band": "accent"
+      },
+      {
+        "type": "products-grid",
+        "card": "arch",
+        "title": "Lo que nuestros amigos aman",
+        "link": "products"
+      },
+      {
+        "type": "press-quotes",
+        "look": "row",
+        "title": "Nos vieron y nos quieren",
+        "items": [
+          {
+            "title": "Revista Moda"
+          },
+          {
+            "title": "Diario Diseño"
+          },
+          {
+            "title": "Musgo"
+          },
+          {
+            "title": "Revista Amiga"
+          }
+        ]
+      },
+      {
+        "type": "social-marquee",
+        "look": "photos",
+        "title": "En nuestras redes",
+        "handle": "@tumarca",
+        "social": "https://instagram.com/",
+        "items": [
+          {
+            "title": "1",
+            "photo": "slot:ma-story"
+          },
+          {
+            "title": "2",
+            "photo": "slot:pl-p1"
+          },
+          {
+            "title": "3",
+            "photo": "slot:ba-p2"
+          },
+          {
+            "title": "4",
+            "photo": "slot:ar-caja"
+          },
+          {
+            "title": "5",
+            "photo": "slot:ma-p1"
+          }
+        ]
+      }
+    ]
+  }
+}
