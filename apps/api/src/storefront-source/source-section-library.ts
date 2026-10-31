@@ -270,7 +270,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     // Social posts are the store's own photos: the answer need not list them.
     const rawItems: RawItem[] = needs.social && (raw.items ?? []).length < (needs.items?.[0] ?? 0) ? Array.from({ length: needs.items![0] + 2 }, () => ({ title: 'post', photo: -1 })) : (raw.items ?? []);
     // A template's small category tiles (Maximize) show up to eight.
-    let items: LayoutItem[] = rawItems.slice(0, raw.look === 'small' ? 8 : Math.max(maxItems, needs.categories ? 4 : 0)).map(item => {
+    let items: LayoutItem[] = rawItems.slice(0, raw.look === 'small' || raw.look === 'circles' ? 8 : Math.max(maxItems, needs.categories ? 4 : 0)).map(item => {
       const out: LayoutItem = { title: clip(item.title, TEXT_CAPS.itemTitle) };
       const text = clip(item.text, TEXT_CAPS.itemText); if (text) out.text = text;
       if (item.icon && (LIBRARY_ICON_NAMES as readonly string[]).includes(item.icon)) out.icon = item.icon;
