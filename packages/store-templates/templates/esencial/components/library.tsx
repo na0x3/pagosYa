@@ -91,7 +91,7 @@ function Head({ block, index, align = 'start', level = 2, aside }: { block: Libr
   if (!block.title && !block.eyebrow && !block.text) return null;
   const words = <>
     {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-    {block.title ? <Title id={`lb-${index}-title`} className={level === 1 ? 'es-display lb-title' : 'es-h2 lb-title'}><Marked text={block.title} /></Title> : null}
+    {block.title ? <Title id={`lb-${index}-title`} className={level === 1 ? 'es-display lb-title' : 'es-h2 lb-title'} style={{ ['--chars' as string]: block.title.replace(/\*/g, '').length } as CSSProperties}><Marked text={block.title} /></Title> : null}
   </>;
   if (align === 'split') return <Reveal className="lb-head lb-head--split">
     <div>{words}</div>
@@ -1040,6 +1040,15 @@ function CategoriesMosaic({ block, index }: { block: LibraryBlock; index: number
 function IconColumns({ block, index }: { block: LibraryBlock; index: number }) {
   const columns = (block.items ?? []).filter(item => item.title).slice(0, 4);
   if (columns.length < 2) return null;
+  if (block.look === 'side' && block.photo) return <Band block={block} index={index}>
+    <Head block={block} index={index} align="center" />
+    <div className="lb-columns-side">
+      <ul className="lb-columns lb-columns--grid" data-count={columns.length}>{columns.map((column, at) => <li key={at}><Reveal delay={at * 90}>
+        <Icon name={column.icon || 'sparkles'} className="lb-columns__icon" /><h3 className="lb-columns__title">{column.title}</h3>{column.text ? <p>{column.text}</p> : null}
+      </Reveal></li>)}</ul>
+      <Photo src={block.photo} className="lb-columns-side__photo" />
+    </div>
+  </Band>;
   return <Band block={block} index={index}>
     {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
     <ul className="lb-columns" data-count={columns.length}>{columns.map((column, at) => <li key={at}><Reveal delay={at * 90}>

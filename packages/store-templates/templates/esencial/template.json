@@ -412,6 +412,13 @@
         "heading": "playfair-display",
         "body": "newsreader",
         "starterOnly": true
+      },
+      {
+        "id": "shrine2",
+        "name": "Shrine Pro Bebidas",
+        "heading": "anton",
+        "body": "figtree",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -572,7 +579,8 @@
         "focal",
         "symmetry",
         "broadcast",
-        "shrine"
+        "shrine",
+        "shrine2"
       ],
       "icons": [
         "line",

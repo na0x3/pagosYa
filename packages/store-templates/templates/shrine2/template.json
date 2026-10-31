@@ -1,0 +1,309 @@
+{
+  "id": "shrine2",
+  "name": "Shrine Pro Bebidas",
+  "category": "comida",
+  "description": "Bebidas y snacks con energía: letra gruesa, títulos que brillan, tarjetas punteadas de colores, olas y comparación.",
+  "tags": [
+    "bebidas",
+    "snacks",
+    "proteína",
+    "divertido"
+  ],
+  "sitePurpose": "shop",
+  "order": 31,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Shrine Pro (CHUG)",
+    "url": "https://shrine-pro-demo-2.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "cr-hero",
+      "role": "hero",
+      "demo": "cr-hero.jpg"
+    },
+    {
+      "slot": "cr-p1",
+      "role": "product",
+      "demo": "cr-p1.jpg"
+    },
+    {
+      "slot": "cr-p2",
+      "role": "product",
+      "demo": "cr-p2.jpg"
+    },
+    {
+      "slot": "cr-p3",
+      "role": "product",
+      "demo": "cr-p3.jpg"
+    },
+    {
+      "slot": "to-p1",
+      "role": "product",
+      "demo": "to-p1.jpg"
+    },
+    {
+      "slot": "to-p2",
+      "role": "product",
+      "demo": "to-p2.jpg"
+    },
+    {
+      "slot": "cr-feature",
+      "role": "lifestyle",
+      "demo": "cr-feature.jpg"
+    },
+    {
+      "slot": "cr-gente1",
+      "role": "lifestyle",
+      "demo": "cr-gente1.jpg"
+    },
+    {
+      "slot": "cr-gente2",
+      "role": "lifestyle",
+      "demo": "cr-gente2.jpg"
+    },
+    {
+      "slot": "cr-gente3",
+      "role": "lifestyle",
+      "demo": "cr-gente3.jpg"
+    },
+    {
+      "slot": "to-hero",
+      "role": "lifestyle",
+      "demo": "to-hero.jpg"
+    },
+    {
+      "slot": "to-origen",
+      "role": "lifestyle",
+      "demo": "to-origen.jpg"
+    },
+    {
+      "slot": "to-taza",
+      "role": "lifestyle",
+      "demo": "to-taza.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "shrine2",
+    "colors": {
+      "paper": "#fbf3e6",
+      "ink": "#2b1a10",
+      "muted": "#f5e3cc",
+      "accent": "#8a5329",
+      "deep": "#4a2a16"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "shrine2",
+      "icons": "line",
+      "header": "classic",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "soft",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "upper",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "layout": [
+      {
+        "type": "strip-marquee",
+        "look": "solid",
+        "items": [
+          {
+            "title": "Agotado 3 veces"
+          },
+          {
+            "title": "Llegó el nuevo lote"
+          },
+          {
+            "title": "Hecho con ingredientes reales"
+          }
+        ]
+      },
+      {
+        "type": "cover-split",
+        "look": "free",
+        "eyebrow": "Más de 100 pedidos esta semana",
+        "title": "*Rico* y que te quiere de vuelta.",
+        "text": "",
+        "cta": "Pídelo ahora :)",
+        "link": "products",
+        "photo": "slot:cr-hero",
+        "items": [
+          {
+            "title": "Obsesionados con el sabor",
+            "text": "Rico y cremoso, sin el sabor raro de siempre.",
+            "icon": "heart"
+          },
+          {
+            "title": "Amable con tu panza",
+            "text": "Ingredientes limpios, sin pesadez.",
+            "icon": "heart"
+          }
+        ]
+      },
+      {
+        "type": "press-quotes",
+        "look": "marquee",
+        "items": [
+          {
+            "title": "Supermercado Uno"
+          },
+          {
+            "title": "Tienda Barrio"
+          },
+          {
+            "title": "Market Central"
+          },
+          {
+            "title": "Súper Hogar"
+          }
+        ]
+      },
+      {
+        "type": "wave-divider",
+        "band": "deep"
+      },
+      {
+        "type": "image-columns",
+        "look": "dashed",
+        "band": "deep",
+        "title": "Para todo tu día",
+        "items": [
+          {
+            "title": "Arranque de mañana",
+            "text": "Empieza el día con algo rico y sin complicarte.",
+            "photo": "slot:to-taza",
+            "link": "products"
+          },
+          {
+            "title": "Después de entrenar",
+            "text": "Lo que tu cuerpo pide después de moverte.",
+            "photo": "slot:cr-gente1",
+            "link": "products"
+          },
+          {
+            "title": "Antojo de la tarde",
+            "text": "Calma el antojo sin descuidarte.",
+            "photo": "slot:cr-feature",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "compare-table",
+        "band": "deep",
+        "title": "Cómo nos *comparamos*",
+        "text": "No tienes que elegir entre rico y bueno: elegimos los dos.",
+        "items": [
+          {
+            "title": "Textura cremosa",
+            "value": "yes"
+          },
+          {
+            "title": "Ingredientes simples",
+            "value": "no"
+          },
+          {
+            "title": "Sin azúcar añadida",
+            "value": "no"
+          },
+          {
+            "title": "Sabor de siempre",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "type": "wave-divider",
+        "band": "deep",
+        "look": "flip"
+      },
+      {
+        "type": "products-cards",
+        "look": "dashed",
+        "title": "Lo mejor de la casa",
+        "text": "Nuestros sabores más pedidos.",
+        "cta": "Pídelos",
+        "link": "products",
+        "products": [
+          "Producto estrella",
+          "Edición de temporada",
+          "El clásico",
+          "Set para regalar"
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "look": "side",
+        "band": "deep",
+        "title": "Sigue haciendo *bien*",
+        "text": "Lo bueno de siempre, con lo que de verdad necesitas.",
+        "photo": "slot:to-p1",
+        "items": [
+          {
+            "title": "Energía",
+            "text": "Para seguir el ritmo del día.",
+            "icon": "zap"
+          },
+          {
+            "title": "Proteína",
+            "text": "Para recuperarte mejor.",
+            "icon": "award"
+          },
+          {
+            "title": "Calcio",
+            "text": "Para huesos fuertes.",
+            "icon": "shield"
+          },
+          {
+            "title": "Vitaminas",
+            "text": "Lo que tu cuerpo agradece.",
+            "icon": "sun"
+          }
+        ]
+      },
+      {
+        "type": "wave-divider",
+        "band": "deep",
+        "look": "flip"
+      },
+      {
+        "type": "social-posts",
+        "look": "cards",
+        "title": "Querido por *miles*",
+        "handle": "@tumarca",
+        "social": "https://instagram.com/",
+        "items": [
+          {
+            "title": "1",
+            "photo": "slot:cr-gente2"
+          },
+          {
+            "title": "2",
+            "photo": "slot:cr-gente3"
+          },
+          {
+            "title": "3",
+            "photo": "slot:to-hero"
+          },
+          {
+            "title": "4",
+            "photo": "slot:to-origen"
+          }
+        ]
+      },
+      {
+        "type": "wave-divider",
+        "band": "deep"
+      }
+    ]
+  }
+}
