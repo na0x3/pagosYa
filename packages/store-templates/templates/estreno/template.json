@@ -1,0 +1,357 @@
+{
+  "id": "estreno",
+  "name": "Estreno",
+  "category": "moda",
+  "description": "Moda urbana editorial: blanco y negro, títulos con una palabra en cursiva, fotos grandes en pares, la pieza de la semana y el look para comprar.",
+  "tags": [
+    "moda",
+    "urbano",
+    "streetwear",
+    "editorial"
+  ],
+  "sitePurpose": "shop",
+  "order": 42,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Release",
+    "url": "https://release-main.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "ur-hero",
+      "role": "hero",
+      "demo": "ur-hero.jpg"
+    },
+    {
+      "slot": "ur-look1",
+      "role": "lifestyle",
+      "demo": "ur-look1.jpg"
+    },
+    {
+      "slot": "ur-look2",
+      "role": "lifestyle",
+      "demo": "ur-look2.jpg"
+    },
+    {
+      "slot": "ur-look3",
+      "role": "lifestyle",
+      "demo": "ur-look3.jpg"
+    },
+    {
+      "slot": "ur-p1",
+      "role": "product",
+      "demo": "ur-p1.jpg"
+    },
+    {
+      "slot": "ur-p2",
+      "role": "product",
+      "demo": "ur-p2.jpg"
+    },
+    {
+      "slot": "ur-p3",
+      "role": "product",
+      "demo": "ur-p3.jpg"
+    },
+    {
+      "slot": "ba-p1",
+      "role": "lifestyle",
+      "demo": "ba-p1.jpg"
+    },
+    {
+      "slot": "ba-p2",
+      "role": "product",
+      "demo": "ba-p2.jpg"
+    },
+    {
+      "slot": "ba-p3",
+      "role": "product",
+      "demo": "ba-p3.jpg"
+    },
+    {
+      "slot": "ba-p4",
+      "role": "product",
+      "demo": "ba-p4.jpg"
+    },
+    {
+      "slot": "ba-calle",
+      "role": "lifestyle",
+      "demo": "ba-calle.jpg"
+    },
+    {
+      "slot": "ba-detalle",
+      "role": "lifestyle",
+      "demo": "ba-detalle.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "estreno",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#111111",
+      "muted": "#f3f3f3",
+      "accent": "#111111",
+      "deep": "#151515"
+    },
+    "kind": "fashion",
+    "variants": {
+      "theme": "estreno",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "bigname",
+      "button": "pill",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis desde Bs 300 · Cambios fáciles"
+    },
+    "layout": [
+      {
+        "type": "cover-stage",
+        "look": "center",
+        "eyebrow": "Nueva colección",
+        "title": "Audaz *por diseño*",
+        "cta": "Descubrir",
+        "link": "products",
+        "photo": "slot:ur-hero"
+      },
+      {
+        "type": "products-slider",
+        "card": "classic",
+        "title": "Recién *llegado*",
+        "link": "products"
+      },
+      {
+        "type": "promo-pair",
+        "look": "uneven",
+        "items": [
+          {
+            "title": "Clásicos *de siempre*",
+            "text": "Piezas que no pasan.",
+            "photo": "slot:ba-p1",
+            "link": "products"
+          },
+          {
+            "title": "La calle",
+            "text": "Hecho para moverse.",
+            "photo": "slot:ur-look1",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "statement-reveal",
+        "look": "center",
+        "title": "Ropa para que cada quien se sienta *único*",
+        "text": "Básicos con carácter, cortes amplios y telas que aguantan la ciudad.",
+        "cta": "Ver el lookbook",
+        "link": "products"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "caption",
+        "title": "Nuestras colecciones *especiales*",
+        "items": [
+          {
+            "title": "Polerones",
+            "photo": "slot:ba-p2",
+            "link": "products"
+          },
+          {
+            "title": "Zapatillas",
+            "photo": "slot:ur-look3",
+            "link": "products"
+          },
+          {
+            "title": "Accesorios",
+            "photo": "slot:ur-look2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "band": "deep",
+        "title": "Lo clásico se encuentra con lo *nuevo*",
+        "text": "Básicos de siempre con un giro de ahora.",
+        "cta": "Descubrir",
+        "link": "products",
+        "photo": "slot:ba-detalle"
+      },
+      {
+        "type": "products-tabs",
+        "card": "classic",
+        "title": "Lo nuevo",
+        "link": "products"
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "Elegido",
+        "title": "La pieza de *la semana*",
+        "product": "demo-1"
+      },
+      {
+        "type": "shop-look",
+        "look": "side",
+        "title": "Compra *el look*",
+        "photo": "slot:ba-calle",
+        "items": [
+          {
+            "title": "Polerón Negro",
+            "x": 50,
+            "y": 45
+          },
+          {
+            "title": "Algodón grueso",
+            "text": "Frisa pesada.",
+            "icon": "shirt"
+          },
+          {
+            "title": "Corte amplio",
+            "text": "Cómodo todo el día.",
+            "icon": "check"
+          }
+        ]
+      },
+      {
+        "type": "promo-banner",
+        "title": "Llegó la temporada. *Descubre* lo nuevo",
+        "cta": "Descubrir",
+        "link": "products",
+        "photo": "slot:ur-look1"
+      },
+      {
+        "type": "social-posts",
+        "look": "grid",
+        "title": "Nos vieron *en la calle*",
+        "items": [
+          {
+            "title": "1",
+            "photo": "slot:ba-calle",
+            "link": "products"
+          },
+          {
+            "title": "2",
+            "photo": "slot:ur-look2",
+            "link": "products"
+          },
+          {
+            "title": "3",
+            "photo": "slot:ur-look3",
+            "link": "products"
+          },
+          {
+            "title": "4",
+            "photo": "slot:ba-detalle",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "reviews-cards",
+        "title": "Lo que dicen"
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "muted",
+        "title": "Únete a *la familia*",
+        "text": "Novedades y lanzamientos antes que nadie."
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "promo-pair",
+        "look": "uneven",
+        "items": [
+          {
+            "title": "Cómo se lleva",
+            "text": "Con básicos de todos los días.",
+            "photo": "slot:ba-calle",
+            "link": "products"
+          },
+          {
+            "title": "Combínalo",
+            "text": "Piezas que van juntas.",
+            "photo": "slot:ur-look2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Talla y *envíos*",
+        "items": [
+          {
+            "title": "¿Cómo calza?",
+            "text": "Corte amplio: si dudas, elige tu talla."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "De 2 a 4 días."
+          },
+          {
+            "title": "¿Puedo cambiarlo?",
+            "text": "Sí, en 30 días."
+          },
+          {
+            "title": "¿Cómo lo lavo?",
+            "text": "En frío y del revés."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Estreno",
+      "tagline": "Ropa urbana con carácter",
+      "products": [
+        {
+          "name": "Polerón Negro",
+          "price": 390,
+          "description": "Frisa pesada.",
+          "category": "Polerones"
+        },
+        {
+          "name": "Zapatillas Nube",
+          "price": 690,
+          "description": "Suela liviana.",
+          "category": "Zapatillas"
+        },
+        {
+          "name": "Polera Naranja",
+          "price": 180,
+          "description": "Algodón grueso.",
+          "category": "Poleras"
+        },
+        {
+          "name": "Polerón Oversize",
+          "price": 420,
+          "description": "Corte amplio.",
+          "category": "Polerones"
+        },
+        {
+          "name": "Cargo Oliva",
+          "price": 360,
+          "description": "Bolsillos amplios.",
+          "category": "Pantalones"
+        },
+        {
+          "name": "Gorra y Bolsa",
+          "price": 210,
+          "description": "Set de algodón.",
+          "category": "Accesorios"
+        }
+      ]
+    }
+  }
+}

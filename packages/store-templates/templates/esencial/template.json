@@ -490,6 +490,14 @@
         "heading": "hanken-grotesk",
         "body": "dm-sans",
         "starterOnly": true
+      },
+      {
+        "id": "estreno",
+        "name": "Estreno",
+        "heading": "manrope",
+        "body": "manrope",
+        "mono": "instrument-serif",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -662,7 +670,8 @@
         "pecas",
         "crocante",
         "amplio",
-        "tacon"
+        "tacon",
+        "estreno"
       ],
       "icons": [
         "line",

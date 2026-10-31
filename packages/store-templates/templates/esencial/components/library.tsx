@@ -622,7 +622,7 @@ function PromoPair({ block, index }: { block: LibraryBlock; index: number }) {
     <ul className="lb-pair">{tiles.map((tile, at) => <li key={at}><Reveal delay={at * 100}>
       <a className="lb-pair__tile" href={href(tile.link)}>
         <Photo src={tile.photo} />
-        <span className="lb-pair__words">{tile.text ? <span className="lb-pair__kicker">{tile.text}</span> : null}<span className="lb-pair__title">{tile.title}</span><span className="lb-pair__go">{block.cta || 'Ver más'} <Icons.IconArrowRight /></span></span>
+        <span className="lb-pair__words">{tile.text ? <span className="lb-pair__kicker">{tile.text}</span> : null}<span className="lb-pair__title"><Marked text={tile.title ?? ''} /></span><span className="lb-pair__go">{block.cta || 'Ver más'} <Icons.IconArrowRight /></span></span>
       </a>
     </Reveal></li>)}</ul>
   </Band>;
