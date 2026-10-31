@@ -419,6 +419,13 @@
         "heading": "anton",
         "body": "figtree",
         "starterOnly": true
+      },
+      {
+        "id": "gumdrop",
+        "name": "Gumdrop",
+        "heading": "archivo",
+        "body": "figtree",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -580,7 +587,8 @@
         "symmetry",
         "broadcast",
         "shrine",
-        "shrine2"
+        "shrine2",
+        "gumdrop"
       ],
       "icons": [
         "line",

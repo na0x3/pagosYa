@@ -1,0 +1,300 @@
+{
+  "id": "gumdrop",
+  "name": "Gumdrop",
+  "category": "comida",
+  "description": "Snacks y dulces con energía: letra gruesa en cursiva, colores pastel, cinta de palabras, comparación con stickers y lo mejor del día.",
+  "tags": [
+    "snacks",
+    "dulces",
+    "comida",
+    "divertido"
+  ],
+  "sitePurpose": "shop",
+  "order": 32,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Gumdrop",
+    "url": "https://sharkbites-boostify.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "an-hero",
+      "role": "hero",
+      "demo": "an-hero.jpg"
+    },
+    {
+      "slot": "an-p1",
+      "role": "product",
+      "demo": "an-p1.jpg"
+    },
+    {
+      "slot": "an-p2",
+      "role": "product",
+      "demo": "an-p2.jpg"
+    },
+    {
+      "slot": "an-p3",
+      "role": "product",
+      "demo": "an-p3.jpg"
+    },
+    {
+      "slot": "an-p4",
+      "role": "product",
+      "demo": "an-p4.jpg"
+    },
+    {
+      "slot": "re-p1",
+      "role": "product",
+      "demo": "re-p1.jpg"
+    },
+    {
+      "slot": "an-story",
+      "role": "lifestyle",
+      "demo": "an-story.jpg"
+    },
+    {
+      "slot": "re-hero",
+      "role": "lifestyle",
+      "demo": "re-hero.jpg"
+    },
+    {
+      "slot": "re-p2",
+      "role": "lifestyle",
+      "demo": "re-p2.jpg"
+    },
+    {
+      "slot": "re-p3",
+      "role": "lifestyle",
+      "demo": "re-p3.jpg"
+    },
+    {
+      "slot": "re-story",
+      "role": "lifestyle",
+      "demo": "re-story.jpg"
+    },
+    {
+      "slot": "cr-feature",
+      "role": "lifestyle",
+      "demo": "cr-feature.jpg"
+    },
+    {
+      "slot": "cr-gente1",
+      "role": "lifestyle",
+      "demo": "cr-gente1.jpg"
+    },
+    {
+      "slot": "cr-p1",
+      "role": "lifestyle",
+      "demo": "cr-p1.jpg"
+    },
+    {
+      "slot": "cr-p2",
+      "role": "lifestyle",
+      "demo": "cr-p2.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "gumdrop",
+    "colors": {
+      "paper": "#fff8f2",
+      "ink": "#3a1c0c",
+      "muted": "#ffe7d6",
+      "accent": "#a2461b",
+      "deep": "#8a3a14"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "gumdrop",
+      "icons": "line",
+      "header": "classic",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "upper",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en compras desde Bs 200"
+    },
+    "layout": [
+      {
+        "type": "cover-ribbon",
+        "look": "gumdrop",
+        "title": "Comodidad en cada *crujido*.",
+        "text": "Snacks hechos con granos de verdad, para picar sin culpa.",
+        "cta": "Ver productos",
+        "link": "products",
+        "photo": "slot:an-hero",
+        "items": [
+          {
+            "title": "¡Es crocante!"
+          },
+          {
+            "title": "Hecho con granos"
+          },
+          {
+            "title": "Sin culpa"
+          }
+        ]
+      },
+      {
+        "type": "categories-list",
+        "look": "stack",
+        "eyebrow": "¿Cuál es tu favorito?",
+        "items": [
+          {
+            "title": "Salados",
+            "link": "products"
+          },
+          {
+            "title": "Saludables",
+            "link": "products"
+          },
+          {
+            "title": "Dulces",
+            "link": "products"
+          },
+          {
+            "title": "Para compartir",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "checker-rows",
+        "title": "Granos que juegan fuerte.",
+        "text": "Un grano antiguo, resistente y lleno de sabor: la base de todos nuestros snacks.",
+        "items": [
+          {
+            "title": "Bueno para la panza",
+            "text": "Fibra que ayuda a tu digestión.",
+            "photo": "slot:cr-feature"
+          },
+          {
+            "title": "Lleno de nutrientes",
+            "text": "Lo bueno del grano entero en cada bocado.",
+            "photo": "slot:re-p2"
+          },
+          {
+            "title": "Con antioxidantes",
+            "text": "Para cuidarte mientras disfrutas.",
+            "photo": "slot:an-story"
+          }
+        ]
+      },
+      {
+        "type": "compare-table",
+        "look": "stickers",
+        "band": "deep",
+        "title": "Mira la *diferencia*",
+        "text": "El grano campeón, con más nutrientes y más sabor.",
+        "photo": "slot:an-p1",
+        "photo2": "slot:an-p2",
+        "items": [
+          {
+            "title": "Sabor",
+            "value": "yes"
+          },
+          {
+            "title": "Más fibra",
+            "value": "no"
+          },
+          {
+            "title": "Energía que dura",
+            "value": "no"
+          },
+          {
+            "title": "Sin gluten",
+            "value": "yes"
+          },
+          {
+            "title": "Amigable con el planeta",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "type": "statement-reveal",
+        "text": "Snacks hechos con granos *antiguos*, inflados y llenos de sabor, para picar sin pensarlo dos veces.",
+        "photo": "slot:cr-p1"
+      },
+      {
+        "type": "products-tabs",
+        "card": "soft",
+        "title": "Novedades",
+        "link": "products"
+      },
+      {
+        "type": "products-spotlight",
+        "look": "banner",
+        "title": "Lo mejor *de hoy*",
+        "photo": "slot:re-hero",
+        "product": "demo-1"
+      },
+      {
+        "type": "press-quotes",
+        "look": "marquee",
+        "items": [
+          {
+            "title": "Revista Sabor"
+          },
+          {
+            "title": "Diario Cocina"
+          },
+          {
+            "title": "Blog Snack"
+          },
+          {
+            "title": "Revista Familia"
+          }
+        ]
+      },
+      {
+        "type": "reviews-cards",
+        "title": "No lo decimos *nosotros*"
+      },
+      {
+        "type": "social-posts",
+        "look": "circles",
+        "title": "@tumarca en redes",
+        "eyebrow": "Síguenos",
+        "handle": "@tumarca",
+        "social": "https://instagram.com/",
+        "items": [
+          {
+            "title": "1",
+            "photo": "slot:re-p3"
+          },
+          {
+            "title": "2",
+            "photo": "slot:cr-gente1"
+          },
+          {
+            "title": "3",
+            "photo": "slot:re-story"
+          },
+          {
+            "title": "4",
+            "photo": "slot:cr-p2"
+          },
+          {
+            "title": "5",
+            "photo": "slot:an-p3"
+          }
+        ]
+      },
+      {
+        "type": "strip-services",
+        "band": "deep"
+      }
+    ]
+  }
+}

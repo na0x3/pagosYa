@@ -1725,6 +1725,63 @@ main[data-lb-home]{overflow-x:clip}
 }
 /* /lb:wave-divider */
 
+/* lb:categories-list */
+.lb-stackcats__eyebrow{text-align:center}
+.lb-stackcats{display:grid;justify-items:center;gap:0;margin:0;padding:0;list-style:none}
+.lb-stackcats a{display:flex;color:color-mix(in srgb,var(--es-ink) 22%,var(--es-paper));font:900 italic clamp(40px,7vw,104px)/.92 var(--es-heading);letter-spacing:-.02em;text-transform:uppercase;text-decoration:none;transition:color .3s}
+.lb-stackcats a:hover,.lb-stackcats a:focus-visible{color:var(--es-accent)}
+.lb-stackcats span{display:inline-block}
+:root:not([data-es-still]) .lb:not([data-in]) .lb-stackcats span{transform:translateY(100%);opacity:0}
+.lb[data-in] .lb-stackcats span{animation:lb-char .6s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--n,0) * 28ms)}
+@keyframes lb-char{0%{transform:translateY(100%);opacity:0}100%{transform:none;opacity:1}}
+/* /lb:categories-list */
+/* lb:checker-rows */
+.lb-zig{display:grid;gap:14px;margin:clamp(24px,3vw,40px) 0 0;padding:0;list-style:none}
+.lb-zig li{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.lb-zig li[data-flip] .lb-zig__tile{order:2}
+.lb-zig__tile{display:grid;place-content:center;justify-items:center;gap:10px;min-height:clamp(220px,24vw,320px);padding:28px;border-radius:var(--lb-r-lg);background:#ffb98a;text-align:center}
+.lb-zig li:nth-child(3n+2) .lb-zig__tile{background:#e6f08f}.lb-zig li:nth-child(3n) .lb-zig__tile{background:#9fe2f0}
+.lb-zig__tile h3{margin:0;font:900 italic clamp(22px,2.4vw,34px)/1 var(--es-heading);text-transform:uppercase}
+.lb-zig__tile p{margin:0;max-width:34ch;font-size:14px;line-height:1.55}
+.lb-zig__photo{border-radius:var(--lb-r-lg);overflow:hidden}
+.lb-zig__photo img{width:100%;height:100%;min-height:clamp(220px,24vw,320px);object-fit:cover}
+@media (max-width:760px){.lb-zig li{grid-template-columns:1fr}.lb-zig li[data-flip] .lb-zig__tile{order:0}}
+/* /lb:checker-rows */
+/* lb:compare-table */
+.lb-compare-table[data-lb-look="stickers"]{position:relative;overflow:hidden}
+.lb-stickers{position:absolute;inset:0;pointer-events:none}
+.lb-sticker{position:absolute;width:clamp(110px,13vw,190px);aspect-ratio:3/4;object-fit:cover;border-radius:14px;box-shadow:0 18px 40px -20px rgba(0,0,0,.45)}
+.lb-sticker--1{left:2%;bottom:6%;transform:rotate(-12deg) translateY(calc((var(--p,.5) - .5) * -80px))}
+.lb-sticker--2{right:3%;bottom:14%;transform:rotate(10deg) translateY(calc((var(--p,.5) - .5) * 80px))}
+.lb-compare-table[data-lb-look="stickers"] .lb-compare{position:relative;z-index:1}
+@media (max-width:760px){.lb-sticker{display:none}}
+/* /lb:compare-table */
+/* lb:statement-reveal */
+.lb-reveal__sticker{position:absolute;right:8%;top:50%;width:clamp(90px,10vw,150px);aspect-ratio:1;object-fit:cover;border-radius:50%;transform:translateY(calc((0.5 - var(--p,.5)) * 600px)) rotate(8deg);z-index:2}
+.lb-reveal__pin{position:sticky}
+/* /lb:statement-reveal */
+/* lb:products-spotlight */
+.lb-best{display:grid;justify-items:center}
+.lb-best__photo{width:100%;aspect-ratio:21/9;max-height:min(52vh,460px);border-radius:var(--lb-r-lg);overflow:hidden}
+.lb-best__photo img{width:100%;height:100%;object-fit:cover}
+.lb-best__title{position:relative;z-index:1;margin:-.62em 0 18px;color:var(--es-accent);font:900 italic clamp(48px,8vw,124px)/.9 var(--es-heading);text-align:center;text-transform:uppercase;text-shadow:0 2px 0 var(--es-paper)}
+.lb-best__card{width:min(820px,100%)}
+.lb-best__card[data-pagosya-spotlight]{grid-template-columns:1fr!important}
+.lb-best__card .spotlight{grid-template-columns:minmax(0,300px) minmax(0,1fr);align-items:center;column-gap:28px;padding:20px;border:0;border-radius:var(--lb-r-lg);background:var(--es-muted)}
+.lb-best__card .spotlight__image{grid-row:span 4;aspect-ratio:1}
+.lb-best__card .spotlight__name{font:900 italic clamp(22px,2.4vw,32px)/1 var(--es-heading);text-transform:uppercase}
+@media (max-width:760px){.lb-best__card .spotlight{grid-template-columns:1fr}}
+/* /lb:products-spotlight */
+/* lb:social-posts */
+.lb-social-posts[data-lb-look="circles"] .lb-posts{grid-auto-columns:calc((100% - 4 * 16px) / 5)}
+.lb-social-posts[data-lb-look="circles"] .lb-posts__photo{aspect-ratio:1;border-radius:50%}
+.lb-social-posts[data-lb-look="circles"] .lb-posts__handle,.lb-social-posts[data-lb-look="circles"] .lb-posts__look{display:none}
+@media (max-width:760px){.lb-social-posts[data-lb-look="circles"] .lb-posts{grid-auto-columns:44%}}
+/* /lb:social-posts */
+/* lb:cover-ribbon */
+.lb-cover-ribbon[data-lb-look="gumdrop"] .lb-cover-ribbon__media{border:0;border-radius:var(--lb-r-lg);aspect-ratio:4/5}
+/* /lb:cover-ribbon */
+
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
  * ground blown up to the page width (BAEK cover) reads as a mistake; the boxes keep their shape up to a height, then crop. */
 .lb-cover-centered__media{width:min(1080px,calc(100% - 48px));aspect-ratio:2/1;max-height:min(56vh,520px)}
@@ -2068,3 +2125,32 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="shrine2"] main .lb[data-in]:not(.lb-wave):not(.lb-cover){animation:s2-in .8s ease both}
 @media (prefers-reduced-motion:reduce){[data-es-theme="shrine2"] .lb-head h2{animation:none!important;width:auto!important;border:0!important}}
 /* /theme:shrine2 */
+
+/* theme:gumdrop */
+/* Gumdrop (themes.shopify.com/themes/gumdrop, SharkBites): cream ground, rusty brown, peach / lime / teal tiles, heavy italic
+ * uppercase titles, round buttons, a curved ribbon of words. Measured on the demo: items slide up 20px .5s ease, staggered 75ms;
+ * category names rise letter by letter; stickers drift with the scroll; the top bar slides sideways. */
+@keyframes gu-in{0%{opacity:.01;transform:translateY(20px)}100%{opacity:1;transform:none}}
+[data-es-theme="gumdrop"] .es-announce{background:var(--es-ink);color:#fff;font-size:12px}
+[data-es-theme="gumdrop"] .es-header{background:var(--es-accent);color:#fff;border-bottom:0}
+[data-es-theme="gumdrop"] .es-header :is(a,button,.es-logo,.es-icon-btn){color:#fff}
+[data-es-theme="gumdrop"] .es-header__links a{padding:6px 14px;border-radius:99px;background:rgba(255,255,255,.16);font:800 italic 12px/1 var(--es-heading);text-transform:uppercase}
+[data-es-theme="gumdrop"] .es-logo{font:900 italic 24px/1 var(--es-heading);text-transform:uppercase}
+[data-es-theme="gumdrop"] :is(.es-h2,.lb-title,.lb-head h2,.lb-cover-ribbon h1,.lb-compare__copy h2){font:900 italic clamp(32px,4.4vw,64px)/.95 var(--es-heading);letter-spacing:-.01em;text-transform:uppercase}
+[data-es-theme="gumdrop"] .lb-bleed.lb-cover-ribbon{background:var(--es-base-accent,#a2461b);color:#fff;--es-ink:#fff}
+[data-es-theme="gumdrop"] .lb-cover-ribbon .lb-em{color:#ffb98a}
+[data-es-theme="gumdrop"] .lb-cover-ribbon :is(h1,p){color:#fff}
+[data-es-theme="gumdrop"] .lb-em{color:#ffb98a}
+[data-es-theme="gumdrop"] .es-section:not([data-es-band]) .lb-em{color:var(--es-accent)}
+[data-es-theme="gumdrop"] .es-btn{border-radius:99px;font:800 italic 12px/1 var(--es-heading);letter-spacing:.04em;text-transform:uppercase}
+[data-es-theme="gumdrop"] .lb-tabs button{font:900 italic clamp(22px,2.4vw,34px)/1 var(--es-heading);text-transform:uppercase}
+[data-es-theme="gumdrop"] .lb-card[data-lb-card="soft"]{background:#ffe7d6}
+[data-es-theme="gumdrop"] .lb-card .es-card__name{font:900 italic 16px/1.1 var(--es-heading);text-transform:uppercase}
+[data-es-theme="gumdrop"] .lb-press-run__run span{font:800 clamp(22px,2.4vw,32px)/1 var(--es-body);color:var(--es-ink);letter-spacing:-.01em}
+[data-es-theme="gumdrop"] .lb-reviews-cards .review,[data-es-theme="gumdrop"] .lb-reviews-cards [class*="review"]{border-radius:var(--lb-r-lg)}
+[data-es-theme="gumdrop"] .es-footer{background:#3a1c0c;color:#fff}
+[data-es-theme="gumdrop"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+:root:not([data-es-still]) [data-es-theme="gumdrop"] main .lb:not([data-in]) :is(.lb-head,.lb-zig li,.lb-compare,.lb-posts__post,.lb-services li,.menu-item){opacity:.01}
+[data-es-theme="gumdrop"] main .lb[data-in] :is(.lb-head,.lb-zig li,.lb-compare,.lb-posts__post,.lb-services li,.menu-item){animation:gu-in .5s ease both}
+[data-es-theme="gumdrop"] main .lb[data-in] :is(li,.menu-item):nth-child(2){animation-delay:.075s}[data-es-theme="gumdrop"] main .lb[data-in] :is(li,.menu-item):nth-child(3){animation-delay:.15s}[data-es-theme="gumdrop"] main .lb[data-in] :is(li,.menu-item):nth-child(n+4){animation-delay:.225s}
+/* /theme:gumdrop */
