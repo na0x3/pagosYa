@@ -17,7 +17,7 @@ import { sourceResponseJson } from './source-response';
 import { SUGGESTIONS_PROMPT, SUGGESTIONS_SCHEMA, type SuggestionInput } from './source-suggestions';
 import type { MasterCopy } from '@pagosya/store-templates';
 import { MASTER_COLOURS, MASTER_COPY_CAPS, MASTER_VALUE_CAPS, type MasterLook, type MasterRead } from './source-master';
-import { LIBRARY_CATALOG, LIBRARY_ICON_NAMES, LIBRARY_PROMPT, libraryAnswerSchema, type LibraryFacts } from './source-section-library';
+import { LIBRARY_CATALOG, LIBRARY_FILL_PROMPT, LIBRARY_ICON_NAMES, LIBRARY_PROMPT, libraryAnswerSchema, type LayoutBlock, type LibraryFacts } from './source-section-library';
 import type { StoreMenu } from './source-store-menu';
 import { PLANTILLA_FILL_PROMPT, plantillaFillFromRead, plantillaFillSchema } from './source-plantilla-fill';
 import type { TemplateCopySlot } from '@pagosya/store-templates';
@@ -305,7 +305,7 @@ export class SourceConversationService {
 
   /** Section library (spec 2026-10-31): one structured call that picks, orders and fills the home's sections. The raw answer, which
    *  validateLibraryLayout makes safe; null when it fails twice. Photos are the merchant's uploads, shown to the model by index. */
-  async composeLibrary(merchantId: string, input: { storeId: string; model?: string; facts: LibraryFacts }): Promise<{ blocks?: unknown[] } | null> {
+  async composeLibrary(merchantId: string, input: { storeId: string; model?: string; facts: LibraryFacts; template?: LayoutBlock[] }): Promise<{ blocks?: unknown[] } | null> {
     // Its own model, not the capped conversation one: the picks and words are the store's whole look (terra by default).
     const model = input.model || this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
     const provider = sourceProvider(this.config, model);
@@ -320,13 +320,18 @@ export class SourceConversationService {
     }
     const { photos: _urls, ...rest } = input.facts;
     const facts = { ...rest, photos: input.facts.photos.map((photo, index) => ({ index, ...(photo.product ? { product: photo.product } : {}), ...(photo.category ? { category: photo.category } : {}) })),
-      icons: LIBRARY_ICON_NAMES, catalogue: LIBRARY_CATALOG.map(({ id, role, use, looks }) => ({ id, role, use, ...(looks ? { looks } : {}) })) };
+      icons: LIBRARY_ICON_NAMES,
+      // A store on a template (34 templates): only that template's sections, with their example words; else the free catalogue.
+      ...(input.template?.length
+        ? { plantilla: input.template.map(({ photo: _p, photo2: _p2, items, ...block }) => ({ ...block, ...(items ? { items: items.map(({ photo: _ip, ...item }) => item) } : {}) })),
+            catalogue: LIBRARY_CATALOG.filter(section => input.template!.some(block => block.type === section.id)).map(({ id, role, use }) => ({ id, role, use })) }
+        : { catalogue: LIBRARY_CATALOG.filter(section => !section.templateOnly).map(({ id, role, use, looks }) => ({ id, role, use, ...(looks ? { looks } : {}) })) }) };
     for (let attempt = 0; attempt < 2; attempt++) {
       const started = Date.now(); let body: any = null; let status = 'FAILED';
       try {
         const response = await fetch(provider.endpoint, {
           method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(120_000),
-          body: JSON.stringify({ model, store: false, instructions: LIBRARY_PROMPT,
+          body: JSON.stringify({ model, store: false, instructions: input.template?.length ? `${LIBRARY_PROMPT}\n\n${LIBRARY_FILL_PROMPT}` : LIBRARY_PROMPT,
             input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(facts) }, ...images] }],
             text: { format: { type: 'json_schema', name: 'section_library', strict: true, schema: libraryAnswerSchema(photos.length) } },
             reasoning: { effort: 'low' }, max_output_tokens: 6000 }),

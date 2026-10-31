@@ -1,4 +1,4 @@
-import { buildLibraryFacts, libraryAnswerSchema, libraryHours, LIBRARY_CATALOG, validateLibraryLayout, type LibraryFacts } from './source-section-library';
+import { buildLibraryFacts, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, type LibraryFacts } from './source-section-library';
 
 const facts = (over: Partial<LibraryFacts> = {}): LibraryFacts => ({
   storeName: 'Dulce Nube', what: 'Galletas artesanales', story: '', city: 'La Paz', request: '', tone: 'calm',
@@ -138,3 +138,60 @@ describe('library facts', () => {
     expect(libraryHours(hours)).toBe('Lunes a viernes, 09:00 a 19:00 · sábado, 10:00 a 14:00');
   });
 });
+
+describe('template fill mode (34 templates)', () => {
+  const template = [
+    { type: 'bar-note', title: 'Demo' },
+    { type: 'cover-stage', title: 'Eleva tu estilo', photo: 'slot:hero1' },
+    { type: 'promo-countdown', title: 'Oferta', endsAt: '2026-12-31' },
+    { type: 'products-slider', card: 'ribbon', title: 'Lo más buscado' },
+    { type: 'social-posts', title: 'Comunidad' },
+    { type: 'shop-look', photo: 'slot:e-hero' },
+    { type: 'press-quotes', eyebrow: 'Prensa' },
+    { type: 'promo-trio', look: 'single', photo: 'slot:look1' },
+    { type: 'faq-split', title: 'Preguntas' },
+  ];
+  const answer = { blocks: [
+    { type: 'faq-split', title: 'Dudas', items: [{ title: '¿Envíos?', text: 'Sí.' }, { title: '¿Recojo?', text: 'No.' }, { title: '¿Pago?', text: 'En línea.' }] },
+    { type: 'bar-note', title: 'Galletas hechas cada mañana en La Paz' },
+    { type: 'cover-stage', title: 'Galletas de verdad', photo: 0, look: 'nope', band: 'deep' },
+    { type: 'promo-countdown', title: '20% en cajas', endsAt: '2026-11-15T23:59:00-04:00' },
+    { type: 'products-slider', title: 'Las favoritas', card: 'soft' },
+    { type: 'social-posts', items: [{ title: 'a', photo: 1 }, { title: 'b', photo: 2 }, { title: 'c', photo: 3 }] },
+    { type: 'shop-look', photo: 4, items: [{ title: 'brownie', x: 40, y: 120 }, { title: 'Pastel inventado', x: 20, y: 20 }] },
+    { type: 'press-quotes', items: [{ title: 'Diario Inventado', text: 'Las mejores del país' }, { title: 'Página Siete', text: 'Galletas que saben a casa' }] },
+    { type: 'promo-trio', photo: 2, items: [{ title: 'Cajas' }, { title: 'Regalos' }, { title: 'Clásicas' }] },
+  ] };
+  const now = Date.parse('2026-10-31T12:00:00Z');
+
+  it('keeps the template order, type, look, band and card; drops what the store cannot back', () => {
+    const story = 'Página Siete escribió: «galletas que saben a casa». Oferta hasta el 15 de noviembre.';
+    const layout = validateLibraryLayout(answer as never, facts({ story }), { fixed: template as never, now });
+    expect(types(layout)).toEqual(['bar-note', 'cover-stage', 'promo-countdown', 'products-slider', 'shop-look', 'press-quotes', 'promo-trio', 'faq-split']);
+    expect(layout.find(block => block.type === 'products-slider')!.card).toBe('ribbon');
+    expect(layout.find(block => block.type === 'cover-stage')!.band).toBeUndefined();
+    expect(layout.find(block => block.type === 'shop-look')!.items).toEqual([{ title: 'Brownie', x: 40, y: 94 }]);
+    expect(layout.find(block => block.type === 'press-quotes')!.items!.map(item => item.title)).toEqual(['Página Siete']);
+    expect(layout.find(block => block.type === 'promo-trio')!.photo).toBeDefined();
+  });
+
+  it('drops the countdown without the merchant date, and social sections without the store account', () => {
+    const layout = validateLibraryLayout(answer as never, facts(), { fixed: template as never, now });
+    expect(types(layout)).not.toContain('promo-countdown');
+    expect(types(layout)).not.toContain('social-posts');
+    const social = validateLibraryLayout(answer as never, facts({ social: { handle: '@dulce', url: 'https://instagram.com/dulce' } }), { fixed: template as never, now });
+    expect(social.find(block => block.type === 'social-posts')!.handle).toBe('@dulce');
+  });
+
+  it('never offers template-only sections when composing freely', () => {
+    expect(types(validateLibraryLayout({ blocks: [{ type: 'press-quotes', items: [{ title: 'X', text: 'Y' }] }] as never }, facts()))).not.toContain('press-quotes');
+  });
+
+  it('reads the social account and the offer end', () => {
+    expect(librarySocial([{ label: 'IG', url: 'https://www.instagram.com/dulce.nube/' }])).toEqual({ handle: '@dulce.nube', url: 'https://www.instagram.com/dulce.nube/' });
+    expect(librarySocial([{ label: 'post', url: 'https://instagram.com/p/abc' }])).toBeUndefined();
+    expect(libraryOfferEnd('2026-11-15T23:59:00-04:00', 'oferta hasta el 15 de noviembre', now)).toBeDefined();
+    expect(libraryOfferEnd('2026-11-15T23:59:00-04:00', 'oferta por tiempo limitado', now)).toBeUndefined();
+  });
+});
+

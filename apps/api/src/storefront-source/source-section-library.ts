@@ -5,8 +5,13 @@
 
 export type LibraryRole = 'cover' | 'strip' | 'products' | 'story' | 'benefits' | 'proof' | 'promo' | 'info' | 'closing';
 export type LibraryNeeds = { photos?: number; items?: [number, number]; products?: [number, number]; product?: boolean; categories?: number;
-  reviews?: boolean; code?: boolean; location?: boolean; services?: boolean; itemPhotos?: number; mood?: 'bold' };
-export type LibrarySection = { id: string; role: LibraryRole; use: string; needs: LibraryNeeds; looks?: string[] };
+  reviews?: boolean; code?: boolean; location?: boolean; services?: boolean; itemPhotos?: number; mood?: 'bold';
+  /** 34 templates (2026-10-31): a date the merchant named (countdown), the store's own social account, real products pinned on a
+   *  photo, outlets and words the merchant gave (press), a text the section cannot do without. */
+  date?: boolean; social?: boolean; pins?: boolean; press?: boolean; text?: boolean };
+export type LibrarySection = { id: string; role: LibraryRole; use: string; needs: LibraryNeeds; looks?: string[];
+  /** Only inside a template's fixed home (34 templates): never offered when YAPI composes a home freely. */
+  templateOnly?: boolean };
 
 /** What each section is for, in the words the model reads (Spanish, like every YAPI prompt). */
 export const LIBRARY_CATALOG: readonly LibrarySection[] = [
@@ -44,6 +49,21 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'visit-store', role: 'info', use: 'Visítanos: foto y la dirección y el horario de la tienda (las filas las pone pagosYa).', needs: { location: true } },
   { id: 'closing-photo', role: 'closing', use: 'Cierre: foto a todo el ancho con una frase final y botón.', needs: { photos: 1 } },
   { id: 'closing-wordmark', role: 'closing', use: 'Cierre: foto, frase final y botón, y el nombre de la tienda enorme al final.', needs: {} },
+  // 34 templates (2026-10-31): parts of the themes' fixed homes.
+  { id: 'bar-note', role: 'strip', use: 'Una línea breve bajo el menú (title, 4 a 10 palabras): un dato real de la tienda.', needs: {}, templateOnly: true },
+  { id: 'cover-stage', role: 'cover', use: 'Portada de foto completa con titular, texto y dos botones apilados; items con photo = fotos extra que se alternan.', needs: { photos: 1, items: [0, 2] }, templateOnly: true },
+  { id: 'promo-countdown', role: 'promo', use: 'Oferta con cuenta regresiva hasta endsAt (fecha ISO). Solo si el comercio dijo hasta cuándo dura su oferta.', needs: { date: true }, templateOnly: true },
+  { id: 'story-stack', role: 'story', use: '2 o 3 frases (items.title, 8 a 16 palabras) cada una con su foto, que pasan junto a las fotos fijas.', needs: { items: [2, 3], itemPhotos: 2 }, templateOnly: true },
+  { id: 'statement-reveal', role: 'story', use: 'Un párrafo grande (text, 25 a 45 palabras) que se ilumina palabra por palabra; una frase de 2 o 3 palabras entre *asteriscos* va subrayada.', needs: { text: true }, templateOnly: true },
+  { id: 'categories-list', role: 'products', use: 'Lista de categorías (items.title = nombre exacto, photo = una foto de esa categoría) junto a la foto de la que se señala.', needs: { categories: 2, items: [2, 6], itemPhotos: 2 }, templateOnly: true },
+  { id: 'marquee-photo', role: 'promo', use: 'Foto a todo el ancho con 1 a 3 palabras que corren encima (items.title) y un botón.', needs: { photos: 1, items: [1, 3] }, templateOnly: true },
+  { id: 'story-overlap', role: 'story', use: 'Dos fotos superpuestas (photo y photo2) junto a un titular y 2 a 4 puntos (items).', needs: { photos: 2, items: [0, 4] }, templateOnly: true },
+  { id: 'promo-trio', role: 'promo', use: 'Tres columnas con título y enlace: con look single sobre una sola foto (photo); si no, cada una con su foto (items.photo).', needs: { items: [2, 3] }, looks: ['single', 'tiles'], templateOnly: true },
+  { id: 'products-slider', role: 'products', use: 'Fila de productos que se desliza, con titular y botón a todos.', needs: {}, templateOnly: true },
+  { id: 'social-posts', role: 'proof', use: 'Publicaciones de la tienda: fotos (items.photo) con su @cuenta y «Ver el look». Solo si la tienda enlazó su Instagram o TikTok.', needs: { social: true, items: [3, 8], itemPhotos: 3 }, templateOnly: true },
+  { id: 'social-marquee', role: 'proof', use: 'Titular con una palabra en *asteriscos* (va en letra manuscrita) y fotos que corren con «síguenos» y la @cuenta. Solo con cuenta enlazada.', needs: { social: true, items: [3, 6], itemPhotos: 3 }, templateOnly: true },
+  { id: 'shop-look', role: 'products', use: 'Foto con puntos sobre los productos que aparecen en ella (items.title = nombre exacto del producto; x, y = posición en % sobre la foto).', needs: { photos: 1, items: [1, 4], pins: true }, templateOnly: true },
+  { id: 'press-quotes', role: 'proof', use: 'Lo que dijo la prensa: items.title = el medio, items.text = su frase. Solo medios y frases que el comercio escribió.', needs: { items: [1, 5], press: true }, templateOnly: true },
 ];
 const BY_ID = new Map(LIBRARY_CATALOG.map(section => [section.id, section]));
 /** The product card, from the same themes (owner 2026-10-31); the main grid carries it and the Shell shows it on every page. */
@@ -61,6 +81,8 @@ export type LibraryFacts = {
   services: Array<{ title: string; text: string; icon: string }>;
   location?: { name: string; address: string; hours?: string };
   reviews: number;
+  /** The store's own Instagram or TikTok (from its links): social-* sections need it. */
+  social?: { handle: string; url: string };
 };
 
 /** The answer schema (strict): every field is present; empty strings and -1 stand for «none». */
@@ -68,15 +90,23 @@ export function libraryAnswerSchema(photoCount: number) {
   const ids = LIBRARY_CATALOG.map(section => section.id);
   const looks = [...new Set(LIBRARY_CATALOG.flatMap(section => section.looks ?? [])), ''];
   const photo = { type: 'integer', minimum: -1, maximum: Math.max(0, photoCount - 1) };
-  const item = { type: 'object', additionalProperties: false, required: ['title', 'text', 'icon', 'photo', 'link', 'value'], properties: {
-    title: { type: 'string' }, text: { type: 'string' }, icon: { type: 'string', enum: [...LIBRARY_ICON_NAMES, ''] }, photo, link: { type: 'string' }, value: { type: 'string', enum: ['yes', 'no', ''] } } };
+  const item = { type: 'object', additionalProperties: false, required: ['title', 'text', 'icon', 'photo', 'link', 'value', 'x', 'y'], properties: {
+    title: { type: 'string' }, text: { type: 'string' }, icon: { type: 'string', enum: [...LIBRARY_ICON_NAMES, ''] }, photo, link: { type: 'string' }, value: { type: 'string', enum: ['yes', 'no', ''] },
+    x: { type: 'number' }, y: { type: 'number' } } };
   const block = { type: 'object', additionalProperties: false,
-    required: ['type', 'look', 'band', 'eyebrow', 'title', 'text', 'cta', 'link', 'cta2', 'link2', 'photo', 'photo2', 'items', 'products', 'product', 'code', 'card'],
+    required: ['type', 'look', 'band', 'eyebrow', 'title', 'text', 'cta', 'link', 'cta2', 'link2', 'photo', 'photo2', 'items', 'products', 'product', 'code', 'card', 'endsAt'],
     properties: { type: { type: 'string', enum: ids }, look: { type: 'string', enum: looks }, band: { type: 'string', enum: ['paper', 'muted', 'accent', 'deep', ''] },
       eyebrow: { type: 'string' }, title: { type: 'string' }, text: { type: 'string' }, cta: { type: 'string' }, link: { type: 'string' }, cta2: { type: 'string' }, link2: { type: 'string' },
-      photo, photo2: photo, items: { type: 'array', items: item }, products: { type: 'array', items: { type: 'string' } }, product: { type: 'string' }, code: { type: 'string' }, card: { type: 'string', enum: [...LIBRARY_CARDS, ''] } } };
+      photo, photo2: photo, items: { type: 'array', items: item }, products: { type: 'array', items: { type: 'string' } }, product: { type: 'string' }, code: { type: 'string' }, card: { type: 'string', enum: [...LIBRARY_CARDS, ''] }, endsAt: { type: 'string' } } };
   return { type: 'object', additionalProperties: false, required: ['blocks'], properties: { blocks: { type: 'array', items: block } } };
 }
+
+/** 34 templates: what changes when the store already wears a template — the answer only fills the template's own sections. */
+export const LIBRARY_FILL_PROMPT = `MODO PLANTILLA: la tienda ya usa una plantilla completa (en «plantilla»: sus secciones en orden, con palabras de ejemplo).
+Responde «blocks» con EXACTAMENTE esas secciones, del mismo tipo y en el mismo orden; no agregues, quites ni cambies ninguna. Escribe
+todo de nuevo con los datos y la voz de esta tienda (las palabras de ejemplo solo marcan el largo y el tono; nunca las copies), elige
+las fotos de la tienda para cada sección y sus items, y deja vacío (o sin items) lo que la tienda no puede respaldar: el código la quita.
+look, band y card los pone la plantilla: déjalos vacíos.`;
 
 export const LIBRARY_PROMPT = `Eres el director de arte de una tienda online pagosYa. Armas su portada con secciones ya diseñadas (como un tema de Shopify):
 eliges cuáles, su orden y escribes sus textos. No diseñas nada: el diseño ya está hecho.
@@ -116,15 +146,21 @@ const TEXT_CAPS = { eyebrow: 40, title: 80, text: 240, cta: 28, cta2: 28, itemTi
 const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const clip = (value: unknown, cap: number) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, cap).trim();
 
-type RawItem = { title?: string; text?: string; icon?: string; photo?: number; link?: string; value?: string };
+type RawItem = { title?: string; text?: string; icon?: string; photo?: number; link?: string; value?: string; x?: number; y?: number };
 type RawBlock = { type?: string; look?: string; band?: string; eyebrow?: string; title?: string; text?: string; cta?: string; link?: string; cta2?: string; link2?: string;
-  photo?: number; photo2?: number; items?: RawItem[]; products?: string[]; product?: string; code?: string; card?: string };
-export type LayoutItem = { title: string; text?: string; icon?: string; photo?: string; link?: string; value?: string };
+  photo?: number; photo2?: number; items?: RawItem[]; products?: string[]; product?: string; code?: string; card?: string; endsAt?: string };
+export type LayoutItem = { title: string; text?: string; icon?: string; photo?: string; link?: string; value?: string; x?: number; y?: number };
 export type LayoutBlock = { type: string; look?: string; band?: string; eyebrow?: string; title?: string; text?: string; cta?: string; link?: string; cta2?: string; link2?: string;
-  photo?: string; photo2?: string; items?: LayoutItem[]; products?: string[]; product?: string; code?: string; card?: string };
+  photo?: string; photo2?: string; items?: LayoutItem[]; products?: string[]; product?: string; code?: string; card?: string; endsAt?: string; handle?: string; social?: string };
 
 /** A model answer → a layout the template can always draw. Photos come back as the store's own URLs (bundled by the caller). */
-export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | undefined, facts: LibraryFacts): LayoutBlock[] {
+/** 34 templates (2026-10-31): `fixed` is a template's home — the answer only fills it. Its blocks keep their order, type, look, band
+ *  and card; each takes the answer's first block of the same type (its words, photos, items); a block the answer left out, or that
+ *  the store cannot back, goes. Nothing is added or moved. */
+export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | undefined, facts: LibraryFacts, options: { fixed?: LayoutBlock[]; now?: number } = {}): LayoutBlock[] {
+  const fixedMode = Boolean(options.fixed?.length);
+  const now = options.now ?? Date.now();
+  const merchantWords = fold(`${facts.what} ${facts.story} ${facts.request}`);
   const used = new Set<number>();
   const productByName = new Map(facts.products.map(product => [fold(product.name), product]));
   const productById = new Map(facts.products.map(product => [product.id, product]));
@@ -145,24 +181,32 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     return 'products';
   };
   const blocks: LayoutBlock[] = [];
-  for (const raw of answer?.blocks ?? []) {
+  const answered = [...(answer?.blocks ?? [])];
+  const sequence: RawBlock[] = fixedMode ? options.fixed!.flatMap(template => {
+    const at = answered.findIndex(raw => raw.type === template.type);
+    if (at < 0) return [];
+    const [raw] = answered.splice(at, 1);
+    return [{ ...raw, type: template.type, look: template.look ?? '', band: template.band ?? '', card: template.card ?? '' }];
+  }) : answered;
+  for (const raw of sequence) {
     const section = BY_ID.get(String(raw.type ?? ''));
-    if (!section) continue;
+    if (!section || (section.templateOnly && !fixedMode)) continue;
     const needs = section.needs;
     if (needs.mood === 'bold' && facts.tone !== 'bold') continue;
     if (needs.reviews && facts.reviews <= 0) continue;
     if (needs.location && !facts.location) continue;
     if (needs.services && facts.services.length < 2) continue;
     if (needs.categories && facts.categories.length < needs.categories) continue;
-    if (blocks.some(block => block.type === section.id)) continue;
+    if (needs.social && !facts.social) continue;
+    if (!fixedMode && blocks.some(block => block.type === section.id)) continue;
     // Live 2026-10-31 (Oh Belly): the ribbon cover already runs its words; a marquee after it is the same band twice.
     if (section.id === 'strip-marquee' && (answer?.blocks ?? []).some(other => other.type === 'cover-ribbon')) continue;
     // The main grid shows up to 8 products: on a smaller catalogue a hand-picked row only repeats it (Oh Belly, 5 products).
     if (section.id === 'products-cards' && facts.products.length <= 8) continue;
-    if (section.role === 'cover' && blocks.some(block => BY_ID.get(block.type)?.role === 'cover')) continue;
-    if (section.role === 'products' && ['products-grid', 'products-tabs'].includes(section.id) && blocks.some(block => ['products-grid', 'products-tabs'].includes(block.type))) continue;
+    if (!fixedMode && section.role === 'cover' && blocks.some(block => BY_ID.get(block.type)?.role === 'cover')) continue;
+    if (!fixedMode && section.role === 'products' && ['products-grid', 'products-tabs'].includes(section.id) && blocks.some(block => ['products-grid', 'products-tabs'].includes(block.type))) continue;
     const block: LayoutBlock = { type: section.id };
-    if (section.id === 'products-grid' || section.id === 'products-tabs') block.card = (LIBRARY_CARDS as readonly string[]).includes(raw.card ?? '') ? raw.card : defaultCard(facts);
+    if (section.id === 'products-grid' || section.id === 'products-tabs' || section.id === 'products-slider') block.card = (LIBRARY_CARDS as readonly string[]).includes(raw.card ?? '') ? raw.card : defaultCard(facts);
     if (raw.look && section.looks?.includes(raw.look)) block.look = raw.look;
     if (raw.band && ['paper', 'muted', 'accent', 'deep'].includes(raw.band)) block.band = raw.band;
     for (const field of ['eyebrow', 'title', 'text', 'cta', 'cta2'] as const) { const value = clip(raw[field], TEXT_CAPS[field]); if (value) block[field] = value; }
@@ -171,20 +215,29 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (block.cta2 && second) block.link2 = second; else delete block.cta2;
     // Photos: the section's own, then its items'; a section that needs more photos than it got is dropped (its photos freed).
     const before = new Set(used);
-    if ((needs.photos ?? 0) >= 1 || ['compare-table', 'faq-split', 'visit-store', 'promo-code', 'closing-wordmark', 'statement-inline'].includes(section.id)) {
+    const single = section.id === 'promo-trio' && raw.look === 'single';
+    if ((needs.photos ?? 0) >= 1 || single || ['compare-table', 'faq-split', 'visit-store', 'promo-code', 'closing-wordmark', 'statement-inline'].includes(section.id)) {
       const photo = takePhoto(raw.photo); if (photo) block.photo = photo;
     }
     if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline') { const photo2 = takePhoto(raw.photo2); if (photo2) block.photo2 = photo2; }
     // Items: capped words, a known icon, an item photo where the section shows one, a value only in the comparison.
     const [minItems, maxItems] = needs.items ?? [0, 0];
+    const itemPhoto = Boolean(needs.itemPhotos) || section.id === 'cover-stage' || (section.id === 'promo-trio' && !single);
     let items: LayoutItem[] = (raw.items ?? []).slice(0, Math.max(maxItems, needs.categories ? 4 : 0)).map(item => {
       const out: LayoutItem = { title: clip(item.title, TEXT_CAPS.itemTitle) };
       const text = clip(item.text, TEXT_CAPS.itemText); if (text) out.text = text;
       if (item.icon && (LIBRARY_ICON_NAMES as readonly string[]).includes(item.icon)) out.icon = item.icon;
       if (section.id === 'compare-table') out.value = item.value === 'yes' ? 'yes' : 'no';
-      if (needs.itemPhotos) { const photo = takePhoto(item.photo); if (photo) out.photo = photo; const target = link(item.link); if (target) out.link = target; }
+      if (itemPhoto) { const photo = takePhoto(item.photo); if (photo) out.photo = photo; }
+      if (itemPhoto || section.id === 'promo-trio') { const target = link(item.link); if (target) out.link = target; }
+      if (needs.pins && Number.isFinite(item.x) && Number.isFinite(item.y)) { out.x = Math.round(Math.min(94, Math.max(6, Number(item.x)))); out.y = Math.round(Math.min(94, Math.max(6, Number(item.y)))); }
       return out;
     }).filter(item => item.title);
+    // Pins name real products; press is only the outlets and words the merchant wrote.
+    if (needs.pins) items = items.filter(item => item.x !== undefined && productByName.has(fold(item.title))).map(item => ({ ...item, title: productByName.get(fold(item.title))!.name }));
+    if (needs.press) items = items.filter(item => merchantWords.includes(fold(item.title)) && Boolean(item.text) && merchantWords.includes(fold(item.text!).replace(/[«»"“”.]/g, '').trim()));
+    if (section.id === 'promo-trio' && !single) items = items.filter(item => item.photo);
+    if (section.id === 'categories-list') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));
     if (section.id === 'categories-tiles') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));
     if (needs.itemPhotos) items = items.filter(item => item.photo);
     if (section.id === 'strip-services') items = facts.services.slice(0, 4);
@@ -198,12 +251,16 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (needs.product) { const found = productById.get(String(raw.product ?? '')) ?? productByName.get(fold(String(raw.product ?? ''))); if (found) block.product = found.id; }
     if (needs.code || section.id === 'cover-half') { const code = facts.codes.find(entry => fold(entry.code) === fold(String(raw.code ?? ''))); if (code) block.code = code.code; }
     if (section.id === 'visit-store' && facts.location && !block.title) block.title = facts.location.name;
+    if (needs.social && facts.social) { block.handle = facts.social.handle; block.social = facts.social.url; }
+    if (needs.date) { const ends = libraryOfferEnd(raw.endsAt, merchantWords, now); if (ends) block.endsAt = ends; }
     // Needs met, or the block goes (and gives its photos back).
     const photos = [block.photo, block.photo2].filter(Boolean).length;
     const ok = photos >= Math.min(needs.photos ?? 0, 2) && (block.items?.length ?? 0) >= minItems && (!needs.itemPhotos || (block.items ?? []).filter(item => item.photo).length >= needs.itemPhotos)
       && (!needs.products || Boolean(block.products)) && (!needs.product || Boolean(block.product)) && (!needs.code || Boolean(block.code))
       && (section.id !== 'statement-inline' || ((block.title ?? '').split(' ').length >= 4 && Boolean(block.photo)))
-      && (section.id !== 'cover-poster' || Boolean(block.title)) && (section.role !== 'cover' || Boolean(block.title));
+      && (section.id !== 'cover-poster' || Boolean(block.title)) && (section.role !== 'cover' || Boolean(block.title))
+      && (!needs.text || Boolean(block.text)) && (!needs.date || Boolean(block.endsAt)) && (!single || Boolean(block.photo))
+      && (section.id !== 'promo-trio' || single || (block.items?.length ?? 0) >= 3) && (section.id !== 'bar-note' || Boolean(block.title));
     if (!ok) { for (const at of [...used]) if (!before.has(at)) used.delete(at); continue; }
     // Owner rule (no dark band of words alone): accent and deep only behind a photo or products.
     // Product cards are drawn for a light ground (Oh Belly live 2026-10-31: names and prices vanished on a deep grid band).
@@ -211,7 +268,18 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if ((block.band === 'deep' || block.band === 'accent') && !block.photo && !block.products && !block.product && !(block.items ?? []).some(item => item.photo) && section.id !== 'categories-tiles') delete block.band;
     blocks.push(block);
   }
-  return frameLayout(blocks, facts, used);
+  return fixedMode ? blocks : frameLayout(blocks, facts, used);
+}
+
+const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+/** A countdown runs only to a date the merchant wrote («hasta el 15 de noviembre»): the model's ISO date must be ahead (within 120
+ *  days) and its day and month must appear in the merchant's own words. */
+export function libraryOfferEnd(value: unknown, merchantWords: string, now: number): string | undefined {
+  const at = Date.parse(String(value ?? ''));
+  if (!Number.isFinite(at) || at <= now || at - now > 120 * 86_400_000) return undefined;
+  const date = new Date(at - 4 * 3_600_000);
+  const day = date.getUTCDate(), month = MONTHS[date.getUTCMonth()];
+  return new RegExp(`\\b${day}\\s*(de\\s+)?${month}`).test(merchantWords) || new RegExp(`\\b${day}/${date.getUTCMonth() + 1}\\b`).test(merchantWords) ? new Date(at).toISOString() : undefined;
 }
 
 const defaultCard = (facts: LibraryFacts) => facts.tone === 'bold' ? 'soft' : 'classic';
@@ -252,6 +320,8 @@ export type LibraryStoreInput = {
   uploads: string[];
   codes: Array<{ code: string; discountType: string; discountValue: number }>;
   reviews: number;
+  /** The store's links (label + url): its Instagram or TikTok becomes the social sections' account. */
+  links?: Array<{ label: string; url: string }>;
 };
 
 const UPLOAD_PHOTO = /^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp)$/i;
@@ -305,7 +375,17 @@ export function buildLibraryFacts(input: LibraryStoreInput, maxPhotos = 14): Lib
     services: services.length >= 2 ? services : [],
     ...(located?.address ? { location: { name: located.name, address: located.address, ...(libraryHours(located.openingHours) ? { hours: libraryHours(located.openingHours) } : {}) } } : {}),
     reviews: input.reviews,
+    ...(librarySocial(input.links) ? { social: librarySocial(input.links)! } : {}),
   };
+}
+
+/** The store's own Instagram or TikTok account from its links: «@name» and the address. */
+export function librarySocial(links: LibraryStoreInput['links']): { handle: string; url: string } | undefined {
+  for (const link of links ?? []) {
+    const match = /^https?:\/\/(?:www\.)?(instagram\.com|tiktok\.com)\/@?([A-Za-z0-9._]{2,30})\/?(?:[?#].*)?$/i.exec(link.url.trim());
+    if (match && !['p', 'reel', 'explore', 'accounts'].includes(match[2].toLowerCase())) return { handle: `@${match[2]}`, url: link.url.trim() };
+  }
+  return undefined;
 }
 
 const uploadOnly = (url: string) => {

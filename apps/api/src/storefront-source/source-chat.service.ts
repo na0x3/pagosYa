@@ -57,7 +57,7 @@ import { fashionCollections } from './source-fashion-collections';
 import { collectionSlug } from '../collections/collection-slug';
 import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy } from './source-templates';
-import { buildLibraryFacts, validateLibraryLayout } from './source-section-library';
+import { buildLibraryFacts, validateLibraryLayout, type LayoutBlock } from './source-section-library';
 import { isPlayfulBusiness } from './home-directions';
 import { instructionAsksStoreMenu, instructionOnlyAboutStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList } from './source-store-menu';
 import { readConfigFile } from './store-look';
@@ -631,7 +631,7 @@ export class SourceChatService {
     const home = snapshot.files.find(file => file.path === 'components/home.tsx')?.content ?? '';
     if (!snapshot.files.some(file => file.path === 'components/library.tsx') || !/\blayout\b/.test(home)) throw new PersonalTouchSkipped('the store predates the section library');
     const state = readMasterState(snapshot.files);
-    const [record, catalog, uploads, codes, reviews, retention] = await Promise.all([
+    const [record, catalog, uploads, codes, reviews, retention, links] = await Promise.all([
       this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true, contactPhone: true } }),
       this.generation.catalog(merchantId, storeId),
       this.prisma.mediaAsset.findMany({ where: { merchantId, mimeType: { in: ['image/jpeg', 'image/png', 'image/webp'] } }, orderBy: { createdAt: 'desc' }, take: 16, select: { url: true } }),
@@ -639,6 +639,7 @@ export class SourceChatService {
       this.prisma.promoCode.findMany({ where: { storeId, isActive: true }, orderBy: { createdAt: 'desc' }, take: 10, select: { id: true, code: true, discountType: true, discountValue: true, showInEmails: true, showInAssistant: true } }),
       this.prisma.storeReview.count({ where: { storeId, status: 'PUBLISHED' } }).catch(() => 0),
       this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } }).catch(() => null),
+      this.prisma.storeLink.findMany({ where: { storeId }, orderBy: { sortOrder: 'asc' }, select: { label: true, url: true } }).catch(() => [] as Array<{ label: string; url: string }>),
     ]);
     const popupCode = ((retention?.settings ?? {}) as { popupPromoCodeId?: string | null }).popupPromoCodeId;
     const onboarding = (record?.onboarding ?? {}) as { what?: string; story?: string };
@@ -648,12 +649,15 @@ export class SourceChatService {
     const facts = buildLibraryFacts({ storeName: state.store?.name || catalog.storeName, what: onboarding.what ?? '', story: onboarding.story ?? '', city: state.store?.city ?? '', request, tone: bold ? 'bold' : 'calm',
       items: catalog.items as never, categories: catalog.categories ?? [], locations: catalog.locations as never, shippingEnabled: catalog.shippingEnabled, shippingPickupEnabled: catalog.shippingPickupEnabled,
       contactPhone: record?.contactPhone ?? catalog.contactPhone, uploads: uploads.map(asset => asset.url),
-      codes: codes.filter(code => code.showInEmails || code.showInAssistant || code.id === popupCode), reviews });
+      codes: codes.filter(code => code.showInEmails || code.showInAssistant || code.id === popupCode), reviews, links });
     if (!facts.photos.length) throw new PersonalTouchSkipped('no photos for the library');
     await workflow.report('design');
-    const answer = await this.dialogue.composeLibrary(merchantId, { storeId, facts });
+    // 34 templates: a store wearing a whole template (variants.theme) keeps that template's home; YAPI only fills it.
+    const theme = String((state.variants as Record<string, unknown> | undefined)?.theme ?? 'none');
+    const template = theme !== 'none' && (state.layout ?? []).length ? state.layout as LayoutBlock[] : undefined;
+    const answer = await this.dialogue.composeLibrary(merchantId, { storeId, facts, ...(template ? { template } : {}) });
     if (!answer) throw new Error('the library call failed');
-    const layout = validateLibraryLayout(answer as never, facts);
+    const layout = validateLibraryLayout(answer as never, facts, template ? { fixed: template } : {});
     // A cover, the grid and a closing are always there; fewer than five blocks means the answer gave almost nothing usable.
     if (layout.length < 5) throw new Error(`the library answer kept only ${layout.length} blocks`);
     this.productLogger.log(JSON.stringify({ event: 'section_library_layout', storeId, asked: (answer.blocks ?? []).length, kept: layout.map(block => block.type) }));

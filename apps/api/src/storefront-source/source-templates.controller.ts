@@ -8,6 +8,9 @@ import { ApplyFilledTemplateDto, ApplyTemplateDto } from './dto/apply-template.d
 import { CompileBudget, MerchantThrottlerGuard } from './source-compile-budget';
 import { SourceTemplatesService } from './source-templates.service';
 import { SourceChatService } from './source-chat.service';
+import { SourceChatJobsService } from './source-chat-jobs.service';
+import { randomUUID } from 'node:crypto';
+import { templateManifest } from '@pagosya/store-templates';
 
 @ApiTags('storefront-templates')
 @ApiBearerAuth()
@@ -47,7 +50,7 @@ export class SourceTemplatesListController {
 @UseGuards(MerchantAuthGuard, MerchantThrottlerGuard)
 @Controller('v1/stores/:storeId/source-project/templates')
 export class SourceTemplatesApplyController {
-  constructor(private readonly templates: SourceTemplatesService, private readonly chat: SourceChatService, private readonly config: ConfigService) {}
+  constructor(private readonly templates: SourceTemplatesService, private readonly chat: SourceChatService, private readonly config: ConfigService, private readonly jobs: SourceChatJobsService) {}
 
   @Get(':templateId/preview')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
@@ -67,8 +70,16 @@ export class SourceTemplatesApplyController {
   @Post(':templateId/apply-filled')
   @Throttle({ default: { limit: 6, ttl: 60_000 } })
   @CompileBudget()
-  applyFilled(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Param('templateId') templateId: string, @Body() input: ApplyFilledTemplateDto) {
+  async applyFilled(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Param('templateId') templateId: string, @Body() input: ApplyFilledTemplateDto) {
     if (this.config.get<boolean>('app.yapiPlantillasFill') !== true) throw new NotFoundException();
-    return this.chat.applyPlantilla(merchant.id, storeId, templateId, input.revision, { about: input.about, assetUrls: input.assetUrls });
+    const applied = await this.chat.applyPlantilla(merchant.id, storeId, templateId, input.revision, { about: input.about, assetUrls: input.assetUrls });
+    // 34 templates (2026-10-31): a whole template's home arrives with its demo words; YAPI fills it with this store in the background
+    // (the section library in fill mode — same order and sections, the store's words and photos, unbacked sections dropped).
+    const revision = (applied as { revision?: number }).revision;
+    if (templateManifest(templateId)?.preset?.layout?.length && typeof revision === 'number') {
+      await this.jobs.create(merchant.id, storeId, { instruction: 'Portada de la plantilla con los datos de la tienda.', revision, personalTouch: true, sectionLibrary: true, requestId: randomUUID(), model: 'auto',
+        ...(input.about?.trim() ? { checklistWords: input.about.trim().slice(0, 4000) } : {}) } as never).catch(() => undefined);
+    }
+    return applied;
   }
 }
