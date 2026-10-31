@@ -67,5 +67,7 @@ export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolea
   checklistMissing?: string[];
   /** Spec 2026-10-29: the home page writer that follows the polish of a new master store. */
   homeWriter?: boolean;
+  /** Spec 2026-10-31: the home composed from the section library, after the polish of a new master store. */
+  sectionLibrary?: boolean;
   /** Owner 2026-10-27: the follow-up is a guarded personal touch (source-guarded-touch.ts). */
   guardedTouch?: boolean };

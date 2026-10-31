@@ -103,7 +103,7 @@ export function starterBrandBlock(colours: StarterBrandColours): string {
   return vars.length ? `/* pagosya-brand */ :root{${vars.join(';')}}` : '';
 }
 
-export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[]; features?: Record<string, unknown> }, plantillaCopy?: Record<string, string>): SourceProjectFileDto {
+export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[]; features?: Record<string, unknown>; layout?: unknown[] }, plantillaCopy?: Record<string, string>): SourceProjectFileDto {
   const data = { name: store.name, tagline: store.tagline ?? '', city: store.city ?? '', logo: store.logo ?? '', phone: store.phone ?? '' };
   return {
     path: TEMPLATE_STORE_DATA_PATH,
@@ -114,7 +114,9 @@ export function templateStoreDataFile(store: { name: string; tagline?: string; c
         + `export const variants: Record<string, string | string[]> = ${JSON.stringify(master.variants ?? { sections: [] })};\n`
         + `export const sections: Array<{ id: string; title: string; items: Array<{ title: string; text: string }> }> = ${JSON.stringify(master.sections ?? [])};\n`
         // John Smedley sections (spec 2026-10-21): always exported, so a home that imports it compiles with none rolled.
-        + `export const features: Record<string, any> = ${JSON.stringify(master.features ?? {})};\n` : '')
+        + `export const features: Record<string, any> = ${JSON.stringify(master.features ?? {})};\n`
+        // Section library (spec 2026-10-31): always exported, empty for a store YAPI did not compose from the library.
+        + `export const layout: any[] = ${JSON.stringify(master.layout ?? [])};\n` : '')
       // A converted Plantilla (spec 2026-10-20): every text it shows, filled for the merchant or the template's own defaults.
       + (plantillaCopy ? `export const copy: Record<string, string> = ${JSON.stringify(plantillaCopy)};\n` : ''),
   };
@@ -173,6 +175,7 @@ export function readMasterState(files: readonly SourceProjectFileDto[]) {
     variants: dataLine(content, 'variants') as MasterVariants | undefined,
     sections: dataLine(content, 'sections') as MasterSection[] | undefined,
     features: (dataLine(content, 'features') ?? {}) as Record<string, unknown>,
+    layout: (dataLine(content, 'layout') ?? []) as unknown[],
   };
 }
 
@@ -339,7 +342,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   // Sort & filter styles spec 2026-10-21: a fashion store from before the filters part gets the John Smedley chip rows.
   if ((settings.variants?.filters ?? []).includes('chips') && variants.filters === undefined && variants.cards === 'fashion') variants.filters = 'chips';
   const out = withFashionTemplateParts(files.map(file => {
-    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [], features });
+    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [], features, layout: change.layout ?? state.layout ?? [] });
     if (file.path === 'styles/globals.css') return { ...file, content: withMasterTheme(file.content, theme) };
     if (file.path === 'config.js') {
       const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);

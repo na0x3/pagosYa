@@ -19,6 +19,8 @@ export type MasterColour = 'paper' | 'ink' | 'muted' | 'accent' | 'deep';
 export const MASTER_COLOURS: readonly MasterColour[] = ['paper', 'ink', 'muted', 'accent', 'deep'];
 export type MasterLook = { palette: string; fonts: string; colors: Partial<Record<MasterColour, string>> };
 export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null;
+  /** Section library (spec 2026-10-31): the home's blocks, in order (store-data `layout`); photos already bundled. */
+  layout?: unknown[];
   /** Owner 2026-10-25: a video the merchant attached, played as the cover (store-data photos.heroVideo). */
   heroVideo?: string;
   /** Owner 2026-10-28 (avril, «longer with more pictures»): the merchant's own pictures the cover and story did not take, in the

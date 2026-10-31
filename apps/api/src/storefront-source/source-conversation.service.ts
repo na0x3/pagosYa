@@ -17,6 +17,7 @@ import { sourceResponseJson } from './source-response';
 import { SUGGESTIONS_PROMPT, SUGGESTIONS_SCHEMA, type SuggestionInput } from './source-suggestions';
 import type { MasterCopy } from '@pagosya/store-templates';
 import { MASTER_COLOURS, MASTER_COPY_CAPS, MASTER_VALUE_CAPS, type MasterLook, type MasterRead } from './source-master';
+import { LIBRARY_CATALOG, LIBRARY_ICON_NAMES, LIBRARY_PROMPT, libraryAnswerSchema, type LibraryFacts } from './source-section-library';
 import type { StoreMenu } from './source-store-menu';
 import { PLANTILLA_FILL_PROMPT, plantillaFillFromRead, plantillaFillSchema } from './source-plantilla-fill';
 import type { TemplateCopySlot } from '@pagosya/store-templates';
@@ -297,6 +298,46 @@ export class SourceConversationService {
         if (error instanceof SourceProviderQuotaException) throw error;
         this.logger.warn(JSON.stringify({ stage: 'master-fill', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
       } finally { await this.metering?.record(input.storeId, 'source-master-fill', model, body, Date.now() - started, status); }
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    return null;
+  }
+
+  /** Section library (spec 2026-10-31): one structured call that picks, orders and fills the home's sections. The raw answer, which
+   *  validateLibraryLayout makes safe; null when it fails twice. Photos are the merchant's uploads, shown to the model by index. */
+  async composeLibrary(merchantId: string, input: { storeId: string; model?: string; facts: LibraryFacts }): Promise<{ blocks?: unknown[] } | null> {
+    // Its own model, not the capped conversation one: the picks and words are the store's whole look (terra by default).
+    const model = input.model || this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
+    const provider = sourceProvider(this.config, model);
+    const photos = input.facts.photos.map(photo => photo.url);
+    const owned = photos.length ? new Set((await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: photos } }, select: { url: true } })).map(asset => asset.url)) : new Set<string>();
+    const images: Array<{ type: 'input_text'; text: string } | { type: 'input_image'; image_url: string; detail: 'low' }> = [];
+    for (const [index, url] of photos.entries()) {
+      const filename = url.split('/').at(-1)!;
+      if (!this.uploads.contentTypeFor(filename).startsWith('image/')) continue;
+      const bytes = owned.has(url) ? await this.uploads.getBuffer(filename).catch(() => null) : null;
+      if (bytes && bytes.length <= 4_000_000) images.push({ type: 'input_text', text: `Foto ${index}` }, { type: 'input_image', image_url: `data:${this.uploads.contentTypeFor(filename)};base64,${bytes.toString('base64')}`, detail: 'low' });
+    }
+    const { photos: _urls, ...rest } = input.facts;
+    const facts = { ...rest, photos: input.facts.photos.map((photo, index) => ({ index, ...(photo.product ? { product: photo.product } : {}), ...(photo.category ? { category: photo.category } : {}) })),
+      icons: LIBRARY_ICON_NAMES, catalogue: LIBRARY_CATALOG.map(({ id, role, use, looks }) => ({ id, role, use, ...(looks ? { looks } : {}) })) };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const started = Date.now(); let body: any = null; let status = 'FAILED';
+      try {
+        const response = await fetch(provider.endpoint, {
+          method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(120_000),
+          body: JSON.stringify({ model, store: false, instructions: LIBRARY_PROMPT,
+            input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(facts) }, ...images] }],
+            text: { format: { type: 'json_schema', name: 'section_library', strict: true, schema: libraryAnswerSchema(photos.length) } },
+            reasoning: { effort: 'low' }, max_output_tokens: 6000 }),
+        });
+        body = await response.json().catch(() => null);
+        checkSourceProviderQuota(response.status, body, provider.name);
+        if (response.ok) { const read = sourceResponseJson(body) as { blocks?: unknown[] }; status = 'COMPLETED'; return read; }
+      } catch (error) {
+        if (error instanceof SourceProviderQuotaException) throw error;
+        this.logger.warn(JSON.stringify({ stage: 'section-library', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
+      } finally { await this.metering?.record(input.storeId, 'source-section-library', model, body, Date.now() - started, status); }
       if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 3000));
     }
     return null;

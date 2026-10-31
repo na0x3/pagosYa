@@ -8,7 +8,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(join(here, '../../../apps/api/package.json'));
 const dir = join(dirname(require.resolve('lucide-static/package.json')), 'icons');
 const version = JSON.parse(readFileSync(join(dir, '..', 'package.json'), 'utf8')).version;
-const ICONS = ['menu', 'x', 'search', 'log-in', 'shopping-bag', 'arrow-right', 'arrow-up-right', 'plus', 'minus', 'chevron-down', 'star', 'truck', 'shield-check', 'refresh-ccw', 'message-circle', 'map-pin', 'mail', 'check'];
+const ICONS = ['menu', 'x', 'search', 'log-in', 'shopping-bag', 'arrow-right', 'arrow-up-right', 'plus', 'minus', 'chevron-down', 'star', 'truck', 'shield-check', 'refresh-ccw', 'message-circle', 'map-pin', 'mail', 'check',
+  // Section library 2026-10-31: badges, services and benefits.
+  'leaf', 'sparkles', 'heart', 'droplet', 'sun', 'gift', 'clock', 'package', 'store', 'lock', 'zap', 'award', 'flame', 'sprout', 'gem', 'recycle', 'smile', 'badge-check', 'circle-check', 'circle-x', 'hand-heart', 'coffee', 'cookie', 'shirt', 'palette', 'credit-card', 'phone', 'calendar', 'users', 'copy', 'chevron-left', 'chevron-right', 'play'];
 const pascal = name => name.split('-').map(part => part[0].toUpperCase() + part.slice(1)).join('');
 const camel = attrs => attrs.replace(/ ([a-z]+)-([a-z])/g, (_, a, b) => ` ${a}${b.toUpperCase()}`);
 const children = svg => camel(svg.slice(svg.indexOf('>', svg.indexOf('<svg')) + 1, svg.lastIndexOf('</svg>')).split('\n').map(line => line.trim()).filter(Boolean).join(''));

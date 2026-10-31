@@ -324,20 +324,36 @@ export class SourceTemplatesService {
     const out: MasterFill = { ...change };
     const files: SourceProjectFileDto[] = [];
     if (!this.uploads) return { change: out, files };
-    for (const key of ['heroPhoto', 'storyPhoto'] as const) {
-      const value = change[key];
-      if (!value || BUNDLED_PHOTO.test(value)) continue;
+    const bundle = async (value: string) => {
       const path = uploadPath(value);
       const match = /^\/v1\/uploads\/([a-f0-9-]+\.(png|jpe?g|webp))$/i.exec(path);
       const owned = match ? (await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: [path] } }, select: { url: true } })).length > 0 : false;
-      let bytes: Buffer | null = owned ? await this.uploads.getBuffer(match![1]).catch(() => null) : null;
+      let bytes: Buffer | null = owned ? await this.uploads!.getBuffer(match![1]).catch(() => null) : null;
       let name = path;
       if (bytes && bytes.length > 2_000_000) { bytes = await sharp(bytes).resize({ width: 1800, withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer().catch(() => null); name = path.replace(/\.[a-z]+$/i, '.jpg'); }
-      if (!bytes) { out[key] = ''; continue; }
-      out.photoSources = { ...(out.photoSources ?? {}), [key === 'heroPhoto' ? 'hero' : 'story']: path };
+      if (!bytes) return null;
       const asset = bundledPhotoPath(bytes, name);
       if (!files.some(file => file.path === asset)) files.push({ path: asset, content: bytes.toString('base64'), encoding: 'base64' });
-      out[key] = asset;
+      return { asset, path };
+    };
+    for (const key of ['heroPhoto', 'storyPhoto'] as const) {
+      const value = change[key];
+      if (!value || BUNDLED_PHOTO.test(value)) continue;
+      const done = await bundle(value);
+      if (!done) { out[key] = ''; continue; }
+      out.photoSources = { ...(out.photoSources ?? {}), [key === 'heroPhoto' ? 'hero' : 'story']: done.path };
+      out[key] = done.asset;
+    }
+    // Section library (spec 2026-10-31): every photo a block shows is bundled too; one that cannot be is left out of its block.
+    if (change.layout?.length) {
+      const swap = async (value: unknown) => typeof value !== 'string' || !value ? undefined : BUNDLED_PHOTO.test(value) ? value : (await bundle(value))?.asset;
+      out.layout = [];
+      for (const raw of change.layout as Array<Record<string, unknown> & { items?: Array<Record<string, unknown>> }>) {
+        const block: Record<string, unknown> = { ...raw };
+        for (const key of ['photo', 'photo2'] as const) { if (key in block) { const asset = await swap(block[key]); if (asset) block[key] = asset; else delete block[key]; } }
+        if (Array.isArray(raw.items)) block.items = await Promise.all(raw.items.map(async item => { if (!('photo' in item)) return item; const asset = await swap(item.photo); const { photo: _photo, ...rest } = item; return asset ? { ...rest, photo: asset } : rest; }));
+        out.layout.push(block);
+      }
     }
     return { change: out, files };
   }

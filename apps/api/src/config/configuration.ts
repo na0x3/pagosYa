@@ -145,6 +145,10 @@ export interface AppConfig {
    *  approved); YAPI_HOME_WRITER=0 turns it off. */
   yapiHomeWriter: boolean;
   yapiHomeWriterModel: string;
+  /** Spec 2026-10-31: after a new store's polish, YAPI composes its home from the Esencial section library (one structured call;
+   *  the layout is template code). YAPI_SECTION_LIBRARY=1 turns it on; it then runs instead of the home writer. */
+  yapiSectionLibrary: boolean;
+  yapiSectionLibraryModel: string;
   /** Spec 2026-10-29: tool calls of the one continuation after a run used its steps unfinished; 0 turns it off. */
   yapiAgentContinueCalls: number;
   /** The capped edit that builds what the check found missing. Off by default (Remolino 2026-10-27: the agent drew giant combo
@@ -529,6 +533,8 @@ export default (): { app: AppConfig } => {
     yapiFirstDesignEffort: (['medium', 'high'] as const).find(effort => effort === process.env.YAPI_FIRST_DESIGN_EFFORT) ?? 'low',
     yapiHomeWriter: process.env.YAPI_HOME_WRITER !== '0',
     yapiHomeWriterModel: process.env.YAPI_HOME_WRITER_MODEL || 'gpt-5.6-terra',
+    yapiSectionLibrary: process.env.YAPI_SECTION_LIBRARY === '1',
+    yapiSectionLibraryModel: process.env.YAPI_SECTION_LIBRARY_MODEL || 'gpt-5.6-terra',
     yapiAgentContinueCalls: process.env.YAPI_AGENT_CONTINUE_CALLS?.trim() && Number.isFinite(Number(process.env.YAPI_AGENT_CONTINUE_CALLS)) ? Math.max(0, Math.floor(Number(process.env.YAPI_AGENT_CONTINUE_CALLS))) : 12,
     yapiChecklistFix: process.env.YAPI_CHECKLIST_FIX === '1',
     yapiChecklistModel: process.env.YAPI_CHECKLIST_MODEL || 'gpt-5.6-terra',

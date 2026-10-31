@@ -57,6 +57,8 @@ import { fashionCollections } from './source-fashion-collections';
 import { collectionSlug } from '../collections/collection-slug';
 import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy } from './source-templates';
+import { buildLibraryFacts, validateLibraryLayout } from './source-section-library';
+import { isPlayfulBusiness } from './home-directions';
 import { instructionAsksStoreMenu, instructionOnlyAboutStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList } from './source-store-menu';
 import { readConfigFile } from './store-look';
 import { FOOTER_PATH, shellWithStoreFooter } from './agent/home-writer-tools';
@@ -105,6 +107,8 @@ export const PERSONAL_TOUCH_BRIEF = 'Toque personal para este negocio: agrega UN
 /** Review 2026-10-29 (I1): a spent model quota as it reaches chat — the provider's class, or generate()'s merchant-facing reply. */
 const quotaSpent = (error: unknown) => error instanceof SourceProviderQuotaException || (error instanceof Error && (error.message.includes(MODEL_LIMIT_MERCHANT_FAILURE) || MODEL_LIMIT.test(error.message)));
 /** Spec 2026-10-29: what the home writer is asked; the merchant's first message follows it. */
+/** Spec 2026-10-31: the follow-up that composes the new store's home from the section library. */
+const SECTION_LIBRARY_BRIEF = 'Portada de la tienda nueva armada con las secciones de la plantilla.';
 const HOME_WRITER_BRIEF = 'Diseña la portada de esta tienda nueva al estilo de Amboras: titulares grandes, mucho recorrido, los colores de la marca, con sus fotos y productos reales.';
 export const MASTER_POLISH_BRIEF = 'Pulido automático de la tienda recién creada desde la plantilla. Conserva paleta, fuentes, variantes, menú y estructura. '
   + 'Revisa cada texto y reescribe solo los que suenan genéricos, repetidos o de relleno («una propuesta minimalista», «hecho con cuidado», '
@@ -618,6 +622,49 @@ export class SourceChatService {
     return { userMessage, assistantMessage, revision };
   }
 
+  /** Spec 2026-10-31: the new store's home composed from the Esencial section library — one structured call picks, orders and fills
+   *  the sections from the store's real facts; code validates every block and keeps the frame (cover, grid, closing). Data only. */
+  private async sectionLibrary(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, input: SourceMessageInput, revision: number, previous: { snapshot: unknown }) {
+    const snapshot = previous.snapshot as SourceProjectSnapshot;
+    if (snapshot.brief?.templateId !== MASTER_TEMPLATE_ID || !readsMasterData(snapshot.files)) throw new PersonalTouchSkipped('the store is no longer Esencial');
+    // A store built before the library (no library.tsx, a home that never reads `layout`) would save a layout nothing draws.
+    const home = snapshot.files.find(file => file.path === 'components/home.tsx')?.content ?? '';
+    if (!snapshot.files.some(file => file.path === 'components/library.tsx') || !/\blayout\b/.test(home)) throw new PersonalTouchSkipped('the store predates the section library');
+    const state = readMasterState(snapshot.files);
+    const [record, catalog, uploads, codes, reviews, retention] = await Promise.all([
+      this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true, contactPhone: true } }),
+      this.generation.catalog(merchantId, storeId),
+      this.prisma.mediaAsset.findMany({ where: { merchantId, mimeType: { in: ['image/jpeg', 'image/png', 'image/webp'] } }, orderBy: { createdAt: 'desc' }, take: 16, select: { url: true } }),
+      // Only codes the merchant already shows (emails, the assistant, the signup window): a private code never reaches the page.
+      this.prisma.promoCode.findMany({ where: { storeId, isActive: true }, orderBy: { createdAt: 'desc' }, take: 10, select: { id: true, code: true, discountType: true, discountValue: true, showInEmails: true, showInAssistant: true } }),
+      this.prisma.storeReview.count({ where: { storeId, status: 'PUBLISHED' } }).catch(() => 0),
+      this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } }).catch(() => null),
+    ]);
+    const popupCode = ((retention?.settings ?? {}) as { popupPromoCodeId?: string | null }).popupPromoCodeId;
+    const onboarding = (record?.onboarding ?? {}) as { what?: string; story?: string };
+    const storeData = snapshot.files.find(file => file.path === 'components/store-data.tsx')?.content ?? '';
+    const request = input.checklistWords ?? '';
+    const bold = (state.variants as Record<string, unknown> | undefined)?.mood === 'bold' || isPlayfulBusiness(`${request}\n${onboarding.what ?? ''}\n${storeData}`);
+    const facts = buildLibraryFacts({ storeName: state.store?.name || catalog.storeName, what: onboarding.what ?? '', story: onboarding.story ?? '', city: state.store?.city ?? '', request, tone: bold ? 'bold' : 'calm',
+      items: catalog.items as never, categories: catalog.categories ?? [], locations: catalog.locations as never, shippingEnabled: catalog.shippingEnabled, shippingPickupEnabled: catalog.shippingPickupEnabled,
+      contactPhone: record?.contactPhone ?? catalog.contactPhone, uploads: uploads.map(asset => asset.url),
+      codes: codes.filter(code => code.showInEmails || code.showInAssistant || code.id === popupCode), reviews });
+    if (!facts.photos.length) throw new PersonalTouchSkipped('no photos for the library');
+    await workflow.report('design');
+    const answer = await this.dialogue.composeLibrary(merchantId, { storeId, facts });
+    if (!answer) throw new Error('the library call failed');
+    const layout = validateLibraryLayout(answer as never, facts);
+    // A cover, the grid and a closing are always there; fewer than five blocks means the answer gave almost nothing usable.
+    if (layout.length < 5) throw new Error(`the library answer kept only ${layout.length} blocks`);
+    this.productLogger.log(JSON.stringify({ event: 'section_library_layout', storeId, asked: (answer.blocks ?? []).length, kept: layout.map(block => block.type) }));
+    await workflow.report('saving');
+    const saved = await this.templates.refill(merchantId, storeId, revision, { layout }, 'Portada de YAPI');
+    await workflow.finish('completed');
+    const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+      content: 'Armé la portada de tu tienda con secciones pensadas para tus productos y tus fotos. Revisa la vista previa.', metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label } } });
+    return { userMessage, assistantMessage, revision: saved };
+  }
+
   private async masterPolish(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, request: string, revision: number, previous: { snapshot: unknown } | null) {
     const snapshot = previous?.snapshot as SourceProjectSnapshot | undefined;
     if (!snapshot || snapshot.brief?.templateId !== MASTER_TEMPLATE_ID || !readsMasterData(snapshot.files)) throw new PersonalTouchSkipped('the store is no longer Esencial');
@@ -1007,7 +1054,11 @@ export class SourceChatService {
           revision, personalTouch: true, homeWriter: true, firstDesign: true, redesign: true, ...(input.checklistWords ? { checklistWords: input.checklistWords } : {}), requestId: randomUUID(),
           model: (this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-terra') as SourceMessageInput['model'] });
         const writerOn = this.config.get<boolean>('app.yapiHomeWriter') === true;
-        const next = (revision: number) => writerOn ? writerFollowUp(revision) : touchOn ? touchFollowUp(revision) : input.checklistWords && this.checklistOn() ? checkFollowUp(revision) : undefined;
+        // Spec 2026-10-31: with the section library on, it composes the home instead of the writer; the check follows it.
+        const libraryOn = this.config.get<boolean>('app.yapiSectionLibrary') === true;
+        const libraryFollowUp = (revision: number): SourceMessageInput => ({ instruction: SECTION_LIBRARY_BRIEF, revision, personalTouch: true, sectionLibrary: true,
+          ...(input.checklistWords ? { checklistWords: input.checklistWords } : {}), requestId: randomUUID(), model: 'auto' });
+        const next = (revision: number) => libraryOn ? libraryFollowUp(revision) : writerOn ? writerFollowUp(revision) : touchOn ? touchFollowUp(revision) : input.checklistWords && this.checklistOn() ? checkFollowUp(revision) : undefined;
         // A polish with nothing to change (NOA on Atelier 2026-10-27) still hands the store to the check.
         const polished = await this.masterPolish(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous).catch(async error => {
           if (!(error instanceof PersonalTouchSkipped) || !next(current.revision)) throw error;
@@ -1018,6 +1069,21 @@ export class SourceChatService {
         const polishedRevision = (polished as { revision?: { revision?: number } }).revision?.revision;
         const after = polishedRevision ? next(polishedRevision) : undefined;
         return after ? { ...polished, followUp: after } : polished;
+      }
+      if (input.sectionLibrary && previous) {
+        const checkAfter = (revision: number) => input.checklistWords && this.checklistOn() ? { instruction: 'Revisión del pedido', revision, personalTouch: true, briefCheck: 1 as const,
+          checklistWords: input.checklistWords, requestId: randomUUID(), model: 'auto' as const } satisfies SourceMessageInput : undefined;
+        let composed: Awaited<ReturnType<SourceChatService['sectionLibrary']>>;
+        try { composed = await this.sectionLibrary(merchantId, storeId, thread.id, userMessage, workflow, input, current.revision, previous); }
+        catch (error) {
+          if (quotaSpent(error) || sourceRequestContext.getStore()?.signal?.aborted) throw error;
+          // Anything else keeps the polished store as it is; the check still runs.
+          this.productLogger.warn(JSON.stringify({ event: 'section_library_kept_template', storeId, reason: String((error as Error)?.message).slice(0, 300) }));
+          await this.prisma.storeAgentMessage.delete({ where: { id: userMessage.id } }).catch(() => undefined);
+          throw new PersonalTouchSkipped('section library kept the template', checkAfter(current.revision));
+        }
+        const after = checkAfter(composed.revision.revision);
+        return after ? { ...composed, followUp: after } : composed;
       }
       if (input.homeWriter && previous) {
         const checkAfter = (revision: number) => input.checklistWords && this.checklistOn() ? { instruction: 'Revisión del pedido', revision, personalTouch: true, briefCheck: 1 as const,

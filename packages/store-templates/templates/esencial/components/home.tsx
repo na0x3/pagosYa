@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { Parallax, Reveal } from '@pagosya/ui';
 import Shell from './Shell';
-import { copy, photos, sections, store } from './store-data';
+import { copy, layout, photos, sections, store } from './store-data';
+import { LibraryHome, type LibraryBlock } from './library';
 import { bandPhotos, notePhoto, photoSide, sectionPhotos, statementPhoto, taken } from './photo-plan';
 import { variant } from './Shell';
 import { FeatureSlot } from './features';
@@ -13,6 +14,8 @@ const VALUE_ICONS = [IconStar, IconTruck, IconShieldCheck];
 const unique = (list: Array<string | undefined>) => [...new Set(list.filter((src): src is string => Boolean(src)))];
 
 export default function Home() {
+  // Section library (spec 2026-10-31): a store YAPI composed from the library shows its blocks; every other store keeps this home.
+  if ((layout as LibraryBlock[]).length) return <Shell><main id="contenido" data-lb-home><LibraryHome layout={layout as LibraryBlock[]} /></main></Shell>;
   // Variety spec §2: the rolled hero; photo-led variants fall back to the type hero when the photos are missing.
   const rolled = variant('hero', 'full');
   const heroPhotos = unique([photos.hero, photos.p1, photos.p2, photos.p3]);
