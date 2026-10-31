@@ -1,7 +1,7 @@
 import { useState, type ReactNode, type CSSProperties } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
 import { store, copy, variants, photos, layout } from './store-data';
-import { CardRibbons, CardTemplate, libraryCard, type LibraryBlock } from './library';
+import { CardRibbons, CardTemplate, ThemeMotion, libraryCard, type LibraryBlock } from './library';
 
 /** The rolled variant of a part (variety spec §2); the first catalogue id when the store has none. */
 export const variant = (part: string, fallback: string) => { const value = variants[part]; return typeof value === 'string' && value ? value : fallback; };
@@ -144,7 +144,7 @@ export default function Shell({ children }: { children: ReactNode }) {
     <a className="es-skip" href="#contenido">Ir al contenido</a>
     <Header />
     {/* Section library stores: one product card on every page (owner 2026-10-31). */}
-    {(layout as LibraryBlock[]).length ? <><CardTemplate card={libraryCard(layout as LibraryBlock[])} /><CardRibbons /></> : null}
+    {(layout as LibraryBlock[]).length ? <><CardTemplate card={libraryCard(layout as LibraryBlock[])} /><CardRibbons /><ThemeMotion /></> : null}
     {children}
     <Footer />
     <div data-pagosya-cart hidden />

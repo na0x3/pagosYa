@@ -110,7 +110,7 @@
       "icons": "person",
       "header": "split",
       "announce": "plain",
-      "footer": "columns",
+      "footer": "bigname",
       "button": "square",
       "corners": "sharp",
       "density": "regular",
@@ -209,26 +209,21 @@
         ]
       },
       {
-        "type": "products-grid",
+        "type": "products-slider",
         "card": "ribbon",
         "title": "Lo más buscado de la temporada",
         "cta": "Ver todo",
         "link": "products"
       },
       {
-        "type": "story-split",
-        "look": "right",
-        "eyebrow": "Nuestra visión",
-        "title": "Diseñado para que expreses tu estilo con confianza",
-        "text": "Prendas que acompañan tu día, pensadas para durar y para que te sientas tú misma en cada momento.",
-        "cta": "Conócenos",
-        "link": "products",
-        "photo": "slot:e-hero"
-      },
-      {
         "type": "story-stack",
         "cta": "Ver colección",
         "items": [
+          {
+            "title": "Diseñado para que expreses tu estilo con confianza.",
+            "photo": "slot:e-hero",
+            "link": "products"
+          },
           {
             "title": "Destaca donde vayas. Nuestro nuevo lookbook ya está aquí, listo para comprar.",
             "photo": "slot:look1",
@@ -243,7 +238,7 @@
       },
       {
         "type": "statement-reveal",
-        "text": "Nacimos del amor por el oficio y la feminidad moderna. Cada pieza está pensada para sentirse cómoda, durar y verse audaz sin esfuerzo.",
+        "text": "Nacimos del amor por el oficio y la *feminidad moderna*. Cada pieza está pensada para sentirse cómoda, durar y verse audaz sin esfuerzo, para que te sientas segura sin intentarlo demasiado.",
         "cta": "Ver todos los productos",
         "link": "products"
       },
@@ -316,22 +311,143 @@
         ]
       },
       {
-        "type": "promo-trio",
-        "cta": "Ver más",
+        "type": "social-posts",
+        "eyebrow": "Etiquétanos para aparecer",
+        "title": "Únete a nuestra comunidad",
+        "handle": "@tumarca",
+        "social": "https://instagram.com/",
+        "cta": "Ver el look",
         "items": [
           {
-            "title": "Tendencias de verano",
+            "title": "1",
+            "photo": "slot:b-calle",
+            "link": "products"
+          },
+          {
+            "title": "2",
+            "photo": "slot:e-p1",
+            "link": "products"
+          },
+          {
+            "title": "3",
+            "photo": "slot:hero2",
+            "link": "products"
+          },
+          {
+            "title": "4",
             "photo": "slot:look2",
             "link": "products"
           },
           {
+            "title": "5",
+            "photo": "slot:e-detalle",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "social-marquee",
+        "title": "Hecho para *elevar* tu mundo.",
+        "handle": "@tumarca",
+        "social": "https://instagram.com/",
+        "cta": "síguenos",
+        "items": [
+          {
+            "title": "1",
+            "photo": "slot:p1"
+          },
+          {
+            "title": "2",
+            "photo": "slot:e-p2"
+          },
+          {
+            "title": "3",
+            "photo": "slot:hero3"
+          },
+          {
+            "title": "4",
+            "photo": "slot:p2"
+          }
+        ]
+      },
+      {
+        "type": "promo-pair",
+        "eyebrow": "Recién llegado",
+        "cta": "Comprar",
+        "items": [
+          {
+            "title": "Sin esfuerzo",
+            "text": "Renueva tu clóset con básicos",
+            "photo": "slot:e-p1",
+            "link": "products"
+          },
+          {
+            "title": "Lo esencial",
+            "text": "Básicos que combinan con todo",
+            "photo": "slot:hero2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "shop-look",
+        "title": "Compra el look",
+        "photo": "slot:e-hero",
+        "items": [
+          {
+            "title": "Producto estrella",
+            "x": 38,
+            "y": 34
+          },
+          {
+            "title": "Edición de temporada",
+            "x": 62,
+            "y": 58
+          },
+          {
+            "title": "El clásico",
+            "x": 30,
+            "y": 72
+          }
+        ]
+      },
+      {
+        "type": "press-quotes",
+        "eyebrow": "En la prensa",
+        "items": [
+          {
+            "title": "Revista Moda",
+            "text": "Piezas audaces, una costura a la vez."
+          },
+          {
+            "title": "Diario Estilo",
+            "text": "Convierten el día a día en momentos de moda."
+          },
+          {
+            "title": "Blog Tendencia",
+            "text": "En un mundo de tendencias, ellos diseñan lo atemporal."
+          }
+        ]
+      },
+      {
+        "type": "promo-trio",
+        "look": "single",
+        "cta": "Ver más",
+        "photo": "slot:look1",
+        "items": [
+          {
+            "title": "Tendencias de verano",
+            "text": "Lo más nuevo",
+            "link": "products"
+          },
+          {
             "title": "Nueva colección",
-            "photo": "slot:hero3",
+            "text": "Recién llegada",
             "link": "products"
           },
           {
             "title": "Nuestro lookbook",
-            "photo": "slot:look1",
+            "text": "Inspírate",
             "link": "products"
           }
         ]

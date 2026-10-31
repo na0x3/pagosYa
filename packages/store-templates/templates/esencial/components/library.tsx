@@ -7,7 +7,9 @@ import * as Icons from './icons';
  * them and fills their words and photos (store-data `layout`); it never writes their layout. Each section draws nothing it
  * has no content for, so a block the code let through with a missing part still reads as finished. */
 
-export type LibraryItem = { title: string; text?: string; icon?: string; photo?: string; link?: string; value?: string };
+export type LibraryItem = { title: string; text?: string; icon?: string; photo?: string; link?: string; value?: string;
+  /** shop-look only: where the pin sits on the photo, in % of its width and height. */
+  x?: number; y?: number };
 export type LibraryBlock = {
   type: string; look?: string; band?: 'paper' | 'muted' | 'accent' | 'deep';
   eyebrow?: string; title?: string; text?: string; cta?: string; link?: string; cta2?: string; link2?: string;
@@ -16,6 +18,8 @@ export type LibraryBlock = {
   card?: string;
   /** promo-countdown only: when the offer the merchant named ends (ISO date); past or missing, the section draws nothing. */
   endsAt?: string;
+  /** social-* only: the store's own account (from its links) — its @name and address. */
+  handle?: string; social?: string;
 };
 
 const ICONS: Record<string, (props: { className?: string }) => ReactElement> = {
@@ -65,15 +69,15 @@ function Photo({ src, className, eager }: { src?: string; className?: string; ea
 }
 
 /** A contained section on its band, like the template's own (the band paints past the column to both edges). */
-function Band({ block, index, children, className = '', id }: { block: LibraryBlock; index: number; children: ReactNode; className?: string; id?: string }) {
+function Band({ block, index, children, className = '', id, extra }: { block: LibraryBlock; index: number; children: ReactNode; className?: string; id?: string; extra?: Record<string, string> }) {
   return <section id={id ?? `lb-${index}`} className={`es-section lb lb-${block.type} ${className}`.trim()} data-lb={block.type} data-lb-look={block.look || undefined}
-    data-es-band={block.band || undefined} aria-labelledby={block.title ? `lb-${index}-title` : undefined}>{children}</section>;
+    data-es-band={block.band || undefined} aria-labelledby={block.title ? `lb-${index}-title` : undefined} {...extra}>{children}</section>;
 }
 
 /** Full-bleed sections (covers, photo banners): the whole width, their own colours. */
-function Bleed({ block, index, children, className = '', id }: { block: LibraryBlock; index: number; children: ReactNode; className?: string; id?: string }) {
+function Bleed({ block, index, children, className = '', id, extra }: { block: LibraryBlock; index: number; children: ReactNode; className?: string; id?: string; extra?: Record<string, string> }) {
   return <section id={id ?? `lb-${index}`} className={`lb lb-bleed lb-${block.type} ${className}`.trim()} data-lb={block.type} data-lb-look={block.look || undefined}
-    data-lb-band={block.band || undefined} aria-labelledby={block.title ? `lb-${index}-title` : undefined}>{children}</section>;
+    data-lb-band={block.band || undefined} aria-labelledby={block.title ? `lb-${index}-title` : undefined} {...extra}>{children}</section>;
 }
 
 function Head({ block, index, align = 'start', level = 2, aside }: { block: LibraryBlock; index: number; align?: 'start' | 'center' | 'split'; level?: 1 | 2; aside?: ReactNode }) {
@@ -100,7 +104,7 @@ function Head({ block, index, align = 'start', level = 2, aside }: { block: Libr
 export const LIBRARY_CARDS = ['classic', 'ribbon', 'soft', 'framed'] as const;
 export type LibraryCard = typeof LIBRARY_CARDS[number];
 export function libraryCard(layout: LibraryBlock[]): LibraryCard {
-  const card = layout.find(block => block.type === 'products-grid' || block.type === 'products-tabs')?.card;
+  const card = layout.find(block => ['products-grid', 'products-tabs', 'products-slider'].includes(block.type))?.card;
   return (LIBRARY_CARDS as readonly string[]).includes(card ?? '') ? card as LibraryCard : 'classic';
 }
 
@@ -126,6 +130,48 @@ export function CardTemplate({ card = 'classic' }: { card?: LibraryCard }) {
       </div>
     </article>
   </template>;
+}
+
+
+/** 34 templates (2026-10-31): the themes' motion, measured on their demos. A section gets data-in when it reaches the screen (each
+ *  theme's CSS plays its own entrance from it); a section with data-lb-progress gets --p (0→1 as it scrolls through; pinned ones
+ *  through their tall box) and, with data-lb-steps, data-step; the page records the scroll direction (compact headers). Without
+ *  motion everything is shown at once and --p is 1. */
+export function ThemeMotion() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const sections = () => Array.from(document.querySelectorAll<HTMLElement>('main [data-lb]'));
+    if (still || !('IntersectionObserver' in window)) { sections().forEach(el => el.setAttribute('data-in', '')); root.setAttribute('data-es-still', ''); return; }
+    const seen = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { entry.target.setAttribute('data-in', ''); seen.unobserve(entry.target); } }), { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+    const watchAll = () => sections().forEach(el => { if (!el.hasAttribute('data-in') && !el.hasAttribute('data-watched')) { el.setAttribute('data-watched', ''); seen.observe(el); } });
+    watchAll();
+    let last = scrollY, queued = false;
+    const frame = () => {
+      queued = false;
+      const vh = innerHeight;
+      document.querySelectorAll<HTMLElement>('[data-lb-progress]').forEach(el => {
+        const box = el.getBoundingClientRect();
+        const pinned = el.hasAttribute('data-lb-pinned');
+        const p = pinned ? -box.top / Math.max(1, box.height - vh) : (vh - box.top) / (vh + box.height);
+        const value = Math.min(1, Math.max(0, p));
+        el.style.setProperty('--p', value.toFixed(4));
+        const steps = Number(el.getAttribute('data-lb-steps'));
+        if (steps > 1) el.setAttribute('data-step', String(Math.min(steps - 1, Math.floor(value * steps))));
+      });
+      const y = scrollY;
+      root.setAttribute('data-es-scroll', y < 80 ? 'top' : y > last + 4 ? 'down' : y < last - 4 ? 'up' : root.getAttribute('data-es-scroll') ?? 'top');
+      last = y;
+    };
+    const onScroll = () => { if (!queued) { queued = true; requestAnimationFrame(frame); } };
+    const late = new MutationObserver(watchAll);
+    late.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    frame();
+    return () => { seen.disconnect(); late.disconnect(); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); };
+  }, []);
+  return null;
 }
 
 /** The ribbon card's offer runs along the photo: the kit writes it once, this repeats it into a moving strip. */
@@ -693,28 +739,43 @@ function PromoCountdown({ block, index }: { block: LibraryBlock; index: number }
   </Band>;
 }
 
-/** Palo Alto lookbook: two or three short stories, each a line of words beside its tall photo, one under the other. */
+/** Palo Alto «Designed to empower»: two or three lines of words scroll past while their photos stay pinned beside them, each photo
+ *  rising over the last as its line arrives (measured on the demo: the media column is sticky; steps follow the scroll). */
 function StoryStack({ block, index }: { block: LibraryBlock; index: number }) {
   const rows = (block.items ?? []).filter(item => item.photo && item.title).slice(0, 3);
   if (rows.length < 2) return null;
-  return <Band block={block} index={index}>
+  return <Band block={block} index={index} extra={{ 'data-lb-progress': '', 'data-lb-pinned': '', 'data-lb-steps': String(rows.length) }}>
     {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
-    <div className="lb-stack">{rows.map((row, at) => <div key={at} className="lb-stack__row">
-      <Reveal className="lb-stack__words"><p className="lb-stack__line">{row.title}</p>{row.text ? <p className="lb-stack__text">{row.text}</p> : null}{row.link || block.cta ? <a className="es-btn es-btn--ink lb-btn lb-stack__btn" href={href(row.link ?? block.link)}>{block.cta || 'Ver más'}</a> : null}</Reveal>
-      <figure className="lb-stack__photo"><Photo src={row.photo} /></figure>
-    </div>)}</div>
+    <div className="lb-stack" data-count={rows.length}>
+      <div className="lb-stack__lines">{rows.map((row, at) => <div key={at} className="lb-stack__row">
+        <p className="lb-stack__line">{row.title}</p>{row.text ? <p className="lb-stack__text">{row.text}</p> : null}
+        {row.link || block.cta ? <a className="es-btn es-btn--ink lb-btn lb-stack__btn" href={href(row.link ?? block.link)}>{block.cta || 'Ver más'}</a> : null}
+        <figure className="lb-stack__inline"><Photo src={row.photo} /></figure>
+      </div>)}</div>
+      <div className="lb-stack__media" aria-hidden="true">{rows.map((row, at) => <figure key={at} className="lb-stack__photo"><Photo src={row.photo} /></figure>)}</div>
+    </div>
   </Band>;
 }
 
-/** Palo Alto: one paragraph in large type, its words lighting up as it scrolls into view (still and fully lit without motion). */
+/** Palo Alto: one paragraph in large type, pinned while its words light up one by one with the scroll; a phrase the copy marks
+ *  with *asterisks* gets a hand-drawn underline. Fully lit and still without motion. */
 function StatementReveal({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.text) return null;
-  return <Band block={block} index={index}>
-    <div className="lb-reveal">
-      <span className="lb-reveal__dots" aria-hidden="true">•••</span>
-      {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
-      <p className="lb-reveal__text">{block.text.split(' ').map((word, at) => <span key={at} style={{ ['--i' as string]: at } as CSSProperties}>{word} </span>)}</p>
-      {block.cta ? <a className="es-btn es-btn--ghost lb-btn" href={href(block.link)}>{block.cta}</a> : null}
+  const words: Array<{ word: string; marked: boolean; tail?: string }> = [];
+  block.text.split('*').forEach((part, at) => {
+    const parts = part.split(' ');
+    // Punctuation right after a marked phrase («*moderna*.») joins its last word instead of standing alone.
+    if (at % 2 === 0 && at > 0 && parts[0] && words.length) { words[words.length - 1] = { ...words[words.length - 1], tail: parts[0] }; parts.shift(); }
+    parts.filter(Boolean).forEach(word => words.push({ word, marked: at % 2 === 1 }));
+  });
+  return <Band block={block} index={index} extra={{ 'data-lb-progress': '', 'data-lb-pinned': '' }}>
+    <div className="lb-reveal__pin">
+      <div className="lb-reveal" style={{ ['--n' as string]: words.length } as CSSProperties}>
+        <span className="lb-reveal__dots" aria-hidden="true">•••</span>
+        {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+        <p className="lb-reveal__text">{words.map((entry, at) => <span key={at}><span className={entry.marked ? 'lb-reveal__word lb-reveal__marked' : 'lb-reveal__word'} style={{ ['--i' as string]: at } as CSSProperties}>{entry.word}</span>{entry.tail ? <span className="lb-reveal__word" style={{ ['--i' as string]: at } as CSSProperties}>{entry.tail}</span> : null}{' '}</span>)}</p>
+        {block.cta ? <a className="es-btn es-btn--ghost lb-btn" href={href(block.link)}>{block.cta}</a> : null}
+      </div>
     </div>
   </Band>;
 }
@@ -742,8 +803,8 @@ function MarqueePhoto({ block, index }: { block: LibraryBlock; index: number }) 
   const words = (block.items ?? []).map(item => item.title).filter(Boolean).slice(0, 4);
   if (!block.photo || !words.length) return null;
   const run = (key: number) => <span key={key} className="lb-marquee-photo__run">{[0, 1, 2].flatMap(round => words.map((word, at) => <span key={`${round}-${at}`}>{word}<i aria-hidden="true">✦</i></span>))}</span>;
-  return <Bleed block={block} index={index} className="lb-cover--dark">
-    <Photo src={block.photo} className="lb-banner__photo" />
+  return <Bleed block={block} index={index} className="lb-cover--dark" extra={{ 'data-lb-progress': '' }}>
+    <Photo src={block.photo} className="lb-banner__photo lb-marquee-photo__img" />
     <div className="lb-marquee-photo">
       <p className="lb-marquee-photo__track" aria-label={words.join(', ')}>{[0, 1].map(run)}</p>
       {block.cta ? <a className="lb-stage__btn lb-stage__btn--small" href={href(block.link)}>{block.cta}</a> : null}
@@ -755,7 +816,7 @@ function MarqueePhoto({ block, index }: { block: LibraryBlock; index: number }) 
 function StoryOverlap({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.photo || !block.photo2) return null;
   const points = (block.items ?? []).filter(item => item.title).slice(0, 4);
-  return <Band block={block} index={index}>
+  return <Band block={block} index={index} extra={{ 'data-lb-progress': '' }}>
     <div className="lb-overlap">
       <div className="lb-overlap__photos"><Photo src={block.photo} className="lb-overlap__a" /><Photo src={block.photo2} className="lb-overlap__b" /></div>
       <Reveal className="lb-overlap__words">
@@ -771,6 +832,18 @@ function StoryOverlap({ block, index }: { block: LibraryBlock; index: number }) 
 
 /** Palo Alto: three photos edge to edge, each with its title and a link in the middle. */
 function PromoTrio({ block, index }: { block: LibraryBlock; index: number }) {
+  // Palo Alto «Top summer trends»: one wide photo behind three columns of words (look single).
+  if (block.look === 'single') {
+    const columns = (block.items ?? []).filter(item => item.title).slice(0, 3);
+    if (!block.photo || columns.length < 2) return null;
+    return <Bleed block={block} index={index} className="lb-cover--dark">
+      <Photo src={block.photo} className="lb-banner__photo" />
+      {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+      <ul className="lb-trio lb-trio--single" data-count={columns.length}>{columns.map((column, at) => <li key={at}><a className="lb-trio__column" href={href(column.link)}>
+        <span className="lb-trio__words">{column.text ? <span className="lb-trio__text">{column.text}</span> : null}<span className="lb-trio__title">{column.title}</span><span className="lb-trio__go">{block.cta || 'Ver más'}</span></span>
+      </a></li>)}</ul>
+    </Bleed>;
+  }
   const tiles = (block.items ?? []).filter(item => item.photo && item.title).slice(0, 3);
   if (tiles.length < 3) return null;
   return <Bleed block={block} index={index}>
@@ -780,6 +853,80 @@ function PromoTrio({ block, index }: { block: LibraryBlock; index: number }) {
       <span className="lb-trio__words"><span className="lb-trio__title">{tile.title}</span>{tile.text ? <span className="lb-trio__text">{tile.text}</span> : null}<span className="lb-trio__go">{block.cta || 'Ver más'}</span></span>
     </a></li>)}</ul>
   </Bleed>;
+}
+
+
+/** Palo Alto «Trending this season»: products in a row that scrolls sideways (the kit draws the store's card), with a button to all. */
+function ProductsSlider({ block, index }: { block: LibraryBlock; index: number }) {
+  return <Band block={block} index={index}>
+    <Head block={block} index={index} align="split" aside={<a className="es-link" href={href(block.link)}>{block.cta || 'Ver todo'} <Icons.IconArrowRight /></a>} />
+    <div className="es-grid lb-slider" data-es-grid="grid4" data-pagosya-catalog data-catalog-limit={10} {...(block.products?.length ? { 'data-products': block.products.join('|') } : {})} />
+  </Band>;
+}
+
+/** Palo Alto «Join our community»: the store's own posts — photos with its @name above and a link to the look below, in a row that
+ *  scrolls sideways. Only for a store that links its Instagram or TikTok, with its own photos. */
+function SocialPosts({ block, index }: { block: LibraryBlock; index: number }) {
+  const posts = (block.items ?? []).filter(item => item.photo).slice(0, 8);
+  if (!block.handle || posts.length < 3) return null;
+  return <Band block={block} index={index}>
+    <Head block={block} index={index} align="center" />
+    <ul className="lb-posts">{posts.map((post, at) => <li key={at} className="lb-posts__post">
+      <a className="lb-posts__handle" href={block.social} target="_blank" rel="noopener">{block.handle}</a>
+      <figure className="lb-posts__photo"><Photo src={post.photo} /></figure>
+      {post.link ? <a className="lb-posts__look" href={href(post.link)}>{block.cta || 'Ver el look'}</a> : null}
+    </li>)}</ul>
+  </Band>;
+}
+
+/** Palo Alto «Made to elevate your world»: a title with one *script* word, then the store's photos running by with «síguenos» and
+ *  its @name between them. Only with the store's own account. */
+function SocialMarquee({ block, index }: { block: LibraryBlock; index: number }) {
+  const photos = (block.items ?? []).map(item => item.photo).filter((src): src is string => Boolean(src)).slice(0, 6);
+  if (!block.handle || photos.length < 3) return null;
+  const title = (block.title ?? '').split('*').map((part, at) => at % 2 ? <em key={at} className="lb-script">{part}</em> : part);
+  const run = (key: number) => <span key={key} className="lb-social__run">{photos.flatMap((src, at) => [<img key={`p${at}`} src={src} alt="" aria-hidden="true" loading="lazy" />, <span key={`w${at}`}>{at % 2 ? block.handle : (block.cta || 'síguenos')}</span>])}</span>;
+  return <Band block={block} index={index}>
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-social__title">{title}</h2> : null}
+    <a className="lb-social__track" href={block.social} target="_blank" rel="noopener" aria-label={`${block.cta || 'Síguenos'} ${block.handle}`}>{[0, 1].map(run)}</a>
+  </Band>;
+}
+
+/** Palo Alto «Shop the look»: a photo with pins on the products in it; the open pin shows that product's card. Real products only. */
+function ShopLook({ block, index }: { block: LibraryBlock; index: number }) {
+  const pins = (block.items ?? []).filter(item => item.title && Number.isFinite(item.x) && Number.isFinite(item.y)).slice(0, 4);
+  const [open, setOpen] = useState(0);
+  if (!block.photo || !pins.length) return null;
+  return <Bleed block={block} index={index}>
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    <div className="lb-look">
+      <Photo src={block.photo} className="lb-look__photo" />
+      {pins.map((pin, at) => <div key={at} className="lb-look__spot" data-open={open === at ? '' : undefined} style={{ left: `${pin.x}%`, top: `${pin.y}%` }}>
+        <button type="button" className="lb-look__pin" aria-expanded={open === at} aria-label={pin.title} onClick={() => setOpen(at)}><span>{pin.title}</span></button>
+        <div className="lb-look__card"><div className="lb-look__product" data-pagosya-catalog data-products={pin.title} data-catalog-limit={1} /></div>
+      </div>)}
+    </div>
+  </Bleed>;
+}
+
+/** Palo Alto press: what each outlet said about the store, one quote at a time rising in, the outlets' names below with the current one
+ *  dark. Only outlets and words the merchant gave. */
+function PressQuotes({ block, index }: { block: LibraryBlock; index: number }) {
+  const quotes = (block.items ?? []).filter(item => item.title && item.text).slice(0, 5);
+  const [at, setAt] = useState(0);
+  useEffect(() => {
+    if (quotes.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = window.setInterval(() => setAt(current => (current + 1) % quotes.length), 4500);
+    return () => window.clearInterval(timer);
+  }, [quotes.length]);
+  if (!quotes.length) return null;
+  return <Band block={block} index={index}>
+    <div className="lb-press">
+      {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+      <div className="lb-press__quotes" aria-live="polite">{quotes.map((quote, n) => <blockquote key={n} className="lb-press__quote" data-active={n === at ? '' : undefined}>«{quote.text}»</blockquote>)}</div>
+      <ul className="lb-press__outlets">{quotes.map((quote, n) => <li key={n}><button type="button" data-active={n === at ? '' : undefined} onClick={() => setAt(n)}>{quote.title}</button></li>)}</ul>
+    </div>
+  </Band>;
 }
 
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
@@ -794,6 +941,7 @@ const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) =
   'closing-photo': ClosingPhoto, 'closing-wordmark': ClosingWordmark,
   'bar-note': BarNote, 'cover-stage': CoverStage, 'promo-countdown': PromoCountdown, 'story-stack': StoryStack, 'statement-reveal': StatementReveal,
   'categories-list': CategoriesList, 'marquee-photo': MarqueePhoto, 'story-overlap': StoryOverlap, 'promo-trio': PromoTrio,
+  'products-slider': ProductsSlider, 'social-posts': SocialPosts, 'social-marquee': SocialMarquee, 'shop-look': ShopLook, 'press-quotes': PressQuotes,
 };
 export const LIBRARY_SECTIONS = Object.keys(SECTIONS);
 
