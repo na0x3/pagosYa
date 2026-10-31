@@ -106,12 +106,15 @@ export function libraryAnswerSchema(photoCount: number) {
 }
 
 /** 34 templates: what changes when the store already wears a template — the answer only fills the template's own sections. */
-export const LIBRARY_FILL_PROMPT = `MODO PLANTILLA: la tienda ya usa una plantilla completa (en «plantilla»: sus secciones en orden, con palabras de ejemplo).
+export const LIBRARY_FILL_PROMPT = `MODO PLANTILLA (manda sobre las reglas de arriba): la tienda ya usa una plantilla completa (en «plantilla»: sus secciones en orden,
+con palabras de ejemplo).
 Responde «blocks» con EXACTAMENTE esas secciones, del mismo tipo y en el mismo orden; no agregues, quites ni cambies ninguna. Escribe
 todo de nuevo con los datos y la voz de esta tienda (las palabras de ejemplo solo marcan el largo y el tono; nunca las copies), elige
 las fotos de la tienda para cada sección y sus items (una foto puede repetirse UNA vez en la página, nunca dos veces en la misma
 sección ni en dos secciones seguidas), y deja vacío (o sin items) lo que la tienda no puede respaldar: el código la quita.
-look, band y card los pone la plantilla: déjalos vacíos.`;
+look, band y card los pone la plantilla: déjalos vacíos. Escribe TODAS las secciones completas hasta la última (preguntas con sus
+respuestas, puntos, columnas, títulos de categorías y productos exactos para los puntos de shop-look): una sección que mandas vacía
+desaparece. Si te faltan fotos, deja photo en -1: el código pone una foto de la tienda.`;
 
 export const LIBRARY_PROMPT = `Eres el director de arte de una tienda online pagosYa. Armas su portada con secciones ya diseñadas (como un tema de Shopify):
 eliges cuáles, su orden y escribes sus textos. No diseñas nada: el diseño ya está hecho.
@@ -185,6 +188,16 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     used.add(at);
     return facts.photos[at].url;
   };
+  // Template mode (live check 2026-10-31: the model left every photo place after the 11th empty): a place the answer left without a
+  // photo takes the store's least-shown photo the rule allows — one of the category named, when there is one.
+  const pick = (category?: string): string | undefined => {
+    if (!fixedMode) return undefined;
+    const order = facts.photos.map((photo, at) => ({ at, shown: (spots.get(at) ?? []).length, match: category && photo.category && fold(photo.category) === fold(category) ? 0 : 1 }))
+      .sort((a, b) => a.match - b.match || a.shown - b.shown || a.at - b.at);
+    for (const { at } of order) { const url = takePhoto(at); if (url) return url; }
+    return undefined;
+  };
+  const photoOf = (index: unknown, category?: string) => takePhoto(index) ?? pick(category);
   const link = (value: unknown): string | undefined => {
     const raw = String(value ?? '').trim();
     if (!raw) return undefined;
@@ -232,18 +245,20 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     here = blocks.length;
     const single = section.id === 'promo-trio' && raw.look === 'single';
     if ((needs.photos ?? 0) >= 1 || single || ['compare-table', 'faq-split', 'visit-store', 'promo-code', 'closing-wordmark', 'statement-inline'].includes(section.id)) {
-      const photo = takePhoto(raw.photo); if (photo) block.photo = photo;
+      const photo = photoOf(raw.photo); if (photo) block.photo = photo;
     }
-    if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline') { const photo2 = takePhoto(raw.photo2); if (photo2) block.photo2 = photo2; }
+    if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline') { const photo2 = photoOf(raw.photo2); if (photo2) block.photo2 = photo2; }
     // Items: capped words, a known icon, an item photo where the section shows one, a value only in the comparison.
     const [minItems, maxItems] = needs.items ?? [0, 0];
     const itemPhoto = Boolean(needs.itemPhotos) || section.id === 'cover-stage' || (section.id === 'promo-trio' && !single);
-    let items: LayoutItem[] = (raw.items ?? []).slice(0, Math.max(maxItems, needs.categories ? 4 : 0)).map(item => {
+    // Social posts are the store's own photos: the answer need not list them.
+    const rawItems: RawItem[] = needs.social && (raw.items ?? []).length < (needs.items?.[0] ?? 0) ? Array.from({ length: needs.items![0] + 2 }, () => ({ title: 'post', photo: -1 })) : (raw.items ?? []);
+    let items: LayoutItem[] = rawItems.slice(0, Math.max(maxItems, needs.categories ? 4 : 0)).map(item => {
       const out: LayoutItem = { title: clip(item.title, TEXT_CAPS.itemTitle) };
       const text = clip(item.text, TEXT_CAPS.itemText); if (text) out.text = text;
       if (item.icon && (LIBRARY_ICON_NAMES as readonly string[]).includes(item.icon)) out.icon = item.icon;
       if (section.id === 'compare-table') out.value = item.value === 'yes' ? 'yes' : 'no';
-      if (itemPhoto) { const photo = takePhoto(item.photo); if (photo) out.photo = photo; }
+      if (itemPhoto) { const photo = photoOf(item.photo, needs.categories ? String(item.title ?? '') : undefined); if (photo) out.photo = photo; }
       if (itemPhoto || section.id === 'promo-trio') { const target = link(item.link); if (target) out.link = target; }
       if (needs.pins && Number.isFinite(item.x) && Number.isFinite(item.y)) { out.x = Math.round(Math.min(94, Math.max(6, Number(item.x)))); out.y = Math.round(Math.min(94, Math.max(6, Number(item.y)))); }
       return out;

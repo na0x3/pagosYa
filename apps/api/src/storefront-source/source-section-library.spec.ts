@@ -181,11 +181,13 @@ describe('template fill mode (34 templates)', () => {
       { type: 'cover-stage', title: 'Hola', photo: 0 }, { type: 'story-split', title: 'Historia', photo: 1 },
       { type: 'promo-banner', title: 'Regalos', photo: 0 }, { type: 'closing-photo', title: 'Chau', photo: 0 },
     ] as never }, facts(), { fixed: fixed as never, now });
-    // Photo 0 on the cover, again two sections on (the banner), never a third time (the closing goes).
-    expect(types(layout)).toEqual(['cover-stage', 'story-split', 'promo-banner']);
-    // Beside the section that already shows it: refused (the story would sit next to the cover with the same photo).
+    // Photo 0 on the cover, again two sections on (the banner); a third time is refused and the closing takes another store photo.
+    const url = (at: number) => `/v1/uploads/0000000${at}-aaaa.jpg`;
+    expect(types(layout)).toEqual(['cover-stage', 'story-split', 'promo-banner', 'closing-photo']);
+    expect(layout.map(block => block.photo)).toEqual([url(0), url(1), url(0), url(2)]);
+    // Beside the section that already shows it: refused — the story takes another photo instead of repeating the cover's.
     const beside = validateLibraryLayout({ blocks: [{ type: 'cover-stage', title: 'Hola', photo: 0 }, { type: 'story-split', title: 'Historia', photo: 0 }] as never }, facts(), { fixed: fixed.slice(0, 2) as never, now });
-    expect(types(beside)).toEqual(['cover-stage']);
+    expect(beside.map(block => block.photo)).toEqual([url(0), url(1)]);
   });
 
   it('drops the countdown without the merchant date, and social sections without the store account', () => {

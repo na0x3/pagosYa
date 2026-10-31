@@ -334,7 +334,7 @@ export class SourceConversationService {
           body: JSON.stringify({ model, store: false, instructions: input.template?.length ? `${LIBRARY_PROMPT}\n\n${LIBRARY_FILL_PROMPT}` : LIBRARY_PROMPT,
             input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(facts) }, ...images] }],
             text: { format: { type: 'json_schema', name: 'section_library', strict: true, schema: libraryAnswerSchema(photos.length) } },
-            reasoning: { effort: 'low' }, max_output_tokens: 6000 }),
+            reasoning: { effort: 'low' }, max_output_tokens: input.template?.length ? 12000 : 6000 }),
         });
         body = await response.json().catch(() => null);
         checkSourceProviderQuota(response.status, body, provider.name);
