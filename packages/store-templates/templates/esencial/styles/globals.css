@@ -2894,3 +2894,36 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="muro"] :is([data-lb-band="deep"],[data-es-band="deep"]) .lb-tiles__label{position:static;justify-content:center;padding:0 12px 16px;color:#16404f;text-shadow:none;font:400 15px/1.2 var(--es-heading)}
 [data-es-theme="muro"] :is([data-lb-band="deep"],[data-es-band="deep"]) .lb-tiles__label svg{display:none}
 /* /theme:muro */
+
+/* theme:claro */
+/* Claro (after Refresh): an ice-blue page, white cards with round corners for every section, a heavy sans, navy pill buttons,
+ * navy bands, a white card over the cover photo. Measured: no scroll motion (Dawn family). */
+[data-es-theme="claro"]{--es-radius:16px;--es-t-weight:800;--es-t-track:-.02em}
+[data-es-theme="claro"] .es-announce{background:#3d5cff;color:#fff;font:600 12px/1 var(--es-body)}
+[data-es-theme="claro"] .es-header{background:#0f1b4c;color:#fff;border-bottom:0}
+[data-es-theme="claro"] .es-header :is(a,button,.es-logo){color:#fff}
+[data-es-theme="claro"] .es-logo{font:900 italic 22px/1 var(--es-heading);text-transform:uppercase;letter-spacing:-.02em}
+[data-es-theme="claro"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:800;letter-spacing:-.02em;text-transform:none}
+[data-es-theme="claro"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(22px,2.2vw,32px)}
+[data-es-theme="claro"] .lb-story-split .lb-title{font-size:clamp(30px,3vw,44px)}
+[data-es-theme="claro"] .lb-em{color:inherit;font-style:normal}
+[data-es-theme="claro"] .lb-cover-full{min-height:min(70vh,640px)}
+[data-es-theme="claro"] .lb-cover-full::after{display:none}
+[data-es-theme="claro"] .lb-cover-full .lb-cover-full__copy{width:min(420px,calc(100% - 48px));margin:auto auto auto max(24px,calc((100% - 1280px)/2 + 24px));padding:32px;border-radius:16px;background:#fff;color:#0f1b4c}
+[data-es-theme="claro"] .lb-cover-full :is(h1,.lb-title,.lb-cover__sub){color:#0f1b4c;text-shadow:none}
+[data-es-theme="claro"] .lb-cover-full :is(h1,.lb-title){font-size:clamp(28px,2.6vw,38px)}
+[data-es-theme="claro"] .es-btn,[data-es-theme="claro"] .lb-card__buy{border-radius:99px;background:#0f1b4c;border:1.5px solid #0f1b4c;color:#fff;font:700 13px/1 var(--es-body);letter-spacing:0;text-transform:none}
+[data-es-theme="claro"] :is([data-lb-band="deep"],[data-es-band="deep"]) .es-btn{background:#fff;border-color:#fff;color:#0f1b4c}
+[data-es-theme="claro"] .lb-cover .es-btn{background:#0f1b4c;color:#fff}
+[data-es-theme="claro"] .es-btn *{color:inherit}
+[data-es-theme="claro"] .es-btn svg{display:none}
+[data-es-theme="claro"] .lb-story-split .lb-split{width:min(1100px,100%);margin:0 auto;padding:clamp(20px,2.4vw,32px);border-radius:16px;background:#fff;gap:clamp(20px,3vw,48px)}
+[data-es-theme="claro"] .lb-story-split .lb-split__media{border-radius:12px;max-height:340px}
+[data-es-theme="claro"] .lb-card{background:#fff;border:1.5px solid #0f1b4c;border-radius:12px;padding:10px}
+[data-es-theme="claro"] .lb-card .lb-card__media{border-radius:8px;background:#eef3fb}
+[data-es-theme="claro"] :is(.es-card__name,.lb-card .es-card__name){font:700 14px/1.3 var(--es-body);text-transform:none;letter-spacing:0}
+[data-es-theme="claro"] .es-footer{background:#0f1b4c;color:#fff}
+[data-es-theme="claro"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+[data-es-theme="claro"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
+[data-es-theme="claro"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* /theme:claro */

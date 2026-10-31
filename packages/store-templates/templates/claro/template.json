@@ -1,0 +1,271 @@
+{
+  "id": "claro",
+  "name": "Claro",
+  "category": "tecnologia",
+  "description": "Accesorios de tecnología: azul noche y celeste hielo, letra gruesa, tarjetas blancas por categoría, una franja azul con razones y ofertas.",
+  "tags": [
+    "tecnología",
+    "accesorios",
+    "audio",
+    "moderno"
+  ],
+  "sitePurpose": "shop",
+  "order": 49,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Refresh",
+    "url": "https://theme-refresh-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "nu-story",
+      "role": "hero",
+      "demo": "nu-story.jpg"
+    },
+    {
+      "slot": "en-escritorio",
+      "role": "hero",
+      "demo": "en-escritorio.jpg"
+    },
+    {
+      "slot": "en-hogar",
+      "role": "lifestyle",
+      "demo": "en-hogar.jpg"
+    },
+    {
+      "slot": "en-accesorios",
+      "role": "lifestyle",
+      "demo": "en-accesorios.jpg"
+    },
+    {
+      "slot": "nu-hero",
+      "role": "product",
+      "demo": "nu-hero.jpg"
+    },
+    {
+      "slot": "nu-p1",
+      "role": "product",
+      "demo": "nu-p1.jpg"
+    },
+    {
+      "slot": "nu-p2",
+      "role": "product",
+      "demo": "nu-p2.jpg"
+    },
+    {
+      "slot": "nu-p3",
+      "role": "product",
+      "demo": "nu-p3.jpg"
+    },
+    {
+      "slot": "nu-p4",
+      "role": "product",
+      "demo": "nu-p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "claro",
+    "colors": {
+      "paper": "#eef3fb",
+      "ink": "#0f1b4c",
+      "muted": "#ffffff",
+      "accent": "#0f1b4c",
+      "deep": "#0f1b4c"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "claro",
+      "icons": "cart",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis desde Bs 300"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "look": "left",
+        "title": "Tu tecnología, *pero mejor*",
+        "text": "Accesorios transparentes, hechos para durar.",
+        "cta": "Ver audio",
+        "link": "products",
+        "photo": "slot:nu-story"
+      },
+      {
+        "type": "products-slider",
+        "card": "classic",
+        "title": "Los favoritos de todos",
+        "link": "products"
+      },
+      {
+        "type": "press-quotes",
+        "look": "quotes",
+        "title": "Lo que dicen"
+      },
+      {
+        "type": "story-split",
+        "title": "Audio.",
+        "text": "Sonido claro y diseño que se ve por dentro. Audífonos para todo el día.",
+        "cta": "Ver audio",
+        "link": "products",
+        "photo": "slot:nu-p2"
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Carga.",
+        "text": "Cargadores rápidos que no calientan y cables que no se rompen.",
+        "cta": "Ver carga",
+        "link": "products",
+        "photo": "slot:nu-p3"
+      },
+      {
+        "type": "story-split",
+        "title": "Hogar.",
+        "text": "Enchufes y accesorios inteligentes para tu casa.",
+        "cta": "Ver hogar",
+        "link": "products",
+        "photo": "slot:en-hogar"
+      },
+      {
+        "type": "products-grid",
+        "card": "classic",
+        "title": "Kits",
+        "link": "products"
+      },
+      {
+        "type": "icon-columns",
+        "look": "side",
+        "band": "deep",
+        "title": "Hacemos accesorios que duran, *sin plástico de más*",
+        "photo": "slot:en-escritorio",
+        "items": [
+          {
+            "title": "Materiales que duran",
+            "text": "Sin piezas frágiles.",
+            "icon": "shield"
+          },
+          {
+            "title": "Envío rápido",
+            "text": "En 24 h en la ciudad.",
+            "icon": "truck"
+          },
+          {
+            "title": "Miles de reseñas",
+            "text": "De gente real.",
+            "icon": "star"
+          },
+          {
+            "title": "Buen precio",
+            "text": "Sin intermediarios.",
+            "icon": "gem"
+          }
+        ]
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "deep",
+        "title": "10% en tu primera compra",
+        "text": "Lanzamientos y ofertas antes que nadie."
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Garantía de un año",
+            "text": "Te lo cambiamos.",
+            "icon": "shield"
+          },
+          {
+            "title": "Envío en 24 h",
+            "text": "En la ciudad.",
+            "icon": "truck"
+          },
+          {
+            "title": "Compatible",
+            "text": "Con iPhone y Android.",
+            "icon": "phone"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Hecho para *verse por dentro*",
+        "text": "Carcasa transparente, piezas de calidad y nada que esconder.",
+        "photo": "slot:en-accesorios"
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Es compatible con mi teléfono?",
+            "text": "Sí, con iPhone y Android."
+          },
+          {
+            "title": "¿Tiene garantía?",
+            "text": "Un año."
+          },
+          {
+            "title": "¿Puedo devolverlo?",
+            "text": "En 7 días si no lo usaste."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Claro",
+      "tagline": "Tecnología que se ve por dentro",
+      "products": [
+        {
+          "name": "Audífonos Claros",
+          "price": 690,
+          "description": "30 h de batería.",
+          "category": "Audio"
+        },
+        {
+          "name": "Funda Transparente",
+          "price": 120,
+          "description": "Ve tu teléfono por dentro.",
+          "category": "Fundas"
+        },
+        {
+          "name": "Audífonos Over-ear",
+          "price": 1190,
+          "description": "Cancelación de ruido.",
+          "category": "Audio"
+        },
+        {
+          "name": "Kit de Carga",
+          "price": 260,
+          "description": "Cargador y cable.",
+          "category": "Carga"
+        },
+        {
+          "name": "Enchufe Inteligente",
+          "price": 180,
+          "description": "Controla desde el teléfono.",
+          "category": "Hogar"
+        }
+      ]
+    }
+  }
+}

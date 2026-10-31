@@ -540,6 +540,13 @@
         "heading": "young-serif",
         "body": "figtree",
         "starterOnly": true
+      },
+      {
+        "id": "claro",
+        "name": "Claro",
+        "heading": "figtree",
+        "body": "figtree",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -719,7 +726,8 @@
         "bazar",
         "sorbo",
         "grano",
-        "muro"
+        "muro",
+        "claro"
       ],
       "icons": [
         "line",
