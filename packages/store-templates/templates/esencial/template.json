@@ -377,6 +377,13 @@
         "heading": "plus-jakarta-sans",
         "body": "plus-jakarta-sans",
         "starterOnly": true
+      },
+      {
+        "id": "motion",
+        "name": "Motion",
+        "heading": "schibsted-grotesk",
+        "body": "schibsted-grotesk",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -532,7 +539,8 @@
       "theme": [
         "none",
         "paloalto",
-        "impulse"
+        "impulse",
+        "motion"
       ],
       "icons": [
         "line",

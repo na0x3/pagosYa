@@ -1299,6 +1299,58 @@ main[data-lb-home]{overflow-x:clip}
   .es-utility{display:none}
 }
 
+/* Motion parts (34 templates): collage prints, newsletter panel, scalloped circle, Ken Burns crossfade, photo countdown bar. */
+.lb-collage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:clamp(32px,6vw,96px)}
+.lb-collage__prints{position:relative;min-height:clamp(320px,36vw,500px)}
+.lb-collage__print{position:absolute;width:48%;aspect-ratio:3/4;object-fit:cover;box-shadow:0 20px 40px -24px rgba(0,0,0,.45)}
+.lb-collage__print:nth-child(1){left:6%;top:4%;transform:rotate(-3deg)}
+.lb-collage__print:nth-child(2){left:30%;top:14%;z-index:2}
+.lb-collage__print:nth-child(3){right:4%;bottom:2%;width:34%;transform:rotate(4deg);z-index:3}
+.lb-news{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);min-height:min(56vh,480px)}
+.lb-news__photo{width:100%;height:100%;object-fit:cover}
+.lb-news__panel{display:grid;align-content:center;justify-items:center;gap:14px;padding:clamp(32px,5vw,64px);background:var(--es-accent);color:var(--es-on-accent);text-align:center}
+.lb-news__title{margin:0;font:600 clamp(20px,2vw,28px)/1.2 var(--es-heading);letter-spacing:.04em;text-transform:uppercase}
+.lb-news__text{margin:0;max-width:34ch;font-size:14px;line-height:1.55}
+.lb-news__form{width:min(340px,100%)}
+.lb-story-split[data-lb-look="wavy"] .lb-split__media{position:relative;overflow:visible;border-radius:0;aspect-ratio:auto;max-height:none;min-height:clamp(300px,30vw,420px);background:none}
+.lb-story-split[data-lb-look="wavy"] .lb-split__media>img:first-child{position:absolute;left:0;bottom:0;width:56%;aspect-ratio:1;object-fit:cover;z-index:1;
+  -webkit-mask:radial-gradient(circle at 50% 50%,#000 64%,transparent 65%),conic-gradient(from 0deg,#000 0 100%);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 2c4 0 6 4 10 5s8-2 11 1 1 7 4 10 8 2 10 6-2 7-1 11 5 6 5 10-4 6-5 10 3 8 1 11-7 1-10 4-2 8-6 10-7-2-11-1-6 5-10 5-6-4-10-5-8 2-11-1-1-7-4-10-8-2-10-6 2-7 1-11-5-6-5-10 4-6 5-10-3-8-1-11 7-1 10-4 2-8 6-10 7 2 11 1 6-5 10-5z'/%3E%3C/svg%3E") center/100% 100% no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 2c4 0 6 4 10 5s8-2 11 1 1 7 4 10 8 2 10 6-2 7-1 11 5 6 5 10-4 6-5 10 3 8 1 11-7 1-10 4-2 8-6 10-7-2-11-1-6 5-10 5-6-4-10-5-8 2-11-1-1-7-4-10-8-2-10-6 2-7 1-11-5-6-5-10 4-6 5-10-3-8-1-11 7-1 10-4 2-8 6-10 7 2 11 1 6-5 10-5z'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+.lb-story-split[data-lb-look="wavy"] .lb-split__media .lb-split__inset{position:absolute;right:0;top:0;width:48%;height:100%;margin:0;object-fit:cover;border-radius:999px 999px 0 0}
+.lb-fade{position:absolute;inset:0;overflow:hidden}
+.lb-fade__photo{opacity:0;animation:lb-kenburns calc(var(--n,2) * 7s) linear infinite}
+.lb-fade[data-count="1"] .lb-fade__photo{opacity:1;animation:lb-kenburns-once 7s linear both}
+.lb-fade[data-count="2"]{--n:2}.lb-fade[data-count="3"]{--n:3}
+.lb-fade__photo:first-child{animation-name:lb-kenburns-first}
+@keyframes lb-kenburns-first{0%{opacity:1;transform:scale(1.2)}46%{opacity:1;transform:scale(1)}52%,96%{opacity:0;transform:scale(1)}100%{opacity:1;transform:scale(1.2)}}
+.lb-fade__photo:nth-child(2){animation-delay:7s}.lb-fade__photo:nth-child(3){animation-delay:14s}
+@keyframes lb-kenburns{0%{opacity:0;transform:scale(1.27)}4%{opacity:1;transform:scale(1.2)}46%{opacity:1;transform:scale(1)}52%,100%{opacity:0;transform:scale(1)}}
+@keyframes lb-kenburns-once{0%{opacity:0;transform:scale(1.27)}10%{opacity:1;transform:scale(1.2)}100%{opacity:1;transform:scale(1)}}
+.lb-countdown-band--photo{position:relative;overflow:hidden;color:#fff}
+.lb-countdown-band--photo.es-section{padding-block:clamp(28px,3vw,40px)}
+.lb-countdown__photo{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover}
+.lb-countdown-band--photo::before{content:'';position:absolute;inset:0;background:color-mix(in srgb,var(--es-accent) 72%,transparent);z-index:1}
+.lb-countdown-band--photo .lb-countdown{position:relative;z-index:2;max-width:1100px}
+.lb-countdown-band--photo :is(.lb-countdown__title,.lb-underline-link,.es-eyebrow,.lb-countdown__n,.lb-countdown__unit){color:#fff}
+.lb-categories-mosaic[data-lb-look="grid5"] .lb-mosaic{grid-template-columns:2fr 1fr 1fr}
+.lb-categories-mosaic[data-lb-look="grid5"] .lb-mosaic li:nth-child(1){grid-row:span 1}
+.lb-categories-mosaic[data-lb-look="grid5"] .lb-mosaic li:nth-child(4){grid-column:span 1}
+.lb-categories-mosaic[data-lb-look="grid5"] .lb-mosaic li:nth-child(5){grid-column:span 2}
+.lb-categories-mosaic[data-lb-look="grid5"] .lb-mosaic__label{align-self:end;justify-self:start;padding:14px;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.lb-products-cards[data-lb-look="feature"] .lb-cards{grid-template-columns:repeat(2,minmax(0,1fr));max-width:820px;margin-inline:auto}
+.lb-products-cards[data-lb-look="feature"] .lb-cards .menu-item{background:none;padding:0;text-align:left}
+.lb-cover-stage[data-lb-look="center"] .lb-stage__copy{margin-inline:auto;width:min(760px,calc(100% - 48px))}
+.lb-cover-stage[data-lb-look="center"] .lb-stage__title{text-transform:uppercase;font-weight:500}
+.lb-cover-stage[data-lb-look="center"] .lb-mark svg{display:none}
+@media (max-width:760px){
+  .lb-collage,.lb-news{grid-template-columns:1fr}
+  .lb-collage__prints{min-height:340px}
+  .lb-news__photo{aspect-ratio:4/3}
+  .lb-categories-mosaic[data-lb-look="grid5"] .lb-mosaic{grid-template-columns:1fr 1fr}
+  .lb-categories-mosaic[data-lb-look="grid5"] .lb-mosaic li:nth-child(1),.lb-categories-mosaic[data-lb-look="grid5"] .lb-mosaic li:nth-child(5){grid-column:span 2}
+}
+@media (prefers-reduced-motion:reduce){.lb-fade__photo{animation:none}.lb-fade__photo:first-child{opacity:1}}
+
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
  * ground blown up to the page width (BAEK cover) reads as a mistake; the boxes keep their shape up to a height, then crop. */
 .lb-cover-centered__media{width:min(1080px,calc(100% - 48px));aspect-ratio:2/1;max-height:min(56vh,520px)}
@@ -1468,3 +1520,37 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="impulse"] .lb-promo-banner[data-in][data-lb-look="parallax"] .lb-actions{animation:im-fade 2s ease 1.3s both}
 [data-es-theme="impulse"] .lb-cover-shoppable .lb-cover-full__copy>*{animation:im-fade 1s cubic-bezier(.26,.54,.32,1) .2s both}
 /* /theme:impulse */
+
+/* theme:motion */
+/* Motion (themes.shopify.com/themes/motion, preset Adventure): off-white ground, black type, blue buttons, an orange bar and panel,
+ * uppercase grotesque titles, header clear over the cover. Motion measured on the demo (same family as Impulse): cover zoom-fade
+ * 2.5s cubic-bezier(.26,.54,.32,1) and words rising from 120% (.8s at .3s, 1s at .7s); sections' words rise 1s; images fade .5s;
+ * crossfading photos Ken Burns 7s; parallax 128–184px. */
+@keyframes mo-zoomfade{0%{opacity:0;transform:scale(1.25)}100%{opacity:1;transform:scale(1)}}
+@keyframes mo-rise{0%{transform:translateY(120%)}100%{transform:translateY(0)}}
+@keyframes mo-fade{0%{opacity:0}100%{opacity:1}}
+[data-es-theme="motion"]{--es-radius:0px}
+[data-es-theme="motion"] .es-announce{background:#f04e12;color:#fff;font-size:12px}
+[data-es-theme="motion"] .es-header{min-height:64px;border-bottom:0;transition:background .3s ease,color .3s ease}
+[data-es-theme="motion"] .es-logo{font:700 18px/1 var(--es-heading);letter-spacing:.12em;text-transform:uppercase}
+:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="motion"]:has(main>.lb-cover:first-child) .es-header{background:transparent}
+:root:not([data-es-scroll="down"]):not([data-es-scroll="up"]) [data-es-theme="motion"]:has(main>.lb-cover:first-child) .es-header :is(a,button,.es-logo,.es-icon-btn){color:#fff}
+[data-es-theme="motion"]:has(main>.lb-cover:first-child) main>.lb-cover:first-child{margin-top:-64px}
+[data-es-theme="motion"] :is(.es-h2,.lb-title,.lb-head h2,.lb-countdown__title){font-weight:500;letter-spacing:.02em;text-transform:uppercase}
+[data-es-theme="motion"] .lb-head h2{font-size:clamp(15px,1.2vw,18px);letter-spacing:.08em}
+[data-es-theme="motion"] .es-btn{min-height:38px;padding:0 18px;border-radius:0;font-size:11px;letter-spacing:.1em}
+[data-es-theme="motion"] .es-btn--accent,[data-es-theme="motion"] .es-btn--ink{background:#4a73e8;border-color:#4a73e8;color:#fff}
+[data-es-theme="motion"] .es-btn svg{display:none}
+[data-es-theme="motion"] .lb-head--split .es-link,[data-es-theme="motion"] .lb-more .es-btn{background:#4a73e8;color:#fff;padding:10px 18px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none}
+[data-es-theme="motion"] .lb-reviews-cards[data-es-band]{--es-band-bg:#4a73e8}
+[data-es-theme="motion"] .lb-news__panel{background:#f04e12}
+[data-es-theme="motion"] .lb-cover-stage .lb-stage__slides{animation:mo-zoomfade 2.5s cubic-bezier(.26,.54,.32,1) both}
+[data-es-theme="motion"] .lb-stage__copy>*{overflow:hidden}
+[data-es-theme="motion"] .lb-stage__title{animation:mo-rise .8s cubic-bezier(.26,.54,.32,1) .3s both}
+[data-es-theme="motion"] .lb-stage__copy .lb-cover__sub{animation:mo-rise 1s cubic-bezier(.26,.54,.32,1) .7s both}
+:root:not([data-es-still]) [data-es-theme="motion"] main .lb:not([data-in]) :is(.lb-head,.lb-collage__words,.lb-split__copy,.lb-columns li,.lb-news__panel>*){opacity:0}
+[data-es-theme="motion"] main .lb[data-in] :is(.lb-head,.lb-collage__words,.lb-split__copy,.lb-columns li,.lb-news__panel>*){animation:mo-fade 1s cubic-bezier(.26,.54,.32,1) both}
+:root:not([data-es-still]) [data-es-theme="motion"] main .lb:not([data-in]) img{opacity:0}
+[data-es-theme="motion"] main .lb[data-in] img:not(.lb-fade__photo){animation:mo-fade .5s cubic-bezier(.29,.65,.58,1) both}
+[data-es-theme="motion"] .es-footer{background:var(--es-paper)}
+/* /theme:motion */

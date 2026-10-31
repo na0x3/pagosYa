@@ -63,6 +63,8 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'social-posts', role: 'proof', use: 'Publicaciones de la tienda: fotos (items.photo) con su @cuenta y «Ver el look». Solo si la tienda enlazó su Instagram o TikTok.', needs: { social: true, items: [3, 8], itemPhotos: 3 }, templateOnly: true },
   { id: 'social-marquee', role: 'proof', use: 'Titular con una palabra en *asteriscos* (va en letra manuscrita) y fotos que corren con «síguenos» y la @cuenta. Solo con cuenta enlazada.', needs: { social: true, items: [3, 6], itemPhotos: 3 }, templateOnly: true },
   { id: 'shop-look', role: 'products', use: 'Foto con puntos sobre los productos que aparecen en ella (items.title = nombre exacto del producto; x, y = posición en % sobre la foto).', needs: { photos: 1, items: [1, 4], pins: true }, templateOnly: true },
+  { id: 'story-collage', role: 'story', use: 'Tres fotos superpuestas como copias sobre una mesa (photo, photo2, items.photo) junto a un titular, texto y dos botones.', needs: { photos: 2 }, templateOnly: true },
+  { id: 'newsletter-split', role: 'info', use: 'Una foto junto a un panel de color con titular, texto y el formulario de novedades de la tienda.', needs: { photos: 1 }, templateOnly: true },
   { id: 'cover-shoppable', role: 'cover', use: 'Portada de foto completa con un + sobre cada producto que aparece en ella (items.title = nombre exacto, x, y = posición en %) y el titular abajo a la izquierda.', needs: { photos: 1, items: [0, 4], pins: true }, templateOnly: true },
   { id: 'cover-video', role: 'cover', use: 'El video de la tienda de fondo con un titular centrado (solo se ve si la tienda subió un video).', needs: {}, templateOnly: true },
   { id: 'categories-mosaic', role: 'products', use: 'Mosaico de 3 a 6 fotos con su nombre al centro y enlace (items con photo).', needs: { items: [3, 6], itemPhotos: 3 }, templateOnly: true },
@@ -155,7 +157,7 @@ const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').t
 const clip = (value: unknown, cap: number) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, cap).trim();
 
 type RawItem = { title?: string; text?: string; icon?: string; photo?: number; link?: string; value?: string; x?: number; y?: number };
-type RawBlock = { type?: string; look?: string; band?: string; eyebrow?: string; title?: string; text?: string; cta?: string; link?: string; cta2?: string; link2?: string;
+type RawBlock = { template?: LayoutBlock; type?: string; look?: string; band?: string; eyebrow?: string; title?: string; text?: string; cta?: string; link?: string; cta2?: string; link2?: string;
   photo?: number; photo2?: number; items?: RawItem[]; products?: string[]; product?: string; code?: string; card?: string; endsAt?: string };
 export type LayoutItem = { title: string; text?: string; icon?: string; photo?: string; link?: string; value?: string; x?: number; y?: number };
 export type LayoutBlock = { type: string; look?: string; band?: string; eyebrow?: string; title?: string; text?: string; cta?: string; link?: string; cta2?: string; link2?: string;
@@ -213,7 +215,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     const at = answered.findIndex(raw => raw.type === template.type);
     if (at < 0) return [];
     const [raw] = answered.splice(at, 1);
-    return [{ ...raw, type: template.type, look: template.look ?? '', band: template.band ?? '', card: template.card ?? '' }];
+    return [{ ...raw, type: template.type, look: template.look ?? '', band: template.band ?? '', card: template.card ?? '', template }];
   }) : answered;
   for (const raw of sequence) {
     const section = BY_ID.get(String(raw.type ?? ''));
@@ -229,12 +231,13 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     // Live 2026-10-31 (Oh Belly): the ribbon cover already runs its words; a marquee after it is the same band twice.
     if (section.id === 'strip-marquee' && (answer?.blocks ?? []).some(other => other.type === 'cover-ribbon')) continue;
     // The main grid shows up to 8 products: on a smaller catalogue a hand-picked row only repeats it (Oh Belly, 5 products).
-    if (section.id === 'products-cards' && facts.products.length <= 8) continue;
+    if (!fixedMode && section.id === 'products-cards' && facts.products.length <= 8) continue;
     if (!fixedMode && section.role === 'cover' && blocks.some(block => BY_ID.get(block.type)?.role === 'cover')) continue;
     if (!fixedMode && section.role === 'products' && ['products-grid', 'products-tabs'].includes(section.id) && blocks.some(block => ['products-grid', 'products-tabs'].includes(block.type))) continue;
     const block: LayoutBlock = { type: section.id };
     if (section.id === 'products-grid' || section.id === 'products-tabs' || section.id === 'products-slider') block.card = (LIBRARY_CARDS as readonly string[]).includes(raw.card ?? '') ? raw.card : defaultCard(facts);
-    if (raw.look && section.looks?.includes(raw.look)) block.look = raw.look;
+    // A template's own look wins (arch, caption, uneven, parallax…); a free answer may only use the section's listed looks.
+    if (raw.look && (raw.template || section.looks?.includes(raw.look))) block.look = raw.look;
     if (raw.band && ['paper', 'muted', 'accent', 'deep'].includes(raw.band)) block.band = raw.band;
     for (const field of ['eyebrow', 'title', 'text', 'cta', 'cta2'] as const) { const value = clip(raw[field], TEXT_CAPS[field]); if (value) block[field] = value; }
     const first = link(raw.link), second = link(raw.link2);
@@ -244,13 +247,13 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     const before = new Set(used);
     here = blocks.length;
     const single = section.id === 'promo-trio' && raw.look === 'single';
-    if ((needs.photos ?? 0) >= 1 || single || ['compare-table', 'faq-split', 'visit-store', 'promo-code', 'closing-wordmark', 'statement-inline'].includes(section.id)) {
+    if ((needs.photos ?? 0) >= 1 || single || raw.template?.photo || ['compare-table', 'faq-split', 'visit-store', 'promo-code', 'closing-wordmark', 'statement-inline'].includes(section.id)) {
       const photo = photoOf(raw.photo); if (photo) block.photo = photo;
     }
-    if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline') { const photo2 = photoOf(raw.photo2); if (photo2) block.photo2 = photo2; }
+    if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline' || raw.template?.photo2) { const photo2 = photoOf(raw.photo2); if (photo2) block.photo2 = photo2; }
     // Items: capped words, a known icon, an item photo where the section shows one, a value only in the comparison.
     const [minItems, maxItems] = needs.items ?? [0, 0];
-    const itemPhoto = Boolean(needs.itemPhotos) || section.id === 'cover-stage' || (section.id === 'promo-trio' && !single);
+    const itemPhoto = Boolean(needs.itemPhotos) || section.id === 'cover-stage' || (section.id === 'promo-trio' && !single) || Boolean(raw.template?.items?.some(item => item.photo));
     // Social posts are the store's own photos: the answer need not list them.
     const rawItems: RawItem[] = needs.social && (raw.items ?? []).length < (needs.items?.[0] ?? 0) ? Array.from({ length: needs.items![0] + 2 }, () => ({ title: 'post', photo: -1 })) : (raw.items ?? []);
     let items: LayoutItem[] = rawItems.slice(0, Math.max(maxItems, needs.categories ? 4 : 0)).map(item => {

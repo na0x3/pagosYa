@@ -1,0 +1,305 @@
+{
+  "id": "motion",
+  "name": "Motion",
+  "category": "deporte",
+  "description": "Aventura y deporte: portada en movimiento, productos destacados, cuenta regresiva, collage, fotos que se funden y lista de correo.",
+  "tags": [
+    "deporte",
+    "aire libre",
+    "ropa técnica",
+    "aventura"
+  ],
+  "sitePurpose": "shop",
+  "order": 42,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Motion",
+    "url": "https://motion-theme-adventure.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "c-hero",
+      "role": "hero",
+      "demo": "c-hero.jpg"
+    },
+    {
+      "slot": "c-banner",
+      "role": "lifestyle",
+      "demo": "c-banner.jpg"
+    },
+    {
+      "slot": "c-p1",
+      "role": "product",
+      "demo": "c-p1.jpg"
+    },
+    {
+      "slot": "c-p2",
+      "role": "product",
+      "demo": "c-p2.jpg"
+    },
+    {
+      "slot": "c-p3",
+      "role": "product",
+      "demo": "c-p3.jpg"
+    },
+    {
+      "slot": "c-uso1",
+      "role": "lifestyle",
+      "demo": "c-uso1.jpg"
+    },
+    {
+      "slot": "c-uso2",
+      "role": "lifestyle",
+      "demo": "c-uso2.jpg"
+    },
+    {
+      "slot": "c-uso3",
+      "role": "lifestyle",
+      "demo": "c-uso3.jpg"
+    },
+    {
+      "slot": "s-detalle",
+      "role": "detail",
+      "demo": "s-detalle.jpg"
+    },
+    {
+      "slot": "s-p1",
+      "role": "product",
+      "demo": "s-p1.jpg"
+    },
+    {
+      "slot": "s-p2",
+      "role": "product",
+      "demo": "s-p2.jpg"
+    },
+    {
+      "slot": "s-p3",
+      "role": "lifestyle",
+      "demo": "s-p3.jpg"
+    },
+    {
+      "slot": "s-p4",
+      "role": "lifestyle",
+      "demo": "s-p4.jpg"
+    },
+    {
+      "slot": "s-ruta",
+      "role": "lifestyle",
+      "demo": "s-ruta.jpg"
+    },
+    {
+      "slot": "r-accion",
+      "role": "lifestyle",
+      "demo": "r-accion.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "motion",
+    "colors": {
+      "paper": "#f5f5f2",
+      "ink": "#141414",
+      "muted": "#ebebe6",
+      "accent": "#4a73e8",
+      "deep": "#141414"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "motion",
+      "icons": "line",
+      "header": "links",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "square",
+      "corners": "sharp",
+      "density": "regular",
+      "texture": "none",
+      "titles": "upper",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envíos y cambios gratis desde Bs 500"
+    },
+    "layout": [
+      {
+        "type": "cover-stage",
+        "look": "center",
+        "title": "Nueva temporada, nuevo terreno",
+        "text": "Capas frescas y equipo de ruta para lo que viene.",
+        "photo": "slot:c-hero",
+        "items": [
+          {
+            "title": "2",
+            "photo": "slot:s-ruta"
+          }
+        ]
+      },
+      {
+        "type": "products-cards",
+        "look": "feature",
+        "title": "Hecho para lo que sigue",
+        "cta": "Ver todo",
+        "link": "products",
+        "products": [
+          "Producto estrella",
+          "Edición de temporada"
+        ]
+      },
+      {
+        "type": "strip-marquee",
+        "look": "line",
+        "items": [
+          {
+            "title": "Envíos y cambios gratis"
+          },
+          {
+            "title": "Envíos y cambios gratis"
+          },
+          {
+            "title": "Envíos y cambios gratis"
+          }
+        ]
+      },
+      {
+        "type": "products-tabs",
+        "card": "classic",
+        "title": "Para usar y para llevar",
+        "cta": "Ver todo",
+        "link": "products"
+      },
+      {
+        "type": "cover-video",
+        "title": "Hacia lo salvaje",
+        "cta": "Ver colección",
+        "link": "products"
+      },
+      {
+        "type": "promo-countdown",
+        "eyebrow": "Solo esta semana",
+        "title": "Lleva 2, paga 1",
+        "cta": "Ver colección",
+        "link": "products",
+        "endsAt": "2026-12-31T23:59:00-04:00",
+        "photo": "slot:s-detalle"
+      },
+      {
+        "type": "categories-mosaic",
+        "look": "grid5",
+        "items": [
+          {
+            "title": "Ruta",
+            "photo": "slot:c-uso1",
+            "link": "products"
+          },
+          {
+            "title": "Mochilas",
+            "photo": "slot:c-p1",
+            "link": "products"
+          },
+          {
+            "title": "Accesorios",
+            "photo": "slot:c-p2",
+            "link": "products"
+          },
+          {
+            "title": "Medias",
+            "photo": "slot:s-p3",
+            "link": "products"
+          },
+          {
+            "title": "Abrigos",
+            "photo": "slot:c-uso2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-collage",
+        "eyebrow": "Colección de ruta",
+        "title": "Llega más lejos, carga menos",
+        "text": "Capas livianas, movimiento fácil y lo esencial para salir por más tiempo.",
+        "cta": "Ver ruta",
+        "link": "products",
+        "cta2": "Ver todo",
+        "link2": "products",
+        "photo": "slot:s-p1",
+        "photo2": "slot:c-uso3",
+        "items": [
+          {
+            "title": "3",
+            "photo": "slot:s-p2"
+          }
+        ]
+      },
+      {
+        "type": "promo-banner",
+        "look": "fade",
+        "title": "Sal a caminar",
+        "cta": "Ver colección",
+        "link": "products",
+        "photo": "slot:r-accion",
+        "items": [
+          {
+            "title": "2",
+            "photo": "slot:c-banner"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "wavy",
+        "eyebrow": "Notas de campo",
+        "title": "Más que los kilómetros",
+        "text": "Guías de ruta, ideas de equipo e historias de salir: lo que pasa entre una caminata y la siguiente.",
+        "cta": "Leer más",
+        "link": "products",
+        "photo": "slot:c-p3",
+        "photo2": "slot:s-p4"
+      },
+      {
+        "type": "reviews-cards",
+        "band": "accent",
+        "title": "No lo decimos nosotros"
+      },
+      {
+        "type": "promo-banner",
+        "look": "parallax",
+        "title": "El camino largo",
+        "text": "Para los que prefieren la vuelta más linda.",
+        "cta": "Ver colección",
+        "link": "products",
+        "photo": "slot:s-ruta"
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Materiales responsables",
+            "text": "Fibras recicladas y de bajo impacto, elegidas para durar.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Hecho para moverse",
+            "text": "Capas livianas y equipo de todos los días para rutas y ciudad.",
+            "icon": "zap"
+          },
+          {
+            "title": "Cambios simples",
+            "text": "Pruébalo, úsalo y si no te queda, lo cambiamos.",
+            "icon": "refresh"
+          }
+        ]
+      },
+      {
+        "type": "newsletter-split",
+        "title": "Únete a la lista",
+        "text": "Lanzamientos, notas de ruta y ofertas antes que nadie.",
+        "photo": "slot:c-uso1"
+      }
+    ]
+  }
+}

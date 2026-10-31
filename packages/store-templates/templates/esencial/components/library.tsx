@@ -396,11 +396,11 @@ function StorySplit({ block, index }: { block: LibraryBlock; index: number }) {
   return <Band block={block} index={index}>
     <div className="lb-split" data-side={block.look === 'right' ? 'right' : 'left'}>
       {/* Impulse (look arch): the second photo stands beside the first in an arch, inside the photo side. */}
-      <Reveal className="lb-split__media"><Photo src={block.photo} />{block.look === 'arch' && block.photo2 ? <Photo src={block.photo2} className="lb-split__inset" /> : null}</Reveal>
+      <Reveal className="lb-split__media"><Photo src={block.photo} />{(block.look === 'arch' || block.look === 'wavy') && block.photo2 ? <Photo src={block.photo2} className="lb-split__inset" /> : null}</Reveal>
       <Reveal className="lb-split__copy" delay={120}>
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
         {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
-        {block.photo2 && block.look !== 'arch' ? <Photo src={block.photo2} className="lb-split__inset" /> : null}
+        {block.photo2 && block.look !== 'arch' && block.look !== 'wavy' ? <Photo src={block.photo2} className="lb-split__inset" /> : null}
         {block.text ? <p className="lb-body">{block.text}</p> : null}
         <Actions block={block} />
       </Reveal>
@@ -607,7 +607,9 @@ function PromoBanner({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.photo) return null;
   // Impulse (look parallax): the photo drifts with the scroll and the words rise in from below their line.
   return <Bleed block={block} index={index} className="lb-cover--dark" extra={block.look === 'parallax' ? { 'data-lb-progress': '' } : undefined}>
-    <Photo src={block.photo} className="lb-banner__photo" />
+    {block.look === 'fade' ? <div className="lb-fade" data-count={1 + (block.items ?? []).filter(item => item.photo).slice(0, 2).length}>
+      {[block.photo, ...(block.items ?? []).map(item => item.photo).filter(Boolean).slice(0, 2)].map((src, at) => <Photo key={at} src={src} className="lb-banner__photo lb-fade__photo" />)}
+    </div> : <Photo src={block.photo} className="lb-banner__photo" />}
     <Reveal className="lb-banner__copy">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
       {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
@@ -729,7 +731,8 @@ function PromoCountdown({ block, index }: { block: LibraryBlock; index: number }
   if (!Number.isFinite(end) || left === 0 || !block.title) return null;
   const ms = left ?? Math.max(0, end - Date.now());
   const parts: Array<[number, string]> = [[Math.floor(ms / 86_400_000), 'Días'], [Math.floor(ms / 3_600_000) % 24, 'Horas'], [Math.floor(ms / 60_000) % 60, 'Minutos'], [Math.floor(ms / 1000) % 60, 'Segundos']];
-  return <Band block={{ ...block, band: block.band ?? 'muted' }} index={index}>
+  return <Band block={{ ...block, band: block.band ?? 'muted' }} index={index} className={block.photo ? 'lb-countdown-band--photo' : ''}>
+    {block.photo ? <Photo src={block.photo} className="lb-countdown__photo" /> : null}
     <div className="lb-countdown">
       <div className="lb-countdown__words">
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
@@ -991,6 +994,39 @@ function IconColumns({ block, index }: { block: LibraryBlock; index: number }) {
   </Band>;
 }
 
+
+/** Motion «Go farther, carry less»: three photos laid over one another like prints on a table, beside the words and two buttons. */
+function StoryCollage({ block, index }: { block: LibraryBlock; index: number }) {
+  const prints = [block.photo, block.photo2, ...(block.items ?? []).map(item => item.photo)].filter((src): src is string => Boolean(src)).slice(0, 3);
+  if (prints.length < 2) return null;
+  return <Band block={block} index={index}>
+    <div className="lb-collage">
+      <div className="lb-collage__prints" data-count={prints.length}>{prints.map((src, at) => <Photo key={at} src={src} className="lb-collage__print" />)}</div>
+      <Reveal className="lb-collage__words">
+        {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+        {block.text ? <p className="lb-lede">{block.text}</p> : null}
+        <Actions block={block} />
+      </Reveal>
+    </div>
+  </Band>;
+}
+
+/** Motion «Join the list»: a photo beside a coloured panel with the store's newsletter form (the kit draws the field). */
+function NewsletterSplit({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.photo) return null;
+  return <Bleed block={block} index={index}>
+    <div className="lb-news">
+      <Photo src={block.photo} className="lb-news__photo" />
+      <div className="lb-news__panel">
+        {block.title ? <h2 id={`lb-${index}-title`} className="lb-news__title">{block.title}</h2> : null}
+        {block.text ? <p className="lb-news__text">{block.text}</p> : null}
+        <div className="lb-news__form" data-pagosya-subscribe-inline data-track="newsletter" />
+      </div>
+    </div>
+  </Bleed>;
+}
+
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
   'cover-split': CoverSplit, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
@@ -1003,6 +1039,7 @@ const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) =
   'closing-photo': ClosingPhoto, 'closing-wordmark': ClosingWordmark,
   'bar-note': BarNote, 'cover-stage': CoverStage, 'promo-countdown': PromoCountdown, 'story-stack': StoryStack, 'statement-reveal': StatementReveal,
   'categories-list': CategoriesList, 'marquee-photo': MarqueePhoto, 'story-overlap': StoryOverlap, 'promo-trio': PromoTrio,
+  'story-collage': StoryCollage, 'newsletter-split': NewsletterSplit,
   'cover-shoppable': CoverShoppable, 'cover-video': CoverVideo, 'categories-mosaic': CategoriesMosaic, 'icon-columns': IconColumns,
   'products-slider': ProductsSlider, 'social-posts': SocialPosts, 'social-marquee': SocialMarquee, 'shop-look': ShopLook, 'press-quotes': PressQuotes,
 };

@@ -190,6 +190,12 @@ describe('template fill mode (34 templates)', () => {
     expect(beside.map(block => block.photo)).toEqual([url(0), url(1)]);
   });
 
+  it('keeps a template look and its second photo even when the free catalogue would not list them', () => {
+    const layout = validateLibraryLayout({ blocks: [{ type: 'story-split', title: 'Diario', photo: 1, photo2: 2 }] as never }, facts(),
+      { fixed: [{ type: 'story-split', look: 'arch', photo: 'slot:a', photo2: 'slot:b' }] as never, now });
+    expect(layout[0]).toMatchObject({ look: 'arch', photo2: '/v1/uploads/00000002-aaaa.jpg' });
+  });
+
   it('drops the countdown without the merchant date, and social sections without the store account', () => {
     const layout = validateLibraryLayout(answer as never, facts(), { fixed: template as never, now });
     expect(types(layout)).not.toContain('promo-countdown');
