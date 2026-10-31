@@ -109,7 +109,8 @@ export function libraryAnswerSchema(photoCount: number) {
 export const LIBRARY_FILL_PROMPT = `MODO PLANTILLA: la tienda ya usa una plantilla completa (en «plantilla»: sus secciones en orden, con palabras de ejemplo).
 Responde «blocks» con EXACTAMENTE esas secciones, del mismo tipo y en el mismo orden; no agregues, quites ni cambies ninguna. Escribe
 todo de nuevo con los datos y la voz de esta tienda (las palabras de ejemplo solo marcan el largo y el tono; nunca las copies), elige
-las fotos de la tienda para cada sección y sus items, y deja vacío (o sin items) lo que la tienda no puede respaldar: el código la quita.
+las fotos de la tienda para cada sección y sus items (una foto puede repetirse UNA vez en la página, nunca dos veces en la misma
+sección ni en dos secciones seguidas), y deja vacío (o sin items) lo que la tienda no puede respaldar: el código la quita.
 look, band y card los pone la plantilla: déjalos vacíos.`;
 
 export const LIBRARY_PROMPT = `Eres el director de arte de una tienda online pagosYa. Armas su portada con secciones ya diseñadas (como un tema de Shopify):
@@ -169,9 +170,18 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   const productByName = new Map(facts.products.map(product => [fold(product.name), product]));
   const productById = new Map(facts.products.map(product => [product.id, product]));
   const categoryByName = new Map(facts.categories.map(name => [fold(name), name]));
+  // Owner 2026-10-31 (option 2): in a template a photo may show twice — never twice in one section, never in two neighbouring
+  // sections; a freely composed home shows each photo once.
+  const spots = new Map<number, number[]>();
+  let here = 0;
   const takePhoto = (index: unknown): string | undefined => {
     const at = typeof index === 'number' ? index : -1;
-    if (at < 0 || at >= facts.photos.length || used.has(at)) return undefined;
+    if (at < 0 || at >= facts.photos.length) return undefined;
+    if (fixedMode) {
+      const places = spots.get(at) ?? [];
+      if (places.length >= 2 || places.includes(here) || places.includes(here - 1)) return undefined;
+      spots.set(at, [...places, here]);
+    } else if (used.has(at)) return undefined;
     used.add(at);
     return facts.photos[at].url;
   };
@@ -219,6 +229,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (block.cta2 && second) block.link2 = second; else delete block.cta2;
     // Photos: the section's own, then its items'; a section that needs more photos than it got is dropped (its photos freed).
     const before = new Set(used);
+    here = blocks.length;
     const single = section.id === 'promo-trio' && raw.look === 'single';
     if ((needs.photos ?? 0) >= 1 || single || ['compare-table', 'faq-split', 'visit-store', 'promo-code', 'closing-wordmark', 'statement-inline'].includes(section.id)) {
       const photo = takePhoto(raw.photo); if (photo) block.photo = photo;
@@ -265,7 +276,11 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       && (section.id !== 'cover-poster' || Boolean(block.title)) && (section.role !== 'cover' || Boolean(block.title))
       && (!needs.text || Boolean(block.text)) && (!needs.date || Boolean(block.endsAt)) && (!single || Boolean(block.photo))
       && (section.id !== 'promo-trio' || single || (block.items?.length ?? 0) >= 3) && (section.id !== 'bar-note' || Boolean(block.title));
-    if (!ok) { for (const at of [...used]) if (!before.has(at)) used.delete(at); continue; }
+    if (!ok) {
+      for (const at of [...used]) if (!before.has(at)) used.delete(at);
+      for (const [at, places] of spots) spots.set(at, places.filter(place => place !== here));
+      continue;
+    }
     // Owner rule (no dark band of words alone): accent and deep only behind a photo or products.
     // Product cards are drawn for a light ground (Oh Belly live 2026-10-31: names and prices vanished on a deep grid band).
     if ((block.band === 'deep' || block.band === 'accent') && ['products-grid', 'products-tabs', 'products-cards', 'products-spotlight', 'products-lookbook'].includes(section.id)) delete block.band;

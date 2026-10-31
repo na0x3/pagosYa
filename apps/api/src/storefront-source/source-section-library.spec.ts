@@ -175,6 +175,19 @@ describe('template fill mode (34 templates)', () => {
     expect(layout.find(block => block.type === 'promo-trio')!.photo).toBeDefined();
   });
 
+  it('lets a template show a photo twice, never in one section nor in neighbouring sections', () => {
+    const fixed = [{ type: 'cover-stage', photo: 'slot:a' }, { type: 'story-split', photo: 'slot:b' }, { type: 'promo-banner', photo: 'slot:c' }, { type: 'closing-photo', photo: 'slot:d' }];
+    const layout = validateLibraryLayout({ blocks: [
+      { type: 'cover-stage', title: 'Hola', photo: 0 }, { type: 'story-split', title: 'Historia', photo: 1 },
+      { type: 'promo-banner', title: 'Regalos', photo: 0 }, { type: 'closing-photo', title: 'Chau', photo: 0 },
+    ] as never }, facts(), { fixed: fixed as never, now });
+    // Photo 0 on the cover, again two sections on (the banner), never a third time (the closing goes).
+    expect(types(layout)).toEqual(['cover-stage', 'story-split', 'promo-banner']);
+    // Beside the section that already shows it: refused (the story would sit next to the cover with the same photo).
+    const beside = validateLibraryLayout({ blocks: [{ type: 'cover-stage', title: 'Hola', photo: 0 }, { type: 'story-split', title: 'Historia', photo: 0 }] as never }, facts(), { fixed: fixed.slice(0, 2) as never, now });
+    expect(types(beside)).toEqual(['cover-stage']);
+  });
+
   it('drops the countdown without the merchant date, and social sections without the store account', () => {
     const layout = validateLibraryLayout(answer as never, facts(), { fixed: template as never, now });
     expect(types(layout)).not.toContain('promo-countdown');
