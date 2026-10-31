@@ -1,0 +1,347 @@
+{
+  "id": "mordisco",
+  "name": "Mordisco",
+  "category": "mascotas",
+  "description": "Premios y comida para perros: verde y menta, letras gruesas, bordes ondulados, sellos que giran y un logo gigante al final.",
+  "tags": [
+    "mascotas",
+    "perros",
+    "premios",
+    "divertido"
+  ],
+  "sitePurpose": "shop",
+  "order": 36,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Shapes (Scratch)",
+    "url": "https://shapes-preset-pets.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "co-hero",
+      "role": "hero",
+      "demo": "co-hero.jpg"
+    },
+    {
+      "slot": "co-perro",
+      "role": "lifestyle",
+      "demo": "co-perro.jpg"
+    },
+    {
+      "slot": "co-cachorro",
+      "role": "lifestyle",
+      "demo": "co-cachorro.jpg"
+    },
+    {
+      "slot": "co-comida",
+      "role": "lifestyle",
+      "demo": "co-comida.jpg"
+    },
+    {
+      "slot": "co-senior",
+      "role": "lifestyle",
+      "demo": "co-senior.jpg"
+    },
+    {
+      "slot": "co-gato",
+      "role": "lifestyle",
+      "demo": "co-gato.jpg"
+    },
+    {
+      "slot": "co-p1",
+      "role": "product",
+      "demo": "co-p1.jpg"
+    },
+    {
+      "slot": "co-p2",
+      "role": "product",
+      "demo": "co-p2.jpg"
+    },
+    {
+      "slot": "co-p3",
+      "role": "product",
+      "demo": "co-p3.jpg"
+    },
+    {
+      "slot": "pa-hero",
+      "role": "hero",
+      "demo": "pa-hero.jpg"
+    },
+    {
+      "slot": "pa-story",
+      "role": "lifestyle",
+      "demo": "pa-story.jpg"
+    },
+    {
+      "slot": "pa-p1",
+      "role": "product",
+      "demo": "pa-p1.jpg"
+    },
+    {
+      "slot": "pa-p2",
+      "role": "product",
+      "demo": "pa-p2.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "mordisco",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#1d3b2c",
+      "muted": "#b9e1ca",
+      "accent": "#4d9e76",
+      "deep": "#8b635c"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "mordisco",
+      "icons": "person",
+      "header": "centered",
+      "announce": "ticker",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Amamos a los perros · Ingredientes reales · Hecho con cariño"
+    },
+    "layout": [
+      {
+        "type": "cover-split",
+        "look": "sticker",
+        "band": "accent",
+        "eyebrow": "¡Aprobado por veterinarios!",
+        "title": "Comida sana para *colas felices*",
+        "text": "Ingredientes reales para mascotas reales, porque merecen lo mejor.",
+        "cta": "Ver comida",
+        "link": "products",
+        "photo": "slot:co-perro"
+      },
+      {
+        "type": "wave-divider",
+        "band": "accent",
+        "look": "flip"
+      },
+      {
+        "type": "icon-columns",
+        "title": "Lo que nos importa",
+        "items": [
+          {
+            "title": "Todo natural",
+            "icon": "leaf"
+          },
+          {
+            "title": "Sin químicos",
+            "icon": "shield-check"
+          },
+          {
+            "title": "Bueno para su panza",
+            "icon": "heart"
+          },
+          {
+            "title": "Sin aditivos",
+            "icon": "sprout"
+          }
+        ]
+      },
+      {
+        "type": "statement-reveal",
+        "look": "center",
+        "title": "¿Por qué *Mordisco*?",
+        "text": "Creemos que cada perro merece lo mejor. Por eso usamos ingredientes de la más alta calidad, sin rellenos ni nada artificial.",
+        "cta": "Ver premios",
+        "link": "products"
+      },
+      {
+        "type": "wave-divider",
+        "band": "muted"
+      },
+      {
+        "type": "products-slider",
+        "look": "scallop",
+        "band": "muted",
+        "title": "Premios y *mordedores*",
+        "text": "Elegidos uno por uno para ellos.",
+        "link": "products"
+      },
+      {
+        "type": "wave-divider",
+        "band": "muted",
+        "look": "flip"
+      },
+      {
+        "type": "steps-howto",
+        "look": "cards",
+        "title": "Cómo *funciona*",
+        "items": [
+          {
+            "title": "Pide fácil",
+            "text": "Elige sus favoritos y pide en minutos."
+          },
+          {
+            "title": "Preparamos y enviamos",
+            "text": "Lo preparamos fresco y te lo llevamos."
+          },
+          {
+            "title": "Tu perro feliz",
+            "text": "Mira cómo mueve la cola."
+          }
+        ]
+      },
+      {
+        "type": "compare-table",
+        "title": "Cómo nos *comparamos*",
+        "items": [
+          {
+            "title": "Ingredientes conocidos",
+            "value": "no"
+          },
+          {
+            "title": "Hecho en pequeños lotes",
+            "value": "no"
+          },
+          {
+            "title": "Sin aditivos artificiales",
+            "value": "no"
+          },
+          {
+            "title": "Prácticas responsables",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "type": "story-overlay",
+        "look": "card",
+        "title": "Nuestro compromiso con su *bienestar*",
+        "text": "Conoce la historia detrás de cada bocado: hecho con amor, cuidado y calidad.",
+        "photo": "slot:co-senior"
+      },
+      {
+        "type": "benefits-orbit",
+        "title": "¿Qué lleva un *premio*?",
+        "photo": "slot:co-p1",
+        "items": [
+          {
+            "title": "100% natural",
+            "text": "Sin rellenos ni nada artificial.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Secado lento",
+            "text": "Conserva el sabor y los nutrientes.",
+            "icon": "clock"
+          },
+          {
+            "title": "Sin granos",
+            "text": "Ideal para panzas sensibles.",
+            "icon": "sprout"
+          },
+          {
+            "title": "Origen local",
+            "text": "De productores de confianza.",
+            "icon": "map-pin"
+          }
+        ]
+      },
+      {
+        "type": "press-quotes",
+        "look": "marquee",
+        "title": "Nos vieron en",
+        "items": [
+          {
+            "title": "Diario Uno"
+          },
+          {
+            "title": "Revista Perro"
+          },
+          {
+            "title": "Radio Patitas"
+          },
+          {
+            "title": "Canal Hogar"
+          }
+        ]
+      },
+      {
+        "type": "reviews-cards",
+        "band": "deep",
+        "title": "Palabras de *humanos*…"
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "El favorito",
+        "title": "El plato *perfecto*",
+        "product": "demo-1"
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas *frecuentes*",
+        "items": [
+          {
+            "title": "¿Qué ingredientes usan?",
+            "text": "Solo ingredientes reales y conocidos."
+          },
+          {
+            "title": "¿Hacen envíos?",
+            "text": "Sí, a toda la ciudad."
+          },
+          {
+            "title": "¿Sirve para perros sensibles?",
+            "text": "Sí, no lleva granos ni aditivos."
+          },
+          {
+            "title": "¿Cuánto dura fresco?",
+            "text": "Mira la fecha en cada bolsa."
+          }
+        ]
+      },
+      {
+        "type": "strip-badges",
+        "items": [
+          {
+            "title": "Ingredientes reales",
+            "icon": "leaf"
+          },
+          {
+            "title": "Hecho para ellos",
+            "icon": "heart"
+          },
+          {
+            "title": "Envío a domicilio",
+            "icon": "truck"
+          },
+          {
+            "title": "Pago seguro",
+            "icon": "lock"
+          }
+        ]
+      },
+      {
+        "type": "wave-divider",
+        "band": "accent"
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "accent",
+        "title": "Únete a la *manada*",
+        "text": "Novedades, ofertas y consejos para tu perro."
+      },
+      {
+        "type": "closing-wordmark",
+        "band": "accent"
+      }
+    ]
+  }
+}

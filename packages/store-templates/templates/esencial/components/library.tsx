@@ -207,17 +207,25 @@ export function CardRibbons() {
 
 /* ---------------------------------------------------------------- covers */
 
+/** Shapes «Scratch»: a star sticker that turns slowly, its few words in the middle (a cover's eyebrow). */
+function Sticker({ text, className }: { text?: string; className?: string }) {
+  if (!text) return null;
+  const points = Array.from({ length: 24 }, (_, at) => { const r = at % 2 ? 42 : 50, a = (Math.PI * at) / 12; return `${50 + r * Math.sin(a)},${50 - r * Math.cos(a)}`; }).join(' ');
+  return <span className={`lb-sticker ${className ?? ''}`} aria-hidden="true"><svg viewBox="0 0 100 100"><polygon points={points} /></svg><span>{text}</span></span>;
+}
+
 function CoverSplit({ block, index }: { block: LibraryBlock; index: number }) {
   const points = (block.items ?? []).slice(0, 3);
+  const sticker = block.look === 'sticker' ? block.eyebrow : undefined;
   return <Bleed block={block} index={index} id="inicio" className="lb-cover">
     <div className="lb-cover-split__inner">
       <div className="lb-cover-split__copy">
-        <Head block={{ ...block, text: undefined }} index={index} level={1} />
+        <Head block={{ ...block, text: undefined, eyebrow: sticker ? undefined : block.eyebrow }} index={index} level={1} />
         {block.text ? <p className="lb-cover__sub">{block.text}</p> : null}
         {points.length ? <ul className="lb-points">{points.map((point, at) => <li key={at}><Icon name={point.icon || 'check'} className="lb-points__icon" /><div><strong>{point.title}</strong>{point.text ? <span>{point.text}</span> : null}</div></li>)}</ul> : null}
         <Actions block={block} />
       </div>
-      <div className="lb-cover-split__media"><Photo src={block.photo} eager /></div>
+      <div className="lb-cover-split__media"><Photo src={block.photo} eager /><Sticker text={sticker} /></div>
     </div>
   </Bleed>;
 }
@@ -547,8 +555,8 @@ function StepsHowto({ block, index }: { block: LibraryBlock; index: number }) {
   const steps = (block.items ?? []).slice(0, 4);
   if (steps.length < 2) return null;
   return <Band block={block} index={index}>
-    <div className={block.photo ? 'lb-steps lb-steps--photo' : 'lb-steps'}>
-      {block.photo ? <Reveal className="lb-steps__media"><Photo src={block.photo} /></Reveal> : null}
+    <div className={block.photo && block.look !== 'cards' ? 'lb-steps lb-steps--photo' : 'lb-steps'}>
+      {block.photo && block.look !== 'cards' ? <Reveal className="lb-steps__media"><Photo src={block.photo} /></Reveal> : null}
       <div>
         <Head block={block} index={index} />
         <ol className="lb-steps__list" data-count={steps.length}>{steps.map((step, at) => <li key={at}><Reveal delay={at * 90}>
@@ -640,6 +648,14 @@ function PromoBanner({ block, index }: { block: LibraryBlock; index: number }) {
 function FaqSplit({ block, index }: { block: LibraryBlock; index: number }) {
   const items = (block.items ?? []).slice(0, 8);
   if (items.length < 2) return null;
+  // Shapes «FAQ»: the title over two columns of closed questions.
+  if (block.look === 'grid') return <Band block={block} index={index} id="preguntas">
+    <Head block={{ ...block, title: block.title || 'Preguntas frecuentes' }} index={index} align="center" />
+    <div className="lb-faq-grid">{items.map((item, at) => <details key={at} className="lb-faq__item">
+      <summary><span>{item.title}</span><Icons.IconChevronDown /></summary>
+      {item.text ? <p>{item.text}</p> : null}
+    </details>)}</div>
+  </Band>;
   return <Band block={block} index={index} id="preguntas">
     <div className="lb-faq">
       <Reveal className="lb-faq__copy">

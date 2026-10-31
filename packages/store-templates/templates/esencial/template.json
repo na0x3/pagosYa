@@ -448,6 +448,13 @@
         "heading": "outfit",
         "body": "figtree",
         "starterOnly": true
+      },
+      {
+        "id": "mordisco",
+        "name": "Mordisco",
+        "heading": "plus-jakarta-sans",
+        "body": "dm-sans",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -614,7 +621,8 @@
         "gumdrop",
         "amigos",
         "majestuoso",
-        "energia"
+        "energia",
+        "mordisco"
       ],
       "icons": [
         "line",

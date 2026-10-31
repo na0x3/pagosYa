@@ -258,7 +258,9 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     const before = new Set(used);
     here = blocks.length;
     const single = section.id === 'promo-trio' && raw.look === 'single';
-    if ((needs.photos ?? 0) >= 1 || single || raw.template?.photo || ['compare-table', 'faq-split', 'visit-store', 'promo-code', 'closing-wordmark', 'statement-inline'].includes(section.id)) {
+    // Steps as numbered cards (Shapes «How it works») show no photo, so they take none.
+    const photoless = section.id === 'steps-howto' && raw.look === 'cards';
+    if (photoless) { /* no photo */ } else if ((needs.photos ?? 0) >= 1 || single || raw.template?.photo || ['compare-table', 'faq-split', 'visit-store', 'promo-code', 'closing-wordmark', 'statement-inline'].includes(section.id)) {
       const photo = photoOf(raw.photo); if (photo) block.photo = photo;
     }
     if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline' || raw.template?.photo2) { const photo2 = photoOf(raw.photo2); if (photo2) block.photo2 = photo2; }
@@ -310,7 +312,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (needs.date) { const ends = libraryOfferEnd(raw.endsAt, merchantWords, now); if (ends) block.endsAt = ends; }
     // Needs met, or the block goes (and gives its photos back).
     const photos = [block.photo, block.photo2].filter(Boolean).length;
-    const ok = photos >= Math.min(needs.photos ?? 0, 2) && (block.items?.length ?? 0) >= minItems && (!needs.itemPhotos || (block.items ?? []).filter(item => item.photo).length >= needs.itemPhotos)
+    const ok = photos >= (photoless ? 0 : Math.min(needs.photos ?? 0, 2)) && (block.items?.length ?? 0) >= minItems && (!needs.itemPhotos || (block.items ?? []).filter(item => item.photo).length >= needs.itemPhotos)
       && (!needs.products || Boolean(block.products)) && (!needs.product || Boolean(block.product)) && (!needs.code || Boolean(block.code))
       && (section.id !== 'statement-inline' || ((block.title ?? '').split(' ').length >= 4 && Boolean(block.photo)))
       && (section.id !== 'cover-poster' || Boolean(block.title)) && (section.role !== 'cover' || Boolean(block.title))

@@ -1894,6 +1894,42 @@ main[data-lb-home]{overflow-x:clip}
 .lb-promo-banner[data-lb-look="rounded"]{width:min(1280px,calc(100% - 32px));margin:0 auto;border-radius:28px}
 /* /lb:promo-banner */
 
+/* lb:cover-split */
+.lb-sticker{position:absolute;z-index:3;top:-4%;left:-8%;display:grid;place-items:center;width:clamp(110px,11vw,150px);aspect-ratio:1;color:#fff;text-align:center;pointer-events:none}
+.lb-sticker svg{position:absolute;inset:0;width:100%;height:100%;fill:var(--es-ink);animation:lb-spin 5s linear infinite}
+.lb-sticker>span{position:relative;max-width:70%;font:800 clamp(12px,1.1vw,15px)/1.1 var(--es-heading)}
+@media (prefers-reduced-motion:reduce){.lb-sticker svg{animation:none}}
+.lb-cover-split[data-lb-look="sticker"] .lb-cover-split__media{overflow:visible;aspect-ratio:1;border-radius:0;box-shadow:none}
+.lb-cover-split[data-lb-look="sticker"] .lb-cover-split__media img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+@media (max-width:760px){.lb-sticker{left:0;top:-6%}}
+@keyframes lb-spin{to{transform:rotate(360deg)}}
+/* /lb:cover-split */
+/* lb:products-slider */
+.lb-products-slider[data-lb-look="scallop"] :is(.es-card__media,.lb-card__media,.es-card__image){border:0;border-radius:0;background:var(--es-paper);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='%23000'%3E%3Ccircle cx='50' cy='50' r='44'/%3E%3Ccircle cx='93.00' cy='50.00' r='7.6'/%3E%3Ccircle cx='90.41' cy='64.71' r='7.6'/%3E%3Ccircle cx='82.94' cy='77.64' r='7.6'/%3E%3Ccircle cx='71.50' cy='87.24' r='7.6'/%3E%3Ccircle cx='57.47' cy='92.35' r='7.6'/%3E%3Ccircle cx='42.53' cy='92.35' r='7.6'/%3E%3Ccircle cx='28.50' cy='87.24' r='7.6'/%3E%3Ccircle cx='17.06' cy='77.64' r='7.6'/%3E%3Ccircle cx='9.59' cy='64.71' r='7.6'/%3E%3Ccircle cx='7.00' cy='50.00' r='7.6'/%3E%3Ccircle cx='9.59' cy='35.29' r='7.6'/%3E%3Ccircle cx='17.06' cy='22.36' r='7.6'/%3E%3Ccircle cx='28.50' cy='12.76' r='7.6'/%3E%3Ccircle cx='42.53' cy='7.65' r='7.6'/%3E%3Ccircle cx='57.47' cy='7.65' r='7.6'/%3E%3Ccircle cx='71.50' cy='12.76' r='7.6'/%3E%3Ccircle cx='82.94' cy='22.36' r='7.6'/%3E%3Ccircle cx='90.41' cy='35.29' r='7.6'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='%23000'%3E%3Ccircle cx='50' cy='50' r='44'/%3E%3Ccircle cx='93.00' cy='50.00' r='7.6'/%3E%3Ccircle cx='90.41' cy='64.71' r='7.6'/%3E%3Ccircle cx='82.94' cy='77.64' r='7.6'/%3E%3Ccircle cx='71.50' cy='87.24' r='7.6'/%3E%3Ccircle cx='57.47' cy='92.35' r='7.6'/%3E%3Ccircle cx='42.53' cy='92.35' r='7.6'/%3E%3Ccircle cx='28.50' cy='87.24' r='7.6'/%3E%3Ccircle cx='17.06' cy='77.64' r='7.6'/%3E%3Ccircle cx='9.59' cy='64.71' r='7.6'/%3E%3Ccircle cx='7.00' cy='50.00' r='7.6'/%3E%3Ccircle cx='9.59' cy='35.29' r='7.6'/%3E%3Ccircle cx='17.06' cy='22.36' r='7.6'/%3E%3Ccircle cx='28.50' cy='12.76' r='7.6'/%3E%3Ccircle cx='42.53' cy='7.65' r='7.6'/%3E%3Ccircle cx='57.47' cy='7.65' r='7.6'/%3E%3Ccircle cx='71.50' cy='12.76' r='7.6'/%3E%3Ccircle cx='82.94' cy='22.36' r='7.6'/%3E%3Ccircle cx='90.41' cy='35.29' r='7.6'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;aspect-ratio:1}
+.lb-products-slider[data-lb-look="scallop"] :is(.es-card,.lb-card){text-align:center}
+/* /lb:products-slider */
+/* lb:steps-howto */
+.lb-steps-howto[data-lb-look="cards"] .lb-steps__list li>div{display:grid;grid-template-columns:1fr;justify-items:center;gap:10px;height:100%;padding:28px 22px;border:2px solid color-mix(in srgb,var(--es-accent) 35%,transparent);border-radius:20px;background:var(--es-paper);text-align:center}
+.lb-steps-howto[data-lb-look="cards"] .lb-steps__list::before{display:none}
+.lb-steps-howto[data-lb-look="cards"] .lb-head{text-align:center;justify-items:center}
+/* /lb:steps-howto */
+/* lb:faq-split */
+.lb-faq-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px;align-items:start;width:min(1100px,100%);margin:0 auto}
+.lb-faq-grid .lb-faq__item{border:2px solid var(--es-accent);border-radius:16px;padding:0 18px;background:var(--es-paper)}
+.lb-faq-grid summary{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:54px;font:700 15px/1.3 var(--es-body);cursor:pointer;list-style:none}
+.lb-faq-grid summary::-webkit-details-marker{display:none}
+.lb-faq-grid summary svg{flex:none;width:20px;height:20px;padding:0;border-radius:0;background:none;color:var(--es-accent);transition:transform .25s}
+.lb-faq-grid .lb-faq__item[open] summary svg{transform:rotate(180deg)}
+.lb-faq-grid p{margin:0 0 16px;font-size:14px;opacity:.85}
+@media (max-width:760px){.lb-faq-grid{grid-template-columns:1fr}}
+/* /lb:faq-split */
+/* lb:story-overlay */
+.lb-story-overlay[data-lb-look="card"] .lb-overlay__inner{justify-content:flex-start;align-items:center}
+.lb-story-overlay[data-lb-look="card"] .lb-overlay__head{max-width:460px;padding:clamp(24px,3vw,40px);border-radius:20px;background:var(--es-paper);color:var(--es-ink);box-shadow:0 20px 50px -30px rgba(0,0,0,.5)}
+.lb-story-overlay[data-lb-look="card"] .lb-overlay__head .lb-lede{color:inherit;opacity:.8}
+.lb-story-overlay[data-lb-look="card"]::after,.lb-story-overlay[data-lb-look="card"] .lb-overlay__photo::after{opacity:.15}
+/* /lb:story-overlay */
+
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
  * ground blown up to the page width (BAEK cover) reads as a mistake; the boxes keep their shape up to a height, then crop. */
 .lb-cover-centered__media{width:min(1080px,calc(100% - 48px));aspect-ratio:2/1;max-height:min(56vh,520px)}
@@ -2351,3 +2387,37 @@ main[data-lb-home]{overflow-x:clip}
 :root:not([data-es-still]) [data-es-theme="energia"] main .lb:not([data-in]):not(.lb-cover){opacity:.01;transform:translateY(50px) scale(.95)}
 [data-es-theme="energia"] main .lb[data-in]:not(.lb-cover){animation:en-up .8s cubic-bezier(.2,.7,.2,1) both}
 /* /theme:energia */
+
+/* theme:mordisco */
+/* Mordisco (after Shapes «Scratch»): green, mint and cocoa, a heavy round sans with one dark word in each title, wavy edges between
+ * bands, a black star sticker turning (5s), scalloped product photos, pill buttons, a green footer with the name drawn huge.
+ * Measured on the demo: the ticker runs 43s; stickers turn every 5s; sections arrive without fades (only the stickers move). */
+[data-es-theme="mordisco"]{--es-radius:18px}
+[data-es-theme="mordisco"] .es-announce{background:var(--es-muted);color:var(--es-accent);font:700 12px/1 var(--es-body)}
+[data-es-theme="mordisco"] .es-header{background:var(--es-accent);color:#fff;border-bottom:0}
+[data-es-theme="mordisco"] .es-header :is(a,button,.es-logo){color:#fff}
+[data-es-theme="mordisco"] .es-logo{font:800 28px/1 var(--es-heading);letter-spacing:-.02em;text-transform:uppercase}
+[data-es-theme="mordisco"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:800;letter-spacing:-.025em;text-transform:none;color:var(--es-accent)}
+[data-es-theme="mordisco"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(28px,3vw,44px);line-height:1.08}
+[data-es-theme="mordisco"] .lb-em{color:var(--es-ink);font-style:normal}
+[data-es-theme="mordisco"] [data-lb-band="accent"] :is(.es-h2,.lb-title,.lb-head h2,h1,p){color:#fff}
+[data-es-theme="mordisco"] [data-lb-band="accent"] .lb-em{color:var(--es-ink)}
+[data-es-theme="mordisco"] [data-lb-band="deep"] :is(.es-h2,.lb-title,.lb-head h2){color:#fff}
+[data-es-theme="mordisco"] [data-lb-band="deep"] .lb-em{color:var(--es-muted)}
+[data-es-theme="mordisco"] .lb-cover-split :is(h1,.lb-title){font-size:clamp(40px,4.6vw,68px);line-height:1.02}
+[data-es-theme="mordisco"] .es-btn{border-radius:99px;background:var(--es-accent);border-color:var(--es-accent);color:#fff;font-weight:800;letter-spacing:0;text-transform:none}
+[data-es-theme="mordisco"] [data-lb-band="accent"] .es-btn{background:#fff;border-color:#fff;color:var(--es-accent)}
+[data-es-theme="mordisco"] .es-btn svg{display:none}
+[data-es-theme="mordisco"] .lb-columns__icon{width:64px;height:64px;padding:16px;border-radius:50%;background:var(--es-accent);color:#fff}
+[data-es-theme="mordisco"] .lb-columns__title{color:var(--es-accent);font:800 17px/1.2 var(--es-heading);text-transform:none;letter-spacing:0}
+[data-es-theme="mordisco"] .lb-steps__n{background:var(--es-muted);color:var(--es-accent);font-weight:800}
+[data-es-theme="mordisco"] :is(.es-card__name,.lb-card .es-card__name){color:var(--es-accent);font:800 16px/1.25 var(--es-heading);text-transform:none;letter-spacing:0}
+[data-es-theme="mordisco"] .lb-compare :is(th,td){border-color:var(--es-accent)}
+[data-es-theme="mordisco"] .es-footer{background:var(--es-accent);color:#fff}
+[data-es-theme="mordisco"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+[data-es-theme="mordisco"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
+[data-es-theme="mordisco"] .lb-closing-wordmark.lb-bleed{background:var(--es-base-accent);color:#fff8ee}
+[data-es-theme="mordisco"] .lb-wordmark__word{color:#fff8ee;font-weight:800;letter-spacing:-.06em;text-transform:uppercase}
+[data-es-theme="mordisco"] .lb-press-marquee li,[data-es-theme="mordisco"] .lb-press :is(li,span){font-family:var(--es-heading);font-weight:800;font-style:normal;color:var(--es-accent);text-transform:none;letter-spacing:-.01em}
+@media (max-width:760px){[data-es-theme="mordisco"] .lb-columns{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:24px 12px}[data-es-theme="mordisco"] .lb-columns li>*{justify-items:center;text-align:center}}
+/* /theme:mordisco */
