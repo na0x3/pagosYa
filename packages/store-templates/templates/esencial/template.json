@@ -512,6 +512,13 @@
         "heading": "hanken-grotesk",
         "body": "hanken-grotesk",
         "starterOnly": true
+      },
+      {
+        "id": "bazar",
+        "name": "Bazar",
+        "heading": "archivo-black",
+        "body": "archivo",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -687,7 +694,8 @@
         "tacon",
         "estreno",
         "conecta",
-        "despensa"
+        "despensa",
+        "bazar"
       ],
       "icons": [
         "line",

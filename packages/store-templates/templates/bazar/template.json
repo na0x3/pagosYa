@@ -1,0 +1,459 @@
+{
+  "id": "bazar",
+  "name": "Bazar",
+  "category": "hogar",
+  "description": "Tienda grande de regalos y cocina: limón pálido y negro, títulos gruesos, mosaico de ofertas, regalos por ocasión en círculos y la mesa para comprar.",
+  "tags": [
+    "regalos",
+    "cocina",
+    "hogar",
+    "tienda grande"
+  ],
+  "sitePurpose": "shop",
+  "order": 45,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Empire",
+    "url": "https://empire-theme-supply.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "al-mesa",
+      "role": "hero",
+      "demo": "al-mesa.jpg"
+    },
+    {
+      "slot": "al-taller",
+      "role": "lifestyle",
+      "demo": "al-taller.jpg"
+    },
+    {
+      "slot": "me-hero",
+      "role": "hero",
+      "demo": "me-hero.jpg"
+    },
+    {
+      "slot": "me-story",
+      "role": "lifestyle",
+      "demo": "me-story.jpg"
+    },
+    {
+      "slot": "ve-regalo",
+      "role": "lifestyle",
+      "demo": "ve-regalo.jpg"
+    },
+    {
+      "slot": "ve-ritual",
+      "role": "lifestyle",
+      "demo": "ve-ritual.jpg"
+    },
+    {
+      "slot": "ga-pared",
+      "role": "lifestyle",
+      "demo": "ga-pared.jpg"
+    },
+    {
+      "slot": "ga-estudio",
+      "role": "lifestyle",
+      "demo": "ga-estudio.jpg"
+    },
+    {
+      "slot": "al-p1",
+      "role": "product",
+      "demo": "al-p1.jpg"
+    },
+    {
+      "slot": "al-p2",
+      "role": "product",
+      "demo": "al-p2.jpg"
+    },
+    {
+      "slot": "al-p3",
+      "role": "product",
+      "demo": "al-p3.jpg"
+    },
+    {
+      "slot": "al-p4",
+      "role": "product",
+      "demo": "al-p4.jpg"
+    },
+    {
+      "slot": "ve-p1",
+      "role": "product",
+      "demo": "ve-p1.jpg"
+    },
+    {
+      "slot": "me-p4",
+      "role": "product",
+      "demo": "me-p4.jpg"
+    },
+    {
+      "slot": "ga-p3",
+      "role": "product",
+      "demo": "ga-p3.jpg"
+    },
+    {
+      "slot": "me-p2",
+      "role": "product",
+      "demo": "me-p2.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "bazar",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#111111",
+      "muted": "#f4f2e6",
+      "accent": "#e4ea8c",
+      "deep": "#111111"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "bazar",
+      "icons": "person",
+      "header": "search",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "soft",
+      "corners": "soft",
+      "density": "compact",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envolvemos tus regalos gratis"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "look": "center",
+        "title": "Hecho para *durar*",
+        "cta": "Ver cocina",
+        "link": "products",
+        "cta2": "Ver regalos",
+        "link2": "products",
+        "photo": "slot:al-mesa"
+      },
+      {
+        "type": "categories-mosaic",
+        "look": "feature3",
+        "items": [
+          {
+            "title": "Todo para la mesa",
+            "text": "Platos, tazas y fuentes.",
+            "photo": "slot:me-hero",
+            "link": "products"
+          },
+          {
+            "title": "Envuelto para regalo",
+            "text": "Listo para sorprender.",
+            "photo": "slot:me-story",
+            "link": "products"
+          },
+          {
+            "title": "Velas",
+            "text": "Para cada rincón.",
+            "photo": "slot:ve-ritual",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-lookbook",
+        "title": "Ofertas de la semana",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:al-taller",
+        "products": [
+          "demo-1",
+          "demo-2",
+          "demo-3"
+        ]
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "Destacado",
+        "title": "El juego de la casa",
+        "product": "demo-2"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "caption",
+        "title": "Colecciones del momento",
+        "items": [
+          {
+            "title": "Cerámica",
+            "photo": "slot:al-p3",
+            "link": "products"
+          },
+          {
+            "title": "Velas",
+            "photo": "slot:ve-p1",
+            "link": "products"
+          },
+          {
+            "title": "Arte",
+            "photo": "slot:ga-p3",
+            "link": "products"
+          },
+          {
+            "title": "Cocina",
+            "photo": "slot:me-p4",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "categories-tiles",
+        "look": "circles",
+        "title": "Regalos por ocasión",
+        "items": [
+          {
+            "title": "Cumpleaños",
+            "photo": "slot:ve-regalo",
+            "link": "products"
+          },
+          {
+            "title": "Para la casa",
+            "photo": "slot:al-p1",
+            "link": "products"
+          },
+          {
+            "title": "Para el café",
+            "photo": "slot:al-p2",
+            "link": "products"
+          },
+          {
+            "title": "Para cocinar",
+            "photo": "slot:me-p4",
+            "link": "products"
+          },
+          {
+            "title": "Para leer",
+            "photo": "slot:me-p2",
+            "link": "products"
+          },
+          {
+            "title": "Ver todo",
+            "photo": "slot:ga-estudio",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "shop-look",
+        "look": "side",
+        "title": "Una mesa para *compartir*",
+        "photo": "slot:me-hero",
+        "items": [
+          {
+            "title": "Taza Moteada",
+            "x": 40,
+            "y": 55
+          },
+          {
+            "title": "Hecho a mano",
+            "text": "Cada pieza es única.",
+            "icon": "hand"
+          },
+          {
+            "title": "Listo para regalar",
+            "text": "Lo envolvemos gratis.",
+            "icon": "gift"
+          }
+        ]
+      },
+      {
+        "type": "products-slider",
+        "card": "classic",
+        "title": "Lo más regalado",
+        "link": "products"
+      },
+      {
+        "type": "promo-pair",
+        "look": "uneven",
+        "title": "Más formas de ahorrar",
+        "items": [
+          {
+            "title": "Ofertas para miembros",
+            "text": "Suscríbete y ahorra.",
+            "photo": "slot:ve-regalo",
+            "link": "products"
+          },
+          {
+            "title": "Liquidación",
+            "text": "Últimas piezas.",
+            "photo": "slot:al-taller",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "reviews-cards",
+        "title": "¿Qué dicen nuestros clientes?"
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Envío gratis",
+            "text": "En compras desde Bs 300.",
+            "icon": "truck"
+          },
+          {
+            "title": "Tarjetas de regalo",
+            "text": "Del monto que quieras.",
+            "icon": "gift"
+          },
+          {
+            "title": "Retira en tienda",
+            "text": "El mismo día.",
+            "icon": "store"
+          },
+          {
+            "title": "Buenos precios",
+            "text": "Ofertas cada semana.",
+            "icon": "star"
+          }
+        ]
+      },
+      {
+        "type": "social-posts",
+        "look": "grid",
+        "title": "Inspiración",
+        "items": [
+          {
+            "title": "1",
+            "photo": "slot:al-mesa",
+            "link": "products"
+          },
+          {
+            "title": "2",
+            "photo": "slot:ve-ritual",
+            "link": "products"
+          },
+          {
+            "title": "3",
+            "photo": "slot:ga-estudio",
+            "link": "products"
+          },
+          {
+            "title": "4",
+            "photo": "slot:me-story",
+            "link": "products"
+          }
+        ]
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Envuelto para regalo",
+            "text": "Gratis, con tarjeta.",
+            "icon": "gift"
+          },
+          {
+            "title": "Envío a domicilio",
+            "text": "A toda la ciudad.",
+            "icon": "truck"
+          },
+          {
+            "title": "Cambios fáciles",
+            "text": "En 30 días.",
+            "icon": "refresh"
+          }
+        ]
+      },
+      {
+        "type": "products-lookbook",
+        "title": "Combínalo",
+        "photo": "slot:me-hero",
+        "products": [
+          "demo-3",
+          "demo-4"
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Lo envuelven para regalo?",
+            "text": "Sí, sin costo."
+          },
+          {
+            "title": "¿Puedo agregar una tarjeta?",
+            "text": "Escribe tu mensaje al pedir."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "De 1 a 3 días."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Bazar",
+      "tagline": "Regalos y cosas lindas para la casa",
+      "products": [
+        {
+          "name": "Jarrón Negro",
+          "price": 180,
+          "description": "Cerámica mate.",
+          "category": "Cerámica"
+        },
+        {
+          "name": "Taza Moteada",
+          "price": 65,
+          "description": "Gres esmaltado.",
+          "category": "Cerámica"
+        },
+        {
+          "name": "Bowl Mostaza",
+          "price": 90,
+          "description": "Para ensaladas.",
+          "category": "Cocina"
+        },
+        {
+          "name": "Jarra Terracota",
+          "price": 140,
+          "description": "Un litro.",
+          "category": "Cocina"
+        },
+        {
+          "name": "Vela Ciruela",
+          "price": 95,
+          "description": "40 horas.",
+          "category": "Velas"
+        },
+        {
+          "name": "Tabla de Olivo",
+          "price": 160,
+          "description": "Madera maciza.",
+          "category": "Cocina"
+        },
+        {
+          "name": "Lámina Limones",
+          "price": 120,
+          "description": "Impresión de arte.",
+          "category": "Arte"
+        },
+        {
+          "name": "Bolsa de Lona",
+          "price": 70,
+          "description": "Algodón grueso.",
+          "category": "Regalos"
+        }
+      ]
+    }
+  }
+}
