@@ -462,6 +462,13 @@
         "heading": "outfit",
         "body": "nunito",
         "starterOnly": true
+      },
+      {
+        "id": "pecas",
+        "name": "Pecas",
+        "heading": "outfit",
+        "body": "figtree",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -630,7 +637,8 @@
         "majestuoso",
         "energia",
         "mordisco",
-        "pancita"
+        "pancita",
+        "pecas"
       ],
       "icons": [
         "line",

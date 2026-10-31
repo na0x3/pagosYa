@@ -211,7 +211,7 @@ export function CardRibbons() {
 function Sticker({ text, className }: { text?: string; className?: string }) {
   if (!text) return null;
   const points = Array.from({ length: 24 }, (_, at) => { const r = at % 2 ? 42 : 50, a = (Math.PI * at) / 12; return `${50 + r * Math.sin(a)},${50 - r * Math.cos(a)}`; }).join(' ');
-  return <span className={`lb-sticker ${className ?? ''}`} aria-hidden="true"><svg viewBox="0 0 100 100"><polygon points={points} /></svg><span>{text}</span></span>;
+  return <span className={`lb-seal ${className ?? ''}`} aria-hidden="true"><svg viewBox="0 0 100 100"><polygon points={points} /></svg><span>{text}</span></span>;
 }
 
 function CoverSplit({ block, index }: { block: LibraryBlock; index: number }) {
@@ -231,10 +231,12 @@ function CoverSplit({ block, index }: { block: LibraryBlock; index: number }) {
 }
 
 function CoverFull({ block, index }: { block: LibraryBlock; index: number }) {
+  const sticker = block.look === 'sticker' ? block.eyebrow : undefined;
   return <Bleed block={block} index={index} id="inicio" className="lb-cover lb-cover--dark">
     <Photo src={block.photo} className="lb-cover-full__photo" eager />
+    <Sticker text={sticker} className="lb-seal--cover" />
     <div className="lb-cover-full__copy">
-      <Head block={{ ...block, text: undefined }} index={index} level={1} />
+      <Head block={{ ...block, text: undefined, eyebrow: sticker ? undefined : block.eyebrow }} index={index} level={1} />
       {block.text ? <p className="lb-cover__sub">{block.text}</p> : null}
       <Actions block={block} tone="light" second="ghost" />
     </div>

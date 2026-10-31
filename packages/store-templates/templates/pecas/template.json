@@ -1,0 +1,186 @@
+{
+  "id": "pecas",
+  "name": "Pecas",
+  "category": "belleza",
+  "description": "Belleza divertida: degradados lila y celeste, amarillo limón, títulos grandes y finos, sello de «nuevo», bordes que ondean.",
+  "tags": [
+    "belleza",
+    "cuidado de la piel",
+    "divertido",
+    "juvenil"
+  ],
+  "sitePurpose": "shop",
+  "order": 38,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "shopdalmatian.com (layout and motion only)",
+    "url": "https://shopdalmatian.com/"
+  },
+  "photos": [
+    {
+      "slot": "gl-hero",
+      "role": "hero",
+      "demo": "gl-hero.jpg"
+    },
+    {
+      "slot": "gl-story",
+      "role": "lifestyle",
+      "demo": "gl-story.jpg"
+    },
+    {
+      "slot": "gl-p1",
+      "role": "product",
+      "demo": "gl-p1.jpg"
+    },
+    {
+      "slot": "gl-p2",
+      "role": "product",
+      "demo": "gl-p2.jpg"
+    },
+    {
+      "slot": "gl-p3",
+      "role": "product",
+      "demo": "gl-p3.jpg"
+    },
+    {
+      "slot": "pi-hero",
+      "role": "hero",
+      "demo": "pi-hero.jpg"
+    },
+    {
+      "slot": "pi-juntas",
+      "role": "lifestyle",
+      "demo": "pi-juntas.jpg"
+    },
+    {
+      "slot": "pi-tonos",
+      "role": "lifestyle",
+      "demo": "pi-tonos.jpg"
+    },
+    {
+      "slot": "ru-textura",
+      "role": "lifestyle",
+      "demo": "ru-textura.jpg"
+    },
+    {
+      "slot": "ru-p1",
+      "role": "product",
+      "demo": "ru-p1.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "pecas",
+    "colors": {
+      "paper": "#fafaf6",
+      "ink": "#3a3550",
+      "muted": "#f2ff4e",
+      "accent": "#9581cf",
+      "deep": "#6f6be8"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "pecas",
+      "icons": "person",
+      "header": "split",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en compras desde Bs 150"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "look": "sticker",
+        "eyebrow": "¡Nuevo!",
+        "title": "Lo bonito también *cuida*",
+        "text": "Cuidado divertido para tu piel, todos los días.",
+        "cta": "Comprar",
+        "link": "products",
+        "photo": "slot:pi-juntas"
+      },
+      {
+        "type": "products-slider",
+        "look": "center",
+        "band": "accent",
+        "title": "Nuestros favoritos",
+        "text": "Lindos, fáciles y hechos para tu piel.",
+        "link": "products"
+      },
+      {
+        "type": "wave-divider",
+        "band": "accent",
+        "look": "sway-flip"
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "El elegido",
+        "title": "El set para empezar",
+        "product": "demo-1"
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Libre de crueldad",
+            "icon": "heart"
+          },
+          {
+            "title": "Con ingredientes amables",
+            "icon": "leaf"
+          },
+          {
+            "title": "Probado en piel",
+            "icon": "sparkles"
+          },
+          {
+            "title": "Para piel sensible",
+            "icon": "circle-check"
+          }
+        ]
+      },
+      {
+        "type": "statement-marquee",
+        "band": "muted",
+        "title": "El cuidado más divertido que existe •"
+      },
+      {
+        "type": "reviews-cards",
+        "band": "accent",
+        "title": "Lo que dicen"
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Tu piel, *con estilo*",
+        "text": "Productos lindos y fáciles de usar, pensados para que cuidarte sea un gusto.",
+        "cta": "Comprar",
+        "link": "products",
+        "photo": "slot:gl-story"
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "accent",
+        "title": "Conectemos",
+        "text": "Ofertas especiales y novedades antes que nadie."
+      },
+      {
+        "type": "wave-divider",
+        "band": "muted",
+        "look": "ripple"
+      }
+    ]
+  }
+}
