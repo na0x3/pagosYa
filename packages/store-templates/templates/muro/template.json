@@ -1,0 +1,296 @@
+{
+  "id": "muro",
+  "name": "Muro",
+  "category": "arte",
+  "description": "Arte y láminas: gris claro, títulos con serif centrados, obras en tarjetas blancas y franjas verde azulado con collage.",
+  "tags": [
+    "arte",
+    "láminas",
+    "galería",
+    "decoración"
+  ],
+  "sitePurpose": "shop",
+  "order": 48,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Studio",
+    "url": "https://theme-studio-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "ga-pared",
+      "role": "hero",
+      "demo": "ga-pared.jpg"
+    },
+    {
+      "slot": "ga-estudio",
+      "role": "hero",
+      "demo": "ga-estudio.jpg"
+    },
+    {
+      "slot": "pu-estante",
+      "role": "lifestyle",
+      "demo": "pu-estante.jpg"
+    },
+    {
+      "slot": "pu-lupa",
+      "role": "lifestyle",
+      "demo": "pu-lupa.jpg"
+    },
+    {
+      "slot": "ga-p1",
+      "role": "product",
+      "demo": "ga-p1.jpg"
+    },
+    {
+      "slot": "ga-p2",
+      "role": "product",
+      "demo": "ga-p2.jpg"
+    },
+    {
+      "slot": "ga-p3",
+      "role": "product",
+      "demo": "ga-p3.jpg"
+    },
+    {
+      "slot": "ga-p4",
+      "role": "product",
+      "demo": "ga-p4.jpg"
+    },
+    {
+      "slot": "pu-p1",
+      "role": "product",
+      "demo": "pu-p1.jpg"
+    },
+    {
+      "slot": "pu-p2",
+      "role": "product",
+      "demo": "pu-p2.jpg"
+    },
+    {
+      "slot": "pu-p3",
+      "role": "product",
+      "demo": "pu-p3.jpg"
+    },
+    {
+      "slot": "pu-p4",
+      "role": "product",
+      "demo": "pu-p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "muro",
+    "colors": {
+      "paper": "#eef0f2",
+      "ink": "#16404f",
+      "muted": "#ffffff",
+      "accent": "#16404f",
+      "deep": "#16404f"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "muro",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-right",
+      "filters": "bar",
+      "grid": "grid3",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Nuevas obras de artistas invitados"
+    },
+    "layout": [
+      {
+        "type": "promo-banner",
+        "title": "Arte de artistas nuevos, *elegido con cuidado*",
+        "cta": "Ver obras",
+        "link": "products",
+        "photo": "slot:ga-pared"
+      },
+      {
+        "type": "products-grid",
+        "card": "framed",
+        "title": "Lo más nuevo",
+        "link": "products"
+      },
+      {
+        "type": "story-collage",
+        "band": "deep",
+        "title": "Cada obra suma a una casa con *carácter*",
+        "text": "Elegimos piezas que conversan entre sí, para que armes tu colección de a poco.",
+        "cta": "Explorar",
+        "link": "products",
+        "photo": "slot:ga-estudio",
+        "photo2": "slot:ga-p3",
+        "items": [
+          {
+            "title": "3",
+            "photo": "slot:pu-p2"
+          }
+        ]
+      },
+      {
+        "type": "products-slider",
+        "card": "framed",
+        "title": "Bien elegido, a buen precio",
+        "link": "products"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "caption",
+        "band": "deep",
+        "title": "Colecciones para tu espacio",
+        "items": [
+          {
+            "title": "Paisajes",
+            "photo": "slot:ga-p2",
+            "link": "products"
+          },
+          {
+            "title": "Retratos",
+            "photo": "slot:ga-p4",
+            "link": "products"
+          },
+          {
+            "title": "Naturaleza muerta",
+            "photo": "slot:ga-p3",
+            "link": "products"
+          },
+          {
+            "title": "Pósters",
+            "photo": "slot:pu-p1",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "title": "Sé el primero en saber",
+        "text": "Obras nuevas y artistas invitados, antes que nadie.",
+        "band": "muted"
+      },
+      {
+        "type": "story-split",
+        "band": "deep",
+        "title": "Elegimos poco y bien",
+        "text": "Cada mes sumamos obras de artistas que admiramos, con impresión de museo y marco a medida.",
+        "cta": "Conócenos",
+        "link": "about",
+        "photo": "slot:pu-estante"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Impresión de museo",
+            "text": "Papel de algodón.",
+            "icon": "award"
+          },
+          {
+            "title": "Marco a medida",
+            "text": "Madera natural.",
+            "icon": "hand"
+          },
+          {
+            "title": "Llega protegido",
+            "text": "En caja rígida.",
+            "icon": "package"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Sobre *el artista*",
+        "text": "Cada obra viene con la historia de quien la hizo y su firma.",
+        "photo": "slot:ga-estudio"
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Qué tamaños hay?",
+            "text": "Del A4 al 70 × 100 cm."
+          },
+          {
+            "title": "¿Viene enmarcado?",
+            "text": "Elige con o sin marco."
+          },
+          {
+            "title": "¿Cuánto tarda?",
+            "text": "De 5 a 7 días."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Muro",
+      "tagline": "Arte para tu pared, de artistas nuevos",
+      "products": [
+        {
+          "name": "Begonias",
+          "price": 380,
+          "description": "Impresión de museo.",
+          "category": "Retratos"
+        },
+        {
+          "name": "Campo al Atardecer",
+          "price": 340,
+          "description": "Óleo, reproducción.",
+          "category": "Paisajes"
+        },
+        {
+          "name": "Limones",
+          "price": 300,
+          "description": "Naturaleza muerta.",
+          "category": "Naturaleza muerta"
+        },
+        {
+          "name": "Azul",
+          "price": 360,
+          "description": "Retrato en azul.",
+          "category": "Retratos"
+        },
+        {
+          "name": "Robot",
+          "price": 180,
+          "description": "Póster retro.",
+          "category": "Pósters"
+        },
+        {
+          "name": "Cohete",
+          "price": 180,
+          "description": "Póster retro.",
+          "category": "Pósters"
+        },
+        {
+          "name": "Explorador",
+          "price": 180,
+          "description": "Póster retro.",
+          "category": "Pósters"
+        },
+        {
+          "name": "Héroe",
+          "price": 180,
+          "description": "Póster retro.",
+          "category": "Pósters"
+        }
+      ]
+    }
+  }
+}

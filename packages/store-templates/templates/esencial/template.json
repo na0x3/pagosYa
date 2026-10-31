@@ -533,6 +533,13 @@
         "heading": "libre-caslon-text",
         "body": "figtree",
         "starterOnly": true
+      },
+      {
+        "id": "muro",
+        "name": "Muro",
+        "heading": "young-serif",
+        "body": "figtree",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -711,7 +718,8 @@
         "despensa",
         "bazar",
         "sorbo",
-        "grano"
+        "grano",
+        "muro"
       ],
       "icons": [
         "line",
