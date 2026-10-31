@@ -106,7 +106,7 @@
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "gallery-right",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -117,9 +117,8 @@
     "layout": [
       {
         "type": "cover-split",
-        "look": "sticker",
+        "look": "circle",
         "band": "accent",
-        "eyebrow": "¡Aprobado por veterinarios!",
         "title": "Comida sana para *colas felices*",
         "text": "Ingredientes reales para mascotas reales, porque merecen lo mejor.",
         "cta": "Ver comida",
@@ -141,7 +140,7 @@
           },
           {
             "title": "Sin químicos",
-            "icon": "shield-check"
+            "icon": "shield"
           },
           {
             "title": "Bueno para su panza",
@@ -249,7 +248,7 @@
           {
             "title": "Origen local",
             "text": "De productores de confianza.",
-            "icon": "map-pin"
+            "icon": "pin"
           }
         ]
       },
@@ -378,6 +377,66 @@
           "category": "Premios"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Todo natural",
+            "text": "Un solo ingrediente.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Sin aditivos",
+            "text": "Nada artificial.",
+            "icon": "shield"
+          },
+          {
+            "title": "Bueno para su panza",
+            "text": "Fácil de digerir.",
+            "icon": "heart"
+          }
+        ]
+      },
+      {
+        "type": "steps-howto",
+        "look": "cards",
+        "title": "Cómo *dárselo*",
+        "items": [
+          {
+            "title": "Elige el tamaño",
+            "text": "Según su peso."
+          },
+          {
+            "title": "Dale uno o dos",
+            "text": "Como premio, no como comida."
+          },
+          {
+            "title": "Siempre con agua",
+            "text": "Fresca y a mano."
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas *frecuentes*",
+        "items": [
+          {
+            "title": "¿Sirve para cachorros?",
+            "text": "Desde los 4 meses."
+          },
+          {
+            "title": "¿Cuánto dura abierto?",
+            "text": "Un mes bien cerrado."
+          },
+          {
+            "title": "¿Hacen envíos?",
+            "text": "Sí, a toda la ciudad."
+          }
+        ]
+      }
+    ]
   }
 }

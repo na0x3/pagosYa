@@ -106,7 +106,7 @@
       "density": "regular",
       "texture": "none",
       "titles": "upper",
-      "pdp": "gallery-left",
+      "pdp": "sticky-thumbs",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -234,7 +234,7 @@
         "cta": "Pídelos",
         "link": "products",
         "products": [
-          "Producto estrella",
+          "Proteína Chocolate",
           "Edición de temporada",
           "El clásico",
           "Set para regalar"
@@ -340,6 +340,101 @@
           "category": "Bebidas"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "look": "side",
+        "title": "Ingredientes",
+        "photo": "slot:cr-feature",
+        "items": [
+          {
+            "title": "Proteína",
+            "text": "30 g por porción.",
+            "icon": "zap"
+          },
+          {
+            "title": "Cacao real",
+            "text": "Sabor de verdad.",
+            "icon": "coffee"
+          },
+          {
+            "title": "Sin lactosa",
+            "text": "Fácil de digerir.",
+            "icon": "droplet"
+          },
+          {
+            "title": "Poca azúcar",
+            "text": "Endulzado con fruta.",
+            "icon": "leaf"
+          }
+        ]
+      },
+      {
+        "type": "compare-table",
+        "title": "Cómo nos *comparamos*",
+        "items": [
+          {
+            "title": "30 g de proteína",
+            "value": "no"
+          },
+          {
+            "title": "Sin arenilla",
+            "value": "no"
+          },
+          {
+            "title": "Sabor real",
+            "value": "no"
+          },
+          {
+            "title": "Poca azúcar",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "type": "image-columns",
+        "title": "Energía para *tu día*",
+        "items": [
+          {
+            "title": "Por la mañana",
+            "text": "Para empezar con todo.",
+            "photo": "slot:cr-gente1",
+            "link": "products"
+          },
+          {
+            "title": "Después de entrenar",
+            "text": "Recupera lo que diste.",
+            "photo": "slot:cr-gente2",
+            "link": "products"
+          },
+          {
+            "title": "Contra el antojo",
+            "text": "Algo rico entre comidas.",
+            "photo": "slot:cr-gente3",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas frecuentes",
+        "items": [
+          {
+            "title": "¿Necesita refrigeración?",
+            "text": "No, hasta que lo abras."
+          },
+          {
+            "title": "¿Es arenoso?",
+            "text": "No, es suave y cremoso."
+          },
+          {
+            "title": "¿Sirve si no tolero la lactosa?",
+            "text": "Sí, no lleva lactosa."
+          }
+        ]
+      }
+    ]
   }
 }

@@ -106,7 +106,7 @@
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "gallery-right",
       "filters": "bar",
       "grid": "grid3",
       "cards": "compact"
@@ -270,6 +270,34 @@
           "category": "Regalos"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Hecho para *compartir*",
+        "text": "Cosas lindas que se disfrutan más en compañía.",
+        "photo": "slot:ma-story"
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Antes de comprar",
+        "items": [
+          {
+            "title": "¿Hacen envíos?",
+            "text": "Sí, a todo el país."
+          },
+          {
+            "title": "¿Lo puedo regalar?",
+            "text": "Lo enviamos listo para regalar."
+          },
+          {
+            "title": "¿Puedo cambiarlo?",
+            "text": "Sí, dentro de 30 días."
+          }
+        ]
+      }
+    ]
   }
 }

@@ -91,7 +91,7 @@
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "split-scroll",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -102,8 +102,6 @@
     "layout": [
       {
         "type": "cover-full",
-        "look": "sticker",
-        "eyebrow": "¡Nuevo!",
         "title": "Lo bonito también *cuida*",
         "text": "Cuidado divertido para tu piel, todos los días.",
         "cta": "Comprar",
@@ -146,7 +144,7 @@
           },
           {
             "title": "Para piel sensible",
-            "icon": "circle-check"
+            "icon": "check"
           }
         ]
       },
@@ -211,6 +209,48 @@
           "category": "Rostro"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "look": "cards",
+        "title": "Cómo se *usa*",
+        "items": [
+          {
+            "title": "Limpia",
+            "text": "Rostro limpio y seco."
+          },
+          {
+            "title": "Aplica",
+            "text": "Dos o tres gotas."
+          },
+          {
+            "title": "Disfruta",
+            "text": "Mañana y noche."
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "title": "Lo que lleva",
+        "items": [
+          {
+            "title": "Niacinamida",
+            "text": "Unifica el tono.",
+            "icon": "sparkles"
+          },
+          {
+            "title": "Ácido hialurónico",
+            "text": "Hidrata.",
+            "icon": "droplet"
+          },
+          {
+            "title": "Sin perfume",
+            "text": "Para piel sensible.",
+            "icon": "heart"
+          }
+        ]
+      }
+    ]
   }
 }

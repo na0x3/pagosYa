@@ -132,7 +132,10 @@ export function withOnlyTheme(css: string, theme: string | undefined, sections?:
   // Template sections' CSS (live check 2026-10-31: the stylesheet passed the 180 kB file limit): a block tagged «lb:ids» stays only
   // when the store's home uses one of those sections. Without a list (an older caller) every block stays.
   if (!sections) return themed;
-  return themed.replace(/\/\* lb:([a-z0-9,-]+) \*\/[\s\S]*?\/\* \/lb:\1 \*\//g, (block, ids: string) => ids.split(',').some(id => sections.has(id)) ? block : '');
+  // Product pages (owner 2026-10-31) keep their sections' CSS too, which brought Palo Alto back to the limit: the notes written for
+  // developers go as well (every comment but the pagosya/theme/lb markers that later edits look for).
+  return themed.replace(/\/\* lb:([a-z0-9,-]+) \*\/[\s\S]*?\/\* \/lb:\1 \*\//g, (block, ids: string) => ids.split(',').some(id => sections.has(id)) ? block : '')
+    .replace(/\/\*(?! ?\/?(?:theme|lb):| ?pagosya)[\s\S]*?\*\//g, '');
 }
 
 export function withMasterTheme(css: string, block: string): string {

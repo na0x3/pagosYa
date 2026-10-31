@@ -281,6 +281,72 @@
           "category": "Canastas"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "title": "Por qué te va a *encantar*",
+        "items": [
+          {
+            "title": "Te cae bien",
+            "text": "Pensado para estómagos sensibles.",
+            "icon": "heart"
+          },
+          {
+            "title": "Ingredientes reales",
+            "text": "Sin nada raro.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Rico de verdad",
+            "text": "Sabor de casa.",
+            "icon": "smile"
+          }
+        ]
+      },
+      {
+        "type": "image-columns",
+        "title": "Formas de *disfrutarlo*",
+        "items": [
+          {
+            "title": "En el desayuno",
+            "text": "Con pan recién hecho.",
+            "photo": "slot:me-story",
+            "link": "products"
+          },
+          {
+            "title": "Para compartir",
+            "text": "En la mesa de todos.",
+            "photo": "slot:gr-hero",
+            "link": "products"
+          },
+          {
+            "title": "De picoteo",
+            "text": "Entre comidas.",
+            "photo": "slot:gr-pasto",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Es apto para estómagos sensibles?",
+            "text": "Sí, para eso lo hacemos."
+          },
+          {
+            "title": "¿Cuánto dura?",
+            "text": "Mira la fecha en el envase."
+          },
+          {
+            "title": "¿Hacen envíos?",
+            "text": "Sí."
+          }
+        ]
+      }
+    ]
   }
 }

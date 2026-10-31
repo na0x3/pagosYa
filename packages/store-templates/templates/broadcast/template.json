@@ -131,7 +131,7 @@
       "density": "regular",
       "texture": "none",
       "titles": "upper",
-      "pdp": "gallery-left",
+      "pdp": "editorial",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -196,7 +196,7 @@
         "eyebrow": "Tendencia y tradición",
         "title": "Para usar todos los días",
         "text": "De lo clásico a lo nuevo: piezas que suman a tu estilo sin esfuerzo.",
-        "cta": "Ver todos los productos",
+        "cta": "Ver todo",
         "link": "products",
         "photo": "slot:br-detalle",
         "photo2": "slot:ar-caja"
@@ -288,7 +288,7 @@
         "link": "products",
         "photo": "slot:ar-mano",
         "products": [
-          "Producto estrella",
+          "Argollas Clásicas",
           "Edición de temporada"
         ]
       },
@@ -381,6 +381,55 @@
           "category": "Aros"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "image-columns",
+        "title": "Origen y *materiales*",
+        "items": [
+          {
+            "title": "Origen responsable",
+            "text": "Metales de fuentes conocidas.",
+            "photo": "slot:pl-estudio",
+            "link": "products"
+          },
+          {
+            "title": "Trabajo justo",
+            "text": "Hecho por manos bien pagadas.",
+            "photo": "slot:ar-mano",
+            "link": "products"
+          },
+          {
+            "title": "Valores claros",
+            "text": "Sabes qué compras.",
+            "photo": "slot:br-detalle",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Cuidado de tus joyas",
+        "items": [
+          {
+            "title": "¿Cómo cuido mi joya?",
+            "text": "Guárdala seca y lejos de perfumes."
+          },
+          {
+            "title": "¿Tiene garantía?",
+            "text": "Sí, un año contra fallas."
+          },
+          {
+            "title": "¿Hacen piezas a pedido?",
+            "text": "Escríbenos y lo vemos."
+          },
+          {
+            "title": "¿Cómo la limpio?",
+            "text": "Con un paño suave."
+          }
+        ]
+      }
+    ]
   }
 }

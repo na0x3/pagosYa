@@ -125,7 +125,7 @@
         "photo": "slot:piel-juntas",
         "items": [
           {
-            "title": "Producto estrella",
+            "title": "Suéter Waffle Cacao",
             "x": 28,
             "y": 46
           },
@@ -315,6 +315,35 @@
           "category": "Punto"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Hecho para *usarse* todos los días",
+        "text": "Telas suaves que mejoran con cada lavado y cortes pensados para moverse.",
+        "photo": "slot:paso-material"
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Algodón peinado",
+            "text": "Suave desde el primer día.",
+            "icon": "leaf"
+          },
+          {
+            "title": "No se deforma",
+            "text": "Lavado tras lavado.",
+            "icon": "shield"
+          },
+          {
+            "title": "Cambios fáciles",
+            "text": "Dentro de 30 días.",
+            "icon": "refresh"
+          }
+        ]
+      }
+    ]
   }
 }

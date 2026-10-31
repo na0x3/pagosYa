@@ -186,7 +186,6 @@
       },
       {
         "type": "story-split",
-        "look": "deco",
         "eyebrow": "Nueva colección",
         "title": "Delicias naturales",
         "text": "Ingredientes de origen vegetal, preparados con cuidado para darte energía y sabor sin culpa.",
@@ -269,7 +268,7 @@
         "photo": "slot:hu-campo",
         "items": [
           {
-            "title": "Producto estrella",
+            "title": "Proteína Vegetal 1 kg",
             "x": 40,
             "y": 42
           },
@@ -297,7 +296,6 @@
       },
       {
         "type": "story-overlap",
-        "look": "badge",
         "eyebrow": "Oferta",
         "title": "Hecho con *amor*",
         "text": "Disfruta lo orgánico: comidas y snacks llenos de proteína, para un día con más energía.",
@@ -376,6 +374,76 @@
           "category": "Suplementos"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "strip-badges",
+        "items": [
+          {
+            "title": "Envío gratis",
+            "text": "",
+            "icon": "truck"
+          },
+          {
+            "title": "Garantía de dinero",
+            "text": "",
+            "icon": "shield"
+          },
+          {
+            "title": "Calidad probada",
+            "text": "",
+            "icon": "award"
+          },
+          {
+            "title": "Soporte por WhatsApp",
+            "text": "",
+            "icon": "message"
+          }
+        ]
+      },
+      {
+        "type": "image-columns",
+        "title": "Para qué *sirve*",
+        "items": [
+          {
+            "title": "Más energía",
+            "text": "Para rendir todo el día.",
+            "photo": "slot:hu-p1",
+            "link": "products"
+          },
+          {
+            "title": "Mejor recuperación",
+            "text": "Después de entrenar.",
+            "photo": "slot:hu-p2",
+            "link": "products"
+          },
+          {
+            "title": "Comer limpio",
+            "text": "Sin aditivos.",
+            "photo": "slot:hu-p3",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Es orgánico?",
+            "text": "Ingredientes naturales y limpios."
+          },
+          {
+            "title": "¿Es vegano?",
+            "text": "Sí."
+          },
+          {
+            "title": "¿Sirve para deportistas?",
+            "text": "Sí, está pensado para ellos."
+          }
+        ]
+      }
+    ]
   }
 }

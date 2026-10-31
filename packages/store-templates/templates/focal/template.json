@@ -116,7 +116,7 @@
       "density": "regular",
       "texture": "none",
       "titles": "upper",
-      "pdp": "gallery-left",
+      "pdp": "gallery-right",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -165,7 +165,7 @@
         "photo": "slot:en-escritorio",
         "items": [
           {
-            "title": "Producto estrella",
+            "title": "Audífonos Inalámbricos",
             "x": 30,
             "y": 45
           },
@@ -181,7 +181,7 @@
         "look": "box",
         "title": "Buen diseño y calidad",
         "text": "Nacimos de una pasión por el diseño: piezas pensadas, hechas con cuidado y para durar.",
-        "cta": "Nuestra historia",
+        "cta": "Conócenos",
         "link": "products",
         "photo": "slot:te-story"
       },
@@ -259,7 +259,7 @@
       {
         "type": "story-timeline",
         "eyebrow": "Dónde estamos",
-        "title": "Nuestra historia",
+        "title": "Cómo trabajamos",
         "items": [
           {
             "title": "El inicio",
@@ -325,6 +325,33 @@
           "category": "Hogar"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "look": "cards",
+        "title": "Listo en *tres pasos*",
+        "items": [
+          {
+            "title": "Sácalo de la caja",
+            "text": "Todo viene incluido."
+          },
+          {
+            "title": "Conéctalo",
+            "text": "Funciona con tu teléfono."
+          },
+          {
+            "title": "Úsalo",
+            "text": "Sin configuraciones raras."
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "title": "Diseñado para tu *día a día*",
+        "text": "Tecnología simple, que se entiende sola y dura años.",
+        "photo": "slot:en-escritorio"
+      }
+    ]
   }
 }

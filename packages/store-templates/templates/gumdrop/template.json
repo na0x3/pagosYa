@@ -331,6 +331,72 @@
           "category": "Regalos"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "compare-table",
+        "title": "Mira la *diferencia*",
+        "items": [
+          {
+            "title": "Granos enteros",
+            "value": "no"
+          },
+          {
+            "title": "Más fibra",
+            "value": "no"
+          },
+          {
+            "title": "Sin colorantes",
+            "value": "no"
+          },
+          {
+            "title": "Bien crocante",
+            "value": "yes"
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "look": "side",
+        "title": "Por qué *elegirnos*",
+        "photo": "slot:an-story",
+        "items": [
+          {
+            "title": "Buenos para tu panza",
+            "text": "Fáciles de digerir.",
+            "icon": "heart"
+          },
+          {
+            "title": "Llenos de nutrientes",
+            "text": "Granos de verdad.",
+            "icon": "sprout"
+          },
+          {
+            "title": "Con antioxidantes",
+            "text": "Naturales.",
+            "icon": "sparkles"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Qué es el grano inflado?",
+            "text": "Grano entero que se abre con calor, sin aceite."
+          },
+          {
+            "title": "¿Llevan gluten?",
+            "text": "No."
+          },
+          {
+            "title": "¿Cuánto duran?",
+            "text": "Tres meses cerrados."
+          }
+        ]
+      }
+    ]
   }
 }

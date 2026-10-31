@@ -233,7 +233,7 @@
         "photo": "slot:au-hero",
         "items": [
           {
-            "title": "Producto estrella",
+            "title": "Sérum Rosa",
             "x": 28,
             "y": 40
           },
@@ -353,6 +353,56 @@
           "category": "Labios"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "story-split",
+        "title": "Transforma tu *rutina*",
+        "text": "Resultados que se notan en segundos y duran todo el día.",
+        "photo": "slot:au-ritual"
+      },
+      {
+        "type": "compare-table",
+        "title": "¿Por qué *elegirnos*?",
+        "items": [
+          {
+            "title": "Dura todo el día",
+            "value": "no"
+          },
+          {
+            "title": "Ingredientes amables",
+            "value": "no"
+          },
+          {
+            "title": "Sin crueldad animal",
+            "value": "no"
+          },
+          {
+            "title": "Hecho en pequeños lotes",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Larga duración",
+            "text": "Todo el día.",
+            "icon": "clock"
+          },
+          {
+            "title": "Amable con tu piel",
+            "text": "Sin irritar.",
+            "icon": "heart"
+          },
+          {
+            "title": "Sin crueldad",
+            "text": "Nunca en animales.",
+            "icon": "hand"
+          }
+        ]
+      }
+    ]
   }
 }

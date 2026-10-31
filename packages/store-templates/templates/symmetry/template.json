@@ -131,7 +131,7 @@
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "sticky-thumbs",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -291,7 +291,7 @@
         "photo": "slot:pi-juntas",
         "items": [
           {
-            "title": "Producto estrella",
+            "title": "Vestido Flores",
             "x": 35,
             "y": 40
           },
@@ -406,6 +406,48 @@
           "category": "Básicos"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Detalles",
+        "items": [
+          {
+            "title": "Descripción",
+            "text": "Tela liviana con caída suave."
+          },
+          {
+            "title": "Envíos y cambios",
+            "text": "Envío en 48 h, cambios en 30 días."
+          },
+          {
+            "title": "Guía de tallas",
+            "text": "Calza normal."
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "title": "Mejor para el planeta",
+        "items": [
+          {
+            "title": "Telas naturales",
+            "text": "Algodón y lino.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Talleres pequeños",
+            "text": "Hecho cerca de casa.",
+            "icon": "hand"
+          },
+          {
+            "title": "Empaque reciclado",
+            "text": "Sin plástico.",
+            "icon": "recycle"
+          }
+        ]
+      }
+    ]
   }
 }

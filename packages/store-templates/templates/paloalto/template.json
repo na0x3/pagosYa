@@ -116,7 +116,7 @@
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "sticky-thumbs",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -239,7 +239,7 @@
       {
         "type": "statement-reveal",
         "text": "Nacimos del amor por el oficio y la *feminidad moderna*. Cada pieza está pensada para sentirse cómoda, durar y verse audaz sin esfuerzo, para que te sientas segura sin intentarlo demasiado.",
-        "cta": "Ver todos los productos",
+        "cta": "Ver todo",
         "link": "products"
       },
       {
@@ -395,7 +395,7 @@
         "photo": "slot:e-hero",
         "items": [
           {
-            "title": "Producto estrella",
+            "title": "Blazer Noche",
             "x": 38,
             "y": 34
           },
@@ -509,6 +509,57 @@
           "category": "Accesorios"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "title": "Por qué te va a durar",
+        "items": [
+          {
+            "title": "Hecho a mano",
+            "text": "Cada pieza cosida en taller.",
+            "icon": "hand"
+          },
+          {
+            "title": "Telas nobles",
+            "text": "Lana, lino y algodón.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Cambios en 30 días",
+            "text": "Sin preguntas.",
+            "icon": "refresh"
+          },
+          {
+            "title": "Envío a tu puerta",
+            "text": "A todo el país.",
+            "icon": "truck"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Talla y cuidado",
+        "items": [
+          {
+            "title": "¿Cómo elijo mi talla?",
+            "text": "Calza normal: elige tu talla de siempre."
+          },
+          {
+            "title": "¿Cómo lo cuido?",
+            "text": "Lavado en frío y secado a la sombra."
+          },
+          {
+            "title": "¿Cuánto tarda el envío?",
+            "text": "De 2 a 4 días hábiles."
+          },
+          {
+            "title": "¿Puedo cambiarlo?",
+            "text": "Sí, dentro de 30 días."
+          }
+        ]
+      }
+    ]
   }
 }

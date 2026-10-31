@@ -116,7 +116,7 @@
       "density": "compact",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "sticky-thumbs",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -434,6 +434,56 @@
           "category": "Juguetes"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "image-columns",
+        "look": "round",
+        "title": "Conoce los *ingredientes*",
+        "items": [
+          {
+            "title": "Pollo",
+            "text": "Proteína de calidad.",
+            "photo": "slot:co-comida",
+            "link": "products"
+          },
+          {
+            "title": "Arroz",
+            "text": "Energía que se digiere fácil.",
+            "photo": "slot:pa-p3",
+            "link": "products"
+          },
+          {
+            "title": "Verduras",
+            "text": "Fibra y vitaminas.",
+            "photo": "slot:pa-p4",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas frecuentes",
+        "items": [
+          {
+            "title": "¿Para qué edad es?",
+            "text": "Para perros adultos."
+          },
+          {
+            "title": "¿Cuánto le doy?",
+            "text": "Mira la tabla en la bolsa."
+          },
+          {
+            "title": "¿Hacen envíos?",
+            "text": "Sí, a toda la ciudad."
+          },
+          {
+            "title": "¿Puedo cambiarlo?",
+            "text": "Sí, si la bolsa está cerrada."
+          }
+        ]
+      }
+    ]
   }
 }

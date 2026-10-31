@@ -116,7 +116,7 @@
       "density": "regular",
       "texture": "none",
       "titles": "upper",
-      "pdp": "gallery-left",
+      "pdp": "split-scroll",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -145,7 +145,7 @@
         "cta": "Ver todo",
         "link": "products",
         "products": [
-          "Producto estrella",
+          "Mochila Andes 24 L",
           "Edición de temporada"
         ]
       },
@@ -330,6 +330,52 @@
           "category": "Mochilas"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "image-columns",
+        "title": "Pensado para el *camino*",
+        "items": [
+          {
+            "title": "Resiste el agua",
+            "text": "Lona encerada que no deja pasar la lluvia.",
+            "photo": "slot:c-uso1",
+            "link": "products"
+          },
+          {
+            "title": "Liviana",
+            "text": "Lleva más, carga menos.",
+            "photo": "slot:c-uso2",
+            "link": "products"
+          },
+          {
+            "title": "Para toda la vida",
+            "text": "Costuras dobles y cuero.",
+            "photo": "slot:c-uso3",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Garantía de por vida",
+            "text": "Si se rompe, la reparamos.",
+            "icon": "award"
+          },
+          {
+            "title": "Envío gratis",
+            "text": "En compras desde Bs 500.",
+            "icon": "truck"
+          },
+          {
+            "title": "Cambios en 30 días",
+            "text": "Sin preguntas.",
+            "icon": "refresh"
+          }
+        ]
+      }
+    ]
   }
 }

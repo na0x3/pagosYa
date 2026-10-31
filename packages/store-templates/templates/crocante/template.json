@@ -101,7 +101,7 @@
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "gallery-right",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -227,7 +227,7 @@
         "band": "accent",
         "title": "Una marca hecha *por mujeres*",
         "text": "Somos una empresa pequeña, hecha con cariño por quienes aman comer rico y sano.",
-        "cta": "Nuestra historia",
+        "cta": "Conócenos",
         "link": "about",
         "photo": "slot:an-hero"
       },
@@ -295,6 +295,59 @@
           "category": "Packs"
         }
       ]
-    }
+    },
+    "productLayout": [
+      {
+        "type": "story-split",
+        "look": "right",
+        "band": "accent",
+        "title": "Súper fruta, *súper snack*",
+        "text": "Fruta entera, con cáscara y todo, secada hasta quedar crocante.",
+        "photo": "slot:cr-feature"
+      },
+      {
+        "type": "image-columns",
+        "title": "Formas de *comerlos*",
+        "items": [
+          {
+            "title": "Con yogur",
+            "text": "Para el desayuno.",
+            "photo": "slot:an-story",
+            "link": "products"
+          },
+          {
+            "title": "En la mochila",
+            "text": "Para la tarde.",
+            "photo": "slot:cr-gente1",
+            "link": "products"
+          },
+          {
+            "title": "Para compartir",
+            "text": "En la juntada.",
+            "photo": "slot:cr-gente2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Llevan gluten?",
+            "text": "No."
+          },
+          {
+            "title": "¿Por qué con cáscara?",
+            "text": "Ahí está la fibra."
+          },
+          {
+            "title": "¿Dónde los compro?",
+            "text": "Aquí y en tiendas amigas."
+          }
+        ]
+      }
+    ]
   }
 }
