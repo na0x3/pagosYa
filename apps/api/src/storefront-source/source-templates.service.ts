@@ -37,6 +37,9 @@ import { storeMenuContext, storeMenuTargetList } from './source-store-menu';
 /** YAPI plan card (spec 2026-10-22): what a checked plan pins on a master store. */
 export type AppliedPlan = { variants: Record<string, string>; sections: string[]; palette: string; fonts: string; accent?: string; dna: Record<string, string> };
 
+/** Owner 2026-10-31: built from Shrine Pro (not a Shopify theme-store theme); behind YAPI_SHRINE_TEMPLATES. */
+const SHRINE_TEMPLATES = new Set(['shrine', 'shrine2']);
+
 @Injectable()
 export class SourceTemplatesService {
   /** The template registry; replaceable in tests. */
@@ -76,7 +79,10 @@ export class SourceTemplatesService {
   };
 
   list(curatedOnly = false) {
-    return this.registry.galleryTemplates().filter(manifest => !curatedOnly || (manifest.curated === true && (Boolean(manifest.copy?.length) || Boolean(manifest.preset))))
+    // Owner 2026-10-31: the Shrine Pro templates stay built but hidden until YAPI_SHRINE_TEMPLATES=1 (the owner decides later).
+    const shrine = this.config.get<boolean>('app.yapiShrineTemplates') === true;
+    return this.registry.galleryTemplates().filter(manifest => shrine || !SHRINE_TEMPLATES.has(manifest.id))
+      .filter(manifest => !curatedOnly || (manifest.curated === true && (Boolean(manifest.copy?.length) || Boolean(manifest.preset))))
       .map(({ id, name, category, description, tags, order }) => ({ id, name, category, description, tags, order }));
   }
 

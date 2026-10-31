@@ -124,8 +124,12 @@ export function masterThemeCss(settings: MasterSettings, look: MasterLook): stri
 
 /** 34 templates (2026-10-31): the template stylesheet carries every theme between «/* theme:id *\/» and «/* /theme:id *\/»; a store
  *  keeps only its own theme's block, so it never ships the other themes' rules or fonts. */
-export function withOnlyTheme(css: string, theme: string | undefined): string {
-  return css.replace(/\/\* theme:([a-z0-9-]+) \*\/[\s\S]*?\/\* \/theme:\1 \*\//g, (block, id: string) => id === theme ? block : '');
+export function withOnlyTheme(css: string, theme: string | undefined, sections?: ReadonlySet<string>): string {
+  const themed = css.replace(/\/\* theme:([a-z0-9-]+) \*\/[\s\S]*?\/\* \/theme:\1 \*\//g, (block, id: string) => id === theme ? block : '');
+  // Template sections' CSS (live check 2026-10-31: the stylesheet passed the 180 kB file limit): a block tagged «lb:ids» stays only
+  // when the store's home uses one of those sections. Without a list (an older caller) every block stays.
+  if (!sections) return themed;
+  return themed.replace(/\/\* lb:([a-z0-9,-]+) \*\/[\s\S]*?\/\* \/lb:\1 \*\//g, (block, ids: string) => ids.split(',').some(id => sections.has(id)) ? block : '');
 }
 
 export function withMasterTheme(css: string, block: string): string {

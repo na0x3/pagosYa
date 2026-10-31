@@ -1,4 +1,7 @@
 import { sourceRequestContext } from './source-request-context';
+import { SOURCE_DESIGN_FILE } from './source-design';
+import { faviconPng } from '../store-seo/store-favicon';
+import { storeIdentity } from '../store-seo/store-identity';
 import { withoutCommerceTemplates } from './commerce-surfaces/surface-inject';
 import { FRAME_DRAW_FILE, parseFrameDraw, type FrameDraw } from './design-engine/frame-draw';
 import { visibleSentences } from './copy-check';
@@ -284,9 +287,30 @@ export class SourceProjectsService {
     if (!generation && input.label !== 'Boceto editado' && input.files.some(file => file.path === 'sketch.json') && !(await this.componentsUnchanged(merchantId, storeId, input))) {
       input = { ...input, files: input.files.filter(file => file.path !== 'sketch.json') };
     }
+    // Owner 2026-10-31 («every store should have a favicon»): every save carries the tab icon — the store's logo, else its name drawn
+    // in its own colours — as favicon.png (and favicon-180.png for phones), which every compiled page links.
+    if (!generation?.prepared) input = { ...input, files: await this.withFavicon(storeId, input.files) };
     const snapshot = generation?.prepared ? assertPreparedSource(input, generation.prepared) : await this.prepare(input);
     if (generation?.prepared && (generation.products?.length || generation.productOperations?.length)) throw new BadRequestException('Las operaciones de catálogo deben prepararse por separado.');
     return this.append(storeId, input.revision, input.label, snapshot, null, generation, undefined, fence);
+  }
+
+  private async withFavicon(storeId: string, files: SaveSourceProjectDto['files']): Promise<SaveSourceProjectDto['files']> {
+    try {
+      const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, logoUrl: true } });
+      if (!store) return files;
+      const identity = storeIdentity(files.filter(file => file.path === SOURCE_DESIGN_FILE || (file.path.endsWith('.css') && file.encoding !== 'base64')) as never);
+      let path = store.logoUrl ?? '';
+      try { path = new URL(path, 'http://store.local').pathname; } catch { /* keep */ }
+      const filename = path.match(/^\/v1\/uploads\/([a-f0-9-]+\.(?:png|jpe?g|webp|gif))$/i)?.[1];
+      const logo = filename && this.uploads ? await this.uploads.getBuffer(filename).catch(() => null) : null;
+      const [small, touch] = await Promise.all([32, 180].map(size => faviconPng({ logo, name: store.name, identity, size })));
+      return [...files.filter(file => file.path !== 'favicon.png' && file.path !== 'favicon-180.png'),
+        { path: 'favicon.png', content: small.toString('base64'), encoding: 'base64' }, { path: 'favicon-180.png', content: touch.toString('base64'), encoding: 'base64' }] as SaveSourceProjectDto['files'];
+    } catch (error) {
+      // A favicon never blocks a save.
+      return files;
+    }
   }
 
   /** Apply the exact normalized bytes that were reviewed, without recompiling. */

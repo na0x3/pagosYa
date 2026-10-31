@@ -140,7 +140,8 @@ export function CardTemplate({ card = 'classic' }: { card?: LibraryCard }) {
 
 
 /** 34 templates (2026-10-31): the themes' motion, measured on their demos. A section gets data-in when it reaches the screen (each
- *  theme's CSS plays its own entrance from it); a section with data-lb-progress gets --p (0→1 as it scrolls through; pinned ones
+ *  theme's CSS plays its own entrance from it — owner 2026-10-31 «se sienten lentos»: it starts just before the section reaches the
+ *  screen, so nothing waits blank); a section with data-lb-progress gets --p (0→1 as it scrolls through; pinned ones
  *  through their tall box) and, with data-lb-steps, data-step; the page records the scroll direction (compact headers). Without
  *  motion everything is shown at once and --p is 1. */
 export function ThemeMotion() {
@@ -149,7 +150,7 @@ export function ThemeMotion() {
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const sections = () => Array.from(document.querySelectorAll<HTMLElement>('main [data-lb]'));
     if (still || !('IntersectionObserver' in window)) { sections().forEach(el => el.setAttribute('data-in', '')); root.setAttribute('data-es-still', ''); return; }
-    const seen = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { entry.target.setAttribute('data-in', ''); seen.unobserve(entry.target); } }), { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+    const seen = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { entry.target.setAttribute('data-in', ''); seen.unobserve(entry.target); } }), { rootMargin: '0px 0px 12% 0px', threshold: 0 });
     const watchAll = () => sections().forEach(el => { if (!el.hasAttribute('data-in') && !el.hasAttribute('data-watched')) { el.setAttribute('data-watched', ''); seen.observe(el); } });
     watchAll();
     let last = scrollY, queued = false;
@@ -340,6 +341,13 @@ function ProductsGrid({ block, index }: { block: LibraryBlock; index: number }) 
 function ProductsSpotlight({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.product) return null;
   const points = (block.items ?? []).slice(0, 3);
+  if (block.look === 'banner' && block.photo) return <Band block={block} index={index}>
+    <div className="lb-best">
+      <div className="lb-best__photo"><Photo src={block.photo} /></div>
+      {block.title ? <h2 id={`lb-${index}-title`} className="lb-best__title"><Marked text={block.title} /></h2> : null}
+      <div className="lb-best__card lb-spotlight__card" data-pagosya-spotlight={block.product} data-side="right" />
+    </div>
+  </Band>;
   return <Band block={block} index={index}>
     <div className="lb-spotlight">
       <Reveal className="lb-spotlight__words">
@@ -515,7 +523,8 @@ function CompareTable({ block, index }: { block: LibraryBlock; index: number }) 
   const rows = (block.items ?? []).slice(0, 6);
   if (rows.length < 3) return null;
   const mark = (yes: boolean) => yes ? <Icons.IconCircleCheck className="lb-compare__yes" /> : <Icons.IconCircleX className="lb-compare__no" />;
-  return <Band block={block} index={index}>
+  return <Band block={block} index={index} extra={block.look === 'stickers' ? { 'data-lb-progress': '' } : undefined}>
+    {block.look === 'stickers' ? <div className="lb-stickers" aria-hidden="true">{[block.photo, block.photo2].filter(Boolean).map((src, at) => <img key={at} src={src} alt="" aria-hidden="true" className={`lb-sticker lb-sticker--${at + 1}`} loading="lazy" />)}</div> : null}
     <div className="lb-compare">
       <Reveal className="lb-compare__copy">
         {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
@@ -792,6 +801,7 @@ function StatementReveal({ block, index }: { block: LibraryBlock; index: number 
   });
   return <Band block={block} index={index} extra={{ 'data-lb-progress': '', 'data-lb-pinned': '' }}>
     <div className="lb-reveal__pin">
+      {block.photo ? <img className="lb-reveal__sticker" src={block.photo} alt="" aria-hidden="true" loading="lazy" /> : null}
       <div className="lb-reveal" style={{ ['--n' as string]: words.length } as CSSProperties}>
         <span className="lb-reveal__dots" aria-hidden="true">•••</span>
         {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
@@ -808,6 +818,11 @@ function CategoriesList({ block, index }: { block: LibraryBlock; index: number }
   const [active, setActive] = useState(0);
   if (rows.length < 2) return null;
   const photo = rows[active]?.photo ?? rows.find(row => row.photo)?.photo ?? block.photo;
+  if (block.look === 'stack') return <Band block={block} index={index}>
+    {block.eyebrow ? <p className="es-eyebrow lb-eyebrow lb-stackcats__eyebrow">{block.eyebrow}</p> : null}
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    <ul className="lb-stackcats">{rows.map((row, at) => <li key={at}><a href={href(row.link)} aria-label={row.title}>{[...row.title].map((char, n) => <span key={n} aria-hidden="true" style={{ ['--n' as string]: n + at * 3 } as CSSProperties}>{char === ' ' ? '\u00a0' : char}</span>)}</a></li>)}</ul>
+  </Band>;
   if (block.look === 'big') return <Bleed block={block} index={index} className="lb-cover--dark lb-bigcats">
     {photo ? <img key={photo} className="lb-banner__photo lb-bigcats__photo" src={photo} alt="" aria-hidden="true" loading="lazy" decoding="async" /> : null}
     {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
@@ -1184,6 +1199,20 @@ function WaveDivider({ block, index }: { block: LibraryBlock; index: number }) {
   </div>;
 }
 
+
+/** Gumdrop «Grains that play hard»: short qualities in coloured tiles, zig-zagging with the store's photos, two per row. */
+function CheckerRows({ block, index }: { block: LibraryBlock; index: number }) {
+  const rows = (block.items ?? []).filter(item => item.title && item.photo).slice(0, 4);
+  if (rows.length < 2) return null;
+  return <Band block={block} index={index}>
+    <Head block={block} index={index} />
+    <ul className="lb-zig">{rows.map((row, at) => <li key={at} data-flip={at % 2 ? '' : undefined}>
+      <Reveal className="lb-zig__tile" delay={0}><h3>{row.title}</h3>{row.text ? <p>{row.text}</p> : null}</Reveal>
+      <Reveal className="lb-zig__photo" delay={75}><Photo src={row.photo} /></Reveal>
+    </li>)}</ul>
+  </Band>;
+}
+
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
   'cover-split': CoverSplit, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
@@ -1196,7 +1225,7 @@ const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) =
   'closing-photo': ClosingPhoto, 'closing-wordmark': ClosingWordmark,
   'bar-note': BarNote, 'cover-stage': CoverStage, 'promo-countdown': PromoCountdown, 'story-stack': StoryStack, 'statement-reveal': StatementReveal,
   'categories-list': CategoriesList, 'marquee-photo': MarqueePhoto, 'story-overlap': StoryOverlap, 'promo-trio': PromoTrio,
-  'stats-rings': StatsRings, 'wave-divider': WaveDivider,
+  'checker-rows': CheckerRows, 'stats-rings': StatsRings, 'wave-divider': WaveDivider,
   'image-columns': ImageColumns, 'statement-marquee': StatementMarquee,
   'photo-scroller': PhotoScroller, 'story-timeline': StoryTimeline,
   'story-collage': StoryCollage, 'newsletter-split': NewsletterSplit,

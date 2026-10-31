@@ -32,7 +32,7 @@ export const templateDemoPath = (manifest: Pick<TemplateManifest, 'id' | 'photos
   return demo ? `assets/template-${manifest.photoSource ?? manifest.id}-${slot}.${demo.split('.').pop()}` : '';
 };
 
-/** (34 templates 2026-10-31: a preset may carry a whole theme — its style block, motion and home; see presetFill's layout.)
+/** (34 templates 2026-10-31: a preset may carry a whole theme — its style block, motion and home; see presetFill's layout. 8 built so far.)
  *  Plantillas presets (2026-10-22): the master a preset is a look of, carrying the preset's photos, and the fill that gives
  *  it the preset's look, parts, sections and starting words. Any other template resolves to itself. */
 export function resolvePresetTemplate(manifest: TemplateManifest, master: (id: string) => TemplateManifest | undefined): { manifest: TemplateManifest; preset?: MasterFill; sourceId: string } {
@@ -452,7 +452,8 @@ export async function assembleTemplateRevision(input: {
   const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city,
     // An uploaded logo as the full API URL, like the photos: the store is served from another origin (Remolino 2026-10-21).
     logo: masterPhotoUrl(data.logoUrl, input.apiUrl), phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: builtVariants, sections: input.sections ?? input.fill?.sections, features, layout: input.fill?.layout ?? [] } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
-  const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withOnlyTheme(withMasterTheme(file.content, masterThemeCss(settings, look!)), String((builtVariants as Record<string, unknown> | undefined)?.theme ?? '')) } : file;
+  const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withOnlyTheme(withMasterTheme(file.content, masterThemeCss(settings, look!)), String((builtVariants as Record<string, unknown> | undefined)?.theme ?? ''),
+    new Set(((input.fill?.layout ?? []) as Array<{ type?: string }>).map(block => String(block.type)))) } : file;
   // A filled Plantilla never shows the demo business's photos; a slot the merchant has no photo for stays empty instead
   // of a broken image showing its description (live check 2026-10-21, Alfar's floating photos).
   const noEmptyPhotos = (file: SourceProjectFileDto) => manifest.copy && input.plantillaCopy && input.demoPhotos === false && file.path === 'styles/globals.css'

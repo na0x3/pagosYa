@@ -148,6 +148,8 @@ export interface AppConfig {
   /** Spec 2026-10-31: after a new store's polish, YAPI composes its home from the Esencial section library (one structured call;
    *  the layout is template code). YAPI_SECTION_LIBRARY=1 turns it on; it then runs instead of the home writer. */
   yapiSectionLibrary: boolean;
+  /** Owner 2026-10-31: the Shrine Pro templates show in Plantillas only with YAPI_SHRINE_TEMPLATES=1. */
+  yapiShrineTemplates: boolean;
   yapiSectionLibraryModel: string;
   /** Spec 2026-10-29: tool calls of the one continuation after a run used its steps unfinished; 0 turns it off. */
   yapiAgentContinueCalls: number;
@@ -534,6 +536,7 @@ export default (): { app: AppConfig } => {
     yapiHomeWriter: process.env.YAPI_HOME_WRITER !== '0',
     yapiHomeWriterModel: process.env.YAPI_HOME_WRITER_MODEL || 'gpt-5.6-terra',
     yapiSectionLibrary: process.env.YAPI_SECTION_LIBRARY === '1',
+    yapiShrineTemplates: process.env.YAPI_SHRINE_TEMPLATES === '1',
     yapiSectionLibraryModel: process.env.YAPI_SECTION_LIBRARY_MODEL || 'gpt-5.6-terra',
     yapiAgentContinueCalls: process.env.YAPI_AGENT_CONTINUE_CALLS?.trim() && Number.isFinite(Number(process.env.YAPI_AGENT_CONTINUE_CALLS)) ? Math.max(0, Math.floor(Number(process.env.YAPI_AGENT_CONTINUE_CALLS))) : 12,
     yapiChecklistFix: process.env.YAPI_CHECKLIST_FIX === '1',
