@@ -1,0 +1,427 @@
+{
+  "id": "conecta",
+  "name": "Conecta",
+  "category": "tecnologia",
+  "description": "Tienda grande de tecnología: encabezado oscuro con buscador, naranja intenso, categorías en círculos, mosaico de ofertas, marcas y ayuda.",
+  "tags": [
+    "tecnología",
+    "electrónica",
+    "gadgets",
+    "tienda grande"
+  ],
+  "sitePurpose": "shop",
+  "order": 43,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Enterprise",
+    "url": "https://enterprise-theme-digital.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "dr-campo",
+      "role": "hero",
+      "demo": "dr-campo.jpg"
+    },
+    {
+      "slot": "dr-control",
+      "role": "lifestyle",
+      "demo": "dr-control.jpg"
+    },
+    {
+      "slot": "dr-p3",
+      "role": "lifestyle",
+      "demo": "dr-p3.jpg"
+    },
+    {
+      "slot": "en-escritorio",
+      "role": "hero",
+      "demo": "en-escritorio.jpg"
+    },
+    {
+      "slot": "en-accesorios",
+      "role": "lifestyle",
+      "demo": "en-accesorios.jpg"
+    },
+    {
+      "slot": "en-hogar",
+      "role": "lifestyle",
+      "demo": "en-hogar.jpg"
+    },
+    {
+      "slot": "dr-p2",
+      "role": "product",
+      "demo": "dr-p2.jpg"
+    },
+    {
+      "slot": "en-audio",
+      "role": "product",
+      "demo": "en-audio.jpg"
+    },
+    {
+      "slot": "vo-p2",
+      "role": "product",
+      "demo": "vo-p2.jpg"
+    },
+    {
+      "slot": "en-carga",
+      "role": "product",
+      "demo": "en-carga.jpg"
+    },
+    {
+      "slot": "vo-p4",
+      "role": "product",
+      "demo": "vo-p4.jpg"
+    },
+    {
+      "slot": "en-p1",
+      "role": "product",
+      "demo": "en-p1.jpg"
+    },
+    {
+      "slot": "dr-p4",
+      "role": "lifestyle",
+      "demo": "dr-p4.jpg"
+    },
+    {
+      "slot": "en-hero",
+      "role": "lifestyle",
+      "demo": "en-hero.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "conecta",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#1b1d22",
+      "muted": "#f2f3f5",
+      "accent": "#ff5a00",
+      "deep": "#1f2329"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "conecta",
+      "icons": "cart",
+      "header": "search",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "soft",
+      "density": "compact",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis desde Bs 500 · Ayuda de expertos"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "look": "left",
+        "title": "Lo mejor en tecnología. *Buenos precios.*",
+        "text": "Cientos de productos, con garantía y envío.",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:dr-campo"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "circles",
+        "title": "Compra por categoría",
+        "items": [
+          {
+            "title": "Audio",
+            "photo": "slot:en-audio",
+            "link": "products"
+          },
+          {
+            "title": "Cámaras",
+            "photo": "slot:vo-p2",
+            "link": "products"
+          },
+          {
+            "title": "Drones",
+            "photo": "slot:dr-p2",
+            "link": "products"
+          },
+          {
+            "title": "Carga",
+            "photo": "slot:en-carga",
+            "link": "products"
+          },
+          {
+            "title": "Accesorios",
+            "photo": "slot:en-accesorios",
+            "link": "products"
+          },
+          {
+            "title": "Hogar",
+            "photo": "slot:en-hogar",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "categories-mosaic",
+        "look": "feature3",
+        "items": [
+          {
+            "title": "Lo nuevo",
+            "text": "Recién llegado.",
+            "photo": "slot:en-escritorio",
+            "link": "products"
+          },
+          {
+            "title": "Para tu escritorio",
+            "text": "Trabaja mejor.",
+            "photo": "slot:en-carga",
+            "link": "products"
+          },
+          {
+            "title": "Sonido de verdad",
+            "text": "Audio que se siente.",
+            "photo": "slot:en-audio",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-slider",
+        "card": "classic",
+        "title": "Lo más pedido…",
+        "link": "products"
+      },
+      {
+        "type": "promo-pair",
+        "look": "uneven",
+        "title": "Nuestras marcas",
+        "items": [
+          {
+            "title": "Vuela más alto",
+            "text": "Drones",
+            "photo": "slot:dr-p3",
+            "link": "products"
+          },
+          {
+            "title": "Control total",
+            "text": "Accesorios",
+            "photo": "slot:dr-control",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "press-quotes",
+        "look": "marquee",
+        "title": "Marcas",
+        "items": [
+          {
+            "title": "Voltio"
+          },
+          {
+            "title": "Aero"
+          },
+          {
+            "title": "Lumen"
+          },
+          {
+            "title": "Sonar"
+          },
+          {
+            "title": "Nube"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Inteligente. Seguro. Simple.",
+        "text": "Equipa tu casa con aparatos que hacen el trabajo por ti.",
+        "cta": "Ver hogar",
+        "link": "products",
+        "photo": "slot:en-hogar"
+      },
+      {
+        "type": "promo-banner",
+        "title": "Un sonido *que se ve*",
+        "text": "Lo mejor en audio para tu casa.",
+        "cta": "Comprar",
+        "link": "products",
+        "photo": "slot:en-accesorios"
+      },
+      {
+        "type": "shop-look",
+        "look": "side",
+        "title": "El escritorio ideal",
+        "photo": "slot:en-escritorio",
+        "items": [
+          {
+            "title": "Cargador Rápido",
+            "x": 55,
+            "y": 60
+          },
+          {
+            "title": "Garantía de un año",
+            "text": "En todo lo que vendemos.",
+            "icon": "shield"
+          },
+          {
+            "title": "Envío en 24 h",
+            "text": "En la ciudad.",
+            "icon": "truck"
+          }
+        ]
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "deep",
+        "title": "Suscríbete y ahorra",
+        "text": "Ofertas, reseñas y lanzamientos en tu correo."
+      },
+      {
+        "type": "products-tabs",
+        "card": "classic",
+        "title": "Destacados para ti",
+        "link": "products"
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Ayuda y consejos",
+        "items": [
+          {
+            "title": "¿A dónde envían?",
+            "text": "A todo el país."
+          },
+          {
+            "title": "¿Cuánto tarda?",
+            "text": "De 1 a 3 días."
+          },
+          {
+            "title": "¿Cómo devuelvo un producto?",
+            "text": "Escríbenos y lo coordinamos."
+          },
+          {
+            "title": "¿Tiene garantía?",
+            "text": "Un año en todo."
+          }
+        ]
+      },
+      {
+        "type": "strip-services"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Garantía de un año",
+            "text": "En todo lo que vendemos.",
+            "icon": "shield"
+          },
+          {
+            "title": "Envío en 24 h",
+            "text": "En la ciudad.",
+            "icon": "truck"
+          },
+          {
+            "title": "Ayuda de expertos",
+            "text": "Te asesoramos por WhatsApp.",
+            "icon": "message"
+          },
+          {
+            "title": "Paga como quieras",
+            "text": "QR o tarjeta.",
+            "icon": "card"
+          }
+        ]
+      },
+      {
+        "type": "compare-table",
+        "title": "¿Por qué comprar aquí?",
+        "items": [
+          {
+            "title": "Garantía oficial",
+            "value": "no"
+          },
+          {
+            "title": "Soporte después de comprar",
+            "value": "no"
+          },
+          {
+            "title": "Envío el mismo día",
+            "value": "no"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Es original?",
+            "text": "Sí, con garantía oficial."
+          },
+          {
+            "title": "¿Viene con factura?",
+            "text": "Sí."
+          },
+          {
+            "title": "¿Puedo devolverlo?",
+            "text": "En 7 días si no lo usaste."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Conecta",
+      "tagline": "Tecnología con garantía",
+      "products": [
+        {
+          "name": "Dron Mini 4K",
+          "price": 3900,
+          "description": "Vuela 30 minutos.",
+          "category": "Drones"
+        },
+        {
+          "name": "Audífonos Pro",
+          "price": 1290,
+          "description": "Cancelación de ruido.",
+          "category": "Audio"
+        },
+        {
+          "name": "Cámara Mirrorless",
+          "price": 6900,
+          "description": "Sensor de 24 MP.",
+          "category": "Cámaras"
+        },
+        {
+          "name": "Batería Externa",
+          "price": 390,
+          "description": "20.000 mAh.",
+          "category": "Carga"
+        },
+        {
+          "name": "Lente 50 mm",
+          "price": 2400,
+          "description": "f/1.8, retratos.",
+          "category": "Cámaras"
+        },
+        {
+          "name": "Audífonos Inalámbricos",
+          "price": 590,
+          "description": "30 h de batería.",
+          "category": "Audio"
+        }
+      ]
+    }
+  }
+}

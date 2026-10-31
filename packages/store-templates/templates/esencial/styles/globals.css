@@ -1987,14 +1987,14 @@ main[data-lb-home]{overflow-x:clip}
 /* /lb:categories-tiles */
 
 /* lb:categories-tiles */
-.lb-categories-tiles[data-lb-look="circles"] .lb-tiles{grid-template-columns:repeat(8,minmax(0,1fr));gap:18px 14px}
+.lb-categories-tiles[data-lb-look="circles"] .lb-tiles{grid-template-columns:repeat(auto-fit,minmax(96px,140px));justify-content:center;gap:18px 14px}
 .lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile{display:grid;justify-items:center;gap:10px;aspect-ratio:auto;padding:0;border-radius:0;background:none;color:var(--es-ink);overflow:visible}
 .lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile img{position:static;width:100%;aspect-ratio:1;height:auto;border-radius:50%;background:#f1f1f1;transition:transform .4s ease}
 .lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile:hover img{transform:scale(1.04)}
 .lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile::after{display:none}
 .lb-categories-tiles[data-lb-look="circles"] .lb-tiles__label{position:static;justify-content:center;text-shadow:none;color:var(--es-ink);font:500 14px/1.2 var(--es-body)}
 .lb-categories-tiles[data-lb-look="circles"] .lb-tiles__label svg{display:none}
-@media (max-width:1024px){.lb-categories-tiles[data-lb-look="circles"] .lb-tiles{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+@media (max-width:1024px){.lb-categories-tiles[data-lb-look="circles"] .lb-tiles{grid-template-columns:repeat(auto-fit,minmax(88px,120px))!important}}
 @media (max-width:760px){.lb-categories-tiles[data-lb-look="circles"] .lb-tiles{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
 /* /lb:categories-tiles */
 
@@ -2693,3 +2693,35 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="estreno"] .lb-cover-stage .lb-stage__buttons{justify-items:center}
 [data-es-theme="estreno"] .lb-cover-stage .lb-stage__btn{width:auto;min-width:180px;padding:0 28px}
 /* /theme:estreno */
+
+/* theme:conecta */
+/* Conecta (after Enterprise): a near-black header with a wide search box, white pages, bright orange buttons, magenta offer pills,
+ * rounded grey cards, round category photos, dark photo banners with orange titles. Measured: no scroll motion beyond sliders. */
+[data-es-theme="conecta"]{--es-radius:12px;--es-t-weight:700;--es-t-track:-.02em}
+[data-es-theme="conecta"] .es-announce{background:#111;color:#fff;font-size:12px}
+[data-es-theme="conecta"] .es-header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:24px;background:var(--es-base-deep,#1f2329);color:#fff;border-bottom:0}
+[data-es-theme="conecta"] .es-header :is(a,button,.es-logo){color:#fff}
+[data-es-theme="conecta"] .es-header__search{max-width:640px;margin:0 auto 0 0;background:#fff;border:0;border-radius:8px}
+[data-es-theme="conecta"] .es-header__search button{background:var(--es-base-accent,#ff5a00);color:#fff}
+[data-es-theme="conecta"] .es-header__links{grid-column:1/-1;grid-row:2;justify-content:flex-start;gap:24px;padding-bottom:10px;font:600 13px/1 var(--es-body)}
+@media (max-width:760px){[data-es-theme="conecta"] .es-header__search{grid-column:1/-1;grid-row:2}[data-es-theme="conecta"] .es-header__links{display:none}}
+[data-es-theme="conecta"] .es-logo{font:900 italic 20px/1 var(--es-heading);letter-spacing:-.02em;text-transform:uppercase}
+[data-es-theme="conecta"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:700;letter-spacing:-.02em;text-transform:none}
+[data-es-theme="conecta"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(22px,2.2vw,30px)}
+[data-es-theme="conecta"] .lb-head{justify-items:center;text-align:center}
+[data-es-theme="conecta"] .lb-cover-full :is(h1,.lb-title){font-size:clamp(40px,4.6vw,64px);font-weight:600;color:#fff}
+[data-es-theme="conecta"] .lb-em{color:var(--es-base-accent,#ff5a00);font-style:normal}
+[data-es-theme="conecta"] .lb-promo-banner .lb-title{color:var(--es-base-accent,#ff5a00)}
+[data-es-theme="conecta"] .lb-press :is(li,span){font-family:var(--es-heading);font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:-.02em}
+[data-es-theme="conecta"] .es-btn,[data-es-theme="conecta"] .lb-card__buy{border-radius:99px;background:var(--es-base-accent,#ff5a00);border-color:var(--es-base-accent,#ff5a00);color:#fff;font:600 13px/1 var(--es-body);letter-spacing:0;text-transform:none}
+[data-es-theme="conecta"] .es-btn *{color:inherit}
+[data-es-theme="conecta"] .lb-card{border:1px solid #eceef1;border-radius:12px;padding:12px;background:#fff}
+[data-es-theme="conecta"] .lb-card .lb-card__media{background:#fff}
+[data-es-theme="conecta"] .lb-card__badge{background:#c2185b;color:#fff;border-radius:99px}
+[data-es-theme="conecta"] :is(.es-card__name,.lb-card .es-card__name){font:600 14px/1.3 var(--es-body);text-transform:none;letter-spacing:0}
+[data-es-theme="conecta"] .lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile img{object-fit:contain;padding:14px;background:#f2f3f5}
+[data-es-theme="conecta"] .lb-strip-services{background:var(--es-base-accent,#ff5a00);color:#fff}
+[data-es-theme="conecta"] .es-footer{background:#1f2329;color:#fff}
+[data-es-theme="conecta"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+[data-es-theme="conecta"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
+/* /theme:conecta */

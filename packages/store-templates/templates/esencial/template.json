@@ -498,6 +498,13 @@
         "body": "manrope",
         "mono": "instrument-serif",
         "starterOnly": true
+      },
+      {
+        "id": "conecta",
+        "name": "Conecta",
+        "heading": "inter",
+        "body": "inter",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -671,7 +678,8 @@
         "crocante",
         "amplio",
         "tacon",
-        "estreno"
+        "estreno",
+        "conecta"
       ],
       "icons": [
         "line",
