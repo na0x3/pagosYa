@@ -5,7 +5,13 @@ import { CardRibbons, CardTemplate, libraryCard, type LibraryBlock } from './lib
 
 /** The rolled variant of a part (variety spec §2); the first catalogue id when the store has none. */
 export const variant = (part: string, fallback: string) => { const value = variants[part]; return typeof value === 'string' && value ? value : fallback; };
-import { IconLogIn, IconMapPin, IconMenu, IconMessageCircle, IconSearch, IconShoppingBag, IconX } from './icons';
+import { IconCircleUser, IconLogIn, IconMapPin, IconMenu, IconMessageCircle, IconSearch, IconShoppingBag, IconShoppingBasket, IconShoppingCart, IconUser, IconX } from './icons';
+
+/** 34 templates (2026-10-31): the header glyphs of each theme — Palo Alto's person in a circle, a cart, a basket, or words. */
+const HEADER_ICONS: Record<string, { account: typeof IconSearch; cart: typeof IconSearch }> = {
+  line: { account: IconLogIn, cart: IconShoppingBag }, person: { account: IconCircleUser, cart: IconShoppingBag },
+  cart: { account: IconUser, cart: IconShoppingCart }, basket: { account: IconUser, cart: IconShoppingBasket },
+};
 
 const links = [{ label: 'Inicio', href: 'index.html' }, { label: 'Productos', href: 'productos.html' }, { label: 'Nuestra historia', href: 'index.html#historia' }];
 
@@ -25,9 +31,11 @@ export function Header() {
       </div>
       <nav className="es-header__links" aria-label="Principal" data-store-menu-replaces>{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
       <div className="es-header__end">
-        <a className="es-icon-btn" href="buscar.html" aria-label="Buscar"><IconSearch /></a>
-        <a className="es-icon-btn" data-pagosya-account="login" href="acceso-ingresar.html" aria-label="Mi cuenta"><IconLogIn /></a>
-        <button type="button" className="es-icon-btn es-cart-btn" data-cart-open aria-label="Abrir carrito"><IconShoppingBag /><span className="es-cart-count" data-cart-count>0</span></button>
+        {variant('icons', 'line') === 'text' ? <>
+          <a className="es-text-btn" href="buscar.html">Buscar</a>
+          <a className="es-text-btn" data-pagosya-account="login" href="acceso-ingresar.html">Cuenta</a>
+          <button type="button" className="es-text-btn es-cart-btn" data-cart-open aria-label="Abrir carrito">Carrito (<span data-cart-count>0</span>)</button>
+        </> : <HeaderIcons />}
       </div>
     </header>
     <div className={open ? 'es-menu es-menu--open' : 'es-menu'} id="es-menu" aria-hidden={!open} onClick={event => { if (event.target === event.currentTarget) setOpen(false); }}>
@@ -122,8 +130,17 @@ export function Footer() {
   </footer>;
 }
 
+function HeaderIcons() {
+  const set = HEADER_ICONS[variant('icons', 'line')] ?? HEADER_ICONS.line;
+  return <>
+    <a className="es-icon-btn" href="buscar.html" aria-label="Buscar"><IconSearch /></a>
+    <a className="es-icon-btn" data-pagosya-account="login" href="acceso-ingresar.html" aria-label="Mi cuenta"><set.account /></a>
+    <button type="button" className="es-icon-btn es-cart-btn" data-cart-open aria-label="Abrir carrito"><set.cart /><span className="es-cart-count" data-cart-count>0</span></button>
+  </>;
+}
+
 export default function Shell({ children }: { children: ReactNode }) {
-  return <div className="es" data-es-button={variant('button', 'pill')} data-es-corners={variant('corners', 'soft')} data-es-density={variant('density', 'regular')} data-es-texture={variant('texture', 'none')} data-es-photos={variant('photos', 'natural')} data-es-titles={variant('titles', 'normal')}>
+  return <div className="es" data-es-theme={variant('theme', 'none')} data-es-icons={variant('icons', 'line')} data-es-button={variant('button', 'pill')} data-es-corners={variant('corners', 'soft')} data-es-density={variant('density', 'regular')} data-es-texture={variant('texture', 'none')} data-es-photos={variant('photos', 'natural')} data-es-titles={variant('titles', 'normal')}>
     <a className="es-skip" href="#contenido">Ir al contenido</a>
     <Header />
     {/* Section library stores: one product card on every page (owner 2026-10-31). */}

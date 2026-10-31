@@ -1,0 +1,368 @@
+{
+  "id": "paloalto",
+  "name": "Palo Alto",
+  "category": "moda",
+  "description": "Moda con ofertas: fondo rosado, letra negra y fuerte, cuenta regresiva, cintas de oferta en las tarjetas y selecciones por categoría.",
+  "tags": [
+    "moda",
+    "ropa",
+    "ofertas",
+    "temporada"
+  ],
+  "sitePurpose": "shop",
+  "order": 40,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Palo Alto",
+    "url": "https://palo-alto-theme-main.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "hero1",
+      "role": "hero",
+      "demo": "hero1.jpg"
+    },
+    {
+      "slot": "hero2",
+      "role": "lifestyle",
+      "demo": "hero2.jpg"
+    },
+    {
+      "slot": "hero3",
+      "role": "lifestyle",
+      "demo": "hero3.jpg"
+    },
+    {
+      "slot": "look1",
+      "role": "lifestyle",
+      "demo": "look1.jpg"
+    },
+    {
+      "slot": "look2",
+      "role": "lifestyle",
+      "demo": "look2.jpg"
+    },
+    {
+      "slot": "p1",
+      "role": "product",
+      "demo": "p1.jpg"
+    },
+    {
+      "slot": "p2",
+      "role": "product",
+      "demo": "p2.jpg"
+    },
+    {
+      "slot": "p3",
+      "role": "product",
+      "demo": "p3.jpg"
+    },
+    {
+      "slot": "a-bag",
+      "role": "product",
+      "demo": "a-bag.jpg"
+    },
+    {
+      "slot": "e-hero",
+      "role": "lifestyle",
+      "demo": "e-hero.jpg"
+    },
+    {
+      "slot": "e-detalle",
+      "role": "detail",
+      "demo": "e-detalle.jpg"
+    },
+    {
+      "slot": "e-p1",
+      "role": "lifestyle",
+      "demo": "e-p1.jpg"
+    },
+    {
+      "slot": "e-p2",
+      "role": "lifestyle",
+      "demo": "e-p2.jpg"
+    },
+    {
+      "slot": "e-p3",
+      "role": "lifestyle",
+      "demo": "e-p3.jpg"
+    },
+    {
+      "slot": "b-calle",
+      "role": "lifestyle",
+      "demo": "b-calle.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "paloalto",
+    "colors": {
+      "paper": "#fdf6f3",
+      "ink": "#111111",
+      "muted": "#f7ece7",
+      "accent": "#111111",
+      "deep": "#111111"
+    },
+    "kind": "fashion",
+    "variants": {
+      "theme": "paloalto",
+      "icons": "person",
+      "header": "split",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "square",
+      "corners": "sharp",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en compras desde Bs 700"
+    },
+    "layout": [
+      {
+        "type": "bar-note",
+        "title": "Más de 10.000 clientas nos eligen desde 2016"
+      },
+      {
+        "type": "cover-stage",
+        "eyebrow": "Recién llegado",
+        "title": "Eleva tu estilo",
+        "text": "Lo mejor de la temporada, elegido a mano.",
+        "cta": "Ver novedades",
+        "link": "products",
+        "cta2": "Ver ofertas",
+        "link2": "products",
+        "photo": "slot:hero1",
+        "items": [
+          {
+            "title": "2",
+            "photo": "slot:look1"
+          },
+          {
+            "title": "3",
+            "photo": "slot:e-hero"
+          }
+        ]
+      },
+      {
+        "type": "promo-countdown",
+        "eyebrow": "Compra antes de que termine",
+        "title": "10% en los más vendidos",
+        "cta": "Ver la oferta",
+        "link": "products",
+        "endsAt": "2026-12-31T23:59:00-04:00"
+      },
+      {
+        "type": "categories-tiles",
+        "eyebrow": "Lo esencial",
+        "title": "Compra por categoría",
+        "items": [
+          {
+            "title": "Novedades",
+            "text": "Lo último",
+            "photo": "slot:hero2",
+            "link": "products"
+          },
+          {
+            "title": "Otoño",
+            "text": "Para los días frescos",
+            "photo": "slot:e-p1",
+            "link": "products"
+          },
+          {
+            "title": "Vestidos",
+            "text": "Para cada ocasión",
+            "photo": "slot:e-p2",
+            "link": "products"
+          },
+          {
+            "title": "Más vendidos",
+            "text": "Los favoritos",
+            "photo": "slot:hero3",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "promo-pair",
+        "look": "uneven",
+        "cta": "Ver colección",
+        "items": [
+          {
+            "title": "30% de descuento",
+            "text": "Solo por tiempo limitado",
+            "photo": "slot:b-calle",
+            "link": "products"
+          },
+          {
+            "title": "Bolso de regalo",
+            "text": "En compras desde Bs 500",
+            "photo": "slot:look2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-grid",
+        "card": "ribbon",
+        "title": "Lo más buscado de la temporada",
+        "cta": "Ver todo",
+        "link": "products"
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "eyebrow": "Nuestra visión",
+        "title": "Diseñado para que expreses tu estilo con confianza",
+        "text": "Prendas que acompañan tu día, pensadas para durar y para que te sientas tú misma en cada momento.",
+        "cta": "Conócenos",
+        "link": "products",
+        "photo": "slot:e-hero"
+      },
+      {
+        "type": "story-stack",
+        "cta": "Ver colección",
+        "items": [
+          {
+            "title": "Destaca donde vayas. Nuestro nuevo lookbook ya está aquí, listo para comprar.",
+            "photo": "slot:look1",
+            "link": "products"
+          },
+          {
+            "title": "Piezas atemporales y elegantes para elevar tu día a día.",
+            "photo": "slot:e-p3",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "statement-reveal",
+        "text": "Nacimos del amor por el oficio y la feminidad moderna. Cada pieza está pensada para sentirse cómoda, durar y verse audaz sin esfuerzo.",
+        "cta": "Ver todos los productos",
+        "link": "products"
+      },
+      {
+        "type": "categories-list",
+        "title": "Las selecciones",
+        "text": "Colecciones pensadas para simplificar cómo te vistes.",
+        "items": [
+          {
+            "title": "Esenciales",
+            "photo": "slot:e-detalle",
+            "link": "products"
+          },
+          {
+            "title": "Más vendidos",
+            "photo": "slot:hero2",
+            "link": "products"
+          },
+          {
+            "title": "Tejidos",
+            "photo": "slot:e-p2",
+            "link": "products"
+          },
+          {
+            "title": "Vacaciones",
+            "photo": "slot:b-calle",
+            "link": "products"
+          },
+          {
+            "title": "Chaquetas",
+            "photo": "slot:e-p1",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "reviews-cards",
+        "title": "Lo que dicen nuestras clientas"
+      },
+      {
+        "type": "marquee-photo",
+        "cta": "Ver colección",
+        "link": "products",
+        "photo": "slot:hero1",
+        "items": [
+          {
+            "title": "estilo de temporada"
+          }
+        ]
+      },
+      {
+        "type": "story-overlap",
+        "eyebrow": "Esenciales con propósito",
+        "title": "Tendencias que vas a amar para siempre",
+        "photo": "slot:e-p3",
+        "photo2": "slot:e-detalle",
+        "items": [
+          {
+            "title": "Para todas.",
+            "text": "La moda debe ser cómoda, accesible y para todos los cuerpos."
+          },
+          {
+            "title": "Hecho para durar.",
+            "text": "Elegimos telas y costuras que aguantan el uso diario."
+          },
+          {
+            "title": "Con cuidado.",
+            "text": "Producimos en pequeñas cantidades para no desperdiciar."
+          }
+        ]
+      },
+      {
+        "type": "promo-trio",
+        "cta": "Ver más",
+        "items": [
+          {
+            "title": "Tendencias de verano",
+            "photo": "slot:look2",
+            "link": "products"
+          },
+          {
+            "title": "Nueva colección",
+            "photo": "slot:hero3",
+            "link": "products"
+          },
+          {
+            "title": "Nuestro lookbook",
+            "photo": "slot:look1",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "eyebrow": "Ayuda",
+        "title": "Lujo para todos los días",
+        "text": "¿Tienes otra pregunta? Escríbenos.",
+        "items": [
+          {
+            "title": "¿Cuánto tarda mi pedido?",
+            "text": "Te avisamos el tiempo de entrega al pagar."
+          },
+          {
+            "title": "¿Puedo cambiar una prenda?",
+            "text": "Sí, dentro de los días que indica nuestra política de cambios."
+          },
+          {
+            "title": "¿Cómo pago?",
+            "text": "En línea con QR, tarjeta o transferencia."
+          },
+          {
+            "title": "¿Hacen envíos?",
+            "text": "Sí, revisa las zonas y costos al pagar."
+          }
+        ]
+      },
+      {
+        "type": "strip-services"
+      }
+    ]
+  }
+}

@@ -362,6 +362,14 @@
         "heading": "fredoka",
         "body": "dm-sans",
         "starterOnly": true
+      },
+      {
+        "id": "paloalto",
+        "name": "Palo Alto",
+        "heading": "archivo",
+        "body": "archivo",
+        "mono": "space-mono",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -513,6 +521,17 @@
       "titles": [
         "normal",
         "upper"
+      ],
+      "theme": [
+        "none",
+        "paloalto"
+      ],
+      "icons": [
+        "line",
+        "person",
+        "cart",
+        "basket",
+        "text"
       ]
     },
     "sections": [

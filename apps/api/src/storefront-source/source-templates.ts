@@ -3,7 +3,7 @@ import { uploadPath } from './source-product-photos';
  * authored source never contains merchant text; it imports `./store-data`, which this module writes with every value
  * JSON-encoded, so no store name or photo URL is ever pasted into JSX. */
 import type { MasterCopy } from '@pagosya/store-templates';
-import { MASTER_TEMPLATE_ID, masterCopy, masterDnaFonts, masterDnaLook, masterFilterStyle, masterProductStyle, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
+import { MASTER_TEMPLATE_ID, masterCopy, masterDnaFonts, masterDnaLook, masterFilterStyle, masterProductStyle, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, withOnlyTheme, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
 import { readFile } from 'node:fs/promises';
 import { templateDemoPhoto, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
 import { plantillaFillFromRead } from './source-plantilla-fill';
@@ -49,6 +49,8 @@ export function presetFill(preset: NonNullable<TemplateManifest['preset']>): Mas
     copy: preset.copy as MasterFill['copy'],
     variants: { ...preset.variants, sections: sections.map(section => section.id) } as MasterVariants,
     sections, featureCopy: (preset.featureCopy ?? {}) as MasterFill['featureCopy'],
+    // 34 templates (2026-10-31): the theme's fixed home (section-library blocks with demo words).
+    ...(preset.layout?.length ? { layout: preset.layout.map(block => ({ ...block })) } : {}),
     character: { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [], kind: preset.kind ?? (preset.variants.cards === 'fashion' ? 'fashion' : 'other') },
   };
 }
@@ -446,8 +448,8 @@ export async function assembleTemplateRevision(input: {
   }
   const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city,
     // An uploaded logo as the full API URL, like the photos: the store is served from another origin (Remolino 2026-10-21).
-    logo: masterPhotoUrl(data.logoUrl, input.apiUrl), phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: builtVariants, sections: input.sections ?? input.fill?.sections, features } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
-  const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withMasterTheme(file.content, masterThemeCss(settings, look!)) } : file;
+    logo: masterPhotoUrl(data.logoUrl, input.apiUrl), phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: builtVariants, sections: input.sections ?? input.fill?.sections, features, layout: input.fill?.layout ?? [] } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
+  const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withOnlyTheme(withMasterTheme(file.content, masterThemeCss(settings, look!)), String((builtVariants as Record<string, unknown> | undefined)?.theme ?? '')) } : file;
   // A filled Plantilla never shows the demo business's photos; a slot the merchant has no photo for stays empty instead
   // of a broken image showing its description (live check 2026-10-21, Alfar's floating photos).
   const noEmptyPhotos = (file: SourceProjectFileDto) => manifest.copy && input.plantillaCopy && input.demoPhotos === false && file.path === 'styles/globals.css'

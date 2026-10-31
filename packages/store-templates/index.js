@@ -29,7 +29,7 @@ function validateMaster(id, master) {
     for (const key of ['paper', 'ink', 'muted', 'accent', 'deep']) if (!HEX.test(p[key])) fail(id, `master palette ${p.id}`, `${key} must be #rrggbb`);
   }
   if (!Array.isArray(master.fonts) || master.fonts.length < 8) fail(id, 'master.fonts', 'must list at least eight font pairs');
-  for (const f of master.fonts) if (!f || !SLOT.test(f.id) || typeof f.name !== 'string' || !SLOT.test(f.heading) || !SLOT.test(f.body)) fail(id, 'master.fonts', 'need id, name, heading and body font ids');
+  for (const f of master.fonts) if (!f || !SLOT.test(f.id) || typeof f.name !== 'string' || !SLOT.test(f.heading) || !SLOT.test(f.body) || (f.mono !== undefined && !SLOT.test(f.mono))) fail(id, 'master.fonts', 'need id, name, heading and body font ids');
   if (master.variants !== undefined) {
     if (!master.variants || typeof master.variants !== 'object') fail(id, 'master.variants', 'must map parts to variant ids');
     for (const [part, ids] of Object.entries(master.variants)) if (!Array.isArray(ids) || !ids.length || ids.some(v => !SLOT.test(v))) fail(id, `master.variants.${part}`, 'must list variant ids');
@@ -64,6 +64,7 @@ function validate(dir, id) {
     if (preset.colors !== undefined && (typeof preset.colors !== 'object' || Object.values(preset.colors).some(value => !HEX.test(value)))) fail(id, 'preset.colors', 'must be #rrggbb values');
     if (!preset.variants || typeof preset.variants !== 'object' || Object.values(preset.variants).some(value => typeof value !== 'string')) fail(id, 'preset.variants', 'must map parts to variant ids');
     if (preset.copy !== undefined && (typeof preset.copy !== 'object' || Object.entries(preset.copy).some(([key, value]) => key === 'values' ? !Array.isArray(value) : !MASTER_COPY_KEYS.includes(key) || typeof value !== 'string'))) fail(id, 'preset.copy', 'must hold master copy keys');
+    if (preset.layout !== undefined && (!Array.isArray(preset.layout) || preset.layout.some(block => !block || typeof block !== 'object' || typeof block.type !== 'string'))) fail(id, 'preset.layout', 'must be a list of section blocks with a type');
     if (preset.sections !== undefined && (!Array.isArray(preset.sections) || preset.sections.some(section => !section || !SLOT.test(section.id) || typeof section.title !== 'string' || !Array.isArray(section.items)))) fail(id, 'preset.sections', 'must be sections with id, title and items');
   }
   // Starters (spec 2026-10-24): a finished store a new store can start from; fits = the business words it suits.

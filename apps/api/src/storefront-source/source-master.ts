@@ -104,20 +104,28 @@ const catalogFont = (id: string) => {
 const face = (id: string) => { const font = catalogFont(id); return `@font-face{font-family:'${font.family}';src:url(assets/${font.id}.ttf) format('truetype');font-weight:${font.weights.replace('–', ' ')};font-display:swap}`; };
 
 /** Spec 2026-10-29 (home writer): the theme block from five colours and two catalog fonts. */
-export function masterThemeBlock(colours: Record<MasterColour, string>, headingFont: string, bodyFont: string): string {
+export function masterThemeBlock(colours: Record<MasterColour, string>, headingFont: string, bodyFont: string, monoFont?: string): string {
   const c = readableColours(colours);
   const vars = `:root{--es-paper:${c.paper};--es-ink:${c.ink};--es-muted:${c.muted};--es-accent:${c.accent};--es-deep:${c.deep};--es-on-accent:${c.onAccent};--es-on-deep:${c.onDeep};`
     + `--es-heading:'${catalogFont(headingFont).family}',Georgia,serif;--es-body:'${catalogFont(bodyFont).family}',system-ui,sans-serif;`
+    // 34 templates (2026-10-31): a theme's third font (eyebrows, labels); the body font when the pair has none.
+    + `--es-mono:${monoFont ? `'${catalogFont(monoFont).family}',ui-monospace,monospace` : 'var(--es-body)'};`
     + `--store-background:var(--es-paper);--store-foreground:var(--es-ink);--store-accent:var(--es-accent);--store-accent-foreground:var(--es-on-accent);`
     // Sort & filter styles spec 2026-10-21: kit pages (checkout fallback, info pages) read these, so they show the store's fonts.
     + `--store-heading-font:var(--es-heading);--store-body-font:var(--es-body)}`;
-  return [MASTER_THEME_START, face(headingFont), bodyFont !== headingFont ? face(bodyFont) : '', vars, MASTER_THEME_END].filter(Boolean).join('\n');
+  return [MASTER_THEME_START, face(headingFont), bodyFont !== headingFont ? face(bodyFont) : '', monoFont && monoFont !== headingFont && monoFont !== bodyFont ? face(monoFont) : '', vars, MASTER_THEME_END].filter(Boolean).join('\n');
 }
 
 export function masterThemeCss(settings: MasterSettings, look: MasterLook): string {
   const pair = settings.fonts.find(f => f.id === look.fonts) ?? settings.fonts[0];
   const c = masterColours(settings, look);
-  return masterThemeBlock({ paper: c.paper, ink: c.ink, muted: c.muted, accent: c.accent, deep: c.deep }, pair.heading, pair.body);
+  return masterThemeBlock({ paper: c.paper, ink: c.ink, muted: c.muted, accent: c.accent, deep: c.deep }, pair.heading, pair.body, (pair as { mono?: string }).mono);
+}
+
+/** 34 templates (2026-10-31): the template stylesheet carries every theme between «/* theme:id *\/» and «/* /theme:id *\/»; a store
+ *  keeps only its own theme's block, so it never ships the other themes' rules or fonts. */
+export function withOnlyTheme(css: string, theme: string | undefined): string {
+  return css.replace(/\/\* theme:([a-z0-9-]+) \*\/[\s\S]*?\/\* \/theme:\1 \*\//g, (block, id: string) => id === theme ? block : '');
 }
 
 export function withMasterTheme(css: string, block: string): string {

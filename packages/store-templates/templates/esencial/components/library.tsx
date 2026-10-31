@@ -1,6 +1,6 @@
-import { useEffect, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { Reveal } from '@pagosya/ui';
-import { store } from './store-data';
+import { photos, store } from './store-data';
 import * as Icons from './icons';
 
 /* Section library (spec 2026-10-31): sections designed and tested once, the way a theme's are. YAPI only picks them, orders
@@ -14,6 +14,8 @@ export type LibraryBlock = {
   photo?: string; photo2?: string; items?: LibraryItem[]; products?: string[]; product?: string; code?: string;
   /** The main grid only: the store's product card (see CardTemplate). */
   card?: string;
+  /** promo-countdown only: when the offer the merchant named ends (ISO date); past or missing, the section draws nothing. */
+  endsAt?: string;
 };
 
 const ICONS: Record<string, (props: { className?: string }) => ReactElement> = {
@@ -335,7 +337,7 @@ function CategoriesTiles({ block, index }: { block: LibraryBlock; index: number 
     <ul className="lb-tiles" data-count={tiles.length}>{tiles.map((tile, at) => <li key={at}><Reveal delay={at * 70}>
       <a className="lb-tiles__tile" href={href(tile.link)}>
         <Photo src={tile.photo} />
-        <span className="lb-tiles__label"><span>{tile.title}</span><Icons.IconArrowRight /></span>
+        <span className="lb-tiles__label"><span>{tile.title}{tile.text ? <small className="lb-tiles__sub">{tile.text}</small> : null}</span><Icons.IconArrowRight /></span>
       </a>
     </Reveal></li>)}</ul>
   </Band>;
@@ -636,6 +638,150 @@ function ClosingWordmark({ block, index }: { block: LibraryBlock; index: number 
   </Bleed>;
 }
 
+
+/* ---------------------------------------------------------------- 34 templates (2026-10-31): parts the themes carry */
+
+/** Palo Alto: a thin note under the header («Loved by over 10,000 customers since 2016»), in the theme's small type. */
+function BarNote({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.title) return null;
+  return <div id={`lb-${index}`} className="lb lb-bar-note" data-lb="bar-note"><p>{block.title}</p></div>;
+}
+
+/** Palo Alto, Impulse: the photo is the page; the words sit centre-left, one word underlined by hand, the buttons stacked full width.
+ *  With item photos it becomes a slow crossfade of up to three slides (the words stay). */
+function CoverStage({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.photo) return null;
+  const slides = [block.photo, ...(block.items ?? []).map(item => item.photo).filter((src): src is string => Boolean(src))].slice(0, 3);
+  const [first, ...rest] = (block.title ?? '').split(' ');
+  return <Bleed block={block} index={index} id="inicio" className="lb-cover lb-cover--dark">
+    <div className="lb-stage__slides" data-count={slides.length}>{slides.map((src, at) => <Photo key={at} src={src} className="lb-stage__photo" eager={at === 0} />)}</div>
+    <div className="lb-stage__copy">
+      {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+      <h1 id={`lb-${index}-title`} className="lb-stage__title"><span className="lb-mark">{first}<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 14c40-8 90-11 194-6" /></svg></span>{rest.length ? ` ${rest.join(' ')}` : ''}</h1>
+      {block.text ? <p className="lb-cover__sub">{block.text}</p> : null}
+      {block.cta || block.cta2 ? <div className="lb-stage__buttons">
+        {block.cta ? <a className="lb-stage__btn" href={href(block.link)}>{block.cta}</a> : null}
+        {block.cta2 ? <a className="lb-stage__btn lb-stage__btn--solid" href={href(block.link2)}>{block.cta2}</a> : null}
+      </div> : null}
+    </div>
+  </Bleed>;
+}
+
+/** Palo Alto «Shop before it ends»: the merchant's offer and the time left, to a date they gave. Nothing when the date has passed. */
+function PromoCountdown({ block, index }: { block: LibraryBlock; index: number }) {
+  const end = Date.parse(block.endsAt ?? '');
+  const [left, setLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (!Number.isFinite(end)) return;
+    const tick = () => setLeft(Math.max(0, end - Date.now()));
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [end]);
+  if (!Number.isFinite(end) || left === 0 || !block.title) return null;
+  const ms = left ?? Math.max(0, end - Date.now());
+  const parts: Array<[number, string]> = [[Math.floor(ms / 86_400_000), 'Días'], [Math.floor(ms / 3_600_000) % 24, 'Horas'], [Math.floor(ms / 60_000) % 60, 'Minutos'], [Math.floor(ms / 1000) % 60, 'Segundos']];
+  return <Band block={{ ...block, band: block.band ?? 'muted' }} index={index}>
+    <div className="lb-countdown">
+      <div className="lb-countdown__words">
+        {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+        <h2 id={`lb-${index}-title`} className="lb-countdown__title">{block.title}</h2>
+        {block.cta ? <a className="lb-underline-link" href={href(block.link)}>{block.cta}</a> : null}
+      </div>
+      <ol className="lb-countdown__clock" aria-label="Tiempo que queda">{parts.map(([value, label]) => <li key={label}><span className="lb-countdown__n">{String(value).padStart(2, '0')}</span><span className="lb-countdown__unit">{label}</span></li>)}</ol>
+    </div>
+  </Band>;
+}
+
+/** Palo Alto lookbook: two or three short stories, each a line of words beside its tall photo, one under the other. */
+function StoryStack({ block, index }: { block: LibraryBlock; index: number }) {
+  const rows = (block.items ?? []).filter(item => item.photo && item.title).slice(0, 3);
+  if (rows.length < 2) return null;
+  return <Band block={block} index={index}>
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    <div className="lb-stack">{rows.map((row, at) => <div key={at} className="lb-stack__row">
+      <Reveal className="lb-stack__words"><p className="lb-stack__line">{row.title}</p>{row.text ? <p className="lb-stack__text">{row.text}</p> : null}{row.link || block.cta ? <a className="es-btn es-btn--ink lb-btn lb-stack__btn" href={href(row.link ?? block.link)}>{block.cta || 'Ver más'}</a> : null}</Reveal>
+      <figure className="lb-stack__photo"><Photo src={row.photo} /></figure>
+    </div>)}</div>
+  </Band>;
+}
+
+/** Palo Alto: one paragraph in large type, its words lighting up as it scrolls into view (still and fully lit without motion). */
+function StatementReveal({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.text) return null;
+  return <Band block={block} index={index}>
+    <div className="lb-reveal">
+      <span className="lb-reveal__dots" aria-hidden="true">•••</span>
+      {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+      <p className="lb-reveal__text">{block.text.split(' ').map((word, at) => <span key={at} style={{ ['--i' as string]: at } as CSSProperties}>{word} </span>)}</p>
+      {block.cta ? <a className="es-btn es-btn--ghost lb-btn" href={href(block.link)}>{block.cta}</a> : null}
+    </div>
+  </Band>;
+}
+
+/** Palo Alto «The Edits»: the categories as a list; the one under the pointer (or focused) shows its photo beside it. */
+function CategoriesList({ block, index }: { block: LibraryBlock; index: number }) {
+  const rows = (block.items ?? []).filter(item => item.title).slice(0, 6);
+  const [active, setActive] = useState(0);
+  if (rows.length < 2) return null;
+  const photo = rows[active]?.photo ?? rows.find(row => row.photo)?.photo ?? block.photo;
+  return <Band block={{ ...block, band: block.band ?? 'muted' }} index={index}>
+    <div className="lb-edits">
+      <div className="lb-edits__words">
+        {block.title ? <h2 id={`lb-${index}-title`} className="lb-edits__title">{block.title}</h2> : null}
+        {block.text ? <p className="lb-lede">{block.text}</p> : null}
+        <ul className="lb-edits__list">{rows.map((row, at) => <li key={at}><a href={href(row.link)} data-active={at === active ? '' : undefined} onMouseEnter={() => setActive(at)} onFocus={() => setActive(at)}>{row.title}</a></li>)}</ul>
+      </div>
+      {photo ? <figure className="lb-edits__photo"><img key={photo} src={photo} alt="" aria-hidden="true" loading="lazy" decoding="async" /></figure> : null}
+    </div>
+  </Band>;
+}
+
+/** Palo Alto «spring style ✦»: thin words running across a full photo, one quiet button under them. */
+function MarqueePhoto({ block, index }: { block: LibraryBlock; index: number }) {
+  const words = (block.items ?? []).map(item => item.title).filter(Boolean).slice(0, 4);
+  if (!block.photo || !words.length) return null;
+  const run = (key: number) => <span key={key} className="lb-marquee-photo__run">{[0, 1, 2].flatMap(round => words.map((word, at) => <span key={`${round}-${at}`}>{word}<i aria-hidden="true">✦</i></span>))}</span>;
+  return <Bleed block={block} index={index} className="lb-cover--dark">
+    <Photo src={block.photo} className="lb-banner__photo" />
+    <div className="lb-marquee-photo">
+      <p className="lb-marquee-photo__track" aria-label={words.join(', ')}>{[0, 1].map(run)}</p>
+      {block.cta ? <a className="lb-stage__btn lb-stage__btn--small" href={href(block.link)}>{block.cta}</a> : null}
+    </div>
+  </Bleed>;
+}
+
+/** Palo Alto «Sustainable trends»: two photos overlapping on one side, the title and a list of points with a star on the other. */
+function StoryOverlap({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.photo || !block.photo2) return null;
+  const points = (block.items ?? []).filter(item => item.title).slice(0, 4);
+  return <Band block={block} index={index}>
+    <div className="lb-overlap">
+      <div className="lb-overlap__photos"><Photo src={block.photo} className="lb-overlap__a" /><Photo src={block.photo2} className="lb-overlap__b" /></div>
+      <Reveal className="lb-overlap__words">
+        {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
+        {block.text ? <p className="lb-lede">{block.text}</p> : null}
+        {points.length ? <ul className="lb-overlap__points">{points.map((point, at) => <li key={at}><i aria-hidden="true">✦</i><span><strong>{point.title}</strong>{point.text ? ` ${point.text}` : ''}</span></li>)}</ul> : null}
+        <Actions block={block} tone="ink" />
+      </Reveal>
+    </div>
+  </Band>;
+}
+
+/** Palo Alto: three photos edge to edge, each with its title and a link in the middle. */
+function PromoTrio({ block, index }: { block: LibraryBlock; index: number }) {
+  const tiles = (block.items ?? []).filter(item => item.photo && item.title).slice(0, 3);
+  if (tiles.length < 3) return null;
+  return <Bleed block={block} index={index}>
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    <ul className="lb-trio">{tiles.map((tile, at) => <li key={at}><a className="lb-trio__tile" href={href(tile.link)}>
+      <Photo src={tile.photo} />
+      <span className="lb-trio__words"><span className="lb-trio__title">{tile.title}</span>{tile.text ? <span className="lb-trio__text">{tile.text}</span> : null}<span className="lb-trio__go">{block.cta || 'Ver más'}</span></span>
+    </a></li>)}</ul>
+  </Bleed>;
+}
+
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
   'cover-split': CoverSplit, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
@@ -646,11 +792,18 @@ const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) =
   'promo-code': PromoCode, 'promo-pair': PromoPair, 'promo-banner': PromoBanner,
   'faq-split': FaqSplit, 'visit-store': VisitStore,
   'closing-photo': ClosingPhoto, 'closing-wordmark': ClosingWordmark,
+  'bar-note': BarNote, 'cover-stage': CoverStage, 'promo-countdown': PromoCountdown, 'story-stack': StoryStack, 'statement-reveal': StatementReveal,
+  'categories-list': CategoriesList, 'marquee-photo': MarqueePhoto, 'story-overlap': StoryOverlap, 'promo-trio': PromoTrio,
 };
 export const LIBRARY_SECTIONS = Object.keys(SECTIONS);
 
 /** The home a section-library store shows: the blocks in YAPI's order, one shared card template for every product section. */
-export function LibraryHome({ layout }: { layout: LibraryBlock[] }) {
+/** A template's demo layout names its photos by slot («slot:hero1»); the store's photo map holds them (34 templates 2026-10-31). */
+const slotted = (src?: string) => src?.startsWith('slot:') ? (photos as Record<string, string | undefined>)[src.slice(5)] || undefined : src;
+const withPhotos = (block: LibraryBlock): LibraryBlock => ({ ...block, photo: slotted(block.photo), photo2: slotted(block.photo2), ...(block.items ? { items: block.items.map(item => ({ ...item, photo: slotted(item.photo) })) } : {}) });
+
+export function LibraryHome({ layout: given }: { layout: LibraryBlock[] }) {
+  const layout = given.map(withPhotos);
   return <>
     {layout.map((block, index) => { const Section = SECTIONS[block.type]; return Section ? <Section key={index} block={block} index={index} /> : null; })}
     <LibraryScript />
