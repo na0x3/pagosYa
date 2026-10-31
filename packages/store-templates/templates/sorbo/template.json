@@ -1,0 +1,271 @@
+{
+  "id": "sorbo",
+  "name": "Sorbo",
+  "category": "comida",
+  "description": "Tés e infusiones: blanco con bordes finos, letra de máquina de escribir, mosaicos en tonos pastel y una franja verde con foto.",
+  "tags": [
+    "té",
+    "infusiones",
+    "bebidas",
+    "minimal"
+  ],
+  "sitePurpose": "shop",
+  "order": 46,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Taste",
+    "url": "https://theme-taste-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "in-ceremonia",
+      "role": "hero",
+      "demo": "in-ceremonia.jpg"
+    },
+    {
+      "slot": "in-hojas",
+      "role": "lifestyle",
+      "demo": "in-hojas.jpg"
+    },
+    {
+      "slot": "in-p1",
+      "role": "hero",
+      "demo": "in-p1.jpg"
+    },
+    {
+      "slot": "in-p2",
+      "role": "product",
+      "demo": "in-p2.jpg"
+    },
+    {
+      "slot": "in-p3",
+      "role": "product",
+      "demo": "in-p3.jpg"
+    },
+    {
+      "slot": "in-p4",
+      "role": "product",
+      "demo": "in-p4.jpg"
+    },
+    {
+      "slot": "me-p1",
+      "role": "product",
+      "demo": "me-p1.jpg"
+    },
+    {
+      "slot": "me-hero",
+      "role": "lifestyle",
+      "demo": "me-hero.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "sorbo",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#121212",
+      "muted": "#f6efe6",
+      "accent": "#121212",
+      "deep": "#1f3a2b"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "sorbo",
+      "icons": "line",
+      "header": "links",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "square",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Bienvenida a Sorbo"
+    },
+    "layout": [
+      {
+        "type": "cover-split",
+        "look": "flip",
+        "title": "Tómate un sorbo",
+        "text": "Tés e infusiones de hoja entera, sin azúcar ni sabores artificiales.",
+        "cta": "Ver tés",
+        "link": "products",
+        "photo": "slot:in-p1"
+      },
+      {
+        "type": "products-slider",
+        "card": "classic",
+        "title": "Los más pedidos",
+        "link": "products"
+      },
+      {
+        "type": "promo-banner",
+        "title": "Tés que saben tan bien como te hacen sentir",
+        "cta": "Probar",
+        "link": "products",
+        "photo": "slot:in-hojas"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "pastel",
+        "items": [
+          {
+            "title": "Tés verdes",
+            "photo": "slot:in-p3",
+            "link": "products"
+          },
+          {
+            "title": "Infusiones",
+            "photo": "slot:in-p4",
+            "link": "products"
+          },
+          {
+            "title": "Para regalar",
+            "photo": "slot:in-p2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "«Mi taza de cada tarde. Calma de verdad.»",
+        "text": "Lo que más nos dicen después de probarlo.",
+        "photo": "slot:in-ceremonia"
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "El favorito",
+        "title": "Té verde de hoja entera",
+        "product": "demo-2"
+      },
+      {
+        "type": "image-columns",
+        "title": "Siempre *verde*",
+        "items": [
+          {
+            "title": "Hoja entera",
+            "text": "Sin polvo ni restos.",
+            "photo": "slot:in-p1",
+            "link": "products"
+          },
+          {
+            "title": "Empaque que vuelve",
+            "text": "Tu lata se rellena.",
+            "photo": "slot:in-p2",
+            "link": "products"
+          },
+          {
+            "title": "De productores pequeños",
+            "text": "Precio justo.",
+            "photo": "slot:in-hojas",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-tabs",
+        "card": "classic",
+        "title": "Arma tu set",
+        "link": "products"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "look": "cards",
+        "title": "Cómo prepararlo",
+        "items": [
+          {
+            "title": "Una cucharadita",
+            "text": "Por taza."
+          },
+          {
+            "title": "Agua a 80 °C",
+            "text": "No hirviendo."
+          },
+          {
+            "title": "Tres minutos",
+            "text": "Y listo."
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Hoja entera",
+            "text": "Sin polvo.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Sin azúcar",
+            "text": "Nada agregado.",
+            "icon": "heart"
+          },
+          {
+            "title": "Lata reutilizable",
+            "text": "Te la rellenamos.",
+            "icon": "recycle"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Cuántas tazas rinde?",
+            "text": "Unas 40 tazas."
+          },
+          {
+            "title": "¿Tiene cafeína?",
+            "text": "El verde sí; las infusiones no."
+          },
+          {
+            "title": "¿Cómo lo guardo?",
+            "text": "Cerrado y lejos de la luz."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Sorbo",
+      "tagline": "Tés e infusiones de hoja entera",
+      "products": [
+        {
+          "name": "Lata Clásica",
+          "price": 85,
+          "description": "Té negro, 100 g.",
+          "category": "Tés"
+        },
+        {
+          "name": "Té Verde Sencha",
+          "price": 70,
+          "description": "Hoja entera, 80 g.",
+          "category": "Tés"
+        },
+        {
+          "name": "Infusión Floral",
+          "price": 60,
+          "description": "Rosa y manzanilla.",
+          "category": "Infusiones"
+        },
+        {
+          "name": "Taza de Gres",
+          "price": 75,
+          "description": "Hecha a mano.",
+          "category": "Accesorios"
+        }
+      ]
+    }
+  }
+}

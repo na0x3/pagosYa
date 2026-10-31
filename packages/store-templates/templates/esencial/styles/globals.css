@@ -2798,3 +2798,40 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="bazar"] .lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile img{background:var(--es-base-muted,#f4f2e6)}
 [data-es-theme="bazar"] .es-footer{background:var(--es-base-muted,#f4f2e6)}
 /* /theme:bazar */
+
+/* theme:sorbo */
+/* Sorbo (after Taste): white, thin black borders around every box, typewriter body text, a clean sans for titles, pastel tiles
+ * (peach, lilac, sky), a dark green photo band, square buttons. Measured: no scroll motion (Dawn family). */
+[data-es-theme="sorbo"]{--es-radius:0;--es-t-weight:500;--es-t-track:-.02em}
+[data-es-theme="sorbo"] .es-announce{background:#121212;color:#fff;font:400 11px/1 var(--es-body)}
+[data-es-theme="sorbo"] .es-header{border-bottom:1px solid #121212}
+[data-es-theme="sorbo"] .es-logo{font:400 18px/1 var(--es-body);padding:4px 8px;border:1px solid #121212}
+[data-es-theme="sorbo"] .es-header__links a{font:400 12px/1 var(--es-body)}
+[data-es-theme="sorbo"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:500;letter-spacing:-.02em;text-transform:none}
+[data-es-theme="sorbo"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(22px,2vw,30px)}
+[data-es-theme="sorbo"] .lb-em{color:inherit;font-style:italic}
+[data-es-theme="sorbo"] :is(p,.lb-lede,.lb-body){font-family:var(--es-body);font-size:13px;line-height:1.7}
+[data-es-theme="sorbo"] .lb-cover-split .lb-cover-split__inner{border:1px solid #121212;padding:0;gap:0;width:min(1280px,calc(100% - 48px));margin:32px auto}
+[data-es-theme="sorbo"] .lb-cover-split .lb-cover-split__copy{padding:clamp(28px,4vw,64px)}
+[data-es-theme="sorbo"] .lb-cover-split .lb-cover-split__media{border-radius:0;box-shadow:none;aspect-ratio:4/3}
+[data-es-theme="sorbo"] .es-btn,[data-es-theme="sorbo"] .lb-card__buy{border-radius:0;background:#121212;border:1px solid #121212;color:#fff;font:400 12px/1 var(--es-body);letter-spacing:0;text-transform:none}
+[data-es-theme="sorbo"] .lb-banner .es-btn{background:#fff;color:#121212;border-color:#fff}
+[data-es-theme="sorbo"] .es-btn *{color:inherit}
+[data-es-theme="sorbo"] .es-btn svg{display:none}
+[data-es-theme="sorbo"] .lb-card .lb-card__media{border-radius:0;background:#f6f6f6}
+[data-es-theme="sorbo"] :is(.es-card__name,.lb-card .es-card__name){font:400 12px/1.4 var(--es-body);text-transform:none;letter-spacing:0;text-align:center}
+[data-es-theme="sorbo"] .lb-categories-tiles[data-lb-look="pastel"] .lb-tiles{gap:16px;width:min(1280px,calc(100% - 48px));margin-inline:auto}
+[data-es-theme="sorbo"] .lb-categories-tiles[data-lb-look="pastel"] li:nth-child(1) .lb-tiles__tile{background:#fbd9bf}
+[data-es-theme="sorbo"] .lb-categories-tiles[data-lb-look="pastel"] li:nth-child(2) .lb-tiles__tile{background:#eadcf3}
+[data-es-theme="sorbo"] .lb-categories-tiles[data-lb-look="pastel"] li:nth-child(3) .lb-tiles__tile{background:#cfe4ee}
+[data-es-theme="sorbo"] .lb-categories-tiles[data-lb-look="pastel"] .lb-tiles__tile img{border-radius:0;width:100%;aspect-ratio:4/3}
+[data-es-theme="sorbo"] .lb-categories-tiles[data-lb-look="pastel"] .lb-tiles__label{font:400 13px/1.2 var(--es-body)}
+[data-es-theme="sorbo"] .lb-story-split .lb-split{border:1px solid #121212}
+[data-es-theme="sorbo"] .lb-story-split .lb-split__copy{padding:clamp(24px,3vw,48px)}
+[data-es-theme="sorbo"] .lb-story-split .lb-split__media{border-radius:0}
+[data-es-theme="sorbo"] .lb-imgcols li>*{border:1px solid #121212}
+[data-es-theme="sorbo"] .lb-imgcols__photo{border-radius:0}
+[data-es-theme="sorbo"] .lb-promo-banner{width:min(1280px,calc(100% - 48px));margin:0 auto}
+[data-es-theme="sorbo"] .es-footer{background:#121212;color:#fff}
+[data-es-theme="sorbo"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* /theme:sorbo */

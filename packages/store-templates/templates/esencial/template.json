@@ -519,6 +519,13 @@
         "heading": "archivo-black",
         "body": "archivo",
         "starterOnly": true
+      },
+      {
+        "id": "sorbo",
+        "name": "Sorbo",
+        "heading": "dm-sans",
+        "body": "space-mono",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -695,7 +702,8 @@
         "estreno",
         "conecta",
         "despensa",
-        "bazar"
+        "bazar",
+        "sorbo"
       ],
       "icons": [
         "line",
