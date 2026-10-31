@@ -391,6 +391,13 @@
         "heading": "unbounded",
         "body": "dm-sans",
         "starterOnly": true
+      },
+      {
+        "id": "symmetry",
+        "name": "Symmetry",
+        "heading": "outfit",
+        "body": "outfit",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -548,7 +555,8 @@
         "paloalto",
         "impulse",
         "motion",
-        "focal"
+        "focal",
+        "symmetry"
       ],
       "icons": [
         "line",

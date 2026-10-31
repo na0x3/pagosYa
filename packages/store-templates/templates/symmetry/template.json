@@ -1,0 +1,375 @@
+{
+  "id": "symmetry",
+  "name": "Symmetry",
+  "category": "moda",
+  "description": "Moda de temporada: letra fina, oferta con cuenta regresiva, comunidad, producto sobre la foto y prensa en movimiento.",
+  "tags": [
+    "moda",
+    "temporada",
+    "verano",
+    "mujer"
+  ],
+  "sitePurpose": "shop",
+  "order": 44,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Symmetry",
+    "url": "https://chantilly.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "e-hero",
+      "role": "hero",
+      "demo": "e-hero.jpg"
+    },
+    {
+      "slot": "pi-juntas",
+      "role": "hero",
+      "demo": "pi-juntas.jpg"
+    },
+    {
+      "slot": "e-p1",
+      "role": "product",
+      "demo": "e-p1.jpg"
+    },
+    {
+      "slot": "e-p2",
+      "role": "product",
+      "demo": "e-p2.jpg"
+    },
+    {
+      "slot": "e-p3",
+      "role": "product",
+      "demo": "e-p3.jpg"
+    },
+    {
+      "slot": "pi-p1",
+      "role": "product",
+      "demo": "pi-p1.jpg"
+    },
+    {
+      "slot": "pi-p2",
+      "role": "product",
+      "demo": "pi-p2.jpg"
+    },
+    {
+      "slot": "e-detalle",
+      "role": "detail",
+      "demo": "e-detalle.jpg"
+    },
+    {
+      "slot": "e-jardin",
+      "role": "lifestyle",
+      "demo": "e-jardin.jpg"
+    },
+    {
+      "slot": "pi-hero",
+      "role": "lifestyle",
+      "demo": "pi-hero.jpg"
+    },
+    {
+      "slot": "pi-tonos",
+      "role": "lifestyle",
+      "demo": "pi-tonos.jpg"
+    },
+    {
+      "slot": "pa-hero1",
+      "role": "lifestyle",
+      "demo": "pa-hero1.jpg"
+    },
+    {
+      "slot": "pa-look1",
+      "role": "lifestyle",
+      "demo": "pa-look1.jpg"
+    },
+    {
+      "slot": "pa-look2",
+      "role": "lifestyle",
+      "demo": "pa-look2.jpg"
+    },
+    {
+      "slot": "pa-p2",
+      "role": "lifestyle",
+      "demo": "pa-p2.jpg"
+    },
+    {
+      "slot": "ar-hero",
+      "role": "lifestyle",
+      "demo": "ar-hero.jpg"
+    },
+    {
+      "slot": "bo-calle",
+      "role": "lifestyle",
+      "demo": "bo-calle.jpg"
+    },
+    {
+      "slot": "pl-p1",
+      "role": "lifestyle",
+      "demo": "pl-p1.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "symmetry",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#1a1a1a",
+      "muted": "#f6f1ec",
+      "accent": "#1a1a1a",
+      "deep": "#262626"
+    },
+    "kind": "fashion",
+    "variants": {
+      "theme": "symmetry",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "square",
+      "corners": "sharp",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en compras desde Bs 400"
+    },
+    "layout": [
+      {
+        "type": "cover-stage",
+        "look": "left",
+        "title": "Encuentra tu mejor versión",
+        "cta": "Ver la colección",
+        "link": "products",
+        "photo": "slot:e-hero",
+        "items": [
+          {
+            "title": "2",
+            "photo": "slot:pi-juntas"
+          }
+        ]
+      },
+      {
+        "type": "statement-reveal",
+        "look": "quote",
+        "eyebrow": "Nuestra marca",
+        "text": "Creemos en dos cosas: hacer lo que amamos y cuidarnos unas a otras. Todo lo demás se acomoda solo."
+      },
+      {
+        "type": "categories-tiles",
+        "look": "button",
+        "cta": "Ver",
+        "items": [
+          {
+            "title": "Vestidos",
+            "photo": "slot:e-p1",
+            "link": "products"
+          },
+          {
+            "title": "Tejidos",
+            "photo": "slot:e-p2",
+            "link": "products"
+          },
+          {
+            "title": "Accesorios",
+            "photo": "slot:e-p3",
+            "link": "products"
+          },
+          {
+            "title": "Básicos",
+            "photo": "slot:pi-p1",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "promo-countdown",
+        "look": "inline",
+        "title": "Oferta relámpago: hasta 40% de descuento",
+        "cta": "Ver ofertas",
+        "link": "products",
+        "endsAt": "2026-12-31T23:59:00-04:00"
+      },
+      {
+        "type": "cover-video",
+        "title": "Escapa de la rutina",
+        "cta": "Ver colección",
+        "link": "products"
+      },
+      {
+        "type": "products-slider",
+        "card": "classic",
+        "title": "Estilos en tendencia",
+        "cta": "Ver todo",
+        "link": "products"
+      },
+      {
+        "type": "social-posts",
+        "look": "grid",
+        "title": "El club de la marca",
+        "eyebrow": "Síguenos",
+        "handle": "@tumarca",
+        "social": "https://instagram.com/",
+        "items": [
+          {
+            "title": "1",
+            "photo": "slot:pa-look1"
+          },
+          {
+            "title": "2",
+            "photo": "slot:e-detalle"
+          },
+          {
+            "title": "3",
+            "photo": "slot:pi-tonos"
+          },
+          {
+            "title": "4",
+            "photo": "slot:ar-hero"
+          },
+          {
+            "title": "5",
+            "photo": "slot:bo-calle"
+          },
+          {
+            "title": "6",
+            "photo": "slot:pa-p2"
+          },
+          {
+            "title": "7",
+            "photo": "slot:pl-p1"
+          },
+          {
+            "title": "8",
+            "photo": "slot:pi-hero"
+          }
+        ]
+      },
+      {
+        "type": "promo-banner",
+        "look": "askew",
+        "eyebrow": "Nueva temporada",
+        "title": "Llegó la temporada",
+        "text": "Lo nuevo de la colección, listo para salir.",
+        "cta": "Ver lo nuevo",
+        "link": "products",
+        "photo": "slot:e-jardin",
+        "product": "demo-2"
+      },
+      {
+        "type": "story-overlap",
+        "eyebrow": "Recién llegado",
+        "title": "Lo nuevo de la temporada",
+        "text": "Piezas que combinan con todo y te acompañan todo el año.",
+        "cta": "Ver colección",
+        "link": "products",
+        "photo": "slot:pa-look2",
+        "photo2": "slot:e-detalle"
+      },
+      {
+        "type": "promo-countdown",
+        "look": "full",
+        "eyebrow": "Por tiempo limitado",
+        "title": "Venta de verano",
+        "cta": "Comprar ahora",
+        "link": "products",
+        "endsAt": "2026-12-31T23:59:00-04:00",
+        "photo": "slot:pa-hero1"
+      },
+      {
+        "type": "reviews-cards",
+        "title": "Lo que dicen"
+      },
+      {
+        "type": "shop-look",
+        "title": "Lo mejor para nosotras",
+        "photo": "slot:pi-juntas",
+        "items": [
+          {
+            "title": "Producto estrella",
+            "x": 35,
+            "y": 40
+          },
+          {
+            "title": "Edición de temporada",
+            "x": 62,
+            "y": 55
+          }
+        ]
+      },
+      {
+        "type": "promo-trio",
+        "look": "tiles",
+        "cta": "Ver",
+        "items": [
+          {
+            "title": "Tienda de verano",
+            "text": "Estilos frescos y colores nuevos.",
+            "photo": "slot:e-p3",
+            "link": "products"
+          },
+          {
+            "title": "El vestido soñado",
+            "text": "Encuentra el tuyo.",
+            "photo": "slot:e-p1",
+            "link": "products"
+          },
+          {
+            "title": "Tarjetas de regalo",
+            "text": "El regalo de elegir.",
+            "photo": "slot:pi-p2",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-stack",
+        "look": "reverse",
+        "cta": "Conócenos",
+        "items": [
+          {
+            "title": "Sostenibilidad como estándar",
+            "text": "Elegimos telas y procesos que cuidan el planeta.",
+            "photo": "slot:pi-hero",
+            "link": "products"
+          },
+          {
+            "title": "Tallas para todas",
+            "text": "Diseñamos para cuerpos reales, en todas las tallas.",
+            "photo": "slot:pa-look1",
+            "link": "products"
+          },
+          {
+            "title": "Por mujeres, para mujeres",
+            "text": "Un equipo que entiende lo que buscas.",
+            "photo": "slot:e-jardin",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "press-quotes",
+        "look": "marquee",
+        "items": [
+          {
+            "title": "Revista Moda"
+          },
+          {
+            "title": "Diario Estilo"
+          },
+          {
+            "title": "Blog Tendencia"
+          },
+          {
+            "title": "Revista Mujer"
+          }
+        ]
+      }
+    ]
+  }
+}

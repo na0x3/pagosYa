@@ -270,7 +270,8 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     }).filter(item => item.title);
     // Pins name real products; press is only the outlets and words the merchant wrote.
     if (needs.pins) items = items.filter(item => item.x !== undefined && productByName.has(fold(item.title))).map(item => ({ ...item, title: productByName.get(fold(item.title))!.name }));
-    if (needs.press) items = items.filter(item => merchantWords.includes(fold(item.title)) && Boolean(item.text) && merchantWords.includes(fold(item.text!).replace(/[«»"“”.]/g, '').trim()));
+    // A marquee of outlet names (Symmetry) needs only the names; quotes must be the merchant's own words too.
+    if (needs.press) items = items.filter(item => merchantWords.includes(fold(item.title)) && (raw.look === 'marquee' || (Boolean(item.text) && merchantWords.includes(fold(item.text!).replace(/[«»"“”.]/g, '').trim()))));
     if (section.id === 'promo-trio' && !single) items = items.filter(item => item.photo);
     if (section.id === 'categories-list') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));
     if (section.id === 'categories-tiles') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));
@@ -283,7 +284,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       const names = [...new Set((raw.products ?? []).map(name => productByName.get(fold(String(name)))?.name).filter((name): name is string => Boolean(name)))].slice(0, needs.products[1]);
       if (names.length >= needs.products[0]) block.products = names;
     }
-    if (needs.product) { const found = productById.get(String(raw.product ?? '')) ?? productByName.get(fold(String(raw.product ?? ''))); if (found) block.product = found.id; }
+    if (needs.product || raw.template?.product) { const found = productById.get(String(raw.product ?? '')) ?? productByName.get(fold(String(raw.product ?? ''))); if (found) block.product = found.id; }
     if (needs.code || section.id === 'cover-half') { const code = facts.codes.find(entry => fold(entry.code) === fold(String(raw.code ?? ''))); if (code) block.code = code.code; }
     if (section.id === 'visit-store' && facts.location && !block.title) block.title = facts.location.name;
     if (needs.social && facts.social) { block.handle = facts.social.handle; block.social = facts.social.url; }

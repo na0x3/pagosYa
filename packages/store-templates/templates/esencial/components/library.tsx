@@ -383,7 +383,7 @@ function CategoriesTiles({ block, index }: { block: LibraryBlock; index: number 
     <ul className="lb-tiles" data-count={tiles.length}>{tiles.map((tile, at) => <li key={at}><Reveal delay={at * 70}>
       <a className="lb-tiles__tile" href={href(tile.link)}>
         <Photo src={tile.photo} />
-        <span className="lb-tiles__label"><span>{tile.title}{tile.text ? <small className="lb-tiles__sub">{tile.text}</small> : null}</span><Icons.IconArrowRight /></span>
+        <span className="lb-tiles__label"><span>{tile.title}{tile.text ? <small className="lb-tiles__sub">{tile.text}</small> : null}{block.look === 'button' ? <span className="lb-tiles__btn">{block.cta || 'Ver'}</span> : null}</span><Icons.IconArrowRight /></span>
       </a>
     </Reveal></li>)}</ul>
   </Band>;
@@ -610,6 +610,7 @@ function PromoBanner({ block, index }: { block: LibraryBlock; index: number }) {
     {block.look === 'fade' ? <div className="lb-fade" data-count={1 + (block.items ?? []).filter(item => item.photo).slice(0, 2).length}>
       {[block.photo, ...(block.items ?? []).map(item => item.photo).filter(Boolean).slice(0, 2)].map((src, at) => <Photo key={at} src={src} className="lb-banner__photo lb-fade__photo" />)}
     </div> : <Photo src={block.photo} className="lb-banner__photo" />}
+    {block.look === 'askew' && block.product ? <div className="lb-askew"><div className="lb-askew__card" data-pagosya-spotlight={block.product} data-side="right" /></div> : null}
     <Reveal className="lb-banner__copy">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
       {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title">{block.title}</h2> : null}
@@ -767,6 +768,14 @@ function StoryStack({ block, index }: { block: LibraryBlock; index: number }) {
  *  with *asterisks* gets a hand-drawn underline. Fully lit and still without motion. */
 function StatementReveal({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.text) return null;
+  // Symmetry (look quote): the store's sentence in quotes, centred, still.
+  if (block.look === 'quote') return <Band block={block} index={index}>
+    <Reveal className="lb-quote">
+      {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+      {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+      <p className="lb-quote__text">“{block.text.replace(/\*/g, '')}”</p>
+    </Reveal>
+  </Band>;
   const words: Array<{ word: string; marked: boolean; tail?: string }> = [];
   block.text.split('*').forEach((part, at) => {
     const parts = part.split(' ');
@@ -918,7 +927,7 @@ function ShopLook({ block, index }: { block: LibraryBlock; index: number }) {
 /** Palo Alto press: what each outlet said about the store, one quote at a time rising in, the outlets' names below with the current one
  *  dark. Only outlets and words the merchant gave. */
 function PressQuotes({ block, index }: { block: LibraryBlock; index: number }) {
-  const quotes = (block.items ?? []).filter(item => item.title && item.text).slice(0, 5);
+  const quotes = (block.items ?? []).filter(item => item.title && (item.text || block.look === 'marquee')).slice(0, 6);
   const [at, setAt] = useState(0);
   useEffect(() => {
     if (quotes.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -926,6 +935,10 @@ function PressQuotes({ block, index }: { block: LibraryBlock; index: number }) {
     return () => window.clearInterval(timer);
   }, [quotes.length]);
   if (!quotes.length) return null;
+  if (block.look === 'marquee') {
+    const run = (key: number) => <span key={key} className="lb-press-run__run">{[0, 1, 2].flatMap(round => quotes.map((quote, n) => <span key={`${round}-${n}`}>{quote.title}</span>))}</span>;
+    return <Bleed block={block} index={index}><p className="lb-press-run" aria-label={quotes.map(quote => quote.title).join(', ')}>{[0, 1].map(run)}</p></Bleed>;
+  }
   if (block.look === 'logos') return <Band block={block} index={index}>
     <div className="lb-press lb-press--logos">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}

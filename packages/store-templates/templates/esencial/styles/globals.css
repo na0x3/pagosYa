@@ -1427,6 +1427,56 @@ main[data-lb-home]{overflow-x:clip}
 }
 @media (prefers-reduced-motion:reduce){.lb-stage__bars span::after,.lb-shop-look[data-lb-look="focal"] .lb-look__pin::before{animation:none}}
 
+/* Symmetry parts (34 templates): quiet quote, tiles with a button, inline and full countdowns, posts grid, tilted product card,
+ * reversed pinned stack, three caption tiles, press marquee. */
+.lb-quote{display:grid;justify-items:center;gap:14px;max-width:820px;margin:0 auto;text-align:center}
+.lb-quote__text{margin:0;font:300 clamp(20px,2.2vw,30px)/1.45 var(--es-heading)}
+.lb-tiles__btn{display:inline-block;margin-top:10px;padding:6px 14px;background:#fff;color:#111;font:500 10px/1 var(--es-body);letter-spacing:.12em;text-transform:uppercase}
+.lb-categories-tiles[data-lb-look="button"] .lb-tiles__label{justify-content:center;text-align:center}
+.lb-categories-tiles[data-lb-look="button"] .lb-tiles__label>span{display:grid;justify-items:center}
+.lb-categories-tiles[data-lb-look="button"] .lb-tiles__label svg{display:none}
+.lb-promo-countdown[data-lb-look="inline"].es-section{padding-block:22px}
+.lb-promo-countdown[data-lb-look="inline"] .lb-countdown{grid-template-columns:auto auto auto;justify-content:space-between;max-width:none}
+.lb-promo-countdown[data-lb-look="inline"] .lb-countdown__words{display:contents}
+.lb-promo-countdown[data-lb-look="inline"] .lb-countdown__title{margin:0;font-size:clamp(15px,1.3vw,18px);text-transform:uppercase;letter-spacing:.04em}
+.lb-promo-countdown[data-lb-look="inline"] .lb-countdown__words .lb-underline-link{order:3}
+.lb-promo-countdown[data-lb-look="inline"] .lb-countdown__n{font-size:22px}
+.lb-promo-countdown[data-lb-look="inline"] .lb-countdown__unit{font-size:9px}
+.lb-promo-countdown[data-lb-look="full"]{min-height:min(76vh,680px);display:grid;place-items:center}
+.lb-promo-countdown[data-lb-look="full"] .lb-countdown{grid-template-columns:1fr;justify-items:center;text-align:center}
+.lb-promo-countdown[data-lb-look="full"] .lb-countdown__words{display:grid;justify-items:center}
+.lb-promo-countdown[data-lb-look="full"]::before{background:rgba(0,0,0,.28)!important}
+.lb-social-posts[data-lb-look="grid"] .lb-posts{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-columns:auto;gap:8px;overflow:visible}
+.lb-social-posts[data-lb-look="grid"] .lb-posts__handle,.lb-social-posts[data-lb-look="grid"] .lb-posts__look{display:none}
+.lb-social-posts[data-lb-look="grid"] .lb-posts__photo{aspect-ratio:1;border-radius:0}
+.lb-askew{position:absolute;right:max(24px,calc((100% - 1280px)/2 + 40px));bottom:12%;z-index:2;width:min(240px,40vw);padding:10px;background:#fff;color:#111;transform:rotate(4deg);box-shadow:0 30px 50px -30px rgba(0,0,0,.6)}
+.lb-askew .lb-askew__card[data-pagosya-spotlight]{grid-template-columns:1fr!important;gap:0}
+.lb-askew .lb-askew__card>*:not(.spotlight){display:none}
+.lb-askew .spotlight{padding:0;border:0;border-radius:0;background:none}
+.lb-askew .spotlight__image{aspect-ratio:3/4;border-radius:0}
+.lb-askew .spotlight__name{font-size:14px}
+.lb-story-stack[data-lb-look="reverse"] .lb-stack__media{grid-column:1;grid-row:1}
+.lb-story-stack[data-lb-look="reverse"] .lb-stack__lines{grid-column:2;grid-row:1}
+.lb-promo-trio[data-lb-look="tiles"] .lb-trio{gap:16px;padding:0 max(16px,calc((100% - 1280px)/2))}
+.lb-promo-trio[data-lb-look="tiles"] .lb-trio__tile{display:grid;align-content:start;aspect-ratio:auto;max-height:none;color:var(--es-ink);text-align:left}
+.lb-promo-trio[data-lb-look="tiles"] .lb-trio__tile img{position:static;aspect-ratio:4/5;height:auto}
+.lb-promo-trio[data-lb-look="tiles"] .lb-trio__tile::after{display:none}
+.lb-promo-trio[data-lb-look="tiles"] .lb-trio__words{justify-items:start;padding:12px 0 0}
+.lb-promo-trio[data-lb-look="tiles"] .lb-trio__title{font-size:18px;font-weight:400}
+.lb-promo-trio[data-lb-look="tiles"] .lb-trio__go{display:none}
+.lb-press-run{display:flex;width:max-content;margin:0;padding:22px 0;overflow:hidden}
+.lb-press-run__run{display:flex;gap:clamp(40px,6vw,96px);padding-right:clamp(40px,6vw,96px);animation:lb-marquee 22s linear infinite}
+.lb-press-run__run span{font:600 clamp(20px,2vw,30px)/1 'Bodoni Moda',Didot,Georgia,serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.lb-press-quotes[data-lb-look="marquee"]{overflow:hidden;border-block:1px solid color-mix(in srgb,var(--es-ink) 10%,transparent)}
+@media (max-width:760px){
+  .lb-promo-countdown[data-lb-look="inline"] .lb-countdown{grid-template-columns:1fr;justify-items:center;text-align:center}
+  .lb-social-posts[data-lb-look="grid"] .lb-posts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lb-askew{display:none}
+  .lb-story-stack[data-lb-look="reverse"] .lb-stack__lines{grid-column:1}
+  .lb-promo-trio[data-lb-look="tiles"] .lb-trio{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){.lb-press-run__run{animation:none}}
+
 /* Owner 2026-10-31 («no me gustan las imágenes muy grandes»): no library photo takes a whole screen. A product shot on a plain
  * ground blown up to the page width (BAEK cover) reads as a mistake; the boxes keep their shape up to a height, then crop. */
 .lb-cover-centered__media{width:min(1080px,calc(100% - 48px));aspect-ratio:2/1;max-height:min(56vh,520px)}
@@ -1658,3 +1708,30 @@ main[data-lb-home]{overflow-x:clip}
 :root:not([data-es-still]) [data-es-theme="focal"] main .lb:not([data-in]) :is(.lb-head,.lb-split__copy,.menu-item,.lb-mosaic li,.lb-scroller li){opacity:0}
 [data-es-theme="focal"] main .lb[data-in] :is(.lb-head,.lb-split__copy,.menu-item,.lb-mosaic li,.lb-scroller li){animation:fo-fade .6s ease both}
 /* /theme:focal */
+
+/* theme:symmetry */
+/* Symmetry (themes.shopify.com/themes/symmetry, preset Chantilly): white ground, light thin type, widely spaced logo, a dark bar,
+ * square buttons, a dark footer. Measured on the demo: sections fade in and rise 20px (cc-animate), the cover's dots run a 6s timer,
+ * look pins pulse 3.5s cubic-bezier(.21,.16,.48,1), the press marquee runs 22s. */
+@keyframes sy-up{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:none}}
+@keyframes sy-pulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,.75)}100%{box-shadow:0 0 0 16px rgba(255,255,255,0)}}
+[data-es-theme="symmetry"]{--es-radius:0px}
+[data-es-theme="symmetry"] .es-announce{background:#262626;color:#fff;font-size:11px;letter-spacing:.08em}
+[data-es-theme="symmetry"] .es-header{min-height:60px;border-bottom:1px solid color-mix(in srgb,var(--es-ink) 8%,transparent)}
+[data-es-theme="symmetry"] .es-logo{font:400 20px/1 var(--es-heading);letter-spacing:.42em;text-transform:uppercase}
+[data-es-theme="symmetry"] .es-header__links a{font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+[data-es-theme="symmetry"] :is(.es-h2,.lb-title,.lb-head h2,.lb-stage__title,.lb-countdown__title,.lb-banner__copy h2){font-weight:300;letter-spacing:.01em}
+[data-es-theme="symmetry"] .lb-mark svg{display:none}
+[data-es-theme="symmetry"] .lb-stage__btn{width:auto;min-height:36px;padding:0 18px;font-size:10px;font-weight:500;letter-spacing:.14em}
+[data-es-theme="symmetry"] .lb-stage__buttons{justify-items:start}
+[data-es-theme="symmetry"] .lb-cover-stage[data-lb-look="left"] .lb-stage__copy{justify-items:start;text-align:left}
+[data-es-theme="symmetry"] .lb-stage__bars span{width:8px;height:8px;border-radius:50%}
+[data-es-theme="symmetry"] .es-btn{min-height:38px;padding:0 20px;border-radius:0;font-size:10px;font-weight:500;letter-spacing:.16em}
+[data-es-theme="symmetry"] .es-btn svg{display:none}
+[data-es-theme="symmetry"] .lb-look__pin{animation:sy-pulse 3.5s cubic-bezier(.21,.16,.48,1) infinite}
+[data-es-theme="symmetry"] .es-footer{background:#262626;color:#fff}
+[data-es-theme="symmetry"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+:root:not([data-es-still]) [data-es-theme="symmetry"] main .lb:not([data-in]) :is(.lb-head,.lb-quote,.lb-tiles li,.lb-countdown,.lb-overlap__words,.lb-posts__post,.lb-trio li,.lb-stack__row){opacity:0}
+[data-es-theme="symmetry"] main .lb[data-in] :is(.lb-head,.lb-quote,.lb-tiles li,.lb-countdown,.lb-overlap__words,.lb-posts__post,.lb-trio li,.lb-stack__row){animation:sy-up .8s ease both}
+[data-es-theme="symmetry"] main .lb[data-in] :is(li,.lb-stack__row):nth-child(2){animation-delay:.12s}[data-es-theme="symmetry"] main .lb[data-in] :is(li,.lb-stack__row):nth-child(3){animation-delay:.24s}[data-es-theme="symmetry"] main .lb[data-in] li:nth-child(n+4){animation-delay:.36s}
+/* /theme:symmetry */
