@@ -32,7 +32,7 @@ export const templateDemoPath = (manifest: Pick<TemplateManifest, 'id' | 'photos
   return demo ? `assets/template-${manifest.photoSource ?? manifest.id}-${slot}.${demo.split('.').pop()}` : '';
 };
 
-/** (34 templates 2026-10-31: a preset may carry a whole theme — its style block, motion and home; see presetFill's layout. 22 built so far, each with its own product page.)
+/** (34 templates 2026-10-31: a preset may carry a whole theme — its style block, motion and home; see presetFill's layout. 28 built so far, each with its own product page.)
  *  Plantillas presets (2026-10-22): the master a preset is a look of, carrying the preset's photos, and the fill that gives
  *  it the preset's look, parts, sections and starting words. Any other template resolves to itself. */
 export function resolvePresetTemplate(manifest: TemplateManifest, master: (id: string) => TemplateManifest | undefined): { manifest: TemplateManifest; preset?: MasterFill; sourceId: string; demo?: NonNullable<TemplateManifest['preset']>['demo'] } {
