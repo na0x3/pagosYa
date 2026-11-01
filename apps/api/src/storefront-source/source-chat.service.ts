@@ -46,7 +46,8 @@ import { asksToRemoveSections, lostHomeSections, requestsImageChange } from './s
 import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
-import { galleryTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
+import { galleryTemplates, listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
+import { fallbackTemplatePick, pickableTemplates } from './source-template-pick';
 import { DEFAULT_RETENTION } from '../retention/retention.dto';
 import { checklistFixBrief, checklistReply, storeDigest, type BriefChecklist, type ChecklistItem, type ChecklistStoreSettings } from './source-brief-checklist';
 import { buildStarters, pickSkeleton, pickStarter, recentStarters, type StarterEntry } from './source-starter-pick';
@@ -368,10 +369,15 @@ export class SourceChatService {
     // Owner 2026-10-27 («every few stores have the same skeleton»): a template the merchant chose (Catálogo…) is built as chosen,
     // with the plan when there is one; otherwise starters stay off and Esencial is the base.
     // With no choice, the industry skeleton whose words fit the business (YAPI_SKELETONS=off keeps Esencial for everyone).
-    const skeletonId = typeof onboarding.template === 'string' ? onboarding.template
+    // Owner 2026-10-31 («do the recommendation»): with YAPI_TEMPLATE_PICK on, a first build with no template chosen and no plan starts
+    // on the whole themed template YAPI picks for the business (its words, its products), told to the merchant with the reason.
+    const templatePick = revision === 0 && !planned && typeof onboarding.template !== 'string' && this.config.get<boolean>('app.yapiTemplatePick') === true
+      ? await this.pickStoreTemplate(merchantId, storeId, { storeName: store?.name ?? '', what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '',
+          request: merchantRequest ?? userMessage.content, products: productNames.map((product: { name: string }) => product.name), businessWords }) : null;
+    const skeletonId = templatePick ? undefined : typeof onboarding.template === 'string' ? onboarding.template
       : this.config.get<boolean>('app.yapiSkeletons') === false ? undefined : pickSkeleton(businessWords, buildStarters(true));
     const chosen = skeletonId ? buildStarters(true).find(entry => entry.id === skeletonId && entry.kind === 'master' && entry.id !== MASTER_TEMPLATE_ID) : undefined;
-    const starter = chosen ?? (planned || !this.startersOn() ? undefined : await this.firstStarter(merchantId, storeId, businessWords,
+    const starter = chosen ?? (planned || templatePick || !this.startersOn() ? undefined : await this.firstStarter(merchantId, storeId, businessWords,
       isFashionStore({ storeName: store?.name ?? '', what: onboarding.what ?? draft.answers?.context ?? '', products: productNames.map((product: { name: string }) => product.name) })));
     let briefPhotos: string[] = [...new Set([...(onboarding.photos ?? []), ...chatPhotos])].slice(0, 8);
     // YAPI plan card (spec 2026-10-22): the fill writes the words for the sections the plan chose.
@@ -385,7 +391,8 @@ export class SourceChatService {
     // module or animated look.
     { const plain = filler; filler = async facts => { const read = await plain(facts); return read && namedColours.length ? { ...read, namedColours } : read; }; }
     // YAPI plan card (spec 2026-10-22): a planned build carries its checked plan and no preset.
-    const saved = chosen ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned?.applied, chosen.id)
+    const saved = templatePick ? await this.templates.applyMaster(merchantId, storeId, revision, filler, templatePick.id)
+      : chosen ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned?.applied, chosen.id)
       : planned ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned.applied)
       : starter?.kind === 'slots' ? await this.applyPlantilla(merchantId, storeId, starter.id, revision, { about: draft.answers?.context, assetUrls: chatPhotos })
       : starter ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, undefined, starter.id)
@@ -400,7 +407,8 @@ export class SourceChatService {
     const touching = this.config.get<boolean>('app.yapiPersonalTouch') === true || (Boolean(merchantRequest) && !polishing) || Boolean(planBrief);
     // Owner 2026-10-23, «the model that made PEPPA please back»: PEPPA's second step was a full redesign with expressive motion
     // from a rich brief (feel, every section, colours from the labels, copy in the brand's voice), never a minimal template edit.
-    const redesigning = this.config.get<boolean>('app.yapiPeppaRedesign') !== false;
+    // A picked template is the design: no free redesign over it (it would drop the template's home and product page).
+    const redesigning = !templatePick && this.config.get<boolean>('app.yapiPeppaRedesign') !== false;
     // Spec 2026-10-28 §3: the brief never repeats the paper or the heading font of the last stores (PEPPA and DooBoo were twins).
     const recent = redesigning ? await recentLooks(this.prisma, storeId).catch(() => []) : [];
     // Owner 2026-10-23, Oh Belly: the photos and the video the merchant attached reached only the fill above, so the redesign could
@@ -419,19 +427,36 @@ export class SourceChatService {
     })).catch(() => null) ?? null;
     const coverLine = picked.cover ? `\n\nFoto de portada: ${picked.cover}` : '';
     const withAssets = attached.length ? { assetUrls: attached } : {};
-    const followUp: SourceMessageInput | undefined = written ? { instruction: `${merchantRequest ? `${written}\n\nMensajes del comercio:\n${merchantRequest}` : written}${coverLine}`, revision: saved.revision, personalTouch: true, ownRequest: true, redesign: true, firstDesign: true, motion: 'expressive', requestId: randomUUID(), model: this.redesignModel(), ...withAssets }
+    // A picked template is filled next by the section library (its sections in the store's words), then the check.
+    const followUp: SourceMessageInput | undefined = templatePick ? { instruction: SECTION_LIBRARY_BRIEF, revision: saved.revision, personalTouch: true, sectionLibrary: true, requestId: randomUUID(), model: 'auto',
+        ...(this.checklistOn() && userMessage.content.trim() ? { checklistWords: userMessage.content.trim().slice(0, 4000) } : {}) }
+      : written ? { instruction: `${merchantRequest ? `${written}\n\nMensajes del comercio:\n${merchantRequest}` : written}${coverLine}`, revision: saved.revision, personalTouch: true, ownRequest: true, redesign: true, firstDesign: true, motion: 'expressive', requestId: randomUUID(), model: this.redesignModel(), ...withAssets }
       : planBrief ? { instruction: merchantRequest ? `${planBrief}\n\nMensajes del comercio:\n${merchantRequest}` : planBrief, revision: saved.revision, personalTouch: true, ownRequest: true, requestId: randomUUID(), model: 'auto', ...withAssets }
       : touching ? { instruction: merchantRequest ? `${OWN_REQUEST_BRIEF}\n\nMensajes del comercio:\n${merchantRequest}` : PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, ...(merchantRequest ? { ownRequest: true } : {}), requestId: randomUUID(), model: 'auto', ...withAssets }
       // Owner 2026-10-27: no touch or redesign → the cheap data-only polish, with the merchant's first message.
       : polishing ? { instruction: `${MASTER_POLISH_BRIEF}${userMessage.content.trim() ? `\n\nMensaje del comercio:\n${userMessage.content.trim().slice(0, 3000)}` : ''}`, revision: saved.revision, personalTouch: true, polish: true, requestId: randomUUID(), model: 'auto', ...(this.checklistOn() && userMessage.content.trim() ? { checklistWords: userMessage.content.trim().slice(0, 4000) } : {}) } : undefined;
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId, channel: 'source', role: 'ASSISTANT',
-      content: `${planned ? `Esto es lo que hice:\n${planned.plan.card.map(line => `• ${line}`).join('\n')}\n` : ''}${replyPrefix}Tu tienda ${store?.name ?? ''} está lista.${sized.length ? ` ${usualOptionsNote(sized)}` : ''}${merchantRequest && touching ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : written ? ' Ahora la estoy rediseñando con un estilo propio para tu marca; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : polishing ? ` Ahora pulo los textos y las fotos con tus palabras; aparecerá en un momento.${merchantRequest ? ' Si pediste páginas o secciones nuevas, pídemelas aquí y las agrego.' : ''}` : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
+      content: `${planned ? `Esto es lo que hice:\n${planned.plan.card.map(line => `• ${line}`).join('\n')}\n` : ''}${replyPrefix}${templatePick ? `Elegí la plantilla ${templateManifest(templatePick.id)?.name ?? templatePick.id}${templatePick.reason ? `: ${templatePick.reason.replace(/\.$/, '')}.` : '.'} ` : ''}Tu tienda ${store?.name ?? ''} está lista.${templatePick ? ' Ahora estoy escribiendo cada sección con tus palabras y tus fotos; aparecerá en unos minutos.' : ''}${sized.length ? ` ${usualOptionsNote(sized)}` : ''}${merchantRequest && touching ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : written ? ' Ahora la estoy rediseñando con un estilo propio para tu marca; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : polishing ? ` Ahora pulo los textos y las fotos con tus palabras; aparecerá en un momento.${merchantRequest ? ' Si pediste páginas o secciones nuevas, pídemelas aquí y las agrego.' : ''}` : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
       metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
     } });
     // Spec 2026-10-19 §2: with no personal touch coming, the cards ride on this reply; otherwise on the touch's.
     if (!touching && !written) await this.attachSuggestions(merchantId, storeId, saved.revision, assistantMessage);
     return { userMessage, assistantMessage, revision: saved, ...(followUp ? { followUp } : {}) };
+  }
+
+  /** Owner 2026-10-31: the themed template for a new store — YAPI's pick with its reason, or the one whose tags share the most words
+   *  with the business when the call fails; null when nothing fits (the store then starts as before). The Shrine pair stays out
+   *  while it is switched off. */
+  private async pickStoreTemplate(merchantId: string, storeId: string, input: { storeName: string; what: string; story: string; request: string; products: string[]; businessWords: string }) {
+    const hidden = this.config.get<boolean>('app.yapiShrineTemplates') === true ? new Set<string>() : new Set(['shrine', 'shrine2']);
+    const templates = pickableTemplates(listTemplates(), hidden);
+    if (!templates.length) return null;
+    const answer = await Promise.resolve(this.dialogue.pickTemplate?.(merchantId, { storeId, storeName: input.storeName, what: input.what, story: input.story, request: input.request, products: input.products, templates }))
+      .catch(error => { if (error instanceof SourceProviderQuotaException) throw error; return null; }) ?? null;
+    const pick = answer ?? fallbackTemplatePick(input.businessWords, templates);
+    this.productLogger.log(JSON.stringify({ event: 'template_pick', storeId, template: pick?.id ?? null, by: answer ? 'yapi' : pick ? 'words' : 'none', reason: pick?.reason ?? '' }));
+    return pick;
   }
 
   /** Spec 2026-10-19 §2: the one call that writes a master store's words, look and photos from the walkthrough and the catalogue. */

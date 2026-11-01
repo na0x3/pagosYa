@@ -18,6 +18,7 @@ import { SUGGESTIONS_PROMPT, SUGGESTIONS_SCHEMA, type SuggestionInput } from './
 import type { MasterCopy } from '@pagosya/store-templates';
 import { MASTER_COLOURS, MASTER_COPY_CAPS, MASTER_VALUE_CAPS, type MasterLook, type MasterRead } from './source-master';
 import { LIBRARY_CATALOG, LIBRARY_FILL_PROMPT, LIBRARY_ICON_NAMES, LIBRARY_PROMPT, libraryAnswerSchema, type LayoutBlock, type LibraryFacts } from './source-section-library';
+import { readTemplatePick, TEMPLATE_PICK_PROMPT, templatePickSchema, type PickableTemplate } from './source-template-pick';
 import type { StoreMenu } from './source-store-menu';
 import { PLANTILLA_FILL_PROMPT, plantillaFillFromRead, plantillaFillSchema } from './source-plantilla-fill';
 import type { TemplateCopySlot } from '@pagosya/store-templates';
@@ -344,6 +345,34 @@ export class SourceConversationService {
         this.logger.warn(JSON.stringify({ stage: 'section-library', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
       } finally { await this.metering?.record(input.storeId, 'source-section-library', model, body, Date.now() - started, status); }
       if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    return null;
+  }
+
+  /** Owner 2026-10-31 («do the recommendation»): the themed template a new store starts on, from its business words and product
+   *  names, with one sentence for the merchant saying why. Text only and short (no photos): null when it fails twice. */
+  async pickTemplate(merchantId: string, input: { storeId: string; storeName: string; what: string; story: string; request: string; products: string[]; templates: PickableTemplate[] }): Promise<{ id: string; reason: string } | null> {
+    const model = this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
+    const provider = sourceProvider(this.config, model);
+    const business = { tienda: input.storeName, vende: input.what.slice(0, 1200), historia: input.story.slice(0, 800), pedido: input.request.slice(0, 1500), productos: input.products.slice(0, 30) };
+    const plantillas = input.templates.map(({ id, name, category, description, tags }) => ({ id, nombre: name, rubro: category, estilo: description, etiquetas: tags }));
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const started = Date.now(); let body: any = null; let status = 'FAILED';
+      try {
+        const response = await fetch(provider.endpoint, {
+          method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(60_000),
+          body: JSON.stringify({ model, store: false, instructions: TEMPLATE_PICK_PROMPT,
+            input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify({ negocio: business, plantillas }) }] }],
+            text: { format: { type: 'json_schema', name: 'template_pick', strict: true, schema: templatePickSchema(input.templates.map(template => template.id)) } },
+            reasoning: { effort: 'low' }, max_output_tokens: 800 }),
+        });
+        body = await response.json().catch(() => null);
+        checkSourceProviderQuota(response.status, body, provider.name);
+        if (response.ok) { const read = readTemplatePick(sourceResponseJson(body), input.templates); if (read) { status = 'COMPLETED'; return read; } }
+      } catch (error) {
+        if (error instanceof SourceProviderQuotaException) throw error;
+        this.logger.warn(JSON.stringify({ stage: 'template-pick', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
+      } finally { await this.metering?.record(input.storeId, 'source-template-pick', model, body, Date.now() - started, status); }
     }
     return null;
   }

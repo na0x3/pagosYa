@@ -930,3 +930,37 @@ describe('the home page writer', () => {
     expect(failure).not.toBeInstanceOf(PersonalTouchSkipped);
   });
 });
+
+describe('YAPI picks the themed template for a new store (owner 2026-10-31, YAPI_TEMPLATE_PICK)', () => {
+  const withPick = (pickTemplate: jest.Mock) => {
+    config.set('app.yapiTemplatePick', true);
+    chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() } as any, generation(), { decide, fillMaster, pickTemplate } as any, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
+  };
+
+  it('applies YAPI\'s pick, says why, and the section library fills it next (no redesign)', async () => {
+    const pickTemplate = jest.fn().mockResolvedValue({ id: 'grano', reason: 'Va con un café de especialidad que tuesta en casa.' });
+    withPick(pickTemplate);
+    const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+    expect(pickTemplate.mock.calls[0][1].templates.map((template: { id: string }) => template.id)).toEqual(expect.arrayContaining(['grano', 'mordisco']));
+    expect(pickTemplate.mock.calls[0][1].templates.map((template: { id: string }) => template.id)).not.toContain('shrine');
+    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), 'grano');
+    expect(out.assistantMessage.content).toContain('Elegí la plantilla Grano: Va con un café de especialidad que tuesta en casa.');
+    expect(out.followUp).toMatchObject({ sectionLibrary: true, revision: 1 });
+    expect(out.followUp.redesign).toBeUndefined();
+  });
+
+  it('without an answer, the template sharing the most words with the business', async () => {
+    withPick(jest.fn().mockResolvedValue(null));
+    await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+    expect(applyMaster.mock.calls[0][4]).toBe('grano');
+  });
+
+  it('switched off, the first build is as before', async () => {
+    const pickTemplate = jest.fn();
+    withPick(pickTemplate);
+    config.set('app.yapiTemplatePick', false);
+    await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+    expect(pickTemplate).not.toHaveBeenCalled();
+    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), 'horno');
+  });
+});
