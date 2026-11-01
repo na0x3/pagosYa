@@ -575,6 +575,13 @@
         "heading": "fraunces",
         "body": "dm-sans",
         "starterOnly": true
+      },
+      {
+        "id": "alacena",
+        "name": "Alacena",
+        "heading": "bricolage",
+        "body": "dm-sans",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -759,7 +766,8 @@
         "hoja",
         "calma",
         "zancada",
-        "cuero"
+        "cuero",
+        "alacena"
       ],
       "icons": [
         "line",

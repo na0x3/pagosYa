@@ -3038,3 +3038,34 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="cuero"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="cuero"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
 /* /theme:cuero */
+
+/* theme:alacena */
+/* Alacena (after Crave): a cream page, every box outlined in maroon with a hard shadow, a chunky grotesque, maroon pill buttons,
+ * a sunny yellow announcement, a maroon footer. Measured: no scroll motion (Dawn family). */
+[data-es-theme="alacena"]{--es-radius:6px;--es-t-weight:600;--es-t-track:-.01em}
+[data-es-theme="alacena"] .es-announce{background:#f2c230;color:#3a1020;font:600 12px/1 var(--es-body)}
+[data-es-theme="alacena"] .es-header{border-bottom:1.5px solid #3a1020}
+[data-es-theme="alacena"] .es-logo{font:800 22px/1 var(--es-heading);letter-spacing:-.02em;text-transform:uppercase;color:#8c1d40}
+[data-es-theme="alacena"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:600;letter-spacing:-.015em;text-transform:none;color:#3a1020}
+[data-es-theme="alacena"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(24px,2.4vw,34px)}
+[data-es-theme="alacena"] .lb-em{color:#8c1d40;font-style:normal}
+[data-es-theme="alacena"] .lb-cover-full::after{display:none}
+[data-es-theme="alacena"] .lb-cover-full .lb-cover-full__copy{width:min(420px,calc(100% - 48px));margin:auto auto auto max(24px,calc((100% - 1280px)/2 + 24px));padding:28px;border:1.5px solid #3a1020;border-radius:6px;background:#f7efd8;box-shadow:6px 6px 0 #3a1020}
+[data-es-theme="alacena"] .lb-cover-full :is(h1,.lb-title,.lb-cover__sub){color:#3a1020;text-shadow:none}
+[data-es-theme="alacena"] .lb-cover-full :is(h1,.lb-title){font-size:clamp(28px,2.6vw,38px)}
+[data-es-theme="alacena"] .es-btn,[data-es-theme="alacena"] .lb-card__buy{border-radius:99px;background:#8c1d40;border:1.5px solid #3a1020;color:#fff;font:600 13px/1 var(--es-body);letter-spacing:0;text-transform:none}
+[data-es-theme="alacena"] .lb-cover .es-btn{background:#8c1d40;color:#fff}
+[data-es-theme="alacena"] .es-btn *{color:inherit}
+[data-es-theme="alacena"] .es-btn svg{display:none}
+[data-es-theme="alacena"] :is(.lb-card,.lb-mosaic__tile,.lb-imgcols li>*){border:1.5px solid #3a1020;border-radius:6px;box-shadow:4px 4px 0 #3a1020;background:#fffaf0}
+[data-es-theme="alacena"] .lb-card{padding:8px}
+[data-es-theme="alacena"] .lb-card .lb-card__media{border-radius:4px}
+[data-es-theme="alacena"] :is(.es-card__name,.lb-card .es-card__name){font:600 14px/1.3 var(--es-body);text-transform:none;letter-spacing:0;color:#3a1020}
+[data-es-theme="alacena"] .lb-story-split .lb-split{padding:clamp(16px,2vw,28px);border:1.5px solid #3a1020;border-radius:6px;box-shadow:6px 6px 0 #3a1020;background:#fffaf0}
+[data-es-theme="alacena"] .lb-story-split .lb-split__media{border-radius:4px}
+[data-es-theme="alacena"] .lb-newsletter-split .lb-newsband{padding:28px;border:1.5px solid #3a1020;border-radius:6px;box-shadow:6px 6px 0 #3a1020;background:#fffaf0}
+[data-es-theme="alacena"] .es-footer{background:#8c1d40;color:#fff}
+[data-es-theme="alacena"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+[data-es-theme="alacena"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
+[data-es-theme="alacena"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* /theme:alacena */

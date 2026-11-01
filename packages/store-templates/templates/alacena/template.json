@@ -1,0 +1,267 @@
+{
+  "id": "alacena",
+  "name": "Alacena",
+  "category": "comida",
+  "description": "Comida de casa y despensa: crema, granate y amarillo, tarjetas con borde, mosaico de sabores y franjas cálidas con reseñas.",
+  "tags": [
+    "comida",
+    "despensa",
+    "panadería",
+    "cocina"
+  ],
+  "sitePurpose": "shop",
+  "order": 54,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Crave",
+    "url": "https://theme-crave-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "me-story",
+      "role": "lifestyle",
+      "demo": "me-story.jpg"
+    },
+    {
+      "slot": "me-hero",
+      "role": "hero",
+      "demo": "me-hero.jpg"
+    },
+    {
+      "slot": "gr-recoleccion",
+      "role": "lifestyle",
+      "demo": "gr-recoleccion.jpg"
+    },
+    {
+      "slot": "me-p3",
+      "role": "product",
+      "demo": "me-p3.jpg"
+    },
+    {
+      "slot": "me-p2",
+      "role": "product",
+      "demo": "me-p2.jpg"
+    },
+    {
+      "slot": "mi-p1",
+      "role": "product",
+      "demo": "mi-p1.jpg"
+    },
+    {
+      "slot": "mi-p3",
+      "role": "product",
+      "demo": "mi-p3.jpg"
+    },
+    {
+      "slot": "me-p1",
+      "role": "product",
+      "demo": "me-p1.jpg"
+    },
+    {
+      "slot": "ms-hero",
+      "role": "hero",
+      "demo": "ms-hero.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "alacena",
+    "colors": {
+      "paper": "#f7efd8",
+      "ink": "#3a1020",
+      "muted": "#fffaf0",
+      "accent": "#8c1d40",
+      "deep": "#8c1d40"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "alacena",
+      "icons": "line",
+      "header": "links",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis en pedidos desde Bs 150"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "look": "left",
+        "title": "Tu nuevo favorito *de la alacena*",
+        "text": "Lo rico de casa, listo en minutos.",
+        "cta": "Comprar",
+        "link": "products",
+        "photo": "slot:me-hero"
+      },
+      {
+        "type": "products-grid",
+        "card": "framed",
+        "title": "Los más pedidos",
+        "link": "products"
+      },
+      {
+        "type": "categories-mosaic",
+        "look": "feature3",
+        "title": "Encuentra tu sabor",
+        "items": [
+          {
+            "title": "Panes",
+            "text": "Horneados hoy.",
+            "photo": "slot:mi-p1",
+            "link": "products"
+          },
+          {
+            "title": "Despensa",
+            "text": "Miel y quesos.",
+            "photo": "slot:me-p3",
+            "link": "products"
+          },
+          {
+            "title": "Dulces",
+            "text": "Para la tarde.",
+            "photo": "slot:mi-p3",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Abre, sirve y *disfruta*",
+        "text": "Todo lo que necesitas para una comida de casa sin pasar horas en la cocina.",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:me-story"
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "muted",
+        "title": "Ponle sabor a tu correo",
+        "text": "Recetas, novedades y ofertas."
+      },
+      {
+        "type": "story-split",
+        "title": "Gente que *sabe de cocina*",
+        "text": "Cocineras y cocineros que recomiendan lo que hacemos, porque lo usan en casa.",
+        "photo": "slot:ms-hero"
+      },
+      {
+        "type": "press-quotes",
+        "look": "quotes",
+        "title": "Lo que dicen"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "look": "cards",
+        "title": "Así de fácil",
+        "items": [
+          {
+            "title": "Abre",
+            "text": "Todo viene listo."
+          },
+          {
+            "title": "Calienta",
+            "text": "Unos minutos."
+          },
+          {
+            "title": "Sirve",
+            "text": "Y a la mesa."
+          }
+        ]
+      },
+      {
+        "type": "image-columns",
+        "title": "Va bien con",
+        "items": [
+          {
+            "title": "Pan del día",
+            "text": "Recién horneado.",
+            "photo": "slot:mi-p1",
+            "link": "products"
+          },
+          {
+            "title": "Queso fresco",
+            "text": "De granja.",
+            "photo": "slot:me-p2",
+            "link": "products"
+          },
+          {
+            "title": "Miel pura",
+            "text": "Del valle.",
+            "photo": "slot:me-p3",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Cuánto dura?",
+            "text": "Mira la fecha en el envase."
+          },
+          {
+            "title": "¿Cómo lo guardo?",
+            "text": "En lugar fresco y seco."
+          },
+          {
+            "title": "¿Hacen envíos?",
+            "text": "Sí, a toda la ciudad."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Alacena",
+      "tagline": "Lo rico de casa, listo en minutos",
+      "products": [
+        {
+          "name": "Miel de los Valles",
+          "price": 60,
+          "description": "500 g.",
+          "category": "Despensa"
+        },
+        {
+          "name": "Queso Fresco",
+          "price": 45,
+          "description": "Medio kilo.",
+          "category": "Despensa"
+        },
+        {
+          "name": "Pan de Masa Madre",
+          "price": 28,
+          "description": "Horneado hoy.",
+          "category": "Panes"
+        },
+        {
+          "name": "Croissants",
+          "price": 35,
+          "description": "De mantequilla.",
+          "category": "Dulces"
+        },
+        {
+          "name": "Huevos de Campo",
+          "price": 38,
+          "description": "Docena.",
+          "category": "Despensa"
+        }
+      ]
+    }
+  }
+}
