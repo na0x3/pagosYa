@@ -1,0 +1,246 @@
+{
+  "id": "cuero",
+  "name": "Cuero",
+  "category": "moda",
+  "description": "Cuero y accesorios: gris cálido, títulos con serif, el producto estrella primero, fotos grandes del taller y una franja oscura con reseñas.",
+  "tags": [
+    "cuero",
+    "bolsos",
+    "accesorios",
+    "artesanal"
+  ],
+  "sitePurpose": "shop",
+  "order": 53,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Origin",
+    "url": "https://theme-origin-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "at-detalle",
+      "role": "hero",
+      "demo": "at-detalle.jpg"
+    },
+    {
+      "slot": "at-taller",
+      "role": "hero",
+      "demo": "at-taller.jpg"
+    },
+    {
+      "slot": "at-p1",
+      "role": "lifestyle",
+      "demo": "at-p1.jpg"
+    },
+    {
+      "slot": "bo-taller",
+      "role": "lifestyle",
+      "demo": "bo-taller.jpg"
+    },
+    {
+      "slot": "ta-story",
+      "role": "lifestyle",
+      "demo": "ta-story.jpg"
+    },
+    {
+      "slot": "at-p2",
+      "role": "product",
+      "demo": "at-p2.jpg"
+    },
+    {
+      "slot": "at-p3",
+      "role": "product",
+      "demo": "at-p3.jpg"
+    },
+    {
+      "slot": "at-p4",
+      "role": "product",
+      "demo": "at-p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "cuero",
+    "colors": {
+      "paper": "#e6e2da",
+      "ink": "#1c1c1c",
+      "muted": "#f2efe9",
+      "accent": "#8b5a2b",
+      "deep": "#151b22"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "cuero",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "minimal",
+      "button": "square",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid3",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis · Grabado de iniciales sin costo"
+    },
+    "layout": [
+      {
+        "type": "products-spotlight",
+        "eyebrow": "El favorito",
+        "title": "El bolso de todos los días",
+        "product": "demo-1"
+      },
+      {
+        "type": "promo-banner",
+        "title": "Cuero que *mejora con el tiempo*",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:at-detalle"
+      },
+      {
+        "type": "promo-pair",
+        "look": "uneven",
+        "items": [
+          {
+            "title": "Hecho a mano",
+            "text": "Puntada por puntada.",
+            "photo": "slot:at-taller",
+            "link": "products"
+          },
+          {
+            "title": "Para llevar",
+            "text": "Todo el día, todos los días.",
+            "photo": "slot:at-p1",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "reviews-cards",
+        "band": "deep",
+        "title": "Un bolso *con fans*"
+      },
+      {
+        "type": "image-columns",
+        "title": "Nuestro *proceso*",
+        "items": [
+          {
+            "title": "Solo para valientes",
+            "text": "Cuero curtido al natural.",
+            "photo": "slot:at-detalle",
+            "link": "products"
+          },
+          {
+            "title": "Hecho en taller",
+            "text": "Lo cosemos a mano.",
+            "photo": "slot:at-taller",
+            "link": "products"
+          },
+          {
+            "title": "Detalles que duran",
+            "text": "Herrajes de bronce.",
+            "photo": "slot:bo-taller",
+            "link": "products"
+          },
+          {
+            "title": "Envuelto con cuidado",
+            "text": "Listo para regalar.",
+            "photo": "slot:ta-story",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Piezas *excepcionales*",
+        "text": "Diseño sencillo y calidad de taller: cada pieza la hacemos a mano y la terminamos para que te acompañe por años.",
+        "cta": "Conócenos",
+        "link": "about",
+        "photo": "slot:at-p1"
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "muted",
+        "title": "Mantente *al tanto*",
+        "text": "Piezas nuevas y ediciones limitadas."
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "image-columns",
+        "title": "Cómo lo *hacemos*",
+        "items": [
+          {
+            "title": "Cuero natural",
+            "text": "Curtido sin químicos fuertes.",
+            "photo": "slot:at-detalle",
+            "link": "products"
+          },
+          {
+            "title": "Cosido a mano",
+            "text": "En nuestro taller.",
+            "photo": "slot:at-taller",
+            "link": "products"
+          },
+          {
+            "title": "Herrajes de bronce",
+            "text": "No se oxidan.",
+            "photo": "slot:bo-taller",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Cuidado y garantía",
+        "items": [
+          {
+            "title": "¿Cómo lo cuido?",
+            "text": "Un poco de crema cada seis meses."
+          },
+          {
+            "title": "¿Tiene garantía?",
+            "text": "De por vida en costuras."
+          },
+          {
+            "title": "¿Lo graban?",
+            "text": "Sí, con tus iniciales."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Cuero",
+      "tagline": "Cuero hecho a mano, para años",
+      "products": [
+        {
+          "name": "Bolso Miel",
+          "price": 990,
+          "description": "Cuero curtido al natural.",
+          "category": "Bolsos"
+        },
+        {
+          "name": "Billetera Clásica",
+          "price": 290,
+          "description": "Seis tarjetas.",
+          "category": "Billeteras"
+        },
+        {
+          "name": "Cinturón Bronce",
+          "price": 240,
+          "description": "Hebilla de bronce.",
+          "category": "Cinturones"
+        }
+      ]
+    }
+  }
+}

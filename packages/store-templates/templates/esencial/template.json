@@ -568,6 +568,13 @@
         "heading": "oswald",
         "body": "inter",
         "starterOnly": true
+      },
+      {
+        "id": "cuero",
+        "name": "Cuero",
+        "heading": "fraunces",
+        "body": "dm-sans",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -751,7 +758,8 @@
         "claro",
         "hoja",
         "calma",
-        "zancada"
+        "zancada",
+        "cuero"
       ],
       "icons": [
         "line",
