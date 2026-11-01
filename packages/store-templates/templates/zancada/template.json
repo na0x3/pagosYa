@@ -1,0 +1,306 @@
+{
+  "id": "zancada",
+  "name": "Zancada",
+  "category": "deporte",
+  "description": "Deporte y running: gris carbón con verde neón, títulos altos en mayúsculas, producto destacado grande y una franja neón para unirse.",
+  "tags": [
+    "deporte",
+    "running",
+    "zapatillas",
+    "entrenamiento"
+  ],
+  "sitePurpose": "shop",
+  "order": 52,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Ride",
+    "url": "https://theme-ride-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "ar-p1",
+      "role": "hero",
+      "demo": "ar-p1.jpg"
+    },
+    {
+      "slot": "ar-cancha",
+      "role": "lifestyle",
+      "demo": "ar-cancha.jpg"
+    },
+    {
+      "slot": "ar-hinchada",
+      "role": "lifestyle",
+      "demo": "ar-hinchada.jpg"
+    },
+    {
+      "slot": "ri-accion",
+      "role": "hero",
+      "demo": "ri-accion.jpg"
+    },
+    {
+      "slot": "ci-p4",
+      "role": "lifestyle",
+      "demo": "ci-p4.jpg"
+    },
+    {
+      "slot": "ar-p2",
+      "role": "product",
+      "demo": "ar-p2.jpg"
+    },
+    {
+      "slot": "ar-p3",
+      "role": "product",
+      "demo": "ar-p3.jpg"
+    },
+    {
+      "slot": "ar-p4",
+      "role": "product",
+      "demo": "ar-p4.jpg"
+    },
+    {
+      "slot": "ri-p1",
+      "role": "product",
+      "demo": "ri-p1.jpg"
+    },
+    {
+      "slot": "ri-p2",
+      "role": "product",
+      "demo": "ri-p2.jpg"
+    },
+    {
+      "slot": "ri-p3",
+      "role": "product",
+      "demo": "ri-p3.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "zancada",
+    "colors": {
+      "paper": "#1f1f1f",
+      "ink": "#ffffff",
+      "muted": "#2b2b2b",
+      "accent": "#dfff1f",
+      "deep": "#151515"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "zancada",
+      "icons": "line",
+      "header": "links",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "square",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Llegaron las nuevas zapatillas · Compra ahora"
+    },
+    "layout": [
+      {
+        "type": "cover-split",
+        "band": "deep",
+        "title": "Libertad *para correr*",
+        "text": "Equipo para entrenar, competir y volver por más.",
+        "cta": "Ver zapatillas",
+        "link": "products",
+        "photo": "slot:ar-p1"
+      },
+      {
+        "type": "products-grid",
+        "card": "classic",
+        "title": "Lo nuevo",
+        "link": "products"
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Nuestro equipo *suma una corredora*",
+        "text": "Entrena con nosotros todo el año y prueba cada modelo antes que nadie.",
+        "cta": "Conocer el equipo",
+        "link": "about",
+        "photo": "slot:ri-accion"
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "Destacado",
+        "title": "Zapatillas *para ir rápido*",
+        "product": "demo-3"
+      },
+      {
+        "type": "image-columns",
+        "title": "Cambia de ritmo",
+        "items": [
+          {
+            "title": "Para la pista",
+            "text": "Agarre y ligereza.",
+            "photo": "slot:ar-cancha",
+            "link": "products"
+          },
+          {
+            "title": "Para el cerro",
+            "text": "Suela que no resbala.",
+            "photo": "slot:ci-p4",
+            "link": "products"
+          },
+          {
+            "title": "Para la carrera",
+            "text": "Vas con todos.",
+            "photo": "slot:ar-hinchada",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "icon-columns",
+        "look": "side",
+        "title": "Hecho para *rendir*",
+        "photo": "slot:ri-p3",
+        "items": [
+          {
+            "title": "Menos impacto",
+            "text": "Amortigua cada paso.",
+            "icon": "shield"
+          },
+          {
+            "title": "Calidad probada",
+            "text": "Por corredores reales.",
+            "icon": "award"
+          },
+          {
+            "title": "Para todos los terrenos",
+            "text": "Ciudad y cerro.",
+            "icon": "pin"
+          },
+          {
+            "title": "Apoyamos el deporte local",
+            "text": "Clubes y carreras.",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "accent",
+        "title": "Corre con *nosotros*",
+        "text": "Sé el primero en enterarte de lanzamientos y carreras."
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Prueba 30 días",
+            "text": "Si no te va, la cambias.",
+            "icon": "refresh"
+          },
+          {
+            "title": "Envío en 24 h",
+            "text": "En la ciudad.",
+            "icon": "truck"
+          },
+          {
+            "title": "Asesoría",
+            "text": "Te ayudamos a elegir talla.",
+            "icon": "message"
+          }
+        ]
+      },
+      {
+        "type": "image-columns",
+        "title": "Para qué *sirve*",
+        "items": [
+          {
+            "title": "Entrenar",
+            "text": "Todos los días.",
+            "photo": "slot:ar-cancha",
+            "link": "products"
+          },
+          {
+            "title": "Competir",
+            "text": "Cuando importa.",
+            "photo": "slot:ar-hinchada",
+            "link": "products"
+          },
+          {
+            "title": "Explorar",
+            "text": "Fuera del asfalto.",
+            "photo": "slot:ci-p4",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Cómo elijo mi talla?",
+            "text": "Medio número más que tu calzado de calle."
+          },
+          {
+            "title": "¿Puedo cambiarlas?",
+            "text": "Sí, en 30 días."
+          },
+          {
+            "title": "¿Tienen garantía?",
+            "text": "Seis meses."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Zancada",
+      "tagline": "Todo para correr",
+      "products": [
+        {
+          "name": "Gorra Verde",
+          "price": 120,
+          "description": "Liviana y fresca.",
+          "category": "Accesorios"
+        },
+        {
+          "name": "Polera Técnica Morada",
+          "price": 180,
+          "description": "Seca rápido.",
+          "category": "Ropa"
+        },
+        {
+          "name": "Zapatillas Nube Gris",
+          "price": 690,
+          "description": "Amortiguación media.",
+          "category": "Zapatillas"
+        },
+        {
+          "name": "Proteína Lima",
+          "price": 260,
+          "description": "Recuperación.",
+          "category": "Nutrición"
+        },
+        {
+          "name": "Electrolitos Naranja",
+          "price": 140,
+          "description": "Para el calor.",
+          "category": "Nutrición"
+        },
+        {
+          "name": "Recuperación en Polvo",
+          "price": 210,
+          "description": "Después de entrenar.",
+          "category": "Nutrición"
+        }
+      ]
+    }
+  }
+}

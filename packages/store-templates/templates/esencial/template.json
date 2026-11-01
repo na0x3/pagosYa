@@ -561,6 +561,13 @@
         "heading": "cormorant-garamond",
         "body": "figtree",
         "starterOnly": true
+      },
+      {
+        "id": "zancada",
+        "name": "Zancada",
+        "heading": "oswald",
+        "body": "inter",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -743,7 +750,8 @@
         "muro",
         "claro",
         "hoja",
-        "calma"
+        "calma",
+        "zancada"
       ],
       "icons": [
         "line",
