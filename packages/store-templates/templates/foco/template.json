@@ -1,0 +1,192 @@
+{
+  "id": "foco",
+  "name": "Foco",
+  "category": "arte",
+  "description": "Lo mínimo: blanco, la grilla de productos primero, letra pequeña y una sola frase de la marca. Para catálogos que hablan solos.",
+  "tags": [
+    "minimal",
+    "pósters",
+    "catálogo",
+    "merch"
+  ],
+  "sitePurpose": "shop",
+  "order": 56,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Spotlight",
+    "url": "https://theme-spotlight-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "pu-estante",
+      "role": "hero",
+      "demo": "pu-estante.jpg"
+    },
+    {
+      "slot": "pu-lupa",
+      "role": "hero",
+      "demo": "pu-lupa.jpg"
+    },
+    {
+      "slot": "pu-p1",
+      "role": "product",
+      "demo": "pu-p1.jpg"
+    },
+    {
+      "slot": "pu-p2",
+      "role": "product",
+      "demo": "pu-p2.jpg"
+    },
+    {
+      "slot": "pu-p3",
+      "role": "product",
+      "demo": "pu-p3.jpg"
+    },
+    {
+      "slot": "pu-p4",
+      "role": "product",
+      "demo": "pu-p4.jpg"
+    },
+    {
+      "slot": "ga-p1",
+      "role": "product",
+      "demo": "ga-p1.jpg"
+    },
+    {
+      "slot": "ga-p2",
+      "role": "product",
+      "demo": "ga-p2.jpg"
+    },
+    {
+      "slot": "ga-p3",
+      "role": "product",
+      "demo": "ga-p3.jpg"
+    },
+    {
+      "slot": "ga-p4",
+      "role": "product",
+      "demo": "ga-p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "foco",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#111111",
+      "muted": "#f3f3f3",
+      "accent": "#111111",
+      "deep": "#111111"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "foco",
+      "icons": "line",
+      "header": "minimal",
+      "announce": "plain",
+      "footer": "minimal",
+      "button": "square",
+      "corners": "soft",
+      "density": "compact",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis desde Bs 300"
+    },
+    "layout": [
+      {
+        "type": "products-grid",
+        "card": "classic",
+        "title": "Todo",
+        "link": "products"
+      },
+      {
+        "type": "statement-reveal",
+        "look": "center",
+        "title": "Una marca que quiere *inspirar*",
+        "text": "Pósters y láminas de artistas que admiramos, impresos con cuidado para tu pared."
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Detalles",
+        "items": [
+          {
+            "title": "Tamaños",
+            "text": "A3, A2 y 50 × 70 cm."
+          },
+          {
+            "title": "Papel",
+            "text": "Algodón de 300 g."
+          },
+          {
+            "title": "Envío",
+            "text": "En tubo rígido, de 2 a 4 días."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Foco",
+      "tagline": "Pósters y láminas",
+      "products": [
+        {
+          "name": "Robot",
+          "price": 180,
+          "description": "Póster retro.",
+          "category": "Pósters"
+        },
+        {
+          "name": "Cohete",
+          "price": 180,
+          "description": "Póster retro.",
+          "category": "Pósters"
+        },
+        {
+          "name": "Explorador",
+          "price": 180,
+          "description": "Póster retro.",
+          "category": "Pósters"
+        },
+        {
+          "name": "Héroe",
+          "price": 180,
+          "description": "Póster retro.",
+          "category": "Pósters"
+        },
+        {
+          "name": "Begonias",
+          "price": 260,
+          "description": "Lámina de arte.",
+          "category": "Láminas"
+        },
+        {
+          "name": "Campo",
+          "price": 260,
+          "description": "Lámina de arte.",
+          "category": "Láminas"
+        },
+        {
+          "name": "Limones",
+          "price": 260,
+          "description": "Lámina de arte.",
+          "category": "Láminas"
+        },
+        {
+          "name": "Azul",
+          "price": 260,
+          "description": "Lámina de arte.",
+          "category": "Láminas"
+        }
+      ]
+    }
+  }
+}

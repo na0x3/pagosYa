@@ -589,6 +589,13 @@
         "heading": "outfit",
         "body": "outfit",
         "starterOnly": true
+      },
+      {
+        "id": "foco",
+        "name": "Foco",
+        "heading": "archivo-black",
+        "body": "inter",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -775,7 +782,8 @@
         "zancada",
         "cuero",
         "alacena",
-        "bloque"
+        "bloque",
+        "foco"
       ],
       "icons": [
         "line",
