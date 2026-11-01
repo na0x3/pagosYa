@@ -691,7 +691,9 @@ export class SourceChatService {
     if (!answer) throw new Error('the library call failed');
     const layout = validateLibraryLayout(answer as never, facts, template ? { fixed: template } : {});
     // A cover, the grid and a closing are always there; fewer than five blocks means the answer gave almost nothing usable.
-    if (layout.length < 5) throw new Error(`the library answer kept only ${layout.length} blocks`);
+    // On a template, against its own length (Foco has two sections): at least half of them, never fewer than one.
+    const least = template ? Math.max(1, Math.ceil(template.length / 2)) : 5;
+    if (layout.length < least) throw new Error(`the library answer kept only ${layout.length} blocks`);
     this.productLogger.log(JSON.stringify({ event: 'section_library_layout', storeId, asked: (answer.blocks ?? []).length, kept: layout.map(block => block.type),
       // What the model sent for each block (photo indexes, item count): tells a left-out section from one the checks dropped.
       answered: (answer.blocks as Array<{ type?: string; photo?: number; photo2?: number; items?: Array<{ photo?: number }> }> ?? []).map(block => `${block.type}:${block.photo ?? ''}/${block.photo2 ?? ''}/${(block.items ?? []).length}i[${(block.items ?? []).map(item => item.photo ?? '').join(',')}]`),
