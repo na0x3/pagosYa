@@ -65,12 +65,12 @@
     },
     {
       "slot": "ca-p1",
-      "role": "product",
+      "role": "lifestyle",
       "demo": "ca-p1.jpg"
     },
     {
       "slot": "ca-p2",
-      "role": "product",
+      "role": "lifestyle",
       "demo": "ca-p2.jpg"
     },
     {
@@ -340,35 +340,23 @@
         {
           "name": "Jarrón Arena",
           "price": 180,
-          "description": "Cerámica esmaltada a mano.",
+          "description": "Cerámica con flores secas.",
           "category": "Cerámica"
         },
         {
-          "name": "Lámpara Lino",
-          "price": 420,
-          "description": "Pantalla de lino natural.",
-          "category": "Sala"
-        },
-        {
-          "name": "Set de Tazas",
-          "price": 160,
-          "description": "Cuatro tazas de gres.",
-          "category": "Cocina"
-        },
-        {
-          "name": "Cojín Trenzado",
+          "name": "Cojín de Lino",
           "price": 140,
-          "description": "Algodón tejido.",
+          "description": "Lino lavado.",
           "category": "Textiles"
         },
         {
-          "name": "Bandeja Nogal",
-          "price": 230,
-          "description": "Madera maciza.",
+          "name": "Bowl de Madera",
+          "price": 160,
+          "description": "Madera de olivo.",
           "category": "Cocina"
         },
         {
-          "name": "Vela Cedro",
+          "name": "Vela Ciruela",
           "price": 90,
           "description": "Cera de soya, 40 h.",
           "category": "Velas"
