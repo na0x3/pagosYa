@@ -59,3 +59,14 @@ export function fallbackTemplatePick(businessWords: string, templates: readonly 
   }
   return best ? { id: best.id, reason: '' } : null;
 }
+
+/** Owner 2026-10-31 (switching templates later): a chat message asking for another template. A template named by its name
+ *  («cámbiala a la plantilla Tacón», «usa Muro») → that one; «otra plantilla» / «cambia la plantilla» with none named → 'other'
+ *  (YAPI picks a different one). Anything else → null, so ordinary edits never switch the store's design. */
+export function templateSwitchRequest(instruction: string, templates: readonly PickableTemplate[]): { id: string } | 'other' | null {
+  const text = fold(instruction);
+  const asks = /\b(?:otra|nueva|distinta|diferente)\s+plantilla\b|\bplantilla\s+(?:distinta|diferente|nueva)\b|\b(?:cambia\w*|prueba\w*|usa\w*|pon\w*|aplica\w*|quiero)\b[^.!?\n]{0,30}\bplantilla\b/.test(text);
+  if (!asks) return null;
+  const named = templates.find(template => new RegExp(`\\bplantilla\\s+(?:de\\s+|llamada\\s+)?[«"']?${fold(template.name)}\\b|\\b(?:a|la|por)\\s+${fold(template.name)}\\b`).test(text));
+  return named ? { id: named.id } : 'other';
+}

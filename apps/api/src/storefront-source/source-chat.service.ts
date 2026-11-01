@@ -47,7 +47,7 @@ import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { galleryTemplates, listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
-import { fallbackTemplatePick, pickableTemplates } from './source-template-pick';
+import { fallbackTemplatePick, pickableTemplates, templateSwitchRequest } from './source-template-pick';
 import { DEFAULT_RETENTION } from '../retention/retention.dto';
 import { checklistFixBrief, checklistReply, storeDigest, type BriefChecklist, type ChecklistItem, type ChecklistStoreSettings } from './source-brief-checklist';
 import { buildStarters, pickSkeleton, pickStarter, recentStarters, type StarterEntry } from './source-starter-pick';
@@ -448,15 +448,51 @@ export class SourceChatService {
   /** Owner 2026-10-31: the themed template for a new store — YAPI's pick with its reason, or the one whose tags share the most words
    *  with the business when the call fails; null when nothing fits (the store then starts as before). The Shrine pair stays out
    *  while it is switched off. */
-  private async pickStoreTemplate(merchantId: string, storeId: string, input: { storeName: string; what: string; story: string; request: string; products: string[]; businessWords: string }) {
+  private async pickStoreTemplate(merchantId: string, storeId: string, input: { storeName: string; what: string; story: string; request: string; products: string[]; businessWords: string; exclude?: string }) {
     const hidden = this.config.get<boolean>('app.yapiShrineTemplates') === true ? new Set<string>() : new Set(['shrine', 'shrine2']);
-    const templates = pickableTemplates(listTemplates(), hidden);
+    const templates = pickableTemplates(listTemplates(), hidden).filter(template => template.id !== input.exclude);
     if (!templates.length) return null;
     const answer = await Promise.resolve(this.dialogue.pickTemplate?.(merchantId, { storeId, storeName: input.storeName, what: input.what, story: input.story, request: input.request, products: input.products, templates }))
       .catch(error => { if (error instanceof SourceProviderQuotaException) throw error; return null; }) ?? null;
     const pick = answer ?? fallbackTemplatePick(input.businessWords, templates);
     this.productLogger.log(JSON.stringify({ event: 'template_pick', storeId, template: pick?.id ?? null, by: answer ? 'yapi' : pick ? 'words' : 'none', reason: pick?.reason ?? '' }));
     return pick;
+  }
+
+  /** Owner 2026-10-31: a store switched to another themed template at the merchant's request; null when the message is not one. */
+  private async switchTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, instruction: string, revision: number) {
+    const hidden = this.config.get<boolean>('app.yapiShrineTemplates') === true ? new Set<string>() : new Set(['shrine', 'shrine2']);
+    const templates = pickableTemplates(listTemplates(), hidden);
+    const asked = templateSwitchRequest(instruction, templates);
+    if (!asked) return null;
+    const snapshot = (await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot;
+    const wearing = String(((readsMasterData(snapshot.files) ? readMasterState(snapshot.files).variants : undefined) as Record<string, unknown> | undefined)?.theme ?? '');
+    let target: { id: string; reason: string } | null = asked === 'other' ? null : { id: asked.id, reason: '' };
+    if (asked === 'other') {
+      const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true, paymentLinks: { select: { name: true }, take: 30 } } }).catch(() => null);
+      const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string };
+      const products = (store?.paymentLinks ?? []).map(product => product.name);
+      // Another one: never the template the store already wears.
+      target = await this.pickStoreTemplate(merchantId, storeId, { storeName: store?.name ?? '', what: onboarding.what ?? '', story: onboarding.story ?? '', request: instruction, products,
+        businessWords: [store?.name, onboarding.what, onboarding.story, instruction, ...products].filter(Boolean).join('\n'), exclude: wearing });
+    }
+    if (!target || target.id === wearing) {
+      await workflow.finish('completed');
+      const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+        content: target ? `Tu tienda ya usa la plantilla ${templateManifest(target.id)?.name ?? target.id}. Dime cuál quieres probar o pídeme «otra plantilla».` : 'No encontré otra plantilla que vaya con tu negocio. Dime cuál quieres probar por su nombre.',
+        metadata: { progress: workflow.value } } });
+      return { userMessage, assistantMessage, setup: null };
+    }
+    await workflow.report('saving');
+    const saved = await this.applyPlantilla(merchantId, storeId, target.id, revision, { about: instruction });
+    await workflow.finish('completed');
+    const name = templateManifest(target.id)?.name ?? target.id;
+    const savedRevision = (saved as { revision: number }).revision;
+    const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+      content: `Cambié tu tienda a la plantilla ${name}${target.reason ? `: ${target.reason.charAt(0).toLowerCase()}${target.reason.slice(1).replace(/\.$/, '')}` : ''}. Ahora escribo cada sección con tus palabras y tus fotos; aparecerá en unos minutos. Si prefieres la anterior, vuelve a esa versión desde el historial.`,
+      metadata: { progress: workflow.value, sourceRevision: savedRevision } } });
+    const followUp: SourceMessageInput = { instruction: SECTION_LIBRARY_BRIEF, revision: savedRevision, personalTouch: true, sectionLibrary: true, requestId: randomUUID(), model: 'auto' };
+    return { userMessage, assistantMessage, revision: saved, followUp };
   }
 
   /** Spec 2026-10-19 §2: the one call that writes a master store's words, look and photos from the walkthrough and the catalogue. */
@@ -1002,6 +1038,12 @@ export class SourceChatService {
         metadata: { assetUrls: input.assetUrls || [], revision: input.revision, requestId: input.requestId, progress },
       } });
     });
+    // Owner 2026-10-31 (switching templates later): «cámbiala a la plantilla Tacón» or «prueba otra plantilla» on a built store
+    // switches it to that whole template (or YAPI's next-best pick), filled again with the store's own words and photos.
+    if (current.revision && !input.personalTouch && !input.resumeWords && !input.selection && this.templatePickOn()) {
+      const switched = await this.switchTemplate(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision);
+      if (switched) return switched;
+    }
     let freePlan: { plan: StorePlan; applied: AppliedPlan } | undefined;
     // «Cambiar» / «dale» (final review 2026-10-22): a message answering YAPI's newest card works on that plan.
     const lastAnswer = [...history.messages].reverse().find(message => message.role === 'ASSISTANT');

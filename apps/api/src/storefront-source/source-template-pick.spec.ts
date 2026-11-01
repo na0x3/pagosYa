@@ -1,4 +1,4 @@
-import { fallbackTemplatePick, pickableTemplates, readTemplatePick, templatePickSchema } from './source-template-pick';
+import { fallbackTemplatePick, pickableTemplates, readTemplatePick, templatePickSchema, templateSwitchRequest } from './source-template-pick';
 
 const manifest = (id: string, extra: Record<string, unknown> = {}) => ({
   id, name: id, category: 'comida', description: `Plantilla ${id}`, tags: [], extends: 'esencial',
@@ -32,5 +32,21 @@ describe('template pick', () => {
     expect(fallbackTemplatePick('Premios naturales para perros y gatos', templates)?.id).toBe('mordisco');
     expect(fallbackTemplatePick('Infusiones de hierbas andinas', templates)?.id).toBe('sorbo');
     expect(fallbackTemplatePick('Servicio de contabilidad', templates)).toBeNull();
+  });
+});
+
+describe('template switch request', () => {
+  const templates = pickableTemplates([manifest('tacon', { name: 'Tacón' }), manifest('muro', { name: 'Muro' })]);
+  it('a named template', () => {
+    expect(templateSwitchRequest('Cámbiala a la plantilla Tacón por favor', templates)).toEqual({ id: 'tacon' });
+    expect(templateSwitchRequest('quiero la plantilla muro', templates)).toEqual({ id: 'muro' });
+  });
+  it('another template, none named', () => {
+    expect(templateSwitchRequest('prueba otra plantilla', templates)).toBe('other');
+    expect(templateSwitchRequest('cambia la plantilla, no me gusta', templates)).toBe('other');
+  });
+  it('ordinary edits never switch', () => {
+    expect(templateSwitchRequest('cambia el color del botón', templates)).toBeNull();
+    expect(templateSwitchRequest('agrega una sección de preguntas', templates)).toBeNull();
   });
 });

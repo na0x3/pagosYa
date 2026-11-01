@@ -965,3 +965,33 @@ describe('YAPI picks the themed template for a new store (owner 2026-10-31, YAPI
     expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), 'horno');
   });
 });
+
+describe('switching templates later (owner 2026-10-31)', () => {
+  let pickTemplate: jest.Mock, applyPlantilla: jest.SpyInstance;
+  beforeEach(() => {
+    config.set('app.yapiTemplatePick', true);
+    pickTemplate = jest.fn().mockResolvedValue({ id: 'muro', reason: 'Va con cuadros y arte.' });
+    chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 3 }), version: jest.fn().mockResolvedValue({ snapshot: { files: [] } }) } as any, generation(), { decide, fillMaster, pickTemplate } as any, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
+    applyPlantilla = jest.spyOn(chat, 'applyPlantilla').mockResolvedValue({ revision: 4, label: 'Plantilla: Esencial' } as never);
+  });
+  const say = (instruction: string) => chat.send('m1', 's1', { revision: 3, instruction, requestId: uuid() }) as Promise<any>;
+
+  it('a named template is applied and the library fills it', async () => {
+    const out = await say('Cámbiala a la plantilla Tacón');
+    expect(applyPlantilla).toHaveBeenCalledWith('m1', 's1', 'tacon', 3, { about: 'Cámbiala a la plantilla Tacón' });
+    expect(pickTemplate).not.toHaveBeenCalled();
+    expect(out.assistantMessage.content).toContain('Cambié tu tienda a la plantilla Tacón.');
+    expect(out.followUp).toMatchObject({ sectionLibrary: true, revision: 4 });
+  });
+
+  it('«otra plantilla» lets YAPI pick one, with its reason', async () => {
+    const out = await say('prueba otra plantilla');
+    expect(applyPlantilla.mock.calls[0][2]).toBe('muro');
+    expect(out.assistantMessage.content).toContain('plantilla Muro: va con cuadros y arte');
+  });
+
+  it('an ordinary edit never switches', async () => {
+    await say('cambia el color del botón a verde').catch(() => undefined);
+    expect(applyPlantilla).not.toHaveBeenCalled();
+  });
+});
