@@ -596,6 +596,13 @@
         "heading": "archivo-black",
         "body": "inter",
         "starterOnly": true
+      },
+      {
+        "id": "lomo",
+        "name": "Lomo",
+        "heading": "libre-caslon-text",
+        "body": "newsreader",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -783,7 +790,8 @@
         "cuero",
         "alacena",
         "bloque",
-        "foco"
+        "foco",
+        "lomo"
       ],
       "icons": [
         "line",

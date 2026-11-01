@@ -1,0 +1,228 @@
+{
+  "id": "lomo",
+  "name": "Lomo",
+  "category": "libros",
+  "description": "Librería: verde oscuro y papel crema, títulos con serif clásica, recomendados de la semana, géneros con foto y el club de lectura.",
+  "tags": [
+    "libros",
+    "librería",
+    "lectura",
+    "editorial"
+  ],
+  "sitePurpose": "shop",
+  "order": 57,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Publisher",
+    "url": "https://theme-publisher-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "pa-hero",
+      "role": "hero",
+      "demo": "pa-hero.jpg"
+    },
+    {
+      "slot": "pa-local1",
+      "role": "lifestyle",
+      "demo": "pa-local1.jpg"
+    },
+    {
+      "slot": "pa-local2",
+      "role": "hero",
+      "demo": "pa-local2.jpg"
+    },
+    {
+      "slot": "pa-lectura",
+      "role": "lifestyle",
+      "demo": "pa-lectura.jpg"
+    },
+    {
+      "slot": "pa-pila",
+      "role": "lifestyle",
+      "demo": "pa-pila.jpg"
+    },
+    {
+      "slot": "pu-lupa",
+      "role": "lifestyle",
+      "demo": "pu-lupa.jpg"
+    },
+    {
+      "slot": "pu-estante",
+      "role": "lifestyle",
+      "demo": "pu-estante.jpg"
+    },
+    {
+      "slot": "pa-p1",
+      "role": "product",
+      "demo": "pa-p1.jpg"
+    },
+    {
+      "slot": "pa-p2",
+      "role": "product",
+      "demo": "pa-p2.jpg"
+    },
+    {
+      "slot": "pa-p3",
+      "role": "product",
+      "demo": "pa-p3.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "lomo",
+    "colors": {
+      "paper": "#faf6ee",
+      "ink": "#1f2a24",
+      "muted": "#efe7d6",
+      "accent": "#1f4a3a",
+      "deep": "#1f4a3a"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "lomo",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "square",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis desde Bs 200 · Envolvemos para regalo"
+    },
+    "layout": [
+      {
+        "type": "cover-split",
+        "look": "flip",
+        "band": "deep",
+        "eyebrow": "Librería",
+        "title": "Libros para *leer despacio*",
+        "text": "Novelas, ensayo y poesía, elegidos uno por uno.",
+        "cta": "Ver los libros",
+        "link": "products",
+        "photo": "slot:pa-hero"
+      },
+      {
+        "type": "products-slider",
+        "card": "classic",
+        "title": "Recomendados de la semana",
+        "link": "products"
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Una librería *de barrio*",
+        "text": "Leemos todo lo que vendemos y te lo recomendamos en persona: pasa, hojea y quédate un rato.",
+        "cta": "Visítanos",
+        "link": "contact",
+        "photo": "slot:pa-local1"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "caption",
+        "title": "Por género",
+        "items": [
+          {
+            "title": "Novela",
+            "photo": "slot:pa-lectura",
+            "link": "products"
+          },
+          {
+            "title": "Ensayo",
+            "photo": "slot:pa-pila",
+            "link": "products"
+          },
+          {
+            "title": "Misterio",
+            "photo": "slot:pu-lupa",
+            "link": "products"
+          },
+          {
+            "title": "Clásicos",
+            "photo": "slot:pu-estante",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-tabs",
+        "card": "classic",
+        "title": "Novedades",
+        "link": "products"
+      },
+      {
+        "type": "press-quotes",
+        "look": "quotes",
+        "title": "Lo que dicen"
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "muted",
+        "title": "El *club* de lectura",
+        "text": "Un libro recomendado cada mes en tu correo."
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Por qué *lo elegimos*",
+        "text": "Cada libro de la tienda lo leímos antes. Si no te gusta, te ayudamos a encontrar otro.",
+        "photo": "slot:pa-local2"
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Lo envuelven para regalo?",
+            "text": "Sí, con una nota."
+          },
+          {
+            "title": "¿Consiguen libros por pedido?",
+            "text": "Sí, escríbenos."
+          },
+          {
+            "title": "¿Cuánto tarda?",
+            "text": "De 1 a 3 días."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Lomo",
+      "tagline": "Librería de barrio",
+      "products": [
+        {
+          "name": "Novela de Verano",
+          "price": 120,
+          "description": "Tapa blanda.",
+          "category": "Novela"
+        },
+        {
+          "name": "Ensayo Breve",
+          "price": 95,
+          "description": "Edición de bolsillo.",
+          "category": "Ensayo"
+        },
+        {
+          "name": "Cuentos del Mar",
+          "price": 110,
+          "description": "Ilustrado.",
+          "category": "Novela"
+        }
+      ]
+    }
+  }
+}
