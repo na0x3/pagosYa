@@ -225,7 +225,9 @@ export class SourceTemplatesService {
     // Spec 2026-10-30 home writer variety: the brand mood rides with the variants; the writer's animated look reads it.
     if (variants) variants = { ...variants, mood: fill?.character?.tone === 'bold' ? 'bold' : 'calm' } as unknown as MasterVariants;
     const { assembled } = await this.assemble(merchantId, storeId, starterManifest?.id ?? presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, files, variants, undefined, dna, starterRoll);
-    const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, brief: { ...assembled.brief, templateRevision: revision + 1 } });
+    // A whole template (34 templates) is named in the history by its own name, not «Esencial» (owner 2026-10-31: switching back).
+    const label = presetManifest?.preset?.layout?.length ? `Plantilla: ${presetManifest.name}` : assembled.label;
+    const saved = await this.projects.save(merchantId, storeId, { revision, ...assembled, label, brief: { ...assembled.brief, templateRevision: revision + 1 } });
     if (revision === 0) await this.firstBuild(storeId);
     // Variety spec §2b: every product's own page content (highlights, story, faq…), written in the background.
     void Promise.resolve().then(() => this.pageWriter?.fillStore(storeId)).catch(() => undefined);
