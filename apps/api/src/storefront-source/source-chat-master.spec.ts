@@ -944,7 +944,8 @@ describe('YAPI picks the themed template for a new store (owner 2026-10-31, YAPI
     expect(pickTemplate.mock.calls[0][1].templates.map((template: { id: string }) => template.id)).toEqual(expect.arrayContaining(['grano', 'mordisco']));
     expect(pickTemplate.mock.calls[0][1].templates.map((template: { id: string }) => template.id)).not.toContain('shrine');
     expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), 'grano');
-    expect(out.assistantMessage.content).toContain('Elegí la plantilla Grano: Va con un café de especialidad que tuesta en casa.');
+    expect(out.assistantMessage.content).toContain('Elegí la plantilla Grano: va con un café de especialidad que tuesta en casa.');
+    expect(out.assistantMessage.content).not.toContain('Ahora pulo');
     expect(out.followUp).toMatchObject({ sectionLibrary: true, revision: 1 });
     expect(out.followUp.redesign).toBeUndefined();
   });
