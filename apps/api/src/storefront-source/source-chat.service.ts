@@ -371,7 +371,7 @@ export class SourceChatService {
     // With no choice, the industry skeleton whose words fit the business (YAPI_SKELETONS=off keeps Esencial for everyone).
     // Owner 2026-10-31 («do the recommendation»): with YAPI_TEMPLATE_PICK on, a first build with no template chosen and no plan starts
     // on the whole themed template YAPI picks for the business (its words, its products), told to the merchant with the reason.
-    const templatePick = revision === 0 && !planned && typeof onboarding.template !== 'string' && this.config.get<boolean>('app.yapiTemplatePick') === true
+    const templatePick = revision === 0 && !planned && typeof onboarding.template !== 'string' && this.templatePickOn()
       ? await this.pickStoreTemplate(merchantId, storeId, { storeName: store?.name ?? '', what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '',
           request: merchantRequest ?? userMessage.content, products: productNames.map((product: { name: string }) => product.name), businessWords }) : null;
     const skeletonId = templatePick ? undefined : typeof onboarding.template === 'string' ? onboarding.template
@@ -530,6 +530,7 @@ export class SourceChatService {
     return [];
   }
 
+  private templatePickOn() { return this.config.get<boolean>('app.yapiTemplatePick') === true; }
   private planOn() { return this.config.get<boolean>('app.yapiPlanCard') !== false && Boolean(this.plans); }
   private startersOn() { return this.config.get<boolean>('app.yapiStarters') === true; }
   private freeFirst() { return this.planOn() && this.config.get<boolean>('app.yapiFreeFirst') !== false; }
@@ -555,7 +556,9 @@ export class SourceChatService {
   /** A new store: a short request shows the plan card; a detailed one builds the plan at once (spec 2026-10-22). */
   private async firstBuild(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[], instruction: string, merchantRequest?: string, replyPrefix = '', setupAction?: string) {
     // Owner 2026-10-24: with starters on, a new store starts from its starter at once; the plan card is for later edits.
-    if (!this.planOn() || this.startersOn()) return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix);
+    // Owner 2026-10-31: with the template pick on, the picked template is the plan — the plan card's colours and sections are for
+    // plain Esencial and would not fit a whole template; the merchant's words still reach its fill and the check.
+    if (!this.planOn() || this.startersOn() || this.templatePickOn()) return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix);
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } }).catch(() => null);
     const what = ((store?.onboarding ?? {}) as { what?: string }).what ?? draft.answers?.context ?? '';
     const drafted = await this.plans!.draft(merchantId, storeId, { revision, request: merchantRequest ?? instruction, what, photos: chatPhotos });
