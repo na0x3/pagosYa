@@ -1,0 +1,324 @@
+{
+  "id": "bloque",
+  "name": "Bloque",
+  "category": "ninos",
+  "description": "Juguetes y niños: blanco con azul eléctrico, letra geométrica, bloques de color con texto y fotos, colecciones por color.",
+  "tags": [
+    "juguetes",
+    "niños",
+    "madera",
+    "colores"
+  ],
+  "sitePurpose": "shop",
+  "order": 55,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "Colorblock",
+    "url": "https://theme-colorblock-demo.myshopify.com/"
+  },
+  "photos": [
+    {
+      "slot": "ju-hero",
+      "role": "hero",
+      "demo": "ju-hero.jpg"
+    },
+    {
+      "slot": "ju-juego",
+      "role": "lifestyle",
+      "demo": "ju-juego.jpg"
+    },
+    {
+      "slot": "re-story",
+      "role": "hero",
+      "demo": "re-story.jpg"
+    },
+    {
+      "slot": "tr-taller",
+      "role": "lifestyle",
+      "demo": "tr-taller.jpg"
+    },
+    {
+      "slot": "ar-cuarto",
+      "role": "lifestyle",
+      "demo": "ar-cuarto.jpg"
+    },
+    {
+      "slot": "ju-p2",
+      "role": "product",
+      "demo": "ju-p2.jpg"
+    },
+    {
+      "slot": "ju-p3",
+      "role": "product",
+      "demo": "ju-p3.jpg"
+    },
+    {
+      "slot": "ju-p1",
+      "role": "product",
+      "demo": "ju-p1.jpg"
+    },
+    {
+      "slot": "tr-p1",
+      "role": "product",
+      "demo": "tr-p1.jpg"
+    },
+    {
+      "slot": "tr-p2",
+      "role": "product",
+      "demo": "tr-p2.jpg"
+    },
+    {
+      "slot": "tr-p3",
+      "role": "product",
+      "demo": "tr-p3.jpg"
+    },
+    {
+      "slot": "tr-p4",
+      "role": "product",
+      "demo": "tr-p4.jpg"
+    },
+    {
+      "slot": "ar-p4",
+      "role": "product",
+      "demo": "ar-p4.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "bloque",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#1a2bd6",
+      "muted": "#e8ebff",
+      "accent": "#1a2bd6",
+      "deep": "#1a2bd6"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "bloque",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "columns",
+      "button": "pill",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis desde Bs 200"
+    },
+    "layout": [
+      {
+        "type": "statement-reveal",
+        "look": "center",
+        "title": "Juguetes de *colores*",
+        "text": "Para jugar, aprender y guardar.",
+        "cta": "Ver los juguetes",
+        "link": "products"
+      },
+      {
+        "type": "promo-pair",
+        "look": "uneven",
+        "items": [
+          {
+            "title": "Bloques",
+            "text": "Para construir.",
+            "photo": "slot:ju-hero",
+            "link": "products"
+          },
+          {
+            "title": "De madera",
+            "text": "Hechos a mano.",
+            "photo": "slot:tr-taller",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "band": "muted",
+        "title": "Inspirados por el juego",
+        "text": "Juguetes de madera y tela, con colores vivos, pensados para manos pequeñas.",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:re-story"
+      },
+      {
+        "type": "categories-tiles",
+        "look": "pastel",
+        "title": "Elige por color",
+        "items": [
+          {
+            "title": "Arcoíris",
+            "photo": "slot:ju-p2",
+            "link": "products"
+          },
+          {
+            "title": "Rojo",
+            "photo": "slot:ju-p3",
+            "link": "products"
+          },
+          {
+            "title": "Azul",
+            "photo": "slot:tr-p2",
+            "link": "products"
+          },
+          {
+            "title": "Natural",
+            "photo": "slot:tr-p4",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "image-columns",
+        "look": "blocks",
+        "items": [
+          {
+            "title": "Para todas las edades",
+            "text": "De 1 a 99 años.",
+            "photo": "slot:ju-juego",
+            "link": "products"
+          },
+          {
+            "title": "Madera de verdad",
+            "text": "Sin plástico.",
+            "photo": "slot:tr-p1",
+            "link": "products"
+          },
+          {
+            "title": "Para construir",
+            "text": "Bloques para apilar.",
+            "photo": "slot:ju-hero",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-grid",
+        "card": "classic",
+        "title": "Los que *más gustan*",
+        "link": "products"
+      },
+      {
+        "type": "story-split",
+        "band": "muted",
+        "title": "Desde 2014",
+        "text": "Hacemos juguetes que duran y se heredan, con cuidado y con color.",
+        "cta": "Conócenos",
+        "link": "about",
+        "photo": "slot:ar-cuarto"
+      },
+      {
+        "type": "newsletter-split",
+        "look": "band",
+        "band": "muted",
+        "title": "Entérate *primero*",
+        "text": "Juguetes nuevos y ofertas."
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Seguro para bebés",
+            "text": "Pintura sin tóxicos.",
+            "icon": "shield"
+          },
+          {
+            "title": "Madera de verdad",
+            "text": "Sin plástico.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Para regalar",
+            "text": "Lo envolvemos gratis.",
+            "icon": "gift"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Desde qué edad?",
+            "text": "Desde 1 año, salvo que diga otra cosa."
+          },
+          {
+            "title": "¿Cómo lo limpio?",
+            "text": "Paño húmedo, sin sumergir."
+          },
+          {
+            "title": "¿Lo envuelven?",
+            "text": "Sí, sin costo."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Bloque",
+      "tagline": "Juguetes de colores, para heredar",
+      "products": [
+        {
+          "name": "Arcoíris de Madera",
+          "price": 180,
+          "description": "Siete arcos.",
+          "category": "Bloques"
+        },
+        {
+          "name": "Auto Rojo",
+          "price": 90,
+          "description": "Madera pintada.",
+          "category": "Vehículos"
+        },
+        {
+          "name": "Oso de Peluche",
+          "price": 150,
+          "description": "Algodón suave.",
+          "category": "Peluches"
+        },
+        {
+          "name": "Conejo de Madera",
+          "price": 80,
+          "description": "Tallado a mano.",
+          "category": "Figuras"
+        },
+        {
+          "name": "Muñeca Rusa",
+          "price": 120,
+          "description": "Cinco piezas.",
+          "category": "Figuras"
+        },
+        {
+          "name": "Figuras Simples",
+          "price": 70,
+          "description": "Para imaginar.",
+          "category": "Figuras"
+        },
+        {
+          "name": "Torre de Aros",
+          "price": 110,
+          "description": "Para apilar.",
+          "category": "Bloques"
+        },
+        {
+          "name": "Conejo de Tela",
+          "price": 140,
+          "description": "Para dormir.",
+          "category": "Peluches"
+        }
+      ]
+    }
+  }
+}

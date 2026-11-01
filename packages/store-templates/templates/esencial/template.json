@@ -582,6 +582,13 @@
         "heading": "bricolage",
         "body": "dm-sans",
         "starterOnly": true
+      },
+      {
+        "id": "bloque",
+        "name": "Bloque",
+        "heading": "outfit",
+        "body": "outfit",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -767,7 +774,8 @@
         "calma",
         "zancada",
         "cuero",
-        "alacena"
+        "alacena",
+        "bloque"
       ],
       "icons": [
         "line",
