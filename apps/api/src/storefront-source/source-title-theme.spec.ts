@@ -33,3 +33,12 @@ describe('a title-style change rewrites the theme (spec 2026-11-03 §6)', () => 
     expect(css).toContain("--es-title-font:'Baloo 2',var(--es-heading)");
   });
 });
+
+describe('a template preset keeps the photos\' title colours (live check 2026-11-03)', () => {
+  it('withPreset carries look.titles with the brand colours', () => {
+    const { withPreset } = require('./source-templates');
+    const preset = { look: { palette: 'mono', fonts: 'modern', colors: {} }, variants: { theme: 'unico', titles: 'redonda' } };
+    const out = withPreset(preset, { look: { colors: { accent: '#471411' }, titles: ['#471411', '#d9a441'] } }, true);
+    expect(out.look.titles).toEqual(['#471411', '#d9a441']);
+  });
+});

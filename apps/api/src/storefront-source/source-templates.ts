@@ -61,7 +61,8 @@ export function presetFill(preset: NonNullable<TemplateManifest['preset']>): Mas
 export function withPreset(preset: MasterFill, fill?: MasterFill | null, keepBrandColours = false): MasterFill {
   if (!fill) return preset;
   // A starter (spec 2026-10-24) keeps the merchant's brand colours over its own look; a preset is a chosen look and keeps none.
-  const look = keepBrandColours && fill.look?.colors && Object.keys(fill.look.colors).length ? { ...(preset.look ?? {}), colors: { ...(preset.look?.colors ?? {}), ...fill.look.colors } } : preset.look;
+  // Chunky colour titles (live check 2026-11-03): the photos' title colours travel with the brand colours.
+  const look = keepBrandColours && fill.look?.colors && Object.keys(fill.look.colors).length ? { ...(preset.look ?? {}), colors: { ...(preset.look?.colors ?? {}), ...fill.look.colors }, ...(fill.look.titles ? { titles: fill.look.titles } : {}) } : preset.look;
   return { ...fill, look, variants: preset.variants,
     copy: { ...(preset.copy ?? {}), ...(fill.copy ?? {}) }, sections: fill.sections?.length ? fill.sections : preset.sections,
     featureCopy: { ...(preset.featureCopy ?? {}), ...(fill.featureCopy ?? {}) },
