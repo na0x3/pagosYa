@@ -735,7 +735,7 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 @media (prefers-reduced-motion:no-preference){.lb-swoosh path{transition:stroke-dashoffset .9s cubic-bezier(.3,.7,.2,1) .2s}:root:not([data-es-still]) .lb:not([data-in]) .lb-swoosh path{stroke-dashoffset:240}}
 /* On a darkened photo or an accent/deep band the title colours (picked for the paper) give way to the title's own colour (review 2026-11-03). */
 .es[data-es-titles] :is(.lb-cover--dark,[data-es-band="deep"],[data-es-band="accent"],[data-lb-band="deep"],[data-lb-band="accent"]) .lb-title :is(.lb-tw,.lb-em){color:inherit}
-@media (max-width:760px){.es[data-es-titles] .es-display{font-size:clamp(32px,9vw,48px)}}
+@media (max-width:760px){.es:is([data-es-titles="burbuja"],[data-es-titles="redonda"],[data-es-titles="firme"],[data-es-titles="poster"]) .es-display{font-size:clamp(32px,9vw,48px)}}
 /* The buy box's product name (the kit draws an h1) takes the chunky font when the product opens the page; no word colours there. */
 .es:is([data-es-titles="burbuja"],[data-es-titles="redonda"],[data-es-titles="firme"],[data-es-titles="poster"]) [data-pagosya-product-page] h1{font-family:var(--es-title-font,var(--es-heading))}
 

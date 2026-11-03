@@ -218,4 +218,8 @@ describe('chunky colour titles (spec 2026-11-03)', () => {
     }));
     expect(seen).toEqual({ closing: 'rgb(255, 255, 255)', band: true });
   });
+  it('leaves normal titles at their own size on a phone (review 2026-11-03)', async () => {
+    const size = await onUnico({ width: 390, patch: data => data.replace(/"titles":"[a-z]+"/, '"titles":"normal"') }, page => page.evaluate(() => getComputedStyle(document.querySelector('.lb-hero-split .es-display') as HTMLElement).fontSize));
+    expect(size).toBe('36px');
+  });
 });
