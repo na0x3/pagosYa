@@ -1525,6 +1525,30 @@ main[data-lb-home]{overflow-x:clip}
   .lb-lookside__points{grid-template-columns:1fr}
 }
 /* /lb:shop-look */
+/* lb:detail-hotspots */
+.lb-hotspots{display:grid;gap:clamp(24px,4vw,56px);align-items:center}
+@media (min-width:861px){.lb-hotspots{grid-template-columns:1.1fr 1fr}}
+.lb-hotspots__frame{position:relative;border-radius:24px;overflow:hidden}
+.lb-hotspots__photo{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+.lb-hotspots__spot{position:absolute;transform:translate(-50%,-50%)}
+.lb-hotspots__pin{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:#fff;color:#111;box-shadow:0 0 0 6px #ffffff59;cursor:pointer}
+.lb-hotspots__pin svg{width:18px;height:18px;transition:transform .2s}
+.lb-hotspots__spot[data-open] .lb-hotspots__pin svg{transform:rotate(45deg)}
+.lb-hotspots__note{position:absolute;left:50%;top:calc(100% + 10px);width:max-content;max-width:min(240px,60vw);margin:0;padding:8px 12px;border-radius:12px;background:#fff;color:#111;font-size:13px;box-shadow:0 12px 28px -14px #0006;opacity:0;transform:translate(-50%,6px);pointer-events:none;transition:opacity .2s,transform .2s}
+.lb-hotspots__spot[data-open] .lb-hotspots__note{opacity:1;transform:translate(-50%,0)}
+.lb-hotspots__list{display:grid;gap:10px;margin:18px 0 0;padding:0;list-style:none}
+.lb-hotspots__list button{all:unset;cursor:pointer;display:block;padding:12px 14px;border-radius:14px;background:var(--es-muted);font-weight:600}
+.lb-hotspots__list button[aria-pressed=true]{outline:2px solid var(--es-accent)}
+@media (prefers-reduced-motion:no-preference){.lb-hotspots__pin{animation:lb-hot 2s ease-out infinite}}
+@keyframes lb-hot{0%{box-shadow:0 0 0 0 #ffffffb3}100%{box-shadow:0 0 0 14px #fff0}}
+/* /lb:detail-hotspots */
+/* lb:chips-marquee */
+.lb-chips{display:grid;gap:12px;overflow:hidden;margin-top:clamp(18px,3vw,28px);-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.lb-chips__row{gap:12px;margin:0;padding:0;list-style:none}
+.lb-chips__row[data-dir=right]{animation-direction:reverse}
+.lb-chips__chip{display:inline-flex;align-items:center;gap:12px;padding:10px 18px 10px 10px;border-radius:18px;background:var(--es-paper);box-shadow:0 1px 0 color-mix(in srgb,var(--es-ink) 10%,transparent);font-weight:600;white-space:nowrap}
+.lb-chips__thumb{width:40px;height:40px;border-radius:50%;object-fit:cover}
+/* /lb:chips-marquee */
 /* lb:social-marquee */
 .lb-social__title{margin:0 0 clamp(24px,3vw,40px);text-align:center;font:600 clamp(26px,2.6vw,38px)/1.15 var(--es-heading)}
 .lb-script{font-family:'Caveat','Kaushan Script',cursive;font-style:normal;font-weight:700;font-size:1.18em}
@@ -2954,7 +2978,39 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="hoja"] .es-footer{background:#fff;border-top:1px solid #eef0ea}
 [data-es-theme="hoja"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="hoja"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una tarjeta flotante. */
+@media (min-width:861px){[data-es-theme="hoja"] .pym-panel{left:0;right:0;width:min(600px,calc(100% - 40px));margin:10px auto 0;padding:24px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-top:3px solid var(--store-accent,currentColor);border-radius:18px;box-shadow:0 30px 60px -30px rgba(0,0,0,.35)}[data-es-theme="hoja"] .pym-group{display:block}[data-es-theme="hoja"] .pym-tiles{display:none}[data-es-theme="hoja"] .pym-links{grid-template-columns:repeat(2,minmax(0,1fr))}[data-es-theme="hoja"] .pym-links a{font-size:16px}[data-es-theme="hoja"] .pym-footer{margin-top:16px;border-radius:12px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="hoja"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:hoja */
+/* theme:unico */
+/* Owner 2026-11-02 (one-product stores): the product on top gets room and the rest of the page stays quiet around it. */
+[data-es-theme="unico"] .lb-product-hero{padding-top:8px}
+[data-es-theme="unico"] .lb-product-hero__note{display:table;padding:8px 16px;border-radius:99px;background:var(--es-muted);color:var(--es-ink);font-size:12px;letter-spacing:.08em}
+[data-es-theme="unico"] :is(.es-h2,.lb-title,.lb-head h2){font-family:var(--es-heading);font-weight:700;letter-spacing:-.02em;text-transform:none;color:var(--es-ink)}
+[data-es-theme="unico"] .es-btn{border-radius:99px}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una tarjeta flotante. */
+@media (min-width:861px){[data-es-theme="unico"] .pym-panel{left:0;right:0;width:min(600px,calc(100% - 40px));margin:10px auto 0;padding:24px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-top:3px solid var(--store-accent,currentColor);border-radius:18px;box-shadow:0 30px 60px -30px rgba(0,0,0,.35)}[data-es-theme="unico"] .pym-group{display:block}[data-es-theme="unico"] .pym-tiles{display:none}[data-es-theme="unico"] .pym-links{grid-template-columns:repeat(2,minmax(0,1fr))}[data-es-theme="unico"] .pym-links a{font-size:16px}[data-es-theme="unico"] .pym-footer{margin-top:16px;border-radius:12px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="unico"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
+/* Lively one-product stores (spec 2026-11-03): the colourful mood — coloured bobbing letters, tinted chips, drifting blobs. */
+[data-es-theme="unico"] .es-logo__letters{display:inline-flex;white-space:nowrap}
+[data-es-theme="unico"][data-es-mood="colourful"] .es-logo__letters span:nth-child(3n+1){color:var(--es-accent)}
+[data-es-theme="unico"][data-es-mood="colourful"] .es-logo__letters span:nth-child(3n+2){color:var(--es-deep)}
+[data-es-theme="unico"][data-es-mood="colourful"] .es-logo__letters span:nth-child(3n){color:color-mix(in srgb,var(--es-accent) 55%,var(--es-deep))}
+[data-es-theme="unico"][data-es-mood="colourful"] .lb-chips__chip:nth-child(3n+1) span{color:var(--es-accent)}
+[data-es-theme="unico"][data-es-mood="colourful"] .lb-chips__chip:nth-child(3n+2) span{color:var(--es-deep)}
+[data-es-theme="unico"][data-es-mood="colourful"] [data-lb="chips-marquee"]{background:color-mix(in srgb,var(--es-accent) 10%,var(--es-paper))}
+[data-es-theme="unico"][data-es-mood="colourful"] section[data-lb="product-hero"]{position:relative;isolation:isolate}
+[data-es-theme="unico"][data-es-mood="colourful"] section[data-lb="product-hero"]::before,[data-es-theme="unico"][data-es-mood="colourful"] section[data-lb="product-hero"]::after{content:"";position:absolute;z-index:-1;width:42vmax;height:42vmax;border-radius:50%;filter:blur(70px);opacity:.35;pointer-events:none}
+[data-es-theme="unico"][data-es-mood="colourful"] section[data-lb="product-hero"]::before{left:-12vmax;top:-10vmax;background:var(--es-accent)}
+[data-es-theme="unico"][data-es-mood="colourful"] section[data-lb="product-hero"]::after{right:-14vmax;bottom:-12vmax;background:color-mix(in srgb,var(--es-deep) 60%,var(--es-accent))}
+@media (prefers-reduced-motion:no-preference){
+  [data-es-theme="unico"][data-es-mood="colourful"] .es-logo__letters span{display:inline-block;animation:pya-float 3.2s ease-in-out infinite;animation-delay:calc(var(--i) * -.22s)}
+  [data-es-theme="unico"][data-es-mood="colourful"] section[data-lb="product-hero"]::before,[data-es-theme="unico"][data-es-mood="colourful"] section[data-lb="product-hero"]::after{animation:lb-drift 18s ease-in-out infinite alternate}
+}
+@keyframes lb-drift{from{transform:translate(0,0)}to{transform:translate(6vmax,4vmax)}}
+/* /theme:unico */
 
 /* theme:calma */
 /* Calma (after Pipeline «Mezzo»): white and warm beige, centred light serif titles, editorial photos beside the products, square

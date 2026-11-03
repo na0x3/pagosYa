@@ -1,0 +1,244 @@
+{
+  "id": "unico",
+  "name": "Único",
+  "category": "tecnologia",
+  "description": "Un solo producto, contado entero: galería, precio y botón arriba; por qué encanta, cómo se usa y preguntas. Para dropshipping.",
+  "tags": [
+    "un producto",
+    "dropshipping",
+    "landing",
+    "producto"
+  ],
+  "sitePurpose": "shop",
+  "order": 35,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "one-product landing pages (layout only)"
+  },
+  "photos": [
+    {
+      "slot": "un-hero",
+      "role": "hero",
+      "demo": "un-hero.jpg"
+    },
+    {
+      "slot": "un-story",
+      "role": "lifestyle",
+      "demo": "un-story.jpg"
+    },
+    {
+      "slot": "un-p1",
+      "role": "product",
+      "demo": "un-p1.jpg"
+    },
+    {
+      "slot": "un-p2",
+      "role": "product",
+      "demo": "un-p2.jpg"
+    },
+    {
+      "slot": "un-p3",
+      "role": "product",
+      "demo": "un-p3.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "modern",
+    "colors": {
+      "paper": "#ffffff",
+      "ink": "#14161a",
+      "muted": "#f2f3f5",
+      "accent": "#2457c5",
+      "deep": "#14161a"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "unico",
+      "icons": "line",
+      "header": "minimal",
+      "announce": "plain",
+      "footer": "minimal",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "gallery-left",
+      "filters": "bar",
+      "grid": "grid3",
+      "cards": "showcase",
+      "menu": "panel"
+    },
+    "copy": {
+      "announcement": "Envío a todo el país"
+    },
+    "layout": [
+      {
+        "type": "promo-countdown",
+        "title": "Precio de lanzamiento",
+        "text": "Hasta que se acabe el tiempo."
+      },
+      {
+        "type": "product-hero",
+        "eyebrow": "Envío a todo el país · Pago seguro",
+        "items": [
+          {
+            "title": "Envío a todo el país"
+          },
+          {
+            "title": "Pago seguro"
+          }
+        ]
+      },
+      {
+        "type": "benefits-bento",
+        "title": "Por qué te va a *encantar*",
+        "photo": "slot:un-story",
+        "items": [
+          {
+            "title": "Fácil de usar",
+            "text": "Lo sacas de la caja y listo.",
+            "icon": "sparkles"
+          },
+          {
+            "title": "Hecho para durar",
+            "text": "Materiales que aguantan el día a día.",
+            "icon": "shield"
+          },
+          {
+            "title": "Va contigo",
+            "text": "Liviano y cómodo de llevar.",
+            "icon": "heart"
+          }
+        ]
+      },
+      {
+        "type": "detail-hotspots",
+        "title": "Mira de *cerca*",
+        "text": "Toca los + para ver cada detalle.",
+        "photo": "slot:un-p3",
+        "items": [
+          {
+            "title": "Materiales que se sienten bien",
+            "x": 32,
+            "y": 40
+          },
+          {
+            "title": "Terminaciones prolijas",
+            "x": 66,
+            "y": 58
+          }
+        ]
+      },
+      {
+        "type": "usecases",
+        "title": "Para cada momento",
+        "items": [
+          {
+            "title": "En casa",
+            "text": "Para tu rutina de todos los días.",
+            "photo": "slot:un-p1"
+          },
+          {
+            "title": "Fuera de casa",
+            "text": "Para el trabajo, el viaje o la calle.",
+            "photo": "slot:un-p2"
+          }
+        ]
+      },
+      {
+        "type": "steps-howto",
+        "title": "Cómo se usa",
+        "items": [
+          {
+            "title": "Ábrelo",
+            "text": "Todo viene listo en la caja."
+          },
+          {
+            "title": "Úsalo",
+            "text": "Un botón y funciona."
+          },
+          {
+            "title": "Disfrútalo",
+            "text": "Cuéntanos cómo te va."
+          }
+        ],
+        "look": "cards"
+      },
+      {
+        "type": "chips-marquee",
+        "title": "Lo que te va a *encantar*",
+        "photo": "slot:un-p1",
+        "band": "muted",
+        "items": [
+          {
+            "title": "Listo para usar"
+          },
+          {
+            "title": "Fácil de guardar"
+          },
+          {
+            "title": "Para todos los días"
+          },
+          {
+            "title": "Cómodo de llevar"
+          },
+          {
+            "title": "Hecho para durar"
+          },
+          {
+            "title": "Fácil de limpiar"
+          }
+        ]
+      },
+      {
+        "type": "reviews-cards",
+        "title": "Lo que dicen nuestros clientes"
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Preguntas frecuentes",
+        "items": [
+          {
+            "title": "¿Cuánto tarda en llegar?",
+            "text": "Te lo decimos al confirmar tu pedido."
+          },
+          {
+            "title": "¿Cómo pago?",
+            "text": "Con QR o tarjeta, al finalizar tu compra."
+          },
+          {
+            "title": "¿Tiene garantía?",
+            "text": "Si llega con un problema, lo resolvemos."
+          },
+          {
+            "title": "¿Puedo devolverlo?",
+            "text": "Escríbenos y lo coordinamos."
+          }
+        ]
+      },
+      {
+        "type": "products-slider",
+        "card": "classic",
+        "title": "También te puede gustar",
+        "link": "products"
+      }
+    ],
+    "productLayout": [],
+    "demo": {
+      "storeName": "Único",
+      "tagline": "Un producto, bien contado",
+      "products": [
+        {
+          "name": "Audífonos inalámbricos",
+          "price": 290,
+          "description": "Sonido claro, 30 horas de batería y estuche de carga.",
+          "category": "Audio"
+        }
+      ]
+    }
+  }
+}

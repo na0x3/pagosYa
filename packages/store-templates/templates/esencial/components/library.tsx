@@ -371,6 +371,20 @@ function ProductsSpotlight({ block, index }: { block: LibraryBlock; index: numbe
   </Band>;
 }
 
+/** Owner 2026-11-02 (one-product stores: «more things about the product, the product card bigger»): the product's whole detail at the
+ *  top of the home — the kit draws its gallery, options, price and «Agregar» into [data-pagosya-product-page][data-product-id]. A line of
+ *  the store's words may sit above it; the product's own name is the page's heading. */
+function ProductHero({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.product) return null;
+  // Lively one-product stores (spec 2026-11-03): the items are short facts the kit floats over the product photo.
+  const pills = (block.items ?? []).map(item => item.title).filter(Boolean).slice(0, 3);
+  return <Band block={block} index={index}>
+    {block.eyebrow ? <p className="es-eyebrow lb-eyebrow lb-product-hero__note">{block.eyebrow}</p> : null}
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
+    <div className="lb-product-hero" data-pagosya-product-page="" data-product-id={block.product} data-product-pills={pills.length ? JSON.stringify(pills) : undefined} />
+  </Band>;
+}
+
 function ProductsCards({ block, index }: { block: LibraryBlock; index: number }) {
   const names = (block.products ?? []).slice(0, 4);
   if (!names.length) return null;
@@ -969,6 +983,50 @@ function SocialMarquee({ block, index }: { block: LibraryBlock; index: number })
 }
 
 /** Palo Alto «Shop the look»: a photo with pins on the products in it; the open pin shows that product's card. Real products only. */
+/** Lively one-product stores (spec 2026-11-03, nubecorp «la textura que se siente»): a close-up photo with up to three pulsing «+»;
+ *  each opens a one-line note about what is there. The notes are also a list beside the photo, so nothing hides behind a tap. */
+function DetailHotspots({ block, index }: { block: LibraryBlock; index: number }) {
+  const spots = (block.items ?? []).filter(item => item.title && Number.isFinite(item.x) && Number.isFinite(item.y)).slice(0, 3);
+  const [open, setOpen] = useState(-1);
+  useEffect(() => {
+    if (open < 0) return;
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(-1); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [open]);
+  if (!block.photo || !spots.length) return null;
+  return <Band block={block} index={index}>
+    <div className="lb-hotspots">
+      <div className="lb-hotspots__frame">
+        <Photo src={block.photo} className="lb-hotspots__photo" />
+        {spots.map((spot, at) => <div key={at} className="lb-hotspots__spot" data-open={open === at ? '' : undefined} style={{ left: `${spot.x}%`, top: `${spot.y}%` }}>
+          <button type="button" className="lb-hotspots__pin" aria-expanded={open === at} aria-label={spot.title} onClick={() => setOpen(open === at ? -1 : at)}><Icons.IconPlus /></button>
+          <p className="lb-hotspots__note">{spot.title}</p>
+        </div>)}
+      </div>
+      <div className="lb-hotspots__words">
+        <Head block={block} index={index} />
+        <ul className="lb-hotspots__list">{spots.map((spot, at) => <li key={at}><button type="button" aria-pressed={open === at} onClick={() => setOpen(at)}>{spot.title}</button></li>)}</ul>
+      </div>
+    </div>
+  </Band>;
+}
+
+/** Lively one-product stores (spec 2026-11-03): short facts about the product in two rows sliding opposite ways, each chip with the
+ *  product's photo (never a text-only band). The motion is the kit's marquee piece: off-screen it pauses, reduced motion stops it. */
+function ChipsMarquee({ block, index }: { block: LibraryBlock; index: number }) {
+  const phrases = (block.items ?? []).map(item => item.title).filter(Boolean).slice(0, 10);
+  if (phrases.length < 6 || !block.photo) return null;
+  const rows = [phrases.filter((_, at) => at % 2 === 0), phrases.filter((_, at) => at % 2 === 1)];
+  return <Band block={block} index={index}>
+    <Head block={block} index={index} align="center" />
+    <ul className="lb-visually-hidden">{phrases.map((phrase, at) => <li key={at}>{phrase}</li>)}</ul>
+    <div className="lb-chips" aria-hidden="true">{rows.map((row, r) => <ul key={r} className="lb-chips__row" data-pya-motion="marquee" data-dir={r ? 'right' : 'left'}>
+      {[0, 1].flatMap(round => row.map((phrase, at) => <li key={`${round}-${at}`} className="lb-chips__chip"><Photo src={block.photo} className="lb-chips__thumb" /><span>{phrase}</span></li>))}
+    </ul>)}</div>
+  </Band>;
+}
+
 function ShopLook({ block, index }: { block: LibraryBlock; index: number }) {
   const pins = (block.items ?? []).filter(item => item.title && Number.isFinite(item.x) && Number.isFinite(item.y)).slice(0, 4);
   const points = (block.items ?? []).filter(item => item.title && !Number.isFinite(item.x)).slice(0, 4);
@@ -1273,7 +1331,8 @@ function CheckerRows({ block, index }: { block: LibraryBlock; index: number }) {
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
   'cover-split': CoverSplit, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
-  'products-grid': ProductsGrid, 'products-tabs': ProductsGrid, 'products-spotlight': ProductsSpotlight, 'products-cards': ProductsCards, 'products-lookbook': ProductsLookbook, 'categories-tiles': CategoriesTiles,
+  'detail-hotspots': DetailHotspots, 'chips-marquee': ChipsMarquee,
+  'products-grid': ProductsGrid, 'products-tabs': ProductsGrid, 'products-spotlight': ProductsSpotlight, 'product-hero': ProductHero, 'products-cards': ProductsCards, 'products-lookbook': ProductsLookbook, 'categories-tiles': CategoriesTiles,
   'story-split': StorySplit, 'story-checker': StoryChecker, 'story-overlay': StoryOverlay, 'story-list': StoryList, 'statement-inline': StatementInline,
   'benefits-orbit': BenefitsOrbit, 'benefits-bento': BenefitsBento, 'compare-table': CompareTable, 'steps-howto': StepsHowto, 'usecases': Usecases,
   'reviews-wall': Reviews, 'reviews-cards': Reviews,
