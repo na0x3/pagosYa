@@ -311,8 +311,8 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     // Pins name real products; press is only the outlets and words the merchant wrote.
     // Pins name real products; items without a pin are the points beside the photo (Shrine's look side).
     if (needs.pins) items = items.filter(item => item.x === undefined || productByName.has(fold(item.title))).map(item => item.x === undefined ? item : ({ ...item, title: productByName.get(fold(item.title))!.name }));
-    // Every number in a pill, chip or note is one the store wrote (its words, notes or the product's own description); a hotspot needs its point.
-    if (liveCap) items = items.filter(entry => (entry.title.match(/\d+/g) ?? []).every(number => backedWords.includes(number)));
+    // Every number in a pill, chip or note is one the store wrote as a whole number (not digits inside a fee or a phone); a hotspot needs its point.
+    if (liveCap) items = items.filter(entry => (entry.title.match(/\d+/g) ?? []).every(number => new RegExp(`(?<!\\d|\\d[.,])${number}(?!\\d|[.,]\\d)`).test(backedWords)));
     if (needs.spots) items = items.filter(entry => entry.x !== undefined).map(({ title, x, y }) => ({ title, x: x!, y: y! }));
     if (section.id === 'stats-rings') items = items.filter(item => item.value);
     // A marquee of outlet names (Symmetry) needs only the names; quotes must be the merchant's own words too.

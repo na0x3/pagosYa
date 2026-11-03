@@ -31,3 +31,15 @@ describe('section library — lively one-product parts (spec 2026-11-03)', () =>
     expect(libraryMood(null, { ...facts, what: 'Gomitas y caramelos para fiestas infantiles' })).toBe('colourful');
   });
 });
+
+describe('backed numbers are whole numbers (review 2026-11-03)', () => {
+  it('drops a delivery time whose digits only hide inside a fee or a phone number', () => {
+    const noisy = { ...facts, notes: 'Envío Santa Cruz: Bs 24,00. Escríbenos al 72448123. Envío a El Alto: Bs 20.' };
+    const [hero] = validateLibraryLayout({ blocks: [raw('product-hero', { product: 'p1', items: [item('Entrega 24–48 h'), item('Llega en 2 días'), item('Llega en caja')] })] } as never, noisy, { fixed: [{ type: 'product-hero' }] });
+    expect(hero.items?.map(entry => entry.title)).toEqual(['Llega en caja']);
+  });
+  it('keeps a number the store wrote on its own', () => {
+    const [chips] = validateLibraryLayout({ blocks: [raw('chips-marquee', { photo: 0, items: ['7 colores', 'Llega en caja', 'Sin herramientas', 'Para departamentos', 'Fácil de mover', 'Se despliega en cama'].map(phrase => item(phrase)) })] } as never, facts, { fixed: [{ type: 'chips-marquee' }] });
+    expect(chips.items?.[0].title).toBe('7 colores');
+  });
+});
