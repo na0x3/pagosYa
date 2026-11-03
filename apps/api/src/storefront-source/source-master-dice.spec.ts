@@ -301,3 +301,14 @@ describe('the shop header is Único\'s own (review 2026-11-03)', () => {
     for (let at = 0; at < 200; at++) expect(roll(`shop-${at}`).variants.header).not.toBe('shop');
   });
 });
+
+describe('chunky colour titles stay Único\'s own (review 2026-11-03)', () => {
+  it('never rolls a chunky title style', () => {
+    for (let at = 0; at < 200; at++) expect(['normal', 'upper']).toContain(roll(`titles-${at}`).variants.titles);
+  });
+  it('never offers a chunky title style or the shop header to the plan card', () => {
+    const offered = esencialDiceSettings(settings).variants!;
+    expect(offered.titles).toEqual(['normal', 'upper']);
+    expect(offered.header).not.toContain('shop');
+  });
+});

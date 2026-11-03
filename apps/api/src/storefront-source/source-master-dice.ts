@@ -70,8 +70,8 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   const excluded = (part: string, id: string) => input.character.exclude.includes(`${part}:${id}`) || (input.character.exclude.includes(id) && owners(id) === 1);
   const allowed = (part: string) => {
     // Owner 2026-10-24: a store with photos never opens on the text-only cover («a blank screen»).
-    // The shop header (premium landing 2026-11-03) belongs to Único's one-product page: never rolled for another store.
-    const fits = catalogue[part].filter(id => id !== 'fashion' && !(part === 'header' && id === 'shop') && !(part === 'pdp' && PHOTO_FIRST_PDP.has(id)) && !(part === 'hero' && !input.photoGroups && MULTI_PHOTO_HERO.has(id))
+    // Único's own looks (premium landing + chunky colour titles, 2026-11-03) are never rolled for another store.
+    const fits = catalogue[part].filter(id => id !== 'fashion' && !UNICO_ONLY_VARIANTS[part]?.includes(id) && !(part === 'pdp' && PHOTO_FIRST_PDP.has(id)) && !(part === 'hero' && !input.photoGroups && MULTI_PHOTO_HERO.has(id))
       && !(part === 'hero' && id === 'type' && input.photoCount > 0) && (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
     const honoured = DICE_ONLY.has(part) ? [] : fits.filter(id => excluded(part, id)).slice(0, Math.floor(fits.length / 2));
     const list = fits.filter(id => !honoured.includes(id));
@@ -113,8 +113,12 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
 }
 
 /** Spec 2026-10-24-starter-dice: palettes and fonts kept for starters are never rolled for plain Esencial stores. */
+/** Looks only the Único template uses (its shop header, the chunky colour titles): never rolled nor offered on a plan card. */
+export const UNICO_ONLY_VARIANTS: Record<string, readonly string[]> = { header: ['shop'], titles: ['burbuja', 'redonda', 'firme', 'poster'] };
+
 export function esencialDiceSettings(settings: MasterSettings): MasterSettings {
-  return { ...settings, palettes: settings.palettes.filter(p => !p.starterOnly), fonts: settings.fonts.filter(f => !f.starterOnly) };
+  const variants = settings.variants ? Object.fromEntries(Object.entries(settings.variants).map(([part, ids]) => [part, (ids as readonly string[]).filter(id => !UNICO_ONLY_VARIANTS[part]?.includes(id))])) : settings.variants;
+  return { ...settings, palettes: settings.palettes.filter(p => !p.starterOnly), fonts: settings.fonts.filter(f => !f.starterOnly), variants } as MasterSettings;
 }
 
 /** Spec 2026-10-24-starter-dice §1: a starter rolls only the parts it lists, among the ids it allows, with Esencial's rules. */
