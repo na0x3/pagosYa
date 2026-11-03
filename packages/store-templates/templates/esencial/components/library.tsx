@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { Reveal } from '@pagosya/ui';
-import { layout, photos, store } from './store-data';
+import { layout, photos, store, variants } from './store-data';
 import * as Icons from './icons';
 
 /* Section library (spec 2026-10-31): sections designed and tested once, the way a theme's are. YAPI only picks them, orders
@@ -81,9 +81,29 @@ function Bleed({ block, index, children, className = '', id, extra }: { block: L
 }
 
 /** A title whose *word* the copy marks shows that word in the accent (two-tone titles: Shrine, Palo Alto); no marks, plain text. */
-export function Marked({ text }: { text: string }) {
+const TITLE_COLOURS: Record<string, number> = { burbuja: 4, redonda: 2, firme: 2, poster: 3 };
+const UNDERLINE = new Set(['burbuja', 'redonda']);
+const titleStyle = () => String((variants as Record<string, unknown>).titles ?? 'normal');
+const Swoosh = () => <svg className="lb-swoosh" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 14 C 50 4, 120 4, 197 10" /></svg>;
+
+/** Chunky colour titles (spec 2026-11-03): the opening headline word by word in the store's title colours; the *marked* word gets the
+ *  hand-drawn underline (styles with one). Normal titles are unchanged. */
+export function TitleWords({ text }: { text: string }) {
+  const style = titleStyle(), count = TITLE_COLOURS[style];
+  if (!count) return <Marked text={text} />;
+  let at = 0;
+  return <>{text.split('*').map((part, segment) => part.split(/(\s+)/).map((word, n) => {
+    if (!word.trim()) return word;
+    const w = (at++ % count) + 1;
+    return segment % 2
+      ? <em key={`${segment}-${n}`} className="lb-em lb-tw" data-w={w}>{word}{UNDERLINE.has(style) ? <Swoosh /> : null}</em>
+      : <span key={`${segment}-${n}`} className="lb-tw" data-w={w}>{word}</span>;
+  }))}</>;
+}
+
+export function Marked({ text, swoosh = false }: { text: string; swoosh?: boolean }) {
   if (!text.includes('*')) return <>{text}</>;
-  return <>{text.split('*').map((part, at) => at % 2 ? <em key={at} className="lb-em">{part}</em> : part)}</>;
+  return <>{text.split('*').map((part, at) => at % 2 ? <em key={at} className="lb-em">{part}{swoosh && UNDERLINE.has(titleStyle()) ? <Swoosh /> : null}</em> : part)}</>;
 }
 
 function Head({ block, index, align = 'start', level = 2, aside }: { block: LibraryBlock; index: number; align?: 'start' | 'center' | 'split'; level?: 1 | 2; aside?: ReactNode }) {
@@ -91,7 +111,7 @@ function Head({ block, index, align = 'start', level = 2, aside }: { block: Libr
   if (!block.title && !block.eyebrow && !block.text) return null;
   const words = <>
     {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
-    {block.title ? <Title id={`lb-${index}-title`} className={level === 1 ? 'es-display lb-title' : 'es-h2 lb-title'} style={{ ['--chars' as string]: block.title.replace(/\*/g, '').length } as CSSProperties}><Marked text={block.title} /></Title> : null}
+    {block.title ? <Title id={`lb-${index}-title`} className={level === 1 ? 'es-display lb-title' : 'es-h2 lb-title'} style={{ ['--chars' as string]: block.title.replace(/\*/g, '').length } as CSSProperties}>{level === 1 ? <TitleWords text={block.title} /> : <Marked text={block.title} swoosh={index % 2 === 0} />}</Title> : null}
   </>;
   if (align === 'split') return <Reveal className="lb-head lb-head--split">
     <div>{words}</div>
@@ -255,7 +275,7 @@ function HeroSplit({ block, index }: { block: LibraryBlock; index: number }) {
     </div>
     <div className="lb-hero-split__panel">
       {block.eyebrow ? <p className="es-eyebrow lb-hero-split__eyebrow"><span aria-hidden="true" />{block.eyebrow}</p> : null}
-      <h1 id={`lb-${index}-title`} className="es-display lb-title"><Marked text={block.title} /></h1>
+      <h1 id={`lb-${index}-title`} className="es-display lb-title"><TitleWords text={block.title} /></h1>
       {block.text ? <p className="lb-lede">{block.text}</p> : null}
       <div className="es-actions lb-actions">
         <a className="es-btn es-btn--accent lb-btn" href="#comprar">{block.cta || 'Ver el producto'}</a>

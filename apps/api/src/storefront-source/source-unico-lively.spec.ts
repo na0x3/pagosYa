@@ -175,4 +175,28 @@ describe('chunky colour titles (spec 2026-11-03)', () => {
     expect(seen.family.length).toBeGreaterThan(0);
     expect(seen.line).toBeLessThanOrEqual(1.06);
   });
+  const contrast = (a: string, b: string) => { const lum = (c: string) => { const [r, g, bl] = c.match(/\d+/g)!.slice(0, 3).map(Number).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * bl; }; const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+  it('colours the hero word by word, one coloured word per section title, readable', async () => {
+    const seen = await onUnico({ width: 1280, patch: burbuja }, page => page.evaluate(() => {
+      const paper = getComputedStyle(document.body).backgroundColor;
+      const words = Array.from(document.querySelectorAll('.lb-hero-split .lb-title .lb-tw')).map(el => getComputedStyle(el).color);
+      const sections = Array.from(document.querySelectorAll('main section.es-section h2.lb-title')).map(el => el.querySelectorAll('.lb-em').length);
+      return { paper, words, sections, swoosh: !!document.querySelector('.lb-hero-split .lb-swoosh') };
+    }));
+    expect(new Set(seen.words).size).toBeGreaterThanOrEqual(2);
+    for (const colour of seen.words) expect(contrast(colour, seen.paper)).toBeGreaterThanOrEqual(3);
+    for (const count of seen.sections) expect(count).toBeLessThanOrEqual(1);
+    expect(seen.swoosh).toBe(true);
+  });
+  it('draws no underline for a hero with no marked word (Review Focus 1)', async () => {
+    const seen = await onUnico({ width: 1280, patch: data => burbuja(data).replace(/("type":"hero-split"[^}]*?"title":")([^"]*)"/, (_m, head, title) => `${head}${title.replace(/\*/g, '')}"`) }, page => page.evaluate(() => ({
+      words: document.querySelectorAll('.lb-hero-split .lb-tw').length, swoosh: document.querySelectorAll('.lb-hero-split .lb-swoosh').length,
+    })));
+    expect(seen.words).toBeGreaterThan(1);
+    expect(seen.swoosh).toBe(0);
+  });
+  it('wraps a 70-character chunky hero at 390 with no sideways scroll', async () => {
+    const scroll = await onUnico({ width: 390, patch: data => burbuja(data).replace(/"type":"hero-split",("eyebrow":"[^"]*",)?"title":"[^"]*"/, '"type":"hero-split","title":"El sofá cama que llega comprimido en una caja y se infla en tu sala"') }, page => page.evaluate(() => document.documentElement.scrollWidth));
+    expect(scroll).toBe(390);
+  });
 });
