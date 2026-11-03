@@ -209,4 +209,13 @@ describe('chunky colour titles (spec 2026-11-03)', () => {
     expect(seen.family).toMatch(/^"?Fredoka/);
     expect(seen.loaded).toBe(true);
   });
+  it('keeps a marked word white on the closing photo and in the band\'s own colour on a deep band (review 2026-11-03)', async () => {
+    const seen = await onUnico({ width: 1280, patch: data => burbuja(data).replace(/("type":"closing-photo"[^}]*?"title":")([^"]*)"/, '$1Llévalo *hoy*"').replace(/("type":"benefits-orbit",)"band":"muted"/, '$1"band":"deep"') }, page => page.evaluate(() => {
+      const closing = document.querySelector('[data-lb="closing-photo"] .lb-title .lb-em') as HTMLElement | null;
+      const bandTitle = document.querySelector('[data-lb="benefits-orbit"] .lb-title') as HTMLElement | null;
+      const bandWord = bandTitle?.querySelector('.lb-em') as HTMLElement | null;
+      return { closing: closing ? getComputedStyle(closing).color : 'missing', band: bandWord ? getComputedStyle(bandWord).color === getComputedStyle(bandTitle!).color : 'missing' };
+    }));
+    expect(seen).toEqual({ closing: 'rgb(255, 255, 255)', band: true });
+  });
 });
