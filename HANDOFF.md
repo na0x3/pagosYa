@@ -8,109 +8,67 @@ see `docs/history/SESSION_LOG.md`. For architecture and how to run locally, see
 **This file is only updated when the user explicitly asks.** The Stop hook
 that used to force this every turn was disabled by request. Don't re-add it.
 
-Updated: 2026-10-05
-Branch: `feature/store-page-architecture` — **not merged, not pushed.** 98 commits ahead of `main`;
-only the most recent 31 are the YAPI page-grammar work and the design engine described below. Merging this
-branch integrates all 98, which is a much larger decision than finishing that work.
-Working tree: `source-publishing.service.ts` + its spec are modified ON PURPOSE (the drawn-signup change,
-complete with four tests, deliberately kept out of every commit). Plus some stray .mov files and `fixit/`.
+Updated: 2026-11-03
+Branch: `oct24-clean` — the owner's working branch (their dev servers read this tree; never switch branches
+under them). **Not pushed.** ~600 commits ahead of `main`.
+Working tree: ~220 uncommitted files of earlier work (Oct 31–Nov 3: 34 templates, template quick edits, shipping
+ask, layout edit, screenshot→product, capture fix…). The owner's «commit it in chunks» step is still pending —
+commits from this session stage only their own hunks.
 
-## 1. Next action — the owner's call first
+## 1. Next action — build the Único premium landing (owner chose **Native**)
 
-**Look at a generated store and judge the design engine.** It is built and committed (`a01083bf`,
-`1274e6b2`) but no human has seen its output on a real store. Two ways in:
+Execute `docs/superpowers/plans/2026-11-03-unico-premium-landing.md` (7 tasks) with
+`superpowers:executing-plans`, inline, then one fresh reviewer on the whole range. Spec:
+`docs/superpowers/specs/2026-11-03-unico-premium-landing-design.md`. Ledger: create
+`.superpowers/sdd/2026-11-03-unico-premium-landing/progress.md` (sdd-workspace script).
 
-- `node examples/yapi-design-engine/server.mjs` serves the deterministic demos on http://127.0.0.1:4336 —
-  three AFTER HOURS directions built from the *same* facts, products, prices and photos, plus all 28
-  principal adapters under `/variants/`.
-- Generate with YAPI on a store **with products and a real name**. The last real generation was an empty
-  store called "tienda", which proves nothing about the copy.
+What it builds: one-product (Único) stores look like nubecorp.pages.dev + Shopify Expanse — split hero (words
+beside the photo, never over it), word band, colour cards (kit-drawn from colour photos; tap picks the colour),
+buy box, benefits band, hotspots, chip band, comparison, calm FAQ, closing photo; a `shop` header with
+«Comprar»; type/spacing/button finish. Also: the `cover-full` look `right` hero (Crocante, Oh Belly…) — the
+owner dislikes its «transparent» words over the photo — gets a solid left-aligned card (Task 1).
 
-Then specify what is still wrong. Hard constraint from the owner, unchanged: **no fixed design rules** —
-add capability, never a grammar.
+Rules that bit this session (all in the plan's Global Constraints):
+- Before saving ANY file under `apps/api/src` (spec files too): check no `StoreSourceChatJob` RUNNING/QUEUED —
+  nest --watch restarts and kills YAPI jobs.
+- Jest: name spec files, always `--maxWorkers=2`. **Never pass a folder** — a whole `storefront-source/` run
+  took the entire dev stack down today. Contract suite needs `NODE_OPTIONS=--max-old-space-size=6144`.
+- Files that also hold other uncommitted work: stage as HEAD + exact text replacements, never `-U0` hunks
+  (that once committed an unparseable file; repaired in 07caf590). Check TS/JS parse; check CSS rules land
+  inside their `/* lb:… */` / `/* theme:… */` block.
+- Kit: edit `packages/storefront-kit/commerce-src/`, then `node packages/storefront-kit/tools/build-commerce.mjs`,
+  then `pnpm --filter @pagosya/merchant-dashboard run build:studio` (the Studio preview uses its own bundled kit).
+- Task 7's live check needs the owner's real photos (a sofa fabric close-up, one photo per colour, plus one
+  calm product).
 
-### What shipped (do not redo it)
-
-**The design engine**, built 2026-10-04 evening, committed 2026-10-05 as `a01083bf` + `1274e6b2`.
-Full architecture in `docs/yapi-design-engine.md` — read that before touching it.
-- `apps/api/src/storefront-source/design-engine/`: brand analysis and creative planning calls, a bounded
-  critic (≤3 layout patches, cannot touch copy/prices/products/assets), Zod schemas, deterministic quality
-  repair, seeded brand-aware defaults, and the fixtures.
-- `packages/shared-types/src/sketch-registry.ts` owns the shared composition vocabulary (28 principal
-  adapters across hero/catalog/story/gallery/collections/footer); `website-design.ts` owns design metadata.
-  `StoreSketch` stays authoritative and editable; no new database tables.
-- It answers the modern-feel spec: generated stores now carry keyframe animation, sticky positioning and
-  gradients, against the measured "1 `@keyframes`, zero sticky, zero gradients" that motivated it. The spec
-  (`docs/superpowers/specs/2026-10-04-yapi-modern-feel-design.md`) is still the statement of intent; nobody
-  has confirmed by eye that it is *met*.
-- Verified 2026-10-05 before committing: design-engine/critic/registry/sketch/sketch-studio **77/77**,
-  merchant-studio **340/340**, `tsc --noEmit` clean on api and merchant-studio, shared-types builds.
-  Capture pass over all three AFTER HOURS fixtures and all 28 variants at 1440/820/390: no overflow, no
-  missing images, one h1, commerce hydrating, zero runtime errors (`examples/yapi-design-engine/dist/`,
-  gitignored).
-
-Before that, the page-grammar program: 14 tasks + a fix wave, all reviewed, on this branch.
-- `drawPageStructure()` generates the page skeleton from drawn parameters BEFORE the model is called;
-  `fillStructure` binds the response to it by slot id, drops inventions, caps vetoes, drops bands that are
-  empty after repair, and owns each band's size/width/media.
-- The prompt carries a real product digest (names, prices, categories, options, facts) instead of 30 bare
-  names; `el bloque catalog los muestra solo` is gone; the energy lines no longer dictate band count.
-- Page-wide component vocabulary went 5 style keys → 11 (buttons ×6, buttonIcon, icons, dividers, badges,
-  fields, links), rendered in CSS and offered to merchants in the Boceto look panel.
-- Ledger with all 49 rulings, deferred minors and known gaps:
-  `.superpowers/sdd/2026-10-04-yapi-page-grammar-real-copy-and-components/progress.md`
+### What shipped this session (do not redo it)
+- **Lively one-product stores** — commits `35121d01..0b27abf7`: kit `look/lively.js` (glow, add-button pulse,
+  bubble ripple, WhatsApp bubble, late-page start), buy bar on laptops (photo + choice, hides at the page footer),
+  hero pills, `detail-hotspots` + `chips-marquee` sections, colourful/calm mood (`variants.mood`, letters, blobs),
+  library rules (caps, whole backed numbers), «hazla más tranquila / más colorida» (`source-mood-ask.ts`).
+  Fresh opus review done; all Critical/Important fixed with tests. Spec/plan: `docs/superpowers/*/2026-11-03-lively-*`.
+- **Uncommitted but live in the stack** (inside files with other pending work): `source-chat.service.ts` (mood
+  saved with the home + mood switch routing; screenshot `pendingListing` → photos make the product;
+  `keepOnMessage` fixes progress saves wiping message metadata), `product-screenshot.ts` (nameless reads use the
+  catalog name; prompt avoids dimmed photos), `source-visual-capture.ts` (on-screen = both axes + 5 s decode cap —
+  fixed the 8 templates' 45 s layout timeouts).
 
 ### Known gaps, honestly
+- 13 deferred minors from the lively review: `.superpowers/sdd/2026-11-03-lively-one-product-stores/progress.md`.
+- Lively Task 8 with real photos never run (stand-in crops only). Test stores: «Sofá Cama Test» 1–4,
+  «Sofá Nube Test» (11krrr2d, rev 3 colourful).
+- `source-templates-motion` spec fails: the Esencial stylesheet is over the 180 kB source limit (pre-existing,
+  grows with each section; template stores filter CSS per section, unaffected).
+- Product names from screenshots ignore the merchant's own words; CNY prices count as «no price».
 
-- **Nobody has looked at the design engine's output.** Every claim above it is a passing test or a geometry
-  capture, not a judgement that the stores look good.
-- **Nine tests fail in `apps/api` `storefront-source`, and all nine predate the design engine.** They were
-  checked one by one against the previous commit (`036623da`) and none is a regression from it:
-  - 5 in `source-product-card-presets.spec.ts` — the spec hardcodes a 5-key `DEFAULTS` while the presets
-    ship 6 (`media`). Both files are untouched since before this work.
-  - 1 in `agent/agent-tools.theme.spec.ts` — `set_product_card_theme` grew `assurances` and `media`; the
-    expected key list was never updated. Source and spec both untouched.
-  - 1 in `source-validation-error.spec.ts` — the raw-diagnostics ratchet reads 31 against a `BASELINE` of
-    29. The previous commit scores 31 too, with an identical list.
-  - 1 in `source-commerce-pages.spec.ts` (preview shows a rating with no published summary) and 1 in
-    `source-next-pages.spec.ts` (a hand-written `page-SLUG` no longer demands its hooks). Attributed from
-    the diff, not by a rerun: the design-engine commit touches none of the code either test exercises —
-    the rating line last changed in `708ce191`.
-  - Also still true from before: `source-generation.service.spec.ts` "steers planning away from recent
-    fingerprints".
-- Running the whole `storefront-source` suite at once dies with SIGABRT partway through. Run it in slices.
-- **The Boceto look panel's 11 controls have never been seen.** The dashboard serves a PRE-BUILT Studio, so
-  they do not appear until it is rebuilt. Generation uses all 11; the merchant cannot click the new 6 yet.
-- **Nothing has proven the copy got less generic.** `specificityReport` is exported and wired into
-  `apps/api/scripts/evaluate-yapi-agent.ts`, but running it spends the owner's ChatGPT plan and needs port
-  3001. Not run.
-- A real compositional weakness seen in the last real generation: the hero landed 5th, after announce →
-  catalog → story → steps. The grammar enforces legality, not editorial sense.
+### Queued (owner asked; each gets its own spec after the Único work)
+1. Growing stores — a Único store that adds products keeps product 1 as the hero; offer/move to a catalogue
+   template (3+ products), keeping photos/words/colours.
+2. pagosYa browser button — Chrome extension: capture the supplier page + YAPI reads it; «Crear tienda con este
+   producto» or «Agregar a mi tienda»; laptop only (phones keep screenshots).
+3. AliExpress official dropshipping API for plain AliExpress links.
 
-## 2. What this branch carries
-
-- Daily luck wheel and dice board (server-drawn with `crypto.randomInt` under a
-  merchant lock); the board pops up per earned roll. Companion profile art.
-- pagosYa is light everywhere; dark tokens remain only for a storefront whose
-  own brand canvas is dark.
-- Comeback card opens centered after the receipt; Studio test sales preview it.
-- Studio plugin dialogs restyled and pinned inside the dashboard iframe.
-- Storefront cart lines: photo, option, unit price, low stock, savings.
-- **Security fixes:**
-  - `metadata.fx` was accepted from merchants at intent creation. It is read as
-    the BOB price an international charge converts from *and* as the amount
-    counted against ASFI limits, so a merchant could overcharge an international
-    buyer or record a 1-centavo payment against their limits. `create()` now
-    strips it. **Check production for intents created earlier with a
-    merchant-seeded `fx`.**
-  - Dice-board rolls counted test-mode payments, so free test payments could
-    farm rolls and the AI credits they win. Now live payments only.
-- One shared HTML escaper (`merchant-dashboard/src/html.mjs`); the old
-  `dashboard.js` one did not escape `'`.
-- ESLint errors 74 → 0 and `pnpm lint` gates CI. 954 warnings remain as a
-  burn-down; promote a rule to error when its count reaches zero.
-- Rewards panel moved out of the `dashboard.js` closure into
-  `src/rewards-panel.mjs`.
+## 2. Older sections below are carried forward from 2026-10-05 — NOT re-verified this session.
 
 ## 3. Domain shop — every remaining blocker is the owner's
 
@@ -141,16 +99,13 @@ re-checked. Verify before trusting it.
 
 ## 7. Local development
 
-- `pnpm run dev:db` — embedded Postgres, port 54329. `pg_isready` is **not**
-  installed on this machine; use `npx prisma migrate status` instead.
-- `apps/api`: `pnpm run start:dev` (port 3000)
-- `apps/checkout`: `pnpm run dev` — **the real configured port is 5174**, not 5173
-- `apps/merchant-dashboard` / `apps/ops`: `node server.mjs` (4323 / 4322)
-- **Known env mismatch, pre-existing:** `apps/checkout/.env` points at API port
-  3001 while `apps/api/.env` uses 3000. This cost a verification agent real time.
-- Some `source-generation` / `source-projects` / `stores.service` specs time out
-  under parallel load and pass in isolation or with `--runInBand`. Verified
-  twice this session — flake, not a regression.
+- Start the stack with **`pnpm dev:chatgpt`** (YAPI on the owner's ChatGPT plan) — never plain `pnpm dev`
+  (paid OpenAI credits). If it dies: `nohup pnpm dev:chatgpt > <log> 2>&1 &`, then check ports.
+- Ports: API 3001, merchant dashboard + Studio 4323, ops 4322, checkout 5175, embedded Postgres 54329.
+- The Studio is served from `apps/merchant-dashboard/public/studio` — rebuild after kit edits
+  (`pnpm --filter @pagosya/merchant-dashboard run build:studio`).
+- Dev login: the seed's demo merchant (`apps/api/prisma/seed.ts`).
+- Read-only DB queries: Prisma `$queryRawUnsafe` from a script inside `apps/api` (no `psql` installed).
 
 ## 8. Migration warnings
 
