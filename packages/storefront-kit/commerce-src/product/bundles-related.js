@@ -53,11 +53,17 @@
     const groups = optionGroups(selectedProduct), variant = selectedVariant(), buy = detail.querySelector('.product-detail__buy');
     const box = boxGroup(selectedProduct), pending = groups && !variant || box && selectedPicks.length !== box.count;
     bar.querySelector('[data-product-sticky-price]').textContent = detail.querySelector('.product-detail__price')?.textContent || '';
+    // Lively stores (spec 2026-11-03): the bar shows the photo and what is chosen, on every width.
+    const photo = bar.querySelector('[data-product-sticky-photo]'), shown = detail.querySelector('.product-detail__photo img, .product-detail__gallery img');
+    if (photo) { photo.hidden = !shown; if (shown) photo.src = shown.currentSrc || shown.src; }
+    const choice = bar.querySelector('[data-product-sticky-choice]');
+    if (choice) choice.textContent = [...detail.querySelectorAll('[data-product-selection]')].map(el => el.textContent.trim()).filter(Boolean).join(' · ');
     const jump = bar.querySelector('[data-product-jump]');
     jump.textContent = pending ? 'Elegir opciones' : isMembership(selectedProduct) ? 'Hacerme miembro' : 'Añadir';
     jump.disabled = !pending && (!buy || buy.disabled);
-    const show = buyPassed && matchMedia('(max-width: 640px)').matches;
-    bar.hidden = !show; detail.querySelector('[data-product-sticky-space]').hidden = !show;
+    const phone = matchMedia('(max-width: 640px)').matches, lively = document.documentElement.hasAttribute('data-pya-lively');
+    const show = buyPassed && !footerSeen && (lively || phone);
+    bar.hidden = !show; detail.querySelector('[data-product-sticky-space]').hidden = !show || !phone;
   }
   let highlightObserver = null;
   // Looping icons rest while nobody is looking at them.
@@ -78,6 +84,10 @@
     if (!buy || typeof IntersectionObserver !== 'function') return;
     stickyObserver = new IntersectionObserver(entries => { const entry = entries[entries.length - 1]; buyPassed = !entry.isIntersecting && entry.boundingClientRect.bottom <= 0; updateStickyBar(); });
     stickyObserver.observe(buy);
+    // Lively stores: the bar steps aside once the footer is on screen.
+    footerObserver?.disconnect(); footerSeen = false;
+    const footer = document.querySelector('footer');
+    if (footer) { footerObserver = new IntersectionObserver(entries => { footerSeen = entries[entries.length - 1].isIntersecting; updateStickyBar(); }); footerObserver.observe(footer); }
   }
   function optionPrices(groups) {
     const p = selectedProduct;

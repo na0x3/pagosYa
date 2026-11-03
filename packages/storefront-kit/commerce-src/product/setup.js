@@ -179,7 +179,7 @@
     detail.querySelector('[data-subscription-choice]')?.toggleAttribute('data-offer-driven', Boolean(detail.querySelector('.product-detail__offers [data-offer-square]')));
     updateStickyBar();
   }
-  let stickyObserver = null, buyPassed = false, commerceData = null;
+  let stickyObserver = null, buyPassed = false, commerceData = null, footerSeen = false, footerObserver = null;
   const starsMarkup = rating => `<span class="product-detail__stars" style="--rating:${Math.max(0, Math.min(5, Number(rating) || 0))}" aria-hidden="true">★★★★★</span>`;
   // Exact published totals come from the server summary, never from the latest-reviews page.
   function decorateProductReviews() {

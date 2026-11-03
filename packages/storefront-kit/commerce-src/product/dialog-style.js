@@ -329,6 +329,16 @@
       [data-pagosya-product][data-style] .product-detail__sticky button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-weight:700}
       [data-pagosya-product][data-style] .product-detail__sticky-space:not([hidden]){display:block;height:72px}
     }
+    /* Lively one-product stores (spec 2026-11-03): the buy bar also shows on laptops, a floating pill with the photo and choice. */
+    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){position:fixed;left:50%;right:auto;bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:12px;width:min(720px,calc(100% - 24px));padding:10px 10px 10px 12px;border:1px solid var(--pd-line);border-radius:20px;background:var(--pd-paper);color:var(--pd-ink);box-shadow:0 18px 40px -18px #0000004d;transform:translateX(-50%)}
+    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky>div{flex:1;min-width:0;font-size:13px;line-height:1.3}
+    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-weight:700}
+    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky img:not([hidden]){display:block;width:44px;height:44px;border-radius:12px;object-fit:cover;flex:0 0 auto}
+    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky [data-product-sticky-choice]{display:block;color:var(--pd-muted)}
+    [data-pagosya-product][data-style] .product-detail__sticky img{display:none}
+    @media (prefers-reduced-motion:no-preference){:root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){animation:pya-bar-in .35s cubic-bezier(.2,.9,.2,1) both}}
+    @keyframes pya-bar-in{from{opacity:0;transform:translate(-50%,24px)}to{opacity:1;transform:translateX(-50%)}}
     /* Approved highlights: one small looping motion each, paused off screen and stopped for reduced motion. */
     [data-pagosya-product][data-style] .product-detail__highlights{display:grid;gap:12px 18px;margin:0 0 20px;padding:0;list-style:none}
     [data-pagosya-product][data-style] .product-detail__highlights li{display:flex;align-items:center;gap:10px;min-width:0;font-size:12px;line-height:1.35}
