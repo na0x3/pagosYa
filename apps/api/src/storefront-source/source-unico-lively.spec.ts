@@ -157,4 +157,8 @@ describe('Único premium landing (spec 2026-11-03)', () => {
     }));
     expect(seen).toEqual({ lines: 1, scroll: 390 });
   });
+  it('writes the closing photo\'s title in white over its darkened photo (live check 2026-11-03: olive on dark)', async () => {
+    const colour = await onUnico({ width: 1280 }, page => page.evaluate(() => getComputedStyle(document.querySelector('[data-lb="closing-photo"] .lb-title')!).color));
+    expect(colour).toBe('rgb(255, 255, 255)');
+  });
 });

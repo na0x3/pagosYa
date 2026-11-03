@@ -3067,6 +3067,8 @@ main[data-lb-home]{overflow-x:clip}
 @media (max-width:760px){[data-es-theme="unico"] main a.es-btn{min-height:52px;height:52px}}
 [data-es-theme="unico"]:not([data-es-mood="colourful"]) [data-es-band]{background:color-mix(in srgb,var(--es-accent) 8%,var(--es-paper))}
 [data-es-theme="unico"] main [data-lb="closing-photo"] img{aspect-ratio:21/9;object-fit:cover;border-radius:22px}
+/* Titles on a darkened photo stay white (the ink titles above would vanish on it; live check 2026-11-03). */
+[data-es-theme="unico"] .lb-cover--dark :is(.es-h2,.lb-title,h2){color:#fff}
 /* /theme:unico */
 
 /* theme:calma */
