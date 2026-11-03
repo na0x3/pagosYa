@@ -166,6 +166,13 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
   .es-header[data-es-header="centered"] .es-header__links{display:none}
 }
 .es-header[data-es-header="minimal"] .es-header__end a[href="buscar.html"]{display:none}
+/* Premium landing (spec 2026-11-03): the shop header — logo and a short menu, then search, account, cart and a solid «Comprar»;
+   phones keep the logo, the cart and «Comprar» (the menu sits in the drawer). */
+.es-header[data-es-header="shop"]{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--es-paper) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid color-mix(in srgb,var(--es-ink) 10%,transparent)}
+.es-header[data-es-header="shop"] .es-header__end{align-items:center}
+.es-header[data-es-header="shop"] .es-header__buy{min-height:40px;padding:0 20px;border-radius:999px;background:var(--es-ink);border-color:var(--es-ink);color:var(--es-paper);display:inline-flex;align-items:center;font-weight:700;margin-left:6px}
+.es-header[data-es-header="shop"] .es-header__links a[hidden]{display:none}
+@media (max-width:760px){.es-header[data-es-header="shop"] :is(.es-header__links,[data-pagosya-account],.es-header__end a[href="buscar.html"]){display:none}.es-header[data-es-header="shop"] .es-header__buy{min-height:38px;padding:0 16px}}
 @media (min-width:900px){
   .es-header[data-es-header="split"]{display:grid;grid-template-columns:1fr auto 1fr}
   .es-header[data-es-header="split"] .es-header__end{justify-self:end}
@@ -1965,6 +1972,12 @@ main[data-lb-home]{overflow-x:clip}
 .lb-faq-grid .lb-faq__item[open] summary svg{transform:rotate(180deg)}
 .lb-faq-grid p{margin:0 0 16px;font-size:14px;opacity:.85}
 @media (max-width:760px){.lb-faq-grid{grid-template-columns:1fr}}
+/* Premium landing (spec 2026-11-03): the calm FAQ — thin dividers and a small plus that turns into a cross, no grey pills. */
+[data-lb="faq-split"][data-lb-look="lines"] .lb-faq__list{gap:0;border-top:1px solid color-mix(in srgb,var(--es-ink) 14%,transparent)}
+[data-lb="faq-split"][data-lb-look="lines"] .lb-faq__item,[data-lb="faq-split"][data-lb-look="lines"] .lb-faq__item[open]{background:none;border:0;border-bottom:1px solid color-mix(in srgb,var(--es-ink) 14%,transparent);border-radius:0}
+[data-lb="faq-split"][data-lb-look="lines"] .lb-faq__item summary{padding:20px 0;font-weight:600}
+[data-lb="faq-split"][data-lb-look="lines"] .lb-faq__item summary svg{width:22px;height:22px;padding:0;border-radius:0;background:none;color:currentColor}
+[data-lb="faq-split"][data-lb-look="lines"] .lb-faq__item p{padding:0 0 20px}
 /* /lb:faq-split */
 /* lb:story-overlay */
 .lb-story-overlay[data-lb-look="card"] .lb-overlay__inner{justify-content:flex-start;align-items:center}

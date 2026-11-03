@@ -613,7 +613,8 @@
         "split",
         "minimal",
         "boxed",
-        "search"
+        "search",
+        "shop"
       ],
       "announce": [
         "plain",

@@ -83,3 +83,15 @@ describe('Único lively look holds up (review 2026-11-03)', () => {
     for (const row of rows) expect(row.half).toBeGreaterThanOrEqual(row.box);
   });
 });
+
+describe('Único premium landing (spec 2026-11-03)', () => {
+  it('the shop header carries search, account, cart and a «Comprar» button', async () => {
+    const seen = await onUnico({ width: 1280, patch: data => data.replace('"header":"minimal"', '"header":"shop"') }, page => page.evaluate(() => {
+      const header = document.querySelector('header[data-es-header="shop"]');
+      const links = Array.from(header?.querySelectorAll('.es-header__links a') ?? []).map(link => `${link.textContent} ${link.getAttribute('href')}`);
+      return { header: !!header, buy: header?.querySelector('a.es-header__buy')?.getAttribute('href'), cart: !!header?.querySelector('[data-cart-open]'), search: !!header?.querySelector('a[href="buscar.html"]'), links };
+    }));
+    // Spec §2: a short menu of the home's own parts (Colores only where the page has colour cards).
+    expect(seen).toEqual({ header: true, buy: 'index.html#comprar', cart: true, search: true, links: ['Producto index.html#comprar', 'Preguntas index.html#preguntas'] });
+  });
+});

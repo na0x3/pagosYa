@@ -56,7 +56,7 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'promo-code', role: 'promo', use: 'Tarjeta de oferta con un código de descuento activo (code = el código exacto) que se copia con un toque, y botón.', needs: { code: true } },
   { id: 'promo-pair', role: 'promo', use: 'Dos mosaicos de foto lado a lado, cada uno con su título y enlace (items = 2 con photo; link = category:Nombre o products).', needs: { items: [2, 2], itemPhotos: 2 } },
   { id: 'promo-banner', role: 'promo', use: 'Banner de foto a todo el ancho con titular, texto y botón. Una colección, una temporada o un regalo.', needs: { photos: 1 } },
-  { id: 'faq-split', role: 'info', use: 'Preguntas frecuentes: titular a un lado, 3 a 6 preguntas con su respuesta al otro, de los datos reales (envíos, recojo, cambios, uso).', needs: { items: [3, 6] } },
+  { id: 'faq-split', role: 'info', use: 'Preguntas frecuentes: titular a un lado, 3 a 6 preguntas con su respuesta al otro, de los datos reales (envíos, recojo, cambios, uso). look lines = líneas finas, sin fondos (tranquila).', needs: { items: [3, 6] }, looks: ['lines'] },
   { id: 'visit-store', role: 'info', use: 'Visítanos: foto y la dirección y el horario de la tienda (las filas las pone pagosYa).', needs: { location: true } },
   { id: 'closing-photo', role: 'closing', use: 'Cierre: foto a todo el ancho con una frase final y botón.', needs: { photos: 1 } },
   { id: 'closing-wordmark', role: 'closing', use: 'Cierre: foto, frase final y botón, y el nombre de la tienda enorme al final.', needs: {} },

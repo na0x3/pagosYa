@@ -55,6 +55,9 @@ function useMenu(): NavLink[] {
   const categories = useCategoryLinks();
   if (!libraryStore()) return links;
   const faq = (layout as LibraryBlock[]).some(block => block.type === 'faq-split');
+  // Premium landing (spec 2026-11-03): the shop header names the home's own parts.
+  if (variant('header', 'classic') === 'shop') return [{ label: 'Producto', href: 'index.html#comprar' },
+    ...((layout as LibraryBlock[]).some(block => block.type === 'variant-cards') ? [{ label: 'Colores', href: 'index.html#colores' }] : []), ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
   return [{ label: frame().shop, href: 'productos.html' }, ...categories, ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
 }
 
@@ -67,6 +70,9 @@ function Wordmark() {
     {[...store.name].map((letter, at) => <span key={at} style={{ ['--i' as string]: at } as CSSProperties}>{letter === ' ' ? '\u00a0' : letter}</span>)}
   </span></>;
 }
+
+/** The kit hides a link to the colour cards when they do not draw (fewer than two photographed colours). */
+const colourLink = (href: string) => href.endsWith('#colores') ? { 'data-needs-colour-cards': '' } : {};
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -87,19 +93,20 @@ export function Header() {
       </div>
       {/* Maximize (34 templates): a big search box in the header itself. */}
       {variant('header', 'classic') === 'search' ? <form className="es-header__search" role="search" method="get" action="buscar.html"><input type="search" name="q" placeholder="¿Qué estás buscando hoy?" aria-label="Buscar productos" /><button type="submit" aria-label="Buscar"><IconSearch /></button></form> : null}
-      <nav className="es-header__links" aria-label="Principal" data-store-menu-replaces>{menu.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
+      <nav className="es-header__links" aria-label="Principal" data-store-menu-replaces>{menu.map(link => <a key={link.href} href={link.href} {...colourLink(link.href)}>{link.label}</a>)}</nav>
       <div className="es-header__end">
         {variant('icons', 'line') === 'text' ? <>
           <a className="es-text-btn" href="buscar.html">Buscar</a>
           <a className="es-text-btn" data-pagosya-account="login" href="acceso-ingresar.html">Cuenta</a>
           <button type="button" className="es-text-btn es-cart-btn" data-cart-open aria-label="Abrir carrito">Carrito (<span data-cart-count>0</span>)</button>
         </> : <HeaderIcons />}
+        {variant('header', 'classic') === 'shop' ? <a className="es-btn es-header__buy" href="index.html#comprar">Comprar</a> : null}
       </div>
     </header>
     <div className={open ? 'es-menu es-menu--open' : 'es-menu'} id="es-menu" aria-hidden={!open} onClick={event => { if (event.target === event.currentTarget) setOpen(false); }}>
       <nav className="es-menu__panel" aria-label="Principal">
         <button type="button" className="es-icon-btn es-menu__close" aria-label="Cerrar menú" onClick={() => setOpen(false)}><IconX /></button>
-        {menu.map(link => <a key={link.href} href={link.href} onClick={() => setOpen(false)}>{link.label}</a>)}
+        {menu.map(link => <a key={link.href} href={link.href} {...colourLink(link.href)} onClick={() => setOpen(false)}>{link.label}</a>)}
       </nav>
     </div>
     <CartTemplate>
