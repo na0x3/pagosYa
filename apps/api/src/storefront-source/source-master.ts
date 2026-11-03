@@ -151,7 +151,9 @@ const DNA_RADIUS: Record<string, string> = { round: 'round', soft: 'soft', sharp
 export function masterDnaLook(variants: Partial<MasterVariants> | undefined): Record<string, string> {
   const button = DNA_BUTTON[String(variants?.button)];
   const radius = DNA_RADIUS[String(variants?.corners)];
-  return { ...(button ? { button } : {}), ...(radius ? { radius } : {}) };
+  // Lively one-product stores (spec 2026-11-03): Único's buttons lift on hover and squash on press, like nubecorp's.
+  const lively: Record<string, string> = variants?.theme === 'unico' ? { hover: 'lift', press: 'squash' } : {};
+  return { ...(button ? { button } : {}), ...(radius ? { radius } : {}), ...lively };
 }
 
 /** Showcase commerce: the rolled card design and offer-square layout, read by the kit from config.showcase. */

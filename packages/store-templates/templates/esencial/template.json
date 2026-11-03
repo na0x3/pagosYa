@@ -791,7 +791,12 @@
         "alacena",
         "bloque",
         "foco",
-        "lomo"
+        "lomo",
+        "unico"
+      ],
+      "mood": [
+        "calm",
+        "colourful"
       ],
       "icons": [
         "line",

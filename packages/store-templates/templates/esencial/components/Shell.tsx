@@ -58,6 +58,16 @@ function useMenu(): NavLink[] {
   return [{ label: frame().shop, href: 'productos.html' }, ...categories, ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
 }
 
+/** Lively one-product stores (spec 2026-11-03): in the colourful mood a store with no logo image shows its name letter by letter,
+ *  each letter coloured and bobbing (theme CSS); screen readers read the name once. */
+function Wordmark() {
+  if (store.logo) return <img src={store.logo} alt={store.name} />;
+  if (variant('mood', 'calm') !== 'colourful') return <>{store.name}</>;
+  return <><span className="lb-visually-hidden">{store.name}</span><span className="es-logo__letters" aria-hidden="true">
+    {[...store.name].map((letter, at) => <span key={at} style={{ ['--i' as string]: at } as CSSProperties}>{letter === ' ' ? '\u00a0' : letter}</span>)}
+  </span></>;
+}
+
 export function Header() {
   const [open, setOpen] = useState(false);
   const menu = useMenu();
@@ -72,7 +82,7 @@ export function Header() {
       <div className="es-header__start">
         <div className="es-store-menu" data-pagosya-store-menu="toggle" />
         <button type="button" className="es-icon-btn" data-store-menu-replaces aria-controls="es-menu" aria-expanded={open} aria-label="Abrir menú" onClick={() => setOpen(true)}><IconMenu /></button>
-        <a className="es-logo" href="index.html">{store.logo ? <img src={store.logo} alt={store.name} /> : store.name}</a>
+        <a className="es-logo" href="index.html"><Wordmark /></a>
         <div className="es-store-menu-links" data-pagosya-store-menu="links" />
       </div>
       {/* Maximize (34 templates): a big search box in the header itself. */}
@@ -194,7 +204,7 @@ function HeaderIcons() {
 }
 
 export default function Shell({ children }: { children: ReactNode }) {
-  return <div className="es" data-es-theme={variant('theme', 'none')} data-es-icons={variant('icons', 'line')} data-es-button={variant('button', 'pill')} data-es-corners={variant('corners', 'soft')} data-es-density={variant('density', 'regular')} data-es-texture={variant('texture', 'none')} data-es-photos={variant('photos', 'natural')} data-es-titles={variant('titles', 'normal')}>
+  return <div className="es" data-es-theme={variant('theme', 'none')} data-es-mood={variant('mood', 'calm')} data-pya-lively={variant('theme', 'none') === 'unico' ? '' : undefined} data-es-icons={variant('icons', 'line')} data-es-button={variant('button', 'pill')} data-es-corners={variant('corners', 'soft')} data-es-density={variant('density', 'regular')} data-es-texture={variant('texture', 'none')} data-es-photos={variant('photos', 'natural')} data-es-titles={variant('titles', 'normal')}>
     <a className="es-skip" href="#contenido">Ir al contenido</a>
     <Header />
     {/* Section library stores: one product card on every page (owner 2026-10-31). */}
