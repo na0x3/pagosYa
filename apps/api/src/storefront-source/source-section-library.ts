@@ -3,12 +3,16 @@
  * catalogue the model reads, its answer schema, and the validation that turns an answer into a safe store-data `layout` — every
  * block's needs are met by the store's real facts, every photo is the store's and shown once, every product exists. */
 
+import { isPlayfulBusiness } from './home-directions';
+
 export type LibraryRole = 'cover' | 'strip' | 'products' | 'story' | 'benefits' | 'proof' | 'promo' | 'info' | 'closing';
 export type LibraryNeeds = { photos?: number; items?: [number, number]; products?: [number, number]; product?: boolean; categories?: number;
   reviews?: boolean; code?: boolean; location?: boolean; services?: boolean; itemPhotos?: number; mood?: 'bold';
   /** 34 templates (2026-10-31): a date the merchant named (countdown), the store's own social account, real products pinned on a
    *  photo, outlets and words the merchant gave (press), a text the section cannot do without. */
-  date?: boolean; social?: boolean; pins?: boolean; press?: boolean; text?: boolean };
+  date?: boolean; social?: boolean; pins?: boolean; press?: boolean; text?: boolean;
+  /** Points on a close-up photo, each with a note (detail-hotspots, lively one-product stores 2026-11-03). */
+  spots?: boolean };
 export type LibrarySection = { id: string; role: LibraryRole; use: string; needs: LibraryNeeds; looks?: string[];
   /** Only inside a template's fixed home (34 templates): never offered when YAPI composes a home freely. */
   templateOnly?: boolean;
@@ -28,6 +32,10 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'strip-badges', role: 'strip', use: 'Insignias redondas con icono de cualidades del producto (items = 3 a 6, 1 a 3 palabras cada una), solo cualidades que el comercio dijo o que están en sus productos.', needs: { items: [3, 6] } },
   { id: 'products-grid', role: 'products', use: 'La grilla principal de productos con buscador, filtros y orden. Obligatoria, una sola vez.', needs: {}, looks: ['grid4', 'grid3'] },
   { id: 'products-tabs', role: 'products', use: 'La grilla principal con pestañas por categoría arriba. En lugar de products-grid cuando hay 2 o más categorías.', needs: { categories: 2 } },
+  // Owner 2026-11-02 (one-product stores): the product's whole detail at the top of the home (the kit's gallery, options, «Agregar»).
+  { id: 'product-hero', role: 'products', use: 'El producto completo arriba de todo: galería grande, precio, opciones y botón Agregar (product = su id). eyebrow = una línea corta de la tienda sobre el producto (envío, garantía). items = hasta 3 etiquetas que flotan sobre la foto (title ≤ 32 letras): solo hechos que el comercio dio (su ciudad de entrega, «Llega en caja», garantía); vacío si no hay. Solo en tiendas de un producto.', needs: { product: true, items: [0, 3] }, templateOnly: true },
+  { id: 'detail-hotspots', role: 'story', use: 'Una foto de cerca del producto (photo: la que muestra un detalle: tela, textura, botones, terminación) con hasta 3 puntos «+». items: title = qué se ve en ese punto (≤ 60 letras), x, y = dónde está, en % del ancho y alto de la foto. title y text de la sección cortos. Sin una foto de detalle, deja la sección vacía.', needs: { photos: 1, items: [1, 3], spots: true }, templateOnly: true },
+  { id: 'chips-marquee', role: 'proof', use: 'Dos filas de frases cortas que se deslizan, cada una con la foto del producto (photo). items: 6 a 10 title de ≤ 48 letras, solo hechos del producto o de la tienda (cómo llega, para qué sirve, colores que hay), nada inventado.', needs: { photos: 1, items: [6, 10] }, templateOnly: true },
   { id: 'products-spotlight', role: 'products', use: 'Un producto destacado con su tarjeta de compra (product = su id) y hasta 3 puntos de por qué es especial.', needs: { product: true, items: [0, 3] } },
   { id: 'products-cards', role: 'products', use: 'De 2 a 4 productos elegidos (products = nombres exactos) en tarjetas de color con botón. «Los más pedidos», «Para regalar».', needs: { products: [2, 4] }, looks: ['soft', 'dashed'] },
   { id: 'products-lookbook', role: 'products', use: 'Una foto grande de ambiente con su titular y botón, y al lado de 2 a 3 productos (products = nombres exactos) para comprar ese look o esa rutina.', needs: { photos: 1, products: [2, 3] } },
@@ -113,7 +121,14 @@ export function libraryAnswerSchema(photoCount: number) {
     properties: { type: { type: 'string', enum: ids }, look: { type: 'string', enum: looks }, band: { type: 'string', enum: ['paper', 'muted', 'accent', 'deep', ''] },
       eyebrow: { type: 'string' }, title: { type: 'string' }, text: { type: 'string' }, cta: { type: 'string' }, link: { type: 'string' }, cta2: { type: 'string' }, link2: { type: 'string' },
       photo, photo2: photo, items: { type: 'array', items: item }, products: { type: 'array', items: { type: 'string' } }, product: { type: 'string' }, code: { type: 'string' }, card: { type: 'string', enum: [...LIBRARY_CARDS, ''] }, endsAt: { type: 'string' } } };
-  return { type: 'object', additionalProperties: false, required: ['blocks'], properties: { blocks: { type: 'array', items: block } } };
+  return { type: 'object', additionalProperties: false, required: ['blocks', 'mood'], properties: { blocks: { type: 'array', items: block }, mood: { type: 'string', enum: ['colourful', 'calm'] } } };
+}
+
+/** Lively one-product stores (spec 2026-11-03): the mood YAPI chose for the product; a playful business (sweets, toys, parties) is
+ *  always colourful; anything else not exactly «colourful» is calm. */
+export function libraryMood(answer: { mood?: unknown } | null | undefined, facts: LibraryFacts): 'colourful' | 'calm' {
+  if (isPlayfulBusiness([facts.what, facts.request, ...facts.products.map(product => `${product.name} ${product.about ?? ''}`)].join('\n'))) return 'colourful';
+  return answer?.mood === 'colourful' ? 'colourful' : 'calm';
 }
 
 /** 34 templates: what changes when the store already wears a template — the answer only fills the template's own sections. */
@@ -125,7 +140,9 @@ las fotos de la tienda para cada sección y sus items (una foto puede repetirse 
 sección ni en dos secciones seguidas), y deja vacío (o sin items) lo que la tienda no puede respaldar: el código la quita.
 look, band y card los pone la plantilla: déjalos vacíos. Escribe TODAS las secciones completas hasta la última (preguntas con sus
 respuestas, puntos, columnas, títulos de categorías y productos exactos para los puntos de shop-look): una sección que mandas vacía
-desaparece. Si te faltan fotos, deja photo en -1: el código pone una foto de la tienda.`;
+desaparece. Si te faltan fotos, deja photo en -1: el código pone una foto de la tienda.
+- mood: «colourful» para productos alegres, de casa o de regalo que piden juego (un sofá nube, una bebida, juguetes, dulces); «calm» para productos serios o técnicos (herramientas, cuidado de la piel, salud, finanzas). Fuera de la plantilla Único no cambia nada.
+- Etiquetas (product-hero items), frases (chips-marquee) y notas (detail-hotspots): solo hechos que están en los datos (lo que dijo el comercio, la descripción del producto, sus notas de entrega). Ningún plazo, número, premio o calificación que no esté escrito. Si no hay hechos, déjalos vacíos.`;
 
 export const LIBRARY_PROMPT = `Eres el director de arte de una tienda online pagosYa. Armas su portada con secciones ya diseñadas (como un tema de Shopify):
 eliges cuáles, su orden y escribes sus textos. No diseñas nada: el diseño ya está hecho.
@@ -187,6 +204,8 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   const categoryByName = new Map(facts.categories.map(name => [fold(name), name]));
   // Owner 2026-10-31 (option 2): in a template a photo may show twice — never twice in one section, never in two neighbouring
   // sections; a freely composed home shows each photo once.
+  // Lively parts may also repeat the store's notes and its products' own descriptions (spec 2026-11-03).
+  const backedWords = fold(`${merchantWords} ${facts.notes ?? ''} ${facts.products.map(product => product.about ?? '').join(' ')}`);
   const spots = new Map<number, number[]>();
   let here = 0;
   const takePhoto = (index: unknown): string | undefined => {
@@ -280,14 +299,17 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
         // Rings: a percentage the merchant wrote («94%»). Boxes (Maximize): any figure the merchant wrote («500+», «4.8», «30 días»).
         const n = String(item.value ?? '').replace(/[^\d]/g, '');
         if (raw.look === 'boxes') { const figure = String(item.value ?? '').trim().slice(0, 12); const digits = figure.match(/\d+(?:[.,]\d+)?/)?.[0]; if (digits && merchantWords.includes(digits)) out.value = figure; }
+    const liveCap = section.id === 'product-hero' ? 32 : section.id === 'chips-marquee' ? 48 : section.id === 'detail-hotspots' ? 60 : 0;
         else if (n && new RegExp(`\\b${n}\\s*(%|por ciento)`).test(merchantWords)) out.value = n;
       }
       if (itemPhoto) { const photo = photoOf(item.photo, needs.categories ? String(item.title ?? '') : undefined); if (photo) out.photo = photo; }
       if (itemPhoto || section.id === 'promo-trio') { const target = link(item.link); if (target) out.link = target; }
-      if (needs.pins && Number(item.x) >= 0 && Number(item.y) >= 0) { out.x = Math.round(Math.min(94, Math.max(6, Number(item.x)))); out.y = Math.round(Math.min(94, Math.max(6, Number(item.y)))); }
+      if ((needs.pins || needs.spots) && Number(item.x) >= 0 && Number(item.y) >= 0) { out.x = Math.round(Math.min(94, Math.max(6, Number(item.x)))); out.y = Math.round(Math.min(94, Math.max(6, Number(item.y)))); }
       return out;
     }).filter(item => item.title);
     // Pins name real products; press is only the outlets and words the merchant wrote.
+      // Lively one-product parts (spec 2026-11-03): an item over its cap goes whole, never cut mid-word (an empty title is dropped below).
+      if (liveCap && String(item.title ?? '').replace(/\s+/g, ' ').trim().length > liveCap) out.title = '';
     // Pins name real products; items without a pin are the points beside the photo (Shrine's look side).
     if (needs.pins) items = items.filter(item => item.x === undefined || productByName.has(fold(item.title))).map(item => item.x === undefined ? item : ({ ...item, title: productByName.get(fold(item.title))!.name }));
     if (section.id === 'stats-rings') items = items.filter(item => item.value);
@@ -306,6 +328,9 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       if (names.length >= needs.products[0]) block.products = names;
     }
     if (needs.product || raw.template?.product) { const found = productById.get(String(raw.product ?? '')) ?? productByName.get(fold(String(raw.product ?? ''))); if (found) block.product = found.id; }
+    // Every number in a pill, chip or note is one the store wrote (its words, notes or the product's own description); a hotspot needs its point.
+    if (liveCap) items = items.filter(entry => (entry.title.match(/\d+/g) ?? []).every(number => backedWords.includes(number)));
+    if (needs.spots) items = items.filter(entry => entry.x !== undefined).map(({ title, x, y }) => ({ title, x: x!, y: y! }));
     if (needs.code || section.id === 'cover-half') { const code = facts.codes.find(entry => fold(entry.code) === fold(String(raw.code ?? ''))); if (code) block.code = code.code; }
     if (section.id === 'visit-store' && facts.location && !block.title) block.title = facts.location.name;
     if (needs.social && facts.social) { block.handle = facts.social.handle; block.social = facts.social.url; }
