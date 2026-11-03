@@ -22,6 +22,7 @@ export type LibrarySection = { id: string; role: LibraryRole; use: string; needs
 /** What each section is for, in the words the model reads (Spanish, like every YAPI prompt). */
 export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'cover-split', role: 'cover', use: 'Portada: titular grande y botones a un lado, una foto enmarcada al otro; hasta 3 puntos breves con icono. La más versátil.', needs: { photos: 1, items: [0, 3] }, looks: ['frame', 'arch', 'circle'] },
+  { id: 'hero-split', role: 'cover', use: 'Portada de tienda de un producto: la mejor foto de ambiente a un lado, al otro eyebrow (ciudad o categoría), titular grande, una o dos líneas y dos botones (cta «Ver el producto», cta2 «Ver colores»). items = hasta 3 etiquetas cortas sobre la foto (≤ 32 letras, solo hechos dados).', needs: { photos: 1, items: [0, 3] }, templateOnly: true },
   { id: 'cover-full', role: 'cover', use: 'Portada: la foto ocupa toda la pantalla y el texto va abajo a la izquierda. Solo con una foto ambiental amplia (escena, persona, lugar), nunca un producto sobre fondo blanco.', needs: { photos: 1 } },
   { id: 'cover-poster', role: 'cover', use: 'Portada afiche: una palabra enorme (el nombre o una palabra de 1 a 8 letras) a todo el ancho y la foto debajo. Solo marcas atrevidas o divertidas.', needs: { photos: 1, mood: 'bold' } },
   { id: 'cover-half', role: 'cover', use: 'Portada mitad foto, mitad color con el titular centrado; si hay un código de descuento activo puede mostrarlo. Buena para una oferta o un lanzamiento.', needs: { photos: 1 } },
@@ -271,7 +272,8 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     for (const field of ['eyebrow', 'title', 'text', 'cta', 'cta2'] as const) { const value = clip(raw[field], TEXT_CAPS[field]); if (value) block[field] = value; }
     const first = link(raw.link), second = link(raw.link2);
     if (block.cta) block.link = first ?? 'products'; else delete block.cta;
-    if (block.cta2 && second) block.link2 = second; else delete block.cta2;
+    // The split hero's second button always scrolls to its colour cards (the kit hides it when they do not draw).
+    if (block.cta2 && second) block.link2 = second; else if (section.id !== 'hero-split') delete block.cta2;
     // Photos: the section's own, then its items'; a section that needs more photos than it got is dropped (its photos freed).
     const before = new Set(used);
     here = blocks.length;
@@ -282,7 +284,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       const photo = photoOf(raw.photo); if (photo) block.photo = photo;
     }
     if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline' || raw.template?.photo2) { const photo2 = photoOf(raw.photo2); if (photo2) block.photo2 = photo2; }
-    const liveCap = section.id === 'product-hero' ? 32 : section.id === 'chips-marquee' ? 48 : section.id === 'detail-hotspots' ? 60 : 0;
+    const liveCap = section.id === 'product-hero' || section.id === 'hero-split' ? 32 : section.id === 'chips-marquee' ? 48 : section.id === 'detail-hotspots' ? 60 : 0;
     // Items: capped words, a known icon, an item photo where the section shows one, a value only in the comparison.
     const [minItems, maxItems] = needs.items ?? [0, 0];
     const itemPhoto = Boolean(needs.itemPhotos) || section.id === 'cover-stage' || (section.id === 'promo-trio' && !single) || Boolean(raw.template?.items?.some(item => item.photo));

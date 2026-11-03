@@ -243,6 +243,28 @@ function CoverFull({ block, index }: { block: LibraryBlock; index: number }) {
   </Bleed>;
 }
 
+/** Premium landing (spec 2026-11-03): nubecorp's opening with Expanse's finish — the photo on one side, the words in their own panel
+ *  (never over the photo), one alignment; pills float on the photo. «Ver colores» hides when the colour cards do not draw. */
+function HeroSplit({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.photo || !block.title) return null;
+  const pills = (block.items ?? []).map(item => item.title).filter(Boolean).slice(0, 3);
+  return <section id="inicio" className="lb lb-hero-split" data-lb="hero-split" aria-labelledby={`lb-${index}-title`}>
+    <div className="lb-hero-split__media">
+      <Photo src={block.photo} className="lb-hero-split__photo" eager />
+      {pills.length ? <ul className="lb-hero-split__pills" aria-label="Destacados">{pills.map((pill, at) => <li key={at} style={{ ['--i' as string]: at } as CSSProperties}><span aria-hidden="true" />{pill}</li>)}</ul> : null}
+    </div>
+    <div className="lb-hero-split__panel">
+      {block.eyebrow ? <p className="es-eyebrow lb-hero-split__eyebrow"><span aria-hidden="true" />{block.eyebrow}</p> : null}
+      <h1 id={`lb-${index}-title`} className="es-display lb-title"><Marked text={block.title} /></h1>
+      {block.text ? <p className="lb-lede">{block.text}</p> : null}
+      <div className="es-actions lb-actions">
+        <a className="es-btn es-btn--accent lb-btn" href="#comprar">{block.cta || 'Ver el producto'}</a>
+        {block.cta2 ? <a className="es-btn es-btn--ghost lb-btn" href="#colores" data-needs-colour-cards="">{block.cta2}</a> : null}
+      </div>
+    </div>
+  </section>;
+}
+
 function CoverPoster({ block, index }: { block: LibraryBlock; index: number }) {
   return <Bleed block={block} index={index} id="inicio" className="lb-cover">
     <div className="lb-cover-poster__inner">
@@ -378,7 +400,7 @@ function ProductHero({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.product) return null;
   // Lively one-product stores (spec 2026-11-03): the items are short facts the kit floats over the product photo.
   const pills = (block.items ?? []).map(item => item.title).filter(Boolean).slice(0, 3);
-  return <Band block={block} index={index}>
+  return <Band block={block} index={index} id="comprar">
     {block.eyebrow ? <p className="es-eyebrow lb-eyebrow lb-product-hero__note">{block.eyebrow}</p> : null}
     {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden">{block.title}</h2> : null}
     <div className="lb-product-hero" data-pagosya-product-page="" data-product-id={block.product} data-product-pills={pills.length ? JSON.stringify(pills) : undefined} />
@@ -1332,7 +1354,7 @@ function CheckerRows({ block, index }: { block: LibraryBlock; index: number }) {
 }
 
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
-  'cover-split': CoverSplit, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
+  'cover-split': CoverSplit, 'hero-split': HeroSplit, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
   'detail-hotspots': DetailHotspots, 'chips-marquee': ChipsMarquee,
   'products-grid': ProductsGrid, 'products-tabs': ProductsGrid, 'products-spotlight': ProductsSpotlight, 'product-hero': ProductHero, 'products-cards': ProductsCards, 'products-lookbook': ProductsLookbook, 'categories-tiles': CategoriesTiles,

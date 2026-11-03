@@ -43,3 +43,14 @@ describe('backed numbers are whole numbers (review 2026-11-03)', () => {
     expect(chips.items?.[0].title).toBe('7 colores');
   });
 });
+
+describe('hero-split (spec 2026-11-03 premium landing)', () => {
+  it('keeps a titled hero with its photo and up to three backed pills', () => {
+    const [hero] = fill(raw('hero-split', { title: 'El sofá que llega en una caja', text: 'Lo abres y toma su forma.', eyebrow: 'Santa Cruz', cta: 'Ver el producto', cta2: 'Ver colores', photo: 0, items: [item('Llega en caja'), item('Entrega 24–48 h')] }));
+    expect(hero).toMatchObject({ type: 'hero-split', title: 'El sofá que llega en una caja', photo: '/v1/uploads/a.jpg', cta2: 'Ver colores' });
+    expect(hero.items?.map(entry => entry.title)).toEqual(['Llega en caja']);
+  });
+  it('drops a hero without a title', () => {
+    expect(fill(raw('hero-split', { photo: 0 }))).toEqual([]);
+  });
+});
