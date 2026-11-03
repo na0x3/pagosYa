@@ -39,3 +39,11 @@ describe('font pairings', () => {
     expect(sourceFontPairingsFor('luxury').every(pairing => pairing.personalities.includes('luxury'))).toBe(true);
   });
 });
+
+describe('chunky title fonts (spec 2026-11-03)', () => {
+  it('ships Baloo 2 for the bubbly titles', () => {
+    const font = SOURCE_FONT_CATALOG.find(entry => entry.id === 'baloo-2');
+    expect(font).toMatchObject({ family: 'Baloo 2', role: 'display' });
+    expect(require('node:fs').statSync(require('@pagosya/storefront-kit').kitPath('fonts', 'baloo-2.ttf')).size).toBeLessThan(600_000);
+  });
+});

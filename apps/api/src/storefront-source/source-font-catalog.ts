@@ -57,6 +57,7 @@ const FONTS = [
   { id: 'titan-one', family: 'Titan One', role: 'display', personality: ['chunky', 'playful', 'rounded'], weights: '400' },
   { id: 'bowlby-one', family: 'Bowlby One', role: 'display', personality: ['chunky', 'heavy', 'poster'], weights: '400' },
   { id: 'fredoka', family: 'Fredoka', role: 'both', personality: ['rounded', 'playful', 'friendly'], weights: '300–700' },
+  { id: 'baloo-2', family: 'Baloo 2', role: 'display', personality: ['rounded', 'bubbly', 'playful'], weights: '400–800' },
   { id: 'monoton', family: 'Monoton', role: 'display', personality: ['neon', 'retro', 'inline'], weights: '400' },
   { id: 'righteous', family: 'Righteous', role: 'display', personality: ['neon', 'retro', 'deco'], weights: '400' },
   { id: 'abril-fatface', family: 'Abril Fatface', role: 'display', personality: ['fashion', 'didone', 'heavy'], weights: '400' },

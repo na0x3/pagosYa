@@ -753,5 +753,18 @@
     "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/crimsonpro/OFL.txt",
     "gitBlob": "6a7d97cd277b519a8bd3d38fcc56b5a133ac8354",
     "sha256": "1820869bd5baa1c2d88fa87c89eea532cf9442d841008acab720654b7f82823d"
+  },
+  {
+    "file": "baloo-2.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/baloo2/Baloo2%5Bwght%5D.ttf",
+    "gitBlob": "bc1b9f1191c0d6d23cb2ce0af66aba82ddbf8d6c",
+    "sha256": "e23a6da0a65b54137755ff1f69a51175747a1180ceefa691722b2609ada1ce54",
+    "subset": "pyftsubset --unicodes=U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122 --layout-features=* (Latin only; upstream also carries Devanagari)"
+  },
+  {
+    "file": "baloo-2-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/baloo2/OFL.txt",
+    "gitBlob": "72adb492d4f0ede2a9dbdefed607f33ad3a6fc68",
+    "sha256": "ad09b05dc8bc678c9daf7c4c5f7ef1f55e5726127f4330b2e98e40b9dffcb860"
   }
 ]
