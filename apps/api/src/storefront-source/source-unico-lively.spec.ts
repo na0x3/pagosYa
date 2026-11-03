@@ -147,4 +147,14 @@ describe('Único premium landing (spec 2026-11-03)', () => {
     expect(seen.buy).toBe(false);
     expect(seen.links).not.toContain('index.html#comprar');
   });
+  it('keeps «Comprar» on one line in the phone header (live check 2026-11-03: «COMPRA / R»)', async () => {
+    // A store name as long as the live one squeezes the header.
+    const seen = await onUnico({ width: 390, patch: data => data.split('"Tu marca"').join('"Nube Sofá Test"') }, page => page.evaluate(() => {
+      const buy = document.querySelector('header .es-header__buy') as HTMLElement;
+      if (!document.querySelector('.es-logo')?.textContent?.includes('Nube Sofá Test')) return { lines: -1, scroll: 0 };
+      const range = document.createRange(); range.selectNodeContents(buy);
+      return { lines: new Set(Array.from(range.getClientRects()).map(rect => Math.round(rect.top))).size, scroll: document.documentElement.scrollWidth };
+    }));
+    expect(seen).toEqual({ lines: 1, scroll: 390 });
+  });
 });

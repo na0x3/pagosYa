@@ -170,7 +170,9 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
    phones keep the logo, the cart and «Comprar» (the menu sits in the drawer). */
 .es-header[data-es-header="shop"]{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--es-paper) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid color-mix(in srgb,var(--es-ink) 10%,transparent)}
 .es-header[data-es-header="shop"] .es-header__end{align-items:center}
-.es-header[data-es-header="shop"] .es-header__buy{min-height:40px;padding:0 20px;border-radius:999px;background:var(--es-ink);border-color:var(--es-ink);color:var(--es-paper);display:inline-flex;align-items:center;font-weight:700;margin-left:6px}
+.es-header[data-es-header="shop"] .es-header__buy{min-height:40px;padding:0 20px;border-radius:999px;background:var(--es-ink);border-color:var(--es-ink);color:var(--es-paper);display:inline-flex;align-items:center;font-weight:700;margin-left:6px;white-space:nowrap;flex:none}
+/* A long store name gives way on a phone; «Comprar» never wraps (live check 2026-11-03: «COMPRA / R»). */
+@media (max-width:760px){.es-header[data-es-header="shop"] .es-header__start{min-width:0}.es-header[data-es-header="shop"] .es-logo{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.es-header[data-es-header="shop"] .es-header__buy{padding:0 14px;letter-spacing:.04em}}
 .es-header[data-es-header="shop"] .es-header__links a[hidden]{display:none}
 /* On laptops the short menu shows even where the kit's store menu (☰ panel) replaces header links; the panel still lists them. */
 @media (min-width:900px){.es-header[data-es-header="shop"] .es-header__links{display:flex!important;margin:0 auto 0 40px;gap:28px;font-size:15px;font-weight:500;letter-spacing:0;text-transform:none}.es-header[data-es-header="shop"] .es-header__start>.es-icon-btn{display:none}}
