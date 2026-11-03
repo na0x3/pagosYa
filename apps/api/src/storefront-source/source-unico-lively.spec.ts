@@ -94,4 +94,17 @@ describe('Único premium landing (spec 2026-11-03)', () => {
     // Spec §2: a short menu of the home's own parts (Colores only where the page has colour cards).
     expect(seen).toEqual({ header: true, buy: 'index.html#comprar', cart: true, search: true, links: ['Producto index.html#comprar', 'Preguntas index.html#preguntas'] });
   });
+  it('Único has one section rhythm and one button height', async () => {
+    // The split hero brings the page's buttons (Task 6 makes it part of the layout).
+    const hero = '{"type":"hero-split","title":"Prueba","cta":"Ver el producto","cta2":"Ver colores","photo":"data:image/gif;base64,R0lGODlhAQABAAAAACw="},';
+    const seen = await onUnico({ width: 1280, patch: data => data.includes('"type":"hero-split"') ? data : data.replace('{"type":"product-hero"', `${hero}{"type":"product-hero"`) }, page => page.evaluate(() => {
+      const bands = Array.from(document.querySelectorAll('main section.es-section:not([hidden])')) as HTMLElement[];
+      const pads = Array.from(new Set(bands.map(el => Math.round(parseFloat(getComputedStyle(el).paddingTop)))));
+      const buttons = Array.from(new Set(Array.from(document.querySelectorAll('main a.es-btn')).map(el => Math.round(el.getBoundingClientRect().height)).filter(Boolean)));
+      return { pads, buttons };
+    }));
+    expect(seen.pads.length).toBe(1);
+    expect(seen.pads[0]).toBeGreaterThanOrEqual(96);
+    expect(seen.buttons).toEqual([48]);
+  });
 });

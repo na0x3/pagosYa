@@ -3052,6 +3052,17 @@ main[data-lb-home]{overflow-x:clip}
 }
 @keyframes es-letter-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 @keyframes lb-drift{from{transform:translate(0,0)}to{transform:translate(6vmax,4vmax)}}
+/* Premium landing (spec 2026-11-03), Expanse's finish: one type scale, one section rhythm on the 8 px grid, one content width,
+   one photo radius and one button height. Bleed sections are full width by design and are not section.es-section. */
+[data-es-theme="unico"] main section.es-section{padding-block:clamp(56px,8vw,120px)}
+[data-es-theme="unico"] main section.es-section>*{width:min(1200px,calc(100% - 32px));margin-inline:auto}
+[data-es-theme="unico"] :is(.es-display,h1.lb-title){font-size:clamp(36px,5.2vw,72px);line-height:1.02;letter-spacing:-.02em;text-transform:none}
+[data-es-theme="unico"] :is(.es-h2,.lb-head h2){font-size:clamp(28px,3.4vw,48px);line-height:1.06;letter-spacing:-.015em}
+[data-es-theme="unico"] main .lb :is(.lb-lede,.lb-head p:not(.es-eyebrow)){font-size:clamp(16px,1.2vw,17px);max-width:62ch}
+[data-es-theme="unico"] main a.es-btn{box-sizing:border-box;min-height:48px;height:48px;padding:0 24px;border-radius:999px;display:inline-flex;align-items:center}
+@media (max-width:760px){[data-es-theme="unico"] main a.es-btn{min-height:52px;height:52px}}
+[data-es-theme="unico"]:not([data-es-mood="colourful"]) [data-es-band]{background:color-mix(in srgb,var(--es-accent) 8%,var(--es-paper))}
+[data-es-theme="unico"] main [data-lb="closing-photo"] img{aspect-ratio:21/9;object-fit:cover;border-radius:22px}
 /* /theme:unico */
 
 /* theme:calma */
