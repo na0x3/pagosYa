@@ -19,3 +19,17 @@ describe('title colours in the theme block (spec 2026-11-03 chunky colour titles
     expect(masterLook(settings, { titles: ['red', '#ABCDEF', '#123456', '#000000', '#ffffff', '#222222'] }).titles).toEqual(['#abcdef', '#123456', '#000000', '#ffffff']);
   });
 });
+
+describe('a title-style change rewrites the theme (spec 2026-11-03 §6)', () => {
+  it('refill with variants.titles writes the new style\'s font face', () => {
+    const { MASTER_THEME_START, MASTER_THEME_END, masterCopy } = require('./source-master');
+    const { refillMasterFiles, templateStoreDataFile } = require('./source-templates');
+    const manifest = { id: 'esencial', name: 'Esencial', category: 'general', description: 'x', tags: [], sitePurpose: 'shop', order: 0, hidden: true, master: settings, photos: [] };
+    const files = [templateStoreDataFile({ name: 'Nube' }, { hero: '' }, { copy: masterCopy(settings), look: masterLook(settings), variants: { theme: 'unico', titles: 'redonda', sections: [] } }),
+      { path: 'styles/globals.css', content: `${MASTER_THEME_START}\n:root{}\n${MASTER_THEME_END}\nbody{margin:0}` }];
+    const out = refillMasterFiles(files, manifest, { variants: { titles: 'burbuja' } });
+    const css = out.find((file: { path: string }) => file.path === 'styles/globals.css')!.content as string;
+    expect(css).toContain('url(assets/baloo-2.ttf)');
+    expect(css).toContain("--es-title-font:'Baloo 2',var(--es-heading)");
+  });
+});
