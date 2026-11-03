@@ -101,3 +101,16 @@ describe('buy bar', () => {
     } finally { await page.close(); }
   });
 });
+
+describe('hero pills', () => {
+  it('draws up to three pills over the product photo from data-product-pills', async () => {
+    const page = await open({ body: PAGE(` data-product-pills='["Entrega en Santa Cruz","Llega en caja","Pago seguro","Cuarta de más"]'`) });
+    try {
+      expect(await page.locator('.product-detail__gallery .product-detail__pills li').allTextContents()).toEqual(['Entrega en Santa Cruz', 'Llega en caja', 'Pago seguro']);
+    } finally { await page.close(); }
+  });
+  it('draws none with a broken attribute', async () => {
+    const page = await open({ body: PAGE(` data-product-pills='not json'`) });
+    try { expect(await page.locator('.product-detail__pills').count()).toBe(0); } finally { await page.close(); }
+  });
+});

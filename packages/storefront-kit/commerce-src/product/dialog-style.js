@@ -338,6 +338,13 @@
     :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky [data-product-sticky-choice]{display:block;color:var(--pd-muted)}
     [data-pagosya-product][data-style] .product-detail__sticky img{display:none}
     @media (prefers-reduced-motion:no-preference){:root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){animation:pya-bar-in .35s cubic-bezier(.2,.9,.2,1) both}}
+    /* Lively one-product stores (spec 2026-11-03): short facts floating over the product photo, each with a pinging dot. */
+    .product-detail__pills{position:absolute;left:14px;top:14px;z-index:2;display:grid;gap:8px;margin:0;padding:0;list-style:none;pointer-events:none}
+    .product-detail__pills li{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:7px 12px;border-radius:999px;background:color-mix(in srgb,var(--pd-paper,#fff) 92%,transparent);color:var(--pd-ink,#111);font-size:12.5px;font-weight:600;box-shadow:0 8px 22px -12px #0000004d;backdrop-filter:blur(8px)}
+    .product-detail__pills li span{width:7px;height:7px;border-radius:50%;background:#2fbf71}
+    @media (max-width:640px){.product-detail__pills{top:auto;bottom:14px}}
+    @media (prefers-reduced-motion:no-preference){.product-detail__pills li{animation:pya-float 5s ease-in-out infinite;animation-delay:calc(var(--i) * -1.4s)}.product-detail__pills li span{animation:pya-ping 2s ease-out infinite}}
+    @keyframes pya-ping{0%{box-shadow:0 0 0 0 #2fbf7180}100%{box-shadow:0 0 0 8px #2fbf7100}}
     @keyframes pya-bar-in{from{opacity:0;transform:translate(-50%,24px)}to{opacity:1;transform:translateX(-50%)}}
     /* Approved highlights: one small looping motion each, paused off screen and stopped for reduced motion. */
     [data-pagosya-product][data-style] .product-detail__highlights{display:grid;gap:12px 18px;margin:0 0 20px;padding:0;list-style:none}
