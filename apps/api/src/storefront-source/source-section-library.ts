@@ -32,7 +32,6 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'strip-badges', role: 'strip', use: 'Insignias redondas con icono de cualidades del producto (items = 3 a 6, 1 a 3 palabras cada una), solo cualidades que el comercio dijo o que están en sus productos.', needs: { items: [3, 6] } },
   { id: 'products-grid', role: 'products', use: 'La grilla principal de productos con buscador, filtros y orden. Obligatoria, una sola vez.', needs: {}, looks: ['grid4', 'grid3'] },
   { id: 'products-tabs', role: 'products', use: 'La grilla principal con pestañas por categoría arriba. En lugar de products-grid cuando hay 2 o más categorías.', needs: { categories: 2 } },
-  // Owner 2026-11-02 (one-product stores): the product's whole detail at the top of the home (the kit's gallery, options, «Agregar»).
   { id: 'product-hero', role: 'products', use: 'El producto completo arriba de todo: galería grande, precio, opciones y botón Agregar (product = su id). eyebrow = una línea corta de la tienda sobre el producto (envío, garantía). items = hasta 3 etiquetas que flotan sobre la foto (title ≤ 32 letras): solo hechos que el comercio dio (su ciudad de entrega, «Llega en caja», garantía); vacío si no hay. Solo en tiendas de un producto.', needs: { product: true, items: [0, 3] }, templateOnly: true },
   { id: 'detail-hotspots', role: 'story', use: 'Una foto de cerca del producto (photo: la que muestra un detalle: tela, textura, botones, terminación) con hasta 3 puntos «+». items: title = qué se ve en ese punto (≤ 60 letras), x, y = dónde está, en % del ancho y alto de la foto. title y text de la sección cortos. Sin una foto de detalle, deja la sección vacía.', needs: { photos: 1, items: [1, 3], spots: true }, templateOnly: true },
   { id: 'chips-marquee', role: 'proof', use: 'Dos filas de frases cortas que se deslizan, cada una con la foto del producto (photo). items: 6 a 10 title de ≤ 48 letras, solo hechos del producto o de la tienda (cómo llega, para qué sirve, colores que hay), nada inventado.', needs: { photos: 1, items: [6, 10] }, templateOnly: true },
@@ -198,14 +197,14 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   const fixedMode = Boolean(options.fixed?.length);
   const now = options.now ?? Date.now();
   const merchantWords = fold(`${facts.what} ${facts.story} ${facts.request}`);
+  // Lively parts may also repeat the store's notes and its products' own descriptions (spec 2026-11-03).
+  const backedWords = fold(`${merchantWords} ${facts.notes ?? ''} ${facts.products.map(product => product.about ?? '').join(' ')}`);
   const used = new Set<number>();
   const productByName = new Map(facts.products.map(product => [fold(product.name), product]));
   const productById = new Map(facts.products.map(product => [product.id, product]));
   const categoryByName = new Map(facts.categories.map(name => [fold(name), name]));
   // Owner 2026-10-31 (option 2): in a template a photo may show twice — never twice in one section, never in two neighbouring
   // sections; a freely composed home shows each photo once.
-  // Lively parts may also repeat the store's notes and its products' own descriptions (spec 2026-11-03).
-  const backedWords = fold(`${merchantWords} ${facts.notes ?? ''} ${facts.products.map(product => product.about ?? '').join(' ')}`);
   const spots = new Map<number, number[]>();
   let here = 0;
   const takePhoto = (index: unknown): string | undefined => {
@@ -283,6 +282,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       const photo = photoOf(raw.photo); if (photo) block.photo = photo;
     }
     if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline' || raw.template?.photo2) { const photo2 = photoOf(raw.photo2); if (photo2) block.photo2 = photo2; }
+    const liveCap = section.id === 'product-hero' ? 32 : section.id === 'chips-marquee' ? 48 : section.id === 'detail-hotspots' ? 60 : 0;
     // Items: capped words, a known icon, an item photo where the section shows one, a value only in the comparison.
     const [minItems, maxItems] = needs.items ?? [0, 0];
     const itemPhoto = Boolean(needs.itemPhotos) || section.id === 'cover-stage' || (section.id === 'promo-trio' && !single) || Boolean(raw.template?.items?.some(item => item.photo));
@@ -291,6 +291,8 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     // A template's small category tiles (Maximize) show up to eight.
     let items: LayoutItem[] = rawItems.slice(0, raw.look === 'small' || raw.look === 'circles' ? 8 : Math.max(maxItems, needs.categories ? 4 : 0)).map(item => {
       const out: LayoutItem = { title: clip(item.title, TEXT_CAPS.itemTitle) };
+      // Lively one-product parts (spec 2026-11-03): an item over its cap goes whole, never cut mid-word (an empty title is dropped below).
+      if (liveCap && String(item.title ?? '').replace(/\s+/g, ' ').trim().length > liveCap) out.title = '';
       const text = clip(item.text, TEXT_CAPS.itemText); if (text) out.text = text;
       if (item.icon && (LIBRARY_ICON_NAMES as readonly string[]).includes(item.icon)) out.icon = item.icon;
       if (section.id === 'compare-table') out.value = item.value === 'yes' ? 'yes' : 'no';
@@ -299,7 +301,6 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
         // Rings: a percentage the merchant wrote («94%»). Boxes (Maximize): any figure the merchant wrote («500+», «4.8», «30 días»).
         const n = String(item.value ?? '').replace(/[^\d]/g, '');
         if (raw.look === 'boxes') { const figure = String(item.value ?? '').trim().slice(0, 12); const digits = figure.match(/\d+(?:[.,]\d+)?/)?.[0]; if (digits && merchantWords.includes(digits)) out.value = figure; }
-    const liveCap = section.id === 'product-hero' ? 32 : section.id === 'chips-marquee' ? 48 : section.id === 'detail-hotspots' ? 60 : 0;
         else if (n && new RegExp(`\\b${n}\\s*(%|por ciento)`).test(merchantWords)) out.value = n;
       }
       if (itemPhoto) { const photo = photoOf(item.photo, needs.categories ? String(item.title ?? '') : undefined); if (photo) out.photo = photo; }
@@ -308,10 +309,11 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       return out;
     }).filter(item => item.title);
     // Pins name real products; press is only the outlets and words the merchant wrote.
-      // Lively one-product parts (spec 2026-11-03): an item over its cap goes whole, never cut mid-word (an empty title is dropped below).
-      if (liveCap && String(item.title ?? '').replace(/\s+/g, ' ').trim().length > liveCap) out.title = '';
     // Pins name real products; items without a pin are the points beside the photo (Shrine's look side).
     if (needs.pins) items = items.filter(item => item.x === undefined || productByName.has(fold(item.title))).map(item => item.x === undefined ? item : ({ ...item, title: productByName.get(fold(item.title))!.name }));
+    // Every number in a pill, chip or note is one the store wrote (its words, notes or the product's own description); a hotspot needs its point.
+    if (liveCap) items = items.filter(entry => (entry.title.match(/\d+/g) ?? []).every(number => backedWords.includes(number)));
+    if (needs.spots) items = items.filter(entry => entry.x !== undefined).map(({ title, x, y }) => ({ title, x: x!, y: y! }));
     if (section.id === 'stats-rings') items = items.filter(item => item.value);
     // A marquee of outlet names (Symmetry) needs only the names; quotes must be the merchant's own words too.
     if (needs.press) items = items.filter(item => merchantWords.includes(fold(item.title)) && ((raw.look === 'marquee' || raw.look === 'row') || (Boolean(item.text) && merchantWords.includes(fold(item.text!).replace(/[«»"“”.]/g, '').trim()))));
@@ -328,9 +330,6 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       if (names.length >= needs.products[0]) block.products = names;
     }
     if (needs.product || raw.template?.product) { const found = productById.get(String(raw.product ?? '')) ?? productByName.get(fold(String(raw.product ?? ''))); if (found) block.product = found.id; }
-    // Every number in a pill, chip or note is one the store wrote (its words, notes or the product's own description); a hotspot needs its point.
-    if (liveCap) items = items.filter(entry => (entry.title.match(/\d+/g) ?? []).every(number => backedWords.includes(number)));
-    if (needs.spots) items = items.filter(entry => entry.x !== undefined).map(({ title, x, y }) => ({ title, x: x!, y: y! }));
     if (needs.code || section.id === 'cover-half') { const code = facts.codes.find(entry => fold(entry.code) === fold(String(raw.code ?? ''))); if (code) block.code = code.code; }
     if (section.id === 'visit-store' && facts.location && !block.title) block.title = facts.location.name;
     if (needs.social && facts.social) { block.handle = facts.social.handle; block.social = facts.social.url; }
