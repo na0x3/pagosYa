@@ -149,3 +149,14 @@ describe('pills never cover the badge or the photo dots (review 2026-11-03)', ()
     } finally { await page.close(); }
   });
 });
+
+describe('buy bar footer (live check 2026-11-03)', () => {
+  it('watches the page footer, not a footer inside a fixed card', async () => {
+    const card = '<aside style="position:fixed;left:0;top:0"><footer>tarjeta</footer></aside>';
+    const page = await open({ body: card + PAGE() });
+    try {
+      await page.evaluate(() => window.scrollTo(0, 1200));
+      await page.waitForSelector('[data-product-sticky]:not([hidden])', { timeout: 5000 });
+    } finally { await page.close(); }
+  });
+});

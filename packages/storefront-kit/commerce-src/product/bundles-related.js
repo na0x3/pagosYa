@@ -86,7 +86,11 @@
     stickyObserver.observe(buy);
     // Lively stores: the bar steps aside once the footer is on screen.
     footerObserver?.disconnect(); footerSeen = false;
-    const footer = document.querySelector('footer');
+    // The page's own footer (Esencial's, else the last one outside a fixed card or panel), never a footer inside an overlay.
+    const footer = document.querySelector('.es-footer') || [...document.querySelectorAll('footer')].reverse().find(el => {
+      for (let box = el; box; box = box.parentElement) if (getComputedStyle(box).position === 'fixed') return false;
+      return true;
+    });
     if (footer) { footerObserver = new IntersectionObserver(entries => { footerSeen = entries[entries.length - 1].isIntersecting; updateStickyBar(); }); footerObserver.observe(footer); }
   }
   function optionPrices(groups) {
