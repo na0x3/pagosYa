@@ -162,3 +162,17 @@ describe('Único premium landing (spec 2026-11-03)', () => {
     expect(colour).toBe('rgb(255, 255, 255)');
   });
 });
+
+describe('chunky colour titles (spec 2026-11-03)', () => {
+  const burbuja = (data: string) => data.includes('"titles":') ? data.replace(/"titles":"[a-z]+"/, '"titles":"burbuja"') : data.replace('"theme":"unico"', '"theme":"unico","titles":"burbuja"');
+  it('draws a chunky title style from the theme variables', async () => {
+    const seen = await onUnico({ width: 1280, patch: burbuja }, page => page.evaluate(() => {
+      const root = document.querySelector('.es') as HTMLElement, title = document.querySelector('main h2.lb-title') as HTMLElement;
+      return { attr: root.dataset.esTitles, weight: getComputedStyle(title).fontWeight, family: getComputedStyle(title).fontFamily, line: parseFloat(getComputedStyle(title).lineHeight) / parseFloat(getComputedStyle(title).fontSize) };
+    }));
+    expect(seen.attr).toBe('burbuja');
+    expect(seen.weight).toBe('800');
+    expect(seen.family.length).toBeGreaterThan(0);
+    expect(seen.line).toBeLessThanOrEqual(1.06);
+  });
+});

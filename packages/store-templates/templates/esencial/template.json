@@ -755,7 +755,11 @@
       ],
       "titles": [
         "normal",
-        "upper"
+        "upper",
+        "burbuja",
+        "redonda",
+        "firme",
+        "poster"
       ],
       "theme": [
         "none",
