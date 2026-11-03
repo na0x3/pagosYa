@@ -114,3 +114,38 @@ describe('hero pills', () => {
     try { expect(await page.locator('.product-detail__pills').count()).toBe(0); } finally { await page.close(); }
   });
 });
+
+// Live check 2026-11-03 (Studio preview): React draws the page after the kit runs, so [data-pya-lively] arrives late.
+describe('late page', () => {
+  it('turns lively when the flagged page is drawn after the kit has started', async () => {
+    const page = await open({ body: PAGE().replace(' data-pya-lively', '') });
+    try {
+      expect(await page.evaluate(() => document.documentElement.hasAttribute('data-pya-lively'))).toBe(false);
+      await page.evaluate(() => { const flag = document.createElement('div'); flag.setAttribute('data-pya-lively', ''); document.body.prepend(flag); });
+      await page.waitForFunction(() => document.documentElement.hasAttribute('data-pya-lively') && !!document.querySelector('.product-detail__buy[data-pya-pulse]'));
+    } finally { await page.close(); }
+  });
+});
+
+describe('pills never cover the badge or the photo dots (review 2026-11-03)', () => {
+  const overlap = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  it('sits below the product badge on a laptop', async () => {
+    const page = await open({ body: PAGE(` data-product-pills='["Llega en caja","Pago seguro"]'`), data: { items: [{ ...ITEM, badge: 'Más vendido' }] } });
+    try {
+      const badge = await page.locator('.product-detail__badge').first().boundingBox();
+      const pills = await page.locator('.product-detail__pills').boundingBox();
+      expect(badge).not.toBeNull();
+      expect(overlap(badge!, pills!)).toBe(false);
+    } finally { await page.close(); }
+  });
+  it('stays clear of the photo dots on a phone', async () => {
+    const two = { ...ITEM, imageUrls: [ITEM.imageUrls[0], 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACw='] };
+    const page = await open({ width: 390, body: PAGE(` data-product-pills='["Entrega en Santa Cruz","Llega comprimido en caja"]'`), data: { items: [two] } });
+    try {
+      const dots = await page.locator('.product-detail__thumbnails').first().boundingBox();
+      const pills = await page.locator('.product-detail__pills').boundingBox();
+      expect(dots).not.toBeNull();
+      expect(overlap(dots!, pills!)).toBe(false);
+    } finally { await page.close(); }
+  });
+});

@@ -2,7 +2,13 @@
   // Único theme). Buttons glow in the accent, the product's own add button pulses until the shopper has scrolled past it once, the
   // corner bubble ripples, and a WhatsApp store with no assistant gets a WhatsApp bubble. Everything stands still with reduced motion.
   (function lively() {
-    if (!document.querySelector('[data-pya-lively]')) return;
+    // The flagged page may be drawn after the kit starts (the Studio preview renders with React): wait for it a little while.
+    if (!document.querySelector('[data-pya-lively]')) {
+      const wait = new MutationObserver(() => { if (document.querySelector('[data-pya-lively]')) { wait.disconnect(); lively(); } });
+      wait.observe(document.body || document.documentElement, { childList: true, subtree: true });
+      setTimeout(() => wait.disconnect(), 15000);
+      return;
+    }
     const rootEl = document.documentElement;
     rootEl.setAttribute('data-pya-lively', '');
     const style = document.createElement('style');
