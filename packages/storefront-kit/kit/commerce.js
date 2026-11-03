@@ -6980,10 +6980,11 @@
       document.querySelectorAll('[data-pagosya-variant-cards][data-product-id]').forEach(host => {
         if (host.dataset.drawn) return;
         const product = products().find(item => String(item.id) === host.getAttribute('data-product-id'));
-        if (!product) { pending = true; return; }
+        // Not in a catalogue that has loaded (archived, or an old id after a template switch): no cards. An empty catalogue may still load.
+        if (!product && !products().length) { pending = true; return; }
         host.dataset.drawn = '1';
         ensureStyle();
-        const cards = cardsFor(product), section = host.closest('section') || host;
+        const cards = product ? cardsFor(product) : [], section = host.closest('section') || host;
         if (cards.length < 2) { section.hidden = true; document.querySelectorAll('[data-needs-colour-cards]').forEach(el => { el.hidden = true; }); return; }
         host.innerHTML = `<div class="pya-colour-cards">${cards.join('')}</div>`;
         host.addEventListener('click', event => { const card = event.target.closest('.pya-colour-card'); if (card) pick(card); });

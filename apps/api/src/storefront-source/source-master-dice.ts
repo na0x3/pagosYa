@@ -70,7 +70,8 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   const excluded = (part: string, id: string) => input.character.exclude.includes(`${part}:${id}`) || (input.character.exclude.includes(id) && owners(id) === 1);
   const allowed = (part: string) => {
     // Owner 2026-10-24: a store with photos never opens on the text-only cover («a blank screen»).
-    const fits = catalogue[part].filter(id => id !== 'fashion' && !(part === 'pdp' && PHOTO_FIRST_PDP.has(id)) && !(part === 'hero' && !input.photoGroups && MULTI_PHOTO_HERO.has(id))
+    // The shop header (premium landing 2026-11-03) belongs to Único's one-product page: never rolled for another store.
+    const fits = catalogue[part].filter(id => id !== 'fashion' && !(part === 'header' && id === 'shop') && !(part === 'pdp' && PHOTO_FIRST_PDP.has(id)) && !(part === 'hero' && !input.photoGroups && MULTI_PHOTO_HERO.has(id))
       && !(part === 'hero' && id === 'type' && input.photoCount > 0) && (PHOTO_NEEDS[id] ?? 0) <= input.photoCount);
     const honoured = DICE_ONLY.has(part) ? [] : fits.filter(id => excluded(part, id)).slice(0, Math.floor(fits.length / 2));
     const list = fits.filter(id => !honoured.includes(id));

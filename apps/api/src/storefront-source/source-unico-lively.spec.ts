@@ -134,4 +134,17 @@ describe('Único premium landing (spec 2026-11-03)', () => {
     const wanted = ['hero-split', 'strip-marquee', 'variant-cards', 'product-hero', 'benefits-orbit', 'chips-marquee', 'faq-split', 'closing-photo'];
     expect(order.filter(type => wanted.includes(type!))).toEqual(wanted);
   });
+  it('drops «Ver colores» from the hero when the page has no colour cards (review 2026-11-03)', async () => {
+    const seen = await onUnico({ width: 1280, patch: data => data.replace('"type":"variant-cards"', '"type":"variant-cards-gone"') }, page => page.evaluate(() => ({
+      hero: !!document.querySelector('.lb-hero-split'), colours: !!document.querySelector('.lb-hero-split a[href="#colores"]'),
+    })));
+    expect(seen).toEqual({ hero: true, colours: false });
+  });
+  it('keeps the shop header\'s «Comprar» and short menu to a one-product page (review 2026-11-03)', async () => {
+    const seen = await onUnico({ width: 1280, patch: data => data.replace('"type":"product-hero"', '"type":"product-hero-gone"') }, page => page.evaluate(() => ({
+      buy: !!document.querySelector('header .es-header__buy'), links: Array.from(document.querySelectorAll('header .es-header__links a')).map(link => link.getAttribute('href')),
+    })));
+    expect(seen.buy).toBe(false);
+    expect(seen.links).not.toContain('index.html#comprar');
+  });
 });

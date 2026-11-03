@@ -51,12 +51,15 @@ function useCategoryLinks(): NavLink[] {
 }
 const libraryStore = () => (layout as LibraryBlock[]).length > 0;
 const frame = () => FRAME[variant('theme', 'none')] ?? { shop: 'Tienda', footShop: 'Tienda', footHelp: 'Ayuda' };
+/** The shop header's «Comprar» and short menu point at the one-product home's buy box: only where that page has one. */
+const shopPage = () => variant('header', 'classic') === 'shop' && (layout as LibraryBlock[]).some(block => block.type === 'product-hero');
+
 function useMenu(): NavLink[] {
   const categories = useCategoryLinks();
   if (!libraryStore()) return links;
   const faq = (layout as LibraryBlock[]).some(block => block.type === 'faq-split');
   // Premium landing (spec 2026-11-03): the shop header names the home's own parts.
-  if (variant('header', 'classic') === 'shop') return [{ label: 'Producto', href: 'index.html#comprar' },
+  if (shopPage()) return [{ label: 'Producto', href: 'index.html#comprar' },
     ...((layout as LibraryBlock[]).some(block => block.type === 'variant-cards') ? [{ label: 'Colores', href: 'index.html#colores' }] : []), ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
   return [{ label: frame().shop, href: 'productos.html' }, ...categories, ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
 }
@@ -100,7 +103,7 @@ export function Header() {
           <a className="es-text-btn" data-pagosya-account="login" href="acceso-ingresar.html">Cuenta</a>
           <button type="button" className="es-text-btn es-cart-btn" data-cart-open aria-label="Abrir carrito">Carrito (<span data-cart-count>0</span>)</button>
         </> : <HeaderIcons />}
-        {variant('header', 'classic') === 'shop' ? <a className="es-btn es-header__buy" href="index.html#comprar">Comprar</a> : null}
+        {shopPage() ? <a className="es-btn es-header__buy" href="index.html#comprar">Comprar</a> : null}
       </div>
     </header>
     <div className={open ? 'es-menu es-menu--open' : 'es-menu'} id="es-menu" aria-hidden={!open} onClick={event => { if (event.target === event.currentTarget) setOpen(false); }}>

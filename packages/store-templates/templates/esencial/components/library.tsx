@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { Reveal } from '@pagosya/ui';
-import { photos, store } from './store-data';
+import { layout, photos, store } from './store-data';
 import * as Icons from './icons';
 
 /* Section library (spec 2026-10-31): sections designed and tested once, the way a theme's are. YAPI only picks them, orders
@@ -259,7 +259,7 @@ function HeroSplit({ block, index }: { block: LibraryBlock; index: number }) {
       {block.text ? <p className="lb-lede">{block.text}</p> : null}
       <div className="es-actions lb-actions">
         <a className="es-btn es-btn--accent lb-btn" href="#comprar">{block.cta || 'Ver el producto'}</a>
-        {block.cta2 ? <a className="es-btn es-btn--ghost lb-btn" href="#colores" data-needs-colour-cards="">{block.cta2}</a> : null}
+        {block.cta2 && (layout as LibraryBlock[]).some(entry => entry.type === 'variant-cards') ? <a className="es-btn es-btn--ghost lb-btn" href="#colores" data-needs-colour-cards="">{block.cta2}</a> : null}
       </div>
     </div>
   </section>;

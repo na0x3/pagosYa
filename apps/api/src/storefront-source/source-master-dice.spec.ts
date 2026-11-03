@@ -295,3 +295,9 @@ describe('favoured looks', () => {
   it('uppercase titles on some stores, not all', () => { const upper = share('titles', ['upper']); expect(upper).toBeGreaterThan(0.3); expect(upper).toBeLessThan(0.7); });
   it('the other headers still come', () => expect(new Set(rolls.map(v => v.header)).size).toBeGreaterThanOrEqual(5));
 });
+
+describe('the shop header is Único\'s own (review 2026-11-03)', () => {
+  it('is never rolled for a plain store', () => {
+    for (let at = 0; at < 200; at++) expect(roll(`shop-${at}`).variants.header).not.toBe('shop');
+  });
+});
