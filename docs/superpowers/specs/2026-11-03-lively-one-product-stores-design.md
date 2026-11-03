@@ -43,13 +43,18 @@ wave divider, reveals, colour slider, compare table, benefits around a photo.
 ## 2. How it is built and filled
 
 ### Kit (packages/storefront-kit)
-New general parts, self-hoisting their CSS (like Float/Sticker), switched on by markup, so they cost nothing on stores that do not
-use them: `buy-bar` (sticky bar), `button-feel` (behaviour + CSS for the press/glow/pulse), `bubble-ping` (ripple + WhatsApp
-bubble rule), `hotspots`, `chips-marquee`. Marquees pause when off screen (IntersectionObserver). All honour
-`prefers-reduced-motion: reduce` by standing still. Rebuild the kit and the Studio after kit edits.
+One new runtime part, `commerce-src/look/lively.js`, self-hoisting its CSS like `look/motion-pieces.js` and active only under
+`[data-pya-lively]`: button glow, the add-button pulse, the corner-bubble ripple and the WhatsApp bubble. The existing phone sticky
+bar (`.product-detail__sticky`, product/bundles-related.js) becomes the buy bar: on lively pages it also shows on laptops, carries
+the thumbnail and current selection, and hides near the footer. Hero pills are drawn by the product block from
+`data-product-pills`. Hover lift and press squash come from the kit DNA (`hover: lift`, `press: squash`). The chip band reuses the
+existing `data-pya-motion="marquee"` piece (pauses off screen, still with reduced motion). Rebuild the kit and the Studio after kit
+edits.
+(Plan-time change: hotspots and the chip band are library sections like `shop-look` and `strip-marquee`, not kit parts.)
 
 ### Template (packages/store-templates)
-- Library sections `detail-hotspots` and `chips-marquee` in `esencial/components/library.tsx`; `ProductHero` draws `block.pills`.
+- Library sections `detail-hotspots` and `chips-marquee` in `esencial/components/library.tsx` (CSS in their own `/* lb:… */`
+  blocks, which template stores keep only when used); `ProductHero` hands its items to the kit as `data-product-pills`.
 - Único's `template.json` layout: product-hero (+ pills), benefits, `detail-hotspots`, use cases, steps, `chips-marquee`, reviews,
   FAQ — the two new sections with demo content so the template contract test exercises them.
 - Único theme CSS (`/* theme:unico */` in `esencial/styles/globals.css`) gains only the mood switch
@@ -65,9 +70,9 @@ bubble rule), `hotspots`, `chips-marquee`. Marquees pause when off screen (Inter
   empty. Pure post-processing drops empty parts and caps lengths.
 - Mood: chosen by YAPI from the product and the merchant's words (a cloud sofa, a soda → colourful; a drill, a serum → calm);
   `isPlayfulBusiness` true forces `colourful`. Written to `variants.mood` in the same save.
-- Hotspot points: one small vision call (`dialogue.readHotspots`, the conversation model, low effort, same shape as `readListing`)
-  on the chosen close-up photo, returning ≤ 3 points with notes; the notes must name what is visible. Runs only when the store has a
-  photo the fill marked as a close-up/detail; failure or no points → the section is dropped. This is the only new AI call.
+- Hotspot points: placed by the same fill call, which already receives every store photo (low detail) and already places product
+  pins on photos for `shop-look`; ≤ 3 points with notes that name what is visible; no points → the section is dropped. (Plan-time
+  change: no separate vision call — there is no new AI call at all.)
 - Later edits use the normal chat and the existing layout edit: «quita el contador», «cambia las frases de la banda»; «hazla más
   tranquila / más colorida» sets `variants.mood`.
 
