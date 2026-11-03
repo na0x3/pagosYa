@@ -64,6 +64,7 @@ export const PARTS = [
   'look/fit-headlines.js',
   'look/motion-pieces.js',
   'look/lively.js',
+  'product/variant-cards.js',
   'shared/start.js',
 ];
 

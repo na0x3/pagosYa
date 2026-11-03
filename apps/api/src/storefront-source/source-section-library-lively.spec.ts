@@ -53,4 +53,8 @@ describe('hero-split (spec 2026-11-03 premium landing)', () => {
   it('drops a hero without a title', () => {
     expect(fill(raw('hero-split', { photo: 0 }))).toEqual([]);
   });
+  it('variant-cards takes the store product and keeps only its title', () => {
+    const [cards] = fill(raw('variant-cards', { title: 'Elige tu color' }));
+    expect(cards).toMatchObject({ type: 'variant-cards', product: 'p1', title: 'Elige tu color' });
+  });
 });

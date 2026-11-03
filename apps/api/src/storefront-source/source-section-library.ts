@@ -34,6 +34,7 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'products-grid', role: 'products', use: 'La grilla principal de productos con buscador, filtros y orden. Obligatoria, una sola vez.', needs: {}, looks: ['grid4', 'grid3'] },
   { id: 'products-tabs', role: 'products', use: 'La grilla principal con pestañas por categoría arriba. En lugar de products-grid cuando hay 2 o más categorías.', needs: { categories: 2 } },
   { id: 'product-hero', role: 'products', use: 'El producto completo arriba de todo: galería grande, precio, opciones y botón Agregar (product = su id). eyebrow = una línea corta de la tienda sobre el producto (envío, garantía). items = hasta 3 etiquetas que flotan sobre la foto (title ≤ 32 letras): solo hechos que el comercio dio (su ciudad de entrega, «Llega en caja», garantía); vacío si no hay. Solo en tiendas de un producto.', needs: { product: true, items: [0, 3] }, templateOnly: true },
+  { id: 'variant-cards', role: 'products', use: 'Tarjetas de colores del producto (las dibuja la tienda desde sus variantes con foto). Solo title (corto, p. ej. «Elige tu color»).', needs: { product: true }, templateOnly: true },
   { id: 'detail-hotspots', role: 'story', use: 'Una foto de cerca del producto (photo: la que muestra un detalle: tela, textura, botones, terminación) con hasta 3 puntos «+». items: title = qué se ve en ese punto (≤ 60 letras), x, y = dónde está, en % del ancho y alto de la foto. title y text de la sección cortos. Sin una foto de detalle, deja la sección vacía.', needs: { photos: 1, items: [1, 3], spots: true }, templateOnly: true },
   { id: 'chips-marquee', role: 'proof', use: 'Dos filas de frases cortas que se deslizan, cada una con la foto del producto (photo). items: 6 a 10 title de ≤ 48 letras, solo hechos del producto o de la tienda (cómo llega, para qué sirve, colores que hay), nada inventado.', needs: { photos: 1, items: [6, 10] }, templateOnly: true },
   { id: 'products-spotlight', role: 'products', use: 'Un producto destacado con su tarjeta de compra (product = su id) y hasta 3 puntos de por qué es especial.', needs: { product: true, items: [0, 3] } },
@@ -332,6 +333,8 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       if (names.length >= needs.products[0]) block.products = names;
     }
     if (needs.product || raw.template?.product) { const found = productById.get(String(raw.product ?? '')) ?? productByName.get(fold(String(raw.product ?? ''))); if (found) block.product = found.id; }
+    // The colour cards always draw the store's own product (premium landing 2026-11-03).
+    if (section.id === 'variant-cards' && !block.product && facts.products[0]) block.product = facts.products[0].id;
     if (needs.code || section.id === 'cover-half') { const code = facts.codes.find(entry => fold(entry.code) === fold(String(raw.code ?? ''))); if (code) block.code = code.code; }
     if (section.id === 'visit-store' && facts.location && !block.title) block.title = facts.location.name;
     if (needs.social && facts.social) { block.handle = facts.social.handle; block.social = facts.social.url; }

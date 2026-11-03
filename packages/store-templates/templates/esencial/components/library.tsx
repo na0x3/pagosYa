@@ -407,6 +407,15 @@ function ProductHero({ block, index }: { block: LibraryBlock; index: number }) {
   </Band>;
 }
 
+/** Premium landing (spec 2026-11-03): the colour cards; the kit draws them from the product's variants (hidden with fewer than two). */
+function VariantCards({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.product) return null;
+  return <Band block={block} index={index} id="colores">
+    <Head block={{ ...block, title: block.title || 'Elige tu color' }} index={index} />
+    <div data-pagosya-variant-cards="" data-product-id={block.product} />
+  </Band>;
+}
+
 function ProductsCards({ block, index }: { block: LibraryBlock; index: number }) {
   const names = (block.products ?? []).slice(0, 4);
   if (!names.length) return null;
@@ -1354,7 +1363,7 @@ function CheckerRows({ block, index }: { block: LibraryBlock; index: number }) {
 }
 
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
-  'cover-split': CoverSplit, 'hero-split': HeroSplit, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
+  'cover-split': CoverSplit, 'hero-split': HeroSplit, 'variant-cards': VariantCards, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
   'detail-hotspots': DetailHotspots, 'chips-marquee': ChipsMarquee,
   'products-grid': ProductsGrid, 'products-tabs': ProductsGrid, 'products-spotlight': ProductsSpotlight, 'product-hero': ProductHero, 'products-cards': ProductsCards, 'products-lookbook': ProductsLookbook, 'categories-tiles': CategoriesTiles,

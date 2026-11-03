@@ -160,3 +160,40 @@ describe('buy bar footer (live check 2026-11-03)', () => {
     } finally { await page.close(); }
   });
 });
+
+describe('colour cards (spec 2026-11-03 premium landing)', () => {
+  // Distinct valid base64 GIFs: the kit's safeUrl refuses a data URL with anything after the base64.
+  const GIFS = ['R0lGODlhAQABAAAAACw=', 'R0lGODlhAQABAIAAAP///wAAACw=', 'R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='].map(data => `data:image/gif;base64,${data}`);
+  const colours = (photos: Array<string | undefined>, amount = 300000) => ({ ...ITEM, amount, variants: photos.map((photo, at) => ({ id: `v${at}`, name: `C${at}`, amount, stock: 3, options: [{ name: 'Color', value: `C${at}` }], ...(photo ? { imageUrls: [photo] } : {}) })) });
+  const CARDS = () => PAGE().replace('<div style="height:2400px"></div>', '<section id="colores" data-lb="variant-cards"><div data-pagosya-variant-cards data-product-id="sofa"></div></section><a href="#colores" data-needs-colour-cards>Ver colores</a><div style="height:2400px"></div>');
+  it('draws one card per photographed colour and picks it in the buy box', async () => {
+    const page = await open({ body: CARDS(), data: { items: [colours([GIFS[0], GIFS[1], GIFS[2]])] } });
+    try {
+      await page.waitForSelector('.pya-colour-card');
+      expect(await page.locator('.pya-colour-card').count()).toBe(3);
+      await page.locator('.pya-colour-card').nth(1).click();
+      await page.waitForFunction(() => document.querySelector('[data-product-option="0"][data-option-value="1"]')?.getAttribute('aria-pressed') === 'true');
+      expect(await page.locator('.pya-colour-card').first().textContent()).toMatch(/desde/i);
+    } finally { await page.close(); }
+  });
+  it('hides itself and «Ver colores» with fewer than two photographed colours (Review Focus 1)', async () => {
+    const page = await open({ body: CARDS(), data: { items: [colours([GIFS[0], undefined])] } });
+    try {
+      await page.waitForFunction(() => (document.querySelector('#colores') as HTMLElement).hidden && (document.querySelector('[data-needs-colour-cards]') as HTMLElement).hidden);
+    } finally { await page.close(); }
+  });
+  it('shows no «desde» while the price is still to confirm (Review Focus 2)', async () => {
+    const page = await open({ body: CARDS(), data: { items: [colours([GIFS[0], GIFS[1]], 0)] } });
+    try {
+      await page.waitForSelector('.pya-colour-card');
+      expect(await page.locator('.pya-colour-card', { hasText: /desde/i }).count()).toBe(0);
+    } finally { await page.close(); }
+  });
+  it('makes one card per distinct photo (Review Focus 3)', async () => {
+    const page = await open({ body: CARDS(), data: { items: [colours([GIFS[0], GIFS[0], GIFS[1]])] } });
+    try {
+      await page.waitForSelector('.pya-colour-card');
+      expect(await page.locator('.pya-colour-card').count()).toBe(2);
+    } finally { await page.close(); }
+  });
+});
