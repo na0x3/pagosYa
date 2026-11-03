@@ -16,7 +16,8 @@ import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectSnapshot } from './source-project';
 import { assembleTemplateRevision, readMasterState, refillMasterFiles, refillPlantillaFiles, resolvePresetTemplate, starterBrandBlock, templateDemoRevision, TEMPLATE_STORE_DATA_PATH, withPreset, type StarterBrandColours } from './source-templates';
 import { plantillaFallback, plantillaFillFromRead } from './source-plantilla-fill';
-import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
+import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, accentInk, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
+import { titleColours } from './source-title-style';
 import { distinctPhotoCount, esencialDiceSettings, FASHION_PARTS, menuVariant, rollStarterDice, rollVariants, type RecentRoll } from './source-master-dice';
 import { palettesForPhoto, photoTone } from './source-starter-palette';
 import { DEFAULT_RETENTION } from '../retention/retention.dto';
@@ -185,7 +186,7 @@ export class SourceTemplatesService {
       : brandPalette ? { paper: brandPalette.paper, ink: brandPalette.ink, accent: brandPalette.accent, muted: brandPalette.surface, ...(deepFromAccent(brandPalette.accent) ? { deep: deepFromAccent(brandPalette.accent)! } : {}) } : undefined;
     // The merchant's confirmed brand colours always win over a plan's accent (final review 2026-10-22).
     if (colours && plan?.accent && !Object.keys(brandColours).length) colours.accent = plan.accent;
-    if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours, ...(fill?.look?.palette ? { palette: paletteForBrand(manifest.master, fill.look.palette, colours) } : {}) } };
+    if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours, ...(brandPalette && colours.paper && colours.ink && colours.accent ? { titles: titleColours({ paper: colours.paper, ink: colours.ink, accentInk: accentInk(colours.accent, colours.paper, colours.ink), deep: colours.deep, extras: brandPalette.extras }) } : {}), ...(fill?.look?.palette ? { palette: paletteForBrand(manifest.master, fill.look.palette, colours) } : {}) } };
     const files = [...bundled.files, ...carried.filter(file => !bundled.files.some(own => own.path === file.path))];
     // Starter dice (spec 2026-10-24-starter-dice §1): a starter with dice rolls its own lists, seeded by the store.
     // A/B comparison 2026-10-24: the rolled palette sits with the hero photo (PEPPA's red bottles got a blue accent).

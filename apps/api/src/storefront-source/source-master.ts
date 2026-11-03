@@ -5,6 +5,7 @@ import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 import { bestInkFor, contrastRatio } from './sketch/sketch-schema';
 import type { StoreMenuGroup } from './source-store-menu';
 import type { FeatureCopy } from './source-master-features';
+import { TITLE_STYLES, isTitleStyle, type TitleStyle } from './source-title-style';
 
 export const MASTER_TEMPLATE_ID = 'esencial';
 export const MASTER_THEME_START = '/* pagosya:master-theme */';
@@ -17,7 +18,7 @@ const HEX = /^#[0-9a-f]{6}$/i;
 
 export type MasterColour = 'paper' | 'ink' | 'muted' | 'accent' | 'deep';
 export const MASTER_COLOURS: readonly MasterColour[] = ['paper', 'ink', 'muted', 'accent', 'deep'];
-export type MasterLook = { palette: string; fonts: string; colors: Partial<Record<MasterColour, string>> };
+export type MasterLook = { palette: string; fonts: string; colors: Partial<Record<MasterColour, string>>; titles?: string[] };
 export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null;
   /** Section library (spec 2026-10-31): the home's blocks, in order (store-data `layout`); photos already bundled. */
   layout?: unknown[];
@@ -73,7 +74,9 @@ export function masterLook(settings: MasterSettings, partial: Partial<MasterLook
   const fonts = settings.fonts.some(f => f.id === partial.fonts) ? partial.fonts! : settings.fonts[0].id;
   const colors: Partial<Record<MasterColour, string>> = {};
   for (const key of MASTER_COLOURS) { const value = partial.colors?.[key]; if (typeof value === 'string' && HEX.test(value)) colors[key] = value.toLowerCase(); }
-  return { palette, fonts, colors };
+  // Chunky colour titles (spec 2026-11-03): up to four title colours from the store's photos.
+  const titles = (partial.titles ?? []).filter(value => typeof value === 'string' && HEX.test(value)).map(value => value.toLowerCase()).slice(0, 4);
+  return { palette, fonts, colors, ...(titles.length ? { titles } : {}) };
 }
 
 /** The palette with the merchant's own colours over it; text is always readable on paper, accent and deep. */
@@ -106,23 +109,30 @@ const catalogFont = (id: string) => {
 };
 const face = (id: string) => { const font = catalogFont(id); return `@font-face{font-family:'${font.family}';src:url(assets/${font.id}.ttf) format('truetype');font-weight:${font.weights.replace('–', ' ')};font-display:swap}`; };
 
+/** Chunky colour titles (spec 2026-11-03): four title colours (a shorter list repeats in order) and the style's font. */
+const titleVars = (colours: string[]) => [0, 1, 2, 3].map(at => `--es-title-${at + 1}:${colours[at % colours.length]};`).join('');
+
 /** Spec 2026-10-29 (home writer): the theme block from five colours and two catalog fonts. */
-export function masterThemeBlock(colours: Record<MasterColour, string>, headingFont: string, bodyFont: string, monoFont?: string): string {
+export function masterThemeBlock(colours: Record<MasterColour, string>, headingFont: string, bodyFont: string, monoFont?: string, titles?: { colours?: string[]; style?: string }): string {
   const c = readableColours(colours);
+  const titleFont = isTitleStyle(titles?.style) ? TITLE_STYLES[titles!.style as TitleStyle].font : undefined;
   const vars = `:root{--es-paper:${c.paper};--es-ink:${c.ink};--es-muted:${c.muted};--es-accent:${c.accent};--es-deep:${c.deep};--es-on-accent:${c.onAccent};--es-on-deep:${c.onDeep};`
     + `--es-heading:'${catalogFont(headingFont).family}',Georgia,serif;--es-body:'${catalogFont(bodyFont).family}',system-ui,sans-serif;`
     // 34 templates (2026-10-31): a theme's third font (eyebrows, labels); the body font when the pair has none.
     + `--es-mono:${monoFont ? `'${catalogFont(monoFont).family}',ui-monospace,monospace` : 'var(--es-body)'};`
+    + titleVars(titles?.colours?.length ? titles.colours : [c.accentInk, c.ink])
+    + (titleFont ? `--es-title-font:'${catalogFont(titleFont).family}',var(--es-heading);` : '')
     + `--store-background:var(--es-paper);--store-foreground:var(--es-ink);--store-accent:var(--es-accent);--store-accent-foreground:var(--es-on-accent);`
     // Sort & filter styles spec 2026-10-21: kit pages (checkout fallback, info pages) read these, so they show the store's fonts.
     + `--store-heading-font:var(--es-heading);--store-body-font:var(--es-body)}`;
-  return [MASTER_THEME_START, face(headingFont), bodyFont !== headingFont ? face(bodyFont) : '', monoFont && monoFont !== headingFont && monoFont !== bodyFont ? face(monoFont) : '', vars, MASTER_THEME_END].filter(Boolean).join('\n');
+  return [MASTER_THEME_START, face(headingFont), bodyFont !== headingFont ? face(bodyFont) : '', monoFont && monoFont !== headingFont && monoFont !== bodyFont ? face(monoFont) : '',
+    titleFont && titleFont !== headingFont && titleFont !== bodyFont && titleFont !== monoFont ? face(titleFont) : '', vars, MASTER_THEME_END].filter(Boolean).join('\n');
 }
 
-export function masterThemeCss(settings: MasterSettings, look: MasterLook): string {
+export function masterThemeCss(settings: MasterSettings, look: MasterLook, titleStyle?: string): string {
   const pair = settings.fonts.find(f => f.id === look.fonts) ?? settings.fonts[0];
   const c = masterColours(settings, look);
-  return masterThemeBlock({ paper: c.paper, ink: c.ink, muted: c.muted, accent: c.accent, deep: c.deep }, pair.heading, pair.body, (pair as { mono?: string }).mono);
+  return masterThemeBlock({ paper: c.paper, ink: c.ink, muted: c.muted, accent: c.accent, deep: c.deep }, pair.heading, pair.body, (pair as { mono?: string }).mono, { colours: look.titles, style: titleStyle });
 }
 
 /** 34 templates (2026-10-31): the template stylesheet carries every theme between «/* theme:id *\/» and «/* /theme:id *\/»; a store

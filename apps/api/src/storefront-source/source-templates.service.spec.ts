@@ -212,6 +212,16 @@ describe('SourceTemplatesService', () => {
       expect(savedLook(projects).colors).toMatchObject({ paper: '#fbf6ef', ink: '#2a1a12', accent: '#b5651d', muted: '#efe6db' });
     });
 
+    // Chunky colour titles (spec 2026-11-03): the photos' other goods colours become the title colours, readable on the paper.
+    it('saves title colours from the photos\' other goods colours', async () => {
+      const { templates, projects } = build([]);
+      (templates as any).photosPalette = jest.fn(async () => ({ paper: '#fbf6ef', ink: '#2a1a12', accent: '#b5651d', surface: '#efe6db', onAccent: '#ffffff', extras: ['#2f6db5', '#2e8b57'] }));
+      await templates.applyMaster('m1', 'store-1', 0, async () => ({}));
+      const titles = (savedLook(projects) as { titles?: string[] }).titles ?? [];
+      expect(titles.length).toBeGreaterThanOrEqual(3);
+      expect(titles).toEqual(expect.arrayContaining(['#2f6db5', '#2e8b57']));
+    });
+
     // Owner 2026-10-29 («most lack … brand colors»): an industry preset (most new stores get one) no longer hides the brand's colours.
     it('a store built from an industry preset still wears its photos\' colours', async () => {
       const { templates, projects } = build([]);

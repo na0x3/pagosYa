@@ -319,8 +319,9 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   // A changed look carries its whole colour set (the fill call copies the colours it keeps), so earlier custom colours can go.
   const look = masterLook(settings, { ...(state.look ?? {}), ...(change.look ?? {}), colors: change.look?.colors ?? state.look?.colors ?? {} });
   const photos = sameAsBundled({ ...state.photos, ...(change.heroPhoto !== undefined ? { hero: masterPhotoUrl(change.heroPhoto, apiUrl) } : {}), ...(change.storyPhoto !== undefined ? { story: masterPhotoUrl(change.storyPhoto, apiUrl) } : {}) }, change.photoSources);
-  const theme = masterThemeCss(settings, look);
   const variants = { ...(state.variants ?? { sections: [] }), ...Object.fromEntries(Object.entries(change.variants ?? {}).filter(([part, id]) => part !== 'sections' && (settings.variants?.[part] ?? []).includes(String(id)))) } as MasterVariants;
+  // Chunky colour titles (spec 2026-11-03): the theme block carries the chosen title style's font.
+  const theme = masterThemeCss(settings, look, String((variants as Record<string, unknown>).titles ?? ''));
   // Dropdown menu spec 2026-10-21: a menu change sets the record; a fashion store without one gets the panel.
   const menuIds = settings.variants?.menu ?? [];
   if (menuIds.length) {
@@ -456,7 +457,7 @@ export async function assembleTemplateRevision(input: {
   const storeData = templateStoreDataFile({ name: data.storeName, tagline: data.tagline ?? '', city,
     // An uploaded logo as the full API URL, like the photos: the store is served from another origin (Remolino 2026-10-21).
     logo: masterPhotoUrl(data.logoUrl, input.apiUrl), phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: builtVariants, sections: input.sections ?? input.fill?.sections, features, layout: input.fill?.layout ?? [], productLayout: input.fill?.productLayout ?? [] } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
-  const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withOnlyTheme(withMasterTheme(file.content, masterThemeCss(settings, look!)), String((builtVariants as Record<string, unknown> | undefined)?.theme ?? ''),
+  const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withOnlyTheme(withMasterTheme(file.content, masterThemeCss(settings, look!, String((builtVariants as Record<string, unknown> | undefined)?.titles ?? ''))), String((builtVariants as Record<string, unknown> | undefined)?.theme ?? ''),
     new Set([...(input.fill?.layout ?? []), ...(input.fill?.productLayout ?? [])].map(block => String((block as { type?: string }).type)))) } : file;
   // A filled Plantilla never shows the demo business's photos; a slot the merchant has no photo for stays empty instead
   // of a broken image showing its description (live check 2026-10-21, Alfar's floating photos).
