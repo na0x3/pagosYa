@@ -999,7 +999,9 @@ function DetailHotspots({ block, index }: { block: LibraryBlock; index: number }
     <div className="lb-hotspots">
       <div className="lb-hotspots__frame">
         <Photo src={block.photo} className="lb-hotspots__photo" />
-        {spots.map((spot, at) => <div key={at} className="lb-hotspots__spot" data-open={open === at ? '' : undefined} style={{ left: `${spot.x}%`, top: `${spot.y}%` }}>
+        {/* A note near an edge opens toward the middle, so it is never cut off (review 2026-11-03). */}
+        {spots.map((spot, at) => <div key={at} className="lb-hotspots__spot" data-open={open === at ? '' : undefined} data-y={spot.y! > 60 ? 'low' : undefined}
+          data-x={spot.x! < 25 ? 'left' : spot.x! > 75 ? 'right' : undefined} style={{ left: `${spot.x}%`, top: `${spot.y}%` }}>
           <button type="button" className="lb-hotspots__pin" aria-expanded={open === at} aria-label={spot.title} onClick={() => setOpen(open === at ? -1 : at)}><Icons.IconPlus /></button>
           <p className="lb-hotspots__note">{spot.title}</p>
         </div>)}
@@ -1017,7 +1019,8 @@ function DetailHotspots({ block, index }: { block: LibraryBlock; index: number }
 function ChipsMarquee({ block, index }: { block: LibraryBlock; index: number }) {
   const phrases = (block.items ?? []).map(item => item.title).filter(Boolean).slice(0, 10);
   if (phrases.length < 6 || !block.photo) return null;
-  const rows = [phrases.filter((_, at) => at % 2 === 0), phrases.filter((_, at) => at % 2 === 1)];
+  // Each half of a row is wide enough to fill a laptop screen (about ten chips), so the loop never shows an empty stretch.
+  const rows = [phrases.filter((_, at) => at % 2 === 0), phrases.filter((_, at) => at % 2 === 1)].map(row => Array.from({ length: Math.ceil(10 / row.length) }, () => row).flat());
   return <Band block={block} index={index}>
     <Head block={block} index={index} align="center" />
     <ul className="lb-visually-hidden">{phrases.map((phrase, at) => <li key={at}>{phrase}</li>)}</ul>
