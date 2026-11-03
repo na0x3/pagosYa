@@ -63,6 +63,7 @@ export const PARTS = [
   'controls/decorate.js',
   'look/fit-headlines.js',
   'look/motion-pieces.js',
+  'look/lively.js',
   'shared/start.js',
 ];
 
