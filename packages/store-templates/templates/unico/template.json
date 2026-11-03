@@ -57,7 +57,7 @@
     "variants": {
       "theme": "unico",
       "icons": "line",
-      "header": "minimal",
+      "header": "shop",
       "announce": "plain",
       "footer": "minimal",
       "button": "pill",
@@ -81,8 +81,13 @@
         "text": "Hasta que se acabe el tiempo."
       },
       {
-        "type": "product-hero",
-        "eyebrow": "Envío a todo el país · Pago seguro",
+        "type": "hero-split",
+        "eyebrow": "Envío a todo el país",
+        "title": "Un producto *pensado* para tu día",
+        "text": "Fácil de usar, hecho para durar y listo desde que lo abres.",
+        "cta": "Ver el producto",
+        "cta2": "Ver colores",
+        "photo": "slot:un-hero",
         "items": [
           {
             "title": "Envío a todo el país"
@@ -93,7 +98,40 @@
         ]
       },
       {
-        "type": "benefits-bento",
+        "type": "strip-marquee",
+        "look": "solid",
+        "items": [
+          {
+            "title": "Fácil de usar"
+          },
+          {
+            "title": "Hecho para durar"
+          },
+          {
+            "title": "Listo para usar"
+          },
+          {
+            "title": "Va contigo"
+          },
+          {
+            "title": "Pago seguro"
+          }
+        ]
+      },
+      {
+        "type": "wave-divider"
+      },
+      {
+        "type": "variant-cards",
+        "title": "Elige tu *color*"
+      },
+      {
+        "type": "product-hero",
+        "eyebrow": "Envío a todo el país · Pago seguro"
+      },
+      {
+        "type": "benefits-orbit",
+        "band": "muted",
         "title": "Por qué te va a *encantar*",
         "photo": "slot:un-story",
         "items": [
@@ -111,6 +149,11 @@
             "title": "Va contigo",
             "text": "Liviano y cómodo de llevar.",
             "icon": "heart"
+          },
+          {
+            "title": "Pago seguro",
+            "text": "Pagas con QR o tarjeta.",
+            "icon": "lock"
           }
         ]
       },
@@ -131,41 +174,6 @@
             "y": 58
           }
         ]
-      },
-      {
-        "type": "usecases",
-        "title": "Para cada momento",
-        "items": [
-          {
-            "title": "En casa",
-            "text": "Para tu rutina de todos los días.",
-            "photo": "slot:un-p1"
-          },
-          {
-            "title": "Fuera de casa",
-            "text": "Para el trabajo, el viaje o la calle.",
-            "photo": "slot:un-p2"
-          }
-        ]
-      },
-      {
-        "type": "steps-howto",
-        "title": "Cómo se usa",
-        "items": [
-          {
-            "title": "Ábrelo",
-            "text": "Todo viene listo en la caja."
-          },
-          {
-            "title": "Úsalo",
-            "text": "Un botón y funciona."
-          },
-          {
-            "title": "Disfrútalo",
-            "text": "Cuéntanos cómo te va."
-          }
-        ],
-        "look": "cards"
       },
       {
         "type": "chips-marquee",
@@ -194,12 +202,26 @@
         ]
       },
       {
-        "type": "reviews-cards",
-        "title": "Lo que dicen nuestros clientes"
+        "type": "compare-table",
+        "title": "Este producto vs lo de siempre",
+        "items": [
+          {
+            "title": "Listo al sacarlo de la caja",
+            "value": "no"
+          },
+          {
+            "title": "Fácil de guardar",
+            "value": "no"
+          },
+          {
+            "title": "Pago seguro en línea",
+            "value": "yes"
+          }
+        ]
       },
       {
         "type": "faq-split",
-        "look": "grid",
+        "look": "lines",
         "title": "Preguntas frecuentes",
         "items": [
           {
@@ -221,10 +243,10 @@
         ]
       },
       {
-        "type": "products-slider",
-        "card": "classic",
-        "title": "También te puede gustar",
-        "link": "products"
+        "type": "closing-photo",
+        "title": "Llévalo hoy",
+        "cta": "Comprar",
+        "photo": "slot:un-p2"
       }
     ],
     "productLayout": [],

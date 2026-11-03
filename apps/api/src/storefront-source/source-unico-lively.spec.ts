@@ -15,10 +15,10 @@ async function onUnico<T>(options: { mood?: 'colourful' | 'calm'; width?: number
   const resolved = resolvePresetTemplate(manifest, templateManifest);
   const preset = mood ? { ...resolved.preset, variants: { ...(resolved.preset as any).variants, mood } } : resolved.preset;
   const assembled = await templateDemoRevision(resolved.manifest, templateSourceFiles(resolved.manifest.id), preset as never);
-  // The demo's hero names no product (a real store's fill always sets it): give it the demo catalogue's first product.
+  // The demo's hero and colour cards name no product (a real store's fill always sets it): give them the demo catalogue's first product.
   const config = assembled.files.find(file => file.path === 'config.js')!.content;
   const first = JSON.parse(config.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/)![1]).data.items[0].id as string;
-  const files = assembled.files.map(file => file.path === 'components/store-data.tsx' ? { ...file, content: (options.patch ?? (data => data))(file.content.replace('"type":"product-hero",', `"type":"product-hero","product":${JSON.stringify(first)},`)) } : file);
+  const files = assembled.files.map(file => file.path === 'components/store-data.tsx' ? { ...file, content: (options.patch ?? (data => data))(file.content.replace('"type":"product-hero",', `"type":"product-hero","product":${JSON.stringify(first)},`).replace('"type":"variant-cards",', `"type":"variant-cards","product":${JSON.stringify(first)},`)) } : file);
   const snapshot = await new SourceProjectsService({} as any).prepare({ revision: 0, ...assembled, files });
   // The page as a shopper gets it: rendered offline in the sandbox YAPI's own checks use.
   return withVisualSandbox(snapshot, '', undefined, false, async context => {
@@ -35,7 +35,10 @@ describe('Único lively home (spec 2026-11-03)', () => {
     const html = await unicoHome();
     expect(html).toContain('data-pya-lively=""');
     expect(html).toContain('data-es-mood="calm"');
-    expect(html).toMatch(/data-product-pills="\[&quot;/);
+    // Premium landing (2026-11-03): the pills float on the split hero's photo, the buy box no longer repeats them.
+    expect(html.match(/<li[^>]*><span aria-hidden="true"><\/span>[^<]+<\/li>/g)?.length).toBeGreaterThanOrEqual(1);
+    expect(html).toContain('class="lb-hero-split__pills"');
+    expect(html).not.toContain('data-product-pills');
     expect(html.match(/class="lb-hotspots__pin"/g)?.length).toBeGreaterThanOrEqual(2);
     expect(html.match(/class="lb-chips__row"[^>]*data-pya-motion="marquee"/g)).toHaveLength(2);
     expect(html).not.toContain('es-logo__letters');
@@ -88,11 +91,13 @@ describe('Único premium landing (spec 2026-11-03)', () => {
   it('the shop header carries search, account, cart and a «Comprar» button', async () => {
     const seen = await onUnico({ width: 1280, patch: data => data.replace('"header":"minimal"', '"header":"shop"') }, page => page.evaluate(() => {
       const header = document.querySelector('header[data-es-header="shop"]');
-      const links = Array.from(header?.querySelectorAll('.es-header__links a') ?? []).map(link => `${link.textContent} ${link.getAttribute('href')}`);
-      return { header: !!header, buy: header?.querySelector('a.es-header__buy')?.getAttribute('href'), cart: !!header?.querySelector('[data-cart-open]'), search: !!header?.querySelector('a[href="buscar.html"]'), links };
+      // The demo product has no colours: the kit hides «Colores» with the colour cards.
+      const links = Array.from(header?.querySelectorAll<HTMLElement>('.es-header__links a') ?? []).filter(link => link.getClientRects().length > 0).map(link => `${link.textContent} ${link.getAttribute('href')}`);
+      const colours = header?.querySelector<HTMLElement>('.es-header__links a[href="index.html#colores"]');
+      return { header: !!header, buy: header?.querySelector('a.es-header__buy')?.getAttribute('href'), cart: !!header?.querySelector('[data-cart-open]'), search: !!header?.querySelector('a[href="buscar.html"]'), links, coloursHidden: colours ? colours.hidden && colours.hasAttribute('data-needs-colour-cards') : 'missing' };
     }));
     // Spec §2: a short menu of the home's own parts (Colores only where the page has colour cards).
-    expect(seen).toEqual({ header: true, buy: 'index.html#comprar', cart: true, search: true, links: ['Producto index.html#comprar', 'Preguntas index.html#preguntas'] });
+    expect(seen).toEqual({ header: true, buy: 'index.html#comprar', cart: true, search: true, links: ['Producto index.html#comprar', 'Preguntas index.html#preguntas'], coloursHidden: true });
   });
   it('Único has one section rhythm and one button height', async () => {
     // The split hero brings the page's buttons (Task 6 makes it part of the layout).
@@ -106,5 +111,27 @@ describe('Único premium landing (spec 2026-11-03)', () => {
     expect(seen.pads.length).toBe(1);
     expect(seen.pads[0]).toBeGreaterThanOrEqual(96);
     expect(seen.buttons).toEqual([48]);
+  });
+  it('opens with the split hero whose words never cover its photo, at 1280 and 390 (Review Focus 4)', async () => {
+    for (const width of [1280, 390]) {
+      const seen = await onUnico({ width, patch: data => data.replace(/"type":"hero-split",("eyebrow":"[^"]*",)?"title":"[^"]*"/, '"type":"hero-split","title":"El sofá cama que llega comprimido en una caja y se infla en tu sala"') }, page => page.evaluate(() => {
+        const first = document.querySelector('main [data-lb]')!.getAttribute('data-lb');
+        const photo = document.querySelector('.lb-hero-split__photo')!.getBoundingClientRect(), panel = document.querySelector('.lb-hero-split__panel')!.getBoundingClientRect();
+        const overlap = panel.left < photo.right && panel.right > photo.left && panel.top < photo.bottom && panel.bottom > photo.top;
+        const aligns = Array.from(new Set(Array.from(document.querySelectorAll('.lb-hero-split__panel > *')).map(el => getComputedStyle(el).textAlign)));
+        const title = document.querySelector('.lb-hero-split .lb-title')!.textContent;
+        return { first, overlap, aligns, title, scroll: document.documentElement.scrollWidth };
+      }));
+      expect(seen.first).toBe('hero-split');
+      expect(seen.title).toMatch(/se infla en tu sala/);
+      expect(seen.overlap).toBe(false);
+      expect(seen.aligns).toEqual(['left']);
+      expect(seen.scroll).toBe(width);
+    }
+  });
+  it('follows the nubecorp order', async () => {
+    const order = await onUnico({ width: 1280 }, page => page.evaluate(() => Array.from(document.querySelectorAll('main [data-lb]')).map(el => el.getAttribute('data-lb'))));
+    const wanted = ['hero-split', 'strip-marquee', 'variant-cards', 'product-hero', 'benefits-orbit', 'chips-marquee', 'faq-split', 'closing-photo'];
+    expect(order.filter(type => wanted.includes(type!))).toEqual(wanted);
   });
 });
