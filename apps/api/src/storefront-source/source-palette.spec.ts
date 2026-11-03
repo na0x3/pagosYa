@@ -13,7 +13,7 @@ const hue = (hex: string) => {
 function expectReadable(palette: SourcePalette | undefined) {
   expect(palette).toBeDefined();
   const p = palette!;
-  for (const value of Object.values(p)) expect(value).toMatch(/^#[0-9a-f]{6}$/);
+  for (const [key, value] of Object.entries(p)) if (key !== 'extras') expect(value).toMatch(/^#[0-9a-f]{6}$/);
   expect(contrastRatio(rgb(p.ink), rgb(p.paper))).toBeGreaterThanOrEqual(4.5);
   expect(contrastRatio(rgb(p.ink), rgb(p.surface))).toBeGreaterThanOrEqual(4.5);
   expect(contrastRatio(rgb(p.onAccent), rgb(p.accent))).toBeGreaterThanOrEqual(4.5);
@@ -135,5 +135,15 @@ describe('the full brand palette', () => {
     const palette = paletteFromSamples({ logo: { dominant: ['#c99a0e', '#2f5d34'] } })!;
     expect(hsl(palette.surface).s).toBeGreaterThan(.25);
     expect(palette.surface.toLowerCase()).not.toBe(palette.paper.toLowerCase());
+  });
+});
+
+describe('palette extras for titles (spec 2026-11-03 chunky colour titles)', () => {
+  it('returns the photos\' other goods colours, distinct, without the accent', () => {
+    const palette = paletteFromSamples({ photos: [{ dominant: ['#2f6db5', '#2e6cb4', '#c0392b', '#f2f2f2', '#e0a030'] }] })!;
+    expect(palette.extras).toEqual(['#c0392b', '#e0a030']);
+  });
+  it('returns no extras for grey photos', () => {
+    expect(paletteFromSamples({ photos: [{ dominant: ['#2f6db5', '#9a9a9a', '#f4f4f4'] }] })!.extras ?? []).toEqual([]);
   });
 });

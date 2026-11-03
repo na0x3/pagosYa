@@ -5,7 +5,7 @@
 import { contrastRatio } from './source-scorecard';
 import { samplePhotoColours, type PhotoSample } from './source-photo-sampler';
 
-export type SourcePalette = { paper: string; ink: string; accent: string; surface: string; onAccent: string };
+export type SourcePalette = { paper: string; ink: string; accent: string; surface: string; onAccent: string; extras?: string[] };
 export type PaletteImage = { url: string; path: string; bytes: Buffer };
 type Rgb = [number, number, number];
 
@@ -69,7 +69,10 @@ export function paletteFromSamples(input: { logo?: PhotoSample; photos?: PhotoSa
     const [h, s, l] = toHsl(fill), lighterText = brightness(onAccent(fill)) > brightness(fill);
     fill = fromHsl(h, s, Math.max(0, Math.min(1, l + (lighterText ? -.02 : .02))));
   }
-  return { paper: toHex(paper), ink: toHex(ink), accent: toHex(fill), surface: toHex(surface), onAccent: toHex(onAccent(fill)) };
+  // Chunky colour titles (spec 2026-11-03): the goods' other colours, for the hero's word-by-word titles.
+  const extras: Rgb[] = [];
+  for (const colour of photos) if (chromatic(colour) && distance(colour, accent) >= 40 && extras.every(kept => distance(kept, colour) >= 40) && extras.length < 4) extras.push(colour);
+  return { paper: toHex(paper), ink: toHex(ink), accent: toHex(fill), surface: toHex(surface), onAccent: toHex(onAccent(fill)), ...(extras.length ? { extras: extras.map(toHex) } : {}) };
 }
 
 /** Logo and up to 12 product photos through the pixel sampler, then paletteFromSamples. Any failure gives no palette. */
