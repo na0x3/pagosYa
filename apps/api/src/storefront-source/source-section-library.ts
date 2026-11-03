@@ -4,6 +4,7 @@
  * block's needs are met by the store's real facts, every photo is the store's and shown once, every product exists. */
 
 import { isPlayfulBusiness } from './home-directions';
+import { libraryTitleStyle, type TitleStyle } from './source-title-style';
 
 export type LibraryRole = 'cover' | 'strip' | 'products' | 'story' | 'benefits' | 'proof' | 'promo' | 'info' | 'closing';
 export type LibraryNeeds = { photos?: number; items?: [number, number]; products?: [number, number]; product?: boolean; categories?: number;
@@ -122,11 +123,18 @@ export function libraryAnswerSchema(photoCount: number) {
     properties: { type: { type: 'string', enum: ids }, look: { type: 'string', enum: looks }, band: { type: 'string', enum: ['paper', 'muted', 'accent', 'deep', ''] },
       eyebrow: { type: 'string' }, title: { type: 'string' }, text: { type: 'string' }, cta: { type: 'string' }, link: { type: 'string' }, cta2: { type: 'string' }, link2: { type: 'string' },
       photo, photo2: photo, items: { type: 'array', items: item }, products: { type: 'array', items: { type: 'string' } }, product: { type: 'string' }, code: { type: 'string' }, card: { type: 'string', enum: [...LIBRARY_CARDS, ''] }, endsAt: { type: 'string' } } };
-  return { type: 'object', additionalProperties: false, required: ['blocks', 'mood'], properties: { blocks: { type: 'array', items: block }, mood: { type: 'string', enum: ['colourful', 'calm'] } } };
+  return { type: 'object', additionalProperties: false, required: ['blocks', 'mood', 'titleStyle'], properties: { blocks: { type: 'array', items: block }, mood: { type: 'string', enum: ['colourful', 'calm'] }, titleStyle: { type: 'string', enum: ['burbuja', 'redonda', 'firme', 'poster'] } } };
 }
 
 /** Lively one-product stores (spec 2026-11-03): the mood YAPI chose for the product; a playful business (sweets, toys, parties) is
  *  always colourful; anything else not exactly «colourful» is calm. */
+/** Chunky colour titles (spec 2026-11-03): what a library answer sets on a Único store — the mood and the title style; nothing elsewhere. */
+export function libraryVariants(theme: string, answer: { mood?: unknown; titleStyle?: unknown } | null | undefined, facts: LibraryFacts): { mood: 'colourful' | 'calm'; titles: TitleStyle } | undefined {
+  if (theme !== 'unico') return undefined;
+  const playful = isPlayfulBusiness([facts.what, facts.request, ...facts.products.map(product => `${product.name} ${product.about ?? ''}`)].join('\n'));
+  return { mood: libraryMood(answer, facts), titles: libraryTitleStyle(answer, playful) };
+}
+
 export function libraryMood(answer: { mood?: unknown } | null | undefined, facts: LibraryFacts): 'colourful' | 'calm' {
   if (isPlayfulBusiness([facts.what, facts.request, ...facts.products.map(product => `${product.name} ${product.about ?? ''}`)].join('\n'))) return 'colourful';
   return answer?.mood === 'colourful' ? 'colourful' : 'calm';
@@ -143,6 +151,7 @@ look, band y card los pone la plantilla: déjalos vacíos. Escribe TODAS las sec
 respuestas, puntos, columnas, títulos de categorías y productos exactos para los puntos de shop-look): una sección que mandas vacía
 desaparece. Si te faltan fotos, deja photo en -1: el código pone una foto de la tienda.
 - mood: «colourful» para productos alegres, de casa o de regalo que piden juego (un sofá nube, una bebida, juguetes, dulces); «calm» para productos serios o técnicos (herramientas, cuidado de la piel, salud, finanzas). Fuera de la plantilla Único no cambia nada.
+- titleStyle: el estilo de los títulos según el producto: «burbuja» (juguetes, mascotas, dulces, snacks, fiestas, niños), «redonda» (casa, muebles, cocina, ropa de cama), «firme» (tecnología, belleza, herramientas), «poster» (deportes, bebidas, ropa urbana). Fuera de la plantilla Único no cambia nada.
 - Etiquetas (product-hero items), frases (chips-marquee) y notas (detail-hotspots): solo hechos que están en los datos (lo que dijo el comercio, la descripción del producto, sus notas de entrega). Ningún plazo, número, premio o calificación que no esté escrito. Si no hay hechos, déjalos vacíos.`;
 
 export const LIBRARY_PROMPT = `Eres el director de arte de una tienda online pagosYa. Armas su portada con secciones ya diseñadas (como un tema de Shopify):

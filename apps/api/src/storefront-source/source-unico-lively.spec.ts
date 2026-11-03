@@ -199,4 +199,14 @@ describe('chunky colour titles (spec 2026-11-03)', () => {
     const scroll = await onUnico({ width: 390, patch: data => burbuja(data).replace(/"type":"hero-split",("eyebrow":"[^"]*",)?"title":"[^"]*"/, '"type":"hero-split","title":"El sofá cama que llega comprimido en una caja y se infla en tu sala"') }, page => page.evaluate(() => document.documentElement.scrollWidth));
     expect(scroll).toBe(390);
   });
+  it('Único starts with rounded titles in Fredoka, its font bundled', async () => {
+    const seen = await onUnico({ width: 1280 }, page => page.evaluate(async () => {
+      await document.fonts.ready;
+      const title = document.querySelector('.lb-hero-split .lb-title') as HTMLElement;
+      return { attr: (document.querySelector('.es') as HTMLElement).dataset.esTitles, family: getComputedStyle(title).fontFamily, loaded: document.fonts.check('600 40px Fredoka') };
+    }));
+    expect(seen.attr).toBe('redonda');
+    expect(seen.family).toMatch(/^"?Fredoka/);
+    expect(seen.loaded).toBe(true);
+  });
 });

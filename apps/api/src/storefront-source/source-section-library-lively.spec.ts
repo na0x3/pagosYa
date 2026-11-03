@@ -1,4 +1,4 @@
-import { libraryAnswerSchema, libraryMood, validateLibraryLayout, type LibraryFacts } from './source-section-library';
+import { libraryAnswerSchema, libraryMood, libraryVariants, validateLibraryLayout, type LibraryFacts } from './source-section-library';
 
 const facts: LibraryFacts = { storeName: 'Nube', what: 'Vendo un sofá cama plegable comprimido. Entrega en Santa Cruz.', story: '', city: 'Santa Cruz', request: 'sofá cama plegable, llega en caja',
   tone: 'calm', products: [{ id: 'p1', name: 'Sofá cama plegable', about: 'Llega comprimido en una caja. 7 colores.' }], categories: [],
@@ -56,5 +56,18 @@ describe('hero-split (spec 2026-11-03 premium landing)', () => {
   it('variant-cards takes the store product and keeps only its title', () => {
     const [cards] = fill(raw('variant-cards', { title: 'Elige tu color' }));
     expect(cards).toMatchObject({ type: 'variant-cards', product: 'p1', title: 'Elige tu color' });
+  });
+});
+
+describe('title style from the library answer (spec 2026-11-03 chunky colour titles)', () => {
+  it('asks YAPI for a title style beside the mood', () => {
+    const schema = libraryAnswerSchema(2) as unknown as { required: string[]; properties: Record<string, { enum?: string[] }> };
+    expect(schema.required).toContain('titleStyle');
+    expect(schema.properties.titleStyle.enum).toEqual(['burbuja', 'redonda', 'firme', 'poster']);
+  });
+  it('saves mood and title style on Único only; a playful business gets burbuja', () => {
+    expect(libraryVariants('unico', { mood: 'calm', titleStyle: 'redonda' }, facts)).toEqual({ mood: 'calm', titles: 'redonda' });
+    expect(libraryVariants('unico', { mood: 'calm', titleStyle: 'firme' }, { ...facts, what: 'Gomitas y caramelos para fiestas infantiles' })).toEqual({ mood: 'colourful', titles: 'burbuja' });
+    expect(libraryVariants('crocante', { mood: 'calm', titleStyle: 'firme' }, facts)).toBeUndefined();
   });
 });
