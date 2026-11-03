@@ -1996,10 +1996,14 @@ main[data-lb-home]{overflow-x:clip}
 /* /lb:cover-split,cover-full */
 /* lb:cover-full */
 .lb-cover-full[data-lb-look="right"]{min-height:min(64vh,620px);align-items:center;background:var(--es-muted)}
-.lb-cover-full[data-lb-look="right"]::after{background:radial-gradient(60% 80% at 82% 50%,rgba(255,255,255,.82),rgba(255,255,255,0) 70%)}
-.lb-cover-full[data-lb-look="right"] .lb-cover-full__copy{justify-items:end;text-align:right;display:grid}
-.lb-cover-full[data-lb-look="right"] :is(.lb-title,.lb-cover__sub,h1){color:var(--es-ink);text-shadow:none;max-width:20ch;margin-left:auto}
-.lb-cover-full[data-lb-look="right"] .lb-actions{justify-content:flex-end}
+.lb-cover-full[data-lb-look="right"]::after{display:none}
+.lb-cover-full[data-lb-look="right"] .lb-cover-full__copy{display:grid;justify-items:start;text-align:left;width:clamp(260px,calc(33.333% - 48px),420px);margin-left:auto;margin-right:24px;padding:clamp(24px,2.6vw,36px);border-radius:22px;background:var(--es-paper);color:var(--es-ink);box-shadow:0 30px 60px -36px #0006}
+.lb-cover-full[data-lb-look="right"] :is(.lb-title,.lb-cover__sub,h1,.es-eyebrow){color:var(--es-ink);text-shadow:none;text-align:left;margin-left:0;max-width:none}
+.lb-cover-full[data-lb-look="right"] .lb-cover-full__copy :is(h1,.lb-title){font-size:clamp(30px,2.8vw,44px);line-height:1.04}
+.lb-cover-full[data-lb-look="right"] .lb-cover-full__copy{gap:16px}
+.lb-cover-full[data-lb-look="right"] .lb-cover-full__copy>*{margin-block:0}
+.lb-cover-full[data-lb-look="right"] .lb-actions{justify-content:flex-start;margin-top:8px}
+@media (max-width:900px){.lb-cover-full[data-lb-look="right"]{display:block;min-height:0}.lb-cover-full[data-lb-look="right"] .lb-cover-full__photo{position:relative;inset:auto;display:block;width:100%;aspect-ratio:4/5;object-fit:cover}.lb-cover-full[data-lb-look="right"] .lb-cover-full__copy{width:auto;margin:-32px 16px 0;position:relative}}
 /* /lb:cover-full */
 /* lb:categories-tiles */
 .lb-categories-tiles[data-lb-look="pastel"]{padding-inline:0}
