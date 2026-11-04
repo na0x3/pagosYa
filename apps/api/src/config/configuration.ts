@@ -150,6 +150,8 @@ export interface AppConfig {
   yapiSectionLibrary: boolean;
   /** Owner 2026-10-31: a new store starts on the themed template YAPI picks for its business (YAPI_TEMPLATE_PICK=1). */
   yapiTemplatePick: boolean;
+  /** Spec 2026-11-04: YAPI asks what is missing before a new store's first build (source-intake.ts). */
+  yapiIntake: boolean;
   /** Owner 2026-10-31: the Shrine Pro templates show in Plantillas only with YAPI_SHRINE_TEMPLATES=1. */
   yapiShrineTemplates: boolean;
   /** Owner 2026-11-02 («check and log»): a new template home is checked in the background and the findings logged (template_qa). */
@@ -541,6 +543,7 @@ export default (): { app: AppConfig } => {
     yapiHomeWriterModel: process.env.YAPI_HOME_WRITER_MODEL || 'gpt-5.6-terra',
     yapiSectionLibrary: process.env.YAPI_SECTION_LIBRARY === '1',
     yapiTemplatePick: process.env.YAPI_TEMPLATE_PICK === '1',
+    yapiIntake: process.env.YAPI_INTAKE === '1',
     yapiShrineTemplates: process.env.YAPI_SHRINE_TEMPLATES === '1',
     yapiTemplateQa: process.env.YAPI_TEMPLATE_QA !== '0' && process.env.NODE_ENV !== 'test',
     yapiSectionLibraryModel: process.env.YAPI_SECTION_LIBRARY_MODEL || 'gpt-5.6-terra',

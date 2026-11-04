@@ -26,6 +26,7 @@ import { PLANTILLA_FILL_PROMPT, plantillaFillFromRead, plantillaFillSchema } fro
 import type { TemplateCopySlot } from '@pagosya/store-templates';
 import { checkSourceProviderQuota, SourceProviderQuotaException } from './source-provider-error';
 import { BRIEF_CHECKLIST_PROMPT, BRIEF_CHECKLIST_SCHEMA, normalizeChecklist, type BriefChecklist } from './source-brief-checklist';
+import { INTAKE_PROMPT, INTAKE_SCHEMA, type IntakeAnswer, type IntakeFacts, type IntakeTopic } from './source-intake';
 import { coverCandidates } from './source-cover-pick';
 import { readPhotoFit } from './source-photo-fit';
 import { Logger, Optional } from '@nestjs/common';
@@ -554,6 +555,36 @@ export class SourceConversationService {
         this.logger.warn(JSON.stringify({ stage: 'brief-checklist', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
       } finally { await this.metering?.record(input.storeId, 'source-brief-checklist', model, body, Date.now() - started, status); }
       if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    return null;
+  }
+
+  /** Spec 2026-11-04 (owner «keep asking questions until he is ready»): what a new store still needs before its first build, as
+   *  one structured answer that source-intake.ts normalises. Null when both attempts fail: the store is then built at once. */
+  async intakeStep(merchantId: string, input: { storeId: string; facts: IntakeFacts; words: string; answers: IntakeAnswer[]; asked: IntakeTopic[]; pending?: { topic: IntakeTopic; text: string } }): Promise<unknown | null> {
+    const model = sourceConversationModel(undefined, this.config.get<string>('app.openAi.conversationModel'));
+    const provider = sourceProvider(this.config, model);
+    const facts = { palabras: input.words.slice(0, 4000), respuestas: input.answers.map(answer => ({ pregunta: answer.question, respuesta: answer.answer.slice(0, 600) })),
+      preguntado: input.asked, ...(input.pending ? { pendiente: input.pending } : {}), hechos: input.facts };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const started = Date.now(); let body: any = null; let status = 'FAILED';
+      try {
+        const response = await fetch(provider.endpoint, {
+          method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(45_000),
+          body: JSON.stringify({ model, store: false, instructions: INTAKE_PROMPT,
+            input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(facts) }] }],
+            text: { format: { type: 'json_schema', name: 'store_intake', strict: true, schema: INTAKE_SCHEMA } },
+            reasoning: { effort: 'low' }, max_output_tokens: 1200 }),
+        });
+        body = await response.json().catch(() => null);
+        checkSourceProviderQuota(response.status, body, provider.name);
+        const answer = response.ok ? sourceResponseJson(body) : null;
+        if (answer && typeof answer === 'object') { status = 'COMPLETED'; return answer; }
+      } catch (error) {
+        if (error instanceof SourceProviderQuotaException) throw error;
+        this.logger.warn(JSON.stringify({ stage: 'intake', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
+      } finally { await this.metering?.record(input.storeId, 'source-intake', model, body, Date.now() - started, status); }
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 1500));
     }
     return null;
   }
