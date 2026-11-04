@@ -275,7 +275,9 @@ async function main() {
     const step = async (name: string, run: () => Promise<void>) => { if (record.done[name]) return; await run(); record.done[name] = true; await save(); console.log('✓', name); };
     if (!record) {
       // The owner's demo merchant (the one that owns NOA VARGAS and BOXY), so it shows in «Tus tiendas».
-      const noa = await prisma.store.findFirstOrThrow({ where: { name: 'NOA VARGAS Atelier' }, select: { merchantId: true } });
+      // DEMO_MERCHANT_EMAIL (2026-11-04, owner «crea otro usuario, ese ya tiene muchas tiendas»): another dev merchant owns it.
+      const other = process.env.DEMO_MERCHANT_EMAIL ? await prisma.merchant.findUniqueOrThrow({ where: { email: process.env.DEMO_MERCHANT_EMAIL }, select: { id: true } }) : null;
+      const noa = other ? { merchantId: other.id } : await prisma.store.findFirstOrThrow({ where: { name: 'NOA VARGAS Atelier' }, select: { merchantId: true } });
       const store = await stores.create(noa.merchantId, { name: brand.name, tagline: brand.tagline, animations: [] } as never);
       record = { merchantId: noa.merchantId, storeId: store.id, slug: store.slug, photos: {}, categories: {}, products: {}, done: {} };
       await save();

@@ -49,4 +49,9 @@ describe('template switch request', () => {
     expect(templateSwitchRequest('cambia el color del botón', templates)).toBeNull();
     expect(templateSwitchRequest('agrega una sección de preguntas', templates)).toBeNull();
   });
+  it('reads a template named inside a first message (live 2026-11-04, Miga Dorada got Gumdrop)', () => {
+    const templates = [{ id: 'grano', name: 'Grano', category: 'comida', description: '', tags: [] }, { id: 'gumdrop', name: 'Gumdrop', category: 'comida', description: '', tags: [] }];
+    expect(templateSwitchRequest('Somos una panadería en La Paz. Quiero una tienda cálida. Usa la plantilla Grano.', templates)).toEqual({ id: 'grano' });
+    expect(templateSwitchRequest('Somos una panadería de grano entero en La Paz.', templates)).toBeNull();
+  });
 });

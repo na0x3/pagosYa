@@ -470,6 +470,14 @@ export class SourceChatService {
     const oneProduct = input.products.length > 0 && input.products.length <= 2;
     const templates = pickableTemplates(listTemplates(), hidden).filter(template => template.id !== input.exclude && (oneProduct || template.id !== ONE_PRODUCT_TEMPLATE));
     if (!templates.length) return null;
+    // Live check 2026-11-04 (Miga Dorada: «Usa la plantilla Grano.» in the first message got Gumdrop): a template the merchant names
+    // is the one, never the model's guess.
+    const named = templateSwitchRequest(input.request, templates);
+    if (named && named !== 'other') {
+      const pick = { id: named.id, reason: 'es la que pediste' };
+      this.productLogger.log(JSON.stringify({ event: 'template_pick', storeId, template: pick.id, by: 'named', reason: pick.reason }));
+      return pick;
+    }
     if (oneProduct && templates.some(template => template.id === ONE_PRODUCT_TEMPLATE)) {
       const pick = { id: ONE_PRODUCT_TEMPLATE, reason: input.products.length === 1 ? 'tu tienda vende un producto, así que la portada lo muestra entero arriba de todo: fotos, precio y botón de compra, y debajo todo lo que lo hace especial'
         : 'tu tienda vende dos productos, así que la portada muestra el principal entero arriba de todo y el otro debajo' };
