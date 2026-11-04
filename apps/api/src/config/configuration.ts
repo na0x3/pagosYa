@@ -150,7 +150,7 @@ export interface AppConfig {
   yapiSectionLibrary: boolean;
   /** Owner 2026-10-31: a new store starts on the themed template YAPI picks for its business (YAPI_TEMPLATE_PICK=1). */
   yapiTemplatePick: boolean;
-  /** Owner 2026-11-04: YAPI_TEMPLATE_RANDOM=pick draws one of YAPI's three templates, =all any store template; unset keeps the least used. */
+  /** Owner 2026-11-04: YAPI_TEMPLATE_RANDOM=pick draws one of YAPI's three templates, =all any store template; unset keeps the least used (the API reads it at start). */
   yapiTemplateRandom: string;
   /** Spec 2026-11-04: YAPI asks what is missing before a new store's first build (source-intake.ts). */
   yapiIntake: boolean;
