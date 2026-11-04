@@ -127,7 +127,8 @@ function Head({ block, index, align = 'start', level = 2, aside }: { block: Libr
  *            struck through, «2 colores».
  *  soft    — CHUG/Shapes: a tinted card with a rounded photo and a full «Agregar» pill.
  *  framed  — Shrine Pro: a framed photo, centred name and price, an outline «Agregar al carrito» bar. */
-export const LIBRARY_CARDS = ['classic', 'ribbon', 'soft', 'framed', 'arch'] as const;
+// Template frame variety (2026-11-03): ten more cards copied from real stores (esencial globals.css, «v:lbcard» blocks).
+export const LIBRARY_CARDS = ['classic', 'ribbon', 'soft', 'framed', 'arch', 'overlay', 'line', 'portrait', 'swatch', 'badge', 'polaroid', 'round-add', 'list', 'scallop', 'caps'] as const;
 export type LibraryCard = typeof LIBRARY_CARDS[number];
 export function libraryCard(layout: LibraryBlock[]): LibraryCard {
   const card = layout.find(block => ['products-grid', 'products-tabs', 'products-slider'].includes(block.type))?.card;

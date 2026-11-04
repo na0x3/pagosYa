@@ -315,3 +315,23 @@ describe('the account link in the footer nav', () => {
     win.close();
   });
 });
+
+describe('YAPI edits everything (spec 2026-11-03): own FAQ questions and footer links', () => {
+  it('shows the merchant\'s own questions first, escaped, and one of them alone makes the page', async () => {
+    const w = await shop('faq', { items: [], faq: [{ q: '¿Hacen tortas personalizadas?', a: `Sí, con 3 días.\n\n${HOSTILE}` }, { q: '', a: 'sin pregunta' }] });
+    const questions = Array.from(mount(w).querySelectorAll('.pagosya-info__qa h2')).map(node => node.textContent);
+    expect(questions[0]).toBe('¿Hacen tortas personalizadas?');
+    expect(mount(w).textContent).not.toContain('sin pregunta');
+    expect(mount(w).innerHTML).toContain('&lt;script&gt;');
+    expect(mount(w).querySelector('script')).toBeNull();
+    w.close();
+  });
+
+  it('adds the store\'s http(s) links to the footer\'s information links only', async () => {
+    const w = await shop('about', { aboutText: 'Hola', links: [{ label: 'Instagram', url: 'https://instagram.com/marca' }, { label: 'Malo', url: 'javascript:alert(1)' }] });
+    const footer = Array.from(w.document.querySelectorAll('footer [data-pagosya-pages] a[data-pagosya-store-link]')) as HTMLAnchorElement[];
+    expect(footer.map(link => link.textContent)).toEqual(['Instagram']);
+    expect(footer[0].getAttribute('rel')).toContain('noopener');
+    w.close();
+  });
+});

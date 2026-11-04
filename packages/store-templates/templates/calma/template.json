@@ -75,8 +75,8 @@
       "icons": "line",
       "header": "centered",
       "announce": "plain",
-      "footer": "columns",
-      "button": "square",
+      "footer": "photo",
+      "button": "caps",
       "corners": "soft",
       "density": "regular",
       "texture": "none",
@@ -102,7 +102,7 @@
       },
       {
         "type": "products-tabs",
-        "card": "classic",
+        "card": "portrait",
         "title": "Tejidos de la casa",
         "link": "products"
       },
@@ -153,8 +153,7 @@
         ]
       },
       {
-        "type": "categories-tiles",
-        "look": "caption",
+        "type": "categories-mosaic",
         "title": "Colecciones",
         "items": [
           {
@@ -176,32 +175,6 @@
             "title": "Todo",
             "photo": "slot:en-jardin",
             "link": "products"
-          }
-        ]
-      },
-      {
-        "type": "newsletter-split",
-        "look": "band",
-        "band": "muted",
-        "title": "Siempre *al tanto*",
-        "text": "Novedades, regalos y ofertas antes que nadie."
-      },
-      {
-        "type": "press-quotes",
-        "look": "marquee",
-        "title": "Nos vieron en",
-        "items": [
-          {
-            "title": "Revista Cosas"
-          },
-          {
-            "title": "Vestir"
-          },
-          {
-            "title": "Diario Uno"
-          },
-          {
-            "title": "Estilo"
           }
         ]
       }

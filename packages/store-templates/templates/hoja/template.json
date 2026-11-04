@@ -80,8 +80,8 @@
       "icons": "line",
       "header": "centered",
       "announce": "plain",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "visit",
+      "button": "soft",
       "corners": "round",
       "density": "regular",
       "texture": "none",
@@ -106,7 +106,7 @@
         "photo": "slot:pe-rutina"
       },
       {
-        "type": "products-slider",
+        "type": "products-grid",
         "card": "soft",
         "title": "Nuestras fórmulas favoritas",
         "link": "products"

@@ -22,8 +22,8 @@ export const LISTING_READ_PROMPT = [
   'isListing: true only when it shows a product with its name or price as an app or web page does (text, buttons or prices around a photo); false for a plain photo of a product.',
   'name: the product name exactly as shown. description: what the listing says about it, copied, at most 600 characters. priceText: the price exactly as printed with its currency sign or code (e.g. «Bs 120», «US$ 18.30», «$25»), or an empty string. currency: the ISO code when it is certain (BOB, USD, …), else an empty string.',
   'options: groups of choices the listing shows (colour, size, capacity) with their values; empty when none are shown.',
-  "photo: the product photo's box in the screenshot in thousandths of its width and height (0–1000): x, y, width, height. Only the photo, without text, buttons, badges or app bars. All zeros when there is no product photo.",
-  "catalogName: a short catalog name in Spanish (at most 60 characters, the product itself, without keyword stuffing or seller names). catalogDescription: one to three plain Spanish sentences from what the screenshot shows, inventing no claim, rating or delivery term.",
+  "photo: the product photo's box in the screenshot in thousandths of its width and height (0–1000): x, y, width, height. Only the photo, without text, buttons, badges or app bars. Never a photo dimmed or partly covered by a sheet, popup or overlay: then the largest clear photo of the product, such as a colour option's picture. All zeros when there is no product photo.",
+  "catalogName: a short catalog name in Spanish (at most 60 characters, the product itself, without keyword stuffing or seller names; when no title is shown, name it from what the photos show, e.g. «Sofá cama plegable», not just «Sofá»). catalogDescription: one to three plain Spanish sentences from what the screenshot shows, inventing no claim, rating or delivery term.",
 ].join('\n');
 
 export type ListingRead = { listing: ProductListing; copy: ProductCopy; box: { x: number; y: number; width: number; height: number } | null };
@@ -33,7 +33,8 @@ const unit = (value: unknown) => typeof value === 'number' && Number.isFinite(va
 /** The read, kept only when it is a listing with a name. `source` labels where it came from (the screenshot's upload URL). */
 export function parseListingRead(body: unknown, source: string): ListingRead | null {
   const value = (body && typeof body === 'object' ? body : {}) as Record<string, any>;
-  const name = text(value.name, 200);
+  // A colour or size picker sheet covers the title (live 2026-11-03, sofa cama): the catalog name the read wrote names it instead.
+  const name = text(value.name, 200) || text(value.catalogName, 120);
   if (value.isListing !== true || !name) return null;
   const priceText = text(value.priceText, 40);
   const currency = listingCurrency(text(value.currency, 8)) ?? listingCurrency(priceText);

@@ -59,9 +59,10 @@ export async function captureSourceVisuals(snapshot: SourceProjectSnapshot, entr
       const positions = [...new Set([0, Math.max(0, Math.round((pageHeight - 844) / 2)), Math.max(0, pageHeight - 844)])];
       for (const y of positions) {
         await page.evaluate(offset => window.scrollTo(0, offset), y);
-        await page.evaluate(async () => { await Promise.all(Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }).map(i => i.decode().catch(() => {}))); });
+        // On screen means both axes: a lazy photo parked to the side in a phone slider never loads, and waiting on it hung the sandbox.
+        await page.evaluate(async () => { await Promise.race([Promise.all(Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; }).map(i => i.decode().catch(() => {}))), new Promise(resolve => setTimeout(resolve, 5000))]); });
         const image = await page.screenshot({ type: 'jpeg', quality: 75, animations: 'disabled', timeout: 7000 });
-        const readiness = await page.evaluate(() => ({ fontsLoaded: document.fonts.status === 'loaded', scrollWidth: document.documentElement.scrollWidth, missingImages: Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight && (!i.complete || !i.naturalWidth); }).length }));
+        const readiness = await page.evaluate(() => ({ fontsLoaded: document.fonts.status === 'loaded', scrollWidth: document.documentElement.scrollWidth, missingImages: Array.from(document.images).filter(i => { const r = i.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth && (!i.complete || !i.naturalWidth); }).length }));
         // Purchase placement is measured once per viewport, at the top where shoppers land.
         const product = y === 0 ? await page.evaluate(() => {
           const detail = document.querySelector('[data-pagosya-product-page]'), title = detail?.querySelector('#pagosya-product-title');

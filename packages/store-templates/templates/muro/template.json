@@ -95,8 +95,8 @@
       "icons": "line",
       "header": "centered",
       "announce": "plain",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "twotone",
+      "button": "soft",
       "corners": "soft",
       "density": "regular",
       "texture": "none",
@@ -140,14 +140,7 @@
         ]
       },
       {
-        "type": "products-slider",
-        "card": "framed",
-        "title": "Bien elegido, a buen precio",
-        "link": "products"
-      },
-      {
-        "type": "categories-tiles",
-        "look": "caption",
+        "type": "categories-list",
         "band": "deep",
         "title": "Colecciones para tu espacio",
         "items": [

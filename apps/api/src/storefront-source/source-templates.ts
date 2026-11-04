@@ -3,9 +3,9 @@ import { uploadPath } from './source-product-photos';
  * authored source never contains merchant text; it imports `./store-data`, which this module writes with every value
  * JSON-encoded, so no store name or photo URL is ever pasted into JSX. */
 import type { MasterCopy } from '@pagosya/store-templates';
-import { MASTER_TEMPLATE_ID, masterCopy, masterDnaFonts, masterDnaLook, masterFilterStyle, masterProductStyle, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, withMasterTheme, withOnlyTheme, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
+import { MASTER_TEMPLATE_ID, bindThemeAccent, frameChoices, refreshVariantBlocks, masterCopy, readableAccentText, masterDnaFonts, masterDnaLook, masterFilterStyle, masterProductStyle, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, templateLook, withMasterTheme, withOnlyTheme, type MasterColour, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
 import { readFile } from 'node:fs/promises';
-import { templateDemoPhoto, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
+import { templateDemoPhoto, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
 import { plantillaFillFromRead } from './source-plantilla-fill';
 import { kitPath } from '@pagosya/storefront-kit';
 import type { SourceProjectBriefDto, SourceProjectFileDto } from './dto/save-source-project.dto';
@@ -236,8 +236,50 @@ export function withStoreMenuMounts<F extends { path: string; content: string }>
 }
 
 /** Sort & filter styles spec 2026-10-21: an Esencial store built before the store's own catalogue pages gets them, with their
- *  CSS block, so its productos.html and coleccion.html carry the store's header, menu, footer and fonts (the compiled pages
+ *  CSS block (kept up to date: it is the platform's), so its productos.html and coleccion.html carry the store's header, menu, footer and fonts (the compiled pages
  *  replace the kit's fallback files at save). A page the store already has is left alone; doing it twice changes nothing. */
+/** 2026-11-02 (DooBoo: Pancita's turquoise tag was fixed in the template, the store kept its white-on-turquoise copy): the store's own
+ *  theme block is the platform's too, so a refill takes the template's current one (without developer notes) before the store's
+ *  accent is bound into it again. A theme the template no longer has stays as it is. */
+export function withCurrentThemeBlock(css: string, theme: string): string {
+  const start = css.indexOf(`/* theme:${theme} */`), end = css.indexOf(`/* /theme:${theme} */`);
+  if (!theme || theme === 'none' || start < 0 || end < start) return css;
+  const source = templateSourceFiles(MASTER_TEMPLATE_ID).find(file => file.path === 'styles/globals.css')?.content ?? '';
+  const from = source.indexOf(`/* theme:${theme} */`), to = source.indexOf(`/* /theme:${theme} */`);
+  if (from < 0 || to < from) return css;
+  const latest = source.slice(from, to).replace(/\/\*(?! ?\/?(?:theme|lb):| ?pagosya)[\s\S]*?\*\//g, '');
+  return css.slice(0, start) + latest + css.slice(end);
+}
+
+/** 2026-11-02 (Taller Lienzo: the overlap section's phone rule was fixed in the template, the store kept its old copy): the section
+ *  blocks a store's sheet carries («lb:ids») are the platform's, so a refill brings each one up to the template's current version,
+ *  without the developer notes (as withOnlyTheme ships them). Sections the store does not carry are left out. */
+export function withCurrentSectionCss<F extends { path: string; content: string }>(files: F[]): F[] {
+  const sheet = files.find(file => file.path === 'styles/globals.css');
+  if (!sheet || !sheet.content.includes('/* lb:') || !files.some(file => file.path === TEMPLATE_STORE_DATA_PATH)) return files;
+  const source = templateSourceFiles(MASTER_TEMPLATE_ID).find(file => file.path === 'styles/globals.css')?.content ?? '';
+  // One tag can mark several blocks (story-overlap has two): the store's n-th block of a tag takes the template's n-th.
+  const latest = new Map<string, string[]>();
+  for (const match of source.matchAll(/\/\* lb:([a-z0-9,-]+) \*\/[\s\S]*?\/\* \/lb:\1 \*\//g)) latest.set(match[1], [...(latest.get(match[1]) ?? []), match[0].replace(/\/\*(?! ?\/?(?:theme|lb):| ?pagosya)[\s\S]*?\*\//g, '')]);
+  const seen = new Map<string, number>();
+  // The colour binding ran before this (the accent as words): a fresh block gets it too.
+  const content = readableAccentText(sheet.content.replace(/\/\* lb:([a-z0-9,-]+) \*\/[\s\S]*?\/\* \/lb:\1 \*\//g, (block, ids: string) => {
+    const at = seen.get(ids) ?? 0; seen.set(ids, at + 1);
+    return latest.get(ids)?.[at] ?? block;
+  }));
+  return content === sheet.content ? files : files.map(file => file === sheet ? { ...file, content } : file);
+}
+
+/** Template frame variety (2026-11-03): a refill brings the store's variant blocks («v:part=value») in line with its footer, button,
+ *  card and product page — the chosen ones from the template's current sheet, the others empty. Only a template store's sheet. */
+export function withCurrentVariantCss<F extends { path: string; content: string }>(files: F[], choices: Record<string, unknown>): F[] {
+  const sheet = files.find(file => file.path === 'styles/globals.css');
+  if (!sheet || !sheet.content.includes('/* pagosya:master-theme */') || !files.some(file => file.path === TEMPLATE_STORE_DATA_PATH)) return files;
+  const source = templateSourceFiles(MASTER_TEMPLATE_ID).find(file => file.path === 'styles/globals.css')?.content ?? '';
+  const content = readableAccentText(refreshVariantBlocks(sheet.content, source, choices));
+  return content === sheet.content ? files : files.map(file => file === sheet ? { ...file, content } : file);
+}
+
 const CATALOG_PAGES = ['components/page-productos.tsx', 'components/page-coleccion.tsx'];
 const CATALOG_CSS_MARK = '/* Esencial catalogue pages (2026-10-21)';
 const CATALOG_CSS_END = '/* Esencial catalogue pages end */';
@@ -255,6 +297,11 @@ export function withEsencialCatalogPages<F extends { path: string; content: stri
   const current = (path: string) => source.find(file => file.path === path)?.content;
   const withCss = files.map(file => {
     if (file.path === 'styles/globals.css' && block && !file.content.includes(CATALOG_CSS_MARK)) return { ...file, content: `${file.content.trimEnd()}\n\n${block}\n` };
+    // The block is the platform's (2026-11-02: the template-card grid): an older copy of it is replaced by the current one.
+    if (file.path === 'styles/globals.css' && block) {
+      const from = file.content.indexOf(CATALOG_CSS_MARK), to = file.content.indexOf(CATALOG_CSS_END, from);
+      if (to > from && file.content.slice(from, to + CATALOG_CSS_END.length) !== block) return { ...file, content: file.content.slice(0, from) + block + file.content.slice(to + CATALOG_CSS_END.length) };
+    }
     const latest = CATALOG_PAGES.includes(file.path) ? current(file.path) : undefined;
     return latest && file.content !== latest && firstVersion(file.content, latest) ? { ...file, content: latest } : file;
   });
@@ -318,7 +365,11 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   const state = readMasterState(files);
   const copy = masterCopy(settings, { ...(state.copy ?? {}), ...(change.copy ?? {}) });
   // A changed look carries its whole colour set (the fill call copies the colours it keeps), so earlier custom colours can go.
-  const look = masterLook(settings, { ...(state.look ?? {}), ...(change.look ?? {}), colors: change.look?.colors ?? state.look?.colors ?? {} });
+  // On a template (spec 2026-11-01 §2) only the accent changes: its theme is drawn for its own paper, ink and deep.
+  const themeId = String((state.variants as Record<string, unknown> | undefined)?.theme ?? 'none');
+  const themed = themeId !== 'none' ? templateManifest(themeId)?.preset?.colors as Partial<Record<MasterColour, string>> | undefined : undefined;
+  const look = themed && change.look && state.look ? templateLook(settings, state.look as MasterLook, change.look)
+    : masterLook(settings, { ...(state.look ?? {}), ...(change.look ?? {}), colors: change.look?.colors ?? state.look?.colors ?? {} });
   const photos = sameAsBundled({ ...state.photos, ...(change.heroPhoto !== undefined ? { hero: masterPhotoUrl(change.heroPhoto, apiUrl) } : {}), ...(change.storyPhoto !== undefined ? { story: masterPhotoUrl(change.storyPhoto, apiUrl) } : {}) }, change.photoSources);
   const variants = { ...(state.variants ?? { sections: [] }), ...Object.fromEntries(Object.entries(change.variants ?? {}).filter(([part, id]) => part !== 'sections' && (settings.variants?.[part] ?? []).includes(String(id)))) } as MasterVariants;
   // Chunky colour titles (spec 2026-11-03): the theme block carries the chosen title style's font.
@@ -354,7 +405,8 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   if ((settings.variants?.filters ?? []).includes('chips') && variants.filters === undefined && variants.cards === 'fashion') variants.filters = 'chips';
   const out = withFashionTemplateParts(files.map(file => {
     if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [], features, layout: change.layout ?? state.layout ?? [], productLayout: change.productLayout ?? state.productLayout ?? [] });
-    if (file.path === 'styles/globals.css') return { ...file, content: withMasterTheme(file.content, theme) };
+    // Owner 2026-11-02 (DooBoo): the accent as words on the page reads even when the brand's accent is pale.
+    if (file.path === 'styles/globals.css') return { ...file, content: readableAccentText(themed ? bindThemeAccent(withMasterTheme(withCurrentThemeBlock(file.content, themeId), theme), themeId, themed) : withMasterTheme(file.content, theme)) };
     if (file.path === 'config.js') {
       const match = file.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
       if (!match) return file;
@@ -370,7 +422,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
     }
     return file;
   }), variants);
-  const pages = withFeatureSlots(withEsencialCatalogPages(out));
+  const pages = withFeatureSlots(withCurrentVariantCss(withCurrentSectionCss(withEsencialCatalogPages(out)), frameChoices(variants as Record<string, unknown>, (change.layout ?? state.layout ?? []) as { type?: unknown; card?: unknown }[])));
   return variants.menu && variants.menu !== 'none' ? withStoreMenuMounts(pages) : pages;
 }
 
@@ -459,7 +511,9 @@ export async function assembleTemplateRevision(input: {
     // An uploaded logo as the full API URL, like the photos: the store is served from another origin (Remolino 2026-10-21).
     logo: masterPhotoUrl(data.logoUrl, input.apiUrl), phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: builtVariants, sections: input.sections ?? input.fill?.sections, features, layout: input.fill?.layout ?? [], productLayout: input.fill?.productLayout ?? [] } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
   const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withOnlyTheme(withMasterTheme(file.content, masterThemeCss(settings, look!, String((builtVariants as Record<string, unknown> | undefined)?.titles ?? ''))), String((builtVariants as Record<string, unknown> | undefined)?.theme ?? ''),
-    new Set([...(input.fill?.layout ?? []), ...(input.fill?.productLayout ?? [])].map(block => String((block as { type?: string }).type)))) } : file;
+    new Set([...(input.fill?.layout ?? []), ...(input.fill?.productLayout ?? [])].map(block => String((block as { type?: string }).type))),
+    // Template frame variety (2026-11-03): only the footer, button, card and product page this store uses.
+    frameChoices((builtVariants ?? {}) as Record<string, unknown>, (input.fill?.layout ?? []) as { type?: unknown; card?: unknown }[])) } : file;
   // A filled Plantilla never shows the demo business's photos; a slot the merchant has no photo for stays empty instead
   // of a broken image showing its description (live check 2026-10-21, Alfar's floating photos).
   const noEmptyPhotos = (file: SourceProjectFileDto) => manifest.copy && input.plantillaCopy && input.demoPhotos === false && file.path === 'styles/globals.css'

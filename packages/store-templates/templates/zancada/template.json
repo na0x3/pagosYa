@@ -90,8 +90,8 @@
       "icons": "line",
       "header": "links",
       "announce": "plain",
-      "footer": "columns",
-      "button": "square",
+      "footer": "ticker",
+      "button": "block",
       "corners": "soft",
       "density": "regular",
       "texture": "none",
@@ -106,7 +106,7 @@
     },
     "layout": [
       {
-        "type": "cover-split",
+        "type": "promo-banner",
         "band": "deep",
         "title": "Libertad *para correr*",
         "text": "Equipo para entrenar, competir y volver por más.",
@@ -116,18 +116,32 @@
       },
       {
         "type": "products-grid",
-        "card": "classic",
+        "card": "portrait",
         "title": "Lo nuevo",
         "link": "products"
       },
       {
-        "type": "story-split",
-        "look": "right",
+        "type": "story-overlay",
+        "look": "card",
         "title": "Nuestro equipo *suma una corredora*",
         "text": "Entrena con nosotros todo el año y prueba cada modelo antes que nadie.",
         "cta": "Conocer el equipo",
         "link": "about",
-        "photo": "slot:ri-accion"
+        "photo": "slot:ri-accion",
+        "items": [
+          {
+            "title": "Corre con nosotros",
+            "text": "Salidas en grupo todo el año."
+          },
+          {
+            "title": "Prueba antes",
+            "text": "Testea cada modelo."
+          },
+          {
+            "title": "Consejo",
+            "text": "Te ayudamos a elegir."
+          }
+        ]
       },
       {
         "type": "products-spotlight",

@@ -241,6 +241,24 @@ describe('Esencial catalogue pages follow-ups', () => {
     expect(out.find(file => file.path === 'components/page-coleccion.tsx')!.content).toBe(template('components/page-coleccion.tsx'));
     expect(out.find(file => file.path === 'components/page-productos.tsx')!.content).toBe('mine');
   });
+  // Owner 2026-11-02 (Miga Dorada «Todos los productos»: «they are huge»): template cards are custom cards, which the kit never puts
+  // in a grid, so the catalogue page drew one card per row at full width. The block lays them out like the home's grid.
+  it('lays template cards on the catalogue pages out in the home grid, and an older store gets the block brought up to date', () => {
+    const css = template('styles/globals.css');
+    const block = css.slice(css.indexOf('/* Esencial catalogue pages (2026-10-21)'), css.indexOf('/* Esencial catalogue pages end */'));
+    expect(block).toMatch(/\.es-catalog-page \[data-pagosya-catalog\]:has\(>\.menu-item\[data-custom-product\]\)\{display:grid;grid-template-columns:repeat\(4,/);
+    expect(block).toMatch(/max-width:1024px[^}]*repeat\(3,/);
+    expect(block).toMatch(/max-width:760px[^}]*repeat\(2,/);
+    const older = '/* Esencial catalogue pages (2026-10-21): old. */\n.es-catalog-page [data-pagosya-catalog]{margin:0}\n/* Esencial catalogue pages end */';
+    const store = storeFiles().map(file => file.path === 'styles/globals.css' ? { ...file, content: `${file.content}\n\n${older}\n.mine{color:red}\n` } : file);
+    const out = refillMasterFiles(store, manifest, { copy: { headline: 'Otra' } }).find(file => file.path === 'styles/globals.css')!.content;
+    expect(out).toContain('display:grid;grid-template-columns:repeat(4,');
+    expect(out).not.toContain('old. */');
+    expect(out).toContain('.mine{color:red}');
+    expect(out.split('/* Esencial catalogue pages end */')).toHaveLength(2);
+    // Doing it again changes nothing.
+    expect(refillMasterFiles(store, manifest, { copy: { headline: 'Otra' } }).find(file => file.path === 'styles/globals.css')!.content).toBe(out);
+  });
 });
 
 /** John Smedley sections (spec 2026-10-21): the features on a master store. */
@@ -327,6 +345,25 @@ it('a words-only change rebuilds the rolled sections with the new words', () => 
   const edited = refillMasterFiles(rolled, featureManifest, { featureCopy: { duoTitles: ['Verano', ''] } });
   expect((readMasterState(edited).features as any).duo.halves[0].title).toBe('Verano');
   expect(readMasterState(edited).variants?.feature).toBe('duo');
+});
+
+/** Spec 2026-11-01 template quick edits §2: on a template a palette change reaches the page as the template's new accent. */
+it('a template store keeps its colours, takes the new accent and binds its theme to it', () => {
+  const zancada = { paper: '#1f1f1f', ink: '#ffffff', muted: '#2b2b2b', accent: '#dfff1f', deep: '#151515' };
+  const files = [
+    templateStoreDataFile({ name: 'goodProtein' }, { hero: '' }, { copy: masterCopy(master), look: { palette: 'terracotta', fonts: 'classic', colors: zancada }, variants: { theme: 'zancada', sections: [] } as never, layout: [{ type: 'cover-split', title: 'Hola' }] }),
+    { path: 'styles/globals.css', content: `${MASTER_THEME_START}\n:root{}\n${MASTER_THEME_END}\n/* theme:zancada */\n[data-es-theme="zancada"] .es-btn{background:#dfff1f;color:#111}\n/* /theme:zancada */` },
+    { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ dna: {}, data: {} })};\n` },
+  ];
+  const out = refillMasterFiles(files, manifest, { look: { palette: 'sage', fonts: 'classic', colors: { ...zancada } } });
+  expect(readMasterState(out).look?.colors).toEqual({ ...zancada, accent: '#2f5d46' });
+  const css = out.find(file => file.path === 'styles/globals.css')!.content;
+  expect(css).toContain('--es-accent:#2f5d46');
+  // 2026-11-02: the refill brings the theme block up to the template's own (the store's old copy here is a stand-in) and binds it.
+  const theme = css.slice(css.indexOf('/* theme:zancada */'), css.indexOf('/* /theme:zancada */'));
+  expect(theme).not.toContain('.es-btn{background:#dfff1f;color:#111}');
+  expect(theme).toMatch(/\.es-btn[^{]*\{[^}]*background:var\(--es-base-accent,var\(--es-accent\)\)/);
+  expect(theme).not.toMatch(/#dfff1f/i);
 });
 
 /** Final review 2026-10-21: the boxed header keeps the store menu's panels full width, and an empty rail is hidden. */

@@ -120,8 +120,8 @@
       "icons": "line",
       "header": "centered",
       "announce": "plain",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "band",
+      "button": "lift",
       "corners": "round",
       "density": "regular",
       "texture": "none",
@@ -147,7 +147,7 @@
       {
         "type": "products-slider",
         "look": "overlap",
-        "card": "soft",
+        "card": "round-add",
         "title": "Lo más pedido",
         "link": "products"
       },
@@ -185,17 +185,32 @@
         "text": "Alimentos hechos con ingredientes de verdad, pensados para que comer bien sea fácil y rico todos los días."
       },
       {
-        "type": "story-split",
+        "type": "story-overlay",
         "eyebrow": "Nueva colección",
         "title": "Delicias naturales",
         "text": "Ingredientes de origen vegetal, preparados con cuidado para darte energía y sabor sin culpa.",
         "cta": "Ver comidas",
         "link": "products",
-        "photo": "slot:hu-hero"
+        "photo": "slot:hu-hero",
+        "look": "card",
+        "items": [
+          {
+            "title": "Origen vegetal",
+            "text": "Ingredientes simples y reales."
+          },
+          {
+            "title": "Para tu día",
+            "text": "Energía sin vueltas."
+          },
+          {
+            "title": "Fácil",
+            "text": "Listo para llevar."
+          }
+        ]
       },
       {
         "type": "products-tabs",
-        "card": "soft",
+        "card": "round-add",
         "title": "Energía para tu cuerpo",
         "link": "products"
       },

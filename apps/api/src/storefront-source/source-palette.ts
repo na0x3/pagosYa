@@ -41,11 +41,16 @@ export function paletteFromSamples(input: { logo?: PhotoSample; photos?: PhotoSa
     // The goods, not what they sit on: a colour close to the backdrop is the table or the sweep.
     return (sample.dominant ?? []).filter(value => HEX.test(value)).map(toRgb).filter(colour => !backdrop || distance(colour, backdrop) > 40);
   });
-  // A coloured logo first, then the goods; a monochrome brand (a black mark) takes its dark colour.
-  const accent = logo.find(chromatic) ?? photos.find(chromatic) ?? [...logo, ...photos].find(colour => toHsl(colour)[2] < .35);
-  if (!accent) return undefined;
   const backdrop = input.logo?.backdropHex && HEX.test(input.logo.backdropHex) ? toRgb(input.logo.backdropHex) : undefined;
   const dark = options.page ? options.page === 'dark' : !!backdrop && (input.logo?.uniformity ?? 0) >= .8 && toHsl(backdrop)[2] < .2;
+  // Owner 2026-11-02 (DooBoo: cream gelato became the accent on a cream page, its maroon was only the photos' backdrop): from the photos,
+  // a goods colour that stands out from a light page first, then a strong brand-coloured backdrop, and only then a pale goods colour.
+  const strong = (colour: Rgb) => chromatic(colour) && (dark || contrastRatio(colour, WHITE) >= 3);
+  const backdrops = (input.photos ?? []).map(sample => sample.backdropHex).filter((value): value is string => !!value && HEX.test(value)).map(toRgb);
+  // A coloured logo first (a pale logo colour stays the merchant's), then the goods; a monochrome brand (a black mark) takes its dark colour.
+  const accent = logo.find(chromatic) ?? photos.find(strong) ?? backdrops.find(strong) ?? photos.find(chromatic)
+    ?? [...logo, ...photos].find(colour => toHsl(colour)[2] < .35);
+  if (!accent) return undefined;
   const [hue, saturation] = toHsl(accent);
   // Owner 2026-10-28 (PEPPA and DooBoo on the same #faf5f5): a light, tinted colour the brand already shows — the logo's or the
   // photos' backdrop (DooBoo's cream) — is the paper; only without one is the paper a near-white tint of the accent's hue.

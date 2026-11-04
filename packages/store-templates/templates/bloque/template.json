@@ -100,13 +100,13 @@
       "icons": "line",
       "header": "centered",
       "announce": "plain",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "ticker",
+      "button": "sticker",
       "corners": "soft",
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "strip",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -204,7 +204,7 @@
       },
       {
         "type": "products-grid",
-        "card": "classic",
+        "card": "polaroid",
         "title": "Los que *más gustan*",
         "link": "products"
       },

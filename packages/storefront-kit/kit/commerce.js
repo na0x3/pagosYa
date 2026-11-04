@@ -1321,6 +1321,9 @@
   `;
   document.head.append(detailStyle);
   const fullProductPage = document.querySelector("[data-pagosya-product-page]");
+  // Owner 2026-11-02 (one-product stores: «the product card should be bigger»): a page that is not product.html can hold one product's
+  // whole detail — gallery, options, «Agregar» — with [data-pagosya-product-page][data-product-id]; the page keeps its own title.
+  const embeddedProductId = fullProductPage?.getAttribute("data-product-id") || null;
   const fullCheckoutPage = document.querySelector("[data-pagosya-checkout-page]");
   // Kit-owned pages: the whole catalog (productos.html) and one collection per page (coleccion.html).
   const fullCatalogPage = Boolean(document.querySelector('[data-catalog-full]'));
@@ -2012,9 +2015,16 @@
   }
   const phoneLink = () => { const phone = infoText(store.contactPhone); return /^\+?[0-9][0-9 ()-]{5,24}$/.test(phone) ? `<a href="tel:${escape(phone.replace(/[^0-9+]/g, ''))}">${escape(phone)}</a>` : ''; };
   const emailLink = () => { const email = infoText(store.contactEmail); return /^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`]+$/.test(email) ? `<a href="mailto:${escape(email)}">${escape(email)}</a>` : ''; };
+  // YAPI edits everything (spec 2026-11-03): the store's links (Instagram, TikTok…) close a footer's information links, so every
+  // store shows them with no change to its files. http(s) only; at most six.
+  const storeLinks = () => (Array.isArray(store.links) ? store.links : []).filter(link => link && infoText(link.label) && /^https?:\/\//i.test(infoText(link.url))).slice(0, 6)
+    .map(link => `<a href="${escape(infoText(link.url))}" target="_blank" rel="noopener noreferrer" data-pagosya-store-link>${escape(infoText(link.label))}</a>`).join('');
+  // YAPI edits everything (spec 2026-11-03): the merchant's own questions, written in the chat, come first.
+  const ownQuestions = () => (Array.isArray(store.faq) ? store.faq : []).filter(entry => entry && infoText(entry.q) && infoText(entry.a)).slice(0, 12);
   function faqBody() {
     const places = infoLocations(), delivering = places.filter(place => place.deliveryEnabled), pickup = places.filter(place => place.pickupEnabled);
-    const entries = [];
+    const own = ownQuestions();
+    const entries = own.map(entry => [infoText(entry.q), infoParagraphs(infoText(entry.a))]);
     if (store.shippingEnabled || delivering.length) entries.push(['¿Hacen envíos?', delivering.length ? `Sí, entregamos a domicilio desde: ${placeNames(delivering)}.` : 'Sí, hacemos envíos.']);
     // Only questions the store can answer (spec 2026-10-14): pickup needs a place that offers it, not only the switch.
     if (pickup.length) entries.push(['¿Puedo retirar mi pedido?', `Sí, puedes retirarlo en: ${placeNames(pickup)}.`]);
@@ -2025,7 +2035,8 @@
     entries.push(['¿Cómo pago?', store.checkoutMode === 'payment' ? 'Pagas con QR o tarjeta desde la tienda, con pago seguro procesado por pagosYa.' : store.checkoutMode === 'whatsapp' ? 'Confirmas tu pedido por WhatsApp y acuerdas el pago con la tienda.' : 'Acuerdas el pago con la tienda al confirmar tu pedido.']);
     const contact = [phoneLink(), emailLink()].filter(Boolean);
     if (contact.length) entries.push(['¿Cómo los contacto?', contact.join(' · ')]);
-    return entries.length >= 2 ? entries.map(([question, answer]) => `<section class="pagosya-info__qa"><h2>${escape(question)}</h2>${answer.startsWith('<') ? answer : `<p>${answer}</p>`}</section>`).join('') : '';
+    // One question of the merchant's own is a page; the facts alone need two.
+    return own.length || entries.length >= 2 ? entries.map(([question, answer]) => `<section class="pagosya-info__qa"><h2>${escape(question)}</h2>${answer.startsWith('<') ? answer : `<p>${answer}</p>`}</section>`).join('') : '';
   }
   // Catalog pages. `collections()` and `collectionHref` are declared further down the file, so these read the store directly.
   const infoCollections = () => (Array.isArray(store.collections) ? store.collections : [])
@@ -2130,7 +2141,8 @@
     const live = force || ready;
     if (live) document.querySelectorAll('[data-pagosya-pages]').forEach(slot => {
       const account = SHOWCASE ? '' : accountEntry();
-      slot.innerHTML = INFO_LINKS.filter(([kind]) => !(SHOWCASE && SHOP_ONLY_INFO.has(kind)) && infoBody(kind)).map(([, href, label]) => `<a href="${href}">${escape(label)}</a>`).join('') + (account ? `<a href="${escape(account)}" data-pagosya-account>Mi cuenta</a>` : '');
+      slot.innerHTML = INFO_LINKS.filter(([kind]) => !(SHOWCASE && SHOP_ONLY_INFO.has(kind)) && infoBody(kind)).map(([, href, label]) => `<a href="${href}">${escape(label)}</a>`).join('') + (account ? `<a href="${escape(account)}" data-pagosya-account>Mi cuenta</a>` : '')
+        + (slot.closest('footer') ? storeLinks() : '');
       slot.hidden = !slot.innerHTML;
     });
     let unavailable = false;
@@ -2662,6 +2674,7 @@
   }
   function openProduct(id, trigger) {
     const p = products().find(p => p.id === id);
+    if (!p && embeddedProductId && id === embeddedProductId) { fullProductPage.hidden = true; return; }
     if (!p) { if (fullProductPage) detail.innerHTML = `<h1>Producto no disponible</h1><p>Este producto ya no está en el catálogo.</p><a href="${escape(pageHref('productos.html'))}">Explorar productos</a>`; return; }
     track('product_view', undefined, { value: price(p), currency: p.currency });
     analytics('product_view', { productId: p.id }, 'view:' + p.id);
@@ -4833,7 +4846,7 @@
     fitCards();
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(fitCards);
     if (hasDna && typeof requestAnimationFrame === 'function') requestAnimationFrame(placeQuickLooks);
-    if (fullProductPage && !preview) {
+    if (fullProductPage && !embeddedProductId && !preview) {
       const p = products().find(item => item.id === new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));
       if (p) {
         const canonical = `${(config.publicSiteUrl || `${config.checkoutOrigin}/s/${encodeURIComponent(config.slug)}`).replace(/\/$/, '')}/p/${encodeURIComponent(p.id)}`;
@@ -4860,7 +4873,7 @@
     }
     // The Studio opens product.html without an id (Boceto's Producto tab, the page picker); a
     // store with a catalog previews its first product. A shopper's broken link keeps the error.
-    if (fullProductPage) openProduct(new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id') ?? (preview ? products()[0]?.id : null));
+    if (fullProductPage) openProduct(embeddedProductId ?? new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id') ?? (preview ? products()[0]?.id : null));
     else if (selectedProduct && detail.open) {
       if (products().some(p => p.id === selectedProduct.id)) openProduct(selectedProduct.id, detailTrigger);
       else detail.close();
@@ -5193,7 +5206,7 @@
     // only a form the page shows in its content goes inline (final review 2026-10-16, I4).
     if (inline && slot.hidden && !slot.hasAttribute('data-contact-inline')) return;
     // Only an enabled store setting permits the legacy fallback; new stores default off.
-    if (!slot && store.contactFormEnabled === true && !fullProductPage && !fullCheckoutPage && (!window.PAGOSYA_PREVIEW_PAGE || window.PAGOSYA_PREVIEW_PAGE === 'index.html')) {
+    if (!slot && store.contactFormEnabled === true && (!fullProductPage || embeddedProductId) && !fullCheckoutPage && (!window.PAGOSYA_PREVIEW_PAGE || window.PAGOSYA_PREVIEW_PAGE === 'index.html')) {
       slot = document.createElement('section'); slot.setAttribute('data-pagosya-contact', '');
       const footer = document.querySelector('body > footer');
       if (footer) footer.before(slot); else (document.querySelector('main') || document.body).append(slot);
@@ -6394,10 +6407,11 @@
         if (slot.hasAttribute('data-pagosya-blog')) slot.innerHTML = blogMarkup(data.articles);
         if (slot.hasAttribute('data-pagosya-reviews')) {
           const reviews = data.reviews.filter(review => !fullProductPage || review.productId === selectedProduct?.id);
-          slot.innerHTML = reviews.map(reviewMarkup).join('') || (fullProductPage ? '<p>Todavía no hay reseñas publicadas.</p>' : '');
+          slot.innerHTML = reviews.map(reviewMarkup).join('') || (fullProductPage && !embeddedProductId ? '<p>Todavía no hay reseñas publicadas.</p>' : '');
           // Away from the product page a store without reviews shows no empty reviews section (spec 2026-10-18).
           const section = slot.closest('[data-pagosya-reviews-section]');
-          slot.hidden = !reviews.length && !fullProductPage;
+          // A product shown whole on the home (one-product stores, 2026-11-02) hides its reviews until it has some.
+          slot.hidden = !reviews.length && (!fullProductPage || Boolean(embeddedProductId));
           if (section) section.hidden = slot.hidden;
           if (slot.hasAttribute('data-pagosya-carousel')) mountCarousel(slot);
         }

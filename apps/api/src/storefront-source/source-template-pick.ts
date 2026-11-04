@@ -7,7 +7,7 @@ import type { TemplateManifest } from '@pagosya/store-templates';
  * (source-preset-pick picks among the older industry presets; source-starter-pick among the starters.)
  */
 
-export type PickableTemplate = { id: string; name: string; category: string; description: string; tags: string[] };
+export type PickableTemplate = { id: string; name: string; category: string; description: string; tags: string[]; sections?: number };
 
 /** The templates a new store can start on: Esencial presets that carry a whole theme and its home (variants.theme + layout).
  *  Templates kept off (the Shrine pair until the owner decides) are left out. */
@@ -15,13 +15,15 @@ export function pickableTemplates(manifests: readonly TemplateManifest[], hidden
   return manifests
     .filter(manifest => manifest.extends === 'esencial' && manifest.preset && !hidden.has(manifest.id))
     .filter(manifest => { const theme = (manifest.preset!.variants as Record<string, string | undefined>).theme; return Boolean(theme && theme !== 'none' && manifest.preset!.layout?.length); })
-    .map(manifest => ({ id: manifest.id, name: manifest.name, category: manifest.category, description: manifest.description, tags: [...(manifest.tags ?? [])] }));
+    .map(manifest => ({ id: manifest.id, name: manifest.name, category: manifest.category, description: manifest.description, tags: [...(manifest.tags ?? [])], sections: manifest.preset!.layout!.length }));
 }
 
 export const TEMPLATE_PICK_PROMPT = `Eres YAPI, el diseñador de pagosYa. Una tienda nueva necesita su plantilla: elige UNA de «plantillas» para empezar.
 Cada plantilla es una tienda completa (encabezado, portada, página de producto, pie) pensada para un rubro y un estilo.
 Elige por el negocio: qué vende (sus palabras y los nombres de sus productos), para quién y con qué tono. El rubro manda; si dos
 plantillas sirven por igual, elige la que mejor va con el tono (alegre, elegante, sencillo, divertido) que muestran sus palabras.
+«secciones» es cuántas secciones tiene su portada. Si el comercio pide una tienda completa o con muchas secciones, elige entre las de
+10 o más la que va con su rubro (2026-11-02: las cuatro tiendas «completas» recibieron plantillas de 7).
 «porque»: una sola frase corta en español, para el comerciante, que diga por qué esa plantilla va con su negocio (sin halagos ni
 promesas). Responde solo el JSON.`;
 

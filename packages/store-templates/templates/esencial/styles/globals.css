@@ -195,6 +195,11 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 /* Esencial catalogue pages (2026-10-21): the whole catalogue and a collection inside the store's own Shell. */
 .es-catalog-page__title{margin:0 0 24px;font-family:var(--es-heading);font-size:clamp(32px,5vw,56px);line-height:1.05;letter-spacing:-.01em}
 .es-catalog-page [data-pagosya-catalog]{margin:0}
+/* Owner 2026-11-02 («they are huge»): a template's own cards (custom cards, which the kit never puts in a grid) sit in the home's grid. */
+.es-catalog-page [data-pagosya-catalog]:has(>.menu-item[data-custom-product]){display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px 24px;align-items:start}
+.es-catalog-page [data-pagosya-catalog]:has(>.menu-item[data-custom-product])>:not(.menu-item){grid-column:1/-1}
+@media (max-width:1024px){.es-catalog-page [data-pagosya-catalog]:has(>.menu-item[data-custom-product]){grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.es-catalog-page [data-pagosya-catalog]:has(>.menu-item[data-custom-product]){grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 12px}}
 /* Esencial catalogue pages end */
 /* John Smedley sections (2026-10-21): duo, explore, capsule, origin, palette, and the side-title grid, boxed header, dashed
    buttons and column footer. */
@@ -441,6 +446,96 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-footer[data-es-footer="minimal"] .es-footer__name{font-size:22px;margin-right:auto}
 .es-footer[data-es-footer="minimal"] .es-footer__legal{margin-top:32px}
 .es-footer[data-es-footer="twotone"] .es-footer__brand{padding:32px;background:var(--es-deep);color:var(--es-on-deep);border-radius:var(--es-radius,6px)}
+/* Template frame variety (2026-11-03, owner «los footers… agarra referencias reales de buenos footers»): footers copied from real
+   stores (.superpowers/sdd/2026-11-03-template-frame-variety/real/<store>/footer-d.png). «.es» in front so they win over a theme's
+   footer colours; a store keeps only its own footer's block (withOnlyVariants). */
+/* v:footer=wordmark */
+/* Graza / Ridge / Scratch: links above, the store's name across the whole bottom edge, sized by its length. */
+.es .es-footer[data-es-footer="wordmark"]{padding-bottom:16px;overflow:hidden}
+.es .es-footer[data-es-footer="wordmark"] .es-footer__name{display:none}
+.es-footer__word{margin:40px 0 0;font:400 clamp(44px,calc((100vw - 48px) / (var(--es-word-len,6) * .66)),300px)/.92 var(--es-heading);letter-spacing:-.03em;white-space:nowrap;text-align:center;color:inherit}
+/* /v:footer=wordmark */
+/* v:footer=signup */
+/* Fly By Jing / Tracksmith / Fody: a big signup headline and field lead the footer, the links sit under it. */
+.es .es-footer[data-es-footer="signup"]{display:flex;flex-direction:column}
+.es .es-footer[data-es-footer="signup"] .es-footer__news{order:-1;flex-direction:column;align-items:center;gap:20px;margin:0 0 56px;padding:0 0 56px;border-top:0;border-bottom:1px solid color-mix(in srgb,currentColor 18%,transparent);text-align:center}
+.es .es-footer[data-es-footer="signup"] .es-footer__news h2{margin:0;font:400 clamp(32px,5vw,64px)/1.02 var(--es-heading);letter-spacing:-.01em;text-transform:none}
+.es .es-footer[data-es-footer="signup"] .es-footer__news p{font-size:17px}
+.es .es-footer[data-es-footer="signup"] .es-footer__signup{width:100%;max-width:520px;flex:none}
+/* /v:footer=signup */
+/* v:footer=band */
+/* Olipop / Crave / Refresh: the footer on the store's accent, the name large. */
+.es .es-footer[data-es-footer="band"]{background:var(--es-accent);color:var(--es-on-accent)}
+.es .es-footer[data-es-footer="band"] :is(a,p,h2,span,label){color:inherit}
+.es .es-footer[data-es-footer="band"] .es-footer__name{font-size:clamp(32px,4vw,52px);line-height:1}
+.es .es-footer[data-es-footer="band"] :is(.es-footer__legal,.es-footer__news){border-color:color-mix(in srgb,currentColor 28%,transparent)}
+/* /v:footer=band */
+/* v:footer=photo */
+/* Brightland / Pipeline / Flux: the links on the left half, the store's story photo filling the right half. */
+.es .es-footer[data-es-footer="photo"][style*="--es-footer-photo"]{position:relative;padding-right:calc(50% + 40px)}
+.es .es-footer[data-es-footer="photo"][style*="--es-footer-photo"]::before{content:"";position:absolute;inset:0 0 0 50%;background:var(--es-footer-photo) center/cover no-repeat}
+.es .es-footer[data-es-footer="photo"] .es-footer__grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.es .es-footer[data-es-footer="photo"] .es-footer__brand{grid-column:1/-1}
+@media (max-width:760px){
+  .es .es-footer[data-es-footer="photo"][style*="--es-footer-photo"]{padding-right:16px;padding-top:0}
+  .es .es-footer[data-es-footer="photo"][style*="--es-footer-photo"]::before{position:static;display:block;height:220px;margin:0 -16px 40px}
+}
+/* /v:footer=photo */
+/* v:footer=bignav */
+/* Gumdrop / Partake: the shop's pages as a big bold uppercase list next to the brand and help. */
+/* Live check 2026-11-04 (Miga · Gumdrop): the columns are a desktop grid; a phone keeps the two-column footer, or long page names
+   («devoluciones») broke mid-word. */
+@media (min-width:761px){.es .es-footer[data-es-footer="bignav"] .es-footer__grid{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr) minmax(0,.8fr)}}
+.es .es-footer[data-es-footer="bignav"] .es-footer__grid>div:nth-child(2) h2{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.es .es-footer[data-es-footer="bignav"] .es-footer__grid>div:nth-child(2) nav{gap:2px}
+.es .es-footer[data-es-footer="bignav"] .es-footer__grid>div:nth-child(2) a{font:800 clamp(26px,3.2vw,44px)/1.04 var(--es-heading);letter-spacing:-.01em;text-transform:uppercase}
+.es .es-footer[data-es-footer="bignav"] .es-footer__grid>div:nth-child(2) a:hover{text-decoration:none;opacity:.7}
+@media (max-width:760px){.es .es-footer[data-es-footer="bignav"] .es-footer__grid>div:nth-child(2){grid-column:1/-1}}
+/* /v:footer=bignav */
+/* v:footer=centered */
+/* Nothing / Spotlight / Origin: everything centred in one column, the links in rows. */
+.es .es-footer[data-es-footer="centered"]{text-align:center}
+.es .es-footer[data-es-footer="centered"] .es-footer__grid{display:flex;flex-direction:column;align-items:center;gap:28px}
+.es .es-footer[data-es-footer="centered"] .es-footer__grid h2{display:none}
+.es .es-footer[data-es-footer="centered"] :is(.es-footer__grid nav,.es-footer__grid>div:not(.es-footer__brand),.es-footer .pagosya-info-nav){display:flex;flex-wrap:wrap;justify-content:center;gap:10px 26px}
+.es .es-footer[data-es-footer="centered"] .es-footer__news{flex-direction:column;align-items:center;text-align:center}
+/* /v:footer=centered */
+/* v:footer=card */
+/* Maximize / Tonies: the footer as a rounded card on the deep colour, inset from the page edges. */
+.es .es-footer[data-es-footer="card"]{margin:24px;padding:56px clamp(24px,5vw,72px) 28px;border-radius:28px;background:var(--es-deep);color:var(--es-on-deep)}
+.es .es-footer[data-es-footer="card"] :is(a,p,h2,span,label){color:inherit}
+.es .es-footer[data-es-footer="card"] :is(.es-footer__legal,.es-footer__news){border-color:color-mix(in srgb,currentColor 25%,transparent)}
+@media (max-width:760px){.es .es-footer[data-es-footer="card"]{margin:12px;padding:40px 20px 20px;border-radius:20px}}
+/* /v:footer=card */
+/* v:footer=ticker */
+/* BonBonBon: the tagline scrolling on an accent strip across the top of the footer; still under reduced motion. */
+.es .es-footer[data-es-footer="ticker"]{overflow:hidden}
+.es-footer__ticker{margin:-72px calc(-1 * max(24px,calc((100% - 1280px) / 2))) 56px;padding:14px 0;overflow:hidden;background:var(--es-accent);color:var(--es-on-accent)}
+.es-footer__ticker p{display:flex;width:max-content;margin:0;font:700 clamp(18px,2.2vw,28px)/1 var(--es-heading);text-transform:uppercase;animation:es-ticker 34s linear infinite}
+.es-footer__ticker p>span{display:flex}
+.es-footer__ticker p>span>span{display:inline-flex;align-items:center;gap:28px;padding-right:28px}
+.es-footer__ticker i{font-style:normal;font-size:.6em}
+@media (max-width:760px){.es-footer__ticker{margin:-48px -16px 40px}}
+@media (prefers-reduced-motion:reduce){.es-footer__ticker p{animation:none}}
+/* /v:footer=ticker */
+/* v:footer=mega */
+/* Lovevery / Everlane / Impulse: small spaced-caps headings over many link columns, the newsletter as the last column. */
+.es .es-footer[data-es-footer="mega"]:has(.es-footer__news){display:grid;grid-template-columns:minmax(0,3fr) minmax(260px,1.2fr);column-gap:56px}
+.es .es-footer[data-es-footer="mega"] .es-footer__news{grid-column:2;grid-row:1;flex-direction:column;align-items:stretch;margin:0;padding:0;border:0}
+.es .es-footer[data-es-footer="mega"] .es-footer__legal{grid-column:1/-1}
+.es .es-footer[data-es-footer="mega"] :is(.es-footer h2,.es-footer__news h2){font:600 11px/1 var(--es-body);letter-spacing:.2em;text-transform:uppercase}
+.es .es-footer[data-es-footer="mega"] :is(nav a,.pagosya-info-nav a,.es-footer__line){font-size:14px}
+@media (max-width:760px){.es .es-footer[data-es-footer="mega"]:has(.es-footer__news){display:block}.es .es-footer[data-es-footer="mega"] .es-footer__news{margin-top:32px}}
+/* /v:footer=mega */
+/* v:footer=visit */
+/* Publisher / Sense: «Visítanos» first — the city and WhatsApp large — then the menu, the brand last. */
+@media (min-width:761px){.es .es-footer[data-es-footer="visit"] .es-footer__grid{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)}}
+.es .es-footer[data-es-footer="visit"] .es-footer__contact{order:-1}
+.es .es-footer[data-es-footer="visit"] .es-footer__contact .es-footer__line{font:400 clamp(20px,2vw,26px)/1.3 var(--es-heading)}
+.es .es-footer[data-es-footer="visit"] .es-footer__contact .es-footer__line svg{width:22px;height:22px}
+.es .es-footer[data-es-footer="visit"] .es-footer__brand{order:5;text-align:right}
+@media (max-width:760px){.es .es-footer[data-es-footer="visit"] .es-footer__contact{grid-column:1/-1}.es .es-footer[data-es-footer="visit"] .es-footer__brand{text-align:left}}
+/* /v:footer=visit */
 
 /* ---- Variety spec §2b: product page layout and order ---- */
 .es-pdp{display:flex;flex-direction:column}
@@ -476,6 +571,22 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
   .es-pdp[data-es-pdp="editorial"] .es-pdp__gallery{grid-column:1;grid-row:3/span 8;position:sticky;top:96px}
   .es-pdp[data-es-pdp="split-scroll"] .es-pdp__grid{grid-template-columns:1.5fr 1fr;gap:56px}
   .es-pdp[data-es-pdp="split-scroll"] .es-pdp__info{position:sticky;top:96px;align-self:start}
+  /* Template frame variety (2026-11-03): product pages from real stores; the kit draws the photos (config dna.gallery). */
+  /* v:pdp=panel */
+  /* Shrine Pro / Maximize: the photo on the left, the name, price and buy box in a soft tinted panel beside it (owner 2026-10-22:
+     the product and its price are always seen together). */
+  .es-pdp[data-es-pdp="panel"] .es-pdp__info{position:sticky;top:96px;align-self:start;padding:32px;border-radius:calc(var(--es-radius,6px) * 2.5);background:color-mix(in srgb,var(--es-accent) 7%,var(--es-paper))}
+  /* /v:pdp=panel */
+  /* v:pdp=grid-2 */
+  /* Palo Alto / Enterprise: every photo in a two-column grid (the kit's mosaic), the details sticky beside it. */
+  .es-pdp[data-es-pdp="grid-2"] .es-pdp__grid{grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:48px}
+  .es-pdp[data-es-pdp="grid-2"] .es-pdp__info{position:sticky;top:96px;align-self:start}
+  /* /v:pdp=grid-2 */
+  /* v:pdp=strip */
+  /* Gumdrop / Colorblock: the photo with its thumbnails in a row under it (the kit's strip), the details beside it. */
+  .es-pdp[data-es-pdp="strip"] .es-pdp__grid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:56px}
+  .es-pdp[data-es-pdp="strip"] .es-pdp__info{position:sticky;top:96px;align-self:start}
+  /* /v:pdp=strip */
   .es-pdp[data-es-pdp="split-scroll"] .product-detail__photo{aspect-ratio:4/5;object-fit:cover;width:100%}
 }
 
@@ -582,6 +693,50 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es[data-es-button="underline"] .es-btn--accent{border-bottom-width:3px}
 .es[data-es-button="underline"] .es-actions{gap:12px 32px}
 .es[data-es-button="underline"] :is(.es-card__bar,.es-cart__action [data-checkout],.es-review__fields [data-pay]){border-radius:0}
+/* Template frame variety (2026-11-03, owner «casi todos los botones se parecen»): button looks copied from real stores
+   (.superpowers/sdd/2026-11-03-template-frame-variety/real/<store>/buttons.json). Each sets the shape, type, height, border and
+   shadow of every button in the store — sections, card add, product buy, cart and pay — over the theme's; the theme keeps its colours.
+   The product page's buy button has a rule of its own: the kit lifts any rule naming a .product-detail__ hook out of the sheet.
+   A store keeps only its own look's block (withOnlyVariants). */
+/* v:button=lift */
+/* Flux / Chiwis: 13px corners, bold 16px, a soft drop shadow. */
+.es[data-es-button="lift"] :is(.es-btn,.lb-card__buy,.es-card__bar,.es-cart__action [data-checkout],.es-review__fields [data-pay]){min-height:48px;padding:0 26px;border-radius:13px;font:700 16px/1 var(--es-body);letter-spacing:.01em;text-transform:none;box-shadow:0 8px 18px -10px rgb(0 0 0 / .5)}
+.es[data-es-button="lift"] .es-pdp .product-detail__buy{min-height:48px;padding:0 26px;border-radius:13px;font:700 16px/1 var(--es-body);letter-spacing:.01em;text-transform:none;box-shadow:0 8px 18px -10px rgb(0 0 0 / .5)}
+.es[data-es-button="lift"] :is(.es-btn,.lb-card__buy):hover{box-shadow:0 12px 22px -10px rgb(0 0 0 / .55)}
+/* /v:button=lift */
+/* v:button=sticker */
+/* Gumdrop / Fishwife / Wild One: a pill with a 2px ink outline, heavy uppercase. */
+.es[data-es-button="sticker"] :is(.es-btn,.lb-card__buy,.es-card__bar,.es-cart__action [data-checkout],.es-review__fields [data-pay]){min-height:52px;padding:0 28px;border:2px solid var(--es-ink);border-radius:999px;font:800 15px/1 var(--es-body);letter-spacing:.03em;text-transform:uppercase;box-shadow:none}
+.es[data-es-button="sticker"] .es-pdp .product-detail__buy{min-height:52px;padding:0 28px;border:2px solid var(--es-ink);border-radius:999px;font:800 15px/1 var(--es-body);letter-spacing:.03em;text-transform:uppercase;box-shadow:none}
+.es[data-es-button="sticker"] :is([data-lb-band="deep"],[data-es-band="deep"],.lb-cover,.es-hero) .es-btn{border-color:currentColor}
+/* /v:button=sticker */
+/* v:button=block */
+/* Partake / Focal / Ride: square, tall, condensed uppercase, bigger type. */
+.es[data-es-button="block"] :is(.es-btn,.lb-card__buy,.es-card__bar,.es-cart__action [data-checkout],.es-review__fields [data-pay]){min-height:58px;padding:0 34px;border-radius:0;font:700 17px/1 var(--es-heading);letter-spacing:.04em;text-transform:uppercase;box-shadow:none}
+.es[data-es-button="block"] .es-pdp .product-detail__buy{min-height:58px;padding:0 34px;border-radius:0;font:700 17px/1 var(--es-heading);letter-spacing:.04em;text-transform:uppercase;box-shadow:none}
+.es[data-es-button="block"] :is(.lb-card__buy,.es-card__bar){min-height:48px;font-size:15px}
+/* /v:button=block */
+/* v:button=caps */
+/* Tracksmith / Symmetry / Brightland: square, small, widely spaced uppercase, light weight, a hairline edge. */
+.es[data-es-button="caps"] :is(.es-btn,.lb-card__buy,.es-card__bar,.es-cart__action [data-checkout],.es-review__fields [data-pay]){min-height:46px;padding:0 28px;border:1px solid color-mix(in srgb,currentColor 40%,transparent);border-radius:2px;font:400 12px/1 var(--es-body);letter-spacing:.18em;text-transform:uppercase;box-shadow:none}
+.es[data-es-button="caps"] .es-pdp .product-detail__buy{min-height:46px;padding:0 28px;border:1px solid color-mix(in srgb,currentColor 40%,transparent);border-radius:2px;font:400 12px/1 var(--es-body);letter-spacing:.18em;text-transform:uppercase;box-shadow:none}
+/* /v:button=caps */
+/* v:button=rounded */
+/* Empire / Smartsweets / Our Place / Great Jones: 6px corners, bold sentence case. */
+.es[data-es-button="rounded"] :is(.es-btn,.lb-card__buy,.es-card__bar,.es-cart__action [data-checkout],.es-review__fields [data-pay]){min-height:50px;padding:0 26px;border-radius:6px;font:700 16px/1 var(--es-body);letter-spacing:.01em;text-transform:none;box-shadow:none}
+.es[data-es-button="rounded"] .es-pdp .product-detail__buy{min-height:50px;padding:0 26px;border-radius:6px;font:700 16px/1 var(--es-body);letter-spacing:.01em;text-transform:none;box-shadow:none}
+/* /v:button=rounded */
+/* v:button=cushion */
+/* Tonies / Refresh / Kidu: 16px corners, semibold, a little taller. */
+.es[data-es-button="cushion"] :is(.es-btn,.lb-card__buy,.es-card__bar,.es-cart__action [data-checkout],.es-review__fields [data-pay]){min-height:54px;padding:0 30px;border-radius:16px;font:600 17px/1 var(--es-body);letter-spacing:0;text-transform:none;box-shadow:none}
+.es[data-es-button="cushion"] .es-pdp .product-detail__buy{min-height:54px;padding:0 30px;border-radius:16px;font:600 17px/1 var(--es-body);letter-spacing:0;text-transform:none;box-shadow:none}
+/* /v:button=cushion */
+/* v:button=chunky */
+/* Lovevery / Enterprise: a 2px edge in the button's own colour, 4px corners, bold, tall. */
+.es[data-es-button="chunky"] :is(.es-btn,.lb-card__buy,.es-card__bar,.es-cart__action [data-checkout],.es-review__fields [data-pay]){min-height:58px;padding:0 32px;border-width:2px;border-style:solid;border-radius:4px;font:700 17px/1 var(--es-body);letter-spacing:0;text-transform:none;box-shadow:none}
+.es[data-es-button="chunky"] .es-pdp .product-detail__buy{min-height:58px;padding:0 32px;border-width:2px;border-style:solid;border-radius:4px;font:700 17px/1 var(--es-body);letter-spacing:0;text-transform:none;box-shadow:none}
+.es[data-es-button="chunky"] .es-btn--ghost{border-color:currentColor}
+/* /v:button=chunky */
 .es[data-es-corners="round"]{--es-radius:16px}
 .es[data-es-corners="soft"]{--es-radius:6px}
 .es[data-es-corners="sharp"]{--es-radius:0px}
@@ -635,7 +790,9 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es main[data-es-bands="blocks"]{}
 /* The band paints past the 1280px column to both edges; border-image outset is ink overflow, so it never scrolls. */
 .es-section[data-es-band]{--store-foreground:var(--es-ink);--store-background:var(--es-paper);--store-surface:var(--es-muted);--store-accent:var(--es-accent);--store-on-accent:var(--es-on-accent);
-  color:var(--es-ink);border-image:conic-gradient(var(--es-band-bg,transparent) 0 0) fill 0//0 100vw}
+  color:var(--es-ink);border-image:conic-gradient(var(--es-band-bg,transparent) 0 0) fill 0//0 100vw;
+  /* The same colour under the content (Tacón 2026-11-03): the kit's contrast guard reads background-color, never border-image. */
+  background-color:var(--es-band-bg,transparent)}
 .es-section[data-es-band="paper"]{--es-band-bg:var(--es-base-paper)}
 .es-section[data-es-band="muted"]{--es-band-bg:var(--es-base-muted);--es-muted:var(--es-base-paper)}
 .es-section[data-es-band="deep"]{--es-band-bg:var(--es-base-deep);--es-paper:var(--es-base-deep);--es-ink:var(--es-base-on-deep);--es-muted:color-mix(in srgb,var(--es-base-on-deep) 9%,var(--es-base-deep));--es-accent:var(--es-base-on-deep);--es-on-accent:var(--es-base-deep)}
@@ -1118,6 +1275,93 @@ main[data-lb-home]{overflow-x:clip}
 .lb-card[data-lb-card="framed"] .lb-card__buy{border-radius:var(--es-radius,6px);background:transparent;color:var(--es-ink);text-transform:uppercase;letter-spacing:.1em;font-size:12px}
 @media (hover:hover){.lb-card[data-lb-card="framed"] .lb-card__buy:hover{background:var(--es-ink);color:var(--es-paper)}.lb-card[data-lb-card="soft"] .lb-card__buy:hover{background:var(--es-accent);border-color:var(--es-accent);color:var(--es-on-accent)}}
 .lb-card__buy:disabled{opacity:.45;cursor:not-allowed}
+/* Template frame variety (2026-11-03): product cards copied from real stores (.superpowers/sdd/2026-11-03-template-frame-variety/
+   real/<store>/card-d.png). Every one keeps the kit's slots; the add button is always reachable on touch. A store keeps only its
+   own card's block (withOnlyVariants, part «lbcard»). */
+/* v:lbcard=overlay */
+/* Impulse / Motion: the name and price over the bottom of the photo. */
+.lb-card[data-lb-card="overlay"] .lb-card__body{position:absolute;inset:auto 0 0;z-index:2;padding:56px 14px 14px;border-radius:0 0 var(--es-radius,6px) var(--es-radius,6px);background:linear-gradient(transparent,rgb(0 0 0 / .64));color:#fff;pointer-events:none}
+.lb-card[data-lb-card="overlay"] .lb-card__body :is(.es-card__name,.es-card__price,.lb-card__options,.es-card__save){color:#fff}
+.lb-card[data-lb-card="overlay"] .es-card__name{font:600 15px/1.3 var(--es-body)}
+.lb-card[data-lb-card="overlay"] .es-card__add{pointer-events:auto;border-color:transparent;background:#fff;color:#111}
+/* /v:lbcard=overlay */
+/* v:lbcard=line */
+/* Glossier / Merit: no box — the photo, then the name and the price on one line. */
+.lb-card[data-lb-card="line"] .lb-card__media{border-radius:0;background:color-mix(in srgb,var(--es-ink) 4%,var(--es-paper))}
+.lb-card[data-lb-card="line"] .lb-card__body{grid-template-columns:minmax(0,1fr) auto;align-items:baseline;column-gap:12px;padding-top:12px}
+.lb-card[data-lb-card="line"] .es-card__name{grid-column:1;grid-row:1;font:400 15px/1.35 var(--es-body)}
+.lb-card[data-lb-card="line"] .es-card__row{grid-column:2;grid-row:1;flex-wrap:nowrap;gap:10px}
+.lb-card[data-lb-card="line"] .lb-card__options{grid-column:1/-1}
+.lb-card[data-lb-card="line"] .es-card__add{width:32px;height:32px}
+/* A narrow card (two to a row on a phone): the price goes under the name instead of squeezing it. */
+.lb-card[data-lb-card="line"]{container-type:inline-size}
+@container (max-width:240px){.lb-card[data-lb-card="line"] .lb-card__body{grid-template-columns:minmax(0,1fr)}.lb-card[data-lb-card="line"] .es-card__row{grid-column:1;grid-row:auto;justify-content:space-between}}
+/* /v:lbcard=line */
+/* v:lbcard=portrait */
+/* Pipeline / Symmetry: a tall 3:4 photo, a small name, a quiet price; the add button shows on hover (always on touch). */
+.lb-card[data-lb-card="portrait"] .lb-card__media{aspect-ratio:3/4;border-radius:0}
+.lb-card[data-lb-card="portrait"] .es-card__name{font:400 14px/1.4 var(--es-body)}
+.lb-card[data-lb-card="portrait"] .es-card__price{font-weight:400;font-size:14px;opacity:.75}
+@media (hover:hover){.lb-card[data-lb-card="portrait"] .es-card__add{opacity:0;transition:opacity .2s ease}.lb-card[data-lb-card="portrait"]:is(:hover,:focus-within) .es-card__add{opacity:1}}
+/* /v:lbcard=portrait */
+/* v:lbcard=swatch */
+/* Focal / Symmetry: the product on a soft ground, centred name and price, the colours under it. */
+.lb-card[data-lb-card="swatch"] .lb-card__media{background:color-mix(in srgb,var(--es-ink) 5%,var(--es-paper))}
+.lb-card[data-lb-card="swatch"] .lb-card__body{justify-items:center;text-align:center}
+.lb-card[data-lb-card="swatch"] .es-card__name{font:500 15px/1.35 var(--es-body)}
+.lb-card[data-lb-card="swatch"] .es-card__row{justify-content:center}
+.lb-card[data-lb-card="swatch"] .lb-card__options{display:inline-flex;align-items:center;gap:8px;order:3}
+.lb-card[data-lb-card="swatch"] .lb-card__options::before{content:"";width:34px;height:12px;background:radial-gradient(circle 5px at 6px 50%,var(--es-ink) 98%,#0000),radial-gradient(circle 5px at 17px 50%,color-mix(in srgb,var(--es-ink) 45%,var(--es-paper)) 98%,#0000),radial-gradient(circle 5px at 28px 50%,var(--es-accent) 98%,#0000)}
+/* /v:lbcard=swatch */
+/* v:lbcard=badge */
+/* Warehouse / Empire / Enterprise: a framed card, a corner chip (new / save, from the kit's real data), a bold price. */
+.lb-card[data-lb-card="badge"]{padding:10px 10px 14px;border:1px solid color-mix(in srgb,var(--es-ink) 12%,transparent);border-radius:var(--es-radius,6px);background:var(--es-paper)}
+.lb-card[data-lb-card="badge"] .lb-card__badge{top:0;left:0;border-radius:0 0 var(--es-radius,6px) 0;background:var(--es-accent);color:var(--es-on-accent);padding:6px 12px;font-weight:700;text-transform:uppercase}
+.lb-card[data-lb-card="badge"] .es-card__name{font:600 15px/1.35 var(--es-body)}
+.lb-card[data-lb-card="badge"] .es-card__price{font-size:19px;font-weight:700}
+/* /v:lbcard=badge */
+/* v:lbcard=polaroid */
+/* Colorblock / Spotlight: a white frame around a square photo, a caption under it, a slight tilt. */
+.lb-card[data-lb-card="polaroid"]{padding:12px 12px 16px;border-radius:4px;background:#fff;color:#1d1d1d;box-shadow:0 1px 2px rgb(0 0 0 / .06),0 16px 32px -20px rgb(0 0 0 / .4);transition:rotate .3s ease}
+.lb-card[data-lb-card="polaroid"]:nth-child(odd){rotate:-1.2deg}
+.lb-card[data-lb-card="polaroid"]:nth-child(even){rotate:1deg}
+@media (hover:hover){.lb-card[data-lb-card="polaroid"]:hover{rotate:0deg}}
+.lb-card[data-lb-card="polaroid"] .lb-card__media{aspect-ratio:1;border-radius:2px}
+.lb-card[data-lb-card="polaroid"] .lb-card__body{justify-items:center;text-align:center}
+.lb-card[data-lb-card="polaroid"] .es-card__name{font:400 clamp(17px,1.4vw,20px)/1.2 var(--es-heading);color:inherit}
+.lb-card[data-lb-card="polaroid"] .es-card__row{justify-content:center}
+.lb-card[data-lb-card="polaroid"] :is(.es-card__price,.es-card__add){color:inherit}
+@media (prefers-reduced-motion:reduce){.lb-card[data-lb-card="polaroid"]{transition:none}}
+/* /v:lbcard=polaroid */
+/* v:lbcard=round-add */
+/* Flux / Tonies: rounded photo, a round + button sitting on its lower corner. */
+.lb-card[data-lb-card="round-add"]{container-type:inline-size}
+.lb-card[data-lb-card="round-add"] .lb-card__media{border-radius:calc(var(--es-radius,6px) * 2.6)}
+.lb-card[data-lb-card="round-add"] .es-card__add{position:absolute;top:calc(125cqw - 54px);right:12px;z-index:3;width:44px;height:44px;border:0;background:var(--es-accent);color:var(--es-on-accent);box-shadow:0 8px 16px -8px rgb(0 0 0 / .45)}
+.lb-card[data-lb-card="round-add"] .es-card__name{font:600 16px/1.3 var(--es-body)}
+/* /v:lbcard=round-add */
+/* v:lbcard=list */
+/* Publisher: a row — the photo on the left, the details beside it. */
+.lb-card[data-lb-card="list"]{display:grid;grid-template-columns:minmax(84px,38%) minmax(0,1fr);gap:14px;align-items:center;padding:10px;border:1px solid color-mix(in srgb,var(--es-ink) 12%,transparent);border-radius:var(--es-radius,6px)}
+.lb-card[data-lb-card="list"] .lb-card__media{aspect-ratio:3/4}
+.lb-card[data-lb-card="list"] .lb-card__body{padding:0}
+.lb-card[data-lb-card="list"] .es-card__name{font:400 17px/1.25 var(--es-heading)}
+/* /v:lbcard=list */
+/* v:lbcard=scallop */
+/* Scratch: the photo in a scalloped frame on a tinted ground, centred words. */
+.lb-card[data-lb-card="scallop"] .lb-card__media{--sc:11px;border-radius:0;background:color-mix(in srgb,var(--es-accent) 14%,var(--es-paper));-webkit-mask:radial-gradient(var(--sc) at var(--sc) var(--sc),#000 98%,#0000) round calc(-1.5 * var(--sc)) calc(-1.5 * var(--sc)) / calc(3 * var(--sc)) calc(3 * var(--sc)),linear-gradient(#000 0 0) 50% / calc(100% - 3 * var(--sc)) calc(100% - 3 * var(--sc)) no-repeat;mask:radial-gradient(var(--sc) at var(--sc) var(--sc),#000 98%,#0000) round calc(-1.5 * var(--sc)) calc(-1.5 * var(--sc)) / calc(3 * var(--sc)) calc(3 * var(--sc)),linear-gradient(#000 0 0) 50% / calc(100% - 3 * var(--sc)) calc(100% - 3 * var(--sc)) no-repeat}
+.lb-card[data-lb-card="scallop"] .lb-card__body{justify-items:center;text-align:center}
+.lb-card[data-lb-card="scallop"] .es-card__name{font:400 clamp(17px,1.4vw,20px)/1.2 var(--es-heading)}
+.lb-card[data-lb-card="scallop"] .es-card__row{justify-content:center}
+/* /v:lbcard=scallop */
+/* v:lbcard=caps */
+/* Release / Stiletto: plain photo, a small spaced uppercase name, the price under it, a square chip on the photo. */
+.lb-card[data-lb-card="caps"] .lb-card__media{border-radius:0}
+.lb-card[data-lb-card="caps"] .lb-card__badge{border-radius:0;font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.lb-card[data-lb-card="caps"] .es-card__name{font:600 12px/1.4 var(--es-body);letter-spacing:.12em;text-transform:uppercase}
+.lb-card[data-lb-card="caps"] .es-card__price{font-weight:400;font-size:13px}
+.lb-card[data-lb-card="caps"] .lb-card__options{font-size:11px;letter-spacing:.06em}
+/* /v:lbcard=caps */
 @media (prefers-reduced-motion:reduce){.lb-card__ribbon-run{animation:none}.lb-card,.lb-card__media img{transition:none}}
 /* 34 templates (2026-10-31): template sections' CSS, one block per section (or sections) — a store keeps only the blocks of
  * the sections its home uses (withOnlyTheme in the API). Rules shared by no section stay for every store. */
@@ -1707,6 +1951,8 @@ main[data-lb-home]{overflow-x:clip}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__words{padding-bottom:clamp(120px,14vw,200px)}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__words{display:grid;justify-items:center;text-align:center}
 @media (max-width:760px){
+  /* Taller Lienzo 2026-11-02: the categories-list phone rule sits above the base two columns and lost to it; stacked here. */
+  .lb-overlap{grid-template-columns:1fr}
   .lb-overlap__photos{min-height:360px}
   .lb-story-overlap[data-lb-look="pair"] .lb-overlap{grid-template-columns:1fr}
   .lb-story-overlap[data-lb-look="pair"] .lb-overlap__b{right:6%;bottom:-12%;width:38%}
@@ -1840,6 +2086,11 @@ main[data-lb-home]{overflow-x:clip}
 .lb-reveal__sticker{position:absolute;right:8%;top:50%;width:clamp(90px,10vw,150px);aspect-ratio:1;object-fit:cover;border-radius:50%;transform:translateY(calc((0.5 - var(--p,.5)) * 600px)) rotate(8deg);z-index:2}
 .lb-reveal__pin{position:sticky}
 /* /lb:statement-reveal */
+/* lb:product-hero */
+/* Owner 2026-11-02 (one-product stores): the kit's product detail fills the section; the band only gives it room. */
+.lb-product-hero{display:block;width:100%;margin:0 auto}
+.lb-product-hero__note{margin:0 auto 18px;text-align:center}
+/* /lb:product-hero */
 /* lb:products-spotlight */
 .lb-best{display:grid;justify-items:center}
 .lb-best__photo{width:100%;aspect-ratio:21/9;max-height:min(52vh,460px);border-radius:var(--lb-r-lg);overflow:hidden}
@@ -2233,6 +2484,8 @@ main[data-lb-home]{overflow-x:clip}
 }
 [data-es-theme="paloalto"] .lb-press__outlets button{font-family:var(--es-heading);text-transform:none}
 [data-es-theme="paloalto"] .lb-posts__handle,[data-es-theme="paloalto"] .lb-posts__look{font-family:var(--es-mono)}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="paloalto"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:paloalto */
 
 /* theme:impulse */
@@ -2268,6 +2521,8 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="impulse"] .lb-promo-banner[data-in][data-lb-look="parallax"] .lb-lede{animation-duration:1s;animation-delay:.7s}
 [data-es-theme="impulse"] .lb-promo-banner[data-in][data-lb-look="parallax"] .lb-actions{animation:im-fade 2s ease 1.3s both}
 [data-es-theme="impulse"] .lb-cover-shoppable .lb-cover-full__copy>*{animation:im-fade 1s cubic-bezier(.26,.54,.32,1) .2s both}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="impulse"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:impulse */
 
 /* theme:motion */
@@ -2302,6 +2557,8 @@ main[data-lb-home]{overflow-x:clip}
 :root:not([data-es-still]) [data-es-theme="motion"] main .lb:not([data-in]) img{opacity:0}
 [data-es-theme="motion"] main .lb[data-in] img:not(.lb-fade__photo){animation:mo-fade .5s cubic-bezier(.29,.65,.58,1) both}
 [data-es-theme="motion"] .es-footer{background:var(--es-paper)}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="motion"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:motion */
 
 /* theme:focal */
@@ -2330,6 +2587,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="focal"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 :root:not([data-es-still]) [data-es-theme="focal"] main .lb:not([data-in]) :is(.lb-head,.lb-split__copy,.menu-item,.lb-mosaic li,.lb-scroller li){opacity:0}
 [data-es-theme="focal"] main .lb[data-in] :is(.lb-head,.lb-split__copy,.menu-item,.lb-mosaic li,.lb-scroller li){animation:fo-fade .6s ease both}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una tarjeta flotante. */
+@media (min-width:861px){[data-es-theme="focal"] .pym-panel{left:0;right:0;width:min(600px,calc(100% - 40px));margin:10px auto 0;padding:24px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-top:3px solid var(--store-accent,currentColor);border-radius:18px;box-shadow:0 30px 60px -30px rgba(0,0,0,.35)}[data-es-theme="focal"] .pym-group{display:block}[data-es-theme="focal"] .pym-tiles{display:none}[data-es-theme="focal"] .pym-links{grid-template-columns:repeat(2,minmax(0,1fr))}[data-es-theme="focal"] .pym-links a{font-size:16px}[data-es-theme="focal"] .pym-footer{margin-top:16px;border-radius:12px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="focal"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:focal */
 
 /* theme:symmetry */
@@ -2357,6 +2618,8 @@ main[data-lb-home]{overflow-x:clip}
 :root:not([data-es-still]) [data-es-theme="symmetry"] main .lb:not([data-in]) :is(.lb-head,.lb-quote,.lb-tiles li,.lb-countdown,.lb-overlap__words,.lb-posts__post,.lb-trio li,.lb-stack__row){opacity:0}
 [data-es-theme="symmetry"] main .lb[data-in] :is(.lb-head,.lb-quote,.lb-tiles li,.lb-countdown,.lb-overlap__words,.lb-posts__post,.lb-trio li,.lb-stack__row){animation:sy-up .8s ease both}
 [data-es-theme="symmetry"] main .lb[data-in] :is(li,.lb-stack__row):nth-child(2){animation-delay:.12s}[data-es-theme="symmetry"] main .lb[data-in] :is(li,.lb-stack__row):nth-child(3){animation-delay:.24s}[data-es-theme="symmetry"] main .lb[data-in] li:nth-child(n+4){animation-delay:.36s}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="symmetry"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:symmetry */
 
 /* theme:broadcast */
@@ -2383,6 +2646,10 @@ main[data-lb-home]{overflow-x:clip}
 :root:not([data-es-still]) [data-es-theme="broadcast"] main .lb:not([data-in]) :is(.lb-head,.lb-imgcols li,.lb-overlap__words,.lb-columns li,.lb-posts__post,.lb-press,.lb-bigrun__words,.lb-statement){opacity:.001}
 [data-es-theme="broadcast"] main .lb[data-in] :is(.lb-head,.lb-imgcols li,.lb-overlap__words,.lb-columns li,.lb-posts__post,.lb-press,.lb-bigrun__words,.lb-statement){animation:br-up 1s ease both}
 [data-es-theme="broadcast"] main .lb[data-in] li:nth-child(2){animation-delay:.15s}[data-es-theme="broadcast"] main .lb[data-in] li:nth-child(3){animation-delay:.3s}[data-es-theme="broadcast"] main .lb[data-in] li:nth-child(n+4){animation-delay:.45s}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una barra fina de enlaces. */
+@media (min-width:861px){[data-es-theme="broadcast"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="broadcast"] .pym-group{display:block}[data-es-theme="broadcast"] :is(.pym-tiles,.pym-footer){display:none}[data-es-theme="broadcast"] .pym-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 40px}[data-es-theme="broadcast"] .pym-links a{min-height:40px;font-family:inherit;font-size:13px;letter-spacing:.14em;text-transform:uppercase}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="broadcast"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:broadcast */
 
 /* theme:shrine */
@@ -2408,6 +2675,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="shrine"] .es-footer__big{font:800 clamp(60px,10vw,140px)/1 var(--es-heading);text-transform:uppercase;color:#fff}
 :root:not([data-es-still]) [data-es-theme="shrine"] main .lb:not([data-in]):not(.lb-wave):not(.lb-cover){opacity:0}
 [data-es-theme="shrine"] main .lb[data-in]:not(.lb-wave):not(.lb-cover){animation:sh-in .8s ease both}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una tarjeta flotante. */
+@media (min-width:861px){[data-es-theme="shrine"] .pym-panel{left:0;right:0;width:min(600px,calc(100% - 40px));margin:10px auto 0;padding:24px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-top:3px solid var(--store-accent,currentColor);border-radius:18px;box-shadow:0 30px 60px -30px rgba(0,0,0,.35)}[data-es-theme="shrine"] .pym-group{display:block}[data-es-theme="shrine"] .pym-tiles{display:none}[data-es-theme="shrine"] .pym-links{grid-template-columns:repeat(2,minmax(0,1fr))}[data-es-theme="shrine"] .pym-links a{font-size:16px}[data-es-theme="shrine"] .pym-footer{margin-top:16px;border-radius:12px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="shrine"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:shrine */
 
 /* theme:shrine2 */
@@ -2442,6 +2713,10 @@ main[data-lb-home]{overflow-x:clip}
 :root:not([data-es-still]) [data-es-theme="shrine2"] main .lb:not([data-in]):not(.lb-wave):not(.lb-cover){opacity:0}
 [data-es-theme="shrine2"] main .lb[data-in]:not(.lb-wave):not(.lb-cover){animation:s2-in .8s ease both}
 @media (prefers-reduced-motion:reduce){[data-es-theme="shrine2"] .lb-head h2{animation:none!important;width:auto!important;border:0!important}}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is botones redondos y fotos grandes. */
+@media (min-width:861px){[data-es-theme="shrine2"] .pym-panel{border-top-width:0;border-radius:0 0 28px 28px;box-shadow:0 24px 40px -28px rgba(0,0,0,.35)}[data-es-theme="shrine2"] .pym-group{grid-template-columns:minmax(0,.8fr) minmax(0,2.2fr)}[data-es-theme="shrine2"] .pym-links{grid-template-columns:1fr;gap:8px}[data-es-theme="shrine2"] .pym-links a{min-height:42px;padding:0 18px;border-radius:99px;background:color-mix(in srgb,var(--store-accent,currentColor) 12%,transparent);font-size:17px;font-weight:700}[data-es-theme="shrine2"] .pym-tiles-title{display:none}[data-es-theme="shrine2"] .pym-tiles ul{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}[data-es-theme="shrine2"] .pym-tiles img{aspect-ratio:1/1;border-radius:22px}[data-es-theme="shrine2"] .pym-tiles a{text-align:center;font-weight:700}[data-es-theme="shrine2"] .pym-footer{border-radius:99px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="shrine2"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:shrine2 */
 
 /* theme:gumdrop */
@@ -2471,6 +2746,10 @@ main[data-lb-home]{overflow-x:clip}
 :root:not([data-es-still]) [data-es-theme="gumdrop"] main .lb:not([data-in]) :is(.lb-head,.lb-zig li,.lb-compare,.lb-posts__post,.lb-services li,.menu-item){opacity:.01}
 [data-es-theme="gumdrop"] main .lb[data-in] :is(.lb-head,.lb-zig li,.lb-compare,.lb-posts__post,.lb-services li,.menu-item){animation:gu-in .5s ease both}
 [data-es-theme="gumdrop"] main .lb[data-in] :is(li,.menu-item):nth-child(2){animation-delay:.075s}[data-es-theme="gumdrop"] main .lb[data-in] :is(li,.menu-item):nth-child(3){animation-delay:.15s}[data-es-theme="gumdrop"] main .lb[data-in] :is(li,.menu-item):nth-child(n+4){animation-delay:.225s}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is botones redondos y fotos grandes. */
+@media (min-width:861px){[data-es-theme="gumdrop"] .pym-panel{border-top-width:0;border-radius:0 0 28px 28px;box-shadow:0 24px 40px -28px rgba(0,0,0,.35)}[data-es-theme="gumdrop"] .pym-group{grid-template-columns:minmax(0,.8fr) minmax(0,2.2fr)}[data-es-theme="gumdrop"] .pym-links{grid-template-columns:1fr;gap:8px}[data-es-theme="gumdrop"] .pym-links a{min-height:42px;padding:0 18px;border-radius:99px;background:color-mix(in srgb,var(--store-accent,currentColor) 12%,transparent);font-size:17px;font-weight:700}[data-es-theme="gumdrop"] .pym-tiles-title{display:none}[data-es-theme="gumdrop"] .pym-tiles ul{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}[data-es-theme="gumdrop"] .pym-tiles img{aspect-ratio:1/1;border-radius:22px}[data-es-theme="gumdrop"] .pym-tiles a{text-align:center;font-weight:700}[data-es-theme="gumdrop"] .pym-footer{border-radius:99px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="gumdrop"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:gumdrop */
 
 /* theme:amigos */
@@ -2500,6 +2779,8 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="amigos"] .es-footer button,[data-es-theme="amigos"] .es-footer [type="submit"]{border-radius:99px;background:#f6b3c2;color:var(--es-deep)}
 :root:not([data-es-still]) [data-es-theme="amigos"] main .lb:not([data-in]) :is(.lb-head,.lb-paragraph,.lb-press-row,.menu-item){opacity:0}
 [data-es-theme="amigos"] main .lb[data-in] :is(.lb-head,.lb-paragraph,.lb-press-row,.menu-item){animation:am-in .7s ease both}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="amigos"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:amigos */
 
 /* theme:majestuoso */
@@ -2530,6 +2811,8 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="majestuoso"] .lb-card[data-lb-card="framed"] .lb-card__buy{background:var(--es-accent);border-color:var(--es-accent);color:#fff}
 [data-es-theme="majestuoso"] [data-es-band="deep"] .es-btn{background:#8fcc5c;border-color:#8fcc5c;color:#1d2550}
 [data-es-theme="majestuoso"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="majestuoso"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:majestuoso */
 
 /* theme:energia */
@@ -2552,6 +2835,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="energia"] .es-footer{background:#fff}
 :root:not([data-es-still]) [data-es-theme="energia"] main .lb:not([data-in]):not(.lb-cover){opacity:.01;transform:translateY(50px) scale(.95)}
 [data-es-theme="energia"] main .lb[data-in]:not(.lb-cover){animation:en-up .8s cubic-bezier(.2,.7,.2,1) both}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is botones redondos y fotos grandes. */
+@media (min-width:861px){[data-es-theme="energia"] .pym-panel{border-top-width:0;border-radius:0 0 28px 28px;box-shadow:0 24px 40px -28px rgba(0,0,0,.35)}[data-es-theme="energia"] .pym-group{grid-template-columns:minmax(0,.8fr) minmax(0,2.2fr)}[data-es-theme="energia"] .pym-links{grid-template-columns:1fr;gap:8px}[data-es-theme="energia"] .pym-links a{min-height:42px;padding:0 18px;border-radius:99px;background:color-mix(in srgb,var(--store-accent,currentColor) 12%,transparent);font-size:17px;font-weight:700}[data-es-theme="energia"] .pym-tiles-title{display:none}[data-es-theme="energia"] .pym-tiles ul{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}[data-es-theme="energia"] .pym-tiles img{aspect-ratio:1/1;border-radius:22px}[data-es-theme="energia"] .pym-tiles a{text-align:center;font-weight:700}[data-es-theme="energia"] .pym-footer{border-radius:99px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="energia"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:energia */
 
 /* theme:mordisco */
@@ -2587,6 +2874,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="mordisco"] .lb-wordmark__word{color:#fff8ee;font-weight:800;letter-spacing:-.06em;text-transform:uppercase}
 [data-es-theme="mordisco"] .lb-press-marquee li,[data-es-theme="mordisco"] .lb-press :is(li,span){font-family:var(--es-heading);font-weight:800;font-style:normal;color:var(--es-accent);text-transform:none;letter-spacing:-.01em}
 @media (max-width:760px){[data-es-theme="mordisco"] .lb-columns{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:24px 12px}[data-es-theme="mordisco"] .lb-columns li>*{justify-items:center;text-align:center}}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is botones redondos y fotos grandes. */
+@media (min-width:861px){[data-es-theme="mordisco"] .pym-panel{border-top-width:0;border-radius:0 0 28px 28px;box-shadow:0 24px 40px -28px rgba(0,0,0,.35)}[data-es-theme="mordisco"] .pym-group{grid-template-columns:minmax(0,.8fr) minmax(0,2.2fr)}[data-es-theme="mordisco"] .pym-links{grid-template-columns:1fr;gap:8px}[data-es-theme="mordisco"] .pym-links a{min-height:42px;padding:0 18px;border-radius:99px;background:color-mix(in srgb,var(--store-accent,currentColor) 12%,transparent);font-size:17px;font-weight:700}[data-es-theme="mordisco"] .pym-tiles-title{display:none}[data-es-theme="mordisco"] .pym-tiles ul{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}[data-es-theme="mordisco"] .pym-tiles img{aspect-ratio:1/1;border-radius:22px}[data-es-theme="mordisco"] .pym-tiles a{text-align:center;font-weight:700}[data-es-theme="mordisco"] .pym-footer{border-radius:99px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="mordisco"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:mordisco */
 
 /* theme:pancita */
@@ -2611,11 +2902,15 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="pancita"] .lb-card[data-lb-card="soft"]{background:none;box-shadow:none;text-align:center}
 [data-es-theme="pancita"] .lb-card[data-lb-card="soft"] .lb-card__media{background:none}
 [data-es-theme="pancita"] .lb-card__buy{border-radius:99px;background:var(--es-accent);color:#fff}
-[data-es-theme="pancita"] .lb-products-spotlight .es-eyebrow{width:max-content;padding:6px 14px;border-radius:99px;background:#2bd1c9;color:#fff;letter-spacing:.04em}
+[data-es-theme="pancita"] .lb-products-spotlight .es-eyebrow{width:max-content;padding:6px 14px;border-radius:99px;background:#2bd1c9;color:#0b3d3a;letter-spacing:.04em}
 [data-es-theme="pancita"] .lb-faq-grid .lb-faq__item{border-color:var(--es-accent);border-width:0 0 2px;border-radius:0;padding:0}
 [data-es-theme="pancita"] .lb-faq-grid summary{color:var(--es-accent);font-family:var(--es-heading)}
 [data-es-theme="pancita"] .es-footer{background:var(--es-accent);color:#fff}
 [data-es-theme="pancita"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is botones redondos y fotos grandes. */
+@media (min-width:861px){[data-es-theme="pancita"] .pym-panel{border-top-width:0;border-radius:0 0 28px 28px;box-shadow:0 24px 40px -28px rgba(0,0,0,.35)}[data-es-theme="pancita"] .pym-group{grid-template-columns:minmax(0,.8fr) minmax(0,2.2fr)}[data-es-theme="pancita"] .pym-links{grid-template-columns:1fr;gap:8px}[data-es-theme="pancita"] .pym-links a{min-height:42px;padding:0 18px;border-radius:99px;background:color-mix(in srgb,var(--store-accent,currentColor) 12%,transparent);font-size:17px;font-weight:700}[data-es-theme="pancita"] .pym-tiles-title{display:none}[data-es-theme="pancita"] .pym-tiles ul{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}[data-es-theme="pancita"] .pym-tiles img{aspect-ratio:1/1;border-radius:22px}[data-es-theme="pancita"] .pym-tiles a{text-align:center;font-weight:700}[data-es-theme="pancita"] .pym-footer{border-radius:99px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="pancita"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:pancita */
 
 /* theme:pecas */
@@ -2650,6 +2945,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="pecas"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 [data-es-theme="pecas"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="pecas"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is botones redondos y fotos grandes. */
+@media (min-width:861px){[data-es-theme="pecas"] .pym-panel{border-top-width:0;border-radius:0 0 28px 28px;box-shadow:0 24px 40px -28px rgba(0,0,0,.35)}[data-es-theme="pecas"] .pym-group{grid-template-columns:minmax(0,.8fr) minmax(0,2.2fr)}[data-es-theme="pecas"] .pym-links{grid-template-columns:1fr;gap:8px}[data-es-theme="pecas"] .pym-links a{min-height:42px;padding:0 18px;border-radius:99px;background:color-mix(in srgb,var(--store-accent,currentColor) 12%,transparent);font-size:17px;font-weight:700}[data-es-theme="pecas"] .pym-tiles-title{display:none}[data-es-theme="pecas"] .pym-tiles ul{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}[data-es-theme="pecas"] .pym-tiles img{aspect-ratio:1/1;border-radius:22px}[data-es-theme="pecas"] .pym-tiles a{text-align:center;font-weight:700}[data-es-theme="pecas"] .pym-footer{border-radius:99px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="pecas"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:pecas */
 
 /* theme:crocante */
@@ -2680,6 +2979,12 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="crocante"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
 :root:not([data-es-still]) [data-es-theme="crocante"] main .lb:not([data-in]):not(.lb-cover):not(.lb-strip-marquee){opacity:.01;transform:translateY(50px) scale(.95)}
 [data-es-theme="crocante"] main .lb[data-in]:not(.lb-cover):not(.lb-strip-marquee){animation:cr-up .8s cubic-bezier(.2,.7,.2,1) both}
+/* Oh Belly 2026-11-02: on a phone the dark cover words sat straight on the photo, the paragraph across the can. There the photo shows whole on top and the words follow on the store's paper. */
+@media (max-width:760px){[data-es-theme="crocante"] .lb-cover-full{display:block;min-height:0;background:var(--es-paper);color:var(--es-ink)}[data-es-theme="crocante"] .lb-cover-full .lb-cover-full__photo{position:relative;inset:auto;display:block;height:auto;aspect-ratio:4/5}[data-es-theme="crocante"] .lb-cover-full .lb-cover-full__copy{padding:24px 20px 32px;text-align:left;justify-items:start}[data-es-theme="crocante"] .lb-cover-full .lb-cover-full__copy :is(.lb-eyebrow,.es-eyebrow,.lb-cover__sub,p,h1,.lb-title){color:var(--es-ink);text-shadow:none;text-align:left;margin-left:0;margin-right:auto;justify-self:start}}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is botones redondos y fotos grandes. */
+@media (min-width:861px){[data-es-theme="crocante"] .pym-panel{border-top-width:0;border-radius:0 0 28px 28px;box-shadow:0 24px 40px -28px rgba(0,0,0,.35)}[data-es-theme="crocante"] .pym-group{grid-template-columns:minmax(0,.8fr) minmax(0,2.2fr)}[data-es-theme="crocante"] .pym-links{grid-template-columns:1fr;gap:8px}[data-es-theme="crocante"] .pym-links a{min-height:42px;padding:0 18px;border-radius:99px;background:color-mix(in srgb,var(--store-accent,currentColor) 12%,transparent);font-size:17px;font-weight:700}[data-es-theme="crocante"] .pym-tiles-title{display:none}[data-es-theme="crocante"] .pym-tiles ul{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}[data-es-theme="crocante"] .pym-tiles img{aspect-ratio:1/1;border-radius:22px}[data-es-theme="crocante"] .pym-tiles a{text-align:center;font-weight:700}[data-es-theme="crocante"] .pym-footer{border-radius:99px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="crocante"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:crocante */
 /* Product page titles per theme (owner 2026-10-31): each theme's title weight, case, spacing and colour. */
 [data-es-theme="paloalto"]{--es-t-weight:700;--es-t-track:-.015em}
@@ -2729,6 +3034,8 @@ main[data-lb-home]{overflow-x:clip}
 @media (max-width:760px){[data-es-theme="amplio"] .es-header__search{grid-column:1/-1;grid-row:2}[data-es-theme="amplio"] .es-header__links{display:none}}
 [data-es-theme="amplio"] .lb-cover-split[data-lb-band="muted"]{background:linear-gradient(90deg,var(--es-base-paper,#fff) 0 50%,var(--es-base-muted,#dfe5d8) 50%)}
 @media (max-width:760px){[data-es-theme="amplio"] .lb-cover-split[data-lb-band="muted"]{background:var(--es-base-muted,#dfe5d8)}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="amplio"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:amplio */
 
 /* theme:tacon */
@@ -2757,13 +3064,15 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="tacon"] .lb-cover--dark :is(.lb-title,h1,h2){color:#f1efc0}
 [data-es-theme="tacon"] :is(.es-card__name,.lb-card .es-card__name){font:400 13px/1.3 var(--es-body);text-transform:none;letter-spacing:0}
 [data-es-theme="tacon"] .lb-card .lb-card__media{border-radius:0}
-[data-es-theme="tacon"] .lb-strip-marquee{background:#141414;color:#fff;font:400 18px/1 var(--es-heading);text-transform:uppercase}
+[data-es-theme="tacon"] .lb-strip-marquee{background:var(--es-accent);color:var(--es-on-accent);font:400 18px/1 var(--es-heading);text-transform:uppercase}
 [data-es-theme="tacon"] .es-footer{background:#141414;color:#fff}
 [data-es-theme="tacon"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 [data-es-theme="tacon"] .es-footer__big{text-transform:uppercase;font-weight:400}
 :root:not([data-es-still]) [data-es-theme="tacon"] main .lb:not([data-in]) :is(.lb-head,.lb-title){opacity:0}
 [data-es-theme="tacon"] main .lb[data-in] :is(.lb-head,.lb-title){animation:ta-up .7s cubic-bezier(.33,0,0,1) both}
 [data-es-theme="tacon"] main .lb[data-in] :is(.lb-split__media img,.lb-tiles__tile img){animation:ta-settle 1.2s cubic-bezier(.33,0,0,1) both}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="tacon"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:tacon */
 
 /* theme:estreno */
@@ -2794,6 +3103,8 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="estreno"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
 [data-es-theme="estreno"] .lb-cover-stage .lb-stage__buttons{justify-items:center}
 [data-es-theme="estreno"] .lb-cover-stage .lb-stage__btn{width:auto;min-width:180px;padding:0 28px}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="estreno"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:estreno */
 
 /* theme:conecta */
@@ -2826,6 +3137,8 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="conecta"] .es-footer{background:#1f2329;color:#fff}
 [data-es-theme="conecta"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 [data-es-theme="conecta"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="conecta"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:conecta */
 
 /* theme:despensa */
@@ -2857,6 +3170,8 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="despensa"] .es-footer{background:#fff;border-top:1px solid #e3e7eb}
 [data-es-theme="despensa"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="despensa"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="despensa"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:despensa */
 
 /* theme:bazar */
@@ -2884,6 +3199,8 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="bazar"] :is(.es-card__name,.lb-card .es-card__name){font:500 14px/1.3 var(--es-body);text-transform:none;letter-spacing:0}
 [data-es-theme="bazar"] .lb-categories-tiles[data-lb-look="circles"] .lb-tiles__tile img{background:var(--es-base-muted,#f4f2e6)}
 [data-es-theme="bazar"] .es-footer{background:var(--es-base-muted,#f4f2e6)}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="bazar"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:bazar */
 
 /* theme:sorbo */
@@ -2921,6 +3238,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="sorbo"] .lb-promo-banner{width:min(1280px,calc(100% - 48px));margin:0 auto}
 [data-es-theme="sorbo"] .es-footer{background:#121212;color:#fff}
 [data-es-theme="sorbo"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una barra fina de enlaces. */
+@media (min-width:861px){[data-es-theme="sorbo"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="sorbo"] .pym-group{display:block}[data-es-theme="sorbo"] :is(.pym-tiles,.pym-footer){display:none}[data-es-theme="sorbo"] .pym-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 40px}[data-es-theme="sorbo"] .pym-links a{min-height:40px;font-family:inherit;font-size:13px;letter-spacing:.14em;text-transform:uppercase}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="sorbo"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:sorbo */
 
 /* theme:grano */
@@ -2951,6 +3272,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="grano"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 [data-es-theme="grano"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="grano"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una barra fina de enlaces. */
+@media (min-width:861px){[data-es-theme="grano"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="grano"] .pym-group{display:block}[data-es-theme="grano"] :is(.pym-tiles,.pym-footer){display:none}[data-es-theme="grano"] .pym-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 40px}[data-es-theme="grano"] .pym-links a{min-height:40px;font-family:inherit;font-size:13px;letter-spacing:.14em;text-transform:uppercase}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="grano"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:grano */
 
 /* theme:muro */
@@ -2980,6 +3305,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="muro"] :is([data-lb-band="deep"],[data-es-band="deep"]) .lb-tiles__tile::after{display:none}
 [data-es-theme="muro"] :is([data-lb-band="deep"],[data-es-band="deep"]) .lb-tiles__label{position:static;justify-content:center;padding:0 12px 16px;color:#16404f;text-shadow:none;font:400 15px/1.2 var(--es-heading)}
 [data-es-theme="muro"] :is([data-lb-band="deep"],[data-es-band="deep"]) .lb-tiles__label svg{display:none}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una barra fina de enlaces. */
+@media (min-width:861px){[data-es-theme="muro"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="muro"] .pym-group{display:block}[data-es-theme="muro"] :is(.pym-tiles,.pym-footer){display:none}[data-es-theme="muro"] .pym-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 40px}[data-es-theme="muro"] .pym-links a{min-height:40px;font-family:inherit;font-size:13px;letter-spacing:.14em;text-transform:uppercase}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="muro"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:muro */
 
 /* theme:claro */
@@ -3013,6 +3342,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="claro"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 [data-es-theme="claro"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="claro"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una tarjeta flotante. */
+@media (min-width:861px){[data-es-theme="claro"] .pym-panel{left:0;right:0;width:min(600px,calc(100% - 40px));margin:10px auto 0;padding:24px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-top:3px solid var(--store-accent,currentColor);border-radius:18px;box-shadow:0 30px 60px -30px rgba(0,0,0,.35)}[data-es-theme="claro"] .pym-group{display:block}[data-es-theme="claro"] .pym-tiles{display:none}[data-es-theme="claro"] .pym-links{grid-template-columns:repeat(2,minmax(0,1fr))}[data-es-theme="claro"] .pym-links a{font-size:16px}[data-es-theme="claro"] .pym-footer{margin-top:16px;border-radius:12px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="claro"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:claro */
 
 /* theme:hoja */
@@ -3116,6 +3449,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="calma"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
 @keyframes ca-fade{from{opacity:0}to{opacity:1}}
 [data-es-theme="calma"] main .lb[data-in] img{animation:ca-fade .9s ease both}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una barra fina de enlaces. */
+@media (min-width:861px){[data-es-theme="calma"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="calma"] .pym-group{display:block}[data-es-theme="calma"] :is(.pym-tiles,.pym-footer){display:none}[data-es-theme="calma"] .pym-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 40px}[data-es-theme="calma"] .pym-links a{min-height:40px;font-family:inherit;font-size:13px;letter-spacing:.14em;text-transform:uppercase}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="calma"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:calma */
 
 /* theme:zancada */
@@ -3144,6 +3481,8 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="zancada"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 [data-es-theme="zancada"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="zancada"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="zancada"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:zancada */
 
 /* theme:cuero */
@@ -3171,6 +3510,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="cuero"] .es-footer{background:var(--es-paper);border-top:1px solid #cfc9be}
 [data-es-theme="cuero"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="cuero"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una barra fina de enlaces. */
+@media (min-width:861px){[data-es-theme="cuero"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="cuero"] .pym-group{display:block}[data-es-theme="cuero"] :is(.pym-tiles,.pym-footer){display:none}[data-es-theme="cuero"] .pym-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 40px}[data-es-theme="cuero"] .pym-links a{min-height:40px;font-family:inherit;font-size:13px;letter-spacing:.14em;text-transform:uppercase}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="cuero"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:cuero */
 
 /* theme:alacena */
@@ -3202,6 +3545,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="alacena"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 [data-es-theme="alacena"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="alacena"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is botones redondos y fotos grandes. */
+@media (min-width:861px){[data-es-theme="alacena"] .pym-panel{border-top-width:0;border-radius:0 0 28px 28px;box-shadow:0 24px 40px -28px rgba(0,0,0,.35)}[data-es-theme="alacena"] .pym-group{grid-template-columns:minmax(0,.8fr) minmax(0,2.2fr)}[data-es-theme="alacena"] .pym-links{grid-template-columns:1fr;gap:8px}[data-es-theme="alacena"] .pym-links a{min-height:42px;padding:0 18px;border-radius:99px;background:color-mix(in srgb,var(--store-accent,currentColor) 12%,transparent);font-size:17px;font-weight:700}[data-es-theme="alacena"] .pym-tiles-title{display:none}[data-es-theme="alacena"] .pym-tiles ul{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}[data-es-theme="alacena"] .pym-tiles img{aspect-ratio:1/1;border-radius:22px}[data-es-theme="alacena"] .pym-tiles a{text-align:center;font-weight:700}[data-es-theme="alacena"] .pym-footer{border-radius:99px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="alacena"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:alacena */
 
 /* theme:bloque */
@@ -3237,6 +3584,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="bloque"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 [data-es-theme="bloque"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="bloque"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is botones redondos y fotos grandes. */
+@media (min-width:861px){[data-es-theme="bloque"] .pym-panel{border-top-width:0;border-radius:0 0 28px 28px;box-shadow:0 24px 40px -28px rgba(0,0,0,.35)}[data-es-theme="bloque"] .pym-group{grid-template-columns:minmax(0,.8fr) minmax(0,2.2fr)}[data-es-theme="bloque"] .pym-links{grid-template-columns:1fr;gap:8px}[data-es-theme="bloque"] .pym-links a{min-height:42px;padding:0 18px;border-radius:99px;background:color-mix(in srgb,var(--store-accent,currentColor) 12%,transparent);font-size:17px;font-weight:700}[data-es-theme="bloque"] .pym-tiles-title{display:none}[data-es-theme="bloque"] .pym-tiles ul{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}[data-es-theme="bloque"] .pym-tiles img{aspect-ratio:1/1;border-radius:22px}[data-es-theme="bloque"] .pym-tiles a{text-align:center;font-weight:700}[data-es-theme="bloque"] .pym-footer{border-radius:99px}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="bloque"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:bloque */
 
 /* theme:foco */
@@ -3258,6 +3609,10 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="foco"] .lb-card .lb-card__media{border-radius:0;background:#f3f3f3}
 [data-es-theme="foco"] :is(.es-card__name,.lb-card .es-card__name){font:400 12px/1.3 var(--es-body);text-transform:none;letter-spacing:0}
 [data-es-theme="foco"] .es-footer{background:#fff;border-top:1px solid #eee}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una barra fina de enlaces. */
+@media (min-width:861px){[data-es-theme="foco"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="foco"] .pym-group{display:block}[data-es-theme="foco"] :is(.pym-tiles,.pym-footer){display:none}[data-es-theme="foco"] .pym-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 40px}[data-es-theme="foco"] .pym-links a{min-height:40px;font-family:inherit;font-size:13px;letter-spacing:.14em;text-transform:uppercase}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="foco"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:foco */
 
 /* theme:lomo */
@@ -3285,4 +3640,8 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="lomo"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
 [data-es-theme="lomo"]:has(.lb-newsletter-split) .es-footer :has(> .es-footer__signup){display:none}
 [data-es-theme="lomo"] .lb-newsband{grid-template-columns:1fr;justify-items:center;text-align:center}
+/* Owner 2026-11-02 («all stores have the same menu»): this template's dropdown is una barra fina de enlaces. */
+@media (min-width:861px){[data-es-theme="lomo"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="lomo"] .pym-group{display:block}[data-es-theme="lomo"] :is(.pym-tiles,.pym-footer){display:none}[data-es-theme="lomo"] .pym-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 40px}[data-es-theme="lomo"] .pym-links a{min-height:40px;font-family:inherit;font-size:13px;letter-spacing:.14em;text-transform:uppercase}}
+/* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
+[data-es-theme="lomo"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:lomo */

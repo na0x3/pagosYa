@@ -148,6 +148,22 @@ describe('a screenshot of a product card (2026-10-18)', () => {
     expect(messages.at(-1).content).toMatch(/^Leí «Portable Blender 380ml» en tu captura, pero su foto es muy pequeña/);
   });
 
+  // Live 2026-11-03 (sofa cama): the photos the merchant sends after that reply make the product from the screenshot's read.
+  // The Studio sends a requestId, so progress saves rewrite the message's metadata on every step (they wiped the read).
+  it('builds the product from the earlier read when the asked-for photos arrive', async () => {
+    const harness = await withShot([{ url: shot, role: 'listing', description: 'captura' }], { ...read, photo: { x: 0, y: 0, width: 100, height: 100 } });
+    const { service, generation, products, messages, dialogue } = harness;
+    await service.send('m', 's', { ...request, instruction: 'quiero vender esto', assetUrls: [shot], requestId: '11111111-1111-4111-8111-111111111111' });
+    dialogue.decide.mockResolvedValue({ action: 'generate', reply: '', summary: 'Una licuadora.', generationInstruction: 'Crea la tienda.', imageUses: [{ url: photo, role: 'product', description: 'foto' }], startFrom: 'scratch' });
+    await service.send('m', 's', { ...request, instruction: 'aquí van las fotos', assetUrls: [photo], requestId: '22222222-2222-4222-8222-222222222222' });
+    expect(dialogue.readListing).toHaveBeenCalledTimes(1);
+    expect(products).toHaveLength(1);
+    expect(products[0]).toMatchObject({ name: 'Licuadora portátil', imageUrls: [photo], amount: 1830, currency: 'USD', priceToConfirm: true });
+    expect(generation.generate).toHaveBeenCalledTimes(1);
+    expect(execution(generation).instruction).toContain('already in the catalog as «Licuadora portátil»');
+    expect(messages.at(-1).content).toMatch(/^Leí «Licuadora portátil» en tu captura/);
+  });
+
   it('a screenshot that cannot be read stays a reference, never artwork', async () => {
     const { service, generation, products } = await withShot([{ url: shot, role: 'listing', description: 'captura' }], { isListing: false });
     await service.send('m', 's', { ...request, instruction: 'mira esto', assetUrls: [shot] });

@@ -85,8 +85,8 @@
       "icons": "person",
       "header": "split",
       "announce": "plain",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "signup",
+      "button": "sticker",
       "corners": "round",
       "density": "regular",
       "texture": "none",
@@ -109,12 +109,12 @@
         "photo": "slot:pi-juntas"
       },
       {
-        "type": "products-slider",
-        "look": "center",
+        "type": "products-grid",
         "band": "accent",
         "title": "Nuestros favoritos",
         "text": "Lindos, fáciles y hechos para tu piel.",
-        "link": "products"
+        "link": "products",
+        "card": "overlay"
       },
       {
         "type": "wave-divider",
@@ -159,20 +159,27 @@
         "title": "Lo que dicen"
       },
       {
-        "type": "story-split",
-        "look": "right",
+        "type": "story-overlay",
+        "look": "card",
         "title": "Tu piel, *con estilo*",
         "text": "Productos lindos y fáciles de usar, pensados para que cuidarte sea un gusto.",
         "cta": "Comprar",
         "link": "products",
-        "photo": "slot:gl-story"
-      },
-      {
-        "type": "newsletter-split",
-        "look": "band",
-        "band": "accent",
-        "title": "Conectemos",
-        "text": "Ofertas especiales y novedades antes que nadie."
+        "photo": "slot:gl-story",
+        "items": [
+          {
+            "title": "Fácil de usar",
+            "text": "Rutinas cortas."
+          },
+          {
+            "title": "Para tu piel",
+            "text": "Fórmulas suaves."
+          },
+          {
+            "title": "Con estilo",
+            "text": "Envases que dan gusto."
+          }
+        ]
       },
       {
         "type": "wave-divider",

@@ -1,5 +1,5 @@
 import { templateManifest } from '@pagosya/store-templates';
-import { masterLook, masterThemeCss } from './source-master';
+import { masterLook, masterThemeCss, templateLook } from './source-master';
 
 const settings = templateManifest('esencial')!.master!;
 describe('title colours in the theme block (spec 2026-11-03 chunky colour titles)', () => {
@@ -14,6 +14,10 @@ describe('title colours in the theme block (spec 2026-11-03 chunky colour titles
     const css = masterThemeCss(settings, masterLook(settings, { colors: { paper: '#ffffff', ink: '#111111', accent: '#2457c5' } }));
     expect(css).toMatch(/--es-title-1:#[0-9a-f]{6};--es-title-2:#[0-9a-f]{6};--es-title-3:/);
     expect(css).not.toContain('--es-title-font');
+  });
+  it('keeps the saved title colours when only the accent changes (Review Focus 3)', () => {
+    const before = masterLook(settings, { colors: { accent: '#5d7a2e' }, titles: ['#5d7a2e', '#c0392b'] });
+    expect(templateLook(settings, before, { colors: { accent: '#2457c5' } }).titles).toEqual(['#5d7a2e', '#c0392b']);
   });
   it('drops invalid title colours', () => {
     expect(masterLook(settings, { titles: ['red', '#ABCDEF', '#123456', '#000000', '#ffffff', '#222222'] }).titles).toEqual(['#abcdef', '#123456', '#000000', '#ffffff']);

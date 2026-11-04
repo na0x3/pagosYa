@@ -110,8 +110,8 @@
       "icons": "line",
       "header": "links",
       "announce": "plain",
-      "footer": "columns",
-      "button": "square",
+      "footer": "column",
+      "button": "block",
       "corners": "sharp",
       "density": "regular",
       "texture": "none",
@@ -146,7 +146,7 @@
       },
       {
         "type": "products-tabs",
-        "card": "framed",
+        "card": "swatch",
         "title": "Explora",
         "link": "products"
       },
@@ -238,21 +238,6 @@
             "title": "4",
             "text": "Materiales que duran.",
             "photo": "slot:en-p2"
-          }
-        ]
-      },
-      {
-        "type": "press-quotes",
-        "look": "logos",
-        "eyebrow": "Lo que dicen",
-        "items": [
-          {
-            "title": "Revista Diseño",
-            "text": "Siempre busca darle un toque lujoso y moderno a sus accesorios."
-          },
-          {
-            "title": "Diario Tecno",
-            "text": "Piezas simples que se sienten mejor cada día."
           }
         ]
       },

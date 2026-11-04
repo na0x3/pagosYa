@@ -100,8 +100,8 @@
       "icons": "cart",
       "header": "search",
       "announce": "plain",
-      "footer": "columns",
-      "button": "soft",
+      "footer": "mega",
+      "button": "rounded",
       "corners": "soft",
       "density": "compact",
       "texture": "none",
@@ -116,8 +116,7 @@
     },
     "layout": [
       {
-        "type": "cover-full",
-        "look": "right",
+        "type": "hero-split",
         "title": "Lo fresco *llega a tu casa*",
         "text": "Frutas, verduras, pan y despensa del día.",
         "cta": "Hacer mi pedido",
@@ -152,8 +151,7 @@
         "type": "strip-services"
       },
       {
-        "type": "categories-tiles",
-        "look": "circles",
+        "type": "categories-list",
         "title": "Nuestras secciones",
         "items": [
           {
@@ -190,7 +188,7 @@
       },
       {
         "type": "products-grid",
-        "card": "classic",
+        "card": "badge",
         "title": "Lo más comprado",
         "link": "products"
       },
@@ -203,37 +201,33 @@
         "link": "about"
       },
       {
-        "type": "press-quotes",
-        "look": "row",
-        "title": "Productores con los que trabajamos",
-        "items": [
-          {
-            "title": "Granja Sol"
-          },
-          {
-            "title": "Valle Verde"
-          },
-          {
-            "title": "Horno Uno"
-          },
-          {
-            "title": "Miel Andina"
-          }
-        ]
-      },
-      {
-        "type": "story-split",
+        "type": "story-overlay",
         "band": "deep",
         "title": "Recién cosechado",
         "text": "Lo nuevo de la semana, directo del campo.",
         "cta": "Ver lo nuevo",
         "link": "products",
-        "photo": "slot:gr-granjero"
+        "photo": "slot:gr-granjero",
+        "look": "card",
+        "items": [
+          {
+            "title": "Del campo",
+            "text": "Lo traen productores de la zona."
+          },
+          {
+            "title": "Cada semana",
+            "text": "Lo nuevo llega fresco."
+          },
+          {
+            "title": "A tu puerta",
+            "text": "Pides hoy, recibes pronto."
+          }
+        ]
       },
       {
         "type": "products-slider",
         "band": "deep",
-        "card": "classic",
+        "card": "badge",
         "title": "Novedades",
         "link": "products"
       },
@@ -245,7 +239,7 @@
       },
       {
         "type": "products-tabs",
-        "card": "classic",
+        "card": "badge",
         "title": "Mejor calificados",
         "link": "products"
       },
@@ -253,13 +247,6 @@
         "type": "visit-store",
         "title": "Nuestras tiendas",
         "photo": "slot:mi-cocina"
-      },
-      {
-        "type": "newsletter-split",
-        "look": "band",
-        "band": "muted",
-        "title": "¡Mantengámonos en contacto!",
-        "text": "Ofertas de la semana en tu correo."
       }
     ],
     "productLayout": [

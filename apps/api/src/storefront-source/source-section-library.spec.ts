@@ -1,4 +1,4 @@
-import { buildLibraryFacts, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, type LibraryFacts } from './source-section-library';
+import { buildLibraryFacts, carriedSections, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
 
 const facts = (over: Partial<LibraryFacts> = {}): LibraryFacts => ({
   storeName: 'Dulce Nube', what: 'Galletas artesanales', story: '', city: 'La Paz', request: '', tone: 'calm',
@@ -175,16 +175,23 @@ describe('template fill mode (34 templates)', () => {
     expect(layout.find(block => block.type === 'promo-trio')!.photo).toBeDefined();
   });
 
-  it('lets a template show a photo twice, never in one section nor in neighbouring sections', () => {
+  it('shows every store photo before a template repeats one, never in one section nor in neighbouring sections', () => {
     const fixed = [{ type: 'cover-stage', photo: 'slot:a' }, { type: 'story-split', photo: 'slot:b' }, { type: 'promo-banner', photo: 'slot:c' }, { type: 'closing-photo', photo: 'slot:d' }];
     const layout = validateLibraryLayout({ blocks: [
       { type: 'cover-stage', title: 'Hola', photo: 0 }, { type: 'story-split', title: 'Historia', photo: 1 },
       { type: 'promo-banner', title: 'Regalos', photo: 0 }, { type: 'closing-photo', title: 'Chau', photo: 0 },
     ] as never }, facts(), { fixed: fixed as never, now });
-    // Photo 0 on the cover, again two sections on (the banner); a third time is refused and the closing takes another store photo.
+    // Owner 2026-11-02 («unused photos first»): while the store has photos not shown yet, the banner and the closing take those.
     const url = (at: number) => `/v1/uploads/0000000${at}-aaaa.jpg`;
     expect(types(layout)).toEqual(['cover-stage', 'story-split', 'promo-banner', 'closing-photo']);
-    expect(layout.map(block => block.photo)).toEqual([url(0), url(1), url(0), url(2)]);
+    expect(layout.map(block => block.photo)).toEqual([url(0), url(1), url(2), url(3)]);
+    // Once every photo has shown, a photo may come back — two sections on, never a third time.
+    const two = { ...facts(), photos: facts().photos.slice(0, 2) };
+    const repeat = validateLibraryLayout({ blocks: [
+      { type: 'cover-stage', title: 'Hola', photo: 0 }, { type: 'story-split', title: 'Historia', photo: 1 },
+      { type: 'promo-banner', title: 'Regalos', photo: 0 }, { type: 'closing-photo', title: 'Chau', photo: 0 },
+    ] as never }, two as never, { fixed: fixed as never, now });
+    expect(repeat.map(block => block.photo)).toEqual([url(0), url(1), url(0), url(1)]);
     // Beside the section that already shows it: refused — the story takes another photo instead of repeating the cover's.
     const beside = validateLibraryLayout({ blocks: [{ type: 'cover-stage', title: 'Hola', photo: 0 }, { type: 'story-split', title: 'Historia', photo: 0 }] as never }, facts(), { fixed: fixed.slice(0, 2) as never, now });
     expect(beside.map(block => block.photo)).toEqual([url(0), url(1)]);
@@ -218,3 +225,62 @@ describe('template fill mode (34 templates)', () => {
   });
 });
 
+describe('adding and carrying sections (fixes 3 and 6, 2026-11-02)', () => {
+  const store = (partial: Partial<LibraryFacts> = {}): LibraryFacts => ({ storeName: 'Tienda', what: '', story: '', city: 'La Paz', request: '', tone: 'calm',
+    products: [{ id: 'p1', name: 'Uno' }, { id: 'p2', name: 'Dos' }], categories: [], photos: [{ url: '/v1/uploads/a.jpg' }, { url: '/v1/uploads/b.jpg' }],
+    codes: [], services: [], reviews: 0, ...partial });
+
+  it('says what a store lacks for a section before any call', () => {
+    expect(librarySectionBlocker('reviews-cards', store())).toContain('reseñas');
+    expect(librarySectionBlocker('reviews-cards', store({ reviews: 3 }))).toBeNull();
+    expect(librarySectionBlocker('visit-store', store())).toContain('dirección');
+    expect(librarySectionBlocker('promo-code', store())).toContain('código');
+    expect(librarySectionBlocker('social-posts', store())).toContain('Instagram');
+    expect(librarySectionBlocker('faq-split', store())).toBeNull();
+    expect(librarySectionBlocker('steps-howto', store())).toBeNull();
+    expect(librarySectionBlocker('nope', store())).toBeTruthy();
+  });
+
+  it('carries the sections added after the old template, and its questions, when the new one has none', () => {
+    const oldTemplate = [{ type: 'cover-split' }, { type: 'products-grid' }, { type: 'faq-split' }, { type: 'story-split' }, { type: 'closing-photo' }];
+    const oldLayout = [{ type: 'cover-split', title: 'Viejo' }, { type: 'products-grid' }, { type: 'steps-howto', title: 'Cómo se toma', items: [{ title: 'a' }] },
+      { type: 'faq-split', title: 'Preguntas', items: [{ title: '¿Envían?', text: 'Sí' }] }, { type: 'story-split', title: 'Historia' }, { type: 'closing-photo' }];
+    const newLayout = [{ type: 'cover-full', title: 'Nuevo' }, { type: 'products-grid' }, { type: 'image-columns' }, { type: 'closing-wordmark', title: 'Fin' }];
+    const carried = carriedSections(oldLayout, oldTemplate, newLayout);
+    expect(carried.map(block => block.type)).toEqual(['steps-howto', 'faq-split']);
+    expect(withCarriedSections(newLayout, carried).map(block => block.type)).toEqual(['cover-full', 'products-grid', 'image-columns', 'steps-howto', 'faq-split', 'closing-wordmark']);
+    // A new template that has its own questions keeps them; nothing is carried twice.
+    expect(carriedSections(oldLayout, oldTemplate, [...newLayout, { type: 'faq-split' }, { type: 'steps-howto' }])).toEqual([]);
+  });
+});
+
+
+// Owner rule 2026-10-29 (no section of only words on a plain ground), enforced on templates 2026-11-02.
+it('a template home keeps no section of only words', () => {
+  const now = Date.UTC(2026, 10, 2);
+  const layout = validateLibraryLayout({ blocks: [
+    { type: 'statement-reveal', text: 'BOXY hace hoodies amplios de tela pesada para todos los días, en pocas piezas por lote.' },
+    { type: 'icon-columns', items: [{ title: 'Tela pesada', icon: 'sparkles' }, { title: 'Hecho a mano', icon: 'heart' }] },
+  ] as never }, { ...facts(), categories: ['Básicos', 'Gráficos'] } as never, { fixed: [{ type: 'statement-reveal' }, { type: 'icon-columns' }] as never, now });
+  expect(layout.map(block => block.type)).toEqual(['icon-columns']);
+  expect(layout[0]).toMatchObject({ look: 'side', photo: expect.stringMatching(/^\/v1\/uploads\//) });
+});
+
+// Owner 2026-11-02 («drop unfilled sections»; Brisa Portátil kept Conecta's demo brands).
+describe('withoutDemoWords', () => {
+  const template = [{ type: 'cover-full', look: 'dark' }, { type: 'press-quotes' }, { type: 'products-slider' }, { type: 'faq-split' }] as never;
+  const store = { ...facts(), storeName: 'Brisa Portátil', what: 'Ventiladores de cuello para el calor. Envío a todo Bolivia.', products: [{ id: 'p1', name: 'Ventilador de cuello portátil LED' }] };
+  it('gives an empty fill a cover from the store and its product grid, never a template block', () => {
+    const out = withoutDemoWords([], template, store as never);
+    expect(out.map(block => block.type)).toEqual(['cover-full', 'products-grid']);
+    expect(out[0]).toMatchObject({ title: 'Brisa Portátil', text: 'Ventiladores de cuello para el calor.', link: 'products', look: 'dark' });
+    expect(out[1]).toMatchObject({ title: 'Ventilador de cuello portátil LED' });
+  });
+  it('keeps what was filled and adds only what is missing', () => {
+    const filled = [{ type: 'cover-split', title: 'Fresco todo el día', photo: '/v1/uploads/00000000-aaaa.jpg' }, { type: 'products-slider', title: 'Elige el tuyo' }] as never;
+    expect(withoutDemoWords(filled, template, store as never)).toEqual(filled);
+  });
+  it('a store without photos gets no cover it cannot show', () => {
+    expect(withoutDemoWords([], template, { ...store, photos: [] } as never).map(block => block.type)).toEqual(['products-grid']);
+  });
+});

@@ -160,6 +160,7 @@
   }
   function openProduct(id, trigger) {
     const p = products().find(p => p.id === id);
+    if (!p && embeddedProductId && id === embeddedProductId) { fullProductPage.hidden = true; return; }
     if (!p) { if (fullProductPage) detail.innerHTML = `<h1>Producto no disponible</h1><p>Este producto ya no está en el catálogo.</p><a href="${escape(pageHref('productos.html'))}">Explorar productos</a>`; return; }
     track('product_view', undefined, { value: price(p), currency: p.currency });
     analytics('product_view', { productId: p.id }, 'view:' + p.id);

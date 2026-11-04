@@ -1,4 +1,7 @@
   const fullProductPage = document.querySelector("[data-pagosya-product-page]");
+  // Owner 2026-11-02 (one-product stores: «the product card should be bigger»): a page that is not product.html can hold one product's
+  // whole detail — gallery, options, «Agregar» — with [data-pagosya-product-page][data-product-id]; the page keeps its own title.
+  const embeddedProductId = fullProductPage?.getAttribute("data-product-id") || null;
   const fullCheckoutPage = document.querySelector("[data-pagosya-checkout-page]");
   // Kit-owned pages: the whole catalog (productos.html) and one collection per page (coleccion.html).
   const fullCatalogPage = Boolean(document.querySelector('[data-catalog-full]'));

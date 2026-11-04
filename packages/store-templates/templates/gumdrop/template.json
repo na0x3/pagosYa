@@ -110,13 +110,13 @@
       "icons": "line",
       "header": "classic",
       "announce": "plain",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "bignav",
+      "button": "sticker",
       "corners": "round",
       "density": "regular",
       "texture": "none",
       "titles": "upper",
-      "pdp": "gallery-left",
+      "pdp": "strip",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -228,7 +228,7 @@
       },
       {
         "type": "products-tabs",
-        "card": "soft",
+        "card": "ribbon",
         "title": "Novedades",
         "link": "products"
       },

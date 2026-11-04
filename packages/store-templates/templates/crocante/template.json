@@ -96,7 +96,7 @@
       "header": "centered",
       "announce": "plain",
       "footer": "columns",
-      "button": "pill",
+      "button": "lift",
       "corners": "round",
       "density": "regular",
       "texture": "none",
@@ -157,7 +157,7 @@
         ]
       },
       {
-        "type": "products-slider",
+        "type": "products-grid",
         "card": "soft",
         "title": "Nuestros snacks favoritos",
         "link": "products"

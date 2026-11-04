@@ -148,7 +148,7 @@
     fitCards();
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(fitCards);
     if (hasDna && typeof requestAnimationFrame === 'function') requestAnimationFrame(placeQuickLooks);
-    if (fullProductPage && !preview) {
+    if (fullProductPage && !embeddedProductId && !preview) {
       const p = products().find(item => item.id === new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id'));
       if (p) {
         const canonical = `${(config.publicSiteUrl || `${config.checkoutOrigin}/s/${encodeURIComponent(config.slug)}`).replace(/\/$/, '')}/p/${encodeURIComponent(p.id)}`;
@@ -175,7 +175,7 @@
     }
     // The Studio opens product.html without an id (Boceto's Producto tab, the page picker); a
     // store with a catalog previews its first product. A shopper's broken link keeps the error.
-    if (fullProductPage) openProduct(new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id') ?? (preview ? products()[0]?.id : null));
+    if (fullProductPage) openProduct(embeddedProductId ?? new URLSearchParams(window.PAGOSYA_PREVIEW_QUERY || location.search).get('id') ?? (preview ? products()[0]?.id : null));
     else if (selectedProduct && detail.open) {
       if (products().some(p => p.id === selectedProduct.id)) openProduct(selectedProduct.id, detailTrigger);
       else detail.close();

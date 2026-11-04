@@ -100,7 +100,7 @@
       "icons": "person",
       "header": "split",
       "announce": "plain",
-      "footer": "columns",
+      "footer": "signup",
       "button": "pill",
       "corners": "round",
       "density": "regular",

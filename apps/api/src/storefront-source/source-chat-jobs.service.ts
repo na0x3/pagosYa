@@ -198,6 +198,9 @@ export class SourceChatJobsService implements OnModuleDestroy {
       await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { status: failed ? 'FAILED' : 'skipped' in result || 'revision' in result && result.revision ? 'COMPLETED' : 'AWAITING_INPUT', result: json(result), activeStoreId: null, leaseToken: null, leaseUntil: null, sequence: { increment: 1 } } });
       // Variety spec §5: a reply can carry a follow-up request (the personal touch). A store has one active job at a time,
       // so it is queued only now that this job is closed; failing to queue it never fails the merchant's request.
+      // Spec 2026-11-01: the rest of a template layout edit was the merchant's own message, already in the chat; its echo goes.
+      const restOf = job.input as unknown as SourceMessageInput | null;
+      if (restOf?.layoutRest || restOf?.shippingRest) await this.prisma.storeAgentMessage.deleteMany({ where: { role: 'USER', metadata: { path: ['requestId'], equals: job.requestId } } }).catch(() => undefined);
       const followUp = !failed && 'followUp' in result ? result.followUp as SourceMessageInput | undefined : undefined;
       if (followUp) await this.create(job.merchantId, job.storeId, followUp).catch(error => this.logger.warn(`follow-up not queued for ${job.storeId}: ${String(error).slice(0, 200)}`));
     } catch (error) {

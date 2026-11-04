@@ -19,6 +19,8 @@ import type { MasterCopy } from '@pagosya/store-templates';
 import { MASTER_COLOURS, MASTER_COPY_CAPS, MASTER_VALUE_CAPS, type MasterLook, type MasterRead } from './source-master';
 import { LIBRARY_CATALOG, LIBRARY_FILL_PROMPT, LIBRARY_ICON_NAMES, LIBRARY_PROMPT, libraryAnswerSchema, type LayoutBlock, type LibraryFacts } from './source-section-library';
 import { readTemplatePick, TEMPLATE_PICK_PROMPT, templatePickSchema, type PickableTemplate } from './source-template-pick';
+import { addableSections, LAYOUT_EDIT_PROMPT, layoutDigest, layoutEditSchema, readLayoutEdit, type LayoutEditRead } from './source-layout-edit';
+import { STORE_EDIT_PROMPT, storeDigest, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
 import type { StoreMenu } from './source-store-menu';
 import { PLANTILLA_FILL_PROMPT, plantillaFillFromRead, plantillaFillSchema } from './source-plantilla-fill';
 import type { TemplateCopySlot } from '@pagosya/store-templates';
@@ -98,7 +100,7 @@ startFrom: for a new shop, "template" only when the merchant explicitly wants a 
 templates: only when the merchant explicitly requested a template and action=generate for a new shop, the three Plantillas that best fit this business, best first, each with a one-sentence reason in the merchant's language about why it fits; otherwise [].
 chosenTemplateId: when the merchant picks one of offeredTemplates (by name, by position such as "la segunda", or by description), its id; otherwise "".
 rework: true when the merchant asks an existing store to look more unique, more different or less like its template ("hazla más única", "que no parezca plantilla"), and also when a store that started from a template (startedFromTemplate in the context, with that template's look) settles on a visual direction or style different from that look (for example "moderna y clínica" on Pausa, a warm natural pilates template); otherwise false. Keeping the template is not a rework: a merchant who asks to use it as a reference or base, keep its style or adapt it to their business ("usa la plantilla como referencia", "mantén el estilo de la plantilla", "adáptala a mi panadería") gets rework false, even when they rename the business or ask for new copy; only an explicitly different look makes it true.
-editKind: for an existing store whose context has masterTemplate=true — "content" when the request only changes words, colours, fonts, the announcement bar or which photo goes where; "design" when it changes layout, sections, components or adds a feature (a bundle offer, moving reviews, a shorter hero); "redesign" only when the merchant explicitly asks to redesign everything or for something unique ("rediseña todo", "quiero algo único"); otherwise "none". For new stores always "none".
+editKind: for an existing store whose context has masterTemplate=true — "content" when the request only changes words, colours, fonts, the announcement bar or which photo goes where, or the store's own data: its pages (Nosotros, contacto, envíos, preguntas frecuentes, políticas), the footer line, social links, the email signup window («ventana de suscripción», «popup»: never a product subscription, so never ask a cadence for it), a product's name, price, description or photo. On such a store a clear change request is action "generate": do not ask back about details it did not need; "design" when it changes layout, sections, components or adds a feature (a bundle offer, moving reviews, a shorter hero); "redesign" only when the merchant explicitly asks to redesign everything or for something unique ("rediseña todo", "quiero algo único"); otherwise "none". For new stores always "none".
 vague: true when the merchant asks for a change of look without saying what («ponlo más bonito», «hazla más moderna», «cambia el estilo», «no me gusta», «mejóralo»); false when they name what to change («cambia el precio», «quita las reseñas», «el botón verde»).`;
 const decisionSchema = {
   type: 'object', additionalProperties: false,
@@ -349,13 +351,42 @@ export class SourceConversationService {
     return null;
   }
 
+  /** Template quick edits (spec 2026-11-01 §1): a words, remove, move or add request on a template home, as exact operations on its
+   *  numbered sections plus the part they cannot do. Text only, short; null when it fails twice. */
+  async editLayout(merchantId: string, input: { storeId: string; layout: LayoutBlock[]; request: string; productLayout?: LayoutBlock[]; store?: StoreEditState; photos?: StoreEditPhoto[] }): Promise<LayoutEditRead | null> {
+    const model = this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
+    const provider = sourceProvider(this.config, model);
+    // YAPI edits everything (spec 2026-11-03): the product page's sections and the store's own data ride in the same short call.
+    const body = { secciones: layoutDigest(input.layout), ...(input.productLayout?.length ? { ficha: layoutDigest(input.productLayout) } : {}), nuevas: addableSections(),
+      ...(input.store ? { tienda: storeDigest(input.store, input.photos ?? []) } : {}), pedido: input.request.slice(0, 2000) };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const started = Date.now(); let answer: any = null; let status = 'FAILED';
+      try {
+        const response = await fetch(provider.endpoint, {
+          method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(60_000),
+          body: JSON.stringify({ model, store: false, instructions: `${LAYOUT_EDIT_PROMPT}\n${STORE_EDIT_PROMPT}`, input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(body) }] }],
+            // A rewritten policy or about page is longer than a headline.
+            text: { format: { type: 'json_schema', name: 'layout_edit', strict: true, schema: layoutEditSchema() } }, reasoning: { effort: 'low' }, max_output_tokens: 6000 }),
+        });
+        answer = await response.json().catch(() => null);
+        checkSourceProviderQuota(response.status, answer, provider.name);
+        if (response.ok) { const read = readLayoutEdit(sourceResponseJson(answer)); if (read) { status = 'COMPLETED'; return read; } }
+      } catch (error) {
+        if (error instanceof SourceProviderQuotaException) throw error;
+        this.logger.warn(JSON.stringify({ stage: 'layout-edit', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));
+      } finally { await this.metering?.record(input.storeId, 'source-layout-edit', model, answer, Date.now() - started, status); }
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    return null;
+  }
+
   /** Owner 2026-10-31 («do the recommendation»): the themed template a new store starts on, from its business words and product
    *  names, with one sentence for the merchant saying why. Text only and short (no photos): null when it fails twice. */
   async pickTemplate(merchantId: string, input: { storeId: string; storeName: string; what: string; story: string; request: string; products: string[]; templates: PickableTemplate[] }): Promise<{ id: string; reason: string } | null> {
     const model = this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
     const provider = sourceProvider(this.config, model);
     const business = { tienda: input.storeName, vende: input.what.slice(0, 1200), historia: input.story.slice(0, 800), pedido: input.request.slice(0, 1500), productos: input.products.slice(0, 30) };
-    const plantillas = input.templates.map(({ id, name, category, description, tags }) => ({ id, nombre: name, rubro: category, estilo: description, etiquetas: tags }));
+    const plantillas = input.templates.map(({ id, name, category, description, tags, sections }) => ({ id, nombre: name, rubro: category, estilo: description, etiquetas: tags, ...(sections ? { secciones: sections } : {}) }));
     for (let attempt = 0; attempt < 2; attempt++) {
       const started = Date.now(); let body: any = null; let status = 'FAILED';
       try {

@@ -5,6 +5,7 @@ import { STORE_SITE_SECTION_PATTERN, STORE_BASE_CONTENT_SECTIONS, STORE_MOTION_E
 import { UpdateStoreDto } from "./dto/update-store.dto";
 import { applySiteArtDirection, siteSectionBlockSlotIsSupported, resolveSiteSectionFamily } from "@pagosya/shared-types";
 import { storeLocationSnapshot } from "./store-locations";
+import { SAFE_TEXT_PATTERN } from "../common/validation/safe-text.decorator";
 
 export type StoreHeroSlide = {
   imageUrl: string;
@@ -307,6 +308,8 @@ export type SiteDocumentLegacyStore = {
   bannerUrl: string | null;
   aboutImageUrl: string | null;
   editorialGallery: Prisma.JsonValue;
+  /** The stored policies, so saving Ajustes keeps the merchant's own FAQ questions (YAPI edits everything, 2026-11-03). */
+  policies?: Prisma.JsonValue;
 };
 
 export function synchronizedSiteDocument(
@@ -675,7 +678,8 @@ export function storeUpdateData(
       cartRecommendationProductIds: dto.cartRecommendationProductIds as Prisma.InputJsonValue,
     }),
     ...(dto.showLowStockToCustomers !== undefined && { showLowStockToCustomers: dto.showLowStockToCustomers }),
-    ...(dto.policies !== undefined && { policies: storePolicies(dto.policies) as Prisma.InputJsonValue }),
+    // Ajustes edits the four policy texts; the merchant's own FAQ questions ride in the same JSON and are kept.
+    ...(dto.policies !== undefined && { policies: { ...storePolicies(dto.policies), ...storeFaqField(currentStore?.policies) } as Prisma.InputJsonValue }),
     ...(dto.publicVisibility !== undefined && { publicVisibility: dto.publicVisibility }),
     // Measurement IDs moved to extensions (spec 2026-09-27); these Store columns are read by nothing and dropped later.
     ...(dto.salesGoalLabel !== undefined && { salesGoalLabel: dto.salesGoalLabel }),
@@ -695,4 +699,24 @@ export function storePolicies(value: unknown): StorePolicies {
     if (text) result[key] = text;
   }
   return result;
+}
+
+/** The merchant's own FAQ questions (YAPI edits everything, spec 2026-11-03), stored as `policies.faq`: the FAQ page shows them
+ *  before the questions it answers from the store's facts. Plain text, trimmed and capped; an entry missing either half is dropped. */
+export type StoreFaqEntry = { q: string; a: string };
+export const STORE_FAQ_LIMITS = { entries: 12, question: 160, answer: 1200 } as const;
+export function storeFaq(policies: unknown): StoreFaqEntry[] {
+  const source = policies && typeof policies === "object" && !Array.isArray(policies) ? (policies as Record<string, unknown>).faq : undefined;
+  const clean = (value: unknown, cap: number) => (typeof value === "string" && SAFE_TEXT_PATTERN.test(value) ? value.replace(/\r\n?/g, "\n").trim().slice(0, cap).trim() : "");
+  return (Array.isArray(source) ? source : []).flatMap((entry) => {
+    const record = entry && typeof entry === "object" ? entry as Record<string, unknown> : {};
+    const q = clean(record.q, STORE_FAQ_LIMITS.question).replace(/\s+/g, " ");
+    const a = clean(record.a, STORE_FAQ_LIMITS.answer);
+    return q && a ? [{ q, a }] : [];
+  }).slice(0, STORE_FAQ_LIMITS.entries);
+}
+/** `{ faq }` when the stored policies hold questions, else nothing: spread into a policies object being saved. */
+export function storeFaqField(policies: unknown): { faq?: StoreFaqEntry[] } {
+  const faq = storeFaq(policies);
+  return faq.length ? { faq } : {};
 }

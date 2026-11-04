@@ -110,6 +110,14 @@ export class SourceTemplatesService {
     if (expectedRevision !== undefined && current.revision !== expectedRevision) throw new ConflictException('El proyecto cambió. Recarga antes de aplicar la plantilla.');
     const previous = current.revision ? await this.projects.version(merchantId, storeId, current.revision) : null;
     const publicStore = await this.publicStores.getStorePublic(current.slug, { trackView: false, ownerMerchantId: merchantId });
+    // Owner 2026-11-02 («all stores have the same menu, not dropdown»): the 34 themed templates set no menu, so every template store
+    // had the plain header links. The merchant's ask wins; a store with two or more categories gets dropdowns (the kit fills them
+    // from its categories and pages), a smaller one the side panel.
+    if (preset?.layout?.length && variants && !variants.menu) {
+      const asked = fill?.menu?.style;
+      const categories = [...storeMenuContext(sourceStoreConfigData(publicStore, sourcePublicApiUrl(this.config), false), []).targets.keys()].filter(key => key.startsWith('category:')).length;
+      if (asked !== 'none') variants = Object.assign({}, variants, { menu: asked === 'panel' || asked === 'dropdowns' ? asked : categories >= 2 ? 'dropdowns' : 'panel' });
+    }
     const assembled = await assembleTemplateRevision({
       manifest, source: this.registry.templateSourceFiles(sourceId), storeId,
       ...(chosen.starter && chosen.extends ? { starter: { id: chosen.id, name: chosen.name } } : {}), slug: current.slug, publicStore,
@@ -236,7 +244,9 @@ export class SourceTemplatesService {
   }
 
   /** Spec 2026-10-19 §3.1: a content edit on a master store — data and theme only, as a new revision. */
-  async refill(merchantId: string, storeId: string, revision: number, change: MasterFill, label: string) {
+  /** `options` (YAPI edits everything, spec 2026-11-03): `files` changes the store's files after the refill (the catalogue title);
+   *  `refreshData` writes the live store data into config.js, so the preview shows what the edit just wrote to the database. */
+  async refill(merchantId: string, storeId: string, revision: number, change: MasterFill, label: string, options: { files?: <T extends { path: string; content: string }>(files: T[]) => T[]; refreshData?: boolean } = {}) {
     const previous = await this.projects.version(merchantId, storeId, revision);
     const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
     const manifest = snapshot.brief?.templateId ? this.registry.templateManifest(snapshot.brief.templateId) : undefined;
@@ -244,8 +254,9 @@ export class SourceTemplatesService {
     const bundled = await this.bundleMasterPhotos(merchantId, change);
     // Dropdown menu spec 2026-10-21: a menu change is checked against the live catalog, so a category made after the last build can
     // be linked (final review); config.js data is refreshed the way every save refreshes it.
-    const live = change.menu ? await this.liveConfigData(merchantId, storeId).catch(() => undefined) : undefined;
-    const files = refillMasterFiles(live ? withLiveCatalog(snapshot.files, live) : snapshot.files, manifest, bundled.change, sourcePublicApiUrl(this.config));
+    const live = change.menu || options.refreshData ? await this.liveConfigData(merchantId, storeId).catch(() => undefined) : undefined;
+    const refilled = refillMasterFiles(live ? withLiveCatalog(snapshot.files, live) : snapshot.files, manifest, bundled.change, sourcePublicApiUrl(this.config));
+    const files = options.files ? options.files(refilled) : refilled;
     return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: [...files, ...bundled.files.filter(asset => !files.some(file => file.path === asset.path))] });
   }
 

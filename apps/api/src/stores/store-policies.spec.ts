@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { UpdateStoreDto } from './dto/update-store.dto';
-import { storePolicies } from './store-presentation';
+import { storeFaq, storePolicies, storeUpdateData } from './store-presentation';
 
 describe('store policies', () => {
   it('accepts plain multi-line text, rejects invisible control characters and oversize text', () => {
@@ -33,5 +33,19 @@ describe('measurement IDs moved to extensions', () => {
     const { storeUpdateData } = jest.requireActual('./store-presentation');
     const data = storeUpdateData(plainToInstance(UpdateStoreDto, { name: 'X', analyticsGa4Id: 'G-ABC1234567', analyticsGtmId: 'GTM-ABCD123', analyticsMetaPixelId: '123456789012345', analyticsTiktokPixelId: 'CJKLMNOP1234' }));
     for (const column of ['analyticsGa4Id', 'analyticsGtmId', 'analyticsMetaPixelId', 'analyticsTiktokPixelId']) expect(data).not.toHaveProperty(column);
+  });
+});
+
+describe('the merchant\'s own FAQ questions (YAPI edits everything, 2026-11-03)', () => {
+  it('reads policies.faq trimmed and capped, dropping half entries and unsafe text', () => {
+    expect(storeFaq({ faq: [{ q: '  ¿Hacen envíos?  ', a: ' Sí.\r\nTodos los días. ' }, { q: 'Sin respuesta', a: '' }, { q: 'a\u202Eb', a: 'x' }, 'nope'] }))
+      .toEqual([{ q: '¿Hacen envíos?', a: 'Sí.\nTodos los días.' }]);
+    expect(storeFaq({ faq: Array.from({ length: 20 }, (_, n) => ({ q: `P${n}`, a: 'R' })) })).toHaveLength(12);
+    expect(storeFaq(null)).toEqual([]);
+  });
+  it('saving Ajustes policies keeps the stored questions', () => {
+    const current = { bannerUrl: null, aboutImageUrl: null, editorialGallery: null, policies: { returns: 'Viejo', faq: [{ q: '¿Tortas?', a: 'Sí.' }] } };
+    const data = storeUpdateData(plainToInstance(UpdateStoreDto, { policies: { returns: 'Nuevo' } }), null, current) as { policies: unknown };
+    expect(data.policies).toEqual({ returns: 'Nuevo', faq: [{ q: '¿Tortas?', a: 'Sí.' }] });
   });
 });

@@ -171,13 +171,26 @@ export function Header() {
   </>;
 }
 
+/** A store photo no section of the home names (by slot or by address). */
+function sparePhoto(): string {
+  const home = JSON.stringify(layout);
+  const map = photos as Record<string, unknown>;
+  // The same photo can sit under two names (hero and its slot): what the home shows is compared by address.
+  const shown = new Set([...home.matchAll(/"slot:([^"]+)"/g)].map(match => map[match[1]]).filter(Boolean));
+  const entry = Object.entries(map).find(([, src]) => typeof src === 'string' && src && !shown.has(src) && !home.includes(src));
+  return entry ? String(entry[1]) : '';
+}
+
 export function Footer() {
   const tagline = copy.tagline || store.tagline;
   // store-data is `as const`: widen so an empty value still type-checks as text.
   const phone: string = store.phone;
   const footer = variant('footer', 'columns');
   // John Smedley sections (spec 2026-10-21): the `column` footer sits on a band of the store's hero photo.
-  const band = footer === 'column' && photos.hero ? { ['--es-footer-photo' as string]: `url("${photos.hero}")` } as CSSProperties : undefined;
+  // Template frame variety (2026-11-03): the `photo` footer (Brightland / Pipeline) fills one side with a store photo the home does not
+  // already show (each photo once); with none spare it is drawn without one.
+  const footerPhoto = footer === 'photo' ? sparePhoto() : footer === 'column' ? photos.hero : '';
+  const band = footerPhoto ? { ['--es-footer-photo' as string]: `url("${footerPhoto}")` } as CSSProperties : undefined;
   const categories = useCategoryLinks();
   const themed = libraryStore();
   const words = frame();
@@ -185,12 +198,14 @@ export function Footer() {
   const news = !themed || !(layout as LibraryBlock[]).some(block => block.type === 'newsletter-split');
   return <footer className="es-footer" data-es-footer={footer} style={band}>
     {footer === 'bigname' ? <p className="es-footer__big" aria-hidden="true">{store.name}</p> : null}
+    {/* BonBonBon: the tagline (or the name) scrolling on a strip above the footer; still under reduced motion. */}
+    {footer === 'ticker' ? <div className="es-footer__ticker" aria-hidden="true"><p>{[0, 1].map(half => <span key={half}>{Array.from({ length: 4 }, (_, i) => <span key={i}>{tagline || store.name}<i>{'\u2726'}</i></span>)}</span>)}</p></div> : null}
     <div className="es-footer__grid">
       <div className="es-footer__brand">{store.logo ? <a className="es-footer__logo" href="index.html"><img src={store.logo} alt={store.name} /></a> : <p className="es-footer__name">{store.name}</p>}{tagline ? <p>{tagline}</p> : null}</div>
       {themed ? <div><h2>{words.footShop}</h2><nav aria-label={words.footShop}><a href="productos.html">Ver todo</a>{categories.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav></div>
         : <div><h2>Tienda</h2><nav aria-label="Tienda"><a href="productos.html">Todos los productos</a><a href="index.html#historia">Nuestra historia</a></nav></div>}
       <div><h2>{themed ? words.footHelp : 'Ayuda'}</h2><nav data-pagosya-pages className="pagosya-info-nav es-footer__pages" aria-label="Información" /></div>
-      {store.city || phone ? <div><h2>Contacto</h2>
+      {store.city || phone ? <div className="es-footer__contact"><h2>{footer === 'visit' ? 'Visítanos' : 'Contacto'}</h2>
         {store.city ? <p className="es-footer__line"><IconMapPin /> {store.city}</p> : null}
         {phone ? <a className="es-footer__line" href={`https://wa.me/${phone.replace(/\D/g, '')}`}><IconMessageCircle /> WhatsApp</a> : null}
       </div> : null}
@@ -201,6 +216,8 @@ export function Footer() {
       <div className="es-footer__signup" data-pagosya-subscribe-inline data-track="newsletter" />
     </div> : null}
     <p className="es-footer__legal">{'\u00a9'} {new Date().getFullYear()} {store.name} · Pagos seguros con pagosYa</p>
+    {/* Graza / Ridge / Scratch: the store's name across the whole bottom edge. */}
+    {footer === 'wordmark' ? <p className="es-footer__word" aria-hidden="true" style={{ ['--es-word-len' as string]: Math.max(4, store.name.length) } as CSSProperties}>{store.name}</p> : null}
   </footer>;
 }
 

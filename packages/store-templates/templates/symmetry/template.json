@@ -126,7 +126,7 @@
       "header": "centered",
       "announce": "plain",
       "footer": "columns",
-      "button": "square",
+      "button": "caps",
       "corners": "sharp",
       "density": "regular",
       "texture": "none",
@@ -161,8 +161,7 @@
         "text": "Creemos en dos cosas: hacer lo que amamos y cuidarnos unas a otras. Todo lo demás se acomoda solo."
       },
       {
-        "type": "categories-tiles",
-        "look": "button",
+        "type": "categories-mosaic",
         "cta": "Ver",
         "items": [
           {
@@ -202,8 +201,8 @@
         "link": "products"
       },
       {
-        "type": "products-slider",
-        "card": "classic",
+        "type": "products-grid",
+        "card": "swatch",
         "title": "Estilos en tendencia",
         "cta": "Ver todo",
         "link": "products"

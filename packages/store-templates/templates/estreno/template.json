@@ -100,13 +100,13 @@
       "icons": "line",
       "header": "centered",
       "announce": "plain",
-      "footer": "bigname",
-      "button": "pill",
+      "footer": "wordmark",
+      "button": "underline",
       "corners": "soft",
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "grid-2",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -116,8 +116,7 @@
     },
     "layout": [
       {
-        "type": "cover-stage",
-        "look": "center",
+        "type": "hero-split",
         "eyebrow": "Nueva colección",
         "title": "Audaz *por diseño*",
         "cta": "Descubrir",
@@ -126,7 +125,7 @@
       },
       {
         "type": "products-slider",
-        "card": "classic",
+        "card": "caps",
         "title": "Recién *llegado*",
         "link": "products"
       },
@@ -157,8 +156,7 @@
         "link": "products"
       },
       {
-        "type": "categories-tiles",
-        "look": "caption",
+        "type": "categories-mosaic",
         "title": "Nuestras colecciones *especiales*",
         "items": [
           {
@@ -179,17 +177,32 @@
         ]
       },
       {
-        "type": "story-split",
+        "type": "story-overlay",
         "band": "deep",
         "title": "Lo clásico se encuentra con lo *nuevo*",
         "text": "Básicos de siempre con un giro de ahora.",
         "cta": "Descubrir",
         "link": "products",
-        "photo": "slot:ba-detalle"
+        "photo": "slot:ba-detalle",
+        "look": "card",
+        "items": [
+          {
+            "title": "Básicos",
+            "text": "Prendas que combinan con todo."
+          },
+          {
+            "title": "Nuevos cortes",
+            "text": "Un giro de temporada."
+          },
+          {
+            "title": "Para usar",
+            "text": "Hechas para el día a día."
+          }
+        ]
       },
       {
         "type": "products-tabs",
-        "card": "classic",
+        "card": "caps",
         "title": "Lo nuevo",
         "link": "products"
       },
@@ -259,13 +272,6 @@
       {
         "type": "reviews-cards",
         "title": "Lo que dicen"
-      },
-      {
-        "type": "newsletter-split",
-        "look": "band",
-        "band": "muted",
-        "title": "Únete a *la familia*",
-        "text": "Novedades y lanzamientos antes que nadie."
       }
     ],
     "productLayout": [

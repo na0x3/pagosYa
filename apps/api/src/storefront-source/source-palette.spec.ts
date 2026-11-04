@@ -138,6 +138,16 @@ describe('the full brand palette', () => {
   });
 });
 
+// Owner 2026-11-02 (DooBoo: cream headings on a cream page): pale goods on a brand-coloured backdrop take the backdrop's colour.
+it('takes a strong brand backdrop over a pale goods colour, and keeps strong goods first', () => {
+  const dooboo = paletteFromSamples({ photos: [{ dominant: ['#471411', '#e4ddcc', '#4b4444'], backdropHex: '#471411', uniformity: .8 }, { dominant: ['#e9e7da', '#cccabd'], backdropHex: '#e9e7da', uniformity: .9 }] })!;
+  expectReadable(dooboo);
+  expect(dooboo.accent).toBe('#471411');
+  expect(contrastRatio(rgb(dooboo.accent), rgb(dooboo.paper))).toBeGreaterThanOrEqual(3);
+  const teal = paletteFromSamples({ photos: [{ dominant: ['#1f7a74', '#e4ddcc'], backdropHex: '#471411', uniformity: .8 }] })!;
+  expect(Math.abs(hue(teal.accent) - hue('#1f7a74'))).toBeLessThan(8);
+});
+
 describe('palette extras for titles (spec 2026-11-03 chunky colour titles)', () => {
   it('returns the photos\' other goods colours, distinct, without the accent', () => {
     const palette = paletteFromSamples({ photos: [{ dominant: ['#2f6db5', '#2e6cb4', '#c0392b', '#f2f2f2', '#e0a030'] }] })!;

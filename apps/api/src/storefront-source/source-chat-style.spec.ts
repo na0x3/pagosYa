@@ -141,7 +141,8 @@ it('refuses a pick once the store moved past the revision the styles were made f
 it('"Elige tú" explains its choice in the chat; a merchant\'s own pick does not', async () => {
   prisma.storeSourceGeneration.findFirst.mockResolvedValue({ id: 'g1', status: 'AWAITING_STYLE', proposal: awaitingProposal() });
   const auto: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Elige tú', stylePick: { generationId: 'g1', auto: true }, requestId: uuid() });
-  expect(auto.assistantMessage.content.startsWith('Elegí «Estilo 1»: r Guardé')).toBe(true);
+  // The reason leads the usual saved reply (its wording since f30f6d91: «Listo: guardé …»).
+  expect(auto.assistantMessage.content).toMatch(/^Elegí «Estilo 1»: r Listo: guardé «Carta editorial»/);
   const own: any = await chat.send('m1', 's1', { revision: 0, instruction: 'Usar este estilo', stylePick: { generationId: 'g1', index: 2 }, requestId: uuid() });
   expect(own.assistantMessage.content.startsWith('Elegí')).toBe(false);
 });

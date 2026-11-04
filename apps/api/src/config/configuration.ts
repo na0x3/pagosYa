@@ -152,6 +152,8 @@ export interface AppConfig {
   yapiTemplatePick: boolean;
   /** Owner 2026-10-31: the Shrine Pro templates show in Plantillas only with YAPI_SHRINE_TEMPLATES=1. */
   yapiShrineTemplates: boolean;
+  /** Owner 2026-11-02 («check and log»): a new template home is checked in the background and the findings logged (template_qa). */
+  yapiTemplateQa: boolean;
   yapiSectionLibraryModel: string;
   /** Spec 2026-10-29: tool calls of the one continuation after a run used its steps unfinished; 0 turns it off. */
   yapiAgentContinueCalls: number;
@@ -540,6 +542,7 @@ export default (): { app: AppConfig } => {
     yapiSectionLibrary: process.env.YAPI_SECTION_LIBRARY === '1',
     yapiTemplatePick: process.env.YAPI_TEMPLATE_PICK === '1',
     yapiShrineTemplates: process.env.YAPI_SHRINE_TEMPLATES === '1',
+    yapiTemplateQa: process.env.YAPI_TEMPLATE_QA !== '0' && process.env.NODE_ENV !== 'test',
     yapiSectionLibraryModel: process.env.YAPI_SECTION_LIBRARY_MODEL || 'gpt-5.6-terra',
     yapiAgentContinueCalls: process.env.YAPI_AGENT_CONTINUE_CALLS?.trim() && Number.isFinite(Number(process.env.YAPI_AGENT_CONTINUE_CALLS)) ? Math.max(0, Math.floor(Number(process.env.YAPI_AGENT_CONTINUE_CALLS))) : 12,
     yapiChecklistFix: process.env.YAPI_CHECKLIST_FIX === '1',

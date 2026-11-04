@@ -13,10 +13,15 @@ describe('parseListingRead (2026-10-18 product screenshot)', () => {
   });
   it('drops plain photos, nameless reads and unusable boxes', () => {
     expect(parseListingRead({ ...read, isListing: false }, 'x')).toBeNull();
-    expect(parseListingRead({ ...read, name: ' ' }, 'x')).toBeNull();
+    expect(parseListingRead({ ...read, name: ' ', catalogName: '' }, 'x')).toBeNull();
     expect(parseListingRead({ ...read, photo: { x: 0, y: 0, width: 0, height: 0 } }, 'x')!.box).toBeNull();
     expect(parseListingRead({ ...read, photo: { x: 600, y: 0, width: 600, height: 500 } }, 'x')!.box).toBeNull();
     expect(parseListingRead({ ...read, priceText: '$25', currency: '' }, 'x')!.listing).toMatchObject({ price: 25, currency: null });
+  });
+  // Live 2026-11-03 (sofa cama): a supplier app's colour picker sheet covers the title; the read had price, colours and «Sofá» only.
+  it('names a listing whose title is hidden by its catalog name', () => {
+    const sheet = parseListingRead({ ...read, name: '', priceText: '¥ 174.00', currency: 'CNY', catalogName: 'Sofá cama plegable' }, 'x');
+    expect(sheet!.listing).toMatchObject({ name: 'Sofá cama plegable', price: 174, currency: 'CNY', options: [{ name: 'Color', values: ['Rosa', 'Negro'] }] });
   });
 });
 

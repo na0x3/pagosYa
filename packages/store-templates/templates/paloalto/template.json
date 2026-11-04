@@ -111,12 +111,12 @@
       "header": "split",
       "announce": "plain",
       "footer": "bigname",
-      "button": "square",
+      "button": "rounded",
       "corners": "sharp",
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "sticky-thumbs",
+      "pdp": "grid-2",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -159,7 +159,7 @@
         "endsAt": "2026-12-31T23:59:00-04:00"
       },
       {
-        "type": "categories-tiles",
+        "type": "categories-mosaic",
         "eyebrow": "Lo esencial",
         "title": "Compra por categoría",
         "items": [
@@ -209,7 +209,7 @@
         ]
       },
       {
-        "type": "products-slider",
+        "type": "products-grid",
         "card": "ribbon",
         "title": "Lo más buscado de la temporada",
         "cta": "Ver todo",

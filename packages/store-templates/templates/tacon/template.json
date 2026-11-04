@@ -106,12 +106,12 @@
       "header": "links",
       "announce": "plain",
       "footer": "bigname",
-      "button": "square",
+      "button": "caps",
       "corners": "soft",
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "sticky-thumbs",
+      "pdp": "fashion",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -121,7 +121,7 @@
     },
     "layout": [
       {
-        "type": "cover-full",
+        "type": "promo-banner",
         "title": "Piezas *en movimiento*",
         "text": "Telas que caen y se mueven contigo.",
         "cta": "Comprar",
@@ -154,8 +154,7 @@
         "link": "about"
       },
       {
-        "type": "categories-tiles",
-        "look": "shop",
+        "type": "categories-mosaic",
         "title": "Encuentra tu pieza",
         "items": [
           {
@@ -181,25 +180,40 @@
         ]
       },
       {
-        "type": "story-split",
+        "type": "story-overlay",
         "band": "deep",
         "eyebrow": "Colección",
         "title": "Tops que *se notan*",
         "text": "Texturas lindas y cortes limpios.",
         "cta": "Ver tops",
         "link": "products",
-        "photo": "slot:pa-hero2"
+        "photo": "slot:pa-hero2",
+        "look": "card",
+        "items": [
+          {
+            "title": "Texturas",
+            "text": "Telas con caída y brillo justo."
+          },
+          {
+            "title": "Cortes",
+            "text": "Líneas limpias que favorecen."
+          },
+          {
+            "title": "Para salir",
+            "text": "Del día a la noche."
+          }
+        ]
       },
       {
         "type": "products-slider",
         "band": "deep",
-        "card": "classic",
+        "card": "caps",
         "title": "Lo nuevo",
         "link": "products"
       },
       {
         "type": "products-slider",
-        "card": "classic",
+        "card": "caps",
         "title": "Selección de la casa",
         "link": "products"
       },
@@ -246,25 +260,34 @@
       },
       {
         "type": "products-tabs",
-        "card": "classic",
+        "card": "caps",
         "title": "Piezas que destacan",
         "link": "products"
       },
       {
-        "type": "press-quotes",
-        "look": "quotes",
-        "title": "Lo que dicen"
-      },
-      {
-        "type": "story-split",
-        "look": "right",
+        "type": "story-overlay",
+        "look": "card",
         "band": "muted",
         "eyebrow": "Nosotras",
         "title": "Una marca hecha por mujeres",
         "text": "Diseñamos para mujeres reales, que viajan, trabajan y se visten para ellas.",
         "cta": "Conócenos",
         "link": "about",
-        "photo": "slot:at-detalle"
+        "photo": "slot:at-detalle",
+        "items": [
+          {
+            "title": "Hecha por mujeres",
+            "text": "Diseñamos lo que usamos."
+          },
+          {
+            "title": "Para viajar",
+            "text": "Prendas que no se arrugan."
+          },
+          {
+            "title": "Para trabajar",
+            "text": "Cómodas todo el día."
+          }
+        ]
       },
       {
         "type": "marquee-photo",

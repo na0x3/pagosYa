@@ -85,13 +85,13 @@
       "icons": "line",
       "header": "minimal",
       "announce": "plain",
-      "footer": "minimal",
-      "button": "square",
+      "footer": "centered",
+      "button": "underline",
       "corners": "soft",
       "density": "compact",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "panel",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -102,7 +102,7 @@
     "layout": [
       {
         "type": "products-grid",
-        "card": "classic",
+        "card": "polaroid",
         "title": "Todo",
         "link": "products"
       },

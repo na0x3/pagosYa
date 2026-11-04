@@ -675,7 +675,17 @@
         "bigname",
         "minimal",
         "twotone",
-        "column"
+        "column",
+        "band",
+        "bignav",
+        "card",
+        "centered",
+        "mega",
+        "photo",
+        "signup",
+        "ticker",
+        "visit",
+        "wordmark"
       ],
       "pdp": [
         "gallery-left",
@@ -684,7 +694,10 @@
         "sticky-thumbs",
         "editorial",
         "split-scroll",
-        "fashion"
+        "fashion",
+        "grid-2",
+        "panel",
+        "strip"
       ],
       "pdpOrder": [
         "story-first",
@@ -696,7 +709,14 @@
         "soft",
         "square",
         "underline",
-        "dashed"
+        "dashed",
+        "block",
+        "caps",
+        "chunky",
+        "cushion",
+        "lift",
+        "rounded",
+        "sticker"
       ],
       "corners": [
         "round",

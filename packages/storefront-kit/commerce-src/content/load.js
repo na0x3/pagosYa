@@ -61,10 +61,11 @@
         if (slot.hasAttribute('data-pagosya-blog')) slot.innerHTML = blogMarkup(data.articles);
         if (slot.hasAttribute('data-pagosya-reviews')) {
           const reviews = data.reviews.filter(review => !fullProductPage || review.productId === selectedProduct?.id);
-          slot.innerHTML = reviews.map(reviewMarkup).join('') || (fullProductPage ? '<p>Todavía no hay reseñas publicadas.</p>' : '');
+          slot.innerHTML = reviews.map(reviewMarkup).join('') || (fullProductPage && !embeddedProductId ? '<p>Todavía no hay reseñas publicadas.</p>' : '');
           // Away from the product page a store without reviews shows no empty reviews section (spec 2026-10-18).
           const section = slot.closest('[data-pagosya-reviews-section]');
-          slot.hidden = !reviews.length && !fullProductPage;
+          // A product shown whole on the home (one-product stores, 2026-11-02) hides its reviews until it has some.
+          slot.hidden = !reviews.length && (!fullProductPage || Boolean(embeddedProductId));
           if (section) section.hidden = slot.hidden;
           if (slot.hasAttribute('data-pagosya-carousel')) mountCarousel(slot);
         }

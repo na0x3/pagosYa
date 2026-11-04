@@ -101,13 +101,13 @@
       "utility": "pages",
       "header": "split",
       "announce": "plain",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "mega",
+      "button": "caps",
       "corners": "sharp",
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "fashion",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -142,8 +142,7 @@
         ]
       },
       {
-        "type": "categories-tiles",
-        "look": "caption",
+        "type": "categories-mosaic",
         "items": [
           {
             "title": "Tops",
@@ -169,7 +168,7 @@
       },
       {
         "type": "products-grid",
-        "card": "classic",
+        "card": "overlay",
         "title": "Esenciales de cada día",
         "cta": "Ver todo",
         "link": "products"
@@ -197,7 +196,8 @@
         "type": "products-slider",
         "title": "Lo nuevo",
         "cta": "Ver todo",
-        "link": "products"
+        "link": "products",
+        "card": "overlay"
       },
       {
         "type": "cover-video",
@@ -206,14 +206,28 @@
         "link": "products"
       },
       {
-        "type": "story-split",
-        "look": "arch",
+        "type": "story-overlay",
+        "look": "card",
         "title": "Desde el diario",
         "text": "Ideas para vestir, notas de temporada e historias que acercan nuestras colecciones a tu vida.",
         "cta": "Leer más",
         "link": "products",
         "photo": "slot:piel-tonos",
-        "photo2": "slot:paso-material"
+        "photo2": "slot:paso-material",
+        "items": [
+          {
+            "title": "Ideas para vestir",
+            "text": "Combinaciones de temporada."
+          },
+          {
+            "title": "Notas",
+            "text": "Lo que estamos usando."
+          },
+          {
+            "title": "Historias",
+            "text": "Quién hace cada prenda."
+          }
+        ]
       },
       {
         "type": "promo-banner",

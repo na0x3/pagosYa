@@ -64,6 +64,12 @@ test('every colour band option has its own styles, and the bands repaint the col
   assert.match(file('components/home.tsx'), /data-es-bands=\{bands\}/);
 });
 
+// Tacón 2026-11-03: a band paints full-bleed through border-image, which the kit's contrast guard cannot see; it took the band for
+// white and «corrected» the white card names to the dark ink, invisible on the deep band. The band also sets its background colour.
+test('a colour band sets its background colour too, so the kit contrast guard reads the real ground', () => {
+  assert.match(file('styles/globals.css'), /\.es-section\[data-es-band\]\{[^}]*background-color:var\(--es-band-bg/);
+});
+
 test('every header variant keeps the login link (login comes with every store)', () => {
   const css = file('styles/globals.css');
   assert.doesNotMatch(css, /data-es-header="[a-z]+"\][^{]*\.es-header__end a\{display:none/);

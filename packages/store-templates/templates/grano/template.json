@@ -90,8 +90,8 @@
       "icons": "line",
       "header": "centered",
       "announce": "plain",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "visit",
+      "button": "soft",
       "corners": "soft",
       "density": "airy",
       "texture": "none",
@@ -141,7 +141,7 @@
       },
       {
         "type": "products-grid",
-        "card": "classic",
+        "card": "line",
         "title": "Lo más pedido",
         "link": "products"
       },

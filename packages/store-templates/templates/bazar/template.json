@@ -116,12 +116,12 @@
       "header": "search",
       "announce": "plain",
       "footer": "columns",
-      "button": "soft",
+      "button": "rounded",
       "corners": "soft",
       "density": "compact",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "strip",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -270,8 +270,8 @@
         ]
       },
       {
-        "type": "products-slider",
-        "card": "classic",
+        "type": "products-grid",
+        "card": "badge",
         "title": "Lo más regalado",
         "link": "products"
       },

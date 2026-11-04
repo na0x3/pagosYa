@@ -31,6 +31,12 @@ To capture: 9 Palo Alto · 10 Impulse · 11 Motion · 12 Focal · 13 Symmetry ·
 28 Crave · 29 Ride · 30 Origin · 31 Spotlight · 32 Dawn · 33 Publisher · 34 Kidu (final list may swap a theme whose demo will not
 load for another of the same industry).
 
+## Owner picks (2026-10-31, built first)
+
+Shrine Pro (shrine-pro-demo), Shrine Pro 2 (shrine-pro-demo-2, CHUG), Gumdrop (SharkBites), Maximize «Tender» (maximize-majestic),
+Flux (fuel-theme), chiwis.co (a real brand's store: its layout, sections and motion only — never its name, logo, photos or words).
+They replace Kidu, Publisher and Dawn in the list.
+
 ## Build order
 
 Batches of ~6, each: capture refs → list what the theme needs that the engine lacks → build those parts → write the template

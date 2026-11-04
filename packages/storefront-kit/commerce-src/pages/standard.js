@@ -18,9 +18,16 @@
   }
   const phoneLink = () => { const phone = infoText(store.contactPhone); return /^\+?[0-9][0-9 ()-]{5,24}$/.test(phone) ? `<a href="tel:${escape(phone.replace(/[^0-9+]/g, ''))}">${escape(phone)}</a>` : ''; };
   const emailLink = () => { const email = infoText(store.contactEmail); return /^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`]+$/.test(email) ? `<a href="mailto:${escape(email)}">${escape(email)}</a>` : ''; };
+  // YAPI edits everything (spec 2026-11-03): the store's links (Instagram, TikTok…) close a footer's information links, so every
+  // store shows them with no change to its files. http(s) only; at most six.
+  const storeLinks = () => (Array.isArray(store.links) ? store.links : []).filter(link => link && infoText(link.label) && /^https?:\/\//i.test(infoText(link.url))).slice(0, 6)
+    .map(link => `<a href="${escape(infoText(link.url))}" target="_blank" rel="noopener noreferrer" data-pagosya-store-link>${escape(infoText(link.label))}</a>`).join('');
+  // YAPI edits everything (spec 2026-11-03): the merchant's own questions, written in the chat, come first.
+  const ownQuestions = () => (Array.isArray(store.faq) ? store.faq : []).filter(entry => entry && infoText(entry.q) && infoText(entry.a)).slice(0, 12);
   function faqBody() {
     const places = infoLocations(), delivering = places.filter(place => place.deliveryEnabled), pickup = places.filter(place => place.pickupEnabled);
-    const entries = [];
+    const own = ownQuestions();
+    const entries = own.map(entry => [infoText(entry.q), infoParagraphs(infoText(entry.a))]);
     if (store.shippingEnabled || delivering.length) entries.push(['¿Hacen envíos?', delivering.length ? `Sí, entregamos a domicilio desde: ${placeNames(delivering)}.` : 'Sí, hacemos envíos.']);
     // Only questions the store can answer (spec 2026-10-14): pickup needs a place that offers it, not only the switch.
     if (pickup.length) entries.push(['¿Puedo retirar mi pedido?', `Sí, puedes retirarlo en: ${placeNames(pickup)}.`]);
@@ -31,7 +38,8 @@
     entries.push(['¿Cómo pago?', store.checkoutMode === 'payment' ? 'Pagas con QR o tarjeta desde la tienda, con pago seguro procesado por pagosYa.' : store.checkoutMode === 'whatsapp' ? 'Confirmas tu pedido por WhatsApp y acuerdas el pago con la tienda.' : 'Acuerdas el pago con la tienda al confirmar tu pedido.']);
     const contact = [phoneLink(), emailLink()].filter(Boolean);
     if (contact.length) entries.push(['¿Cómo los contacto?', contact.join(' · ')]);
-    return entries.length >= 2 ? entries.map(([question, answer]) => `<section class="pagosya-info__qa"><h2>${escape(question)}</h2>${answer.startsWith('<') ? answer : `<p>${answer}</p>`}</section>`).join('') : '';
+    // One question of the merchant's own is a page; the facts alone need two.
+    return own.length || entries.length >= 2 ? entries.map(([question, answer]) => `<section class="pagosya-info__qa"><h2>${escape(question)}</h2>${answer.startsWith('<') ? answer : `<p>${answer}</p>`}</section>`).join('') : '';
   }
   // Catalog pages. `collections()` and `collectionHref` are declared further down the file, so these read the store directly.
   const infoCollections = () => (Array.isArray(store.collections) ? store.collections : [])
@@ -136,7 +144,8 @@
     const live = force || ready;
     if (live) document.querySelectorAll('[data-pagosya-pages]').forEach(slot => {
       const account = SHOWCASE ? '' : accountEntry();
-      slot.innerHTML = INFO_LINKS.filter(([kind]) => !(SHOWCASE && SHOP_ONLY_INFO.has(kind)) && infoBody(kind)).map(([, href, label]) => `<a href="${href}">${escape(label)}</a>`).join('') + (account ? `<a href="${escape(account)}" data-pagosya-account>Mi cuenta</a>` : '');
+      slot.innerHTML = INFO_LINKS.filter(([kind]) => !(SHOWCASE && SHOP_ONLY_INFO.has(kind)) && infoBody(kind)).map(([, href, label]) => `<a href="${href}">${escape(label)}</a>`).join('') + (account ? `<a href="${escape(account)}" data-pagosya-account>Mi cuenta</a>` : '')
+        + (slot.closest('footer') ? storeLinks() : '');
       slot.hidden = !slot.innerHTML;
     });
     let unavailable = false;

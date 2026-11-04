@@ -95,13 +95,13 @@
       "icons": "person",
       "header": "links",
       "announce": "plain",
-      "footer": "columns",
+      "footer": "signup",
       "button": "pill",
       "corners": "round",
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "panel",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -132,14 +132,6 @@
         "type": "wave-divider",
         "band": "accent",
         "look": "ripple-flip"
-      },
-      {
-        "type": "products-slider",
-        "look": "center",
-        "card": "soft",
-        "title": "Los favoritos que te *hacen bien*",
-        "text": "Todo lo que necesitas para que cada comida sea rica y fácil.",
-        "link": "products"
       },
       {
         "type": "wave-divider",
@@ -209,12 +201,6 @@
             "link": "products"
           }
         ]
-      },
-      {
-        "type": "press-quotes",
-        "look": "quotes",
-        "band": "accent",
-        "title": "Recomendado por expertos"
       },
       {
         "type": "wave-divider",

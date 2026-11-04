@@ -80,13 +80,13 @@
       "icons": "cart",
       "header": "centered",
       "announce": "plain",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "band",
+      "button": "cushion",
       "corners": "round",
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "grid-2",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -103,17 +103,6 @@
         "cta": "Ver audio",
         "link": "products",
         "photo": "slot:nu-story"
-      },
-      {
-        "type": "products-slider",
-        "card": "classic",
-        "title": "Los favoritos de todos",
-        "link": "products"
-      },
-      {
-        "type": "press-quotes",
-        "look": "quotes",
-        "title": "Lo que dicen"
       },
       {
         "type": "story-split",
@@ -142,7 +131,7 @@
       },
       {
         "type": "products-grid",
-        "card": "classic",
+        "card": "round-add",
         "title": "Kits",
         "link": "products"
       },
@@ -174,13 +163,6 @@
             "icon": "gem"
           }
         ]
-      },
-      {
-        "type": "newsletter-split",
-        "look": "band",
-        "band": "deep",
-        "title": "10% en tu primera compra",
-        "text": "Lanzamientos y ofertas antes que nadie."
       }
     ],
     "productLayout": [

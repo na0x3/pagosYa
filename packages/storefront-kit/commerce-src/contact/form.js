@@ -11,7 +11,7 @@
     // only a form the page shows in its content goes inline (final review 2026-10-16, I4).
     if (inline && slot.hidden && !slot.hasAttribute('data-contact-inline')) return;
     // Only an enabled store setting permits the legacy fallback; new stores default off.
-    if (!slot && store.contactFormEnabled === true && !fullProductPage && !fullCheckoutPage && (!window.PAGOSYA_PREVIEW_PAGE || window.PAGOSYA_PREVIEW_PAGE === 'index.html')) {
+    if (!slot && store.contactFormEnabled === true && (!fullProductPage || embeddedProductId) && !fullCheckoutPage && (!window.PAGOSYA_PREVIEW_PAGE || window.PAGOSYA_PREVIEW_PAGE === 'index.html')) {
       slot = document.createElement('section'); slot.setAttribute('data-pagosya-contact', '');
       const footer = document.querySelector('body > footer');
       if (footer) footer.before(slot); else (document.querySelector('main') || document.body).append(slot);

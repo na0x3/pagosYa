@@ -25,6 +25,9 @@ export function sourceStoreConfigData(publicStore: SourcePublicStore, apiUrl: UR
     tagline: publicStore.tagline, checkoutMode: firstRevision ? "payment" : publicStore.checkoutMode,
     contactPhone: publicStore.contactPhone, leadCaptureUrl: publicStore.leadCaptureUrl,
     aboutText: publicStore.aboutText, contactEmail: publicStore.contactEmail, policies: publicStore.policies,
+    // YAPI edits everything (spec 2026-11-03): the merchant's own FAQ questions, and the store's links (Instagram, TikTok…) the
+    // kit adds to the footer's information links.
+    faq: publicStore.faq ?? [], links: (publicStore.links ?? []).map(({ label, url }) => ({ label, url })),
     contactFormEnabled: publicStore.contactFormEnabled, contactTitle: publicStore.contactTitle, contactSubtitle: publicStore.contactSubtitle,
     categories: publicStore.categories, locations: publicStore.locations,
     // Owner 2026-10-28 («colección Mujer y adentro zapatos, ropa…»): the collections reach the kit, which builds a menu per

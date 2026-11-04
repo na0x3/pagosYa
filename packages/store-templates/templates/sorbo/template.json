@@ -75,13 +75,13 @@
       "icons": "line",
       "header": "links",
       "announce": "plain",
-      "footer": "columns",
+      "footer": "band",
       "button": "square",
       "corners": "soft",
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "panel",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -101,7 +101,7 @@
       },
       {
         "type": "products-slider",
-        "card": "classic",
+        "card": "line",
         "title": "Los más pedidos",
         "link": "products"
       },
@@ -172,7 +172,7 @@
       },
       {
         "type": "products-tabs",
-        "card": "classic",
+        "card": "line",
         "title": "Arma tu set",
         "link": "products"
       }

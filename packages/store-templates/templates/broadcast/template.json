@@ -131,7 +131,7 @@
       "density": "regular",
       "texture": "none",
       "titles": "upper",
-      "pdp": "editorial",
+      "pdp": "split-scroll",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -222,7 +222,7 @@
       },
       {
         "type": "products-tabs",
-        "card": "classic",
+        "card": "portrait",
         "title": "Piezas excepcionales",
         "text": "Básicos que querrás usar siempre.",
         "link": "products"

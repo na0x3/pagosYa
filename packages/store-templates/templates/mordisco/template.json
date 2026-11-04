@@ -100,8 +100,8 @@
       "icons": "person",
       "header": "centered",
       "announce": "ticker",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "wordmark",
+      "button": "sticker",
       "corners": "round",
       "density": "regular",
       "texture": "none",
@@ -165,12 +165,12 @@
         "band": "muted"
       },
       {
-        "type": "products-slider",
-        "look": "scallop",
+        "type": "products-grid",
         "band": "muted",
         "title": "Premios y *mordedores*",
         "text": "Elegidos uno por uno para ellos.",
-        "link": "products"
+        "link": "products",
+        "card": "scallop"
       },
       {
         "type": "wave-divider",
@@ -223,7 +223,21 @@
         "look": "card",
         "title": "Nuestro compromiso con su *bienestar*",
         "text": "Conoce la historia detrás de cada bocado: hecho con amor, cuidado y calidad.",
-        "photo": "slot:co-senior"
+        "photo": "slot:co-senior",
+        "items": [
+          {
+            "title": "Hecho con cuidado",
+            "text": "Ingredientes que elegimos uno a uno."
+          },
+          {
+            "title": "Para cada etapa",
+            "text": "Del cachorro al mayor."
+          },
+          {
+            "title": "Probado en casa",
+            "text": "Nuestros perros lo aprueban."
+          }
+        ]
       },
       {
         "type": "benefits-orbit",

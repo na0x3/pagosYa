@@ -105,13 +105,13 @@
       "icons": "cart",
       "header": "search",
       "announce": "plain",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "mega",
+      "button": "chunky",
       "corners": "soft",
       "density": "compact",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "grid-2",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -121,8 +121,7 @@
     },
     "layout": [
       {
-        "type": "cover-full",
-        "look": "left",
+        "type": "hero-split",
         "title": "Lo mejor en tecnología. *Buenos precios.*",
         "text": "Cientos de productos, con garantía y envío.",
         "cta": "Ver todo",
@@ -130,8 +129,7 @@
         "photo": "slot:dr-campo"
       },
       {
-        "type": "categories-tiles",
-        "look": "circles",
+        "type": "categories-list",
         "title": "Compra por categoría",
         "items": [
           {
@@ -192,7 +190,7 @@
       },
       {
         "type": "products-slider",
-        "card": "classic",
+        "card": "badge",
         "title": "Lo más pedido…",
         "link": "products"
       },
@@ -216,35 +214,27 @@
         ]
       },
       {
-        "type": "press-quotes",
-        "look": "marquee",
-        "title": "Marcas",
-        "items": [
-          {
-            "title": "Voltio"
-          },
-          {
-            "title": "Aero"
-          },
-          {
-            "title": "Lumen"
-          },
-          {
-            "title": "Sonar"
-          },
-          {
-            "title": "Nube"
-          }
-        ]
-      },
-      {
-        "type": "story-split",
-        "look": "right",
+        "type": "story-overlay",
+        "look": "card",
         "title": "Inteligente. Seguro. Simple.",
         "text": "Equipa tu casa con aparatos que hacen el trabajo por ti.",
         "cta": "Ver hogar",
         "link": "products",
-        "photo": "slot:en-hogar"
+        "photo": "slot:en-hogar",
+        "items": [
+          {
+            "title": "Inteligente",
+            "text": "Funciona con tu celular."
+          },
+          {
+            "title": "Seguro",
+            "text": "Garantía en cada equipo."
+          },
+          {
+            "title": "Simple",
+            "text": "Lo instalas en minutos."
+          }
+        ]
       },
       {
         "type": "promo-banner",
@@ -278,15 +268,8 @@
         ]
       },
       {
-        "type": "newsletter-split",
-        "look": "band",
-        "band": "deep",
-        "title": "Suscríbete y ahorra",
-        "text": "Ofertas, reseñas y lanzamientos en tu correo."
-      },
-      {
         "type": "products-tabs",
-        "card": "classic",
+        "card": "badge",
         "title": "Destacados para ti",
         "link": "products"
       },

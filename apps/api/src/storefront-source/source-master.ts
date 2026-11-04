@@ -99,7 +99,28 @@ function readableColours(merged: Record<MasterColour, string>) {
   const ink = contrastRatio(merged.paper, merged.ink) >= 4.5 ? merged.ink : bestInkFor(merged.paper, merged.ink);
   // The footer, empty cart and hovers put ink on muted: a muted the ink cannot be read on becomes a tint of the paper.
   const muted = contrastRatio(merged.muted, ink) >= 4.5 ? merged.muted : mixHex(merged.paper, ink, 0.06);
-  return { ...merged, ink, muted, onAccent: bestInkFor(merged.accent, '#ffffff'), onDeep: bestInkFor(merged.deep, '#ffffff') };
+  return { ...merged, ink, muted, onAccent: bestInkFor(merged.accent, '#ffffff'), onDeep: bestInkFor(merged.deep, '#ffffff'), accentInk: accentInk(merged.accent, merged.paper, ink) };
+}
+
+/** Owner 2026-11-02 (DooBoo «el fondo y las letras del mismo color»): the templates write headings, card names and links in the accent,
+ *  drawn for a dark accent. A pale brand accent (DooBoo's cream gelato) keeps its buttons; its words on the page move towards the ink,
+ *  in the accent's family, until they read (4.5:1). An accent that already reads at 3:1 (large headings) stays itself. */
+export function accentInk(accent: string, paper: string, ink: string): string {
+  if (!HEX.test(accent) || !HEX.test(paper) || !HEX.test(ink) || contrastRatio(accent, paper) >= 3) return accent;
+  for (let t = 0.1; t < 1; t += 0.1) { const mixed = mixHex(accent, ink, t); if (contrastRatio(mixed, paper) >= 4.5) return mixed; }
+  return ink;
+}
+
+/** The accent as text on the page (no background of its own in the rule, not inside an accent or dark band) becomes
+ *  var(--es-accent-ink), which is the accent itself whenever the accent reads on the paper. A section that redraws the accent
+ *  (an accent band sets --es-accent to the colour read on it) redraws --es-accent-ink with it (DooBoo rev 4: maroon on maroon). Idempotent. */
+export function readableAccentText(css: string): string {
+  return css.replace(/([^{}]*)\{([^{}]*)\}/g, (rule, selector: string, body: string) => {
+    const redrawn = /(?:^|[;\s])--es-accent:\s*([^;]+)/.exec(body);
+    if (redrawn && !/--es-accent-ink:/.test(body)) return `${selector}{${body.replace(/;?\s*$/, '')};--es-accent-ink:${redrawn[1].trim()}}`;
+    if (!/(^|[;\s])color:\s*var\(--es-accent\)/.test(body) || /background/.test(body) || /band="(accent|deep|dark)"|es-(header|footer)\b/.test(selector)) return rule;
+    return `${selector}{${body.replace(/(^|[;\s])color:\s*var\(--es-accent\)/g, '$1color:var(--es-accent-ink,var(--es-accent))')}}`;
+  });
 }
 
 const catalogFont = (id: string) => {
@@ -116,7 +137,7 @@ const titleVars = (colours: string[]) => [0, 1, 2, 3].map(at => `--es-title-${at
 export function masterThemeBlock(colours: Record<MasterColour, string>, headingFont: string, bodyFont: string, monoFont?: string, titles?: { colours?: string[]; style?: string }): string {
   const c = readableColours(colours);
   const titleFont = isTitleStyle(titles?.style) ? TITLE_STYLES[titles!.style as TitleStyle].font : undefined;
-  const vars = `:root{--es-paper:${c.paper};--es-ink:${c.ink};--es-muted:${c.muted};--es-accent:${c.accent};--es-deep:${c.deep};--es-on-accent:${c.onAccent};--es-on-deep:${c.onDeep};`
+  const vars = `:root{--es-paper:${c.paper};--es-ink:${c.ink};--es-muted:${c.muted};--es-accent:${c.accent};--es-deep:${c.deep};--es-on-accent:${c.onAccent};--es-on-deep:${c.onDeep};--es-accent-ink:${c.accentInk};`
     + `--es-heading:'${catalogFont(headingFont).family}',Georgia,serif;--es-body:'${catalogFont(bodyFont).family}',system-ui,sans-serif;`
     // 34 templates (2026-10-31): a theme's third font (eyebrows, labels); the body font when the pair has none.
     + `--es-mono:${monoFont ? `'${catalogFont(monoFont).family}',ui-monospace,monospace` : 'var(--es-body)'};`
@@ -137,15 +158,98 @@ export function masterThemeCss(settings: MasterSettings, look: MasterLook, title
 
 /** 34 templates (2026-10-31): the template stylesheet carries every theme between «/* theme:id *\/» and «/* /theme:id *\/»; a store
  *  keeps only its own theme's block, so it never ships the other themes' rules or fonts. */
-export function withOnlyTheme(css: string, theme: string | undefined, sections?: ReadonlySet<string>): string {
+export function withOnlyTheme(css: string, theme: string | undefined, sections?: ReadonlySet<string>, choices?: Record<string, unknown>): string {
   const themed = css.replace(/\/\* theme:([a-z0-9-]+) \*\/[\s\S]*?\/\* \/theme:\1 \*\//g, (block, id: string) => id === theme ? block : '');
   // Template sections' CSS (live check 2026-10-31: the stylesheet passed the 180 kB file limit): a block tagged «lb:ids» stays only
   // when the store's home uses one of those sections. Without a list (an older caller) every block stays.
   if (!sections) return themed;
   // Product pages (owner 2026-10-31) keep their sections' CSS too, which brought Palo Alto back to the limit: the notes written for
-  // developers go as well (every comment but the pagosya/theme/lb markers that later edits look for).
-  return themed.replace(/\/\* lb:([a-z0-9,-]+) \*\/[\s\S]*?\/\* \/lb:\1 \*\//g, (block, ids: string) => ids.split(',').some(id => sections.has(id)) ? block : '')
-    .replace(/\/\*(?! ?\/?(?:theme|lb):| ?pagosya)[\s\S]*?\*\//g, '');
+  // developers go as well (every comment but the pagosya/theme/lb/v markers that later edits look for).
+  const pruned = themed.replace(/\/\* lb:([a-z0-9,-]+) \*\/[\s\S]*?\/\* \/lb:\1 \*\//g, (block, ids: string) => ids.split(',').some(id => sections.has(id)) ? block : '')
+    .replace(NOTE, '');
+  return choices ? withOnlyVariants(pruned, choices) : pruned;
+}
+
+/** Every comment but the markers later edits and refills look for. */
+const NOTE = /\/\*(?! ?\/?(?:theme|lb|v):| ?pagosya)[\s\S]*?\*\//g;
+const VARIANT_BLOCK = /\/\* v:([a-z]+)=([a-z0-9-]+) \*\/[\s\S]*?\/\* \/v:\1=\2 \*\//g;
+const emptyVariant = (part: string, value: string) => `/* v:${part}=${value} *//* /v:${part}=${value} */`;
+const PRODUCT_SECTIONS = ['products-grid', 'products-tabs', 'products-slider'];
+
+/** Template frame variety (spec 2026-11-03): the template sheet carries every footer, button, library card and product page between
+ *  «/* v:part=value *\/» markers; a store keeps the blocks of the ones it uses and an empty marker for the rest, so a refill that
+ *  changes one can fill it back in place (refreshVariantBlocks). A part the store has no value for uses its default, which has no block. */
+export function withOnlyVariants(css: string, choices: Record<string, unknown>): string {
+  return css.replace(VARIANT_BLOCK, (block, part: string, value: string) => String(choices[part] ?? '') === value ? block : emptyVariant(part, value));
+}
+
+/** What a store's variant blocks follow: its footer, button and product-page variants, and the library card of its first products
+ *  section (the card every page draws, see esencial libraryCard). */
+export function frameChoices(variants: Record<string, unknown>, layout: readonly { type?: unknown; card?: unknown }[]): Record<string, string> {
+  const pick = (part: string) => typeof variants[part] === 'string' ? { [part]: variants[part] as string } : {};
+  const card = layout.find(block => PRODUCT_SECTIONS.includes(String(block.type)))?.card;
+  return { ...pick('footer'), ...pick('button'), ...pick('pdp'), lbcard: typeof card === 'string' && card ? card : 'classic' };
+}
+
+/** A refill (the merchant or YAPI changed a variant, or a template update): every marker the store's sheet carries takes the
+ *  template's current block when it is chosen and stays empty otherwise; a chosen block an older store never had goes in before
+ *  its theme block (theme rules still win on order). */
+export function refreshVariantBlocks(sheet: string, source: string, choices: Record<string, unknown>): string {
+  const latest = new Map<string, string>();
+  for (const match of source.matchAll(VARIANT_BLOCK)) latest.set(`${match[1]}=${match[2]}`, match[0].replace(NOTE, ''));
+  const present = new Set<string>();
+  let out = sheet.replace(VARIANT_BLOCK, (block, part: string, value: string) => {
+    present.add(`${part}=${value}`);
+    return String(choices[part] ?? '') === value ? latest.get(`${part}=${value}`) ?? block : emptyVariant(part, value);
+  });
+  const missing = Object.entries(choices).map(([part, value]) => latest.get(`${part}=${value}`) && !present.has(`${part}=${value}`) ? latest.get(`${part}=${value}`)! : '').filter(Boolean);
+  if (missing.length) {
+    const at = out.indexOf('/* theme:');
+    out = at < 0 ? `${out}\n${missing.join('\n')}` : `${out.slice(0, at)}${missing.join('\n')}\n${out.slice(at)}`;
+  }
+  return out;
+}
+
+/** Template quick edits (spec 2026-11-01 §2): a theme paints its accent as a fixed hex, so the store's accent never showed. In the
+ *  store's own theme block the preset accent becomes var(--es-accent), and a fixed text colour in a rule drawn on the accent (its
+ *  background, or an accent band) becomes var(--es-on-accent). Until the accent changes the page looks the same. Idempotent; a
+ *  theme whose accent is also its paper, ink or deep is left alone (the hex would not say which one it means). */
+export function bindThemeAccent(css: string, theme: string, preset: Partial<Record<MasterColour, string>>): string {
+  const accent = String(preset.accent ?? '').toLowerCase();
+  if (!HEX.test(accent) || (['paper', 'ink', 'deep'] as const).some(name => String(preset[name] ?? '').toLowerCase() === accent)) return css;
+  const start = css.indexOf(`/* theme:${theme} */`);
+  const end = css.indexOf(`/* /theme:${theme} */`);
+  if (start < 0 || end < start) return css;
+  const short = accent[1] === accent[2] && accent[3] === accent[4] && accent[5] === accent[6] ? `|#${accent[1]}${accent[3]}${accent[5]}` : '';
+  const hex = new RegExp(`(?:${accent}${short})(?![0-9a-f])`, 'gi');
+  // Sections the kit itself paints on the accent («.lb-cover-ribbon{background:var(--es-base-accent)…}»): a theme's fixed white or
+  // black words in them follow the store's text-on-accent too (Miga Dorada 2026-11-02: Gumdrop's white title on a mustard accent).
+  const accentSections = [...css.matchAll(/(?:^|\})\s*\.([a-z0-9_-]+)\s*\{[^{}]*background:\s*var\(--es-base-accent/gi)].map(match => match[1]);
+  const inAccentSection = (selector: string) => accentSections.some(name => new RegExp(`\\.${name}(?![a-z0-9_-])`, 'i').test(selector));
+  const NEUTRAL = /#(?:f{3}|f{6}|e{6}|0{3}|0{6}|1{3}|1{6}|2{6})(?![0-9a-f])/i;
+  const block = css.slice(start, end).replace(hex, 'var(--es-accent)')
+    .replace(/([^{}]*)\{([^{}]*)\}/g, (rule, selector: string, body: string) => {
+      // Inside an accent band the band redraws --es-on-accent as the accent itself (DooBoo 2026-11-02: maroon words on the maroon
+      // cover), so a rule in the band takes the store's own text-on-accent, --es-base-on-accent; an earlier binding is corrected.
+      const section = inAccentSection(selector);
+      if (section) body = body.replace(new RegExp(`(^|;)(\\s*)(color|--es-ink):\\s*${NEUTRAL.source}`, 'gi'), '$1$2$3:var(--es-base-on-accent)');
+      const band = /band="accent"/.test(selector);
+      if (band || section) body = body.replace(/(^|;)(\s*)color:\s*var\(--es-on-accent\)/g, '$1$2color:var(--es-base-on-accent)');
+      const onAccent = band || /background(?:-color)?:[^;]*--es-accent\)/.test(body);
+      return onAccent ? `${selector}{${body.replace(/(^|;)(\s*)color:\s*#[0-9a-f]{3,8}(?![0-9a-f])/gi, `$1$2color:var(${band ? '--es-base-on-accent' : '--es-on-accent'})`)}}` : `${selector}{${body}}`;
+    });
+  return css.slice(0, start) + block + css.slice(end);
+}
+
+/** On a template the theme is drawn for its own paper, ink and deep, so a look change takes only the accent: the one the merchant
+ *  named, or, when only the palette changed, that palette's accent. */
+export function templateLook(settings: MasterSettings, current: MasterLook, change: Partial<MasterLook>): MasterLook {
+  const before = masterLook(settings, current);
+  const after = masterLook(settings, { ...before, ...change });
+  const asked = String(change.colors?.accent ?? '').toLowerCase();
+  const palette = after.palette !== before.palette ? settings.palettes.find(p => p.id === after.palette) : undefined;
+  const accent = HEX.test(asked) && asked !== before.colors.accent ? asked : palette ? palette.accent.toLowerCase() : before.colors.accent;
+  return { palette: after.palette, fonts: after.fonts, colors: { ...before.colors, ...(accent ? { accent } : {}) }, ...(change.titles ? { titles: after.titles } : before.titles ? { titles: before.titles } : {}) };
 }
 
 export function withMasterTheme(css: string, block: string): string {
@@ -156,14 +260,19 @@ export function withMasterTheme(css: string, block: string): string {
 }
 
 /** The rolled button shape and corners, as the kit's DNA, so kit-drawn parts (cart, checkout, product buy box) match. */
-const DNA_BUTTON: Record<string, string> = { pill: 'pill', soft: 'block', square: 'block', underline: 'underline', dashed: 'block' };
+const DNA_BUTTON: Record<string, string> = { pill: 'pill', soft: 'block', square: 'block', underline: 'underline', dashed: 'block',
+  // Template frame variety (2026-11-03): the button looks copied from real stores, as the kit's nearest shape.
+  lift: 'block', sticker: 'sticker', block: 'block', caps: 'outline', rounded: 'block', cushion: 'block', chunky: 'block' };
 const DNA_RADIUS: Record<string, string> = { round: 'round', soft: 'soft', sharp: 'none' };
+/** Template frame variety (2026-11-03): the product pages that show every photo at once tell the kit how to lay them out. */
+const DNA_GALLERY: Record<string, string> = { 'grid-2': 'mosaic', stacked: 'stack', strip: 'strip' };
 export function masterDnaLook(variants: Partial<MasterVariants> | undefined): Record<string, string> {
   const button = DNA_BUTTON[String(variants?.button)];
   const radius = DNA_RADIUS[String(variants?.corners)];
+  const gallery = DNA_GALLERY[String(variants?.pdp)];
   // Lively one-product stores (spec 2026-11-03): Único's buttons lift on hover and squash on press, like nubecorp's.
   const lively: Record<string, string> = variants?.theme === 'unico' ? { hover: 'lift', press: 'squash' } : {};
-  return { ...(button ? { button } : {}), ...(radius ? { radius } : {}), ...lively };
+  return { ...(button ? { button } : {}), ...(radius ? { radius } : {}), ...(gallery ? { gallery } : {}), ...lively };
 }
 
 /** Showcase commerce: the rolled card design and offer-square layout, read by the kit from config.showcase. */

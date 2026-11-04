@@ -85,13 +85,13 @@
       "icons": "line",
       "header": "centered",
       "announce": "plain",
-      "footer": "columns",
-      "button": "square",
+      "footer": "visit",
+      "button": "rounded",
       "corners": "soft",
       "density": "regular",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "panel",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -113,22 +113,35 @@
       },
       {
         "type": "products-slider",
-        "card": "classic",
+        "card": "list",
         "title": "Recomendados de la semana",
         "link": "products"
       },
       {
-        "type": "story-split",
-        "look": "right",
+        "type": "story-overlay",
+        "look": "card",
         "title": "Una librería *de barrio*",
         "text": "Leemos todo lo que vendemos y te lo recomendamos en persona: pasa, hojea y quédate un rato.",
         "cta": "Visítanos",
         "link": "contact",
-        "photo": "slot:pa-local1"
+        "photo": "slot:pa-local1",
+        "items": [
+          {
+            "title": "Leído por nosotros",
+            "text": "Recomendamos lo que leímos."
+          },
+          {
+            "title": "Pasa y hojea",
+            "text": "Te esperamos en la librería."
+          },
+          {
+            "title": "Pedidos",
+            "text": "Te lo guardamos o lo enviamos."
+          }
+        ]
       },
       {
-        "type": "categories-tiles",
-        "look": "caption",
+        "type": "categories-list",
         "title": "Por género",
         "items": [
           {
@@ -155,14 +168,9 @@
       },
       {
         "type": "products-tabs",
-        "card": "classic",
+        "card": "list",
         "title": "Novedades",
         "link": "products"
-      },
-      {
-        "type": "press-quotes",
-        "look": "quotes",
-        "title": "Lo que dicen"
       },
       {
         "type": "newsletter-split",

@@ -110,13 +110,13 @@
       "icons": "person",
       "header": "search",
       "announce": "plain",
-      "footer": "columns",
-      "button": "pill",
+      "footer": "card",
+      "button": "cushion",
       "corners": "soft",
       "density": "compact",
       "texture": "none",
       "titles": "normal",
-      "pdp": "gallery-left",
+      "pdp": "panel",
       "filters": "bar",
       "grid": "grid4",
       "cards": "compact"
@@ -136,8 +136,7 @@
         "photo": "slot:ni-hero"
       },
       {
-        "type": "categories-tiles",
-        "look": "circles",
+        "type": "categories-list",
         "title": "Compra por categoría",
         "items": [
           {
@@ -184,7 +183,7 @@
       },
       {
         "type": "products-slider",
-        "card": "classic",
+        "card": "line",
         "title": "Los más vendidos",
         "link": "products"
       },
@@ -220,46 +219,34 @@
         "photo": "slot:ni-sala"
       },
       {
-        "type": "press-quotes",
-        "look": "row",
-        "title": "Nuestras marcas",
-        "items": [
-          {
-            "title": "Taller Uno"
-          },
-          {
-            "title": "Barro Vivo"
-          },
-          {
-            "title": "Lino Norte"
-          },
-          {
-            "title": "Casa Alta"
-          }
-        ]
-      },
-      {
-        "type": "newsletter-split",
-        "look": "band",
-        "band": "muted",
-        "title": "10% en tu primera compra",
-        "text": "Suscríbete y te enviamos tu código."
-      },
-      {
         "type": "products-tabs",
-        "card": "classic",
+        "card": "line",
         "title": "Novedades",
         "link": "products"
       },
       {
-        "type": "story-split",
-        "look": "right",
+        "type": "story-overlay",
+        "look": "card",
         "band": "deep",
         "title": "Desde siempre, *en tu ciudad*",
         "text": "Gracias por elegirnos todos estos años. Te esperamos en la tienda o te lo llevamos a casa.",
         "cta": "Ver la tienda",
         "link": "contact",
-        "photo": "slot:ba-manos"
+        "photo": "slot:ba-manos",
+        "items": [
+          {
+            "title": "En tu ciudad",
+            "text": "Visítanos o compra en línea."
+          },
+          {
+            "title": "Piezas elegidas",
+            "text": "Cosas útiles y lindas."
+          },
+          {
+            "title": "Te asesoramos",
+            "text": "Te ayudamos a elegir."
+          }
+        ]
       },
       {
         "type": "icon-columns",

@@ -110,8 +110,8 @@
       "icons": "person",
       "header": "search",
       "announce": "plain",
-      "footer": "columns",
-      "button": "soft",
+      "footer": "card",
+      "button": "cushion",
       "corners": "round",
       "density": "compact",
       "texture": "none",
@@ -211,7 +211,7 @@
       },
       {
         "type": "products-slider",
-        "card": "framed",
+        "card": "badge",
         "title": "Los *favoritos* de la casa",
         "cta": "Ver todo",
         "link": "products"
@@ -331,7 +331,7 @@
       },
       {
         "type": "products-tabs",
-        "card": "framed",
+        "card": "badge",
         "title": "Encuentra lo ideal para tu *mascota*",
         "link": "products"
       },
@@ -391,12 +391,6 @@
             "icon": "smile"
           }
         ]
-      },
-      {
-        "type": "newsletter-split",
-        "look": "band",
-        "title": "Suscríbete a nuestros correos",
-        "text": "Novedades, ofertas y consejos para tu mascota."
       }
     ],
     "demo": {

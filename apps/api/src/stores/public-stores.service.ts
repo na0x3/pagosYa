@@ -5,7 +5,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { findActiveStoreBySlug, PUBLIC_STORE_WHERE } from "./active-store";
 import { readCatalogLayout } from "./catalog-layout";
 import { readStoreLocations, readLocationStocks, offersPickupAt, storeOffersPickup } from "./store-locations";
-import { storePolicies } from "./store-presentation";
+import { storeFaq, storePolicies } from "./store-presentation";
 import { readStoreHeroSlides, readStoreEditorialGallery, readStoreMotionExperiences, readStoreAnimations, readStoreContentOrder } from "./store-presentation";
 import { readProductExtras, readStringArray, readProductVariants } from "./product-pricing";
 import { publishedStoreLook } from "./store-dna";
@@ -334,6 +334,8 @@ export class PublicStoresService implements OnModuleDestroy {
       topSellerId: topSellerId(paidOrders),
       showLowStockToCustomers: store.showLowStockToCustomers,
       policies: storePolicies(store.policies),
+      // The merchant's own FAQ questions (YAPI edits everything, 2026-11-03), shown first on the FAQ page.
+      faq: storeFaq(store.policies),
       assistant,
       appointmentOfferings,
       links: links.map((l) => ({ id: l.id, label: l.label, url: l.url })),

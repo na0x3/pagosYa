@@ -70,4 +70,12 @@ export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolea
   /** Spec 2026-10-31: the home composed from the section library, after the polish of a new master store. */
   sectionLibrary?: boolean;
   /** Owner 2026-10-27: the follow-up is a guarded personal touch (source-guarded-touch.ts). */
-  guardedTouch?: boolean };
+  guardedTouch?: boolean;
+  /** Spec 2026-11-01 template quick edits: the part of a request the layout edit could not do, run after it as its own edit. */
+  layoutRest?: boolean;
+  /** Fix 4 (2026-11-02): the part of a message left after its shipping price was set, run as its own edit. */
+  shippingRest?: boolean;
+  /** Fix 6 (2026-11-02): a template switch's fill — the merchant's earlier asks (words only, no check) and the sections the old home
+   *  had that the new template lacks (types and words, no photos). */
+  earlierAsks?: string;
+  carry?: Array<{ type: string; [key: string]: unknown }> };

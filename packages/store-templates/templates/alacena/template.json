@@ -80,7 +80,7 @@
       "icons": "line",
       "header": "links",
       "announce": "plain",
-      "footer": "columns",
+      "footer": "band",
       "button": "pill",
       "corners": "soft",
       "density": "regular",
@@ -145,22 +145,10 @@
         "photo": "slot:me-story"
       },
       {
-        "type": "newsletter-split",
-        "look": "band",
-        "band": "muted",
-        "title": "Ponle sabor a tu correo",
-        "text": "Recetas, novedades y ofertas."
-      },
-      {
         "type": "story-split",
         "title": "Gente que *sabe de cocina*",
         "text": "Cocineras y cocineros que recomiendan lo que hacemos, porque lo usan en casa.",
         "photo": "slot:ms-hero"
-      },
-      {
-        "type": "press-quotes",
-        "look": "quotes",
-        "title": "Lo que dicen"
       }
     ],
     "productLayout": [
