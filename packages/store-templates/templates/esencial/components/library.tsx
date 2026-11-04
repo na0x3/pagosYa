@@ -1412,7 +1412,7 @@ function PromoLines({ block, index }: { block: LibraryBlock; index: number }) {
     <ul className="lb-lines">{lines.map((line, at) => <li key={at}><Reveal delay={at * 100}>
       <a className="lb-lines__photo" href={href(line.link)} aria-label={line.title}>
         <Photo src={line.photo} />
-        {line.value ? <span className="lb-lines__sticker" data-n={at}><span>{line.value}</span></span> : null}
+        {line.value ? <span className="lb-lines__sticker" data-n={at} style={{ ['--len' as string]: Math.max(...line.value.split(/\s+/).map(word => word.length)) } as CSSProperties}><span>{line.value}</span></span> : null}
       </a>
       <h3 className="lb-lines__title">{line.title}</h3>
       {line.text ? <p className="lb-lines__text">{line.text}</p> : null}
