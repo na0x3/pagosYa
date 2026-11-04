@@ -661,7 +661,8 @@ export class SourceChatService {
   }
 
   /** A new store: a short request shows the plan card; a detailed one builds the plan at once (spec 2026-10-22). */
-  private intakeOn() { return this.config.get<boolean>('app.yapiIntake') === true && Boolean((this.dialogue as { intakeStep?: unknown }).intakeStep); }
+  // Final review 2026-11-04: only with the template pick — without it a first build ends on the plan card, not a build.
+  private intakeOn() { return this.config.get<boolean>('app.yapiIntake') === true && this.templatePickOn() && Boolean((this.dialogue as { intakeStep?: unknown }).intakeStep); }
 
   /** Spec 2026-11-04 §1: the catalogue and settings the questions depend on (what is already there is never asked). */
   private async intakeFactsFor(storeId: string) {
@@ -1443,10 +1444,15 @@ export class SourceChatService {
     });
     // Spec 2026-11-04 §1: the merchant's reply to YAPI's question before the first build goes back to the questions, whatever the
     // Studio sent with it (a chip tap carries no setupAction). Photos sent with it join the build.
-    const openIntake = !input.personalTouch && !input.resumeWords && this.intakeOn() ? pendingIntake(history.messages, current.revision) : null;
+    // Final review 2026-11-04: only a plain answer does — a product photo, a pasted link, «restart» or a template/style/plan tap keeps
+    // its own flow (the open question is left behind). Photos answering it are images only and lead the build's photos.
+    const plainAnswer = (!input.setupAction || input.setupAction === 'generate') && !input.templateId && !input.directionId && !input.planId && !input.stylePick
+      && !/https?:\/\/|www\./i.test(input.instruction);
+    const openIntake = plainAnswer && !input.personalTouch && !input.resumeWords && this.intakeOn() ? pendingIntake(history.messages, current.revision) : null;
     if (openIntake) {
+      const images = (input.assetUrls || []).filter(url => /\.(?:png|jpe?g|webp|avif|gif)$/i.test(url));
       const answer = input.instruction.trim() || ((input.assetUrls || []).length ? '(fotos)' : '');
-      const state: IntakeState = { ...openIntake, photos: [...new Set([...openIntake.photos, ...(input.assetUrls || [])])].slice(0, 24),
+      const state: IntakeState = { ...openIntake, photos: [...new Set([...images, ...openIntake.photos])].slice(0, 24),
         answers: [...openIntake.answers, { topic: openIntake.question?.topic ?? 'what', question: openIntake.question?.text ?? '', answer }] };
       await workflow.report('interpreting');
       return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, state.photos.slice(0, 8), state.words, state.request, '', 'generate', state);

@@ -10,6 +10,8 @@ it('keeps the request only until a build is saved', () => {
   const kept = { metadata: { pendingRequest: { instruction: 'x', direct: false } } };
   expect(pendingRequestIn([{ metadata: {} }, kept])).toEqual({ instruction: 'x', direct: false });
   expect(pendingRequestIn([{ metadata: { sourceRevision: 2 } }, kept])).toBeUndefined();
+  // Final review 2026-11-04: a newer question before the first build is what «sigue»/«dale» answers, never an older request.
+  expect(pendingRequestIn([{ metadata: { intake: { pending: true } } }, kept])).toBeUndefined();
   expect(pendingRequestIn([])).toBeUndefined();
 });
 it('tells the merchant what stopped and how to go on', () => {

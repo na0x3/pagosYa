@@ -8,11 +8,12 @@ export type PendingRequest = { instruction: string; direct: boolean; setupAction
 /** The request a note kept, while no build has been saved since. Reads assistant messages newest first. */
 export function pendingRequestIn(newestFirst: { metadata: unknown }[]): PendingRequest | undefined {
   for (const message of newestFirst) {
-    const metadata = (message.metadata ?? {}) as { pendingRequest?: Partial<PendingRequest>; sourceRevision?: unknown; plan?: unknown };
+    const metadata = (message.metadata ?? {}) as { pendingRequest?: Partial<PendingRequest>; sourceRevision?: unknown; plan?: unknown; intake?: unknown };
     const pending = metadata.pendingRequest;
     if (pending && typeof pending.instruction === 'string' && pending.instruction.trim()) return { instruction: pending.instruction, direct: pending.direct === true, ...(typeof pending.setupAction === 'string' ? { setupAction: pending.setupAction } : {}) };
-    // A build saved since, or a newer plan card the merchant is answering, ends the search.
-    if (typeof metadata.sourceRevision === 'number' || metadata.plan) return undefined;
+    // A build saved since, a newer plan card the merchant is answering, or a newer question before the first build (final review
+    // 2026-11-04: «dale» answers it, never an older request) ends the search.
+    if (typeof metadata.sourceRevision === 'number' || metadata.plan || metadata.intake) return undefined;
   }
   return undefined;
 }
