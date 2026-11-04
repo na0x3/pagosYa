@@ -47,7 +47,7 @@ import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { galleryTemplates, listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
-import { fallbackTemplatePick, leastUsedPick, pickableTemplates, templateSwitchRequest } from './source-template-pick';
+import { fallbackTemplatePick, leastUsedPick, pickableTemplates, randomPick, readTemplateRandom, templateSwitchRequest } from './source-template-pick';
 import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
 /** Owner 2026-11-02: the template a one- or two-product store starts on (the product whole at the top). */
@@ -494,12 +494,21 @@ export class SourceChatService {
       this.productLogger.log(JSON.stringify({ event: 'template_pick', storeId, template: pick.id, by: 'one-product', reason: pick.reason }));
       return pick;
     }
+    // Owner 2026-11-04 («podemos hacer pruebas con 1 y 3?»): =all draws any store template without asking YAPI; =pick draws one of
+    // YAPI's three below instead of the least used.
+    const draw = readTemplateRandom(this.config.get<string>('app.yapiTemplateRandom'));
+    if (draw === 'all') {
+      const drawn = randomPick(templates)!;
+      const pick = { id: drawn.id, reason: '' };
+      this.productLogger.log(JSON.stringify({ event: 'template_pick', storeId, template: pick.id, by: 'random-all', reason: '' }));
+      return pick;
+    }
     const answer = await Promise.resolve(this.dialogue.pickTemplate?.(merchantId, { storeId, storeName: input.storeName, what: input.what, story: input.story, request: input.request, products: input.products, templates }))
       .catch(error => { if (error instanceof SourceProviderQuotaException) throw error; return null; }) ?? null;
     // Spec 2026-11-04 §2: up to three candidates (a single answer still reads), the least used wins.
     const candidates = (Array.isArray(answer) ? answer : answer ? [answer] : []).filter(candidate => templates.some(template => template.id === candidate.id));
-    const pick = candidates.length ? leastUsedPick(candidates, await this.templateUses()) : fallbackTemplatePick(input.businessWords, templates);
-    this.productLogger.log(JSON.stringify({ event: 'template_pick', storeId, template: pick?.id ?? null, by: candidates.length ? 'yapi' : pick ? 'words' : 'none', candidates: candidates.map(candidate => candidate.id), reason: pick?.reason ?? '' }));
+    const pick = !candidates.length ? fallbackTemplatePick(input.businessWords, templates) : draw === 'pick' ? randomPick(candidates) : leastUsedPick(candidates, await this.templateUses());
+    this.productLogger.log(JSON.stringify({ event: 'template_pick', storeId, template: pick?.id ?? null, by: candidates.length ? (draw === 'pick' ? 'yapi-random' : 'yapi') : pick ? 'words' : 'none', candidates: candidates.map(candidate => candidate.id), reason: pick?.reason ?? '' }));
     return pick;
   }
 

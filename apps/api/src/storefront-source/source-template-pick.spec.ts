@@ -1,4 +1,4 @@
-import { fallbackTemplatePick, leastUsedPick, pickableTemplates, readTemplatePicks, templatePickSchema, templateSwitchRequest } from './source-template-pick';
+import { fallbackTemplatePick, leastUsedPick, pickableTemplates, randomPick, readTemplatePicks, readTemplateRandom, templatePickSchema, templateSwitchRequest } from './source-template-pick';
 
 const manifest = (id: string, extra: Record<string, unknown> = {}) => ({
   id, name: id, category: 'comida', description: `Plantilla ${id}`, tags: [], extends: 'esencial',
@@ -29,6 +29,15 @@ describe('template pick', () => {
     expect(leastUsedPick(candidates, new Map([['muro', 2], ['calma', 1]]))).toEqual({ id: 'diario', reason: 'c' });
     expect(leastUsedPick(candidates, new Map([['muro', 1], ['calma', 1], ['diario', 1]]))).toEqual({ id: 'muro', reason: 'a' });
     expect(leastUsedPick([], new Map())).toBeNull();
+  });
+
+  it('draws one at random when the owner switches the draw on (2026-11-04: «podemos hacer que sea random?»)', () => {
+    const candidates = [{ id: 'muro', reason: 'a' }, { id: 'calma', reason: 'b' }, { id: 'diario', reason: 'c' }];
+    expect(randomPick(candidates, () => 0)).toEqual({ id: 'muro', reason: 'a' });
+    expect(randomPick(candidates, () => 0.5)).toEqual({ id: 'calma', reason: 'b' });
+    expect(randomPick(candidates, () => 0.9999)).toEqual({ id: 'diario', reason: 'c' });
+    expect(randomPick([], () => 0)).toBeNull();
+    expect([' Pick', 'ALL', '', undefined, 'yes'].map(readTemplateRandom)).toEqual(['pick', 'all', 'off', 'off', 'off']);
   });
 
   it('falls back to the template sharing the most words with the business', () => {

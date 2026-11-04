@@ -960,6 +960,39 @@ describe('YAPI picks the themed template for a new store (owner 2026-10-31, YAPI
     expect(out.assistantMessage.metadata.templatePick).toBe('sorbo');
   });
 
+  describe('the draw (owner 2026-11-04: «podemos hacer pruebas con 1 y 3?»)', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('pick: one of YAPI\'s three at random, even the most used', async () => {
+      config.set('app.yapiTemplateRandom', 'pick');
+      withPick(jest.fn().mockResolvedValue([{ id: 'grano', reason: 'Café que tuesta en casa.' }, { id: 'sorbo', reason: 'Bebidas de la casa.' }, { id: 'horno', reason: 'Horneado.' }]));
+      const used = [{ metadata: { templatePick: 'grano' } }, { metadata: { templatePick: 'grano' } }];
+      prisma.storeAgentMessage.findMany.mockImplementation(async ({ where }: any) => where.metadata ? used : messages.filter(m => m.threadId === where.threadId && m.role === where.role).reverse());
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+      const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+      expect(applyMaster.mock.calls[0][4]).toBe('grano');
+      expect(out.assistantMessage.content).toContain('Elegí la plantilla Grano: café que tuesta en casa.');
+      expect(out.assistantMessage.metadata.templatePick).toBe('grano');
+    });
+
+    it('all: any of the store templates, without asking YAPI and never the one-product or hidden ones', async () => {
+      config.set('app.yapiTemplateRandom', 'all');
+      const pickTemplate = jest.fn();
+      const drawn: string[] = [];
+      for (const draw of [0, 0.9999]) {
+        withPick(pickTemplate);
+        jest.spyOn(Math, 'random').mockReturnValue(draw);
+        applyMaster.mockClear();
+        await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+        drawn.push(applyMaster.mock.calls[0][4]);
+        jest.restoreAllMocks();
+      }
+      expect(pickTemplate).not.toHaveBeenCalled();
+      expect(drawn[0]).not.toBe(drawn[1]);
+      for (const id of drawn) expect(['unico', 'shrine', 'shrine2']).not.toContain(id);
+    });
+  });
+
   it('without an answer, the template sharing the most words with the business', async () => {
     withPick(jest.fn().mockResolvedValue(null));
     await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');

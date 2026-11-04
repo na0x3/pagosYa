@@ -61,6 +61,18 @@ export function leastUsedPick(candidates: ReadonlyArray<{ id: string; reason: st
   return best;
 }
 
+/** Owner 2026-11-04 («podemos hacer que sea random? … pruebas con 1 y 3»): YAPI_TEMPLATE_RANDOM=pick draws one of YAPI's three,
+ *  =all draws any store template without asking YAPI; anything else keeps the least used. */
+export type TemplateRandom = 'off' | 'pick' | 'all';
+export function readTemplateRandom(value?: string): TemplateRandom {
+  const mode = (value ?? '').trim().toLowerCase();
+  return mode === 'pick' || mode === 'all' ? mode : 'off';
+}
+
+export function randomPick<T>(items: readonly T[], random: () => number = Math.random): T | null {
+  return items.length ? items[Math.min(items.length - 1, Math.floor(random() * items.length))] : null;
+}
+
 const fold = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 // Words every shop uses say nothing about which template fits.
 const GENERIC = new Set(['tiend', 'produ', 'nuest', 'grand', 'plant', 'hecho', 'compr', 'venta', 'vende', 'para', 'todos', 'calid']);
