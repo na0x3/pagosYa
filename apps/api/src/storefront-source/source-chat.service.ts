@@ -48,6 +48,7 @@ import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { galleryTemplates, listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
 import { fallbackTemplatePick, pickableTemplates, templateSwitchRequest } from './source-template-pick';
+import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
 /** Owner 2026-11-02: the template a one- or two-product store starts on (the product whole at the top). */
 const ONE_PRODUCT_TEMPLATE = 'unico';
@@ -649,7 +650,58 @@ export class SourceChatService {
   }
 
   /** A new store: a short request shows the plan card; a detailed one builds the plan at once (spec 2026-10-22). */
-  private async firstBuild(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[], instruction: string, merchantRequest?: string, replyPrefix = '', setupAction?: string) {
+  private intakeOn() { return this.config.get<boolean>('app.yapiIntake') === true && Boolean((this.dialogue as { intakeStep?: unknown }).intakeStep); }
+
+  /** Spec 2026-11-04 §1: the catalogue and settings the questions depend on (what is already there is never asked). */
+  private async intakeFactsFor(storeId: string) {
+    const [store, zones] = await Promise.all([
+      this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true, locations: true, contactPhone: true,
+        paymentLinks: { where: { status: 'ACTIVE' }, select: { name: true, imageUrls: true }, take: 60 }, promoCodes: { select: { code: true }, take: 3 }, links: { select: { label: true, url: true } } } }).catch(() => null),
+      Promise.resolve(this.prisma.deliveryZone?.count({ where: { storeId } })).catch(() => 0),
+    ]);
+    const s = (store ?? {}) as { name?: string; onboarding?: { what?: string; story?: string } | null; locations?: unknown; contactPhone?: string | null;
+      paymentLinks?: Array<{ name: string; imageUrls: string[] }>; promoCodes?: Array<{ code: string }>; links?: Array<{ label: string; url: string }> };
+    return intakeFacts({ name: s.name ?? '', onboarding: s.onboarding ?? {}, products: s.paymentLinks ?? [], zones: Number(zones) || 0,
+      locations: Array.isArray(s.locations) ? s.locations as Array<{ pickupEnabled?: boolean }> : [], codes: (s.promoCodes ?? []).map(code => code.code),
+      links: s.links ?? [], contactPhone: s.contactPhone ?? null });
+  }
+
+  /** Spec 2026-11-04 §1: one question when something is still missing (saved with its chips and the intake so far); null when it
+   *  is time to build — ready, four asked, «Créala ya», or the check failed. */
+  private async askBeforeBuild(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, state: IntakeState) {
+    const last = state.answers.at(-1);
+    if (state.asked.length >= INTAKE_MAX || wantsBuildNow(last ? last.answer : state.words)) return null;
+    const facts = await this.intakeFactsFor(storeId);
+    const raw = await Promise.resolve(this.dialogue.intakeStep!(merchantId, { storeId, facts, words: state.words, answers: state.answers, asked: state.asked, ...(state.question ? { pending: state.question } : {}) }))
+      .catch(error => { if (error instanceof SourceProviderQuotaException) throw error; return null; });
+    const turn = normalizeIntake(raw, state, facts);
+    if (!turn || turn.ready || turn.topic === 'none') return null;
+    const topic = turn.topic as IntakeTopic;
+    const next: IntakeState = { ...state, pending: true, asked: state.asked.includes(topic) ? state.asked : [...state.asked, topic], question: { topic, text: turn.question } };
+    await workflow.finish('completed');
+    const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
+      content: intakeMessage(turn, !state.question),
+      metadata: { progress: workflow.value, clarification: { prompt: turn.question, options: turn.options.map(label => ({ label, value: label })) }, intake: next } as never } });
+    this.productLogger.log(JSON.stringify({ event: 'intake_question', storeId, topic, asked: next.asked.length }));
+    return { userMessage, assistantMessage, setup: null };
+  }
+
+  private async firstBuild(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[], instruction: string, merchantRequest?: string, replyPrefix = '', setupAction?: string, intake?: IntakeState | false) {
+    // Spec 2026-11-04 §1: before a new store's first build, YAPI asks what is still missing; the build then reads the first words
+    // with every answer. A link flow (product link, listing screenshot) passes false and is never interrupted.
+    if (intake !== false && revision === 0 && this.intakeOn()) {
+      const state: IntakeState = intake ?? { pending: true, words: instruction, ...(merchantRequest ? { request: merchantRequest } : {}), photos: chatPhotos, asked: [], answers: [] };
+      const asked = await this.askBeforeBuild(merchantId, storeId, threadId, userMessage, workflow, state);
+      if (asked) return asked;
+      if (state.answers.length) {
+        const words = intakeInstruction(state);
+        userMessage = { ...userMessage, content: words };
+        instruction = words;
+        chatPhotos = state.photos.slice(0, 8);
+        merchantRequest = state.request ? words : undefined;
+        replyPrefix = `Listo, ya tengo lo que necesito. ${replyPrefix}`;
+      }
+    }
     // Owner 2026-10-24: with starters on, a new store starts from its starter at once; the plan card is for later edits.
     // Owner 2026-10-31: with the template pick on, the picked template is the plan — the plan card's colours and sections are for
     // plain Esencial and would not fit a whole template; the merchant's words still reach its fill and the check.
@@ -1378,6 +1430,16 @@ export class SourceChatService {
         metadata: { ...(userMessage.metadata as Record<string, unknown>), progress } as unknown as Prisma.InputJsonValue,
       } });
     });
+    // Spec 2026-11-04 §1: the merchant's reply to YAPI's question before the first build goes back to the questions, whatever the
+    // Studio sent with it (a chip tap carries no setupAction). Photos sent with it join the build.
+    const openIntake = !input.personalTouch && !input.resumeWords && this.intakeOn() ? pendingIntake(history.messages, current.revision) : null;
+    if (openIntake) {
+      const answer = input.instruction.trim() || ((input.assetUrls || []).length ? '(fotos)' : '');
+      const state: IntakeState = { ...openIntake, photos: [...new Set([...openIntake.photos, ...(input.assetUrls || [])])].slice(0, 24),
+        answers: [...openIntake.answers, { topic: openIntake.question?.topic ?? 'what', question: openIntake.question?.text ?? '', answer }] };
+      await workflow.report('interpreting');
+      return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, state.photos.slice(0, 8), state.words, state.request, '', 'generate', state);
+    }
     // Owner 2026-10-31 (switching templates later): «cámbiala a la plantilla Tacón» or «prueba otra plantilla» on a built store
     // switches it to that whole template (or YAPI's next-best pick), filled again with the store's own words and photos.
     // Fix 4 (2026-11-02, goodProtein #12: «envío gratis desde Bs 300» → «Listo» and the zone unchanged): a shipping price in the
@@ -1893,7 +1955,7 @@ export class SourceChatService {
         const chatPhotos = assetUrls.filter(url => ['product', 'business', 'team', 'background'].includes(decision.imageUses.find(use => use.url === url)?.role ?? ''));
         const ownRequest = ownDesignRequest(input.instruction, history.messages);
         const productRequest = productImport ? `${ownRequest ?? input.instruction}\n\n${productSourcePrompt(productImport.product, productImport.listingDescription, productImport.videoUrls?.length ?? 0)}\nConstruye la tienda alrededor de este producto.` : undefined;
-        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos, input.instruction, productRequest ?? ownRequest, productNote);
+        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos, input.instruction, productRequest ?? ownRequest, productNote, undefined, productImport ? false : undefined);
       }
       // "Elige tu estilo": new stores and full redesigns get two styles to pick from (one calm, one bold); a kept template stays its own style.
       // A copy follows its blueprint: no style cards (spec 2026-10-18 B §3).
