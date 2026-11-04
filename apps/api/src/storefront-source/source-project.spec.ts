@@ -61,6 +61,16 @@ describe("Independent source artifacts", () => {
     expect(() => withSheet([{ path: 'styles.css', content: big }])).toThrow('Invalid source file content');
     expect(() => withSheet([{ path: 'styles/globals.css', content: big }])).toThrow('Invalid source file content');
   });
+  // Focal 2026-11-03: 25 compiled pages (3.1 MB) and the kit (0.7 MB) counted against the store's 8 MiB, so the template with its
+  // photos and fonts could not be built. Platform output has its own total; the merchant's files keep the 8 MiB.
+  it('counts compiled platform output apart from the store’s own 8 MiB', () => {
+    const page = (n: number) => ({ path: `_compiled/page${n}.js`, content: 'x'.repeat(700_000) });
+    const photo = (n: number) => ({ path: `assets/photo${n}.jpg`, content: Buffer.alloc(2_000_000, n).toString('base64'), encoding: 'base64' as const });
+    const project = (files: any[]) => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, ...files] });
+    expect(() => project([...[1, 2, 3, 4, 5, 6, 7, 8].map(page), photo(1), photo(2), photo(3)])).not.toThrow();
+    expect(() => project([photo(1), photo(2), photo(3), photo(4), photo(5)])).toThrow('Source project exceeds the 8 MiB limit');
+    expect(() => project(Array.from({ length: 26 }, (_, n) => page(n)))).toThrow('Compiled store output exceeds the 16 MiB limit');
+  });
   it('gives the platform commerce runtime its own budget while authored files keep theirs', () => {
     const runtime = { path: 'commerce.js', content: '/* runtime */'.padEnd(200_000, ' ') };
     expect(sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, runtime] }).files.some(f => f.path === 'commerce.js')).toBe(true);

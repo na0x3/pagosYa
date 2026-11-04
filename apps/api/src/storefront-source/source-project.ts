@@ -11,6 +11,9 @@ export interface SourceProjectSnapshot {
 }
 
 const MAX_BYTES = 8 * 1024 * 1024;
+/** Focal 2026-11-03: the platform's own output (compiled pages, the kit, the compiled layout and stylesheet) is counted apart from
+ *  the 8 MiB a store's own files may use; 25 compiled pages alone are about 3 MB. Bounded on its own. */
+const MAX_PLATFORM_BYTES = 16 * 1024 * 1024;
 const BINARY_EXTENSIONS = /\.(png|jpe?g|webp|avif|gif|mp4|ico|woff2?|ttf|otf)$/i;
 const RESERVED_PATH = "pagosya-project.json";
 const PRIVATE_FILE = /^(?:\.env(?:\..+)?|\.npmrc|\.yarnrc(?:\.yml)?|\.netrc|id_rsa|id_ed25519|credentials(?:\.json)?|.*\.(?:pem|key|p12|pfx))$/i;
@@ -23,6 +26,11 @@ const SECRET = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|(?:sk_live_|sk
 // 2026-10-19: the bundle reached about 595 000 characters and Lana Andina's first save failed at the old 600 000 cap
 // («Invalid source file content»); source-runtime.spec.ts now fails before the bundle gets within 20 % of this one.
 export const MAX_COMMERCE_RUNTIME = 900_000;
+
+/** Files the platform writes from the store's source on every save, never by hand. */
+function platformOutput(path: string, compiledSheet: boolean): boolean {
+  return /^_compiled\/(?:(?:pages|catalog|auth|account)\/)?[a-z][a-z0-9-]{0,52}\.js$/.test(path) || path === 'commerce.js' || path === 'source-next-layout.json' || (compiledSheet && path === 'styles.css');
+}
 
 function reject(message: string): never {
   throw new BadRequestException(message);
@@ -51,7 +59,7 @@ export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjec
     ...(typeof input.brief.starterId === 'string' && /^[a-z0-9-]{1,40}$/.test(input.brief.starterId) ? { starterId: input.brief.starterId } : {}),
   };
   const paths = new Set<string>();
-  let total = 0, videoTotal = 0;
+  let total = 0, videoTotal = 0, platformTotal = 0;
   // A Next store's styles.css is Tailwind's output from styles/globals.css, not a file anyone writes (Palo Alto 2026-11-03: 181 167
   // characters and the template could not be built). An older static store's styles.css is authored and keeps 180 kB.
   const compiledSheet = input.files.some(file => file?.path === 'styles/globals.css');
@@ -75,8 +83,10 @@ export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjec
       if (encoding !== 'base64' || bytes.length < 12 || bytes.subarray(4, 8).toString('ascii') !== 'ftyp') reject('Invalid MP4 asset');
       videoTotal += bytes.length;
       if (videoTotal > MAX_SOURCE_VIDEO_BYTES) reject('Los videos del proyecto superan 20 MB en total.');
-    } else total += Buffer.byteLength(file.content, encoding === "base64" ? "base64" : "utf8");
+    } else if (platformOutput(file.path, compiledSheet)) platformTotal += Buffer.byteLength(file.content, "utf8");
+    else total += Buffer.byteLength(file.content, encoding === "base64" ? "base64" : "utf8");
     if (total > MAX_BYTES) reject("Source project exceeds the 8 MiB limit");
+    if (platformTotal > MAX_PLATFORM_BYTES) reject("Compiled store output exceeds the 16 MiB limit");
     return { path: file.path, content: file.content, encoding };
   }).sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
   for (const file of files) {
