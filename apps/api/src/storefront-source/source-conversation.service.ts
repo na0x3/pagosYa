@@ -18,7 +18,7 @@ import { SUGGESTIONS_PROMPT, SUGGESTIONS_SCHEMA, type SuggestionInput } from './
 import type { MasterCopy } from '@pagosya/store-templates';
 import { MASTER_COLOURS, MASTER_COPY_CAPS, MASTER_VALUE_CAPS, type MasterLook, type MasterRead } from './source-master';
 import { LIBRARY_CATALOG, LIBRARY_FILL_PROMPT, LIBRARY_ICON_NAMES, LIBRARY_PROMPT, libraryAnswerSchema, type LayoutBlock, type LibraryFacts } from './source-section-library';
-import { readTemplatePick, TEMPLATE_PICK_PROMPT, templatePickSchema, type PickableTemplate } from './source-template-pick';
+import { readTemplatePicks, TEMPLATE_PICK_PROMPT, templatePickSchema, type PickableTemplate } from './source-template-pick';
 import { addableSections, LAYOUT_EDIT_PROMPT, layoutDigest, layoutEditSchema, readLayoutEdit, type LayoutEditRead } from './source-layout-edit';
 import { STORE_EDIT_PROMPT, storeDigest, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
 import type { StoreMenu } from './source-store-menu';
@@ -383,7 +383,7 @@ export class SourceConversationService {
 
   /** Owner 2026-10-31 («do the recommendation»): the themed template a new store starts on, from its business words and product
    *  names, with one sentence for the merchant saying why. Text only and short (no photos): null when it fails twice. */
-  async pickTemplate(merchantId: string, input: { storeId: string; storeName: string; what: string; story: string; request: string; products: string[]; templates: PickableTemplate[] }): Promise<{ id: string; reason: string } | null> {
+  async pickTemplate(merchantId: string, input: { storeId: string; storeName: string; what: string; story: string; request: string; products: string[]; templates: PickableTemplate[] }): Promise<Array<{ id: string; reason: string }> | null> {
     const model = this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
     const provider = sourceProvider(this.config, model);
     const business = { tienda: input.storeName, vende: input.what.slice(0, 1200), historia: input.story.slice(0, 800), pedido: input.request.slice(0, 1500), productos: input.products.slice(0, 30) };
@@ -396,11 +396,11 @@ export class SourceConversationService {
           body: JSON.stringify({ model, store: false, instructions: TEMPLATE_PICK_PROMPT,
             input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify({ negocio: business, plantillas }) }] }],
             text: { format: { type: 'json_schema', name: 'template_pick', strict: true, schema: templatePickSchema(input.templates.map(template => template.id)) } },
-            reasoning: { effort: 'low' }, max_output_tokens: 800 }),
+            reasoning: { effort: 'low' }, max_output_tokens: 1200 }),
         });
         body = await response.json().catch(() => null);
         checkSourceProviderQuota(response.status, body, provider.name);
-        if (response.ok) { const read = readTemplatePick(sourceResponseJson(body), input.templates); if (read) { status = 'COMPLETED'; return read; } }
+        if (response.ok) { const read = readTemplatePicks(sourceResponseJson(body), input.templates); if (read.length) { status = 'COMPLETED'; return read; } }
       } catch (error) {
         if (error instanceof SourceProviderQuotaException) throw error;
         this.logger.warn(JSON.stringify({ stage: 'template-pick', attempt, reason: ((error as Error)?.message || '').slice(0, 200) }));

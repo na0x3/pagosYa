@@ -1,4 +1,4 @@
-import { fallbackTemplatePick, pickableTemplates, readTemplatePick, templatePickSchema, templateSwitchRequest } from './source-template-pick';
+import { fallbackTemplatePick, leastUsedPick, pickableTemplates, readTemplatePicks, templatePickSchema, templateSwitchRequest } from './source-template-pick';
 
 const manifest = (id: string, extra: Record<string, unknown> = {}) => ({
   id, name: id, category: 'comida', description: `Plantilla ${id}`, tags: [], extends: 'esencial',
@@ -16,12 +16,19 @@ describe('template pick', () => {
     expect(list.map(template => template.id)).toEqual(['mordisco']);
   });
 
-  it('keeps a known answer and its reason, drops an unknown one', () => {
-    const templates = pickableTemplates([manifest('mordisco'), manifest('pecas')]);
-    expect(readTemplatePick({ plantilla: 'pecas', porque: '  Va con tu   cuidado de la piel. ' }, templates)).toEqual({ id: 'pecas', reason: 'Va con tu cuidado de la piel.' });
-    expect(readTemplatePick({ plantilla: 'otra', porque: 'x' }, templates)).toBeNull();
-    expect(readTemplatePick(null, templates)).toBeNull();
-    expect(templatePickSchema(['a', 'b']).properties.plantilla.enum).toEqual(['a', 'b']);
+  it('keeps up to three known, distinct candidates in order, with their reasons', () => {
+    const templates = pickableTemplates([manifest('mordisco'), manifest('pecas'), manifest('grano'), manifest('sorbo')]);
+    expect(readTemplatePicks({ plantillas: [{ plantilla: 'pecas', porque: '  Va con tu   piel. ' }, { plantilla: 'otra', porque: 'x' }, { plantilla: 'pecas', porque: 'y' }, { plantilla: 'grano', porque: '' }, { plantilla: 'sorbo', porque: '' }, { plantilla: 'mordisco', porque: '' }] }, templates))
+      .toEqual([{ id: 'pecas', reason: 'Va con tu piel.' }, { id: 'grano', reason: '' }, { id: 'sorbo', reason: '' }]);
+    expect(readTemplatePicks(null, templates)).toEqual([]);
+    expect(templatePickSchema(['a', 'b']).properties.plantillas.items.properties.plantilla.enum).toEqual(['a', 'b']);
+  });
+
+  it('takes the least used candidate; a tie keeps the model order (spec 2026-11-04 §2: two art stores both got Muro)', () => {
+    const candidates = [{ id: 'muro', reason: 'a' }, { id: 'calma', reason: 'b' }, { id: 'diario', reason: 'c' }];
+    expect(leastUsedPick(candidates, new Map([['muro', 2], ['calma', 1]]))).toEqual({ id: 'diario', reason: 'c' });
+    expect(leastUsedPick(candidates, new Map([['muro', 1], ['calma', 1], ['diario', 1]]))).toEqual({ id: 'muro', reason: 'a' });
+    expect(leastUsedPick([], new Map())).toBeNull();
   });
 
   it('falls back to the template sharing the most words with the business', () => {

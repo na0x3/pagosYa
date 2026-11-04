@@ -950,6 +950,16 @@ describe('YAPI picks the themed template for a new store (owner 2026-10-31, YAPI
     expect(out.followUp.redesign).toBeUndefined();
   });
 
+  it('of three candidates, the one fewer stores already use, and the reply records it (spec 2026-11-04 §2)', async () => {
+    withPick(jest.fn().mockResolvedValue([{ id: 'grano', reason: 'Café que tuesta en casa.' }, { id: 'sorbo', reason: 'Bebidas de la casa.' }, { id: 'horno', reason: 'Horneado.' }]));
+    const used = [{ metadata: { templatePick: 'grano' } }, { metadata: { templatePick: 'grano' } }, { metadata: { templatePick: 'horno' } }];
+    prisma.storeAgentMessage.findMany.mockImplementation(async ({ where }: any) => where.metadata ? used : messages.filter(m => m.threadId === where.threadId && m.role === where.role).reverse());
+    const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+    expect(applyMaster.mock.calls[0][4]).toBe('sorbo');
+    expect(out.assistantMessage.content).toContain('Elegí la plantilla Sorbo: bebidas de la casa.');
+    expect(out.assistantMessage.metadata.templatePick).toBe('sorbo');
+  });
+
   it('without an answer, the template sharing the most words with the business', async () => {
     withPick(jest.fn().mockResolvedValue(null));
     await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');

@@ -47,7 +47,7 @@ import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { galleryTemplates, listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
-import { fallbackTemplatePick, pickableTemplates, templateSwitchRequest } from './source-template-pick';
+import { fallbackTemplatePick, leastUsedPick, pickableTemplates, templateSwitchRequest } from './source-template-pick';
 import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
 /** Owner 2026-11-02: the template a one- or two-product store starts on (the product whole at the top). */
@@ -454,7 +454,7 @@ export class SourceChatService {
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: {
       threadId, channel: 'source', role: 'ASSISTANT',
       content: `${planned ? `Esto es lo que hice:\n${planned.plan.card.map(line => `• ${line}`).join('\n')}\n` : ''}${replyPrefix}${templatePick ? `Elegí la plantilla ${templateManifest(templatePick.id)?.name ?? templatePick.id}${templatePick.reason ? `: ${templatePick.reason.charAt(0).toLowerCase()}${templatePick.reason.slice(1).replace(/\.$/, '')}.` : '.'} ` : ''}Tu tienda ${store?.name ?? ''} está lista.${templatePick ? ' Ahora estoy escribiendo cada sección con tus palabras y tus fotos; aparecerá en unos minutos.' : ''}${sized.length ? ` ${usualOptionsNote(sized)}` : ''}${merchantRequest && touching ? ' Ahora estoy aplicando lo que me pediste —páginas, estilo y detalles—; aparecerá en unos minutos.' : written ? ' Ahora la estoy rediseñando con un estilo propio para tu marca; aparecerá en unos minutos.' : touching ? ' Le estoy dando un toque personal a tu tienda; aparecerá en unos minutos.' : polishing && !templatePick ? ` Ahora pulo los textos y las fotos con tus palabras; aparecerá en un momento.${merchantRequest ? ' Si pediste páginas o secciones nuevas, pídemelas aquí y las agrego.' : ''}` : ''} Pídeme cualquier cambio: textos, colores, fuentes, fotos o secciones.`.replace(/\s{2,}/g, ' '),
-      metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label },
+      metadata: { progress: workflow.value, sourceSetup: { ...draft, assetUrls: [], prompt: undefined, pendingCatalogRequest: undefined }, sourceRevision: saved.revision, label: saved.label, ...(templatePick ? { templatePick: templatePick.id } : {}) },
     } });
     // Spec 2026-10-19 §2: with no personal touch coming, the cards ride on this reply; otherwise on the touch's.
     if (!touching && !written) await this.attachSuggestions(merchantId, storeId, saved.revision, assistantMessage);
@@ -464,6 +464,15 @@ export class SourceChatService {
   /** Owner 2026-10-31: the themed template for a new store — YAPI's pick with its reason, or the one whose tags share the most words
    *  with the business when the call fails; null when nothing fits (the store then starts as before). The Shrine pair stays out
    *  while it is switched off. */
+  /** Spec 2026-11-04 §2: how many recent new stores started on each template (the first-build reply's metadata.templatePick). */
+  private async templateUses() {
+    const rows = await Promise.resolve(this.prisma.storeAgentMessage.findMany({ where: { role: 'ASSISTANT', metadata: { path: ['templatePick'], string_starts_with: '' } },
+      orderBy: { createdAt: 'desc' }, take: 300, select: { metadata: true } })).catch(() => [] as Array<{ metadata: unknown }>);
+    const uses = new Map<string, number>();
+    for (const row of rows ?? []) { const id = (row.metadata as { templatePick?: unknown } | null)?.templatePick; if (typeof id === 'string') uses.set(id, (uses.get(id) ?? 0) + 1); }
+    return uses;
+  }
+
   private async pickStoreTemplate(merchantId: string, storeId: string, input: { storeName: string; what: string; story: string; request: string; products: string[]; businessWords: string; exclude?: string }) {
     const hidden = this.config.get<boolean>('app.yapiShrineTemplates') === true ? new Set<string>() : new Set(['shrine', 'shrine2']);
     // Owner 2026-11-02 (Brisa Portátil: one AliExpress product got Conecta, a big tech catalogue): a store selling one or two products
@@ -487,8 +496,10 @@ export class SourceChatService {
     }
     const answer = await Promise.resolve(this.dialogue.pickTemplate?.(merchantId, { storeId, storeName: input.storeName, what: input.what, story: input.story, request: input.request, products: input.products, templates }))
       .catch(error => { if (error instanceof SourceProviderQuotaException) throw error; return null; }) ?? null;
-    const pick = answer ?? fallbackTemplatePick(input.businessWords, templates);
-    this.productLogger.log(JSON.stringify({ event: 'template_pick', storeId, template: pick?.id ?? null, by: answer ? 'yapi' : pick ? 'words' : 'none', reason: pick?.reason ?? '' }));
+    // Spec 2026-11-04 §2: up to three candidates (a single answer still reads), the least used wins.
+    const candidates = (Array.isArray(answer) ? answer : answer ? [answer] : []).filter(candidate => templates.some(template => template.id === candidate.id));
+    const pick = candidates.length ? leastUsedPick(candidates, await this.templateUses()) : fallbackTemplatePick(input.businessWords, templates);
+    this.productLogger.log(JSON.stringify({ event: 'template_pick', storeId, template: pick?.id ?? null, by: candidates.length ? 'yapi' : pick ? 'words' : 'none', candidates: candidates.map(candidate => candidate.id), reason: pick?.reason ?? '' }));
     return pick;
   }
 

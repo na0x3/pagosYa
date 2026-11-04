@@ -18,29 +18,47 @@ export function pickableTemplates(manifests: readonly TemplateManifest[], hidden
     .map(manifest => ({ id: manifest.id, name: manifest.name, category: manifest.category, description: manifest.description, tags: [...(manifest.tags ?? [])], sections: manifest.preset!.layout!.length }));
 }
 
-export const TEMPLATE_PICK_PROMPT = `Eres YAPI, el diseñador de pagosYa. Una tienda nueva necesita su plantilla: elige UNA de «plantillas» para empezar.
-Cada plantilla es una tienda completa (encabezado, portada, página de producto, pie) pensada para un rubro y un estilo.
-Elige por el negocio: qué vende (sus palabras y los nombres de sus productos), para quién y con qué tono. El rubro manda; si dos
-plantillas sirven por igual, elige la que mejor va con el tono (alegre, elegante, sencillo, divertido) que muestran sus palabras.
-«secciones» es cuántas secciones tiene su portada. Si el comercio pide una tienda completa o con muchas secciones, elige entre las de
-10 o más la que va con su rubro (2026-11-02: las cuatro tiendas «completas» recibieron plantillas de 7).
-«porque»: una sola frase corta en español, para el comerciante, que diga por qué esa plantilla va con su negocio (sin halagos ni
-promesas). Responde solo el JSON.`;
+// Spec 2026-11-04 §2 (owner «las de arte usaron la misma»): three candidates by style from any rubro — the rubro alone sent every
+// art shop to Muro (arte has 2 templates, libros 1) — and the server takes the one fewer stores already wear.
+export const TEMPLATE_PICK_PROMPT = `Eres YAPI, el diseñador de pagosYa. Una tienda nueva necesita su plantilla: propone las TRES de «plantillas» que mejor le quedan, la mejor primero.
+Cada plantilla es una tienda completa (encabezado, portada, página de producto, pie) con un estilo; su «rubro» dice para qué negocio se pensó, pero
+el contenido se llena con los productos y las palabras de esta tienda, así que una plantilla de otro rubro sirve cuando su forma le queda a este
+catálogo (una tienda de láminas puede vestirse con una de moda calma o de diario; una de libros con una editorial). Nunca propongas una cuyas
+secciones necesitan lo que esta tienda no tiene (tallas para una panadería, una carta para ropa).
+Elige por el negocio y el estilo: qué vende (sus palabras y los nombres de sus productos), para quién, y cómo quiere verse. Si sus palabras o sus
+respuestas dicen un estilo («Colorida», «Tranquila», «Elegante», «Divertida», un color, una tienda que le gusta), ese estilo manda sobre el rubro.
+«secciones» es cuántas secciones tiene su portada. Si el comercio pide una tienda completa o con muchas secciones, prefiere las de 10 o más
+(2026-11-02: las cuatro tiendas «completas» recibieron plantillas de 7).
+«porque»: una sola frase corta en español, para el comerciante, que diga por qué esa plantilla va con su negocio (sin halagos ni promesas).
+Tres plantillas distintas. Responde solo el JSON.`;
 
 export function templatePickSchema(ids: readonly string[]) {
   return {
-    type: 'object', additionalProperties: false, required: ['plantilla', 'porque'],
-    properties: { plantilla: { type: 'string', enum: [...ids] }, porque: { type: 'string', maxLength: 220 } },
+    type: 'object', additionalProperties: false, required: ['plantillas'],
+    properties: { plantillas: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['plantilla', 'porque'],
+      properties: { plantilla: { type: 'string', enum: [...ids] }, porque: { type: 'string', maxLength: 220 } } } } },
   } as const;
 }
 
-/** The model's answer, checked: a known template and a short reason, or null. */
-export function readTemplatePick(answer: unknown, templates: readonly PickableTemplate[]): { id: string; reason: string } | null {
-  const raw = (answer ?? {}) as { plantilla?: unknown; porque?: unknown };
-  const id = String(raw.plantilla ?? '');
-  if (!templates.some(template => template.id === id)) return null;
-  const reason = String(raw.porque ?? '').replace(/\s+/g, ' ').trim().slice(0, 220);
-  return { id, reason };
+/** The model's candidates, checked: known templates, each once, at most three, with a short reason. */
+export function readTemplatePicks(answer: unknown, templates: readonly PickableTemplate[]): Array<{ id: string; reason: string }> {
+  const list = Array.isArray((answer as { plantillas?: unknown } | null)?.plantillas) ? (answer as { plantillas: unknown[] }).plantillas : [];
+  const out: Array<{ id: string; reason: string }> = [];
+  for (const entry of list) {
+    const raw = (entry ?? {}) as { plantilla?: unknown; porque?: unknown };
+    const id = String(raw.plantilla ?? '');
+    if (!templates.some(template => template.id === id) || out.some(pick => pick.id === id)) continue;
+    out.push({ id, reason: String(raw.porque ?? '').replace(/\s+/g, ' ').trim().slice(0, 220) });
+    if (out.length === 3) break;
+  }
+  return out;
+}
+
+/** Of the candidates, the one fewer stores already wear; a tie keeps the model's order. */
+export function leastUsedPick(candidates: ReadonlyArray<{ id: string; reason: string }>, uses: ReadonlyMap<string, number>) {
+  let best: { id: string; reason: string } | null = null;
+  for (const candidate of candidates) if (!best || (uses.get(candidate.id) ?? 0) < (uses.get(best.id) ?? 0)) best = candidate;
+  return best;
 }
 
 const fold = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
