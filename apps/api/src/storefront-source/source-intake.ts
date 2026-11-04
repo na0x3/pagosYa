@@ -37,13 +37,26 @@ function factsAnswer(topic: IntakeTopic, facts: IntakeFacts) {
   return false;
 }
 
+/** Live check 2026-11-04 (Libros de Ana: no question, though the store had no delivery, pickup, code or WhatsApp): what the facts
+ *  can check is asked even when the model calls the brief ready — the must-haves when the store has none of them, photos when
+ *  products have none — each once. */
+function factsQuestion(state: IntakeState, facts: IntakeFacts, understood: string): IntakeTurn | null {
+  const turn = (topic: IntakeTopic, question: string, options: string[]): IntakeTurn => ({ understood, reply: '', ready: false, topic, question, options: [...options, BUILD_NOW] });
+  if (!state.asked.includes('musts') && !facts.envios && !facts.recojo && !facts.codigo && !facts.whatsapp) {
+    return turn('musts', '¿Cómo le llegan los pedidos a tus clientes?', ['Envíos', 'Recojo en mi local', 'Los dos', 'Por WhatsApp']);
+  }
+  if (!state.asked.includes('photos') && facts.sinFoto.length) return turn('photos', `¿Me mandas fotos de ${facts.sinFoto.slice(0, 2).join(' y ')}?`, ['Te las mando', 'Sigue sin fotos']);
+  return null;
+}
+
 export function normalizeIntake(raw: unknown, state: IntakeState, facts: IntakeFacts): IntakeTurn | null {
   if (!raw || typeof raw !== 'object') return null;
   const answer = raw as Partial<Record<keyof IntakeTurn, unknown>>;
   const understood = clean(answer.understood, 200).replace(/\.$/, '');
   const reply = clean(answer.reply, 240);
-  const ready: IntakeTurn = { understood, reply: '', ready: true, topic: 'none', question: '', options: [] };
-  if (answer.ready === true || state.asked.length >= INTAKE_MAX) return ready;
+  if (state.asked.length >= INTAKE_MAX) return { understood, reply: '', ready: true, topic: 'none', question: '', options: [] };
+  const ready: IntakeTurn = factsQuestion(state, facts, understood) ?? { understood, reply: '', ready: true, topic: 'none', question: '', options: [] };
+  if (answer.ready === true) return ready;
   const topic = (INTAKE_TOPICS as readonly string[]).includes(String(answer.topic)) ? answer.topic as IntakeTopic : null;
   const repeat = Boolean(topic && reply && state.question?.topic === topic);
   if (!topic || (state.asked.includes(topic) && !repeat) || factsAnswer(topic, facts)) return ready;

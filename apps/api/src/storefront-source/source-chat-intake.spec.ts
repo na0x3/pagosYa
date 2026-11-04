@@ -30,6 +30,8 @@ beforeEach(() => {
   chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 0 }), version: jest.fn() } as any, generation,
     { decide: jest.fn(), fillMaster: jest.fn().mockResolvedValue(null), intakeStep } as any, { apply: jest.fn(), applyMaster } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
 });
+// The store's delivery and every product photo set: the facts have nothing left to ask once the model is ready.
+const settle = () => { prisma.deliveryZone.count.mockResolvedValue(1); prisma.store.findFirst.mockResolvedValue({ logoUrl: null, _count: { paymentLinks: 1 }, name: 'Láminas Lu', onboarding: { what: 'laminas de arte' }, locations: [], contactPhone: null, promoCodes: [], links: [], paymentLinks: [{ name: 'Café', imageUrls: ['/v1/uploads/a.jpg', '/v1/uploads/b.jpg', '/v1/uploads/c.jpg'] }] }); };
 const first = (instruction: string, assetUrls: string[] = []) => chat.send('m1', 's1', { revision: 0, instruction, assetUrls, setupAction: 'generate', requestId: uuid() }) as Promise<any>;
 const reply = (instruction: string, assetUrls: string[] = []) => chat.send('m1', 's1', { revision: 0, instruction, assetUrls, requestId: uuid() }) as Promise<any>;
 
@@ -45,6 +47,7 @@ it('asks first: one question with chips and «Créala ya», nothing built yet', 
 
 it('a chip answer (no setupAction) goes back to the questions, then builds with every answer', async () => {
   intakeStep.mockResolvedValueOnce(question('look', '¿Cómo quieres que se vea tu tienda?')).mockResolvedValueOnce(ready);
+  settle();
   await first('hola quiero mi tienda para vender laminas');
   const out = await reply('Colorida');
   expect(intakeStep.mock.calls[1][1].answers).toEqual([{ topic: 'look', question: '¿Cómo quieres que se vea tu tienda?', answer: 'Colorida' }]);
@@ -69,10 +72,19 @@ it('«créala ya» as the very first message builds at once (review focus 2)', a
 
 it('a reply of photos only counts as an answer and the photos join the build (review focus 1)', async () => {
   intakeStep.mockResolvedValueOnce(question('photos', '¿Me mandas fotos de Café?', ['Te las mando'])).mockResolvedValueOnce(ready);
+  prisma.deliveryZone.count.mockResolvedValue(1);
   await first('quiero vender laminas');
   await reply('', ['/v1/uploads/11111111-1111-1111-1111-111111111111.jpg']);
   expect(intakeStep.mock.calls[1][1].answers.at(-1)).toMatchObject({ topic: 'photos', answer: '(fotos)' });
   expect(applyMaster).toHaveBeenCalledTimes(1);
+});
+
+it('a model «ready» on a store with no delivery, pickup, code or WhatsApp still asks how orders reach the buyer (live: Libros de Ana)', async () => {
+  intakeStep.mockResolvedValueOnce(ready);
+  const out = await first('vendo novelas y cuadernos, algo bonito y sencillo');
+  expect(applyMaster).not.toHaveBeenCalled();
+  expect(out.assistantMessage.metadata.intake).toMatchObject({ asked: ['musts'] });
+  expect(out.assistantMessage.content).toContain('¿Cómo le llegan los pedidos a tus clientes?');
 });
 
 it('stops at four questions', async () => {

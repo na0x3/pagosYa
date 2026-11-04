@@ -3,6 +3,8 @@ import { BUILD_NOW, INTAKE_SCHEMA, intakeFacts, intakeInstruction, intakeMessage
 const state = (extra: Partial<IntakeState> = {}): IntakeState => ({ pending: true, words: 'hola quiero mi tienda para vender laminas', photos: [], asked: [], answers: [], ...extra });
 const facts = intakeFacts({ name: 'Láminas Lu', onboarding: { what: 'laminas de arte', story: '' }, products: [{ name: 'Café', imageUrls: ['/v1/uploads/a.jpg'] }, { name: 'Té', imageUrls: [] }],
   zones: 0, locations: [], codes: [], links: [], contactPhone: null });
+// A store with delivery set and a photo on every product: nothing for the facts to ask.
+const settled = intakeFacts({ name: 'Láminas Lu', onboarding: {}, products: [{ name: 'Café', imageUrls: ['1', '2', '3'] }], zones: 1, locations: [], codes: [], links: [], contactPhone: null });
 
 describe('intake facts', () => {
   it('summarises the catalogue and the settings the questions depend on', () => {
@@ -22,9 +24,9 @@ describe('normalizeIntake', () => {
   });
 
   it('is ready when the model says so, at the cap, or on a topic already asked', () => {
-    expect(normalizeIntake({ ...ask, ready: true }, state(), facts)?.ready).toBe(true);
+    expect(normalizeIntake({ ...ask, ready: true }, state(), settled)?.ready).toBe(true);
     expect(normalizeIntake(ask, state({ asked: ['what', 'look', 'musts', 'photos'] }), facts)?.ready).toBe(true);
-    expect(normalizeIntake(ask, state({ asked: ['look'] }), facts)?.ready).toBe(true);
+    expect(normalizeIntake(ask, state({ asked: ['look'] }), settled)?.ready).toBe(true);
   });
 
   it('re-asks the pending topic only with a one-line reply to a merchant question', () => {
@@ -32,14 +34,25 @@ describe('normalizeIntake', () => {
     expect(normalizeIntake({ ...ask, reply: 'Sí, puedes cambiarlo después.' }, pending, facts)).toMatchObject({ ready: false, topic: 'look', reply: 'Sí, puedes cambiarlo después.' });
   });
 
+  // Live check 2026-11-04 (Libros de Ana: «vendo novelas y cuadernos, algo bonito y sencillo» → no question, though the store had no
+  // delivery, pickup, code or WhatsApp): what the facts can check is asked even when the model calls the brief ready.
+  it('asks the must-haves when the store has none of them, and photos when products have none, even on «ready»', () => {
+    const none = intakeFacts({ name: 'Libros', onboarding: {}, products: [{ name: 'Ghosts', imageUrls: ['1', '2', '3'] }], zones: 0, locations: [], codes: [], links: [], contactPhone: null });
+    expect(normalizeIntake({ ...ask, ready: true }, state(), none)).toMatchObject({ ready: false, topic: 'musts', options: ['Envíos', 'Recojo en mi local', 'Los dos', 'Por WhatsApp', BUILD_NOW] });
+    expect(normalizeIntake({ ...ask, ready: true }, state({ asked: ['musts'] }), facts)).toMatchObject({ ready: false, topic: 'photos', question: '¿Me mandas fotos de Té?' });
+    expect(normalizeIntake({ ...ask, ready: true }, state({ asked: ['musts', 'photos'] }), facts)?.ready).toBe(true);
+    const some = intakeFacts({ name: 'Miga', onboarding: {}, products: [{ name: 'Roll', imageUrls: ['1', '2', '3'] }], zones: 1, locations: [], codes: [], links: [], contactPhone: null });
+    expect(normalizeIntake({ ...ask, ready: true }, state(), some)?.ready).toBe(true);
+  });
+
   it('never asks for photos when every product has one and there are three or more', () => {
-    const covered = intakeFacts({ name: 'X', onboarding: {}, products: [{ name: 'A', imageUrls: ['1', '2'] }, { name: 'B', imageUrls: ['3'] }], zones: 0, locations: [], codes: [], links: [], contactPhone: null });
+    const covered = intakeFacts({ name: 'X', onboarding: {}, products: [{ name: 'A', imageUrls: ['1', '2'] }, { name: 'B', imageUrls: ['3'] }], zones: 1, locations: [], codes: [], links: [], contactPhone: null });
     expect(normalizeIntake({ ...ask, topic: 'photos' }, state(), covered)?.ready).toBe(true);
   });
 
   it('an unknown topic, an empty question or an unreadable answer is ready (or null) (review focus 5)', () => {
-    expect(normalizeIntake({ ...ask, topic: 'budget' }, state(), facts)?.ready).toBe(true);
-    expect(normalizeIntake({ ...ask, question: '  ' }, state(), facts)?.ready).toBe(true);
+    expect(normalizeIntake({ ...ask, topic: 'budget' }, state(), settled)?.ready).toBe(true);
+    expect(normalizeIntake({ ...ask, question: '  ' }, state(), settled)?.ready).toBe(true);
     expect(normalizeIntake(null, state(), facts)).toBeNull();
     expect(INTAKE_SCHEMA.properties.topic.enum).toEqual(['what', 'look', 'musts', 'photos', 'none']);
   });
