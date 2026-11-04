@@ -52,6 +52,15 @@ describe("Independent source artifacts", () => {
     expect(() => layout('source-next-layout.json')).not.toThrow();
     expect(() => layout('data/layout.json')).toThrow('Invalid source file content');
   });
+  // Palo Alto 2026-11-03: Tailwind's styles.css (compiled from styles/globals.css) came out at 181 167 characters and the template
+  // could not be built at all. Compiled output gets the compiled budget; the stylesheet a merchant or YAPI writes keeps 180 kB.
+  it('gives the compiled stylesheet of a Next store the compiled budget, never an authored one', () => {
+    const big = 'a{color:red}'.padEnd(200_000, ' ');
+    const withSheet = (files: { path: string; content: string }[]) => sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files.filter(f => !files.some(x => x.path === f.path)), ...files] });
+    expect(() => withSheet([{ path: 'styles/globals.css', content: 'a{color:red}' }, { path: 'styles.css', content: big }])).not.toThrow();
+    expect(() => withSheet([{ path: 'styles.css', content: big }])).toThrow('Invalid source file content');
+    expect(() => withSheet([{ path: 'styles/globals.css', content: big }])).toThrow('Invalid source file content');
+  });
   it('gives the platform commerce runtime its own budget while authored files keep theirs', () => {
     const runtime = { path: 'commerce.js', content: '/* runtime */'.padEnd(200_000, ' ') };
     expect(sourceProjectSnapshot({ ...sourceFixture(), files: [...sourceFixture().files, runtime] }).files.some(f => f.path === 'commerce.js')).toBe(true);
