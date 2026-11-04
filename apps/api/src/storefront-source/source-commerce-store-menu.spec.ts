@@ -17,13 +17,17 @@ const HOST = '<header class="host"><div data-pagosya-store-menu="toggle"></div><
 
 const windows: any[] = [];
 const errors: Error[] = [];
-afterEach(() => { windows.splice(0).forEach(w => w.close()); expect(errors.splice(0)).toEqual([]); });
+// A closed window's kit watchers (Único colour cards, lively: MutationObservers kept 15 s) still fire once its document is gone and
+// throw there; only what a window throws while open belongs to its test (2026-11-04: every later test failed on the one before's).
+const closed = new WeakSet<object>();
+afterEach(() => { windows.splice(0).forEach(w => { closed.add(w); w.close(); }); expect(errors.splice(0)).toEqual([]); });
 
 async function open({ menu, data = DATA, host = HOST, extra = {} }: { menu?: unknown; data?: any; host?: string; extra?: Record<string, unknown> } = {}) {
   const virtualConsole = new VirtualConsole();
-  virtualConsole.on('jsdomError', (error: Error) => { if (!/Could not parse CSS stylesheet|getComputedStyle\(elt, pseudoElt\)/.test(error.message)) errors.push(error); });
+  let opened: object | null = null;
+  virtualConsole.on('jsdomError', (error: Error) => { if (!(opened && closed.has(opened)) && !/Could not parse CSS stylesheet|getComputedStyle\(elt, pseudoElt\)/.test(error.message)) errors.push(error); });
   const dom = new JSDOM(`<html><head></head><body>${host}<section data-pagosya-catalog></section><section data-pagosya-cart></section><p data-pagosya-status></p></body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', virtualConsole });
-  const w = dom.window; windows.push(w);
+  const w = dom.window; windows.push(w); opened = w;
   w.HTMLElement.prototype.scrollIntoView = () => {};
   w.matchMedia = (query: string) => ({ matches: /min-width/.test(query), addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
   w.PAGOSYA_PREVIEW = true;
@@ -72,6 +76,28 @@ describe('store menu', () => {
   });
 
   // Review 2026-10-30: «Ver todo» (the whole collection) and the first category point at the same photo; each photo shows once.
+  // Spec 2026-11-04 §3 (Canasta Viva: «Descubre» was four words over an empty panel).
+  it('a group with no photo of its own shows the story photo, then two products with a badge first', async () => {
+    const data = { ...DATA, aboutText: 'Horneamos cada mañana.', aboutImageUrl: '/v1/uploads/historia.jpg',
+      items: [item('a', 'C1'), { ...item('b', 'c2'), badge: 'Más vendido' }, item('c', 'c3')] };
+    const { all } = await open({ data, menu: { style: 'dropdowns', groups: [{ label: 'Descubre', links: [{ to: 'page:about' }, { to: 'page:contact' }] }] } });
+    expect(all('.pym-tiles img').map(img => img.getAttribute('src'))).toEqual(['https://api.test/v1/uploads/historia.jpg', 'https://api.test/b.jpg', 'https://api.test/a.jpg']);
+    const tiles = all('.pym-tiles a');
+    expect(tiles[0].textContent).toContain('Nuestra historia');
+    expect(tiles[1].getAttribute('href')).toContain('id=b');
+    expect(tiles[1].querySelector('.pym-price').textContent).toMatch(/Bs/);
+  });
+
+  it('without the store\'s own photo there is no story tile; without any photo, links only', async () => {
+    const data = { ...DATA, aboutText: 'Horneamos cada mañana.' };
+    const first = await open({ data, menu: { style: 'dropdowns', groups: [{ label: 'Descubre', links: [{ to: 'page:about' }] }] } });
+    expect(first.all('.pym-tiles img').map(img => img.getAttribute('src'))).toEqual(['https://api.test/a.jpg', 'https://api.test/b.jpg']);
+    const bare = { ...data, items: DATA.items.map(entry => ({ ...entry, imageUrls: [] })) };
+    const second = await open({ data: bare, menu: { style: 'dropdowns', groups: [{ label: 'Descubre', links: [{ to: 'page:about' }] }] } });
+    expect(second.all('.pym-tiles')).toHaveLength(0);
+    expect(second.all('.pym-links a').map(a => a.textContent)).toEqual(['Nuestra historia']);
+  });
+
   it('a dropdown fallback never shows the same photo twice', async () => {
     const data = { ...DATA, collections: [{ id: 'k1', slug: 'mujer', name: 'Mujer', productIds: ['a', 'b'] }] };
     const { all } = await open({ data, menu: { style: 'dropdowns', groups: [{ label: 'Mujer', links: [{ label: 'Vestidos', to: 'collection:mujer/category:C1' }, { label: 'Sastrería', to: 'collection:mujer/category:c2' }, { label: 'Ver todo', to: 'collection:mujer' }, { label: 'Vestidos otra vez', to: 'category:C1' }] }] } });
@@ -84,7 +110,8 @@ describe('store menu', () => {
     const { all } = await open({ menu: { style: 'panel', groups: [{ label: 'Mujer', links: [{ label: 'Vestidos', to: 'category:C1' }], tiles: [{ title: 'Vestidos', image: photo, to: 'category:C1' }, { title: 'Otro', image: 'javascript:alert(1)', to: 'category:C1' }] }] }, data });
     expect(all('.pym-tiles img').map(img => img.getAttribute('src'))).toEqual([photo]);
     const { all: fallback } = await open({ menu: { style: 'panel' }, data });
-    expect(fallback('.pym-tiles img')).toHaveLength(3);
+    // «Tienda» has one tile per category; «Descubre» two products (spec 2026-11-04 §3).
+    expect(fallback('.pym-group').map(group => group.querySelectorAll('.pym-tiles img').length)).toEqual([3, 2]);
   });
 
   it('draws the merchant groups, dropping targets the live store no longer has', async () => {

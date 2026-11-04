@@ -6528,6 +6528,7 @@
     .pym-tiles ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0;padding:0;list-style:none}
     .pym-tiles a{display:grid;gap:8px;color:inherit;font-size:14px;text-decoration:none}
     .pym-tiles img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover}
+    .pym-price{font-size:13px;opacity:.75}
     .pym-footer{display:flex;align-items:center;justify-content:center;min-height:52px;margin-top:24px;background:var(--store-foreground,#111);color:var(--store-background,#fff);font-size:13px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none}
     .pym-extras{display:flex;flex-wrap:wrap;gap:4px 24px;margin-top:20px;padding-top:16px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
     .pym-extras a{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-size:14px}
@@ -6627,6 +6628,25 @@
     const item = products().find(product => (!ids || ids.has(product.id)) && (!match[2] || product.categoryId === match[2]) && storeMenuPhoto((product.imageUrls || [])[0]));
     return item ? storeMenuPhoto(item.imageUrls[0]) : '';
   }
+  // A store upload path ("/v1/uploads/…") lives on the API, not on the store's own origin.
+  function storeMenuStorePhoto(url) {
+    if (typeof url !== 'string' || !url.trim()) return '';
+    try { return storeMenuPhoto(/^\/v1\//.test(url.trim()) && config.apiBaseUrl ? new URL(url.trim(), config.apiBaseUrl).href : url.trim()); } catch { return ''; }
+  }
+  /** Spec 2026-11-04 §3 (Canasta Viva: «Descubre» was four words over an empty panel): a group with no photo of its own shows the
+   *  store's own photo on «Nuestra historia» (never a product photo) and up to two products, badged ones first. */
+  function storeMenuDiscoverTiles(group) {
+    const tiles = [];
+    const about = (Array.isArray(group.links) ? group.links : []).some(link => link && link.to === 'page:about') ? storeMenuTarget('page:about') : null;
+    const story = about ? storeMenuStorePhoto(store.aboutImageUrl) || storeMenuStorePhoto(store.bannerUrl) : '';
+    if (about && story) tiles.push({ href: about.href, title: about.label, image: story });
+    const shown = products().filter(item => storeMenuPhoto((item.imageUrls || [])[0]));
+    for (const item of [...shown.filter(entry => entry.badge), ...shown.filter(entry => !entry.badge)].slice(0, 2)) {
+      tiles.push({ href: pageHref(config.productPage || 'product.html', '?id=' + encodeURIComponent(item.id)), title: String(item.name || '').slice(0, 28),
+        image: storeMenuPhoto(item.imageUrls[0]), price: money(price(item), item.currency || 'BOB') });
+    }
+    return tiles;
+  }
   /** Groups with every link, tile and footer resolved; a repeated label is shown once, and a group with no link left is dropped. */
   function resolveStoreMenuGroups(groups) {
     return (Array.isArray(groups) ? groups : []).slice(0, 4).map(group => {
@@ -6645,8 +6665,9 @@
         return target && image ? { href: target.href, title: String(link.label || target.label).slice(0, 28), image } : null;
       // Each photo and each page once (review 2026-10-30: «Ver todo» and the first category share a photo).
       }).filter((tile, index, list) => tile && list.findIndex(other => other && (other.image === tile.image || other.href === tile.href)) === index).slice(0, 3);
+      const shownTiles = tiles.length ? tiles : storeMenuDiscoverTiles(group);
       const footerTarget = group.footer ? storeMenuTarget(group.footer.to) : null;
-      return { label: String(group.label || '').slice(0, 28), links, tilesTitle: tiles.length ? String(group.tilesTitle || '') : '', tiles, footer: footerTarget ? { href: footerTarget.href, label: String(group.footer.label || footerTarget.label).slice(0, 28) } : null };
+      return { label: String(group.label || '').slice(0, 28), links, tilesTitle: shownTiles.length ? String(group.tilesTitle || '') : '', tiles: shownTiles, footer: footerTarget ? { href: footerTarget.href, label: String(group.footer.label || footerTarget.label).slice(0, 28) } : null };
     }).filter(group => group.label && group.links.length);
   }
   let storeMenuCount = 0;
@@ -6674,7 +6695,7 @@
     panel.innerHTML = `<div class="pym-tabs" role="tablist" aria-label="Menú"${groups.length === 1 ? ' data-single' : ''}>${groups.map((group, index) => `<button type="button" class="pym-tab" role="tab" id="${id}-tab-${index}" aria-controls="${id}-group-${index}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${escape(group.label)}</button>`).join('')}</div>`
       + groups.map((group, index) => `<div class="pym-group" role="tabpanel" id="${id}-group-${index}" aria-labelledby="${id}-tab-${index}"${index ? ' hidden' : ''}>`
         + `<ul class="pym-links">${group.links.map(link => `<li><a href="${escape(link.href)}">${escape(link.label)}</a></li>`).join('')}</ul>`
-        + (group.tiles.length ? `<div class="pym-tiles">${group.tilesTitle ? `<p class="pym-tiles-title">${escape(group.tilesTitle)}</p>` : ''}<ul>${group.tiles.map(tile => `<li><a href="${escape(tile.href)}"><img src="${escape(tile.image)}" alt="" loading="lazy"><span>${escape(tile.title)}</span></a></li>`).join('')}</ul></div>` : '')
+        + (group.tiles.length ? `<div class="pym-tiles">${group.tilesTitle ? `<p class="pym-tiles-title">${escape(group.tilesTitle)}</p>` : ''}<ul>${group.tiles.map(tile => `<li><a href="${escape(tile.href)}"><img src="${escape(tile.image)}" alt="" loading="lazy"><span>${escape(tile.title)}</span>${tile.price ? `<small class="pym-price">${escape(tile.price)}</small>` : ''}</a></li>`).join('')}</ul></div>` : '')
         + (group.footer ? `<a class="pym-footer" href="${escape(group.footer.href)}">${escape(group.footer.label)}</a>` : '')
         + '</div>').join('')
       + (extras ? `<div class="pym-extras">${extras}</div>` : '');
