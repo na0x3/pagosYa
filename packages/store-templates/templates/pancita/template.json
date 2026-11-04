@@ -144,8 +144,7 @@
         "title": "Una comunidad que te entiende"
       },
       {
-        "type": "story-split",
-        "look": "circle",
+        "type": "story-sunburst",
         "band": "accent",
         "title": "Pide de nuevo *sin pensarlo*",
         "text": "Tus favoritos cuando los necesitas, para que comer bien sea fácil y tranquilo.",

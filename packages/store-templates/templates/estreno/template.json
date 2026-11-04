@@ -130,20 +130,23 @@
         "link": "products"
       },
       {
-        "type": "promo-pair",
-        "look": "uneven",
+        "type": "promo-lines",
+        "title": "Dos maneras de vestir",
+        "cta": "Ver más",
         "items": [
           {
-            "title": "Clásicos *de siempre*",
+            "title": "Clásicos de siempre",
             "text": "Piezas que no pasan.",
             "photo": "slot:ba-p1",
-            "link": "products"
+            "link": "products",
+            "value": "Clásico"
           },
           {
             "title": "La calle",
             "text": "Hecho para moverse.",
             "photo": "slot:ur-look1",
-            "link": "products"
+            "link": "products",
+            "value": "Nuevo"
           }
         ]
       },

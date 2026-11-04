@@ -128,23 +128,27 @@
         "product": "demo-1"
       },
       {
-        "type": "icon-columns",
+        "type": "perks-rows",
+        "title": "Lo que te llevas",
+        "photo": "slot:pi-tonos",
         "items": [
           {
             "title": "Libre de crueldad",
-            "icon": "heart"
-          },
-          {
-            "title": "Con ingredientes amables",
-            "icon": "leaf"
-          },
-          {
-            "title": "Probado en piel",
-            "icon": "sparkles"
+            "text": "Nada se prueba en animales.",
+            "value": "Siempre",
+            "link": "products"
           },
           {
             "title": "Para piel sensible",
-            "icon": "check"
+            "text": "Fórmulas suaves, sin perfume fuerte.",
+            "value": "Suave",
+            "link": "products"
+          },
+          {
+            "title": "Asesoría de piel",
+            "text": "Te ayudamos a elegir tu rutina.",
+            "value": "Escríbenos",
+            "link": "whatsapp"
           }
         ]
       },

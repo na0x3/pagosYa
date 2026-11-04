@@ -119,20 +119,23 @@
         "photo": "slot:pi-juntas"
       },
       {
-        "type": "promo-pair",
-        "look": "uneven",
+        "type": "promo-lines",
+        "title": "Elige tu rutina",
+        "cta": "Ver más",
         "items": [
           {
             "title": "Rutina de noche",
             "text": "Para despertar luminosa.",
             "photo": "slot:gl-story",
-            "link": "products"
+            "link": "products",
+            "value": "Noche"
           },
           {
             "title": "Texturas suaves",
             "text": "Que se sienten bien.",
             "photo": "slot:pe-textura",
-            "link": "products"
+            "link": "products",
+            "value": "Suave"
           }
         ]
       },

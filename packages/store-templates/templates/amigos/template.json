@@ -116,16 +116,15 @@
     },
     "layout": [
       {
-        "type": "cover-stage",
-        "look": "plain",
+        "type": "cover-duo",
         "title": "Diseño independiente, hecho con cariño",
+        "text": "Ropa de autor para todos los días.",
+        "cta": "Lo nuevo",
+        "link": "products",
+        "cta2": "Ver todo",
+        "link2": "products",
         "photo": "slot:ur-hero",
-        "items": [
-          {
-            "title": "2",
-            "photo": "slot:ba-calle"
-          }
-        ]
+        "photo2": "slot:ba-calle"
       },
       {
         "type": "strip-marquee",

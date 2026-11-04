@@ -134,10 +134,12 @@
         ]
       },
       {
-        "type": "story-split",
-        "look": "right",
+        "type": "story-sunburst",
+        "look": "rings",
         "title": "«Mi taza de cada tarde. Calma de verdad.»",
         "text": "Lo que más nos dicen después de probarlo.",
+        "cta": "Ver los tés",
+        "link": "products",
         "photo": "slot:in-ceremonia"
       },
       {

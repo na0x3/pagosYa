@@ -13,7 +13,9 @@ export type LibraryNeeds = { photos?: number; items?: [number, number]; products
    *  photo, outlets and words the merchant gave (press), a text the section cannot do without. */
   date?: boolean; social?: boolean; pins?: boolean; press?: boolean; text?: boolean;
   /** Points on a close-up photo, each with a note (detail-hotspots, lively one-product stores 2026-11-03). */
-  spots?: boolean };
+  spots?: boolean;
+  /** before-after: the merchant's own words speak of a before and an after (new sections 2026-11-04). */
+  pair?: boolean };
 export type LibrarySection = { id: string; role: LibraryRole; use: string; needs: LibraryNeeds; looks?: string[];
   /** Only inside a template's fixed home (34 templates): never offered when YAPI composes a home freely. */
   templateOnly?: boolean;
@@ -90,8 +92,16 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'categories-mosaic', role: 'products', use: 'Mosaico de 3 a 6 fotos con su nombre al centro y enlace (items con photo).', needs: { items: [3, 6], itemPhotos: 3 }, templateOnly: true },
   { id: 'icon-columns', role: 'benefits', use: '2 a 4 columnas con icono, título y una frase (items) de cualidades reales de la tienda.', needs: { items: [2, 4] }, templateOnly: true },
   { id: 'press-quotes', role: 'proof', use: 'Lo que dijo la prensa: items.title = el medio, items.text = su frase. Solo medios y frases que el comercio escribió.', needs: { items: [1, 5], press: true }, templateOnly: true },
+  // New sections copied from real stores (spec docs/superpowers/specs/2026-11-04-new-sections-from-real-stores.md).
+  { id: 'cover-duo', role: 'cover', use: 'Portada de dos fotos lado a lado hasta los bordes (photo y photo2), el titular encima de ambas y un botón blanco al pie de cada foto (cta/link en la primera, cta2/link2 en la segunda: «Mujer» / «Hombre», dos categorías o dos líneas). Para moda, hogar o dos públicos.', needs: { photos: 2 } },
+  { id: 'promo-lines', role: 'promo', use: 'Dos tarjetas grandes de foto redondeadas (items = 2 con photo, title, text y link), cada una con una etiqueta redonda sobre la foto (items.value, 1 a 3 palabras: «Nuevo», «Sin azúcar», solo lo que el comercio dijo) y un botón debajo (cta). Dos líneas, dos sabores, dos colecciones.', needs: { items: [2, 2], itemPhotos: 2 } },
+  { id: 'story-sunburst', role: 'story', use: 'Banda de color suave: titular, texto y botón a un lado; al otro la foto en un círculo con rayos de color que giran despacio (marcas tranquilas: anillos finos). Para lo que hace especial al producto: ingredientes, origen, cómo se hace. look rings = anillos finos en lugar de rayos (marcas tranquilas); left = la foto a la izquierda.', needs: { photos: 1 }, looks: ['rings', 'left'] },
+  { id: 'perks-rows', role: 'benefits', use: 'Una foto enmarcada sobre un panel a rayas y, al lado, 2 a 4 filas con lo que gana el cliente al comprar aquí (items: title = el beneficio, text = una línea, value = una etiqueta corta como «Gratis» o «10% menos», link): suscripción, envío, recojo, un código. Solo beneficios que la tienda tiene de verdad.', needs: { photos: 1, items: [2, 4] } },
+  { id: 'before-after', role: 'proof', use: 'Antes y después: dos fotos en un mismo marco (photo = antes, photo2 = después) que el cliente compara arrastrando una barra. Solo si el comercio habla de un antes y un después (limpieza, restauración, belleza, peluquería) y tiene esas dos fotos.', needs: { photos: 2, pair: true } },
 ];
 const BY_ID = new Map(LIBRARY_CATALOG.map(section => [section.id, section]));
+/** Sections whose items carry a short tag in `value` (spec docs/superpowers/specs/2026-11-04-new-sections-from-real-stores.md). */
+const TAGGED = new Set(['promo-lines', 'perks-rows']);
 /** The product card, from the same themes (owner 2026-10-31); the main grid carries it and the Shell shows it on every page. */
 // Template frame variety (2026-11-03): ten more cards copied from real stores (esencial globals.css, «v:lbcard» blocks).
 export const LIBRARY_CARDS = ['classic', 'ribbon', 'soft', 'framed', 'arch', 'overlay', 'line', 'portrait', 'swatch', 'badge', 'polaroid', 'round-add', 'list', 'scallop', 'caps'] as const;
@@ -174,7 +184,8 @@ es un cierre (role closing).
 Reglas de contenido:
 - Usa cada foto UNA sola vez en toda la página (photo, photo2 e items.photo). -1 = sin foto. Una sección que pide foto la necesita.
   Las fotos de producto sobre fondo liso van en portadas enmarcadas (cover-split, cover-half, cover-centered), story-split, benefits-*,
-  steps-howto; las fotos de ambiente amplias en cover-full, story-overlay, promo-banner, closing-photo. Mira las fotos.
+  steps-howto; las fotos de ambiente amplias en cover-full, cover-duo (dos de personas o lugares, verticales), story-overlay, promo-banner,
+  closing-photo. Mira las fotos.
 - Productos: nombres EXACTOS de la lista (products), y product = el id exacto. Categorías: nombres exactos (link category:Nombre).
 - notes son datos reales que el comercio ya escribió (envíos, precios de envío, políticas, sus notas): úsalos para responder
   preguntas frecuentes y escribir pasos con datos concretos; nunca respondas «consulta por WhatsApp» si notes tiene la respuesta.
@@ -193,7 +204,8 @@ Reglas de contenido:
   classic = foto, nombre y precio, sobria (moda, lujo, artesanal); ribbon = una cinta con la oferta corre sobre la foto y el precio
   anterior tachado (tiendas con ofertas, moda rápida, belleza); soft = tarjeta de color suave con botón «Agregar» (snacks, bebidas,
   dulces, marcas alegres); framed = foto enmarcada, nombre centrado y botón «Agregar al carrito» (cuidado personal, regalos, hogar).
-- items.icon: uno de la lista; items.value solo en compare-table (yes/no) y stats-rings (el número). items.x e items.y solo en
+- items.icon: uno de la lista; items.value solo en compare-table (yes/no), stats-rings (el número) y las etiquetas de promo-lines y
+  perks-rows (1 a 3 palabras; ningún número que el comercio no escribió). items.x e items.y solo en
   los puntos sobre una foto (shop-look, cover-shoppable), en %; -1 en todo lo demás.
 - Si el comercio pidió algo concreto para la portada (una sección, un tema, una oferta), cúmplelo con estas secciones.`;
 
@@ -277,6 +289,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (needs.services && facts.services.length < 2) continue;
     if (needs.categories && facts.categories.length < needs.categories) continue;
     if (needs.social && !facts.social) continue;
+    if (needs.pair && !(/\bantes\b/.test(merchantWords) && /\bdespues\b/.test(merchantWords))) continue;
     if (!fixedMode && blocks.some(block => block.type === section.id)) continue;
     // With the product on top and nothing else to sell, a row of products would only repeat it (it comes back once there are two).
     if (['products-slider', 'products-grid', 'products-tabs', 'products-cards'].includes(section.id) && facts.products.length < 2 && sequence.some(other => other.type === 'product-hero')) continue;
@@ -301,7 +314,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     const first = link(raw.link), second = link(raw.link2);
     if (block.cta) block.link = first ?? 'products'; else delete block.cta;
     // The split hero's second button always scrolls to its colour cards (the kit hides it when they do not draw).
-    if (block.cta2 && second) block.link2 = second; else if (section.id !== 'hero-split') delete block.cta2;
+    if (block.cta2 && second) block.link2 = second; else if (block.cta2 && section.id === 'cover-duo') block.link2 = 'products'; else if (section.id !== 'hero-split') delete block.cta2;
     // Photos: the section's own, then its items'; a section that needs more photos than it got is dropped (its photos freed).
     const before = new Set(used);
     here = blocks.length;
@@ -326,6 +339,8 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       const text = clip(item.text, TEXT_CAPS.itemText); if (text) out.text = text;
       if (item.icon && (LIBRARY_ICON_NAMES as readonly string[]).includes(item.icon)) out.icon = item.icon;
       if (section.id === 'compare-table') out.value = item.value === 'yes' ? 'yes' : 'no';
+      // A sticker (promo-lines) or a pill (perks-rows): a few words, and every number in it one the merchant wrote.
+      if (TAGGED.has(section.id)) { const tag = clip(item.value, 22); if (tag && (tag.match(/\d+/g) ?? []).every(number => new RegExp(`(?<!\\d|\\d[.,])${number}(?!\\d|[.,]\\d)`).test(backedWords))) out.value = tag; }
       // A percentage ring shows only a number the merchant wrote («94%»).
       if (section.id === 'stats-rings') {
         // Rings: a percentage the merchant wrote («94%»). Boxes (Maximize): any figure the merchant wrote («500+», «4.8», «30 días»).
@@ -334,7 +349,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
         else if (n && new RegExp(`\\b${n}\\s*(%|por ciento)`).test(merchantWords)) out.value = n;
       }
       if (itemPhoto) { const photo = photoOf(item.photo, needs.categories ? String(item.title ?? '') : undefined); if (photo) out.photo = photo; }
-      if (itemPhoto || section.id === 'promo-trio') { const target = link(item.link); if (target) out.link = target; }
+      if (itemPhoto || section.id === 'promo-trio' || section.id === 'perks-rows') { const target = link(item.link); if (target) out.link = target; }
       if ((needs.pins || needs.spots) && Number(item.x) >= 0 && Number(item.y) >= 0) { out.x = Math.round(Math.min(94, Math.max(6, Number(item.x)))); out.y = Math.round(Math.min(94, Math.max(6, Number(item.y)))); }
       return out;
     }).filter(item => item.title);
@@ -575,6 +590,7 @@ export function librarySectionBlocker(type: string, facts: LibraryFacts): string
   if (needs.categories && facts.categories.length < needs.categories) return `necesita al menos ${needs.categories} categorías con productos`;
   if (needs.services && facts.services.length < 2) return 'aún no tienes envío ni recojo configurados';
   if (needs.mood === 'bold' && facts.tone !== 'bold') return 'va solo con marcas atrevidas';
+  if (needs.pair && !/\bantes\b/.test(fold(`${facts.what} ${facts.story} ${facts.request}`))) return 'necesito que me cuentes qué cambia antes y después, y las dos fotos';
   if (needs.products && facts.products.length < needs.products[0]) return `necesita al menos ${needs.products[0]} productos`;
   if (needs.product && !facts.products.length) return 'aún no tienes productos';
   if ((needs.photos ?? 0) + (needs.itemPhotos ?? 0) > facts.photos.length) return 'no me alcanzan las fotos de tu tienda';

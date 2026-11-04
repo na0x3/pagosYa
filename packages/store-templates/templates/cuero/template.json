@@ -104,20 +104,23 @@
         "photo": "slot:at-detalle"
       },
       {
-        "type": "promo-pair",
-        "look": "uneven",
+        "type": "promo-lines",
+        "title": "Dos líneas, un oficio",
+        "cta": "Ver más",
         "items": [
           {
             "title": "Hecho a mano",
             "text": "Puntada por puntada.",
             "photo": "slot:at-taller",
-            "link": "products"
+            "link": "products",
+            "value": "A mano"
           },
           {
             "title": "Para llevar",
             "text": "Todo el día, todos los días.",
             "photo": "slot:at-p1",
-            "link": "products"
+            "link": "products",
+            "value": "Diario"
           }
         ]
       },

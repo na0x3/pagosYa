@@ -1383,6 +1383,104 @@ function CheckerRows({ block, index }: { block: LibraryBlock; index: number }) {
   </Band>;
 }
 
+/* ------------------------------------------- new sections from real stores (spec 2026-11-04-new-sections-from-real-stores) */
+
+/** Kotn's opening: two photos to the edges, the headline across both, a white button at the foot of each. */
+function CoverDuo({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.photo || !block.photo2) return null;
+  const halves = [{ src: block.photo, label: block.cta, link: block.link }, { src: block.photo2, label: block.cta2, link: block.link2 }];
+  return <Bleed block={block} index={index} id="inicio" className="lb-cover lb-cover--dark">
+    <div className="lb-duo">
+      {halves.map((half, at) => <figure key={at} className="lb-duo__half">
+        <Photo src={half.src} eager />
+        {half.label ? <Button label={half.label} link={half.link} tone="light" /> : null}
+      </figure>)}
+      <div className="lb-duo__words">
+        <Head block={{ ...block, text: undefined }} index={index} level={1} align="center" />
+        {block.text ? <p className="lb-cover__sub">{block.text}</p> : null}
+      </div>
+    </div>
+  </Bleed>;
+}
+
+/** Olipop «Shop by fiber line»: two big rounded photo cards, a round sticker on each photo, a title, a line and a button. */
+function PromoLines({ block, index }: { block: LibraryBlock; index: number }) {
+  const lines = (block.items ?? []).filter(item => item.photo).slice(0, 2);
+  if (lines.length < 2) return null;
+  return <Band block={block} index={index}>
+    <Head block={block} index={index} align="center" />
+    <ul className="lb-lines">{lines.map((line, at) => <li key={at}><Reveal delay={at * 100}>
+      <a className="lb-lines__photo" href={href(line.link)} aria-label={line.title}>
+        <Photo src={line.photo} />
+        {line.value ? <span className="lb-lines__sticker" data-n={at}><span>{line.value}</span></span> : null}
+      </a>
+      <h3 className="lb-lines__title">{line.title}</h3>
+      {line.text ? <p className="lb-lines__text">{line.text}</p> : null}
+      <Button label={block.cta || 'Ver más'} link={line.link} />
+    </Reveal></li>)}</ul>
+  </Band>;
+}
+
+/** Olipop «Made with real ingredients»: words on a soft band, the photo in a circle ringed by slowly turning rays (look rings: thin
+ *  rings, for calm stores). */
+function StorySunburst({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.photo) return null;
+  return <Band block={{ ...block, band: block.band ?? 'muted' }} index={index}>
+    <div className="lb-sun" data-side={block.look === 'left' ? 'left' : 'right'}>
+      <Reveal className="lb-sun__copy">
+        {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+        {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} swoosh /></h2> : null}
+        {block.text ? <p className="lb-body">{block.text}</p> : null}
+        <Actions block={block} />
+      </Reveal>
+      <Reveal className="lb-sun__media" delay={120}>
+        <span className="lb-sun__rays" aria-hidden="true" />
+        <span className="lb-sun__disc"><Photo src={block.photo} /></span>
+      </Reveal>
+    </div>
+  </Band>;
+}
+
+/** Summer Fridays «Beauty you look forward to»: a photo framed on a striped panel; beside it the store's perks as rows with a pill. */
+function PerksRows({ block, index }: { block: LibraryBlock; index: number }) {
+  const perks = (block.items ?? []).slice(0, 4);
+  if (!block.photo || perks.length < 2) return null;
+  return <Band block={block} index={index}>
+    <div className="lb-perks">
+      <Reveal className="lb-perks__media"><span className="lb-perks__frame"><Photo src={block.photo} /></span></Reveal>
+      <div className="lb-perks__copy">
+        <Head block={block} index={index} />
+        <ul className="lb-perks__list">{perks.map((perk, at) => <li key={at}><Reveal delay={at * 80}>
+          <a className="lb-perks__row" href={href(perk.link)}>
+            <span className="lb-perks__name"><strong>{perk.title}</strong>{perk.text ? <small>{perk.text}</small> : null}</span>
+            {perk.value ? <span className="lb-perks__pill">{perk.value}</span> : null}
+            <Icons.IconArrowRight />
+          </a>
+        </Reveal></li>)}</ul>
+      </div>
+    </div>
+  </Band>;
+}
+
+/** Before and after: both photos in one frame, the before clipped at a line the shopper drags (a range input, so keys work too). */
+function BeforeAfter({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.photo || !block.photo2) return null;
+  return <Band block={block} index={index}>
+    <Head block={block} index={index} align="center" />
+    <Reveal className="lb-ba">
+      <div className="lb-ba__frame" style={{ ['--lb-cut' as string]: '50%' } as CSSProperties}>
+        <Photo src={block.photo2} className="lb-ba__after" />
+        <Photo src={block.photo} className="lb-ba__before" />
+        <span className="lb-ba__label lb-ba__label--before">Antes</span>
+        <span className="lb-ba__label lb-ba__label--after">Después</span>
+        <span className="lb-ba__line" aria-hidden="true"><span className="lb-ba__knob"><Icons.IconChevronLeft /><Icons.IconChevronRight /></span></span>
+        <input className="lb-ba__range" type="range" min={0} max={100} defaultValue={50} aria-label="Comparar antes y después" data-lb-compare />
+      </div>
+    </Reveal>
+    {block.cta ? <p className="lb-more"><Button label={block.cta} link={block.link} /></p> : null}
+  </Band>;
+}
+
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
   'cover-split': CoverSplit, 'hero-split': HeroSplit, 'variant-cards': VariantCards, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
@@ -1402,6 +1500,7 @@ const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) =
   'story-collage': StoryCollage, 'newsletter-split': NewsletterSplit,
   'cover-shoppable': CoverShoppable, 'cover-video': CoverVideo, 'categories-mosaic': CategoriesMosaic, 'icon-columns': IconColumns,
   'products-slider': ProductsSlider, 'social-posts': SocialPosts, 'social-marquee': SocialMarquee, 'shop-look': ShopLook, 'press-quotes': PressQuotes,
+  'cover-duo': CoverDuo, 'promo-lines': PromoLines, 'story-sunburst': StorySunburst, 'perks-rows': PerksRows, 'before-after': BeforeAfter,
 };
 export const LIBRARY_SECTIONS = Object.keys(SECTIONS);
 
@@ -1440,11 +1539,17 @@ function LibraryScript() {
       if (el.offsetWidth > 0 && box > 0) { size = Math.min(max, size * box / el.offsetWidth * .98); el.style.fontSize = `${size}px`; }
       for (let guard = 0; el.offsetWidth > box && size > 24 && guard < 80; guard++) { size -= 2; el.style.fontSize = `${size}px`; }
     });
+    // Before and after: the range moves the cut line.
+    const compare = (event: Event) => {
+      const input = event.target as HTMLInputElement | null;
+      if (input?.matches?.('[data-lb-compare]')) input.parentElement?.style.setProperty('--lb-cut', `${input.value}%`);
+    };
     document.addEventListener('click', copy);
+    document.addEventListener('input', compare);
     window.addEventListener('resize', fit);
     fit();
     void document.fonts?.ready.then(fit);
-    return () => { document.removeEventListener('click', copy); window.removeEventListener('resize', fit); };
+    return () => { document.removeEventListener('click', copy); document.removeEventListener('input', compare); window.removeEventListener('resize', fit); };
   }, []);
   return null;
 }

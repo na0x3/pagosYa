@@ -165,27 +165,28 @@
         ]
       },
       {
-        "type": "icon-columns",
+        "type": "perks-rows",
+        "eyebrow": "Comprar aquí",
+        "title": "Café fresco, sin vueltas",
+        "photo": "slot:to-taza",
         "items": [
           {
-            "title": "Tostado responsable",
-            "text": "En pequeños lotes.",
-            "icon": "flame"
+            "title": "Suscripción",
+            "text": "Tu café cada mes, tostado esa semana.",
+            "value": "Cada mes",
+            "link": "products"
           },
           {
-            "title": "Precio justo",
-            "text": "Para quien lo cultiva.",
-            "icon": "hand"
+            "title": "Envío a domicilio",
+            "text": "Te lo llevamos en tu ciudad.",
+            "value": "A tu puerta",
+            "link": "products"
           },
           {
-            "title": "Origen conocido",
-            "text": "Sabes de qué finca viene.",
-            "icon": "pin"
-          },
-          {
-            "title": "Nos importa",
-            "text": "Empaque que se recicla.",
-            "icon": "recycle"
+            "title": "Molido a tu gusto",
+            "text": "En grano, para prensa o para espresso.",
+            "value": "Tú eliges",
+            "link": "products"
           }
         ]
       },

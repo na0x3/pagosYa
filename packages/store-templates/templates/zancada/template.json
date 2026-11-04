@@ -174,30 +174,27 @@
         ]
       },
       {
-        "type": "icon-columns",
-        "look": "side",
+        "type": "perks-rows",
         "title": "Hecho para *rendir*",
         "photo": "slot:ri-p3",
         "items": [
           {
-            "title": "Menos impacto",
-            "text": "Amortigua cada paso.",
-            "icon": "shield"
+            "title": "Cambio de talla",
+            "text": "Si no te queda, la cambiamos.",
+            "value": "Sin vueltas",
+            "link": "products"
           },
           {
-            "title": "Calidad probada",
-            "text": "Por corredores reales.",
-            "icon": "award"
+            "title": "Envío a todo el país",
+            "text": "Tus zapatillas llegan a tu puerta.",
+            "value": "A tu puerta",
+            "link": "products"
           },
           {
-            "title": "Para todos los terrenos",
-            "text": "Ciudad y cerro.",
-            "icon": "pin"
-          },
-          {
-            "title": "Apoyamos el deporte local",
-            "text": "Clubes y carreras.",
-            "icon": "users"
+            "title": "Asesoría",
+            "text": "Te ayudamos a elegir por WhatsApp.",
+            "value": "Escríbenos",
+            "link": "whatsapp"
           }
         ]
       },

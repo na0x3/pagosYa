@@ -91,14 +91,14 @@
     },
     "layout": [
       {
-        "type": "cover-full",
-        "look": "center",
+        "type": "cover-duo",
         "title": "Estilo que dura, *diseño consciente*",
         "cta": "Ver productos",
         "link": "products",
         "cta2": "Conocer más",
-        "link2": "about",
-        "photo": "slot:pi-hero"
+        "link2": "products",
+        "photo": "slot:pi-hero",
+        "photo2": "slot:pi-juntas"
       },
       {
         "type": "products-tabs",

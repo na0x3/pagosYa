@@ -284,3 +284,56 @@ describe('withoutDemoWords', () => {
     expect(withoutDemoWords([], template, { ...store, photos: [] } as never).map(block => block.type)).toEqual(['products-grid']);
   });
 });
+
+// New sections copied from real stores (spec docs/superpowers/specs/2026-11-04-new-sections-from-real-stores.md).
+describe('sections from real stores (2026-11-04)', () => {
+  const find = (layout: Array<{ type: string }>, type: string) => layout.find(block => block.type === type) as any;
+
+  it('cover-duo: two photos and a button on each; a second button without a link goes to the catalogue', () => {
+    const layout = validateLibraryLayout({ blocks: [{ type: 'cover-duo', title: 'Galletas para todos', photo: 0, photo2: 1, cta: 'Galletas', link: 'category:Galletas', cta2: 'Cajas', link2: '' }] as never }, facts());
+    const cover = find(layout, 'cover-duo');
+    expect(layout[0].type).toBe('cover-duo');
+    expect([cover.photo, cover.photo2].every(Boolean)).toBe(true);
+    expect(cover.link).toBe('category:Galletas');
+    expect(cover.link2).toBe('products');
+  });
+
+  it('cover-duo with one photo is not a cover', () => {
+    const layout = validateLibraryLayout({ blocks: [{ type: 'cover-duo', title: 'Hola', photo: 0, photo2: 0 }] as never }, facts());
+    expect(types(layout)).not.toContain('cover-duo');
+  });
+
+  it('promo-lines: two photo cards; a sticker keeps words but never a number the merchant did not write', () => {
+    const layout = validateLibraryLayout({ blocks: [{ type: 'promo-lines', title: 'Dos sabores', cta: 'Ver', items: [
+      { title: 'Galletas', photo: 2, link: 'category:Galletas', value: 'Nuevo' },
+      { title: 'Cajas', photo: 3, link: 'category:Cajas', value: '50% menos' },
+    ] }] as never }, facts());
+    const lines = find(layout, 'promo-lines');
+    expect(lines.items.map((item: any) => item.value)).toEqual(['Nuevo', undefined]);
+    expect(lines.items.map((item: any) => item.link)).toEqual(['category:Galletas', 'category:Cajas']);
+  });
+
+  it('perks-rows: a pill with the merchant\'s own number stays, each row keeps its link', () => {
+    const layout = validateLibraryLayout({ blocks: [{ type: 'perks-rows', title: 'Comprar aquí', photo: 2, items: [
+      { title: 'Suscripción', text: 'Cada mes en tu puerta', value: '10% menos', link: 'products' },
+      { title: 'Envío', text: 'En La Paz', value: 'En 2 horas', link: 'category:Cajas' },
+    ] }] as never }, facts({ story: 'Con la suscripción pagas 10% menos.' }));
+    const perks = find(layout, 'perks-rows');
+    expect(perks.items.map((item: any) => item.value)).toEqual(['10% menos', undefined]);
+    expect(perks.items[1].link).toBe('category:Cajas');
+  });
+
+  it('before-after only when the merchant speaks of a before and an after', () => {
+    const answer = { blocks: [{ type: 'before-after', title: 'Así quedan', photo: 2, photo2: 3 }] } as never;
+    expect(types(validateLibraryLayout(answer, facts()))).not.toContain('before-after');
+    expect(librarySectionBlocker('before-after', facts())).toMatch(/antes y después/);
+    const backed = facts({ what: 'Limpieza de sofás: mira el antes y el después' });
+    expect(find(validateLibraryLayout(answer, backed), 'before-after')).toMatchObject({ photo: '/v1/uploads/00000002-aaaa.jpg', photo2: '/v1/uploads/00000003-aaaa.jpg' });
+    expect(librarySectionBlocker('before-after', backed)).toBeNull();
+  });
+
+  it('story-sunburst takes its rings look in a free home', () => {
+    const layout = validateLibraryLayout({ blocks: [{ type: 'story-sunburst', look: 'rings', title: 'Hecho a mano', photo: 4 }] as never }, facts());
+    expect(find(layout, 'story-sunburst')).toMatchObject({ look: 'rings', photo: '/v1/uploads/00000004-aaaa.jpg' });
+  });
+});

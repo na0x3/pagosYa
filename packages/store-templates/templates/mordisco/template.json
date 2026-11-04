@@ -219,25 +219,13 @@
         ]
       },
       {
-        "type": "story-overlay",
-        "look": "card",
+        "type": "story-sunburst",
+        "look": "left",
         "title": "Nuestro compromiso con su *bienestar*",
         "text": "Conoce la historia detrás de cada bocado: hecho con amor, cuidado y calidad.",
-        "photo": "slot:co-senior",
-        "items": [
-          {
-            "title": "Hecho con cuidado",
-            "text": "Ingredientes que elegimos uno a uno."
-          },
-          {
-            "title": "Para cada etapa",
-            "text": "Del cachorro al mayor."
-          },
-          {
-            "title": "Probado en casa",
-            "text": "Nuestros perros lo aprueban."
-          }
-        ]
+        "cta": "Ver la comida",
+        "link": "products",
+        "photo": "slot:co-senior"
       },
       {
         "type": "benefits-orbit",
