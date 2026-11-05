@@ -56,6 +56,7 @@ import { DEFAULT_RETENTION } from '../retention/retention.dto';
 import { checklistFixBrief, checklistReply, storeDigest, type BriefChecklist, type ChecklistItem, type ChecklistStoreSettings } from './source-brief-checklist';
 import { buildStarters, pickSkeleton, pickStarter, recentStarters, type StarterEntry } from './source-starter-pick';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import { writerTemplate } from './source-home-writer-stage';
 import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook, type MasterFill, type MasterVariants } from './source-master';
 import { isFashionStore } from './source-master-fashion';
 import { fashionCollections } from './source-fashion-collections';
@@ -443,9 +444,11 @@ export class SourceChatService {
     })).catch(() => null) ?? null;
     const coverLine = picked.cover ? `\n\nFoto de portada: ${picked.cover}` : '';
     const withAssets = attached.length ? { assetUrls: attached } : {};
-    // A picked template is filled next by the section library (its sections in the store's words), then the check.
-    const followUp: SourceMessageInput | undefined = templatePick ? { instruction: SECTION_LIBRARY_BRIEF, revision: saved.revision, personalTouch: true, sectionLibrary: true, requestId: randomUUID(), model: 'auto',
-        ...(this.checklistOn() && userMessage.content.trim() ? { checklistWords: userMessage.content.trim().slice(0, 4000) } : {}) }
+    // A picked template is filled next by the section library (its sections in the store's words), then the check. Spec 2026-11-04
+    // §2: a template from the owner's pool is written by the home writer instead.
+    const checklist = this.checklistOn() && userMessage.content.trim() ? userMessage.content.trim().slice(0, 4000) : undefined;
+    const followUp: SourceMessageInput | undefined = templatePick
+      ? (this.templateWriterOn(templatePick.id) ? this.writerFollowUp(saved.revision, checklist) : this.libraryFollowUp(saved.revision, checklist))
       : written ? { instruction: `${merchantRequest ? `${written}\n\nMensajes del comercio:\n${merchantRequest}` : written}${coverLine}`, revision: saved.revision, personalTouch: true, ownRequest: true, redesign: true, firstDesign: true, motion: 'expressive', requestId: randomUUID(), model: this.redesignModel(), ...withAssets }
       : planBrief ? { instruction: merchantRequest ? `${planBrief}\n\nMensajes del comercio:\n${merchantRequest}` : planBrief, revision: saved.revision, personalTouch: true, ownRequest: true, requestId: randomUUID(), model: 'auto', ...withAssets }
       : touching ? { instruction: merchantRequest ? `${OWN_REQUEST_BRIEF}\n\nMensajes del comercio:\n${merchantRequest}` : PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, ...(merchantRequest ? { ownRequest: true } : {}), requestId: randomUUID(), model: 'auto', ...withAssets }
@@ -650,6 +653,18 @@ export class SourceChatService {
   }
 
   private templatePickOn() { return this.config.get<boolean>('app.yapiTemplatePick') === true; }
+  /** Spec 2026-11-04 §2: a template from the owner's pool is written by the home writer, not filled by the section library. */
+  private templateWriterOn(templateId: string) {
+    const pool = this.config.get<string[]>('app.yapiTemplatePool') ?? [];
+    return pool.includes(templateId) && this.config.get<boolean>('app.yapiHomeWriter') === true;
+  }
+  private writerFollowUp(revision: number, checklistWords?: string): SourceMessageInput {
+    return { instruction: `${HOME_WRITER_BRIEF}${checklistWords ? `\n\nMensaje del comercio:\n${checklistWords}` : ''}`, revision, personalTouch: true, homeWriter: true, firstDesign: true, redesign: true,
+      ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), model: (this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] };
+  }
+  private libraryFollowUp(revision: number, checklistWords?: string): SourceMessageInput {
+    return { instruction: SECTION_LIBRARY_BRIEF, revision, personalTouch: true, sectionLibrary: true, ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), model: 'auto' };
+  }
   private planOn() { return this.config.get<boolean>('app.yapiPlanCard') !== false && Boolean(this.plans); }
   private startersOn() { return this.config.get<boolean>('app.yapiStarters') === true; }
   private freeFirst() { return this.planOn() && this.config.get<boolean>('app.yapiFreeFirst') !== false; }
@@ -1587,14 +1602,11 @@ export class SourceChatService {
           model: (this.config.get<string>('app.yapiTouchModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] });
         const touchOn = this.config.get<boolean>('app.yapiGuardedTouch') === true;
         // Spec 2026-10-29: with the home writer on, the polished store goes to the writer; the check follows the writer.
-        const writerFollowUp = (revision: number): SourceMessageInput => ({ instruction: `${HOME_WRITER_BRIEF}${input.checklistWords ? `\n\nMensaje del comercio:\n${input.checklistWords}` : ''}`,
-          revision, personalTouch: true, homeWriter: true, firstDesign: true, redesign: true, ...(input.checklistWords ? { checklistWords: input.checklistWords } : {}), requestId: randomUUID(),
-          model: (this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] });
+        const writerFollowUp = (revision: number) => this.writerFollowUp(revision, input.checklistWords);
         const writerOn = this.config.get<boolean>('app.yapiHomeWriter') === true;
         // Spec 2026-10-31: with the section library on, it composes the home instead of the writer; the check follows it.
         const libraryOn = this.config.get<boolean>('app.yapiSectionLibrary') === true;
-        const libraryFollowUp = (revision: number): SourceMessageInput => ({ instruction: SECTION_LIBRARY_BRIEF, revision, personalTouch: true, sectionLibrary: true,
-          ...(input.checklistWords ? { checklistWords: input.checklistWords } : {}), requestId: randomUUID(), model: 'auto' });
+        const libraryFollowUp = (revision: number) => this.libraryFollowUp(revision, input.checklistWords);
         const next = (revision: number) => libraryOn ? libraryFollowUp(revision) : writerOn ? writerFollowUp(revision) : touchOn ? touchFollowUp(revision) : input.checklistWords && this.checklistOn() ? checkFollowUp(revision) : undefined;
         // A polish with nothing to change (NOA on Atelier 2026-10-27) still hands the store to the check.
         const polished = await this.masterPolish(merchantId, storeId, thread.id, userMessage, workflow, input.instruction, current.revision, previous).catch(async error => {
@@ -1634,7 +1646,10 @@ export class SourceChatService {
           this.productLogger.warn(JSON.stringify({ event: 'home_writer_kept_template', storeId, reason: String((error as Error)?.message).slice(0, 300) }));
           // An undone run appended a restored revision (review I3): the check runs on the store as it is now.
           const latest = await this.projects.current(merchantId, storeId).catch(() => null);
-          throw new PersonalTouchSkipped('home writer kept the template', checkAfter(latest?.revision ?? current.revision));
+          const revisionNow = latest?.revision ?? current.revision;
+          // Spec 2026-11-04 §6: a template store is never left on its demo home — the section library fills it instead.
+          const templated = writerTemplate(((previous.snapshot as unknown as SourceProjectSnapshot)?.files ?? []) as SourceProjectFileDto[]);
+          throw new PersonalTouchSkipped('home writer kept the template', templated ? this.libraryFollowUp(revisionNow, input.checklistWords) : checkAfter(revisionNow));
         }
         const after = checkAfter(written.revision.revision);
         return after ? { ...written, followUp: after } : written;

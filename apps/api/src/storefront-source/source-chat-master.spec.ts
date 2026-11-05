@@ -821,6 +821,14 @@ describe('the home page writer', () => {
     expect(out.followUp).toMatchObject({ briefCheck: 1, revision: 3 });
     expect(out.followUp.homeWriter).toBeUndefined();
   });
+  it('on a template store a writer that fails hands the store to the section library, never leaving the demo home', async () => {
+    const templated = { snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files: [
+      { path: 'components/store-data.tsx', content: `${storeData}export const variants = {"theme":"sorbo"} as const;\nexport const layout = [{"type":"cover-split"}] as const;\n` },
+      { path: 'components/home.tsx', content: 'export default function Home() { return 0; }' }, { path: 'components/Shell.tsx', content: shell }, { path: 'styles/globals.css', content: 'body{}' }] } };
+    projects.version.mockImplementation(async () => templated);
+    generate.mockRejectedValueOnce(new Error('YAPI no pudo terminar la portada: steps'));
+    await expect(writer()).rejects.toMatchObject({ followUp: { sectionLibrary: true, revision: 3, checklistWords: 'Café de altura' } });
+  });
   it('the writer runs generate() as the home writer, with no conversation step, and hands its revision to the check', async () => {
     generate.mockResolvedValueOnce({ revision: 4, label: 'Portada de YAPI' });
     const out = await writer();
@@ -948,6 +956,23 @@ describe('YAPI picks the themed template for a new store (owner 2026-10-31, YAPI
     expect(out.assistantMessage.content).not.toContain('Ahora pulo');
     expect(out.followUp).toMatchObject({ sectionLibrary: true, revision: 1 });
     expect(out.followUp.redesign).toBeUndefined();
+  });
+
+  it('a pooled template goes to the home writer, not the section library (spec 2026-11-04 §2)', async () => {
+    config.set('app.yapiTemplatePool', ['grano', 'sorbo']);
+    config.set('app.yapiHomeWriter', true);
+    config.set('app.yapiHomeWriterModel', 'gpt-5.6-sol');
+    withPick(jest.fn().mockResolvedValue({ id: 'grano', reason: 'Café que tuesta en casa.' }));
+    const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+    expect(out.followUp).toMatchObject({ homeWriter: true, firstDesign: true, redesign: true, personalTouch: true, revision: 1, model: 'gpt-5.6-sol' });
+    expect(out.followUp.sectionLibrary).toBeUndefined();
+    config.set('app.yapiTemplatePool', []);
+    config.set('app.yapiHomeWriter', false);
+  });
+  it('without a pool the section library fills the template as before', async () => {
+    config.set('app.yapiTemplatePool', []);
+    withPick(jest.fn().mockResolvedValue({ id: 'grano', reason: 'x' }));
+    expect((await send('Mi negocio se llama Café Buna.\nCrea mi tienda.')).followUp).toMatchObject({ sectionLibrary: true });
   });
 
   it('with a pool, YAPI is offered only the pooled templates (Shrine Pro included) and Único stays for one product', async () => {
