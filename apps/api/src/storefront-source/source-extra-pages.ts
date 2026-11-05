@@ -59,7 +59,8 @@ export function applyPageOps(current: readonly ExtraPage[], ops: readonly Layout
       const menu = place(op.field);
       pages.push({ slug, name, menu, layout: [] });
       created = slug;
-      done.push(`creé la página «${name}» (${slug}.html)${menu ? ` dentro de «${menu}»` : ' con su enlace en el menú'}`);
+      // The link is said only where it is sure (a dropdown); a full bar is said by the menu step (live 2026-11-05).
+      done.push(`creé la página «${name}» (${slug}.html)${menu ? ` con su enlace dentro de «${menu}»` : ''}`);
       continue;
     }
     if (op.op !== 'page-rename' && op.op !== 'page-remove' && op.op !== 'page-link') continue;

@@ -39,6 +39,8 @@ it('adds a page and points «nueva» ops at it', () => {
   expect(out.ops[1].page).toBe('novias');
   expect(out.created).toBe('novias');
   expect(out.done[0]).toContain('creé la página «Novias»');
+  // Live 2026-11-05: the link may still be refused (a full menu), so creating the page never promises it.
+  expect(applyPageOps([], [pageOp({ value: 'Novias' })], [], []).done[0]).toBe('creé la página «Novias» (novias.html)');
   // «nueva» ops without a page-add are dropped.
   expect(applyPageOps([], [pageOp({ op: 'add', type: 'cover-split', page: 'nueva' })], [], []).ops).toEqual([]);
 });
