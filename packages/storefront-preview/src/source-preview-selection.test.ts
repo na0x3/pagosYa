@@ -278,3 +278,17 @@ it('the Studio keeps a valid viewing and drops a bad one', () => {
   expect(receivePreviewViewing(event({ type: 'pagosya:source-viewing', page: 'faq', at: -1, label: 'x' }), frame)).toBeNull();
   expect(receivePreviewViewing({ source: {}, origin: 'null', data: { type: 'pagosya:source-viewing', page: 'home', label: 'x' } } as unknown as MessageEvent, frame)).toBeNull();
 });
+
+// Live 2026-11-05: the real preview is an opaque srcdoc, so the page comes from PAGOSYA_PREVIEW_PAGE, never from location.
+it('a circle names the page the preview shows, with its query, whatever the frame URL is', async () => {
+  const snap = { ...snapshot, files: [{ path: 'nosotros.html', content: templatePage }] };
+  const dom = new JSDOM(sourcePreviewDocument(snap, 'nosotros.html', { query: '?id=abc' }), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://source.invalid/' });
+  const w = dom.window; windows.push(w);
+  const posted: any[] = [];
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:source-select') posted.push(event.data); });
+  box(w, '[data-lb="cover-split"]', 0, 0, 1280, 600); box(w, '[data-lb="cover-split"] h1', 100, 200, 400, 80);
+  w.dispatchEvent(new w.MessageEvent('message', { data: { type: 'pagosya:source-edit-mode', on: true }, source: w }));
+  drag(w, square(50, 50, 600), '[data-lb="cover-split"] h1');
+  await vi.waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0].area.pageQuery).toBe('nosotros.html?id=abc');
+});

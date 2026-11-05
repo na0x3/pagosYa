@@ -110,7 +110,8 @@
       if (url && url.length <= 500 && /^(https?:\/\/|\/|assets\/)/.test(url) && photos.indexOf(url) < 0) photos.push(url);
     });
     var parts = PARTS.filter(function (part) { return Array.prototype.some.call(document.querySelectorAll(part[1]), function (element) { return overlap(rect, pageBox(element)) > 0; }); }).map(function (part) { return part[0]; });
-    var page = (location.pathname.split('/').pop() || 'index.html') + (window.PAGOSYA_PREVIEW_QUERY || location.search || '');
+    // The preview is an opaque srcdoc: its page and query come from the preview's own globals, never from location.
+    var page = String(window.PAGOSYA_PREVIEW_PAGE || 'index.html') + String(window.PAGOSYA_PREVIEW_QUERY || '');
     return { first: sections[0] || null, area: { points: simplify(points), rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) },
       sections: sections.map(function (s) { return { page: s.page, at: s.at, label: s.label }; }), texts: texts, photos: photos, parts: parts,
       width: Math.max(280, Math.min(2400, Math.round(innerWidth))), pageQuery: page.slice(0, 200) } };
