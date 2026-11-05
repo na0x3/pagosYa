@@ -131,3 +131,18 @@ it('builds the Nosotros page from template sections and leaves the home alone (s
   expect(pageFiles[2].content).toBe('old');
   expect(out.assistantMessage.content).toContain('a tu página «Nosotros»');
 });
+
+it('tells each new section the titles already on the page, so they do not repeat one another (live BOXY 2026-11-05)', async () => {
+  const libraryFacts = { storeName: 'DooBoo', what: 'Gelato de tofu', story: '', city: 'La Paz', request: '', tone: 'calm', products: [{ id: 'p1', name: 'Gelato chocolate' }],
+    categories: [], photos: [0, 1, 2, 3].map(index => ({ url: `/v1/uploads/0000000${index}-aaaa.jpg` })), codes: [], services: [], reviews: 0 };
+  chat.libraryFacts = jest.fn().mockResolvedValue(libraryFacts);
+  const compose = jest.fn(async (_merchant: string, input: { template: Array<{ type: string }>; facts: { request: string } }) => ({ blocks: [{
+    type: input.template[0].type, eyebrow: '', title: input.template[0].type === 'cover-centered' ? 'Gelato para todos' : 'Gelato para compartir', text: 'Gelato de tofu hecho en La Paz.',
+    cta: '', link: '', cta2: '', link2: '', photo: 0, photo2: -1, items: [], products: [], product: '', code: '', look: '', band: '', card: '', endsAt: '' }] }));
+  chat.dialogue.composeLibrary = compose;
+  const add = (type: string) => ({ op: 'add', at: -1, field: '', item: -1, value: '', to: -1, type, page: 'about' });
+  editLayout.mockResolvedValue(read({ ops: [add('cover-centered'), add('story-split')] }));
+  await edit('cambia nosotros a algo más bonito');
+  expect(compose.mock.calls[0][1].facts.request).not.toContain('Títulos que ya están');
+  expect(compose.mock.calls[1][1].facts.request).toContain('«Gelato para todos»');
+});

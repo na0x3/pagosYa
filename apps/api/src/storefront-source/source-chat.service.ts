@@ -1123,7 +1123,10 @@ export class SourceChatService {
       for (const add of asked.adds) {
         const blocker = librarySectionBlocker(add.type, facts);
         if (blocker) { refusedAdds.push(`No pude agregar esa sección: ${blocker}.`); continue; }
-        const request = `${input.instruction}\n(Sección nueva para ${where}${add.about ? `: ${add.about}` : ''}. Escríbela completa con los datos de la tienda.)`;
+        // Live BOXY 2026-11-05: written one at a time, four sections all began «Hoodies para…»; each sees the titles already there.
+        const titles = [...list, ...added.map(entry => entry.block)].map(block => block.title).filter((title): title is string => Boolean(title));
+        const request = `${input.instruction}\n(Sección nueva para ${where}${add.about ? `: ${add.about}` : ''}. Escríbela completa con los datos de la tienda.${titles.length
+          ? ` Títulos que ya están en la página: ${titles.map(title => `«${title}»`).join(', ')}; el tuyo dice otra cosa y empieza distinto.` : ''})`;
         // Two new sections in one request show different photos (Miga Dorada live 2026-11-02: both took the same one).
         const shown = new Set(added.flatMap(({ block }) => [block.photo, block.photo2, ...(block.items ?? []).map(item => item.photo)]).filter(Boolean));
         const fresh = facts.photos.filter(photo => !shown.has(photo.url));
