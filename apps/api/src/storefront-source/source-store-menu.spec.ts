@@ -125,6 +125,11 @@ describe('extra page links', () => {
     expect(withExtraPageLinks(linked, [{ ...novias, name: 'Novias 2027' }]).menu.groups!.at(-1)!.label).toBe('Novias 2027');
     expect(withExtraPageLinks(undefined, [novias]).menu).toEqual({ style: 'dropdowns', groups: [{ label: 'Novias', links: [{ label: 'Novias', to: 'extra:novias' }], direct: true }] });
   });
+  // Live NOA 2026-11-05: the «Novias» dropdown already linked the «Novias» category; the kit shows one link per name.
+  it('names the page link apart when its dropdown already has a link with that name', () => {
+    const menu = { style: 'panel' as const, groups: [{ label: 'Novias', links: [{ label: 'Novias', to: 'category:c1' }] }] };
+    expect(withExtraPageLinks(menu, [{ ...novias, menu: 'Novias' }]).menu.groups![0].links).toEqual([{ label: 'Novias', to: 'category:c1' }, { label: 'Página Novias', to: 'extra:novias' }]);
+  });
   it('refuses a fifth entry in the bar', () => {
     const full = { style: 'dropdowns' as const, groups: ['a', 'b', 'c', 'd'].map(label => ({ label, links: [{ to: 'all' }] })) };
     expect(withExtraPageLinks(full, [novias]).refused[0]).toMatch(/menú ya tiene 4/);

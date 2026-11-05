@@ -141,6 +141,8 @@ export function withExtraPageLinks(menu: StoreMenu | undefined, pages: ReadonlyA
     // One place only: out of every other entry first.
     groups = groups.map(group => group === inGroup ? group : { ...group, links: group.links.filter(entry => entry.to !== to || (!inGroup && group.direct === true)) }).filter(group => group.links.length);
     if (inGroup) {
+      // The kit shows one link per name: a dropdown that already links that name (a category «Novias») gets «Página Novias».
+      if (inGroup.links.some(entry => entry.to !== to && (entry.label ?? '').toLowerCase() === link.label.toLowerCase())) link.label = `Página ${page.name}`.slice(0, STORE_MENU_LIMITS.label).trim();
       const at = inGroup.links.findIndex(entry => entry.to === to);
       if (at >= 0) inGroup.links[at] = link;
       else if (inGroup.links.length >= STORE_MENU_LIMITS.links) refused.push(`«${inGroup.label}» ya tiene ${STORE_MENU_LIMITS.links} enlaces: no puse «${page.name}» ahí.`);
