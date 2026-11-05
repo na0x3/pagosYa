@@ -1,3 +1,4 @@
+import { outsideFocus, pointFocus } from './source-point-focus';
 import { randomUUID } from 'node:crypto';
 import { SOURCE_MODEL_CHOICES } from './source-generation-policy';
 import { merchantAsksForPhotoGroup } from './source-media-design';
@@ -68,7 +69,7 @@ import { nextTitleStyle, readTitleAsk } from './source-title-style';
 import { buildLibraryFacts, carriedSections, libraryDropReason, libraryMood, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, type LayoutBlock } from './source-section-library';
 import { applyStoreOps, readCatalogTitle, storeChangeEmpty, withCatalogTitle, type StoreChange, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
 import { storeFaq, storePolicies } from '../stores/store-presentation';
-import { MENU_PAGES, MENU_PAGE_NAMES, applyLayoutOps, layoutAdds, layoutEditReply, menuPagesFor, type LayoutPage, type MenuPage } from './source-layout-edit';
+import { MENU_PAGES, MENU_PAGE_NAMES, MENU_PAGE_URLS, applyLayoutOps, layoutAdds, layoutEditReply, menuPagesFor, type LayoutPage, type MenuPage } from './source-layout-edit';
 import { keptMenuPages, sectionablePage, withSectionedPages } from './source-content-pages';
 import { bolivianos, readShippingAsk, type ShippingAsk } from './source-shipping-ask';
 import { plainReply } from './source-plain-reply';
@@ -1117,10 +1118,13 @@ export class SourceChatService {
     });
     const photos = editState ? await this.storeEditPhotos(merchantId, storeId, input.assetUrls ?? [], editState.products) : [];
     const templateTypes = [...new Set(layout.map(block => block.type))];
-    const menuPages = menuPagesFor(pages, input.instruction, input.currentPage);
+    // Spec 2026-11-05 point-at: what the merchant clicked, circled or (with «esto», «aquí») had on screen; a menu page in focus counts as open.
+    const focus = pointFocus({ instruction: input.instruction, selection: input.selection, viewing: input.viewing });
+    const focusPage = focus && (MENU_PAGES as readonly string[]).includes(focus.pagina) ? MENU_PAGE_URLS[focus.pagina as MenuPage] : undefined;
+    const menuPages = menuPagesFor(pages, input.instruction, focusPage ?? input.currentPage);
     const read = await this.dialogue.editLayout(merchantId, { storeId, layout, request: input.instruction, ...(productLayout.length ? { productLayout } : {}),
       ...(menuPages ? { pages: menuPages.pages as Record<string, LayoutBlock[]>, offerPages: menuPages.offer } : {}), templateTypes,
-      ...(editState ? { store: editState, photos } : {}) });
+      ...(editState ? { store: editState, photos } : {}), ...(focus ? { focus } : {}) });
     if (!read) return null;
     // Fix 3 (2026-11-02, goodProtein #12: a new section went to the design agent, ~18 min, never mounted): a section the merchant asks
     // for comes from the library, filled with the store's words and photos the way the template was — on the home or a menu page.
@@ -1174,7 +1178,8 @@ export class SourceChatService {
     const done = [...applied.done, ...product.done, ...menu.flatMap(entry => entry.done)];
     const refused = [...applied.refused, ...product.refused, ...menu.flatMap(entry => entry.refused), ...store.refused];
     this.productLogger.log(JSON.stringify({ event: 'template_layout_edit', storeId, ops: read.ops.map(op => `${op.page && op.page !== 'home' ? `${op.page === 'product' ? 'ficha' : op.page}:` : ''}${op.op}:${op.at}${op.field ? `.${op.field}` : ''}${op.item >= 0 ? `[${op.item}]` : ''}${op.type ? `=${op.type}` : ''}`),
-      store: read.store.map(op => `${op.part}.${op.field}${op.at >= 0 ? `[${op.at}]` : ''}`), added: homeAdds.added.map(entry => entry.block.type), changed, productChanged, menuChanged: menuChanged.map(entry => `${entry.page}:${entry.layout.map(block => block.type).join(',')}`), refused: refused.length, rest: read.rest.slice(0, 200) }));
+      store: read.store.map(op => `${op.part}.${op.field}${op.at >= 0 ? `[${op.at}]` : ''}`), added: homeAdds.added.map(entry => entry.block.type), changed, productChanged, menuChanged: menuChanged.map(entry => `${entry.page}:${entry.layout.map(block => block.type).join(',')}`), refused: refused.length, rest: read.rest.slice(0, 200),
+      focus: focus ? { pagina: focus.pagina, secciones: focus.secciones, partes: focus.partes, mirando: Boolean(focus.mirando) } : null, outsideFocus: outsideFocus(read.ops, focus) }));
     // The store's data first: a refused write (a check the database makes) is said, never «Listo».
     // The announcement, the footer line and the catalogue title are files; everything else the store edit changes is data.
     const { copy: _copy, catalogTitle: _title, ...data } = store.change;
@@ -1983,7 +1988,8 @@ export class SourceChatService {
       const layoutAsk = masterStore && !input.redesign && !input.personalTouch && !sourceRedesignRequested(input.instruction) ? layoutChangeFor(input.instruction, offered) : {};
       // Template quick edits (spec 2026-11-01 §1): a template home draws its layout only, so words, removals and moves change those
       // blocks; what the operations cannot do (a colour, the menu, a new section) follows as its own request.
-      const templateHome = masterStore && !input.redesign && !input.personalTouch && !input.layoutRest && !input.selection && !menuOnly && !Object.keys(layoutAsk).length
+      // Spec 2026-11-05 point-at: a clicked or circled part of a template store is a quick edit too (it went to the code generator).
+      const templateHome = masterStore && !input.redesign && !input.personalTouch && !input.layoutRest && !menuOnly && !Object.keys(layoutAsk).length
         && !sourceRedesignRequested(input.instruction) && !decision.rework && (decision.editKind === 'content' || decision.editKind === 'design')
         ? readMasterState((previous!.snapshot as unknown as SourceProjectSnapshot).files).layout as LayoutBlock[] : [];
       if (templateHome.length && !storeEditTried) {

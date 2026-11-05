@@ -271,6 +271,20 @@ describe('edits on a master store', () => {
     expect(fillMaster.mock.calls[0][1]).toMatchObject({ request: 'Cambia el título a «Café de altura»', current: { copy: { headline: 'Hecho con cuidado' } } });
   });
 
+  // Spec 2026-11-05 point-at: a clicked part of a template store used to skip the quick edit and go to the code generator.
+  it('a clicked section of a template store goes to the quick edit, never the code generator', async () => {
+    const files = [templateStoreDataFile({ name: 'Café Buna' }, {}, { copy: { headline: 'Hola' } as never, look: { palette: 'mono', fonts: 'zancada' } as never, variants: { theme: 'sorbo', sections: [] } as never,
+      layout: [{ type: 'cover-split', title: 'Hola' }], productLayout: [] }), { path: 'components/home.tsx', content: "import { copy } from './store-data';\n" }];
+    const projects = { current: jest.fn().mockResolvedValue({ revision: 2 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files } }) };
+    chat = new SourceChatService(prisma, projects as any, generation(), { decide, fillMaster } as any, { apply: jest.fn(), applyMaster, refill } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
+    const quick = jest.spyOn(chat as any, 'templateLayoutEdit').mockResolvedValue({ revision: 3 } as never) as jest.SpyInstance;
+    decided('content');
+    await chat.send('m1', 's1', { revision: 2, instruction: 'hazla más corta', requestId: uuid(), selection: { sectionId: 'lb-0', at: 0, page: 'home' } });
+    expect(quick).toHaveBeenCalled();
+    expect(quick.mock.calls[0][5]).toMatchObject({ selection: { sectionId: 'lb-0', at: 0, page: 'home' } });
+    expect(generate).not.toHaveBeenCalled();
+  });
+
   // Owner 2026-10-27 (B): the PEPPA please redesign, only when the merchant asks for it.
   it('an explicit redesign of a master store runs on a written brief with expressive motion', async () => {
     const redesignBrief = jest.fn().mockResolvedValue('Rediseña la tienda atrevida y divertida. Sigue esta estructura:\n- Portada con la foto grande');

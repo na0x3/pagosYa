@@ -41,6 +41,25 @@ beforeEach(() => {
 const workflow = { report: jest.fn(), finish: jest.fn(), value: {} };
 const edit = (instruction: string, assetUrls: string[] = []) => chat.templateLayoutEdit('m1', 's1', 't1', { id: 'u1' }, workflow, { instruction, revision: 5, assetUrls }, 5, home);
 
+// Spec 2026-11-05 point-at: what the merchant pointed at reaches the one edit call.
+const pointed = (instruction: string, extra: Record<string, unknown>) => chat.templateLayoutEdit('m1', 's1', 't1', { id: 'u1' }, workflow, { instruction, revision: 5, assetUrls: [], ...extra }, 5, home);
+
+it('sends what the merchant pointed at, and logs an op outside it', async () => {
+  editLayout.mockResolvedValue(read({ ops: [{ op: 'text', at: 1, field: 'title', item: -1, value: 'Más corto', to: -1, type: '' }] }));
+  const log = jest.spyOn((chat as any).productLogger, 'log');
+  await pointed('hazla más corta', { selection: { sectionId: 'lb-0', at: 0, page: 'home' } });
+  expect(editLayout.mock.calls[0][1].focus).toEqual({ pagina: 'home', secciones: [0], textos: [], fotos: [], partes: [] });
+  expect(log.mock.calls.map(call => String(call[0])).find(line => line.includes('template_layout_edit'))).toContain('"outsideFocus":["home:1"]');
+});
+
+it('the section on screen reaches the edit only with «aquí»', async () => {
+  editLayout.mockResolvedValue(read());
+  await pointed('agrega una pregunta aquí', { viewing: { page: 'home', at: 1 } });
+  await pointed('agrega una pregunta', { viewing: { page: 'home', at: 1 } });
+  expect(editLayout.mock.calls[0][1].focus).toMatchObject({ mirando: { pagina: 'home', at: 1 } });
+  expect(editLayout.mock.calls[1][1].focus).toBeUndefined();
+});
+
 it('sends the store data, the product page and the photos to the one edit call', async () => {
   editLayout.mockResolvedValue(read());
   await edit('cambia la foto de la portada por esta', ['/v1/uploads/bead01.jpg']);
