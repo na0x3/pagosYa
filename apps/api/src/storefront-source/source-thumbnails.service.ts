@@ -67,10 +67,10 @@ export class SourceThumbnailsService {
 
   /** A circled area of a saved revision with the merchant's loop drawn on it (spec 2026-11-05 point-at). Not cached, never stored.
    *  The points are finite numbers and the page matches the DTO's file pattern, so nothing sent becomes markup or leaves ORIGIN. */
-  async region(merchantId: string, storeId: string, revision: number, area: { pageQuery: string; width: number; rect: { x: number; y: number; width: number; height: number }; points: number[] }): Promise<Buffer> {
+  async region(merchantId: string, storeId: string, revision: number, area: { pageQuery: string; width: number; height?: number; rect: { x: number; y: number; width: number; height: number }; points: number[] }): Promise<Buffer> {
     const saved = await this.projects.version(merchantId, storeId, revision);
     const clip = regionClip(area);
-    const job = this.queue.then(() => this.withStorePage(merchantId, storeId, saved.snapshot as unknown as SourceProjectSnapshot, { width: area.width, height: 900 }, area.pageQuery, async page => {
+    const job = this.queue.then(() => this.withStorePage(merchantId, storeId, saved.snapshot as unknown as SourceProjectSnapshot, { width: area.width, height: area.height ?? 900 }, area.pageQuery, async page => {
       await page.evaluate(points => {
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('style', `position:absolute;left:0;top:0;width:${document.documentElement.scrollWidth}px;height:${document.documentElement.scrollHeight}px;pointer-events:none;z-index:2147483647;overflow:visible`);

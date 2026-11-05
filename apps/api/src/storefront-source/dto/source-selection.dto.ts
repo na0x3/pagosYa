@@ -25,6 +25,8 @@ export class SourcePointAreaDto {
   @IsArray() @ArrayMaxSize(6) @IsString({ each: true }) @MaxLength(500, { each: true }) @Matches(/^(https?:\/\/|\/|assets\/)/, { each: true }) photos!: string[];
   @IsArray() @IsIn(POINT_PARTS, { each: true }) parts!: Array<(typeof POINT_PARTS)[number]>;
   @IsInt() @Min(280) @Max(2400) width!: number;
+  /** The preview's viewport height (final review 2026-11-05); optional for drafts saved before it. */
+  @IsOptional() @IsInt() @Min(200) @Max(4000) height?: number;
   @IsString() @Matches(/^[a-z0-9][a-z0-9-]{0,63}\.html(\?[A-Za-z0-9=&_.%-]{0,135})?$/) pageQuery!: string;
 }
 

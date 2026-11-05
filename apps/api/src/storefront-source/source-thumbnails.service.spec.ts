@@ -39,4 +39,11 @@ describe('store thumbnails', () => {
     expect(regionClip({ rect: { x: 10, y: 10, width: 3000, height: 3000 }, width: 1280 })).toEqual({ x: 0, y: 0, width: 1280, height: 1000 });
     expect(regionClip({ rect: { x: 1200, y: 0, width: 200, height: 50 }, width: 1280 })).toEqual({ x: 1152, y: 0, width: 128, height: 98 });
   });
+
+  it('draws a circled area at the viewport size of the merchant preview (final review 2026-11-05)', async () => {
+    const { svc } = service();
+    const page = jest.spyOn(svc as any, 'withStorePage').mockResolvedValue(Buffer.from('png'));
+    await svc.region('m', 'store-1', 3, { pageQuery: 'index.html', width: 1024, height: 700, rect: { x: 0, y: 0, width: 90, height: 90 }, points: [0, 0, 90, 0, 90, 90] }).catch(() => undefined);
+    expect(page.mock.calls[0][3]).toEqual({ width: 1024, height: 700 });
+  });
 });

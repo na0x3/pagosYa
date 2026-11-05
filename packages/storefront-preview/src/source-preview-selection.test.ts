@@ -236,6 +236,8 @@ it('a circle selects the sections, words, photos and header parts it covers, and
   expect(area.points.length % 2).toBe(0);
   expect(area.rect).toEqual({ x: 50, y: 10, width: 1000, height: 1000 });
   expect(area.pageQuery).toBe('index.html');
+  // Final review 2026-11-05: the picture is drawn at the preview's own viewport height (covers are sized in vh).
+  expect(area.height).toBe(w.innerHeight);
 });
 
 it('ignores a loop smaller than 24 × 24 and a drag never navigates', async () => {
@@ -252,9 +254,9 @@ it('ignores a loop smaller than 24 × 24 and a drag never navigates', async () =
 it('the Studio keeps a valid area and drops a malformed one', () => {
   const frame = { contentWindow: {} } as unknown as HTMLIFrameElement;
   const event = (data: unknown) => ({ source: frame.contentWindow, origin: 'null', data }) as unknown as MessageEvent;
-  const area = { points: [0, 0, 100, 0, 100, 100], rect: { x: 0, y: 0, width: 100, height: 100 }, sections: [{ page: 'home', at: 1, label: 'Hola' }], texts: ['Hola'], photos: [], parts: ['menu'], width: 1280, pageQuery: 'index.html' };
+  const area = { points: [0, 0, 100, 0, 100, 100], rect: { x: 0, y: 0, width: 100, height: 100 }, sections: [{ page: 'home', at: 1, label: 'Hola' }], texts: ['Hola'], photos: [], parts: ['menu'], width: 1280, height: 720, pageQuery: 'index.html' };
   expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'area', sectionId: 'lb-1', label: 'Hola', area }), frame)).toMatchObject({ kind: 'area', area });
-  for (const bad of [{ ...area, points: [0, NaN, 1, 1, 2, 2] }, { ...area, texts: Array(13).fill('x') }, { ...area, parts: ['body'] }, { ...area, width: 100 }, { ...area, pageQuery: '../x.html' }, { ...area, photos: ['/' + 'x'.repeat(500)] }])
+  for (const bad of [{ ...area, height: 100 }, { ...area, points: [0, NaN, 1, 1, 2, 2] }, { ...area, texts: Array(13).fill('x') }, { ...area, parts: ['body'] }, { ...area, width: 100 }, { ...area, pageQuery: '../x.html' }, { ...area, photos: ['/' + 'x'.repeat(500)] }])
     expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'area', sectionId: 'lb-1', label: 'Hola', area: bad }), frame)).toBeNull();
 });
 
@@ -311,4 +313,19 @@ it('while selecting, a press neither selects text nor starts the browser drag, a
   w.document.dispatchEvent(new w.MouseEvent('pointercancel', { bubbles: true, clientX: 60, clientY: 61 }));
   await vi.waitFor(() => expect(posted).toHaveLength(1));
   expect(posted[0]).toMatchObject({ kind: 'area', sectionId: 'lb-0' });
+});
+
+// Final review 2026-11-05: a fixed-id section («preguntas») after one that drew nothing is addressed by its data-lb-at, not its position.
+it('takes the layout number from data-lb-at before the id or the position', async () => {
+  const snap = { ...snapshot, files: [{ path: 'index.html', content: `<!doctype html><html><body><main data-lb-home>
+    <section id="lb-0" data-lb-at="0" data-lb="cover-split"><h1>Hola</h1></section>
+    <section id="preguntas" data-lb-at="3" data-lb="faq-split"><h2>Preguntas</h2></section></main></body></html>` }] };
+  const dom = new JSDOM(sourcePreviewDocument(snap, 'index.html', {}), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://source.invalid/index.html' });
+  const w = dom.window; windows.push(w);
+  const posted: any[] = [];
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:source-select') posted.push(event.data); });
+  w.dispatchEvent(new w.MessageEvent('message', { data: { type: 'pagosya:source-edit-mode', on: true }, source: w }));
+  w.document.querySelector('#preguntas h2').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+  await vi.waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]).toMatchObject({ sectionId: 'preguntas', page: 'home', at: 3 });
 });

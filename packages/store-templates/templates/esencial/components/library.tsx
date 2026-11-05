@@ -70,13 +70,13 @@ function Photo({ src, className, eager }: { src?: string; className?: string; ea
 
 /** A contained section on its band, like the template's own (the band paints past the column to both edges). */
 function Band({ block, index, children, className = '', id, extra }: { block: LibraryBlock; index: number; children: ReactNode; className?: string; id?: string; extra?: Record<string, string> }) {
-  return <section id={id ?? `lb-${index}`} className={`es-section lb lb-${block.type} ${className}`.trim()} data-lb={block.type} data-lb-look={block.look || undefined}
+  return <section id={id ?? `lb-${index}`} className={`es-section lb lb-${block.type} ${className}`.trim()} data-lb-at={index} data-lb={block.type} data-lb-look={block.look || undefined}
     data-es-band={block.band || undefined} aria-labelledby={block.title ? `lb-${index}-title` : undefined} {...extra}>{children}</section>;
 }
 
 /** Full-bleed sections (covers, photo banners): the whole width, their own colours. */
 function Bleed({ block, index, children, className = '', id, extra }: { block: LibraryBlock; index: number; children: ReactNode; className?: string; id?: string; extra?: Record<string, string> }) {
-  return <section id={id ?? `lb-${index}`} className={`lb lb-bleed lb-${block.type} ${className}`.trim()} data-lb={block.type} data-lb-look={block.look || undefined}
+  return <section id={id ?? `lb-${index}`} className={`lb lb-bleed lb-${block.type} ${className}`.trim()} data-lb-at={index} data-lb={block.type} data-lb-look={block.look || undefined}
     data-lb-band={block.band || undefined} aria-labelledby={block.title ? `lb-${index}-title` : undefined} {...extra}>{children}</section>;
 }
 
@@ -269,7 +269,7 @@ function CoverFull({ block, index }: { block: LibraryBlock; index: number }) {
 function HeroSplit({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.photo || !block.title) return null;
   const pills = (block.items ?? []).map(item => item.title).filter(Boolean).slice(0, 3);
-  return <section id="inicio" className="lb lb-hero-split" data-lb="hero-split" aria-labelledby={`lb-${index}-title`}>
+  return <section id="inicio" className="lb lb-hero-split" data-lb-at={index} data-lb="hero-split" aria-labelledby={`lb-${index}-title`}>
     <div className="lb-hero-split__media">
       <Photo src={block.photo} className="lb-hero-split__photo" eager />
       {pills.length ? <ul className="lb-hero-split__pills" aria-label="Destacados">{pills.map((pill, at) => <li key={at} style={{ ['--i' as string]: at } as CSSProperties}><span aria-hidden="true" />{pill}</li>)}</ul> : null}
@@ -354,7 +354,7 @@ function StripMarquee({ block, index }: { block: LibraryBlock; index: number }) 
   const words = (block.items ?? []).map(item => item.title).filter(Boolean);
   if (words.length < 2) return null;
   const run = (key: number) => <span key={key} className="lb-marquee__run">{[0, 1].flatMap(round => words.map((word, at) => <span key={`${round}-${at}`}>{word}<i aria-hidden="true">✦</i></span>))}</span>;
-  return <div id={`lb-${index}`} className="lb lb-strip-marquee" data-lb="strip-marquee" data-lb-look={block.look || 'solid'} aria-label={words.join(', ')}>
+  return <div id={`lb-${index}`} className="lb lb-strip-marquee" data-lb-at={index} data-lb="strip-marquee" data-lb-look={block.look || 'solid'} aria-label={words.join(', ')}>
     <p className="lb-marquee__track" aria-hidden="true">{[0, 1].map(run)}</p>
   </div>;
 }
@@ -652,7 +652,7 @@ function Usecases({ block, index }: { block: LibraryBlock; index: number }) {
 
 function Reviews({ block, index }: { block: LibraryBlock; index: number }) {
   const wall = block.type === 'reviews-wall';
-  return <section id={`lb-${index}`} className={`es-section lb lb-${block.type}`} data-lb={block.type} data-es-band={block.band || undefined} data-pagosya-reviews-section aria-labelledby={`lb-${index}-title`}>
+  return <section id={`lb-${index}`} className={`es-section lb lb-${block.type}`} data-lb-at={index} data-lb={block.type} data-es-band={block.band || undefined} data-pagosya-reviews-section aria-labelledby={`lb-${index}-title`}>
     <Head block={{ ...block, title: block.title || 'Lo que dicen nuestros clientes' }} index={index} align="center" />
     <div className={wall ? 'lb-reviews lb-reviews--wall' : 'lb-reviews lb-reviews--cards'} data-pagosya-reviews />
   </section>;
@@ -794,7 +794,7 @@ function ClosingWordmark({ block, index }: { block: LibraryBlock; index: number 
 /** Palo Alto: a thin note under the header («Loved by over 10,000 customers since 2016»), in the theme's small type. */
 function BarNote({ block, index }: { block: LibraryBlock; index: number }) {
   if (!block.title) return null;
-  return <div id={`lb-${index}`} className="lb lb-bar-note" data-lb="bar-note"><p>{block.title}</p></div>;
+  return <div id={`lb-${index}`} className="lb lb-bar-note" data-lb-at={index} data-lb="bar-note"><p>{block.title}</p></div>;
 }
 
 /** Palo Alto, Impulse: the photo is the page; the words sit centre-left, one word underlined by hand, the buttons stacked full width.
@@ -1355,9 +1355,9 @@ function StatsRings({ block, index }: { block: LibraryBlock; index: number }) {
  *  band they lead into (band), turned over (look flip) where a band ends. Decoration only: no words. */
 function WaveDivider({ block, index }: { block: LibraryBlock; index: number }) {
   // fodyfoods: a band's edge made of small round scallops — «ripple» rises into the band below, «ripple-flip» hangs from the one above.
-  if (block.look === 'ripple' || block.look === 'ripple-flip') return <div id={`lb-${index}`} className="lb lb-wave lb-ripple" data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look} aria-hidden="true" />;
-  if (block.look === 'sway' || block.look === 'sway-flip') return <div id={`lb-${index}`} className="lb lb-wave lb-wave--sway" data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look} aria-hidden="true"><span /></div>;
-  return <div id={`lb-${index}`} className="lb lb-wave" data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look || undefined} aria-hidden="true">
+  if (block.look === 'ripple' || block.look === 'ripple-flip') return <div id={`lb-${index}`} className="lb lb-wave lb-ripple" data-lb-at={index} data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look} aria-hidden="true" />;
+  if (block.look === 'sway' || block.look === 'sway-flip') return <div id={`lb-${index}`} className="lb lb-wave lb-wave--sway" data-lb-at={index} data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look} aria-hidden="true"><span /></div>;
+  return <div id={`lb-${index}`} className="lb lb-wave" data-lb-at={index} data-lb="wave-divider" data-lb-band={block.band || 'accent'} data-lb-look={block.look || undefined} aria-hidden="true">
     <svg viewBox="0 24 150 28" preserveAspectRatio="none">
       <defs><path id={`lb-wave-${index}`} d="M-160 44c30 0 58-18 88-18s58 18 88 18 58-18 88-18 58 18 88 18v44h-352z" /></defs>
       <g className="lb-wave__layers">

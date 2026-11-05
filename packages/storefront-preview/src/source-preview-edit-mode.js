@@ -20,9 +20,12 @@
   /** Template sections (spec 2026-11-05 point-at): a [data-lb] child of a [data-lb-home] / [data-lb-product] container, addressed
    *  by page and by the number the quick edit uses (its lb-N id; its position among the [data-lb] children otherwise). */
   function addressOf(element, box) {
+    // The template's own number first (data-lb-at, final review 2026-11-05), then an lb-N id, then the position among the
+    // [data-lb] children (older stores; a fixed-id section after one that drew nothing would be off by one there).
+    var given = /^\d{1,2}$/.exec(element.getAttribute('data-lb-at') || '');
     var named = /^lb-(\d{1,2})$/.exec(element.id || '');
     var siblings = Array.prototype.filter.call(box.children, function (child) { return child.hasAttribute('data-lb'); });
-    var at = named ? Number(named[1]) : siblings.indexOf(element);
+    var at = given ? Number(given[0]) : named ? Number(named[1]) : siblings.indexOf(element);
     var page = box.getAttribute('data-lb-page') || (box.hasAttribute('data-lb-product') ? 'product' : 'home');
     if (PAGES.indexOf(page) < 0 || at < 0 || at > 40) return null;
     var id = SECTION_ID.test(element.id || '') ? element.id : 'lb-' + at;
@@ -114,7 +117,7 @@
     var page = String(window.PAGOSYA_PREVIEW_PAGE || 'index.html') + String(window.PAGOSYA_PREVIEW_QUERY || '');
     return { first: sections[0] || null, area: { points: simplify(points), rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) },
       sections: sections.map(function (s) { return { page: s.page, at: s.at, label: s.label }; }), texts: texts, photos: photos, parts: parts,
-      width: Math.max(280, Math.min(2400, Math.round(innerWidth))), pageQuery: page.slice(0, 200) } };
+      width: Math.max(280, Math.min(2400, Math.round(innerWidth))), height: Math.max(200, Math.min(4000, Math.round(innerHeight))), pageQuery: page.slice(0, 200) } };
   }
   /** The loop stays drawn (thin, dark, white halo) until the selection is cleared. */
   function drawLoop(points) {

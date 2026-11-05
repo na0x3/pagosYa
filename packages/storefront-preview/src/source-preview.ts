@@ -45,7 +45,7 @@ export type PointPage = 'home' | 'product' | 'about' | 'contact' | 'faq' | 'ship
 export const POINT_PAGES: readonly PointPage[] = ['home', 'product', 'about', 'contact', 'faq', 'shipping'];
 export type PointPart = 'header' | 'announcement' | 'footer' | 'menu';
 /** A loop the merchant drew around part of the preview (spec 2026-11-05 point-at), in page coordinates. */
-export interface PointArea { points: number[]; rect: { x: number; y: number; width: number; height: number }; sections: Array<{ page: PointPage; at: number; label: string }>; texts: string[]; photos: string[]; parts: PointPart[]; width: number; pageQuery: string }
+export interface PointArea { points: number[]; rect: { x: number; y: number; width: number; height: number }; sections: Array<{ page: PointPage; at: number; label: string }>; texts: string[]; photos: string[]; parts: PointPart[]; width: number; height: number; pageQuery: string }
 export interface PreviewSelection { kind: 'section' | 'platform' | 'area'; sectionId: string; label: string; text?: string; at?: number; page?: PointPage; area?: PointArea }
 const validAt = (value: unknown) => Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 40;
 const POINT_PARTS: readonly PointPart[] = ['header', 'announcement', 'footer', 'menu'];
@@ -63,8 +63,10 @@ export function validPointArea(value: unknown): PointArea | null {
   if (!Array.isArray(a.photos) || a.photos.length > 6 || !a.photos.every(p => typeof p === 'string' && p.length <= 500 && /^(https?:\/\/|\/|assets\/)/.test(p))) return null;
   if (!Array.isArray(a.parts) || !a.parts.every(p => POINT_PARTS.includes(p))) return null;
   if (!inRange(a.width, 2400) || a.width < 280 || typeof a.pageQuery !== 'string' || !PAGE_QUERY.test(a.pageQuery)) return null;
+  // The preview's own viewport height: the picture is drawn at it, since covers are sized in vh (final review 2026-11-05).
+  if (!inRange(a.height, 4000) || a.height < 200) return null;
   return { points: [...a.points], rect: { x: r.x, y: r.y, width: r.width, height: r.height }, sections: a.sections.map(s => ({ page: s.page, at: s.at, label: s.label })),
-    texts: [...a.texts], photos: [...a.photos], parts: [...new Set(a.parts)], width: a.width, pageQuery: a.pageQuery };
+    texts: [...a.texts], photos: [...a.photos], parts: [...new Set(a.parts)], width: a.width, height: a.height, pageQuery: a.pageQuery };
 }
 
 /** The section in the middle of the preview (spec 2026-11-05 point-at), checked like a selection. */

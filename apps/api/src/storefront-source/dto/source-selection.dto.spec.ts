@@ -44,7 +44,7 @@ describe('selection on the request bodies', () => {
 });
 
 import { SourceViewingDto } from './source-selection.dto';
-const area = { points: [0, 0, 100, 0, 100, 100], rect: { x: 0, y: 0, width: 100, height: 100 }, sections: [{ page: 'home', at: 1, label: 'Hola' }], texts: ['Hola'], photos: ['/v1/uploads/a.jpg'], parts: ['menu'], width: 1280, pageQuery: 'producto.html?id=abc' };
+const area = { points: [0, 0, 100, 0, 100, 100], rect: { x: 0, y: 0, width: 100, height: 100 }, sections: [{ page: 'home', at: 1, label: 'Hola' }], texts: ['Hola'], photos: ['/v1/uploads/a.jpg'], parts: ['menu'], width: 1280, height: 720, pageQuery: 'producto.html?id=abc' };
 describe('pointing (spec 2026-11-05 point-at)', () => {
   it('accepts a template address, a circle and a viewing', () => {
     expect(errors(SourceSelectionDto, { sectionId: 'lb-1', at: 1, page: 'about' })).toEqual([]);
@@ -56,7 +56,7 @@ describe('pointing (spec 2026-11-05 point-at)', () => {
     { at: 41, page: 'home' }, { at: 1, page: 'blog' },
     { area: { ...area, points: Array(130).fill(1) } }, { area: { ...area, points: [1, 'x', 2, 2, 3, 3] } }, { area: { ...area, texts: Array(13).fill('x') } },
     { area: { ...area, texts: ['x'.repeat(201)] } }, { area: { ...area, photos: Array(7).fill('/a.jpg') } }, { area: { ...area, photos: ['javascript:alert(1)'] } },
-    { area: { ...area, parts: ['body'] } }, { area: { ...area, width: 279 } }, { area: { ...area, pageQuery: '../etc.html' } }, { area: { ...area, sections: Array(4).fill(area.sections[0]) } },
+    { area: { ...area, parts: ['body'] } }, { area: { ...area, width: 279 } }, { area: { ...area, height: 100 } }, { area: { ...area, pageQuery: '../etc.html' } }, { area: { ...area, sections: Array(4).fill(area.sections[0]) } },
   ])('refuses %j', extra => { expect(errors(SourceSelectionDto, { sectionId: 'lb-1', ...extra })).not.toEqual([]); });
   it('refuses a viewing on an unknown page', () => { expect(errors(SourceViewingDto, { page: 'blog' })).not.toEqual([]); });
 });
