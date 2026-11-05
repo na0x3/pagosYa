@@ -366,16 +366,26 @@ export class SourceTemplatesService {
     }
     // Section library (spec 2026-10-31): every photo a block shows is bundled too; one that cannot be is left out of its block.
     // The product page's sections (owner 2026-10-31) the same way.
-    for (const key of ['layout', 'productLayout'] as const) {
-      if (!change[key]?.length) continue;
-      const swap = async (value: unknown) => typeof value !== 'string' || !value ? undefined : BUNDLED_PHOTO.test(value) ? value : (await bundle(value))?.asset;
-      const blocks: unknown[] = out[key] = [];
-      for (const raw of change[key] as Array<Record<string, unknown> & { items?: Array<Record<string, unknown>> }>) {
+    const swap = async (value: unknown) => typeof value !== 'string' || !value ? undefined : BUNDLED_PHOTO.test(value) ? value : (await bundle(value))?.asset;
+    const bundled = async (list: unknown[]) => {
+      const blocks: unknown[] = [];
+      for (const raw of list as Array<Record<string, unknown> & { items?: Array<Record<string, unknown>> }>) {
         const block: Record<string, unknown> = { ...raw };
         for (const key of ['photo', 'photo2'] as const) { if (key in block) { const asset = await swap(block[key]); if (asset) block[key] = asset; else delete block[key]; } }
         if (Array.isArray(raw.items)) block.items = await Promise.all(raw.items.map(async item => { if (!('photo' in item)) return item; const asset = await swap(item.photo); const { photo: _photo, ...rest } = item; return asset ? { ...rest, photo: asset } : rest; }));
         blocks.push(block);
       }
+      return blocks;
+    };
+    for (const key of ['layout', 'productLayout'] as const) {
+      if (!change[key]?.length) continue;
+      out[key] = await bundled(change[key]!);
+    }
+    // The menu pages' sections (spec 2026-11-05) the same way.
+    if (change.pageLayouts) {
+      const pages: Record<string, unknown[]> = {};
+      for (const [kind, list] of Object.entries(change.pageLayouts)) pages[kind] = Array.isArray(list) ? await bundled(list) : [];
+      out.pageLayouts = pages;
     }
     return { change: out, files };
   }

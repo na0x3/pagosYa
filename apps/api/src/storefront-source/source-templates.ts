@@ -110,7 +110,7 @@ export function starterBrandBlock(colours: StarterBrandColours): string {
   return vars.length ? `/* pagosya-brand */ :root{${vars.join(';')}}` : '';
 }
 
-export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[]; features?: Record<string, unknown>; layout?: unknown[]; productLayout?: unknown[] }, plantillaCopy?: Record<string, string>): SourceProjectFileDto {
+export function templateStoreDataFile(store: { name: string; tagline?: string; city?: string; logo?: string; phone?: string }, photos: Record<string, string>, master?: { copy: MasterCopy; look: MasterLook; variants?: MasterVariants; sections?: MasterSection[]; features?: Record<string, unknown>; layout?: unknown[]; productLayout?: unknown[]; pageLayouts?: Record<string, unknown[]> }, plantillaCopy?: Record<string, string>): SourceProjectFileDto {
   const data = { name: store.name, tagline: store.tagline ?? '', city: store.city ?? '', logo: store.logo ?? '', phone: store.phone ?? '' };
   return {
     path: TEMPLATE_STORE_DATA_PATH,
@@ -125,7 +125,9 @@ export function templateStoreDataFile(store: { name: string; tagline?: string; c
         // Section library (spec 2026-10-31): always exported, empty for a store YAPI did not compose from the library.
         + `export const layout: any[] = ${JSON.stringify(master.layout ?? [])};\n`
         // The template's product-page sections (owner 2026-10-31); always exported, so the product page compiles with none.
-        + `export const productLayout: any[] = ${JSON.stringify(master.productLayout ?? [])};\n` : '')
+        + `export const productLayout: any[] = ${JSON.stringify(master.productLayout ?? [])};\n`
+        // The menu pages' sections (spec 2026-11-05); always exported, so a page that draws them compiles with none.
+        + `export const pageLayouts: Record<string, any[]> = ${JSON.stringify(master.pageLayouts ?? {})};\n` : '')
       // A converted Plantilla (spec 2026-10-20): every text it shows, filled for the merchant or the template's own defaults.
       + (plantillaCopy ? `export const copy: Record<string, string> = ${JSON.stringify(plantillaCopy)};\n` : ''),
   };
@@ -186,6 +188,7 @@ export function readMasterState(files: readonly SourceProjectFileDto[]) {
     features: (dataLine(content, 'features') ?? {}) as Record<string, unknown>,
     layout: (dataLine(content, 'layout') ?? []) as unknown[],
     productLayout: (dataLine(content, 'productLayout') ?? []) as unknown[],
+    pageLayouts: (dataLine(content, 'pageLayouts') ?? {}) as Record<string, unknown[]>,
   };
 }
 
@@ -404,7 +407,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   // Sort & filter styles spec 2026-10-21: a fashion store from before the filters part gets the John Smedley chip rows.
   if ((settings.variants?.filters ?? []).includes('chips') && variants.filters === undefined && variants.cards === 'fashion') variants.filters = 'chips';
   const out = withFashionTemplateParts(files.map(file => {
-    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [], features, layout: change.layout ?? state.layout ?? [], productLayout: change.productLayout ?? state.productLayout ?? [] });
+    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [], features, layout: change.layout ?? state.layout ?? [], productLayout: change.productLayout ?? state.productLayout ?? [], pageLayouts: change.pageLayouts ?? state.pageLayouts ?? {} });
     // Owner 2026-11-02 (DooBoo): the accent as words on the page reads even when the brand's accent is pale.
     if (file.path === 'styles/globals.css') return { ...file, content: readableAccentText(themed ? bindThemeAccent(withMasterTheme(withCurrentThemeBlock(file.content, themeId), theme), themeId, themed) : withMasterTheme(file.content, theme)) };
     if (file.path === 'config.js') {

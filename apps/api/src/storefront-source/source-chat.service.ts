@@ -68,7 +68,8 @@ import { nextTitleStyle, readTitleAsk } from './source-title-style';
 import { buildLibraryFacts, carriedSections, libraryDropReason, libraryMood, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, type LayoutBlock } from './source-section-library';
 import { applyStoreOps, readCatalogTitle, storeChangeEmpty, withCatalogTitle, type StoreChange, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
 import { storeFaq, storePolicies } from '../stores/store-presentation';
-import { applyLayoutOps, layoutAdds, layoutEditReply } from './source-layout-edit';
+import { MENU_PAGES, MENU_PAGE_NAMES, applyLayoutOps, layoutAdds, layoutEditReply, type LayoutPage, type MenuPage } from './source-layout-edit';
+import { withSectionedPages } from './source-content-pages';
 import { bolivianos, readShippingAsk, type ShippingAsk } from './source-shipping-ask';
 import { plainReply } from './source-plain-reply';
 import { visibleChanges } from './source-visible-change';
@@ -1096,25 +1097,33 @@ export class SourceChatService {
   private async templateLayoutEdit(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, input: SourceMessageInput, revision: number, layout: LayoutBlock[]) {
     const files = ((await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot).files;
     const productLayout = (readMasterState(files).productLayout ?? []) as LayoutBlock[];
+    // Spec 2026-11-05: the menu pages' own sections ([] = the page shows only its text today).
+    const savedPages = (readMasterState(files).pageLayouts ?? {}) as Record<string, unknown>;
+    const pages = Object.fromEntries(MENU_PAGES.map(page => [page, (Array.isArray(savedPages[page]) ? savedPages[page] : []) as LayoutBlock[]])) as Record<MenuPage, LayoutBlock[]>;
     const editState = await this.storeEditState(merchantId, storeId, files).catch(error => {
       this.productLogger.warn(JSON.stringify({ event: 'store_edit_state_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
       return null;
     });
     const photos = editState ? await this.storeEditPhotos(merchantId, storeId, input.assetUrls ?? [], editState.products) : [];
-    const read = await this.dialogue.editLayout(merchantId, { storeId, layout, request: input.instruction, ...(productLayout.length ? { productLayout } : {}), ...(editState ? { store: editState, photos } : {}) });
+    const templateTypes = [...new Set(layout.map(block => block.type))];
+    const read = await this.dialogue.editLayout(merchantId, { storeId, layout, request: input.instruction, ...(productLayout.length ? { productLayout } : {}), pages, templateTypes,
+      ...(editState ? { store: editState, photos } : {}) });
     if (!read) return null;
     // Fix 3 (2026-11-02, goodProtein #12: a new section went to the design agent, ~18 min, never mounted): a section the merchant asks
-    // for comes from the library, filled with the store's words and photos the way the template was.
-    const asked = layoutAdds(layout, read.ops);
-    const added: Array<{ to: number; block: LayoutBlock }> = [];
-    const refusedAdds = [...asked.refused];
-    if (asked.adds.length) {
+    // for comes from the library, filled with the store's words and photos the way the template was — on the home or a menu page.
+    let facts: Awaited<ReturnType<SourceChatService['libraryFacts']>> | null = null;
+    const compose = async (page: LayoutPage, list: LayoutBlock[]) => {
+      const asked = layoutAdds(list, read.ops, page);
+      const added: Array<{ to: number; block: LayoutBlock }> = [];
+      const refusedAdds = [...asked.refused];
+      if (!asked.adds.length) return { added, refusedAdds };
       await workflow.report('design');
-      const facts = await this.libraryFacts(merchantId, storeId, files, input.instruction, 14);
+      facts ??= await this.libraryFacts(merchantId, storeId, files, input.instruction, 14);
+      const where = page === 'home' ? 'la portada' : `la página «${MENU_PAGE_NAMES[page as MenuPage]}»`;
       for (const add of asked.adds) {
         const blocker = librarySectionBlocker(add.type, facts);
         if (blocker) { refusedAdds.push(`No pude agregar esa sección: ${blocker}.`); continue; }
-        const request = `${input.instruction}\n(Sección nueva para la portada${add.about ? `: ${add.about}` : ''}. Escríbela completa con los datos de la tienda.)`;
+        const request = `${input.instruction}\n(Sección nueva para ${where}${add.about ? `: ${add.about}` : ''}. Escríbela completa con los datos de la tienda.)`;
         // Two new sections in one request show different photos (Miga Dorada live 2026-11-02: both took the same one).
         const shown = new Set(added.flatMap(({ block }) => [block.photo, block.photo2, ...(block.items ?? []).map(item => item.photo)]).filter(Boolean));
         const fresh = facts.photos.filter(photo => !shown.has(photo.url));
@@ -1123,17 +1132,28 @@ export class SourceChatService {
         const [block] = answer ? validateLibraryLayout(answer as never, sectionFacts, { fixed: [{ type: add.type }] }) : [];
         if (block) added.push({ to: add.to, block }); else refusedAdds.push(`No pude agregar esa sección: ${libraryDropReason(add.type)}.`);
       }
-    }
-    const applied = applyLayoutOps(layout, read.ops, added, { photos });
-    applied.refused.push(...refusedAdds);
+      return { added, refusedAdds };
+    };
+    const homeAdds = await compose('home', layout);
+    const applied = applyLayoutOps(layout, read.ops, homeAdds.added, { photos });
+    applied.refused.push(...homeAdds.refusedAdds);
     const product = productLayout.length ? applyLayoutOps(productLayout, read.ops, [], { page: 'product', photos }) : { layout: productLayout, done: [], refused: [] };
+    // Spec 2026-11-05: each menu page on its own; a request about «Nosotros» never changes the home or another page.
+    const menu: Array<{ page: MenuPage; layout: LayoutBlock[]; done: string[]; refused: string[] }> = [];
+    for (const page of MENU_PAGES) {
+      if (!read.ops.some(op => op.page === page)) continue;
+      const pageAdds = await compose(page, pages[page]);
+      const result = applyLayoutOps(pages[page], read.ops, pageAdds.added, { page, photos });
+      menu.push({ page, layout: result.layout, done: result.done, refused: [...result.refused, ...pageAdds.refusedAdds] });
+    }
+    const menuChanged = menu.filter(entry => JSON.stringify(entry.layout) !== JSON.stringify(pages[entry.page]));
     const store = editState ? applyStoreOps(editState, read.store, photos) : { change: { products: [] } as StoreChange, done: [], refused: [] };
     const changed = JSON.stringify(applied.layout) !== JSON.stringify(layout);
     const productChanged = JSON.stringify(product.layout) !== JSON.stringify(productLayout);
-    const done = [...applied.done, ...product.done];
-    const refused = [...applied.refused, ...product.refused, ...store.refused];
-    this.productLogger.log(JSON.stringify({ event: 'template_layout_edit', storeId, ops: read.ops.map(op => `${op.page === 'product' ? 'ficha:' : ''}${op.op}:${op.at}${op.field ? `.${op.field}` : ''}${op.item >= 0 ? `[${op.item}]` : ''}${op.type ? `=${op.type}` : ''}`),
-      store: read.store.map(op => `${op.part}.${op.field}${op.at >= 0 ? `[${op.at}]` : ''}`), added: added.map(entry => entry.block.type), changed, productChanged, refused: refused.length, rest: read.rest.slice(0, 200) }));
+    const done = [...applied.done, ...product.done, ...menu.flatMap(entry => entry.done)];
+    const refused = [...applied.refused, ...product.refused, ...menu.flatMap(entry => entry.refused), ...store.refused];
+    this.productLogger.log(JSON.stringify({ event: 'template_layout_edit', storeId, ops: read.ops.map(op => `${op.page && op.page !== 'home' ? `${op.page === 'product' ? 'ficha' : op.page}:` : ''}${op.op}:${op.at}${op.field ? `.${op.field}` : ''}${op.item >= 0 ? `[${op.item}]` : ''}${op.type ? `=${op.type}` : ''}`),
+      store: read.store.map(op => `${op.part}.${op.field}${op.at >= 0 ? `[${op.at}]` : ''}`), added: homeAdds.added.map(entry => entry.block.type), changed, productChanged, menuChanged: menuChanged.map(entry => `${entry.page}:${entry.layout.map(block => block.type).join(',')}`), refused: refused.length, rest: read.rest.slice(0, 200) }));
     // The store's data first: a refused write (a check the database makes) is said, never «Listo».
     // The announcement, the footer line and the catalogue title are files; everything else the store edit changes is data.
     const { copy: _copy, catalogTitle: _title, ...data } = store.change;
@@ -1148,15 +1168,20 @@ export class SourceChatService {
       })();
       if (written) done.push(...store.done); else refused.push('No pude guardar los cambios de los datos de tu tienda. Inténtalo de nuevo en un momento.');
     }
-    const filesChange: MasterFill = { ...(changed ? { layout: applied.layout } : {}), ...(productChanged ? { productLayout: product.layout } : {}), ...(store.change.copy ? { copy: store.change.copy } : {}) };
+    const filesChange: MasterFill = { ...(changed ? { layout: applied.layout } : {}), ...(productChanged ? { productLayout: product.layout } : {}), ...(store.change.copy ? { copy: store.change.copy } : {}),
+      ...(menuChanged.length ? { pageLayouts: { ...pages, ...Object.fromEntries(menuChanged.map(entry => [entry.page, entry.layout])) } } : {}) };
     if (!done.length && !refused.length) return null;
     let saved: Awaited<ReturnType<SourceTemplatesService['refill']>> | null = null;
     // One revision: the files that changed, and the live data in config.js so the preview shows a page or product just written.
     if (Object.keys(filesChange).length || store.change.catalogTitle !== undefined || dataChanged) {
       await workflow.report('saving');
       const title = store.change.catalogTitle;
-      saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || store.change.copy || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
-        { refreshData: true, ...(title !== undefined ? { files: <T extends { path: string; content: string }>(list: T[]) => withCatalogTitle(list, title) } : {}) });
+      // A menu page that now has sections draws them (spec 2026-11-05); one emptied keeps the file, which then shows its text.
+      const sectioned = menuChanged.filter(entry => entry.layout.length).map(entry => entry.page);
+      const pageFiles = title !== undefined || sectioned.length
+        ? { files: <T extends { path: string; content: string }>(list: T[]) => withSectionedPages(title !== undefined ? withCatalogTitle(list, title) : list, sectioned) } : {};
+      saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || store.change.copy || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
+        { refreshData: true, ...pageFiles });
     }
     await workflow.finish('completed');
     const rest = read.rest;

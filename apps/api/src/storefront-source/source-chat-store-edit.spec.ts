@@ -107,3 +107,27 @@ it('switches the popup on with a welcome code', async () => {
   expect(prisma.promoCode.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ code: 'BIENVENIDA10', discountValue: 10 }) }));
   expect(prisma.storeRetention.upsert.mock.calls[0][0].update.settings).toMatchObject({ signupEnabled: true, popupPromoCodeId: 'code1' });
 });
+
+it('builds the Nosotros page from template sections and leaves the home alone (spec 2026-11-05)', async () => {
+  const libraryFacts = { storeName: 'DooBoo', what: 'Gelato de tofu', story: 'Empezamos en 2021.', city: 'La Paz', request: '', tone: 'calm', products: [{ id: 'p1', name: 'Gelato chocolate' }],
+    categories: [], photos: [0, 1, 2, 3].map(index => ({ url: `/v1/uploads/0000000${index}-aaaa.jpg` })), codes: [], services: [], reviews: 0 };
+  chat.libraryFacts = jest.fn().mockResolvedValue(libraryFacts);
+  chat.dialogue.composeLibrary = jest.fn(async (_merchant: string, input: { template: Array<{ type: string }> }) => ({ blocks: [{
+    type: input.template[0].type, eyebrow: '', title: input.template[0].type === 'cover-centered' ? 'Somos DooBoo' : 'Nuestra historia', text: 'Gelato de tofu hecho en La Paz desde 2021.',
+    cta: '', link: '', cta2: '', link2: '', photo: 0, photo2: -1, items: [], products: [], product: '', code: '', look: '', band: '', card: '', endsAt: '' }] }));
+  const add = (type: string) => ({ op: 'add', at: -1, field: '', item: -1, value: 'quiénes somos', to: -1, type, page: 'about' });
+  editLayout.mockResolvedValue(read({ ops: [add('story-split'), add('cover-centered')] }));
+  const out = await edit('cambia nosotros a algo más bonito');
+  const input = editLayout.mock.calls[0][1];
+  expect(input.pages).toEqual({ about: [], contact: [], faq: [], shipping: [] });
+  expect(input.templateTypes).toEqual(['cover-split', 'products-grid']);
+  const [, , , change, label, options] = refill.mock.calls[0];
+  expect(change.layout).toBeUndefined();
+  expect(change.pageLayouts.about.map((block: LayoutBlock) => block.type)).toEqual(['cover-centered', 'story-split']);
+  expect(change.pageLayouts.about[1].title).toBe('Nuestra historia');
+  expect(label).toBe('Cambios de YAPI');
+  const pageFiles = options.files([{ path: 'components/library.tsx', content: '' }, { path: 'components/pages/about.tsx', content: 'old' }, { path: 'components/pages/faq.tsx', content: 'old' }]);
+  expect(pageFiles[1].content).toContain('<LibraryHome');
+  expect(pageFiles[2].content).toBe('old');
+  expect(out.assistantMessage.content).toContain('a tu página «Nosotros»');
+});

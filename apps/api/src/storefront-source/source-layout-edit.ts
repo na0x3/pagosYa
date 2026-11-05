@@ -7,7 +7,14 @@ import { photoRef, readStoreOps, storeOpSchema, type StoreEditPhoto, type StoreO
 export type LayoutTextField = 'eyebrow' | 'title' | 'text' | 'cta' | 'cta2';
 /** YAPI edits everything (spec 2026-11-03): `page` = the product page's sections (productLayout) instead of the home; `photo` swaps a
  *  photo the section already shows (field photo | photo2, or an item's photo) for one of the numbered photos (value f0, f1…). */
-export type LayoutOp = { op: 'text' | 'remove' | 'move' | 'add' | 'photo'; at: number; field: LayoutTextField | 'photo' | 'photo2' | ''; item: number; value: string; to: number; type?: string; page?: 'home' | 'product' };
+export type LayoutOp = { op: 'text' | 'remove' | 'move' | 'add' | 'photo'; at: number; field: LayoutTextField | 'photo' | 'photo2' | ''; item: number; value: string; to: number; type?: string; page?: LayoutPage };
+/** Spec 2026-11-05 (owner: «cambia nosotros a algo más bonito … solo eso»): the menu pages that may carry the template's sections
+ *  (store-data `pageLayouts`), each edited on its own. */
+export const MENU_PAGES = ['about', 'contact', 'faq', 'shipping'] as const;
+export type MenuPage = typeof MENU_PAGES[number];
+export type LayoutPage = 'home' | 'product' | MenuPage;
+export const MENU_PAGE_NAMES: Record<MenuPage, string> = { about: 'Nosotros', contact: 'Contacto', faq: 'Preguntas frecuentes', shipping: 'Envíos' };
+const isMenuPage = (page: unknown): page is MenuPage => (MENU_PAGES as readonly unknown[]).includes(page);
 export type LayoutEditRead = { ops: LayoutOp[]; store: StoreOp[]; rest: string };
 /** Fix 3 (2026-11-02): a section the merchant asked for, from the library, before the section `to` showed (-1 = before the closing). */
 export type LayoutAdd = { type: string; to: number; about: string };
@@ -22,6 +29,10 @@ const MAIN_GRIDS = new Set(['products-grid', 'products-tabs']);
 const ADDABLE = LIBRARY_CATALOG.filter(section => section.role !== 'cover' && !MAIN_GRIDS.has(section.id) && !section.decor && section.id !== 'bar-note');
 const ADDABLE_IDS = new Set(ADDABLE.map(section => section.id));
 const MAX_ADDS = 2;
+// A menu page may also start with a cover: «Nosotros» built from nothing reads like the template's home (spec 2026-11-05).
+const PAGE_ADDABLE = LIBRARY_CATALOG.filter(section => !MAIN_GRIDS.has(section.id) && !section.decor && section.id !== 'bar-note');
+const PAGE_ADDABLE_IDS = new Set(PAGE_ADDABLE.map(section => section.id));
+const MAX_PAGE_ADDS = 5;
 // What the merchant calls each kind of section; the reply names a section by its own title first.
 const ROLE_NAME: Record<LibraryRole, string> = { cover: 'la portada', strip: 'la franja', products: 'los productos', story: 'la historia', benefits: 'los beneficios',
   proof: 'las reseñas', promo: 'la promoción', info: 'la información', closing: 'el cierre' };
@@ -35,9 +46,9 @@ const nameIn = (block: LayoutBlock) => block.title ? `«${block.title}»` : kind
 const upper = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 const placeIn = (block: LayoutBlock) => isCover(block) ? 'la portada' : block.title ? `la sección «${block.title}»` : kindOf(block);
 
-/** The sections a request may add, as the model reads them. */
-export function addableSections(): Array<{ id: string; use: string }> {
-  return ADDABLE.map(({ id, use }) => ({ id, use }));
+/** The sections a request may add, as the model reads them; a menu page's list also has the covers. */
+export function addableSections(page: 'home' | 'menu' = 'home'): Array<{ id: string; use: string }> {
+  return (page === 'menu' ? PAGE_ADDABLE : ADDABLE).map(({ id, use }) => ({ id, use }));
 }
 
 /** The home as the model reads it: numbered sections, what kind each is and its current words. */
@@ -69,8 +80,16 @@ Operaciones de «ops» (todos los campos van siempre; los que no se usan: field 
   palabras). at = -1. Sus textos y fotos se escriben después con los datos de la tienda. Como mucho 2 secciones nuevas por pedido.
   Si la portada ya tiene una sección que hace eso, cambia sus textos en vez de agregar otra.
 
+Páginas del menú: «paginas» trae Nosotros (about), Contacto (contact), Preguntas frecuentes (faq) y Envíos (shipping) con sus
+secciones (numeradas con at, como la portada; [] = hoy solo muestra su texto). Un cambio de una de esas páginas lleva page = about,
+contact, faq o shipping; sus at son los de esa página; nunca cambies la portada ni otra página por ese pedido. «Haz Nosotros más
+bonita», «cambia nosotros a algo más lindo», «que contacto se vea mejor»: si la página tiene pocas secciones, agrégale de 3 a 5
+con add y su page (una sola portada cover-*, que va primero; luego historia, beneficios, pasos o un cierre con foto), escogidas de
+«nuevas_paginas» y prefiriendo los tipos de «plantilla» (las secciones que usa la portada de esta plantilla); si ya tiene, cambia
+sus textos o fotos. Como mucho 5 secciones nuevas por página y pedido. Su texto de la página (store about) no cambia por eso.
+
 Reglas:
-- Usa solo los números de «secciones». Cambia solo lo que el comercio pidió; nunca reescribas lo demás.
+- Usa solo los números de «secciones» (o de la página del menú que pidió). Cambia solo lo que el comercio pidió; nunca reescribas lo demás.
 - «el titular», «el título principal», «el texto grande de arriba» = el title de la portada (la primera sección cover-*). «el botón»
   sin más = el cta de la portada.
 - Una sección se reconoce por su título actual o por lo que muestra (preguntas, reseñas, productos, beneficios…).
@@ -83,7 +102,7 @@ Reglas:
 export function layoutEditSchema() {
   const op = { type: 'object', additionalProperties: false, required: ['op', 'at', 'field', 'item', 'value', 'to', 'type', 'page'], properties: {
     op: { type: 'string', enum: ['text', 'remove', 'move', 'add', 'photo'] }, at: { type: 'integer' }, field: { type: 'string', enum: [...FIELDS, 'photo', 'photo2', ''] },
-    item: { type: 'integer' }, value: { type: 'string' }, to: { type: 'integer' }, type: { type: 'string', enum: [...ADDABLE_IDS, ''] }, page: { type: 'string', enum: ['home', 'product'] } } };
+    item: { type: 'integer' }, value: { type: 'string' }, to: { type: 'integer' }, type: { type: 'string', enum: [...PAGE_ADDABLE_IDS, ''] }, page: { type: 'string', enum: ['home', 'product', ...MENU_PAGES] } } };
   return { type: 'object', additionalProperties: false, required: ['ops', 'store', 'rest'], properties: { ops: { type: 'array', items: op }, store: { type: 'array', items: storeOpSchema() }, rest: { type: 'string' } } };
 }
 
@@ -93,22 +112,31 @@ export function readLayoutEdit(answer: unknown): LayoutEditRead | null {
   const raw = answer as { ops?: unknown; store?: unknown; rest?: unknown };
   const ops = (Array.isArray(raw.ops) ? raw.ops : []).filter((op): op is LayoutOp => Boolean(op) && ['text', 'remove', 'move', 'add', 'photo'].includes((op as LayoutOp).op)
     && Number.isInteger((op as LayoutOp).at))
-    // The home is the default page; only the product page is marked.
-    .map(op => { const { page, ...rest } = op; return page === 'product' ? { ...rest, page } : rest; });
+    // The home is the default page; only the product page and the menu pages are marked.
+    .map(op => { const { page, ...rest } = op; return page === 'product' || isMenuPage(page) ? { ...rest, page } : rest; });
   return { ops, store: readStoreOps(raw.store), rest: String(raw.rest ?? '').replace(/\s+/g, ' ').trim() };
 }
 
 /** The sections a request adds, checked: a known addable section the home does not have yet, at most two. The caller fills each
  *  (words and photos from the store's facts) and hands the filled blocks back to applyLayoutOps. */
-export function layoutAdds(layout: readonly LayoutBlock[], ops: readonly LayoutOp[]): { adds: LayoutAdd[]; refused: string[] } {
+export function layoutAdds(layout: readonly LayoutBlock[], ops: readonly LayoutOp[], page: LayoutPage = 'home'): { adds: LayoutAdd[]; refused: string[] } {
   const adds: LayoutAdd[] = [];
   const refused: string[] = [];
-  for (const op of ops.filter(entry => entry.op === 'add' && entry.page !== 'product')) {
+  // The product page takes no new section; a menu page (spec 2026-11-05) up to five, one of them a cover.
+  if (page === 'product') return { adds, refused };
+  const menu = isMenuPage(page);
+  const allowed = menu ? PAGE_ADDABLE_IDS : ADDABLE_IDS;
+  const where = menu ? `Tu página «${MENU_PAGE_NAMES[page]}»` : 'Tu portada';
+  for (const op of ops.filter(entry => entry.op === 'add' && (entry.page ?? 'home') === page)) {
     const type = String(op.type ?? '');
-    if (!ADDABLE_IDS.has(type) || adds.some(add => add.type === type)) continue;
+    if (!allowed.has(type) || adds.some(add => add.type === type)) continue;
     const there = layout.find(block => block.type === type);
-    if (there) { refused.push(`Tu portada ya tiene ${nameIn(there)}: pídeme cambiar sus textos.`); continue; }
-    if (adds.length >= MAX_ADDS) { refused.push('Agrego hasta dos secciones por pedido: pídeme la siguiente después.'); break; }
+    if (there) { refused.push(`${where} ya tiene ${nameIn(there)}: pídeme cambiar sus textos.`); continue; }
+    if (ROLE.get(type) === 'cover' && [...layout, ...adds].some(block => ROLE.get(block.type) === 'cover')) { refused.push(`${where} lleva una portada, no dos.`); continue; }
+    if (adds.length >= (menu ? MAX_PAGE_ADDS : MAX_ADDS)) {
+      refused.push(menu ? `Agrego hasta cinco secciones por pedido en ${where.replace('Tu', 'tu')}: pídeme las demás después.` : 'Agrego hasta dos secciones por pedido: pídeme la siguiente después.');
+      break;
+    }
     adds.push({ type, to: Number.isInteger(op.to) && op.to >= 0 && op.to < layout.length ? op.to : -1, about: clip(op.value, 300) });
   }
   return { adds, refused };
@@ -117,11 +145,12 @@ export function layoutAdds(layout: readonly LayoutBlock[], ops: readonly LayoutO
 /** The operations applied to the home. Ops name the sections by the numbers the model saw, whatever was removed or moved first.
  *  The cover and the main grid stay, the cover stays on top and keeps its title, and an item always keeps its title. */
 export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly LayoutOp[], added: ReadonlyArray<{ to: number; block: LayoutBlock }> = [],
-  options: { page?: 'home' | 'product'; photos?: readonly StoreEditPhoto[] } = {}): { layout: LayoutBlock[]; done: string[]; refused: string[] } {
-  // Spec 2026-11-03: the ops of one page (the home unless marked); the product page's sections are named «de la ficha».
+  options: { page?: LayoutPage; photos?: readonly StoreEditPhoto[] } = {}): { layout: LayoutBlock[]; done: string[]; refused: string[] } {
+  // Spec 2026-11-03: the ops of one page (the home unless marked); the product page's sections are named «de la ficha», a menu
+  // page's «de la página «Nosotros»» (spec 2026-11-05).
   const page = options.page ?? 'home';
   const ops = allOps.filter(op => (op.page ?? 'home') === page);
-  const where = page === 'product' ? ' de la ficha de producto' : '';
+  const where = page === 'product' ? ' de la ficha de producto' : isMenuPage(page) ? ` de la página «${MENU_PAGE_NAMES[page]}»` : '';
   // The product page's sections are named «… de la ficha de producto» right where the reply names them.
   const placeOf = (block: LayoutBlock) => `${placeIn(block)}${where}`;
   const nameOf = (block: LayoutBlock) => `${nameIn(block)}${where}`;
@@ -200,14 +229,22 @@ export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly 
   }
   // Last, the new sections (filled by the caller): before the section they were asked before, else before the closing; never
   // above the cover.
+  const pageAdds: string[] = [];
   for (const { to, block } of added) {
     const at = blocks.push(block) - 1;
     const closing = order.length && ROLE.get(blocks[order.at(-1)!].type) === 'closing' ? order.length - 1 : order.length;
     let place = to >= 0 && order.includes(to) ? order.indexOf(to) : closing;
-    place = Math.max(place, order.findIndex(index => isCover(blocks[index])) + 1);
+    // A menu page's new cover (the only place one can be added) goes on top.
+    place = isCover(block) ? 0 : Math.max(place, order.findIndex(index => isCover(blocks[index])) + 1);
     order = [...order.slice(0, place), at, ...order.slice(place)];
+    const name = block.title ? `la sección «${block.title}»` : kindOf(block);
+    if (isMenuPage(page)) { pageAdds.push(name); continue; }
     // «agregué la sección «A» y la sección «B»», not «agregué … y agregué …».
-    done.push(`${done.at(-1)?.startsWith('agregué') ? '' : 'agregué '}${block.title ? `la sección «${block.title}»` : kindOf(block)}`);
+    done.push(`${done.at(-1)?.startsWith('agregué') ? '' : 'agregué '}${name}`);
+  }
+  if (pageAdds.length && isMenuPage(page)) {
+    const list = pageAdds.length > 1 ? `${pageAdds.slice(0, -1).join(', ')} y ${pageAdds.at(-1)}` : pageAdds[0];
+    done.push(`agregué ${list} a tu página «${MENU_PAGE_NAMES[page]}»`);
   }
   return { layout: order.map(at => blocks[at]), done, refused };
 }

@@ -1,4 +1,4 @@
-import { addableSections, applyLayoutOps, layoutAdds, layoutDigest, layoutEditReply, layoutEditSchema, readLayoutEdit } from './source-layout-edit';
+import { MENU_PAGES, addableSections, applyLayoutOps, layoutAdds, layoutDigest, layoutEditReply, layoutEditSchema, readLayoutEdit } from './source-layout-edit';
 import type { LayoutBlock } from './source-section-library';
 
 const home: LayoutBlock[] = [
@@ -105,7 +105,9 @@ describe('adding a section (fix 3, 2026-11-02)', () => {
     const ids = addableSections().map(section => section.id);
     expect(ids).toEqual(expect.arrayContaining(['faq-split', 'steps-howto', 'compare-table', 'story-list', 'icon-columns']));
     expect(ids.some(id => id.startsWith('cover-') || ['products-grid', 'products-tabs', 'wave-divider', 'bar-note'].includes(id))).toBe(false);
-    expect(layoutEditSchema().properties.ops.items.properties.type.enum).toEqual([...ids, '']);
+    // The schema also offers the covers, which only a menu page takes (spec 2026-11-05); layoutAdds refuses them on the home.
+    expect(layoutEditSchema().properties.ops.items.properties.type.enum).toEqual([...addableSections('menu').map(section => section.id), '']);
+    expect(addableSections('menu').map(section => section.id)).toEqual(expect.arrayContaining([...ids, 'cover-centered']));
   });
 
   it('reads at most two new sections the home does not have', () => {
@@ -164,5 +166,39 @@ describe('layout edit: photos and the product page (spec 2026-11-03)', () => {
   it('reads the store ops of the same answer', () => {
     const read = readLayoutEdit({ ops: [], store: [{ part: 'faq', field: 'add', at: -1, title: '¿Envían?', value: 'Sí.' }, { part: 'evil', field: 'x' }], rest: '' });
     expect(read!.store).toEqual([{ part: 'faq', field: 'add', at: -1, title: '¿Envían?', value: 'Sí.' }]);
+  });
+});
+
+describe('layout edit: menu pages (spec 2026-11-05)', () => {
+  it('reads ops for Nosotros, Contacto, Preguntas and Envíos and offers them in the schema', () => {
+    expect(layoutEditSchema().properties.ops.items.properties.page.enum).toEqual(['home', 'product', ...MENU_PAGES]);
+    expect(MENU_PAGES).toEqual(['about', 'contact', 'faq', 'shipping']);
+    const read = readLayoutEdit({ ops: [op({ at: 0, page: 'about' }), op({ at: 0, page: 'faq' }), op({ at: 0, page: 'evil' })], store: [], rest: '' })!;
+    expect(read.ops.map(entry => (entry as { page?: string }).page)).toEqual(['about', 'faq', undefined]);
+  });
+
+  it('builds an empty page from up to five new sections, one cover, never touching the home', () => {
+    const ops = [op({ op: 'add', type: 'story-split', page: 'about', value: 'Quiénes somos' }), op({ op: 'add', type: 'cover-centered', page: 'about' }),
+      op({ op: 'add', type: 'cover-full', page: 'about' }), op({ op: 'add', type: 'icon-columns', page: 'about' }), op({ op: 'add', type: 'steps-howto', page: 'about' }),
+      op({ op: 'add', type: 'closing-photo', page: 'about' }), op({ op: 'add', type: 'faq-split', page: 'about' }), op({ op: 'add', type: 'products-grid', page: 'about' })];
+    const { adds, refused } = layoutAdds([], ops, 'about');
+    expect(adds.map(add => add.type)).toEqual(['story-split', 'cover-centered', 'icon-columns', 'steps-howto', 'closing-photo']);
+    expect(refused).toEqual([expect.stringContaining('una portada'), expect.stringContaining('hasta cinco')]);
+    // The home reads none of them.
+    expect(layoutAdds(home, ops).adds).toEqual([]);
+    // A cover the home may not add.
+    expect(layoutAdds(home, [op({ op: 'add', type: 'cover-centered' })]).adds).toEqual([]);
+  });
+
+  it('puts a new cover first and names the page in the reply', () => {
+    const story = { type: 'story-split', title: 'Nuestra historia', photo: '/v1/uploads/a.jpg' };
+    const cover = { type: 'cover-centered', title: 'Somos BOXY', photo: '/v1/uploads/b.jpg' };
+    const built = applyLayoutOps([], [], [{ to: -1, block: story }, { to: -1, block: cover }], { page: 'about' });
+    expect(built.layout.map(block => block.type)).toEqual(['cover-centered', 'story-split']);
+    expect(layoutEditReply(built.done, built.refused)).toBe('Listo: agregué la sección «Nuestra historia» y la sección «Somos BOXY» a tu página «Nosotros». Revisa la vista previa.');
+    const page: LayoutBlock[] = [cover, story];
+    const edited = applyLayoutOps(page, [op({ at: 1, field: 'title', value: 'Cómo empezamos', page: 'about' }), op({ at: 1, field: 'title', value: 'Hola' })], [], { page: 'about' });
+    expect(edited.layout[1].title).toBe('Cómo empezamos');
+    expect(edited.done).toEqual(['el título de la sección «Nuestra historia» de la página «Nosotros» ahora dice «Cómo empezamos»']);
   });
 });

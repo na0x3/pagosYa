@@ -10,6 +10,28 @@ export const CONTENT_PAGE_FILES: SourceProjectFileDto[] = PAGES.map(({ group, fi
   content: `// @pagosya-page\nimport Shell from '../Shell';\nimport { InfoPage } from '@pagosya/ui';\nexport default function ${component}() { return <Shell><InfoPage kind="${kind}" /></Shell>; }\n`,
 }));
 
+/** Spec 2026-11-05 (owner: «cambia nosotros a algo más bonito»): a menu page that carries the template's sections (store-data
+ *  `pageLayouts`) draws them with the template's own LibraryHome. «Nosotros» is its sections alone (they tell the story); the other
+ *  pages keep the platform's live content (form, questions, shipping) under them. With no sections it is today's page. */
+export function sectionedPageFile(kind: 'about' | 'contact' | 'faq' | 'shipping'): SourceProjectFileDto {
+  const page = PAGES.find(entry => entry.kind === kind && entry.group === 'pages')!;
+  const info = `<InfoPage kind="${kind}" />`;
+  const body = kind === 'about' ? `{layout.length ? sections : ${info}}` : `{layout.length ? sections : null}${info}`;
+  return {
+    path: `components/${page.group}/${page.file}.tsx`,
+    content: `// @pagosya-page\nimport Shell from '../Shell';\nimport { InfoPage } from '@pagosya/ui';\nimport { LibraryHome, type LibraryBlock } from '../library';\nimport { pageLayouts } from '../store-data';\n`
+      + `export default function ${page.component}() {\n  const layout = (pageLayouts.${kind} ?? []) as LibraryBlock[];\n`
+      + `  const sections = <main id="contenido" data-lb-home data-lb-page="${kind}"><LibraryHome layout={layout} /></main>;\n  return <Shell>${body}</Shell>;\n}\n`,
+  };
+}
+
+/** The menu pages that now have sections, rewritten to draw them; only on a store whose template has the section library. */
+export function withSectionedPages<T extends { path: string; content: string }>(files: T[], kinds: ReadonlyArray<'about' | 'contact' | 'faq' | 'shipping'>): T[] {
+  if (!kinds.length || !files.some(file => file.path === 'components/library.tsx')) return files;
+  const pages = new Map(kinds.map(kind => { const page = sectionedPageFile(kind); return [page.path, page.content] as const; }));
+  return files.map(file => pages.has(file.path) ? { ...file, content: pages.get(file.path)! } : file);
+}
+
 /** The customer-access and account pages (spec 2026-09-30-store-account-page-files-design). Each is a gate: the template's Shell
  * around a kit AccountGatePage whose button opens the real form on the trusted checkout origin. No input is ever drawn here. */
 const ACCOUNT_PAGES = STOREFRONT_PAGES.filter(page => page.owner === 'account').map(page => ({ group: page.key.split('/')[0], file: page.key.split('/')[1], component: page.key.split('/')[1].replace(/(^|-)([a-z])/g, (_, dash, c) => c.toUpperCase()), view: page.key.split('/')[1] }));

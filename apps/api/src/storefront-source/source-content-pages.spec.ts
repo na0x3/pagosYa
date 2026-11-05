@@ -2,8 +2,8 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { nextStoreFiles } from './fixtures/next-store';
-import { ACCOUNT_PAGE_FILES, STANDARD_PAGE_FILES, CONTENT_PAGE_FILES, withStandardPages } from './source-content-pages';
-import { nextContentPages } from './source-next';
+import { ACCOUNT_PAGE_FILES, STANDARD_PAGE_FILES, CONTENT_PAGE_FILES, sectionedPageFile, withSectionedPages, withStandardPages } from './source-content-pages';
+import { compileNextPreview, nextContentPages, nextSourceFile } from './source-next';
 import { assembleTemplateRevision } from './source-templates';
 
 const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom');
@@ -144,5 +144,39 @@ describe('account page files', () => {
     expect(result.added).not.toContain('components/auth/login.tsx');
     expect(result.added).toContain('components/account/orders.tsx');
     expect(result.files.filter(f => f.path === 'components/auth/login.tsx')).toHaveLength(1);
+  });
+});
+
+describe('menu pages with template sections (spec 2026-11-05)', () => {
+  it('draws Nosotros from its sections alone, and the other pages above their live content', () => {
+    const about = sectionedPageFile('about');
+    expect(about.path).toBe('components/pages/about.tsx');
+    expect(about.content.startsWith('// @pagosya-page\n')).toBe(true);
+    expect(about.content).toContain('pageLayouts.about');
+    expect(about.content).toContain('<LibraryHome');
+    // Without sections it is still the platform's page.
+    expect(about.content).toContain('<InfoPage kind="about" />');
+    expect(sectionedPageFile('contact').content).toMatch(/<LibraryHome[\s\S]*<InfoPage kind="contact" \/>/);
+  });
+
+  it('rewrites only the pages that have sections, and only on a store with the section library', () => {
+    const files = [{ path: 'components/library.tsx', content: 'export function LibraryHome() { return null; }' }, ...CONTENT_PAGE_FILES];
+    const out = withSectionedPages(files, ['about']);
+    expect(out.find(file => file.path === 'components/pages/about.tsx')!.content).toContain('<LibraryHome');
+    expect(out.find(file => file.path === 'components/pages/faq.tsx')).toEqual(CONTENT_PAGE_FILES.find(file => file.path === 'components/pages/faq.tsx'));
+    expect(withSectionedPages(CONTENT_PAGE_FILES, ['about'])).toEqual(CONTENT_PAGE_FILES);
+  });
+
+  it('compiles a Nosotros page with a cover and a story on a real template store', async () => {
+    const revision = await apply(templateSourceFiles('esencial'), 'esencial');
+    const layouts = { about: [{ type: 'cover-centered', title: 'Somos Acuarela', text: 'Pintamos desde 2019.' }, { type: 'story-split', title: 'Nuestra historia', text: 'Empezamos en un taller de La Paz.' }] };
+    const files = withSectionedPages(revision.files.map(file => file.path === 'components/store-data.tsx'
+      ? { ...file, content: file.content.replace(/^export const pageLayouts: Record<string, any\[\]> = \{\};$/m, `export const pageLayouts: Record<string, any[]> = ${JSON.stringify(layouts)};`) } : file), ['about']);
+    expect(files.find(file => file.path === 'components/store-data.tsx')!.content).toContain('Nuestra historia');
+    const compiled = await compileNextPreview(files.filter(file => nextSourceFile(file.path)));
+    const page = compiled.find(file => file.path === '_compiled/pages/about.js')!.content;
+    expect(page).toContain('Nuestra historia');
+    expect(page).toContain('data-lb-page');
+    expect(compiled.find(file => file.path === 'nosotros.html')).toBeDefined();
   });
 });

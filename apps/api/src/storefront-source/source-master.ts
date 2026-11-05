@@ -25,6 +25,8 @@ export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook
   /** Owner 2026-10-31 («the inside of each product card»): the template's sections under the product page's buy box (store-data
    *  `productLayout`), filled like the home. */
   productLayout?: unknown[];
+  /** Spec 2026-11-05: the template's sections on the menu pages (store-data `pageLayouts`: about, contact, faq, shipping). */
+  pageLayouts?: Record<string, unknown[]>;
   /** Owner 2026-10-25: a video the merchant attached, played as the cover (store-data photos.heroVideo). */
   heroVideo?: string;
   /** Owner 2026-10-28 (avril, «longer with more pictures»): the merchant's own pictures the cover and story did not take, in the
