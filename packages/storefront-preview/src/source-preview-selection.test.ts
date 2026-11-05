@@ -201,7 +201,7 @@ it('the Studio keeps a template address and drops a bad one', () => {
   expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'section', sectionId: 'lb-0', label: 'x', at: 0, page: 'about' }), frame))
     .toEqual({ kind: 'section', sectionId: 'lb-0', label: 'x', at: 0, page: 'about' });
   expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'section', sectionId: 'lb-0', label: 'x', at: 41, page: 'home' }), frame)).toBeNull();
-  expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'section', sectionId: 'lb-0', label: 'x', at: 1, page: 'blog' }), frame)).toBeNull();
+  expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'section', sectionId: 'lb-0', label: 'x', at: 1, page: 'Blog!' }), frame)).toBeNull();
 });
 
 /** jsdom has no layout: give elements boxes (client coordinates; the page is not scrolled). */
@@ -438,4 +438,22 @@ it('while selecting, the page itself never sees the pointer (no carousel swipe)'
   send({ type: 'pagosya:source-edit-mode', on: false });
   h1.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
   expect(seen).toEqual(['pointerdown']);
+});
+
+// YAPI creates anything (spec 2026-11-05): a section on a page YAPI made is addressed by that page's address.
+it('addresses a section on a page YAPI made, and the Studio keeps that address', async () => {
+  const snap = { ...snapshot, files: [{ path: 'novias.html', content: '<!doctype html><html><body><main data-lb-home data-lb-page="novias"><section id="lb-0" data-lb="cover-split"><h1>Novias</h1></section></main></body></html>' }] };
+  const dom = new JSDOM(sourcePreviewDocument(snap, 'novias.html', {}), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://source.invalid/' });
+  const w = dom.window; windows.push(w);
+  const posted: any[] = [];
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:source-select') posted.push(event.data); });
+  w.dispatchEvent(new w.MessageEvent('message', { data: { type: 'pagosya:source-edit-mode', on: true }, source: w }));
+  w.document.querySelector('h1').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+  await vi.waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]).toMatchObject({ page: 'novias', at: 0 });
+  const frame = { contentWindow: {} } as unknown as HTMLIFrameElement;
+  const event = (data: unknown) => ({ source: frame.contentWindow, origin: 'null', data }) as unknown as MessageEvent;
+  expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'section', sectionId: 'lb-0', label: 'x', at: 0, page: 'novias' }), frame)).toMatchObject({ page: 'novias' });
+  expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'section', sectionId: 'lb-0', label: 'x', at: 0, page: 'No Vale' }), frame)).toBeNull();
+  expect(receivePreviewViewing(event({ type: 'pagosya:source-viewing', page: 'novias', at: 0, label: 'Novias' }), frame)).toMatchObject({ page: 'novias' });
 });

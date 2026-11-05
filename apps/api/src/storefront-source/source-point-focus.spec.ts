@@ -28,3 +28,7 @@ it('outsideFocus names ops on the focused page outside its sections', () => {
   expect(outsideFocus([{ at: 1 }, { at: 4 }, { page: 'about', at: 0 }], focus)).toEqual(['home:4']);
   expect(outsideFocus([{ at: 4 }], null)).toEqual([]);
 });
+
+it('a section on a page YAPI made is a focus on that page (spec 2026-11-05 creates anything)', () => {
+  expect(pointFocus({ instruction: 'agrega un paso aquí', selection: { sectionId: 'lb-1', at: 1, page: 'novias' as never } })).toMatchObject({ pagina: 'novias', secciones: [1] });
+});

@@ -41,12 +41,14 @@ export function openPreviewContact(url: string): void {
 }
 /** What the merchant clicked in the preview while editing: a section of the page, or a part the platform owns.
  * An empty section id with kind 'section' means "clear the selection". */
-export type PointPage = 'home' | 'product' | 'about' | 'contact' | 'faq' | 'shipping';
+/** A known page, or the address of a page YAPI made (spec 2026-11-05 creates anything). */
+export type PointPage = 'home' | 'product' | 'about' | 'contact' | 'faq' | 'shipping' | (string & {});
 export const POINT_PAGES: readonly PointPage[] = ['home', 'product', 'about', 'contact', 'faq', 'shipping'];
 export type PointPart = 'header' | 'announcement' | 'footer' | 'menu';
 /** A loop the merchant drew around part of the preview (spec 2026-11-05 point-at), in page coordinates. */
 export interface PointArea { points: number[]; rect: { x: number; y: number; width: number; height: number }; sections: Array<{ page: PointPage; at: number; label: string }>; texts: string[]; photos: string[]; parts: PointPart[]; width: number; height: number; pageQuery: string }
 export interface PreviewSelection { kind: 'section' | 'platform' | 'area'; sectionId: string; label: string; text?: string; at?: number; page?: PointPage; area?: PointArea }
+const validPage = (value: unknown): value is PointPage => typeof value === 'string' && ((POINT_PAGES as readonly string[]).includes(value) || /^[a-z][a-z0-9-]{0,39}$/.test(value));
 const validAt = (value: unknown) => Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 40;
 const POINT_PARTS: readonly PointPart[] = ['header', 'announcement', 'footer', 'menu'];
 const PAGE_QUERY = /^[a-z0-9][a-z0-9-]{0,63}\.html(\?[A-Za-z0-9=&_.%+,-]{0,135})?$/;
@@ -58,7 +60,7 @@ export function validPointArea(value: unknown): PointArea | null {
   if (!Array.isArray(a.points) || a.points.length < 6 || a.points.length > 128 || a.points.length % 2 || !a.points.every(n => typeof n === 'number' && Number.isFinite(n))) return null;
   const r = a.rect;
   if (!r || ![r.x, r.y, r.width, r.height].every(n => inRange(n))) return null;
-  if (!Array.isArray(a.sections) || a.sections.length > 3 || !a.sections.every(s => s && POINT_PAGES.includes(s.page) && validAt(s.at) && typeof s.label === 'string' && s.label.length <= 60)) return null;
+  if (!Array.isArray(a.sections) || a.sections.length > 3 || !a.sections.every(s => s && validPage(s.page) && validAt(s.at) && typeof s.label === 'string' && s.label.length <= 60)) return null;
   if (!Array.isArray(a.texts) || a.texts.length > 12 || !a.texts.every(t => typeof t === 'string' && t.length <= 200)) return null;
   if (!Array.isArray(a.photos) || a.photos.length > 6 || !a.photos.every(p => typeof p === 'string' && p.length <= 500 && /^(https?:\/\/|\/|assets\/)/.test(p))) return null;
   if (!Array.isArray(a.parts) || !a.parts.every(p => POINT_PARTS.includes(p))) return null;
@@ -76,7 +78,7 @@ export function receivePreviewViewing(event: MessageEvent, frame: HTMLIFrameElem
   if (!frame || event.source !== frame.contentWindow || event.origin !== 'null' || data?.type !== 'pagosya:source-viewing') return null;
   // Nothing in the middle of the screen (between sections, the footer): the Studio forgets the last section.
   if (data.none === true) return 'none';
-  if (!POINT_PAGES.includes(data.page) || typeof data.label !== 'string' || data.label.length > 60) return null;
+  if (!validPage(data.page) || typeof data.label !== 'string' || data.label.length > 60) return null;
   if (data.at !== undefined && !validAt(data.at)) return null;
   if (data.sectionId !== undefined && (typeof data.sectionId !== 'string' || !/^[a-z][a-z0-9-]{0,47}$/.test(data.sectionId))) return null;
   return { page: data.page, label: data.label, ...(data.at !== undefined ? { at: data.at } : {}), ...(data.sectionId ? { sectionId: data.sectionId } : {}) };
@@ -95,7 +97,7 @@ export function receivePreviewSelection(event: MessageEvent, frame: HTMLIFrameEl
   const text = typeof data.text === 'string' ? data.text.slice(0, 200) : '';
   // A template section carries its address (page + number), both valid or the message is dropped.
   const addressed = data.kind === 'section' && (data.at !== undefined || data.page !== undefined);
-  if (addressed && (!validAt(data.at) || !POINT_PAGES.includes(data.page))) return null;
+  if (addressed && (!validAt(data.at) || !validPage(data.page))) return null;
   return { kind: data.kind, sectionId: data.sectionId, label: data.label, ...(text ? { text } : {}), ...(addressed ? { at: data.at, page: data.page } : {}) };
 }
 

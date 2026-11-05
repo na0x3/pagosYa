@@ -53,12 +53,12 @@ describe('pointing (spec 2026-11-05 point-at)', () => {
     expect(errors(SendSourceMessageDto, { revision: 1, instruction: 'agrega una pregunta aquí', viewing: { page: 'faq', at: 2 } })).toEqual([]);
   });
   it.each([
-    { at: 41, page: 'home' }, { at: 1, page: 'blog' },
+    { at: 41, page: 'home' }, { at: 1, page: 'Blog!' },
     { area: { ...area, points: Array(130).fill(1) } }, { area: { ...area, points: [1, 'x', 2, 2, 3, 3] } }, { area: { ...area, texts: Array(13).fill('x') } },
     { area: { ...area, texts: ['x'.repeat(201)] } }, { area: { ...area, photos: Array(7).fill('/a.jpg') } }, { area: { ...area, photos: ['javascript:alert(1)'] } },
     { area: { ...area, parts: ['body'] } }, { area: { ...area, width: 279 } }, { area: { ...area, height: 100 } }, { area: { ...area, pageQuery: '../etc.html' } }, { area: { ...area, sections: Array(4).fill(area.sections[0]) } },
   ])('refuses %j', extra => { expect(errors(SourceSelectionDto, { sectionId: 'lb-1', ...extra })).not.toEqual([]); });
-  it('refuses a viewing on an unknown page', () => { expect(errors(SourceViewingDto, { page: 'blog' })).not.toEqual([]); });
+  it('refuses a viewing on an unknown page', () => { expect(errors(SourceViewingDto, { page: 'Blog!' })).not.toEqual([]); });
   // Small fixes 2026-11-05: what the Studio refuses, the API refuses too; a search query may hold + and ,.
   it('refuses an odd number of point coordinates and more than four parts', () => {
     expect(errors(SourceSelectionDto, { sectionId: 'lb-1', area: { ...area, points: [0, 0, 100, 0, 100, 100, 5] } })).not.toEqual([]);
@@ -67,4 +67,10 @@ describe('pointing (spec 2026-11-05 point-at)', () => {
   it('accepts a page query with + and ,', () => {
     expect(errors(SourceSelectionDto, { sectionId: 'lb-1', area: { ...area, pageQuery: 'buscar.html?q=vestido+novia,seda' } })).toEqual([]);
   });
+});
+
+it('takes the address of a page YAPI made as a page (spec 2026-11-05 creates anything)', () => {
+  expect(errors(SourceSelectionDto, { sectionId: 'lb-0', at: 0, page: 'novias' })).toEqual([]);
+  expect(errors(SourceViewingDto, { page: 'novias-2' })).toEqual([]);
+  expect(errors(SourceSelectionDto, { sectionId: 'lb-0', at: 0, page: '../x' })).not.toEqual([]);
 });

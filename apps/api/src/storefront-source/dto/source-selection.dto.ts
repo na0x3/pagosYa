@@ -2,6 +2,8 @@ import { Type } from 'class-transformer';
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested, Validate, ValidatorConstraint, type ValidatorConstraintInterface } from 'class-validator';
 
 export const POINT_PAGES = ['home', 'product', 'about', 'contact', 'faq', 'shipping'] as const;
+/** A known page or the address of a page YAPI made (spec 2026-11-05 creates anything). */
+const POINT_PAGE = /^[a-z][a-z0-9-]{0,39}$/;
 export const POINT_PARTS = ['header', 'announcement', 'footer', 'menu'] as const;
 const FINITE = { allowNaN: false, allowInfinity: false };
 
@@ -19,7 +21,7 @@ export class SourcePointRectDto {
   @IsNumber(FINITE) @Min(0) @Max(100000) height!: number;
 }
 export class SourcePointSectionDto {
-  @IsIn(POINT_PAGES) page!: (typeof POINT_PAGES)[number];
+  @Matches(POINT_PAGE) page!: string;
   @IsInt() @Min(0) @Max(40) at!: number;
   @IsString() @MaxLength(60) label!: string;
 }
@@ -42,12 +44,12 @@ export class SourcePointAreaDto {
 export class SourceSelectionDto {
   @IsString() @Matches(/^[a-z][a-z0-9-]{0,47}$/) sectionId!: string;
   @IsOptional() @IsInt() @Min(0) @Max(40) at?: number;
-  @IsOptional() @IsIn(POINT_PAGES) page?: (typeof POINT_PAGES)[number];
+  @IsOptional() @Matches(POINT_PAGE) page?: string;
   @IsOptional() @ValidateNested() @Type(() => SourcePointAreaDto) area?: SourcePointAreaDto;
 }
 /** The section in the middle of the preview when nothing is selected. */
 export class SourceViewingDto {
-  @IsIn(POINT_PAGES) page!: (typeof POINT_PAGES)[number];
+  @Matches(POINT_PAGE) page!: string;
   @IsOptional() @IsInt() @Min(0) @Max(40) at?: number;
   @IsOptional() @IsString() @Matches(/^[a-z][a-z0-9-]{0,47}$/) sectionId?: string;
 }

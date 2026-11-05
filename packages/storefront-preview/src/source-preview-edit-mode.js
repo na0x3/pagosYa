@@ -27,7 +27,8 @@
     var siblings = Array.prototype.filter.call(box.children, function (child) { return child.hasAttribute('data-lb'); });
     var at = given ? Number(given[0]) : named ? Number(named[1]) : siblings.indexOf(element);
     var page = box.getAttribute('data-lb-page') || (box.hasAttribute('data-lb-product') ? 'product' : 'home');
-    if (PAGES.indexOf(page) < 0 || at < 0 || at > 40) return null;
+    // A page YAPI made (spec 2026-11-05 creates anything) is addressed by its own address.
+    if ((PAGES.indexOf(page) < 0 && !/^[a-z][a-z0-9-]{0,39}$/.test(page)) || at < 0 || at > 40) return null;
     var id = SECTION_ID.test(element.id || '') ? element.id : 'lb-' + at;
     return { kind: 'section', element: element, id: id, label: labelOf(element, id), at: at, page: page };
   }
