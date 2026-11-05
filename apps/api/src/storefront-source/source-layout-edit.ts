@@ -7,7 +7,7 @@ import { photoRef, readStoreOps, storeOpSchema, type StoreEditPhoto, type StoreO
 export type LayoutTextField = 'eyebrow' | 'title' | 'text' | 'cta' | 'cta2';
 /** YAPI edits everything (spec 2026-11-03): `page` = the product page's sections (productLayout) instead of the home; `photo` swaps a
  *  photo the section already shows (field photo | photo2, or an item's photo) for one of the numbered photos (value f0, f1…). */
-export type LayoutOp = { op: 'text' | 'remove' | 'move' | 'add' | 'photo'; at: number; field: LayoutTextField | 'photo' | 'photo2' | ''; item: number; value: string; to: number; type?: string; page?: LayoutPage };
+export type LayoutOp = { op: 'text' | 'remove' | 'move' | 'add' | 'photo' | 'item-add' | 'item-remove' | 'item-move'; at: number; field: LayoutTextField | 'photo' | 'photo2' | ''; item: number; value: string; to: number; type?: string; page?: LayoutPage };
 /** Spec 2026-11-05 (owner: «cambia nosotros a algo más bonito … solo eso»): the menu pages that may carry the template's sections
  *  (store-data `pageLayouts`), each edited on its own. */
 export const MENU_PAGES = ['about', 'contact', 'faq', 'shipping'] as const;
@@ -35,6 +35,8 @@ export type LayoutDigestSection = { at: number; type: string; name: string; eyeb
   fotos?: Array<'photo' | 'photo2'> };
 
 const FIELDS: readonly LayoutTextField[] = ['eyebrow', 'title', 'text', 'cta', 'cta2'];
+/** Spec 2026-11-05 creates anything: item-add / item-remove / item-move change the items inside a section. */
+const LAYOUT_OPS: readonly string[] = ['text', 'remove', 'move', 'add', 'photo', 'item-add', 'item-remove', 'item-move'];
 const ROLE = new Map(LIBRARY_CATALOG.map(section => [section.id, section.role]));
 const MAIN_GRIDS = new Set(['products-grid', 'products-tabs']);
 // What a merchant may add to a template home: any library section but a second cover or main grid, decoration and the menu note.
@@ -86,6 +88,10 @@ Operaciones de «ops» (todos los campos van siempre; los que no se usan: field 
 - text: cambia un texto de la sección at. field = eyebrow (línea pequeña sobre el título), title, text, cta (texto del botón) o cta2.
   item = -1 para el texto de la sección; o el número del punto (items, desde 0) para cambiar su title o su text. value = el texto
   nuevo; si el comercio dio las palabras, cópialas exactas. value vacío quita ese texto.
+- item-add: agrega un punto (un paso, una tarjeta, una pregunta, una reseña…) a la sección at. item = el lugar donde va (0 = primero;
+  -1 = al final); value = su title. Su text y su foto van después como ops text / photo con item = ese mismo número. Solo con las
+  palabras del comercio o datos de «tienda»; si faltan, no lo agregues y pregunta con «ask» («¿Qué dice el nuevo paso?»).
+- item-remove: quita el punto item de la sección at. item-move: pone el punto item en el lugar to.
 - remove: quita la sección at.
 - move: pone la sección at en el lugar de la sección to (to = 0 es arriba del todo; la última sección = al final).
 - add: agrega una sección NUEVA cuando el comercio pide algo que la portada no tiene (una guía, preguntas frecuentes, pasos, una
@@ -122,7 +128,7 @@ cambio es del menú, la cinta de anuncio o el pie: va en «store».`;
 
 export function layoutEditSchema() {
   const op = { type: 'object', additionalProperties: false, required: ['op', 'at', 'field', 'item', 'value', 'to', 'type', 'page'], properties: {
-    op: { type: 'string', enum: ['text', 'remove', 'move', 'add', 'photo'] }, at: { type: 'integer' }, field: { type: 'string', enum: [...FIELDS, 'photo', 'photo2', ''] },
+    op: { type: 'string', enum: LAYOUT_OPS }, at: { type: 'integer' }, field: { type: 'string', enum: [...FIELDS, 'photo', 'photo2', ''] },
     item: { type: 'integer' }, value: { type: 'string' }, to: { type: 'integer' }, type: { type: 'string', enum: [...PAGE_ADDABLE_IDS, ''] }, page: { type: 'string', enum: ['home', 'product', ...MENU_PAGES] } } };
   return { type: 'object', additionalProperties: false, required: ['ops', 'store', 'rest', 'ask'], properties: { ops: { type: 'array', items: op }, store: { type: 'array', items: storeOpSchema() }, rest: { type: 'string' }, ask: { type: 'string' } } };
 }
@@ -131,7 +137,7 @@ export function layoutEditSchema() {
 export function readLayoutEdit(answer: unknown): LayoutEditRead | null {
   if (!answer || typeof answer !== 'object') return null;
   const raw = answer as { ops?: unknown; store?: unknown; rest?: unknown; ask?: unknown };
-  const ops = (Array.isArray(raw.ops) ? raw.ops : []).filter((op): op is LayoutOp => Boolean(op) && ['text', 'remove', 'move', 'add', 'photo'].includes((op as LayoutOp).op)
+  const ops = (Array.isArray(raw.ops) ? raw.ops : []).filter((op): op is LayoutOp => Boolean(op) && LAYOUT_OPS.includes((op as LayoutOp).op)
     && Number.isInteger((op as LayoutOp).at))
     // The home is the default page; only the product page and the menu pages are marked.
     .map(op => { const { page, ...rest } = op; return page === 'product' || isMenuPage(page) ? { ...rest, page } : rest; });
@@ -186,7 +192,35 @@ export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly 
   const done: string[] = [];
   const refused: string[] = [];
   const known = (at: number) => Number.isInteger(at) && at >= 0 && at < blocks.length;
-  // Words first, on the blocks as they were shown.
+  // Items inside a section (spec 2026-11-05 creates anything): added, removed and moved first, so later text/photo ops use the
+  // numbers after them. The section type's needs.items is the limit.
+  for (const op of ops.filter(entry => entry.op === 'item-add' || entry.op === 'item-remove' || entry.op === 'item-move')) {
+    if (!known(op.at)) continue;
+    const block = blocks[op.at];
+    const limits = LIBRARY_CATALOG.find(section => section.id === block.type)?.needs.items;
+    if (!limits) { refused.push(`${upper(placeOf(layout[op.at]))} no tiene puntos para agregar ni quitar.`); continue; }
+    const items = block.items ?? (block.items = []);
+    if (op.op === 'item-add') {
+      const title = clip(op.value, ITEM_CAP.title);
+      if (!title) continue;
+      if (items.length >= limits[1]) { refused.push(`Los puntos de ${placeOf(layout[op.at])} ya son ${limits[1]}, el máximo de esa sección: quita uno o cambia uno de los que hay.`); continue; }
+      const at = Number.isInteger(op.item) && op.item >= 0 && op.item <= items.length ? op.item : items.length;
+      items.splice(at, 0, { title });
+      done.push(`agregué el punto «${title}» a ${placeOf(layout[op.at])}`);
+    } else if (op.op === 'item-remove') {
+      const item = items[op.item];
+      if (!item) continue;
+      if (items.length <= limits[0]) { refused.push(`${upper(placeOf(layout[op.at]))} necesita al menos ${limits[0]} puntos: cambia uno en vez de quitarlo.`); continue; }
+      items.splice(op.item, 1);
+      done.push(`quité el punto «${item.title}» de ${placeOf(layout[op.at])}`);
+    } else {
+      const item = items[op.item];
+      if (!item || !Number.isInteger(op.to) || op.to < 0 || op.to >= items.length || op.to === op.item) continue;
+      items.splice(op.item, 1); items.splice(op.to, 0, item);
+      done.push(`moví el punto «${item.title}» de ${placeOf(layout[op.at])}`);
+    }
+  }
+  // Words next (item numbers as the item ops left them).
   for (const op of ops.filter(entry => entry.op === 'text')) {
     if (!known(op.at) || !(FIELDS as readonly string[]).includes(op.field)) continue;
     const block = blocks[op.at];

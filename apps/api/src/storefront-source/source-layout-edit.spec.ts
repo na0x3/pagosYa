@@ -244,3 +244,31 @@ it('reads the question YAPI asks back, and the schema always asks for one', () =
   expect(layoutEditSchema().required).toContain('ask');
   expect(LAYOUT_EDIT_PROMPT + STORE_EDIT_PROMPT).toContain('«ask»');
 });
+
+describe('items inside a section (spec 2026-11-05 creates anything)', () => {
+  const steps: LayoutBlock[] = [{ type: 'cover-split', title: 'Hola' }, { type: 'story-list', title: 'Pasos', items: [{ title: 'Uno' }, { title: 'Dos' }, { title: 'Tres' }] }];
+  it('adds an item where asked and the text op hits the new number', () => {
+    const out = applyLayoutOps(steps, [op({ op: 'item-add', at: 1, item: 1, value: 'Uno y medio' }), op({ op: 'text', at: 1, item: 1, field: 'text', value: 'Entre uno y dos' })], []);
+    expect(out.layout[1].items!.map(i => i.title)).toEqual(['Uno', 'Uno y medio', 'Dos', 'Tres']);
+    expect(out.layout[1].items![1].text).toBe('Entre uno y dos');
+    expect(out.done[0]).toContain('agregué el punto «Uno y medio»');
+  });
+  it('appends with item -1, removes and moves', () => {
+    expect(applyLayoutOps(steps, [op({ op: 'item-add', at: 1, item: -1, value: 'Cuatro' })], []).layout[1].items!.at(-1)!.title).toBe('Cuatro');
+    expect(applyLayoutOps(steps, [op({ op: 'item-remove', at: 1, item: 0 })], []).layout[1].items!.map(i => i.title)).toEqual(['Dos', 'Tres']);
+    expect(applyLayoutOps(steps, [op({ op: 'item-move', at: 1, item: 2, to: 0 })], []).layout[1].items!.map(i => i.title)).toEqual(['Tres', 'Uno', 'Dos']);
+  });
+  it('keeps the section type limits and refuses sections without items', () => {
+    const full: LayoutBlock[] = [steps[0], { ...steps[1], items: [...steps[1].items!, { title: 'Cuatro' }] }];
+    const over = applyLayoutOps(full, [op({ op: 'item-add', at: 1, item: -1, value: 'Cinco' })], []);
+    expect(over.layout[1].items).toHaveLength(4);
+    expect(over.refused[0]).toMatch(/ya son 4, el máximo/);
+    const two: LayoutBlock[] = [steps[0], { ...steps[1], items: steps[1].items!.slice(0, 2) }];
+    expect(applyLayoutOps(two, [op({ op: 'item-remove', at: 1, item: 0 })], []).refused[0]).toMatch(/al menos 2/);
+    expect(applyLayoutOps([{ type: 'products-grid' }] as LayoutBlock[], [op({ op: 'item-add', at: 0, item: -1, value: 'x' })], []).refused[0]).toMatch(/no tiene puntos/);
+  });
+  it('reads the item ops and offers them in the schema', () => {
+    expect(readLayoutEdit({ ops: [op({ op: 'item-add', at: 1, item: -1, value: 'x' })], store: [], rest: '' })!.ops).toHaveLength(1);
+    expect(JSON.stringify(layoutEditSchema())).toContain('item-add');
+  });
+});
