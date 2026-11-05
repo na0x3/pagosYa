@@ -208,3 +208,10 @@ describe('menu pages with template sections (spec 2026-11-05)', () => {
     expect(compiled.find(file => file.path === 'nosotros.html')).toBeDefined();
   });
 });
+
+it('keeps the pages YAPI made, and their photos, when the store switches template (spec 2026-11-05 creates anything)', () => {
+  const photo = { path: 'assets/image-0123456789ab.jpg', content: 'AAAA', encoding: 'base64' as const };
+  const files = [{ path: 'components/library.tsx', content: '' }, photo];
+  const extra = [{ slug: 'novias', name: 'Novias', menu: 'Colecciones', layout: [{ type: 'story-split', photo: 'assets/image-0123456789ab.jpg' }] }];
+  expect(keptMenuPages(files, {}, extra as never)).toEqual({ pageLayouts: {}, kinds: [], photos: [photo], extraPages: extra });
+});

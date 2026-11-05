@@ -66,7 +66,9 @@ export function visibleChanges(before: readonly File[], after: readonly File[]):
   if (!same(pageData(wasData), pageData(nowData))) out.add('pages');
   // The menu pages' own sections (spec 2026-11-05) are drawn too, so a change to them or to their section types shows (minor 2026-11-05).
   if (!same(was.pageLayouts, now.pageLayouts)) out.add('pages');
-  const pageBlocks = Object.values(now.pageLayouts ?? {}).flatMap(list => (Array.isArray(list) ? list : []));
+  // The pages YAPI made (spec 2026-11-05 creates anything) the same way.
+  if (!same(was.extraPages, now.extraPages)) out.add('pages');
+  const pageBlocks = [...Object.values(now.pageLayouts ?? {}), ...(now.extraPages ?? []).map(page => (page as { layout?: unknown }).layout)].flatMap(list => (Array.isArray(list) ? list : []));
 
   const types = new Set([...now.layout, ...now.productLayout, ...pageBlocks].map(block => String((block as { type?: unknown })?.type ?? '')));
   // Components: a changed declaration is drawn; a new one only when something drawn uses it (or a section on the page, by its type).

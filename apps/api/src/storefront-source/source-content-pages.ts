@@ -1,5 +1,6 @@
 import { STOREFRONT_PAGES } from '@pagosya/shared-types';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
+import type { ExtraPage } from './source-extra-pages';
 
 /** The information pages every store applied from a template gets (spec 2026-09-30-store-content-pages-design). Each is
  * a thin file: the template's Shell around a kit InfoPage whose content the storefront runtime fills from the live store. */
@@ -53,12 +54,14 @@ const BUNDLED_IN = /\.?\/?(assets\/image-[a-f0-9]{12}\.(?:png|jpe?g|webp))/gi;
 /** Minor 2026-11-05 («prueba otra plantilla» lost a built «Nosotros»): the menu pages a template switch keeps — those with sections on
  *  a page YAPI draws (library sections, so they redraw in the new template's look) — and the bundled photos they show, from the old
  *  version's files. Null when there is none. */
-export function keptMenuPages<T extends { path: string; content: string }>(files: readonly T[], pageLayouts: Record<string, unknown> | undefined): { pageLayouts: Record<string, unknown[]>; kinds: MenuKind[]; photos: T[] } | null {
+export function keptMenuPages<T extends { path: string; content: string }>(files: readonly T[], pageLayouts: Record<string, unknown> | undefined, extraPages: readonly ExtraPage[] = []):
+  { pageLayouts: Record<string, unknown[]>; kinds: MenuKind[]; photos: T[]; extraPages?: ExtraPage[] } | null {
   const kinds = MENU_KINDS.filter(kind => Array.isArray(pageLayouts?.[kind]) && (pageLayouts![kind] as unknown[]).length && sectionablePage(files, kind));
-  if (!kinds.length) return null;
+  // The pages YAPI made go along too, with their links (spec 2026-11-05 creates anything).
+  if (!kinds.length && !extraPages.length) return null;
   const kept = Object.fromEntries(kinds.map(kind => [kind, pageLayouts![kind] as unknown[]]));
-  const used = new Set([...JSON.stringify(kept).matchAll(BUNDLED_IN)].map(match => match[1]));
-  return { pageLayouts: kept, kinds, photos: files.filter(file => used.has(file.path)) };
+  const used = new Set([...JSON.stringify([kept, extraPages]).matchAll(BUNDLED_IN)].map(match => match[1]));
+  return { pageLayouts: kept, kinds, photos: files.filter(file => used.has(file.path)), ...(extraPages.length ? { extraPages: [...extraPages] } : {}) };
 }
 
 /** The customer-access and account pages (spec 2026-09-30-store-account-page-files-design). Each is a gate: the template's Shell

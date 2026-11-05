@@ -18,14 +18,18 @@ export type MenuPage = typeof MENU_PAGES[number];
 export type LayoutPage = 'home' | 'product' | MenuPage | (string & {});
 export const MENU_PAGE_NAMES: Record<MenuPage, string> = { about: 'Nosotros', contact: 'Contacto', faq: 'Preguntas frecuentes', shipping: 'Envíos' };
 const isMenuPage = (page: unknown): page is MenuPage => (MENU_PAGES as readonly unknown[]).includes(page);
+/** A page of its own (a menu page, or one YAPI made — spec 2026-11-05 creates anything): sections added there, any cover removable. */
+const ownPage = (page: unknown) => page !== 'home' && page !== 'product' && typeof page === 'string';
+const NEW_PAGE_WORDS = /\b(crea|cre[aá]me|agrega|haz|hazme|a[ñn]ade|nueva|otra)\b[^.!?]{0,30}\b(p[aá]gina|pesta[ñn]a|secci[oó]n del men[uú])/i;
 export const MENU_PAGE_URLS: Record<MenuPage, string> = { about: 'nosotros.html', contact: 'contacto.html', faq: 'faq.html', shipping: 'envios.html' };
 const MENU_PAGE_WORDS = /\b(nosotros|qui[eé]nes somos|contacto|cont[aá]ctanos|preguntas|faq|env[ií]os?|entregas|p[aá]ginas?)\b/i;
 
 /** Minor 2026-11-05 (every quick edit sent the menu pages and their section list): the pages that ride in the quick edit — the ones
  *  with sections always, every page and the new-section list (`offer`) only when the request names a page or one is open; null = none. */
-export function menuPagesFor(pages: Record<MenuPage, LayoutBlock[]>, request: string, currentPage?: string): { pages: Partial<Record<MenuPage, LayoutBlock[]>>; offer: boolean } | null {
+export function menuPagesFor(pages: Record<MenuPage, LayoutBlock[]>, request: string, currentPage?: string, extraSlugs: readonly string[] = []): { pages: Partial<Record<MenuPage, LayoutBlock[]>>; offer: boolean } | null {
   const open = String(currentPage ?? '').replace(/^\/+/, '').split(/[?#]/)[0];
-  if (MENU_PAGE_WORDS.test(request) || MENU_PAGES.some(page => MENU_PAGE_URLS[page] === open)) return { pages, offer: true };
+  // Spec 2026-11-05 creates anything: «crea una página…» or a page YAPI made being open offers the page sections too.
+  if (MENU_PAGE_WORDS.test(request) || NEW_PAGE_WORDS.test(request) || MENU_PAGES.some(page => MENU_PAGE_URLS[page] === open) || extraSlugs.some(slug => `${slug}.html` === open)) return { pages, offer: true };
   const built = Object.fromEntries(MENU_PAGES.filter(page => pages[page]?.length).map(page => [page, pages[page]])) as Partial<Record<MenuPage, LayoutBlock[]>>;
   return Object.keys(built).length ? { pages: built, offer: false } : null;
 }
@@ -158,14 +162,14 @@ export function readLayoutEdit(answer: unknown): LayoutEditRead | null {
 
 /** The sections a request adds, checked: a known addable section the home does not have yet, at most two. The caller fills each
  *  (words and photos from the store's facts) and hands the filled blocks back to applyLayoutOps. */
-export function layoutAdds(layout: readonly LayoutBlock[], ops: readonly LayoutOp[], page: LayoutPage = 'home'): { adds: LayoutAdd[]; refused: string[] } {
+export function layoutAdds(layout: readonly LayoutBlock[], ops: readonly LayoutOp[], page: LayoutPage = 'home', pageName?: string): { adds: LayoutAdd[]; refused: string[] } {
   const adds: LayoutAdd[] = [];
   const refused: string[] = [];
   // The product page takes no new section; a menu page (spec 2026-11-05) up to five, one of them a cover.
   if (page === 'product') return { adds, refused };
-  const menu = isMenuPage(page);
+  const menu = ownPage(page);
   const allowed = menu ? PAGE_ADDABLE_IDS : ADDABLE_IDS;
-  const where = menu ? `Tu página «${MENU_PAGE_NAMES[page]}»` : 'Tu portada';
+  const where = menu ? `Tu página «${isMenuPage(page) ? MENU_PAGE_NAMES[page] : pageName ?? page}»` : 'Tu portada';
   for (const op of ops.filter(entry => entry.op === 'add' && (entry.page ?? 'home') === page)) {
     const type = String(op.type ?? '');
     // The schema offers covers for the menu pages; on the home one is said, never dropped silently (review 2026-11-05).
@@ -280,7 +284,7 @@ export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly 
     if (!known(op.at) || !order.includes(op.at)) continue;
     const block = layout[op.at];
     // A menu page may lose any section, its cover too: emptied, it shows its text again (review 2026-11-05).
-    if (isCover(block) && !isMenuPage(page)) { refused.push('No quité la portada: es lo primero que ve tu cliente.'); continue; }
+    if (isCover(block) && !ownPage(page)) { refused.push('No quité la portada: es lo primero que ve tu cliente.'); continue; }
     if (MAIN_GRIDS.has(block.type)) { refused.push('No quité la grilla de productos: la tienda la necesita para vender.'); continue; }
     order = order.filter(at => at !== op.at);
     done.push(`quité ${nameOf(block)}`);
@@ -312,13 +316,13 @@ export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly 
     place = isCover(block) ? 0 : Math.max(place, order.findIndex(index => isCover(blocks[index])) + 1);
     order = [...order.slice(0, place), at, ...order.slice(place)];
     const name = block.title ? `la sección «${block.title}»` : kindOf(block);
-    if (isMenuPage(page)) { pageAdds.push(name); continue; }
+    if (ownPage(page)) { pageAdds.push(name); continue; }
     // «agregué la sección «A» y la sección «B»», not «agregué … y agregué …».
     done.push(`${done.at(-1)?.startsWith('agregué') ? '' : 'agregué '}${name}`);
   }
-  if (pageAdds.length && isMenuPage(page)) {
+  if (pageAdds.length && ownPage(page)) {
     const list = pageAdds.length > 1 ? `${pageAdds.slice(0, -1).join(', ')} y ${pageAdds.at(-1)}` : pageAdds[0];
-    done.push(`agregué ${list} a tu página «${MENU_PAGE_NAMES[page]}»`);
+    done.push(`agregué ${list} a tu página «${isMenuPage(page) ? MENU_PAGE_NAMES[page] : options.pageName ?? page}»`);
   }
   return { layout: order.map(at => blocks[at]), done, refused };
 }

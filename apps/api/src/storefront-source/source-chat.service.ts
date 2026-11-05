@@ -1,3 +1,4 @@
+import { applyPageOps, withExtraPages, type ExtraPage } from './source-extra-pages';
 import { SourceThumbnailsService } from './source-thumbnails.service';
 import { outsideFocus, pointFocus } from './source-point-focus';
 import { randomUUID } from 'node:crypto';
@@ -76,7 +77,7 @@ import { bolivianos, readShippingAsk, type ShippingAsk } from './source-shipping
 import { plainReply } from './source-plain-reply';
 import { visibleChanges } from './source-visible-change';
 import { isPlayfulBusiness } from './home-directions';
-import { instructionAsksStoreMenu, instructionOnlyAboutStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList } from './source-store-menu';
+import { instructionAsksStoreMenu, instructionOnlyAboutStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList, withExtraPageLinks, withStoreMenuConfig } from './source-store-menu';
 import { readConfigFile } from './store-look';
 import { FOOTER_PATH, shellWithStoreFooter } from './agent/home-writer-tools';
 import { buildSuggestions, withRedesignOffer } from './source-suggestions';
@@ -560,10 +561,15 @@ export class SourceChatService {
     await workflow.report('saving');
     let saved = await this.applyPlantilla(merchantId, storeId, target.id, revision, { about: instruction });
     // Minor 2026-11-05: a «Nosotros» (or another menu page) built from sections keeps them, with their photos, on the new template.
-    const keptPages = readsMasterData(snapshot.files) ? keptMenuPages(snapshot.files, readMasterState(snapshot.files).pageLayouts) : null;
+    const keptPages = readsMasterData(snapshot.files) ? keptMenuPages(snapshot.files, readMasterState(snapshot.files).pageLayouts, (readMasterState(snapshot.files).extraPages ?? []) as ExtraPage[]) : null;
     if (keptPages) {
-      const withPages = await this.templates.refill(merchantId, storeId, (saved as { revision: number }).revision, { pageLayouts: keptPages.pageLayouts }, 'Páginas del menú', {
-        files: list => withSectionedPages([...list, ...keptPages.photos.filter(photo => !list.some(file => file.path === photo.path))] as typeof list, keptPages.kinds),
+      const kept = keptPages.extraPages ?? [];
+      const withPages = await this.templates.refill(merchantId, storeId, (saved as { revision: number }).revision, { pageLayouts: keptPages.pageLayouts, ...(kept.length ? { extraPages: kept } : {}) }, 'Páginas del menú', {
+        files: list => {
+          const pagesIn = withSectionedPages([...list, ...keptPages.photos.filter(photo => !list.some(file => file.path === photo.path))] as typeof list, keptPages.kinds);
+          // The pages YAPI made keep their files and their menu links on the new template (spec 2026-11-05 creates anything).
+          return kept.length ? withStoreMenuConfig(withExtraPages(pagesIn, kept), pagesIn, withExtraPageLinks(readStoreMenu(pagesIn), kept).menu) : pagesIn;
+        },
       }).catch(error => {
         this.productLogger.warn(JSON.stringify({ event: 'template_switch_pages_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
         return null;
@@ -1134,6 +1140,9 @@ export class SourceChatService {
     // Spec 2026-11-05: the menu pages' own sections ([] = the page shows only its text today).
     const savedPages = (readMasterState(files).pageLayouts ?? {}) as Record<string, unknown>;
     const pages = Object.fromEntries(MENU_PAGES.map(page => [page, (Array.isArray(savedPages[page]) ? savedPages[page] : []) as LayoutBlock[]])) as Record<MenuPage, LayoutBlock[]>;
+    // Spec 2026-11-05 creates anything: the pages YAPI made, and the store menu's dropdowns (where a page link may go).
+    const extraPages = (readMasterState(files).extraPages ?? []) as ExtraPage[];
+    const menuGroups = (readStoreMenu(files)?.groups ?? []).filter(group => !group.direct).map(group => group.label);
     const editState = await this.storeEditState(merchantId, storeId, files).catch(error => {
       this.productLogger.warn(JSON.stringify({ event: 'store_edit_state_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
       return null;
@@ -1142,15 +1151,17 @@ export class SourceChatService {
     const templateTypes = [...new Set(layout.map(block => block.type))];
     // Spec 2026-11-05 point-at: what the merchant clicked, circled or (with «esto», «aquí») had on screen; a menu page in focus counts as open.
     const focus = pointFocus({ instruction: input.instruction, selection: input.selection, viewing: input.viewing });
-    const focusPage = focus && (MENU_PAGES as readonly string[]).includes(focus.pagina) ? MENU_PAGE_URLS[focus.pagina as MenuPage] : undefined;
-    const menuPages = menuPagesFor(pages, input.instruction, focusPage ?? input.currentPage);
+    const focusPage = focus && (MENU_PAGES as readonly string[]).includes(focus.pagina) ? MENU_PAGE_URLS[focus.pagina as MenuPage]
+      : focus && extraPages.some(page => page.slug === focus.pagina) ? `${focus.pagina}.html` : undefined;
+    const menuPages = menuPagesFor(pages, input.instruction, focusPage ?? input.currentPage, extraPages.map(page => page.slug));
     const shot = await picture;
     // Live 2026-11-05: the merchant's reply to a question YAPI asked («¿Qué respuesta le pongo…?») is read with the request it answers.
     const pendingAsk = await this.lastStoreAsk(threadId);
     const request = pendingAsk ? `${pendingAsk.request}\n(El comercio responde a «${pendingAsk.ask}»: ${input.instruction})` : input.instruction;
     const read = await this.dialogue.editLayout(merchantId, { storeId, layout, request, ...(productLayout.length ? { productLayout } : {}),
       ...(menuPages ? { pages: menuPages.pages as Record<string, LayoutBlock[]>, offerPages: menuPages.offer } : {}), templateTypes,
-      ...(editState ? { store: editState, photos } : {}), ...(focus ? { focus } : {}), ...(shot ? { picture: shot } : {}) });
+      ...(editState ? { store: editState, photos } : {}), ...(focus ? { focus } : {}), ...(shot ? { picture: shot } : {}),
+      ...(extraPages.length ? { extraPages: extraPages.map(page => ({ slug: page.slug, nombre: page.name, layout: page.layout })) } : {}), ...(menuGroups.length ? { menuGroups } : {}) });
     if (!read) return null;
     // Live 2026-11-05: a change that needs the merchant's words first (a FAQ answer) is asked for, never «No logré que se vea».
     if (read.ask && !read.ops.length && !read.store.length) {
@@ -1159,23 +1170,30 @@ export class SourceChatService {
         metadata: { progress: workflow.value, storeAsk: { request: input.instruction.slice(0, 2000), ask: read.ask } } as never } });
       return { userMessage, assistantMessage };
     }
+    // Spec 2026-11-05 creates anything: page ops first (a new page, renames, links, removals); «nueva» ops now name the new page.
+    const paged = applyPageOps(extraPages, read.ops, files, menuGroups);
+    const ops = paged.ops;
     // Fix 3 (2026-11-02, goodProtein #12: a new section went to the design agent, ~18 min, never mounted): a section the merchant asks
     // for comes from the library, filled with the store's words and photos the way the template was — on the home or a menu page.
     let facts: Awaited<ReturnType<SourceChatService['libraryFacts']>> | null = null;
-    const compose = async (page: LayoutPage, list: LayoutBlock[]) => {
-      const asked = layoutAdds(list, read.ops, page);
+    const compose = async (page: LayoutPage, list: LayoutBlock[], pageName?: string) => {
+      const asked = layoutAdds(list, ops, page, pageName);
       const added: Array<{ to: number; block: LayoutBlock }> = [];
       const refusedAdds = [...asked.refused];
       if (!asked.adds.length) return { added, refusedAdds };
       await workflow.report('design');
       facts ??= await this.libraryFacts(merchantId, storeId, files, input.instruction, 14);
-      const where = page === 'home' ? 'la portada' : `la página «${MENU_PAGE_NAMES[page as MenuPage]}»`;
+      const where = page === 'home' ? 'la portada' : `la página «${pageName ?? MENU_PAGE_NAMES[page as MenuPage]}»`;
+      // A page named like a category shows that category (spec 2026-11-05 creates anything).
+      const fold = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+      const category = pageName ? facts.categories.find(name => fold(name) === fold(pageName)) : undefined;
+      const categoryNote = category ? ` Es la página de la categoría «${category}»: muestra sus productos y un botón «Ver todo» a esa categoría (link category:${category}).` : '';
       for (const add of asked.adds) {
         const blocker = librarySectionBlocker(add.type, facts);
         if (blocker) { refusedAdds.push(`No pude agregar esa sección: ${blocker}.`); continue; }
         // Live BOXY 2026-11-05: written one at a time, four sections all began «Hoodies para…»; each sees the titles already there.
         const titles = [...list, ...added.map(entry => entry.block)].map(block => block.title).filter((title): title is string => Boolean(title));
-        const request = `${input.instruction}\n(Sección nueva para ${where}${add.about ? `: ${add.about}` : ''}. Escríbela completa con los datos de la tienda.${titles.length
+        const request = `${input.instruction}\n(Sección nueva para ${where}${add.about ? `: ${add.about}` : ''}. Escríbela completa con los datos de la tienda.${categoryNote}${titles.length
           ? ` Títulos que ya están en la página: ${titles.map(title => `«${title}»`).join(', ')}; el tuyo dice otra cosa y empieza distinto.` : ''})`;
         // Two new sections in one request show different photos (Miga Dorada live 2026-11-02: both took the same one).
         const shown = new Set(added.flatMap(({ block }) => [block.photo, block.photo2, ...(block.items ?? []).map(item => item.photo)]).filter(Boolean));
@@ -1188,31 +1206,42 @@ export class SourceChatService {
       return { added, refusedAdds };
     };
     const homeAdds = await compose('home', layout);
-    const applied = applyLayoutOps(layout, read.ops, homeAdds.added, { photos });
+    const applied = applyLayoutOps(layout, ops, homeAdds.added, { photos });
     applied.refused.push(...homeAdds.refusedAdds);
-    const product = productLayout.length ? applyLayoutOps(productLayout, read.ops, [], { page: 'product', photos }) : { layout: productLayout, done: [], refused: [] };
+    const product = productLayout.length ? applyLayoutOps(productLayout, ops, [], { page: 'product', photos }) : { layout: productLayout, done: [], refused: [] };
     // Spec 2026-11-05: each menu page on its own; a request about «Nosotros» never changes the home or another page.
     const menu: Array<{ page: MenuPage; layout: LayoutBlock[]; done: string[]; refused: string[] }> = [];
     for (const page of MENU_PAGES) {
-      if (!read.ops.some(op => op.page === page)) continue;
+      if (!ops.some(op => op.page === page)) continue;
       // Review 2026-11-05: a page the store's own design wrote is never replaced by sections.
       if (!sectionablePage(files, page)) {
         menu.push({ page, layout: pages[page], done: [], refused: [`Tu página «${MENU_PAGE_NAMES[page]}» tiene un diseño propio: no la cambié con secciones de la plantilla. Pídeme el cambio de esa página y lo hago sobre su diseño.`] });
         continue;
       }
       const pageAdds = await compose(page, pages[page]);
-      const result = applyLayoutOps(pages[page], read.ops, pageAdds.added, { page, photos });
+      const result = applyLayoutOps(pages[page], ops, pageAdds.added, { page, photos });
       menu.push({ page, layout: result.layout, done: result.done, refused: [...result.refused, ...pageAdds.refusedAdds] });
     }
     const menuChanged = menu.filter(entry => JSON.stringify(entry.layout) !== JSON.stringify(pages[entry.page]));
+    // The pages YAPI made: each with its own ops, like a menu page (spec 2026-11-05 creates anything).
+    const extra: ExtraPage[] = [];
+    const extraDone: string[] = [...paged.done], extraRefused: string[] = [...paged.refused];
+    for (const page of paged.pages) {
+      if (!ops.some(op => op.page === page.slug)) { extra.push(page); continue; }
+      const adds = await compose(page.slug, page.layout, page.name);
+      const result = applyLayoutOps(page.layout, ops, adds.added, { page: page.slug, pageName: page.name, photos });
+      extra.push({ ...page, layout: result.layout });
+      extraDone.push(...result.done); extraRefused.push(...result.refused, ...adds.refusedAdds);
+    }
+    const extraChanged = JSON.stringify(extra) !== JSON.stringify(extraPages);
     const store = editState ? applyStoreOps(editState, read.store, photos) : { change: { products: [] } as StoreChange, done: [], refused: [] };
     const changed = JSON.stringify(applied.layout) !== JSON.stringify(layout);
     const productChanged = JSON.stringify(product.layout) !== JSON.stringify(productLayout);
-    const done = [...applied.done, ...product.done, ...menu.flatMap(entry => entry.done)];
-    const refused = [...applied.refused, ...product.refused, ...menu.flatMap(entry => entry.refused), ...store.refused];
-    this.productLogger.log(JSON.stringify({ event: 'template_layout_edit', storeId, ops: read.ops.map(op => `${op.page && op.page !== 'home' ? `${op.page === 'product' ? 'ficha' : op.page}:` : ''}${op.op}:${op.at}${op.field ? `.${op.field}` : ''}${op.item >= 0 ? `[${op.item}]` : ''}${op.type ? `=${op.type}` : ''}`),
+    const done = [...applied.done, ...product.done, ...menu.flatMap(entry => entry.done), ...extraDone];
+    const refused = [...applied.refused, ...product.refused, ...menu.flatMap(entry => entry.refused), ...extraRefused, ...store.refused];
+    this.productLogger.log(JSON.stringify({ event: 'template_layout_edit', storeId, ops: ops.map(op => `${op.page && op.page !== 'home' ? `${op.page === 'product' ? 'ficha' : op.page}:` : ''}${op.op}:${op.at}${op.field ? `.${op.field}` : ''}${op.item >= 0 ? `[${op.item}]` : ''}${op.type ? `=${op.type}` : ''}`),
       store: read.store.map(op => `${op.part}.${op.field}${op.at >= 0 ? `[${op.at}]` : ''}`), added: homeAdds.added.map(entry => entry.block.type), changed, productChanged, menuChanged: menuChanged.map(entry => `${entry.page}:${entry.layout.map(block => block.type).join(',')}`), refused: refused.length, rest: read.rest.slice(0, 200),
-      focus: focus ? { pagina: focus.pagina, secciones: focus.secciones, partes: focus.partes, mirando: Boolean(focus.mirando) } : null, outsideFocus: outsideFocus(read.ops, focus) }));
+      extraPages: extra.map(page => page.slug), focus: focus ? { pagina: focus.pagina, secciones: focus.secciones, partes: focus.partes, mirando: Boolean(focus.mirando) } : null, outsideFocus: outsideFocus(ops, focus) }));
     // The store's data first: a refused write (a check the database makes) is said, never «Listo».
     // The announcement, the footer line and the catalogue title are files; everything else the store edit changes is data.
     const { copy: _copy, catalogTitle: _title, ...data } = store.change;
@@ -1228,7 +1257,8 @@ export class SourceChatService {
       if (written) done.push(...store.done); else refused.push('No pude guardar los cambios de los datos de tu tienda. Inténtalo de nuevo en un momento.');
     }
     const filesChange: MasterFill = { ...(changed ? { layout: applied.layout } : {}), ...(productChanged ? { productLayout: product.layout } : {}), ...(store.change.copy ? { copy: store.change.copy } : {}),
-      ...(menuChanged.length ? { pageLayouts: { ...pages, ...Object.fromEntries(menuChanged.map(entry => [entry.page, entry.layout])) } } : {}) };
+      ...(menuChanged.length ? { pageLayouts: { ...pages, ...Object.fromEntries(menuChanged.map(entry => [entry.page, entry.layout])) } } : {}),
+      ...(extraChanged ? { extraPages: extra } : {}) };
     if (!done.length && !refused.length) return null;
     let saved: Awaited<ReturnType<SourceTemplatesService['refill']>> | null = null;
     // One revision: the files that changed, and the live data in config.js so the preview shows a page or product just written.
@@ -1237,9 +1267,16 @@ export class SourceChatService {
       const title = store.change.catalogTitle;
       // A menu page that now has sections draws them (spec 2026-11-05); one emptied keeps the file, which then shows its text.
       const sectioned = menuChanged.filter(entry => entry.layout.length).map(entry => entry.page);
-      const pageFiles = title !== undefined || sectioned.length
-        ? { files: <T extends { path: string; content: string }>(list: T[]) => withSectionedPages(title !== undefined ? withCatalogTitle(list, title) : list, sectioned) } : {};
-      saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || store.change.copy || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
+      // Pages YAPI made: their files and their menu links follow the list (spec 2026-11-05 creates anything).
+      const withExtra = <T extends { path: string; content: string }>(list: T[]): T[] => {
+        if (!extraChanged) return list;
+        const linked = withExtraPageLinks(readStoreMenu(list), extra);
+        refused.push(...linked.refused);
+        return withStoreMenuConfig(withExtraPages(list, extra), list, linked.menu);
+      };
+      const pageFiles = title !== undefined || sectioned.length || extraChanged
+        ? { files: <T extends { path: string; content: string }>(list: T[]) => withExtra(withSectionedPages(title !== undefined ? withCatalogTitle(list, title) : list, sectioned)) } : {};
+      saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraChanged || store.change.copy || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
         { refreshData: true, ...pageFiles });
     }
     await workflow.finish('completed');

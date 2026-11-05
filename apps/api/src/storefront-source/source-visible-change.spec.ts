@@ -80,3 +80,8 @@ describe('visible changes', () => {
     expect(visibleChanges(config({ faq: [] }), config({ faq: [], items: [3] }))).toEqual([]);
   });
 });
+
+it('a page YAPI made shows as a page change (spec 2026-11-05 creates anything)', () => {
+  const page = { extraPages: [{ slug: 'novias', name: 'Novias', menu: '', layout: [{ type: 'story-split', title: 'Novias' }] }] };
+  expect(visibleChanges(store(), store({}, undefined, page as never))).toEqual(['pages']);
+});

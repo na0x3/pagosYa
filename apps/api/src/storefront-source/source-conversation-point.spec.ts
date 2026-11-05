@@ -28,3 +28,13 @@ it('sends neither when nothing was pointed at', async () => {
   expect(content).toHaveLength(1);
   expect(JSON.parse(content[0].text).foco).toBeUndefined();
 });
+
+it('lists the pages YAPI made under their address, and their address and the dropdowns in the schema (spec 2026-11-05 creates anything)', async () => {
+  await service().editLayout('m1', { storeId: 's1', layout: [{ type: 'cover-split', title: 'Hola' }] as never, request: 'agrega un paso en Novias',
+    extraPages: [{ slug: 'novias', nombre: 'Novias', layout: [{ type: 'story-list', title: 'Pasos' }] as never }], menuGroups: ['Colecciones'] });
+  const body = sent();
+  expect(JSON.parse(body.input[0].content[0].text).paginas.novias).toMatchObject({ nombre: 'Novias' });
+  const schema = JSON.stringify(body.text.format.schema);
+  expect(schema).toContain('"novias"');
+  expect(schema).toContain('"Colecciones"');
+});

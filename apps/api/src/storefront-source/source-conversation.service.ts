@@ -356,14 +356,17 @@ export class SourceConversationService {
   /** Template quick edits (spec 2026-11-01 §1): a words, remove, move or add request on a template home, as exact operations on its
    *  numbered sections plus the part they cannot do. Text only, short; null when it fails twice. */
   async editLayout(merchantId: string, input: { storeId: string; layout: LayoutBlock[]; request: string; productLayout?: LayoutBlock[]; store?: StoreEditState; photos?: StoreEditPhoto[];
-    pages?: Record<string, LayoutBlock[]>; offerPages?: boolean; templateTypes?: string[]; focus?: PointFocus; picture?: Buffer }): Promise<LayoutEditRead | null> {
+    pages?: Record<string, LayoutBlock[]>; offerPages?: boolean; templateTypes?: string[]; focus?: PointFocus; picture?: Buffer;
+    /** Spec 2026-11-05 creates anything: the pages YAPI made, and the store menu's dropdowns (where a page link may go). */
+    extraPages?: Array<{ slug: string; nombre: string; layout: LayoutBlock[] }>; menuGroups?: string[] }): Promise<LayoutEditRead | null> {
     const model = this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
     const provider = sourceProvider(this.config, model);
     // YAPI edits everything (spec 2026-11-03): the product page's sections and the store's own data ride in the same short call; the
     // menu pages' sections and the template's own section types too (spec 2026-11-05).
     const body = { secciones: layoutDigest(input.layout), ...(input.productLayout?.length ? { ficha: layoutDigest(input.productLayout) } : {}),
       // Minor 2026-11-05: only the pages that matter, and the new-section list only when a page is named or open (menuPagesFor).
-      ...(input.pages ? { paginas: Object.fromEntries(Object.entries(input.pages).map(([page, list]) => [page, layoutDigest(list)])),
+      ...(input.pages || input.extraPages?.length ? { paginas: { ...Object.fromEntries(Object.entries(input.pages ?? {}).map(([page, list]) => [page, layoutDigest(list)])),
+          ...Object.fromEntries((input.extraPages ?? []).map(page => [page.slug, { nombre: page.nombre, secciones: layoutDigest(page.layout) }])) },
         ...(input.offerPages ? { plantilla: input.templateTypes ?? [], nuevas_paginas: addableSections('menu') } : {}) } : {}),
       nuevas: addableSections(),
       ...(input.store ? { tienda: storeDigest(input.store, input.photos ?? []) } : {}), ...(input.focus ? { foco: input.focus } : {}), pedido: input.request.slice(0, 2000) };
@@ -377,7 +380,7 @@ export class SourceConversationService {
           method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(60_000),
           body: JSON.stringify({ model, store: false, instructions: `${LAYOUT_EDIT_PROMPT}\n${STORE_EDIT_PROMPT}`, input: [{ role: 'user', content }],
             // A rewritten policy or about page is longer than a headline.
-            text: { format: { type: 'json_schema', name: 'layout_edit', strict: true, schema: layoutEditSchema() } }, reasoning: { effort: 'low' }, max_output_tokens: 6000 }),
+            text: { format: { type: 'json_schema', name: 'layout_edit', strict: true, schema: layoutEditSchema((input.extraPages ?? []).map(page => page.slug), input.menuGroups ?? []) } }, reasoning: { effort: 'low' }, max_output_tokens: 6000 }),
         });
         answer = await response.json().catch(() => null);
         checkSourceProviderQuota(response.status, answer, provider.name);

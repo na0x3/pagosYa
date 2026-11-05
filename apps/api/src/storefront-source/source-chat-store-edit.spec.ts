@@ -227,3 +227,46 @@ it('the answer of the merchant is read with the question it answers (live 2026-1
   await edit('No, solo vestidos de mujer');
   expect(editLayout.mock.calls[1][1].request).toBe('agrega una pregunta sobre si hacen vestidos para hombres\n(El comercio responde a «¿Qué respuesta le pongo a «¿Hacen vestidos para hombres?»?»: No, solo vestidos de mujer)');
 });
+
+// YAPI creates anything (spec 2026-11-05): pages YAPI makes, their sections, their link in the menu.
+describe('extra pages through the quick edit', () => {
+  const novias = { slug: 'novias', name: 'Novias', menu: '', layout: [{ type: 'story-list', title: 'Cómo es', items: [{ title: 'Uno' }, { title: 'Dos' }, { title: 'Tres' }] }] };
+  const configFile = { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"header":{"menu":{"style":"dropdowns","groups":[{"label":"Colecciones","links":[{"to":"all"}]}]}}};\n' };
+  const storeFiles = (extraPages: unknown[]) => [
+    templateStoreDataFile({ name: 'DooBoo' }, { hero: '' }, { copy: { headline: 'x' } as never, look: { palette: 'mono', fonts: 'zancada' } as never, variants: { theme: 'unico' } as never, layout: home, productLayout: ficha, extraPages } as never),
+    { path: 'components/library.tsx', content: '' }, configFile];
+  const chatOn = (list: Array<{ path: string; content: string }>): any => new SourceChatService(prisma, { version: jest.fn().mockResolvedValue({ snapshot: { files: list } }) } as any,
+    { catalog: jest.fn().mockResolvedValue({ items: [] }) } as any, { editLayout } as any, { refill } as any, { get: () => undefined } as unknown as ConfigService);
+  const pageOp = (over: Record<string, unknown>) => ({ op: 'page-add', at: -1, field: '', item: -1, value: '', to: -1, type: '', ...over });
+  const written = (base: Array<{ path: string; content: string }>) => refill.mock.calls[0][5].files(base) as Array<{ path: string; content: string }>;
+
+  it('creates a page with its menu link in one revision and tells the edit which dropdowns there are', async () => {
+    const list = storeFiles([]);
+    editLayout.mockResolvedValue(read({ ops: [pageOp({ value: 'Novias' })] }));
+    const out = await chatOn(list).templateLayoutEdit('m1', 's1', 't1', { id: 'u1' }, workflow, { instruction: 'crea una página Novias', revision: 5, assetUrls: [] }, 5, home);
+    expect(editLayout.mock.calls[0][1]).toMatchObject({ menuGroups: ['Colecciones'] });
+    expect(refill.mock.calls[0][3].extraPages).toEqual([{ slug: 'novias', name: 'Novias', menu: '', layout: [] }]);
+    const files = written(list);
+    expect(files.some(file => file.path === 'components/pages/novias.tsx')).toBe(true);
+    expect(files.find(file => file.path === 'config.js')!.content).toContain('extra:novias');
+    expect(out.assistantMessage.content).toContain('creé la página «Novias»');
+  });
+
+  it('adds a step on a page YAPI made', async () => {
+    editLayout.mockResolvedValue(read({ ops: [{ op: 'item-add', at: 0, field: '', item: -1, value: 'Cuatro', to: -1, type: '', page: 'novias' }] }));
+    await chatOn(storeFiles([novias])).templateLayoutEdit('m1', 's1', 't1', { id: 'u1' }, workflow, { instruction: 'agrega un paso en Novias', revision: 5, assetUrls: [] }, 5, home);
+    expect(editLayout.mock.calls[0][1].extraPages).toEqual([{ slug: 'novias', nombre: 'Novias', layout: novias.layout }]);
+    expect(refill.mock.calls[0][3].extraPages[0].layout[0].items.map((item: { title: string }) => item.title)).toEqual(['Uno', 'Dos', 'Tres', 'Cuatro']);
+  });
+
+  it('removes a page, its file and its link', async () => {
+    const list = [...storeFiles([novias]).filter(file => file.path !== 'config.js'), { path: 'components/pages/novias.tsx', content: '// @pagosya-extra-page\n' },
+      { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"header":{"menu":{"style":"dropdowns","groups":[{"label":"Novias","direct":true,"links":[{"label":"Novias","to":"extra:novias"}]}]}}};\n' }];
+    editLayout.mockResolvedValue(read({ ops: [pageOp({ op: 'page-remove', page: 'novias' })] }));
+    await chatOn(list).templateLayoutEdit('m1', 's1', 't1', { id: 'u1' }, workflow, { instruction: 'quita la página Novias', revision: 5, assetUrls: [] }, 5, home);
+    expect(refill.mock.calls[0][3].extraPages).toEqual([]);
+    const files = written(list);
+    expect(files.some(file => file.path === 'components/pages/novias.tsx')).toBe(false);
+    expect(files.find(file => file.path === 'config.js')!.content).not.toContain('extra:novias');
+  });
+});
