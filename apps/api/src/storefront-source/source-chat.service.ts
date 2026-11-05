@@ -1139,6 +1139,12 @@ export class SourceChatService {
       ...(menuPages ? { pages: menuPages.pages as Record<string, LayoutBlock[]>, offerPages: menuPages.offer } : {}), templateTypes,
       ...(editState ? { store: editState, photos } : {}), ...(focus ? { focus } : {}), ...(shot ? { picture: shot } : {}) });
     if (!read) return null;
+    // Live 2026-11-05: a change that needs the merchant's words first (a FAQ answer) is asked for, never «No logré que se vea».
+    if (read.ask && !read.ops.length && !read.store.length) {
+      await workflow.finish('completed');
+      const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT', content: read.ask, metadata: { progress: workflow.value } as never } });
+      return { userMessage, assistantMessage };
+    }
     // Fix 3 (2026-11-02, goodProtein #12: a new section went to the design agent, ~18 min, never mounted): a section the merchant asks
     // for comes from the library, filled with the store's words and photos the way the template was — on the home or a menu page.
     let facts: Awaited<ReturnType<SourceChatService['libraryFacts']>> | null = null;

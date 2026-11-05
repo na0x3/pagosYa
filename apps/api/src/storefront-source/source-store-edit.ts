@@ -109,7 +109,8 @@ La tienda también tiene datos propios en «tienda» (no son secciones de la por
   en texto simple, con los datos que dio el comercio y sin inventar plazos ni precios. value "" la quita.
 - faq: las «preguntas frecuentes» propias del comercio (la página de preguntas frecuentes). field add (title = pregunta, value =
   respuesta), set (at = cuál; title y value nuevos) o remove (at). Nunca inventes una respuesta que el comercio no dio ni está en
-  los datos de la tienda.
+  los datos de la tienda: si pide una pregunta sin su respuesta, no la agregues y pon en «ask» una pregunta corta pidiéndole la
+  respuesta («¿Qué respuesta le pongo a “¿Hacen arreglos?”?»). «ask» es "" en todo otro caso.
 - announcement: field text = la cinta de arriba de todas las páginas (una frase corta, «Envío gratis desde Bs 200»); "" la quita.
 - footer: field tagline = la frase del pie de página.
 - social: field instagram, tiktok, facebook, youtube o x; value = el usuario (@marca) o el enlace; "" lo quita.

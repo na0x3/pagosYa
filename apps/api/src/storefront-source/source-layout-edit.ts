@@ -26,7 +26,8 @@ export function menuPagesFor(pages: Record<MenuPage, LayoutBlock[]>, request: st
   const built = Object.fromEntries(MENU_PAGES.filter(page => pages[page]?.length).map(page => [page, pages[page]])) as Partial<Record<MenuPage, LayoutBlock[]>>;
   return Object.keys(built).length ? { pages: built, offer: false } : null;
 }
-export type LayoutEditRead = { ops: LayoutOp[]; store: StoreOp[]; rest: string };
+/** `ask`: a question back to the merchant when the change needs their words first (a FAQ answer, live 2026-11-05). */
+export type LayoutEditRead = { ops: LayoutOp[]; store: StoreOp[]; rest: string; ask?: string };
 /** Fix 3 (2026-11-02): a section the merchant asked for, from the library, before the section `to` showed (-1 = before the closing). */
 export type LayoutAdd = { type: string; to: number; about: string };
 export type LayoutDigestSection = { at: number; type: string; name: string; eyebrow?: string; title?: string; text?: string; cta?: string; cta2?: string; items?: Array<{ title: string; text?: string; foto?: true }>;
@@ -123,18 +124,19 @@ export function layoutEditSchema() {
   const op = { type: 'object', additionalProperties: false, required: ['op', 'at', 'field', 'item', 'value', 'to', 'type', 'page'], properties: {
     op: { type: 'string', enum: ['text', 'remove', 'move', 'add', 'photo'] }, at: { type: 'integer' }, field: { type: 'string', enum: [...FIELDS, 'photo', 'photo2', ''] },
     item: { type: 'integer' }, value: { type: 'string' }, to: { type: 'integer' }, type: { type: 'string', enum: [...PAGE_ADDABLE_IDS, ''] }, page: { type: 'string', enum: ['home', 'product', ...MENU_PAGES] } } };
-  return { type: 'object', additionalProperties: false, required: ['ops', 'store', 'rest'], properties: { ops: { type: 'array', items: op }, store: { type: 'array', items: storeOpSchema() }, rest: { type: 'string' } } };
+  return { type: 'object', additionalProperties: false, required: ['ops', 'store', 'rest', 'ask'], properties: { ops: { type: 'array', items: op }, store: { type: 'array', items: storeOpSchema() }, rest: { type: 'string' }, ask: { type: 'string' } } };
 }
 
 /** The model's answer, checked: known operations only, and the rest trimmed. Null when there is no answer. */
 export function readLayoutEdit(answer: unknown): LayoutEditRead | null {
   if (!answer || typeof answer !== 'object') return null;
-  const raw = answer as { ops?: unknown; store?: unknown; rest?: unknown };
+  const raw = answer as { ops?: unknown; store?: unknown; rest?: unknown; ask?: unknown };
   const ops = (Array.isArray(raw.ops) ? raw.ops : []).filter((op): op is LayoutOp => Boolean(op) && ['text', 'remove', 'move', 'add', 'photo'].includes((op as LayoutOp).op)
     && Number.isInteger((op as LayoutOp).at))
     // The home is the default page; only the product page and the menu pages are marked.
     .map(op => { const { page, ...rest } = op; return page === 'product' || isMenuPage(page) ? { ...rest, page } : rest; });
-  return { ops, store: readStoreOps(raw.store), rest: String(raw.rest ?? '').replace(/\s+/g, ' ').trim() };
+  const ask = String(raw.ask ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  return { ops, store: readStoreOps(raw.store), rest: String(raw.rest ?? '').replace(/\s+/g, ' ').trim(), ...(ask ? { ask } : {}) };
 }
 
 /** The sections a request adds, checked: a known addable section the home does not have yet, at most two. The caller fills each

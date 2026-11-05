@@ -210,3 +210,10 @@ it('never draws sections over a Nosotros page the store\'s own design wrote, and
     expect(out.assistantMessage.content).toContain('diseño propio');
   } finally { files.pop(); }
 });
+
+it('a question YAPI needs answered is asked, and nothing is saved (live 2026-11-05)', async () => {
+  editLayout.mockResolvedValue(read({ ask: '¿Qué respuesta le pongo a la pregunta «¿Hacen arreglos de vestidos?»?' }));
+  const out = await edit('agrega una pregunta sobre arreglos de vestidos');
+  expect(out.assistantMessage.content).toBe('¿Qué respuesta le pongo a la pregunta «¿Hacen arreglos de vestidos?»?');
+  expect(refill).not.toHaveBeenCalled();
+});
