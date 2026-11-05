@@ -210,6 +210,32 @@
     overlay = null; tab = null;
   }
 
+  // What the merchant is looking at (spec 2026-11-05 point-at): always on, the section under the middle of the viewport, at most
+  // once per 400 ms and only when it changes.
+  var viewingTimer = 0, lastViewing = '';
+  function viewingNow() {
+    viewingTimer = 0;
+    var middle = innerHeight / 2, found = null, i, r;
+    var list = document.querySelectorAll('[data-lb-home] > [data-lb], [data-lb-product] > [data-lb]');
+    for (i = 0; i < list.length && !found; i++) { r = list[i].getBoundingClientRect(); if (r.height && r.top <= middle && r.bottom > middle) found = addressOf(list[i], list[i].parentElement); }
+    var main = document.querySelector('main');
+    for (i = 0; !found && main && i < main.children.length; i++) {
+      var kid = main.children[i]; r = kid.getBoundingClientRect();
+      if (r.height && r.top <= middle && r.bottom > middle && SECTION_ID.test(kid.id || '')) found = { id: kid.id, label: labelOf(kid, kid.id), page: 'home' };
+    }
+    if (!found) return;
+    var message = { type: 'pagosya:source-viewing', page: found.page, sectionId: found.id, label: found.label };
+    if (typeof found.at === 'number') message.at = found.at;
+    var key = JSON.stringify(message);
+    if (key === lastViewing) return;
+    lastViewing = key;
+    parent.postMessage(message, '*');
+  }
+  function onViewing() { if (!viewingTimer) viewingTimer = setTimeout(viewingNow, 400); }
+  window.addEventListener('scroll', onViewing, true);
+  window.addEventListener('resize', onViewing);
+  window.addEventListener('load', onViewing);
+
   window.addEventListener('message', function (event) {
     // Only the Studio (the parent window) may switch edit mode.
     if (event.source !== parent) return;

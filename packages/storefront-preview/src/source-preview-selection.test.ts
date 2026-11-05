@@ -2,7 +2,7 @@
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { receivePreviewSelection, sourcePreviewDocument } from './source-preview';
+import { receivePreviewSelection, receivePreviewViewing, sourcePreviewDocument } from './source-preview';
 
 /** The injected edit mode runs in a page of its own; jsdom (from the checkout app's dependencies) runs the real preview document. */
 const { JSDOM } = createRequire(join(__dirname, '../../../apps/checkout/package.json'))('jsdom');
@@ -256,4 +256,25 @@ it('the Studio keeps a valid area and drops a malformed one', () => {
   expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'area', sectionId: 'lb-1', label: 'Hola', area }), frame)).toMatchObject({ kind: 'area', area });
   for (const bad of [{ ...area, points: [0, NaN, 1, 1, 2, 2] }, { ...area, texts: Array(13).fill('x') }, { ...area, parts: ['body'] }, { ...area, width: 100 }, { ...area, pageQuery: '../x.html' }, { ...area, photos: ['/' + 'x'.repeat(500)] }])
     expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'area', sectionId: 'lb-1', label: 'Hola', area: bad }), frame)).toBeNull();
+});
+
+it('always says which section is in the middle of the screen, without edit mode, once per 400 ms', async () => {
+  const { w } = loadTemplate();
+  const seen: any[] = [];
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:source-viewing') seen.push(event.data); });
+  Object.defineProperty(w, 'innerHeight', { value: 800, configurable: true });
+  box(w, '[data-lb="cover-split"]', 0, -900, 1280, 600); box(w, '[data-lb="products-grid"]', 0, -300, 1280, 900); box(w, '#inicio', 0, 600, 1280, 500);
+  w.dispatchEvent(new w.Event('scroll')); w.dispatchEvent(new w.Event('scroll')); w.dispatchEvent(new w.Event('scroll'));
+  await vi.waitFor(() => expect(seen).toHaveLength(1), { timeout: 1500 });
+  await new Promise(resolve => setTimeout(resolve, 500));
+  expect(seen).toHaveLength(1);
+  expect(seen[0]).toMatchObject({ page: 'home', at: 2, sectionId: 'lb-2', label: 'Colección' });
+});
+
+it('the Studio keeps a valid viewing and drops a bad one', () => {
+  const frame = { contentWindow: {} } as unknown as HTMLIFrameElement;
+  const event = (data: unknown) => ({ source: frame.contentWindow, origin: 'null', data }) as unknown as MessageEvent;
+  expect(receivePreviewViewing(event({ type: 'pagosya:source-viewing', page: 'faq', at: 1, sectionId: 'lb-1', label: 'Preguntas' }), frame)).toEqual({ page: 'faq', at: 1, sectionId: 'lb-1', label: 'Preguntas' });
+  expect(receivePreviewViewing(event({ type: 'pagosya:source-viewing', page: 'faq', at: -1, label: 'x' }), frame)).toBeNull();
+  expect(receivePreviewViewing({ source: {}, origin: 'null', data: { type: 'pagosya:source-viewing', page: 'home', label: 'x' } } as unknown as MessageEvent, frame)).toBeNull();
 });

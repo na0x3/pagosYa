@@ -67,6 +67,17 @@ export function validPointArea(value: unknown): PointArea | null {
     texts: [...a.texts], photos: [...a.photos], parts: [...new Set(a.parts)], width: a.width, pageQuery: a.pageQuery };
 }
 
+/** The section in the middle of the preview (spec 2026-11-05 point-at), checked like a selection. */
+export interface PreviewViewing { page: PointPage; at?: number; sectionId?: string; label: string }
+export function receivePreviewViewing(event: MessageEvent, frame: HTMLIFrameElement | null): PreviewViewing | null {
+  const data = event.data;
+  if (!frame || event.source !== frame.contentWindow || event.origin !== 'null' || data?.type !== 'pagosya:source-viewing') return null;
+  if (!POINT_PAGES.includes(data.page) || typeof data.label !== 'string' || data.label.length > 60) return null;
+  if (data.at !== undefined && !validAt(data.at)) return null;
+  if (data.sectionId !== undefined && (typeof data.sectionId !== 'string' || !/^[a-z][a-z0-9-]{0,47}$/.test(data.sectionId))) return null;
+  return { page: data.page, label: data.label, ...(data.at !== undefined ? { at: data.at } : {}), ...(data.sectionId ? { sectionId: data.sectionId } : {}) };
+}
+
 export function receivePreviewSelection(event: MessageEvent, frame: HTMLIFrameElement | null): PreviewSelection | null {
   const data = event.data;
   if (!frame || event.source !== frame.contentWindow || event.origin !== 'null' || data?.type !== 'pagosya:source-select') return null;
