@@ -387,6 +387,8 @@ export class SourceTemplatesService {
       for (const [kind, list] of Object.entries(change.pageLayouts)) pages[kind] = Array.isArray(list) ? await bundled(list) : [];
       out.pageLayouts = pages;
     }
+    // The pages YAPI made (spec 2026-11-05 creates anything) the same way.
+    if (change.extraPages) out.extraPages = await Promise.all(change.extraPages.map(async page => ({ ...page, layout: await bundled(page.layout) as typeof page.layout })));
     return { change: out, files };
   }
 
