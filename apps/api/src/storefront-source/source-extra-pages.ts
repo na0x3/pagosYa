@@ -1,5 +1,6 @@
 import { STOREFRONT_PAGES } from '@pagosya/shared-types';
 import type { LayoutBlock } from './source-section-library';
+import type { LayoutOp } from './source-layout-edit';
 
 /** YAPI creates anything (spec 2026-11-05, owner: «yapi … create anything inside the store»): pages the merchant asks for beyond the
  *  four menu pages. Each lives in store-data `extraPages`, is drawn by its own marked page file, and is linked in the store menu
@@ -37,4 +38,44 @@ export function withExtraPages<T extends { path: string; content: string }>(file
   const out = files.filter(file => !(marked(file) && !wanted.has(file.path))).map(file => wanted.has(file.path) && marked(file) ? { ...file, content: wanted.get(file.path)! } : file);
   for (const [path, content] of wanted) if (!out.some(file => file.path === path)) out.push({ path, content } as T);
   return out;
+}
+
+/** The page ops of one quick edit (spec 2026-11-05 creates anything): at most one new page per request, renames, relinks and
+ *  removals of pages YAPI made; the «nueva» ops pointed at the new page (dropped when no page was made). `menuGroups` = the store
+ *  menu's dropdown labels, where a link may go. */
+export function applyPageOps(current: readonly ExtraPage[], ops: readonly LayoutOp[], files: ReadonlyArray<{ path: string }>, menuGroups: readonly string[]) {
+  let pages = current.map(page => ({ ...page }));
+  const done: string[] = [], refused: string[] = [];
+  let created: string | undefined;
+  const place = (field: string) => menuGroups.find(group => group.toLowerCase() === String(field ?? '').trim().toLowerCase()) ?? '';
+  const named = (value: string) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  for (const op of ops) {
+    if (op.op === 'page-add') {
+      const name = named(op.value);
+      if (!name || created) continue;
+      if (pages.length >= EXTRA_PAGE_LIMIT) { refused.push(`Tu tienda ya tiene ${EXTRA_PAGE_LIMIT} páginas extra: quita una antes de crear «${name}».`); continue; }
+      const slug = extraPageSlug(name, files, pages);
+      if (!slug) { refused.push(`No pude crear una página con el nombre «${name}»: dime otro nombre.`); continue; }
+      const menu = place(op.field);
+      pages.push({ slug, name, menu, layout: [] });
+      created = slug;
+      done.push(`creé la página «${name}» (${slug}.html)${menu ? ` dentro de «${menu}»` : ' con su enlace en el menú'}`);
+      continue;
+    }
+    if (op.op !== 'page-rename' && op.op !== 'page-remove' && op.op !== 'page-link') continue;
+    const page = pages.find(entry => entry.slug === op.page);
+    if (!page) { refused.push('Esa no es una página que yo haya creado: las páginas del menú (Nosotros, Contacto…) se cambian, no se quitan.'); continue; }
+    if (op.op === 'page-rename') {
+      const name = named(op.value);
+      if (name && name !== page.name) { done.push(`la página «${page.name}» ahora se llama «${name}»`); page.name = name; }
+    } else if (op.op === 'page-link') {
+      page.menu = place(op.field);
+      done.push(page.menu ? `puse «${page.name}» dentro de «${page.menu}»` : `puse «${page.name}» en la barra del menú`);
+    } else {
+      pages = pages.filter(entry => entry !== page);
+      done.push(`quité la página «${page.name}» y su enlace del menú`);
+    }
+  }
+  const rewritten = ops.flatMap(op => op.page !== 'nueva' ? [op] : created ? [{ ...op, page: created }] : []);
+  return { pages, ops: rewritten, done, refused, ...(created ? { created } : {}) };
 }

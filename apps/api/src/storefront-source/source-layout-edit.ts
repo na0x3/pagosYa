@@ -7,12 +7,15 @@ import { photoRef, readStoreOps, storeOpSchema, type StoreEditPhoto, type StoreO
 export type LayoutTextField = 'eyebrow' | 'title' | 'text' | 'cta' | 'cta2';
 /** YAPI edits everything (spec 2026-11-03): `page` = the product page's sections (productLayout) instead of the home; `photo` swaps a
  *  photo the section already shows (field photo | photo2, or an item's photo) for one of the numbered photos (value f0, f1…). */
-export type LayoutOp = { op: 'text' | 'remove' | 'move' | 'add' | 'photo' | 'item-add' | 'item-remove' | 'item-move'; at: number; field: LayoutTextField | 'photo' | 'photo2' | ''; item: number; value: string; to: number; type?: string; page?: LayoutPage };
+export type LayoutOp = { op: 'text' | 'remove' | 'move' | 'add' | 'photo' | 'item-add' | 'item-remove' | 'item-move' | 'page-add' | 'page-rename' | 'page-remove' | 'page-link';
+  /** A text field, a photo place, or (page-add / page-link, spec 2026-11-05 creates anything) the dropdown a page link goes in. */
+  at: number; field: string; item: number; value: string; to: number; type?: string; page?: LayoutPage };
 /** Spec 2026-11-05 (owner: «cambia nosotros a algo más bonito … solo eso»): the menu pages that may carry the template's sections
  *  (store-data `pageLayouts`), each edited on its own. */
 export const MENU_PAGES = ['about', 'contact', 'faq', 'shipping'] as const;
 export type MenuPage = typeof MENU_PAGES[number];
-export type LayoutPage = 'home' | 'product' | MenuPage;
+/** home, the product page, a menu page, or (spec 2026-11-05 creates anything) the address of a page YAPI made / «nueva». */
+export type LayoutPage = 'home' | 'product' | MenuPage | (string & {});
 export const MENU_PAGE_NAMES: Record<MenuPage, string> = { about: 'Nosotros', contact: 'Contacto', faq: 'Preguntas frecuentes', shipping: 'Envíos' };
 const isMenuPage = (page: unknown): page is MenuPage => (MENU_PAGES as readonly unknown[]).includes(page);
 export const MENU_PAGE_URLS: Record<MenuPage, string> = { about: 'nosotros.html', contact: 'contacto.html', faq: 'faq.html', shipping: 'envios.html' };
@@ -36,7 +39,8 @@ export type LayoutDigestSection = { at: number; type: string; name: string; eyeb
 
 const FIELDS: readonly LayoutTextField[] = ['eyebrow', 'title', 'text', 'cta', 'cta2'];
 /** Spec 2026-11-05 creates anything: item-add / item-remove / item-move change the items inside a section. */
-const LAYOUT_OPS: readonly string[] = ['text', 'remove', 'move', 'add', 'photo', 'item-add', 'item-remove', 'item-move'];
+const LAYOUT_OPS: readonly string[] = ['text', 'remove', 'move', 'add', 'photo', 'item-add', 'item-remove', 'item-move', 'page-add', 'page-rename', 'page-remove', 'page-link'];
+const PAGE_SLUG = /^[a-z][a-z0-9-]{0,39}$/;
 const ROLE = new Map(LIBRARY_CATALOG.map(section => [section.id, section.role]));
 const MAIN_GRIDS = new Set(['products-grid', 'products-tabs']);
 // What a merchant may add to a template home: any library section but a second cover or main grid, decoration and the menu note.
@@ -100,6 +104,13 @@ Operaciones de «ops» (todos los campos van siempre; los que no se usan: field 
   palabras). at = -1. Sus textos y fotos se escriben después con los datos de la tienda. Como mucho 2 secciones nuevas por pedido.
   Si la portada ya tiene una sección que hace eso, cambia sus textos en vez de agregar otra.
 
+Páginas nuevas: «paginas» trae también las páginas que el comercio te pidió (por su dirección, con su «nombre»). «Crea una página
+Novias», «agrega una pestaña Lookbook»: op page-add con value = el nombre y field = "" (va en la barra del menú) o el nombre de un
+desplegable del menú que el comercio nombró; en el mismo pedido llénala con ops add con page = "nueva": primero una portada, luego de 2 a
+5 secciones de «nuevas_paginas» que muestren lo que el comercio quiere (si el nombre es una categoría, secciones con sus productos).
+page-rename (page = la dirección, value = el nombre nuevo), page-link (page, field = "" o el desplegable), page-remove (page). Los
+cambios de una página nueva llevan page = su dirección. Nunca uses page-* con la portada, la ficha ni Nosotros/Contacto/Preguntas/Envíos.
+
 Páginas del menú: «paginas» trae Nosotros (about), Contacto (contact), Preguntas frecuentes (faq) y Envíos (shipping) con sus
 secciones (numeradas con at, como la portada; [] = hoy solo muestra su texto). Un cambio de una de esas páginas lleva page = about,
 contact, faq o shipping; sus at son los de esa página; nunca cambies la portada ni otra página por ese pedido. «Haz Nosotros más
@@ -126,10 +137,10 @@ pedido nombre otras; en una página del menú tus ops llevan page con esa págin
 parte. «mirando» es la sección que el comercio tenía en pantalla: úsala solo para esas palabras. Si «partes» es lo único del foco, el
 cambio es del menú, la cinta de anuncio o el pie: va en «store».`;
 
-export function layoutEditSchema() {
+export function layoutEditSchema(extraSlugs: readonly string[] = [], menuGroups: readonly string[] = []) {
   const op = { type: 'object', additionalProperties: false, required: ['op', 'at', 'field', 'item', 'value', 'to', 'type', 'page'], properties: {
-    op: { type: 'string', enum: LAYOUT_OPS }, at: { type: 'integer' }, field: { type: 'string', enum: [...FIELDS, 'photo', 'photo2', ''] },
-    item: { type: 'integer' }, value: { type: 'string' }, to: { type: 'integer' }, type: { type: 'string', enum: [...PAGE_ADDABLE_IDS, ''] }, page: { type: 'string', enum: ['home', 'product', ...MENU_PAGES] } } };
+    op: { type: 'string', enum: LAYOUT_OPS }, at: { type: 'integer' }, field: { type: 'string', enum: [...new Set([...FIELDS, 'photo', 'photo2', '', ...menuGroups])] },
+    item: { type: 'integer' }, value: { type: 'string' }, to: { type: 'integer' }, type: { type: 'string', enum: [...PAGE_ADDABLE_IDS, ''] }, page: { type: 'string', enum: [...new Set(['home', 'product', ...MENU_PAGES, ...extraSlugs, 'nueva'])] } } };
   return { type: 'object', additionalProperties: false, required: ['ops', 'store', 'rest', 'ask'], properties: { ops: { type: 'array', items: op }, store: { type: 'array', items: storeOpSchema() }, rest: { type: 'string' }, ask: { type: 'string' } } };
 }
 
@@ -140,7 +151,7 @@ export function readLayoutEdit(answer: unknown): LayoutEditRead | null {
   const ops = (Array.isArray(raw.ops) ? raw.ops : []).filter((op): op is LayoutOp => Boolean(op) && LAYOUT_OPS.includes((op as LayoutOp).op)
     && Number.isInteger((op as LayoutOp).at))
     // The home is the default page; only the product page and the menu pages are marked.
-    .map(op => { const { page, ...rest } = op; return page === 'product' || isMenuPage(page) ? { ...rest, page } : rest; });
+    .map(op => { const { page, ...rest } = op; return page === 'product' || isMenuPage(page) || (typeof page === 'string' && page !== 'home' && PAGE_SLUG.test(page)) ? { ...rest, page } : rest; });
   const ask = String(raw.ask ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
   return { ops, store: readStoreOps(raw.store), rest: String(raw.rest ?? '').replace(/\s+/g, ' ').trim(), ...(ask ? { ask } : {}) };
 }
@@ -179,12 +190,12 @@ export function layoutAdds(layout: readonly LayoutBlock[], ops: readonly LayoutO
 /** The operations applied to the home. Ops name the sections by the numbers the model saw, whatever was removed or moved first.
  *  The cover and the main grid stay, the cover stays on top and keeps its title, and an item always keeps its title. */
 export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly LayoutOp[], added: ReadonlyArray<{ to: number; block: LayoutBlock }> = [],
-  options: { page?: LayoutPage; photos?: readonly StoreEditPhoto[] } = {}): { layout: LayoutBlock[]; done: string[]; refused: string[] } {
+  options: { page?: LayoutPage; photos?: readonly StoreEditPhoto[]; pageName?: string } = {}): { layout: LayoutBlock[]; done: string[]; refused: string[] } {
   // Spec 2026-11-03: the ops of one page (the home unless marked); the product page's sections are named «de la ficha», a menu
   // page's «de la página «Nosotros»» (spec 2026-11-05).
   const page = options.page ?? 'home';
   const ops = allOps.filter(op => (op.page ?? 'home') === page);
-  const where = page === 'product' ? ' de la ficha de producto' : isMenuPage(page) ? ` de la página «${MENU_PAGE_NAMES[page]}»` : '';
+  const where = page === 'product' ? ' de la ficha de producto' : isMenuPage(page) ? ` de la página «${MENU_PAGE_NAMES[page]}»` : page !== 'home' ? ` de la página «${options.pageName ?? page}»` : '';
   // The product page's sections are named «… de la ficha de producto» right where the reply names them.
   const placeOf = (block: LayoutBlock) => `${placeIn(block)}${where}`;
   const nameOf = (block: LayoutBlock) => `${nameIn(block)}${where}`;

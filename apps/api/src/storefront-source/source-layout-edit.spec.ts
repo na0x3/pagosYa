@@ -172,10 +172,11 @@ describe('layout edit: photos and the product page (spec 2026-11-03)', () => {
 
 describe('layout edit: menu pages (spec 2026-11-05)', () => {
   it('reads ops for Nosotros, Contacto, Preguntas and Envíos and offers them in the schema', () => {
-    expect(layoutEditSchema().properties.ops.items.properties.page.enum).toEqual(['home', 'product', ...MENU_PAGES]);
+    expect(layoutEditSchema().properties.ops.items.properties.page.enum).toEqual(['home', 'product', ...MENU_PAGES, 'nueva']);
     expect(MENU_PAGES).toEqual(['about', 'contact', 'faq', 'shipping']);
-    const read = readLayoutEdit({ ops: [op({ at: 0, page: 'about' }), op({ at: 0, page: 'faq' }), op({ at: 0, page: 'evil' })], store: [], rest: '' })!;
-    expect(read.ops.map(entry => (entry as { page?: string }).page)).toEqual(['about', 'faq', undefined]);
+    // A page address (spec 2026-11-05 creates anything) is read; one with no page behind it changes nothing later. Junk is dropped.
+    const read = readLayoutEdit({ ops: [op({ at: 0, page: 'about' }), op({ at: 0, page: 'faq' }), op({ at: 0, page: 'evil' }), op({ at: 0, page: 'Evil Page!' })], store: [], rest: '' })!;
+    expect(read.ops.map(entry => (entry as { page?: string }).page)).toEqual(['about', 'faq', 'evil', undefined]);
   });
 
   it('builds an empty page from up to five new sections, one cover, never touching the home', () => {
@@ -271,4 +272,11 @@ describe('items inside a section (spec 2026-11-05 creates anything)', () => {
     expect(readLayoutEdit({ ops: [op({ op: 'item-add', at: 1, item: -1, value: 'x' })], store: [], rest: '' })!.ops).toHaveLength(1);
     expect(JSON.stringify(layoutEditSchema())).toContain('item-add');
   });
+});
+
+it('offers the page ops and the store pages in the schema, and keeps a page op naming a page (spec 2026-11-05 creates anything)', () => {
+  const schema = JSON.stringify(layoutEditSchema(['novias']));
+  for (const word of ['"novias"', '"nueva"', 'page-add', 'page-remove', 'page-link', 'page-rename']) expect(schema).toContain(word);
+  expect(readLayoutEdit({ ops: [op({ op: 'page-remove', page: 'novias' }), op({ op: 'add', type: 'cover-split', page: 'nueva' }), op({ page: '../x' })], store: [], rest: '' })!.ops.map(o => o.page))
+    .toEqual(['novias', 'nueva', undefined]);
 });
