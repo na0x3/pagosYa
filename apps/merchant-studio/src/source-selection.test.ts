@@ -26,3 +26,30 @@ it('holds and clears the selection', () => {
   state.clear();
   expect(state.get()).toBeNull();
 });
+
+// Point YAPI at a part of the page (spec 2026-11-05 point-at).
+import { createViewingState, selectionChipLabel, selectionPayload, viewingPayload } from './source-selection';
+const area = { points: [0, 0, 90, 0, 90, 90], rect: { x: 0, y: 0, width: 90, height: 90 }, sections: [{ page: 'home' as const, at: 1, label: 'Hola' }], texts: ['Hola'], photos: [], parts: [], width: 1280, pageQuery: 'index.html' };
+
+it('keeps a template address and a circle, and sends them', () => {
+  const state = createSelectionState();
+  state.set({ sectionId: 'lb-1', label: 'Hola', at: 1, page: 'about' });
+  expect(selectionPayload(state.get()!)).toEqual({ sectionId: 'lb-1', at: 1, page: 'about' });
+  state.set({ sectionId: 'lb-1', label: 'Hola', area });
+  expect(selectionPayload(state.get()!)).toEqual({ sectionId: 'lb-1', area });
+  state.set({ sectionId: 'hero', label: 'Hola' });
+  expect(selectionPayload(state.get()!)).toEqual({ sectionId: 'hero' });
+});
+
+it('labels a circle as a marked area', () => {
+  expect(selectionChipLabel({ sectionId: 'lb-1', label: 'Hola' })).toBe('Hola');
+  expect(selectionChipLabel({ sectionId: 'lb-1', label: 'Hola', area })).toBe('zona marcada · Hola');
+});
+
+it('remembers what the merchant is looking at until the page changes', () => {
+  const viewing = createViewingState();
+  viewing.set({ page: 'faq', at: 2, sectionId: 'lb-2', label: 'Preguntas' });
+  expect(viewingPayload(viewing.get()!)).toEqual({ page: 'faq', at: 2, sectionId: 'lb-2' });
+  viewing.clear();
+  expect(viewing.get()).toBeNull();
+});

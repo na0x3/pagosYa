@@ -333,8 +333,8 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/conversation`);
   }
 
-  async sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string, selection?: { sectionId: string }, currentPage?: string, onAccepted?: (job: SourceChatJob) => void, options?: { resumeDraft?: boolean; stylePick?: { generationId: string; index?: number; auto?: boolean }; planId?: string; onUpdate?: (job: SourceChatJob) => void }): Promise<SourceChatResult> {
-    const job = await this.request<SourceChatJob>(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}), ...(selection ? { selection } : {}), ...(currentPage ? { currentPage } : {}), ...(options?.resumeDraft ? { resumeDraft: true } : {}), ...(options?.stylePick ? { stylePick: options.stylePick } : {}), ...(options?.planId ? { planId: options.planId } : {}) }) });
+  async sendSourceMessage(storeId: string, instruction: string, assetUrls: string[], revision: number, setupStep?: string, setupAction?: string, generation?: SourceGenerationSettings, browserReview?: string[], requestId?: string, templateId?: string, directionId?: string, selection?: import('./source-selection').SelectionPayload, currentPage?: string, onAccepted?: (job: SourceChatJob) => void, options?: { viewing?: import('./source-selection').ViewingPayload; resumeDraft?: boolean; stylePick?: { generationId: string; index?: number; auto?: boolean }; planId?: string; onUpdate?: (job: SourceChatJob) => void }): Promise<SourceChatResult> {
+    const job = await this.request<SourceChatJob>(`/stores/${encodeURIComponent(storeId)}/source-project/chat-jobs`, { method: "POST", body: JSON.stringify({ instruction, assetUrls, revision, setupStep, setupAction, ...generation, ...(browserReview?.length ? { browserReview } : {}), ...(requestId ? { requestId } : {}), ...(templateId ? { templateId } : {}), ...(directionId ? { directionId } : {}), ...(selection ? { selection } : {}), ...(options?.viewing ? { viewing: options.viewing } : {}), ...(currentPage ? { currentPage } : {}), ...(options?.resumeDraft ? { resumeDraft: true } : {}), ...(options?.stylePick ? { stylePick: options.stylePick } : {}), ...(options?.planId ? { planId: options.planId } : {}) }) });
     onAccepted?.(job);
     return this.waitSourceChatJob(storeId, job, options?.onUpdate);
   }
@@ -388,7 +388,7 @@ export class MerchantStudioApi {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/progress?requestId=${encodeURIComponent(requestId)}`, { signal });
   }
 
-  estimateSource(storeId: string, body: SourceGenerationSettings & { revision: number; instruction: string; assetUrls: string[]; selection?: { sectionId: string } }): Promise<SourceGenerationEstimate> {
+  estimateSource(storeId: string, body: SourceGenerationSettings & { revision: number; instruction: string; assetUrls: string[]; selection?: import('./source-selection').SelectionPayload; viewing?: import('./source-selection').ViewingPayload }): Promise<SourceGenerationEstimate> {
     return this.request(`/stores/${encodeURIComponent(storeId)}/source-project/estimate`, { method: 'POST', body: JSON.stringify(body) });
   }
 
@@ -594,4 +594,4 @@ export type SourceGenerationEstimate = { billingMode?: 'usage' | 'chatgpt-plan';
 export type SourceGenerationRun = { id: string; model: string; status: string; credits: number; maxCredits: number; durationMs: number | null; revision: number | null; createdAt: string };
 
 /** The request a preserved draft was built from (API: source-draft-retry.ts); resent with resumeDraft to finish and save it. */
-export type SourceDraftRetry = { text: string; assetUrls: string[]; currentPage: string; setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo'; selection?: { sectionId: string }; templateId?: string; directionId?: string };
+export type SourceDraftRetry = { text: string; assetUrls: string[]; currentPage: string; setupAction?: 'generate' | 'restart' | 'quick' | 'product-photo'; selection?: import('./source-selection').SelectionPayload; viewing?: import('./source-selection').ViewingPayload; templateId?: string; directionId?: string };

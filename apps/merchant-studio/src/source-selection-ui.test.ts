@@ -45,7 +45,7 @@ it('shows a chip with the escaped label and removes it with the x, sending no se
   const sent = vi.spyOn(MerchantStudioApi.prototype, 'sendSourceMessage').mockResolvedValue({ userMessage: { id: 'u', role: 'USER', content: 'x' }, assistantMessage: { id: 'a', role: 'ASSISTANT', content: 'ok' } } as any);
   await ready();
   select({ label: '<b>x</b>' });
-  expect(chip()!.textContent).toContain('Sección: <b>x</b>');
+  expect(chip()!.textContent).toContain('Sobre: <b>x</b>');
   expect(chip()!.querySelector('b')).toBeNull();
   chip()!.querySelector<HTMLButtonElement>('button[aria-label="Quitar selección"]')!.click();
   expect(chip()).toBeNull();
