@@ -62,3 +62,9 @@ it('the page file is one the build turns into <slug>.html, and an older marked f
   const older = withExtraPages([{ path: 'components/pages/novias.tsx', content: '// @pagosya-extra-page\nold' }], [page]);
   expect(older[0].content).toBe(extraPageFile(page).content);
 });
+
+// Live NOA 2026-11-05: after «quita la página Novias» its built novias.html stayed and still opened.
+it('removing a page removes its built page too', () => {
+  const files = [{ path: 'components/pages/novias.tsx', content: `${EXTRA_PAGE_MARK}\n` }, { path: 'novias.html', content: '<html>' }, { path: '_compiled/pages/novias.js', content: 'x' }, { path: 'nosotros.html', content: '<html>' }];
+  expect(withExtraPages(files, []).map(file => file.path)).toEqual(['nosotros.html']);
+});

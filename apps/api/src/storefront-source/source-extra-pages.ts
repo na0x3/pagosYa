@@ -37,7 +37,12 @@ export function extraPageFile(page: ExtraPage): { path: string; content: string 
 export function withExtraPages<T extends { path: string; content: string }>(files: T[], pages: readonly ExtraPage[]): T[] {
   const wanted = new Map(pages.map(page => { const file = extraPageFile(page); return [file.path, file.content] as const; }));
   const marked = (file: T) => file.content.startsWith(EXTRA_PAGE_MARK) || file.content.startsWith(OLDER_MARK);
-  const out = files.filter(file => !(marked(file) && !wanted.has(file.path))).map(file => wanted.has(file.path) && marked(file) ? { ...file, content: wanted.get(file.path)! } : file);
+  // A removed page goes with what the build made from it (live NOA 2026-11-05: novias.html stayed and still opened).
+  const gone = new Set(files.filter(file => marked(file) && !wanted.has(file.path)).flatMap(file => {
+    const slug = /^components\/pages\/([a-z][a-z0-9-]{0,39})\.tsx$/.exec(file.path)?.[1];
+    return slug ? [file.path, `${slug}.html`, `_compiled/pages/${slug}.js`] : [file.path];
+  }));
+  const out = files.filter(file => !gone.has(file.path)).map(file => wanted.has(file.path) && marked(file) ? { ...file, content: wanted.get(file.path)! } : file);
   for (const [path, content] of wanted) if (!out.some(file => file.path === path)) out.push({ path, content } as T);
   return out;
 }
