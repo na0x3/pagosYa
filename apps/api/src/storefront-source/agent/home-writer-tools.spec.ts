@@ -217,6 +217,8 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
     expect(out).toContain("import { LibraryHome } from './library'");
     expect(out).toContain('- cover-split: {"type":"cover-split","title":"Tómate un sorbo","photo":"slot:in-p1"}');
     expect(out).not.toContain('PIE (');
+    // Review 2026-11-04: library sections sit inside <main data-lb-home>, whose overflow clip stops a tilted marquee scrolling sideways on phones.
+    expect(out).toContain('<main data-lb-home>');
   });
   it('set_tokens keeps the template\'s fonts whatever fonts it is given', async () => {
     const b = sorboBox();
@@ -267,6 +269,15 @@ describe('the visual review at finish (spec 2026-11-04 §5)', () => {
   it('a review that errors never blocks the save', async () => {
     const b = await ready(reviewBox(jest.fn().mockRejectedValue(new Error('provider down'))));
     expect((await b.run('finish', '{"summary":"x"}')).output).toBe('Listo.');
+  });
+  it('a fix cut off by the limit before its check falls back to the last clean draft, never losing it (review 2026-11-04 I2)', async () => {
+    const b = await ready(reviewBox(jest.fn().mockResolvedValue(['palabras cortadas — portada: acorta'])));
+    const clean = b.workspace.read(HOME_PATH);
+    await b.run('finish', '{"summary":"x"}');
+    await b.run('write_home', JSON.stringify({ content: changed('a medias') }));
+    expect(b.draftIsClean()).toBe(false);
+    expect(await b.acceptIfBuildable()).toBe(true);
+    expect(b.workspace.read(HOME_PATH)).toBe(clean);
   });
   it('out of time with a clean draft, it saves even when the last review found problems', async () => {
     const b = await ready(reviewBox(jest.fn().mockResolvedValue(['palabras cortadas — portada: acorta'])));

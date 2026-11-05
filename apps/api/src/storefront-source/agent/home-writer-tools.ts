@@ -60,6 +60,7 @@ export function templateBrief(template: WriterTemplate): string {
   return `PLANTILLA ${template.name}: el encabezado, el menú, el pie, las tarjetas de producto y la ficha de producto son de la plantilla; no los cambies ni los imites. Sus fuentes se quedan; tú eliges los colores.
 Secciones probadas de la plantilla — úsalas tal cual, cambia sus textos, o mézclalas con tus propias secciones:
 import { LibraryHome } from './library' y <LibraryHome layout={[{ type: 'cover-split', … }]} /> con uno o varios bloques seguidos. Cada bloque va con los campos de su ejemplo.
+Toda la portada va dentro de <Shell><main data-lb-home>…</main></Shell>: así una sección inclinada (marquee) no hace que el celular se desplace de lado.
 Fotos de un bloque: "slot:<clave>" con una clave de photos (store-data) o la ruta de un archivo de fotos. Cada foto una sola vez en toda la portada.
 Ejemplos (los de esta tienda ahora):
 ${examples}`;
@@ -138,6 +139,8 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
   private shots = 0;
   private lastImages: string[] = [];
   private reviewed: { version: number; problems: string[] } | null = null;
+  /** Review 2026-11-04 (I2): the clean draft a review sent back; a fix cut off before its check falls back to it. */
+  private reviewedClean: SourceProjectFileDto[] | null = null;
   constructor(private readonly ctx: { workspace: AgentWorkspace; base: AgentPreviewBase; signal?: AbortSignal; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; /** Spec 2026-10-30: the store's home is animated. */ animated?: boolean;
     /** Owner 2026-10-30: YAPI writes the footer (a must before finish); a playful store moves without scrolling; a calm brand
      *  never shouts; the brand's own accent/deep colours (store-data look.colors) stay. */
@@ -251,6 +254,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
             step('check', 'Revisando cómo se ve');
             const problems = await this.ctx.reviewer(this.lastImages).catch(() => [] as string[]);
             this.reviewed = { version: this.workspace.version, problems };
+            if (problems.length) this.reviewedClean = this.workspace.files();
             if (problems.length) return { output: `Revisión visual — Debes corregir:\n- ${problems.join('\n- ')}\nCorrige con write_home o set_tokens, llama check y luego finish.` };
           }
           const diagnostic = await this.ctx.gate(this.workspace.files());
@@ -269,6 +273,11 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
   /** Out of steps or time: a changed draft whose last check had nothing blocking still ships through the gate. */
   async acceptIfBuildable(): Promise<boolean> {
     if (this.finished) return true;
+    if (!this.draftIsClean() && this.reviewedClean) {
+      // The fix the review asked for never reached a clean check: the last clean draft saves instead (spec 2026-11-04 §5).
+      this.workspace.restore(this.reviewedClean, true);
+      this.lastVerify = { version: this.workspace.version, clean: true, hard: false };
+    }
     if (!this.workspace.changedPaths().length || !this.draftIsClean()) return false;
     if (await this.ctx.gate(this.workspace.files())) return false;
     this.finished = { summary: 'Diseñé una portada nueva para tu tienda.' };

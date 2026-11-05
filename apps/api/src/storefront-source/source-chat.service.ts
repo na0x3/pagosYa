@@ -197,6 +197,9 @@ const TEMPLATE_CHOICES_REPLY = 'Elegí estas 3 plantillas para tu negocio. Toca 
 
 export const IMPORT_BUILD_MODEL = 'gpt-5.6-terra';
 export const IMPORT_BUILD_MAX_CREDITS = 150;
+/** Review 2026-11-04 (I3): the home writer on sol/Opus with 40 calls and two reviews costs more than the 50-credit default, so on
+ *  usage billing it would stop half-way; owner 2026-11-04: «i dont care if cheap or costly i want good stores». */
+export const HOME_WRITER_MAX_CREDITS = 500;
 const IMPORT_BUILD_REQUEST = {
   same: 'Recrea esta tienda en pagosYa con el mismo estilo de su tienda Shopify actual: estructura, orden de secciones, colores, tipografías y textos de portada, usando sus fotos ya importadas. Las capturas adjuntas son su tienda actual.',
   redesign: 'Diseña una tienda nueva y moderna para este negocio con su marca: logo, colores y fotos ya importadas. Las capturas adjuntas muestran su tienda anterior solo como contexto del negocio; no la copies.',
@@ -390,7 +393,7 @@ export class SourceChatService {
     // on the whole themed template YAPI picks for the business (its words, its products), told to the merchant with the reason.
     const templatePick = revision === 0 && !planned && typeof onboarding.template !== 'string' && this.templatePickOn()
       ? await this.pickStoreTemplate(merchantId, storeId, { storeName: store?.name ?? '', what: onboarding.what ?? draft.answers?.context ?? '', story: onboarding.story ?? '',
-          request: merchantRequest ?? userMessage.content, products: productNames.map((product: { name: string }) => product.name), businessWords }) : null;
+          request: merchantRequest ?? userMessage.content, products: productNames.map((product: { name: string }) => product.name), businessWords, pooled: true }) : null;
     const skeletonId = templatePick ? undefined : typeof onboarding.template === 'string' ? onboarding.template
       : this.config.get<boolean>('app.yapiSkeletons') === false ? undefined : pickSkeleton(businessWords, buildStarters(true));
     const chosen = skeletonId ? buildStarters(true).find(entry => entry.id === skeletonId && entry.kind === 'master' && entry.id !== MASTER_TEMPLATE_ID) : undefined;
@@ -476,19 +479,19 @@ export class SourceChatService {
     return uses;
   }
 
-  private async pickStoreTemplate(merchantId: string, storeId: string, input: { storeName: string; what: string; story: string; request: string; products: string[]; businessWords: string; exclude?: string }) {
-    const pool = this.config.get<string[]>('app.yapiTemplatePool') ?? [];
+  private async pickStoreTemplate(merchantId: string, storeId: string, input: { storeName: string; what: string; story: string; request: string; products: string[]; businessWords: string; exclude?: string; /** First build only (spec 2026-11-04 «Not changing»: a later switch keeps every template). */ pooled?: boolean }) {
+    const pool = input.pooled ? this.config.get<string[]>('app.yapiTemplatePool') ?? [] : [];
     // A pool that names Shrine Pro shows it; without a pool the Shrine pair stays hidden until the owner turns it on.
     const hidden = pool.length || this.config.get<boolean>('app.yapiShrineTemplates') === true ? new Set<string>() : new Set(['shrine', 'shrine2']);
     // Owner 2026-11-02 (Brisa Portátil: one AliExpress product got Conecta, a big tech catalogue): a store selling one or two products
     // starts on Único — the product whole at the top; a larger catalogue never gets it.
     const oneProduct = input.products.length > 0 && input.products.length <= 2;
-    const templates = inTemplatePool(pickableTemplates(listTemplates(), hidden), pool, [ONE_PRODUCT_TEMPLATE])
-      .filter(template => template.id !== input.exclude && (oneProduct || template.id !== ONE_PRODUCT_TEMPLATE));
+    const pickable = pickableTemplates(listTemplates(), hidden).filter(template => template.id !== input.exclude && (oneProduct || template.id !== ONE_PRODUCT_TEMPLATE));
+    const templates = inTemplatePool(pickable, pool, [ONE_PRODUCT_TEMPLATE]);
     if (!templates.length) return null;
     // Live check 2026-11-04 (Miga Dorada: «Usa la plantilla Grano.» in the first message got Gumdrop): a template the merchant names
-    // is the one, never the model's guess.
-    const named = templateSwitchRequest(input.request, templates);
+    // is the one, never the model's guess — even outside the owner's pool (review 2026-11-04 I1); the pool narrows only YAPI's pick.
+    const named = templateSwitchRequest(input.request, pickable);
     if (named && named !== 'other') {
       const pick = { id: named.id, reason: 'es la que pediste' };
       this.productLogger.log(JSON.stringify({ event: 'template_pick', storeId, template: pick.id, by: 'named', reason: pick.reason }));
@@ -660,7 +663,8 @@ export class SourceChatService {
   }
   private writerFollowUp(revision: number, checklistWords?: string): SourceMessageInput {
     return { instruction: `${HOME_WRITER_BRIEF}${checklistWords ? `\n\nMensaje del comercio:\n${checklistWords}` : ''}`, revision, personalTouch: true, homeWriter: true, firstDesign: true, redesign: true,
-      ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), model: (this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] };
+      ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), maxCredits: HOME_WRITER_MAX_CREDITS,
+      model: (this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] };
   }
   private libraryFollowUp(revision: number, checklistWords?: string): SourceMessageInput {
     return { instruction: SECTION_LIBRARY_BRIEF, revision, personalTouch: true, sectionLibrary: true, ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), model: 'auto' };

@@ -2,7 +2,7 @@ import { BadGatewayException } from '@nestjs/common';
 import { shellWithStoreFooter } from './agent/home-writer-tools';
 import { randomUUID as uuid } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { withoutPhotoGroups, MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, OWN_REQUEST_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
+import { withoutPhotoGroups, HOME_WRITER_MAX_CREDITS, MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, OWN_REQUEST_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
 import { SourceProviderQuotaException } from './source-provider-error';
 import { MODEL_LIMIT_MERCHANT_FAILURE as LIMIT_REPLY } from './source-validation-error';
@@ -964,8 +964,20 @@ describe('YAPI picks the themed template for a new store (owner 2026-10-31, YAPI
     config.set('app.yapiHomeWriterModel', 'gpt-5.6-sol');
     withPick(jest.fn().mockResolvedValue({ id: 'grano', reason: 'Café que tuesta en casa.' }));
     const out = await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
-    expect(out.followUp).toMatchObject({ homeWriter: true, firstDesign: true, redesign: true, personalTouch: true, revision: 1, model: 'gpt-5.6-sol' });
+    expect(out.followUp).toMatchObject({ homeWriter: true, firstDesign: true, redesign: true, personalTouch: true, revision: 1, model: 'gpt-5.6-sol', maxCredits: HOME_WRITER_MAX_CREDITS });
     expect(out.followUp.sectionLibrary).toBeUndefined();
+    config.set('app.yapiTemplatePool', []);
+    config.set('app.yapiHomeWriter', false);
+  });
+  it('a template the merchant names stays theirs even outside the pool, and the section library fills it (review 2026-11-04 I1)', async () => {
+    config.set('app.yapiTemplatePool', ['sorbo', 'tacon']);
+    config.set('app.yapiHomeWriter', true);
+    const pickTemplate = jest.fn();
+    withPick(pickTemplate);
+    const out = await send('Mi negocio se llama Café Buna.\nUsa la plantilla Grano.\nCrea mi tienda.');
+    expect(applyMaster).toHaveBeenCalledWith('m1', 's1', 0, expect.any(Function), 'grano');
+    expect(pickTemplate).not.toHaveBeenCalled();
+    expect(out.followUp).toMatchObject({ sectionLibrary: true });
     config.set('app.yapiTemplatePool', []);
     config.set('app.yapiHomeWriter', false);
   });
@@ -1059,6 +1071,15 @@ describe('switching templates later (owner 2026-10-31)', () => {
     expect(pickTemplate).not.toHaveBeenCalled();
     expect(out.assistantMessage.content).toContain('Cambié tu tienda a la plantilla Tacón.');
     expect(out.followUp).toMatchObject({ sectionLibrary: true, revision: 4 });
+  });
+
+  it('«otra plantilla» draws from every template, not only the first-build pool (spec 2026-11-04 «Not changing»)', async () => {
+    config.set('app.yapiTemplatePool', ['sorbo', 'tacon']);
+    await say('prueba otra plantilla');
+    const offered = pickTemplate.mock.calls[0][1].templates.map((template: { id: string }) => template.id);
+    config.set('app.yapiTemplatePool', []);
+    expect(offered).toEqual(expect.arrayContaining(['muro', 'grano']));
+    expect(offered).not.toContain('shrine');
   });
 
   it('«otra plantilla» lets YAPI pick one, with its reason', async () => {
