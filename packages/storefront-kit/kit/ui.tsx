@@ -555,11 +555,14 @@ const INFO_PAGE_TITLES: Record<InfoPageKind, string> = {
   collections: 'Colecciones', search: 'Buscar',
 };
 /** A store information page: a title and the runtime's empty mount, which fills it from the live store (commerce.js,
- * `renderInfoPages`). Never put children in the mount: the runtime owns it. */
-export function InfoPage({ kind }: { kind: InfoPageKind }) {
+ * `renderInfoPages`). Never put children in the mount: the runtime owns it. `children` (a store's own sections, spec 2026-11-05)
+ * go between the title and the mount, full width. */
+export function InfoPage({ kind, children }: { kind: InfoPageKind; children?: ReactNode }) {
   return <main id="contenido" className="ui-info-page" data-info-page={kind}>
     <style data-pagosya-standard-pages="" dangerouslySetInnerHTML={{ __html: STANDARD_PAGE_CSS }} />
-    <Container><Display>{INFO_PAGE_TITLES[kind]}</Display><div data-pagosya-page={kind} /></Container>
+    <Container><Display>{INFO_PAGE_TITLES[kind]}</Display></Container>
+    {children}
+    <Container><div data-pagosya-page={kind} /></Container>
   </main>;
 }
 

@@ -355,13 +355,15 @@ export class SourceConversationService {
   /** Template quick edits (spec 2026-11-01 §1): a words, remove, move or add request on a template home, as exact operations on its
    *  numbered sections plus the part they cannot do. Text only, short; null when it fails twice. */
   async editLayout(merchantId: string, input: { storeId: string; layout: LayoutBlock[]; request: string; productLayout?: LayoutBlock[]; store?: StoreEditState; photos?: StoreEditPhoto[];
-    pages?: Record<string, LayoutBlock[]>; templateTypes?: string[] }): Promise<LayoutEditRead | null> {
+    pages?: Record<string, LayoutBlock[]>; offerPages?: boolean; templateTypes?: string[] }): Promise<LayoutEditRead | null> {
     const model = this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
     const provider = sourceProvider(this.config, model);
     // YAPI edits everything (spec 2026-11-03): the product page's sections and the store's own data ride in the same short call; the
     // menu pages' sections and the template's own section types too (spec 2026-11-05).
     const body = { secciones: layoutDigest(input.layout), ...(input.productLayout?.length ? { ficha: layoutDigest(input.productLayout) } : {}),
-      ...(input.pages ? { paginas: Object.fromEntries(Object.entries(input.pages).map(([page, list]) => [page, layoutDigest(list)])), plantilla: input.templateTypes ?? [], nuevas_paginas: addableSections('menu') } : {}),
+      // Minor 2026-11-05: only the pages that matter, and the new-section list only when a page is named or open (menuPagesFor).
+      ...(input.pages ? { paginas: Object.fromEntries(Object.entries(input.pages).map(([page, list]) => [page, layoutDigest(list)])),
+        ...(input.offerPages ? { plantilla: input.templateTypes ?? [], nuevas_paginas: addableSections('menu') } : {}) } : {}),
       nuevas: addableSections(),
       ...(input.store ? { tienda: storeDigest(input.store, input.photos ?? []) } : {}), pedido: input.request.slice(0, 2000) };
     for (let attempt = 0; attempt < 2; attempt++) {

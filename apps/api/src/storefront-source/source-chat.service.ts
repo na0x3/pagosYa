@@ -68,8 +68,8 @@ import { nextTitleStyle, readTitleAsk } from './source-title-style';
 import { buildLibraryFacts, carriedSections, libraryDropReason, libraryMood, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, type LayoutBlock } from './source-section-library';
 import { applyStoreOps, readCatalogTitle, storeChangeEmpty, withCatalogTitle, type StoreChange, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
 import { storeFaq, storePolicies } from '../stores/store-presentation';
-import { MENU_PAGES, MENU_PAGE_NAMES, applyLayoutOps, layoutAdds, layoutEditReply, type LayoutPage, type MenuPage } from './source-layout-edit';
-import { sectionablePage, withSectionedPages } from './source-content-pages';
+import { MENU_PAGES, MENU_PAGE_NAMES, applyLayoutOps, layoutAdds, layoutEditReply, menuPagesFor, type LayoutPage, type MenuPage } from './source-layout-edit';
+import { keptMenuPages, sectionablePage, withSectionedPages } from './source-content-pages';
 import { bolivianos, readShippingAsk, type ShippingAsk } from './source-shipping-ask';
 import { plainReply } from './source-plain-reply';
 import { visibleChanges } from './source-visible-change';
@@ -556,7 +556,18 @@ export class SourceChatService {
       .map(({ photo: _photo, photo2: _photo2, items, ...block }) => ({ ...block, ...(items ? { items: items.map(({ photo: _itemPhoto, ...item }) => item) } : {}) }));
     const earlierAsks = await this.earlierAsks(threadId, userMessage.id, templates);
     await workflow.report('saving');
-    const saved = await this.applyPlantilla(merchantId, storeId, target.id, revision, { about: instruction });
+    let saved = await this.applyPlantilla(merchantId, storeId, target.id, revision, { about: instruction });
+    // Minor 2026-11-05: a «Nosotros» (or another menu page) built from sections keeps them, with their photos, on the new template.
+    const keptPages = readsMasterData(snapshot.files) ? keptMenuPages(snapshot.files, readMasterState(snapshot.files).pageLayouts) : null;
+    if (keptPages) {
+      const withPages = await this.templates.refill(merchantId, storeId, (saved as { revision: number }).revision, { pageLayouts: keptPages.pageLayouts }, 'Páginas del menú', {
+        files: list => withSectionedPages([...list, ...keptPages.photos.filter(photo => !list.some(file => file.path === photo.path))] as typeof list, keptPages.kinds),
+      }).catch(error => {
+        this.productLogger.warn(JSON.stringify({ event: 'template_switch_pages_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
+        return null;
+      });
+      if (withPages) saved = withPages as typeof saved;
+    }
     await workflow.finish('completed');
     const name = templateManifest(target.id)?.name ?? target.id;
     const savedRevision = (saved as { revision: number }).revision;
@@ -565,7 +576,7 @@ export class SourceChatService {
       metadata: { progress: workflow.value, sourceRevision: savedRevision } } });
     const followUp: SourceMessageInput = { instruction: SECTION_LIBRARY_BRIEF, revision: savedRevision, personalTouch: true, sectionLibrary: true, requestId: randomUUID(), model: 'auto',
       ...(earlierAsks ? { earlierAsks } : {}), ...(carried.length ? { carry: carried } : {}) };
-    this.productLogger.log(JSON.stringify({ event: 'template_switch', storeId, from: wearing, to: target.id, carried: carried.map(block => block.type), earlierAsks: earlierAsks.length }));
+    this.productLogger.log(JSON.stringify({ event: 'template_switch', storeId, from: wearing, to: target.id, carried: carried.map(block => block.type), earlierAsks: earlierAsks.length, keptPages: keptPages?.kinds ?? [] }));
     return { userMessage, assistantMessage, revision: saved, followUp };
   }
 
@@ -1106,7 +1117,9 @@ export class SourceChatService {
     });
     const photos = editState ? await this.storeEditPhotos(merchantId, storeId, input.assetUrls ?? [], editState.products) : [];
     const templateTypes = [...new Set(layout.map(block => block.type))];
-    const read = await this.dialogue.editLayout(merchantId, { storeId, layout, request: input.instruction, ...(productLayout.length ? { productLayout } : {}), pages, templateTypes,
+    const menuPages = menuPagesFor(pages, input.instruction, input.currentPage);
+    const read = await this.dialogue.editLayout(merchantId, { storeId, layout, request: input.instruction, ...(productLayout.length ? { productLayout } : {}),
+      ...(menuPages ? { pages: menuPages.pages as Record<string, LayoutBlock[]>, offerPages: menuPages.offer } : {}), templateTypes,
       ...(editState ? { store: editState, photos } : {}) });
     if (!read) return null;
     // Fix 3 (2026-11-02, goodProtein #12: a new section went to the design agent, ~18 min, never mounted): a section the merchant asks

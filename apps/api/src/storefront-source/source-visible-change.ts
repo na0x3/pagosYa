@@ -64,8 +64,11 @@ export function visibleChanges(before: readonly File[], after: readonly File[]):
   // Spec 2026-11-03 E2: a policy or the about text YAPI wrote reaches the store's data, not its files; the catalogue stays out.
   const pageData = (data: unknown) => PAGE_FIELDS.map(field => ((data ?? {}) as Record<string, unknown>)[field] ?? null);
   if (!same(pageData(wasData), pageData(nowData))) out.add('pages');
+  // The menu pages' own sections (spec 2026-11-05) are drawn too, so a change to them or to their section types shows (minor 2026-11-05).
+  if (!same(was.pageLayouts, now.pageLayouts)) out.add('pages');
+  const pageBlocks = Object.values(now.pageLayouts ?? {}).flatMap(list => (Array.isArray(list) ? list : []));
 
-  const types = new Set([...now.layout, ...now.productLayout].map(block => String((block as { type?: unknown })?.type ?? '')));
+  const types = new Set([...now.layout, ...now.productLayout, ...pageBlocks].map(block => String((block as { type?: unknown })?.type ?? '')));
   // Components: a changed declaration is drawn; a new one only when something drawn uses it (or a section on the page, by its type).
   const oldDecls = new Map<string, string>();
   for (const file of before.filter(isComponent)) for (const [name, body] of declarations(file.content)) oldDecls.set(`${file.path}#${name}`, body);

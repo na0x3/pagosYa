@@ -15,6 +15,17 @@ export type MenuPage = typeof MENU_PAGES[number];
 export type LayoutPage = 'home' | 'product' | MenuPage;
 export const MENU_PAGE_NAMES: Record<MenuPage, string> = { about: 'Nosotros', contact: 'Contacto', faq: 'Preguntas frecuentes', shipping: 'Envíos' };
 const isMenuPage = (page: unknown): page is MenuPage => (MENU_PAGES as readonly unknown[]).includes(page);
+const MENU_PAGE_URLS: Record<MenuPage, string> = { about: 'nosotros.html', contact: 'contacto.html', faq: 'faq.html', shipping: 'envios.html' };
+const MENU_PAGE_WORDS = /\b(nosotros|qui[eé]nes somos|contacto|cont[aá]ctanos|preguntas|faq|env[ií]os?|entregas|p[aá]ginas?)\b/i;
+
+/** Minor 2026-11-05 (every quick edit sent the menu pages and their section list): the pages that ride in the quick edit — the ones
+ *  with sections always, every page and the new-section list (`offer`) only when the request names a page or one is open; null = none. */
+export function menuPagesFor(pages: Record<MenuPage, LayoutBlock[]>, request: string, currentPage?: string): { pages: Partial<Record<MenuPage, LayoutBlock[]>>; offer: boolean } | null {
+  const open = String(currentPage ?? '').replace(/^\/+/, '').split(/[?#]/)[0];
+  if (MENU_PAGE_WORDS.test(request) || MENU_PAGES.some(page => MENU_PAGE_URLS[page] === open)) return { pages, offer: true };
+  const built = Object.fromEntries(MENU_PAGES.filter(page => pages[page]?.length).map(page => [page, pages[page]])) as Partial<Record<MenuPage, LayoutBlock[]>>;
+  return Object.keys(built).length ? { pages: built, offer: false } : null;
+}
 export type LayoutEditRead = { ops: LayoutOp[]; store: StoreOp[]; rest: string };
 /** Fix 3 (2026-11-02): a section the merchant asked for, from the library, before the section `to` showed (-1 = before the closing). */
 export type LayoutAdd = { type: string; to: number; about: string };
@@ -33,6 +44,8 @@ const MAX_ADDS = 2;
 const PAGE_ADDABLE = LIBRARY_CATALOG.filter(section => !MAIN_GRIDS.has(section.id) && !section.decor && section.id !== 'bar-note');
 const PAGE_ADDABLE_IDS = new Set(PAGE_ADDABLE.map(section => section.id));
 const MAX_PAGE_ADDS = 5;
+// However many requests build it, a menu page stays a page, not a second home (minor 2026-11-05).
+const MAX_PAGE_SECTIONS = 8;
 // What the merchant calls each kind of section; the reply names a section by its own title first.
 const ROLE_NAME: Record<LibraryRole, string> = { cover: 'la portada', strip: 'la franja', products: 'los productos', story: 'la historia', benefits: 'los beneficios',
   proof: 'las reseñas', promo: 'la promoción', info: 'la información', closing: 'el cierre' };
@@ -87,6 +100,7 @@ bonita», «cambia nosotros a algo más lindo», «que contacto se vea mejor»: 
 con add y su page (una sola portada cover-*, que va primero; luego historia, beneficios, pasos o un cierre con foto), escogidas de
 «nuevas_paginas» y prefiriendo los tipos de «plantilla» (las secciones que usa la portada de esta plantilla); si ya tiene, cambia
 sus textos o fotos. Como mucho 5 secciones nuevas por página y pedido. Su texto de la página (store about) no cambia por eso.
+Una página que no viene en «paginas» no es parte de este pedido; sin «nuevas_paginas» no agregues secciones a ninguna página del menú.
 
 Reglas:
 - Usa solo los números de «secciones» (o de la página del menú que pidió). Cambia solo lo que el comercio pidió; nunca reescribas lo demás.
@@ -135,6 +149,10 @@ export function layoutAdds(layout: readonly LayoutBlock[], ops: readonly LayoutO
     const there = layout.find(block => block.type === type);
     if (there) { refused.push(`${where} ya tiene ${nameIn(there)}: pídeme cambiar sus textos.`); continue; }
     if (ROLE.get(type) === 'cover' && [...layout, ...adds].some(block => ROLE.get(block.type) === 'cover')) { refused.push(`${where} lleva una portada, no dos.`); continue; }
+    if (menu && layout.length + adds.length >= MAX_PAGE_SECTIONS) {
+      refused.push(`${where} ya tiene ocho secciones, el máximo de una página: quita una o pídeme cambiar las que tiene.`);
+      break;
+    }
     if (adds.length >= (menu ? MAX_PAGE_ADDS : MAX_ADDS)) {
       refused.push(menu ? `Agrego hasta cinco secciones por pedido en ${where.replace('Tu', 'tu')}: pídeme las demás después.` : 'Agrego hasta dos secciones por pedido: pídeme la siguiente después.');
       break;

@@ -30,6 +30,13 @@ describe('visible changes', () => {
     expect(visibleChanges(store(), after)).toEqual([]);
   });
 
+  it('a menu page\'s sections show, and so does a design change to a section only a menu page draws (minor 2026-11-05)', () => {
+    const about = { pageLayouts: { about: [{ type: 'faq-split', title: 'Preguntas' }] } };
+    expect(visibleChanges(store(), store({}, undefined, about))).toEqual(['pages']);
+    const redrawn = library.replace("'faq-split': FaqSplit", "'faq-split': FaqCards").replace('export function LibraryHome', 'function FaqCards() { return null; }\nexport function LibraryHome');
+    expect(visibleChanges(store({}, undefined, about), store({ library: redrawn }, undefined, about))).toEqual(['components']);
+  });
+
   it('a product page layout and a menu change show', () => {
     expect(visibleChanges(store(), store({}, undefined, { productLayout: [{ type: 'faq-split', title: 'Dudas' }] }))).toEqual(['productPage']);
     const menu = store({ config: `window.PAGOSYA_CONFIG = ${JSON.stringify({ header: { menu: { style: 'dropdowns' } }, data: { items: [1] } })};\n` });

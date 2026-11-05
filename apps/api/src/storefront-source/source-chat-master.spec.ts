@@ -1,6 +1,8 @@
 import { BadGatewayException } from '@nestjs/common';
 import { shellWithStoreFooter } from './agent/home-writer-tools';
 import { randomUUID as uuid } from 'node:crypto';
+import { templateStoreDataFile } from './source-templates';
+import { CONTENT_PAGE_FILES, withSectionedPages } from './source-content-pages';
 import { ConfigService } from '@nestjs/config';
 import { withoutPhotoGroups, HOME_WRITER_MAX_CREDITS, MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, OWN_REQUEST_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
@@ -1091,5 +1093,25 @@ describe('switching templates later (owner 2026-10-31)', () => {
   it('an ordinary edit never switches', async () => {
     await say('cambia el color del botón a verde').catch(() => undefined);
     expect(applyPlantilla).not.toHaveBeenCalled();
+  });
+
+  it('keeps a «Nosotros» built from sections, and its photo, on the new template (minor 2026-11-05)', async () => {
+    const about = [{ type: 'story-split', title: 'Nuestra historia', photo: 'assets/image-0123456789ab.jpg' }];
+    const photo = { path: 'assets/image-0123456789ab.jpg', content: 'AAAA', encoding: 'base64' };
+    const files = [
+      templateStoreDataFile({ name: 'Tienda' }, {}, { copy: { headline: 'Hola' } as never, look: { palette: 'mono', fonts: 'zancada' } as never, variants: { theme: 'sorbo', sections: [] } as never, layout: [], productLayout: [], pageLayouts: { about } }),
+      { path: 'components/home.tsx', content: "import { copy } from './store-data';\nexport default function Home() { return null; }\n" },
+      { path: 'components/library.tsx', content: 'export function LibraryHome() { return null; }' },
+      ...withSectionedPages(CONTENT_PAGE_FILES, []), photo,
+    ];
+    const refill = jest.fn().mockResolvedValue({ revision: 5, label: 'Páginas del menú' });
+    chat = new SourceChatService(prisma, { current: jest.fn().mockResolvedValue({ revision: 3 }), version: jest.fn().mockResolvedValue({ snapshot: { files } }) } as any, generation(), { decide, fillMaster, pickTemplate } as any, { apply: jest.fn(), applyMaster, refill } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
+    jest.spyOn(chat, 'applyPlantilla').mockResolvedValue({ revision: 4, label: 'Plantilla: Esencial' } as never);
+    const out = await say('Cámbiala a la plantilla Tacón');
+    expect(refill).toHaveBeenCalledWith('m1', 's1', 4, { pageLayouts: { about } }, 'Páginas del menú', expect.any(Object));
+    const written = refill.mock.calls[0][5].files([...CONTENT_PAGE_FILES, { path: 'components/library.tsx', content: '' }]);
+    expect(written.find((file: { path: string }) => file.path === 'components/pages/about.tsx').content).toContain('pageLayouts.about');
+    expect(written).toContainEqual(photo);
+    expect(out.followUp).toMatchObject({ sectionLibrary: true, revision: 5 });
   });
 });

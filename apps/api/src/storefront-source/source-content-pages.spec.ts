@@ -2,8 +2,9 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { nextStoreFiles } from './fixtures/next-store';
-import { ACCOUNT_PAGE_FILES, STANDARD_PAGE_FILES, CONTENT_PAGE_FILES, sectionablePage, sectionedPageFile, withSectionedPages, withStandardPages } from './source-content-pages';
+import { ACCOUNT_PAGE_FILES, STANDARD_PAGE_FILES, CONTENT_PAGE_FILES, keptMenuPages, sectionablePage, sectionedPageFile, withSectionedPages, withStandardPages } from './source-content-pages';
 import { compileNextPreview, nextContentPages, nextSourceFile } from './source-next';
+import { LIBRARY_CATALOG } from './source-section-library';
 import { assembleTemplateRevision } from './source-templates';
 
 const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom');
@@ -153,7 +154,12 @@ describe('menu pages with template sections (spec 2026-11-05)', () => {
     expect(about.path).toBe('components/pages/about.tsx');
     expect(about.content.startsWith('// @pagosya-page\n')).toBe(true);
     expect(about.content).toContain('pageLayouts.about');
-    for (const kind of ['about', 'contact'] as const) expect(sectionedPageFile(kind).content).toMatch(new RegExp(`<LibraryHome[\\s\\S]*<InfoPage kind="${kind}" />`));
+    // A page that opens with a cover shows it above the page; otherwise the page's title comes first and the sections follow it,
+    // above the about text (minor 2026-11-05).
+    for (const kind of ['about', 'contact'] as const) expect(sectionedPageFile(kind).content).toContain(`{covered ? sections : null}<InfoPage kind="${kind}">{covered ? null : sections}</InfoPage>`);
+    const rule = new RegExp(/covered = \/(.+)\/\.test/.exec(about.content)![1]);
+    for (const cover of LIBRARY_CATALOG.filter(section => section.role === 'cover')) expect(rule.test(cover.id)).toBe(true);
+    for (const other of LIBRARY_CATALOG.filter(section => section.role !== 'cover')) expect(rule.test(other.id)).toBe(false);
     // InfoPage brings its own <main id="contenido">: the sections never add a second one.
     expect(about.content).not.toContain('<main');
     expect(about.content).toContain('data-lb-home');
@@ -174,6 +180,19 @@ describe('menu pages with template sections (spec 2026-11-05)', () => {
     const earlier = files.map(file => file.path === 'components/pages/about.tsx' ? { ...file, content: '// @pagosya-page\nimport { pageLayouts } from \'../store-data\';\nconst layout = pageLayouts.about ?? [];\n' } : file);
     expect(sectionablePage(earlier, 'about')).toBe(true);
     expect(withSectionedPages(own, ['about']).find(file => file.path === 'components/pages/about.tsx')!.content).toContain('Mi historia');
+  });
+
+  it('keeps the menu pages built from sections, and the photos they show, when the store switches template (minor 2026-11-05)', () => {
+    const photo = { path: 'assets/image-0123456789ab.jpg', content: 'AAAA', encoding: 'base64' as const };
+    const files = [{ path: 'components/library.tsx', content: 'export function LibraryHome() { return null; }' }, ...withSectionedPages(CONTENT_PAGE_FILES, []), photo,
+      { path: 'assets/image-ffffffffffff.jpg', content: 'BBBB', encoding: 'base64' as const }];
+    const layouts = { about: [{ type: 'story-split', title: 'Nuestra historia', photo: 'assets/image-0123456789ab.jpg' }], faq: [], contact: 'nope' };
+    expect(keptMenuPages(files, layouts as never)).toEqual({ pageLayouts: { about: layouts.about }, kinds: ['about'], photos: [photo] });
+    expect(keptMenuPages(files, { about: [] })).toBeNull();
+    expect(keptMenuPages(files, undefined)).toBeNull();
+    // A page the store's own design wrote stays out.
+    const own = files.map(file => file.path === 'components/pages/about.tsx' ? { ...file, content: '// @pagosya-page\nexport default function About() { return <h1>Mi historia</h1>; }\n' } : file);
+    expect(keptMenuPages(own, layouts as never)).toBeNull();
   });
 
   it('compiles a Nosotros page with a cover and a story on a real template store', async () => {

@@ -1,4 +1,4 @@
-import { MENU_PAGES, addableSections, applyLayoutOps, layoutAdds, layoutDigest, layoutEditReply, layoutEditSchema, readLayoutEdit } from './source-layout-edit';
+import { MENU_PAGES, addableSections, applyLayoutOps, layoutAdds, menuPagesFor, layoutDigest, layoutEditReply, layoutEditSchema, readLayoutEdit } from './source-layout-edit';
 import type { LayoutBlock } from './source-section-library';
 
 const home: LayoutBlock[] = [
@@ -188,6 +188,25 @@ describe('layout edit: menu pages (spec 2026-11-05)', () => {
     expect(layoutAdds(home, ops).adds).toEqual([]);
     // A cover the home may not add.
     expect(layoutAdds(home, [op({ op: 'add', type: 'cover-centered' })]).adds).toEqual([]);
+  });
+
+  it('sends the menu pages only when they matter, and the new-section list only when a page is named or open (minor 2026-11-05)', () => {
+    const empty = { about: [], contact: [], faq: [], shipping: [] };
+    expect(menuPagesFor(empty, 'Cambia el título de la portada')).toBeNull();
+    const built = { ...empty, about: [{ type: 'story-split', title: 'Somos BOXY' }] as LayoutBlock[] };
+    expect(menuPagesFor(built, 'Cambia el título de la portada')).toEqual({ pages: { about: built.about }, offer: false });
+    expect(menuPagesFor(empty, 'Haz la página de nosotros más bonita')).toEqual({ pages: empty, offer: true });
+    expect(menuPagesFor(empty, 'Agrega fotos aquí', 'contacto.html')).toEqual({ pages: empty, offer: true });
+    expect(menuPagesFor(empty, 'Agrega fotos aquí', 'index.html')).toBeNull();
+  });
+
+  it('keeps a menu page to eight sections whatever the requests add up to', () => {
+    const types = addableSections('home').map(section => section.id);
+    const page = types.slice(0, 7).map(type => ({ type, title: type })) as LayoutBlock[];
+    const { adds, refused } = layoutAdds(page, [op({ op: 'add', type: types[7], page: 'about' }), op({ op: 'add', type: types[8], page: 'about' })], 'about');
+    expect(adds.map(add => add.type)).toEqual([types[7]]);
+    expect(refused).toEqual([expect.stringContaining('ocho secciones')]);
+    expect(layoutAdds([...page, { type: types[7] }] as LayoutBlock[], [op({ op: 'add', type: types[8], page: 'about' })], 'about').adds).toEqual([]);
   });
 
   it('puts a new cover first and names the page in the reply', () => {
