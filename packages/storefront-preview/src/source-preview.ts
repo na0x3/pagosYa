@@ -49,7 +49,7 @@ export interface PointArea { points: number[]; rect: { x: number; y: number; wid
 export interface PreviewSelection { kind: 'section' | 'platform' | 'area'; sectionId: string; label: string; text?: string; at?: number; page?: PointPage; area?: PointArea }
 const validAt = (value: unknown) => Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 40;
 const POINT_PARTS: readonly PointPart[] = ['header', 'announcement', 'footer', 'menu'];
-const PAGE_QUERY = /^[a-z0-9][a-z0-9-]{0,63}\.html(\?[A-Za-z0-9=&_.%-]{0,135})?$/;
+const PAGE_QUERY = /^[a-z0-9][a-z0-9-]{0,63}\.html(\?[A-Za-z0-9=&_.%+,-]{0,135})?$/;
 const inRange = (n: unknown, max = 100000) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= max;
 /** Everything a circle in the preview says (spec 2026-11-05 point-at), checked before the Studio trusts it; null when anything is off. */
 export function validPointArea(value: unknown): PointArea | null {
@@ -71,9 +71,11 @@ export function validPointArea(value: unknown): PointArea | null {
 
 /** The section in the middle of the preview (spec 2026-11-05 point-at), checked like a selection. */
 export interface PreviewViewing { page: PointPage; at?: number; sectionId?: string; label: string }
-export function receivePreviewViewing(event: MessageEvent, frame: HTMLIFrameElement | null): PreviewViewing | null {
+export function receivePreviewViewing(event: MessageEvent, frame: HTMLIFrameElement | null): PreviewViewing | 'none' | null {
   const data = event.data;
   if (!frame || event.source !== frame.contentWindow || event.origin !== 'null' || data?.type !== 'pagosya:source-viewing') return null;
+  // Nothing in the middle of the screen (between sections, the footer): the Studio forgets the last section.
+  if (data.none === true) return 'none';
   if (!POINT_PAGES.includes(data.page) || typeof data.label !== 'string' || data.label.length > 60) return null;
   if (data.at !== undefined && !validAt(data.at)) return null;
   if (data.sectionId !== undefined && (typeof data.sectionId !== 'string' || !/^[a-z][a-z0-9-]{0,47}$/.test(data.sectionId))) return null;

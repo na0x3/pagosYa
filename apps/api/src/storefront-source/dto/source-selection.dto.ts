@@ -1,9 +1,16 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested, Validate, ValidatorConstraint, type ValidatorConstraintInterface } from 'class-validator';
 
 export const POINT_PAGES = ['home', 'product', 'about', 'contact', 'faq', 'shipping'] as const;
 export const POINT_PARTS = ['header', 'announcement', 'footer', 'menu'] as const;
 const FINITE = { allowNaN: false, allowInfinity: false };
+
+/** A loop is pairs of numbers: an odd count is not a loop (the Studio refuses it too). */
+@ValidatorConstraint({ name: 'pointPairs' })
+class PointPairs implements ValidatorConstraintInterface {
+  validate(value: unknown) { return Array.isArray(value) && value.length % 2 === 0; }
+  defaultMessage() { return 'points must be x,y pairs'; }
+}
 
 export class SourcePointRectDto {
   @IsNumber(FINITE) @Min(0) @Max(100000) x!: number;
@@ -18,16 +25,16 @@ export class SourcePointSectionDto {
 }
 /** A loop the merchant drew around part of the preview (spec 2026-11-05 point-at). */
 export class SourcePointAreaDto {
-  @IsArray() @ArrayMinSize(6) @ArrayMaxSize(128) @IsNumber(FINITE, { each: true }) points!: number[];
+  @IsArray() @ArrayMinSize(6) @ArrayMaxSize(128) @IsNumber(FINITE, { each: true }) @Validate(PointPairs) points!: number[];
   @ValidateNested() @Type(() => SourcePointRectDto) rect!: SourcePointRectDto;
   @IsArray() @ArrayMaxSize(3) @ValidateNested({ each: true }) @Type(() => SourcePointSectionDto) sections!: SourcePointSectionDto[];
   @IsArray() @ArrayMaxSize(12) @IsString({ each: true }) @MaxLength(200, { each: true }) texts!: string[];
   @IsArray() @ArrayMaxSize(6) @IsString({ each: true }) @MaxLength(500, { each: true }) @Matches(/^(https?:\/\/|\/|assets\/)/, { each: true }) photos!: string[];
-  @IsArray() @IsIn(POINT_PARTS, { each: true }) parts!: Array<(typeof POINT_PARTS)[number]>;
+  @IsArray() @ArrayMaxSize(4) @IsIn(POINT_PARTS, { each: true }) parts!: Array<(typeof POINT_PARTS)[number]>;
   @IsInt() @Min(280) @Max(2400) width!: number;
   /** The preview's viewport height (final review 2026-11-05); optional for drafts saved before it. */
   @IsOptional() @IsInt() @Min(200) @Max(4000) height?: number;
-  @IsString() @Matches(/^[a-z0-9][a-z0-9-]{0,63}\.html(\?[A-Za-z0-9=&_.%-]{0,135})?$/) pageQuery!: string;
+  @IsString() @Matches(/^[a-z0-9][a-z0-9-]{0,63}\.html(\?[A-Za-z0-9=&_.%+,-]{0,135})?$/) pageQuery!: string;
 }
 
 /** A section picked in the Studio preview; the id has the same shape the preview and the section scope accept. On a template

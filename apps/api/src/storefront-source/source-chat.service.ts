@@ -2004,7 +2004,9 @@ export class SourceChatService {
       // Template quick edits (spec 2026-11-01 §1): a template home draws its layout only, so words, removals and moves change those
       // blocks; what the operations cannot do (a colour, the menu, a new section) follows as its own request.
       // Spec 2026-11-05 point-at: a clicked or circled part of a template store is a quick edit too (it went to the code generator).
-      const templateHome = masterStore && !input.redesign && !input.personalTouch && !input.layoutRest && !menuOnly && !Object.keys(layoutAsk).length
+      // A classic section id (no page and number, small fixes 2026-11-05) keeps the code generator's section scope.
+      const classicPick = Boolean(input.selection && !input.selection.area && !input.selection.page);
+      const templateHome = masterStore && !input.redesign && !input.personalTouch && !input.layoutRest && !classicPick && !menuOnly && !Object.keys(layoutAsk).length
         && !sourceRedesignRequested(input.instruction) && !decision.rework && (decision.editKind === 'content' || decision.editKind === 'design')
         ? readMasterState((previous!.snapshot as unknown as SourceProjectSnapshot).files).layout as LayoutBlock[] : [];
       if (templateHome.length && !storeEditTried) {

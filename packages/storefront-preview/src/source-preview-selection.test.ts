@@ -209,7 +209,7 @@ function box(w: any, selector: string, x: number, y: number, width: number, heig
   w.document.querySelectorAll(selector).forEach((el: any) => { el.getBoundingClientRect = () => ({ left: x, top: y, right: x + width, bottom: y + height, width, height, x, y }); });
 }
 function drag(w: any, path: Array<[number, number]>, startOn = 'body') {
-  const at = (type: string, [x, y]: [number, number], target: any) => target.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+  const at = (type: string, [x, y]: [number, number], target: any) => target.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, buttons: type === 'pointerup' ? 0 : 1 }));
   const start = w.document.querySelector(startOn);
   at('pointerdown', path[0], start);
   path.slice(1).forEach(point => at('pointermove', point, w.document));
@@ -309,7 +309,7 @@ it('while selecting, a press neither selects text nor starts the browser drag, a
   expect(down.defaultPrevented).toBe(true);
   expect(dragStart.defaultPrevented).toBe(true);
   expect(w.document.documentElement.style.userSelect).toBe('none');
-  for (const [x, y] of square(60, 60, 500).slice(1)) w.document.dispatchEvent(new w.MouseEvent('pointermove', { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+  for (const [x, y] of square(60, 60, 500).slice(1)) w.document.dispatchEvent(new w.MouseEvent('pointermove', { bubbles: true, cancelable: true, clientX: x, clientY: y, buttons: 1 }));
   w.document.dispatchEvent(new w.MouseEvent('pointercancel', { bubbles: true, clientX: 60, clientY: 61 }));
   await vi.waitFor(() => expect(posted).toHaveLength(1));
   expect(posted[0]).toMatchObject({ kind: 'area', sectionId: 'lb-0' });
@@ -328,4 +328,100 @@ it('takes the layout number from data-lb-at before the id or the position', asyn
   w.document.querySelector('#preguntas h2').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
   await vi.waitFor(() => expect(posted).toHaveLength(1));
   expect(posted[0]).toMatchObject({ sectionId: 'preguntas', page: 'home', at: 3 });
+});
+
+
+// Small fixes after the final review (owner 2026-11-05 «lets fix these»).
+describe('circle edge cases', () => {
+  const ev = (w: any, type: string, x: number, y: number, buttons = 1) => new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, buttons });
+  const setup = () => {
+    const env = loadTemplate();
+    box(env.w, '.es-header', 0, 0, 1280, 80); box(env.w, '.es-header nav', 400, 20, 400, 40);
+    box(env.w, '[data-lb="cover-split"]', 0, 80, 1280, 600); box(env.w, '[data-lb="cover-split"] h1', 100, 200, 400, 80);
+    box(env.w, '[data-lb="products-grid"]', 0, 680, 1280, 800); box(env.w, '#inicio', 0, 1480, 1280, 500); box(env.w, '#inicio h2', 100, 1500, 300, 60);
+    env.send({ type: 'pagosya:source-edit-mode', on: true });
+    return env;
+  };
+
+  it('a cancelled pointer ends the circle and the next tap still selects', async () => {
+    const { w, posted } = setup();
+    const h1 = w.document.querySelector('[data-lb="cover-split"] h1');
+    h1.dispatchEvent(ev(w, 'pointerdown', 120, 220));
+    for (const [x, y] of square(60, 100, 500).slice(1)) w.document.dispatchEvent(ev(w, 'pointermove', x, y));
+    w.document.dispatchEvent(ev(w, 'pointercancel', 60, 101, 0));
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    w.document.querySelector('#inicio h2').dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(posted).toHaveLength(2));
+    expect(posted[1]).toMatchObject({ kind: 'section', sectionId: 'inicio' });
+  });
+
+  it('a button let go outside the preview ends the circle at the next move', async () => {
+    const { w, posted } = setup();
+    w.document.querySelector('[data-lb="cover-split"] h1').dispatchEvent(ev(w, 'pointerdown', 120, 220));
+    for (const [x, y] of square(60, 100, 500).slice(1)) w.document.dispatchEvent(ev(w, 'pointermove', x, y));
+    w.document.dispatchEvent(ev(w, 'pointermove', 900, 900, 0));
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0].area.rect).toEqual({ x: 60, y: 100, width: 500, height: 500 });
+  });
+
+  it('a tap that slips a little still selects its section', async () => {
+    const { w, posted } = setup();
+    drag(w, square(120, 220, 14), '[data-lb="cover-split"] h1');
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ kind: 'section', sectionId: 'lb-0' });
+  });
+
+  it('a fast flick with one move is still a circle', async () => {
+    const { w, posted } = setup();
+    w.document.querySelector('[data-lb="cover-split"] h1').dispatchEvent(ev(w, 'pointerdown', 60, 100));
+    w.document.dispatchEvent(ev(w, 'pointermove', 500, 500));
+    w.document.dispatchEvent(ev(w, 'pointerup', 520, 520, 0));
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0].area.points.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('a circle that only grazes the header does not count the header', async () => {
+    const { w, posted } = setup();
+    drag(w, square(50, 70, 900), '[data-lb="cover-split"] h1');
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0].area.parts).toEqual([]);
+  });
+
+  it('outlines the section that was picked even when another page part has the same id', async () => {
+    const { w, posted, click } = setup();
+    box(w, '[data-lb-page="about"] section', 0, 2500, 1280, 400);
+    click('[data-lb-page="about"] h2');
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(w.document.querySelector('[data-pagosya-edit-overlay]').style.top).toBe('2500px');
+  });
+
+  it('a press keeps the preview focused, so Escape still reaches it', () => {
+    const { w } = setup();
+    const focus = vi.spyOn(w, 'focus');
+    w.document.querySelector('[data-lb="cover-split"] h1').dispatchEvent(ev(w, 'pointerdown', 120, 220));
+    expect(focus).toHaveBeenCalled();
+  });
+});
+
+it('says when no section is in the middle of the screen, and the Studio reads it', async () => {
+  const { w } = loadTemplate();
+  const seen: any[] = [];
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:source-viewing') seen.push(event.data); });
+  Object.defineProperty(w, 'innerHeight', { value: 800, configurable: true });
+  box(w, '[data-lb="products-grid"]', 0, -300, 1280, 900);
+  w.dispatchEvent(new w.Event('scroll'));
+  await vi.waitFor(() => expect(seen).toHaveLength(1), { timeout: 1500 });
+  box(w, '[data-lb="products-grid"]', 0, -3000, 1280, 900);
+  w.dispatchEvent(new w.Event('scroll'));
+  await vi.waitFor(() => expect(seen).toHaveLength(2), { timeout: 1500 });
+  expect(seen[1]).toEqual({ type: 'pagosya:source-viewing', none: true });
+  const frame = { contentWindow: {} } as unknown as HTMLIFrameElement;
+  expect(receivePreviewViewing({ source: frame.contentWindow, origin: 'null', data: seen[1] } as unknown as MessageEvent, frame)).toBe('none');
+});
+
+it('the Studio keeps a page query with + and , in it', () => {
+  const frame = { contentWindow: {} } as unknown as HTMLIFrameElement;
+  const area = { points: [0, 0, 100, 0, 100, 100], rect: { x: 0, y: 0, width: 100, height: 100 }, sections: [], texts: ['Hola'], photos: [], parts: [], width: 1280, height: 720, pageQuery: 'buscar.html?q=vestido+novia,seda' };
+  expect(receivePreviewSelection({ source: frame.contentWindow, origin: 'null', data: { type: 'pagosya:source-select', kind: 'area', sectionId: 'zona-marcada', label: 'Hola', area } } as unknown as MessageEvent, frame)).toMatchObject({ kind: 'area' });
 });

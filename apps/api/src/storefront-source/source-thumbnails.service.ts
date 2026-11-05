@@ -33,6 +33,8 @@ export class SourceThumbnailsService {
   private readonly drawing = new Map<string, Promise<Buffer>>();
   // One browser at a time: a page of 30 new cards must not start 30 browsers.
   private queue: Promise<unknown> = Promise.resolve();
+  // Circled-area pictures, one at a time too, on a line of their own.
+  private regions: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly uploads: UploadsService) {}
 
@@ -70,7 +72,8 @@ export class SourceThumbnailsService {
   async region(merchantId: string, storeId: string, revision: number, area: { pageQuery: string; width: number; height?: number; rect: { x: number; y: number; width: number; height: number }; points: number[] }): Promise<Buffer> {
     const saved = await this.projects.version(merchantId, storeId, revision);
     const clip = regionClip(area);
-    const job = this.queue.then(() => this.withStorePage(merchantId, storeId, saved.snapshot as unknown as SourceProjectSnapshot, { width: area.width, height: area.height ?? 900 }, area.pageQuery, async page => {
+    // Its own line (small fixes 2026-11-05): a picture never waits behind store cards being drawn, which outlasted its 20 s.
+    const job = this.regions.then(() => this.withStorePage(merchantId, storeId, saved.snapshot as unknown as SourceProjectSnapshot, { width: area.width, height: area.height ?? 900 }, area.pageQuery, async page => {
       await page.evaluate(points => {
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('style', `position:absolute;left:0;top:0;width:${document.documentElement.scrollWidth}px;height:${document.documentElement.scrollHeight}px;pointer-events:none;z-index:2147483647;overflow:visible`);
@@ -80,7 +83,7 @@ export class SourceThumbnailsService {
       }, area.points);
       return page.screenshot({ type: 'png', fullPage: true, clip, timeout: 10_000 });
     })).then(shot => sharp(shot).resize({ width: Math.min(1024, clip.width), withoutEnlargement: true }).jpeg({ quality: 72 }).toBuffer());
-    this.queue = job.catch(() => undefined);
+    this.regions = job.catch(() => undefined);
     return job;
   }
 

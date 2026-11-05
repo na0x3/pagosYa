@@ -6,7 +6,7 @@
   var MOUNTS = '[data-pagosya-catalog],[data-pagosya-cart],[data-pagosya-product-page],[data-pagosya-checkout-page],[data-pagosya-contact],[data-pagosya-subscribe-block]';
   var SECTION_ID = /^[a-z][a-z0-9-]{0,47}$/;
   var on = false, overlay = null, tab = null, selected = '', hovered = null, frame = 0;
-  var press = null, drawing = false, swallowClick = false, loop = null;
+  var press = null, drawing = false, swallowClick = false, loop = null, selectedEl = null;
 
   var PAGES = ['home', 'product', 'about', 'contact', 'faq', 'shipping'];
 
@@ -55,7 +55,8 @@
     if (!element || !element.id || !SECTION_ID.test(element.id)) return null;
     return { kind: 'section', element: element, id: element.id, label: labelOf(element, element.id) };
   }
-  function selectedElement() { return selected ? document.getElementById(selected) : null; }
+  /** The element picked, kept by reference: ids such as «inicio» or «lb-0» repeat across a home and a menu page. */
+  function selectedElement() { return selectedEl && selectedEl.isConnected ? selectedEl : selected ? document.getElementById(selected) : null; }
 
   function draw() {
     frame = 0;
@@ -112,7 +113,13 @@
       var url = element.tagName === 'IMG' ? (element.currentSrc || element.src) : ((/url\(["']?([^"')]+)/.exec(element.style.backgroundImage) || [])[1] || '');
       if (url && url.length <= 500 && /^(https?:\/\/|\/|assets\/)/.test(url) && photos.indexOf(url) < 0) photos.push(url);
     });
-    var parts = PARTS.filter(function (part) { return Array.prototype.some.call(document.querySelectorAll(part[1]), function (element) { return overlap(rect, pageBox(element)) > 0; }); }).map(function (part) { return part[0]; });
+    // A part counts when the loop really covers it, not when it grazes a sticky header that follows the scroll.
+    var parts = PARTS.filter(function (part) {
+      return Array.prototype.some.call(document.querySelectorAll(part[1]), function (element) {
+        var b = pageBox(element), shared = overlap(rect, b);
+        return shared > 0 && shared >= 0.3 * Math.min(b.width * b.height, rect.width * rect.height);
+      });
+    }).map(function (part) { return part[0]; });
     // The preview is an opaque srcdoc: its page and query come from the preview's own globals, never from location.
     var page = String(window.PAGOSYA_PREVIEW_PAGE || 'index.html') + String(window.PAGOSYA_PREVIEW_QUERY || '');
     return { first: sections[0] || null, area: { points: simplify(points), rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) },
@@ -133,31 +140,42 @@
     // A press on words or a photo must not become the browser's own text selection or drag-and-drop: those cancel the pointer
     // (no pointerup), so the circle never arrived (live 2026-11-05). The click that follows still selects.
     event.preventDefault();
+    // preventDefault keeps the frame from taking focus; Escape must still reach it.
+    try { window.focus(); } catch (error) { /* best effort */ }
     press = { x: event.clientX, y: event.clientY, points: [event.clientX + scrollX, event.clientY + scrollY] }; drawing = false;
   }
   function onNativeDrag(event) { event.preventDefault(); }
   function onDrag(event) {
     if (!press) return;
+    // The button was let go outside the preview: the circle ends here, without this point.
+    if (event.buttons === 0) { onUp(event); return; }
     if (!drawing && Math.abs(event.clientX - press.x) + Math.abs(event.clientY - press.y) < 12) return;
     if (!drawing) { drawing = true; clearLoop(); }
     event.preventDefault();
     press.points.push(event.clientX + scrollX, event.clientY + scrollY);
     drawLoop(press.points);
   }
-  function onUp() {
+  function onUp(event) {
     if (!press) return;
     var points = press.points; press = null;
     if (!drawing) return;
-    drawing = false; swallowClick = true;
+    drawing = false;
+    var released = event && event.type === 'pointerup';
+    if (released) points.push(event.clientX + scrollX, event.clientY + scrollY);
+    // A fast flick has one move: the loop gets a middle point so it is never just two.
+    if (points.length < 6) points.splice(2, 0, (points[0] + points[points.length - 2]) / 2, (points[1] + points[points.length - 1]) / 2);
     var read = areaOf(points);
+    // A tap that slipped a little is still a tap: its click selects, nothing is swallowed.
     if (!read) { clearLoop(); return; }
     var area = read.area, first = read.first;
     if (!first && !area.parts.length) {
       var hit = document.elementFromPoint ? document.elementFromPoint(area.rect.x - scrollX + area.rect.width / 2, area.rect.y - scrollY + area.rect.height / 2) : null;
-      if (hit && hit.closest && hit.closest(MOUNTS)) { clearLoop(); post({ kind: 'platform', id: '', label: 'Lo administra pagosYa' }, ''); return; }
+      if (hit && hit.closest && hit.closest(MOUNTS)) { clearLoop(); swallowClick = released; post({ kind: 'platform', id: '', label: 'Lo administra pagosYa' }, ''); return; }
       if (!area.texts.length && !area.photos.length) { clearLoop(); return; }
     }
-    selected = first ? first.id : '';
+    // Only a real release is followed by a click to swallow (a cancel or a release outside the preview has none).
+    swallowClick = released;
+    selected = first ? first.id : ''; selectedEl = first ? first.element : null;
     parent.postMessage({ type: 'pagosya:source-select', kind: 'area', sectionId: first ? first.id : 'zona-marcada', label: (first ? first.label : area.texts[0] || 'Zona marcada').slice(0, 60), area: area }, '*');
     schedule();
   }
@@ -171,18 +189,19 @@
     var target = targetOf(event.target);
     if (!target) return;
     var own = event.target.children && event.target.children.length === 0 ? (event.target.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200) : '';
-    selected = target.kind === 'section' ? target.id : '';
+    selected = target.kind === 'section' ? target.id : ''; selectedEl = target.kind === 'section' ? target.element : null;
     post(target, own);
     schedule();
   }
   function onKey(event) {
     if (event.key !== 'Escape') return;
-    selected = ''; clearLoop();
+    selected = ''; selectedEl = null; clearLoop();
     post({ kind: 'section', id: '', label: '' }, '');
     schedule();
   }
 
   function turnOn(selectedId) {
+    if (selectedId !== selected || !selectedEl || selectedEl.id !== selectedId) selectedEl = null;
     selected = selectedId;
     if (on) { schedule(); return; }
     on = true;
@@ -209,7 +228,7 @@
   }
   function turnOff() {
     if (!on) return;
-    on = false; hovered = null; selected = '';
+    on = false; hovered = null; selected = ''; selectedEl = null;
     window.removeEventListener('mousemove', onMove, true);
     window.removeEventListener('click', onClick, true);
     window.removeEventListener('pointerdown', onDown, true);
@@ -240,7 +259,11 @@
       var kid = main.children[i]; r = kid.getBoundingClientRect();
       if (r.height && r.top <= middle && r.bottom > middle && SECTION_ID.test(kid.id || '')) found = { id: kid.id, label: labelOf(kid, kid.id), page: 'home' };
     }
-    if (!found) return;
+    if (!found) {
+      // Between sections or on the footer: say so once, so the Studio forgets the last section.
+      if (lastViewing !== 'none') { lastViewing = 'none'; parent.postMessage({ type: 'pagosya:source-viewing', none: true }, '*'); }
+      return;
+    }
     var message = { type: 'pagosya:source-viewing', page: found.page, sectionId: found.id, label: found.label };
     if (typeof found.at === 'number') message.at = found.at;
     var key = JSON.stringify(message);

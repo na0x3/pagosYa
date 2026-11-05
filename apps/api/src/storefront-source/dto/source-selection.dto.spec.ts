@@ -59,4 +59,12 @@ describe('pointing (spec 2026-11-05 point-at)', () => {
     { area: { ...area, parts: ['body'] } }, { area: { ...area, width: 279 } }, { area: { ...area, height: 100 } }, { area: { ...area, pageQuery: '../etc.html' } }, { area: { ...area, sections: Array(4).fill(area.sections[0]) } },
   ])('refuses %j', extra => { expect(errors(SourceSelectionDto, { sectionId: 'lb-1', ...extra })).not.toEqual([]); });
   it('refuses a viewing on an unknown page', () => { expect(errors(SourceViewingDto, { page: 'blog' })).not.toEqual([]); });
+  // Small fixes 2026-11-05: what the Studio refuses, the API refuses too; a search query may hold + and ,.
+  it('refuses an odd number of point coordinates and more than four parts', () => {
+    expect(errors(SourceSelectionDto, { sectionId: 'lb-1', area: { ...area, points: [0, 0, 100, 0, 100, 100, 5] } })).not.toEqual([]);
+    expect(errors(SourceSelectionDto, { sectionId: 'lb-1', area: { ...area, parts: ['menu', 'menu', 'header', 'footer', 'announcement'] } })).not.toEqual([]);
+  });
+  it('accepts a page query with + and ,', () => {
+    expect(errors(SourceSelectionDto, { sectionId: 'lb-1', area: { ...area, pageQuery: 'buscar.html?q=vestido+novia,seda' } })).toEqual([]);
+  });
 });

@@ -287,6 +287,19 @@ describe('edits on a master store', () => {
     expect(decide).not.toHaveBeenCalled();
   });
 
+  // Small fixes 2026-11-05: a classic section id (no page and number) on a template store keeps the code generator's section scope.
+  it('a classic section pick on a template store is not sent to the quick edit without a focus', async () => {
+    const files = [templateStoreDataFile({ name: 'Café Buna' }, {}, { copy: { headline: 'Hola' } as never, look: { palette: 'mono', fonts: 'zancada' } as never, variants: { theme: 'sorbo', sections: [] } as never,
+      layout: [{ type: 'cover-split', title: 'Hola' }], productLayout: [] }), { path: 'components/home.tsx', content: "import { copy } from './store-data';\n" }];
+    const projects = { current: jest.fn().mockResolvedValue({ revision: 2 }), version: jest.fn().mockResolvedValue({ snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files } }) };
+    chat = new SourceChatService(prisma, projects as any, generation(), { decide, fillMaster } as any, { apply: jest.fn(), applyMaster, refill } as any, { get: (key: string) => config.get(key) } as unknown as ConfigService);
+    const quick = jest.spyOn(chat as any, 'templateLayoutEdit').mockResolvedValue({ revision: 3 } as never) as jest.SpyInstance;
+    decided('content');
+    generate.mockResolvedValueOnce({ revision: 3, label: 'Cambio' });
+    await chat.send('m1', 's1', { revision: 2, instruction: 'hazla más corta', requestId: uuid(), selection: { sectionId: 'contacto' } }).catch(() => undefined);
+    expect(quick).not.toHaveBeenCalled();
+  });
+
   // Owner 2026-10-27 (B): the PEPPA please redesign, only when the merchant asks for it.
   it('an explicit redesign of a master store runs on a written brief with expressive motion', async () => {
     const redesignBrief = jest.fn().mockResolvedValue('Rediseña la tienda atrevida y divertida. Sigue esta estructura:\n- Portada con la foto grande');

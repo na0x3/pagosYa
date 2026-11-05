@@ -280,6 +280,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
     if (plantillasOn && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:inline-product-text' && typeof event.data.productId === 'string' && event.data.productId.length <= 64 && ['name', 'description', 'price'].includes(event.data.field) && typeof event.data.after === 'string') { void saveInlineProduct(event.data.productId, event.data.field, event.data.after.slice(0, 2000)); return; }
     if (plantillasOn && event.source === previewFrame?.contentWindow && event.origin === 'null' && event.data?.type === 'pagosya:inline-product' && typeof event.data.productId === 'string' && event.data.productId.length <= 64) { openProductEditor(event.data.productId, event.data.field === 'price' ? 'price' : 'description'); return; }
     const looked = receivePreviewViewing(event, previewFrame);
+    if (looked === 'none') { viewing.clear(); return; }
     if (looked) { viewing.set(looked); return; }
     const picked = receivePreviewSelection(event, previewFrame);
     if (picked) { takeSelection(picked); return; }

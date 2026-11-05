@@ -46,4 +46,13 @@ describe('store thumbnails', () => {
     await svc.region('m', 'store-1', 3, { pageQuery: 'index.html', width: 1024, height: 700, rect: { x: 0, y: 0, width: 90, height: 90 }, points: [0, 0, 90, 0, 90, 90] }).catch(() => undefined);
     expect(page.mock.calls[0][3]).toEqual({ width: 1024, height: 700 });
   });
+
+  it('a circled-area picture does not wait behind store cards being drawn (small fixes 2026-11-05)', async () => {
+    const { svc } = service();
+    (svc as any).queue = new Promise(() => undefined);
+    const page = jest.spyOn(svc as any, 'withStorePage').mockResolvedValue(Buffer.from('png'));
+    void svc.region('m', 'store-1', 3, { pageQuery: 'index.html', width: 1024, height: 700, rect: { x: 0, y: 0, width: 90, height: 90 }, points: [0, 0, 90, 0, 90, 90] }).catch(() => undefined);
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(page).toHaveBeenCalled();
+  });
 });
