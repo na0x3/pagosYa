@@ -2,7 +2,7 @@ import { BadGatewayException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { AgentWorkspace } from './agent/agent-workspace';
-import { agentWallWithin, runAgent, type AgentModel, type AGENT_LIMITS } from './agent/agent-loop';
+import { agentRunHeadroom, agentWallWithin, runAgent, type AgentModel, type AGENT_LIMITS } from './agent/agent-loop';
 import { agentOpening } from './agent/agent-prompt';
 import type { AgentPreviewBase } from './agent/agent-capture';
 import type { AgentStep } from './agent/agent-tools';
@@ -111,6 +111,13 @@ export function homeWriterLimits(chatgptPlan: boolean, runDeadline: number, now 
   return agentWallWithin({ ...HOME_WRITER_LIMITS, wallMs: HOME_WRITER_LIMITS.wallMs * (chatgptPlan ? 2 : 1) }, runDeadline, now);
 }
 
+/** Spec 2026-11-04 §5: room for two visual reviews after the writer's own wall. */
+export const HOME_WRITER_REVIEW_MS = 360_000;
+/** The generation run's deadline for a home writer run: the writer's wall (twice on the ChatGPT plan), its headroom and the reviews. */
+export function homeWriterRunTimeout(chatgptPlan: boolean): number {
+  return agentRunHeadroom(HOME_WRITER_LIMITS.wallMs * (chatgptPlan ? 2 : 1)) + HOME_WRITER_REVIEW_MS;
+}
+
 /** The writer's loop on its own: testable without a generation run. */
 export async function runHomeWriterLoop(input: LoopInput) {
   const workspace = new AgentWorkspace(input.files, { redesign: true, lockedShell: true });
@@ -167,7 +174,7 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
     await prisma.storeSourceGeneration.updateMany({ where: { id: runId, status: 'RUNNING' }, data: { attempts: attempts as unknown as Prisma.InputJsonValue } });
     await metering?.record(storeId, 'source-generation', plan.model, body, durationMs, status);
   };
-  const effort = config.get<'low' | 'medium' | 'high'>('app.yapiFirstDesignEffort') ?? 'low';
+  const effort = config.get<'low' | 'medium' | 'high'>('app.yapiHomeWriterEffort') ?? 'high';
   const model = agentProvider
     ? anthropicAgentModel({ endpoint: agentProvider.endpoint, apiKey: agentProvider.apiKey, model: plan.model, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), signal, onTurn })
     : openAiAgentModel({ endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: effort, signal, onTurn,

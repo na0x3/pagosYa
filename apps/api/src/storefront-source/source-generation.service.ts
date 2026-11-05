@@ -139,7 +139,7 @@ import { assembleSourceSave, designMotifs, type LookChoice, type SaveAssemblyCon
 import { runSep5AuthorStage } from './source-sep5-stage';
 import { runChatKitTouch, type ReviewControls } from './source-sep5-review';
 import { runAgentStage } from './source-agent-stage';
-import { runHomeWriterStage } from './source-home-writer-stage';
+import { homeWriterRunTimeout, runHomeWriterStage } from './source-home-writer-stage';
 export type { SourceGenerationAttempt, StyleProposalResult } from './source-generation-types';
 
 // The run's constants and credit rule, and the generated-source checks, live in their own modules; re-exported for existing importers.
@@ -732,7 +732,7 @@ export class SourceGenerationService {
     // 240s default aborted the run before an average generation finished. apps/api/sep5-run.mjs, which made
     // those measurements, allowed 900s; the port carries that budget rather than the single-call default.
     // The self-review runs after the save (spec 2026-10-12), on its own budget, so the run keeps the one Sep-5 allowance.
-    const runTimeout = sep5Author ? 900_000 : agentEngine ? agentRunHeadroom(agentLimits(chatgptPlan).wallMs) : 240_000;
+    const runTimeout = execution?.homeWriter ? homeWriterRunTimeout(chatgptPlan) : sep5Author ? 900_000 : agentEngine ? agentRunHeadroom(agentLimits(chatgptPlan).wallMs) : 240_000;
     const signal = AbortSignal.any([leaseController.signal, AbortSignal.timeout(runTimeout), ...[execution?.signal, sourceRequestContext.getStore()?.signal].filter((value): value is AbortSignal => Boolean(value))]);
     const attempts: SourceGenerationAttempt[] = [];
     let sketchFile: SourceProjectFileDto | null = null;

@@ -145,6 +145,8 @@ export interface AppConfig {
    *  approved); YAPI_HOME_WRITER=0 turns it off. */
   yapiHomeWriter: boolean;
   yapiHomeWriterModel: string;
+  /** Spec 2026-11-04 §4: the writer's reasoning (YAPI_HOME_WRITER_EFFORT), high unless set. */
+  yapiHomeWriterEffort: 'low' | 'medium' | 'high';
   /** Spec 2026-10-31: after a new store's polish, YAPI composes its home from the Esencial section library (one structured call;
    *  the layout is template code). YAPI_SECTION_LIBRARY=1 turns it on; it then runs instead of the home writer. */
   yapiSectionLibrary: boolean;
@@ -544,7 +546,8 @@ export default (): { app: AppConfig } => {
     yapiAgentStepModel: process.env.YAPI_AGENT_STEP_MODEL || 'gpt-5.6-terra',
     yapiFirstDesignEffort: (['medium', 'high'] as const).find(effort => effort === process.env.YAPI_FIRST_DESIGN_EFFORT) ?? 'low',
     yapiHomeWriter: process.env.YAPI_HOME_WRITER !== '0',
-    yapiHomeWriterModel: process.env.YAPI_HOME_WRITER_MODEL || 'gpt-5.6-terra',
+    yapiHomeWriterModel: process.env.YAPI_HOME_WRITER_MODEL || 'gpt-5.6-sol',
+    yapiHomeWriterEffort: (['low', 'medium', 'high'] as const).find(level => level === process.env.YAPI_HOME_WRITER_EFFORT) ?? 'high',
     yapiSectionLibrary: process.env.YAPI_SECTION_LIBRARY === '1',
     yapiTemplatePick: process.env.YAPI_TEMPLATE_PICK === '1',
     yapiTemplateRandom: process.env.YAPI_TEMPLATE_RANDOM ?? '',

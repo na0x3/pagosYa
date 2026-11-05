@@ -15,7 +15,8 @@ export const HOME_PATH = 'components/home.tsx';
 export const FOOTER_PATH = 'components/footer.tsx';
 /** Spec 2026-11-04 writer on templates: the themed template the store wears (its id, name and the sections it filled). */
 export type WriterTemplate = { id: string; name: string; layout: unknown[] };
-export const HOME_WRITER_LIMITS = { toolCalls: 24, wallMs: 360_000, screenshots: 4 };
+/** Spec 2026-11-04 §4 (owner: «i dont care if cheap or costly i want good stores»): the strongest settings. */
+export const HOME_WRITER_LIMITS = { toolCalls: 40, wallMs: 900_000, screenshots: 8 };
 const GLOBALS = 'styles/globals.css';
 const strictTool = (name: string, description: string, properties: Record<string, object>): AgentToolDefinition =>
   ({ type: 'function', name, description, parameters: { type: 'object', additionalProperties: false, properties, required: Object.keys(properties) }, strict: true });
@@ -28,7 +29,7 @@ export const HOME_WRITER_TOOLS: readonly AgentToolDefinition[] = [
   strictTool('write_footer', 'Escribe components/footer.tsx COMPLETO: export default function StoreFooter() con el pie de la tienda. Los textos van como texto JSX literal.', { content: text }),
   strictTool('set_tokens', 'Fija los 5 colores de la tienda (hex) y dos fuentes del catálogo (ids de read_chassis).', { paper: hex, ink: hex, muted: hex, accent: hex, deep: hex, heading: text, body: text }),
   strictTool('check', 'Comprueba la portada en escritorio y celular: lo que debes corregir, los consejos y las dos capturas.', {}),
-  strictTool('screenshot', 'Otra captura de la portada, solo si check no bastó (máximo 4 en total).', { width: { type: 'integer', enum: [1280, 390] } }),
+  strictTool('screenshot', 'Otra captura de la portada, solo si check no bastó (máximo 8 en total).', { width: { type: 'integer', enum: [1280, 390] } }),
   strictTool('finish', 'Termina: resumen para el comercio en español, 1–2 frases simples, sin términos técnicos.', { summary: text }),
 ];
 

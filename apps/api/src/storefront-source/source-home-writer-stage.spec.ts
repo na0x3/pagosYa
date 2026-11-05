@@ -1,13 +1,14 @@
 import { templateManifest, templateSourceFiles } from '@pagosya/store-templates';
 import { resolvePresetTemplate, templateDemoRevision } from './source-templates';
 import { nextSourceFile } from './source-next';
-import { brandColoursOf, homeWriterDna, writerTemplate, homeWriterInstructions, homeWriterLimits, homeWriterTask, runHomeWriterLoop, runHomeWriterStage } from './source-home-writer-stage';
+import { brandColoursOf, homeWriterDna, writerTemplate, homeWriterRunTimeout, HOME_WRITER_REVIEW_MS, homeWriterInstructions, homeWriterLimits, homeWriterTask, runHomeWriterLoop, runHomeWriterStage } from './source-home-writer-stage';
 import { HOME_DIRECTIONS, HOME_FOOTERS, HOME_PLAYFUL_BRIEF } from './home-directions';
 import { HOME_PATH, HOME_WRITER_LIMITS } from './agent/home-writer-tools';
 import { masterThemeBlock, withMasterTheme } from './source-master';
 import { SOURCE_FONT_IDS } from './source-font-catalog';
 import { SourceRequestBudget } from './source-request-budget';
 import { openAiAgentModel } from './agent/agent-model';
+import { agentRunHeadroom } from './agent/agent-loop';
 import { validateNextSources } from './source-next';
 
 jest.mock('./agent/agent-model', () => ({ ...jest.requireActual('./agent/agent-model'), openAiAgentModel: jest.fn() }));
@@ -65,7 +66,7 @@ describe('home writer review fixes (2026-10-29)', () => {
     expect(homeWriterLimits(true, now + 400_000, now).wallMs).toBeLessThan(400_000);
     expect(homeWriterLimits(true, now + 400_000, now).toolCalls).toBe(HOME_WRITER_LIMITS.toolCalls);
   });
-  it('the stage asks the model with a prompt cache key, low reasoning and the run\'s limits', async () => {
+  it('the stage asks the model with a prompt cache key, high reasoning (spec 2026-11-04 §4) and the run\'s limits', async () => {
     const options: any[] = [];
     (openAiAgentModel as jest.Mock).mockImplementation((opts: any) => { options.push(opts); return async () => { throw Object.assign(new Error('stop'), {}); }; });
     const facts: any = { prisma: { storeSourceGeneration: { updateMany: jest.fn() } }, config: { get: () => undefined }, metering: undefined, storeId: 's1', runId: 'r1', dto: { brief: base.brief, instruction: 'Diseña la portada' },
@@ -73,7 +74,7 @@ describe('home writer review fixes (2026-10-29)', () => {
       progress: undefined, previousFiles: base.files, oldFiles: base.files, assets: [], images: [], data: { storeName: 'x' }, chatgptPlan: true, started: Date.now(), runTimeout: 3_600_000 };
     const live: any = { generated: { label: '', files: [] }, lenient: false };
     await expect(runHomeWriterStage({ facts, live, acceptCandidate: async () => undefined, resume: {} as any })).rejects.toThrow(/portada/);
-    expect(options[0]).toMatchObject({ reasoningEffort: 'low', model: 'gpt-5.6-terra' });
+    expect(options[0]).toMatchObject({ reasoningEffort: 'high', model: 'gpt-5.6-terra' });
     expect(typeof options[0].promptCacheKey).toBe('string');
   });
 });
@@ -196,5 +197,15 @@ describe('writer on a template (spec 2026-11-04)', () => {
     expect(text).not.toContain('write_footer');
     expect(text).toContain('plantilla Sorbo');
     expect(homeWriterInstructions()).toContain('write_footer');
+  });
+});
+
+describe('writer limits (spec 2026-11-04 §4)', () => {
+  it('40 calls, 15 minutes, 8 screenshots', () => {
+    expect(HOME_WRITER_LIMITS).toEqual({ toolCalls: 40, wallMs: 900_000, screenshots: 8 });
+  });
+  it('the run outlasts the writer\'s wall plus two reviews, twice the wall on the ChatGPT plan', () => {
+    expect(homeWriterRunTimeout(false)).toBe(agentRunHeadroom(900_000) + HOME_WRITER_REVIEW_MS);
+    expect(homeWriterRunTimeout(true)).toBe(agentRunHeadroom(1_800_000) + HOME_WRITER_REVIEW_MS);
   });
 });

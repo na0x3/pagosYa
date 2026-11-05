@@ -1589,7 +1589,7 @@ export class SourceChatService {
         // Spec 2026-10-29: with the home writer on, the polished store goes to the writer; the check follows the writer.
         const writerFollowUp = (revision: number): SourceMessageInput => ({ instruction: `${HOME_WRITER_BRIEF}${input.checklistWords ? `\n\nMensaje del comercio:\n${input.checklistWords}` : ''}`,
           revision, personalTouch: true, homeWriter: true, firstDesign: true, redesign: true, ...(input.checklistWords ? { checklistWords: input.checklistWords } : {}), requestId: randomUUID(),
-          model: (this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-terra') as SourceMessageInput['model'] });
+          model: (this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] });
         const writerOn = this.config.get<boolean>('app.yapiHomeWriter') === true;
         // Spec 2026-10-31: with the section library on, it composes the home instead of the writer; the check follows it.
         const libraryOn = this.config.get<boolean>('app.yapiSectionLibrary') === true;

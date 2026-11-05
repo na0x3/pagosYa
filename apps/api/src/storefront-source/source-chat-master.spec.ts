@@ -811,7 +811,7 @@ describe('the home page writer', () => {
   it('with the switch on, the polish hands the store to the writer, which carries the merchant\'s words', async () => {
     fillMaster.mockResolvedValueOnce(read);
     const out = await polish();
-    expect(out.followUp).toMatchObject({ homeWriter: true, firstDesign: true, redesign: true, revision: 3, model: 'gpt-5.6-terra', checklistWords: 'Café de altura' });
+    expect(out.followUp).toMatchObject({ homeWriter: true, firstDesign: true, redesign: true, revision: 3, model: 'gpt-5.6-sol', checklistWords: 'Café de altura' });
     expect(out.followUp.briefCheck).toBeUndefined();
   });
   it('with the switch off, the polish goes straight to the check as before', async () => {

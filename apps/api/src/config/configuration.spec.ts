@@ -416,16 +416,26 @@ describe('home page writer switch', () => {
     if (original.model === undefined) delete process.env.YAPI_HOME_WRITER_MODEL; else process.env.YAPI_HOME_WRITER_MODEL = original.model;
   });
   // Owner 2026-10-30 («its really good»): the writer is the default build path; YAPI_HOME_WRITER=0 turns it off.
-  it('is on unless set to 0, and runs on terra unless a model is named', () => {
+  it('is on unless set to 0, and runs on sol unless a model is named', () => {
     delete process.env.YAPI_HOME_WRITER; delete process.env.YAPI_HOME_WRITER_MODEL;
     expect(configuration().app.yapiHomeWriter).toBe(true);
-    expect(configuration().app.yapiHomeWriterModel).toBe('gpt-5.6-terra');
+    expect(configuration().app.yapiHomeWriterModel).toBe('gpt-5.6-sol');
     process.env.YAPI_HOME_WRITER = '0';
     expect(configuration().app.yapiHomeWriter).toBe(false);
     process.env.YAPI_HOME_WRITER = '1';
-    process.env.YAPI_HOME_WRITER_MODEL = 'gpt-5.6-sol';
+    process.env.YAPI_HOME_WRITER_MODEL = 'gpt-5.6-terra';
     expect(configuration().app.yapiHomeWriter).toBe(true);
-    expect(configuration().app.yapiHomeWriterModel).toBe('gpt-5.6-sol');
+    expect(configuration().app.yapiHomeWriterModel).toBe('gpt-5.6-terra');
+  });
+  it('reasons high unless YAPI_HOME_WRITER_EFFORT names another level', () => {
+    const before = process.env.YAPI_HOME_WRITER_EFFORT;
+    delete process.env.YAPI_HOME_WRITER_EFFORT;
+    expect(configuration().app.yapiHomeWriterEffort).toBe('high');
+    process.env.YAPI_HOME_WRITER_EFFORT = 'medium';
+    expect(configuration().app.yapiHomeWriterEffort).toBe('medium');
+    process.env.YAPI_HOME_WRITER_EFFORT = 'loud';
+    expect(configuration().app.yapiHomeWriterEffort).toBe('high');
+    if (before === undefined) delete process.env.YAPI_HOME_WRITER_EFFORT; else process.env.YAPI_HOME_WRITER_EFFORT = before;
   });
 });
 

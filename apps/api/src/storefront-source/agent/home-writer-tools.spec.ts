@@ -4,7 +4,7 @@ import { SOURCE_FONT_CATALOG } from '../source-font-catalog';
 import { nextSourceFile } from '../source-next';
 import { MASTER_THEME_END, MASTER_THEME_START, masterThemeBlock } from '../source-master';
 import { AgentWorkspace } from './agent-workspace';
-import { FOOTER_PATH, HomeWriterToolbox, HOME_PATH, HOME_WRITER_TOOLS, footerProblems, homeWriterTools, inventedClasses, nearColour, shellWithStoreFooter, shoutedHeadings, templateFonts } from './home-writer-tools';
+import { FOOTER_PATH, HomeWriterToolbox, HOME_PATH, HOME_WRITER_LIMITS, HOME_WRITER_TOOLS, footerProblems, homeWriterTools, inventedClasses, nearColour, shellWithStoreFooter, shoutedHeadings, templateFonts } from './home-writer-tools';
 
 // Spec 2026-10-29 home page writer §2: five tools plus finish, on the locked Esencial chassis.
 jest.setTimeout(240_000);
@@ -102,9 +102,9 @@ describe('HomeWriterToolbox', () => {
     // Review 2026-10-30: the merchant's progress shows the check's capture now that screenshot calls are rare.
     expect(b.steps.find(step => step.kind === 'check')?.thumbnail).toBeTruthy();
   });
-  it('stops screenshots after four', async () => {
+  it('stops screenshots at the limit (8, spec 2026-11-04 §4)', async () => {
     const b = box();
-    for (let i = 0; i < 4; i++) expect((await b.run('screenshot', JSON.stringify({ width: 390 }))).image).toBeTruthy();
+    for (let i = 0; i < HOME_WRITER_LIMITS.screenshots; i++) expect((await b.run('screenshot', JSON.stringify({ width: 390 }))).image).toBeTruthy();
     expect((await b.run('screenshot', JSON.stringify({ width: 390 }))).output).toMatch(/No quedan capturas/);
   });
   it('acceptIfBuildable ships a changed draft whose last check was clean, and nothing else', async () => {
