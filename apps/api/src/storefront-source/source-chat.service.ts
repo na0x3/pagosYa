@@ -1,3 +1,4 @@
+import { SourceThumbnailsService } from './source-thumbnails.service';
 import { outsideFocus, pointFocus } from './source-point-focus';
 import { randomUUID } from 'node:crypto';
 import { SOURCE_MODEL_CHOICES } from './source-generation-policy';
@@ -270,7 +271,7 @@ export class SourceChatService {
   homeMeasurer = measureBuiltHome;
   private readonly productLogger = new Logger('ProductSource');
   constructor(private readonly prisma: PrismaService, private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly dialogue: SourceConversationService, private readonly templates: SourceTemplatesService, private readonly config: ConfigService, @Optional() private readonly uploads?: UploadsService,
-    @Optional() private readonly plans?: SourceStorePlanService) {}
+    @Optional() private readonly plans?: SourceStorePlanService, @Optional() private readonly thumbnails?: SourceThumbnailsService) {}
   /** Spec 2026-10-12: how long a pick or a new request waits for a style run that is stopping to let go of the store. */
   /** Computed on first use from the deadlines the style run awaits (source-style-release.ts); tests set it directly. */
   protected styleReleaseWaitMs?: number;
@@ -1108,6 +1109,17 @@ export class SourceChatService {
    *  nothing for them: the usual edit then runs with the whole request. */
   private async templateLayoutEdit(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, input: SourceMessageInput, revision: number, layout: LayoutBlock[]) {
     const files = ((await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot).files;
+    // Spec 2026-11-05 point-at: a circle comes with a picture of the area, drawn beside the store-state read, at most 20 s.
+    const area = input.selection?.area;
+    const picture: Promise<Buffer | null> = area && this.thumbnails ? (() => {
+      let timer: NodeJS.Timeout | undefined;
+      const late = new Promise<null>(resolve => { timer = setTimeout(() => { this.productLogger.warn(JSON.stringify({ event: 'point_picture_failed', storeId, reason: 'timeout' })); resolve(null); }, 20_000); });
+      const drawn = this.thumbnails!.region(merchantId, storeId, revision, area).catch(error => {
+        this.productLogger.warn(JSON.stringify({ event: 'point_picture_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
+        return null;
+      });
+      return Promise.race([drawn, late]).finally(() => clearTimeout(timer));
+    })() : Promise.resolve(null);
     const productLayout = (readMasterState(files).productLayout ?? []) as LayoutBlock[];
     // Spec 2026-11-05: the menu pages' own sections ([] = the page shows only its text today).
     const savedPages = (readMasterState(files).pageLayouts ?? {}) as Record<string, unknown>;
@@ -1122,9 +1134,10 @@ export class SourceChatService {
     const focus = pointFocus({ instruction: input.instruction, selection: input.selection, viewing: input.viewing });
     const focusPage = focus && (MENU_PAGES as readonly string[]).includes(focus.pagina) ? MENU_PAGE_URLS[focus.pagina as MenuPage] : undefined;
     const menuPages = menuPagesFor(pages, input.instruction, focusPage ?? input.currentPage);
+    const shot = await picture;
     const read = await this.dialogue.editLayout(merchantId, { storeId, layout, request: input.instruction, ...(productLayout.length ? { productLayout } : {}),
       ...(menuPages ? { pages: menuPages.pages as Record<string, LayoutBlock[]>, offerPages: menuPages.offer } : {}), templateTypes,
-      ...(editState ? { store: editState, photos } : {}), ...(focus ? { focus } : {}) });
+      ...(editState ? { store: editState, photos } : {}), ...(focus ? { focus } : {}), ...(shot ? { picture: shot } : {}) });
     if (!read) return null;
     // Fix 3 (2026-11-02, goodProtein #12: a new section went to the design agent, ~18 min, never mounted): a section the merchant asks
     // for comes from the library, filled with the store's words and photos the way the template was — on the home or a menu page.

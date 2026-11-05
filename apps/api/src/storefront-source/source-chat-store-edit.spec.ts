@@ -60,6 +60,37 @@ it('the section on screen reaches the edit only with «aquí»', async () => {
   expect(editLayout.mock.calls[1][1].focus).toBeUndefined();
 });
 
+const circle = { points: [0, 0, 90, 0, 90, 90], rect: { x: 0, y: 0, width: 90, height: 90 }, sections: [{ page: 'home', at: 0, label: 'Gelato' }], texts: [], photos: [], parts: [], width: 1280, pageQuery: 'index.html' };
+it('a circle sends a picture of the area; a failed picture still edits, without it', async () => {
+  editLayout.mockResolvedValue(read());
+  const region = jest.fn().mockResolvedValueOnce(Buffer.from('jpg')).mockRejectedValueOnce(new Error('browser died'));
+  (chat as any).thumbnails = { region };
+  await pointed('cambia esta foto', { selection: { sectionId: 'lb-0', area: circle } });
+  expect(region).toHaveBeenCalledWith('m1', 's1', 5, expect.objectContaining({ pageQuery: 'index.html', width: 1280 }));
+  expect(editLayout.mock.calls[0][1].picture).toEqual(Buffer.from('jpg'));
+  await pointed('cambia esta foto', { selection: { sectionId: 'lb-0', area: circle } });
+  expect(editLayout.mock.calls[1][1].picture).toBeUndefined();
+});
+
+it('a picture that takes longer than 20 s is dropped', async () => {
+  jest.useFakeTimers();
+  try {
+    editLayout.mockResolvedValue(read());
+    (chat as any).thumbnails = { region: jest.fn(() => new Promise(() => undefined)) };
+    const done = pointed('cambia esta foto', { selection: { sectionId: 'lb-0', area: circle } });
+    await jest.advanceTimersByTimeAsync(20_001);
+    await done;
+    expect(editLayout.mock.calls[0][1].picture).toBeUndefined();
+  } finally { jest.useRealTimers(); }
+});
+
+it('a click (no circle) never draws a picture', async () => {
+  editLayout.mockResolvedValue(read());
+  const region = jest.fn(); (chat as any).thumbnails = { region };
+  await pointed('hazla más corta', { selection: { sectionId: 'lb-0', at: 0, page: 'home' } });
+  expect(region).not.toHaveBeenCalled();
+});
+
 it('sends the store data, the product page and the photos to the one edit call', async () => {
   editLayout.mockResolvedValue(read());
   await edit('cambia la foto de la portada por esta', ['/v1/uploads/bead01.jpg']);

@@ -31,4 +31,12 @@ describe('store thumbnails', () => {
     expect((await svc.thumbnail('m', 'store-1', 3)).toString()).toBe('fresh');
     expect(draw).toHaveBeenCalledTimes(1);
   });
+
+  // Spec 2026-11-05 point-at: the picture of a circled area.
+  it('clips the circled rect plus 48 px, inside the page, never past 1400 × 1000', () => {
+    const { regionClip } = require('./source-thumbnails.service');
+    expect(regionClip({ rect: { x: 100, y: 200, width: 300, height: 100 }, width: 1280 })).toEqual({ x: 52, y: 152, width: 396, height: 196 });
+    expect(regionClip({ rect: { x: 10, y: 10, width: 3000, height: 3000 }, width: 1280 })).toEqual({ x: 0, y: 0, width: 1280, height: 1000 });
+    expect(regionClip({ rect: { x: 1200, y: 0, width: 200, height: 50 }, width: 1280 })).toEqual({ x: 1152, y: 0, width: 128, height: 98 });
+  });
 });
