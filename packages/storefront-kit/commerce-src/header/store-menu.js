@@ -242,7 +242,9 @@
       if (focus) (mode === 'panel' ? tabs.find(tab => tab.getAttribute('aria-selected') === 'true') : focusable()[0])?.focus({ preventScroll: true });
     }
     toggle.addEventListener('click', () => (panel.hidden || panel.getAttribute('data-mode') !== 'panel' ? open('panel', 0, toggle, true) : close(true)));
-    tops.forEach((top, index) => {
+    // Each top button opens its own group: direct page links (plain <a>) are not buttons, so the list index is not the group's.
+    tops.forEach(top => {
+      const index = Number(top.getAttribute('data-store-menu-top'));
       top.addEventListener('click', () => { clearTimeout(openTimer); clearTimeout(closeTimer); if (!panel.hidden && opener === top && openedBy === 'click') close(false); else open('dropdown', index, top, true); });
       top.addEventListener('pointerenter', event => { if (!mouse(event)) return; clearTimeout(closeTimer); clearTimeout(openTimer); if (!panel.hidden && openedBy === 'click') return; openTimer = setTimeout(() => open('dropdown', index, top, false, 'hover'), STORE_MENU_OPEN_MS); });
       top.addEventListener('pointerleave', event => { if (!mouse(event)) return; clearTimeout(openTimer); if (panel.getAttribute('data-mode') === 'dropdown' && openedBy === 'hover') closeTimer = setTimeout(() => close(false), STORE_MENU_CLOSE_MS); });

@@ -248,11 +248,17 @@ it('reads the question YAPI asks back, and the schema always asks for one', () =
 
 describe('items inside a section (spec 2026-11-05 creates anything)', () => {
   const steps: LayoutBlock[] = [{ type: 'cover-split', title: 'Hola' }, { type: 'story-list', title: 'Pasos', items: [{ title: 'Uno' }, { title: 'Dos' }, { title: 'Tres' }] }];
-  it('adds an item where asked and the text op hits the new number', () => {
-    const out = applyLayoutOps(steps, [op({ op: 'item-add', at: 1, item: 1, value: 'Uno y medio' }), op({ op: 'text', at: 1, item: 1, field: 'text', value: 'Entre uno y dos' })], []);
-    expect(out.layout[1].items!.map(i => i.title)).toEqual(['Uno', 'Uno y medio', 'Dos', 'Tres']);
-    expect(out.layout[1].items![1].text).toBe('Entre uno y dos');
-    expect(out.done[0]).toContain('agregué el punto «Uno y medio»');
+  // Final review 2026-11-05: item numbers are the ones the model saw; a new item brings its text on a second line.
+  it('adds an item before the item it names, with its text, and other ops keep the numbers that were shown', () => {
+    const out = applyLayoutOps(steps, [op({ op: 'item-add', at: 1, item: 1, value: 'Uno y medio\nEntre uno y dos' }), op({ op: 'text', at: 1, item: 1, field: 'text', value: 'Segundo' })], []);
+    expect(out.layout[1].items!.map(i => [i.title, i.text])).toEqual([['Uno', undefined], ['Uno y medio', 'Entre uno y dos'], ['Dos', 'Segundo'], ['Tres', undefined]]);
+    expect(out.done.join(' ')).toContain('agregué el punto «Uno y medio»');
+    const appended = applyLayoutOps(steps, [op({ op: 'item-add', at: 1, item: -1, value: 'Cuatro\nX' }), op({ op: 'text', at: 1, item: -1, field: 'title', value: 'Pasos' })], []);
+    expect(appended.layout[1].items!.at(-1)).toEqual({ title: 'Cuatro', text: 'X' });
+  });
+  it('«quita el paso 1 y cambia el paso 3» changes the third step that was shown', () => {
+    const out = applyLayoutOps(steps, [op({ op: 'item-remove', at: 1, item: 0 }), op({ op: 'text', at: 1, item: 2, field: 'title', value: 'Tres nuevo' })], []);
+    expect(out.layout[1].items!.map(i => i.title)).toEqual(['Dos', 'Tres nuevo']);
   });
   it('appends with item -1, removes and moves', () => {
     expect(applyLayoutOps(steps, [op({ op: 'item-add', at: 1, item: -1, value: 'Cuatro' })], []).layout[1].items!.at(-1)!.title).toBe('Cuatro');

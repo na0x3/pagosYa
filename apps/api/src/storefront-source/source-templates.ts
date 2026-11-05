@@ -19,7 +19,7 @@ import { withSourceCommerceDesign } from './source-commerce-design';
 import { withSourceMotion } from './source-motion';
 import { buildSourceVisualSystem, withSourceStyleTokens, SOURCE_VISUAL_SYSTEM_FILE } from './source-visual-system';
 import { sourceStoreConfigData, type SourcePublicStore } from './source-store-config';
-import { menuFromVariant, storeMenuContext, type StoreMenuGroup } from './source-store-menu';
+import { menuFromVariant, storeMenuContext, withExtraPageLinks, type StoreMenuGroup } from './source-store-menu';
 import { isFilterStyle } from './source-filter-style';
 import { buildFeatures, eligibleFeatures, featureFacts, rollFeatures } from './source-master-features';
 import type { ExtraPage } from './source-extra-pages';
@@ -423,7 +423,10 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
       const style = masterProductStyle(variants).productPageStyle ?? (productPageStyle === 'fashion' ? undefined : productPageStyle);
       // Dropdown menu spec 2026-10-21: header.menu follows the menu variant; a refill that names no menu keeps its groups.
       const { menu: savedMenu, ...header } = config.header ?? {};
-      const menu = menuIds.length ? menuFromVariant(variants.menu, change.menu ? absoluteTiles(change.menu.groups, apiUrl) : savedMenu?.groups, storeMenuContext(config.data ?? {}, files)) : savedMenu;
+      const built = menuIds.length ? menuFromVariant(variants.menu, change.menu ? absoluteTiles(change.menu.groups, apiUrl) : savedMenu?.groups, storeMenuContext(config.data ?? {}, files)) : savedMenu;
+      // The pages YAPI made keep their links whatever the refill rebuilt (final review 2026-11-05, creates anything).
+      const extraPages = (change.extraPages ?? state.extraPages ?? []) as ExtraPage[];
+      const menu = extraPages.length ? withExtraPageLinks(built ?? undefined, extraPages).menu : built;
       const withHeader = config.header || menu ? { header: { ...header, ...(menu ? { menu } : {}) } } : {};
       return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...rest, ...(style ? { productPageStyle: style } : {}), ...(change.variants?.filters || !isFilterStyle(rest.filterStyle) ? masterFilterStyle(variants) : {}), ...withHeader, dna: { ...config.dna, ...masterDnaFonts(settings, look), ...masterDnaLook({ ...(state.variants ?? {}), ...(change.variants ?? {}) }), ...Object.fromEntries(Object.entries(change.dna ?? {}).filter(([name, value]) => SOURCE_DNA_RUNTIME_ENUMS[name]?.includes(value))) }, showcase: { ...(config.showcase ?? {}), ...masterShowcase(variants) } })};\n` };
     }

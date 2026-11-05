@@ -13,6 +13,8 @@ it('makes a slug from the name, never an existing page', () => {
   expect(extraPageSlug('Mi página', files, [])).toBe('mi-pagina-2');
   expect(extraPageSlug('Novias', files, [{ slug: 'novias', name: 'Novias', menu: '', layout: [] }])).toBe('novias-2');
   expect(extraPageSlug('¡!', files, [])).toBeNull();
+  // Final review 2026-11-05: the quick edit's own page names are never a page address.
+  for (const name of ['Home', 'Product', 'About', 'Contact', 'FAQ', 'Shipping', 'Nueva']) expect(extraPageSlug(name, [], [])).toBe(`${name.toLowerCase()}-2`);
 });
 
 it('writes one marked file per page and removes only its own', () => {

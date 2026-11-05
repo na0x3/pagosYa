@@ -10,7 +10,9 @@ export const EXTRA_PAGE_LIMIT = 6;
 /** The build makes an HTML page only for files whose first line says @pagosya-page (live NOA 2026-11-05: novias.html was missing). */
 export const EXTRA_PAGE_MARK = '// @pagosya-page @pagosya-extra-page';
 const OLDER_MARK = '// @pagosya-extra-page';
+// The quick edit's own page names (home, product, the menu pages, «nueva») are never a page address (final review 2026-11-05).
 const RESERVED = new Set(['index', 'producto', 'productos', 'coleccion', 'checkout', 'buscar', 'nosotros', 'contacto', 'faq', 'envios', 'nueva',
+  'home', 'product', 'about', 'contact', 'shipping',
   ...STOREFRONT_PAGES.map(page => page.url.replace(/\.html$/, ''))]);
 
 /** The page's address from its name; never a page the store already has (a clash gets -2, -3…). Null when the name has no letters. */

@@ -46,6 +46,15 @@ async function open({ menu, data = DATA, host = HOST, extra = {} }: { menu?: unk
 
 describe('store menu', () => {
   // YAPI creates anything (spec 2026-11-05): a page YAPI made is a plain link in the bar, after the kit's own menu when the store set none.
+  // Final review 2026-11-05: a dropdown after a direct page link opens its own panel, not the one before it.
+  it('a dropdown placed after a direct link opens its own group', async () => {
+    const { all } = await open({ menu: { style: 'dropdowns', groups: [{ label: 'Tienda', links: [{ to: 'all' }] }, { label: 'Novias', direct: true, links: [{ label: 'Novias', to: 'extra:novias' }] }, { label: 'Telas', links: [{ to: 'category:c3' }] }] } });
+    const telas = all('[data-pagosya-store-menu="links"] .pym-top').find((top: any) => top.textContent === 'Telas');
+    telas.click();
+    const shown = all('.pym-group').filter((group: any) => !group.hidden);
+    expect(shown).toHaveLength(1);
+    expect(shown[0].textContent).toContain('Seda');
+  });
   it('draws a direct extra-page link in the bar and keeps the default menu when that is all the store set', async () => {
     const { all } = await open({ menu: { style: 'dropdowns', groups: [{ label: 'Novias', direct: true, links: [{ label: 'Novias', to: 'extra:novias' }] }] } });
     const tops = all('[data-pagosya-store-menu="links"] .pym-top');

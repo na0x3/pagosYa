@@ -373,3 +373,15 @@ it('the sections CSS keeps menu panels full width under the boxed header and hid
   expect(css).toContain('.es-explore__rail[hidden],.es-capsule__cards[hidden]{display:none}');
 });
 
+
+// Final review 2026-11-05 (creates anything): a refill rebuilds header.menu from the menu variant; the links of the pages YAPI made
+// must come back every time, not only when a page changes.
+describe('pages YAPI made keep their menu link through any refill', () => {
+  const withMenu = { ...manifest, master: { ...master, variants: { menu: ['none', 'dropdowns'] } } } as unknown as TemplateManifest;
+  const configOf = (files: Array<{ path: string; content: string }>) => JSON.parse(files.find(f => f.path === 'config.js')!.content.match(/=\s*([\s\S]*?);?\s*$/)![1]);
+  it('keeps the link after an unrelated edit', () => {
+    const first = refillMasterFiles(storeFiles(), withMenu, { extraPages: [{ slug: 'novias', name: 'Novias', menu: '', layout: [] }] });
+    const again = refillMasterFiles(first, withMenu, { copy: { headline: 'Otra' } });
+    expect(JSON.stringify(configOf(again).header?.menu ?? null)).toContain('extra:novias');
+  });
+});

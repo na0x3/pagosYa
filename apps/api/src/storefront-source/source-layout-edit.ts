@@ -96,10 +96,11 @@ Operaciones de «ops» (todos los campos van siempre; los que no se usan: field 
 - text: cambia un texto de la sección at. field = eyebrow (línea pequeña sobre el título), title, text, cta (texto del botón) o cta2.
   item = -1 para el texto de la sección; o el número del punto (items, desde 0) para cambiar su title o su text. value = el texto
   nuevo; si el comercio dio las palabras, cópialas exactas. value vacío quita ese texto.
-- item-add: agrega un punto (un paso, una tarjeta, una pregunta, una reseña…) a la sección at. item = el lugar donde va (0 = primero;
-  -1 = al final); value = su title. Su text y su foto van después como ops text / photo con item = ese mismo número. Solo con las
-  palabras del comercio o datos de «tienda»; si faltan, no lo agregues y pregunta con «ask» («¿Qué dice el nuevo paso?»).
-- item-remove: quita el punto item de la sección at. item-move: pone el punto item en el lugar to.
+- item-add: agrega un punto (un paso, una tarjeta, una pregunta, una reseña…) a la sección at, antes del punto item (-1 = al final).
+  value = su title; si lleva texto, en una segunda línea («Entrega\nRecoges tu vestido en el atelier»). Solo con las palabras del
+  comercio o datos de «tienda»; si faltan, no lo agregues y pregunta con «ask» («¿Qué dice el nuevo paso?»).
+- item-remove: quita el punto item de la sección at. item-move: pone el punto item en el lugar del punto to.
+  Los números de item de todas las ops son los que ves, aunque el mismo pedido agregue o quite puntos.
 - remove: quita la sección at.
 - move: pone la sección at en el lugar de la sección to (to = 0 es arriba del todo; la última sección = al final).
 - add: agrega una sección NUEVA cuando el comercio pide algo que la portada no tiene (una guía, preguntas frecuentes, pasos, una
@@ -207,35 +208,6 @@ export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly 
   const done: string[] = [];
   const refused: string[] = [];
   const known = (at: number) => Number.isInteger(at) && at >= 0 && at < blocks.length;
-  // Items inside a section (spec 2026-11-05 creates anything): added, removed and moved first, so later text/photo ops use the
-  // numbers after them. The section type's needs.items is the limit.
-  for (const op of ops.filter(entry => entry.op === 'item-add' || entry.op === 'item-remove' || entry.op === 'item-move')) {
-    if (!known(op.at)) continue;
-    const block = blocks[op.at];
-    const limits = LIBRARY_CATALOG.find(section => section.id === block.type)?.needs.items;
-    if (!limits) { refused.push(`${upper(placeOf(layout[op.at]))} no tiene puntos para agregar ni quitar.`); continue; }
-    const items = block.items ?? (block.items = []);
-    if (op.op === 'item-add') {
-      const title = clip(op.value, ITEM_CAP.title);
-      if (!title) continue;
-      if (items.length >= limits[1]) { refused.push(`Los puntos de ${placeOf(layout[op.at])} ya son ${limits[1]}, el máximo de esa sección: quita uno o cambia uno de los que hay.`); continue; }
-      const at = Number.isInteger(op.item) && op.item >= 0 && op.item <= items.length ? op.item : items.length;
-      items.splice(at, 0, { title });
-      done.push(`agregué el punto «${title}» a ${placeOf(layout[op.at])}`);
-    } else if (op.op === 'item-remove') {
-      const item = items[op.item];
-      if (!item) continue;
-      if (items.length <= limits[0]) { refused.push(`${upper(placeOf(layout[op.at]))} necesita al menos ${limits[0]} puntos: cambia uno en vez de quitarlo.`); continue; }
-      items.splice(op.item, 1);
-      done.push(`quité el punto «${item.title}» de ${placeOf(layout[op.at])}`);
-    } else {
-      const item = items[op.item];
-      if (!item || !Number.isInteger(op.to) || op.to < 0 || op.to >= items.length || op.to === op.item) continue;
-      items.splice(op.item, 1); items.splice(op.to, 0, item);
-      done.push(`moví el punto «${item.title}» de ${placeOf(layout[op.at])}`);
-    }
-  }
-  // Words next (item numbers as the item ops left them).
   for (const op of ops.filter(entry => entry.op === 'text')) {
     if (!known(op.at) || !(FIELDS as readonly string[]).includes(op.field)) continue;
     const block = blocks[op.at];
@@ -277,6 +249,40 @@ export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly 
     if (block[field] === url) continue;
     block[field] = url;
     done.push(`cambié la ${field === 'photo2' ? 'segunda foto' : 'foto'} de ${placeOf(layout[op.at])}`);
+  }
+  // Items inside a section (spec 2026-11-05 creates anything), after words and photos: every item number is the one the model saw
+  // (final review 2026-11-05: «quita el paso 1 y cambia el paso 3»), so items are found by what was shown, not by place. A new item
+  // brings its text on a second line of value. The section type's needs.items is the limit.
+  const shownItems = blocks.map(block => [...(block.items ?? [])]);
+  for (const op of ops.filter(entry => entry.op === 'item-add' || entry.op === 'item-remove' || entry.op === 'item-move')) {
+    if (!known(op.at)) continue;
+    const block = blocks[op.at];
+    const limits = LIBRARY_CATALOG.find(section => section.id === block.type)?.needs.items;
+    if (!limits) { refused.push(`${upper(placeOf(layout[op.at]))} no tiene puntos para agregar ni quitar.`); continue; }
+    const items = block.items ?? (block.items = []);
+    const shown = shownItems[op.at];
+    const named = Number.isInteger(op.item) && op.item >= 0 ? shown[op.item] : undefined;
+    if (op.op === 'item-add') {
+      const [first, ...more] = String(op.value ?? '').split('\n');
+      const title = clip(first, ITEM_CAP.title);
+      const text = clip(more.join(' '), ITEM_CAP.text);
+      if (!title) continue;
+      if (items.length >= limits[1]) { refused.push(`Los puntos de ${placeOf(layout[op.at])} ya son ${limits[1]}, el máximo de esa sección: quita uno o cambia uno de los que hay.`); continue; }
+      const at = named && items.includes(named) ? items.indexOf(named) : items.length;
+      items.splice(at, 0, { title, ...(text ? { text } : {}) });
+      done.push(`agregué el punto «${title}» a ${placeOf(layout[op.at])}`);
+    } else if (op.op === 'item-remove') {
+      if (!named || !items.includes(named)) continue;
+      if (items.length <= limits[0]) { refused.push(`${upper(placeOf(layout[op.at]))} necesita al menos ${limits[0]} puntos: cambia uno en vez de quitarlo.`); continue; }
+      items.splice(items.indexOf(named), 1);
+      done.push(`quité el punto «${named.title}» de ${placeOf(layout[op.at])}`);
+    } else {
+      const target = Number.isInteger(op.to) && op.to >= 0 ? shown[op.to] : undefined;
+      if (!named || !target || named === target || !items.includes(named) || !items.includes(target)) continue;
+      items.splice(items.indexOf(named), 1);
+      items.splice(items.indexOf(target) + (op.to > op.item ? 1 : 0), 0, named);
+      done.push(`moví el punto «${named.title}» de ${placeOf(layout[op.at])}`);
+    }
   }
   // Then removals and moves, by the blocks' first numbers.
   let order = blocks.map((_, at) => at);
