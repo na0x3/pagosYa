@@ -292,3 +292,23 @@ it('a circle names the page the preview shows, with its query, whatever the fram
   await vi.waitFor(() => expect(posted).toHaveLength(1));
   expect(posted[0].area.pageQuery).toBe('nosotros.html?id=abc');
 });
+
+// Live 2026-11-05: a drag that started on words or a photo became the browser's own text selection / drag-and-drop, which cancels
+// the pointer (no pointerup), so the circle never arrived. While selecting, the page neither selects text nor drags.
+it('while selecting, a press neither selects text nor starts the browser drag, and a cancelled pointer still ends the circle', async () => {
+  const { w, posted, send } = loadTemplate();
+  box(w, '[data-lb="cover-split"]', 0, 0, 1280, 600); box(w, '[data-lb="cover-split"] h1', 100, 200, 400, 80);
+  send({ type: 'pagosya:source-edit-mode', on: true });
+  const h1 = w.document.querySelector('[data-lb="cover-split"] h1');
+  const down = new w.MouseEvent('pointerdown', { bubbles: true, cancelable: true, clientX: 120, clientY: 220 });
+  h1.dispatchEvent(down);
+  const dragStart = new w.Event('dragstart', { bubbles: true, cancelable: true });
+  h1.dispatchEvent(dragStart);
+  expect(down.defaultPrevented).toBe(true);
+  expect(dragStart.defaultPrevented).toBe(true);
+  expect(w.document.documentElement.style.userSelect).toBe('none');
+  for (const [x, y] of square(60, 60, 500).slice(1)) w.document.dispatchEvent(new w.MouseEvent('pointermove', { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+  w.document.dispatchEvent(new w.MouseEvent('pointercancel', { bubbles: true, clientX: 60, clientY: 61 }));
+  await vi.waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]).toMatchObject({ kind: 'area', sectionId: 'lb-0' });
+});

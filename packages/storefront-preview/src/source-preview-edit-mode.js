@@ -125,7 +125,14 @@
     loop.innerHTML = line + 'stroke="#fff" stroke-width="6"/>' + line + 'stroke="#18181b" stroke-width="2.5"/>';
   }
   function clearLoop() { if (loop && loop.parentNode) loop.parentNode.removeChild(loop); loop = null; }
-  function onDown(event) { if (event.button > 0) return; press = { x: event.clientX, y: event.clientY, points: [event.clientX + scrollX, event.clientY + scrollY] }; drawing = false; }
+  function onDown(event) {
+    if (event.button > 0) return;
+    // A press on words or a photo must not become the browser's own text selection or drag-and-drop: those cancel the pointer
+    // (no pointerup), so the circle never arrived (live 2026-11-05). The click that follows still selects.
+    event.preventDefault();
+    press = { x: event.clientX, y: event.clientY, points: [event.clientX + scrollX, event.clientY + scrollY] }; drawing = false;
+  }
+  function onNativeDrag(event) { event.preventDefault(); }
   function onDrag(event) {
     if (!press) return;
     if (!drawing && Math.abs(event.clientX - press.x) + Math.abs(event.clientY - press.y) < 12) return;
@@ -187,8 +194,11 @@
     window.addEventListener('pointerdown', onDown, true);
     window.addEventListener('pointermove', onDrag, true);
     window.addEventListener('pointerup', onUp, true);
-    // A finger draws the circle instead of scrolling the page.
+    window.addEventListener('pointercancel', onUp, true);
+    window.addEventListener('dragstart', onNativeDrag, true);
+    // A finger draws the circle instead of scrolling the page; nothing is text-selected while selecting.
     document.documentElement.style.touchAction = 'none';
+    document.documentElement.style.userSelect = 'none';
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('scroll', schedule, true);
     window.addEventListener('resize', schedule);
@@ -202,7 +212,10 @@
     window.removeEventListener('pointerdown', onDown, true);
     window.removeEventListener('pointermove', onDrag, true);
     window.removeEventListener('pointerup', onUp, true);
+    window.removeEventListener('pointercancel', onUp, true);
+    window.removeEventListener('dragstart', onNativeDrag, true);
     document.documentElement.style.touchAction = '';
+    document.documentElement.style.userSelect = '';
     press = null; drawing = false; swallowClick = false; clearLoop();
     window.removeEventListener('keydown', onKey, true);
     window.removeEventListener('scroll', schedule, true);
