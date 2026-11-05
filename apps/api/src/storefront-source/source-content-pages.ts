@@ -11,24 +11,35 @@ export const CONTENT_PAGE_FILES: SourceProjectFileDto[] = PAGES.map(({ group, fi
 }));
 
 /** Spec 2026-11-05 (owner: «cambia nosotros a algo más bonito»): a menu page that carries the template's sections (store-data
- *  `pageLayouts`) draws them with the template's own LibraryHome. «Nosotros» is its sections alone (they tell the story); the other
- *  pages keep the platform's live content (form, questions, shipping) under them. With no sections it is today's page. */
+ *  `pageLayouts`) draws them with the template's own LibraryHome, above the platform's live page (the about text, the form, the
+ *  questions, shipping) — review 2026-11-05: the merchant's own about text stays on the page and stays editable. InfoPage brings the
+ *  page's <main id="contenido">, so the sections are a div. With no sections it is today's page. */
 export function sectionedPageFile(kind: 'about' | 'contact' | 'faq' | 'shipping'): SourceProjectFileDto {
   const page = PAGES.find(entry => entry.kind === kind && entry.group === 'pages')!;
-  const info = `<InfoPage kind="${kind}" />`;
-  const body = kind === 'about' ? `{layout.length ? sections : ${info}}` : `{layout.length ? sections : null}${info}`;
   return {
     path: `components/${page.group}/${page.file}.tsx`,
     content: `// @pagosya-page\nimport Shell from '../Shell';\nimport { InfoPage } from '@pagosya/ui';\nimport { LibraryHome, type LibraryBlock } from '../library';\nimport { pageLayouts } from '../store-data';\n`
       + `export default function ${page.component}() {\n  const layout = (pageLayouts.${kind} ?? []) as LibraryBlock[];\n`
-      + `  const sections = <main id="contenido" data-lb-home data-lb-page="${kind}"><LibraryHome layout={layout} /></main>;\n  return <Shell>${body}</Shell>;\n}\n`,
+      + `  return <Shell>{layout.length ? <div data-lb-home data-lb-page="${kind}" style={{ overflowX: 'clip' }}><LibraryHome layout={layout} /></div> : null}<InfoPage kind="${kind}" /></Shell>;\n}\n`,
   };
 }
 
-/** The menu pages that now have sections, rewritten to draw them; only on a store whose template has the section library. */
+/** Review 2026-11-05: a menu page YAPI may draw sections on — the platform's own page or one already drawn this way; never a page
+ *  the store's own design wrote. A store without the section library has none. */
+export function sectionablePage(files: ReadonlyArray<{ path: string; content: string }>, kind: 'about' | 'contact' | 'faq' | 'shipping'): boolean {
+  if (!files.some(file => file.path === 'components/library.tsx')) return false;
+  const sectioned = sectionedPageFile(kind);
+  const current = files.find(file => file.path === sectioned.path)?.content;
+  // A page drawn from pageLayouts (any version of this file) is YAPI's own, like the platform's.
+  return current === undefined || current === sectioned.content || current === CONTENT_PAGE_FILES.find(file => file.path === sectioned.path)?.content
+    || (current.startsWith('// @pagosya-page\n') && current.includes(`pageLayouts.${kind}`));
+}
+
+/** The menu pages that now have sections, rewritten to draw them; only the pages `sectionablePage` allows. */
 export function withSectionedPages<T extends { path: string; content: string }>(files: T[], kinds: ReadonlyArray<'about' | 'contact' | 'faq' | 'shipping'>): T[] {
-  if (!kinds.length || !files.some(file => file.path === 'components/library.tsx')) return files;
-  const pages = new Map(kinds.map(kind => { const page = sectionedPageFile(kind); return [page.path, page.content] as const; }));
+  const allowed = kinds.filter(kind => sectionablePage(files, kind));
+  if (!allowed.length) return files;
+  const pages = new Map(allowed.map(kind => { const page = sectionedPageFile(kind); return [page.path, page.content] as const; }));
   return files.map(file => pages.has(file.path) ? { ...file, content: pages.get(file.path)! } : file);
 }
 

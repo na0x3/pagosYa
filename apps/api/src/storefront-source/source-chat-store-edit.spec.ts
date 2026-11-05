@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { SourceChatService } from './source-chat.service';
 import { templateStoreDataFile } from './source-templates';
+import { CONTENT_PAGE_FILES } from './source-content-pages';
 import type { LayoutBlock } from './source-section-library';
 
 /** YAPI edits everything (spec 2026-11-03): the template quick edit writes the store's own data, swaps photos and edits the product
@@ -10,6 +11,7 @@ const ficha: LayoutBlock[] = [{ type: 'steps-howto', title: 'Cómo se sirve', it
 const files = [
   templateStoreDataFile({ name: 'DooBoo' }, { hero: '' }, { copy: { headline: 'x' } as never, look: { palette: 'mono', fonts: 'zancada' } as never, variants: { theme: 'unico' } as never, layout: home, productLayout: ficha }),
   { path: 'components/page-productos.tsx', content: '<h1 className="es-catalog-page__title">Todos los productos</h1>' },
+  { path: 'components/library.tsx', content: '' },
 ];
 const read = (over: Record<string, unknown> = {}) => ({ ops: [], store: [], rest: '', ...over });
 
@@ -126,7 +128,7 @@ it('builds the Nosotros page from template sections and leaves the home alone (s
   expect(change.pageLayouts.about.map((block: LayoutBlock) => block.type)).toEqual(['cover-centered', 'story-split']);
   expect(change.pageLayouts.about[1].title).toBe('Nuestra historia');
   expect(label).toBe('Cambios de YAPI');
-  const pageFiles = options.files([{ path: 'components/library.tsx', content: '' }, { path: 'components/pages/about.tsx', content: 'old' }, { path: 'components/pages/faq.tsx', content: 'old' }]);
+  const pageFiles = options.files([{ path: 'components/library.tsx', content: '' }, CONTENT_PAGE_FILES.find(file => file.path === 'components/pages/about.tsx')!, { path: 'components/pages/faq.tsx', content: 'old' }]);
   expect(pageFiles[1].content).toContain('<LibraryHome');
   expect(pageFiles[2].content).toBe('old');
   expect(out.assistantMessage.content).toContain('a tu página «Nosotros»');
@@ -145,4 +147,16 @@ it('tells each new section the titles already on the page, so they do not repeat
   await edit('cambia nosotros a algo más bonito');
   expect(compose.mock.calls[0][1].facts.request).not.toContain('Títulos que ya están');
   expect(compose.mock.calls[1][1].facts.request).toContain('«Gelato para todos»');
+});
+
+it('never draws sections over a Nosotros page the store\'s own design wrote, and says so (review 2026-11-05)', async () => {
+  files.push({ path: 'components/pages/about.tsx', content: '// @pagosya-page\nexport default function About() { return <h1>Mi historia</h1>; }\n' });
+  try {
+    chat.dialogue.composeLibrary = jest.fn();
+    editLayout.mockResolvedValue(read({ ops: [{ op: 'add', at: -1, field: '', item: -1, value: '', to: -1, type: 'story-split', page: 'about' }] }));
+    const out = await edit('cambia nosotros a algo más bonito');
+    expect(chat.dialogue.composeLibrary).not.toHaveBeenCalled();
+    expect(refill).not.toHaveBeenCalled();
+    expect(out.assistantMessage.content).toContain('diseño propio');
+  } finally { files.pop(); }
 });

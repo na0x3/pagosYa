@@ -69,7 +69,7 @@ import { buildLibraryFacts, carriedSections, libraryDropReason, libraryMood, lib
 import { applyStoreOps, readCatalogTitle, storeChangeEmpty, withCatalogTitle, type StoreChange, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
 import { storeFaq, storePolicies } from '../stores/store-presentation';
 import { MENU_PAGES, MENU_PAGE_NAMES, applyLayoutOps, layoutAdds, layoutEditReply, type LayoutPage, type MenuPage } from './source-layout-edit';
-import { withSectionedPages } from './source-content-pages';
+import { sectionablePage, withSectionedPages } from './source-content-pages';
 import { bolivianos, readShippingAsk, type ShippingAsk } from './source-shipping-ask';
 import { plainReply } from './source-plain-reply';
 import { visibleChanges } from './source-visible-change';
@@ -1145,6 +1145,11 @@ export class SourceChatService {
     const menu: Array<{ page: MenuPage; layout: LayoutBlock[]; done: string[]; refused: string[] }> = [];
     for (const page of MENU_PAGES) {
       if (!read.ops.some(op => op.page === page)) continue;
+      // Review 2026-11-05: a page the store's own design wrote is never replaced by sections.
+      if (!sectionablePage(files, page)) {
+        menu.push({ page, layout: pages[page], done: [], refused: [`Tu página «${MENU_PAGE_NAMES[page]}» tiene un diseño propio: no la cambié con secciones de la plantilla. Pídeme el cambio de esa página y lo hago sobre su diseño.`] });
+        continue;
+      }
       const pageAdds = await compose(page, pages[page]);
       const result = applyLayoutOps(pages[page], read.ops, pageAdds.added, { page, photos });
       menu.push({ page, layout: result.layout, done: result.done, refused: [...result.refused, ...pageAdds.refusedAdds] });

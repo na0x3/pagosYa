@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { nextStoreFiles } from './fixtures/next-store';
-import { ACCOUNT_PAGE_FILES, STANDARD_PAGE_FILES, CONTENT_PAGE_FILES, sectionedPageFile, withSectionedPages, withStandardPages } from './source-content-pages';
+import { ACCOUNT_PAGE_FILES, STANDARD_PAGE_FILES, CONTENT_PAGE_FILES, sectionablePage, sectionedPageFile, withSectionedPages, withStandardPages } from './source-content-pages';
 import { compileNextPreview, nextContentPages, nextSourceFile } from './source-next';
 import { assembleTemplateRevision } from './source-templates';
 
@@ -148,23 +148,32 @@ describe('account page files', () => {
 });
 
 describe('menu pages with template sections (spec 2026-11-05)', () => {
-  it('draws Nosotros from its sections alone, and the other pages above their live content', () => {
+  it('draws every menu page\'s sections above its live content, the merchant\'s about text included (review 2026-11-05)', () => {
     const about = sectionedPageFile('about');
     expect(about.path).toBe('components/pages/about.tsx');
     expect(about.content.startsWith('// @pagosya-page\n')).toBe(true);
     expect(about.content).toContain('pageLayouts.about');
-    expect(about.content).toContain('<LibraryHome');
-    // Without sections it is still the platform's page.
-    expect(about.content).toContain('<InfoPage kind="about" />');
-    expect(sectionedPageFile('contact').content).toMatch(/<LibraryHome[\s\S]*<InfoPage kind="contact" \/>/);
+    for (const kind of ['about', 'contact'] as const) expect(sectionedPageFile(kind).content).toMatch(new RegExp(`<LibraryHome[\\s\\S]*<InfoPage kind="${kind}" />`));
+    // InfoPage brings its own <main id="contenido">: the sections never add a second one.
+    expect(about.content).not.toContain('<main');
+    expect(about.content).toContain('data-lb-home');
   });
 
-  it('rewrites only the pages that have sections, and only on a store with the section library', () => {
+  it('rewrites only the platform\'s own pages that have sections, and only on a store with the section library', () => {
     const files = [{ path: 'components/library.tsx', content: 'export function LibraryHome() { return null; }' }, ...CONTENT_PAGE_FILES];
     const out = withSectionedPages(files, ['about']);
     expect(out.find(file => file.path === 'components/pages/about.tsx')!.content).toContain('<LibraryHome');
     expect(out.find(file => file.path === 'components/pages/faq.tsx')).toEqual(CONTENT_PAGE_FILES.find(file => file.path === 'components/pages/faq.tsx'));
     expect(withSectionedPages(CONTENT_PAGE_FILES, ['about'])).toEqual(CONTENT_PAGE_FILES);
+    // Review 2026-11-05: a page the store's own design wrote is never replaced.
+    const own = files.map(file => file.path === 'components/pages/about.tsx' ? { ...file, content: '// @pagosya-page\nexport default function About() { return <h1>Mi historia</h1>; }\n' } : file);
+    expect(sectionablePage(own, 'about')).toBe(false);
+    expect(sectionablePage(files, 'about')).toBe(true);
+    expect(sectionablePage(out, 'about')).toBe(true);
+    // An earlier version of the sectioned page (live BOXY/rhode 2026-11-05) is still YAPI's own.
+    const earlier = files.map(file => file.path === 'components/pages/about.tsx' ? { ...file, content: '// @pagosya-page\nimport { pageLayouts } from \'../store-data\';\nconst layout = pageLayouts.about ?? [];\n' } : file);
+    expect(sectionablePage(earlier, 'about')).toBe(true);
+    expect(withSectionedPages(own, ['about']).find(file => file.path === 'components/pages/about.tsx')!.content).toContain('Mi historia');
   });
 
   it('compiles a Nosotros page with a cover and a story on a real template store', async () => {

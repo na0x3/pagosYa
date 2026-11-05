@@ -129,6 +129,8 @@ export function layoutAdds(layout: readonly LayoutBlock[], ops: readonly LayoutO
   const where = menu ? `Tu página «${MENU_PAGE_NAMES[page]}»` : 'Tu portada';
   for (const op of ops.filter(entry => entry.op === 'add' && (entry.page ?? 'home') === page)) {
     const type = String(op.type ?? '');
+    // The schema offers covers for the menu pages; on the home one is said, never dropped silently (review 2026-11-05).
+    if (!menu && ROLE.get(type) === 'cover') { refused.push('Tu tienda ya tiene su portada arriba: pídeme cambiar sus textos o su foto.'); continue; }
     if (!allowed.has(type) || adds.some(add => add.type === type)) continue;
     const there = layout.find(block => block.type === type);
     if (there) { refused.push(`${where} ya tiene ${nameIn(there)}: pídeme cambiar sus textos.`); continue; }
@@ -206,7 +208,8 @@ export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly 
   for (const op of ops.filter(entry => entry.op === 'remove')) {
     if (!known(op.at) || !order.includes(op.at)) continue;
     const block = layout[op.at];
-    if (isCover(block)) { refused.push('No quité la portada: es lo primero que ve tu cliente.'); continue; }
+    // A menu page may lose any section, its cover too: emptied, it shows its text again (review 2026-11-05).
+    if (isCover(block) && !isMenuPage(page)) { refused.push('No quité la portada: es lo primero que ve tu cliente.'); continue; }
     if (MAIN_GRIDS.has(block.type)) { refused.push('No quité la grilla de productos: la tienda la necesita para vender.'); continue; }
     order = order.filter(at => at !== op.at);
     done.push(`quité ${nameOf(block)}`);

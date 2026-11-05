@@ -115,7 +115,7 @@ describe('adding a section (fix 3, 2026-11-02)', () => {
       op({ op: 'add', type: 'compare-table' }), op({ op: 'add', type: 'story-list' })];
     const { adds, refused } = layoutAdds(home, ops);
     expect(adds).toEqual([{ type: 'steps-howto', to: 4, about: 'Cómo preparar el batido' }, { type: 'compare-table', to: -1, about: '' }]);
-    expect(refused).toEqual([expect.stringContaining('ya tiene «Preguntas»'), expect.stringContaining('hasta dos')]);
+    expect(refused).toEqual([expect.stringContaining('ya tiene «Preguntas»'), expect.stringContaining('ya tiene su portada'), expect.stringContaining('hasta dos')]);
   });
 
   it('puts a filled new section before the one it was asked before, else before the closing, never above the cover', () => {
@@ -200,5 +200,18 @@ describe('layout edit: menu pages (spec 2026-11-05)', () => {
     const edited = applyLayoutOps(page, [op({ at: 1, field: 'title', value: 'Cómo empezamos', page: 'about' }), op({ at: 1, field: 'title', value: 'Hola' })], [], { page: 'about' });
     expect(edited.layout[1].title).toBe('Cómo empezamos');
     expect(edited.done).toEqual(['el título de la sección «Nuestra historia» de la página «Nosotros» ahora dice «Cómo empezamos»']);
+  });
+});
+
+describe('layout edit: menu pages, review fixes (2026-11-05)', () => {
+  it('lets a menu page lose its cover, so the page can go back to its text', () => {
+    const page: LayoutBlock[] = [{ type: 'cover-centered', title: 'Somos BOXY' }, { type: 'story-split', title: 'Historia' }];
+    const out = applyLayoutOps(page, [op({ op: 'remove', at: 0, page: 'about' }), op({ op: 'remove', at: 1, page: 'about' })], [], { page: 'about' });
+    expect(out.layout).toEqual([]);
+    expect(out.refused).toEqual([]);
+  });
+
+  it('says so when a cover is asked for on the home, instead of dropping it silently', () => {
+    expect(layoutAdds(home, [op({ op: 'add', type: 'cover-centered' })]).refused).toEqual([expect.stringContaining('ya tiene su portada')]);
   });
 });

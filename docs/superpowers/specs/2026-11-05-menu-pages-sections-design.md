@@ -17,9 +17,10 @@ Today «Nosotros», «Contacto», «Preguntas frecuentes» and «Envíos» on a 
 
 - **Data.** store-data gains `pageLayouts: Record<'about'|'contact'|'faq'|'shipping', LayoutBlock[]>` (always exported, `{}` by
   default), read by `readMasterState` and written by every refill, its photos bundled like the home's (`MasterFill.pageLayouts`).
-- **Page file.** A menu page with sections is rewritten to draw them with the template's own `LibraryHome` inside the Shell; «Nosotros»
-  shows only its sections (they tell the story), the other pages show their sections above the platform's InfoPage (form, questions,
-  shipping data stay live). A page without sections keeps today's file, unchanged.
+- **Page file.** A menu page with sections is rewritten to draw them with the template's own `LibraryHome` inside the Shell, above the
+  platform's InfoPage (about text, form, questions, shipping data stay live and editable). Only the platform's page or one already drawn
+  from `pageLayouts` is rewritten; a page the store's own design wrote is refused with a message. A menu page may lose any section,
+  its cover too. A page without sections keeps today's file, unchanged.
 - **Edit.** The template quick edit (`templateLayoutEdit`) reads the menu pages too (`paginas`, plus the template's own section
   types as `plantilla`). An op may name `page: about | contact | faq | shipping`. Words, photo, remove and move ops work on that page's
   sections like on the home; `add` on a menu page may add up to 5 sections, one of them a cover (which always goes first), so
