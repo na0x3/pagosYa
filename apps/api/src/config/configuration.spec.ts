@@ -428,3 +428,14 @@ describe('home page writer switch', () => {
     expect(configuration().app.yapiHomeWriterModel).toBe('gpt-5.6-sol');
   });
 });
+
+describe('template pool', () => {
+  const original = process.env.YAPI_TEMPLATE_POOL;
+  afterEach(() => { if (original === undefined) delete process.env.YAPI_TEMPLATE_POOL; else process.env.YAPI_TEMPLATE_POOL = original; });
+  it('reads a comma list, trimmed and lower-cased, empty when unset', () => {
+    delete process.env.YAPI_TEMPLATE_POOL;
+    expect(configuration().app.yapiTemplatePool).toEqual([]);
+    process.env.YAPI_TEMPLATE_POOL = ' Sorbo, tacon ,,pecas';
+    expect(configuration().app.yapiTemplatePool).toEqual(['sorbo', 'tacon', 'pecas']);
+  });
+});

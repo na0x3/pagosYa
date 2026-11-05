@@ -152,6 +152,8 @@ export interface AppConfig {
   yapiTemplatePick: boolean;
   /** Owner 2026-11-04: YAPI_TEMPLATE_RANDOM=pick draws one of YAPI's three templates, =all any store template; unset keeps the least used (read at API start: restart after changing it). */
   yapiTemplateRandom: string;
+  /** Spec 2026-11-04 writer on templates §1: the owner's chosen templates (YAPI_TEMPLATE_POOL, comma list); empty = every template. */
+  yapiTemplatePool: string[];
   /** Spec 2026-11-04: YAPI asks what is missing before a new store's first build (source-intake.ts). */
   yapiIntake: boolean;
   /** Owner 2026-10-31: the Shrine Pro templates show in Plantillas only with YAPI_SHRINE_TEMPLATES=1. */
@@ -546,6 +548,7 @@ export default (): { app: AppConfig } => {
     yapiSectionLibrary: process.env.YAPI_SECTION_LIBRARY === '1',
     yapiTemplatePick: process.env.YAPI_TEMPLATE_PICK === '1',
     yapiTemplateRandom: process.env.YAPI_TEMPLATE_RANDOM ?? '',
+    yapiTemplatePool: [...new Set((process.env.YAPI_TEMPLATE_POOL ?? '').split(',').map(id => id.trim().toLowerCase()).filter(Boolean))],
     yapiIntake: process.env.YAPI_INTAKE === '1',
     yapiShrineTemplates: process.env.YAPI_SHRINE_TEMPLATES === '1',
     yapiTemplateQa: process.env.YAPI_TEMPLATE_QA !== '0' && process.env.NODE_ENV !== 'test',

@@ -950,6 +950,15 @@ describe('YAPI picks the themed template for a new store (owner 2026-10-31, YAPI
     expect(out.followUp.redesign).toBeUndefined();
   });
 
+  it('with a pool, YAPI is offered only the pooled templates (Shrine Pro included) and Único stays for one product', async () => {
+    config.set('app.yapiTemplatePool', ['sorbo', 'shrine', 'tacon']);
+    const pickTemplate = jest.fn().mockResolvedValue({ id: 'sorbo', reason: 'Bebidas de la casa.' });
+    withPick(pickTemplate);
+    await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+    expect(pickTemplate.mock.calls[0][1].templates.map((template: { id: string }) => template.id).sort()).toEqual(['shrine', 'sorbo', 'tacon']);
+    config.set('app.yapiTemplatePool', []);
+  });
+
   it('of three candidates, the one fewer stores already use, and the reply records it (spec 2026-11-04 §2)', async () => {
     withPick(jest.fn().mockResolvedValue([{ id: 'grano', reason: 'Café que tuesta en casa.' }, { id: 'sorbo', reason: 'Bebidas de la casa.' }, { id: 'horno', reason: 'Horneado.' }]));
     const used = [{ metadata: { templatePick: 'grano' } }, { metadata: { templatePick: 'grano' } }, { metadata: { templatePick: 'horno' } }];

@@ -73,6 +73,14 @@ export function randomPick<T>(items: readonly T[], random: () => number = Math.r
   return items.length ? items[Math.min(items.length - 1, Math.floor(random() * items.length))] : null;
 }
 
+/** Spec 2026-11-04 writer on templates §1 (owner: «sorbo, shrine pro, broadcast…»): a new store's template comes only from the
+ *  owner's pool; `keep` (Único for one-product stores) always stays. A pool that matches none of these is ignored, so a typo
+ *  in YAPI_TEMPLATE_POOL never leaves YAPI with nothing to pick. */
+export function inTemplatePool<T extends { id: string }>(templates: readonly T[], pool: readonly string[], keep: readonly string[] = []): T[] {
+  if (!pool.length || !templates.some(template => pool.includes(template.id))) return [...templates];
+  return templates.filter(template => pool.includes(template.id) || keep.includes(template.id));
+}
+
 const fold = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 // Words every shop uses say nothing about which template fits.
 const GENERIC = new Set(['tiend', 'produ', 'nuest', 'grand', 'plant', 'hecho', 'compr', 'venta', 'vende', 'para', 'todos', 'calid']);

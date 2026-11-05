@@ -47,7 +47,7 @@ import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { galleryTemplates, listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
-import { fallbackTemplatePick, leastUsedPick, pickableTemplates, randomPick, readTemplateRandom, templateSwitchRequest } from './source-template-pick';
+import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates, randomPick, readTemplateRandom, templateSwitchRequest } from './source-template-pick';
 import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
 /** Owner 2026-11-02: the template a one- or two-product store starts on (the product whole at the top). */
@@ -474,11 +474,14 @@ export class SourceChatService {
   }
 
   private async pickStoreTemplate(merchantId: string, storeId: string, input: { storeName: string; what: string; story: string; request: string; products: string[]; businessWords: string; exclude?: string }) {
-    const hidden = this.config.get<boolean>('app.yapiShrineTemplates') === true ? new Set<string>() : new Set(['shrine', 'shrine2']);
+    const pool = this.config.get<string[]>('app.yapiTemplatePool') ?? [];
+    // A pool that names Shrine Pro shows it; without a pool the Shrine pair stays hidden until the owner turns it on.
+    const hidden = pool.length || this.config.get<boolean>('app.yapiShrineTemplates') === true ? new Set<string>() : new Set(['shrine', 'shrine2']);
     // Owner 2026-11-02 (Brisa Portátil: one AliExpress product got Conecta, a big tech catalogue): a store selling one or two products
     // starts on Único — the product whole at the top; a larger catalogue never gets it.
     const oneProduct = input.products.length > 0 && input.products.length <= 2;
-    const templates = pickableTemplates(listTemplates(), hidden).filter(template => template.id !== input.exclude && (oneProduct || template.id !== ONE_PRODUCT_TEMPLATE));
+    const templates = inTemplatePool(pickableTemplates(listTemplates(), hidden), pool, [ONE_PRODUCT_TEMPLATE])
+      .filter(template => template.id !== input.exclude && (oneProduct || template.id !== ONE_PRODUCT_TEMPLATE));
     if (!templates.length) return null;
     // Live check 2026-11-04 (Miga Dorada: «Usa la plantilla Grano.» in the first message got Gumdrop): a template the merchant names
     // is the one, never the model's guess.

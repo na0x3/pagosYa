@@ -1,4 +1,4 @@
-import { fallbackTemplatePick, leastUsedPick, pickableTemplates, randomPick, readTemplatePicks, readTemplateRandom, templatePickSchema, templateSwitchRequest } from './source-template-pick';
+import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates, randomPick, readTemplatePicks, readTemplateRandom, templatePickSchema, templateSwitchRequest } from './source-template-pick';
 
 const manifest = (id: string, extra: Record<string, unknown> = {}) => ({
   id, name: id, category: 'comida', description: `Plantilla ${id}`, tags: [], extends: 'esencial',
@@ -69,5 +69,22 @@ describe('template switch request', () => {
     const templates = [{ id: 'grano', name: 'Grano', category: 'comida', description: '', tags: [] }, { id: 'gumdrop', name: 'Gumdrop', category: 'comida', description: '', tags: [] }];
     expect(templateSwitchRequest('Somos una panadería en La Paz. Quiero una tienda cálida. Usa la plantilla Grano.', templates)).toEqual({ id: 'grano' });
     expect(templateSwitchRequest('Somos una panadería de grano entero en La Paz.', templates)).toBeNull();
+  });
+});
+
+describe('template pool (spec 2026-11-04 writer on templates §1)', () => {
+  const list = [{ id: 'sorbo' }, { id: 'grano' }, { id: 'unico' }, { id: 'tacon' }];
+  it('keeps only pooled templates, plus the ones always kept', () => {
+    expect(inTemplatePool(list, ['sorbo', 'tacon'], ['unico']).map(t => t.id)).toEqual(['sorbo', 'unico', 'tacon']);
+  });
+  it('an empty pool changes nothing', () => {
+    expect(inTemplatePool(list, []).map(t => t.id)).toEqual(['sorbo', 'grano', 'unico', 'tacon']);
+  });
+  it('a pool that matches nothing behaves as no pool (a typo never empties the pick)', () => {
+    expect(inTemplatePool(list, ['palo-alto']).map(t => t.id)).toEqual(['sorbo', 'grano', 'unico', 'tacon']);
+  });
+  it('every id of the owner\'s pool is a real template', () => {
+    const { templateManifest } = require('@pagosya/store-templates');
+    for (const id of 'sorbo,shrine,broadcast,calma,paloalto,symmetry,focal,alacena,gumdrop,motion,tacon,pecas'.split(',')) expect(templateManifest(id)?.id).toBe(id);
   });
 });
