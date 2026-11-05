@@ -217,3 +217,13 @@ it('a question YAPI needs answered is asked, and nothing is saved (live 2026-11-
   expect(out.assistantMessage.content).toBe('¿Qué respuesta le pongo a la pregunta «¿Hacen arreglos de vestidos?»?');
   expect(refill).not.toHaveBeenCalled();
 });
+
+it('the answer of the merchant is read with the question it answers (live 2026-11-05)', async () => {
+  editLayout.mockResolvedValueOnce(read({ ask: '¿Qué respuesta le pongo a «¿Hacen vestidos para hombres?»?' }));
+  const asked = await edit('agrega una pregunta sobre si hacen vestidos para hombres');
+  expect(asked.assistantMessage.metadata.storeAsk).toEqual({ request: 'agrega una pregunta sobre si hacen vestidos para hombres', ask: '¿Qué respuesta le pongo a «¿Hacen vestidos para hombres?»?' });
+  prisma.storeAgentMessage.findFirst = jest.fn().mockResolvedValue(asked.assistantMessage);
+  editLayout.mockResolvedValueOnce(read());
+  await edit('No, solo vestidos de mujer');
+  expect(editLayout.mock.calls[1][1].request).toBe('agrega una pregunta sobre si hacen vestidos para hombres\n(El comercio responde a «¿Qué respuesta le pongo a «¿Hacen vestidos para hombres?»?»: No, solo vestidos de mujer)');
+});

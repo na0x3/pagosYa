@@ -1107,6 +1107,16 @@ export class SourceChatService {
    *  store's own data — about, contact, policies, FAQ, announcement, footer, social links, popup, catalogue title, products.
    *  The part the operations cannot do follows as its own request (`layoutRest`) on the saved revision. Null when the request has
    *  nothing for them: the usual edit then runs with the whole request. */
+  /** The question YAPI's last reply asked the merchant (a FAQ answer), with the request it was for; null when the last reply asked
+   *  nothing or it cannot be read. */
+  private async lastStoreAsk(threadId: string): Promise<{ request: string; ask: string } | null> {
+    try {
+      const last = await this.prisma.storeAgentMessage.findFirst({ where: { threadId, role: 'ASSISTANT' }, orderBy: { createdAt: 'desc' }, select: { metadata: true } });
+      const asked = (last?.metadata as { storeAsk?: { request?: unknown; ask?: unknown } } | null)?.storeAsk;
+      return asked && typeof asked.request === 'string' && typeof asked.ask === 'string' ? { request: asked.request, ask: asked.ask } : null;
+    } catch { return null; }
+  }
+
   private async templateLayoutEdit(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, input: SourceMessageInput, revision: number, layout: LayoutBlock[]) {
     const files = ((await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot).files;
     // Spec 2026-11-05 point-at: a circle comes with a picture of the area, drawn beside the store-state read, at most 20 s.
@@ -1135,14 +1145,18 @@ export class SourceChatService {
     const focusPage = focus && (MENU_PAGES as readonly string[]).includes(focus.pagina) ? MENU_PAGE_URLS[focus.pagina as MenuPage] : undefined;
     const menuPages = menuPagesFor(pages, input.instruction, focusPage ?? input.currentPage);
     const shot = await picture;
-    const read = await this.dialogue.editLayout(merchantId, { storeId, layout, request: input.instruction, ...(productLayout.length ? { productLayout } : {}),
+    // Live 2026-11-05: the merchant's reply to a question YAPI asked («¿Qué respuesta le pongo…?») is read with the request it answers.
+    const pendingAsk = await this.lastStoreAsk(threadId);
+    const request = pendingAsk ? `${pendingAsk.request}\n(El comercio responde a «${pendingAsk.ask}»: ${input.instruction})` : input.instruction;
+    const read = await this.dialogue.editLayout(merchantId, { storeId, layout, request, ...(productLayout.length ? { productLayout } : {}),
       ...(menuPages ? { pages: menuPages.pages as Record<string, LayoutBlock[]>, offerPages: menuPages.offer } : {}), templateTypes,
       ...(editState ? { store: editState, photos } : {}), ...(focus ? { focus } : {}), ...(shot ? { picture: shot } : {}) });
     if (!read) return null;
     // Live 2026-11-05: a change that needs the merchant's words first (a FAQ answer) is asked for, never «No logré que se vea».
     if (read.ask && !read.ops.length && !read.store.length) {
       await workflow.finish('completed');
-      const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT', content: read.ask, metadata: { progress: workflow.value } as never } });
+      const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT', content: read.ask,
+        metadata: { progress: workflow.value, storeAsk: { request: input.instruction.slice(0, 2000), ask: read.ask } } as never } });
       return { userMessage, assistantMessage };
     }
     // Fix 3 (2026-11-02, goodProtein #12: a new section went to the design agent, ~18 min, never mounted): a section the merchant asks
