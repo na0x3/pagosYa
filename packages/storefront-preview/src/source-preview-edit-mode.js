@@ -136,6 +136,8 @@
   }
   function clearLoop() { if (loop && loop.parentNode) loop.parentNode.removeChild(loop); loop = null; }
   function onDown(event) {
+    // While selecting, the page itself never sees the pointer: a photo carousel would swipe under the circle (live 2026-11-05).
+    event.stopPropagation();
     if (event.button > 0) return;
     // A press on words or a photo must not become the browser's own text selection or drag-and-drop: those cancel the pointer
     // (no pointerup), so the circle never arrived (live 2026-11-05). The click that follows still selects.
@@ -146,6 +148,7 @@
   }
   function onNativeDrag(event) { event.preventDefault(); }
   function onDrag(event) {
+    event.stopPropagation();
     if (!press) return;
     // The button was let go outside the preview: the circle ends here, without this point.
     if (event.buttons === 0) { onUp(event); return; }
@@ -156,6 +159,7 @@
     drawLoop(press.points);
   }
   function onUp(event) {
+    if (event) event.stopPropagation();
     if (!press) return;
     var points = press.points; press = null;
     if (!drawing) return;

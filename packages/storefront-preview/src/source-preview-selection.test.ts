@@ -425,3 +425,17 @@ it('the Studio keeps a page query with + and , in it', () => {
   const area = { points: [0, 0, 100, 0, 100, 100], rect: { x: 0, y: 0, width: 100, height: 100 }, sections: [], texts: ['Hola'], photos: [], parts: [], width: 1280, height: 720, pageQuery: 'buscar.html?q=vestido+novia,seda' };
   expect(receivePreviewSelection({ source: frame.contentWindow, origin: 'null', data: { type: 'pagosya:source-select', kind: 'area', sectionId: 'zona-marcada', label: 'Hola', area } } as unknown as MessageEvent, frame)).toMatchObject({ kind: 'area' });
 });
+
+// Live 2026-11-05: drawing over a photo carousel also swiped it. While selecting, the page's own pointer handlers stay quiet.
+it('while selecting, the page itself never sees the pointer (no carousel swipe)', () => {
+  const { w, send } = loadTemplate();
+  const seen: string[] = [];
+  const h1 = w.document.querySelector('[data-lb="cover-split"] h1');
+  for (const type of ['pointerdown', 'pointermove', 'pointerup']) h1.addEventListener(type, () => seen.push(type));
+  send({ type: 'pagosya:source-edit-mode', on: true });
+  for (const type of ['pointerdown', 'pointermove', 'pointerup']) h1.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: 10, clientY: 10, buttons: type === 'pointerup' ? 0 : 1 }));
+  expect(seen).toEqual([]);
+  send({ type: 'pagosya:source-edit-mode', on: false });
+  h1.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
+  expect(seen).toEqual(['pointerdown']);
+});
