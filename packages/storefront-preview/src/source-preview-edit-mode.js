@@ -7,16 +7,41 @@
   var SECTION_ID = /^[a-z][a-z0-9-]{0,47}$/;
   var on = false, overlay = null, tab = null, selected = '', hovered = null, frame = 0;
 
-  function labelOf(section) {
+  var PAGES = ['home', 'product', 'about', 'contact', 'faq', 'shipping'];
+
+  function labelOf(section, id) {
     var heading = section.querySelector('h1,h2,h3,h4,h5,h6');
     var text = heading ? (heading.textContent || '').replace(/\s+/g, ' ').trim() : '';
     if (text) return text.slice(0, 40);
-    var words = section.id.replace(/-/g, ' ');
+    var words = String(id || section.id || '').replace(/-/g, ' ');
     return (words.charAt(0).toUpperCase() + words.slice(1)).slice(0, 40);
   }
-  /** The section (a direct child of <main> with a literal id) or platform-owned part that contains a node. */
+  /** Template sections (spec 2026-11-05 point-at): a [data-lb] child of a [data-lb-home] / [data-lb-product] container, addressed
+   *  by page and by the number the quick edit uses (its lb-N id; its position among the [data-lb] children otherwise). */
+  function addressOf(element, box) {
+    var named = /^lb-(\d{1,2})$/.exec(element.id || '');
+    var siblings = Array.prototype.filter.call(box.children, function (child) { return child.hasAttribute('data-lb'); });
+    var at = named ? Number(named[1]) : siblings.indexOf(element);
+    var page = box.getAttribute('data-lb-page') || (box.hasAttribute('data-lb-product') ? 'product' : 'home');
+    if (PAGES.indexOf(page) < 0 || at < 0 || at > 40) return null;
+    var id = SECTION_ID.test(element.id || '') ? element.id : 'lb-' + at;
+    return { kind: 'section', element: element, id: id, label: labelOf(element, id), at: at, page: page };
+  }
+  function templateSectionOf(node) {
+    var element = node.closest('[data-lb]');
+    while (element) {
+      var box = element.parentElement;
+      if (box && (box.hasAttribute('data-lb-home') || box.hasAttribute('data-lb-product'))) return addressOf(element, box);
+      element = box ? box.closest('[data-lb]') : null;
+    }
+    return null;
+  }
+  /** A template section (a product card inside one selects the section), a platform-owned part, or a classic section (a direct
+   *  child of <main> with a literal id). */
   function targetOf(node) {
     if (!node || !node.closest) return null;
+    var template = templateSectionOf(node);
+    if (template) return template;
     var mount = node.closest(MOUNTS);
     if (mount) return { kind: 'platform', element: mount, id: '', label: 'Lo administra pagosYa' };
     var main = document.querySelector('main');
@@ -24,7 +49,7 @@
     var element = node;
     while (element && element.parentElement !== main) element = element.parentElement;
     if (!element || !element.id || !SECTION_ID.test(element.id)) return null;
-    return { kind: 'section', element: element, id: element.id, label: labelOf(element) };
+    return { kind: 'section', element: element, id: element.id, label: labelOf(element, element.id) };
   }
   function selectedElement() { return selected ? document.getElementById(selected) : null; }
 
@@ -45,6 +70,7 @@
   function post(target, text) {
     var message = { type: 'pagosya:source-select', kind: target.kind, sectionId: target.id, label: target.label };
     if (text) message.text = text;
+    if (typeof target.at === 'number') { message.at = target.at; message.page = target.page; }
     parent.postMessage(message, '*');
   }
   function onMove(event) { var target = targetOf(event.target); hovered = target ? target.element : null; schedule(); }

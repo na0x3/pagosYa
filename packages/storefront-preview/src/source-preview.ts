@@ -41,14 +41,23 @@ export function openPreviewContact(url: string): void {
 }
 /** What the merchant clicked in the preview while editing: a section of the page, or a part the platform owns.
  * An empty section id with kind 'section' means "clear the selection". */
-export interface PreviewSelection { kind: 'section' | 'platform'; sectionId: string; label: string; text?: string }
+export type PointPage = 'home' | 'product' | 'about' | 'contact' | 'faq' | 'shipping';
+export const POINT_PAGES: readonly PointPage[] = ['home', 'product', 'about', 'contact', 'faq', 'shipping'];
+export type PointPart = 'header' | 'announcement' | 'footer' | 'menu';
+/** A loop the merchant drew around part of the preview (spec 2026-11-05 point-at), in page coordinates. */
+export interface PointArea { points: number[]; rect: { x: number; y: number; width: number; height: number }; sections: Array<{ page: PointPage; at: number; label: string }>; texts: string[]; photos: string[]; parts: PointPart[]; width: number; pageQuery: string }
+export interface PreviewSelection { kind: 'section' | 'platform' | 'area'; sectionId: string; label: string; text?: string; at?: number; page?: PointPage; area?: PointArea }
+const validAt = (value: unknown) => Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 40;
 export function receivePreviewSelection(event: MessageEvent, frame: HTMLIFrameElement | null): PreviewSelection | null {
   const data = event.data;
   if (!frame || event.source !== frame.contentWindow || event.origin !== 'null' || data?.type !== 'pagosya:source-select') return null;
   if ((data.kind !== 'section' && data.kind !== 'platform') || typeof data.sectionId !== 'string' || typeof data.label !== 'string' || data.label.length > 60) return null;
   if (data.kind === 'platform' ? data.sectionId !== '' : data.sectionId !== '' && !/^[a-z][a-z0-9-]{0,47}$/.test(data.sectionId)) return null;
   const text = typeof data.text === 'string' ? data.text.slice(0, 200) : '';
-  return { kind: data.kind, sectionId: data.sectionId, label: data.label, ...(text ? { text } : {}) };
+  // A template section carries its address (page + number), both valid or the message is dropped.
+  const addressed = data.kind === 'section' && (data.at !== undefined || data.page !== undefined);
+  if (addressed && (!validAt(data.at) || !POINT_PAGES.includes(data.page))) return null;
+  return { kind: data.kind, sectionId: data.sectionId, label: data.label, ...(text ? { text } : {}), ...(addressed ? { at: data.at, page: data.page } : {}) };
 }
 
 /** Only the platform's own upload directory may be allowed as an image source, and only over HTTPS

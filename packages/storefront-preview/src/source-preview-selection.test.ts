@@ -154,3 +154,52 @@ describe('receivePreviewSelection', () => {
     expect(receivePreviewSelection(event({ ...good, text: 't'.repeat(500) }, f), f)!.text).toHaveLength(200);
   });
 });
+
+// Point YAPI at a part of the page (spec 2026-11-05 point-at): template sections, circles, what the merchant is looking at.
+const templatePage = `<!doctype html><html><body><header class="es-header"><nav><a href="index.html">Inicio</a></nav></header>
+<main id="contenido" data-lb-home>
+  <section id="lb-0" data-lb="cover-split"><h1>Alta costura</h1></section>
+  <section id="lb-2" data-lb="products-grid"><h2>Colección</h2><div data-pagosya-catalog><p class="card">Vestido Cala</p></div></section>
+  <section id="inicio" data-lb="hero-split"><h2>Sin número</h2></section>
+</main>
+<div data-lb-home data-lb-page="about"><section id="lb-0" data-lb="story-split"><h2>Nuestra historia</h2></section></div>
+<footer class="es-footer"><p>NOA</p></footer></body></html>`;
+function loadTemplate() {
+  const snap = { ...snapshot, files: [{ path: 'index.html', content: templatePage }] };
+  const dom = new JSDOM(sourcePreviewDocument(snap, 'index.html', {}), { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://source.invalid/index.html' });
+  const w = dom.window; windows.push(w);
+  const posted: any[] = [];
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:source-select') posted.push(event.data); });
+  const send = (data: unknown) => w.dispatchEvent(new w.MessageEvent('message', { data, source: w }));
+  const click = (selector: string) => w.document.querySelector(selector).dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+  return { w, posted, send, click };
+}
+
+it('addresses a template section by page and number, and a product card inside it selects the section', async () => {
+  const { posted, send, click } = loadTemplate();
+  send({ type: 'pagosya:source-edit-mode', on: true });
+  click('[data-lb="cover-split"] h1');
+  click('[data-pagosya-catalog] .card');
+  click('[data-lb-page="about"] h2');
+  await vi.waitFor(() => expect(posted).toHaveLength(3));
+  expect(posted[0]).toMatchObject({ kind: 'section', sectionId: 'lb-0', page: 'home', at: 0, label: 'Alta costura' });
+  expect(posted[1]).toMatchObject({ kind: 'section', sectionId: 'lb-2', page: 'home', at: 2, label: 'Colección' });
+  expect(posted[2]).toMatchObject({ kind: 'section', sectionId: 'lb-0', page: 'about', at: 0 });
+});
+
+it('falls back to the position among the [data-lb] children when the id carries no number', async () => {
+  const { posted, send, click } = loadTemplate();
+  send({ type: 'pagosya:source-edit-mode', on: true });
+  click('#inicio h2');
+  await vi.waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]).toMatchObject({ sectionId: 'inicio', page: 'home', at: 2 });
+});
+
+it('the Studio keeps a template address and drops a bad one', () => {
+  const frame = { contentWindow: {} } as unknown as HTMLIFrameElement;
+  const event = (data: unknown) => ({ source: frame.contentWindow, origin: 'null', data }) as unknown as MessageEvent;
+  expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'section', sectionId: 'lb-0', label: 'x', at: 0, page: 'about' }), frame))
+    .toEqual({ kind: 'section', sectionId: 'lb-0', label: 'x', at: 0, page: 'about' });
+  expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'section', sectionId: 'lb-0', label: 'x', at: 41, page: 'home' }), frame)).toBeNull();
+  expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'section', sectionId: 'lb-0', label: 'x', at: 1, page: 'blog' }), frame)).toBeNull();
+});
