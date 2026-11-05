@@ -203,3 +203,57 @@ it('the Studio keeps a template address and drops a bad one', () => {
   expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'section', sectionId: 'lb-0', label: 'x', at: 41, page: 'home' }), frame)).toBeNull();
   expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'section', sectionId: 'lb-0', label: 'x', at: 1, page: 'blog' }), frame)).toBeNull();
 });
+
+/** jsdom has no layout: give elements boxes (client coordinates; the page is not scrolled). */
+function box(w: any, selector: string, x: number, y: number, width: number, height: number) {
+  w.document.querySelectorAll(selector).forEach((el: any) => { el.getBoundingClientRect = () => ({ left: x, top: y, right: x + width, bottom: y + height, width, height, x, y }); });
+}
+function drag(w: any, path: Array<[number, number]>, startOn = 'body') {
+  const at = (type: string, [x, y]: [number, number], target: any) => target.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+  const start = w.document.querySelector(startOn);
+  at('pointerdown', path[0], start);
+  path.slice(1).forEach(point => at('pointermove', point, w.document));
+  at('pointerup', path[path.length - 1], w.document);
+  start.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+}
+const square = (x: number, y: number, s: number): Array<[number, number]> => [[x, y], [x + s, y], [x + s, y + s], [x, y + s], [x, y + 1]];
+
+it('a circle selects the sections, words, photos and header parts it covers, and its click selects nothing more', async () => {
+  const { w, posted, send } = loadTemplate();
+  w.document.querySelector('[data-lb="cover-split"]').insertAdjacentHTML('beforeend', '<img src="https://api.test/v1/uploads/cala.jpg" alt="">');
+  box(w, '.es-header', 0, 0, 1280, 80); box(w, '.es-header nav', 400, 20, 400, 40); box(w, '.es-header nav a', 410, 25, 60, 20);
+  box(w, '[data-lb="cover-split"]', 0, 80, 1280, 600); box(w, '[data-lb="cover-split"] h1', 100, 200, 400, 80); box(w, '[data-lb="cover-split"] img', 700, 150, 300, 400);
+  box(w, '[data-lb="products-grid"]', 0, 680, 1280, 800); box(w, '.es-footer', 0, 3000, 1280, 200);
+  send({ type: 'pagosya:source-edit-mode', on: true });
+  drag(w, square(50, 10, 1000), '[data-lb="cover-split"] h1');
+  await vi.waitFor(() => expect(posted).toHaveLength(1));
+  const area = posted[0].area;
+  expect(posted[0]).toMatchObject({ kind: 'area', sectionId: 'lb-0', label: 'Alta costura' });
+  expect(area.sections.map((s: any) => [s.page, s.at])).toEqual([['home', 0], ['home', 2]]);
+  expect(area.texts).toEqual(['Inicio', 'Alta costura']);
+  expect(area.photos).toEqual(['https://api.test/v1/uploads/cala.jpg']);
+  expect(area.parts).toEqual(['header', 'menu']);
+  expect(area.points.length % 2).toBe(0);
+  expect(area.rect).toEqual({ x: 50, y: 10, width: 1000, height: 1000 });
+  expect(area.pageQuery).toBe('index.html');
+});
+
+it('ignores a loop smaller than 24 × 24 and a drag never navigates', async () => {
+  const { w, posted, send } = loadTemplate();
+  send({ type: 'pagosya:source-edit-mode', on: true });
+  const navigations: any[] = [];
+  w.addEventListener('message', (event: any) => { if (event.data?.type === 'pagosya:source-navigate') navigations.push(event.data); });
+  drag(w, square(10, 10, 20), '.es-header nav a');
+  await tick();
+  expect(posted).toEqual([]);
+  expect(navigations).toEqual([]);
+});
+
+it('the Studio keeps a valid area and drops a malformed one', () => {
+  const frame = { contentWindow: {} } as unknown as HTMLIFrameElement;
+  const event = (data: unknown) => ({ source: frame.contentWindow, origin: 'null', data }) as unknown as MessageEvent;
+  const area = { points: [0, 0, 100, 0, 100, 100], rect: { x: 0, y: 0, width: 100, height: 100 }, sections: [{ page: 'home', at: 1, label: 'Hola' }], texts: ['Hola'], photos: [], parts: ['menu'], width: 1280, pageQuery: 'index.html' };
+  expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'area', sectionId: 'lb-1', label: 'Hola', area }), frame)).toMatchObject({ kind: 'area', area });
+  for (const bad of [{ ...area, points: [0, NaN, 1, 1, 2, 2] }, { ...area, texts: Array(13).fill('x') }, { ...area, parts: ['body'] }, { ...area, width: 100 }, { ...area, pageQuery: '../x.html' }, { ...area, photos: ['/' + 'x'.repeat(500)] }])
+    expect(receivePreviewSelection(event({ type: 'pagosya:source-select', kind: 'area', sectionId: 'lb-1', label: 'Hola', area: bad }), frame)).toBeNull();
+});

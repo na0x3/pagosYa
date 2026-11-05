@@ -48,9 +48,33 @@ export type PointPart = 'header' | 'announcement' | 'footer' | 'menu';
 export interface PointArea { points: number[]; rect: { x: number; y: number; width: number; height: number }; sections: Array<{ page: PointPage; at: number; label: string }>; texts: string[]; photos: string[]; parts: PointPart[]; width: number; pageQuery: string }
 export interface PreviewSelection { kind: 'section' | 'platform' | 'area'; sectionId: string; label: string; text?: string; at?: number; page?: PointPage; area?: PointArea }
 const validAt = (value: unknown) => Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 40;
+const POINT_PARTS: readonly PointPart[] = ['header', 'announcement', 'footer', 'menu'];
+const PAGE_QUERY = /^[a-z0-9][a-z0-9-]{0,63}\.html(\?[A-Za-z0-9=&_.%-]{0,135})?$/;
+const inRange = (n: unknown, max = 100000) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= max;
+/** Everything a circle in the preview says (spec 2026-11-05 point-at), checked before the Studio trusts it; null when anything is off. */
+export function validPointArea(value: unknown): PointArea | null {
+  const a = value as PointArea | null;
+  if (!a || typeof a !== 'object') return null;
+  if (!Array.isArray(a.points) || a.points.length < 6 || a.points.length > 128 || a.points.length % 2 || !a.points.every(n => typeof n === 'number' && Number.isFinite(n))) return null;
+  const r = a.rect;
+  if (!r || ![r.x, r.y, r.width, r.height].every(n => inRange(n))) return null;
+  if (!Array.isArray(a.sections) || a.sections.length > 3 || !a.sections.every(s => s && POINT_PAGES.includes(s.page) && validAt(s.at) && typeof s.label === 'string' && s.label.length <= 60)) return null;
+  if (!Array.isArray(a.texts) || a.texts.length > 12 || !a.texts.every(t => typeof t === 'string' && t.length <= 200)) return null;
+  if (!Array.isArray(a.photos) || a.photos.length > 6 || !a.photos.every(p => typeof p === 'string' && p.length <= 500 && /^(https?:\/\/|\/|assets\/)/.test(p))) return null;
+  if (!Array.isArray(a.parts) || !a.parts.every(p => POINT_PARTS.includes(p))) return null;
+  if (!inRange(a.width, 2400) || a.width < 280 || typeof a.pageQuery !== 'string' || !PAGE_QUERY.test(a.pageQuery)) return null;
+  return { points: [...a.points], rect: { x: r.x, y: r.y, width: r.width, height: r.height }, sections: a.sections.map(s => ({ page: s.page, at: s.at, label: s.label })),
+    texts: [...a.texts], photos: [...a.photos], parts: [...new Set(a.parts)], width: a.width, pageQuery: a.pageQuery };
+}
+
 export function receivePreviewSelection(event: MessageEvent, frame: HTMLIFrameElement | null): PreviewSelection | null {
   const data = event.data;
   if (!frame || event.source !== frame.contentWindow || event.origin !== 'null' || data?.type !== 'pagosya:source-select') return null;
+  if (data.kind === 'area') {
+    const area = validPointArea(data.area);
+    if (!area || typeof data.label !== 'string' || data.label.length > 60 || typeof data.sectionId !== 'string' || !/^[a-z][a-z0-9-]{0,47}$/.test(data.sectionId)) return null;
+    return { kind: 'area', sectionId: data.sectionId, label: data.label, area };
+  }
   if ((data.kind !== 'section' && data.kind !== 'platform') || typeof data.sectionId !== 'string' || typeof data.label !== 'string' || data.label.length > 60) return null;
   if (data.kind === 'platform' ? data.sectionId !== '' : data.sectionId !== '' && !/^[a-z][a-z0-9-]{0,47}$/.test(data.sectionId)) return null;
   const text = typeof data.text === 'string' ? data.text.slice(0, 200) : '';

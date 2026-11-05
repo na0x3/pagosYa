@@ -36,13 +36,16 @@ type Brand = {
   /** More brand photos (a ~/Downloads folder), uploaded once each beside the product photos. */
   brandPhotos?: string;
   /** A one-product store typed in by hand (premium landing check 2026-11-03): its photos from photoFolder, a photo set per colour. */
-  items?: Array<{ name: string; description: string; amount: number; stock: number; photos: string[]; colours: Array<{ value: string; photos: string[] }> }>;
+  items?: Array<{ name: string; description: string; amount: number; stock: number; photos: string[]; option?: string; colours: Array<{ value: string; photos: string[] }> }>;
   /** CSV category → the merchant's own grouping (a CSV with one category is split by what the products show). */
   category?: (row: Row) => string; skip?: string[]; badges?: Record<string, string>;
-  location: { name: string; address: string; description: string; hours: Array<[number, string, string]> };
-  zone: { name: string; fee: number; freeAbove: number; minutes: number; departments: string[] };
-  code: { code: string; percent: number }; instagram: string; assistant: { name: string; greeting: string; notes: string };
-  policies: { returns: string; delivery: string; privacy: string; terms: string };
+  /** A real new merchant (readiness run 2026-11-04) fills in only what is set here: no address, zone, code, signup window,
+   *  assistant, Instagram, policies or blog unless given. Products in noPhoto lose their photos, noDescription their words. */
+  real?: boolean; noPhoto?: string[]; noDescription?: string[];
+  location?: { name: string; address: string; description: string; hours: Array<[number, string, string]> };
+  zone?: { name: string; fee: number; freeAbove: number; minutes: number; departments: string[] };
+  code?: { code: string; percent: number }; instagram?: string; assistant?: { name: string; greeting: string; notes: string };
+  policies?: { returns: string; delivery: string; privacy: string; terms: string };
   articles: Array<{ slug: string; title: string; excerpt: string; body: string }>;
 };
 
@@ -51,6 +54,37 @@ const WEEK = (open: string, close: string, saturday?: [string, string]): Array<[
 const TERMS = 'Precios en bolivianos. Tienda de demostración para probar funciones de pagosYa.';
 
 const BRANDS: Record<string, Brand> = {
+  // Readiness run 2026-11-04 (owner «store design ready?»): new merchants as they really arrive — short typed words, phone
+  // photos, empty descriptions, no extras filled in. The words in examples/full-stores-2026-11-02/<key>/first.txt.
+  libros: {
+    name: 'Libros de Ana', tagline: 'Libros y cuadernos', city: 'Santa Cruz', real: true, folder: 'productos-libros-pagosya-paquete', csv: 'productos-libros-pagosya.csv',
+    what: 'vendo libros nuevos, novelas en ingles y español y unos cuadernos lindos. hago envios en santa cruz', story: '', about: '',
+    articles: [],
+  },
+  laminas: {
+    name: 'Láminas Lu', tagline: '', city: 'Cochabamba', real: true, folder: 'catalogo_productos_arte_completo', csv: 'catalogo_productos_arte.csv',
+    what: 'laminas de arte para decorar', story: '', about: '',
+    noDescription: ['Café Good News', 'Casa en Jardín Soleado', 'Café sobre Azulejos', 'Té y Libros', 'Café en el Jardín'],
+    articles: [],
+  },
+  canasta: {
+    name: 'Canasta Viva', tagline: 'Frutas y verduras a tu puerta', city: 'La Paz', real: true, folder: 'catalogo_pagosya', csv: 'productos_pagosya.csv', category: row => row.categoria,
+    what: 'Armamos canastas y cajas de frutas y verduras frescas del mercado y las llevamos a tu casa en La Paz. Pedidos hasta las 6 pm para el día siguiente.', story: '', about: '',
+    noPhoto: ['Bolsa fresh essentials', 'Carrito de frutas frescas'],
+    location: { name: 'Canasta Viva', address: 'Mercado Rodríguez, puesto 112, La Paz', description: 'Recoge tu canasta en el mercado.', hours: WEEK('07:00', '18:00', ['07:00', '13:00']) },
+    zone: { name: 'La Paz ciudad', fee: 1000, freeAbove: 20000, minutes: 1440, departments: ['LA_PAZ'] },
+    articles: [],
+  },
+  peppa: {
+    name: 'Peppa Please', tagline: 'Salsa picante', city: 'La Paz', real: true,
+    what: 'hacemos una salsa picante de locoto en botella, 3 sabores', story: '', about: '',
+    photoFolder: resolve(homedir(), 'Downloads', 'hut'),
+    items: [{ name: 'Salsa picante Peppa 250 ml', amount: 4500, stock: 80, option: 'Sabor',
+      description: 'Salsa picante de locoto hecha en La Paz. Botella de 250 ml.',
+      photos: ['183a817839131ffdf80e6f887ae1a0de.jpg', '38605cb7738cdc7a35885d2ccf1e0da4.jpg', '647a2ffb60b4d4a3c9c8f84cc5434481.jpg', 'c70e292a5af4972283800da8a41f14f8.jpg', 'd9b96be096501284d6c4379ac15b1f73.jpg'],
+      colours: [{ value: 'Original', photos: [] }, { value: 'Ajo', photos: [] }, { value: 'Ahumada', photos: [] }] }],
+    articles: [],
+  },
   miga: {
     name: 'Miga Dorada', tagline: 'Panadería y cookies de autor en Sopocachi.', folder: 'catalogo_bakery_pagosya', csv: 'productos_bakery.csv', city: 'La Paz',
     what: 'Panadería de autor: rolls rellenos, cookies gourmet, cajas para regalar y desayunos con café para llevar o recibir en casa.',
@@ -354,59 +388,64 @@ async function main() {
       };
       const imageUrls = await Promise.all(item.photos.map(fromFolder));
       const variants = await Promise.all(item.colours.map(async colour => ({ id: `var_${randomUUID().replace(/-/g, '').slice(0, 12)}`, name: colour.value, stock: Math.floor(item.stock / item.colours.length),
-        amount: item.amount, options: [{ name: 'Color', value: colour.value }], imageUrls: await Promise.all(colour.photos.map(fromFolder)) })));
+        amount: item.amount, options: [{ name: item.option ?? 'Color', value: colour.value }], imageUrls: await Promise.all(colour.photos.map(fromFolder)) })));
       const product = await prisma.paymentLink.create({ data: { storeId, name: item.name, description: item.description, amount: item.amount, currency: 'BOB', stock: item.stock,
         variants: variants as never, imageUrls, shippingWeightGrams: 25000 } });
       record.products[item.name] = product.id; await save();
     }
-    for (const [order, name] of [...new Set(rows.map(categoryOf))].entries()) {
+    for (const [order, name] of (brand.real && !brand.category ? [] : [...new Set(rows.map(categoryOf))]).entries()) {
       if (record.categories[name]) continue;
       record.categories[name] = (await prisma.category.create({ data: { storeId, name, sortOrder: order } })).id; await save();
     }
     for (const row of rows) {
       if (record.products[row.nombre]) continue;
-      const imageUrls = await Promise.all(row.imagenes.split(/[|,]/).map(file => file.trim()).filter(Boolean).map(upload));
+      const imageUrls = brand.noPhoto?.includes(row.nombre) ? [] : await Promise.all(row.imagenes.split(/[|,]/).map(file => file.trim()).filter(Boolean).map(upload));
       const badge = brand.badges?.[row.nombre];
-      const item = await prisma.paymentLink.create({ data: { storeId, categoryId: record.categories[categoryOf(row)], name: row.nombre, description: row.descripcion,
+      const description = brand.noDescription?.includes(row.nombre) ? '' : row.descripcion;
+      const item = await prisma.paymentLink.create({ data: { storeId, categoryId: brand.real && !brand.category ? null : record.categories[categoryOf(row)], name: row.nombre, description,
         amount: Math.round(Number(row.precio.replace(',', '.')) * 100), currency: 'BOB', stock: Number(row.stock) || 0, imageUrls, shippingWeightGrams: 500, ...(badge ? { badge } : {}) } });
       record.products[row.nombre] = item.id; await save();
     }
     const photos = (Object.values(record.photos) as string[]).filter(Boolean);
     await step('settings', async () => {
-      await stores.update(merchantId, storeId, { contactFormEnabled: true, showLowStockToCustomers: true, cartRecommendationsEnabled: true, aboutText: brand.about, policies: brand.policies } as never);
-      const location = { id: randomUUID(), name: brand.location.name, address: brand.location.address, description: brand.location.description, city: brand.city, pickupEnabled: true, deliveryEnabled: true,
-        openingHours: [0, 1, 2, 3, 4, 5, 6].map(day => { const hours = brand.location.hours.find(entry => entry[0] === day); return { day, open: hours?.[1] ?? '09:00', close: hours?.[2] ?? '18:00', closed: !hours }; }) };
-      await prisma.store.update({ where: { id: storeId }, data: { locations: [location] as never, shippingEnabled: true, shippingPickupEnabled: true,
+      if (!brand.real) await stores.update(merchantId, storeId, { contactFormEnabled: true, showLowStockToCustomers: true, cartRecommendationsEnabled: true, aboutText: brand.about, policies: brand.policies } as never);
+      const where = brand.location;
+      const location = where && { id: randomUUID(), name: where.name, address: where.address, description: where.description, city: brand.city, pickupEnabled: true, deliveryEnabled: true,
+        openingHours: [0, 1, 2, 3, 4, 5, 6].map(day => { const hours = where.hours.find(entry => entry[0] === day); return { day, open: hours?.[1] ?? '09:00', close: hours?.[2] ?? '18:00', closed: !hours }; }) };
+      await prisma.store.update({ where: { id: storeId }, data: { ...(location ? { locations: [location] as never, shippingEnabled: true, shippingPickupEnabled: true } : {}),
         onboarding: { version: 1, step: 7, what: brand.what, story: brand.story, contact: { city: brand.city }, photos: photos.slice(0, 2), finishedAt: new Date().toISOString() } } });
     });
-    await step('links', async () => { await prisma.storeLink.create({ data: { storeId, label: 'Instagram', url: brand.instagram, sortOrder: 0 } }); });
+    await step('links', async () => { if (brand.instagram) await prisma.storeLink.create({ data: { storeId, label: 'Instagram', url: brand.instagram, sortOrder: 0 } }); });
     await step('shipping', async () => {
-      await app.get(OperationsService).createDeliveryZone(merchantId, storeId, { name: brand.zone.name, fee: brand.zone.fee, freeAbove: brand.zone.freeAbove, estimatedMinutes: brand.zone.minutes,
-        ...(brand.zone.departments.length ? { departments: brand.zone.departments } : {}) } as never);
+      const zone = brand.zone; if (!zone) return;
+      await app.get(OperationsService).createDeliveryZone(merchantId, storeId, { name: zone.name, fee: zone.fee, freeAbove: zone.freeAbove, estimatedMinutes: zone.minutes,
+        ...(zone.departments.length ? { departments: zone.departments } : {}) } as never);
     });
     const content = app.get(CommerceContentService);
     await step('articles', async () => {
       for (const [index, article] of brand.articles.entries()) await content.saveArticle(merchantId, storeId, { ...article, locale: 'es', author: `Equipo ${brand.name}`, publishedAt: new Date(Date.now() - (index + 1) * 4 * 86_400_000).toISOString() } as never);
     });
     const promos = app.get(PromoCodesService);
-    await step('promo-code', async () => {
-      const welcome: any = await promos.create(merchantId, storeId, { code: brand.code.code, discountType: 'PERCENT', discountValue: brand.code.percent } as never);
+    const code = brand.code;
+    if (code) await step('promo-code', async () => {
+      const welcome: any = await promos.create(merchantId, storeId, { code: code.code, discountType: 'PERCENT', discountValue: code.percent } as never);
       await promos.setFlags(merchantId, storeId, welcome.id, { showInAssistant: true, showInEmails: true });
       record.welcomeCodeId = welcome.id;
     });
     // The footer form and a popup after 12 s with the welcome code. Emails only go to an address someone types into this store.
-    await step('newsletter', async () => {
+    if (code) await step('newsletter', async () => {
       const retention = app.get(RetentionService);
       const current = await retention.settings(storeId);
       await retention.save(merchantId, storeId, {
         revision: current.revision, comebackEnabled: false, visitsRequired: 5, rewardLabel: 'Un regalo en tu próxima compra', timezone: 'America/La_Paz',
-        signupEnabled: true, signupTitle: 'Novedades primero', signupBody: `Lo nuevo de ${brand.name} y un ${brand.code.percent} % en tu primera compra.`, signupButton: 'Suscribirme',
+        signupEnabled: true, signupTitle: 'Novedades primero', signupBody: `Lo nuevo de ${brand.name} y un ${code.percent} % en tu primera compra.`, signupButton: 'Suscribirme',
         popupTrigger: 'delay', popupDelaySeconds: 12, popupPromoCodeId: record.welcomeCodeId, recoveryEnabled: true, recoveryHours: 2, reviewRequestsEnabled: true,
-        welcomeEnabled: true, welcomeSubject: `Bienvenido a ${brand.name}`, welcomeBody: `Gracias por suscribirte. Usa el código ${brand.code.code} en tu primera compra.`,
+        welcomeEnabled: true, welcomeSubject: `Bienvenido a ${brand.name}`, welcomeBody: `Gracias por suscribirte. Usa el código ${code.code} en tu primera compra.`,
       } as never);
     });
-    await step('assistant', async () => {
-      await app.get(StoreAssistantAdminService).save(merchantId, storeId, { enabled: true, name: brand.assistant.name, greeting: brand.assistant.greeting, formality: 'tu', notes: brand.assistant.notes } as never);
+    const assistant = brand.assistant;
+    if (assistant) await step('assistant', async () => {
+      await app.get(StoreAssistantAdminService).save(merchantId, storeId, { enabled: true, name: assistant.name, greeting: assistant.greeting, formality: 'tu', notes: assistant.notes } as never);
     });
     console.log(JSON.stringify({ storeId, slug: record.slug, products: Object.keys(record.products).length, photos: photos.length }));
   } finally { await app.close(); }

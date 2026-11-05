@@ -6,6 +6,7 @@
   var MOUNTS = '[data-pagosya-catalog],[data-pagosya-cart],[data-pagosya-product-page],[data-pagosya-checkout-page],[data-pagosya-contact],[data-pagosya-subscribe-block]';
   var SECTION_ID = /^[a-z][a-z0-9-]{0,47}$/;
   var on = false, overlay = null, tab = null, selected = '', hovered = null, frame = 0;
+  var press = null, drawing = false, swallowClick = false, loop = null;
 
   var PAGES = ['home', 'product', 'about', 'contact', 'faq', 'shipping'];
 
@@ -73,10 +74,89 @@
     if (typeof target.at === 'number') { message.at = target.at; message.page = target.page; }
     parent.postMessage(message, '*');
   }
+  // A circle (spec 2026-11-05 point-at): a drag of 12 px or more draws a loop; on release, what it covers is the selection.
+  var PARTS = [['announcement', '.es-announce,[data-pagosya-announcement]'], ['header', 'body header:not(main header)'], ['menu', 'body header:not(main header) nav,[data-pagosya-store-menu]'], ['footer', 'body footer:not(main footer)']];
+  function pageBox(element) { var r = element.getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, width: r.width, height: r.height }; }
+  function overlap(a, b) { return Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)); }
+  /** Ray casting on the flat [x0,y0,x1,y1,…] loop. */
+  function inside(points, x, y) {
+    var hit = false;
+    for (var i = 0, j = points.length - 2; i < points.length; j = i, i += 2) {
+      var xi = points[i], yi = points[i + 1], xj = points[j], yj = points[j + 1];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) hit = !hit;
+    }
+    return hit;
+  }
+  function centreIn(points, element) { var b = pageBox(element); return b.width > 0 && inside(points, b.x + b.width / 2, b.y + b.height / 2); }
+  function simplify(points) { var step = Math.ceil(points.length / 2 / 64), out = []; for (var i = 0; i < points.length; i += 2 * step) out.push(Math.round(points[i]), Math.round(points[i + 1])); return out; }
+  function areaOf(points) {
+    var xs = [], ys = []; for (var i = 0; i < points.length; i += 2) { xs.push(points[i]); ys.push(points[i + 1]); }
+    var left = Math.max(0, Math.min.apply(null, xs)), top = Math.max(0, Math.min.apply(null, ys));
+    var rect = { x: left, y: top, width: Math.max.apply(null, xs) - left, height: Math.max.apply(null, ys) - top };
+    if (rect.width < 24 || rect.height < 24) return null;
+    var sections = Array.prototype.map.call(document.querySelectorAll('[data-lb-home] > [data-lb], [data-lb-product] > [data-lb]'), function (element) { return addressOf(element, element.parentElement); })
+      .filter(Boolean).map(function (s) { return { s: s, o: overlap(rect, pageBox(s.element)) }; }).filter(function (e) { return e.o > 0; })
+      .sort(function (a, b) { return b.o - a.o; }).slice(0, 3).map(function (e) { return e.s; });
+    var texts = [];
+    Array.prototype.forEach.call(document.body.querySelectorAll('*'), function (element) {
+      if (texts.length >= 12 || element.children.length || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(element.tagName) || element.closest('[data-pagosya-edit-overlay]')) return;
+      var text = (element.textContent || '').replace(/\s+/g, ' ').trim();
+      if (text && centreIn(points, element)) texts.push(text.slice(0, 200));
+    });
+    var photos = [];
+    Array.prototype.forEach.call(document.querySelectorAll('img,[style*="background-image"]'), function (element) {
+      if (photos.length >= 6 || !centreIn(points, element)) return;
+      var url = element.tagName === 'IMG' ? (element.currentSrc || element.src) : ((/url\(["']?([^"')]+)/.exec(element.style.backgroundImage) || [])[1] || '');
+      if (url && url.length <= 500 && /^(https?:\/\/|\/|assets\/)/.test(url) && photos.indexOf(url) < 0) photos.push(url);
+    });
+    var parts = PARTS.filter(function (part) { return Array.prototype.some.call(document.querySelectorAll(part[1]), function (element) { return overlap(rect, pageBox(element)) > 0; }); }).map(function (part) { return part[0]; });
+    var page = (location.pathname.split('/').pop() || 'index.html') + (window.PAGOSYA_PREVIEW_QUERY || location.search || '');
+    return { first: sections[0] || null, area: { points: simplify(points), rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) },
+      sections: sections.map(function (s) { return { page: s.page, at: s.at, label: s.label }; }), texts: texts, photos: photos, parts: parts,
+      width: Math.max(280, Math.min(2400, Math.round(innerWidth))), pageQuery: page.slice(0, 200) } };
+  }
+  /** The loop stays drawn (thin, dark, white halo) until the selection is cleared. */
+  function drawLoop(points) {
+    if (!loop) { loop = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); loop.setAttribute('data-pagosya-edit-overlay', ''); loop.setAttribute('aria-hidden', 'true'); document.body.appendChild(loop); }
+    loop.setAttribute('style', 'position:absolute;left:0;top:0;width:' + document.documentElement.scrollWidth + 'px;height:' + document.documentElement.scrollHeight + 'px;pointer-events:none;z-index:2147483646;overflow:visible');
+    var list = []; for (var i = 0; i < points.length; i += 2) list.push(points[i] + ',' + points[i + 1]);
+    var line = '<polyline points="' + list.join(' ') + '" fill="none" stroke-linejoin="round" stroke-linecap="round" ';
+    loop.innerHTML = line + 'stroke="#fff" stroke-width="6"/>' + line + 'stroke="#18181b" stroke-width="2.5"/>';
+  }
+  function clearLoop() { if (loop && loop.parentNode) loop.parentNode.removeChild(loop); loop = null; }
+  function onDown(event) { if (event.button > 0) return; press = { x: event.clientX, y: event.clientY, points: [event.clientX + scrollX, event.clientY + scrollY] }; drawing = false; }
+  function onDrag(event) {
+    if (!press) return;
+    if (!drawing && Math.abs(event.clientX - press.x) + Math.abs(event.clientY - press.y) < 12) return;
+    if (!drawing) { drawing = true; clearLoop(); }
+    event.preventDefault();
+    press.points.push(event.clientX + scrollX, event.clientY + scrollY);
+    drawLoop(press.points);
+  }
+  function onUp() {
+    if (!press) return;
+    var points = press.points; press = null;
+    if (!drawing) return;
+    drawing = false; swallowClick = true;
+    var read = areaOf(points);
+    if (!read) { clearLoop(); return; }
+    var area = read.area, first = read.first;
+    if (!first && !area.parts.length) {
+      var hit = document.elementFromPoint ? document.elementFromPoint(area.rect.x - scrollX + area.rect.width / 2, area.rect.y - scrollY + area.rect.height / 2) : null;
+      if (hit && hit.closest && hit.closest(MOUNTS)) { clearLoop(); post({ kind: 'platform', id: '', label: 'Lo administra pagosYa' }, ''); return; }
+      if (!area.texts.length && !area.photos.length) { clearLoop(); return; }
+    }
+    selected = first ? first.id : '';
+    parent.postMessage({ type: 'pagosya:source-select', kind: 'area', sectionId: first ? first.id : 'zona-marcada', label: (first ? first.label : area.texts[0] || 'Zona marcada').slice(0, 60), area: area }, '*');
+    schedule();
+  }
   function onMove(event) { var target = targetOf(event.target); hovered = target ? target.element : null; schedule(); }
   function onClick(event) {
     // Editing must not follow links, press buttons or add to the cart: the click only selects.
     event.preventDefault(); event.stopPropagation();
+    // The click a drawn circle ends with selects nothing more.
+    if (swallowClick) { swallowClick = false; return; }
+    clearLoop();
     var target = targetOf(event.target);
     if (!target) return;
     var own = event.target.children && event.target.children.length === 0 ? (event.target.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200) : '';
@@ -86,7 +166,7 @@
   }
   function onKey(event) {
     if (event.key !== 'Escape') return;
-    selected = '';
+    selected = ''; clearLoop();
     post({ kind: 'section', id: '', label: '' }, '');
     schedule();
   }
@@ -103,6 +183,11 @@
     document.body.appendChild(overlay);
     window.addEventListener('mousemove', onMove, true);
     window.addEventListener('click', onClick, true);
+    window.addEventListener('pointerdown', onDown, true);
+    window.addEventListener('pointermove', onDrag, true);
+    window.addEventListener('pointerup', onUp, true);
+    // A finger draws the circle instead of scrolling the page.
+    document.documentElement.style.touchAction = 'none';
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('scroll', schedule, true);
     window.addEventListener('resize', schedule);
@@ -113,6 +198,11 @@
     on = false; hovered = null; selected = '';
     window.removeEventListener('mousemove', onMove, true);
     window.removeEventListener('click', onClick, true);
+    window.removeEventListener('pointerdown', onDown, true);
+    window.removeEventListener('pointermove', onDrag, true);
+    window.removeEventListener('pointerup', onUp, true);
+    document.documentElement.style.touchAction = '';
+    press = null; drawing = false; swallowClick = false; clearLoop();
     window.removeEventListener('keydown', onKey, true);
     window.removeEventListener('scroll', schedule, true);
     window.removeEventListener('resize', schedule);
