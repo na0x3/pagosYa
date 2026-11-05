@@ -1775,7 +1775,9 @@ export class SourceChatService {
       // its own request; a request it has nothing for (a question, a redesign, a logo) goes on to the conversation step unchanged.
       let storeEditTried = false;
       const firstFiles = previous ? (previous.snapshot as unknown as SourceProjectSnapshot).files : [];
-      if (previous && !input.personalTouch && !input.redesign && !input.layoutRest && !input.selection && !input.resumeDraft && !productLink && !referenceUrls.length
+      // Final review 2026-11-05 (point-at): a template section or circle goes here too; a classic section id still does not.
+      const pointed = Boolean(input.selection && (input.selection.area || input.selection.page));
+      if (previous && !input.personalTouch && !input.redesign && !input.layoutRest && (!input.selection || pointed) && !input.resumeDraft && !productLink && !referenceUrls.length
         && this.config.get<boolean>('app.yapiMasterTemplate') === true && (previous.snapshot as unknown as SourceProjectSnapshot).brief?.templateId === MASTER_TEMPLATE_ID
         && readsMasterData(firstFiles) && !sourceRedesignRequested(input.instruction) && (readMasterState(firstFiles).layout ?? []).length) {
         storeEditTried = true;

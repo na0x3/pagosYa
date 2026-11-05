@@ -283,6 +283,8 @@ describe('edits on a master store', () => {
     expect(quick).toHaveBeenCalled();
     expect(quick.mock.calls[0][5]).toMatchObject({ selection: { sectionId: 'lb-0', at: 0, page: 'home' } });
     expect(generate).not.toHaveBeenCalled();
+    // Final review 2026-11-05: straight to the quick edit, before the conversation step (which never sees the selection).
+    expect(decide).not.toHaveBeenCalled();
   });
 
   // Owner 2026-10-27 (B): the PEPPA please redesign, only when the merchant asks for it.
