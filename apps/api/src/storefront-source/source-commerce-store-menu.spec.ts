@@ -45,6 +45,16 @@ async function open({ menu, data = DATA, host = HOST, extra = {} }: { menu?: unk
 }
 
 describe('store menu', () => {
+  // YAPI creates anything (spec 2026-11-05): a page YAPI made is a plain link in the bar, after the kit's own menu when the store set none.
+  it('draws a direct extra-page link in the bar and keeps the default menu when that is all the store set', async () => {
+    const { all } = await open({ menu: { style: 'dropdowns', groups: [{ label: 'Novias', direct: true, links: [{ label: 'Novias', to: 'extra:novias' }] }] } });
+    const tops = all('[data-pagosya-store-menu="links"] .pym-top');
+    const novias = tops.find((top: any) => top.textContent === 'Novias');
+    expect(novias.tagName).toBe('A');
+    expect(novias.getAttribute('href')).toContain('novias.html');
+    expect(tops.length).toBeGreaterThan(1);
+    expect(tops.filter((top: any) => top.tagName === 'BUTTON').length).toBeGreaterThan(0);
+  });
   it('stays off without config.header.menu', async () => {
     const { q } = await open();
     expect(q('[data-pagosya-store-menu="toggle"]').innerHTML).toBe('');

@@ -7,7 +7,8 @@ export const STORE_MENU_STYLES = ['panel', 'dropdowns'] as const;
 export type StoreMenuStyle = typeof STORE_MENU_STYLES[number];
 export type StoreMenuLink = { label?: string; to: string };
 export type StoreMenuTile = { title: string; image: string; to: string };
-export type StoreMenuGroup = { label: string; links: StoreMenuLink[]; tilesTitle?: string; tiles?: StoreMenuTile[]; footer?: { label: string; to: string } };
+/** `direct` (spec 2026-11-05 creates anything): a one-link entry drawn as a plain link in the bar, not a dropdown. */
+export type StoreMenuGroup = { label: string; links: StoreMenuLink[]; tilesTitle?: string; tiles?: StoreMenuTile[]; footer?: { label: string; to: string }; direct?: true };
 export type StoreMenu = { style: StoreMenuStyle; groups?: StoreMenuGroup[] };
 export type StoreMenuContext = { targets: Map<string, string>; photos: Set<string> };
 export const STORE_MENU_LIMITS = { groups: 4, links: 12, tiles: 3, label: 28 } as const;
@@ -21,6 +22,13 @@ export function storeMenuContext(data: { categories?: Array<{ id: string; name: 
   for (const category of data.categories ?? []) if (items.some(item => item.categoryId === category.id)) targets.set(`category:${category.id}`, category.name);
   for (const collection of data.collections ?? []) targets.set(`collection:${collection.slug}`, collection.name);
   for (const [page, name] of Object.entries(PAGE_NAMES)) targets.set(`page:${page}`, name);
+  // The pages YAPI made (spec 2026-11-05 creates anything), from store-data.
+  const storeData = files.find(file => file.path === 'components/store-data.tsx')?.content ?? '';
+  const extra = /export const extraPages: any\[\] = (\[.*\]);/.exec(storeData)?.[1];
+  let listed: unknown = [];
+  try { listed = extra ? JSON.parse(extra) : []; } catch { listed = []; }
+  for (const page of (Array.isArray(listed) ? listed : []) as Array<{ slug?: unknown; name?: unknown }>)
+    if (typeof page.slug === 'string' && /^[a-z][a-z0-9-]{0,39}$/.test(page.slug) && typeof page.name === 'string') targets.set(`extra:${page.slug}`, page.name);
   // A section anchor is a home id; it has no name of its own, so a link to it must carry a label.
   const index = files.find(file => file.path === 'index.html')?.content ?? '';
   for (const match of index.matchAll(/\sid\s*=\s*["']([\w-]{1,60})["']/g)) targets.set(`section:${match[1]}`, '');
@@ -57,7 +65,8 @@ export function checkStoreMenu(raw: unknown, ctx: StoreMenuContext): StoreMenu |
     const footerTo = target(record(group.footer).to);
     const footerLabel = footerTo ? named(footerTo, record(group.footer).label) : '';
     const tilesTitle = label(group.tilesTitle);
-    return [{ label: name, links, ...(tiles.length ? { ...(tilesTitle ? { tilesTitle } : {}), tiles } : {}), ...(footerTo && footerLabel ? { footer: { label: footerLabel, to: footerTo } } : {}) }];
+    const direct = group.direct === true && links.length === 1 ? { direct: true as const } : {};
+    return [{ label: name, ...direct, links, ...(tiles.length ? { ...(tilesTitle ? { tilesTitle } : {}), tiles } : {}), ...(footerTo && footerLabel ? { footer: { label: footerLabel, to: footerTo } } : {}) }];
   }).slice(0, STORE_MENU_LIMITS.groups);
   return groups.length ? { style, groups } : { style };
 }
@@ -115,4 +124,33 @@ export const instructionTouchesStoreMenu = (text: string) => MENU_ASK.test(text)
 /** Esencial's dice record (variants.menu) as the config the kit reads; `none` or no record means no menu. */
 export function menuFromVariant(variant: unknown, groups: unknown, ctx: StoreMenuContext): StoreMenu | undefined {
   return checkStoreMenu({ style: variant, groups }, ctx) ?? undefined;
+}
+
+/** YAPI creates anything (spec 2026-11-05): the menu follows the pages YAPI made — each linked where its `menu` says (the bar, as a
+ *  one-link `direct` entry, or a named dropdown; a name with no dropdown = the bar), renamed with the page, and the links of pages no
+ *  longer there removed. A store without a menu gets one; the kit draws its own entries before direct links. */
+export function withExtraPageLinks(menu: StoreMenu | undefined, pages: ReadonlyArray<{ slug: string; name: string; menu: string }>): { menu: StoreMenu; refused: string[] } {
+  const refused: string[] = [];
+  const slugs = new Set(pages.map(page => page.slug));
+  let groups: StoreMenuGroup[] = (menu?.groups ?? []).map(group => ({ ...group, links: group.links.filter(link => !link.to.startsWith('extra:') || slugs.has(link.to.slice(6))) }))
+    .filter(group => group.links.length);
+  for (const page of pages) {
+    const to = `extra:${page.slug}`;
+    const link = { label: page.name.slice(0, STORE_MENU_LIMITS.label).trim(), to };
+    const inGroup = page.menu ? groups.find(group => !group.direct && group.label.toLowerCase() === page.menu.toLowerCase()) : undefined;
+    // One place only: out of every other entry first.
+    groups = groups.map(group => group === inGroup ? group : { ...group, links: group.links.filter(entry => entry.to !== to || (!inGroup && group.direct === true)) }).filter(group => group.links.length);
+    if (inGroup) {
+      const at = inGroup.links.findIndex(entry => entry.to === to);
+      if (at >= 0) inGroup.links[at] = link;
+      else if (inGroup.links.length >= STORE_MENU_LIMITS.links) refused.push(`«${inGroup.label}» ya tiene ${STORE_MENU_LIMITS.links} enlaces: no puse «${page.name}» ahí.`);
+      else inGroup.links.push(link);
+      continue;
+    }
+    const direct = groups.find(group => group.direct && group.links[0]?.to === to);
+    if (direct) { direct.label = link.label; direct.links = [link]; continue; }
+    if (groups.length >= STORE_MENU_LIMITS.groups) { refused.push(`Tu menú ya tiene ${STORE_MENU_LIMITS.groups} entradas: no puse «${page.name}» en la barra. Pídeme ponerla dentro de un desplegable.`); continue; }
+    groups.push({ label: link.label, links: [link], direct: true });
+  }
+  return { menu: { style: menu?.style ?? 'dropdowns', groups }, refused };
 }

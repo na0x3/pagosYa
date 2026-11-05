@@ -1,4 +1,4 @@
-import { checkStoreMenu, instructionAsksStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList, withStoreMenuConfig, STORE_MENU_LIMITS } from './source-store-menu';
+import { checkStoreMenu, instructionAsksStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList, withStoreMenuConfig, STORE_MENU_LIMITS, withExtraPageLinks } from './source-store-menu';
 
 /** Dropdown menu (spec 2026-10-21): the menu config, its save checks and the chat words that switch it on or off. */
 const data = {
@@ -111,3 +111,28 @@ describe('instructionOnlyAboutStoreMenu (final review 2026-10-21)', () => {
   ])('%s → %s', (text, expected) => expect(instructionOnlyAboutStoreMenu(text)).toBe(expected));
 });
 
+
+// YAPI creates anything (spec 2026-11-05): the menu follows the pages YAPI made.
+describe('extra page links', () => {
+  const novias = { slug: 'novias', name: 'Novias', menu: '', layout: [] };
+  it('puts an extra page in the bar, inside a named dropdown, and drops links of removed pages', () => {
+    const menu = { style: 'dropdowns' as const, groups: [{ label: 'Colecciones', links: [{ to: 'all' }] }] };
+    expect(withExtraPageLinks(menu, [novias]).menu.groups!.at(-1)).toEqual({ label: 'Novias', links: [{ label: 'Novias', to: 'extra:novias' }], direct: true });
+    expect(withExtraPageLinks(menu, [{ ...novias, menu: 'Colecciones' }]).menu.groups![0].links).toContainEqual({ label: 'Novias', to: 'extra:novias' });
+    expect(withExtraPageLinks(menu, [{ ...novias, menu: 'Colecciones' }]).menu.groups).toHaveLength(1);
+    const linked = withExtraPageLinks(menu, [novias]).menu;
+    expect(withExtraPageLinks(linked, []).menu.groups!.some(group => group.links.some(link => link.to.startsWith('extra:')))).toBe(false);
+    expect(withExtraPageLinks(linked, [{ ...novias, name: 'Novias 2027' }]).menu.groups!.at(-1)!.label).toBe('Novias 2027');
+    expect(withExtraPageLinks(undefined, [novias]).menu).toEqual({ style: 'dropdowns', groups: [{ label: 'Novias', links: [{ label: 'Novias', to: 'extra:novias' }], direct: true }] });
+  });
+  it('refuses a fifth entry in the bar', () => {
+    const full = { style: 'dropdowns' as const, groups: ['a', 'b', 'c', 'd'].map(label => ({ label, links: [{ to: 'all' }] })) };
+    expect(withExtraPageLinks(full, [novias]).refused[0]).toMatch(/menú ya tiene 4/);
+  });
+  it('lets the menu link an extra page and keeps a direct one-link group', () => {
+    const files = [{ path: 'components/store-data.tsx', content: 'export const extraPages: any[] = [{"slug":"novias","name":"Novias","menu":"","layout":[]}];\n' }];
+    const ctx = storeMenuContext({}, files);
+    expect(ctx.targets.get('extra:novias')).toBe('Novias');
+    expect(checkStoreMenu({ style: 'dropdowns', groups: [{ label: 'Novias', direct: true, links: [{ to: 'extra:novias' }] }] }, ctx)).toEqual({ style: 'dropdowns', groups: [{ label: 'Novias', direct: true, links: [{ label: 'Novias', to: 'extra:novias' }] }] });
+  });
+});

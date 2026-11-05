@@ -6582,6 +6582,8 @@
       const collection = infoCollections().find(entry => entry.slug === value.slice(11));
       return collection ? { href: pageHref('coleccion.html', '?c=' + encodeURIComponent(collection.slug)), label: collection.name } : null;
     }
+    // The pages YAPI made (spec 2026-11-05 creates anything): <slug>.html; the link carries its own label.
+    if (value.startsWith('extra:') && /^[a-z][a-z0-9-]{0,39}$/.test(value.slice(6))) return { href: pageHref(value.slice(6) + '.html'), label: '' };
     if (value.startsWith('page:')) {
       const kind = value.slice(5), page = STORE_MENU_PAGES[kind];
       return page && infoBody(kind) ? { href: pageHref(page[0]), label: page[1] } : null;
@@ -6667,7 +6669,7 @@
       }).filter((tile, index, list) => tile && list.findIndex(other => other && (other.image === tile.image || other.href === tile.href)) === index).slice(0, 3);
       const shownTiles = tiles.length ? tiles : storeMenuDiscoverTiles(group);
       const footerTarget = group.footer ? storeMenuTarget(group.footer.to) : null;
-      return { label: String(group.label || '').slice(0, 28), links, tilesTitle: shownTiles.length ? String(group.tilesTitle || '') : '', tiles: shownTiles, footer: footerTarget ? { href: footerTarget.href, label: String(group.footer.label || footerTarget.label).slice(0, 28) } : null };
+      return { label: String(group.label || '').slice(0, 28), links, direct: group.direct === true && links.length === 1, tilesTitle: shownTiles.length ? String(group.tilesTitle || '') : '', tiles: shownTiles, footer: footerTarget ? { href: footerTarget.href, label: String(group.footer.label || footerTarget.label).slice(0, 28) } : null };
     }).filter(group => group.label && group.links.length);
   }
   let storeMenuCount = 0;
@@ -6678,13 +6680,17 @@
     const linksMount = menu.style === 'dropdowns' ? host.querySelector('[data-pagosya-store-menu="links"]') : null;
     let groups = resolveStoreMenuGroups(menu.groups);
     if (!groups.length) groups = resolveStoreMenuGroups(defaultStoreMenuGroups(host));
+    // Only direct page links (spec 2026-11-05 creates anything): the kit's own menu stays, the links follow it.
+    else if (groups.every(group => group.direct)) groups = [...resolveStoreMenuGroups(defaultStoreMenuGroups(host)), ...groups];
     if (!groups.length) return;
     const id = 'pym-' + (++storeMenuCount);
     host.setAttribute('data-store-menu', menu.style);
     host.toggleAttribute('data-store-menu-links', Boolean(linksMount));
     if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
     toggleMount.innerHTML = `<button type="button" class="pym-toggle" data-store-menu-toggle aria-expanded="false" aria-controls="${id}"><span class="pym-bars" aria-hidden="true"></span><span class="pym-sr">Menú</span></button>`;
-    if (linksMount) linksMount.innerHTML = groups.map((group, index) => `<button type="button" class="pym-top" data-store-menu-top="${index}" aria-expanded="false" aria-controls="${id}">${escape(group.label)}</button>`).join('');
+    if (linksMount) linksMount.innerHTML = groups.map((group, index) => group.direct
+      ? `<a class="pym-top" href="${escape(group.links[0].href)}">${escape(group.label)}</a>`
+      : `<button type="button" class="pym-top" data-store-menu-top="${index}" aria-expanded="false" aria-controls="${id}">${escape(group.label)}</button>`).join('');
     const extras = [...host.querySelectorAll('[data-store-menu-extra] a[href]')].map(anchor => { const copy = anchor.cloneNode(true); copy.removeAttribute('id'); copy.removeAttribute('class'); return copy.outerHTML; }).join('');
     const panel = document.createElement('div');
     panel.className = 'pym-panel';
