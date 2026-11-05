@@ -3,13 +3,17 @@ import { Throttle } from '@nestjs/throttler';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { SendSourceMessageDto } from './dto/send-source-message.dto';
+import { ConfigService } from '@nestjs/config';
 import { SourceChatJobsService } from './source-chat-jobs.service';
+import { merchantModelChoice } from './source-generation-policy';
 @UseGuards(MerchantAuthGuard)
 @Controller('v1/stores/:storeId/source-project/chat-jobs')
 export class SourceChatJobsController {
-  constructor(private readonly jobs: SourceChatJobsService) {}
+  constructor(private readonly jobs: SourceChatJobsService, private readonly config: ConfigService) {}
   @Post() @Throttle({ default: { limit: 12, ttl: 60000 } })
-  create(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() input: SendSourceMessageDto) { return this.jobs.create(merchant.id, storeId, input); }
+  create(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() input: SendSourceMessageDto) {
+    return this.jobs.create(merchant.id, storeId, { ...input, model: merchantModelChoice(input.model, this.config.get<boolean>('app.yapiModelPicker') === true) } as SendSourceMessageDto);
+  }
   @Get() @Header('Cache-Control', 'private, no-store')
   latest(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string) { return this.jobs.latest(merchant.id, storeId); }
   @Get(':id') @Header('Cache-Control', 'private, no-store')

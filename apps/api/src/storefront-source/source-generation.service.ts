@@ -292,7 +292,9 @@ export class SourceGenerationService {
     const estimate = sourceGenerationEstimate(plan, sourceSize, dto.instruction.length, Math.min(6, dto.assetUrls?.length || 0), dto.revision === 0 || sourceRedesignRequested(dto.instruction));
     const maxCredits = dto.maxCredits ?? DEFAULT_MAX_CREDITS;
     const maxOutputTokens = sourceOutputBudget(plan, estimate.estimatedInputTokens, maxCredits);
-    return { ...plan, estimate, maxCredits, maxOutputTokens, billingMode: this.config.get('app.chatgptPlan') ? 'chatgpt-plan' : 'usage', repairIncluded: true };
+    return { ...plan, estimate, maxCredits, maxOutputTokens, billingMode: this.config.get('app.chatgptPlan') ? 'chatgpt-plan' : 'usage', repairIncluded: true,
+      // Spec 2026-11-04 §7: the Studio shows the model select only to the owner/dev.
+      modelPicker: this.config.get<boolean>('app.yapiModelPicker') === true };
   }
 
   async usage(merchantId: string, storeId: string) {

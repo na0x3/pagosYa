@@ -9,6 +9,8 @@ import { SourcePublishingService } from './source-publishing.service';
 import { SourceGenerationService } from './source-generation.service';
 import { SourceProjectsService } from './source-projects.service';
 import { SendSourceMessageDto } from './dto/send-source-message.dto';
+import { ConfigService } from '@nestjs/config';
+import { merchantModelChoice } from './source-generation-policy';
 class PublishDto {
   @IsInt() @Min(1) revision!: number;
   @IsInt() @Min(0) publicationVersion!: number;
@@ -37,7 +39,7 @@ class VisitDto { @IsOptional() @IsUUID('4') visitorId?: string; }
 @Controller('v1/stores/:storeId/source-project')
 @UseGuards(MerchantAuthGuard)
 export class SourcePublishingController {
-  constructor(private readonly publishing: SourcePublishingService, private readonly generation: SourceGenerationService, private readonly projects: SourceProjectsService) {}
+  constructor(private readonly publishing: SourcePublishingService, private readonly generation: SourceGenerationService, private readonly projects: SourceProjectsService, private readonly config: ConfigService) {}
   @Post('versions/:revision/checks')
   checks(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Param('revision') revision: string, @Body() body: SourceCheckResultDto) {
     return this.publishing.recordChecks(m.id, id, /^\d+$/.test(revision) ? Number(revision) : NaN, body);
@@ -69,7 +71,7 @@ export class SourcePublishingController {
     const current = await this.projects.current(m.id, id);
     const baseRevision = store.publishedSourceRevision || current.revision;
     const snapshot = await this.publishing.snapshot(id, baseRevision);
-    return this.generation.generate(m.id, id, { revision: body.revision, baseRevision, brief: snapshot.brief, model: body.model, maxCredits: body.maxCredits, motion: body.motion,
+    return this.generation.generate(m.id, id, { revision: body.revision, baseRevision, brief: snapshot.brief, model: merchantModelChoice(body.model, this.config.get<boolean>('app.yapiModelPicker') === true), maxCredits: body.maxCredits, motion: body.motion,
       instruction: 'Crea una alternativa B para una prueba A/B contra este diseño. Cambia una hipótesis concreta de conversión: jerarquía del hero, claridad de beneficios o ubicación del CTA. Conserva productos, precios, marca, navegación, formularios y checkout. No inventes reseñas, descuentos ni afirmaciones. Usa un título de revisión que describa el cambio. ' + body.instruction });
   }
 }

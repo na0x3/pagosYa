@@ -146,3 +146,9 @@ export function sourceImageMicroUsd(size: string, count = 1, overrides: Partial<
   const usd = overrides[shape] ?? SOURCE_IMAGE_PRICE_USD[shape];
   return Number.isFinite(usd) && usd > 0 ? Math.ceil(usd * count * 1_000_000) : null;
 }
+
+/** Spec 2026-11-04 §7 (owner: «users can choose which model to use, or should i disable that?»): merchants never pick a model;
+ *  their requests run on auto and we choose per step. The owner/dev keeps the picker (YAPI_MODEL_PICKER=1). */
+export function merchantModelChoice<T extends string | undefined>(model: T, pickerOn: boolean): T | 'auto' {
+  return pickerOn ? model : 'auto';
+}

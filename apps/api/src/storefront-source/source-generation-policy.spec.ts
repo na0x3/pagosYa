@@ -1,7 +1,8 @@
-import { agentStepModel, sourceConversationModel, sourceGenerationPlan, sourceGenerationEstimate, sourceImageMicroUsd, sourceOutputBudget, sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
+import { agentStepModel, merchantModelChoice, sourceConversationModel, sourceGenerationPlan, sourceGenerationEstimate, sourceImageMicroUsd, sourceOutputBudget, sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { SendSourceMessageDto } from './dto/send-source-message.dto';
+import { SourceChatJobsController } from './source-chat-jobs.controller';
 
 describe('Source model routing and credit budgets', () => {
   it('rejects the removed DeepSeek choices at the API boundary', async () => {
@@ -101,5 +102,25 @@ describe('agentStepModel', () => {
   it('ignores an unknown or non-GPT step model', () => {
     expect(agentStepModel(sol, 'gpt-4o')).toBe('gpt-5.6-terra');
     expect(agentStepModel(sol, 'claude-sonnet-5')).toBe('gpt-5.6-terra');
+  });
+});
+
+describe('merchant model choice (spec 2026-11-04 §7)', () => {
+  it('without the picker every merchant request is auto', () => {
+    expect(merchantModelChoice('claude-opus-5-5', false)).toBe('auto');
+    expect(merchantModelChoice('gpt-5.6-luna', false)).toBe('auto');
+    expect(merchantModelChoice(undefined, false)).toBe('auto');
+  });
+  it('with the picker the choice passes through', () => {
+    expect(merchantModelChoice('gpt-5.6-sol', true)).toBe('gpt-5.6-sol');
+    expect(merchantModelChoice(undefined, true)).toBeUndefined();
+  });
+  it('a merchant\'s queued chat message reaches the job as auto when the picker is off, and as asked when it is on', () => {
+    const jobs = { create: jest.fn() };
+    const input = { revision: 1, instruction: 'Hola', model: 'claude-opus-5-5' } as any;
+    new SourceChatJobsController(jobs as any, { get: () => false } as any).create({ id: 'm' }, 's', input);
+    expect(jobs.create).toHaveBeenLastCalledWith('m', 's', expect.objectContaining({ model: 'auto' }));
+    new SourceChatJobsController(jobs as any, { get: (key: string) => key === 'app.yapiModelPicker' } as any).create({ id: 'm' }, 's', input);
+    expect(jobs.create).toHaveBeenLastCalledWith('m', 's', expect.objectContaining({ model: 'claude-opus-5-5' }));
   });
 });

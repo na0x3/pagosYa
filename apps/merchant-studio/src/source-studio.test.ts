@@ -154,14 +154,27 @@ it('while YAPI builds nothing animates: no thinking face, stars or code ticker i
   finish({ userMessage: { id: 'u', role: 'USER', content: 'Usar Retro americana' }, assistantMessage: { id: 'a2', role: 'ASSISTANT', content: 'Listo' } });
 });
 
-it('lets the merchant pick a Claude model like any other', async () => {
+// Spec 2026-11-04 §7: the model select is the owner's — shown only when the API says the picker is on (YAPI_MODEL_PICKER=1).
+it('with the owner\'s picker on, a Claude model can be picked like any other', async () => {
   vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
   vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [] } as any);
+  vi.spyOn(MerchantStudioApi.prototype, 'estimateSource').mockResolvedValue({ model: 'auto', reason: '', maxCredits: 50, modelPicker: true, estimate: { minCredits: 1, maxCredits: 2 } });
   await mountSourceStudio(app);
   const select = await vi.waitFor(() => { const found = app.querySelector<HTMLSelectElement>('#source-model'); expect(found).toBeTruthy(); return found!; });
   const options = [...select.options].map(option => option.value);
   expect(options).toEqual(expect.arrayContaining(['claude-opus-5-5', 'claude-sonnet-5', 'claude-haiku-4-5-20251001']));
   expect([...select.options].find(option => option.value === 'claude-sonnet-5')!.textContent).toContain('Claude Sonnet 5');
+});
+
+it('a merchant sees no model select and never reads about choosing a model', async () => {
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceState').mockResolvedValue({ revision: 0, versions: [], nextBefore: null });
+  vi.spyOn(MerchantStudioApi.prototype, 'sourceConversation').mockResolvedValue({ messages: [] } as any);
+  const estimate = vi.spyOn(MerchantStudioApi.prototype, 'estimateSource');
+  await mountSourceStudio(app);
+  await vi.waitFor(() => expect(estimate).toHaveBeenCalled());
+  await vi.waitFor(() => expect(app.querySelector('#source-credit-limit')).toBeTruthy());
+  expect(app.querySelector('#source-model')).toBeNull();
+  expect(app.textContent).not.toContain('El modelo elegido');
 });
 
 it('offers 200 credits per request by default, enough for YAPI to build and check a whole store', async () => {

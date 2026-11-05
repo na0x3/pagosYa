@@ -73,7 +73,7 @@ describe('review state on the service', () => {
 it('adds reviewPending to the store state and cancels a review only for the store owner', async () => {
   const projects: any = { state: jest.fn().mockResolvedValue({ revision: 3, versions: [], nextBefore: null }), current: jest.fn().mockResolvedValue({ revision: 3 }) };
   const generation: any = { reviewPending: jest.fn().mockResolvedValue(true), cancelReview: jest.fn().mockResolvedValue(true) };
-  const controller = new SourceProjectsController(projects, generation, {} as any, {} as any);
+  const controller = new SourceProjectsController(projects, generation, {} as any, {} as any, { get: () => true } as any);
   expect(await controller.state({ id: 'm1' }, 's1')).toMatchObject({ revision: 3, reviewPending: true });
   expect(generation.reviewPending).toHaveBeenCalledWith('s1', 3);
   expect(await controller.cancelReview({ id: 'm1' }, 's1')).toEqual({ cancelled: true });

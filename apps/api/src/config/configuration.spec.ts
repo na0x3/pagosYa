@@ -449,3 +449,14 @@ describe('template pool', () => {
     expect(configuration().app.yapiTemplatePool).toEqual(['sorbo', 'tacon', 'pecas']);
   });
 });
+
+describe('model picker', () => {
+  it('is off unless YAPI_MODEL_PICKER=1', () => {
+    const before = process.env.YAPI_MODEL_PICKER;
+    delete process.env.YAPI_MODEL_PICKER;
+    expect(configuration().app.yapiModelPicker).toBe(false);
+    process.env.YAPI_MODEL_PICKER = '1';
+    expect(configuration().app.yapiModelPicker).toBe(true);
+    if (before === undefined) delete process.env.YAPI_MODEL_PICKER; else process.env.YAPI_MODEL_PICKER = before;
+  });
+});

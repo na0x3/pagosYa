@@ -18,6 +18,8 @@ import { GenerateSourceProjectDto } from "./dto/generate-source-project.dto";
 import { SourceVisualEditDto } from './dto/source-visual-edit.dto';
 import { CompileBudget, MerchantThrottlerGuard } from './source-compile-budget';
 import { SourceThumbnailsService } from './source-thumbnails.service';
+import { ConfigService } from '@nestjs/config';
+import { merchantModelChoice } from './source-generation-policy';
 
 class ContactFormDto extends SourceProjectRevisionDto { @IsBoolean() enabled!: boolean; }
 
@@ -27,7 +29,9 @@ class ContactFormDto extends SourceProjectRevisionDto { @IsBoolean() enabled!: b
 @UseGuards(MerchantAuthGuard, MerchantThrottlerGuard)
 @Controller("v1/stores/:storeId/source-project")
 export class SourceProjectsController {
-  constructor(private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly chat: SourceChatService, private readonly thumbnails: SourceThumbnailsService) {}
+  constructor(private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly chat: SourceChatService, private readonly thumbnails: SourceThumbnailsService, private readonly config: ConfigService) {}
+  /** Spec 2026-11-04 §7: a merchant's model choice counts only with the owner's picker on. */
+  private modelPickerOn() { return this.config.get<boolean>('app.yapiModelPicker') === true; }
 
   /** A «Tus tiendas» card: one picture of the store's first screen for this revision, instead of running the whole site. */
   @Get('thumbnail/:revision')
@@ -75,7 +79,7 @@ export class SourceProjectsController {
   @Post("messages")
   @Throttle({ default: { limit: 12, ttl: 60_000 } })
   message(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: SendSourceMessageDto) {
-    return this.chat.send(merchant.id, storeId, input);
+    return this.chat.send(merchant.id, storeId, { ...input, model: merchantModelChoice(input.model, this.modelPickerOn()) } as SendSourceMessageDto);
   }
 
   @Get('draft-preview')
@@ -114,7 +118,7 @@ export class SourceProjectsController {
   async generate(@CurrentMerchant() merchant: { id: string }, @Param("storeId") storeId: string, @Body() input: GenerateSourceProjectDto) {
     const current = await this.projects.current(merchant.id, storeId);
     if (!current.revision) throw new BadRequestException('Antes de crear tu primer sitio, responde las preguntas de YAPI en el chat.');
-    return this.generation.generate(merchant.id, storeId, input);
+    return this.generation.generate(merchant.id, storeId, { ...input, model: merchantModelChoice(input.model, this.modelPickerOn()) } as GenerateSourceProjectDto);
   }
 
   @Get()

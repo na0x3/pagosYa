@@ -590,7 +590,7 @@ export type SourceModelChoice = 'auto' | 'gpt-5.6-luna' | 'gpt-5.6-terra' | 'gpt
 export type SourceMotionMode = 'auto' | 'off' | 'subtle' | 'expressive';
 export type SourceScrollFeel = 'native' | 'soft' | 'cinematic';
 export type SourceGenerationSettings = { model: SourceModelChoice; maxCredits: number; motion?: SourceMotionMode; scrollFeel?: SourceScrollFeel; sitePurpose?: 'shop' | 'service' | 'portfolio' | 'editorial' };
-export type SourceGenerationEstimate = { billingMode?: 'usage' | 'chatgpt-plan'; model: string; reason: string; maxCredits: number; estimate: { minCredits: number; maxCredits: number } };
+export type SourceGenerationEstimate = { billingMode?: 'usage' | 'chatgpt-plan'; modelPicker?: boolean; model: string; reason: string; maxCredits: number; estimate: { minCredits: number; maxCredits: number } };
 export type SourceGenerationRun = { id: string; model: string; status: string; credits: number; maxCredits: number; durationMs: number | null; revision: number | null; createdAt: string };
 
 /** The request a preserved draft was built from (API: source-draft-retry.ts); resent with resumeDraft to finish and save it. */
