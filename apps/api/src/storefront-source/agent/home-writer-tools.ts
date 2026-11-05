@@ -8,6 +8,7 @@ import type { AgentWorkspace } from './agent-workspace';
 import { evaluateCalmTitles, evaluateHomeWriterRules, evaluatePlayfulCover, homeWriterVerdict } from './home-writer-checks';
 import { AMBIENT_PARTS, HOME_MOTION_BRIEF, ambientPartsUsed, motionPartsUsed } from '../home-directions';
 import { SHELL_PATH } from './agent-workspace';
+import type { HomeReviewer } from './home-writer-review';
 
 /* Spec 2026-10-29 home page writer: Amboras's recipe on the locked Esencial chassis — one home file and the tokens. */
 export const HOME_PATH = 'components/home.tsx';
@@ -133,12 +134,16 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
   lastVerify: { version: number; clean: boolean; hard: boolean } | null = null;
   finished: { summary: string } | null = null;
   stopped = null;
+  reviews = 0;
   private shots = 0;
+  private lastImages: string[] = [];
+  private reviewed: { version: number; problems: string[] } | null = null;
   constructor(private readonly ctx: { workspace: AgentWorkspace; base: AgentPreviewBase; signal?: AbortSignal; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; /** Spec 2026-10-30: the store's home is animated. */ animated?: boolean;
     /** Owner 2026-10-30: YAPI writes the footer (a must before finish); a playful store moves without scrolling; a calm brand
      *  never shouts; the brand's own accent/deep colours (store-data look.colors) stay. */
     footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[];
-    /** Spec 2026-11-04: the template the store wears; its footer and fonts stay. */ template?: WriterTemplate }) {}
+    /** Spec 2026-11-04: the template the store wears; its footer and fonts stay. */ template?: WriterTemplate;
+    /** Spec 2026-11-04 §5: a look at the captures before saving, at most reviewRounds (2) times. */ reviewer?: HomeReviewer; reviewRounds?: number }) {}
   get workspace() { return this.ctx.workspace; }
   draftIsClean() { return Boolean(this.lastVerify?.clean && this.lastVerify.version === this.workspace.version); }
 
@@ -194,6 +199,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           const snapshot = await agentPreviewSnapshot(this.ctx.base, this.workspace.files());
           const captures: Array<{ width: number; errors: string[]; image: string; thumbnail?: string }> = [];
           for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules, ...(this.ctx.calm ? [evaluateCalmTitles] : []), ...(this.ctx.playful ? [evaluatePlayfulCover] : [])]));
+          this.lastImages = captures.map(capture => capture.image);
           const verdict = homeWriterVerdict(captures);
           // Review 2026-10-30: the merchant's progress shows the check's capture, now that screenshot calls are rare.
           step('check', 'Comprobando la portada', (captures[0] as { thumbnail?: string } | undefined)?.thumbnail);
@@ -237,6 +243,16 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
         case 'finish': {
           if (!this.workspace.changedPaths().length) return { output: 'Todavía no cambiaste la portada: escríbela con write_home antes de terminar.' };
           if (!this.draftIsClean()) return { output: 'Antes de terminar, llama check sobre la versión actual y corrige lo que bloquea.' };
+          if (this.reviewed?.problems.length && this.reviewed.version === this.workspace.version) {
+            return { output: `Todavía no corregiste lo que encontró la revisión:\n- ${this.reviewed.problems.join('\n- ')}\nCorrige, llama check y luego finish.` };
+          }
+          if (this.ctx.reviewer && this.reviews < (this.ctx.reviewRounds ?? 2)) {
+            this.reviews++;
+            step('check', 'Revisando cómo se ve');
+            const problems = await this.ctx.reviewer(this.lastImages).catch(() => [] as string[]);
+            this.reviewed = { version: this.workspace.version, problems };
+            if (problems.length) return { output: `Revisión visual — Debes corregir:\n- ${problems.join('\n- ')}\nCorrige con write_home o set_tokens, llama check y luego finish.` };
+          }
           const diagnostic = await this.ctx.gate(this.workspace.files());
           if (diagnostic) { this.lastVerify = { version: this.workspace.version, clean: false, hard: true }; return { output: `La tienda no se puede guardar todavía: ${diagnostic.slice(0, 1500)}` }; }
           this.finished = { summary: String(args.summary ?? '').trim() || 'Diseñé una portada nueva para tu tienda.' };

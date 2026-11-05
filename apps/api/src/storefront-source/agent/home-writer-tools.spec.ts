@@ -235,3 +235,42 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
     expect((await sorboBox().run('write_footer', JSON.stringify({ content: 'export default function StoreFooter() { return <footer />; }' }))).output).toBe('Esta tienda usa el pie de su plantilla; no escribas uno.');
   });
 });
+
+describe('the visual review at finish (spec 2026-11-04 §5)', () => {
+  // The template's own home passes check (see «check on the branded template home…»), so it stands in for a writer's good home.
+  const goodHome = () => base.files.find(file => file.path === HOME_PATH)!.content;
+  const reviewBox = (reviewer: jest.Mock) => new HomeWriterToolbox({ workspace: new AgentWorkspace(base.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base, gate: async () => null, reviewer });
+  const ready = async (b: HomeWriterToolbox) => { await branded(b); await b.run('write_home', JSON.stringify({ content: goodHome() })); await b.run('check', '{}'); return b; };
+  const changed = (n: string) => goodHome().replace('</Shell>', `<p style={{ margin: 0 }}>Gracias ${n}.</p></Shell>`);
+
+  it('problems go back to the writer; finishing unchanged is refused; after a fix the second review passes and it saves', async () => {
+    const reviewer = jest.fn().mockResolvedValueOnce(['título tocado o tapado por una imagen — portada: separa el título de la foto']).mockResolvedValueOnce([]);
+    const b = await ready(reviewBox(reviewer));
+    expect((await b.run('finish', '{"summary":"Listo"}')).output).toMatch(/^Revisión visual — Debes corregir:/);
+    expect(reviewer.mock.calls[0][0]).toHaveLength(2);
+    expect((await b.run('finish', '{"summary":"Listo"}')).output).toMatch(/^Todavía no corregiste lo que encontró la revisión/);
+    expect(reviewer).toHaveBeenCalledTimes(1);
+    await b.run('write_home', JSON.stringify({ content: changed('uno') })); await b.run('check', '{}');
+    expect((await b.run('finish', '{"summary":"Listo"}')).output).toBe('Listo.');
+    expect(reviewer).toHaveBeenCalledTimes(2);
+  });
+  it('after two rounds the clean draft saves without a third review', async () => {
+    const reviewer = jest.fn().mockResolvedValue(['palabras cortadas — portada: acorta el titular']);
+    const b = await ready(reviewBox(reviewer));
+    await b.run('finish', '{"summary":"x"}');
+    await b.run('write_home', JSON.stringify({ content: changed('uno') })); await b.run('check', '{}');
+    await b.run('finish', '{"summary":"x"}');
+    await b.run('write_home', JSON.stringify({ content: changed('dos') })); await b.run('check', '{}');
+    expect((await b.run('finish', '{"summary":"x"}')).output).toBe('Listo.');
+    expect(reviewer).toHaveBeenCalledTimes(2);
+  });
+  it('a review that errors never blocks the save', async () => {
+    const b = await ready(reviewBox(jest.fn().mockRejectedValue(new Error('provider down'))));
+    expect((await b.run('finish', '{"summary":"x"}')).output).toBe('Listo.');
+  });
+  it('out of time with a clean draft, it saves even when the last review found problems', async () => {
+    const b = await ready(reviewBox(jest.fn().mockResolvedValue(['palabras cortadas — portada: acorta'])));
+    await b.run('finish', '{"summary":"x"}');
+    expect(await b.acceptIfBuildable()).toBe(true);
+  });
+});

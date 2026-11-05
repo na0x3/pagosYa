@@ -10,6 +10,7 @@ import { openAiAgentModel } from './agent/agent-model';
 import { anthropicAgentModel } from './agent/agent-model-anthropic';
 import { HomeWriterToolbox, FOOTER_PATH, HOME_PATH, HOME_WRITER_LIMITS, homeWriterTools, type WriterTemplate } from './agent/home-writer-tools';
 import { templateManifest } from '@pagosya/store-templates';
+import { createHomeReviewer, homeReviewInstructions, type HomeReviewer } from './agent/home-writer-review';
 import { nextSourceFile } from './source-next';
 import { sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
 import type { AgentStageContext } from './source-agent-stage';
@@ -49,7 +50,7 @@ export function writerTemplate(files: readonly SourceProjectFileDto[]): WriterTe
 
 type LoopInput = { model: AgentModel; files: SourceProjectFileDto[]; base: AgentPreviewBase; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; task: string;
   images?: unknown[]; signal?: AbortSignal; limits?: Partial<typeof AGENT_LIMITS>; onStep?: (step: AgentStep) => void | Promise<void>; animated?: boolean;
-  footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[]; template?: WriterTemplate };
+  footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[]; template?: WriterTemplate; reviewer?: HomeReviewer };
 
 /** Spec 2026-10-30 home writer variety: the writer's task — the merchant's words, the store's page direction, what the last
  *  stores already used, and the motion brief only for an animated store. */
@@ -123,7 +124,7 @@ export async function runHomeWriterLoop(input: LoopInput) {
   const workspace = new AgentWorkspace(input.files, { redesign: true, lockedShell: true });
   const toolbox = new HomeWriterToolbox({ workspace, base: input.base, gate: input.gate, ...(input.signal ? { signal: input.signal } : {}), ...(input.animated ? { animated: true } : {}),
     ...(input.footer ? { footer: true } : {}), ...(input.playful ? { playful: true } : {}), ...(input.calm ? { calm: true } : {}), ...(input.brandColours?.length ? { brandColours: input.brandColours } : {}),
-    ...(input.template ? { template: input.template } : {}) });
+    ...(input.template ? { template: input.template } : {}), ...(input.reviewer ? { reviewer: input.reviewer } : {}) });
   const outcome = await runAgent({ model: input.model, toolbox, tools: homeWriterTools({ footer: Boolean(input.footer) && !input.template }), verifyTool: 'check',
     instructions: homeWriterInstructions(input.template ? { template: input.template.name } : {}), signal: input.signal, onStep: input.onStep,
     limits: { ...HOME_WRITER_LIMITS, ...input.limits }, opening: agentOpening(input.task, [], input.images ?? []) });
@@ -168,23 +169,26 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
     catch (error) { return (error as Error).message; }
     finally { live.lenient = false; }
   };
-  const onTurn = async ({ body, durationMs, status }: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED' }) => {
+  const onTurn = (phase: 'home-writer' | 'home-review') => async ({ body, durationMs, status }: { body: any; durationMs: number; status: 'COMPLETED' | 'FAILED' }) => {
     const tools = [...(Array.isArray(body?.output) ? body.output : []), ...(Array.isArray(body?.content) ? body.content : [])].filter((item: any) => item?.type === 'function_call' || item?.type === 'tool_use').map((item: any) => String(item.name));
-    attempts.push({ model: plan.model, phase: 'home-writer', durationMs, status, usage: sourceUsage(plan.model, body?.usage), tools });
+    attempts.push({ model: plan.model, phase, durationMs, status, usage: sourceUsage(plan.model, body?.usage), tools });
     await prisma.storeSourceGeneration.updateMany({ where: { id: runId, status: 'RUNNING' }, data: { attempts: attempts as unknown as Prisma.InputJsonValue } });
     await metering?.record(storeId, 'source-generation', plan.model, body, durationMs, status);
   };
   const effort = config.get<'low' | 'medium' | 'high'>('app.yapiHomeWriterEffort') ?? 'high';
-  const model = agentProvider
-    ? anthropicAgentModel({ endpoint: agentProvider.endpoint, apiKey: agentProvider.apiKey, model: plan.model, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), signal, onTurn })
-    : openAiAgentModel({ endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: effort, signal, onTurn,
+  // Spec 2026-11-04 §5: the review runs on the writer's own model, so each test arm (sol, Opus) reviews itself.
+  const makeModel = (phase: 'home-writer' | 'home-review') => agentProvider
+    ? anthropicAgentModel({ endpoint: agentProvider.endpoint, apiKey: agentProvider.apiKey, model: plan.model, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), signal, onTurn: onTurn(phase) })
+    : openAiAgentModel({ endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: effort, signal, onTurn: onTurn(phase),
       // Every turn resends the transcript; a stable key lets the provider bill that prefix at the cached rate (review 2026-10-29).
-      promptCacheKey: sourcePromptCacheKey('home-writer', homeWriterInstructions(template ? { template: template.name } : {}), storeId) });
+      promptCacheKey: sourcePromptCacheKey(phase, phase === 'home-review' ? homeReviewInstructions() : homeWriterInstructions(template ? { template: template.name } : {}), storeId) });
+  const model = makeModel('home-writer');
+  const reviewer = createHomeReviewer(makeModel('home-review'));
   const task = homeWriterTask({ instruction: dto.instruction, storeName: (data as { storeName?: string }).storeName ?? '', direction: choice.direction, animated: choice.animated,
     footer: choice.footer, playful, calm, brandColours,
     avoid: { fonts: template ? [] : [...new Set(looks.map(look => look.heading).filter((font): font is string => Boolean(font)))], papers: [...new Set(looks.map(look => look.paper).filter((paper): paper is string => Boolean(paper)))] } });
   const out = await runHomeWriterLoop({ model, files: oldFiles.filter(file => nextSourceFile(file.path)), base, gate, task, signal, animated: choice.animated,
-    footer: Boolean(choice.footer) && !template, ...(template ? { template } : {}), playful, calm, brandColours, limits: homeWriterLimits(chatgptPlan, started + runTimeout),
+    footer: Boolean(choice.footer) && !template, ...(template ? { template } : {}), reviewer, playful, calm, brandColours, limits: homeWriterLimits(chatgptPlan, started + runTimeout),
     images: images.map(image => ({ ...(image as object), detail: 'low' })),
     onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); } });
   if (!out.accepted) throw new BadGatewayException(`YAPI no pudo terminar la portada${out.outcome.reason ? `: ${out.outcome.reason}` : ''}`);
