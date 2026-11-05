@@ -16,3 +16,10 @@ describe('sourceDraftRetry', () => {
     expect(sourceDraftRetry({ instruction: 'Arregla el encabezado', resumeDraft: true })).toBeUndefined();
   });
 });
+
+it('carries a template address, a circle and a viewing back to the Studio (spec 2026-11-05 point-at)', () => {
+  const area = { points: [1, 1, 2, 2, 3, 3] };
+  expect(sourceDraftRetry({ instruction: 'x', selection: { sectionId: 'lb-1', at: 1, page: 'faq', area }, viewing: { page: 'faq', at: 2 } }))
+    .toMatchObject({ selection: { sectionId: 'lb-1', at: 1, page: 'faq', area }, viewing: { page: 'faq', at: 2 } });
+  expect(sourceDraftRetry({ instruction: 'x', viewing: { page: 'blog' } })?.viewing).toBeUndefined();
+});

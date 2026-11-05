@@ -4,7 +4,7 @@ import { SOURCE_MODEL_CHOICES, type SourceModelChoice } from '../source-generati
 import { IsBoolean, IsIn, IsUUID, ArrayMaxSize, IsArray, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
-import { SourceSelectionDto } from './source-selection.dto';
+import { SourceSelectionDto, SourceViewingDto } from './source-selection.dto';
 import { SourceProjectRevisionDto } from './save-source-project.dto';
 export class SourceStylePickDto {
   @IsString() @Matches(/^[a-z0-9]{8,40}$/i) generationId!: string;
@@ -35,6 +35,8 @@ export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @IsBoolean() resumeDraft?: boolean;
   /** A section the merchant picked in the preview (visual selection editor); scopes the edit to it. */
   @IsOptional() @ValidateNested() @Type(() => SourceSelectionDto) selection?: SourceSelectionDto;
+  /** What the merchant had on screen when nothing is selected (spec 2026-11-05 point-at). */
+  @IsOptional() @ValidateNested() @Type(() => SourceViewingDto) viewing?: SourceViewingDto;
   /** Preview context for phrases such as 'this page'; does not override an explicit global request. */
   @IsOptional() @IsString() @Matches(/^[a-z0-9][a-z0-9-]{0,63}\.html$/) currentPage?: string;
   /** "Elige tu estilo" (spec 2026-10-11): build from this saved proposal's card, or YAPI's recommendation when auto. */
