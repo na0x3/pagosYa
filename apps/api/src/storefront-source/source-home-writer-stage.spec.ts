@@ -1,7 +1,7 @@
 import { templateManifest, templateSourceFiles } from '@pagosya/store-templates';
-import { templateDemoRevision } from './source-templates';
+import { resolvePresetTemplate, templateDemoRevision } from './source-templates';
 import { nextSourceFile } from './source-next';
-import { brandColoursOf, homeWriterDna, homeWriterInstructions, homeWriterLimits, homeWriterTask, runHomeWriterLoop, runHomeWriterStage } from './source-home-writer-stage';
+import { brandColoursOf, homeWriterDna, writerTemplate, homeWriterInstructions, homeWriterLimits, homeWriterTask, runHomeWriterLoop, runHomeWriterStage } from './source-home-writer-stage';
 import { HOME_DIRECTIONS, HOME_FOOTERS, HOME_PLAYFUL_BRIEF } from './home-directions';
 import { HOME_PATH, HOME_WRITER_LIMITS } from './agent/home-writer-tools';
 import { masterThemeBlock, withMasterTheme } from './source-master';
@@ -173,5 +173,28 @@ describe('the writer stage and the real save check', () => {
     expect(shell).toContain("import StoreFooter from './footer';");
     expect(shell).toContain('<StoreFooter />');
     expect(shell).not.toMatch(/<Footer\s*\/>/);
+  });
+});
+
+describe('writer on a template (spec 2026-11-04)', () => {
+  jest.setTimeout(120_000);
+  it('reads the template from store-data: id, name and its filled layout', async () => {
+    const resolved = resolvePresetTemplate(templateManifest('sorbo')!, templateManifest);
+    const sorbo = await templateDemoRevision(resolved.manifest, templateSourceFiles(resolved.manifest.id), resolved.preset as never);
+    const found = writerTemplate(sorbo.files);
+    expect(found).toMatchObject({ id: 'sorbo', name: 'Sorbo' });
+    expect(found!.layout).toHaveLength(8);
+  });
+  it('an Esencial store (no theme, or theme none) is not a template store', async () => {
+    const esencial = await templateDemoRevision(templateManifest('esencial')!, templateSourceFiles('esencial'));
+    expect(writerTemplate(esencial.files)).toBeNull();
+    expect(writerTemplate([{ path: 'components/store-data.tsx', content: 'export const variants = {"theme":"none"} as const;' }] as never)).toBeNull();
+    expect(writerTemplate([])).toBeNull();
+  });
+  it('on a template the instructions never ask for a footer and name the template', () => {
+    const text = homeWriterInstructions({ template: 'Sorbo' });
+    expect(text).not.toContain('write_footer');
+    expect(text).toContain('plantilla Sorbo');
+    expect(homeWriterInstructions()).toContain('write_footer');
   });
 });

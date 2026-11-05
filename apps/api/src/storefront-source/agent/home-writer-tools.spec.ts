@@ -1,9 +1,10 @@
 import { templateManifest, templateSourceFiles } from '@pagosya/store-templates';
-import { templateDemoRevision } from '../source-templates';
+import { resolvePresetTemplate, templateDemoRevision } from '../source-templates';
+import { SOURCE_FONT_CATALOG } from '../source-font-catalog';
 import { nextSourceFile } from '../source-next';
-import { MASTER_THEME_END, MASTER_THEME_START } from '../source-master';
+import { MASTER_THEME_END, MASTER_THEME_START, masterThemeBlock } from '../source-master';
 import { AgentWorkspace } from './agent-workspace';
-import { FOOTER_PATH, HomeWriterToolbox, HOME_PATH, HOME_WRITER_TOOLS, footerProblems, inventedClasses, nearColour, shellWithStoreFooter, shoutedHeadings } from './home-writer-tools';
+import { FOOTER_PATH, HomeWriterToolbox, HOME_PATH, HOME_WRITER_TOOLS, footerProblems, homeWriterTools, inventedClasses, nearColour, shellWithStoreFooter, shoutedHeadings, templateFonts } from './home-writer-tools';
 
 // Spec 2026-10-29 home page writer §2: five tools plus finish, on the locked Esencial chassis.
 jest.setTimeout(240_000);
@@ -193,5 +194,44 @@ describe('inventedClasses', () => {
     const css = base.files.find(f => f.path === 'styles/globals.css')!.content;
     for (const path of ['components/home.tsx', 'components/Shell.tsx', 'components/page-productos.tsx']) expect([path, inventedClasses(base.files.find(f => f.path === path)!.content, css)]).toEqual([path, []]);
     expect(inventedClasses('<div className="oh-grid"><div className="es-section oh-media ui-float pagosya-info-nav" /></div>', css)).toEqual(['oh-grid', 'oh-media']);
+  });
+});
+
+// Spec 2026-11-04 writer on templates §2–3: inside a themed template the footer and fonts are the template's.
+describe('HomeWriterToolbox on a template store (Sorbo)', () => {
+  let sorbo: Awaited<ReturnType<typeof templateDemoRevision>>;
+  beforeAll(async () => {
+    const resolved = resolvePresetTemplate(templateManifest('sorbo')!, templateManifest);
+    sorbo = await templateDemoRevision(resolved.manifest, templateSourceFiles(resolved.manifest.id), resolved.preset as never);
+  });
+  const template = { id: 'sorbo', name: 'Sorbo', layout: [{ type: 'cover-split', title: 'Tómate un sorbo', photo: 'slot:in-p1' }, { type: 'products-slider', title: 'Los más pedidos', link: 'products' }] };
+  const sorboBox = () => new HomeWriterToolbox({ workspace: new AgentWorkspace(sorbo.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base: sorbo, gate: async () => null, template });
+
+  it('offers no footer tool', () => {
+    expect(homeWriterTools({ footer: false }).map(t => t.name)).toEqual(['read_chassis', 'write_home', 'set_tokens', 'check', 'screenshot', 'finish']);
+    expect(homeWriterTools({ footer: true }).map(t => t.name)).toContain('write_footer');
+  });
+  it('read_chassis names the template, its tested sections with an example each, and how to place them', async () => {
+    const out = (await sorboBox().run('read_chassis', '{}')).output;
+    expect(out).toContain('PLANTILLA Sorbo');
+    expect(out).toContain("import { LibraryHome } from './library'");
+    expect(out).toContain('- cover-split: {"type":"cover-split","title":"Tómate un sorbo","photo":"slot:in-p1"}');
+    expect(out).not.toContain('PIE (');
+  });
+  it('set_tokens keeps the template\'s fonts whatever fonts it is given', async () => {
+    const b = sorboBox();
+    const before = templateFonts(b.workspace.read('styles/globals.css'));
+    expect(before).toEqual({ heading: 'dm-sans', body: 'space-mono' });
+    const other = SOURCE_FONT_CATALOG.find(font => font.id !== before!.heading && font.id !== before!.body)!.id;
+    const out = (await b.run('set_tokens', JSON.stringify({ paper: '#fbf8f2', ink: '#1d2a22', muted: '#efe7da', accent: '#2f6b4a', deep: '#1f3a2b', heading: other, body: other }))).output;
+    expect(out).toMatch(/^Colores guardados\. Las fuentes son de la plantilla Sorbo/);
+    expect(templateFonts(b.workspace.read('styles/globals.css'))).toEqual(before);
+  });
+  it('reads the fonts by role, so a template with one face for titles and text keeps its label font (Palo Alto)', () => {
+    const css = masterThemeBlock({ paper: '#ffffff', ink: '#111111', muted: '#eeeeee', accent: '#2255aa', deep: '#112244' }, 'archivo', 'archivo', 'space-mono');
+    expect(templateFonts(css)).toEqual({ heading: 'archivo', body: 'archivo', mono: 'space-mono' });
+  });
+  it('write_footer is refused', async () => {
+    expect((await sorboBox().run('write_footer', JSON.stringify({ content: 'export default function StoreFooter() { return <footer />; }' }))).output).toBe('Esta tienda usa el pie de su plantilla; no escribas uno.');
   });
 });

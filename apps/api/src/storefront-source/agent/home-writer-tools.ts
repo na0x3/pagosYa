@@ -1,6 +1,6 @@
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import { SOURCE_FONT_CATALOG } from '../source-font-catalog';
-import { masterThemeBlock, withMasterTheme } from '../source-master';
+import { MASTER_THEME_END, MASTER_THEME_START, masterThemeBlock, withMasterTheme } from '../source-master';
 import type { AgentLoopToolbox, AgentToolDefinition } from './agent-loop';
 import { agentPreviewSnapshot, captureAgentDraft, type AgentPreviewBase } from './agent-capture';
 import type { AgentStep } from './agent-tools';
@@ -13,6 +13,8 @@ import { SHELL_PATH } from './agent-workspace';
 export const HOME_PATH = 'components/home.tsx';
 /** Owner 2026-10-30 («the footer always is the same»): YAPI writes each store's footer; the Shell renders it. */
 export const FOOTER_PATH = 'components/footer.tsx';
+/** Spec 2026-11-04 writer on templates: the themed template the store wears (its id, name and the sections it filled). */
+export type WriterTemplate = { id: string; name: string; layout: unknown[] };
 export const HOME_WRITER_LIMITS = { toolCalls: 24, wallMs: 360_000, screenshots: 4 };
 const GLOBALS = 'styles/globals.css';
 const strictTool = (name: string, description: string, properties: Record<string, object>): AgentToolDefinition =>
@@ -30,9 +32,40 @@ export const HOME_WRITER_TOOLS: readonly AgentToolDefinition[] = [
   strictTool('finish', 'Termina: resumen para el comercio en español, 1–2 frases simples, sin términos técnicos.', { summary: text }),
 ];
 
+/** On a template store the footer is the template's: no write_footer (spec 2026-11-04 §2). */
+export function homeWriterTools(opts: { footer: boolean }): readonly AgentToolDefinition[] {
+  return HOME_WRITER_TOOLS.filter(tool => opts.footer || tool.name !== 'write_footer');
+}
+
+/** The theme block's fonts by role (--es-heading, --es-body, --es-mono → catalog ids), or null when the block names none.
+ *  By role, not by @font-face order: Palo Alto uses one face for titles and text and a third for labels. */
+export function templateFonts(globalsCss: string): { heading: string; body: string; mono?: string } | null {
+  const start = globalsCss.indexOf(MASTER_THEME_START), end = globalsCss.indexOf(MASTER_THEME_END);
+  if (start < 0 || end <= start) return null;
+  const block = globalsCss.slice(start, end);
+  const role = (name: string) => {
+    const family = new RegExp(`--es-${name}:'([^']+)'`).exec(block)?.[1];
+    return family ? SOURCE_FONT_CATALOG.find(font => font.family === family)?.id : undefined;
+  };
+  const heading = role('heading'), body = role('body'), mono = role('mono');
+  return heading && body ? { heading, body, ...(mono ? { mono } : {}) } : null;
+}
+
+/** What a template store's home may use besides the kit: the template's tested sections, each with the store's own example.
+ *  Library photos resolve «slot:<key>» through store-data photos (library.tsx `slotted`). */
+export function templateBrief(template: WriterTemplate): string {
+  const examples = template.layout.slice(0, 14).map(block => `- ${String((block as { type?: unknown }).type ?? '')}: ${JSON.stringify(block)}`).join('\n');
+  return `PLANTILLA ${template.name}: el encabezado, el menú, el pie, las tarjetas de producto y la ficha de producto son de la plantilla; no los cambies ni los imites. Sus fuentes se quedan; tú eliges los colores.
+Secciones probadas de la plantilla — úsalas tal cual, cambia sus textos, o mézclalas con tus propias secciones:
+import { LibraryHome } from './library' y <LibraryHome layout={[{ type: 'cover-split', … }]} /> con uno o varios bloques seguidos. Cada bloque va con los campos de su ejemplo.
+Fotos de un bloque: "slot:<clave>" con una clave de photos (store-data) o la ruta de un archivo de fotos. Cada foto una sola vez en toda la portada.
+Ejemplos (los de esta tienda ahora):
+${examples}`;
+}
+
 /** What the kit and the template give the home; the writer composes with these instead of inventing commerce parts. */
 const KIT_BRIEF = `PARTES DISPONIBLES (no inventes otras partes de comercio):
-- import Shell from './Shell' — envuelve SIEMPRE toda la portada: <Shell>…</Shell> (encabezado, menú y carrito son de la plataforma; el pie lo escribes tú con write_footer).
+- import Shell from './Shell' — envuelve SIEMPRE toda la portada: <Shell>…</Shell> (encabezado, menú y carrito son de la plataforma; el pie lo escribes tú con write_footer, salvo en una tienda con plantilla).
 - import { Parallax, Reveal } from '@pagosya/ui' — <Reveal> anima al entrar; <Parallax> mueve una foto al hacer scroll.
 - Grilla de productos: copia la de la portada actual tal cual — data-pagosya-catalog con data-pagosya-filters data-filters-style="chips" (ordenar, color y talla) y data-es-cards={variant('cards', 'compact')} (import { variant } from './Shell'), para que las tarjetas de moda muestren sus tallas. El kit dibuja tarjetas, precios y el botón de agregar.
 - Un producto destacado: <div data-pagosya-spotlight="ID"></div> con un id real de los productos.
@@ -103,7 +136,8 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
   constructor(private readonly ctx: { workspace: AgentWorkspace; base: AgentPreviewBase; signal?: AbortSignal; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; /** Spec 2026-10-30: the store's home is animated. */ animated?: boolean;
     /** Owner 2026-10-30: YAPI writes the footer (a must before finish); a playful store moves without scrolling; a calm brand
      *  never shouts; the brand's own accent/deep colours (store-data look.colors) stay. */
-    footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[] }) {}
+    footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[];
+    /** Spec 2026-11-04: the template the store wears; its footer and fonts stay. */ template?: WriterTemplate }) {}
   get workspace() { return this.ctx.workspace; }
   draftIsClean() { return Boolean(this.lastVerify?.clean && this.lastVerify.version === this.workspace.version); }
 
@@ -123,6 +157,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           return { output: 'Portada escrita y compilada. Llama check o screenshot.' };
         }
         case 'write_footer': {
+          if (this.ctx.template) return { output: 'Esta tienda usa el pie de su plantilla; no escribas uno.' };
           const content = String(args.content ?? '');
           const shell = shellWithStoreFooter(this.workspace.read(SHELL_PATH));
           if (!shell) return { output: 'Esta tienda no admite un pie propio; deja el de la plataforma y termina la portada.' };
@@ -136,8 +171,9 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           return { output: missing.length ? `Pie escrito y compilado, pero le falta: ${missing.join('; ')}.` : 'Pie escrito y compilado.' };
         }
         case 'set_tokens': {
-          const fonts = [String(args.heading), String(args.body)];
-          const unknown = fonts.find(id => !SOURCE_FONT_CATALOG.some(font => font.id === id));
+          const kept = this.ctx.template ? templateFonts(this.workspace.read(GLOBALS)) : null;
+          const fonts = kept ? [kept.heading, kept.body] : [String(args.heading), String(args.body)];
+          const unknown = kept ? undefined : fonts.find(id => !SOURCE_FONT_CATALOG.some(font => font.id === id));
           if (unknown) return { output: `La fuente ${unknown} no está en el catálogo; usa un id de read_chassis.` };
           const colours = { paper: String(args.paper), ink: String(args.ink), muted: String(args.muted), accent: String(args.accent), deep: String(args.deep) };
           // Owner 2026-10-30 (BOXY lost its navy for terracotta): the brand's own accent or dark colour stays one of the five.
@@ -145,12 +181,13 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           if (brand.length && ![colours.accent, colours.deep].some(colour => brand.some(own => nearColour(colour, own)))) {
             return { output: `Esta marca tiene sus propios colores (${brand.join(', ')}): usa uno de ellos (o uno muy cercano) como accent o deep. Varía el fondo y la fuente, no el color de la marca.` };
           }
-          const block = masterThemeBlock(colours, fonts[0], fonts[1]);
+          const block = masterThemeBlock(colours, fonts[0], fonts[1], kept?.mono);
           const written = this.workspace.write(GLOBALS, withMasterTheme(this.workspace.read(GLOBALS), block));
           if (!written.ok) return { output: written.message };
           step('set_tokens', 'Eligiendo colores y fuentes');
           const ink = /--es-ink:([^;]+);/.exec(block)?.[1] ?? colours.ink;
-          return { output: `Colores y fuentes guardados.${ink.toLowerCase() !== colours.ink.toLowerCase() ? ` El texto no se leía sobre el fondo; usé ${ink}.` : ''}` };
+          const fixedInk = ink.toLowerCase() !== colours.ink.toLowerCase() ? ` El texto no se leía sobre el fondo; usé ${ink}.` : '';
+          return { output: kept ? `Colores guardados. Las fuentes son de la plantilla ${this.ctx.template!.name}; se mantienen.${fixedInk}` : `Colores y fuentes guardados.${fixedInk}` };
         }
         case 'check': {
           const snapshot = await agentPreviewSnapshot(this.ctx.base, this.workspace.files());
@@ -227,7 +264,8 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
     const photos = this.ctx.base.files.filter(file => file.path.startsWith('assets/') && /\.(jpe?g|png|webp|mp4)$/i.test(file.path)).map(file => file.path);
     const fonts = SOURCE_FONT_CATALOG.map(font => `${font.id} (${font.family}, ${font.role})`).join(', ');
     const templateFooter = /export function Footer\(\)[\s\S]*?\n\}\n/.exec(this.workspace.read(SHELL_PATH))?.[0];
-    return [KIT_BRIEF, ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []), ...(this.ctx.footer ? [FOOTER_BRIEF, templateFooter ? `El pie actual de la plantilla (solo como referencia de los ganchos; el tuyo debe verse distinto):\n${templateFooter}` : ''] : []),
+    return [KIT_BRIEF, ...(this.ctx.template ? [templateBrief(this.ctx.template)] : []), ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []),
+      ...(this.ctx.footer && !this.ctx.template ? [FOOTER_BRIEF, templateFooter ? `El pie actual de la plantilla (solo como referencia de los ganchos; el tuyo debe verse distinto):\n${templateFooter}` : ''] : []),
       `import { … } from './store-data' — exporta: ${exported.join(', ')}. Productos, precios, fotos y logo salen de ahí; nunca los escribas a mano.`,
       `Archivos de fotos: ${photos.join(', ') || 'ninguno (portada solo tipográfica)'}`,
       `fuentes: ${fonts}`,
