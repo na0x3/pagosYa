@@ -1,6 +1,7 @@
 import { applyPageOps, extraPageFile, extraPageSlug, withExtraPages, EXTRA_PAGE_MARK } from './source-extra-pages';
 import type { LayoutOp } from './source-layout-edit';
 import { readMasterState, templateStoreDataFile } from './source-templates';
+import { storefrontPageIndex } from '@pagosya/shared-types';
 
 /** YAPI creates anything (spec 2026-11-05): the pages the merchant asks for beyond the four menu pages. */
 const files = [{ path: 'components/pages/about.tsx', content: '' }, { path: 'components/catalog/productos.tsx', content: '' }, { path: 'components/pages/mi-pagina.tsx', content: 'export default function X() {}' }];
@@ -52,4 +53,12 @@ it('renames, relinks and removes; refuses unknown pages, the seventh page and me
   expect(applyPageOps(pages, [pageOp({ op: 'page-remove', page: 'about' })], [], []).refused[0]).toMatch(/no es una página que yo haya creado/);
   const six = Array.from({ length: 6 }, (_, n) => ({ slug: `p${n}`, name: `P${n}`, menu: '', layout: [] }));
   expect(applyPageOps(six, [pageOp({ value: 'Otra' })], [], []).refused[0]).toMatch(/ya tiene 6 páginas/);
+});
+
+// Live NOA 2026-11-05: the page file was saved but no novias.html was built — the build only makes pages marked @pagosya-page.
+it('the page file is one the build turns into <slug>.html, and an older marked file is still known as YAPI\'s', () => {
+  const page = { slug: 'novias', name: 'Novias', menu: '', layout: [] };
+  expect(storefrontPageIndex([extraPageFile(page)]).map(entry => entry.url)).toEqual(['novias.html']);
+  const older = withExtraPages([{ path: 'components/pages/novias.tsx', content: '// @pagosya-extra-page\nold' }], [page]);
+  expect(older[0].content).toBe(extraPageFile(page).content);
 });

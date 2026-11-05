@@ -7,7 +7,9 @@ import type { LayoutOp } from './source-layout-edit';
  *  where `menu` says ("" = the bar, else the label of a dropdown). */
 export type ExtraPage = { slug: string; name: string; menu: string; layout: LayoutBlock[] };
 export const EXTRA_PAGE_LIMIT = 6;
-export const EXTRA_PAGE_MARK = '// @pagosya-extra-page';
+/** The build makes an HTML page only for files whose first line says @pagosya-page (live NOA 2026-11-05: novias.html was missing). */
+export const EXTRA_PAGE_MARK = '// @pagosya-page @pagosya-extra-page';
+const OLDER_MARK = '// @pagosya-extra-page';
 const RESERVED = new Set(['index', 'producto', 'productos', 'coleccion', 'checkout', 'buscar', 'nosotros', 'contacto', 'faq', 'envios', 'nueva',
   ...STOREFRONT_PAGES.map(page => page.url.replace(/\.html$/, ''))]);
 
@@ -34,7 +36,7 @@ export function extraPageFile(page: ExtraPage): { path: string; content: string 
 /** Each listed page's file written, the marked files of pages no longer listed removed; a file without the mark is never touched. */
 export function withExtraPages<T extends { path: string; content: string }>(files: T[], pages: readonly ExtraPage[]): T[] {
   const wanted = new Map(pages.map(page => { const file = extraPageFile(page); return [file.path, file.content] as const; }));
-  const marked = (file: T) => file.content.startsWith(EXTRA_PAGE_MARK);
+  const marked = (file: T) => file.content.startsWith(EXTRA_PAGE_MARK) || file.content.startsWith(OLDER_MARK);
   const out = files.filter(file => !(marked(file) && !wanted.has(file.path))).map(file => wanted.has(file.path) && marked(file) ? { ...file, content: wanted.get(file.path)! } : file);
   for (const [path, content] of wanted) if (!out.some(file => file.path === path)) out.push({ path, content } as T);
   return out;
