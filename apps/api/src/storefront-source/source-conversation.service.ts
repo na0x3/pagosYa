@@ -1,3 +1,4 @@
+import type { PointFocus } from './source-point-focus';
 import { sourceRequestContext } from './source-request-context';
 import { normalizePlan, planJsonSchema, type PlanCatalogue, type StorePlan } from './plan/store-plan';
 import type { CatalogFacts } from './plan/store-plan-checks';
@@ -355,7 +356,7 @@ export class SourceConversationService {
   /** Template quick edits (spec 2026-11-01 §1): a words, remove, move or add request on a template home, as exact operations on its
    *  numbered sections plus the part they cannot do. Text only, short; null when it fails twice. */
   async editLayout(merchantId: string, input: { storeId: string; layout: LayoutBlock[]; request: string; productLayout?: LayoutBlock[]; store?: StoreEditState; photos?: StoreEditPhoto[];
-    pages?: Record<string, LayoutBlock[]>; offerPages?: boolean; templateTypes?: string[] }): Promise<LayoutEditRead | null> {
+    pages?: Record<string, LayoutBlock[]>; offerPages?: boolean; templateTypes?: string[]; focus?: PointFocus; picture?: Buffer }): Promise<LayoutEditRead | null> {
     const model = this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
     const provider = sourceProvider(this.config, model);
     // YAPI edits everything (spec 2026-11-03): the product page's sections and the store's own data ride in the same short call; the
@@ -365,13 +366,16 @@ export class SourceConversationService {
       ...(input.pages ? { paginas: Object.fromEntries(Object.entries(input.pages).map(([page, list]) => [page, layoutDigest(list)])),
         ...(input.offerPages ? { plantilla: input.templateTypes ?? [], nuevas_paginas: addableSections('menu') } : {}) } : {}),
       nuevas: addableSections(),
-      ...(input.store ? { tienda: storeDigest(input.store, input.photos ?? []) } : {}), pedido: input.request.slice(0, 2000) };
+      ...(input.store ? { tienda: storeDigest(input.store, input.photos ?? []) } : {}), ...(input.focus ? { foco: input.focus } : {}), pedido: input.request.slice(0, 2000) };
+    const content: Array<Record<string, string>> = [{ type: 'input_text', text: JSON.stringify(body) }];
+    // Spec 2026-11-05 point-at: the circled area with the merchant's loop drawn on it.
+    if (input.picture) content.push({ type: 'input_image', image_url: `data:image/jpeg;base64,${input.picture.toString('base64')}`, detail: 'high' });
     for (let attempt = 0; attempt < 2; attempt++) {
       const started = Date.now(); let answer: any = null; let status = 'FAILED';
       try {
         const response = await fetch(provider.endpoint, {
           method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(60_000),
-          body: JSON.stringify({ model, store: false, instructions: `${LAYOUT_EDIT_PROMPT}\n${STORE_EDIT_PROMPT}`, input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(body) }] }],
+          body: JSON.stringify({ model, store: false, instructions: `${LAYOUT_EDIT_PROMPT}\n${STORE_EDIT_PROMPT}`, input: [{ role: 'user', content }],
             // A rewritten policy or about page is longer than a headline.
             text: { format: { type: 'json_schema', name: 'layout_edit', strict: true, schema: layoutEditSchema() } }, reasoning: { effort: 'low' }, max_output_tokens: 6000 }),
         });

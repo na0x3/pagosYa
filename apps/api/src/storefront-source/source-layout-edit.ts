@@ -15,7 +15,7 @@ export type MenuPage = typeof MENU_PAGES[number];
 export type LayoutPage = 'home' | 'product' | MenuPage;
 export const MENU_PAGE_NAMES: Record<MenuPage, string> = { about: 'Nosotros', contact: 'Contacto', faq: 'Preguntas frecuentes', shipping: 'Envíos' };
 const isMenuPage = (page: unknown): page is MenuPage => (MENU_PAGES as readonly unknown[]).includes(page);
-const MENU_PAGE_URLS: Record<MenuPage, string> = { about: 'nosotros.html', contact: 'contacto.html', faq: 'faq.html', shipping: 'envios.html' };
+export const MENU_PAGE_URLS: Record<MenuPage, string> = { about: 'nosotros.html', contact: 'contacto.html', faq: 'faq.html', shipping: 'envios.html' };
 const MENU_PAGE_WORDS = /\b(nosotros|qui[eé]nes somos|contacto|cont[aá]ctanos|preguntas|faq|env[ií]os?|entregas|p[aá]ginas?)\b/i;
 
 /** Minor 2026-11-05 (every quick edit sent the menu pages and their section list): the pages that ride in the quick edit — the ones
@@ -111,7 +111,13 @@ Reglas:
 - rest: lo que el comercio pidió y no se hace con estas operaciones — colores, letras, el menú, cómo se ve una sección, una sección
   que ninguna de «nuevas» puede mostrar, una página nueva, direcciones de locales, formas de pago, una foto que no mandó —, con sus
   propias palabras. "" si todo se hizo con ops y store.
-- Si nada del pedido se hace con ops ni con store: ops = [], store = [] y rest = el pedido entero.`;
+- Si nada del pedido se hace con ops ni con store: ops = [], store = [] y rest = el pedido entero.
+«foco» (si viene) es lo que el comercio señaló en la vista previa: «pagina» (home, product, about, contact, faq, shipping), «secciones»
+(los números at de esa página), los «textos» y «fotos» dentro de la zona que marcó y «partes» (header, announcement, footer, menu).
+Palabras como esto, esta, este, aquí, acá, este título, esta foto se refieren al foco. Cambia solo las secciones del foco, salvo que el
+pedido nombre otras; en una página del menú tus ops llevan page con esa página. Si viene una imagen, la línea dibujada en ella marca la
+parte. «mirando» es la sección que el comercio tenía en pantalla: úsala solo para esas palabras. Si «partes» es lo único del foco, el
+cambio es del menú, la cinta de anuncio o el pie: va en «store».`;
 
 export function layoutEditSchema() {
   const op = { type: 'object', additionalProperties: false, required: ['op', 'at', 'field', 'item', 'value', 'to', 'type', 'page'], properties: {
