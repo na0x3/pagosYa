@@ -106,6 +106,7 @@ export function storeDigest(state: StoreEditState, photos: readonly StoreEditPho
     productos: state.products.slice(0, 40).map((product, at) => ({ at, nombre: product.name, precio: bs(product.amount), descripcion: short(product.description, 160),
       ...(product.stock !== undefined ? { stock: product.stock === null ? 'sin límite' : product.stock } : {}),
       ...(product.categoryId ? { categoria: state.categories?.find(category => category.id === product.categoryId)?.name ?? '' } : {}),
+      ...(product.variants?.some(variant => variant.options?.length) ? { grupos: product.variants.find(variant => variant.options?.length)!.options!.map(option => option.name) } : {}),
       ...(product.variants?.length ? { opciones: product.variants.map(variant => ({ nombre: variant.name, precio: bs(variant.amount), stock: variant.stock == null ? 'sin límite' : variant.stock })) }
         : product.options ? { opciones: true } : {}) })),
     ...(state.archived?.length ? { archivados: state.archived.slice(0, 20).map((product, at) => ({ at, nombre: product.name })) } : {}),

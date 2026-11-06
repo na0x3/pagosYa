@@ -253,3 +253,48 @@ describe('final review fixes (2026-11-06)', () => {
     expect(notes).toEqual(['Mándame la foto de «Flan» cuando la tengas.']);
   });
 });
+
+describe('option groups — colour and size from chat (owner 2026-11-06)', () => {
+  const grouped = state({ products: [...state().products,
+    { id: 'p3', name: 'Vestido', amount: 24000, description: '', imageUrls: [], options: true, stock: null, categoryId: null, currency: 'BOB',
+      variants: [{ id: 'w1', name: 'Rojo', amount: 24000, stock: null, options: [{ name: 'Color', value: 'Rojo' }] },
+        { id: 'w2', name: 'Azul', amount: 24000, stock: 1, options: [{ name: 'Color', value: 'Azul' }] }] }] });
+
+  it('a colour group is saved as the store\'s «Color» options, so the page draws its dots', () => {
+    const { change } = applyCatalogOps(state(), [op('product-add', { name: 'Polerón', value: 'Color: Rojo | 90 | 3\nColor: Azul | 90 |' })]);
+    expect(change.products.create[0].variants).toEqual([expect.objectContaining({ name: 'Rojo', amount: 9000, stock: 3, options: [{ name: 'Color', value: 'Rojo' }] }),
+      expect.objectContaining({ name: 'Azul', amount: 9000, stock: null, options: [{ name: 'Color', value: 'Azul' }] })]);
+  });
+
+  it('colour and size together are one line per combination, two groups', () => {
+    const { change, done } = applyCatalogOps(state(), [op('product-add', { name: 'Polerón', value: 'Color: Rojo / Talla: S | 90 |\nColor: Rojo / Talla: M | 90 |\nColor: Azul / Talla: S | 95 | 2' })]);
+    expect(change.products.create[0].variants.map(variant => [variant.name, variant.options])).toEqual([
+      ['Rojo / S', [{ name: 'Color', value: 'Rojo' }, { name: 'Talla', value: 'S' }]], ['Rojo / M', [{ name: 'Color', value: 'Rojo' }, { name: 'Talla', value: 'M' }]],
+      ['Azul / S', [{ name: 'Color', value: 'Azul' }, { name: 'Talla', value: 'S' }]]]);
+    expect(done[0]).toBe('creé «Polerón», con 3 opciones (Rojo / S Bs 90, Rojo / M Bs 90, Azul / S Bs 95)');
+  });
+
+  it('lines with different groups, or some with a group and some without, are refused', () => {
+    const { change, refused } = applyCatalogOps(state(), [op('product-add', { name: 'Polerón', value: 'Color: Rojo | 90\nTalla: S | 90' }),
+      op('product-add', { name: 'Gorra', value: 'Color: Rojo | 50\nAzul | 50' })]);
+    expect(change.products.create).toEqual([]);
+    expect(refused[0]).toMatch(/^No creé «Polerón»: /);
+    expect(refused[1]).toBe('No creé «Gorra»: escribe el grupo en todas las opciones («Color: Rojo») o en ninguna.');
+  });
+
+  it('a new colour joins the product\'s colour group; one is found by «Color: Rojo» or «Rojo»', () => {
+    const { change } = applyCatalogOps(grouped, [op('option-add', { at: 2, option: 'Verde', price: '250' }), op('option-price', { at: 2, option: 'Color: Rojo', price: '230' }),
+      op('option-stock', { at: 2, option: 'azul', stock: '4' })]);
+    expect(change.products.update).toEqual([{ id: 'p3', variantOps: [{ action: 'add', changes: { name: 'Verde', amount: 25000, stock: null, options: [{ name: 'Color', value: 'Verde' }] } },
+      { action: 'update', variantId: 'w1', changes: { amount: 23000 } }, { action: 'update', variantId: 'w2', changes: { stock: 4 } }] }]);
+  });
+
+  it('a group on a product whose options have none is dropped, so the product stays buyable', () => {
+    const { change } = applyCatalogOps(state(), [op('option-add', { at: 1, option: 'Talla: L', price: '100' })]);
+    expect(change.products.update[0].variantOps).toEqual([{ action: 'add', changes: { name: 'L', amount: 10000, stock: null } }]);
+  });
+
+  it('the prompt shows how to write a colour group and a colour × size combination', () => {
+    expect(CATALOG_EDIT_PROMPT).toContain('Color: Rojo / Talla: S | 90 | 3');
+  });
+});

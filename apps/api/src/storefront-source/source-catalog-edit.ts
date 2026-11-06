@@ -58,14 +58,18 @@ que no se usan: at -1, el resto ""):
   voz de la tienda y SOLO con lo que dijo el comercio (nada de ingredientes, tallas, materiales ni promesas que no dijo). category =
   su categoría (una de «categorias» o una nueva). photo = una foto de «fotos» con de "mensaje" (si no mandó foto, ""). stock = las
   unidades si las dijo («5», «sin límite»). Si tiene opciones («chica Bs 80, grande Bs 120», «tallas S, M y L»), value = una por
-  línea «nombre | precio | stock» (precio "" = el del producto; stock "" = sin límite) y price puede ir "". Como mucho 6 por pedido.
+  línea «nombre | precio | stock» (precio "" = el del producto; stock "" = sin límite) y price puede ir "". Colores, tallas, sabores
+  y otros grupos llevan su grupo delante, en todas las líneas: «Color: Rojo | 90 | 3»; con color y talla, una línea por cada
+  combinación que existe: «Color: Rojo / Talla: S | 90 | 3». El grupo de los colores se llama Color y el de las tallas Talla. Como
+  mucho 6 por pedido.
   Nunca inventes un precio: si falta, no lo agregues y pregunta con «ask» («¿A cuánto vendes la Torta de chocolate?»).
 - product-archive (quitar, borrar, eliminar o sacar un producto: queda archivado) y product-restore (volver a poner uno de
   «archivados»): at = su número en esa lista.
 - product-stock: at, stock («5», «sin límite», «agotado»). Un producto con opciones lleva option-stock por opción.
 - product-category: at, category = el nombre de la categoría ("" = sin categoría).
 - option-add (at, option = el nombre, price, stock), option-remove (at, option), option-price (at, option, price), option-stock
-  (at, option, stock): las opciones de un producto de «productos», por su nombre.
+  (at, option, stock): las opciones de un producto de «productos», por su nombre. Si el producto tiene «grupos», una opción nueva
+  lleva cada grupo: «Color: Verde» o «Color: Verde / Talla: M».
 - category-add (name), category-rename (at, name = el nombre nuevo), category-remove (at; sus productos quedan sin categoría),
   category-move (at, value = el lugar nuevo, 0 = la primera).
 - code-add: name = el código en mayúsculas (VERANO20; si el comercio no lo nombró, uno corto con sus palabras), value = el
@@ -76,20 +80,40 @@ Los números son los que ves. Una categoría se nombra por su nombre, también s
 un producto sin opciones, la descripción o la foto de un producto que ya existe se cambian con «store» (part product), no aquí.
 Los productos, categorías y códigos nunca van en «rest».`;
 
-/** «Chica | 15 | 5» lines → a new product's options (at least two, as Productos asks), or why not. */
+type OptionParts = { label: string; options?: Array<{ name: string; value: string }> };
+/** Owner 2026-11-06: «Color: Rojo / Talla: S» → its groups, saved as Productos saves them (the product page draws a «Color» group
+ *  as dots, then the size); «Chica» → a plain option. Null when it cannot be read, or mixes grouped and plain parts. */
+function optionParts(raw: string): OptionParts | null {
+  const parts = raw.split('/').map(part => part.trim()).filter(Boolean);
+  if (!parts.length) return null;
+  const pairs = parts.map(part => /^([^:]{1,40}):\s*(.{1,40})$/.exec(part));
+  if (pairs.every(Boolean)) {
+    const options = pairs.map(pair => ({ name: oneLine(pair![1], 40), value: oneLine(pair![2], 40) }));
+    if (options.length > 6 || options.some(option => !option.name || !option.value || !safe(option.name) || !safe(option.value))) return null;
+    return { label: options.map(option => option.value).join(' / '), options };
+  }
+  if (pairs.some(Boolean)) return null;
+  const label = oneLine(raw, CATALOG_LIMITS.optionName);
+  return label && safe(label) ? { label } : null;
+}
+
+/** «Chica | 15 | 5» or «Color: Rojo / Talla: S | 90 | 3» lines → a new product's options (at least two, as Productos asks), or why not. */
 function optionsFrom(lines: readonly string[], price: number | null): ProductVariant[] | string {
   if (!lines.length) return [];
-  const asked: Array<{ name: string; amount: number; stock: number | null }> = [];
+  const asked: Array<{ name: string; amount: number; stock: number | null; options?: OptionParts['options'] }> = [];
   for (const line of lines) {
     const [rawName = '', rawPrice = '', rawStock = ''] = line.split('|').map(part => part.trim());
-    const name = oneLine(rawName, CATALOG_LIMITS.optionName);
-    if (!name || !safe(name)) return `la opción «${short(rawName, 30)}» no tiene nombre.`;
+    const parts = optionParts(rawName);
+    if (!parts) return `la opción «${short(rawName, 30)}» no tiene nombre.`;
+    const name = parts.label;
     const amount = rawPrice ? priceCents(rawPrice) : price;
     if (amount === null) return `dime el precio de la opción «${name}».`;
     const stock = stockValue(rawStock);
     if (Number.isNaN(stock)) return `«${short(rawStock, 20)}» no es un stock.`;
-    asked.push({ name, amount, stock: stock ?? null });
+    asked.push({ name, amount, stock: stock ?? null, ...(parts.options ? { options: parts.options } : {}) });
   }
+  // The store page draws a product's options only when all of them carry the same groups, or none does.
+  if (asked.some(option => option.options) && !asked.every(option => option.options)) return 'escribe el grupo en todas las opciones («Color: Rojo») o en ninguna.';
   try { return normalizeProductVariants(asked as never); } catch (error) { return `${String((error as Error).message).replace(/\.$/, '')}.`; }
 }
 const currencyOf = (state: StoreEditState) => state.products.find(product => product.currency)?.currency ?? 'BOB';
@@ -305,11 +329,13 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
         const item: StoreEditProduct | undefined = shown[op.at];
         if (!item) break;
         const label = short(item.name, 40);
-        const name = oneLine(op.option, CATALOG_LIMITS.optionName);
-        if (!name || !safe(name)) break;
+        const parts = optionParts(op.option);
+        if (!parts) break;
+        const name = parts.label;
         if (item.options && !item.variants) { refused.push(`No pude leer las opciones de «${label}»: cámbialas en Productos.`); break; }
         const variants = item.variants ?? [];
         const target = variants.find(variant => fold(variant.name) === fold(name));
+        const groups = variants.find(variant => variant.options?.length)?.options?.map(option => option.name);
         let next: SourceVariantOperation;
         let line: string;
         if (op.kind === 'option-add') {
@@ -318,7 +344,14 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
           if (amount === null) { refused.push(`No agregué «${name}» a «${label}»: «${short(op.price, 20)}» no es un precio.`); break; }
           const stock = stockValue(op.stock);
           if (Number.isNaN(stock)) { refused.push(`No agregué «${name}» a «${label}»: «${short(op.stock, 20)}» no es un stock.`); break; }
-          next = { action: 'add', changes: { name, amount, stock: stock ?? null } as never };
+          // A new option joins the product's groups («Verde» → Color: Verde); on a product whose options have none, a group is dropped
+          // (a mix leaves the product unbuyable on the store page).
+          let options = groups ? parts.options : undefined;
+          if (groups && !options) {
+            if (groups.length !== 1) { refused.push(`No agregué «${name}» a «${label}»: dime cada grupo, por ejemplo «${groups.map(group => `${group}: …`).join(' / ')}».`); break; }
+            options = [{ name: groups[0], value: name }];
+          }
+          next = { action: 'add', changes: { name, amount, stock: stock ?? null, ...(options ? { options } : {}) } as never };
           line = `«${label}» tiene la opción «${name}» a ${bs(amount)}`;
         } else if (!target) {
           refused.push(variants.length ? `«${label}» no tiene la opción «${name}».` : `«${label}» no tiene opciones.`);

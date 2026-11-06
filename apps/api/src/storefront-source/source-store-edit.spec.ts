@@ -135,3 +135,10 @@ describe('catalog in the digest (spec 2026-11-05 part 2)', () => {
     expect(digest.productos[1]).toMatchObject({ opciones: true });
   });
 });
+
+it('shows a product\'s option groups, so a new colour can join «Color» (owner 2026-11-06)', () => {
+  const digest = storeDigest(state({ products: [{ id: 'p3', name: 'Vestido', amount: 24000, description: '', imageUrls: [], options: true, stock: null, categoryId: null, currency: 'BOB',
+    variants: [{ id: 'w1', name: 'Rojo / S', amount: 24000, stock: null, options: [{ name: 'Color', value: 'Rojo' }, { name: 'Talla', value: 'S' }] },
+      { id: 'w2', name: 'Azul / S', amount: 24000, stock: 1, options: [{ name: 'Color', value: 'Azul' }, { name: 'Talla', value: 'S' }] }] }] }), []);
+  expect(digest.productos[0]).toMatchObject({ grupos: ['Color', 'Talla'] });
+});
