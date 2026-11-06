@@ -860,6 +860,27 @@ describe('the home page writer', () => {
     generate.mockRejectedValueOnce(new Error('YAPI no pudo terminar la portada: steps'));
     await expect(writer()).rejects.toMatchObject({ followUp: { sectionLibrary: true, revision: 3, checklistWords: 'Café de altura' } });
   });
+  // Live 2026-11-06 (Gramiyaa on Tacón): the section library's save failed and the merchant, told «aparecerá en unos minutos», heard
+  // nothing. The store keeps the template's home, and YAPI says so.
+  it('a section library that cannot save tells the merchant the store kept the template\'s home', async () => {
+    const templated = { snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files: [
+      templateStoreDataFile({ name: 'Café Buna' }, { hero: '' }, { copy: { headline: 'Café' } as never, look: { palette: 'mono', fonts: 'zancada' } as never, variants: { theme: 'sorbo' } as never,
+        layout: [{ type: 'cover-split', title: 'Café de altura', photo: '/v1/uploads/hero.jpg' }] as never }),
+      { path: 'components/home.tsx', content: 'import { copy, layout } from \'./store-data\';\nexport default function Home() { return copy && layout.length; }' }, { path: 'components/library.tsx', content: 'export {}' },
+      { path: 'components/Shell.tsx', content: shell }, { path: 'styles/globals.css', content: 'body{}' }] } };
+    projects.version.mockImplementation(async () => templated);
+    // The store's save failing (any real error inside the library) — not one of its planned skips.
+    (chat as any).libraryFacts = jest.fn().mockRejectedValue(new Error('Invalid source file content'));
+    await expect(chat.send('m1', 's1', { revision: 3, instruction: 'Portada', personalTouch: true, sectionLibrary: true, requestId: uuid(), model: 'auto' } as any)).rejects.toBeInstanceOf(PersonalTouchSkipped);
+    const said = messages.filter(message => message.role === 'ASSISTANT').map(message => message.content).join(' ');
+    expect(said).toContain('No pude terminar las secciones de tu portada');
+    // A planned skip (a store from before the library) stays quiet, as before.
+    messages.length = 0;
+    projects.version.mockImplementation(async () => ({ snapshot: { ...templated.snapshot, files: templated.snapshot.files.filter(file => file.path !== 'components/library.tsx') } }));
+    await expect(chat.send('m1', 's1', { revision: 3, instruction: 'Portada', personalTouch: true, sectionLibrary: true, requestId: uuid(), model: 'auto' } as any)).rejects.toBeInstanceOf(PersonalTouchSkipped);
+    expect(messages.filter(message => message.role === 'ASSISTANT')).toHaveLength(0);
+  });
+
   it('the writer runs generate() as the home writer, with no conversation step, and hands its revision to the check', async () => {
     generate.mockResolvedValueOnce({ revision: 4, label: 'Portada de YAPI' });
     const out = await writer();

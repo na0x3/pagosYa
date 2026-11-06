@@ -1868,6 +1868,11 @@ export class SourceChatService {
           // Anything else keeps the polished store as it is; the check still runs.
           this.productLogger.warn(JSON.stringify({ event: 'section_library_kept_template', storeId, reason: String((error as Error)?.message).slice(0, 300) }));
           await this.prisma.storeAgentMessage.delete({ where: { id: userMessage.id } }).catch(() => undefined);
+          // Live 2026-11-06 (Gramiyaa on Tacón: the save failed, the merchant had been told «aparecerá en unos minutos» and heard
+          // nothing): a real failure is said; a planned skip (no photos, an older store) stays quiet as before.
+          if (!(error instanceof PersonalTouchSkipped)) await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT',
+            content: 'No pude terminar las secciones de tu portada, así que tu tienda quedó con la portada de la plantilla. Pídeme los cambios que quieras y los hago sobre ella.',
+            metadata: { progress: workflow.value } } }).catch(() => undefined);
           throw new PersonalTouchSkipped('section library kept the template', checkAfter(current.revision));
         }
         const after = checkAfter(composed.revision.revision);
