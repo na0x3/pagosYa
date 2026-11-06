@@ -846,6 +846,7 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
 .es-pdp[data-es-pdp="fashion"] .es-pdp__buy{margin-top:auto}
 @media (max-width:820px){.es-pdp[data-es-pdp="fashion"] .es-pdp__grid{grid-template-columns:1fr}.es-pdp[data-es-pdp="fashion"] .es-pdp__gallery{order:0;min-height:0}.es-pdp[data-es-pdp="fashion"] :is(.es-pdp__buy,.es-pdp__guide){margin-top:0}}
 
+/* Fashion look end */
 /* Newsletter entry in the footer (owner 2026-10-24): a full-width strip under the columns; pagosYa's form takes the email. */
 .es-footer__news{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 32px;margin-top:40px;padding:24px 0;border-top:1px solid color-mix(in srgb,currentColor 18%,transparent)}
 .es-footer__news h2{margin:0;font-size:20px}.es-footer__news p{margin:4px 0 0;opacity:.8}.es-footer__news .es-footer__status:empty{display:none}

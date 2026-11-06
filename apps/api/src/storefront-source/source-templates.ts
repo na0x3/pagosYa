@@ -201,10 +201,14 @@ export function readMasterState(files: readonly SourceProjectFileDto[]) {
  *  CSS block and, when its product page is still the template's, the category line and size guide link. A product page the
  *  store edited (anchors missing) is left alone; doing it twice changes nothing. */
 const FASHION_CSS_MARK = '/* Fashion look (2026-10-21)';
+// Live 2026-11-06 (Gramiyaa on Tacón): the block ends at its own mark — up to the sheet's end it took every section, card and theme
+// written after it, and a fashion store's sheet passed the size limit at its next save.
+const FASHION_CSS_END = '/* Fashion look end */';
 export function withFashionTemplateParts<F extends { path: string; content: string }>(files: F[], variants: Partial<MasterVariants>): F[] {
   if (variants.cards !== 'fashion' && variants.pdp !== 'fashion') return files;
   const css = templateSourceFiles(MASTER_TEMPLATE_ID).find(file => file.path === 'styles/globals.css')?.content ?? '';
-  const block = css.includes(FASHION_CSS_MARK) ? css.slice(css.indexOf(FASHION_CSS_MARK)).trim() : '';
+  const start = css.indexOf(FASHION_CSS_MARK), end = css.indexOf(FASHION_CSS_END);
+  const block = start >= 0 && end > start ? css.slice(start, end + FASHION_CSS_END.length) : '';
   const title = '<KitSlot kind="product" name="title" className="es-pdp__title" />', buy = '<KitSlot kind="product" name="buy" className="es-pdp__buy" />';
   return files.map(file => {
     if (file.path === 'styles/globals.css' && block && !file.content.includes(FASHION_CSS_MARK)) return { ...file, content: `${file.content.trimEnd()}\n\n${block}\n` };

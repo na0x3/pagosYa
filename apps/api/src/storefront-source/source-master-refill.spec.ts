@@ -138,6 +138,17 @@ describe('fashion look', () => {
     expect(file(again, 'components/product.tsx').split('name="category"').length).toBe(2);
   });
 
+  // Live 2026-11-06 (Gramiyaa on Tacón, «Invalid source file content» on every save): the fashion block was copied up to the end of
+  // the template's sheet — every section, card and theme after it — so a fashion store's sheet tripled past the size limit.
+  it('the fashion CSS is only the fashion block, never the rest of the template\'s sheet', () => {
+    const files = refillMasterFiles(withPages(), withVariants, { variants: { cards: 'fashion', pdp: 'fashion' } as any });
+    const sheet = file(files, 'styles/globals.css'), before = file(withPages(), 'styles/globals.css');
+    expect(sheet).toContain('/* Fashion look end */');
+    expect(sheet).not.toContain('/* theme:paloalto */');
+    // The refill adds its own small blocks too (catalogue pages, menu); the old copy added ~300 000 characters.
+    expect(sheet.length - before.length).toBeLessThan(30000);
+  });
+
   it('other refills leave the product page and CSS as they are; an edited product page without the anchors is left alone', () => {
     const plain = refillMasterFiles(withPages(), withVariants, { copy: { headline: 'Otra' } });
     expect(file(plain, 'components/product.tsx')).toBe(oldProduct);
