@@ -2,9 +2,9 @@
  * ops, the template quick edit answers «catalogo» — products made, archived, restored, stocked, filed and given options; categories
  * made, renamed, removed and ordered; discount codes made and switched. This pure module reads those operations, checks them against
  * the store as the digest showed it and turns them into one change the caller writes, plus the words of the reply. */
-import type { ProductVariant } from '../payment-links/product-variants';
-import type { SourceVariantOperation } from './source-product-options';
-import { bs, oneLine, priceCents, safe, short, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
+import { normalizeProductVariants, totalVariantStock, type ProductVariant } from '../payment-links/product-variants';
+import { applyVariantOperations, type SourceVariantOperation } from './source-product-options';
+import { STORE_CAPS, block, bs, oneLine, photoRef, priceCents, safe, short, type StoreEditPhoto, type StoreEditProduct, type StoreEditState } from './source-store-edit';
 
 export const CATALOG_KINDS = ['product-add', 'product-archive', 'product-restore', 'product-stock', 'product-category', 'option-add', 'option-remove',
   'option-price', 'option-stock', 'category-add', 'category-rename', 'category-remove', 'category-move', 'code-add', 'code-off', 'code-on', 'code-show'] as const;
@@ -74,6 +74,25 @@ Los números son los que ves. Una categoría se nombra por su nombre, también s
 un producto sin opciones, la descripción o la foto de un producto que ya existe se cambian con «store» (part product), no aquí.
 Los productos, categorías y códigos nunca van en «rest».`;
 
+/** «Chica | 15 | 5» lines → a new product's options (at least two, as Productos asks), or why not. */
+function optionsFrom(lines: readonly string[], price: number | null): ProductVariant[] | string {
+  if (!lines.length) return [];
+  const asked: Array<{ name: string; amount: number; stock: number | null }> = [];
+  for (const line of lines) {
+    const [rawName = '', rawPrice = '', rawStock = ''] = line.split('|').map(part => part.trim());
+    const name = oneLine(rawName, CATALOG_LIMITS.optionName);
+    if (!name || !safe(name)) return `la opción «${short(rawName, 30)}» no tiene nombre.`;
+    const amount = rawPrice ? priceCents(rawPrice) : price;
+    if (amount === null) return `dime el precio de la opción «${name}».`;
+    const stock = stockValue(rawStock);
+    if (Number.isNaN(stock)) return `«${short(rawStock, 20)}» no es un stock.`;
+    asked.push({ name, amount, stock: stock ?? null });
+  }
+  try { return normalizeProductVariants(asked as never); } catch (error) { return `${String((error as Error).message).replace(/\.$/, '')}.`; }
+}
+const currencyOf = (state: StoreEditState) => state.products.find(product => product.currency)?.currency ?? 'BOB';
+const listNames = (names: readonly string[]) => names.length > 1 ? `${names.slice(0, -1).map(name => `«${name}»`).join(', ')} y «${names.at(-1)}»` : `«${names[0]}»`;
+
 /** An existing category id, or `new:<n>` for the n-th category this change creates. */
 export type CategoryRef = string;
 export type CatalogNewProduct = { name: string; description: string; amount: number; currency: string; imageUrls: string[]; stock: number | null; variants: ProductVariant[]; categoryRef: CategoryRef | null };
@@ -101,6 +120,11 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
   const categories = state.categories ?? [];
   const codes = state.codes ?? [];
   const removed = new Set<string>();
+  const shown = state.products.slice(0, CATALOG_LIMITS.shown);
+  const archived = state.archived ?? [];
+  const productUpdate = (id: string) => { let entry = change.products.update.find(item => item.id === id); if (!entry) { entry = { id }; change.products.update.push(entry); } return entry; };
+  const optionDone = new Map<string, string[]>();
+  const noPhoto: string[] = [];
   // Names to refs: the store's own categories, then the ones this request makes.
   const named = new Map<string, CategoryRef>(categories.map(category => [fold(category.name), category.id]));
   const categoryName = (ref: CategoryRef) => categories.find(category => category.id === ref)?.name ?? change.categories.create.find(category => category.ref === ref)?.name ?? '';
@@ -203,10 +227,126 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
         done.push(where === 'correos' ? `el código ${code.code} ${yes ? 'ahora puede salir' : 'ya no sale'} en los correos` : `el asistente ${yes ? 'ahora ofrece' : 'ya no ofrece'} el código ${code.code}`);
         break;
       }
-      default: break; // products and options: Task 4
+      case 'product-add': {
+        const name = oneLine(op.name, STORE_CAPS.productName);
+        if (!name || !safe(name)) break;
+        if (shown.some(item => fold(item.name) === fold(name)) || change.products.create.some(item => fold(item.name) === fold(name))) {
+          if (!options.answering) refused.push(`Ya tienes «${short(name, 40)}» en la tienda.`);
+          break;
+        }
+        if (change.products.create.length >= CATALOG_LIMITS.products) { refused.push(`No creé «${short(name, 40)}»: como mucho ${CATALOG_LIMITS.products} productos nuevos por pedido.`); break; }
+        const price = op.price.trim() ? priceCents(op.price) : null;
+        if (op.price.trim() && price === null) { refused.push(`No creé «${short(name, 40)}»: «${short(op.price, 20)}» no es un precio.`); break; }
+        const variants = optionsFrom(op.value.split('\n').map(line => line.trim()).filter(Boolean), price);
+        if (typeof variants === 'string') { refused.push(`No creé «${short(name, 40)}»: ${variants}`); break; }
+        if (!variants.length && price === null) { refused.push(`No creé «${short(name, 40)}»: dime su precio.`); break; }
+        const stock = stockValue(op.stock);
+        if (Number.isNaN(stock)) { refused.push(`No creé «${short(name, 40)}»: «${short(op.stock, 20)}» no es un número de unidades.`); break; }
+        const categoryRef = op.category.trim() ? categoryFor(op.category) : null;
+        if (op.category.trim() && categoryRef === null) break;
+        const description = block(op.text, STORE_CAPS.productDescription);
+        const photo = op.photo.trim() ? photoRef(op.photo, photos) : undefined;
+        const amount = variants.length ? Math.min(...variants.map(variant => variant.amount)) : price!;
+        change.products.create.push({ name, description: description && safe(description) ? description : '', amount, currency: currencyOf(state),
+          imageUrls: photo ? [photo] : [], stock: variants.length ? totalVariantStock(variants) : stock ?? null, variants, categoryRef });
+        done.push(`creé «${name}»${categoryRef ? ` en ${categoryName(categoryRef)}` : ''}${variants.length
+          ? `, con ${variants.length} opciones (${variants.map(variant => `${variant.name} ${bs(variant.amount)}`).join(', ')})` : ` a ${bs(amount)}`}`);
+        if (!photo) noPhoto.push(name);
+        break;
+      }
+      case 'product-archive': {
+        const item = shown[op.at];
+        if (!item) break;
+        const entry = productUpdate(item.id);
+        if (entry.status === 'ARCHIVED') break;
+        entry.status = 'ARCHIVED';
+        done.push(`archivé «${short(item.name, 40)}»: ya no aparece en la tienda y puedes volver a activarlo en Productos`);
+        break;
+      }
+      case 'product-restore': {
+        const item = archived[op.at];
+        if (!item) break;
+        productUpdate(item.id).status = 'ACTIVE';
+        done.push(`«${short(item.name, 40)}» vuelve a estar en la tienda`);
+        break;
+      }
+      case 'product-stock': {
+        const item = shown[op.at];
+        if (!item) break;
+        if (item.options) { refused.push(`«${short(item.name, 40)}» tiene opciones: dime el stock de cada opción.`); break; }
+        const stock = stockValue(op.stock);
+        if (stock === undefined) break;
+        if (Number.isNaN(stock)) { refused.push(`No cambié el stock de «${short(item.name, 40)}»: «${short(op.stock, 20)}» no es un número de unidades.`); break; }
+        if (stock === item.stock) break;
+        productUpdate(item.id).stock = stock;
+        done.push(stock === null ? `«${short(item.name, 40)}» ya no tiene límite de stock` : stock === 0 ? `«${short(item.name, 40)}» está agotado` : `quedan ${stock} de «${short(item.name, 40)}»`);
+        break;
+      }
+      case 'product-category': {
+        const item = shown[op.at];
+        if (!item) break;
+        const ref = op.category.trim() ? categoryFor(op.category) : null;
+        if (op.category.trim() && ref === null) break;
+        if (ref === (item.categoryId ?? null)) break;
+        productUpdate(item.id).categoryRef = ref;
+        done.push(ref ? `«${short(item.name, 40)}» está en ${categoryName(ref)}` : `«${short(item.name, 40)}» ya no tiene categoría`);
+        break;
+      }
+      case 'option-add': case 'option-remove': case 'option-price': case 'option-stock': {
+        const item: StoreEditProduct | undefined = shown[op.at];
+        if (!item) break;
+        const label = short(item.name, 40);
+        const name = oneLine(op.option, CATALOG_LIMITS.optionName);
+        if (!name || !safe(name)) break;
+        if (item.options && !item.variants) { refused.push(`No pude leer las opciones de «${label}»: cámbialas en Productos.`); break; }
+        const variants = item.variants ?? [];
+        const target = variants.find(variant => fold(variant.name) === fold(name));
+        let next: SourceVariantOperation;
+        let line: string;
+        if (op.kind === 'option-add') {
+          if (target) { refused.push(`«${label}» ya tiene la opción «${target.name}».`); break; }
+          const amount = op.price.trim() ? priceCents(op.price) : item.amount;
+          if (amount === null) { refused.push(`No agregué «${name}» a «${label}»: «${short(op.price, 20)}» no es un precio.`); break; }
+          const stock = stockValue(op.stock);
+          if (Number.isNaN(stock)) { refused.push(`No agregué «${name}» a «${label}»: «${short(op.stock, 20)}» no es un stock.`); break; }
+          next = { action: 'add', changes: { name, amount, stock: stock ?? null } as never };
+          line = `«${label}» tiene la opción «${name}» a ${bs(amount)}`;
+        } else if (!target) {
+          refused.push(variants.length ? `«${label}» no tiene la opción «${name}».` : `«${label}» no tiene opciones.`);
+          break;
+        } else if (op.kind === 'option-remove') {
+          next = { action: 'delete', variantId: target.id };
+          line = `quité la opción «${target.name}» de «${label}»`;
+        } else if (op.kind === 'option-price') {
+          const amount = priceCents(op.price);
+          if (amount === null) { refused.push(`No cambié el precio de «${target.name}»: «${short(op.price, 20)}» no es un precio.`); break; }
+          if (amount === target.amount) break;
+          next = { action: 'update', variantId: target.id, changes: { amount } as never };
+          line = `«${target.name}» de «${label}» ahora cuesta ${bs(amount)}`;
+        } else {
+          const stock = stockValue(op.stock);
+          if (stock === undefined) break;
+          if (Number.isNaN(stock)) { refused.push(`No cambié el stock de «${target.name}»: «${short(op.stock, 20)}» no es un número de unidades.`); break; }
+          if (stock === (target.stock ?? null)) break;
+          next = { action: 'update', variantId: target.id, changes: { stock } as never };
+          line = stock === null ? `«${target.name}» de «${label}» ya no tiene límite de stock` : `quedan ${stock} de «${target.name}» en «${label}»`;
+        }
+        const entry = productUpdate(item.id);
+        entry.variantOps = [...(entry.variantOps ?? []), next];
+        optionDone.set(item.id, [...(optionDone.get(item.id) ?? []), line]);
+        break;
+      }
     }
   }
   if (order) change.categories.order = order;
-  void photos; void categoryName; void notes;
+  // A product's option changes are checked together (Productos asks for at least two options, unique names).
+  for (const entry of change.products.update) {
+    if (!entry.variantOps?.length) continue;
+    const item = shown.find(product => product.id === entry.id)!;
+    try { applyVariantOperations(item.variants ?? [], entry.variantOps); done.push(...(optionDone.get(entry.id) ?? [])); }
+    catch (error) { delete entry.variantOps; refused.push(`No cambié las opciones de «${short(item.name, 40)}»: ${String((error as Error).message)}`); }
+  }
+  change.products.update = change.products.update.filter(entry => Object.keys(entry).length > 1);
+  if (noPhoto.length) notes.push(`Mándame la foto de ${listNames(noPhoto)} cuando la tengas.`);
   return { change, done, refused, notes };
 }

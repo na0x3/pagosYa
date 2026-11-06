@@ -120,3 +120,73 @@ describe('discount codes', () => {
     expect(applyCatalogOps(state(), [op('code-add', { name: 'VERANO20', value: '20 %' })], [], { answering: true }).refused).toEqual([]);
   });
 });
+
+describe('products', () => {
+  const photos = [{ url: '/v1/uploads/torta.jpg', from: 'mensaje' as const }];
+
+  it('creates a product in a category made in the same request, with its options, and asks for the photo it was not sent', () => {
+    const { change, done, notes } = applyCatalogOps(state(), [op('category-add', { name: 'Bebidas' }),
+      op('product-add', { name: 'Limonada', text: 'Limonada de la casa.', category: 'bebidas', value: 'Chica | 15 |\nGrande | 25 | 4' })]);
+    expect(change.products.create).toEqual([{ name: 'Limonada', description: 'Limonada de la casa.', amount: 1500, currency: 'BOB', imageUrls: [], stock: null, categoryRef: 'new:0',
+      variants: [expect.objectContaining({ name: 'Chica', amount: 1500, stock: null }), expect.objectContaining({ name: 'Grande', amount: 2500, stock: 4 })] }]);
+    expect(done).toEqual(['creé la categoría «Bebidas»', 'creé «Limonada» en Bebidas, con 2 opciones (Chica Bs 15, Grande Bs 25)']);
+    expect(notes).toEqual(['Mándame la foto de «Limonada» cuando la tengas.']);
+  });
+
+  it('a single-price product takes its stock and the photo of the message', () => {
+    const { change, notes } = applyCatalogOps(state(), [op('product-add', { name: 'Brownie', price: '25', stock: '10', photo: 'f0', category: 'Tortas' })], photos);
+    expect(change.products.create[0]).toMatchObject({ name: 'Brownie', amount: 2500, stock: 10, imageUrls: ['/v1/uploads/torta.jpg'], variants: [], categoryRef: 'c1' });
+    expect(notes).toEqual([]);
+  });
+
+  it('never creates a product without a price, twice, with one option, or past six', () => {
+    const seven = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map(name => op('product-add', { name: `Galleta ${name}`, price: '5' }));
+    const { change, refused } = applyCatalogOps(state(), [op('product-add', { name: 'Flan' }), op('product-add', { name: 'torta de chocolate', price: '90' }),
+      op('product-add', { name: 'Queque', price: 'barato' }), op('product-add', { name: 'Combo', value: 'Solo | 30 |' }), ...seven]);
+    expect(change.products.create.map(product => product.name)).toEqual(['Galleta A', 'Galleta B', 'Galleta C', 'Galleta D', 'Galleta E', 'Galleta F']);
+    expect(refused).toEqual(['No creé «Flan»: dime su precio.', 'Ya tienes «torta de chocolate» en la tienda.', 'No creé «Queque»: «barato» no es un precio.',
+      expect.stringMatching(/^No creé «Combo»: Agrega por lo menos 2 opciones/), 'No creé «Galleta G»: como mucho 6 productos nuevos por pedido.']);
+  });
+
+  it('answering YAPI\'s question, a product the first request already made is skipped quietly', () => {
+    const { change, refused } = applyCatalogOps(state(), [op('product-add', { name: 'Torta de chocolate', price: '120' }), op('product-add', { name: 'Flan', price: '40' })], [], { answering: true });
+    expect(change.products.create.map(product => product.name)).toEqual(['Flan']);
+    expect(refused).toEqual([]);
+  });
+
+  it('archives, restores and files a product', () => {
+    const { change, done } = applyCatalogOps(state(), [op('product-archive', { at: 0 }), op('product-restore', { at: 0 }), op('product-category', { at: 1, category: 'Postres' }),
+      op('product-category', { at: 0, category: 'tortas' })]);
+    expect(change.products.update).toEqual([{ id: 'p1', status: 'ARCHIVED' }, { id: 'p9', status: 'ACTIVE' }, { id: 'p2', categoryRef: 'c2' }]);
+    expect(done).toEqual(['archivé «Torta de chocolate»: ya no aparece en la tienda y puedes volver a activarlo en Productos', '«Torta de limón» vuelve a estar en la tienda', '«Polera» está en Postres']);
+  });
+
+  it('stock: a number, «sin límite» or «agotado»; a product with options is asked per option', () => {
+    const { change, done, refused } = applyCatalogOps(state(), [op('product-stock', { at: 0, stock: 'agotado' }), op('product-stock', { at: 1, stock: '5' })]);
+    expect(change.products.update).toEqual([{ id: 'p1', stock: 0 }]);
+    expect(done).toEqual(['«Torta de chocolate» está agotado']);
+    expect(refused).toEqual(['«Polera» tiene opciones: dime el stock de cada opción.']);
+  });
+
+  it('options: add, price, stock and remove by name, checked together', () => {
+    const { change, done, refused } = applyCatalogOps(state(), [op('option-add', { at: 1, option: 'L', price: '100', stock: '3' }), op('option-price', { at: 1, option: 's', price: '85' }),
+      op('option-stock', { at: 1, option: 'M', stock: 'sin límite' }), op('option-remove', { at: 1, option: 'S' }), op('option-price', { at: 0, option: 'Grande', price: '150' })]);
+    expect(change.products.update).toEqual([{ id: 'p2', variantOps: [{ action: 'add', changes: { name: 'L', amount: 10000, stock: 3 } }, { action: 'update', variantId: 'v1', changes: { amount: 8500 } },
+      { action: 'update', variantId: 'v2', changes: { stock: null } }, { action: 'delete', variantId: 'v1' }] }]);
+    expect(done).toEqual(['«Polera» tiene la opción «L» a Bs 100', '«S» de «Polera» ahora cuesta Bs 85', '«M» de «Polera» ya no tiene límite de stock', 'quité la opción «S» de «Polera»']);
+    expect(refused).toEqual(['«Torta de chocolate» no tiene opciones.']);
+  });
+
+  it('option changes that would leave fewer than two are refused as a whole', () => {
+    const { change, done, refused } = applyCatalogOps(state(), [op('option-remove', { at: 1, option: 'S' })]);
+    expect(change.products.update).toEqual([]);
+    expect(done).toEqual([]);
+    expect(refused[0]).toMatch(/^No cambié las opciones de «Polera»: /);
+  });
+
+  it('never files a product into a category this request removes', () => {
+    const { change, refused } = applyCatalogOps(state(), [op('category-remove', { at: 1 }), op('product-category', { at: 0, category: 'Postres' })]);
+    expect(change.products.update).toEqual([]);
+    expect(refused).toEqual(['La categoría «Postres» se quita en este mismo pedido.']);
+  });
+});
