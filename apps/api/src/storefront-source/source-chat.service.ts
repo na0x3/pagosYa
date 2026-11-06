@@ -1,3 +1,4 @@
+import { appendFileSync } from 'node:fs';
 import { applyPageOps, withExtraPages, type ExtraPage } from './source-extra-pages';
 import { SourceThumbnailsService } from './source-thumbnails.service';
 import { outsideFocus, pointFocus } from './source-point-focus';
@@ -930,6 +931,14 @@ export class SourceChatService {
     return { userMessage, assistantMessage, revision: saved };
   }
 
+  /** Owner 2026-11-06 («no podemos dejar nada a la suerte»): one JSON line per quick edit in YAPI_TRACE_FILE (dev only) — what the
+   *  model read and what came of it (replied, asked, handed on to the code generator). A trace never breaks a request. */
+  private traceQuickEdit(entry: Record<string, unknown>) {
+    const file = this.config.get<string>('app.yapiTraceFile');
+    if (!file) return;
+    try { appendFileSync(file, `${JSON.stringify({ at: new Date().toISOString(), event: 'quick_edit', ...entry })}\n`); } catch { /* the trace is a dev aid */ }
+  }
+
   /** Owner 2026-11-06: the top-up of a short template home — one call fills the sections `libraryTopUp` picks, with the photos the
    *  home has not shown first and the titles it already has; a failed call keeps the home as it was (a spent quota or a cancel
    *  still stops the build). */
@@ -1193,9 +1202,12 @@ export class SourceChatService {
       ...(menuPages ? { pages: menuPages.pages as Record<string, LayoutBlock[]>, offerPages: menuPages.offer } : {}), templateTypes,
       ...(editState ? { store: editState, photos } : {}), ...(focus ? { focus } : {}), ...(shot ? { picture: shot } : {}),
       ...(extraPages.length ? { extraPages: extraPages.map(page => ({ slug: page.slug, nombre: page.name, layout: page.layout })) } : {}), ...(menuGroups.length ? { menuGroups } : {}) });
-    if (!read) return null;
+    const trace = (outcome: string, extra: Record<string, unknown> = {}) => this.traceQuickEdit({ storeId, request: input.instruction.slice(0, 300),
+      ...(read ? { ops: read.ops.length, store: read.store.length, catalog: (read.catalog ?? []).length, rest: read.rest.slice(0, 300), ask: read.ask ?? '' } : {}), outcome, ...extra });
+    if (!read) { trace('no-answer'); return null; }
     // Live 2026-11-05: a change that needs the merchant's words first (a FAQ answer) is asked for, never «No logré que se vea».
     if (read.ask && !read.ops.length && !read.store.length && !(read.catalog ?? []).length) {
+      trace('asked');
       await workflow.finish('completed');
       const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT', content: read.ask,
         metadata: { progress: workflow.value, storeAsk: { request: request.slice(0, 2000), ask: read.ask } } as never } });
@@ -1311,7 +1323,8 @@ export class SourceChatService {
       ...(JSON.stringify(productNow) !== JSON.stringify(productLayout) ? { productLayout: productNow } : {}), ...(store.change.copy ? { copy: store.change.copy } : {}),
       ...(pagesNowChanged ? { pageLayouts: pagesNow } : {}), ...(extraNowChanged ? { extraPages: extraNow } : {}) };
     // Final review 2026-11-06: a question, or catalog ops that changed nothing, is answered here — never the slow design edit.
-    if (!done.length && !refused.length && !read.ask && !(read.catalog ?? []).length) return null;
+    if (!done.length && !refused.length && !read.ask && !(read.catalog ?? []).length) { trace('handed-on'); return null; }
+    trace('replied', { done: done.length, refused: refused.length });
     let saved: Awaited<ReturnType<SourceTemplatesService['refill']>> | null = null;
     let previewFailed = false;
     // One revision: the files that changed, and the live data in config.js so the preview shows a page or product just written.

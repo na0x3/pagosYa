@@ -164,6 +164,8 @@ export interface AppConfig {
   yapiShrineTemplates: boolean;
   /** Owner 2026-11-02 («check and log»): a new template home is checked in the background and the findings logged (template_qa). */
   yapiTemplateQa: boolean;
+  /** Owner 2026-11-06 («no podemos dejar nada a la suerte»): a dev JSONL file where the quick edit writes what it read and did. */
+  yapiTraceFile: string;
   yapiSectionLibraryModel: string;
   /** Spec 2026-10-29: tool calls of the one continuation after a run used its steps unfinished; 0 turns it off. */
   yapiAgentContinueCalls: number;
@@ -558,6 +560,7 @@ export default (): { app: AppConfig } => {
     yapiIntake: process.env.YAPI_INTAKE === '1',
     yapiShrineTemplates: process.env.YAPI_SHRINE_TEMPLATES === '1',
     yapiTemplateQa: process.env.YAPI_TEMPLATE_QA !== '0' && process.env.NODE_ENV !== 'test',
+    yapiTraceFile: process.env.YAPI_TRACE_FILE?.trim() ?? '',
     yapiSectionLibraryModel: process.env.YAPI_SECTION_LIBRARY_MODEL || 'gpt-5.6-terra',
     yapiAgentContinueCalls: process.env.YAPI_AGENT_CONTINUE_CALLS?.trim() && Number.isFinite(Number(process.env.YAPI_AGENT_CONTINUE_CALLS)) ? Math.max(0, Math.floor(Number(process.env.YAPI_AGENT_CONTINUE_CALLS))) : 12,
     yapiChecklistFix: process.env.YAPI_CHECKLIST_FIX === '1',

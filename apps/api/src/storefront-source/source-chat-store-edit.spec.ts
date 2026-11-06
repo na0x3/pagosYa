@@ -415,3 +415,16 @@ describe('home top-up', () => {
     expect(chat.dialogue.composeLibrary).not.toHaveBeenCalled();
   });
 });
+
+// Owner 2026-11-06 («no podemos dejar nada a la suerte»): what the quick edit read and what it did with it, one JSON line per request
+// in YAPI_TRACE_FILE (dev only), so a request that went on to the slow code generator shows why.
+it('writes the quick edit\'s reading and outcome to the trace file when one is set', async () => {
+  const { mkdtempSync, readFileSync } = require('node:fs'); const { join } = require('node:path'); const { tmpdir } = require('node:os');
+  const file = join(mkdtempSync(join(tmpdir(), 'yapi-trace-')), 'trace.jsonl');
+  (chat as any).config = { get: (key: string) => key === 'app.yapiTraceFile' ? file : undefined };
+  editLayout.mockResolvedValue(read({ rest: 'mejora la sección de envíos y entregas' }));
+  expect(await edit('mejora la sección de envíos y entregas')).toBeNull();
+  const line = JSON.parse(readFileSync(file, 'utf8').trim().split('\n').at(-1));
+  expect(line).toMatchObject({ event: 'quick_edit', storeId: 's1', request: 'mejora la sección de envíos y entregas', ops: 0, store: 0, catalog: 0,
+    rest: 'mejora la sección de envíos y entregas', outcome: 'handed-on' });
+});
