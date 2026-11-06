@@ -106,3 +106,32 @@ describe('store edit (YAPI edits everything, spec 2026-11-03)', () => {
     expect(done).toEqual([]);
   });
 });
+
+describe('catalog in the digest (spec 2026-11-05 part 2)', () => {
+  it('shows stock, category and options of each product, the archived ones, the categories and the codes', () => {
+    const digest = storeDigest(state({
+      products: [{ id: 'p1', name: 'Brownie', amount: 2000, description: '', imageUrls: [], options: false, stock: 5, categoryId: 'c1', currency: 'BOB', variants: [] },
+        { id: 'p2', name: 'Polera', amount: 9000, description: '', imageUrls: [], options: true, stock: null, categoryId: null, currency: 'BOB',
+          variants: [{ id: 'v1', name: 'S', amount: 9000, stock: 2 }, { id: 'v2', name: 'M', amount: 9500, stock: null }] }],
+      archived: [{ id: 'p9', name: 'Torta de limón' }],
+      categories: [{ id: 'c1', name: 'Postres', count: 1 }],
+      codes: [{ id: 'k1', code: 'VERANO20', type: 'PERCENT', value: 20, active: true, emails: false, assistant: true },
+        { id: 'k2', code: 'ENVIO', type: 'FIXED', value: 3000, active: false, emails: false, assistant: false }],
+    }), []);
+    expect(digest.productos[0]).toMatchObject({ stock: 5, categoria: 'Postres' });
+    expect(digest.productos[1]).toMatchObject({ stock: 'sin límite', opciones: [{ nombre: 'S', precio: 'Bs 90', stock: 2 }, { nombre: 'M', precio: 'Bs 95', stock: 'sin límite' }] });
+    expect(digest.archivados).toEqual([{ at: 0, nombre: 'Torta de limón' }]);
+    expect(digest.categorias).toEqual([{ at: 0, nombre: 'Postres', productos: 1 }]);
+    expect(digest.codigos).toEqual([{ at: 0, codigo: 'VERANO20', descuento: '20 %', activo: true, correos: false, asistente: true },
+      { at: 1, codigo: 'ENVIO', descuento: 'Bs 30', activo: false, correos: false, asistente: false }]);
+  });
+
+  it('leaves the catalog lists out when the store rows could not be read', () => {
+    const digest = storeDigest(state(), []);
+    expect(digest).not.toHaveProperty('categorias');
+    expect(digest).not.toHaveProperty('codigos');
+    expect(digest).not.toHaveProperty('archivados');
+    expect(digest.productos[0]).not.toHaveProperty('stock');
+    expect(digest.productos[1]).toMatchObject({ opciones: true });
+  });
+});

@@ -6,6 +6,7 @@
 import { policyTextProblem } from './source-agent-policies';
 import { SAFE_TEXT_PATTERN } from '../common/validation/safe-text.decorator';
 import { STORE_FAQ_LIMITS, STORE_POLICY_KEYS, type StoreFaqEntry, type StorePolicies } from '../stores/store-presentation';
+import type { ProductVariant } from '../payment-links/product-variants';
 
 export const STORE_PARTS = ['about', 'contact', 'policy', 'faq', 'announcement', 'footer', 'social', 'popup', 'catalog', 'product'] as const;
 export type StorePart = typeof STORE_PARTS[number];
@@ -13,7 +14,11 @@ export const STORE_FIELDS = ['tagline', 'text', 'phone', 'email', ...STORE_POLIC
   'on', 'off', 'title', 'button', 'discount', 'name', 'price', 'description', 'photo'] as const;
 export type StoreOp = { part: StorePart; field: string; at: number; title: string; value: string };
 
-export type StoreEditProduct = { id: string; name: string; amount: number; description: string; imageUrls: string[]; options: boolean };
+export type StoreEditProduct = { id: string; name: string; amount: number; description: string; imageUrls: string[]; options: boolean;
+  /** YAPI creates anything part 2 (spec 2026-11-05): the catalog fields the chat may change; absent when the rows could not be read. */
+  stock?: number | null; categoryId?: string | null; currency?: string; variants?: ProductVariant[] };
+export type StoreEditCategory = { id: string; name: string; count: number };
+export type StoreEditCode = { id: string; code: string; type: 'PERCENT' | 'FIXED'; value: number; active: boolean; emails: boolean; assistant: boolean };
 export type StoreEditState = {
   tagline: string; aboutText: string; contactPhone: string; contactEmail: string;
   policies: StorePolicies; faq: StoreFaqEntry[];
@@ -24,6 +29,10 @@ export type StoreEditState = {
   /** The catalogue page's title, or null when the store has no such page to edit. */
   catalogTitle: string | null;
   products: StoreEditProduct[];
+  /** Part 2: archived products (to bring back), the categories in their order and the discount codes, active first. */
+  archived?: Array<{ id: string; name: string }>;
+  categories?: StoreEditCategory[];
+  codes?: StoreEditCode[];
 };
 /** A photo the merchant may name: attached to this message, or one of the store's own. */
 export type StoreEditPhoto = { url: string; from: 'mensaje' | 'producto' | 'tienda'; product?: string };
@@ -51,12 +60,12 @@ const NETWORKS: Record<string, { label: string; url: (handle: string) => string;
   x: { label: 'X', url: handle => `https://x.com/${handle}`, host: /(^|\.)(x|twitter)\.com$/i },
 };
 
-const oneLine = (value: unknown, cap: number) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, cap).trim();
-const block = (value: unknown, cap: number) => String(value ?? '').replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, cap).trim();
-const safe = (value: string) => SAFE_TEXT_PATTERN.test(value);
-const short = (value: string, cap = 60) => value.length > cap ? `${value.slice(0, cap - 1).trim()}…` : value;
+export const oneLine = (value: unknown, cap: number) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, cap).trim();
+export const block = (value: unknown, cap: number) => String(value ?? '').replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, cap).trim();
+export const safe = (value: string) => SAFE_TEXT_PATTERN.test(value);
+export const short = (value: string, cap = 60) => value.length > cap ? `${value.slice(0, cap - 1).trim()}…` : value;
 // «Bs 1.950», «Bs 25,50»: thousands with a dot and decimals with a comma, as prices are written in Bolivia.
-const bs = (cents: number) => { const [whole, part] = (cents / 100).toFixed(2).split('.'); return `Bs ${whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}${part === '00' ? '' : `,${part}`}`; };
+export const bs = (cents: number) => { const [whole, part] = (cents / 100).toFixed(2).split('.'); return `Bs ${whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}${part === '00' ? '' : `,${part}`}`; };
 
 /** «Bs 25», «25,50», «25.5» → cents; null when it is not a price. */
 export function priceCents(value: string): number | null {
@@ -94,7 +103,15 @@ export function storeDigest(state: StoreEditState, photos: readonly StoreEditPho
     redes: state.links.map(link => ({ red: link.label, url: link.url })),
     popup: { encendido: state.popup.on, titulo: state.popup.title, texto: state.popup.text, boton: state.popup.button, ...(state.popup.discount ? { descuento: state.popup.discount } : {}) },
     ...(state.catalogTitle !== null ? { catalogo: state.catalogTitle } : {}),
-    productos: state.products.slice(0, 40).map((product, at) => ({ at, nombre: product.name, precio: bs(product.amount), descripcion: short(product.description, 160), ...(product.options ? { opciones: true } : {}) })),
+    productos: state.products.slice(0, 40).map((product, at) => ({ at, nombre: product.name, precio: bs(product.amount), descripcion: short(product.description, 160),
+      ...(product.stock !== undefined ? { stock: product.stock === null ? 'sin límite' : product.stock } : {}),
+      ...(product.categoryId ? { categoria: state.categories?.find(category => category.id === product.categoryId)?.name ?? '' } : {}),
+      ...(product.variants?.length ? { opciones: product.variants.map(variant => ({ nombre: variant.name, precio: bs(variant.amount), stock: variant.stock == null ? 'sin límite' : variant.stock })) }
+        : product.options ? { opciones: true } : {}) })),
+    ...(state.archived?.length ? { archivados: state.archived.slice(0, 20).map((product, at) => ({ at, nombre: product.name })) } : {}),
+    ...(state.categories ? { categorias: state.categories.map((category, at) => ({ at, nombre: category.name, productos: category.count })) } : {}),
+    ...(state.codes ? { codigos: state.codes.slice(0, 20).map((code, at) => ({ at, codigo: code.code, descuento: code.type === 'PERCENT' ? `${code.value} %` : bs(code.value),
+      activo: code.active, correos: code.emails, asistente: code.assistant })) } : {}),
     fotos: photos.map((photo, at) => ({ ref: `f${at}`, de: photo.from, ...(photo.product ? { producto: photo.product } : {}) })),
   };
 }
