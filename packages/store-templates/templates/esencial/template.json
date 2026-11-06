@@ -624,6 +624,27 @@
         "heading": "epilogue",
         "body": "inter",
         "starterOnly": true
+      },
+      {
+        "id": "pulso",
+        "name": "Pulso",
+        "heading": "syne",
+        "body": "manrope",
+        "starterOnly": true
+      },
+      {
+        "id": "ola",
+        "name": "Ola",
+        "heading": "unbounded",
+        "body": "figtree",
+        "starterOnly": true
+      },
+      {
+        "id": "ruta",
+        "name": "Ruta",
+        "heading": "big-shoulders-display",
+        "body": "chivo",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -842,7 +863,10 @@
         "unico",
         "botica",
         "noble",
-        "estudio"
+        "estudio",
+        "pulso",
+        "ola",
+        "ruta"
       ],
       "mood": [
         "calm",

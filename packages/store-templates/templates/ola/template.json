@@ -1,0 +1,330 @@
+{
+  "id": "ola",
+  "name": "Ola",
+  "category": "belleza",
+  "description": "Cosmética moderna: rubor y azul cobalto, letra ancha, productos marcados en la foto de portada y texturas de cerca.",
+  "tags": [
+    "cosmética",
+    "skincare",
+    "belleza",
+    "bienestar",
+    "cuidado de la piel"
+  ],
+  "sitePurpose": "shop",
+  "order": 64,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (familia Focal)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "ol-crema",
+      "role": "hero",
+      "demo": "ol-crema.jpg"
+    },
+    {
+      "slot": "ol-hero",
+      "role": "hero",
+      "demo": "ol-hero.jpg"
+    },
+    {
+      "slot": "ol-serum",
+      "role": "product",
+      "demo": "ol-serum.jpg"
+    },
+    {
+      "slot": "ol-pote",
+      "role": "product",
+      "demo": "ol-pote.jpg"
+    },
+    {
+      "slot": "ol-tubo",
+      "role": "product",
+      "demo": "ol-tubo.jpg"
+    },
+    {
+      "slot": "ol-textura",
+      "role": "detail",
+      "demo": "ol-textura.jpg"
+    },
+    {
+      "slot": "ol-rutina",
+      "role": "lifestyle",
+      "demo": "ol-rutina.jpg"
+    },
+    {
+      "slot": "ol-amigas",
+      "role": "lifestyle",
+      "demo": "ol-amigas.jpg"
+    },
+    {
+      "slot": "ol-jarra",
+      "role": "lifestyle",
+      "demo": "ol-jarra.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "ola",
+    "colors": {
+      "paper": "#f8f1ee",
+      "ink": "#17171c",
+      "muted": "#f0e3df",
+      "accent": "#2b46e5",
+      "deep": "#17171c"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "ola",
+      "icons": "person",
+      "header": "links",
+      "announce": "plain",
+      "footer": "photo",
+      "button": "square",
+      "corners": "sharp",
+      "density": "regular",
+      "texture": "none",
+      "titles": "upper",
+      "pdp": "split-scroll",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Muestra de regalo en compras desde Bs 250"
+    },
+    "layout": [
+      {
+        "type": "cover-shoppable",
+        "title": "Tu piel, *sin filtro*",
+        "text": "Fórmulas ligeras para todos los días: se sienten bien y se ven mejor.",
+        "cta": "Ver productos",
+        "link": "products",
+        "photo": "slot:ol-crema",
+        "items": [
+          {
+            "title": "Crema Nube",
+            "x": 48,
+            "y": 56
+          }
+        ]
+      },
+      {
+        "type": "chips-marquee",
+        "title": "Lo que vas a *sentir*",
+        "photo": "slot:ol-serum",
+        "band": "muted",
+        "items": [
+          {
+            "title": "Piel suave"
+          },
+          {
+            "title": "Sin perfume"
+          },
+          {
+            "title": "Se absorbe rápido"
+          },
+          {
+            "title": "Apta para piel sensible"
+          },
+          {
+            "title": "Hecha en pequeños lotes"
+          },
+          {
+            "title": "Sin pruebas en animales"
+          }
+        ]
+      },
+      {
+        "type": "products-grid",
+        "look": "grid4",
+        "card": "round-add",
+        "title": "La *rutina*",
+        "link": "products"
+      },
+      {
+        "type": "detail-hotspots",
+        "title": "Mírala de *cerca*",
+        "text": "Toca los + para ver cada detalle.",
+        "photo": "slot:ol-textura",
+        "items": [
+          {
+            "title": "Textura de gel crema",
+            "x": 36,
+            "y": 42
+          },
+          {
+            "title": "Se absorbe en segundos",
+            "x": 64,
+            "y": 60
+          }
+        ]
+      },
+      {
+        "type": "products-lookbook",
+        "title": "El kit de *todos los días*",
+        "cta": "Ver el kit",
+        "link": "products",
+        "photo": "slot:ol-hero",
+        "products": [
+          "demo-1",
+          "demo-2",
+          "demo-3"
+        ]
+      },
+      {
+        "type": "steps-howto",
+        "title": "Tres pasos, *nada más*",
+        "photo": "slot:ol-rutina",
+        "items": [
+          {
+            "title": "Limpia",
+            "text": "Por la mañana y por la noche."
+          },
+          {
+            "title": "Hidrata",
+            "text": "El sérum sobre la piel húmeda."
+          },
+          {
+            "title": "Sella",
+            "text": "Una capa fina de crema."
+          }
+        ]
+      },
+      {
+        "type": "benefits-orbit",
+        "title": "Por qué *funciona*",
+        "photo": "slot:ol-tubo",
+        "items": [
+          {
+            "title": "Pocos ingredientes",
+            "text": "Solo lo que hace falta.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Sin perfume",
+            "text": "Para piel sensible.",
+            "icon": "droplet"
+          },
+          {
+            "title": "Envase reciclable",
+            "text": "Vidrio y aluminio.",
+            "icon": "recycle"
+          },
+          {
+            "title": "Probado en piel",
+            "text": "Por dermatólogas.",
+            "icon": "check"
+          }
+        ]
+      },
+      {
+        "type": "usecases",
+        "title": "Para tu *día*",
+        "items": [
+          {
+            "title": "Mañana",
+            "text": "Sérum y protector, en dos minutos.",
+            "photo": "slot:ol-jarra"
+          },
+          {
+            "title": "Noche",
+            "text": "Crema y descanso.",
+            "photo": "slot:ol-amigas"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Preguntas frecuentes",
+        "items": [
+          {
+            "title": "¿Sirve para piel grasa?",
+            "text": "Sí: las texturas son ligeras y no tapan los poros."
+          },
+          {
+            "title": "¿Cuánto dura?",
+            "text": "Con uso diario, unos dos meses."
+          },
+          {
+            "title": "¿Hacen envíos?",
+            "text": "A todo el país en dos a cuatro días."
+          },
+          {
+            "title": "¿Y si no me sienta bien?",
+            "text": "Te ayudamos a cambiarlo."
+          }
+        ]
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "title": "Cómo *usarlo*",
+        "photo": "slot:ol-rutina",
+        "items": [
+          {
+            "title": "Poco",
+            "text": "Del tamaño de una arveja."
+          },
+          {
+            "title": "Piel húmeda",
+            "text": "Se absorbe mejor."
+          },
+          {
+            "title": "Cada día",
+            "text": "La constancia hace todo."
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Ingredientes y envío",
+        "items": [
+          {
+            "title": "¿Qué contiene?",
+            "text": "La lista está en la etiqueta y en esta página."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En dos a cuatro días."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Ola",
+      "tagline": "Cuidado de la piel, sin filtro",
+      "products": [
+        {
+          "name": "Crema Nube",
+          "price": 240,
+          "description": "Gel crema hidratante, 50 ml.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Sérum Gota",
+          "price": 290,
+          "description": "Ácido hialurónico, 30 ml.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Bálsamo Tubo",
+          "price": 150,
+          "description": "Labios y codos.",
+          "category": "Cuerpo"
+        },
+        {
+          "name": "Kit Diario",
+          "price": 590,
+          "description": "Los tres esenciales.",
+          "category": "Kits"
+        }
+      ]
+    }
+  }
+}

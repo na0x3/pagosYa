@@ -1,0 +1,333 @@
+{
+  "id": "pulso",
+  "name": "Pulso",
+  "category": "moda",
+  "description": "Moda urbana y zapatillas: negro y naranja, letra ancha, portada en presentación de fotos y el look marcado sobre la foto.",
+  "tags": [
+    "streetwear",
+    "moda urbana",
+    "zapatillas",
+    "ropa",
+    "hoodies"
+  ],
+  "sitePurpose": "shop",
+  "order": 63,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (familia Focal)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "pu-hero",
+      "role": "hero",
+      "demo": "pu-hero.jpg"
+    },
+    {
+      "slot": "pu-zapas",
+      "role": "hero",
+      "demo": "pu-zapas.jpg"
+    },
+    {
+      "slot": "pu-calle",
+      "role": "lifestyle",
+      "demo": "pu-calle.jpg"
+    },
+    {
+      "slot": "pu-look",
+      "role": "lifestyle",
+      "demo": "pu-look.jpg"
+    },
+    {
+      "slot": "pu-hoodie",
+      "role": "product",
+      "demo": "pu-hoodie.jpg"
+    },
+    {
+      "slot": "pu-zapa",
+      "role": "product",
+      "demo": "pu-zapa.jpg"
+    },
+    {
+      "slot": "pu-polera",
+      "role": "product",
+      "demo": "pu-polera.jpg"
+    },
+    {
+      "slot": "pu-rayas",
+      "role": "product",
+      "demo": "pu-rayas.jpg"
+    },
+    {
+      "slot": "pu-negro",
+      "role": "product",
+      "demo": "pu-negro.jpg"
+    },
+    {
+      "slot": "pu-cargo",
+      "role": "product",
+      "demo": "pu-cargo.jpg"
+    },
+    {
+      "slot": "pu-gorra",
+      "role": "product",
+      "demo": "pu-gorra.jpg"
+    },
+    {
+      "slot": "pu-bolso",
+      "role": "lifestyle",
+      "demo": "pu-bolso.jpg"
+    },
+    {
+      "slot": "pu-etiqueta",
+      "role": "detail",
+      "demo": "pu-etiqueta.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "pulso",
+    "colors": {
+      "paper": "#f2f2ef",
+      "ink": "#101010",
+      "muted": "#e4e4df",
+      "accent": "#ff5a1f",
+      "deep": "#101010"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "pulso",
+      "icons": "line",
+      "header": "split",
+      "announce": "ticker",
+      "footer": "ticker",
+      "button": "chunky",
+      "corners": "sharp",
+      "density": "regular",
+      "texture": "none",
+      "titles": "upper",
+      "pdp": "sticky-thumbs",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío en 24 horas en la ciudad · Cambios fáciles"
+    },
+    "layout": [
+      {
+        "type": "cover-stage",
+        "look": "low",
+        "eyebrow": "Nueva temporada",
+        "title": "Hecho para *la calle*",
+        "cta": "Ver lo nuevo",
+        "link": "products",
+        "photo": "slot:pu-hero",
+        "items": [
+          {
+            "title": "2",
+            "photo": "slot:pu-zapas"
+          },
+          {
+            "title": "3",
+            "photo": "slot:pu-calle"
+          }
+        ]
+      },
+      {
+        "type": "products-tabs",
+        "card": "caps",
+        "title": "Lo *nuevo*",
+        "link": "products"
+      },
+      {
+        "type": "shop-look",
+        "look": "side",
+        "title": "Arma tu *look*",
+        "photo": "slot:pu-look",
+        "items": [
+          {
+            "title": "Hoodie Noche",
+            "x": 46,
+            "y": 38
+          },
+          {
+            "title": "Corte amplio",
+            "text": "Hombro caído y tela pesada.",
+            "icon": "shirt"
+          },
+          {
+            "title": "Hecho en serie corta",
+            "text": "Pocas piezas por color.",
+            "icon": "award"
+          }
+        ]
+      },
+      {
+        "type": "promo-lines",
+        "title": "Dos *esenciales*",
+        "cta": "Ver todo",
+        "items": [
+          {
+            "title": "Hoodies",
+            "text": "Algodón de 380 g.",
+            "photo": "slot:pu-hoodie",
+            "link": "products",
+            "value": "Pesado"
+          },
+          {
+            "title": "Zapatillas",
+            "text": "Suela que aguanta todo.",
+            "photo": "slot:pu-zapa",
+            "link": "products",
+            "value": "Nuevo"
+          }
+        ]
+      },
+      {
+        "type": "photo-scroller",
+        "eyebrow": "En la calle",
+        "title": "Cómo se *usa*",
+        "items": [
+          {
+            "title": "Rayas",
+            "text": "La polera de todos los días.",
+            "photo": "slot:pu-rayas"
+          },
+          {
+            "title": "Cargo",
+            "text": "Bolsillos que sirven.",
+            "photo": "slot:pu-cargo"
+          },
+          {
+            "title": "Gorra y bolsa",
+            "text": "Lo que siempre llevas.",
+            "photo": "slot:pu-gorra"
+          },
+          {
+            "title": "Naranja",
+            "text": "Un color para que te vean.",
+            "photo": "slot:pu-polera"
+          }
+        ]
+      },
+      {
+        "type": "story-overlap",
+        "look": "pair",
+        "eyebrow": "Series cortas",
+        "title": "Pocas piezas, *mucha calle*",
+        "text": "Diseñamos en series cortas, probamos cada prenda en la calle y solo sale lo que aguanta.",
+        "cta": "Conócenos",
+        "link": "about",
+        "photo": "slot:pu-bolso",
+        "photo2": "slot:pu-etiqueta"
+      },
+      {
+        "type": "products-cards",
+        "look": "dashed",
+        "title": "Los que *más salen*",
+        "cta": "Ver todo",
+        "link": "products",
+        "products": [
+          "Hoodie Noche",
+          "Zapatilla Señal"
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Antes de comprar",
+        "items": [
+          {
+            "title": "¿Cómo calzan?",
+            "text": "Las zapatillas, tu número de siempre; los hoodies, amplios."
+          },
+          {
+            "title": "¿Puedo cambiar la talla?",
+            "text": "Sí, dentro de 15 días."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En la ciudad, en 24 horas."
+          },
+          {
+            "title": "¿Hacen más colores?",
+            "text": "Sacamos colores nuevos cada temporada."
+          }
+        ]
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "promo-lines",
+        "title": "Combínalo",
+        "items": [
+          {
+            "title": "Hoodies",
+            "text": "Para todo el año.",
+            "photo": "slot:pu-hoodie",
+            "link": "products",
+            "value": "Pesado"
+          },
+          {
+            "title": "Zapatillas",
+            "text": "Para caminar todo el día.",
+            "photo": "slot:pu-zapa",
+            "link": "products",
+            "value": "Nuevo"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Talla y envío",
+        "items": [
+          {
+            "title": "¿Cómo calza?",
+            "text": "Tu talla de siempre."
+          },
+          {
+            "title": "¿Cambios?",
+            "text": "Dentro de 15 días."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En 24 horas en la ciudad."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Pulso",
+      "tagline": "Ropa urbana hecha para la calle",
+      "products": [
+        {
+          "name": "Hoodie Noche",
+          "price": 390,
+          "description": "Algodón de 380 g.",
+          "category": "Hoodies"
+        },
+        {
+          "name": "Zapatilla Señal",
+          "price": 620,
+          "description": "Suela de goma.",
+          "category": "Zapatillas"
+        },
+        {
+          "name": "Polera Naranja",
+          "price": 180,
+          "description": "Algodón peinado.",
+          "category": "Poleras"
+        },
+        {
+          "name": "Cargo Oliva",
+          "price": 340,
+          "description": "Seis bolsillos.",
+          "category": "Pantalones"
+        }
+      ]
+    }
+  }
+}

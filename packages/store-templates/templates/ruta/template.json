@@ -1,0 +1,304 @@
+{
+  "id": "ruta",
+  "name": "Ruta",
+  "category": "deporte",
+  "description": "Viajes y aire libre: verde bosque y ámbar, letra condensada, dos fotos de portada y frases que pasan con su foto.",
+  "tags": [
+    "mochilas",
+    "viajes",
+    "outdoor",
+    "aire libre",
+    "equipaje",
+    "montaña"
+  ],
+  "sitePurpose": "shop",
+  "order": 65,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (familia Focal)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "ru-caminantes",
+      "role": "hero",
+      "demo": "ru-caminantes.jpg"
+    },
+    {
+      "slot": "ru-amanecer",
+      "role": "hero",
+      "demo": "ru-amanecer.jpg"
+    },
+    {
+      "slot": "ru-mochila",
+      "role": "product",
+      "demo": "ru-mochila.jpg"
+    },
+    {
+      "slot": "ru-bolso",
+      "role": "product",
+      "demo": "ru-bolso.jpg"
+    },
+    {
+      "slot": "ru-parka",
+      "role": "product",
+      "demo": "ru-parka.jpg"
+    },
+    {
+      "slot": "ru-rinonera",
+      "role": "product",
+      "demo": "ru-rinonera.jpg"
+    },
+    {
+      "slot": "ru-azul",
+      "role": "product",
+      "demo": "ru-azul.jpg"
+    },
+    {
+      "slot": "ru-valle",
+      "role": "lifestyle",
+      "demo": "ru-valle.jpg"
+    },
+    {
+      "slot": "ru-bosque",
+      "role": "lifestyle",
+      "demo": "ru-bosque.jpg"
+    },
+    {
+      "slot": "ru-costa",
+      "role": "lifestyle",
+      "demo": "ru-costa.jpg"
+    },
+    {
+      "slot": "ru-hebilla",
+      "role": "detail",
+      "demo": "ru-hebilla.jpg"
+    },
+    {
+      "slot": "ru-accion",
+      "role": "detail",
+      "demo": "ru-accion.jpg"
+    },
+    {
+      "slot": "ru-viaje",
+      "role": "lifestyle",
+      "demo": "ru-viaje.jpg"
+    },
+    {
+      "slot": "ru-casa",
+      "role": "lifestyle",
+      "demo": "ru-casa.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "ruta",
+    "colors": {
+      "paper": "#efeee8",
+      "ink": "#14211c",
+      "muted": "#e2e2d9",
+      "accent": "#e8920c",
+      "deep": "#14211c"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "ruta",
+      "icons": "line",
+      "header": "classic",
+      "announce": "plain",
+      "footer": "twotone",
+      "button": "lift",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "upper",
+      "pdp": "strip",
+      "filters": "bar",
+      "grid": "grid3",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Garantía de 2 años en todas las mochilas"
+    },
+    "layout": [
+      {
+        "type": "cover-duo",
+        "title": "Equipo para *ir lejos*",
+        "text": "Mochilas y abrigo probados en la montaña, hechos para durar viajes enteros.",
+        "cta": "Ver el equipo",
+        "link": "products",
+        "cta2": "Nuestras rutas",
+        "link2": "about",
+        "photo": "slot:ru-caminantes",
+        "photo2": "slot:ru-amanecer"
+      },
+      {
+        "type": "promo-pair",
+        "look": "uneven",
+        "items": [
+          {
+            "title": "Mochilas",
+            "text": "Para el día o para la semana.",
+            "photo": "slot:ru-bosque",
+            "link": "products"
+          },
+          {
+            "title": "Abrigo",
+            "text": "Liviano y caliente.",
+            "photo": "slot:ru-parka",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-grid",
+        "look": "grid3",
+        "card": "ribbon",
+        "title": "El *equipo*",
+        "link": "products"
+      },
+      {
+        "type": "story-stack",
+        "cta": "Ver el equipo",
+        "items": [
+          {
+            "title": "Probamos cada mochila en la montaña antes de venderla: si no aguanta la lluvia, no sale.",
+            "photo": "slot:ru-valle",
+            "link": "products"
+          },
+          {
+            "title": "Del cerro a la ciudad: costuras dobles, cierres sellados y el mismo equipo para el viaje y para todos los días.",
+            "photo": "slot:ru-costa",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "checker-rows",
+        "title": "Hecho para *aguantar*",
+        "text": "Lo que no se ve también importa.",
+        "items": [
+          {
+            "title": "Hebillas de acero",
+            "text": "No se rompen con el frío.",
+            "photo": "slot:ru-hebilla"
+          },
+          {
+            "title": "Suela con agarre",
+            "text": "Para barro y piedra.",
+            "photo": "slot:ru-accion"
+          }
+        ]
+      },
+      {
+        "type": "marquee-photo",
+        "cta": "Ver el equipo",
+        "link": "products",
+        "photo": "slot:ru-viaje",
+        "items": [
+          {
+            "title": "fuera de ruta"
+          }
+        ]
+      },
+      {
+        "type": "products-spotlight",
+        "eyebrow": "La favorita",
+        "title": "La mochila de *todos los viajes*",
+        "product": "demo-1"
+      },
+      {
+        "type": "visit-store",
+        "title": "Visítanos",
+        "photo": "slot:ru-casa"
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Antes de salir",
+        "items": [
+          {
+            "title": "¿Son impermeables?",
+            "text": "Resisten la lluvia; para tormentas, usa la funda incluida."
+          },
+          {
+            "title": "¿Qué garantía tienen?",
+            "text": "Dos años en costuras y cierres."
+          },
+          {
+            "title": "¿Qué tamaño elijo?",
+            "text": "24 L para el día, 40 L para varios días."
+          },
+          {
+            "title": "¿Envían a todo el país?",
+            "text": "Sí, en dos a cuatro días."
+          }
+        ]
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "checker-rows",
+        "title": "De *cerca*",
+        "items": [
+          {
+            "title": "Hebillas de acero",
+            "text": "No se rompen con el frío.",
+            "photo": "slot:ru-hebilla"
+          },
+          {
+            "title": "Probado en ruta",
+            "text": "Lluvia, barro y piedra.",
+            "photo": "slot:ru-bosque"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Garantía y envío",
+        "items": [
+          {
+            "title": "¿Garantía?",
+            "text": "Dos años."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En dos a cuatro días."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Ruta",
+      "tagline": "Equipo para ir lejos",
+      "products": [
+        {
+          "name": "Mochila Andes 24 L",
+          "price": 690,
+          "description": "Tela resistente al agua.",
+          "category": "Mochilas"
+        },
+        {
+          "name": "Mochila Enrollable 30 L",
+          "price": 740,
+          "description": "Cierre enrollable.",
+          "category": "Mochilas"
+        },
+        {
+          "name": "Parka Cumbre",
+          "price": 980,
+          "description": "Relleno sintético.",
+          "category": "Abrigo"
+        },
+        {
+          "name": "Riñonera Ruta",
+          "price": 210,
+          "description": "Para el día.",
+          "category": "Accesorios"
+        }
+      ]
+    }
+  }
+}
