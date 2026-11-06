@@ -226,3 +226,14 @@ it('keeps the pages YAPI made, and their photos, when the store switches templat
   const extra = [{ slug: 'novias', name: 'Novias', menu: 'Colecciones', layout: [{ type: 'story-split', photo: 'assets/image-0123456789ab.jpg' }] }];
   expect(keptMenuPages(files, {}, extra as never)).toEqual({ pageLayouts: {}, kinds: [], photos: [photo], extraPages: extra });
 });
+
+// Owner 2026-11-06 (Lullu): the code generator wrapped the plain shipping page in a div; it is still the platform's page, so
+// «haz envíos más bonito» can draw sections on it. A page with its own words or parts stays the store's own.
+it('a plain page the code generator only wrapped can take sections; a page with its own content cannot', () => {
+  const library = { path: 'components/library.tsx', content: '' };
+  const wrapped = { path: 'components/pages/shipping.tsx', content: `// @pagosya-page\nimport Shell from '../Shell';\nimport { InfoPage } from '@pagosya/ui';\nexport default function Shipping() { return <Shell><div className="es-shipping-page"><InfoPage kind="shipping" /></div></Shell>; }\n` };
+  expect(sectionablePage([library, wrapped], 'shipping')).toBe(true);
+  expect(withSectionedPages([library, wrapped], ['shipping'])[1].content).toContain('<LibraryHome');
+  const own = { ...wrapped, content: wrapped.content.replace('<InfoPage kind="shipping" />', '<h2>Entregas en 24 h</h2><InfoPage kind="shipping" />') };
+  expect(sectionablePage([library, own], 'shipping')).toBe(false);
+});

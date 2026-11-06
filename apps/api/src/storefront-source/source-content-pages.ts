@@ -30,13 +30,21 @@ export function sectionedPageFile(kind: 'about' | 'contact' | 'faq' | 'shipping'
 
 /** Review 2026-11-05: a menu page YAPI may draw sections on — the platform's own page or one already drawn this way; never a page
  *  the store's own design wrote. A store without the section library has none. */
+/** Owner 2026-11-06 (Lullu): the platform's plain page, only wrapped in plain <div>s (the code generator does that), is still the
+ *  platform's page; any words or parts of its own make it the store's. */
+function onlyWrapsPlainPage(content: string, kind: string): boolean {
+  const body = /export default function \w+\(\) \{\s*return (<Shell>[\s\S]*<\/Shell>);?\s*\}\s*$/.exec(content)?.[1];
+  if (!body || !/^\/\/ @pagosya-page\nimport Shell from '\.\.\/Shell';\nimport \{ InfoPage \} from '@pagosya\/ui';\nexport default/.test(content)) return false;
+  return body.replace(/<div(?:\s+className="[\w\s-]*")?>|<\/div>/g, '').replace(/\s+/g, '') === `<Shell><InfoPagekind="${kind}"/></Shell>`;
+}
+
 export function sectionablePage(files: ReadonlyArray<{ path: string; content: string }>, kind: 'about' | 'contact' | 'faq' | 'shipping'): boolean {
   if (!files.some(file => file.path === 'components/library.tsx')) return false;
   const sectioned = sectionedPageFile(kind);
   const current = files.find(file => file.path === sectioned.path)?.content;
   // A page drawn from pageLayouts (any version of this file) is YAPI's own, like the platform's.
   return current === undefined || current === sectioned.content || current === CONTENT_PAGE_FILES.find(file => file.path === sectioned.path)?.content
-    || (current.startsWith('// @pagosya-page\n') && current.includes(`pageLayouts.${kind}`));
+    || (current.startsWith('// @pagosya-page\n') && current.includes(`pageLayouts.${kind}`)) || onlyWrapsPlainPage(current, kind);
 }
 
 /** The menu pages that now have sections, rewritten to draw them; only the pages `sectionablePage` allows. */
