@@ -12,23 +12,27 @@
       // The colour option's own value travels to the product page (owner 2026-10-25: a picked colour opened another one).
       const colourValue = (Array.isArray(v.options) ? v.options : []).find(o => typeof o?.name === 'string' && /^colou?r$/i.test(o.name.trim()) && typeof o.value === 'string')?.value;
       list.push({ url, name: v.name, ...(colourValue ? { value: colourValue } : {}), color: (Array.isArray(v.options) ? v.options : []).map(o => typeof o?.name === 'string' && typeof o?.value === 'string' ? swatchColor(o.name, o.value) : '').find(Boolean) || '' });
-      if (list.length === 4) break;
     }
     return list.length > 1 ? list : [];
   }
+  // Browse stores (spec 2026-11-06, the Nike shop page): every card with two colour photos or more shows them as a strip of up to
+  // six thumbnails, «+N» after, whatever the DNA; a card without them is unchanged.
+  const browseCards = () => config.filterStyle === 'browse';
+  const STRIP_CAP = 6;
   function cardPreview(p, image) {
+    if (image && browseCards()) { const all = cardSwatches(p); return all.length ? { swatches: all.slice(0, STRIP_CAP), more: all.length - STRIP_CAP, strip: true } : {}; }
     const mode = cardMode();
     if (!image || !mode) return {};
     if (mode === 'second-photo') { const alt = galleryImages(p).find(url => url !== image); return alt ? { alt } : {}; }
-    if (mode === 'swatch-swap') { const swatches = cardSwatches(p); return swatches.length ? { swatches } : {}; }
+    if (mode === 'swatch-swap') { const swatches = cardSwatches(p).slice(0, 4); return swatches.length ? { swatches } : {}; }
     if (mode === 'quick-look' && !fullProductPage) return { chip: true };
     return {};
   }
   // The second photo is fetched only when the shopper reaches the card (pointer, focus or touch): see loadCardAlt.
   const CARD_SIZES = '(max-width: 820px) 50vw, 25vw';
   const cardAltMarkup = url => `<img class="menu-item__image-alt" data-src="${escape(url)}"${responsiveSrcset(url) ? ` data-srcset="${escape(responsiveSrcset(url))}" data-sizes="${CARD_SIZES}"` : ''} alt="" aria-hidden="true" decoding="async">`;
-  // Swatch thumbnails are 22px: the smallest rendition is enough.
-  const cardSwatchMarkup = (p, swatches) => `<div class="menu-item__swatches" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => `<button type="button" data-card-swatch="${escape(s.url)}"${s.value ? ` data-card-colour="${escape(s.value)}"` : ''} aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${s.color ? ` style="--swatch:${escape(s.color)}"` : ''}>${s.color ? '' : `<img src="${escape(s.url)}"${responsiveAttrs(s.url, '22px')} alt="" loading="lazy" decoding="async">`}</span></button>`).join('')}</div>`;
+  // Swatch thumbnails are 22px: the smallest rendition is enough. A browse strip always shows the colour's photo, 56px.
+  const cardSwatchMarkup = (p, swatches, more = 0, strip = false) => `<div class="menu-item__swatches${strip ? ' menu-item__swatches--strip' : ''}" role="group" aria-label="Variantes de ${escape(p.name)}">${swatches.map(s => { const dot = s.color && !strip; return `<button type="button" data-card-swatch="${escape(s.url)}"${s.value ? ` data-card-colour="${escape(s.value)}"` : ''} aria-label="Ver ${escape(s.name)}" aria-pressed="false"><span${dot ? ` style="--swatch:${escape(s.color)}"` : ''}>${dot ? '' : `<img src="${escape(s.url)}"${responsiveAttrs(s.url, strip ? '56px' : '22px')} alt="" loading="lazy" decoding="async">`}</span></button>`; }).join('')}${more > 0 ? `<span class="menu-item__swatches-more">+${more}</span>` : ''}</div>`;
   // A sale's old price sits inside the price element, so an authored card layout gains no new item to place. The space before
   // it lets it drop to its own line on a narrow card instead of running into the add button.
   const cardOriginalMarkup = p => !isMembership(p) && price(p) < p.amount ? ` <del class="menu-item__original" aria-label="Precio anterior">${money(p.amount, p.currency)}</del>` : '';
@@ -104,8 +108,11 @@
     // Re-read the photo: an image link may have been rebuilt as a button above.
     if (cardExtras.alt) root.querySelector('.menu-item__image')?.insertAdjacentHTML('afterend', cardAltMarkup(cardExtras.alt));
     if (cardExtras.swatches) {
-      const after = field('price');
-      if (after && !after.closest('a,button')) after.insertAdjacentHTML('afterend', cardSwatchMarkup(p, cardExtras.swatches)); else root.insertAdjacentHTML('beforeend', cardSwatchMarkup(p, cardExtras.swatches));
+      const markup = cardSwatchMarkup(p, cardExtras.swatches, cardExtras.more, cardExtras.strip);
+      // A browse strip sits under the photo, outside any link or button that wraps it; the dots after the price.
+      let after = field('price');
+      if (cardExtras.strip) { after = root.querySelector('.menu-item__image'); for (let el = after?.parentElement; el && el !== root; el = el.parentElement) if (el.matches('a,button')) after = el; }
+      if (after && (cardExtras.strip || !after.closest('a,button'))) after.insertAdjacentHTML('afterend', markup); else root.insertAdjacentHTML('beforeend', markup);
     }
     if (cardExtras.chip) {
       // The chip belongs to the photo: right after it, outside any link or button that wraps it.
@@ -251,7 +258,7 @@
     // Showcase commerce: richer insides; showcase and split cards say «Agregar» across the card.
     const inside = cardInsidesMarkup(p), wide = ['showcase', 'split'].includes(config.showcase?.cards);
     const addFace = atelier || wide ? `${BAG_ICON}<span>Agregar</span>` : '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
-    return `<article class="menu-item" data-product-id="${escape(p.id)}"${atelier ? ' data-anatomy="atelier"' : ''}>${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />${badgeMarkup(p, 'menu-item__badge')}` : ""}${cardExtras.alt ? cardAltMarkup(cardExtras.alt) : ''}${cardExtras.chip ? cardChipMarkup(p) : ''}<div class="menu-item__copy">${inside.eyebrow}<h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${inside.points}${cardExtras.swatches ? '' : inside.chips}${inside.deal}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${isMembership(p) ? escape(membershipPriceText(p)) : money(price(p), p.currency)}${cardOriginalMarkup(p)}</strong>${inside.save}${cardExtras.swatches ? cardSwatchMarkup(p, cardExtras.swatches) : ''}${isMembership(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Hacerme miembro de ${escape(p.name)}">Hacerme miembro</button>` : soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}>${addFace}</button>`}</article>`;
+    return `<article class="menu-item" data-product-id="${escape(p.id)}"${atelier ? ' data-anatomy="atelier"' : ''}>${config.productPage ? `<a class="menu-item__details" href="${escape(pageHref(config.productPage, '?id=' + encodeURIComponent(p.id)))}" aria-label="Ver detalle de ${escape(p.name)}"></a>` : `<button class="menu-item__details" type="button" data-product="${escape(p.id)}" aria-label="Ver detalle de ${escape(p.name)}"></button>`}${image ? `<img class="menu-item__image" src="${escape(image)}"${responsiveAttrs(image, "(max-width: 820px) 50vw, 25vw")} alt="${escape(p.name)}" loading="lazy" decoding="async" />${badgeMarkup(p, 'menu-item__badge')}` : ""}${cardExtras.strip ? cardSwatchMarkup(p, cardExtras.swatches, cardExtras.more, true) : ''}${cardExtras.alt ? cardAltMarkup(cardExtras.alt) : ''}${cardExtras.chip ? cardChipMarkup(p) : ''}<div class="menu-item__copy">${inside.eyebrow}<h3>${escape(p.name)}</h3>${p.description && p.description.trim() !== p.name.trim() ? `<p>${escape(p.description)}</p>` : ""}${inside.points}${cardExtras.swatches ? '' : inside.chips}${inside.deal}${soldOut(p) ? '<span class="sold-out">Agotado</span>' : ""}</div><strong class="menu-item__price">${isMembership(p) ? escape(membershipPriceText(p)) : money(price(p), p.currency)}${cardOriginalMarkup(p)}</strong>${inside.save}${cardExtras.swatches && !cardExtras.strip ? cardSwatchMarkup(p, cardExtras.swatches) : ''}${isMembership(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Hacerme miembro de ${escape(p.name)}">Hacerme miembro</button>` : soldOut(p) && complex ? `<button class="menu-add" type="button" disabled aria-label="${escape(p.name)} agotado">Agotado</button>` : complex ? optionGroups(p) ? `<button class="menu-add" type="button" data-product="${escape(p.id)}" aria-label="Elegir opciones de ${escape(p.name)}">Elegir opciones</button>` : preview || config.demo ? `<button class="menu-add" disabled>Elegir opciones</button>` : `<a class="menu-add" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `<button class="menu-add" type="button" data-add="${escape(p.id)}" aria-label="Añadir ${escape(p.name)}" ${!ready || limit(p) === 0 ? "disabled" : ""}>${addFace}</button>`}</article>`;
   }
   // A catalog without its own layout whose photos fill each card becomes a photo grid, not a stack of full-width cards.
   function structureCatalog(el) {

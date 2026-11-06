@@ -22,6 +22,27 @@
     chip.style.setProperty('--look-top', `${Math.round(p.top - h.top - (host.clientTop || 0))}px`);
     chip.style.setProperty('--look-left', `${Math.round(p.right - h.left - (host.clientLeft || 0))}px`);
   }
+  /** A colour swatch on a card: the card photo becomes that colour's, and the card's links open the product in it. */
+  function pickCardSwatch(swatch) {
+    const card = swatch?.closest('.menu-item'), photo = card?.querySelector('.menu-item__image');
+    if (!photo) return false;
+    const set = responsiveSrcset(swatch.dataset.cardSwatch);
+    if (set) { photo.srcset = set; photo.sizes = photo.getAttribute('sizes') || CARD_SIZES; } else { photo.removeAttribute('srcset'); photo.removeAttribute('sizes'); }
+    photo.src = swatch.dataset.cardSwatch; photo.style.objectPosition = '';
+    card.querySelectorAll('[data-card-swatch]').forEach(button => button.setAttribute('aria-pressed', String(button === swatch)));
+    // The card's links open the product in the colour the shopper picked (owner 2026-10-25).
+    const colour = swatch.dataset.cardColour;
+    if (colour) card.querySelectorAll('a.menu-item__details[href],a[data-product-link][href]').forEach(link => {
+      const [path, hash] = link.getAttribute('href').split('#'), [base, query = ''] = path.split('?'), params = new URLSearchParams(query);
+      params.set('color', colour);
+      link.setAttribute('href', `${base}?${params}${hash !== undefined ? '#' + hash : ''}`);
+    });
+    return true;
+  }
+  // A browse strip (spec 2026-11-06) works in every store, DNA or not: pointing at a photo or tapping it picks that colour.
+  const stripSwatch = event => event.target?.closest?.('.menu-item__swatches--strip [data-card-swatch]');
+  if (!hasDna) document.addEventListener('click', event => { if (pickCardSwatch(stripSwatch(event))) event.preventDefault(); }, true);
+  document.addEventListener('pointerover', event => { const swatch = stripSwatch(event); if (swatch) pickCardSwatch(swatch); }, { passive: true });
   function placeQuickLooks() { if (cardMode() === 'quick-look') document.querySelectorAll('.menu-item').forEach(placeQuickLook); }
   if (hasDna) {
     const cardOf = event => event.target?.closest?.('.menu-item');
@@ -55,21 +76,7 @@
     document.addEventListener('contextmenu', event => { if (event.target?.closest?.('.menu-item[data-previewing]')) event.preventDefault(); });
     document.addEventListener('click', event => {
       if (Date.now() < swallowUntil && cardOf(event)) { swallowUntil = 0; event.preventDefault(); event.stopImmediatePropagation(); return; }
-      const swatch = event.target?.closest?.('[data-card-swatch]');
-      const card = swatch?.closest('.menu-item'), photo = card?.querySelector('.menu-item__image');
-      if (!photo) return;
-      event.preventDefault();
-      const set = responsiveSrcset(swatch.dataset.cardSwatch);
-      if (set) { photo.srcset = set; photo.sizes = photo.getAttribute('sizes') || CARD_SIZES; } else { photo.removeAttribute('srcset'); photo.removeAttribute('sizes'); }
-      photo.src = swatch.dataset.cardSwatch; photo.style.objectPosition = '';
-      card.querySelectorAll('[data-card-swatch]').forEach(button => button.setAttribute('aria-pressed', String(button === swatch)));
-      // The card's links open the product in the colour the shopper picked (owner 2026-10-25).
-      const colour = swatch.dataset.cardColour;
-      if (colour) card.querySelectorAll('a.menu-item__details[href],a[data-product-link][href]').forEach(link => {
-        const [path, hash] = link.getAttribute('href').split('#'), [base, query = ''] = path.split('?'), params = new URLSearchParams(query);
-        params.set('color', colour);
-        link.setAttribute('href', `${base}?${params}${hash !== undefined ? '#' + hash : ''}`);
-      });
+      if (pickCardSwatch(event.target?.closest?.('[data-card-swatch]'))) event.preventDefault();
     }, true);
     // Tilt follows a fine pointer only, and never with reduced motion.
     const tiltAllowed = () => cardMode() === 'tilt' && config.motion !== 'off' && matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches;

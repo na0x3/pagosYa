@@ -4,7 +4,7 @@
   // (owner 2026-10-22: «la lupa del header nunca sirve» — «Cannot access 'filterFold' before initialization»).
   function filterFold(text) { return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
   const SORTS = [['destacados', 'Destacados'], ['precio-asc', 'Precio ↑'], ['precio-desc', 'Precio ↓'], ['novedades', 'Novedades'], ['mejor-oferta', 'Mejor oferta']];
-  const FILTER_TOGGLES = ['descuento', 'disponible', 'ofertas'];
+  const FILTER_TOGGLES = ['descuento', 'disponible', 'ofertas', 'recoger'];
   /** Search (amendment 2026-10-21): the words of a query, folded; the catalogue and buscar.html match with the same rule —
    *  every word in the product's name, description, tags or category name, case and accents ignored. */
   function searchWords(text) { return filterFold(String(text || '').slice(0, 80)).split(/\s+/).filter(Boolean); }
@@ -70,6 +70,8 @@
       if (state.toggles.has('descuento') && !(price(p) < p.amount)) return false;
       if (state.toggles.has('disponible') && p.stock === 0) return false;
       if (state.toggles.has('ofertas') && !offerOptions(p, undefined).length) return false;
+      // «Recoger hoy» (browse, spec 2026-11-06): what can be bought now — not sold out, any combination left.
+      if (state.toggles.has('recoger') && soldOut(p)) return false;
       for (const [key, values] of Object.entries(state.sets)) {
         if (!values.length) continue;
         if (key === 'categoria') { if (!values.includes(filterFold(p.categoryId))) return false; continue; }
@@ -90,15 +92,21 @@
   }
   /* Sort & filter styles (spec 2026-10-21): three finished styles over the same state — `bar` (top row + drawer), `chips` (the
    * John Smedley explorer: category and option chip rows, price and switches in «Más filtros») and `sidebar` (collapsible groups
-   * beside the grid; the drawer under 900 px). Every control edits the state directly (read → change → write → render). */
-  const FILTER_STYLES = ['bar', 'chips', 'sidebar'];
+   * beside the grid; the drawer under 900 px). Every control edits the state directly (read → change → write → render).
+   * `browse` (spec 2026-11-06, the Nike shop page): the sidebar's column under a head row — count, «Ocultar filtros» (kept for
+   * the tab) and the sort —, «Recoger hoy» first when the store has a pickup location, and colour-photo strips on the cards. */
+  const FILTER_STYLES = ['bar', 'chips', 'sidebar', 'browse'];
   let filtersDrawerOpen = false, filtersLockedFrom = null, filtersOpener = null;
+  const FILTERS_HIDDEN_KEY = 'pagosya-filters-hidden';
+  let filtersHidden = (() => { try { return sessionStorage.getItem(FILTERS_HIDDEN_KEY) === '1'; } catch { return false; } })();
+  const pickupToday = () => (Array.isArray(store.locations) ? store.locations : []).some(l => l?.pickupEnabled);
   const filterStyleFor = (all, groups) => FILTER_STYLES.includes(config.filterStyle) ? config.filterStyle : all.length >= 9 || groups.length >= 3 ? 'sidebar' : 'bar';
   const productsWord = n => `${n} ${n === 1 ? 'producto' : 'productos'}`;
   function filtersMarkup(all, state, shown, forcedStyle) {
     const groups = filterGroups(all);
     // Owner 2026-10-28 («que tenga los sorters siempre»): a collection page shows its categories and colours as open chip rows.
     const style = FILTER_STYLES.includes(forcedStyle) ? forcedStyle : filterStyleFor(all, groups);
+    if (style === 'browse' && pickupToday()) groups.unshift({ key: 'recoger', label: 'Recoger hoy', kind: 'toggle', values: [] });
     const chosen = key => state.sets[key] || [];
     const chip = (g, v) => `<button type="button" class="cf-chip"${v.color ? ' data-swatch-chip' : ''} data-filter-chip="${escape(g.key)}:${escape(v.value)}" data-key="${escape(g.key)}" data-value="${escape(v.value)}" aria-pressed="${chosen(g.key).includes(v.value)}">${v.color ? `<span data-swatch style="--swatch:${escape(v.color)}" aria-hidden="true"></span>` : ''}<span>${escape(v.text)}</span></button>`;
     const range = g => {
@@ -130,17 +138,20 @@
       const catRow = cat ? `<div class="catalog-filters__row catalog-filters__row--categories" data-filter-group="categoria" role="group" aria-label="${escape(cat.label)}"><button type="button" class="cf-chip cf-chip--plain" data-filter-chip="categoria:" data-key="categoria" data-value="" aria-pressed="${!chosen('categoria').length}">Todo</button>${cat.values.map(v => chip(cat, v).replace('class="cf-chip"', 'class="cf-chip cf-chip--plain"')).join('')}</div>` : '';
       const optionRow = options.length ? `<div class="catalog-filters__row catalog-filters__row--options">${options.map(g => `<div class="cf-chips" data-filter-group="${escape(g.key)}" role="group" aria-label="${escape(g.label)}">${g.values.map(v => chip(g, v)).join('')}</div>`).join('')}</div>` : '';
       inner = `${search}<div class="catalog-filters__top">${catRow}${sort}</div>${optionRow}<div class="catalog-filters__bar">${count}${more.length ? opener('Más filtros') : ''}</div>${activeRow}${drawer(more, 'Más filtros')}`;
-    } else if (style === 'sidebar') {
+    } else if (style === 'sidebar' || style === 'browse') {
       const details = g => g.kind === 'toggle' ? `<div class="cf-group cf-group--toggle" data-filter-group="${escape(g.key)}">${toggle(g)}</div>`
         : `<details class="cf-group" data-filter-group="${escape(g.key)}" open><summary>${escape(title(g))}${chosen(g.key).length ? ` · ${chosen(g.key).length}` : ''}<span class="cf-caret" aria-hidden="true"></span></summary>${body(g)}</details>`;
       // On desktop the sidebar takes a fixed left column of the catalogue and its groups stay in view as the products scroll;
       // a grid row span left the products ~2300 px below it (final review 2026-10-21).
-      inner = `${search}<aside class="catalog-filters__side" aria-label="Filtros"><div class="catalog-filters__side-inner">${groups.map(details).join('')}${filterCount ? '<button type="button" class="cf-link" data-filters-clear="filters">Borrar filtros</button>' : ''}</div></aside>`
-        + `<div class="catalog-filters__bar">${count}${opener('Filtrar')}${sort}</div>${activeRow}${drawer(groups, 'Filtrar')}`;
+      const side = `<aside class="catalog-filters__side" aria-label="Filtros"><div class="catalog-filters__side-inner">${groups.map(details).join('')}${filterCount ? '<button type="button" class="cf-link" data-filters-clear="filters">Borrar filtros</button>' : ''}</div></aside>`;
+      const hide = `<button type="button" class="cf-hide" data-filters-hide aria-expanded="${!filtersHidden}">${filtersHidden ? 'Mostrar filtros' : 'Ocultar filtros'}</button>`;
+      inner = style === 'browse'
+        ? `${search}${side}<div class="catalog-filters__head">${count}<div class="catalog-filters__tools">${opener('Filtrar')}${hide}${sort}</div></div>${activeRow}${drawer(groups, 'Filtrar')}`
+        : `${search}${side}<div class="catalog-filters__bar">${count}${opener('Filtrar')}${sort}</div>${activeRow}${drawer(groups, 'Filtrar')}`;
     } else {
       inner = `${search}<div class="catalog-filters__bar">${count}${sort}${groups.length ? opener('Filtrar') : ''}</div>${activeRow}${drawer(groups, 'Filtrar')}`;
     }
-    return `<div class="catalog-filters" data-filter-style="${style}">${inner}</div>`;
+    return `<div class="catalog-filters" data-filter-style="${style}"${style === 'browse' && filtersHidden ? ' data-filters-hidden' : ''}>${inner}</div>`;
   }
   /** The search field filters as the shopper types (150 ms after the last key); Esc and ✕ clear it. */
   let searchTimer = 0;
@@ -223,6 +234,13 @@
       const state = readFilterState(), key = switchButton.dataset.filterToggle;
       if (state.toggles.has(key)) state.toggles.delete(key); else state.toggles.add(key);
       applyFilterChange(state, `[data-filter-toggle="${attrValue(key)}"]`);
+      return;
+    }
+    if (target?.closest?.('[data-filters-hide]')) {
+      filtersHidden = !filtersHidden;
+      try { if (filtersHidden) sessionStorage.setItem(FILTERS_HIDDEN_KEY, '1'); else sessionStorage.removeItem(FILTERS_HIDDEN_KEY); } catch { /* storage can be unavailable */ }
+      render();
+      filterControl('[data-filters-hide]')?.focus({ preventScroll: true });
       return;
     }
     if (target?.closest?.('[data-sort-toggle]')) { setSortOpen(document.querySelector('.cf-sort__list')?.hidden !== false); return; }
