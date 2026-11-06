@@ -42,6 +42,12 @@
     const range = /^(\d+)-(\d+)$/.exec(params.get('precio') || '');
     if (range) state.precio = [Number(range[1]) * 100, Number(range[2]) * 100];
     for (const [key, value] of params) if (key.startsWith('f_')) state.sets[filterFold(key.slice(2))] = value.split(',').map(filterFold).filter(Boolean);
+    // Owner 2026-11-06: a home section links a category by its name (?f_categoria=Noche), the menu by its id; a name is read as
+    // that category's id, so both open its products (an unknown value still matches nothing, as before).
+    if (state.sets.categoria) {
+      const categories = Array.isArray(store.categories) ? store.categories : [];
+      state.sets.categoria = state.sets.categoria.map(value => { const named = categories.find(c => c && c.id && filterFold(c.name) === value); return named ? filterFold(named.id) : value; });
+    }
     for (const key of FILTER_TOGGLES) if (params.get(key) === '1') state.toggles.add(key);
     return state;
   }

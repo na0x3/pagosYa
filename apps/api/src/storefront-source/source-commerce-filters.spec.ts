@@ -331,3 +331,14 @@ describe('follow-ups', () => {
   });
 });
 
+
+// Owner 2026-11-06 (NOA, «and in many stores»): a home section's category link names the category (library.tsx sends
+// ?f_categoria=<name>); the menu sends its id. Both open that category's products, never an empty page.
+it('a category link by name opens that category, like a link by id', async () => {
+  const items = [p('a', 1000, { categoryId: 'c1' }), p('b', 2000, { categoryId: 'c2' }), p('c', 3000, { categoryId: 'c1' }), p('d', 4000, { categoryId: 'c2' }),
+    p('e', 5000, { categoryId: 'c1' }), p('f', 6000, { categoryId: 'c2' })];
+  const categories = [{ id: 'c1', name: 'Noche' }, { id: 'c2', name: 'Pequeños' }];
+  expect((await open(items, '?f_categoria=Noche', { categories })).ids()).toEqual(['a', 'c', 'e']);
+  expect((await open(items, '?f_categoria=Peque%C3%B1os', { categories })).ids()).toEqual(['b', 'd', 'f']);
+  expect((await open(items, '?f_categoria=c2', { categories })).ids()).toEqual(['b', 'd', 'f']);
+});

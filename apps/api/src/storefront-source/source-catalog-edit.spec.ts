@@ -308,3 +308,8 @@ it('a renamed category takes its menu words along, only where they said its old 
     { label: 'Info', links: [{ label: 'Novias', to: 'page:about' }] }] });
   expect(withCategoryMenuRenames(menu, [])).toBe(menu);
 });
+
+it('a removed category leaves every category section, the mosaic too (live NOA 2026-11-06)', () => {
+  const mosaic: LayoutBlock[] = [{ type: 'categories-mosaic', items: [{ title: 'Novias', link: 'category:Novias' }, { title: 'Noche', link: 'category:Noche' }] }];
+  expect(relinkCategories(mosaic, { rename: [], remove: [{ id: 'c1', name: 'Novias' }] })[0].items).toEqual([{ title: 'Noche', link: 'category:Noche' }]);
+});

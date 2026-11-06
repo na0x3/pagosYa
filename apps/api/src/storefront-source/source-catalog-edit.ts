@@ -393,7 +393,6 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
   return { change, done, refused, notes };
 }
 
-const CATEGORY_LISTS = new Set(['categories-list', 'categories-tiles']);
 
 /** Section links to a renamed or removed category (`category:<name>`) and its tiles in the category lists follow the change: a
  *  rename keeps pointing at it, a removal points at all the products and drops its tile. The same array when nothing follows. */
@@ -411,7 +410,8 @@ export function relinkCategories(blocks: readonly LayoutBlock[], links: CatalogC
     if (block.link !== undefined) next.link = target(block.link);
     if (block.link2 !== undefined) next.link2 = target(block.link2);
     if (block.items) {
-      const list = CATEGORY_LISTS.has(block.type);
+      // Every category section (list, tiles, mosaic — live NOA 2026-11-06: the mosaic kept a removed category's tile).
+      const list = block.type.startsWith('categories-');
       next.items = block.items.filter(item => !(list && gone.has(fold(item.title))))
         .map(item => ({ ...item, ...(list && renamed.has(fold(item.title)) ? { title: renamed.get(fold(item.title))! } : {}), ...(item.link !== undefined ? { link: target(item.link) } : {}) }));
     }
