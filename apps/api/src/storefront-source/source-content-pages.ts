@@ -21,10 +21,10 @@ export function sectionedPageFile(kind: 'about' | 'contact' | 'faq' | 'shipping'
     path: `components/${page.group}/${page.file}.tsx`,
     content: `// @pagosya-page\nimport Shell from '../Shell';\nimport { InfoPage } from '@pagosya/ui';\nimport { LibraryHome, type LibraryBlock } from '../library';\nimport { pageLayouts } from '../store-data';\n`
       + `export default function ${page.component}() {\n  const layout = (pageLayouts.${kind} ?? []) as LibraryBlock[];\n`
-      + `  const sections = layout.length ? <div data-lb-home data-lb-page="${kind}" style={{ overflowX: 'clip' }}><LibraryHome layout={layout} /></div> : null;\n`
-      // Minor 2026-11-05: a cover opens the page; without one the page's title comes first, then the sections, then its text.
-      + `  const covered = /^(cover-|hero-split$)/.test(String(layout[0]?.type ?? ''));\n`
-      + `  return <Shell>{covered ? sections : null}<InfoPage kind="${kind}">{covered ? null : sections}</InfoPage></Shell>;\n}\n`,
+      // Owner 2026-11-06 (Vórtice «Envíos»: «i just did not like he left the original block there»): YAPI's sections are the whole
+      // page, like a page YAPI made; the platform's plain page (its title and data) shows only on a page without sections.
+      + `  if (layout.length) return <Shell><main id="contenido" data-lb-home data-lb-page="${kind}" style={{ overflowX: 'clip' }}><LibraryHome layout={layout} /></main></Shell>;\n`
+      + `  return <Shell><InfoPage kind="${kind}" /></Shell>;\n}\n`,
   };
 }
 
@@ -49,6 +49,21 @@ export function withSectionedPages<T extends { path: string; content: string }>(
 
 type MenuKind = 'about' | 'contact' | 'faq' | 'shipping';
 const MENU_KINDS: readonly MenuKind[] = ['about', 'contact', 'faq', 'shipping'];
+
+/** Owner 2026-11-06: a refill brings every menu page YAPI drew (any earlier version of the sectioned file) to the current one;
+ *  the platform's plain pages and pages the store's own design wrote stay as they are. */
+export function withCurrentSectionedPages<T extends { path: string; content: string }>(files: T[]): T[] {
+  if (!files.some(file => file.path === 'components/library.tsx')) return files;
+  const current = new Map(MENU_KINDS.map(kind => { const page = sectionedPageFile(kind); return [page.path, { kind, content: page.content }] as const; }));
+  let changed = false;
+  const out = files.map(file => {
+    const page = current.get(file.path);
+    if (!page || file.content === page.content || !file.content.startsWith('// @pagosya-page\n') || !file.content.includes(`pageLayouts.${page.kind}`)) return file;
+    changed = true;
+    return { ...file, content: page.content };
+  });
+  return changed ? out : files;
+}
 const BUNDLED_IN = /\.?\/?(assets\/image-[a-f0-9]{12}\.(?:png|jpe?g|webp))/gi;
 
 /** Minor 2026-11-05 («prueba otra plantilla» lost a built «Nosotros»): the menu pages a template switch keeps — those with sections on

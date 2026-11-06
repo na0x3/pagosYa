@@ -10,7 +10,7 @@ import { plantillaFillFromRead } from './source-plantilla-fill';
 import { kitPath } from '@pagosya/storefront-kit';
 import type { SourceProjectBriefDto, SourceProjectFileDto } from './dto/save-source-project.dto';
 import { compileNextPreview, nextContentPages, nextProjectScaffold } from './source-next';
-import { contentPagesFor } from './source-content-pages';
+import { contentPagesFor, withCurrentSectionedPages } from './source-content-pages';
 import { sourceCommerceRoutes } from './source-commerce-pages';
 import { SOURCE_DNA_RUNTIME_ENUMS, sourceRuntimeDna } from './source-dna';
 import { sourceAssetInventory, withSourceAssets } from './source-asset-library';
@@ -432,7 +432,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
     }
     return file;
   }), variants);
-  const pages = withFeatureSlots(withCurrentVariantCss(withCurrentSectionCss(withEsencialCatalogPages(out)), frameChoices(variants as Record<string, unknown>, (change.layout ?? state.layout ?? []) as { type?: unknown; card?: unknown }[])));
+  const pages = withFeatureSlots(withCurrentVariantCss(withCurrentSectionCss(withEsencialCatalogPages(withCurrentSectionedPages(out))), frameChoices(variants as Record<string, unknown>, (change.layout ?? state.layout ?? []) as { type?: unknown; card?: unknown }[])));
   return variants.menu && variants.menu !== 'none' ? withStoreMenuMounts(pages) : pages;
 }
 

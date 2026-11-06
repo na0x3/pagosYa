@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { nextStoreFiles } from './fixtures/next-store';
-import { ACCOUNT_PAGE_FILES, STANDARD_PAGE_FILES, CONTENT_PAGE_FILES, keptMenuPages, sectionablePage, sectionedPageFile, withSectionedPages, withStandardPages } from './source-content-pages';
+import { ACCOUNT_PAGE_FILES, STANDARD_PAGE_FILES, CONTENT_PAGE_FILES, keptMenuPages, sectionablePage, sectionedPageFile, withCurrentSectionedPages, withSectionedPages, withStandardPages } from './source-content-pages';
 import { compileNextPreview, nextContentPages, nextSourceFile } from './source-next';
 import { LIBRARY_CATALOG } from './source-section-library';
 import { assembleTemplateRevision } from './source-templates';
@@ -149,20 +149,31 @@ describe('account page files', () => {
 });
 
 describe('menu pages with template sections (spec 2026-11-05)', () => {
-  it('draws every menu page\'s sections above its live content, the merchant\'s about text included (review 2026-11-05)', () => {
+  // Owner 2026-11-06 (Vórtice «Envíos»: «i like what yapi did, i just did not like he left the original block there»): once YAPI drew
+  // sections on a menu page they are the whole page — the platform's plain page (its title and data) shows only on a page without them.
+  it('draws a menu page from its sections alone; the plain page only when it has none', () => {
     const about = sectionedPageFile('about');
     expect(about.path).toBe('components/pages/about.tsx');
     expect(about.content.startsWith('// @pagosya-page\n')).toBe(true);
     expect(about.content).toContain('pageLayouts.about');
-    // A page that opens with a cover shows it above the page; otherwise the page's title comes first and the sections follow it,
-    // above the about text (minor 2026-11-05).
-    for (const kind of ['about', 'contact'] as const) expect(sectionedPageFile(kind).content).toContain(`{covered ? sections : null}<InfoPage kind="${kind}">{covered ? null : sections}</InfoPage>`);
-    const rule = new RegExp(/covered = \/(.+)\/\.test/.exec(about.content)![1]);
-    for (const cover of LIBRARY_CATALOG.filter(section => section.role === 'cover')) expect(rule.test(cover.id)).toBe(true);
-    for (const other of LIBRARY_CATALOG.filter(section => section.role !== 'cover')) expect(rule.test(other.id)).toBe(false);
-    // InfoPage brings its own <main id="contenido">: the sections never add a second one.
-    expect(about.content).not.toContain('<main');
-    expect(about.content).toContain('data-lb-home');
+    for (const kind of ['about', 'contact', 'faq', 'shipping'] as const) {
+      const page = sectionedPageFile(kind).content;
+      expect(page).toContain(`if (layout.length) return <Shell><main id="contenido" data-lb-home data-lb-page="${kind}" style={{ overflowX: 'clip' }}><LibraryHome layout={layout} /></main></Shell>;`);
+      expect(page).toContain(`return <Shell><InfoPage kind="${kind}" /></Shell>;`);
+      expect(page.match(/<main/g)).toHaveLength(1);
+    }
+  });
+
+  it('a refill brings an older sectioned page to the current one, and leaves the plain and the store\'s own pages alone', () => {
+    const older = { path: 'components/pages/shipping.tsx', content: "// @pagosya-page\nimport { pageLayouts } from '../store-data';\nconst layout = pageLayouts.shipping ?? [];\n<InfoPage kind=\"shipping\">" };
+    const own = { path: 'components/pages/about.tsx', content: '// @pagosya-page\nexport default function About() { return <h1>Mi historia</h1>; }\n' };
+    const plain = CONTENT_PAGE_FILES.find(file => file.path === 'components/pages/faq.tsx')!;
+    const files = [{ path: 'components/library.tsx', content: '' }, older, own, plain];
+    const out = withCurrentSectionedPages(files);
+    expect(out[1]).toEqual(sectionedPageFile('shipping'));
+    expect(out[2]).toBe(own);
+    expect(out[3]).toBe(plain);
+    expect(withCurrentSectionedPages(out)).toEqual(out);
   });
 
   it('rewrites only the platform\'s own pages that have sections, and only on a store with the section library', () => {

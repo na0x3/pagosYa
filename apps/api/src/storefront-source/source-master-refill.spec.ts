@@ -385,3 +385,10 @@ describe('pages YAPI made keep their menu link through any refill', () => {
     expect(JSON.stringify(configOf(again).header?.menu ?? null)).toContain('extra:novias');
   });
 });
+
+// Owner 2026-11-06: every refill brings an older sectioned menu page to the current one (the plain block under YAPI's sections goes).
+it('a refill refreshes an older sectioned menu page', () => {
+  const older = { path: 'components/pages/shipping.tsx', content: "// @pagosya-page\nimport { pageLayouts } from '../store-data';\nconst layout = pageLayouts.shipping ?? [];\n<InfoPage kind=\"shipping\">" };
+  const out = refillMasterFiles([...storeFiles(), { path: 'components/library.tsx', content: '' }, older], manifest, {});
+  expect(out.find(file => file.path === 'components/pages/shipping.tsx')!.content).not.toContain('<InfoPage kind="shipping">');
+});
