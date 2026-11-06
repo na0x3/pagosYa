@@ -3,6 +3,7 @@ import { SourceChatService } from './source-chat.service';
 import { templateStoreDataFile } from './source-templates';
 import { CONTENT_PAGE_FILES } from './source-content-pages';
 import type { LayoutBlock } from './source-section-library';
+import { readStoreMenu } from './source-store-menu';
 
 /** YAPI edits everything (spec 2026-11-03): the template quick edit writes the store's own data, swaps photos and edits the product
  *  page's sections in one reply. */
@@ -268,5 +269,79 @@ describe('extra pages through the quick edit', () => {
     const files = written(list);
     expect(files.some(file => file.path === 'components/pages/novias.tsx')).toBe(false);
     expect(files.find(file => file.path === 'config.js')!.content).not.toContain('extra:novias');
+  });
+});
+
+describe('the catalog through the quick edit (spec 2026-11-05 creates anything part 2)', () => {
+  const cat = (fields: Record<string, unknown>) => ({ kind: '', at: -1, name: '', price: '', stock: '', text: '', category: '', photo: '', option: '', value: '', ...fields });
+  const linked: LayoutBlock[] = [{ type: 'cover-split', title: 'Gelato de tofu', cta: 'Ver helados', link: 'category:Helados' }, { type: 'products-grid', card: 'classic' }];
+  const editOn = (blocks: LayoutBlock[], instruction: string) => chat.templateLayoutEdit('m1', 's1', 't1', { id: 'u1' }, workflow, { instruction, revision: 5, assetUrls: [] }, 5, blocks);
+  beforeEach(() => {
+    prisma.paymentLink = { findMany: jest.fn(async ({ where }: any) => where.status === 'ARCHIVED' ? [{ id: 'p9', name: 'Torta de limón' }]
+      : [{ id: 'p1', stock: null, categoryId: 'c1', currency: 'BOB', variants: [] }]) };
+    prisma.category = { findMany: jest.fn().mockResolvedValue([{ id: 'c1', name: 'Helados', _count: { paymentLinks: 1 } }]) };
+    prisma.promoCode.findMany = jest.fn().mockResolvedValue([]);
+    Object.assign(prisma.tx, {
+      category: { count: jest.fn().mockResolvedValue(1), create: jest.fn(async ({ data }: any) => ({ id: `cat-${data.name}` })), updateMany: jest.fn(), deleteMany: jest.fn() },
+      promoCode: { create: jest.fn(), updateMany: jest.fn() }, $queryRaw: jest.fn(),
+    });
+    prisma.tx.paymentLink.create = jest.fn();
+  });
+
+  it('sends categories, codes and archived products, and makes a category, a product in it and a code in one revision', async () => {
+    editLayout.mockResolvedValue(read({ ops: [{ op: 'text', at: 0, field: 'title', item: -1, value: 'Gelato y más', to: -1, type: '' }], catalog: [
+      cat({ kind: 'category-add', name: 'Paletas' }), cat({ kind: 'product-add', name: 'Paleta de mango', price: '15', text: 'De mango.', category: 'Paletas' }),
+      cat({ kind: 'code-add', name: 'PALETA10', value: '10 %' })] }));
+    const result = await edit('crea la categoría Paletas con la Paleta de mango a Bs 15, un código PALETA10 de 10 % y cambia el título');
+    const sentState = editLayout.mock.calls[0][1].store;
+    expect(sentState.categories).toEqual([{ id: 'c1', name: 'Helados', count: 1 }]);
+    expect(sentState.archived).toEqual([{ id: 'p9', name: 'Torta de limón' }]);
+    expect(sentState.products[0]).toMatchObject({ id: 'p1', stock: null, categoryId: 'c1' });
+    expect(prisma.tx.category.create).toHaveBeenCalledWith({ data: { storeId: 's1', name: 'Paletas', sortOrder: 1 }, select: { id: true } });
+    expect(prisma.tx.paymentLink.create).toHaveBeenCalledWith({ data: expect.objectContaining({ name: 'Paleta de mango', amount: 1500, categoryId: 'cat-Paletas' }) });
+    expect(prisma.tx.promoCode.create).toHaveBeenCalledWith({ data: { storeId: 's1', code: 'PALETA10', discountType: 'PERCENT', discountValue: 10 } });
+    expect(refill).toHaveBeenCalledTimes(1);
+    expect(refill.mock.calls[0][5]).toMatchObject({ refreshData: true });
+    expect(result.assistantMessage.content).toContain('creé «Paleta de mango» en Paletas a Bs 15');
+    expect(result.assistantMessage.content).toContain('el código PALETA10 da 10 % de descuento');
+    expect(result.assistantMessage.content).toContain('Mándame la foto de «Paleta de mango» cuando la tengas.');
+  });
+
+  it('a renamed category takes its section links along', async () => {
+    editLayout.mockResolvedValue(read({ catalog: [cat({ kind: 'category-rename', at: 0, name: 'Gelatos' })] }));
+    await editOn(linked, 'renombra Helados a Gelatos');
+    expect(prisma.tx.category.updateMany).toHaveBeenCalledWith({ where: { id: 'c1', storeId: 's1' }, data: { name: 'Gelatos' } });
+    expect(refill.mock.calls[0][3].layout[0].link).toBe('category:Gelatos');
+  });
+
+  it('a removed category sends its links to all products and leaves the menu', async () => {
+    editLayout.mockResolvedValue(read({ catalog: [cat({ kind: 'category-remove', at: 0 })] }));
+    await editOn(linked, 'borra la categoría Helados');
+    expect(prisma.tx.category.deleteMany).toHaveBeenCalledWith({ where: { storeId: 's1', id: { in: ['c1'] } } });
+    expect(refill.mock.calls[0][3].layout[0].link).toBe('products');
+    const config = { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ header: { menu: { style: 'dropdowns', groups: [
+      { label: 'Helados', links: [{ to: 'category:c1' }] }, { label: 'Info', links: [{ to: 'page:about' }] }] } } })};` };
+    expect(readStoreMenu(refill.mock.calls[0][5].files([config]))?.groups?.map((group: { label: string }) => group.label)).toEqual(['Info']);
+  });
+
+  it('a failed catalog write is said honestly, and no link is rewritten', async () => {
+    prisma.$transaction = jest.fn().mockRejectedValue(new Error('db down'));
+    editLayout.mockResolvedValue(read({ catalog: [cat({ kind: 'category-rename', at: 0, name: 'Gelatos' })] }));
+    const result = await editOn(linked, 'renombra Helados a Gelatos');
+    expect(result.assistantMessage.content).toContain('No pude guardar los cambios del catálogo');
+    expect(refill).not.toHaveBeenCalled();
+  });
+
+  it('a product without its price is asked while the rest is done, and the answer never makes a twin', async () => {
+    editLayout.mockResolvedValueOnce(read({ catalog: [cat({ kind: 'product-add', name: 'Paleta de mango', price: '15' })], ask: '¿A cuánto vendes la Paleta de coco?' }));
+    const first = await edit('agrega Paleta de mango a Bs 15 y Paleta de coco');
+    expect(first.assistantMessage.content).toContain('¿A cuánto vendes la Paleta de coco?');
+    expect(first.assistantMessage.metadata.storeAsk).toEqual({ request: 'agrega Paleta de mango a Bs 15 y Paleta de coco', ask: '¿A cuánto vendes la Paleta de coco?' });
+    prisma.storeAgentMessage.findFirst = jest.fn().mockResolvedValue({ metadata: { storeAsk: { request: 'agrega Gelato chocolate a Bs 30 y Paleta de coco', ask: '¿A cuánto vendes la Paleta de coco?' } } });
+    prisma.tx.paymentLink.create.mockClear();
+    editLayout.mockResolvedValueOnce(read({ catalog: [cat({ kind: 'product-add', name: 'Gelato chocolate', price: '30' }), cat({ kind: 'product-add', name: 'Paleta de coco', price: '12' })] }));
+    const second = await edit('a Bs 12');
+    expect(prisma.tx.paymentLink.create).toHaveBeenCalledTimes(1);
+    expect(second.assistantMessage.content).not.toContain('Ya tienes');
   });
 });

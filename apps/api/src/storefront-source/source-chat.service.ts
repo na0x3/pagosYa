@@ -69,6 +69,9 @@ import { readMasterState, readPlantillaCopy } from './source-templates';
 import { readMoodAsk } from './source-mood-ask';
 import { nextTitleStyle, readTitleAsk } from './source-title-style';
 import { buildLibraryFacts, carriedSections, libraryDropReason, libraryMood, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, type LayoutBlock } from './source-section-library';
+import { applyCatalogOps, catalogChangeEmpty, emptyCatalogChange, relinkCategories, withoutCategoryMenuLinks, type CatalogChange } from './source-catalog-edit';
+import { writeCatalogChange } from './source-catalog-write';
+import type { ProductVariant } from '../payment-links/product-variants';
 import { applyStoreOps, readCatalogTitle, storeChangeEmpty, withCatalogTitle, type StoreChange, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
 import { storeFaq, storePolicies } from '../stores/store-presentation';
 import { MENU_PAGES, MENU_PAGE_NAMES, MENU_PAGE_URLS, applyLayoutOps, layoutAdds, layoutEditReply, menuPagesFor, type LayoutPage, type MenuPage } from './source-layout-edit';
@@ -1164,7 +1167,7 @@ export class SourceChatService {
       ...(extraPages.length ? { extraPages: extraPages.map(page => ({ slug: page.slug, nombre: page.name, layout: page.layout })) } : {}), ...(menuGroups.length ? { menuGroups } : {}) });
     if (!read) return null;
     // Live 2026-11-05: a change that needs the merchant's words first (a FAQ answer) is asked for, never «No logré que se vea».
-    if (read.ask && !read.ops.length && !read.store.length) {
+    if (read.ask && !read.ops.length && !read.store.length && !(read.catalog ?? []).length) {
       await workflow.finish('completed');
       const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT', content: read.ask,
         metadata: { progress: workflow.value, storeAsk: { request: input.instruction.slice(0, 2000), ask: read.ask } } as never } });
@@ -1235,30 +1238,47 @@ export class SourceChatService {
     }
     const extraChanged = JSON.stringify(extra) !== JSON.stringify(extraPages);
     const store = editState ? applyStoreOps(editState, read.store, photos) : { change: { products: [] } as StoreChange, done: [], refused: [] };
+    // Part 2 (spec 2026-11-05 creates anything): products, categories and codes, checked against what the digest showed.
+    const catalog = editState ? applyCatalogOps(editState, read.catalog ?? [], photos, { answering: Boolean(pendingAsk) })
+      : { change: emptyCatalogChange(), done: [] as string[], refused: [] as string[], notes: [] as string[] };
     const changed = JSON.stringify(applied.layout) !== JSON.stringify(layout);
     const productChanged = JSON.stringify(product.layout) !== JSON.stringify(productLayout);
     const done = [...applied.done, ...product.done, ...menu.flatMap(entry => entry.done), ...extraDone];
-    const refused = [...applied.refused, ...product.refused, ...menu.flatMap(entry => entry.refused), ...extraRefused, ...store.refused];
+    const refused = [...applied.refused, ...product.refused, ...menu.flatMap(entry => entry.refused), ...extraRefused, ...store.refused, ...catalog.refused];
     this.productLogger.log(JSON.stringify({ event: 'template_layout_edit', storeId, ops: ops.map(op => `${op.page && op.page !== 'home' ? `${op.page === 'product' ? 'ficha' : op.page}:` : ''}${op.op}:${op.at}${op.field ? `.${op.field}` : ''}${op.item >= 0 ? `[${op.item}]` : ''}${op.type ? `=${op.type}` : ''}`),
-      store: read.store.map(op => `${op.part}.${op.field}${op.at >= 0 ? `[${op.at}]` : ''}`), added: homeAdds.added.map(entry => entry.block.type), changed, productChanged, menuChanged: menuChanged.map(entry => `${entry.page}:${entry.layout.map(block => block.type).join(',')}`), refused: refused.length, rest: read.rest.slice(0, 200),
+      store: read.store.map(op => `${op.part}.${op.field}${op.at >= 0 ? `[${op.at}]` : ''}`), catalog: (read.catalog ?? []).map(op => `${op.kind}${op.at >= 0 ? `[${op.at}]` : ''}`), added: homeAdds.added.map(entry => entry.block.type), changed, productChanged, menuChanged: menuChanged.map(entry => `${entry.page}:${entry.layout.map(block => block.type).join(',')}`), refused: refused.length, rest: read.rest.slice(0, 200),
       extraPages: extra.map(page => page.slug), focus: focus ? { pagina: focus.pagina, secciones: focus.secciones, partes: focus.partes, mirando: Boolean(focus.mirando) } : null, outsideFocus: outsideFocus(ops, focus) }));
     // The store's data first: a refused write (a check the database makes) is said, never «Listo».
     // The announcement, the footer line and the catalogue title are files; everything else the store edit changes is data.
     const { copy: _copy, catalogTitle: _title, ...data } = store.change;
     let dataChanged = false;
-    if (!storeChangeEmpty(store.change)) {
-      const written = storeChangeEmpty({ ...data, products: data.products }) ? true : await (async () => {
+    const catalogWrite = !catalogChangeEmpty(catalog.change);
+    const dataEmpty = storeChangeEmpty({ ...data, products: data.products });
+    if (!storeChangeEmpty(store.change) || catalogWrite) {
+      const written = dataEmpty && !catalogWrite ? true : await (async () => {
         await workflow.report('saving');
-        return this.writeStoreChange(merchantId, storeId, store.change).then(() => (dataChanged = true), error => {
+        return this.writeStoreChange(merchantId, storeId, store.change, catalogWrite ? catalog.change : undefined).then(() => (dataChanged = true), error => {
           this.productLogger.warn(JSON.stringify({ event: 'store_edit_write_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
           return false;
         });
       })();
-      if (written) done.push(...store.done); else refused.push('No pude guardar los cambios de los datos de tu tienda. Inténtalo de nuevo en un momento.');
+      if (written) { done.push(...store.done, ...catalog.done); refused.push(...catalog.notes); }
+      else refused.push(catalogWrite && dataEmpty ? 'No pude guardar los cambios del catálogo. Inténtalo de nuevo en un momento.'
+        : 'No pude guardar los cambios de los datos de tu tienda. Inténtalo de nuevo en un momento.');
     }
-    const filesChange: MasterFill = { ...(changed ? { layout: applied.layout } : {}), ...(productChanged ? { productLayout: product.layout } : {}), ...(store.change.copy ? { copy: store.change.copy } : {}),
-      ...(menuChanged.length ? { pageLayouts: { ...pages, ...Object.fromEntries(menuChanged.map(entry => [entry.page, entry.layout])) } } : {}),
-      ...(extraChanged ? { extraPages: extra } : {}) };
+    // Links to a renamed or removed category follow it on every page, only once the change is saved; the menu follows in the files.
+    const links = dataChanged && catalogWrite ? catalog.change.links : { rename: [], remove: [] };
+    const relink = (list: LayoutBlock[]) => relinkCategories(list, links);
+    const homeNow = relink(applied.layout);
+    const productNow = relink(product.layout);
+    const pagesNow = Object.fromEntries(MENU_PAGES.map(page => [page, relink(menu.find(entry => entry.page === page)?.layout ?? pages[page])])) as Record<MenuPage, LayoutBlock[]>;
+    const pagesNowChanged = MENU_PAGES.some(page => JSON.stringify(pagesNow[page]) !== JSON.stringify(pages[page]));
+    const extraNow = extra.map(page => ({ ...page, layout: relink(page.layout) }));
+    const extraNowChanged = JSON.stringify(extraNow) !== JSON.stringify(extraPages);
+    const removedCategoryIds = links.remove.map(entry => entry.id);
+    const filesChange: MasterFill = { ...(JSON.stringify(homeNow) !== JSON.stringify(layout) ? { layout: homeNow } : {}),
+      ...(JSON.stringify(productNow) !== JSON.stringify(productLayout) ? { productLayout: productNow } : {}), ...(store.change.copy ? { copy: store.change.copy } : {}),
+      ...(pagesNowChanged ? { pageLayouts: pagesNow } : {}), ...(extraNowChanged ? { extraPages: extraNow } : {}) };
     if (!done.length && !refused.length) return null;
     let saved: Awaited<ReturnType<SourceTemplatesService['refill']>> | null = null;
     // One revision: the files that changed, and the live data in config.js so the preview shows a page or product just written.
@@ -1269,23 +1289,31 @@ export class SourceChatService {
       const sectioned = menuChanged.filter(entry => entry.layout.length).map(entry => entry.page);
       // Pages YAPI made: their files and their menu links follow the list (spec 2026-11-05 creates anything).
       const withExtra = <T extends { path: string; content: string }>(list: T[]): T[] => {
-        if (!extraChanged) return list;
-        const linked = withExtraPageLinks(readStoreMenu(list), extra);
+        if (!extraNowChanged) return list;
+        const linked = withExtraPageLinks(readStoreMenu(list), extraNow);
         refused.push(...linked.refused);
-        return withStoreMenuConfig(withExtraPages(list, extra), list, linked.menu);
+        return withStoreMenuConfig(withExtraPages(list, extraNow), list, linked.menu);
       };
-      const pageFiles = title !== undefined || sectioned.length || extraChanged
-        ? { files: <T extends { path: string; content: string }>(list: T[]) => withExtra(withSectionedPages(title !== undefined ? withCatalogTitle(list, title) : list, sectioned)) } : {};
-      saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraChanged || store.change.copy || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
+      const withoutRemovedCategories = <T extends { path: string; content: string }>(list: T[]): T[] => {
+        if (!removedCategoryIds.length) return list;
+        const before = readStoreMenu(list);
+        const after = withoutCategoryMenuLinks(before, removedCategoryIds);
+        return after && after !== before ? withStoreMenuConfig(list, list, after) : list;
+      };
+      const pageFiles = title !== undefined || sectioned.length || extraNowChanged || removedCategoryIds.length
+        ? { files: <T extends { path: string; content: string }>(list: T[]) => withoutRemovedCategories(withExtra(withSectionedPages(title !== undefined ? withCatalogTitle(list, title) : list, sectioned))) } : {};
+      saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraNowChanged || store.change.copy || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
         { refreshData: true, ...pageFiles });
     }
     await workflow.finish('completed');
     const rest = read.rest;
     const followUp: SourceMessageInput | undefined = rest ? { instruction: rest, revision: saved?.revision ?? revision, layoutRest: true, requestId: randomUUID(), model: input.model ?? 'auto',
       ...(input.maxCredits ? { maxCredits: input.maxCredits } : {}) } : undefined;
-    const content = `${layoutEditReply(done, refused)}${rest ? ` Ahora sigo con lo demás: ${quoteRest(rest)}.` : ''}`.trim();
+    // Part 2: a question YAPI still needs answered (a price it was not told) rides after what it did, and is remembered for the answer.
+    const content = `${layoutEditReply(done, refused)}${read.ask ? ` ${read.ask}` : ''}${rest ? ` Ahora sigo con lo demás: ${quoteRest(rest)}.` : ''}`.trim();
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT', content,
-      metadata: { progress: workflow.value, ...(saved ? { sourceRevision: saved.revision, label: saved.label } : {}) } } });
+      metadata: { progress: workflow.value, ...(saved ? { sourceRevision: saved.revision, label: saved.label } : {}),
+        ...(read.ask ? { storeAsk: { request: input.instruction.slice(0, 2000), ask: read.ask } } : {}) } } });
     return { userMessage, assistantMessage, ...(saved ? { revision: saved } : { setup: null }), ...(followUp ? { followUp } : {}) };
   }
 
@@ -1302,6 +1330,18 @@ export class SourceChatService {
     const code = settings.popupPromoCodeId ? await this.prisma.promoCode.findFirst({ where: { id: settings.popupPromoCodeId, storeId, isActive: true }, select: { discountType: true, discountValue: true } }) : null;
     const copy = (readMasterState(files).copy ?? {}) as { announcement?: string; tagline?: string };
     const items = (catalog.items ?? []) as Array<{ id: string; name: string; amount: number; description?: string | null; imageUrls?: string[]; variants?: unknown[] }>;
+    // Part 2 (spec 2026-11-05 creates anything): the catalog rows the chat may change; any read that fails leaves its part out.
+    const safely = <T,>(run: () => Promise<T>, fallback: T): Promise<T> => Promise.resolve().then(run).catch(() => fallback);
+    const [rows, archived, categories, codes] = await Promise.all([
+      safely(() => this.prisma.paymentLink.findMany({ where: { storeId, id: { in: items.map(item => item.id) } }, select: { id: true, stock: true, categoryId: true, currency: true, variants: true } }),
+        [] as Array<{ id: string; stock: number | null; categoryId: string | null; currency: string; variants: Prisma.JsonValue }>),
+      safely(() => this.prisma.paymentLink.findMany({ where: { storeId, status: 'ARCHIVED' }, orderBy: { updatedAt: 'desc' }, take: 20, select: { id: true, name: true } }), null),
+      safely(() => this.prisma.category.findMany({ where: { storeId }, orderBy: { sortOrder: 'asc' },
+        select: { id: true, name: true, _count: { select: { paymentLinks: { where: { status: 'ACTIVE' } } } } } }), null),
+      safely(() => this.prisma.promoCode.findMany({ where: { storeId }, orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }], take: 20,
+        select: { id: true, code: true, discountType: true, discountValue: true, isActive: true, showInEmails: true, showInAssistant: true } }), null),
+    ]);
+    const row = new Map(rows.map(entry => [entry.id, entry]));
     return {
       tagline: record.tagline ?? '', aboutText: record.aboutText ?? '', contactPhone: record.contactPhone ?? '', contactEmail: record.contactEmail ?? '',
       policies: storePolicies(record.policies), faq: storeFaq(record.policies),
@@ -1310,8 +1350,16 @@ export class SourceChatService {
       popup: { on: Boolean(settings.signupEnabled), title: String(settings.signupTitle ?? ''), text: String(settings.signupBody ?? ''), button: String(settings.signupButton ?? ''),
         discount: code?.discountType === 'PERCENT' ? Number(code.discountValue) : 0 },
       catalogTitle: readCatalogTitle(files),
-      products: items.map(item => ({ id: item.id, name: item.name, amount: Number(item.amount) || 0, description: item.description ?? '', imageUrls: (item.imageUrls ?? []).map(url => uploadOnly(url) ?? url),
-        options: Array.isArray(item.variants) && item.variants.length > 0 })),
+      products: items.map(item => {
+        const saved = row.get(item.id);
+        return { id: item.id, name: item.name, amount: Number(item.amount) || 0, description: item.description ?? '', imageUrls: (item.imageUrls ?? []).map(url => uploadOnly(url) ?? url),
+          options: Array.isArray(item.variants) && item.variants.length > 0,
+          ...(saved ? { stock: saved.stock, categoryId: saved.categoryId, currency: saved.currency, variants: (Array.isArray(saved.variants) ? saved.variants : []) as unknown as ProductVariant[] } : {}) };
+      }),
+      ...(archived ? { archived } : {}),
+      ...(categories ? { categories: categories.map(category => ({ id: category.id, name: category.name, count: category._count.paymentLinks })) } : {}),
+      ...(codes ? { codes: codes.map(code => ({ id: code.id, code: code.code, type: code.discountType, value: code.discountValue, active: code.isActive,
+        emails: code.showInEmails, assistant: code.showInAssistant })) } : {}),
     };
   }
 
@@ -1331,7 +1379,7 @@ export class SourceChatService {
   }
 
   /** YAPI edits everything (spec 2026-11-03): the store's data the edit changed, written as Ajustes and the product editor write it. */
-  private async writeStoreChange(merchantId: string, storeId: string, change: StoreChange) {
+  private async writeStoreChange(merchantId: string, storeId: string, change: StoreChange, catalog?: CatalogChange) {
     await this.prisma.$transaction(async tx => {
       if (change.store || change.policies) {
         await tx.store.update({ where: { id: storeId }, data: { ...(change.store ?? {}), ...(change.policies ? { policies: change.policies as Prisma.InputJsonValue } : {}) } });
@@ -1352,6 +1400,7 @@ export class SourceChatService {
         const framing = product.imageUrls && positions.length ? { imagePositions: product.imageUrls.map(url => { const at = existing.imageUrls.findIndex(old => (uploadOnly(old) ?? old) === url); return at >= 0 && positions[at] ? positions[at] : '50% 50%'; }) } : {};
         await tx.paymentLink.update({ where: { id: product.id }, data: { ...data, ...framing } });
       }
+      if (catalog) await writeCatalogChange(tx, storeId, catalog);
     });
     if (change.popup) {
       const { discount, ...words } = change.popup;
