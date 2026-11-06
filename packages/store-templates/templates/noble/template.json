@@ -1,0 +1,328 @@
+{
+  "id": "noble",
+  "name": "Noble",
+  "category": "moda",
+  "description": "Joyería y relojería: marfil y negro con un toque de oro, títulos en mayúsculas con serif clásica, una franja oscura para las piezas nuevas y el taller de cerca.",
+  "tags": [
+    "joyería",
+    "joyas",
+    "relojes",
+    "oro",
+    "plata",
+    "lujo"
+  ],
+  "sitePurpose": "shop",
+  "order": 61,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "nb-retrato",
+      "role": "hero",
+      "demo": "nb-retrato.jpg"
+    },
+    {
+      "slot": "nb-hero",
+      "role": "hero",
+      "demo": "nb-hero.jpg"
+    },
+    {
+      "slot": "nb-anillo",
+      "role": "product",
+      "demo": "nb-anillo.jpg"
+    },
+    {
+      "slot": "nb-aros",
+      "role": "product",
+      "demo": "nb-aros.jpg"
+    },
+    {
+      "slot": "nb-collar",
+      "role": "product",
+      "demo": "nb-collar.jpg"
+    },
+    {
+      "slot": "nb-plata",
+      "role": "product",
+      "demo": "nb-plata.jpg"
+    },
+    {
+      "slot": "nb-taller",
+      "role": "lifestyle",
+      "demo": "nb-taller.jpg"
+    },
+    {
+      "slot": "nb-manos",
+      "role": "detail",
+      "demo": "nb-manos.jpg"
+    },
+    {
+      "slot": "nb-oreja",
+      "role": "lifestyle",
+      "demo": "nb-oreja.jpg"
+    },
+    {
+      "slot": "nb-regalo",
+      "role": "lifestyle",
+      "demo": "nb-regalo.jpg"
+    },
+    {
+      "slot": "nb-estuche",
+      "role": "detail",
+      "demo": "nb-estuche.jpg"
+    },
+    {
+      "slot": "nb-seda",
+      "role": "lifestyle",
+      "demo": "nb-seda.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "noble",
+    "colors": {
+      "paper": "#f6f3ee",
+      "ink": "#131313",
+      "muted": "#ebe5da",
+      "accent": "#9a7a43",
+      "deep": "#111111"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "noble",
+      "icons": "line",
+      "header": "boxed",
+      "announce": "plain",
+      "footer": "wordmark",
+      "button": "square",
+      "corners": "sharp",
+      "density": "airy",
+      "texture": "none",
+      "titles": "upper",
+      "pdp": "gallery-right",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío asegurado y estuche de regalo en cada pieza"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "look": "left",
+        "eyebrow": "Hecho a mano",
+        "title": "Joyas para *toda una vida*",
+        "text": "Oro de 18 k y plata 925, terminados a mano en nuestro taller.",
+        "cta": "Ver la colección",
+        "link": "products",
+        "photo": "slot:nb-retrato"
+      },
+      {
+        "type": "categories-mosaic",
+        "look": "feature3",
+        "title": "Elige tu *pieza*",
+        "items": [
+          {
+            "title": "Anillos",
+            "photo": "slot:nb-anillo",
+            "link": "products"
+          },
+          {
+            "title": "Aros",
+            "photo": "slot:nb-aros",
+            "link": "products"
+          },
+          {
+            "title": "Collares",
+            "photo": "slot:nb-collar",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-spotlight",
+        "band": "deep",
+        "eyebrow": "La pieza de la temporada",
+        "title": "El anillo *sello*",
+        "product": "demo-1"
+      },
+      {
+        "type": "story-overlap",
+        "look": "pair",
+        "eyebrow": "El taller",
+        "title": "Hechas a mano, *una por una*",
+        "text": "Cada joya pasa por las mismas manos del boceto al pulido final. Por eso hacemos pocas, y por eso duran.",
+        "cta": "Conoce el taller",
+        "link": "about",
+        "photo": "slot:nb-taller",
+        "photo2": "slot:nb-manos"
+      },
+      {
+        "type": "statement-inline",
+        "eyebrow": "Para regalar o para ti",
+        "title": "Una joya no se compra: se elige para quedarse",
+        "photo": "slot:nb-oreja",
+        "photo2": "slot:nb-plata",
+        "cta": "Ver la colección",
+        "link": "products"
+      },
+      {
+        "type": "products-grid",
+        "look": "grid4",
+        "card": "framed",
+        "title": "La colección",
+        "link": "products"
+      },
+      {
+        "type": "promo-pair",
+        "look": "uneven",
+        "items": [
+          {
+            "title": "Regalos",
+            "text": "Cada pieza llega en su estuche.",
+            "photo": "slot:nb-regalo",
+            "link": "products"
+          },
+          {
+            "title": "Grabado",
+            "text": "Iniciales o una fecha, sin costo.",
+            "photo": "slot:nb-estuche",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "benefits-orbit",
+        "title": "Con cada *pieza*",
+        "photo": "slot:nb-seda",
+        "items": [
+          {
+            "title": "Garantía de por vida",
+            "text": "Limpieza y ajuste cuando lo necesites.",
+            "icon": "shield"
+          },
+          {
+            "title": "Envío asegurado",
+            "text": "Con seguimiento hasta tu puerta.",
+            "icon": "truck"
+          },
+          {
+            "title": "Estuche de regalo",
+            "text": "Listo para entregar.",
+            "icon": "gift"
+          },
+          {
+            "title": "Cambio de talla",
+            "text": "Ajustamos tu anillo sin costo.",
+            "icon": "refresh"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Antes de elegir",
+        "items": [
+          {
+            "title": "¿Cómo sé mi talla?",
+            "text": "Te enviamos un medidor de anillos sin costo."
+          },
+          {
+            "title": "¿El oro es macizo?",
+            "text": "Sí, oro de 18 k con su sello."
+          },
+          {
+            "title": "¿Cómo la cuido?",
+            "text": "Guárdala sola en su estuche y límpiala con un paño suave."
+          },
+          {
+            "title": "¿Cuánto tarda?",
+            "text": "Las piezas en stock salen en 48 horas; las grabadas, en cinco días."
+          }
+        ]
+      },
+      {
+        "type": "closing-photo",
+        "title": "Para siempre",
+        "cta": "Ver la colección",
+        "photo": "slot:nb-hero"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "icon-columns",
+        "items": [
+          {
+            "title": "Garantía de por vida",
+            "text": "Limpieza y ajuste incluidos.",
+            "icon": "shield"
+          },
+          {
+            "title": "Grabado sin costo",
+            "text": "Iniciales o una fecha.",
+            "icon": "gem"
+          },
+          {
+            "title": "Estuche de regalo",
+            "text": "Listo para entregar.",
+            "icon": "gift"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "grid",
+        "title": "Talla y cuidado",
+        "items": [
+          {
+            "title": "¿Y si no es mi talla?",
+            "text": "La ajustamos sin costo."
+          },
+          {
+            "title": "¿Cómo la limpio?",
+            "text": "Con agua tibia y un paño suave."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En dos a cuatro días, con seguro."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Noble",
+      "tagline": "Joyas hechas a mano, para toda una vida",
+      "products": [
+        {
+          "name": "Anillo Sello",
+          "price": 2400,
+          "description": "Oro de 18 k.",
+          "category": "Anillos"
+        },
+        {
+          "name": "Aros Argolla",
+          "price": 1850,
+          "description": "Oro de 18 k, 2 cm.",
+          "category": "Aros"
+        },
+        {
+          "name": "Collar Gota",
+          "price": 1600,
+          "description": "Cadena fina con un punto de luz.",
+          "category": "Collares"
+        },
+        {
+          "name": "Trío de Anillos Plata",
+          "price": 690,
+          "description": "Plata 925.",
+          "category": "Anillos"
+        }
+      ]
+    }
+  }
+}

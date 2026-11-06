@@ -1,0 +1,380 @@
+{
+  "id": "estudio",
+  "name": "Estudio",
+  "category": "hogar",
+  "description": "Muebles, iluminación y objetos de diseño: blanco hueso, grafito y terracota, letra moderna y precisa, compra por espacio y el material de cerca.",
+  "tags": [
+    "muebles",
+    "diseño",
+    "hogar",
+    "decoración",
+    "iluminación",
+    "interiorismo"
+  ],
+  "sitePurpose": "shop",
+  "order": 62,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "es-hero",
+      "role": "hero",
+      "demo": "es-hero.jpg"
+    },
+    {
+      "slot": "es-sillon",
+      "role": "hero",
+      "demo": "es-sillon.jpg"
+    },
+    {
+      "slot": "es-sala",
+      "role": "lifestyle",
+      "demo": "es-sala.jpg"
+    },
+    {
+      "slot": "es-dormitorio",
+      "role": "lifestyle",
+      "demo": "es-dormitorio.jpg"
+    },
+    {
+      "slot": "es-cocina",
+      "role": "lifestyle",
+      "demo": "es-cocina.jpg"
+    },
+    {
+      "slot": "es-exterior",
+      "role": "lifestyle",
+      "demo": "es-exterior.jpg"
+    },
+    {
+      "slot": "es-material",
+      "role": "detail",
+      "demo": "es-material.jpg"
+    },
+    {
+      "slot": "es-taller",
+      "role": "lifestyle",
+      "demo": "es-taller.jpg"
+    },
+    {
+      "slot": "es-jarron",
+      "role": "product",
+      "demo": "es-jarron.jpg"
+    },
+    {
+      "slot": "es-cojin",
+      "role": "product",
+      "demo": "es-cojin.jpg"
+    },
+    {
+      "slot": "es-cuenco",
+      "role": "product",
+      "demo": "es-cuenco.jpg"
+    },
+    {
+      "slot": "es-canasto",
+      "role": "product",
+      "demo": "es-canasto.jpg"
+    },
+    {
+      "slot": "es-jarra",
+      "role": "product",
+      "demo": "es-jarra.jpg"
+    },
+    {
+      "slot": "es-calma",
+      "role": "lifestyle",
+      "demo": "es-calma.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "estudio",
+    "colors": {
+      "paper": "#f2f1ed",
+      "ink": "#1d1d1b",
+      "muted": "#e3e1da",
+      "accent": "#a4532f",
+      "deep": "#2d2c29"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "estudio",
+      "icons": "line",
+      "header": "links",
+      "announce": "plain",
+      "footer": "bignav",
+      "button": "block",
+      "corners": "sharp",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "grid-2",
+      "filters": "sidebar",
+      "grid": "grid3",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Entrega e instalación sin costo en la ciudad"
+    },
+    "layout": [
+      {
+        "type": "cover-half",
+        "eyebrow": "Muebles de madera maciza",
+        "title": "Muebles con *calma*",
+        "text": "Roble, nogal y telas naturales, en piezas pensadas para durar décadas.",
+        "cta": "Ver el catálogo",
+        "link": "products",
+        "photo": "slot:es-hero"
+      },
+      {
+        "type": "categories-list",
+        "title": "Compra por *espacio*",
+        "text": "Cada ambiente, con piezas que conversan entre sí.",
+        "items": [
+          {
+            "title": "Sala",
+            "photo": "slot:es-sillon",
+            "link": "products"
+          },
+          {
+            "title": "Dormitorio",
+            "photo": "slot:es-dormitorio",
+            "link": "products"
+          },
+          {
+            "title": "Cocina",
+            "photo": "slot:es-cocina",
+            "link": "products"
+          },
+          {
+            "title": "Deco",
+            "photo": "slot:es-jarron",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-tabs",
+        "card": "portrait",
+        "title": "Piezas *destacadas*",
+        "link": "products"
+      },
+      {
+        "type": "story-list",
+        "eyebrow": "Materiales",
+        "title": "Madera maciza, *nada de aglomerado*",
+        "photo": "slot:es-material",
+        "cta": "Cómo los hacemos",
+        "link": "about",
+        "items": [
+          {
+            "title": "Roble y nogal",
+            "text": "Secados al aire, sin chapas ni rellenos."
+          },
+          {
+            "title": "Uniones a la vista",
+            "text": "Encastres de carpintería, sin tornillos escondidos."
+          },
+          {
+            "title": "Telas naturales",
+            "text": "Lino y lana que envejecen bien."
+          }
+        ]
+      },
+      {
+        "type": "shop-look",
+        "look": "focal",
+        "title": "Un rincón, *pieza por pieza*",
+        "photo": "slot:es-exterior",
+        "items": [
+          {
+            "title": "Sillón Lino Arena",
+            "x": 40,
+            "y": 62
+          },
+          {
+            "title": "Jarrón de Gres",
+            "x": 78,
+            "y": 70
+          }
+        ]
+      },
+      {
+        "type": "benefits-bento",
+        "title": "Hecho para *quedarse*",
+        "photo": "slot:es-taller",
+        "items": [
+          {
+            "title": "10 años de garantía",
+            "text": "En estructura y uniones.",
+            "icon": "award"
+          },
+          {
+            "title": "Entrega e instalación",
+            "text": "Lo armamos en tu casa.",
+            "icon": "truck"
+          },
+          {
+            "title": "Hecho a medida",
+            "text": "Medidas y telas a tu elección.",
+            "icon": "hand"
+          }
+        ]
+      },
+      {
+        "type": "photo-scroller",
+        "eyebrow": "Objetos",
+        "title": "Lo que *completa* la casa",
+        "items": [
+          {
+            "title": "Cojín de lino",
+            "text": "Lino lavado, funda con cierre.",
+            "photo": "slot:es-cojin"
+          },
+          {
+            "title": "Cuenco de madera",
+            "text": "Torneado en una sola pieza.",
+            "photo": "slot:es-cuenco"
+          },
+          {
+            "title": "Canasto tejido",
+            "text": "Fibra natural y asas de cuero.",
+            "photo": "slot:es-canasto"
+          },
+          {
+            "title": "Jarra de gres",
+            "text": "Esmalte hecho en el taller.",
+            "photo": "slot:es-jarra"
+          }
+        ]
+      },
+      {
+        "type": "steps-howto",
+        "title": "Así *compras*",
+        "photo": "slot:es-calma",
+        "items": [
+          {
+            "title": "Elige",
+            "text": "En la tienda o en el showroom, con muestras de tela."
+          },
+          {
+            "title": "Agenda",
+            "text": "Coordinamos el día de entrega contigo."
+          },
+          {
+            "title": "Lo instalamos",
+            "text": "Armado y nivelado, sin cajas que tirar."
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Preguntas frecuentes",
+        "items": [
+          {
+            "title": "¿Hacen piezas a medida?",
+            "text": "Sí: elige medidas, madera y tela; te enviamos el plano antes de fabricar."
+          },
+          {
+            "title": "¿Cuánto tarda la entrega?",
+            "text": "Las piezas en stock, en una semana; a medida, de cuatro a seis semanas."
+          },
+          {
+            "title": "¿Cómo cuido la madera?",
+            "text": "Un paño seco y aceite natural una vez al año."
+          },
+          {
+            "title": "¿Puedo ver las telas?",
+            "text": "Sí, en el showroom o te llevamos muestras."
+          }
+        ]
+      },
+      {
+        "type": "visit-store",
+        "title": "Visita el *showroom*",
+        "photo": "slot:es-sala"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "image-columns",
+        "title": "Cómo está *hecho*",
+        "items": [
+          {
+            "title": "Madera maciza",
+            "text": "Roble secado al aire.",
+            "photo": "slot:es-material",
+            "link": "products"
+          },
+          {
+            "title": "Hecho en taller",
+            "text": "Uniones a mano.",
+            "photo": "slot:es-taller",
+            "link": "products"
+          },
+          {
+            "title": "Para años",
+            "text": "Diez años de garantía.",
+            "photo": "slot:es-hero",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Medidas y entrega",
+        "items": [
+          {
+            "title": "¿Pasa por mi puerta?",
+            "text": "Te damos las medidas de embalaje antes de enviar."
+          },
+          {
+            "title": "¿Lo arman?",
+            "text": "Sí, entrega e instalación incluidas en la ciudad."
+          },
+          {
+            "title": "¿Puedo cambiar la tela?",
+            "text": "Sí, elige entre nuestras muestras."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Estudio",
+      "tagline": "Muebles de madera maciza, hechos para durar",
+      "products": [
+        {
+          "name": "Sillón Lino Arena",
+          "price": 4800,
+          "description": "Lino lavado sobre roble.",
+          "category": "Sala"
+        },
+        {
+          "name": "Mesa de Centro Roble",
+          "price": 2600,
+          "description": "Roble macizo, 110 cm.",
+          "category": "Sala"
+        },
+        {
+          "name": "Cama Nogal 2 plazas",
+          "price": 6900,
+          "description": "Nogal y uniones a la vista.",
+          "category": "Dormitorio"
+        },
+        {
+          "name": "Jarrón de Gres",
+          "price": 240,
+          "description": "Torneado a mano.",
+          "category": "Deco"
+        }
+      ]
+    }
+  }
+}

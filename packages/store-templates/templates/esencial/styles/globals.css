@@ -3651,6 +3651,115 @@ main[data-lb-home]{overflow-x:clip}
 /* 2026-11-02 (DooBoo: the header painted every link white, the dropdown's too, on its light panel): the menu panel keeps the store's text colour. */
 [data-es-theme="lomo"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
 /* /theme:lomo */
+/* theme:botica */
+/* Botica (pagosYa original, owner 2026-11-06 «plantillas muy bonitas y estéticas para tiendas serias»): warm stone paper, olive ink,
+ * a soft serif in sentence case, calm long lines, hairlines between sections, photos without rounding, text-link buttons in small caps,
+ * a deep olive footer. Motion: titles and photos fade in slowly, nothing moves. */
+@keyframes bo-fade{from{opacity:0}to{opacity:1}}
+[data-es-theme="botica"]{--es-radius:0;--es-t-weight:400;--es-t-track:0}
+[data-es-theme="botica"] .es-announce{background:var(--es-deep);color:#efebe4;font:400 12px/1 var(--es-body);letter-spacing:.04em}
+[data-es-theme="botica"] .es-header{border-bottom:1px solid #d6cfc1;background:var(--es-paper)}
+[data-es-theme="botica"] .es-logo{font:400 26px/1 var(--es-heading);letter-spacing:.01em}
+[data-es-theme="botica"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:400;letter-spacing:-.01em;text-transform:none;line-height:1.15}
+[data-es-theme="botica"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(26px,2.4vw,36px)}
+[data-es-theme="botica"] .lb-cover-centered :is(h1,.lb-title){font-size:clamp(36px,4.2vw,60px);max-width:17ch;margin-inline:auto}
+[data-es-theme="botica"] .lb-em{color:var(--es-accent);font-style:italic}
+[data-es-theme="botica"] :is([data-lb-band="deep"],[data-es-band="deep"],.lb-cover--dark) .lb-em{color:inherit}
+[data-es-theme="botica"] .lb-eyebrow{font:500 11px/1 var(--es-body);letter-spacing:.16em;text-transform:uppercase}
+[data-es-theme="botica"] main>.lb:not([data-lb-band])+.lb:not([data-lb-band]){border-top:1px solid #dcd5c8}
+[data-es-theme="botica"] .lb-statement-reveal .lb-paragraph{max-width:880px;margin-inline:auto}
+[data-es-theme="botica"] .lb-statement-reveal .lb-paragraph :is(p,span){font:400 clamp(22px,2.2vw,31px)/1.45 var(--es-heading);letter-spacing:0;text-transform:none}
+[data-es-theme="botica"] .es-btn,[data-es-theme="botica"] .lb-card__buy{border-radius:0;font:500 12px/1 var(--es-body);letter-spacing:.12em;text-transform:uppercase}
+[data-es-theme="botica"] .es-btn svg{display:none}
+[data-es-theme="botica"] :is(.lb-split__media,.lb-imgcols__photo,.lb-tiles__tile,.lb-cover-centered img){border-radius:0}
+[data-es-theme="botica"] .lb-card .lb-card__media{border-radius:0;background:#e6e0d4}
+[data-es-theme="botica"] :is(.es-card__name,.lb-card .es-card__name){font:400 17px/1.3 var(--es-heading);text-transform:none;letter-spacing:0}
+[data-es-theme="botica"] :is(.es-card__price,.lb-card .es-price){font:400 13px/1 var(--es-body);letter-spacing:.04em;opacity:.8}
+[data-es-theme="botica"] .lb-imgcols__title{font:400 22px/1.2 var(--es-heading);text-transform:none;letter-spacing:0}
+[data-es-theme="botica"] .es-footer{background:var(--es-paper);color:var(--es-ink);border-top:1px solid #d6cfc1}
+[data-es-theme="botica"] .es-footer :is(a,p,h2,h3,label,span,small){color:inherit}
+:root:not([data-es-still]) [data-es-theme="botica"] main .lb:not([data-in]) :is(.lb-head,.lb-title,.lb-split__media img){opacity:0}
+[data-es-theme="botica"] main .lb[data-in] :is(.lb-head,.lb-title){animation:bo-fade 1.1s ease both}
+[data-es-theme="botica"] main .lb[data-in] .lb-split__media img{animation:bo-fade 1.6s ease .15s both}
+@media (min-width:861px){[data-es-theme="botica"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="botica"] .pym-group{display:block}[data-es-theme="botica"] .pym-footer{display:none}}
+[data-es-theme="botica"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
+/* /theme:botica */
+/* theme:noble */
+/* Noble (pagosYa original, owner 2026-11-06 «tiendas serias»): ivory paper, black ink and an old-gold accent, a classic display serif
+ * in wide capitals, outlined square buttons in small caps, a black band for the new pieces, thin gold rules, a black footer.
+ * Motion: titles rise 14px and fade, photos settle from 1.06 to 1. */
+@keyframes nb-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes nb-settle{from{transform:scale(1.06)}to{transform:none}}
+[data-es-theme="noble"]{--es-radius:0;--es-t-weight:400;--es-t-track:.06em;--es-t-case:uppercase}
+[data-es-theme="noble"] .es-announce{background:#111;color:#e9e1d2;font:400 11px/1 var(--es-body);letter-spacing:.18em;text-transform:uppercase}
+[data-es-theme="noble"] .es-header{border-bottom:1px solid #e3dccf;background:var(--es-paper)}
+[data-es-theme="noble"] .es-logo{font:400 24px/1 var(--es-heading);letter-spacing:.24em;text-transform:uppercase}
+[data-es-theme="noble"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:400;letter-spacing:.07em;text-transform:uppercase;line-height:1.12}
+[data-es-theme="noble"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(24px,2.3vw,34px)}
+[data-es-theme="noble"] .lb-cover-full :is(h1,.lb-title){font-size:clamp(38px,4.6vw,70px);color:#fff;letter-spacing:.05em}
+[data-es-theme="noble"] .lb-em{color:var(--es-accent);font-style:normal}
+[data-es-theme="noble"] :is(.lb-cover--dark,[data-lb-band="deep"],[data-es-band="deep"],.lb-cover-full) .lb-em{color:#d9c08e}
+[data-es-theme="noble"] .lb-eyebrow{font:400 11px/1 var(--es-body);letter-spacing:.24em;text-transform:uppercase;color:var(--es-accent)}
+[data-es-theme="noble"] :is(.lb-cover--dark,[data-lb-band="deep"],[data-es-band="deep"],.lb-cover-full) .lb-eyebrow{color:#d9c08e}
+[data-es-theme="noble"] .lb-head :is(h2,.lb-title)::after{content:"";display:block;width:44px;height:1px;margin:18px auto 0;background:var(--es-accent)}
+[data-es-theme="noble"] .lb-head{justify-items:center;text-align:center}
+[data-es-theme="noble"] .es-btn,[data-es-theme="noble"] .lb-card__buy{border-radius:0;background:transparent;border:1px solid #131313;color:#131313;font:400 11px/1 var(--es-body);letter-spacing:.22em;text-transform:uppercase;box-shadow:none}
+[data-es-theme="noble"] .es-btn:hover{background:#131313;color:#f6f3ee}
+[data-es-theme="noble"] :is(.lb-cover--dark,.lb-cover-full,.lb-banner,[data-lb-band="deep"],[data-es-band="deep"]) .es-btn{border-color:#f6f3ee;color:#f6f3ee}
+[data-es-theme="noble"] :is(.lb-cover--dark,.lb-cover-full,.lb-banner,[data-lb-band="deep"],[data-es-band="deep"]) .es-btn:hover{background:#f6f3ee;color:#131313}
+[data-es-theme="noble"] .es-btn *{color:inherit}
+[data-es-theme="noble"] .lb-products-spotlight :is(button,a.menu-add){border-radius:0!important;font:400 11px/1 var(--es-body);letter-spacing:.22em;text-transform:uppercase}
+[data-es-theme="noble"] .es-btn svg{display:none}
+[data-es-theme="noble"] .lb-card .lb-card__media{border-radius:0;background:#ece6db}
+[data-es-theme="noble"] :is(.es-card__name,.lb-card .es-card__name){font:400 12px/1.4 var(--es-body);letter-spacing:.14em;text-transform:uppercase}
+[data-es-theme="noble"] :is(.es-card__price,.lb-card .es-price){font:400 16px/1 var(--es-heading);letter-spacing:.02em}
+[data-es-theme="noble"] :is([data-lb-band="deep"],[data-es-band="deep"]) :is(.es-card__name,.es-card__price,.es-price,.menu-item__price){color:#f6f3ee}
+[data-es-theme="noble"] .lb-strip-marquee{background:var(--es-paper);color:var(--es-ink);border-block:1px solid #d9c9a6;font:400 15px/1 var(--es-heading);letter-spacing:.2em;text-transform:uppercase}
+[data-es-theme="noble"] :is(.lb-split__media,.lb-tiles__tile,.lb-mosaic__tile){border-radius:0}
+[data-es-theme="noble"] .es-footer{background:#111;color:#e9e1d2}
+[data-es-theme="noble"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+[data-es-theme="noble"] .es-footer__big{letter-spacing:.2em;text-transform:uppercase;font-weight:400}
+:root:not([data-es-still]) [data-es-theme="noble"] main .lb:not([data-in]) :is(.lb-head,.lb-title){opacity:0}
+[data-es-theme="noble"] main .lb[data-in] :is(.lb-head,.lb-title){animation:nb-rise .9s cubic-bezier(.33,0,0,1) both}
+[data-es-theme="noble"] main .lb[data-in] :is(.lb-split__media img,.lb-tiles__tile img){animation:nb-settle 1.4s cubic-bezier(.33,0,0,1) both}
+@media (min-width:861px){[data-es-theme="noble"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="noble"] .pym-group{display:block}[data-es-theme="noble"] .pym-footer{display:none}}
+[data-es-theme="noble"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
+/* /theme:noble */
+/* theme:estudio */
+/* Estudio (pagosYa original, owner 2026-11-06 «tiendas serias»): bone white, graphite and one terracotta accent, a precise modern
+ * grotesk set tight, numbered sections like a catalogue (01, 02…), square graphite buttons, hairline frames, a graphite footer.
+ * Motion: titles rise 24px and fade, staggered by section. */
+@keyframes et-up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+[data-es-theme="estudio"]{--es-radius:0;--es-t-weight:500;--es-t-track:-.02em}
+[data-es-theme="estudio"] .es-announce{background:var(--es-ink);color:#f2f1ed;font:500 12px/1 var(--es-body)}
+[data-es-theme="estudio"] .es-header{border-bottom:1px solid #d8d6cf;background:var(--es-paper)}
+[data-es-theme="estudio"] .es-logo{font:600 22px/1 var(--es-heading);letter-spacing:-.03em}
+[data-es-theme="estudio"] :is(.es-h2,.lb-title,.lb-head h2,h1){font-family:var(--es-heading);font-weight:500;letter-spacing:-.035em;text-transform:none;line-height:1.02}
+[data-es-theme="estudio"] :is(.es-h2,.lb-title,.lb-head h2){font-size:clamp(30px,3.2vw,50px)}
+[data-es-theme="estudio"] .lb-cover :is(h1,.lb-title){font-size:clamp(44px,5.4vw,84px)}
+[data-es-theme="estudio"] .lb-edits__title{font-weight:500;letter-spacing:-.035em}
+[data-es-theme="estudio"] .lb-edits__list a{font-weight:500;letter-spacing:-.03em}
+[data-es-theme="estudio"] .lb-em{color:var(--es-accent);font-style:normal}
+[data-es-theme="estudio"] :is(.lb-cover--dark,[data-lb-band="deep"],[data-es-band="deep"]) .lb-em{color:#e2a07f}
+[data-es-theme="estudio"] .lb-eyebrow{font:500 12px/1 var(--es-body);letter-spacing:.08em;text-transform:uppercase}
+[data-es-theme="estudio"] main{counter-reset:et-section}
+[data-es-theme="estudio"] main>.lb:not(.lb-cover) .lb-head{counter-increment:et-section}
+[data-es-theme="estudio"] main>.lb:not(.lb-cover) .lb-head::before{content:counter(et-section,decimal-leading-zero);display:block;margin-bottom:14px;font:500 12px/1 var(--es-body);letter-spacing:.06em;color:var(--es-accent)}
+[data-es-theme="estudio"] .es-btn,[data-es-theme="estudio"] .lb-card__buy{border-radius:0;background:#1d1d1b;border-color:#1d1d1b;color:#f2f1ed;font:500 14px/1 var(--es-body);letter-spacing:-.01em;text-transform:none}
+[data-es-theme="estudio"] :is(.lb-cover--dark,.lb-banner,[data-lb-band="deep"],[data-es-band="deep"]) .es-btn{background:#f2f1ed;border-color:#f2f1ed;color:#1d1d1b}
+[data-es-theme="estudio"] .es-btn *{color:inherit}
+[data-es-theme="estudio"] :is(.lb-split__media,.lb-tiles__tile,.lb-imgcols__photo){border-radius:0}
+[data-es-theme="estudio"] .lb-card .lb-card__media{border-radius:0;background:#e7e5df}
+[data-es-theme="estudio"] :is(.es-card__name,.lb-card .es-card__name){font:500 15px/1.3 var(--es-body);letter-spacing:-.01em;text-transform:none}
+[data-es-theme="estudio"] :is(.es-card__price,.lb-card .es-price){font:400 14px/1 var(--es-body);color:#5d5b55}
+[data-es-theme="estudio"] .es-footer{background:#1d1d1b;color:#e9e7e1}
+[data-es-theme="estudio"] .es-footer :is(a,p,h2,h3,label,span){color:inherit}
+[data-es-theme="estudio"] .es-footer[data-es-footer="bignav"] .es-footer__grid>div:nth-child(2) a{font:500 clamp(24px,2.6vw,36px)/1.08 var(--es-heading);letter-spacing:-.03em;text-transform:none}
+:root:not([data-es-still]) [data-es-theme="estudio"] main .lb:not([data-in]) :is(.lb-head,.lb-title){opacity:0}
+[data-es-theme="estudio"] main .lb[data-in] :is(.lb-head,.lb-title){animation:et-up .8s cubic-bezier(.2,.7,.2,1) both}
+@media (min-width:861px){[data-es-theme="estudio"] .pym-panel{padding:16px max(20px,calc((100% - 1280px)/2));border-top-width:1px}[data-es-theme="estudio"] .pym-group{display:block}[data-es-theme="estudio"] .pym-footer{display:none}}
+[data-es-theme="estudio"] .pym-panel :is(.pym-links,.pym-tiles,.pym-extras) :is(a,span){color:var(--store-foreground,#111)}
+/* /theme:estudio */
 /* New sections copied from real stores (spec docs/superpowers/specs/2026-11-04-new-sections-from-real-stores.md). */
 /* lb:cover-duo */
 .lb-duo{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--es-paper)}

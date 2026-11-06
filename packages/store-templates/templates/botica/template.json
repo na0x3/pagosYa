@@ -1,0 +1,297 @@
+{
+  "id": "botica",
+  "name": "Botica",
+  "category": "belleza",
+  "description": "Cosmética, perfumería y velas de autor: piedra cálida y oliva, serif suave, mucho aire, textos que se leen sin apuro y fotos enmarcadas.",
+  "tags": [
+    "cosmética",
+    "perfumería",
+    "velas",
+    "botica",
+    "cuidado de la piel",
+    "natural"
+  ],
+  "sitePurpose": "shop",
+  "order": 60,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "bt-hero",
+      "role": "hero",
+      "demo": "bt-hero.jpg"
+    },
+    {
+      "slot": "bt-serum",
+      "role": "product",
+      "demo": "bt-serum.jpg"
+    },
+    {
+      "slot": "bt-bruma",
+      "role": "product",
+      "demo": "bt-bruma.jpg"
+    },
+    {
+      "slot": "bt-vela",
+      "role": "product",
+      "demo": "bt-vela.jpg"
+    },
+    {
+      "slot": "bt-textura",
+      "role": "detail",
+      "demo": "bt-textura.jpg"
+    },
+    {
+      "slot": "bt-rutina",
+      "role": "lifestyle",
+      "demo": "bt-rutina.jpg"
+    },
+    {
+      "slot": "bt-envoltorio",
+      "role": "lifestyle",
+      "demo": "bt-envoltorio.jpg"
+    },
+    {
+      "slot": "bt-frasco",
+      "role": "product",
+      "demo": "bt-frasco.jpg"
+    },
+    {
+      "slot": "bt-juntas",
+      "role": "lifestyle",
+      "demo": "bt-juntas.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "botica",
+    "colors": {
+      "paper": "#efebe4",
+      "ink": "#24221f",
+      "muted": "#e2dccf",
+      "accent": "#5e5b45",
+      "deep": "#2a2b24"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "botica",
+      "icons": "text",
+      "header": "minimal",
+      "announce": "plain",
+      "footer": "column",
+      "button": "underline",
+      "corners": "sharp",
+      "density": "airy",
+      "texture": "none",
+      "titles": "normal",
+      "pdp": "split-scroll",
+      "filters": "bar",
+      "grid": "grid3",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Muestras de regalo con cada pedido"
+    },
+    "layout": [
+      {
+        "type": "cover-centered",
+        "eyebrow": "Botica de autor",
+        "title": "Fórmulas *serenas* para la piel y la casa",
+        "text": "Aceites, cremas y velas preparados a mano, sin apuro y sin promesas que no se cumplen.",
+        "cta": "Ver la botica",
+        "link": "products",
+        "photo": "slot:bt-hero"
+      },
+      {
+        "type": "statement-inline",
+        "eyebrow": "Nuestra forma de hacer",
+        "title": "Pocas fórmulas, bien pensadas, para usar sin apuro",
+        "photo": "slot:bt-frasco",
+        "photo2": "slot:bt-textura",
+        "cta": "Conócenos",
+        "link": "about"
+      },
+      {
+        "type": "products-grid",
+        "look": "grid3",
+        "card": "line",
+        "title": "La botica",
+        "link": "products"
+      },
+      {
+        "type": "image-columns",
+        "title": "Para cada *momento*",
+        "items": [
+          {
+            "title": "Rostro",
+            "text": "Aceites y sérums de uso diario.",
+            "photo": "slot:bt-serum",
+            "link": "products"
+          },
+          {
+            "title": "Cuerpo",
+            "text": "Brumas y cremas para después del baño.",
+            "photo": "slot:bt-bruma",
+            "link": "products"
+          },
+          {
+            "title": "Casa",
+            "text": "Velas de cera vegetal y aromas lentos.",
+            "photo": "slot:bt-vela",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "eyebrow": "Ingredientes",
+        "title": "Plantas que conocemos *por su nombre*",
+        "text": "Rosa mosqueta, caléndula, lavanda y cedro: pocas plantas, de proveedores que visitamos. Sin perfumes sintéticos ni rellenos, y cada frasco preparado y envuelto a mano.",
+        "cta": "Leer más",
+        "link": "about",
+        "photo": "slot:bt-envoltorio"
+      },
+      {
+        "type": "steps-howto",
+        "title": "Un ritual en *tres pasos*",
+        "photo": "slot:bt-rutina",
+        "items": [
+          {
+            "title": "Limpia",
+            "text": "Agua tibia y unas gotas de aceite limpiador."
+          },
+          {
+            "title": "Trata",
+            "text": "Tres gotas de sérum, con la piel aún húmeda."
+          },
+          {
+            "title": "Protege",
+            "text": "Una capa fina de crema, de abajo hacia arriba."
+          }
+        ]
+      },
+      {
+        "type": "perks-rows",
+        "title": "Lo que *nos importa*",
+        "photo": "slot:bt-juntas",
+        "items": [
+          {
+            "title": "Lotes pequeños",
+            "text": "Preparamos cada mes, nunca de más."
+          },
+          {
+            "title": "Frascos de vidrio",
+            "text": "Los rellenamos si nos los devuelves."
+          },
+          {
+            "title": "Muestras de regalo",
+            "text": "Prueba algo nuevo con cada pedido."
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Preguntas frecuentes",
+        "items": [
+          {
+            "title": "¿Sirve para piel sensible?",
+            "text": "Sí. Cada producto dice qué contiene; si dudas, empieza por una muestra."
+          },
+          {
+            "title": "¿Cuánto dura un frasco?",
+            "text": "Con uso diario, unos dos meses."
+          },
+          {
+            "title": "¿Hacen envíos?",
+            "text": "A todo el país, en dos a cuatro días."
+          },
+          {
+            "title": "¿Puedo devolverlo?",
+            "text": "Si no te sienta bien, te ayudamos a cambiarlo."
+          }
+        ]
+      },
+      {
+        "type": "visit-store",
+        "title": "Visita la *botica*",
+        "photo": "slot:bt-hero"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "title": "Cómo *usarlo*",
+        "photo": "slot:bt-rutina",
+        "items": [
+          {
+            "title": "Poco",
+            "text": "Dos o tres gotas son suficientes."
+          },
+          {
+            "title": "Sobre piel húmeda",
+            "text": "Se absorbe mejor y rinde más."
+          },
+          {
+            "title": "Cada día",
+            "text": "Los resultados llegan con la constancia."
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Ingredientes y envío",
+        "items": [
+          {
+            "title": "¿Qué contiene?",
+            "text": "La lista completa está en la etiqueta y en esta página."
+          },
+          {
+            "title": "¿Cómo se guarda?",
+            "text": "Lejos del sol, con la tapa bien cerrada."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En dos a cuatro días hábiles."
+          }
+        ]
+      }
+    ],
+    "demo": {
+      "storeName": "Botica",
+      "tagline": "Fórmulas serenas, hechas en lotes pequeños",
+      "products": [
+        {
+          "name": "Sérum de Rosa Mosqueta",
+          "price": 320,
+          "description": "Aceite facial ligero, 30 ml.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Bruma de Lavanda",
+          "price": 180,
+          "description": "Para cuerpo y almohada, 100 ml.",
+          "category": "Cuerpo"
+        },
+        {
+          "name": "Vela de Cedro y Ámbar",
+          "price": 220,
+          "description": "Cera vegetal, 45 horas.",
+          "category": "Casa"
+        },
+        {
+          "name": "Bálsamo de Caléndula",
+          "price": 150,
+          "description": "Manos y codos, 50 ml.",
+          "category": "Cuerpo"
+        }
+      ]
+    }
+  }
+}

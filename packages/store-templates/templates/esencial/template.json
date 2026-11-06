@@ -603,6 +603,27 @@
         "heading": "libre-caslon-text",
         "body": "newsreader",
         "starterOnly": true
+      },
+      {
+        "id": "botica",
+        "name": "Botica",
+        "heading": "lora",
+        "body": "familjen-grotesk",
+        "starterOnly": true
+      },
+      {
+        "id": "noble",
+        "name": "Noble",
+        "heading": "dm-serif-display",
+        "body": "sora",
+        "starterOnly": true
+      },
+      {
+        "id": "estudio",
+        "name": "Estudio",
+        "heading": "epilogue",
+        "body": "inter",
+        "starterOnly": true
       }
     ],
     "variants": {
@@ -818,7 +839,10 @@
         "bloque",
         "foco",
         "lomo",
-        "unico"
+        "unico",
+        "botica",
+        "noble",
+        "estudio"
       ],
       "mood": [
         "calm",
