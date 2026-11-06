@@ -68,7 +68,7 @@ import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy } from './source-templates';
 import { readMoodAsk } from './source-mood-ask';
 import { nextTitleStyle, readTitleAsk } from './source-title-style';
-import { buildLibraryFacts, carriedSections, libraryDropReason, libraryMood, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, type LayoutBlock } from './source-section-library';
+import { buildLibraryFacts, carriedSections, libraryDropReason, libraryMood, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
 import { applyCatalogOps, catalogChangeEmpty, emptyCatalogChange, relinkCategories, withCategoryMenuRenames, withoutCategoryMenuLinks, type CatalogChange } from './source-catalog-edit';
 import { writeCatalogChange } from './source-catalog-write';
 import type { ProductVariant } from '../payment-links/product-variants';
@@ -899,6 +899,9 @@ export class SourceChatService {
       this.productLogger.warn(JSON.stringify({ event: 'section_library_without_demo', storeId, kept: layout.map(block => block.type), template: template.length, photos: facts.photos.length, answered: Boolean(answer) }));
       layout = withoutDemoWords(layout, template, facts);
     }
+    // Owner 2026-11-06 («too short, there should be more things on the main page»): a template home under 11 sections gets
+    // library sections the store can really fill (its place, its code, delivery, how it works…), before its closing.
+    if (template) layout = await this.topUpHome(merchantId, storeId, layout, facts);
     this.productLogger.log(JSON.stringify({ event: 'section_library_layout', storeId, asked: (answer?.blocks ?? []).length, kept: layout.map(block => block.type),
       // What the model sent for each block (photo indexes, item count): tells a left-out section from one the checks dropped.
       answered: (answer?.blocks as Array<{ type?: string; photo?: number; photo2?: number; items?: Array<{ photo?: number }> }> ?? []).map(block => `${block.type}:${block.photo ?? ''}/${block.photo2 ?? ''}/${(block.items ?? []).length}i[${(block.items ?? []).map(item => item.photo ?? '').join(',')}]`),
@@ -925,6 +928,31 @@ export class SourceChatService {
     // reply's metadata (templateQa), never to the merchant's chat.
     if (this.config.get<boolean>('app.yapiTemplateQa') === true) void this.logTemplateQa(merchantId, storeId, saved.revision, assistantMessage.id);
     return { userMessage, assistantMessage, revision: saved };
+  }
+
+  /** Owner 2026-11-06: the top-up of a short template home — one call fills the sections `libraryTopUp` picks, with the photos the
+   *  home has not shown first and the titles it already has; a failed call keeps the home as it was (a spent quota or a cancel
+   *  still stops the build). */
+  private async topUpHome(merchantId: string, storeId: string, layout: LayoutBlock[], facts: LibraryFacts, target = 11): Promise<LayoutBlock[]> {
+    const types = libraryTopUp(layout, facts, target);
+    if (!types.length) return layout;
+    const shown = new Set(layout.flatMap(block => [block.photo, block.photo2, ...(block.items ?? []).map(item => item.photo)]).filter(Boolean));
+    const fresh = facts.photos.filter(photo => !shown.has(photo.url));
+    const titles = layout.map(block => block.title).filter((title): title is string => Boolean(title));
+    const extraFacts: LibraryFacts = { ...facts, ...(fresh.length >= 3 ? { photos: fresh } : {}),
+      request: `${facts.request}\n(Secciones extra para completar la portada: cada una dice algo nuevo de la tienda, con sus datos reales.${titles.length
+        ? ` Títulos que ya están en la portada: ${titles.map(title => `«${title}»`).join(', ')}; los tuyos dicen otra cosa y empiezan distinto.` : ''})`.trim() };
+    const fixed = types.map(type => ({ type }));
+    try {
+      const answer = await this.dialogue.composeLibrary(merchantId, { storeId, facts: extraFacts, template: fixed });
+      const added = answer ? validateLibraryLayout(answer as never, extraFacts, { fixed }) : [];
+      this.productLogger.log(JSON.stringify({ event: 'section_library_topup', storeId, had: layout.length, asked: types, kept: added.map(block => block.type) }));
+      return added.length ? withTopUp(layout, added) : layout;
+    } catch (error) {
+      if (quotaSpent(error) || sourceRequestContext.getStore()?.signal?.aborted) throw error;
+      this.productLogger.warn(JSON.stringify({ event: 'section_library_topup_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
+      return layout;
+    }
   }
 
   /** Owner 2026-11-02 («check and log»): a template home YAPI just composed, rendered and read through the template rules after the

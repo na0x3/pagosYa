@@ -1,4 +1,4 @@
-import { buildLibraryFacts, carriedSections, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
+import { buildLibraryFacts, carriedSections, libraryTopUp, withTopUp, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
 
 const facts = (over: Partial<LibraryFacts> = {}): LibraryFacts => ({
   storeName: 'Dulce Nube', what: 'Galletas artesanales', story: '', city: 'La Paz', request: '', tone: 'calm',
@@ -335,5 +335,31 @@ describe('sections from real stores (2026-11-04)', () => {
   it('story-sunburst takes its rings look in a free home', () => {
     const layout = validateLibraryLayout({ blocks: [{ type: 'story-sunburst', look: 'rings', title: 'Hecho a mano', photo: 4 }] as never }, facts());
     expect(find(layout, 'story-sunburst')).toMatchObject({ look: 'rings', photo: '/v1/uploads/00000004-aaaa.jpg' });
+  });
+});
+
+// Owner 2026-11-06 («they are too short, there should be more things on the main page»): a template home shorter than 11
+// sections is topped up with library sections the store can really fill, most useful first, before its closing.
+describe('top-up', () => {
+  const home = (types: string[]) => types.map(type => ({ type }));
+  it('adds what the store can back, most useful first, up to 11 sections, never one it already has', () => {
+    const f = facts({ location: { name: 'Dulce Nube', address: 'Calle Sagárnaga 120', hours: 'Lun a Vie 9:00–18:00' } });
+    expect(libraryTopUp(home(['cover-split', 'products-grid', 'faq-split', 'story-split', 'benefits-bento', 'closing-photo']), f))
+      .toEqual(['visit-store', 'promo-code', 'strip-services', 'steps-howto', 'products-spotlight']);
+  });
+
+  it('never adds a section the store cannot fill', () => {
+    expect(libraryTopUp(home(['cover-split', 'products-grid']), facts({ codes: [], services: [] }), 5)).toEqual(['steps-howto', 'faq-split', 'products-spotlight']);
+    expect(libraryTopUp(home(['cover-split']), facts({ photos: [], codes: [], services: [], categories: [], products: [] }), 4)).toEqual(['faq-split']);
+  });
+
+  it('a home that is long enough gets nothing', () => {
+    expect(libraryTopUp(home(Array.from({ length: 11 }, (_, at) => `x-${at}`)), facts())).toEqual([]);
+  });
+
+  it('the new sections go before the closing, or at the end when there is none', () => {
+    expect(types(withTopUp(home(['cover-split', 'products-grid', 'closing-photo']), home(['visit-store', 'promo-code']))))
+      .toEqual(['cover-split', 'products-grid', 'visit-store', 'promo-code', 'closing-photo']);
+    expect(types(withTopUp(home(['cover-split', 'products-grid']), home(['visit-store'])))).toEqual(['cover-split', 'products-grid', 'visit-store']);
   });
 });

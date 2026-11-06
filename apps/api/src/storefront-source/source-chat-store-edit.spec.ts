@@ -387,3 +387,31 @@ describe('the catalog through the quick edit (spec 2026-11-05 creates anything p
     expect(prisma.promoCode.findMany.mock.calls[0][0]).not.toHaveProperty('take');
   });
 });
+
+// Owner 2026-11-06 («too short, there should be more things on the main page»): a short template home gets the sections the
+// store can fill, in one more call; a failed call keeps the home as it was.
+describe('home top-up', () => {
+  const facts = { storeName: 'DooBoo', what: 'Gelato de tofu', story: '', city: 'La Paz', request: '', tone: 'calm', products: [{ id: 'p1', name: 'Gelato chocolate' }],
+    categories: [], photos: [0, 1, 2, 3].map(index => ({ url: `/v1/uploads/0000000${index}-aaaa.jpg` })), codes: [{ code: 'DOO10', offer: '10% de descuento' }],
+    services: [{ title: 'Envío a domicilio', text: 'En La Paz', icon: 'truck' }, { title: 'Pago seguro', text: 'Con pagosYa', icon: 'lock' }], reviews: 0 };
+  const short: LayoutBlock[] = [{ type: 'cover-split', title: 'Gelato de tofu', photo: '/v1/uploads/00000000-aaaa.jpg' }, { type: 'products-grid', card: 'classic' }, { type: 'closing-photo', title: 'Ven por tu gelato', photo: '/v1/uploads/00000001-aaaa.jpg' }];
+  const raw = (type: string) => ({ type, eyebrow: '', title: type === 'promo-code' ? '10 % en tu primera compra' : 'Así de fácil', text: 'Gelato de tofu hecho en La Paz.',
+    cta: '', link: '', cta2: '', link2: '', photo: -1, photo2: -1, items: [], products: [], product: '', code: type === 'promo-code' ? 'DOO10' : '', look: '', band: '', card: '', endsAt: '' });
+
+  it('fills the missing sections in one call and puts them before the closing', async () => {
+    const compose = jest.fn(async (_merchant: string, input: { template: Array<{ type: string }> }) => ({ blocks: input.template.map(block => raw(block.type)) }));
+    chat.dialogue.composeLibrary = compose;
+    const out: LayoutBlock[] = await chat.topUpHome('m1', 's1', short, facts, 5);
+    expect(compose).toHaveBeenCalledTimes(1);
+    expect(compose.mock.calls[0][1].template.map((block: LayoutBlock) => block.type)).toEqual(['promo-code', 'strip-services']);
+    expect(out.map(block => block.type)).toEqual(['cover-split', 'products-grid', 'promo-code', 'strip-services', 'closing-photo']);
+  });
+
+  it('a failed call, or a home long enough, keeps the home as it was', async () => {
+    chat.dialogue.composeLibrary = jest.fn().mockRejectedValue(new Error('bridge down'));
+    expect(await chat.topUpHome('m1', 's1', short, facts, 5)).toEqual(short);
+    chat.dialogue.composeLibrary = jest.fn();
+    expect(await chat.topUpHome('m1', 's1', short, facts, 3)).toEqual(short);
+    expect(chat.dialogue.composeLibrary).not.toHaveBeenCalled();
+  });
+});

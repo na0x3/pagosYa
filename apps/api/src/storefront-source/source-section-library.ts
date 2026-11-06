@@ -579,6 +579,25 @@ export const uploadOnly = (url: string) => {
 
 /** Fix 3 (2026-11-02): why the store cannot back a section the merchant asked to add — said in the reply, before any model call.
  *  Null when its data needs are met (photos and words are the fill's to find). */
+/** Owner 2026-11-06 («they are too short, there should be more things on the main page»): a template home shorter than `target`
+ *  gets these library sections, most useful first — what the store really has (its place and hours, its code, delivery), then
+ *  what explains it — skipping any the home already has or the store cannot fill. */
+const TOP_UP_ORDER = ['visit-store', 'promo-code', 'strip-services', 'steps-howto', 'faq-split', 'products-spotlight', 'story-split', 'benefits-bento',
+  'usecases', 'perks-rows', 'categories-tiles', 'products-cards'] as const;
+export function libraryTopUp(layout: ReadonlyArray<{ type: string }>, facts: LibraryFacts, target = 11): string[] {
+  const missing = target - layout.length;
+  if (missing <= 0) return [];
+  const there = new Set(layout.map(block => block.type));
+  return TOP_UP_ORDER.filter(type => !there.has(type) && !librarySectionBlocker(type, facts)).slice(0, missing);
+}
+
+/** The top-up's sections go before the home's closing section (the last block, when it is one), else at the end. */
+export function withTopUp<T extends { type: string }>(layout: readonly T[], added: readonly T[]): T[] {
+  const last = layout.at(-1);
+  const closing = last && BY_ID.get(last.type)?.role === 'closing';
+  return closing ? [...layout.slice(0, -1), ...added, last] : [...layout, ...added];
+}
+
 export function librarySectionBlocker(type: string, facts: LibraryFacts): string | null {
   const section = BY_ID.get(type);
   if (!section) return 'esa sección no está en mi biblioteca';

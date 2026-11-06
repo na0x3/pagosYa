@@ -32,7 +32,9 @@ type Row = { sku: string; nombre: string; precio: string; categoria: string; sto
 type Brand = {
   name: string; tagline: string; city: string; what: string; story: string; about: string;
   /** A CSV catalogue in ~/Downloads/<folder>, or an earlier store of the brand to copy (copyFrom), with optional photo overrides. */
-  folder?: string; csv?: string; copyFrom?: string; photoFolder?: string; photosFor?: Record<string, string[]>; dropProducts?: string[];
+  folder?: string; csv?: string; copyFrom?: string;
+  /** Photos straight in the folder rather than its imagenes/ (2026-11-06 photo-only folders; the CSV then lives in examples/). */
+  flatImages?: boolean; photoFolder?: string; photosFor?: Record<string, string[]>; dropProducts?: string[];
   /** More brand photos (a ~/Downloads folder), uploaded once each beside the product photos. */
   brandPhotos?: string;
   /** A one-product store typed in by hand (premium landing check 2026-11-03): its photos from photoFolder, a photo set per colour. */
@@ -276,6 +278,72 @@ const BRANDS: Record<string, Brand> = {
       { slug: 'cuidar-tu-hoodie', title: 'Cómo cuidar tu hoodie', excerpt: 'Al revés, agua fría y nada de secadora.', body: 'Lava tu hoodie al revés y en agua fría para que el perchado y los gráficos duren.\n\nSécalo colgado a la sombra: la secadora encoge el algodón.' },
     ],
   },
+  // 2026-11-06 owner «create more stores»: photo-only ~/Downloads folders; the catalogue typed from the photos (examples/<key>/catalogo.csv).
+  meathouse: {
+    name: 'Meat House', tagline: 'Cortes madurados y parrilla, sin miedo al fuego.', city: 'La Paz', folder: 'meathouse', flatImages: true, csv: resolve(__dirname, '../../../examples/full-stores-2026-11-02/meathouse/catalogo.csv'), brandPhotos: 'meathouse',
+    what: 'Carnicería y parrilla: cortes madurados (bife de chorizo, ojo de bife, picaña), costillas BBQ y tablas para compartir.',
+    story: 'Meat House empezó como una parrilla de fin de semana entre amigos en Sopocachi. Maduramos la carne 21 días en nuestra cámara y la cortamos grueso, como nos gusta comerla.',
+    about: 'Carnicería y parrilla en Sopocachi. Cortes madurados 21 días, cortados grueso, y costillas cocidas lento.',
+    badges: { 'Bife de chorizo madurado 400 g': 'Más vendido' },
+    location: { name: 'Meat House Sopocachi', address: 'Calle Belisario Salinas 520, Sopocachi, La Paz', description: 'Carnicería y parrilla: compra tus cortes o come aquí.', hours: WEEK('12:00', '22:00', ['12:00', '23:00']) },
+    zone: { name: 'La Paz', fee: 2000, freeAbove: 30000, minutes: 120, departments: ['LA_PAZ'] },
+    code: { code: 'ASADO10', percent: 10 }, instagram: 'https://instagram.com/meathouse.test',
+    assistant: { name: 'Meat House', greeting: '¡Hola! ¿Te ayudo a elegir el corte para tu parrilla?', notes: 'Cortes madurados 21 días. Bife de chorizo y ojo de bife: fuego fuerte, 4 minutos por lado, reposo 5. Picaña: entera, grasa abajo primero. Costillas ya cocidas: solo calentar y glasear.' },
+    policies: { returns: 'Si tu corte llega mal, te lo cambiamos el mismo día.', delivery: 'Entregamos en La Paz en 2 horas, en caja térmica.', privacy: 'Usamos tus datos solo para tu pedido.', terms: TERMS },
+    articles: [{ slug: 'bife-perfecto', title: 'Cómo hacer un bife perfecto', excerpt: 'Fuego fuerte, sal gruesa y paciencia.', body: 'Saca el bife del refri 30 minutos antes.\n\nSal gruesa justo antes de la parrilla, fuego fuerte, 4 minutos por lado para jugoso.\n\nDéjalo reposar 5 minutos antes de cortar.' }],
+  },
+  perra: {
+    name: 'Perra Please', tagline: 'Salsas picantes que no piden permiso.', city: 'Santa Cruz', folder: 'hut', flatImages: true, csv: resolve(__dirname, '../../../examples/full-stores-2026-11-02/perra/catalogo.csv'), brandPhotos: 'hut',
+    what: 'Salsas picantes: Red Pepper Heat, Garlic Heat, Smoke Heat y el pack de las tres.',
+    story: 'Perra Please nació en una cocina de Santa Cruz, fermentando ajíes en frascos. Hacemos salsas para gente que le pone picante a todo antes de probar.',
+    about: 'Salsas picantes de ají fermentado, hechas en Santa Cruz en lotes chicos.',
+    badges: { 'Pack las tres salsas': 'Más vendido' },
+    location: { name: 'Perra Please', address: 'Calle Libertad 340, Santa Cruz', description: 'Retira tus salsas en nuestra cocina.', hours: WEEK('10:00', '18:00') },
+    zone: { name: 'Santa Cruz ciudad', fee: 1500, freeAbove: 15000, minutes: 1440, departments: ['SANTA_CRUZ'] },
+    code: { code: 'PICA10', percent: 10 }, instagram: 'https://instagram.com/perraplease.test',
+    assistant: { name: 'Perra', greeting: '¿Qué tan picante te gusta? 🌶️', notes: 'Red Pepper Heat: la más picante. Garlic Heat: picor medio con ajo asado. Smoke Heat: ahumada, para carnes. El pack trae las tres.' },
+    policies: { returns: 'Si una botella llega rota, te mandamos otra.', delivery: 'Entregamos en Santa Cruz en 24 horas.', privacy: 'Usamos tus datos solo para tu pedido.', terms: TERMS },
+    articles: [{ slug: 'con-que-va', title: 'Con qué va cada salsa', excerpt: 'Spoiler: con todo.', body: 'Red Pepper Heat va con huevos, pizza y tacos.\n\nGarlic Heat, con papas fritas y pollo.\n\nSmoke Heat, con hamburguesas y carnes a la parrilla.' }],
+  },
+  pawby: {
+    name: 'Pawby Kitchen', tagline: 'Comida fresca para perros, hecha con amor.', city: 'Cochabamba', folder: 'pups', flatImages: true, csv: resolve(__dirname, '../../../examples/full-stores-2026-11-02/pawby/catalogo.csv'), brandPhotos: 'pups',
+    what: 'Comida fresca para perros, plan semanal, croquetas naturales, snacks y camas.',
+    story: 'Pawby Kitchen empezó cocinando para nuestra perra Lola, que no comía croquetas. Hoy cocinamos cada semana en Cochabamba con ingredientes que tú también comerías.',
+    about: 'Comida fresca para perros cocinada cada semana en Cochabamba, sin conservantes.',
+    badges: { 'Plan semanal 7 porciones': 'Más vendido' },
+    location: { name: 'Pawby Kitchen', address: 'Av. América 850, Cochabamba', description: 'Nuestra cocina: retira tu plan los lunes.', hours: WEEK('09:00', '18:00', ['09:00', '13:00']) },
+    zone: { name: 'Cochabamba', fee: 1000, freeAbove: 20000, minutes: 1440, departments: ['COCHABAMBA'] },
+    code: { code: 'PAWBY10', percent: 10 }, instagram: 'https://instagram.com/pawby.test',
+    assistant: { name: 'Pawby', greeting: '¡Guau! ¿Cuánto pesa tu perro?', notes: 'Porción diaria aproximada: 50 g de comida fresca por cada kg de peso. El plan semanal trae 7 porciones calculadas por peso y se entrega los lunes.' },
+    policies: { returns: 'Si a tu perro no le gusta la primera porción, te devolvemos tu dinero.', delivery: 'Entregamos en Cochabamba al día siguiente; el plan semanal, los lunes.', privacy: 'Usamos tus datos solo para tu pedido.', terms: TERMS },
+    articles: [{ slug: 'por-que-comida-fresca', title: 'Por qué comida fresca', excerpt: 'Lo que cambia cuando tu perro come de verdad.', body: 'La comida fresca se cocina a baja temperatura y conserva sus nutrientes.\n\nMuchos perros mejoran su digestión y su pelo en pocas semanas.\n\nEmpieza mezclando con su comida de siempre durante 5 días.' }],
+  },
+  lullu: {
+    name: 'Lullu', tagline: 'Belleza que cabe en tu maleta.', city: 'La Paz', folder: 'lullu', flatImages: true, csv: resolve(__dirname, '../../../examples/full-stores-2026-11-02/lullu/catalogo.csv'), brandPhotos: 'lullu',
+    what: 'Kits de belleza para viajar, cuidado de cabello y piel, y canastas para regalar.',
+    story: 'Lullu nació de tanto armar neceseres antes de cada viaje. Juntamos lo que de verdad usamos en tamaño viaje, listo para la maleta.',
+    about: 'Kits de belleza en tamaño viaje y sets de cabello y piel, armados en La Paz.',
+    badges: { 'Kit fin de semana': 'Nuevo' },
+    location: { name: 'Lullu', address: 'Av. Ballivián 1050, Calacoto, La Paz', description: 'Showroom: arma tu kit y llévalo envuelto.', hours: WEEK('10:00', '19:00', ['10:00', '14:00']) },
+    zone: { name: 'La Paz y El Alto', fee: 1500, freeAbove: 30000, minutes: 1440, departments: ['LA_PAZ'] },
+    code: { code: 'LULLU10', percent: 10 }, instagram: 'https://instagram.com/lullu.test',
+    assistant: { name: 'Lullu', greeting: 'Hola ✨ ¿Te ayudo a armar tu kit de viaje?', notes: 'Todos los minis son de menos de 100 ml: pasan en el equipaje de mano. Los kits se pueden envolver para regalo.' },
+    policies: { returns: 'Cambios dentro de 7 días con el producto sin abrir.', delivery: 'Entregamos en La Paz y El Alto en 24 horas.', privacy: 'Usamos tus datos solo para tu pedido.', terms: TERMS },
+    articles: [{ slug: 'que-llevar-en-el-avion', title: 'Qué llevar en el avión', excerpt: 'Menos de 100 ml y todo en una bolsa.', body: 'Los líquidos van en envases de menos de 100 ml, en una bolsa transparente.\n\nLleva crema, protector y un spray para refrescar.\n\nNuestros kits ya vienen listos para pasar el control.' }],
+  },
+  vortice: {
+    name: 'Vórtice', tagline: 'Licuadoras que no se quedan quietas.', city: 'Santa Cruz', folder: 'blender', flatImages: true, csv: resolve(__dirname, '../../../examples/full-stores-2026-11-02/vortice/catalogo.csv'), brandPhotos: 'blender',
+    what: 'Licuadoras personales, de vaso y una retro rosa, más vasos extra.',
+    story: 'En Vórtice probamos cada licuadora con hielo, frutas congeladas y verduras antes de venderla. Si no deja el batido liso, no entra a la tienda.',
+    about: 'Licuadoras probadas en Santa Cruz, con garantía de 1 año.',
+    badges: { 'Licuadora personal 600 W': 'Más vendido' },
+    location: { name: 'Vórtice Equipetrol', address: 'Av. San Martín 900, Equipetrol, Santa Cruz', description: 'Prueba las licuadoras antes de llevarlas.', hours: WEEK('10:00', '20:00', ['10:00', '14:00']) },
+    zone: { name: 'Santa Cruz ciudad', fee: 2000, freeAbove: 50000, minutes: 1440, departments: ['SANTA_CRUZ'] },
+    code: { code: 'VORTICE10', percent: 10 }, instagram: 'https://instagram.com/vortice.test',
+    assistant: { name: 'Vórtice', greeting: '¡Hola! ¿Batidos para uno o para la familia?', notes: 'Personales: 600 W, vaso de 700 ml que sirve de botella. De vaso: 1200 W, 1,5 L, hielo y sopas. Todas con garantía de 1 año.' },
+    policies: { returns: 'Garantía de 1 año; cambios dentro de 7 días si llega con fallas.', delivery: 'Entregamos en Santa Cruz en 24 horas.', privacy: 'Usamos tus datos solo para tu pedido.', terms: TERMS },
+    articles: [{ slug: 'batido-verde', title: 'Batido verde de 3 ingredientes', excerpt: 'Espinaca, plátano y leche.', body: 'Pon un puñado de espinaca, un plátano congelado y un vaso de leche.\n\nLicúa 30 segundos.\n\nListo: verde, frío y sin grumos.' }],
+  },
 };
 
 const parse = (csv: string): Row[] => {
@@ -319,7 +387,7 @@ async function main() {
     const { merchantId, storeId } = record as { merchantId: string; storeId: string };
     const upload = async (file: string) => {
       if (record.photos[file]) return record.photos[file] as string;
-      const asset = await uploads.saveBuffer(await readFile(resolve(source, 'imagenes', file)), /\.png$/i.test(file) ? 'image/png' : 'image/jpeg');
+      const asset = await uploads.saveBuffer(await readFile(brand.flatImages ? resolve(source, file) : resolve(source, 'imagenes', file)), /\.png$/i.test(file) ? 'image/png' : 'image/jpeg');
       await prisma.mediaAsset.create({ data: { merchantId, storeId, url: asset.url, storageKey: asset.filename, mimeType: asset.mimeType, byteSize: asset.byteSize } });
       record.photos[file] = asset.url; await save(); return asset.url as string;
     };
