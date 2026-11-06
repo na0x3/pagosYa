@@ -809,7 +809,7 @@ function CoverStage({ block, index }: { block: LibraryBlock; index: number }) {
     <div className={block.look === 'plain' ? 'lb-stage__copy lb-visually-hidden' : 'lb-stage__copy'}>
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
       {(block.title ?? '').includes('*') ? <h1 id={`lb-${index}-title`} className="lb-stage__title"><Marked text={block.title ?? ''} /></h1>
-        : <h1 id={`lb-${index}-title`} className="lb-stage__title"><span className="lb-mark">{first}<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 14c40-8 90-11 194-6" /></svg></span>{rest.length ? ` ${rest.join(' ')}` : ''}</h1>}
+        : <h1 id={`lb-${index}-title`} className="lb-stage__title"><span className="lb-mark">{first}<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 16c40-3 90-5 194-3" /></svg></span>{rest.length ? ` ${rest.join(' ')}` : ''}</h1>}
       {block.text ? <p className="lb-cover__sub">{block.text}</p> : null}
       {block.cta || block.cta2 ? <div className="lb-stage__buttons">
         {block.cta ? <a className="lb-stage__btn" href={href(block.link)}>{block.cta}</a> : null}
