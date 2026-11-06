@@ -1,4 +1,6 @@
-import { CATALOG_EDIT_PROMPT, applyCatalogOps, catalogChangeEmpty, catalogOpSchema, discountValue, readCatalogOps, stockValue, type CatalogOp } from './source-catalog-edit';
+import { CATALOG_EDIT_PROMPT, applyCatalogOps, catalogChangeEmpty, catalogOpSchema, discountValue, readCatalogOps, relinkCategories, stockValue, withoutCategoryMenuLinks, type CatalogOp } from './source-catalog-edit';
+import type { LayoutBlock } from './source-section-library';
+import type { StoreMenu } from './source-store-menu';
 import type { StoreEditState } from './source-store-edit';
 
 describe('catalog ops (spec 2026-11-05 creates anything part 2)', () => {
@@ -188,5 +190,32 @@ describe('products', () => {
     const { change, refused } = applyCatalogOps(state(), [op('category-remove', { at: 1 }), op('product-category', { at: 0, category: 'Postres' })]);
     expect(change.products.update).toEqual([]);
     expect(refused).toEqual(['La categoría «Postres» se quita en este mismo pedido.']);
+  });
+});
+
+describe('category links', () => {
+  const blocks: LayoutBlock[] = [{ type: 'cover-split', title: 'Hola', cta: 'Ver tortas', link: 'category:Tortas' },
+    { type: 'categories-tiles', items: [{ title: 'Tortas', link: 'category:Tortas' }, { title: 'Postres', link: 'category:Postres' }, { title: 'Bebidas', link: 'category:Bebidas' }] },
+    { type: 'products-cards', cta2: 'Ver todo', link2: 'category:postres' }];
+
+  it('a rename follows into links and tiles; a removal sends links to all products and drops its tile', () => {
+    const next = relinkCategories(blocks, { rename: [{ from: 'Tortas', to: 'Pasteles' }], remove: [{ id: 'c2', name: 'Postres' }] });
+    expect(next[0].link).toBe('category:Pasteles');
+    expect(next[1].items).toEqual([{ title: 'Pasteles', link: 'category:Pasteles' }, { title: 'Bebidas', link: 'category:Bebidas' }]);
+    expect(next[2].link2).toBe('products');
+    expect(blocks[0].link).toBe('category:Tortas');
+  });
+
+  it('nothing to follow leaves the blocks as they are', () => {
+    expect(relinkCategories(blocks, { rename: [], remove: [] })).toBe(blocks);
+  });
+
+  it('a removed category leaves the menu; a dropdown left empty goes', () => {
+    const menu: StoreMenu = { style: 'dropdowns', groups: [
+      { label: 'Tienda', links: [{ to: 'category:c2' }, { to: 'all' }], tiles: [{ title: 'Postres', image: 'https://x.test/p.jpg', to: 'category:c2' }] },
+      { label: 'Postres', links: [{ to: 'category:c2' }] }] };
+    expect(withoutCategoryMenuLinks(menu, ['c2'])).toEqual({ style: 'dropdowns', groups: [{ label: 'Tienda', links: [{ to: 'all' }], tiles: [] }] });
+    expect(withoutCategoryMenuLinks(menu, [])).toBe(menu);
+    expect(withoutCategoryMenuLinks(undefined, ['c2'])).toBeUndefined();
   });
 });

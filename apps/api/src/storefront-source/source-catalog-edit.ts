@@ -4,6 +4,8 @@
  * the store as the digest showed it and turns them into one change the caller writes, plus the words of the reply. */
 import { normalizeProductVariants, totalVariantStock, type ProductVariant } from '../payment-links/product-variants';
 import { applyVariantOperations, type SourceVariantOperation } from './source-product-options';
+import type { LayoutBlock } from './source-section-library';
+import type { StoreMenu } from './source-store-menu';
 import { STORE_CAPS, block, bs, oneLine, photoRef, priceCents, safe, short, type StoreEditPhoto, type StoreEditProduct, type StoreEditState } from './source-store-edit';
 
 export const CATALOG_KINDS = ['product-add', 'product-archive', 'product-restore', 'product-stock', 'product-category', 'option-add', 'option-remove',
@@ -349,4 +351,42 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
   change.products.update = change.products.update.filter(entry => Object.keys(entry).length > 1);
   if (noPhoto.length) notes.push(`Mándame la foto de ${listNames(noPhoto)} cuando la tengas.`);
   return { change, done, refused, notes };
+}
+
+const CATEGORY_LISTS = new Set(['categories-list', 'categories-tiles']);
+
+/** Section links to a renamed or removed category (`category:<name>`) and its tiles in the category lists follow the change: a
+ *  rename keeps pointing at it, a removal points at all the products and drops its tile. The same array when nothing follows. */
+export function relinkCategories(blocks: readonly LayoutBlock[], links: CatalogChange['links']): LayoutBlock[] {
+  if (!links.rename.length && !links.remove.length) return blocks as LayoutBlock[];
+  const renamed = new Map(links.rename.map(entry => [fold(entry.from), entry.to]));
+  const gone = new Set(links.remove.map(entry => fold(entry.name)));
+  const target = (link: string) => {
+    if (!link.startsWith('category:')) return link;
+    const name = fold(link.slice('category:'.length));
+    return gone.has(name) ? 'products' : renamed.has(name) ? `category:${renamed.get(name)}` : link;
+  };
+  return blocks.map(block => {
+    const next: LayoutBlock = { ...block };
+    if (block.link !== undefined) next.link = target(block.link);
+    if (block.link2 !== undefined) next.link2 = target(block.link2);
+    if (block.items) {
+      const list = CATEGORY_LISTS.has(block.type);
+      next.items = block.items.filter(item => !(list && gone.has(fold(item.title))))
+        .map(item => ({ ...item, ...(list && renamed.has(fold(item.title)) ? { title: renamed.get(fold(item.title))! } : {}), ...(item.link !== undefined ? { link: target(item.link) } : {}) }));
+    }
+    return next;
+  });
+}
+
+/** The store menu without its links and tiles to removed categories (`category:<id>`); a dropdown left empty goes too. */
+export function withoutCategoryMenuLinks(menu: StoreMenu | undefined, ids: readonly string[]): StoreMenu | undefined {
+  if (!menu?.groups?.length || !ids.length) return menu;
+  const gone = new Set(ids.map(id => `category:${id}`));
+  const groups = menu.groups.map(group => {
+    const { footer, ...rest } = group;
+    return { ...rest, links: group.links.filter(link => !gone.has(link.to)), ...(group.tiles ? { tiles: group.tiles.filter(tile => !gone.has(tile.to)) } : {}),
+      ...(footer && !gone.has(footer.to) ? { footer } : {}) };
+  }).filter(group => group.links.length || group.tiles?.length);
+  return { ...menu, groups };
 }
