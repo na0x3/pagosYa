@@ -1068,6 +1068,23 @@ describe('YAPI picks the themed template for a new store (owner 2026-10-31, YAPI
       expect(drawn[0]).not.toBe(drawn[1]);
       for (const id of drawn) expect(['unico', 'shrine', 'shrine2']).not.toContain(id);
     });
+
+    // Owner 2026-11-06 («siempre usan las 2 mismas plantillas»): the draw skips a template while another has fewer stores.
+    it('all: a template already used waits until the others have caught up', async () => {
+      config.set('app.yapiTemplateRandom', 'all');
+      withPick(jest.fn());
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+      await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+      const first = applyMaster.mock.calls[0][4];
+      jest.restoreAllMocks();
+      const used = [{ metadata: { templatePick: first } }];
+      prisma.storeAgentMessage.findMany.mockImplementation(async ({ where }: any) => where.metadata ? used : messages.filter(m => m.threadId === where.threadId && m.role === where.role).reverse());
+      withPick(jest.fn());
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+      applyMaster.mockClear();
+      await send('Mi negocio se llama Café Buna.\nCrea mi tienda.');
+      expect(applyMaster.mock.calls[0][4]).not.toBe(first);
+    });
   });
 
   it('without an answer, the template sharing the most words with the business', async () => {

@@ -51,7 +51,7 @@ import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { galleryTemplates, listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
-import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates, randomPick, readTemplateRandom, templateSwitchRequest } from './source-template-pick';
+import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates, leastUsedDraw, randomPick, readTemplateRandom, templateSwitchRequest } from './source-template-pick';
 import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
 /** Owner 2026-11-02: the template a one- or two-product store starts on (the product whole at the top). */
@@ -515,7 +515,7 @@ export class SourceChatService {
     // YAPI's three below instead of the least used.
     const draw = readTemplateRandom(this.config.get<string>('app.yapiTemplateRandom'));
     if (draw === 'all') {
-      const drawn = randomPick(templates)!;
+      const drawn = leastUsedDraw(templates, await this.templateUses())!;
       const pick = { id: drawn.id, reason: '' };
       this.productLogger.log(JSON.stringify({ event: 'template_pick', storeId, template: pick.id, by: 'random-all', reason: '' }));
       return pick;

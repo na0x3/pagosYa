@@ -73,6 +73,14 @@ export function randomPick<T>(items: readonly T[], random: () => number = Math.r
   return items.length ? items[Math.min(items.length - 1, Math.floor(random() * items.length))] : null;
 }
 
+/** Owner 2026-11-06 («siento que siempre usan las 2 mismas plantillas»: a plain draw put 4 of 8 stores on Shrine Pro): a draw among
+ *  the templates fewest stores wear, so a run of new stores goes round the whole pool before any template repeats. */
+export function leastUsedDraw<T extends { id: string }>(items: readonly T[], uses: ReadonlyMap<string, number>, random: () => number = Math.random): T | null {
+  if (!items.length) return null;
+  const fewest = Math.min(...items.map(item => uses.get(item.id) ?? 0));
+  return randomPick(items.filter(item => (uses.get(item.id) ?? 0) === fewest), random);
+}
+
 /** Spec 2026-11-04 writer on templates §1 (owner: «sorbo, shrine pro, broadcast…»): a new store's template comes only from the
  *  owner's pool; `keep` (Único for one-product stores) always stays. A pool that matches none of these is ignored, so a typo
  *  in YAPI_TEMPLATE_POOL never leaves YAPI with nothing to pick. */

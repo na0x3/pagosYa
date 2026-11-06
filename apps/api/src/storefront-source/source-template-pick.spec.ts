@@ -1,4 +1,4 @@
-import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates, randomPick, readTemplatePicks, readTemplateRandom, templatePickSchema, templateSwitchRequest } from './source-template-pick';
+import { fallbackTemplatePick, inTemplatePool, leastUsedDraw, leastUsedPick, pickableTemplates, randomPick, readTemplatePicks, readTemplateRandom, templatePickSchema, templateSwitchRequest } from './source-template-pick';
 
 const manifest = (id: string, extra: Record<string, unknown> = {}) => ({
   id, name: id, category: 'comida', description: `Plantilla ${id}`, tags: [], extends: 'esencial',
@@ -38,6 +38,19 @@ describe('template pick', () => {
     expect(randomPick(candidates, () => 0.9999)).toEqual({ id: 'diario', reason: 'c' });
     expect(randomPick([], () => 0)).toBeNull();
     expect([' Pick', 'ALL', '', undefined, 'yes'].map(readTemplateRandom)).toEqual(['pick', 'all', 'off', 'off', 'off']);
+  });
+
+  // Owner 2026-11-06 («siento que siempre usan las 2 mismas plantillas»: 4 of 8 stores on Shrine Pro): the draw is among the pool's
+  // least used templates, so a run of stores goes round the whole pool before any repeats.
+  it('draws among the least used templates only', () => {
+    const pool = [{ id: 'shrine' }, { id: 'motion' }, { id: 'focal' }, { id: 'tacon' }];
+    const uses = new Map([['shrine', 6], ['focal', 1], ['tacon', 4]]);
+    expect(leastUsedDraw(pool, uses, () => 0)).toEqual({ id: 'motion' });
+    expect(leastUsedDraw(pool, new Map([['shrine', 2], ['motion', 1], ['focal', 1], ['tacon', 2]]), () => 0.9)).toEqual({ id: 'focal' });
+    const seen: string[] = []; const counted = new Map<string, number>();
+    for (let i = 0; i < 4; i++) { const pick = leastUsedDraw(pool, counted, Math.random)!; seen.push(pick.id); counted.set(pick.id, (counted.get(pick.id) ?? 0) + 1); }
+    expect(new Set(seen).size).toBe(4);
+    expect(leastUsedDraw([], uses)).toBeNull();
   });
 
   it('falls back to the template sharing the most words with the business', () => {
