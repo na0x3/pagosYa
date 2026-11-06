@@ -1432,6 +1432,11 @@ export class SourceChatService {
     for (const item of products) add(item.imageUrls[0], 'producto', item.name);
     const uploads = await this.prisma.mediaAsset.findMany({ where: { merchantId, storeId, mimeType: { in: ['image/jpeg', 'image/png', 'image/webp'] } }, orderBy: { createdAt: 'desc' }, take: 8, select: { url: true } }).catch(() => [] as Array<{ url: string }>);
     for (const asset of uploads) add(asset.url, 'tienda');
+    // Sweep 2026-11-06: each photo's bundled name, so a photo a template already shows (as its copy) is never «changed» to itself.
+    if (this.uploads) await Promise.all(photos.map(async photo => {
+      const bytes = await this.uploads!.getBuffer(photo.url.split('/').pop()!.split('?')[0]).catch(() => null);
+      if (bytes) photo.bundled = `assets/image-${createHash('sha256').update(bytes).digest('hex').slice(0, 12)}.${photo.url.split('.').at(-1)!.toLowerCase()}`;
+    }));
     return photos;
   }
 

@@ -332,3 +332,13 @@ describe('the model\'s answer to an improve request', () => {
     expect(withPageImprove({ ops: [], store: [], catalog: [], rest: 'pon los colores en rojo' }, 'mejora envíos y pon los colores en rojo', pages, []).rest).toBe('pon los colores en rojo');
   });
 });
+
+// Sweep 2026-11-06: «cambia la foto de la portada por la foto del plan semanal» when that photo already was the cover (its bundled copy)
+// replied «cambié la foto» and saved a version with nothing changed.
+it('a photo the section already shows (as its bundled copy) changes nothing and says so', () => {
+  const covered: LayoutBlock[] = [{ type: 'cover-split', title: 'Hola', photo: 'assets/image-abc123abc123.jpg' }];
+  const result = applyLayoutOps(covered, [op({ op: 'photo', at: 0, field: 'photo', value: 'f0' })], [], { photos: [{ url: '/v1/uploads/plan.jpg', from: 'producto', product: 'Plan semanal', bundled: 'assets/image-abc123abc123.jpg' }] });
+  expect(result.layout).toEqual(covered);
+  expect(result.done).toEqual([]);
+  expect(result.refused).toEqual([expect.stringMatching(/ya muestra esa foto\.$/)]);
+});

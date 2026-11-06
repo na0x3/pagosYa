@@ -35,7 +35,9 @@ export type StoreEditState = {
   codes?: StoreEditCode[];
 };
 /** A photo the merchant may name: attached to this message, or one of the store's own. */
-export type StoreEditPhoto = { url: string; from: 'mensaje' | 'producto' | 'tienda'; product?: string };
+export type StoreEditPhoto = { url: string; from: 'mensaje' | 'producto' | 'tienda'; product?: string;
+  /** Sweep 2026-11-06: the name this photo's bundled copy has in a template (assets/image-<sha256 12>.<ext>), to know it is already shown. */
+  bundled?: string };
 
 export type StoreChange = {
   store?: Partial<Record<'tagline' | 'aboutText' | 'contactPhone' | 'contactEmail', string | null>>;

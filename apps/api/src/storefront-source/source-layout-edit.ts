@@ -268,17 +268,21 @@ export function applyLayoutOps(layout: readonly LayoutBlock[], allOps: readonly 
     const block = blocks[op.at];
     const url = photoRef(op.value, options.photos ?? []);
     if (!url) { refused.push(`No cambié la foto de ${placeOf(layout[op.at])}: mándame la foto en el mensaje.`); continue; }
+    // Sweep 2026-11-06: the photo a section shows may be its bundled copy; the same photo is never «changed».
+    const bundled = (options.photos ?? []).find(photo => photo.url === url)?.bundled;
+    const shows = (current: string | undefined) => current === url || (bundled !== undefined && current === bundled);
+    const already = () => refused.push(`${upper(placeOf(layout[op.at]))} ya muestra esa foto.`);
     if (Number.isInteger(op.item) && op.item >= 0) {
       const item = block.items?.[op.item];
       if (!item?.photo) { refused.push(`${upper(placeOf(layout[op.at]))} no muestra una foto en ese punto.`); continue; }
-      if (item.photo === url) continue;
+      if (shows(item.photo)) { already(); continue; }
       item.photo = url;
       done.push(`cambié la foto del punto ${op.item + 1} de ${placeOf(layout[op.at])}`);
       continue;
     }
     const field = op.field === 'photo2' ? 'photo2' : 'photo';
     if (!block[field]) { refused.push(`${upper(placeOf(layout[op.at]))} no muestra una foto ahí.`); continue; }
-    if (block[field] === url) continue;
+    if (shows(block[field])) { already(); continue; }
     block[field] = url;
     done.push(`cambié la ${field === 'photo2' ? 'segunda foto' : 'foto'} de ${placeOf(layout[op.at])}`);
   }

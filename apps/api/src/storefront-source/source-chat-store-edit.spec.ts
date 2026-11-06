@@ -445,3 +445,11 @@ it('improving a menu page adds its sections even when the model only changed its
   expect((change.pageLayouts.shipping as LayoutBlock[]).map(block => block.type)[0]).toBe('cover-split');
   expect(out.assistantMessage.content).toContain('a tu página «Envíos»');
 });
+
+// Sweep 2026-11-06: each photo the quick edit may name also carries the name its bundled copy has (assets/image-<sha256 12>.<ext>).
+it('the store\'s photos carry the name of their bundled copy', async () => {
+  const { createHash } = require('node:crypto');
+  (chat as any).uploads = { getBuffer: jest.fn(async () => Buffer.from('photo bytes')) };
+  const photos = await (chat as any).storeEditPhotos('m1', 's1', ['https://api.test/v1/uploads/0000000a-aaaa.jpg'], []);
+  expect(photos[0]).toMatchObject({ url: '/v1/uploads/0000000a-aaaa.jpg', from: 'mensaje', bundled: `assets/image-${createHash('sha256').update(Buffer.from('photo bytes')).digest('hex').slice(0, 12)}.jpg` });
+});
