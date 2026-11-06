@@ -70,17 +70,17 @@ activarla en Productos.», «El código VERANO20 da 20 % de descuento y ya funci
 ### 3. Answering
 
 The quick-edit answer (`layoutEditSchema`) gains a third array `catalogo` beside `ops` and `store`, strict, every field present:
-`{ kind, at, name, price, text, category, photo, option, value }` (unused: `at` -1, strings "").
+`{ kind, at, name, price, stock, text, category, photo, option, value }` (unused: `at` -1, strings "").
 
 | kind | uses |
 |---|---|
-| `product-add` | name, price (or "" when options carry prices), text (description), category (name, may be new), photo (f0…), value = options, one per line «nombre \| precio \| stock» |
+| `product-add` | name, price (or "" when options carry prices), stock, text (description), category (name, may be new), photo (f0…), value = options, one per line «nombre \| precio \| stock» |
 | `product-archive`, `product-restore` | at (`productos` / `archivados`) |
-| `product-stock` | at, value («5» / «sin límite») |
+| `product-stock` | at, stock («5» / «sin límite» / «agotado») |
 | `product-category` | at, category (name; "" = none) |
-| `option-add` | at, option (name), price, value (stock or "") |
+| `option-add` | at, option (name), price, stock ("" = sin límite) |
 | `option-remove` | at, option |
-| `option-price` / `option-stock` | at, option, price / value |
+| `option-price` / `option-stock` | at, option, price / stock |
 | `category-add` | name |
 | `category-rename` | at, name |
 | `category-remove` | at |
