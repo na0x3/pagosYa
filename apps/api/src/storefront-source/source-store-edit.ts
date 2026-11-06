@@ -134,7 +134,7 @@ La tienda también tiene datos propios en «tienda» (no son secciones de la por
 - popup: la ventana de suscripción. field on / off; title, text o button (sus textos); discount (value = el porcentaje, 5 a 50).
 - catalog: field title = el título de la página de todos los productos.
 - product: at = el número del producto; field name, price (value = el precio, «25,50»), description o photo (value = una foto de
-  «fotos», f0, f1…). Un producto con opciones no cambia de precio aquí.
+  «fotos», f0, f1…). Un producto con opciones no cambia de precio aquí: sus opciones cambian con option-price en «catalogo».
 Cambiar una foto de una sección: op photo en «ops» (at, item como en text; field photo o photo2; value = f0, f1…). «esta foto»
 o «la foto que te mando» = la primera foto con de "mensaje".
 Una página (Nosotros, Contacto, Envíos, Preguntas frecuentes, Políticas) se escribe con «store», nunca con una sección nueva de la

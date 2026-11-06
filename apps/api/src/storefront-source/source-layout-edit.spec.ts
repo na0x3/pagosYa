@@ -83,9 +83,9 @@ describe('layout edit', () => {
   });
 
   it('reads the answer and its rest', () => {
-    expect(readLayoutEdit({ ops: [op({ at: 1, field: 'title', value: 'Hola' }), { op: 'paint' }], rest: '  verde lima ' })).toEqual({ ops: [op({ at: 1, field: 'title', value: 'Hola' })], store: [], rest: 'verde lima' });
+    expect(readLayoutEdit({ ops: [op({ at: 1, field: 'title', value: 'Hola' }), { op: 'paint' }], rest: '  verde lima ' })).toEqual({ ops: [op({ at: 1, field: 'title', value: 'Hola' })], store: [], catalog: [], rest: 'verde lima' });
     expect(readLayoutEdit(null)).toBeNull();
-    expect(layoutEditSchema().required).toEqual(['ops', 'store', 'rest', 'ask']);
+    expect(layoutEditSchema().required).toEqual(['ops', 'store', 'catalogo', 'rest', 'ask']);
   });
 
   it('says what changed and what it would not do', () => {
@@ -240,8 +240,8 @@ describe('layout edit: menu pages, review fixes (2026-11-05)', () => {
 // Live 2026-11-05 (NOA «agrega una pregunta sobre arreglos de vestidos»): a question without its answer is never invented; YAPI
 // asks for the answer instead of «No logré que ese cambio se vea».
 it('reads the question YAPI asks back, and the schema always asks for one', () => {
-  expect(readLayoutEdit({ ops: [], store: [], rest: '', ask: '  ¿Qué respuesta le pongo a «¿Hacen arreglos?»?  ' })).toEqual({ ops: [], store: [], rest: '', ask: '¿Qué respuesta le pongo a «¿Hacen arreglos?»?' });
-  expect(readLayoutEdit({ ops: [], store: [], rest: '', ask: '' })).toEqual({ ops: [], store: [], rest: '' });
+  expect(readLayoutEdit({ ops: [], store: [], rest: '', ask: '  ¿Qué respuesta le pongo a «¿Hacen arreglos?»?  ' })).toEqual({ ops: [], store: [], catalog: [], rest: '', ask: '¿Qué respuesta le pongo a «¿Hacen arreglos?»?' });
+  expect(readLayoutEdit({ ops: [], store: [], rest: '', ask: '' })).toEqual({ ops: [], store: [], catalog: [], rest: '' });
   expect(layoutEditSchema().required).toContain('ask');
   expect(LAYOUT_EDIT_PROMPT + STORE_EDIT_PROMPT).toContain('«ask»');
 });
@@ -285,4 +285,12 @@ it('offers the page ops and the store pages in the schema, and keeps a page op n
   for (const word of ['"novias"', '"nueva"', 'page-add', 'page-remove', 'page-link', 'page-rename']) expect(schema).toContain(word);
   expect(readLayoutEdit({ ops: [op({ op: 'page-remove', page: 'novias' }), op({ op: 'add', type: 'cover-split', page: 'nueva' }), op({ page: '../x' })], store: [], rest: '' })!.ops.map(o => o.page))
     .toEqual(['novias', 'nueva', undefined]);
+});
+
+it('reads the catalog ops beside the section and store ops (spec 2026-11-05 creates anything part 2)', () => {
+  const read = readLayoutEdit({ ops: [], store: [], catalogo: [{ kind: 'code-add', at: -1, name: 'VERANO20', price: '', stock: '', text: '', category: '', photo: '', option: '', value: '20 %' }, { kind: 'hack' }], rest: '', ask: '' });
+  expect(read?.catalog).toEqual([expect.objectContaining({ kind: 'code-add', name: 'VERANO20', value: '20 %' })]);
+  expect(layoutEditSchema().properties.catalogo.items.required).toContain('kind');
+  expect(LAYOUT_EDIT_PROMPT).toContain('«catalogo»');
+  expect(STORE_EDIT_PROMPT).toContain('option-price');
 });

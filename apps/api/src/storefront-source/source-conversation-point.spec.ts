@@ -1,3 +1,4 @@
+import { CATALOG_EDIT_PROMPT } from './source-catalog-edit';
 import { SourceConversationService } from './source-conversation.service';
 
 /** Point YAPI at a part of the page (spec 2026-11-05 point-at): the quick edit call carries the focus and the circled picture. */
@@ -37,4 +38,11 @@ it('lists the pages YAPI made under their address, and their address and the dro
   const schema = JSON.stringify(body.text.format.schema);
   expect(schema).toContain('"novias"');
   expect(schema).toContain('"Colecciones"');
+});
+
+it('the quick edit call carries the catalog rules and asks for «catalogo» (spec 2026-11-05 creates anything part 2)', async () => {
+  await service().editLayout('m1', { storeId: 's1', layout: [{ type: 'cover-split', title: 'Hola' }] as never, request: 'agrega la Torta a Bs 120' });
+  const body = sent();
+  expect(body.instructions).toContain(CATALOG_EDIT_PROMPT);
+  expect(body.text.format.schema.required).toContain('catalogo');
 });

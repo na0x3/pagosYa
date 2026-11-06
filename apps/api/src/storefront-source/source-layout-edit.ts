@@ -1,6 +1,7 @@
 /* Template quick edits (spec docs/superpowers/specs/2026-11-01-template-quick-edits.md §1): a template store's home draws its
  * `layout` only, so a words, remove or move request changes those blocks. The model answers exact operations on the numbered
  * sections it was shown; this pure module turns them into a safe layout and the words of the reply. Photos are left alone. */
+import { catalogOpSchema, readCatalogOps, type CatalogOp } from './source-catalog-edit';
 import { LIBRARY_CATALOG, TEXT_CAPS, type LayoutBlock, type LibraryRole } from './source-section-library';
 import { photoRef, readStoreOps, storeOpSchema, type StoreEditPhoto, type StoreOp } from './source-store-edit';
 
@@ -34,7 +35,7 @@ export function menuPagesFor(pages: Record<MenuPage, LayoutBlock[]>, request: st
   return Object.keys(built).length ? { pages: built, offer: false } : null;
 }
 /** `ask`: a question back to the merchant when the change needs their words first (a FAQ answer, live 2026-11-05). */
-export type LayoutEditRead = { ops: LayoutOp[]; store: StoreOp[]; rest: string; ask?: string };
+export type LayoutEditRead = { ops: LayoutOp[]; store: StoreOp[]; catalog: CatalogOp[]; rest: string; ask?: string };
 /** Fix 3 (2026-11-02): a section the merchant asked for, from the library, before the section `to` showed (-1 = before the closing). */
 export type LayoutAdd = { type: string; to: number; about: string };
 export type LayoutDigestSection = { at: number; type: string; name: string; eyebrow?: string; title?: string; text?: string; cta?: string; cta2?: string; items?: Array<{ title: string; text?: string; foto?: true }>;
@@ -90,7 +91,8 @@ export function layoutDigest(layout: readonly LayoutBlock[]): LayoutDigestSectio
 export const LAYOUT_EDIT_PROMPT = `Eres YAPI y editas una tienda pagosYa hecha con una plantilla. La portada es la lista «secciones»
 (numeradas con at, de arriba abajo, con sus textos actuales; «fotos» dice qué fotos muestra); «nuevas» son las secciones ya
 diseñadas que se pueden agregar. El comercio pide un cambio. Respondes «ops» con los cambios exactos de las secciones, «store» con
-los de los datos de la tienda y «rest» con lo que estas operaciones no pueden hacer.
+los de los datos de la tienda, «catalogo» con los del catálogo (productos, categorías y códigos de descuento) y «rest» con lo que
+estas operaciones no pueden hacer.
 
 Operaciones de «ops» (todos los campos van siempre; los que no se usan: field "", item -1, value "", to -1, type "", page "home"):
 - text: cambia un texto de la sección at. field = eyebrow (línea pequeña sobre el título), title, text, cta (texto del botón) o cta2.
@@ -132,9 +134,9 @@ Reglas:
 - Una sección se reconoce por su título actual o por lo que muestra (preguntas, reseñas, productos, beneficios…).
 - Escribe en español natural, con la voz de la tienda, del largo de los textos que ya tiene.
 - rest: lo que el comercio pidió y no se hace con estas operaciones — colores, letras, el menú, cómo se ve una sección, una sección
-  que ninguna de «nuevas» puede mostrar, una página nueva, direcciones de locales, formas de pago, una foto que no mandó —, con sus
+  que ninguna de «nuevas» puede mostrar, una página nueva, direcciones de locales, formas de pago, una foto que no mandó; nunca productos, categorías ni códigos —, con sus
   propias palabras. "" si todo se hizo con ops y store.
-- Si nada del pedido se hace con ops ni con store: ops = [], store = [] y rest = el pedido entero.
+- Si nada del pedido se hace con ops, store ni catalogo: ops = [], store = [], catalogo = [] y rest = el pedido entero.
 «foco» (si viene) es lo que el comercio señaló en la vista previa: «pagina» (home, product, about, contact, faq, shipping), «secciones»
 (los números at de esa página), los «textos» y «fotos» dentro de la zona que marcó y «partes» (header, announcement, footer, menu).
 Palabras como esto, esta, este, aquí, acá, este título, esta foto se refieren al foco. Cambia solo las secciones del foco, salvo que el
@@ -146,19 +148,20 @@ export function layoutEditSchema(extraSlugs: readonly string[] = [], menuGroups:
   const op = { type: 'object', additionalProperties: false, required: ['op', 'at', 'field', 'item', 'value', 'to', 'type', 'page'], properties: {
     op: { type: 'string', enum: LAYOUT_OPS }, at: { type: 'integer' }, field: { type: 'string', enum: [...new Set([...FIELDS, 'photo', 'photo2', '', ...menuGroups])] },
     item: { type: 'integer' }, value: { type: 'string' }, to: { type: 'integer' }, type: { type: 'string', enum: [...PAGE_ADDABLE_IDS, ''] }, page: { type: 'string', enum: [...new Set(['home', 'product', ...MENU_PAGES, ...extraSlugs, 'nueva'])] } } };
-  return { type: 'object', additionalProperties: false, required: ['ops', 'store', 'rest', 'ask'], properties: { ops: { type: 'array', items: op }, store: { type: 'array', items: storeOpSchema() }, rest: { type: 'string' }, ask: { type: 'string' } } };
+  return { type: 'object', additionalProperties: false, required: ['ops', 'store', 'catalogo', 'rest', 'ask'], properties: { ops: { type: 'array', items: op },
+    store: { type: 'array', items: storeOpSchema() }, catalogo: { type: 'array', items: catalogOpSchema() }, rest: { type: 'string' }, ask: { type: 'string' } } };
 }
 
 /** The model's answer, checked: known operations only, and the rest trimmed. Null when there is no answer. */
 export function readLayoutEdit(answer: unknown): LayoutEditRead | null {
   if (!answer || typeof answer !== 'object') return null;
-  const raw = answer as { ops?: unknown; store?: unknown; rest?: unknown; ask?: unknown };
+  const raw = answer as { ops?: unknown; store?: unknown; catalogo?: unknown; rest?: unknown; ask?: unknown };
   const ops = (Array.isArray(raw.ops) ? raw.ops : []).filter((op): op is LayoutOp => Boolean(op) && LAYOUT_OPS.includes((op as LayoutOp).op)
     && Number.isInteger((op as LayoutOp).at))
     // The home is the default page; only the product page and the menu pages are marked.
     .map(op => { const { page, ...rest } = op; return page === 'product' || isMenuPage(page) || (typeof page === 'string' && page !== 'home' && PAGE_SLUG.test(page)) ? { ...rest, page } : rest; });
   const ask = String(raw.ask ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
-  return { ops, store: readStoreOps(raw.store), rest: String(raw.rest ?? '').replace(/\s+/g, ' ').trim(), ...(ask ? { ask } : {}) };
+  return { ops, store: readStoreOps(raw.store), catalog: readCatalogOps(raw.catalogo), rest: String(raw.rest ?? '').replace(/\s+/g, ' ').trim(), ...(ask ? { ask } : {}) };
 }
 
 /** The sections a request adds, checked: a known addable section the home does not have yet, at most two. The caller fills each
