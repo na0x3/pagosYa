@@ -215,6 +215,13 @@ describe('filter style on a master store', () => {
     expect(configOf(refillMasterFiles(asked, filtersManifest, { copy: { headline: 'Otra' } })).filterStyle).toBe('sidebar');
     expect(configOf(refillMasterFiles(asked, filtersManifest, { variants: { filters: 'bar' } as never })).filterStyle).toBe('bar');
   });
+  // Browse catalogue (spec 2026-11-06): the Nike shop page is one more filters choice, kept like the others.
+  it('the browse choice writes filterStyle browse, and a later refill keeps it', () => {
+    const withBrowse = { ...manifest, master: { ...master, variants: { filters: ['bar', 'chips', 'sidebar', 'browse'] } } } as unknown as TemplateManifest;
+    const files = refillMasterFiles(storeFiles(), withBrowse, { variants: { filters: 'browse' } as never });
+    expect(configOf(files).filterStyle).toBe('browse');
+    expect(configOf(refillMasterFiles(files, withBrowse, { copy: { headline: 'Otra' } })).filterStyle).toBe('browse');
+  });
   it('an older fashion store without a filters record gets the chip rows at its next refill', () => {
     const both = { ...manifest, master: { ...master, variants: { filters: ['bar', 'chips', 'sidebar'], cards: ['showcase', 'fashion'] } } } as unknown as TemplateManifest;
     expect(configOf(refillMasterFiles(storeFiles(), both, { variants: { cards: 'fashion' } as never })).filterStyle).toBe('chips');

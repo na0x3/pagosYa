@@ -90,6 +90,18 @@ describe('store edit (YAPI edits everything, spec 2026-11-03)', () => {
     expect(refused).toHaveLength(2);
   });
 
+  // Browse catalogue (spec 2026-11-06): «ponlo como Nike» changes the catalogue's style in the quick edit, never the slow edit.
+  it('changes the catalogue style, saying when it already is that one', () => {
+    const { change, done, refused } = applyStoreOps(state({ filterStyle: 'bar' }), [op('catalog', 'filters', 'browse')]);
+    expect(change.filterStyle).toBe('browse');
+    expect(done[0]).toContain('filtros a la izquierda');
+    expect(refused).toEqual([]);
+    expect(storeChangeEmpty(change)).toBe(false);
+    expect(applyStoreOps(state({ filterStyle: 'browse' }), [op('catalog', 'filters', 'browse')]).done[0]).toContain('ya');
+    expect(applyStoreOps(state(), [op('catalog', 'filters', 'raro')]).change.filterStyle).toBeUndefined();
+    expect(storeDigest(state({ filterStyle: 'chips' }), [])).toHaveProperty('filtros', 'chips');
+  });
+
   it('changes the catalogue title in its file only', () => {
     const files = [{ path: 'components/page-productos.tsx', content: '<main>\n      <h1 className="es-catalog-page__title">Todos los productos</h1>\n</main>' }];
     expect(readCatalogTitle(files)).toBe('Todos los productos');

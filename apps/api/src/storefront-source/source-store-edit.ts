@@ -7,11 +7,12 @@ import { policyTextProblem } from './source-agent-policies';
 import { SAFE_TEXT_PATTERN } from '../common/validation/safe-text.decorator';
 import { STORE_FAQ_LIMITS, STORE_POLICY_KEYS, type StoreFaqEntry, type StorePolicies } from '../stores/store-presentation';
 import type { ProductVariant } from '../payment-links/product-variants';
+import { isFilterStyle, type FilterStyle } from './source-filter-style';
 
 export const STORE_PARTS = ['about', 'contact', 'policy', 'faq', 'announcement', 'footer', 'social', 'popup', 'catalog', 'product'] as const;
 export type StorePart = typeof STORE_PARTS[number];
 export const STORE_FIELDS = ['tagline', 'text', 'phone', 'email', ...STORE_POLICY_KEYS, 'add', 'set', 'remove', 'instagram', 'tiktok', 'facebook', 'youtube', 'x',
-  'on', 'off', 'title', 'button', 'discount', 'name', 'price', 'description', 'photo'] as const;
+  'on', 'off', 'title', 'button', 'discount', 'name', 'price', 'description', 'photo', 'filters'] as const;
 export type StoreOp = { part: StorePart; field: string; at: number; title: string; value: string };
 
 export type StoreEditProduct = { id: string; name: string; amount: number; description: string; imageUrls: string[]; options: boolean;
@@ -28,6 +29,8 @@ export type StoreEditState = {
   popup: { on: boolean; title: string; text: string; button: string; discount: number };
   /** The catalogue page's title, or null when the store has no such page to edit. */
   catalogTitle: string | null;
+  /** Browse catalogue (spec 2026-11-06): the catalogue's filter style (config.js filterStyle), when it has one. */
+  filterStyle?: string;
   products: StoreEditProduct[];
   /** Part 2: archived products (to bring back), the categories in their order and the discount codes, active first. */
   archived?: Array<{ id: string; name: string }>;
@@ -48,9 +51,12 @@ export type StoreChange = {
   links?: Array<{ label: string; url: string }>;
   popup?: { signupEnabled?: boolean; signupTitle?: string; signupBody?: string; signupButton?: string; discount?: number };
   catalogTitle?: string;
+  filterStyle?: FilterStyle;
   products: Array<{ id: string; name?: string; amount?: number; description?: string; imageUrls?: string[] }>;
 };
 
+const FILTER_STYLE_WORDS: Record<FilterStyle, string> = { bar: 'los filtros en una barra arriba', chips: 'los filtros como botones',
+  sidebar: 'los filtros en una columna a la izquierda', browse: 'filtros a la izquierda que se pueden ocultar y las fotos de cada color en los productos, como Nike' };
 export const STORE_CAPS = { tagline: 160, aboutText: 4000, announcement: 120, footer: 160, catalogTitle: 60, productName: 120, productDescription: 500,
   popupTitle: 100, popupText: 500, popupButton: 60 } as const;
 const POLICY_NAME: Record<string, string> = { delivery: 'Envíos y entregas', returns: 'Cambios y devoluciones', privacy: 'Privacidad', terms: 'Términos y condiciones' };
@@ -105,6 +111,7 @@ export function storeDigest(state: StoreEditState, photos: readonly StoreEditPho
     redes: state.links.map(link => ({ red: link.label, url: link.url })),
     popup: { encendido: state.popup.on, titulo: state.popup.title, texto: state.popup.text, boton: state.popup.button, ...(state.popup.discount ? { descuento: state.popup.discount } : {}) },
     ...(state.catalogTitle !== null ? { catalogo: state.catalogTitle } : {}),
+    ...(state.filterStyle ? { filtros: state.filterStyle } : {}),
     productos: state.products.slice(0, 40).map((product, at) => ({ at, nombre: product.name, precio: bs(product.amount), descripcion: short(product.description, 160),
       ...(product.stock !== undefined ? { stock: product.stock === null ? 'sin límite' : product.stock } : {}),
       ...(product.categoryId ? { categoria: state.categories?.find(category => category.id === product.categoryId)?.name ?? '' } : {}),
@@ -135,7 +142,9 @@ La tienda también tiene datos propios en «tienda» (no son secciones de la por
 - footer: field tagline = la frase del pie de página.
 - social: field instagram, tiktok, facebook, youtube o x; value = el usuario (@marca) o el enlace; "" lo quita.
 - popup: la ventana de suscripción. field on / off; title, text o button (sus textos); discount (value = el porcentaje, 5 a 50).
-- catalog: field title = el título de la página de todos los productos.
+- catalog: field title = el título de la página de todos los productos. field filters = cómo se filtra el catálogo («filtros»):
+  bar (botón de filtrar y barra arriba), chips (filtros como botones), sidebar (columna de filtros a la izquierda) o browse (la
+  tienda grande, «como Nike»: columna de filtros, «Ocultar filtros», «Recoger hoy» y las fotos de cada color en los productos).
 - product: at = el número del producto; field name, price (value = el precio, «25,50»), description o photo (value = una foto de
   «fotos», f0, f1…). Un producto con opciones no cambia de precio aquí: sus opciones cambian con option-price en «catalogo».
 Cambiar una foto de una sección: op photo en «ops» (at, item como en text; field photo o photo2; value = f0, f1…). «esta foto»
@@ -309,6 +318,14 @@ export function applyStoreOps(state: StoreEditState, ops: readonly StoreOp[], ph
         break;
       }
       case 'catalog': {
+        if (op.field === 'filters') {
+          const style = op.value.trim().toLowerCase();
+          if (!isFilterStyle(style)) break;
+          if (style === state.filterStyle) { done.push(`tu catálogo ya tiene ${FILTER_STYLE_WORDS[style]}`); break; }
+          change.filterStyle = style;
+          done.push(`tu catálogo ahora tiene ${FILTER_STYLE_WORDS[style]}`);
+          break;
+        }
         if (op.field !== 'title') break;
         if (state.catalogTitle === null) { refused.push('Tu tienda no tiene una página de catálogo con título para cambiar.'); break; }
         const value = oneLine(op.value, STORE_CAPS.catalogTitle).replace(/[{}<>]/g, '').trim();
@@ -354,7 +371,7 @@ export function applyStoreOps(state: StoreEditState, ops: readonly StoreOp[], ph
 }
 
 /** Whether the change writes anything. */
-export const storeChangeEmpty = (change: StoreChange) => !change.store && !change.policies && !change.copy && !change.links && !change.popup && change.catalogTitle === undefined && !change.products.length;
+export const storeChangeEmpty = (change: StoreChange) => !change.store && !change.policies && !change.copy && !change.links && !change.popup && change.catalogTitle === undefined && change.filterStyle === undefined && !change.products.length;
 
 const CATALOG_TITLE = /(<h1 className="es-catalog-page__title">)([^<{}]*)(<\/h1>)/;
 const CATALOG_FILE = 'components/page-productos.tsx';

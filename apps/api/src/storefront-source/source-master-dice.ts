@@ -60,7 +60,9 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
   /** The merchant's own words asked for a gallery or collage (merchantAsksForPhotoGroup); otherwise the cover has one photo at most. */
   photoGroups?: boolean;
   /** John Smedley sections (spec 2026-10-21): the sections this store can have; without it the roll is left to the page assembly. */
-  featureEligible?: string[] }): { variants: MasterVariants; palette: string; fonts: string } {
+  featureEligible?: string[];
+  /** Browse catalogue (spec 2026-11-06): some product carries a photo per colour (carriesColourPhotos). */
+  colourPhotos?: boolean }): { variants: MasterVariants; palette: string; fonts: string } {
   const catalogue = (input.settings.variants ?? {}) as Record<string, readonly string[]>;
   // The fill call's exclusions are honoured for at most half of a part: a model that rules out nearly everything would
   // otherwise make every store the same (live check 2026-10-19: the feature grid on 4 of 6 stores).
@@ -102,9 +104,12 @@ export function rollVariants(input: { seed: string; settings: MasterSettings; ch
     if (catalogue.feature?.length && input.featureEligible) {
       variants.feature = rollFeatures({ seed: input.seed, eligible: input.featureEligible.filter(id => catalogue.feature.includes(id)), fashion: input.character.kind === 'fashion', exclude: input.character.exclude }).join(',');
     }
+    // Browse catalogue (spec 2026-11-06): products with a photo per colour get the Nike shop page; no other store rolls it.
     if (catalogue.filters?.length) {
-      variants.filters = input.character.kind === 'fashion' && (input.categoryCount ?? 0) >= 2 && catalogue.filters.includes('chips') ? 'chips'
-        : pick(rng(`${input.seed}#filters`), allowed('filters'));
+      const rolled = allowed('filters').filter(id => id !== 'browse');
+      variants.filters = input.colourPhotos && catalogue.filters.includes('browse') ? 'browse'
+        : input.character.kind === 'fashion' && (input.categoryCount ?? 0) >= 2 && catalogue.filters.includes('chips') ? 'chips'
+        : pick(rng(`${input.seed}#filters`), rolled.length ? rolled : ['bar']);
     }
     last = { variants: { ...variants, sections } as MasterVariants, palette: pick(next, palettePool), fonts: pick(next, fonts) };
     if (!taken.has(`${last.variants.hero}|${last.palette}|${last.fonts}`)) return last;

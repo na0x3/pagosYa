@@ -19,6 +19,7 @@ import { plantillaFallback, plantillaFillFromRead } from './source-plantilla-fil
 import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, accentInk, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
 import { titleColours } from './source-title-style';
 import { distinctPhotoCount, esencialDiceSettings, FASHION_PARTS, menuVariant, rollStarterDice, rollVariants, type RecentRoll } from './source-master-dice';
+import { carriesColourPhotos } from './source-filter-style';
 import { palettesForPhoto, photoTone } from './source-starter-palette';
 import { DEFAULT_RETENTION } from '../retention/retention.dto';
 
@@ -170,7 +171,8 @@ export class SourceTemplatesService {
       // Counted before bundling: a bundled hero is an asset path and would count its product photo twice (review fix).
       const photoCount = distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]);
       const rolled = rollVariants({ seed: storeId, settings: esencialDiceSettings(manifest.master), character: fill?.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] },
-        photoCount, sections: (fill?.sections ?? []).map(section => section.id), recent: await this.recentMasterRolls(storeId), categoryCount: facts.categoryCount });
+        photoCount, sections: (fill?.sections ?? []).map(section => section.id), recent: await this.recentMasterRolls(storeId), categoryCount: facts.categoryCount,
+        colourPhotos: carriesColourPhotos(publicStore.items) });
       variants = rolled.variants;
       // Dropdown menu spec 2026-10-21: the fill picks panel or dropdowns; the roll decides whether a non-fashion store has one.
       if (variants.menu !== undefined) variants.menu = menuVariant(variants.menu, fill?.menu?.style, fill?.character?.kind === 'fashion')!;

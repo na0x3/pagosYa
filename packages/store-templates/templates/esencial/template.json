@@ -764,7 +764,8 @@
       "filters": [
         "bar",
         "chips",
-        "sidebar"
+        "sidebar",
+        "browse"
       ],
       "feature": [
         "duo",

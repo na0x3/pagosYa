@@ -4,12 +4,28 @@
 import { createHash } from 'node:crypto';
 import { patchConfigFile, readConfigFile } from './store-look';
 
-export const FILTER_STYLES = ['bar', 'chips', 'sidebar'] as const;
+export const FILTER_STYLES = ['bar', 'chips', 'sidebar', 'browse'] as const;
 export type FilterStyle = typeof FILTER_STYLES[number];
 export const isFilterStyle = (value: unknown): value is FilterStyle => (FILTER_STYLES as readonly unknown[]).includes(value);
+/** Browse (spec 2026-11-06, the Nike shop page) is asked for or picked for colour photos, never seeded: a store keeps its seed. */
+export const SEEDED_FILTER_STYLES = ['bar', 'chips', 'sidebar'] as const;
 
 export function seededFilterStyle(storeId: string): FilterStyle {
-  return FILTER_STYLES[createHash('sha256').update(`filters:${storeId}`).digest().readUInt32BE(0) % FILTER_STYLES.length];
+  return SEEDED_FILTER_STYLES[createHash('sha256').update(`filters:${storeId}`).digest().readUInt32BE(0) % SEEDED_FILTER_STYLES.length];
+}
+
+type ColourVariant = { name?: unknown; imageUrl?: unknown; imageUrls?: unknown };
+/** Whether a product shows a colour strip in a browse catalogue (the kit's cardSwatches): two named options or more, each first
+ *  photo its own. */
+export function carriesColourPhotos(items: ReadonlyArray<{ variants?: unknown }>): boolean {
+  return items.some(item => {
+    const photos = new Set<string>();
+    for (const variant of (Array.isArray(item.variants) ? item.variants : []) as ColourVariant[]) {
+      const first = Array.isArray(variant?.imageUrls) && typeof variant.imageUrls[0] === 'string' ? variant.imageUrls[0] : variant?.imageUrl;
+      if (typeof first === 'string' && first && typeof variant.name === 'string' && variant.name.trim()) photos.add(first);
+    }
+    return photos.size > 1;
+  });
 }
 
 const FILTERS = /(?<!\p{L})filtros?(?!\p{L})/iu;
@@ -20,8 +36,12 @@ const STYLE_WORDS: Array<[FilterStyle, RegExp]> = [
   ['chips', /(?<!\p{L})(chips?|pastillas?|como botones|en botones)(?!\p{L})/iu],
   ['bar', /(?<!\p{L})(barra(?! lateral)|arriba del todo|en una fila|bot[oó]n de filtrar|caj[oó]n)(?!\p{L})/iu],
 ];
+// Browse: the catalogue «como Nike» / «tipo tienda grande», or filters with a photo per colour — never a brand the store sells.
+const BROWSE_LIKE = /(?<!\p{L})(como|estilo|tipo|igual que|parecid[oa] a)( (en|a|el de|la de))? (nike|adidas|zara|(una )?tienda grande)(?!\p{L})/iu;
+const BROWSE_PHOTOS = /(?<!\p{L})filtros?(?!\p{L}).{0,60}fotos? (por|de cada) colou?r/iu;
 /** The merchant's words name a filter style for the filters (in the same clause, «filtros» right before or after), or say nothing of one. */
 export function instructionAsksFilterStyle(text: string): FilterStyle | undefined {
+  if (BROWSE_LIKE.test(text) || BROWSE_PHOTOS.test(text)) return 'browse';
   for (const clause of text.split(/[,.;:!?\n]| y | e | pero /i)) {
     const at = clause.search(FILTERS);
     if (at < 0) continue;

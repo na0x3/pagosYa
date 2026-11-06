@@ -161,12 +161,22 @@ describe('menu part', () => {
 
 /** Spec 2026-10-21 sort & filter styles: the filters part. */
 describe('filters part', () => {
-  it('the catalogue has the filters part', () => expect(settings.variants?.filters).toEqual(['bar', 'chips', 'sidebar']));
+  it('the catalogue has the filters part', () => expect(settings.variants?.filters).toEqual(['bar', 'chips', 'sidebar', 'browse']));
+  // Browse catalogue (spec 2026-11-06): a store whose products carry a photo per colour gets the Nike shop page; no other store
+  // rolls it, and the roll of every other part stays as it was.
+  it('a store with colour photos gets browse, fashion or not; the others never roll it', () => {
+    for (const seed of 'abcd') expect(roll(seed, { categoryCount: 1, colourPhotos: true }).variants.filters).toBe('browse');
+    expect(roll('a', { categoryCount: 2, colourPhotos: true, character: { ...calm, kind: 'fashion' } }).variants.filters).toBe('browse');
+    const { filters: _b, ...withPhotos } = roll('x', { categoryCount: 3, colourPhotos: true }).variants;
+    const { filters: _r, ...without } = roll('x', { categoryCount: 3 }).variants;
+    expect(withPhotos).toEqual(without);
+  });
   it('fashion stores with 2+ categories get chips', () => {
     for (const seed of 'abcdefgh') expect(roll(seed, { categoryCount: 2, character: { ...calm, kind: 'fashion' } }).variants.filters).toBe('chips');
   });
   it('other stores roll every style across seeds, from their own seed', () => {
     expect(new Set(Array.from({ length: 40 }, (_, i) => roll(`s${i}`, { categoryCount: 3 }).variants.filters))).toEqual(new Set(['bar', 'chips', 'sidebar']));
+    expect(Array.from({ length: 40 }, (_, i) => roll(`s${i}`, { categoryCount: 3 }).variants.filters)).not.toContain('browse');
     const { filters: _f, ...variants } = settings.variants as Record<string, readonly string[]>;
     const before = rollVariants({ seed: 'x', settings: { ...settings, variants } as typeof settings, character: calm, photoCount: 6, sections: [], recent: [], categoryCount: 3 });
     const { filters: _rolled, ...rest } = roll('x', { categoryCount: 3 }).variants;

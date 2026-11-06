@@ -35,7 +35,10 @@ it('the catalog switches features on and says why', () => {
   const rich: CatalogFacts = { ...facts, productCount: 14, categorySizes: [5, 4, 5], colourProducts: 6, colourPhotoProducts: 4, sizeProducts: 3 };
   const out = checkPlan({ ...base, brands: ['Bloom', 'MAGNUS', 'Best Behavior', 'Inventada'] }, rich, rolled);
   expect(out.dna.card).toBe('swatch-swap');
-  expect(out.variants.filters).toBe('sidebar');
+  // Browse catalogue (spec 2026-11-06): photos per colour win over the sidebar of a big catalogue.
+  expect(out.variants.filters).toBe('browse');
+  expect(checkPlan(base, { ...rich, colourPhotoProducts: 0 }, rolled).variants.filters).toBe('sidebar');
+  expect(checkPlan(base, { ...facts, colourProducts: 1, colourPhotoProducts: 1 }, { ...rolled, filters: 'chips' }).variants.filters).toBe('browse');
   expect(out.variants.menu).toBe('dropdowns');
   expect(out.sections).toContain('sizes');
   expect(out.plan.brands).toEqual(['Bloom', 'MAGNUS', 'Best Behavior']);

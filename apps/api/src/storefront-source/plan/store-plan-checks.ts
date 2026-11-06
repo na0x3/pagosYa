@@ -34,6 +34,8 @@ export function enforceRules(input: Record<string, string>, facts: CatalogFacts)
   if (variants.story === 'pair' && facts.photoCount < 2) variants.story = facts.photoCount ? 'split' : 'quote';
   if (variants.filters === 'sidebar' && facts.productCount < 12) variants.filters = 'bar';
   if (facts.productCount >= 12) variants.filters = 'sidebar';
+  // Browse catalogue (spec 2026-11-06): products with a photo per colour get the Nike shop page, whatever their number.
+  if (facts.colourPhotoProducts > 0) variants.filters = 'browse';
   const browsable = facts.categorySizes.filter(size => size >= 3).length;
   variants.menu = browsable >= 2 ? 'dropdowns' : variants.menu === 'panel' && facts.categorySizes.length >= 2 ? 'panel' : 'none';
   return variants;

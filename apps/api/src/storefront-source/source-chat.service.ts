@@ -1291,8 +1291,8 @@ export class SourceChatService {
       store: read.store.map(op => `${op.part}.${op.field}${op.at >= 0 ? `[${op.at}]` : ''}`), catalog: (read.catalog ?? []).map(op => `${op.kind}${op.at >= 0 ? `[${op.at}]` : ''}`), added: homeAdds.added.map(entry => entry.block.type), changed, productChanged, menuChanged: menuChanged.map(entry => `${entry.page}:${entry.layout.map(block => block.type).join(',')}`), refused: refused.length, rest: read.rest.slice(0, 200),
       extraPages: extra.map(page => page.slug), focus: focus ? { pagina: focus.pagina, secciones: focus.secciones, partes: focus.partes, mirando: Boolean(focus.mirando) } : null, outsideFocus: outsideFocus(ops, focus) }));
     // The store's data first: a refused write (a check the database makes) is said, never «Listo».
-    // The announcement, the footer line and the catalogue title are files; everything else the store edit changes is data.
-    const { copy: _copy, catalogTitle: _title, ...data } = store.change;
+    // The announcement, the footer line, the catalogue title and its filter style are files; everything else the store edit changes is data.
+    const { copy: _copy, catalogTitle: _title, filterStyle: _filters, ...data } = store.change;
     let dataChanged = false;
     const catalogWrite = !catalogChangeEmpty(catalog.change);
     const dataEmpty = storeChangeEmpty({ ...data, products: data.products });
@@ -1323,7 +1323,9 @@ export class SourceChatService {
       from: editState?.categories?.find(category => category.id === entry.id)?.name ?? '' })).filter(entry => entry.from) : [];
     const filesChange: MasterFill = { ...(JSON.stringify(homeNow) !== JSON.stringify(layout) ? { layout: homeNow } : {}),
       ...(JSON.stringify(productNow) !== JSON.stringify(productLayout) ? { productLayout: productNow } : {}), ...(store.change.copy ? { copy: store.change.copy } : {}),
-      ...(pagesNowChanged ? { pageLayouts: pagesNow } : {}), ...(extraNowChanged ? { extraPages: extraNow } : {}) };
+      ...(pagesNowChanged ? { pageLayouts: pagesNow } : {}), ...(extraNowChanged ? { extraPages: extraNow } : {}),
+      // Browse catalogue (spec 2026-11-06): the catalogue's style is the store's filters variant, written to config.js by the refill.
+      ...(store.change.filterStyle ? { variants: { filters: store.change.filterStyle } } : {}) };
     // Final review 2026-11-06: a question, or catalog ops that changed nothing, is answered here — never the slow design edit.
     if (!done.length && !refused.length && !read.ask && !(read.catalog ?? []).length) { trace('handed-on'); return null; }
     trace('replied', { done: done.length, refused: refused.length });
@@ -1352,7 +1354,7 @@ export class SourceChatService {
         ? { files: <T extends { path: string; content: string }>(list: T[]) => withoutRemovedCategories(withExtra(withSectionedPages(title !== undefined ? withCatalogTitle(list, title) : list, sectioned))) } : {};
       // Spec §6: data already saved stays saved when the preview fails to build; the merchant is told, never a bare error.
       try {
-        saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraNowChanged || store.change.copy || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
+        saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraNowChanged || store.change.copy || store.change.filterStyle || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
           { refreshData: true, ...pageFiles });
       } catch (error) {
         if (!dataChanged) throw error;
@@ -1407,6 +1409,7 @@ export class SourceChatService {
       popup: { on: Boolean(settings.signupEnabled), title: String(settings.signupTitle ?? ''), text: String(settings.signupBody ?? ''), button: String(settings.signupButton ?? ''),
         discount: code?.discountType === 'PERCENT' ? Number(code.discountValue) : 0 },
       catalogTitle: readCatalogTitle(files),
+      ...(typeof readConfigFile(files).filterStyle === 'string' ? { filterStyle: String(readConfigFile(files).filterStyle) } : {}),
       products: items.map(item => {
         const saved = row.get(item.id);
         return { id: item.id, name: item.name, amount: Number(item.amount) || 0, description: item.description ?? '', imageUrls: (item.imageUrls ?? []).map(url => uploadOnly(url) ?? url),

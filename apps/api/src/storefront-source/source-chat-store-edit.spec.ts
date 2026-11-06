@@ -138,6 +138,17 @@ it('swaps the cover photo, edits the ficha and the announcement in the files, an
   expect(out.assistantMessage.content).toContain('ficha de producto');
 });
 
+// Browse catalogue (spec 2026-11-06): «ponlo como Nike» is the filters variant, saved in the quick edit with no database write.
+it('changes the catalogue to the Nike shop page as the filters variant', async () => {
+  editLayout.mockResolvedValue(read({ store: [{ part: 'catalog', field: 'filters', at: -1, title: '', value: 'browse' }] }));
+  const out = await edit('pon el catálogo como Nike');
+  const [, , , change, label] = refill.mock.calls[0];
+  expect(change.variants).toEqual({ filters: 'browse' });
+  expect(label).toBe('Cambios de YAPI');
+  expect(prisma.$transaction).not.toHaveBeenCalled();
+  expect(out.assistantMessage.content).toContain('como Nike');
+});
+
 it('a refused change is said, and nothing is saved', async () => {
   editLayout.mockResolvedValue(read({ store: [{ part: 'contact', field: 'phone', at: -1, title: '', value: 'llámame' }] }));
   const out = await edit('cambia el teléfono a llámame');
