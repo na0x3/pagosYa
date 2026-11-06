@@ -69,7 +69,7 @@ import { readMasterState, readPlantillaCopy } from './source-templates';
 import { readMoodAsk } from './source-mood-ask';
 import { nextTitleStyle, readTitleAsk } from './source-title-style';
 import { buildLibraryFacts, carriedSections, libraryDropReason, libraryMood, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, type LayoutBlock } from './source-section-library';
-import { applyCatalogOps, catalogChangeEmpty, emptyCatalogChange, relinkCategories, withoutCategoryMenuLinks, type CatalogChange } from './source-catalog-edit';
+import { applyCatalogOps, catalogChangeEmpty, emptyCatalogChange, relinkCategories, withCategoryMenuRenames, withoutCategoryMenuLinks, type CatalogChange } from './source-catalog-edit';
 import { writeCatalogChange } from './source-catalog-write';
 import type { ProductVariant } from '../payment-links/product-variants';
 import { applyStoreOps, readCatalogTitle, storeChangeEmpty, withCatalogTitle, type StoreChange, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
@@ -1276,6 +1276,9 @@ export class SourceChatService {
     const extraNow = extra.map(page => ({ ...page, layout: relink(page.layout) }));
     const extraNowChanged = JSON.stringify(extraNow) !== JSON.stringify(extraPages);
     const removedCategoryIds = links.remove.map(entry => entry.id);
+    // Live NOA 2026-11-06: the menu's words for a renamed category follow it (its links go by id and keep working on their own).
+    const menuRenames = dataChanged && catalogWrite ? catalog.change.categories.rename.map(entry => ({ id: entry.id, to: entry.name,
+      from: editState?.categories?.find(category => category.id === entry.id)?.name ?? '' })).filter(entry => entry.from) : [];
     const filesChange: MasterFill = { ...(JSON.stringify(homeNow) !== JSON.stringify(layout) ? { layout: homeNow } : {}),
       ...(JSON.stringify(productNow) !== JSON.stringify(productLayout) ? { productLayout: productNow } : {}), ...(store.change.copy ? { copy: store.change.copy } : {}),
       ...(pagesNowChanged ? { pageLayouts: pagesNow } : {}), ...(extraNowChanged ? { extraPages: extraNow } : {}) };
@@ -1297,12 +1300,12 @@ export class SourceChatService {
         return withStoreMenuConfig(withExtraPages(list, extraNow), list, linked.menu);
       };
       const withoutRemovedCategories = <T extends { path: string; content: string }>(list: T[]): T[] => {
-        if (!removedCategoryIds.length) return list;
+        if (!removedCategoryIds.length && !menuRenames.length) return list;
         const before = readStoreMenu(list);
-        const after = withoutCategoryMenuLinks(before, removedCategoryIds);
+        const after = withCategoryMenuRenames(withoutCategoryMenuLinks(before, removedCategoryIds), menuRenames);
         return after && after !== before ? withStoreMenuConfig(list, list, after) : list;
       };
-      const pageFiles = title !== undefined || sectioned.length || extraNowChanged || removedCategoryIds.length
+      const pageFiles = title !== undefined || sectioned.length || extraNowChanged || removedCategoryIds.length || menuRenames.length
         ? { files: <T extends { path: string; content: string }>(list: T[]) => withoutRemovedCategories(withExtra(withSectionedPages(title !== undefined ? withCatalogTitle(list, title) : list, sectioned))) } : {};
       // Spec §6: data already saved stays saved when the preview fails to build; the merchant is told, never a bare error.
       try {

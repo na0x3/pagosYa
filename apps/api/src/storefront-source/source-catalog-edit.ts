@@ -430,3 +430,22 @@ export function withoutCategoryMenuLinks(menu: StoreMenu | undefined, ids: reado
   }).filter(group => group.links.length || group.tiles?.length);
   return { ...menu, groups };
 }
+
+/** Live NOA 2026-11-06: menu words that said a renamed category's old name (a group, a link, a tile pointing at `category:<id>`)
+ *  say its new one; words the merchant chose («Vestidos de novia») stay. The same object when nothing follows. */
+export function withCategoryMenuRenames(menu: StoreMenu | undefined, renames: ReadonlyArray<{ id: string; from: string; to: string }>): StoreMenu | undefined {
+  if (!menu?.groups?.length || !renames.length) return menu;
+  const byTarget = new Map(renames.map(entry => [`category:${entry.id}`, entry]));
+  const follow = (words: string | undefined, to: string) => { const entry = byTarget.get(to); return entry && words !== undefined && fold(words) === fold(entry.from) ? entry.to : words; };
+  let changed = false;
+  const groups = menu.groups.map(group => {
+    const targets = [...group.links.map(link => link.to), ...(group.tiles ?? []).map(tile => tile.to)].filter(to => byTarget.has(to));
+    const label = targets.reduce<string>((words, to) => follow(words, to) ?? words, group.label);
+    const links = group.links.map(link => ({ ...link, ...(link.label !== undefined ? { label: follow(link.label, link.to) } : {}) }));
+    const tiles = group.tiles?.map(tile => ({ ...tile, title: follow(tile.title, tile.to) ?? tile.title }));
+    const next = { ...group, label, links, ...(tiles ? { tiles } : {}) };
+    if (JSON.stringify(next) !== JSON.stringify(group)) changed = true;
+    return next;
+  });
+  return changed ? { ...menu, groups } : menu;
+}

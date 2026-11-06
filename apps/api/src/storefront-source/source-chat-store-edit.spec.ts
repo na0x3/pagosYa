@@ -324,6 +324,14 @@ describe('the catalog through the quick edit (spec 2026-11-05 creates anything p
     expect(readStoreMenu(refill.mock.calls[0][5].files([config]))?.groups?.map((group: { label: string }) => group.label)).toEqual(['Info']);
   });
 
+  it('a renamed category\'s menu entry says its new name (live NOA 2026-11-06)', async () => {
+    editLayout.mockResolvedValue(read({ catalog: [cat({ kind: 'category-rename', at: 0, name: 'Gelatos' })] }));
+    await editOn(linked, 'renombra Helados a Gelatos');
+    const config = { path: 'config.js', content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ header: { menu: { style: 'panel', groups: [
+      { label: 'Helados', links: [{ label: 'Helados', to: 'category:c1' }] }] } } })};` };
+    expect(readStoreMenu(refill.mock.calls[0][5].files([config]))?.groups?.[0]).toMatchObject({ label: 'Gelatos', links: [{ label: 'Gelatos', to: 'category:c1' }] });
+  });
+
   it('a failed catalog write is said honestly, and no link is rewritten', async () => {
     prisma.$transaction = jest.fn().mockRejectedValue(new Error('db down'));
     editLayout.mockResolvedValue(read({ catalog: [cat({ kind: 'category-rename', at: 0, name: 'Gelatos' })] }));

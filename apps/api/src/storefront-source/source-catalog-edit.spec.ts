@@ -1,4 +1,4 @@
-import { CATALOG_EDIT_PROMPT, applyCatalogOps, catalogChangeEmpty, catalogOpSchema, discountValue, readCatalogOps, relinkCategories, stockValue, withoutCategoryMenuLinks, type CatalogOp } from './source-catalog-edit';
+import { CATALOG_EDIT_PROMPT, applyCatalogOps, catalogChangeEmpty, catalogOpSchema, discountValue, readCatalogOps, relinkCategories, stockValue, withCategoryMenuRenames, withoutCategoryMenuLinks, type CatalogOp } from './source-catalog-edit';
 import type { LayoutBlock } from './source-section-library';
 import type { StoreMenu } from './source-store-menu';
 import type { StoreEditState } from './source-store-edit';
@@ -297,4 +297,14 @@ describe('option groups — colour and size from chat (owner 2026-11-06)', () =>
   it('the prompt shows how to write a colour group and a colour × size combination', () => {
     expect(CATALOG_EDIT_PROMPT).toContain('Color: Rojo / Talla: S | 90 | 3');
   });
+});
+
+it('a renamed category takes its menu words along, only where they said its old name (live NOA 2026-11-06)', () => {
+  const menu: StoreMenu = { style: 'panel', groups: [
+    { label: 'Novias', links: [{ label: 'Novias', to: 'category:c1' }], tilesTitle: 'Vestidos de novia', tiles: [{ title: 'Novias', image: 'https://x.test/n.jpg', to: 'category:c1' }, { title: 'Vestidos de novia', image: 'https://x.test/v.jpg', to: 'category:c1' }] },
+    { label: 'Info', links: [{ label: 'Novias', to: 'page:about' }] }] };
+  expect(withCategoryMenuRenames(menu, [{ id: 'c1', from: 'Novias', to: 'Bridal' }])).toEqual({ style: 'panel', groups: [
+    { label: 'Bridal', links: [{ label: 'Bridal', to: 'category:c1' }], tilesTitle: 'Vestidos de novia', tiles: [{ title: 'Bridal', image: 'https://x.test/n.jpg', to: 'category:c1' }, { title: 'Vestidos de novia', image: 'https://x.test/v.jpg', to: 'category:c1' }] },
+    { label: 'Info', links: [{ label: 'Novias', to: 'page:about' }] }] });
+  expect(withCategoryMenuRenames(menu, [])).toBe(menu);
 });
