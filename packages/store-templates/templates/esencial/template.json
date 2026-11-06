@@ -858,6 +858,31 @@
       "utility": [
         "off",
         "pages"
+      ],
+      "goods": [
+        "bag",
+        "gem",
+        "watch",
+        "sofa",
+        "lamp",
+        "flask",
+        "sparkles",
+        "flame",
+        "beef",
+        "icecream",
+        "coffee",
+        "croissant",
+        "cake",
+        "cookie",
+        "wine",
+        "shirt",
+        "paw",
+        "book",
+        "flower",
+        "sprout",
+        "dumbbell",
+        "droplet",
+        "baby"
       ]
     },
     "sections": [

@@ -38,7 +38,7 @@ export const MULTI_PHOTO_HERO = new Set(['collage', 'strip']);
 
 /** Fashion look spec 2026-10-21: the fashion card and product page belong to fashion stores only, and fashion stores always get them. */
 /** Parts the dice never roll: chosen from the merchant's words, the business or the photos (owner 2026-10-27/28). */
-const NEVER_ROLLED = new Set(['menu', 'filters', 'feature', 'outline', 'effect', 'confetti', 'family', 'module', 'heroShape', 'heroSize', 'heroPlain', 'heroFocus']);
+const NEVER_ROLLED = new Set(['menu', 'filters', 'goods', 'feature', 'outline', 'effect', 'confetti', 'family', 'module', 'heroShape', 'heroSize', 'heroPlain', 'heroFocus']);
 export const FASHION_PARTS = ['cards', 'pdp'] as const;
 
 /** Dropdown menu spec 2026-10-21: a menu needs at least two categories to be worth opening; fashion stores always get one.

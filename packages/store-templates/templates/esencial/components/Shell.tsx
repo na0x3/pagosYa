@@ -5,12 +5,21 @@ import { CardRibbons, CardTemplate, ThemeMotion, libraryCard, type LibraryBlock 
 
 /** The rolled variant of a part (variety spec §2); the first catalogue id when the store has none. */
 export const variant = (part: string, fallback: string) => { const value = variants[part]; return typeof value === 'string' && value ? value : fallback; };
-import { IconCircleUser, IconLogIn, IconMapPin, IconMenu, IconMessageCircle, IconSearch, IconShoppingBag, IconShoppingBasket, IconShoppingCart, IconUser, IconX } from './icons';
+import { IconBaby, IconBeef, IconBookOpen, IconCake, IconCircleUser, IconCoffee, IconCookie, IconCroissant, IconDroplet, IconDumbbell, IconFlame, IconFlaskConical, IconFlower2, IconGem, IconGift, IconIceCreamCone, IconLamp, IconLogIn,
+  IconMapPin, IconMenu, IconMessageCircle, IconPawPrint, IconSearch, IconShirt, IconShoppingBag, IconShoppingBasket, IconShoppingCart, IconSofa, IconSparkles, IconSprout, IconUser, IconUtensils, IconWatch, IconWine, IconX } from './icons';
 
 /** 34 templates (2026-10-31): the header glyphs of each theme — Palo Alto's person in a circle, a cart, a basket, or words. */
 const HEADER_ICONS: Record<string, { account: typeof IconSearch; cart: typeof IconSearch }> = {
   line: { account: IconLogIn, cart: IconShoppingBag }, person: { account: IconCircleUser, cart: IconShoppingBag },
   cart: { account: IconUser, cart: IconShoppingCart }, basket: { account: IconUser, cart: IconShoppingBasket },
+};
+/** Owner 2026-11-06 («siempre íconos, nunca palabras; si es una joyería que el carrito sea un anillo»): the cart shows what the store
+ *  sells (variant `goods`, picked from the business at the first build); a store without one keeps its theme's bag, cart or basket. */
+const GOODS_ICONS: Record<string, typeof IconSearch> = {
+  gem: IconGem, watch: IconWatch, sofa: IconSofa, lamp: IconLamp, coffee: IconCoffee, croissant: IconCroissant, cake: IconCake, cookie: IconCookie,
+  beef: IconBeef, icecream: IconIceCreamCone, wine: IconWine, utensils: IconUtensils, shirt: IconShirt, sparkles: IconSparkles, flask: IconFlaskConical,
+  flame: IconFlame, paw: IconPawPrint, book: IconBookOpen, flower: IconFlower2, sprout: IconSprout, dumbbell: IconDumbbell, droplet: IconDroplet,
+  baby: IconBaby, gift: IconGift,
 };
 
 const links = [{ label: 'Inicio', href: 'index.html' }, { label: 'Productos', href: 'productos.html' }, { label: 'Nuestra historia', href: 'index.html#historia' }];
@@ -91,18 +100,16 @@ export function Header() {
       <div className="es-header__start">
         <div className="es-store-menu" data-pagosya-store-menu="toggle" />
         <button type="button" className="es-icon-btn" data-store-menu-replaces aria-controls="es-menu" aria-expanded={open} aria-label="Abrir menú" onClick={() => setOpen(true)}><IconMenu /></button>
-        <a className="es-logo" href="index.html"><Wordmark /></a>
+        {/* A long name shrinks to fit the phone's header instead of being cut with «…» (owner 2026-11-06: «headers bien estructurados»). */}
+        <a className="es-logo" href="index.html" data-es-name-long={store.name.length > 9 ? '' : undefined} style={{ ['--es-name-len' as string]: Math.max(6, store.name.length) } as CSSProperties}><Wordmark /></a>
         <div className="es-store-menu-links" data-pagosya-store-menu="links" />
       </div>
       {/* Maximize (34 templates): a big search box in the header itself. */}
       {variant('header', 'classic') === 'search' ? <form className="es-header__search" role="search" method="get" action="buscar.html"><input type="search" name="q" placeholder="¿Qué estás buscando hoy?" aria-label="Buscar productos" /><button type="submit" aria-label="Buscar"><IconSearch /></button></form> : null}
       <nav className="es-header__links" aria-label="Principal" data-store-menu-replaces>{menu.map(link => <a key={link.href} href={link.href} {...colourLink(link.href)}>{link.label}</a>)}</nav>
       <div className="es-header__end">
-        {variant('icons', 'line') === 'text' ? <>
-          <a className="es-text-btn" href="buscar.html">Buscar</a>
-          <a className="es-text-btn" data-pagosya-account="login" href="acceso-ingresar.html">Cuenta</a>
-          <button type="button" className="es-text-btn es-cart-btn" data-cart-open aria-label="Abrir carrito">Carrito (<span data-cart-count>0</span>)</button>
-        </> : <HeaderIcons />}
+        {/* Owner 2026-11-06: always icons, never the words «Buscar · Cuenta · Carrito» (they broke into syllables on a phone). */}
+        <HeaderIcons />
         {shopPage() ? <a className="es-btn es-header__buy" href="index.html#comprar">Comprar</a> : null}
       </div>
     </header>
@@ -223,10 +230,11 @@ export function Footer() {
 
 function HeaderIcons() {
   const set = HEADER_ICONS[variant('icons', 'line')] ?? HEADER_ICONS.line;
+  const Cart = GOODS_ICONS[variant('goods', '')] ?? set.cart;
   return <>
     <a className="es-icon-btn" href="buscar.html" aria-label="Buscar"><IconSearch /></a>
     <a className="es-icon-btn" data-pagosya-account="login" href="acceso-ingresar.html" aria-label="Mi cuenta"><set.account /></a>
-    <button type="button" className="es-icon-btn es-cart-btn" data-cart-open aria-label="Abrir carrito"><set.cart /><span className="es-cart-count" data-cart-count>0</span></button>
+    <button type="button" className="es-icon-btn es-cart-btn" data-cart-open aria-label="Abrir carrito"><Cart /><span className="es-cart-count" data-cart-count>0</span></button>
   </>;
 }
 

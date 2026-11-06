@@ -245,6 +245,19 @@ describe('SourceTemplatesService', () => {
       expect(await filterStyle([item])).toBe('bar');
     });
 
+    // Owner 2026-11-06 («si es una joyería que el carrito sea un anillo»): the cart icon follows the goods, over any template's.
+    it('a jewellery store gets the gem as its cart icon on a themed template; unclear goods keep the theme\'s', async () => {
+      const goods = async (items: unknown[]) => {
+        const { templates, projects } = build([]);
+        (templates as any).publicStores = { getStorePublic: jest.fn(async () => ({ ...publicStore(items), logoUrl: null })) };
+        await templates.applyMaster('m1', 'store-1', 0, async () => ({}), 'tacon');
+        const data = ((projects.save.mock.calls[0] as any[])[2].files as any[]).find(f => f.path === 'components/store-data.tsx').content;
+        return JSON.parse(/export const variants: Record<string, string \| string\[\]> = (.*);\n/.exec(data)![1]).goods;
+      };
+      expect(await goods([{ ...item, id: 'a', name: 'Anillo Sello' }, { ...item, id: 'b', name: 'Aros Argolla' }])).toBe('gem');
+      expect(await goods([{ ...item, id: 'a', name: 'Licuadora 600 W' }])).toBeUndefined();
+    });
+
     it('hands the brand\'s voice to the filler', async () => {
       const { templates } = build([{ field: 'voice', value: 'Cercana y alegre' }, { field: 'avoid', value: 'Jerga técnica' }]);
       const filler = jest.fn(async () => ({}));
