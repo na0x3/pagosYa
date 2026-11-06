@@ -160,6 +160,10 @@ export class SourceTemplatesService {
     let fill = bundled.change ?? null;
     // Variety spec §3: the platform rolls the store's variants, palette and fonts within the business's character.
     let variants: MasterVariants | undefined;
+    // Browse catalogue (spec 2026-11-06): products with a photo per option get the Nike shop page — from the dice, and over a
+    // themed template's or a starter's own filters (live 2026-11-06: Gramiyaa on Tacón kept the preset's bar).
+    const colourPhotos = carriesColourPhotos(publicStore.items) && (manifest.master.variants?.filters ?? []).includes('browse');
+    const browseOverPreset = colourPhotos && Boolean(presetManifest || starterManifest);
     // A preset (Plantillas, 2026-10-22) is a chosen look: no dice and no logo palette; the fill only writes the words.
     // YAPI plan card (spec 2026-10-22): a checked plan replaces the dice.
     if (plan) {
@@ -172,7 +176,7 @@ export class SourceTemplatesService {
       const photoCount = distinctPhotoCount([...facts.photos, filled?.heroPhoto, filled?.storyPhoto]);
       const rolled = rollVariants({ seed: storeId, settings: esencialDiceSettings(manifest.master), character: fill?.character ?? { tone: 'calm', temperature: 'neutral', lead: 'photo', exclude: [] },
         photoCount, sections: (fill?.sections ?? []).map(section => section.id), recent: await this.recentMasterRolls(storeId), categoryCount: facts.categoryCount,
-        colourPhotos: carriesColourPhotos(publicStore.items) });
+        colourPhotos });
       variants = rolled.variants;
       // Dropdown menu spec 2026-10-21: the fill picks panel or dropdowns; the roll decides whether a non-fashion store has one.
       if (variants.menu !== undefined) variants.menu = menuVariant(variants.menu, fill?.menu?.style, fill?.character?.kind === 'fashion')!;
@@ -231,8 +235,8 @@ export class SourceTemplatesService {
     // the dice when the skeleton offers it; the dice only decide when the brand's pick is not one of the skeleton's.
     const brandFont = starterManifest && filled?.look?.fonts && (starterManifest.starter?.dice?.fonts ?? []).includes(filled.look.fonts) ? filled.look.fonts : undefined;
     const animatedFonts = brandFont ? { fonts: brandFont } : {};
-    const starterRoll = rolledStarter || askedMenu || (starterManifest && (Object.keys(own).length || animatedFonts.fonts)) ? { ...(rolledStarter ?? {}), ...animatedFonts,
-      variants: { ...(rolledStarter?.variants ?? {}), ...(askedMenu ? { menu: askedMenu } : {}), ...(starterManifest ? own : {}) } as Partial<MasterVariants> } : undefined;
+    const starterRoll = rolledStarter || askedMenu || browseOverPreset || (starterManifest && (Object.keys(own).length || animatedFonts.fonts)) ? { ...(rolledStarter ?? {}), ...animatedFonts,
+      variants: { ...(rolledStarter?.variants ?? {}), ...(askedMenu ? { menu: askedMenu } : {}), ...(starterManifest ? own : {}), ...(browseOverPreset ? { filters: 'browse' } : {}) } as Partial<MasterVariants> } : undefined;
     // Spec 2026-10-30 home writer variety: the brand mood rides with the variants; the writer's animated look reads it.
     if (variants) variants = { ...variants, mood: fill?.character?.tone === 'bold' ? 'bold' : 'calm' } as unknown as MasterVariants;
     const { assembled } = await this.assemble(merchantId, storeId, starterManifest?.id ?? presetManifest?.id ?? MASTER_TEMPLATE_ID, revision, fill ?? undefined, files, variants, undefined, dna, starterRoll);

@@ -230,6 +230,21 @@ describe('SourceTemplatesService', () => {
       expect(savedLook(projects).colors).toMatchObject({ paper: '#fbf6ef', ink: '#2a1a12', accent: '#b5651d', muted: '#efe6db' });
     });
 
+    // Browse catalogue (spec 2026-11-06, live 2026-11-06 Gramiyaa on Tacón): a themed template's own filters never hide the Nike
+    // shop page from a store whose products carry a photo per option.
+    it('a themed template gives a store with colour photos the browse catalogue, and keeps its own filters otherwise', async () => {
+      const coloured = { ...item, variants: [{ id: 'v1', name: 'Rojo', amount: 6500, imageUrl: '/v1/uploads/aaaaaaaa-0000-0000-0000-000000000003.jpg' }, { id: 'v2', name: 'Azul', amount: 6500, imageUrl: '/v1/uploads/aaaaaaaa-0000-0000-0000-000000000004.jpg' }] };
+      const filterStyle = async (items: unknown[]) => {
+        const { templates, projects } = build([]);
+        (templates as any).publicStores = { getStorePublic: jest.fn(async () => ({ ...publicStore(items), logoUrl: null })) };
+        await templates.applyMaster('m1', 'store-1', 0, async () => ({}), 'tacon');
+        const config = ((projects.save.mock.calls[0] as any[])[2].files as any[]).find(f => f.path === 'config.js').content;
+        return /"filterStyle":"(\w+)"/.exec(config)?.[1];
+      };
+      expect(await filterStyle([coloured])).toBe('browse');
+      expect(await filterStyle([item])).toBe('bar');
+    });
+
     it('hands the brand\'s voice to the filler', async () => {
       const { templates } = build([{ field: 'voice', value: 'Cercana y alegre' }, { field: 'avoid', value: 'Jerga técnica' }]);
       const filler = jest.fn(async () => ({}));
