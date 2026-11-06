@@ -166,7 +166,7 @@ export class SourceTemplatesService {
     const colourPhotos = carriesColourPhotos(publicStore.items) && (manifest.master.variants?.filters ?? []).includes('browse');
     const browseOverPreset = colourPhotos && Boolean(presetManifest || starterManifest);
     // Owner 2026-11-06 («si es una joyería que el carrito sea un anillo»): the header's cart shows what the store sells, over any template's.
-    const goods = (manifest.master.variants?.goods ?? []).length ? goodsIcon([...publicStore.items.map(item => item.name), ...publicStore.categories.map(category => category.name), publicStore.storeName]) : '';
+    const goods = (manifest.master.variants?.goods ?? []).length ? goodsIcon([...publicStore.items.map(item => item.name), ...publicStore.categories.map(category => category.name)], publicStore.storeName) : '';
     const own: Partial<Record<string, string>> = { ...(browseOverPreset ? { filters: 'browse' } : {}), ...(goods ? { goods } : {}) };
     // A preset (Plantillas, 2026-10-22) is a chosen look: no dice and no logo palette; the fill only writes the words.
     // YAPI plan card (spec 2026-10-22): a checked plan replaces the dice.

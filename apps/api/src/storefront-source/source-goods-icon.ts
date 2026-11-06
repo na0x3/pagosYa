@@ -12,7 +12,7 @@ const GOODS: Array<[string, string[]]> = [
   ['lamp', ['lampara*', 'iluminacion']],
   ['flask', ['serum*', 'botica*', 'perfume*', 'fragancia*', 'balsamo*', 'bruma*', 'tonico*']],
   ['sparkles', ['belleza', 'maquillaje*', 'cosmetica*', 'skincare', 'labial*', 'rubor*', 'brillo*']],
-  ['flame', ['vela*']],
+  ['flame', ['vela*', 'salsa*', 'picante*', 'aji', 'ajies', 'chile*']],
   ['beef', ['carne*', 'parrilla*', 'asado*', 'bife*', 'chorizo*', 'costilla*', 'lomo*', 'picanha*']],
   ['icecream', ['helado*', 'gelato*', 'paleta*']],
   ['coffee', ['cafe*', 'cafeteria*', 'matcha', 'latte*', 'espresso*', 'infusion*']],
@@ -21,7 +21,10 @@ const GOODS: Array<[string, string[]]> = [
   ['cookie', ['galleta*', 'cookie*']],
   ['wine', ['vino*', 'bodega*', 'cerveza*', 'licor*', 'gin', 'pisco*']],
   ['shirt', ['ropa', 'moda', 'polera*', 'hoodie*', 'buzo*', 'vestido*', 'blazer*', 'camisa*', 'pantalon*', 'abrigo*', 'chaqueta*', 'falda*', 'jean*']],
-  ['paw', ['perro*', 'gato*', 'mascota*', 'canino*', 'felino*']],
+  ['paw', ['perro*', 'gato*', 'mascota*', 'canino*', 'felino*', 'croqueta*']],
+  ['apple', ['fruta*', 'verdura*', 'hortaliza*', 'organico*']],
+  ['soda', ['soda*', 'bebida*', 'refresco*', 'kombucha*', 'jugo*']],
+  ['palette', ['cuadro*', 'lamina*', 'lienzo*', 'arte', 'obra*', 'retrato*', 'pintura*', 'ilustracion*', 'acuarela*']],
   ['book', ['libro*', 'libreria*', 'novela*', 'lectura*']],
   ['flower', ['flor', 'flores', 'floreria*', 'ramo*']],
   ['sprout', ['planta*', 'huerta*', 'semilla*', 'vivero*', 'suculenta*']],
@@ -33,12 +36,13 @@ export const GOODS_ICON_IDS = GOODS.map(([id]) => id);
 
 const patterns = GOODS.map(([id, words]) => [id, words.map(word => new RegExp(`(?<![a-z0-9])${word.endsWith('*') ? `${word.slice(0, -1)}[a-z]*` : word}(?![a-z0-9])`, 'g'))] as const);
 
-/** The goods icon for these words (product and category names first, then the store's name), or '' when no icon wins clearly. */
-export function goodsIcon(words: readonly string[]): string {
-  const text = fold(words.filter(Boolean).join(' · '));
+/** The goods icon for the store's product and category names and its own name (which weighs as much as four products: «Taller
+ *  Lienzo» sells paintings, some named «Café…»), or '' when no icon wins clearly. */
+export function goodsIcon(words: readonly string[], storeName = ''): string {
+  const text = fold(words.filter(Boolean).join(' · ')), name = fold(storeName);
   let best = '', bestScore = 0, second = 0;
   for (const [id, regexes] of patterns) {
-    const score = regexes.reduce((sum, regex) => sum + (text.match(regex)?.length ?? 0), 0);
+    const score = regexes.reduce((sum, regex) => sum + (text.match(regex)?.length ?? 0) + 4 * (name.match(regex)?.length ?? 0), 0);
     if (score > bestScore) { second = bestScore; best = id; bestScore = score; } else if (score > second) second = score;
   }
   // Two mentions at least, and clearly ahead of the next: a lone «aceite» in a bakery never turns its cart into a drop.

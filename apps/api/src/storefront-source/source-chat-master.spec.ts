@@ -1007,6 +1007,9 @@ describe('YAPI picks the themed template for a new store (owner 2026-10-31, YAPI
     expect(out.assistantMessage.content).toContain('Elegí la plantilla Grano: va con un café de especialidad que tuesta en casa.');
     expect(out.assistantMessage.content).not.toContain('Ahora pulo');
     expect(out.followUp).toMatchObject({ sectionLibrary: true, revision: 1 });
+    // Owner 2026-11-06 («en miga dorada de panes escribe cosas de zapatos» — the template's demo words, shown until the sections
+    // are written): the follow-up is part of the first design, so the Studio keeps «YAPI está diseñando tu tienda» until it ends.
+    expect(out.followUp).toMatchObject({ firstDesign: true });
     expect(out.followUp.redesign).toBeUndefined();
   });
 

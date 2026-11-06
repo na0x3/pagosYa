@@ -13,7 +13,18 @@ describe('goods icon', () => {
     [['Croissant de mantequilla', 'Caja de rolls rellenos', 'Panadería'], 'croissant'],
     [['Premios para perro', 'Comida fresca para perros', 'Mascotas'], 'paw'],
     [['Aceite de sésamo prensado', 'Aceite de coco', 'Aceites'], 'droplet'],
+    // Evaluation stores 2026-11-06: dog food, a market, sodas, hot sauce.
+    [['Croquetas naturales 2 kg', 'Comida fresca pollo y manzana 500 g', 'Croquetas', 'Snacks'], 'paw'],
+    [['Caja semanal de frutas y verduras', 'Frutas premium surtidas', 'Selección de verduras verdes', 'Frutas'], 'apple'],
+    [['Oh Belly soda prebiótica', 'Pack surtido x6', 'Sodas', 'Packs'], 'soda'],
+    [['Salsa Red Pepper Heat 250 ml', 'Salsa Garlic Heat 250 ml', 'Salsas'], 'flame'],
   ])('%j → %s', (words, expected) => expect(goodsIcon(words)).toBe(expected));
+
+  it('the store\'s own name weighs more than a product\'s («Taller Lienzo» sells paintings, some named «Café…»)', () => {
+    const paintings = ['Café Good News', 'Café sobre Azulejos', 'Café en el Jardín', 'Retrato de Caballero Clásico', 'Ventana Mediterránea', 'Cafés y mesas', 'Lugares'];
+    expect(goodsIcon(paintings, 'Taller Lienzo')).toBe('palette');
+    expect(goodsIcon(paintings)).toBe('coffee');
+  });
 
   it('keeps the theme\'s own cart when the goods say nothing clear', () => {
     expect(goodsIcon(['Licuadora personal 600 W', 'Vaso extra 700 ml'])).toBe('');

@@ -5,8 +5,8 @@ import { CardRibbons, CardTemplate, ThemeMotion, libraryCard, type LibraryBlock 
 
 /** The rolled variant of a part (variety spec §2); the first catalogue id when the store has none. */
 export const variant = (part: string, fallback: string) => { const value = variants[part]; return typeof value === 'string' && value ? value : fallback; };
-import { IconBaby, IconBeef, IconBookOpen, IconCake, IconCircleUser, IconCoffee, IconCookie, IconCroissant, IconDroplet, IconDumbbell, IconFlame, IconFlaskConical, IconFlower2, IconGem, IconGift, IconIceCreamCone, IconLamp, IconLogIn,
-  IconMapPin, IconMenu, IconMessageCircle, IconPawPrint, IconSearch, IconShirt, IconShoppingBag, IconShoppingBasket, IconShoppingCart, IconSofa, IconSparkles, IconSprout, IconUser, IconUtensils, IconWatch, IconWine, IconX } from './icons';
+import { IconApple, IconBaby, IconBeef, IconBookOpen, IconCake, IconCircleUser, IconCoffee, IconCookie, IconCroissant, IconCupSoda, IconDroplet, IconDumbbell, IconFlame, IconFlaskConical, IconFlower2, IconGem, IconGift, IconIceCreamCone, IconLamp, IconLogIn,
+  IconMapPin, IconMenu, IconMessageCircle, IconPalette, IconPawPrint, IconSearch, IconShirt, IconShoppingBag, IconShoppingBasket, IconShoppingCart, IconSofa, IconSparkles, IconSprout, IconUser, IconUtensils, IconWatch, IconWine, IconX } from './icons';
 
 /** 34 templates (2026-10-31): the header glyphs of each theme — Palo Alto's person in a circle, a cart, a basket, or words. */
 const HEADER_ICONS: Record<string, { account: typeof IconSearch; cart: typeof IconSearch }> = {
@@ -19,7 +19,7 @@ const GOODS_ICONS: Record<string, typeof IconSearch> = {
   gem: IconGem, watch: IconWatch, sofa: IconSofa, lamp: IconLamp, coffee: IconCoffee, croissant: IconCroissant, cake: IconCake, cookie: IconCookie,
   beef: IconBeef, icecream: IconIceCreamCone, wine: IconWine, utensils: IconUtensils, shirt: IconShirt, sparkles: IconSparkles, flask: IconFlaskConical,
   flame: IconFlame, paw: IconPawPrint, book: IconBookOpen, flower: IconFlower2, sprout: IconSprout, dumbbell: IconDumbbell, droplet: IconDroplet,
-  baby: IconBaby, gift: IconGift,
+  baby: IconBaby, gift: IconGift, apple: IconApple, soda: IconCupSoda, palette: IconPalette,
 };
 
 const links = [{ label: 'Inicio', href: 'index.html' }, { label: 'Productos', href: 'productos.html' }, { label: 'Nuestra historia', href: 'index.html#historia' }];

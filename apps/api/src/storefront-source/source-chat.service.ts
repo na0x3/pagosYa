@@ -586,7 +586,7 @@ export class SourceChatService {
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
       content: `Cambié tu tienda a la plantilla ${name}${target.reason ? `: ${target.reason.charAt(0).toLowerCase()}${target.reason.slice(1).replace(/\.$/, '')}` : ''}. Ahora escribo cada sección con tus palabras y tus fotos; aparecerá en unos minutos. Si prefieres la anterior, vuelve a esa versión desde el historial.`,
       metadata: { progress: workflow.value, sourceRevision: savedRevision } } });
-    const followUp: SourceMessageInput = { instruction: SECTION_LIBRARY_BRIEF, revision: savedRevision, personalTouch: true, sectionLibrary: true, requestId: randomUUID(), model: 'auto',
+    const followUp: SourceMessageInput = { instruction: SECTION_LIBRARY_BRIEF, revision: savedRevision, personalTouch: true, sectionLibrary: true, firstDesign: true, requestId: randomUUID(), model: 'auto',
       ...(earlierAsks ? { earlierAsks } : {}), ...(carried.length ? { carry: carried } : {}) };
     this.productLogger.log(JSON.stringify({ event: 'template_switch', storeId, from: wearing, to: target.id, carried: carried.map(block => block.type), earlierAsks: earlierAsks.length, keptPages: keptPages?.kinds ?? [] }));
     return { userMessage, assistantMessage, revision: saved, followUp };
@@ -690,8 +690,10 @@ export class SourceChatService {
       ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), maxCredits: HOME_WRITER_MAX_CREDITS,
       model: (this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] };
   }
+  // Owner 2026-11-06 («en miga dorada de panes escribe cosas de zapatos»: the template's demo words showed until the sections were
+  // written): the sections are part of the first design, so the Studio keeps «YAPI está diseñando tu tienda» until they are saved.
   private libraryFollowUp(revision: number, checklistWords?: string): SourceMessageInput {
-    return { instruction: SECTION_LIBRARY_BRIEF, revision, personalTouch: true, sectionLibrary: true, ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), model: 'auto' };
+    return { instruction: SECTION_LIBRARY_BRIEF, revision, personalTouch: true, sectionLibrary: true, firstDesign: true, ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), model: 'auto' };
   }
   private planOn() { return this.config.get<boolean>('app.yapiPlanCard') !== false && Boolean(this.plans); }
   private startersOn() { return this.config.get<boolean>('app.yapiStarters') === true; }
