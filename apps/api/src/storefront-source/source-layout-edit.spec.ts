@@ -1,4 +1,4 @@
-import { MENU_PAGES, addableSections, applyLayoutOps, layoutAdds, menuPagesFor, layoutDigest, layoutEditReply, layoutEditSchema, readLayoutEdit, LAYOUT_EDIT_PROMPT } from './source-layout-edit';
+import { MENU_PAGES, addableSections, applyLayoutOps, layoutAdds, menuPagesFor, layoutDigest, layoutEditReply, layoutEditSchema, pageImproveAdds, readLayoutEdit, withPageImprove, LAYOUT_EDIT_PROMPT } from './source-layout-edit';
 import { STORE_EDIT_PROMPT } from './source-store-edit';
 import type { LayoutBlock } from './source-section-library';
 
@@ -293,4 +293,42 @@ it('reads the catalog ops beside the section and store ops (spec 2026-11-05 crea
   expect(layoutEditSchema().properties.catalogo.items.required).toContain('kind');
   expect(LAYOUT_EDIT_PROMPT).toContain('«catalogo»');
   expect(STORE_EDIT_PROMPT).toContain('option-price');
+});
+
+// Owner 2026-11-06 («no podemos dejar nada a la suerte»): «mejora la sección de envíos y entregas» got sections once, a rewritten
+// policy once and the slow code generator once. Improving a menu page with fewer than 3 sections always adds its sections.
+describe('improving a menu page', () => {
+  const pages = { about: [], contact: [], faq: [], shipping: [] } as Record<'about' | 'contact' | 'faq' | 'shipping', LayoutBlock[]>;
+  const types = (ops: Array<{ type?: string; page?: string; op: string }>) => ops.map(op => `${op.op}:${op.page}:${op.type}`);
+  it('adds a cover in the template\'s style and the sections that fit the page', () => {
+    expect(types(pageImproveAdds('mejora la seccion de envios y entregas', pages, ['cover-stage', 'products-grid']))).toEqual(
+      ['add:shipping:cover-stage', 'add:shipping:strip-services', 'add:shipping:visit-store', 'add:shipping:faq-split']);
+    expect(types(pageImproveAdds('haz la página nosotros más bonita', pages, ['cover-split']))).toEqual(
+      ['add:about:cover-split', 'add:about:story-split', 'add:about:benefits-bento', 'add:about:closing-photo']);
+    expect(types(pageImproveAdds('que contacto se vea mejor', pages, []))).toEqual(['add:contact:cover-split', 'add:contact:visit-store', 'add:contact:faq-split']);
+  });
+
+  it('leaves a page that already has sections, a plain request and the home alone', () => {
+    expect(pageImproveAdds('mejora envíos', { ...pages, shipping: [{ type: 'cover-split' }, { type: 'faq-split' }, { type: 'visit-store' }] }, [])).toEqual([]);
+    expect(pageImproveAdds('cambia el teléfono de contacto', pages, [])).toEqual([]);
+    expect(pageImproveAdds('mejora la portada', pages, [])).toEqual([]);
+  });
+});
+
+describe('the model\'s answer to an improve request', () => {
+  const pages = { about: [], contact: [], faq: [], shipping: [] } as Record<'about' | 'contact' | 'faq' | 'shipping', LayoutBlock[]>;
+  const policy = { part: 'policy', field: 'delivery', at: -1, title: '', value: 'Entregamos en 24 horas.' } as const;
+  it('gets the page\'s sections; a rest or a question about that page goes, other changes stay', () => {
+    const out = withPageImprove({ ops: [], store: [policy], catalog: [], rest: 'mejora la sección de envíos y entregas', ask: '¿Qué quieres mejorar?' }, 'mejora la sección de envíos y entregas', pages, []);
+    expect(out.ops.map(op => op.type)).toEqual(['cover-split', 'strip-services', 'visit-store', 'faq-split']);
+    expect(out.store).toEqual([policy]);
+    expect(out.rest).toBe('');
+    expect(out.ask).toBeUndefined();
+  });
+
+  it('keeps the model\'s own sections for that page, and a rest about something else', () => {
+    const own = { op: 'add' as const, at: -1, field: '', item: -1, value: '', to: -1, type: 'story-split', page: 'shipping' };
+    expect(withPageImprove({ ops: [own], store: [], catalog: [], rest: '' }, 'mejora envíos', pages, []).ops).toEqual([own]);
+    expect(withPageImprove({ ops: [], store: [], catalog: [], rest: 'pon los colores en rojo' }, 'mejora envíos y pon los colores en rojo', pages, []).rest).toBe('pon los colores en rojo');
+  });
 });

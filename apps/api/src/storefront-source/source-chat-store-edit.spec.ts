@@ -422,9 +422,26 @@ it('writes the quick edit\'s reading and outcome to the trace file when one is s
   const { mkdtempSync, readFileSync } = require('node:fs'); const { join } = require('node:path'); const { tmpdir } = require('node:os');
   const file = join(mkdtempSync(join(tmpdir(), 'yapi-trace-')), 'trace.jsonl');
   (chat as any).config = { get: (key: string) => key === 'app.yapiTraceFile' ? file : undefined };
-  editLayout.mockResolvedValue(read({ rest: 'mejora la sección de envíos y entregas' }));
-  expect(await edit('mejora la sección de envíos y entregas')).toBeNull();
+  editLayout.mockResolvedValue(read({ rest: 'pon un mapa interactivo en la portada' }));
+  expect(await edit('pon un mapa interactivo en la portada')).toBeNull();
   const line = JSON.parse(readFileSync(file, 'utf8').trim().split('\n').at(-1));
-  expect(line).toMatchObject({ event: 'quick_edit', storeId: 's1', request: 'mejora la sección de envíos y entregas', ops: 0, store: 0, catalog: 0,
-    rest: 'mejora la sección de envíos y entregas', outcome: 'handed-on' });
+  expect(line).toMatchObject({ event: 'quick_edit', storeId: 's1', request: 'pon un mapa interactivo en la portada', ops: 0, store: 0, catalog: 0,
+    rest: 'pon un mapa interactivo en la portada', outcome: 'handed-on' });
+});
+
+// Owner 2026-11-06: «mejora la sección de envíos y entregas» where the model only rewrote the delivery policy still gets the page's sections.
+it('improving a menu page adds its sections even when the model only changed its words', async () => {
+  const libraryFacts = { storeName: 'DooBoo', what: 'Gelato de tofu', story: '', city: 'La Paz', request: '', tone: 'calm', products: [{ id: 'p1', name: 'Gelato chocolate' }],
+    categories: [], photos: [0, 1, 2, 3].map(index => ({ url: `/v1/uploads/0000000${index}-aaaa.jpg` })), codes: [], services: [{ title: 'Envío a domicilio', text: 'En La Paz', icon: 'truck' }, { title: 'Pago seguro', text: 'Con pagosYa', icon: 'lock' }], reviews: 0 };
+  chat.libraryFacts = jest.fn().mockResolvedValue(libraryFacts);
+  const compose = jest.fn(async (_merchant: string, input: { template: Array<{ type: string }> }) => ({ blocks: [{
+    type: input.template[0].type, eyebrow: '', title: 'Entregamos en La Paz', text: 'Gelato de tofu en tu puerta.', cta: '', link: '', cta2: '', link2: '', photo: 0, photo2: -1,
+    items: [], products: [], product: '', code: '', look: '', band: '', card: '', endsAt: '' }] }));
+  chat.dialogue.composeLibrary = compose;
+  editLayout.mockResolvedValue(read({ store: [{ part: 'policy', field: 'delivery', at: -1, title: '', value: 'Entregamos en La Paz en 24 horas.' }] }));
+  const out = await edit('mejora la seccion de envios y entregas');
+  expect(compose.mock.calls.map(call => call[1].template[0].type)).toEqual(expect.arrayContaining(['cover-split', 'strip-services']));
+  const [, , , change] = refill.mock.calls[0];
+  expect((change.pageLayouts.shipping as LayoutBlock[]).map(block => block.type)[0]).toBe('cover-split');
+  expect(out.assistantMessage.content).toContain('a tu página «Envíos»');
 });

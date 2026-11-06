@@ -34,6 +34,35 @@ export function menuPagesFor(pages: Record<MenuPage, LayoutBlock[]>, request: st
   const built = Object.fromEntries(MENU_PAGES.filter(page => pages[page]?.length).map(page => [page, pages[page]])) as Partial<Record<MenuPage, LayoutBlock[]>>;
   return Object.keys(built).length ? { pages: built, offer: false } : null;
 }
+/** Owner 2026-11-06 («no podemos dejar nada a la suerte»): «mejora la sección de envíos y entregas» got sections once, a rewritten
+ *  policy once and the slow code generator once. A request to improve a menu page that has fewer than 3 sections gets its sections
+ *  here — a cover in the template's style, then what fits the page — whatever the model answered; the library checks still apply. */
+const IMPROVE_WORDS = /\b(mejora|mej[oó]ra(?:la|lo)?|bonit[ao]s?|lind[ao]s?|se vea mejor|se vean mejor|renueva|atractiv[ao]|profesional|m[aá]s (?:linda|bonita|atractiva|bonito|lindo))\b/i;
+const PAGE_WORDS: Array<[MenuPage, RegExp]> = [['about', /\b(nosotros|qui[eé]nes somos)\b/i], ['contact', /\b(contacto|cont[aá]ctanos)\b/i],
+  ['faq', /\b(preguntas|faq)\b/i], ['shipping', /\b(env[ií]os?|entregas)\b/i]];
+const PAGE_SECTIONS: Record<MenuPage, string[]> = { shipping: ['strip-services', 'visit-store', 'faq-split'], about: ['story-split', 'benefits-bento', 'closing-photo'],
+  contact: ['visit-store', 'faq-split'], faq: ['faq-split', 'visit-store'] };
+export function pageImproveAdds(request: string, pages: Record<MenuPage, LayoutBlock[]>, templateTypes: readonly string[]): LayoutOp[] {
+  if (!IMPROVE_WORDS.test(request)) return [];
+  const page = PAGE_WORDS.find(([, words]) => words.test(request))?.[0];
+  if (!page || (pages[page] ?? []).length >= 3) return [];
+  const there = new Set((pages[page] ?? []).map(block => block.type));
+  const cover = there.size && [...there].some(type => type.startsWith('cover-')) ? [] : [templateTypes.find(type => type.startsWith('cover-')) ?? 'cover-split'];
+  return [...cover, ...PAGE_SECTIONS[page].filter(type => !there.has(type))]
+    .map(type => ({ op: 'add' as const, at: -1, field: '', item: -1, value: '', to: -1, type, page }));
+}
+
+/** The model's answer with an improve request's page sections in (when it did not add sections to that page itself): its other
+ *  changes stay; a rest or a question that is about that page goes, since the sections answer it. */
+export function withPageImprove(read: LayoutEditRead, request: string, pages: Record<MenuPage, LayoutBlock[]>, templateTypes: readonly string[]): LayoutEditRead {
+  const adds = pageImproveAdds(request, pages, templateTypes);
+  const page = adds[0]?.page;
+  if (!page || read.ops.some(op => op.op === 'add' && op.page === page)) return read;
+  const words = PAGE_WORDS.find(([kind]) => kind === page)![1];
+  const { ask: _ask, ...rest } = read;
+  return { ...rest, ops: [...read.ops, ...adds], rest: words.test(read.rest) || IMPROVE_WORDS.test(read.rest) ? '' : read.rest };
+}
+
 /** `ask`: a question back to the merchant when the change needs their words first (a FAQ answer, live 2026-11-05). */
 export type LayoutEditRead = { ops: LayoutOp[]; store: StoreOp[]; catalog: CatalogOp[]; rest: string; ask?: string };
 /** Fix 3 (2026-11-02): a section the merchant asked for, from the library, before the section `to` showed (-1 = before the closing). */

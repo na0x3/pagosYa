@@ -75,7 +75,7 @@ import { writeCatalogChange } from './source-catalog-write';
 import type { ProductVariant } from '../payment-links/product-variants';
 import { applyStoreOps, readCatalogTitle, storeChangeEmpty, withCatalogTitle, type StoreChange, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
 import { storeFaq, storePolicies } from '../stores/store-presentation';
-import { MENU_PAGES, MENU_PAGE_NAMES, MENU_PAGE_URLS, applyLayoutOps, layoutAdds, layoutEditReply, menuPagesFor, type LayoutPage, type MenuPage } from './source-layout-edit';
+import { MENU_PAGES, MENU_PAGE_NAMES, MENU_PAGE_URLS, applyLayoutOps, layoutAdds, layoutEditReply, menuPagesFor, withPageImprove, type LayoutPage, type MenuPage } from './source-layout-edit';
 import { keptMenuPages, sectionablePage, withSectionedPages } from './source-content-pages';
 import { bolivianos, readShippingAsk, type ShippingAsk } from './source-shipping-ask';
 import { plainReply } from './source-plain-reply';
@@ -1198,13 +1198,15 @@ export class SourceChatService {
     // Live 2026-11-05: the merchant's reply to a question YAPI asked («¿Qué respuesta le pongo…?») is read with the request it answers.
     const pendingAsk = await this.lastStoreAsk(threadId);
     const request = pendingAsk ? `${pendingAsk.request}\n(El comercio responde a «${pendingAsk.ask}»: ${input.instruction})` : input.instruction;
-    const read = await this.dialogue.editLayout(merchantId, { storeId, layout, request, ...(productLayout.length ? { productLayout } : {}),
+    let read = await this.dialogue.editLayout(merchantId, { storeId, layout, request, ...(productLayout.length ? { productLayout } : {}),
       ...(menuPages ? { pages: menuPages.pages as Record<string, LayoutBlock[]>, offerPages: menuPages.offer } : {}), templateTypes,
       ...(editState ? { store: editState, photos } : {}), ...(focus ? { focus } : {}), ...(shot ? { picture: shot } : {}),
       ...(extraPages.length ? { extraPages: extraPages.map(page => ({ slug: page.slug, nombre: page.name, layout: page.layout })) } : {}), ...(menuGroups.length ? { menuGroups } : {}) });
     const trace = (outcome: string, extra: Record<string, unknown> = {}) => this.traceQuickEdit({ storeId, request: input.instruction.slice(0, 300),
       ...(read ? { ops: read.ops.length, store: read.store.length, catalog: (read.catalog ?? []).length, rest: read.rest.slice(0, 300), ask: read.ask ?? '' } : {}), outcome, ...extra });
     if (!read) { trace('no-answer'); return null; }
+    // Owner 2026-11-06 («no podemos dejar nada a la suerte»): improving a menu page always adds its sections, whatever the model read.
+    read = withPageImprove(read, input.instruction, pages, templateTypes);
     // Live 2026-11-05: a change that needs the merchant's words first (a FAQ answer) is asked for, never «No logré que se vea».
     if (read.ask && !read.ops.length && !read.store.length && !(read.catalog ?? []).length) {
       trace('asked');
