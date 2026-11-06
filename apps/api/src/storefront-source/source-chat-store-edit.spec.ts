@@ -344,4 +344,38 @@ describe('the catalog through the quick edit (spec 2026-11-05 creates anything p
     expect(prisma.tx.paymentLink.create).toHaveBeenCalledTimes(1);
     expect(second.assistantMessage.content).not.toContain('Ya tienes');
   });
+
+  // Final review 2026-11-06.
+  it('a second question keeps the whole request it belongs to', async () => {
+    prisma.storeAgentMessage.findFirst = jest.fn().mockResolvedValue({ metadata: { storeAsk: { request: 'crea Pie y Torta en Postres, 5 de cada una', ask: '¿A cuánto vendes el Pie?' } } });
+    editLayout.mockResolvedValue(read({ catalog: [cat({ kind: 'product-add', name: 'Pie', price: '90', stock: '5' })], ask: '¿A cuánto vendes la Torta?' }));
+    const result = await edit('Pie 90');
+    expect(result.assistantMessage.metadata.storeAsk.request).toContain('crea Pie y Torta en Postres, 5 de cada una');
+    expect(result.assistantMessage.metadata.storeAsk.request).toContain('Pie 90');
+  });
+
+  it('a question with nothing new to make is still asked, and a catalog op already done is said, never the slow edit', async () => {
+    prisma.storeAgentMessage.findFirst = jest.fn().mockResolvedValue({ metadata: { storeAsk: { request: 'agrega Gelato chocolate a Bs 30 y Paleta', ask: '¿A cuánto vendes la Paleta?' } } });
+    editLayout.mockResolvedValueOnce(read({ catalog: [cat({ kind: 'product-add', name: 'Gelato chocolate', price: '30' })], ask: '¿A cuánto vendes la Paleta?' }));
+    const asked = await edit('aún no sé');
+    expect(asked?.assistantMessage.content).toBe('¿A cuánto vendes la Paleta?');
+    prisma.storeAgentMessage.findFirst = jest.fn().mockResolvedValue(null);
+    editLayout.mockResolvedValueOnce(read({ catalog: [cat({ kind: 'category-add', name: 'helados' })] }));
+    const same = await edit('crea la categoría Helados');
+    expect(same?.assistantMessage.content).toBe('Eso ya está así en tu tienda.');
+  });
+
+  it('a preview that fails after the catalog is saved says so, never a bare error', async () => {
+    refill.mockRejectedValueOnce(new Error('build failed'));
+    editLayout.mockResolvedValue(read({ catalog: [cat({ kind: 'code-add', name: 'PALETA10', value: '10 %' })] }));
+    const result = await edit('crea un código PALETA10 de 10 %');
+    expect(prisma.tx.promoCode.create).toHaveBeenCalled();
+    expect(result.assistantMessage.content).toContain('Guardé los cambios, pero la vista previa no se actualizó');
+  });
+
+  it('reads every code, so one past the twentieth is known and never made twice', async () => {
+    editLayout.mockResolvedValue(read());
+    await edit('hola');
+    expect(prisma.promoCode.findMany.mock.calls[0][0]).not.toHaveProperty('take');
+  });
 });

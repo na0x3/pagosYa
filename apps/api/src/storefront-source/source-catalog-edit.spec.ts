@@ -219,3 +219,37 @@ describe('category links', () => {
     expect(withoutCategoryMenuLinks(undefined, ['c2'])).toBeUndefined();
   });
 });
+
+describe('final review fixes (2026-11-06)', () => {
+  it('a category the request removes is never used, whatever the order of the ops', () => {
+    const { change, refused } = applyCatalogOps(state(), [op('product-category', { at: 0, category: 'Postres' }), op('product-add', { name: 'Flan', price: '40', category: 'Postres' }),
+      op('category-remove', { at: 1 })]);
+    expect(change.products.update).toEqual([]);
+    expect(change.products.create).toEqual([]);
+    expect(change.categories.remove).toEqual([{ id: 'c2', name: 'Postres' }]);
+    expect(refused).toEqual(['La categoría «Postres» se quita en este mismo pedido.', 'La categoría «Postres» se quita en este mismo pedido.']);
+  });
+
+  it('answering, a product past the 40 shown is still found and never made twice', () => {
+    const many = Array.from({ length: 41 }, (_, n) => ({ id: `q${n}`, name: n === 40 ? 'Brownie' : `Galleta ${n}`, amount: 500, description: '', imageUrls: [], options: false }));
+    const { change, refused } = applyCatalogOps(state({ products: many }), [op('product-add', { name: 'Brownie', price: '20' })], [], { answering: true });
+    expect(change.products.create).toEqual([]);
+    expect(refused).toEqual([]);
+  });
+
+  it('categories or codes it could not read are never guessed', () => {
+    const noCategories = applyCatalogOps(state({ categories: undefined }), [op('category-add', { name: 'Tortas' }), op('product-add', { name: 'Flan', price: '40', category: 'Tortas' })]);
+    expect(catalogChangeEmpty(noCategories.change)).toBe(true);
+    expect(noCategories.refused).toEqual(['No pude leer tus categorías: inténtalo de nuevo en un momento.', 'No pude leer tus categorías: inténtalo de nuevo en un momento.']);
+    const noCodes = applyCatalogOps(state({ codes: undefined }), [op('code-add', { name: 'VERANO20', value: '20 %' })]);
+    expect(noCodes.change.codes.create).toEqual([]);
+    expect(noCodes.refused).toEqual(['No pude leer tus códigos de descuento: inténtalo de nuevo en un momento.']);
+  });
+
+  it('a new product takes only a photo sent with the message', () => {
+    const photos = [{ url: '/v1/uploads/mio.jpg', from: 'mensaje' as const }, { url: '/v1/uploads/otro.jpg', from: 'producto' as const, product: 'Polera' }];
+    const { change, notes } = applyCatalogOps(state(), [op('product-add', { name: 'Flan', price: '40', photo: 'f1' }), op('product-add', { name: 'Queque', price: '30', photo: 'f0' })], photos);
+    expect(change.products.create.map(product => product.imageUrls)).toEqual([[], ['/v1/uploads/mio.jpg']]);
+    expect(notes).toEqual(['Mándame la foto de «Flan» cuando la tengas.']);
+  });
+});

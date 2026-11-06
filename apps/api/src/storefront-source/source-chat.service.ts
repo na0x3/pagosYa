@@ -1170,7 +1170,7 @@ export class SourceChatService {
     if (read.ask && !read.ops.length && !read.store.length && !(read.catalog ?? []).length) {
       await workflow.finish('completed');
       const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT', content: read.ask,
-        metadata: { progress: workflow.value, storeAsk: { request: input.instruction.slice(0, 2000), ask: read.ask } } as never } });
+        metadata: { progress: workflow.value, storeAsk: { request: request.slice(0, 2000), ask: read.ask } } as never } });
       return { userMessage, assistantMessage };
     }
     // Spec 2026-11-05 creates anything: page ops first (a new page, renames, links, removals); «nueva» ops now name the new page.
@@ -1279,8 +1279,10 @@ export class SourceChatService {
     const filesChange: MasterFill = { ...(JSON.stringify(homeNow) !== JSON.stringify(layout) ? { layout: homeNow } : {}),
       ...(JSON.stringify(productNow) !== JSON.stringify(productLayout) ? { productLayout: productNow } : {}), ...(store.change.copy ? { copy: store.change.copy } : {}),
       ...(pagesNowChanged ? { pageLayouts: pagesNow } : {}), ...(extraNowChanged ? { extraPages: extraNow } : {}) };
-    if (!done.length && !refused.length) return null;
+    // Final review 2026-11-06: a question, or catalog ops that changed nothing, is answered here — never the slow design edit.
+    if (!done.length && !refused.length && !read.ask && !(read.catalog ?? []).length) return null;
     let saved: Awaited<ReturnType<SourceTemplatesService['refill']>> | null = null;
+    let previewFailed = false;
     // One revision: the files that changed, and the live data in config.js so the preview shows a page or product just written.
     if (Object.keys(filesChange).length || store.change.catalogTitle !== undefined || dataChanged) {
       await workflow.report('saving');
@@ -1302,18 +1304,27 @@ export class SourceChatService {
       };
       const pageFiles = title !== undefined || sectioned.length || extraNowChanged || removedCategoryIds.length
         ? { files: <T extends { path: string; content: string }>(list: T[]) => withoutRemovedCategories(withExtra(withSectionedPages(title !== undefined ? withCatalogTitle(list, title) : list, sectioned))) } : {};
-      saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraNowChanged || store.change.copy || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
-        { refreshData: true, ...pageFiles });
+      // Spec §6: data already saved stays saved when the preview fails to build; the merchant is told, never a bare error.
+      try {
+        saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraNowChanged || store.change.copy || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
+          { refreshData: true, ...pageFiles });
+      } catch (error) {
+        if (!dataChanged) throw error;
+        this.productLogger.warn(JSON.stringify({ event: 'store_edit_refill_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
+        previewFailed = true;
+      }
     }
     await workflow.finish('completed');
     const rest = read.rest;
     const followUp: SourceMessageInput | undefined = rest ? { instruction: rest, revision: saved?.revision ?? revision, layoutRest: true, requestId: randomUUID(), model: input.model ?? 'auto',
       ...(input.maxCredits ? { maxCredits: input.maxCredits } : {}) } : undefined;
     // Part 2: a question YAPI still needs answered (a price it was not told) rides after what it did, and is remembered for the answer.
-    const content = `${layoutEditReply(done, refused)}${read.ask ? ` ${read.ask}` : ''}${rest ? ` Ahora sigo con lo demás: ${quoteRest(rest)}.` : ''}`.trim();
+    const said = previewFailed ? [`Guardé los cambios, pero la vista previa no se actualizó${done.length ? ` (${done.join(', ')})` : ''}.`, ...refused, 'Recarga la página en un momento.'].join(' ')
+      : layoutEditReply(done, refused) || (read.ask ? '' : 'Eso ya está así en tu tienda.');
+    const content = `${said}${read.ask ? ` ${read.ask}` : ''}${rest ? ` Ahora sigo con lo demás: ${quoteRest(rest)}.` : ''}`.trim();
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT', content,
       metadata: { progress: workflow.value, ...(saved ? { sourceRevision: saved.revision, label: saved.label } : {}),
-        ...(read.ask ? { storeAsk: { request: input.instruction.slice(0, 2000), ask: read.ask } } : {}) } } });
+        ...(read.ask ? { storeAsk: { request: request.slice(0, 2000), ask: read.ask } } : {}) } } });
     return { userMessage, assistantMessage, ...(saved ? { revision: saved } : { setup: null }), ...(followUp ? { followUp } : {}) };
   }
 
@@ -1338,7 +1349,7 @@ export class SourceChatService {
       safely(() => this.prisma.paymentLink.findMany({ where: { storeId, status: 'ARCHIVED' }, orderBy: { updatedAt: 'desc' }, take: 20, select: { id: true, name: true } }), null),
       safely(() => this.prisma.category.findMany({ where: { storeId }, orderBy: { sortOrder: 'asc' },
         select: { id: true, name: true, _count: { select: { paymentLinks: { where: { status: 'ACTIVE' } } } } } }), null),
-      safely(() => this.prisma.promoCode.findMany({ where: { storeId }, orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }], take: 20,
+      safely(() => this.prisma.promoCode.findMany({ where: { storeId }, orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }],
         select: { id: true, code: true, discountType: true, discountValue: true, isActive: true, showInEmails: true, showInAssistant: true } }), null),
     ]);
     const row = new Map(rows.map(entry => [entry.id, entry]));

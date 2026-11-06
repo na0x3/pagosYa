@@ -122,6 +122,8 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
   const categories = state.categories ?? [];
   const codes = state.codes ?? [];
   const removed = new Set<string>();
+  // Final review 2026-11-06: a category this request removes is never used, even by an op that comes before its removal.
+  const removing = new Set(ops.filter(op => op.kind === 'category-remove').map(op => categories[op.at]?.id).filter((id): id is string => Boolean(id)));
   const shown = state.products.slice(0, CATALOG_LIMITS.shown);
   const archived = state.archived ?? [];
   const productUpdate = (id: string) => { let entry = change.products.update.find(item => item.id === id); if (!entry) { entry = { id }; change.products.update.push(entry); } return entry; };
@@ -132,11 +134,13 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
   const categoryName = (ref: CategoryRef) => categories.find(category => category.id === ref)?.name ?? change.categories.create.find(category => category.ref === ref)?.name ?? '';
   /** A category by name: the store's, one made earlier in this request, or made now (counted against the limit); null when refused. */
   const categoryFor = (raw: string): CategoryRef | null => {
+    // A list that could not be read is never guessed: it would make a twin of a category the store has.
+    if (!state.categories) { refused.push('No pude leer tus categorías: inténtalo de nuevo en un momento.'); return null; }
     const name = oneLine(raw, CATALOG_LIMITS.categoryName);
     if (!name || !safe(name)) { refused.push(`No usé la categoría «${short(raw, 40)}»: escribe su nombre con letras y números.`); return null; }
     const known = named.get(fold(name));
     if (known) {
-      if (removed.has(known)) { refused.push(`La categoría «${name}» se quita en este mismo pedido.`); return null; }
+      if (removing.has(known)) { refused.push(`La categoría «${name}» se quita en este mismo pedido.`); return null; }
       return known;
     }
     if (change.categories.create.length >= CATALOG_LIMITS.categories) { refused.push(`No creé la categoría «${name}»: como mucho ${CATALOG_LIMITS.categories} categorías nuevas por pedido.`); return null; }
@@ -187,6 +191,7 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
         break;
       }
       case 'code-add': {
+        if (!state.codes) { refused.push('No pude leer tus códigos de descuento: inténtalo de nuevo en un momento.'); break; }
         const discount = discountValue(op.value);
         const typed = op.name.trim().toUpperCase().replace(/\s+/g, '');
         if (!discount) { refused.push(`No creé el código${typed ? ` ${short(typed, 32)}` : ''}: dime el descuento, por ejemplo «20 %» o «Bs 30».`); break; }
@@ -232,7 +237,7 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
       case 'product-add': {
         const name = oneLine(op.name, STORE_CAPS.productName);
         if (!name || !safe(name)) break;
-        if (shown.some(item => fold(item.name) === fold(name)) || change.products.create.some(item => fold(item.name) === fold(name))) {
+        if (state.products.some(item => fold(item.name) === fold(name)) || change.products.create.some(item => fold(item.name) === fold(name))) {
           if (!options.answering) refused.push(`Ya tienes «${short(name, 40)}» en la tienda.`);
           break;
         }
@@ -247,7 +252,9 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
         const categoryRef = op.category.trim() ? categoryFor(op.category) : null;
         if (op.category.trim() && categoryRef === null) break;
         const description = block(op.text, STORE_CAPS.productDescription);
-        const photo = op.photo.trim() ? photoRef(op.photo, photos) : undefined;
+        // A new product's photo is only one sent with this message (never another product's or the store's).
+        const sent = op.photo.trim() ? photoRef(op.photo, photos) : undefined;
+        const photo = sent && photos.find(item => item.url === sent)?.from === 'mensaje' ? sent : undefined;
         const amount = variants.length ? Math.min(...variants.map(variant => variant.amount)) : price!;
         change.products.create.push({ name, description: description && safe(description) ? description : '', amount, currency: currencyOf(state),
           imageUrls: photo ? [photo] : [], stock: variants.length ? totalVariantStock(variants) : stock ?? null, variants, categoryRef });
