@@ -61,3 +61,6 @@ examples/premium-benchmark-photos/*/*
 /*.mov
 /fixit/
 *.bak
+
+# API e2e global setup writes its embedded database location here (2026-11-07)
+apps/api/test/.e2e-state.json
