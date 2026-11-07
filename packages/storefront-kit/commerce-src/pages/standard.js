@@ -28,9 +28,12 @@
     const places = infoLocations(), delivering = places.filter(place => place.deliveryEnabled), pickup = places.filter(place => place.pickupEnabled);
     const own = ownQuestions();
     const entries = own.map(entry => [infoText(entry.q), infoParagraphs(infoText(entry.a))]);
-    if (store.shippingEnabled || delivering.length) entries.push(['¿Hacen envíos?', delivering.length ? `Sí, entregamos a domicilio desde: ${placeNames(delivering)}.` : 'Sí, hacemos envíos.']);
+    // Store text check 2026-11-07: «Sí, entregamos a domicilio desde: Miga Dorada Sopocachi.» read like a form; the store's own
+    // delivery policy answers when it has one.
+    const delivery = infoText(store.policies?.delivery);
+    if (store.shippingEnabled || delivering.length) entries.push(['¿Hacen envíos?', delivery ? `Sí. ${escape(delivery)}` : delivering.length ? `Sí, hacemos entregas a domicilio desde ${placeNames(delivering)}.` : 'Sí, hacemos envíos.']);
     // Only questions the store can answer (spec 2026-10-14): pickup needs a place that offers it, not only the switch.
-    if (pickup.length) entries.push(['¿Puedo retirar mi pedido?', `Sí, puedes retirarlo en: ${placeNames(pickup)}.`]);
+    if (pickup.length) entries.push(['¿Puedo retirar mi pedido?', `Sí, puedes recogerlo en ${placeNames(pickup)}.`]);
     if (places.length) entries.push(['¿Dónde están?', `<ul class="pagosya-info__list">${places.map(place => `<li><strong>${escape(place.name)}</strong>${place.address ? ` — ${escape(place.address)}` : ''}</li>`).join('')}</ul>`]);
     // How to order and how to pay are always answerable in a store that sells something (2026-10-18: a new store's FAQ had
     // fewer than two answers and showed nothing but the voice sheet's line).

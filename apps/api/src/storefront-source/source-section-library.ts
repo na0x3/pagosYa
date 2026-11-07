@@ -211,7 +211,22 @@ Reglas de contenido:
 
 export const TEXT_CAPS = { eyebrow: 40, title: 80, text: 240, cta: 28, cta2: 28, itemTitle: 56, itemText: 160 } as const;
 const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-const clip = (value: unknown, cap: number) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, cap).trim();
+// Store text check 2026-11-07: a cap cut mid-sentence (Lullu «…en tamaño viaje, listo»). Over the cap the words end at the last
+// whole sentence, else the last clause, else the last whole word without a dangling comma or «de/y/para…».
+const clip = (value: unknown, cap: number) => {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  if (text.length <= cap) return text;
+  const head = text.slice(0, cap + 1);
+  const sentence = /^.*[.!?…](?=\s|$)/.exec(head)?.[0];
+  if (sentence && sentence.length >= cap * 0.3) return sentence.trim();
+  const clause = /^(.*)[,;:—–]\s/.exec(head)?.[1];
+  if (clause && clause.length >= cap * 0.5) return clause.trim();
+  let words = head.slice(0, cap).replace(/\s+\S*$/, '').replace(/[\s,;:—–-]+$/, '');
+  for (let strip = words; ; words = strip) {
+    strip = words.replace(/\s+(y|o|e|u|de|del|la|el|las|los|en|con|para|por|que|a|al|un|una|tu|tus|su|sus|sin|más|muy)$/i, '');
+    if (strip === words) return words.trim();
+  }
+};
 
 type RawItem = { title?: string; text?: string; icon?: string; photo?: number; link?: string; value?: string; x?: number; y?: number };
 type RawBlock = { template?: LayoutBlock; type?: string; look?: string; band?: string; eyebrow?: string; title?: string; text?: string; cta?: string; link?: string; cta2?: string; link2?: string;

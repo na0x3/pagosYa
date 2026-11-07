@@ -70,7 +70,8 @@
       const byCategory = el.getAttribute('data-category'), byCollection = el.getAttribute('data-collection'), byColor = el.getAttribute('data-color');
       if (named.length || byCategory || byCollection || byColor) {
         const chosen = named.length ? named.map(ref => products().find(item => item.id === ref) || products().find(item => filterFold(item.name) === filterFold(ref))).filter(Boolean)
-          : byCategory ? products().filter(item => item.categoryId === byCategory)
+          // Store text check 2026-11-07: a home rail may name its category (data-category="Café y algo dulce"), not only its id.
+          : byCategory ? products().filter(item => item.categoryId === byCategory || item.categoryId === (store.categories || []).find(c => filterFold(c.name) === filterFold(byCategory))?.id)
           : byCollection ? products().filter(item => (collections().find(c => c.slug === byCollection)?.productIds || []).includes(item.id))
           : products();
         // John Smedley sections (spec 2026-10-21): an `explore` rail can also show one colour, accents and case ignored.

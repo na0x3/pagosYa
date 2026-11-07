@@ -995,7 +995,9 @@ function PromoTrio({ block, index }: { block: LibraryBlock; index: number }) {
 function ProductsSlider({ block, index }: { block: LibraryBlock; index: number }) {
   return <Band block={block} index={index}>
     <Head block={block} index={index} align="split" aside={<a className="es-link" href={href(block.link)}>{block.cta || 'Ver todo'} <Icons.IconArrowRight /></a>} />
-    <div className="es-grid lb-slider" data-es-grid="grid4" data-pagosya-catalog data-catalog-limit={10} {...(block.products?.length ? { 'data-products': block.products.join('|') } : {})} />
+    <div className="es-grid lb-slider" data-es-grid="grid4" data-pagosya-catalog data-catalog-limit={10} {...(block.products?.length ? { 'data-products': block.products.join('|') }
+      // Store text check 2026-11-07: «Café para acompañar» linked to its category but showed the whole catalogue (books too).
+      : block.link?.startsWith('category:') ? { 'data-category': block.link.slice(9) } : {})} />
   </Band>;
 }
 
