@@ -8,7 +8,12 @@ harness.describeDb('customer credential races (real Postgres)', () => {
   let db: PrismaClient, service: StoreCustomersService;
   const slug = 'customer-auth-test', email = 'shopper@example.test';
   const mail = { send: jest.fn(async (_message: any) => undefined) };
-  const token = (index = -1) => new URL(mail.send.mock.calls.at(index)![0].body.match(/https?:\/\/\S+/)![0]).searchParams.get('token')!;
+  // The link carries its token in the fragment (#verificar=… / #restablecer=…) so the store frame never receives it.
+  const token = (index = -1) => {
+    const url = new URL(mail.send.mock.calls.at(index)![0].body.match(/https?:\/\/\S+/)![0]);
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    return (fragment.get('verificar') ?? fragment.get('restablecer') ?? url.searchParams.get('token'))!;
+  };
   jest.setTimeout(120_000);
   beforeAll(async () => {
     db = await harness.create();
