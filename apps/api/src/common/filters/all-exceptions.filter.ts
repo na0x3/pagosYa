@@ -12,6 +12,24 @@ function redactSecrets(value: string): string {
     .replace(/(authorization:\s*bearer\s+)[^\s]+/gi, "$1[REDACTED]");
 }
 
+/** ISO security test 2026-11-07: Express's body parser rejects a body over the limit (413), malformed JSON (400) or a bad
+ *  charset (415) with a plain error that carries its 4xx status; it used to come back as a 500 and log as a crash. */
+const PARSER_MESSAGES: Record<string, string> = {
+  "entity.too.large": "Request body is too large",
+  "entity.parse.failed": "Malformed JSON body",
+  "encoding.unsupported": "Unsupported body encoding",
+  "charset.unsupported": "Unsupported body charset",
+  "request.aborted": "Request aborted",
+  "request.size.invalid": "Request size did not match Content-Length",
+};
+function parserRejection(exception: unknown): { status: number; message: string } | null {
+  if (!exception || typeof exception !== "object") return null;
+  const { type, status, expose } = exception as { type?: unknown; status?: unknown; expose?: unknown };
+  if (typeof type !== "string" || !(type in PARSER_MESSAGES) || expose !== true) return null;
+  if (typeof status !== "number" || status < 400 || status > 499) return null;
+  return { status, message: PARSER_MESSAGES[type] };
+}
+
 function requestPath(request: Request): string {
   if (request.path) return request.path;
   try {
@@ -39,6 +57,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
     const requestId = request.get?.("x-request-id") || "unknown";
+
+    const rejected = parserRejection(exception);
+    if (rejected) {
+      if (!response.headersSent) response.status(rejected.status).json({ statusCode: rejected.status, message: rejected.message });
+      return;
+    }
 
     const isHttpException = exception instanceof HttpException;
     const isStateConflict = exception instanceof IllegalStateTransitionError;

@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, HttpCode, NotFoundException, Post, UnauthorizedException } from "@nestjs/common";
+import { Body, CanActivate, Controller, ExecutionContext, HttpCode, Injectable, NotFoundException, Post, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { timingSafeEqual } from "node:crypto";
 import { PaymentIntentsService } from "./payment-intents.service";
@@ -14,23 +14,32 @@ import { BanecoQrWebhookDto } from "./dto/baneco-qr-webhook.dto";
  * `payment.transactionId` is always the PaymentIntent id we sent as
  * `transactionId` in generateQR, so no side table is needed to map back.
  */
-@Controller("v1/webhooks/baneco")
-export class BanecoQrWebhookController {
-  constructor(
-    private readonly paymentIntents: PaymentIntentsService,
-    private readonly config: ConfigService,
-  ) {}
-
-  @Post("qr")
-  @HttpCode(200)
-  async notifyPaymentQr(@Headers("x-baneco-webhook-secret") secret: string | undefined, @Body() dto: BanecoQrWebhookDto) {
+/** ISO security test 2026-11-07: the shared secret is checked in a guard, before the body is validated, so a caller without it
+ *  gets 401 — not a 400 that lists the expected fields — and costs no validation work. */
+@Injectable()
+export class BanecoWebhookSecretGuard implements CanActivate {
+  constructor(private readonly config: ConfigService) {}
+  canActivate(context: ExecutionContext): boolean {
+    const header = context.switchToHttp().getRequest().headers["x-baneco-webhook-secret"];
+    const secret = Array.isArray(header) ? header[0] : header;
     const expected = this.config.get<string>("app.banecoQr.webhookSecret");
-    const presentedBuf = Buffer.from(secret ?? "");
+    const presentedBuf = Buffer.from(typeof secret === "string" ? secret : "");
     const expectedBuf = Buffer.from(expected ?? "");
     if (!expected || presentedBuf.length !== expectedBuf.length || !timingSafeEqual(presentedBuf, expectedBuf)) {
       throw new UnauthorizedException("Invalid webhook secret");
     }
+    return true;
+  }
+}
 
+@Controller("v1/webhooks/baneco")
+@UseGuards(BanecoWebhookSecretGuard)
+export class BanecoQrWebhookController {
+  constructor(private readonly paymentIntents: PaymentIntentsService) {}
+
+  @Post("qr")
+  @HttpCode(200)
+  async notifyPaymentQr(@Body() dto: BanecoQrWebhookDto) {
     const { payment } = dto;
     try {
       await this.paymentIntents.applyCallbackResult(payment.transactionId, {

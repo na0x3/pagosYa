@@ -112,7 +112,7 @@ const asPrevious = (index: number, extra: Array<{ path: string; content: string 
 };
 
 beforeEach(() => {
-  ({ service, prisma, stores, projects, config, uploads } = setup());
+  ({ service, prisma, projects, config, uploads } = setup());
   jest.spyOn(SourceDesignPlanner.prototype, 'explore').mockResolvedValue(threeConceptDesign);
   jest.spyOn(designModule, 'sourceDesignExploration').mockReturnValue(designModule.sourceDesignExploration(0));
   jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);

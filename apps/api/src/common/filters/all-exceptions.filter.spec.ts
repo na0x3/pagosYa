@@ -18,6 +18,28 @@ function makeHost(request: { method: string; url: string }) {
 }
 
 describe("AllExceptionsFilter", () => {
+  it("answers the body parser's own 4xx (too large, malformed JSON) instead of a 500, without logging a crash", () => {
+    const filter = new AllExceptionsFilter();
+    const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    for (const [type, status] of [["entity.too.large", 413], ["entity.parse.failed", 400]] as const) {
+      const { host, response } = makeHost({ method: "POST", url: "/v1/dashboard/login" });
+      filter.catch(Object.assign(new Error("raw parser message"), { type, status, statusCode: status, expose: true }), host);
+      expect(response.status).toHaveBeenCalledWith(status);
+      expect(response.json).toHaveBeenCalledWith({ statusCode: status, message: expect.not.stringContaining("raw parser") });
+    }
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("still treats an unknown error with a status field as a 500", () => {
+    const filter = new AllExceptionsFilter();
+    const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    const { host, response } = makeHost({ method: "GET", url: "/v1/stores" });
+    filter.catch(Object.assign(new Error("db down"), { status: 404, type: "something.else", expose: true }), host);
+    expect(response.status).toHaveBeenCalledWith(500);
+    errorSpy.mockRestore();
+  });
+
   it("preserves status/body for a known HttpException and does not log it (4xx, expected)", () => {
     const filter = new AllExceptionsFilter();
     const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
