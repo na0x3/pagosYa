@@ -50,7 +50,7 @@ import { asksToRemoveSections, lostHomeSections, requestsImageChange } from './s
 import { createSourceProgress } from './source-progress';
 import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
-import { galleryTemplates, listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
+import { listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
 import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates, leastUsedDraw, randomPick, readTemplateRandom, templateSwitchRequest } from './source-template-pick';
 import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
@@ -69,7 +69,7 @@ import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy } from './source-templates';
 import { readMoodAsk } from './source-mood-ask';
 import { nextTitleStyle, readTitleAsk } from './source-title-style';
-import { buildLibraryFacts, carriedSections, libraryDropReason, libraryMood, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
+import { buildLibraryFacts, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
 import { applyCatalogOps, catalogChangeEmpty, emptyCatalogChange, relinkCategories, withCategoryMenuRenames, withoutCategoryMenuLinks, type CatalogChange } from './source-catalog-edit';
 import { writeCatalogChange } from './source-catalog-write';
 import type { ProductVariant } from '../payment-links/product-variants';
@@ -108,7 +108,7 @@ import { captureWebsiteBlueprint, measureBuiltHome } from './website-copy/copy-c
 import { copyBlueprintPrompt, copyHeaderShape, copyLayoutCheck, copyReplyNote, copyStructureCheck, type WebsiteBlueprint } from './website-copy/copy-blueprint';
 import type { SourceReferenceCapture } from './source-reference-capture';
 import type { BrandSourceInput } from './brand-source-types';
-import { rankTemplates, type TemplateChoice } from './source-template-ranking';
+import { type TemplateChoice } from './source-template-ranking';
 import { countTemplateVersions, FREE_TEMPLATE_ADAPTATIONS, templateReferenceRequested, templateUntouched } from './source-template-state';
 
 /** Photos kept only as style references never appear on the site; say so instead of omitting them silently. */
@@ -200,8 +200,6 @@ export function templateDemoPhotoNote(manifest: Pick<TemplateManifest, 'id' | 'n
   if (!photos.length) return '';
   return `Fotos de demostración de la plantilla ${manifest.name} (muestran el negocio de ejemplo de la plantilla, no a este comercio): ${JSON.stringify(photos)}. Ninguna puede quedar a la vista: reemplaza cada una por una foto del comercio (subida o de su catálogo) que encaje en su lugar o, si no hay ninguna, convierte ese espacio en un panel de color o tipografía de la plantilla. Nunca muestres productos, logotipos ni marcas de otro negocio.`;
 }
-
-const TEMPLATE_CHOICES_REPLY = 'Elegí estas 3 plantillas para tu negocio. Toca la que más te guste o dime cuál prefieres, y la adapto a tu tienda con tus productos.';
 
 export const IMPORT_BUILD_MODEL = 'gpt-5.6-terra';
 export const IMPORT_BUILD_MAX_CREDITS = 150;
@@ -1280,7 +1278,6 @@ export class SourceChatService {
       extra.push({ ...page, layout: result.layout });
       extraDone.push(...result.done); extraRefused.push(...result.refused, ...adds.refusedAdds);
     }
-    const extraChanged = JSON.stringify(extra) !== JSON.stringify(extraPages);
     const store = editState ? applyStoreOps(editState, read.store, photos) : { change: { products: [] } as StoreChange, done: [], refused: [] };
     // Part 2 (spec 2026-11-05 creates anything): products, categories and codes, checked against what the digest showed.
     const catalog = editState ? applyCatalogOps(editState, read.catalog ?? [], photos, { answering: Boolean(pendingAsk) })

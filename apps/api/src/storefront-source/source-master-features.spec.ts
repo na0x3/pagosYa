@@ -96,6 +96,7 @@ describe('buildFeatures', () => {
 
 it('the swatch table is the kit\'s', () => {
   const kit = readFileSync(join(__dirname, '../../../../packages/storefront-kit/commerce-src/product/setup.js'), 'utf8');
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval -- the spec evaluates the built bundle on purpose
   const table = Function(`return ${kit.match(/const swatchColors = (\{[^;]*\});/)![1]}`)();
   expect(FEATURE_SWATCHES).toEqual(table);
 });

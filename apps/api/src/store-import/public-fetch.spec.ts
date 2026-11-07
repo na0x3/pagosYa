@@ -1,4 +1,4 @@
-import { fetchPublic, PublicFetchError, type PublicTransport } from './public-fetch';
+import { fetchPublic, type PublicTransport } from './public-fetch';
 
 const resolve = jest.fn(async () => [{ address: '23.227.38.65', family: 4 }]) as any;
 const reply = (status: number, extra: Partial<{ contentType: string; location: string; body: string }> = {}) =>

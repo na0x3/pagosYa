@@ -473,7 +473,7 @@ describe('style proposal mode', () => {
   /** A hero that lands when its deferred resolves, or rejects when its lane is aborted. */
   const heldHeroes = () => {
     const heroes = [0, 1].map(() => deferred<{ html: string; source: 'model' }>());
-    writeStyleHero.mockImplementation((args: any) => new Promise((ok, fail) => { heroes[args.concept.card.slot].promise.then(ok); args.signal.addEventListener('abort', () => fail(args.signal.reason)); }));
+    writeStyleHero.mockImplementation((args: any) => new Promise((ok, fail) => { void heroes[args.concept.card.slot].promise.then(ok); args.signal.addEventListener('abort', () => fail(args.signal.reason)); }));
     return heroes;
   };
   const heroSignal = (slot: number): AbortSignal => writeStyleHero.mock.calls.find(c => c[0].concept.card.slot === slot)![0].signal;

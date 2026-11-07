@@ -21,7 +21,7 @@ export function parseCsv(text: string): string[][] {
 
 /** Shopify's product export (Productos → Exportar): one row per variant or extra image, grouped by Handle. It carries exact stock. */
 export function readShopifyCsv(csv: string, name: string, host: string): ShopifyStoreData {
-  const [header, ...rows] = parseCsv(csv.replace(/^﻿/, ''));
+  const [header, ...rows] = parseCsv(csv.replace(/^\uFEFF/, ''));
   const col = (label: string) => header?.indexOf(label) ?? -1;
   if (!header || col('Handle') < 0 || col('Title') < 0 || col('Variant Price') < 0) throw new ShopifyReadError('not_shopify', 'Ese archivo no es una exportación de productos de Shopify.');
   const get = (row: string[], label: string) => { const index = col(label); return index < 0 ? '' : (row[index] ?? '').trim(); };

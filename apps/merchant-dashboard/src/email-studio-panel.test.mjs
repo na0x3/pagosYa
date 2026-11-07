@@ -162,7 +162,7 @@ test('saving content reloads the preview', async () => {
 test('the wording form leaves the announcement, story and note to the content panel', async () => {
   const fields = { storeName: 'Café', fields: [{ field: 'subject', value: 'Recibo', edited: false, max: 90 }, { field: 'announcement', value: 'Anuncio', edited: false, max: 90 },
     { field: 'storyText', value: 'Somos', edited: false, max: 300 }, { field: 'helpTitle', value: '¿Problemas con tu pedido?', edited: false, max: 60 }] };
-  const api = async (path, init = {}) => {
+  const api = async (path, _init = {}) => {
     if (path.endsWith('/emails')) return status();
     if (path.endsWith('/emails/content')) return CONTENT;
     if (path.includes('/emails/preview')) return { html: '<p>PREVIEW</p>', subject: 'x', repairs: [] };

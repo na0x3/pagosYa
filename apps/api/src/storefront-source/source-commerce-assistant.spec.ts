@@ -174,7 +174,7 @@ describe('kit chat.js', () => {
   });
 
   it('a failing hosted lead request is reported and re-enables the button', async () => {
-    const { w, doc } = open({ assistant: { ...ASSISTANT, handoff: 'form' }, contactPhone: '' }, (action) => { if (action === 'lead') return Promise.reject(new Error('x')); return { ok: true, body: {} }; });
+    const { doc } = open({ assistant: { ...ASSISTANT, handoff: 'form' }, contactPhone: '' }, (action) => { if (action === 'lead') return Promise.reject(new Error('x')); return { ok: true, body: {} }; });
     (doc.querySelector('[data-assistant-toggle]') as HTMLButtonElement).click();
     const b = doc.querySelector('[data-assistant-handoff]') as HTMLButtonElement; b.click();
     expect(b.disabled).toBe(true);

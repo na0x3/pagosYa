@@ -13,14 +13,16 @@ function makeFakePrisma() {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
-      deleteMany: jest.fn(),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
     },
     passwordResetToken: {
       create: jest.fn(),
       delete: jest.fn(),
-      deleteMany: jest.fn(),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
     },
     merchantSession: {
       updateMany: jest.fn(),
@@ -188,9 +190,10 @@ describe("MerchantUserService.verifyEmail", () => {
     await service.signup("m_1", "owner@tienda.bo", "a-strong-password");
     (service as any).emailProvider.send = originalSend;
 
-    prisma.emailVerificationToken.findMany.mockResolvedValue([
-      { id: "tok_1", merchantUserId: "user_1", hashedToken: storedHashedToken },
-    ]);
+    // The stored hash is a SHA-256 digest of the emailed token, found by an exact lookup (ISO security test 2026-11-07).
+    expect(storedHashedToken).toMatch(/^sha256:[0-9a-f]{64}$/);
+    prisma.emailVerificationToken.findFirst.mockImplementation(async ({ where }: any) =>
+      where.hashedToken === storedHashedToken ? { id: "tok_1", merchantUserId: "user_1", hashedToken: storedHashedToken } : null);
 
     const result = await service.verifyEmail(issuedToken);
 
@@ -199,12 +202,12 @@ describe("MerchantUserService.verifyEmail", () => {
       where: { id: "user_1" },
       data: { emailVerifiedAt: expect.any(Date) },
     });
-    expect(prisma.emailVerificationToken.delete).toHaveBeenCalledWith({ where: { id: "tok_1" } });
+    expect(prisma.emailVerificationToken.deleteMany).toHaveBeenCalledWith({ where: { id: "tok_1" } });
   });
 
   it("returns unverified for an unknown/invalid token without mutating anything", async () => {
     const prisma = makeFakePrisma();
-    prisma.emailVerificationToken.findMany.mockResolvedValue([]);
+    prisma.emailVerificationToken.findFirst.mockResolvedValue(null);
     const service = new MerchantUserService(prisma as any, makeFakeEmailProvider(), makeFakeConfig(), makeFakeSessions());
 
     await expect(service.verifyEmail("totally-made-up")).resolves.toEqual({ verified: false });
@@ -261,9 +264,8 @@ describe("MerchantUserService.resetPassword", () => {
     });
     await service.requestPasswordReset("owner@tienda.bo");
 
-    prisma.passwordResetToken.findMany.mockResolvedValue([
-      { id: "reset_1", merchantUserId: "user_1", hashedToken: storedHashedToken },
-    ]);
+    prisma.passwordResetToken.findFirst.mockImplementation(async ({ where }: any) =>
+      where.hashedToken === storedHashedToken ? { id: "reset_1", merchantUserId: "user_1", hashedToken: storedHashedToken } : null);
     prisma.merchantUser.update.mockResolvedValue({ id: "user_1", merchantId: "m_1", email: "owner@tienda.bo" });
 
     const result = await service.resetPassword(issuedToken, "a-new-strong-password");
@@ -273,7 +275,7 @@ describe("MerchantUserService.resetPassword", () => {
       where: { id: "user_1" },
       data: { hashedPassword: expect.any(String), emailVerifiedAt: expect.any(Date) },
     });
-    expect(prisma.passwordResetToken.delete).toHaveBeenCalledWith({ where: { id: "reset_1" } });
+    expect(prisma.passwordResetToken.deleteMany).toHaveBeenCalledWith({ where: { id: "reset_1" } });
     expect(prisma.merchantSession.updateMany).toHaveBeenCalledWith({
       where: { merchantUserId: "user_1", revokedAt: null },
       data: { revokedAt: expect.any(Date) },
@@ -289,7 +291,7 @@ describe("MerchantUserService.resetPassword", () => {
 
   it("returns unreset for an unknown/expired token without mutating anything", async () => {
     const prisma = makeFakePrisma();
-    prisma.passwordResetToken.findMany.mockResolvedValue([]);
+    prisma.passwordResetToken.findFirst.mockResolvedValue(null);
     const service = new MerchantUserService(prisma as any, makeFakeEmailProvider(), makeFakeConfig(), makeFakeSessions());
 
     await expect(service.resetPassword("totally-made-up", "new-password")).resolves.toEqual({ reset: false });

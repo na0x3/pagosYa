@@ -3,7 +3,7 @@ import { SOURCE_DESIGN_FILE } from './source-design';
 import { faviconPng } from '../store-seo/store-favicon';
 import { storeIdentity } from '../store-seo/store-identity';
 import { withoutCommerceTemplates } from './commerce-surfaces/surface-inject';
-import { FRAME_DRAW_FILE, parseFrameDraw, type FrameDraw } from './design-engine/frame-draw';
+import { FRAME_DRAW_FILE, parseFrameDraw } from './design-engine/frame-draw';
 import { visibleSentences } from './copy-check';
 import { readVoice, VOICE_FILE, type RecentVoice } from './store-voice';
 import { readControls } from './store-controls';

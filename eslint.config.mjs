@@ -114,4 +114,12 @@ export default tseslint.config(
       "@typescript-eslint/no-non-null-assertion": "off",
     },
   },
+  {
+    // Production check 2026-11-07: unit tests the apps' tsconfigs leave out (checkout, Studio, storefront-preview build only
+    // their shipped code) and the store templates (sources the platform compiles per store, in no tsconfig) cannot get type
+    // information; lint them syntactically instead of failing on a parse error.
+    files: ["**/*.test.ts", "**/*.test.tsx", "packages/store-templates/**/*.ts", "packages/store-templates/**/*.tsx", "packages/store-templates/**/*.mts"],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { parserOptions: { projectService: false, project: false } },
+  },
 );

@@ -43,7 +43,7 @@ const variant = (id: string, options: string[], price: string, extra: Partial<Sh
 
 type Table = { header: string[]; rows: string[][]; get: (row: string[], label: string) => string; has: (label: string) => boolean };
 function table(csv: string): Table | null {
-  const clean = csv.replace(/^﻿/, '');
+  const clean = csv.replace(/^\uFEFF/, '');
   const first = clean.split(/\r?\n/, 1)[0] ?? '';
   const delimiter = (first.match(/;/g)?.length ?? 0) > (first.match(/,/g)?.length ?? 0) ? ';' : ',';
   const [header, ...rows] = parseDelimited(clean, delimiter);

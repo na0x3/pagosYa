@@ -68,7 +68,7 @@ describe('DomainFxRate', () => {
     expect(fx.current()).toBe(6.96);
   });
   it('does not fetch at startup under test, so specs stay offline', async () => {
-    await make().onModuleInit(); expect(fetchMock).not.toHaveBeenCalled();
+    make().onModuleInit(); expect(fetchMock).not.toHaveBeenCalled();
   });
   const feed = async (fx: DomainFxRate, venta: number, over: object = {}) => { fetchMock.mockResolvedValue(reply([row({ venta, ...over })])); await fx.refresh(); };
 

@@ -29,7 +29,7 @@ describe.each(listTemplates().map(manifest => [manifest.id, manifest] as const))
     const authored = snapshot.files.filter(f => /^components\/.+\.tsx$/.test(f.path));
     const home = authored.find(f => f.path === 'components/home.tsx')!.content;
     const mainBody = home.slice(home.indexOf('<main'), home.lastIndexOf('</main>'));
-    const sections = (mainBody.match(/\n      <section\b[^>]*>/g) || []);
+    const sections = (mainBody.match(/\n {6}<section\b[^>]*>/g) || []);
     expect(sections.filter(tag => !/\bid="/.test(tag))).toEqual([]);
     const opening = sourceHomeRegions(authored)[0]?.id;
     expect(home.match(/<section\b[^>]*>/)![0]).toContain(`id="${opening}"`);

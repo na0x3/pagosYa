@@ -20,7 +20,7 @@ const concept = (name: string) => ({ name, premise: `${name} premise`, opening: 
   motion: { mode: 'subtle', scrollFeel: 'soft', entrance: 'none', scenes: [] }, dna: validDna() });
 const threeConceptDesign = designModule.validateSourceDesign({ concepts: ['Menu', 'Window', 'Counter'].map(concept), selected: 0 }, 0, true, true);
 const shell = (main: string) => `<!doctype html><html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="styles.css"><title>Inicio</title></head><body><header data-pagosya-header></header><main>${main}</main><footer><p>Pie</p></footer><script src="config.js" defer></script><script src="commerce.js" defer></script><script src="site.js" defer></script></body></html>`;
-const shopFiles = () => [
+const _shopFiles = () => [
   { path: 'index.html', content: shell('<section id="menu" data-nav-label="Menú"><h1>Menú</h1><div data-pagosya-catalog></div></section><section id="historia" data-nav-label="Nuestra historia"><h2>Historia</h2></section><div data-pagosya-cart></div><p data-pagosya-status role="status" aria-live="polite"></p>') },
   { path: 'styles.css', content: 'body { color: #222; }' }, { path: 'site.js', content: 'globalThis.__generatedSourceExecuted = true;' },
 ];
@@ -145,7 +145,7 @@ describe('a brand source edit', () => {
   });
 
   it('a fresh build gives the author the brand block and names only what reached the site', async () => {
-    const { service, prisma, projects } = setup();
+    const { service, prisma } = setup();
     prisma.store.findFirst.mockResolvedValue({ slug: 'baek', onboarding: { version: 1, primaryAction: { kind: 'form' } } });
     prisma.mediaAsset.findMany.mockResolvedValue([{ id: 'brand', url: brandUrl, kind: 'ORIGINAL', role: null, mimeType: 'image/png', parentAsset: null }]);
     (samplePhotoColours as jest.Mock).mockResolvedValue(samples);

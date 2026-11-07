@@ -37,7 +37,7 @@ export function htmlToText(html: string): string {
       ? String.fromCodePoint(entity[1].toLowerCase() === 'x' ? parseInt(entity.slice(2), 16) : Number(entity.slice(1)))
       : ENTITIES[entity.toLowerCase()] ?? match)
     .replace(UNSAFE, '')
-    .split('\n').map(line => line.replace(/[ \t ]+/g, ' ').trim()).join('\n')
+    .split('\n').map(line => line.replace(/[ \t\u00A0]+/g, ' ').trim()).join('\n')
     .replace(/\n{3,}/g, '\n\n').trim().slice(0, 20_000);
 }
 

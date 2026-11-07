@@ -12,7 +12,7 @@ const product = (over: Record<string, unknown> = {}) => ({
   imageUrls: ['https://shop.test/cafe.jpg'], variants: [], extras: [], highlights: [],
   badge: null, createdAt: new Date(Date.now() - 90 * DAY).toISOString(), ...over,
 });
-const rows = (n: number) => ([['cup', 'Café de altura'], ['bolt', 'Energía natural'], ['leaf', 'Enfoque limpio'], ['check', 'Fácil de digerir'], ['heart', 'Sin azúcar'], ['star', 'Hecho en Bolivia']] as const)
+const _rows = (n: number) => ([['cup', 'Café de altura'], ['bolt', 'Energía natural'], ['leaf', 'Enfoque limpio'], ['check', 'Fácil de digerir'], ['heart', 'Sin azúcar'], ['star', 'Hecho en Bolivia']] as const)
   .slice(0, n).map(([icon, label]) => ({ icon, label }));
 
 const windows: any[] = [];

@@ -1,7 +1,7 @@
 import { rankDirections } from './source-directions';
 import { agentDraftPreviews } from './agent/agent-draft-previews';
 import { SourceConversationFailure } from './source-conversation-failure';
-import { SourceChatService, referenceOnlyNotice, TEMPLATE_QUESTION, TEMPLATE_ADAPTATION_MAX_CREDITS, TEMPLATE_UNIQUE_OFFER, TEMPLATE_REWORK_BRIEF, TEMPLATE_KEEP_BRIEF, templateDemoPhotoNote } from './source-chat.service';
+import { SourceChatService, referenceOnlyNotice, TEMPLATE_ADAPTATION_MAX_CREDITS, TEMPLATE_UNIQUE_OFFER, TEMPLATE_REWORK_BRIEF, TEMPLATE_KEEP_BRIEF, templateDemoPhotoNote } from './source-chat.service';
 import { templateReferenceRequested } from './source-template-state';
 import { sourceRequestContext } from './source-request-context';
 import { SourceRequestBudget } from './source-request-budget';

@@ -118,9 +118,9 @@ describe('merchant model choice (spec 2026-11-04 §7)', () => {
   it('a merchant\'s queued chat message reaches the job as auto when the picker is off, and as asked when it is on', () => {
     const jobs = { create: jest.fn() };
     const input = { revision: 1, instruction: 'Hola', model: 'claude-opus-5-5' } as any;
-    new SourceChatJobsController(jobs as any, { get: () => false } as any).create({ id: 'm' }, 's', input);
+    void new SourceChatJobsController(jobs as any, { get: () => false } as any).create({ id: 'm' }, 's', input);
     expect(jobs.create).toHaveBeenLastCalledWith('m', 's', expect.objectContaining({ model: 'auto' }));
-    new SourceChatJobsController(jobs as any, { get: (key: string) => key === 'app.yapiModelPicker' } as any).create({ id: 'm' }, 's', input);
+    void new SourceChatJobsController(jobs as any, { get: (key: string) => key === 'app.yapiModelPicker' } as any).create({ id: 'm' }, 's', input);
     expect(jobs.create).toHaveBeenLastCalledWith('m', 's', expect.objectContaining({ model: 'claude-opus-5-5' }));
   });
 });

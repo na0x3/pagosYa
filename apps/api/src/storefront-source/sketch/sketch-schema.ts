@@ -123,7 +123,7 @@ const LIMITS = { headline: 120, short: 200, paragraph: 600, list: 6, galleryPhot
 /** Kickers get their ✦ from CSS; a glyph the model typed itself would double it. */
 /** Where a block button may lead: in-store pages and anchors only. */
 const BLOCK_HREF = /^(#|index\.html|productos\.html|checkout\.html|galeria\.html)/;
-const kickerText = (value: unknown) => (typeof value === 'string' ? value : '').replace(/^[\s✦✧★☆•·◆◇*✶✳︎-]+/u, '').slice(0, 80);
+const kickerText = (value: unknown) => (typeof value === 'string' ? value : '').replace(/^(?:[\s✦✧★☆•·◆◇*✶✳-]|\uFE0E|\uFE0F)+/u, '').slice(0, 80);
 
 /** Per-channel mix of two hex colors: `weight` of `a` into `1-weight` of `b` (CSS color-mix equivalent). */
 export const mixHex = (a: string, b: string, weight: number) => {

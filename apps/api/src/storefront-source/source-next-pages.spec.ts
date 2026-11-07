@@ -112,6 +112,7 @@ describe('InfoPage', () => {
       bundle: true, write: false, platform: 'node', format: 'cjs', jsx: 'automatic', logLevel: 'silent',
     });
     const module = { exports: {} as any };
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval -- the spec evaluates the built bundle on purpose
     new Function('module', 'exports', 'require', bundle.outputFiles[0].text)(module, module.exports, require);
     return module.exports.default(kind) as string;
   };

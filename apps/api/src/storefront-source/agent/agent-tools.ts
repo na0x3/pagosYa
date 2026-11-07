@@ -18,7 +18,7 @@ import { chosenMotifPack, listMotifPacks, loadMotifPack, snapshotWithMotifPack }
 import { AGENT_POLICY_KINDS, policyTextProblem, snapshotWithPolicies, type AgentPolicyKind, type PendingPolicies } from '../source-agent-policies';
 import { SOURCE_DNA_ENUMS } from '../source-dna';
 import { ASSURANCE_ICONS } from '../product-theme';
-import { PRESET_IDS, type ProductCardParams } from '../source-product-card-presets';
+import { PRESET_IDS } from '../source-product-card-presets';
 import { resolveProductTheme, snapshotWithProductTheme, type ProductThemeInput, type ProductThemeResult } from '../product-theme';
 
 export type AgentToolName = 'inspect_asset' | 'find_products' | 'create_page' | 'plan_task' | 'inspect_project' | 'set_account_theme' | 'list_files' | 'read_file' | 'edit_file' | 'edit_file_batch' | 'write_file' | 'delete_file' | 'screenshot' | 'verify' | 'finish' | 'set_product_card_theme' | 'search_illustrations' | 'set_motif_pack' | 'set_store_policy'

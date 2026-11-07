@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { createHash } from "node:crypto";
 import * as argon2 from "argon2";
 import { customAlphabet } from "nanoid";
 import { PrismaService } from "../prisma/prisma.service";
@@ -11,6 +12,10 @@ const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
 const generateSecretPart = customAlphabet(alphabet, 32);
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+// ISO security test 2026-11-07: email and reset links are 190-bit random tokens, so a SHA-256 digest is enough and is looked up
+// directly. Before, every click Argon2-verified EVERY outstanding token (64 MB each) — anyone could pile up signups and make one
+// click cost the server minutes. Links sent before this change (Argon2-hashed) simply stop working; they expire in 24 h / 1 h.
+const digest = (token: string) => `sha256:${createHash("sha256").update(token).digest("hex")}`;
 
 /**
  * Human logins for the merchant dashboard. Provisioned via
@@ -75,21 +80,19 @@ export class MerchantUserService {
   }
 
   async verifyEmail(token: string): Promise<{ verified: boolean }> {
-    const candidates = await this.prisma.emailVerificationToken.findMany({
-      where: { expiresAt: { gt: new Date() } },
+    if (typeof token !== "string" || !token) return { verified: false };
+    const candidate = await this.prisma.emailVerificationToken.findFirst({
+      where: { hashedToken: digest(token), expiresAt: { gt: new Date() } },
     });
-
-    for (const candidate of candidates) {
-      if (await argon2.verify(candidate.hashedToken, token)) {
-        await this.prisma.merchantUser.update({
-          where: { id: candidate.merchantUserId },
-          data: { emailVerifiedAt: new Date() },
-        });
-        await this.prisma.emailVerificationToken.delete({ where: { id: candidate.id } });
-        return { verified: true };
-      }
-    }
-    return { verified: false };
+    if (!candidate) return { verified: false };
+    // One click wins: the token row is consumed before the account changes.
+    const consumed = await this.prisma.emailVerificationToken.deleteMany({ where: { id: candidate.id } });
+    if (consumed.count !== 1) return { verified: false };
+    await this.prisma.merchantUser.update({
+      where: { id: candidate.merchantUserId },
+      data: { emailVerifiedAt: new Date() },
+    });
+    return { verified: true };
   }
 
   /**
@@ -114,29 +117,29 @@ export class MerchantUserService {
     token: string,
     newPassword: string,
   ): Promise<{ reset: boolean; session?: Awaited<ReturnType<MerchantSessionService["createSession"]>> }> {
-    const candidates = await this.prisma.passwordResetToken.findMany({
-      where: { expiresAt: { gt: new Date() } },
-    });
+    const candidate = typeof token === "string" && token ? await this.prisma.passwordResetToken.findFirst({
+      where: { hashedToken: digest(token), expiresAt: { gt: new Date() } },
+    }) : null;
 
-    for (const candidate of candidates) {
-      if (await argon2.verify(candidate.hashedToken, token)) {
-        const hashedPassword = await argon2.hash(newPassword);
-        const user = await this.prisma.merchantUser.update({
-          where: { id: candidate.merchantUserId },
-          data: { hashedPassword, emailVerifiedAt: new Date() },
-        });
-        await this.prisma.passwordResetToken.delete({ where: { id: candidate.id } });
-        await this.prisma.merchantSession.updateMany({
-          where: { merchantUserId: candidate.merchantUserId, revokedAt: null },
-          data: { revokedAt: new Date() },
-        });
-        // Consuming a valid one-time reset token already proves control of the
-        // mailbox, so this can safely log the merchant straight into a fresh
-        // session (issued after the revocation above, so it isn't revoked too)
-        // instead of making them type their new password again immediately.
-        const session = await this.sessions.createSession(user);
-        return { reset: true, session };
-      }
+    if (candidate) {
+      // One use: the row is consumed first, so two simultaneous submits cannot both set a password.
+      const consumed = await this.prisma.passwordResetToken.deleteMany({ where: { id: candidate.id } });
+      if (consumed.count !== 1) return { reset: false };
+      const hashedPassword = await argon2.hash(newPassword);
+      const user = await this.prisma.merchantUser.update({
+        where: { id: candidate.merchantUserId },
+        data: { hashedPassword, emailVerifiedAt: new Date() },
+      });
+      await this.prisma.merchantSession.updateMany({
+        where: { merchantUserId: candidate.merchantUserId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      // Consuming a valid one-time reset token already proves control of the
+      // mailbox, so this can safely log the merchant straight into a fresh
+      // session (issued after the revocation above, so it isn't revoked too)
+      // instead of making them type their new password again immediately.
+      const session = await this.sessions.createSession(user);
+      return { reset: true, session };
     }
     return { reset: false };
   }
@@ -170,7 +173,7 @@ export class MerchantUserService {
 
   private async issueVerification(merchantUserId: string, email: string): Promise<void> {
     const token = generateSecretPart();
-    const hashedToken = await argon2.hash(token);
+    const hashedToken = digest(token);
     const expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
 
     await this.prisma.emailVerificationToken.create({ data: { merchantUserId, hashedToken, expiresAt } });
@@ -184,7 +187,7 @@ export class MerchantUserService {
 
   private async issuePasswordReset(merchantUserId: string, email: string): Promise<void> {
     const token = generateSecretPart();
-    const hashedToken = await argon2.hash(token);
+    const hashedToken = digest(token);
     const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
 
     // A fresh reset request invalidates any earlier one still outstanding.

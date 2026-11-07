@@ -5,7 +5,7 @@ import { store, copy, variants, photos } from './store-data';
 /** The rolled variant of a part (variety spec §2); the first catalogue id when the store has none. */
 export const variant = (part: string, fallback: string) => { const value = variants[part]; return typeof value === 'string' && value ? value : fallback; };
 import { Confetti } from './effects';
-import { IconLogIn, IconMapPin, IconMenu, IconMessageCircle, IconSearch, IconShoppingBag, IconX } from './icons';
+import { IconMapPin, IconMenu, IconMessageCircle, IconX } from './icons';
 
 const links = [{ label: 'Colección', href: 'productos.html' }, { label: 'Nuestra historia', href: 'index.html#historia' }, { label: 'Contacto', href: 'contacto.html' }];
 

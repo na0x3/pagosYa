@@ -6,7 +6,7 @@ import { SOURCE_MODEL_PRODUCT_PAGE_STYLES } from '../source-dna';
 import { SOURCE_ICON_NAMES } from '../source-asset-library';
 import { sourceResponseJson } from '../source-response';
 import { drawSketchDirection, type SketchDirection } from './sketch-direction';
-import { repairSketch, SKETCH_BLOCK_TYPES, SKETCH_STYLE_OPTIONS, SKETCH_WIDTHS } from './sketch-schema';
+import { repairSketch, SKETCH_STYLE_OPTIONS, SKETCH_WIDTHS } from './sketch-schema';
 import { PRESET_IDS, PRODUCT_CARD_PRESETS } from '../source-product-card-presets';
 import { ASSURANCE_ICONS } from '../product-theme';
 import type { PageStructure } from './sketch-structure-draw';

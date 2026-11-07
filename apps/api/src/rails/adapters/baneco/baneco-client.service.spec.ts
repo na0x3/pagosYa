@@ -12,7 +12,7 @@ describe("BanecoClientService HTTP timeout", () => {
 
   it("every HTTP call carries an abort signal, and an aborted call surfaces as an error", async () => {
     const jwt = `x.${Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url")}.y`;
-    fetchMock.mockImplementation(async (url: string | URL, init: RequestInit) => {
+    fetchMock.mockImplementation(async (url: string | URL, _init: RequestInit) => {
       const u = String(url);
       if (u.includes("/encrypt")) return { ok: true, status: 200, text: async () => "enc" };
       if (u.includes("/authenticate")) return { ok: true, status: 200, json: async () => ({ token: jwt }) };

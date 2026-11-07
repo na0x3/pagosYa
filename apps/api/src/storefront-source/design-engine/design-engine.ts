@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { sectionCompositions, type BrandDirection, type WebsiteDesignSpec, type DesignQuality } from '@pagosya/shared-types';
 import { brandDirectionSchema, creativePlanSchema, type CreativePlan } from './design-schemas';
 import { syncDesignSpec, tokensForSketch } from './design-document';
-import { DEFAULT_SKETCH_STYLE, repairSketch, sketchButtonStyle, bestInkFor, contrastRatio, resolveBg, type StoreSketch, type SketchBlock, type SketchContext } from '../sketch/sketch-schema';
+import { DEFAULT_SKETCH_STYLE, repairSketch, sketchButtonStyle, bestInkFor, contrastRatio, resolveBg, type StoreSketch, type SketchContext } from '../sketch/sketch-schema';
 import type { PageStructure } from '../sketch/sketch-structure-draw';
 import { substanceCaps, type StoreSubstance } from '../sketch/sketch-substance';
 import { catalogueDigest } from '../sketch/sketch-catalogue-digest';

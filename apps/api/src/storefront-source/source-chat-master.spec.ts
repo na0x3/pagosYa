@@ -4,7 +4,7 @@ import { randomUUID as uuid } from 'node:crypto';
 import { templateStoreDataFile } from './source-templates';
 import { CONTENT_PAGE_FILES, withSectionedPages } from './source-content-pages';
 import { ConfigService } from '@nestjs/config';
-import { withoutPhotoGroups, HOME_WRITER_MAX_CREDITS, MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, OWN_REQUEST_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
+import { withoutPhotoGroups, HOME_WRITER_MAX_CREDITS, MASTER_EDIT_RULES, MASTER_POLISH_BRIEF, PERSONAL_TOUCH_BRIEF, PersonalTouchSkipped, SourceChatService } from './source-chat.service';
 import { SourceRequestBudget } from './source-request-budget';
 import { SourceProviderQuotaException } from './source-provider-error';
 import { MODEL_LIMIT_MERCHANT_FAILURE as LIMIT_REPLY } from './source-validation-error';

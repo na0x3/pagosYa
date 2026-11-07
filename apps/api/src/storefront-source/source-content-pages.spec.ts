@@ -4,7 +4,6 @@ import { listTemplates, templateSourceFiles } from '@pagosya/store-templates';
 import { nextStoreFiles } from './fixtures/next-store';
 import { ACCOUNT_PAGE_FILES, STANDARD_PAGE_FILES, CONTENT_PAGE_FILES, keptMenuPages, sectionablePage, sectionedPageFile, withCurrentSectionedPages, withSectionedPages, withStandardPages } from './source-content-pages';
 import { compileNextPreview, nextContentPages, nextSourceFile } from './source-next';
-import { LIBRARY_CATALOG } from './source-section-library';
 import { assembleTemplateRevision } from './source-templates';
 
 const { JSDOM, VirtualConsole } = createRequire(join(__dirname, '../../../checkout/package.json'))('jsdom');

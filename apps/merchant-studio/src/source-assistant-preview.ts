@@ -19,7 +19,7 @@ export function bindAssistantPreview(frame: () => HTMLIFrameElement | null, test
     if (!id || !message) return;
     const conversationId = typeof data.body?.conversationId === 'string' ? data.body.conversationId : undefined;
     preview.postMessage({ type: 'pagosya:assistant-test-ack', id }, '*');
-    testChat({ message: message.slice(0, 500), ...(conversationId ? { conversationId } : {}) })
+    void testChat({ message: message.slice(0, 500), ...(conversationId ? { conversationId } : {}) })
       .then(json => ({ ok: true, status: 200, json }))
       .catch((error: unknown) => ({ ok: false, status: error instanceof ApiError ? error.status : 0, json: { message: error instanceof Error ? error.message : '' } }))
       .then(result => { try { preview.postMessage({ type: 'pagosya:assistant-test-reply', id, ...result }, '*'); } catch { /* the preview reloaded */ } });

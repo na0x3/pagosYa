@@ -57,7 +57,7 @@ const settle = async (page: Page) => {
   await page.evaluate(async () => {
     await document.fonts.ready;
     for (const img of Array.from(document.images)) img.loading = 'eager';
-    await Promise.all(Array.from(document.images).map(img => img.complete ? (img.naturalWidth ? img.decode().catch(() => {}) : undefined) : new Promise(done => { img.addEventListener('load', done, { once: true }); img.addEventListener('error', done, { once: true }); setTimeout(done, 4000); })));
+    await Promise.all(Array.from(document.images).map(img => img.complete ? (img.naturalWidth ? img.decode().catch(() => {}) : Promise.resolve()) : new Promise(done => { img.addEventListener('load', done, { once: true }); img.addEventListener('error', done, { once: true }); setTimeout(done, 4000); })));
   });
   await page.waitForTimeout(500);
 };

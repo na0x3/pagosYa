@@ -1,5 +1,5 @@
 import { parse, parseFragment, serialize } from 'parse5';
-import { attrOf, clampHtml, has, remove, setAttr, setText, walk, type Element, type Node } from '../store-emails/email-dom';
+import { clampHtml, has, remove, setAttr, setText, walk, type Element, type Node } from '../store-emails/email-dom';
 import { ORDER_EMAIL_ATTRIBUTE_SLOTS, ORDER_EMAIL_RENDER_MAX_BYTES } from './order-email-slots';
 
 

@@ -14,7 +14,7 @@ import { checkoutRecipientDetails, isStoreCheckout, renderSuccess, contactBlockH
 import { methodRows, mountShellStyle, shellAccent, shellFrame, shellSummary, trustStripHtml, wireSummaryToggle } from "./shell";
 import { customerContact, contactFieldErrors, EMAIL_PATTERN, PHONE_PATTERN } from "./customer-contact";
 import { reminderConsentHtml } from "./reminder-consent";
-import { ICON_LOCK, ICON_X } from "../ui/icons";
+import { ICON_X } from "../ui/icons";
 
 export const DOMESTIC_METHOD_TYPES: DomesticMethodType[] = [
   PaymentMethodType.CARD,

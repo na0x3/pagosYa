@@ -21,8 +21,8 @@ test('the checkout shell assets reach the runtime as a generated part before the
   assert.ok(PARTS.indexOf('checkout/shell-assets.js') < PARTS.indexOf('checkout/shell.js'));
   assert.ok(PARTS.indexOf('checkout/shell.js') < PARTS.indexOf('checkout/overlay.js'));
   const built = buildCommerce();
-  assert.match(built, /\n  const CHECKOUT_SHELL_CSS = ".*pya-checkout/);
-  assert.match(built, /\n  const PAYMENT_LOGOS = \{"logos":/);
+  assert.match(built, /\n {2}const CHECKOUT_SHELL_CSS = ".*pya-checkout/);
+  assert.match(built, /\n {2}const PAYMENT_LOGOS = \{"logos":/);
 });
 
 test('the built runtime parses as one classic script', () => {

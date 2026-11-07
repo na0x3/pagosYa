@@ -266,7 +266,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     stores: () => lastStores,
     setStores: (stores) => { lastStores = stores; },
   });
-  const { watchStoreThumbnails, unloadStoreThumbnails, openShopifyImport, renderCurrentStoreBanner, renderStoreRows } = storesPanel;
+  const { watchStoreThumbnails, unloadStoreThumbnails, renderCurrentStoreBanner, renderStoreRows } = storesPanel;
   storesPanel.init();
   let storeSettings = null;
   let emailStudio = null;

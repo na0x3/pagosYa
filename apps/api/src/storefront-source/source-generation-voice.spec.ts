@@ -95,7 +95,7 @@ function setup() {
   return { service: new SourceGenerationService(prisma, stores, projects, uploads, config, undefined, metering), prisma, stores, projects, config, uploads, revision };
 }
 
-let service: SourceGenerationService, prisma: any, stores: any, projects: any, config: any, uploads: any;
+let service: SourceGenerationService, prisma: any, projects: any, config: any, uploads: any;
 let fetchMock: jest.SpyInstance;
 const calls = (schema: string): any[] => fetchMock.mock.calls.map(call => call[1]).filter(init => schemaOf(init) === schema);
 const savedFile = (index: number, path: string): string | undefined => projects.save.mock.calls[index]?.[2].files.find((file: any) => file.path === path)?.content;

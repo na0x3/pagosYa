@@ -1,7 +1,6 @@
 import { sourceRequestContext } from './source-request-context';
 import { SOURCE_CONVERSATION_TIMEOUT_MS } from './source-conversation-failure';
 import { SourceConversationService } from './source-conversation.service';
-import { SOURCE_LOCATION_INSTRUCTIONS } from './source-location';
 import { SOURCE_WEBSITE_REFERENCE_INSTRUCTIONS } from './source-website-reference';
 import { newSourceSetup } from './source-setup';
 import { SourceRequestBudget } from './source-request-budget';
