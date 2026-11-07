@@ -206,6 +206,9 @@ describe("SettlementHoldService.applyRefundDrawdown", () => {
       _sum: { amount: true },
     });
     expect(tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(tx.payout.aggregate.mock.invocationCallOrder[0]);
+    // A payout that succeeds between the two reads leaves in-flight and debits payable in one commit. Reading
+    // in-flight first can only count it twice (too little available); the other order would count it as available.
+    expect(tx.payout.aggregate.mock.invocationCallOrder[0]).toBeLessThan(tx.ledgerEntry.groupBy.mock.invocationCallOrder[0]);
     expect(lines.slice(2)).toEqual([
       { account: LedgerAccount.MERCHANT_PAYABLE, direction: DEBIT, amount: 100, merchantId: "m_1", transactionId: "r_1" },
       { account: LedgerAccount.MERCHANT_PENDING, direction: DEBIT, amount: 875, merchantId: "m_1", transactionId: "r_1" },

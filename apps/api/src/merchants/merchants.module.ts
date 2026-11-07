@@ -9,9 +9,10 @@ import { DashboardModule } from "../dashboard/dashboard.module";
 import { ApiKeysController } from "../auth/api-keys.controller";
 import { LegalModule } from "../legal/legal.module";
 import { PrivateFilesService } from "../commerce-platform/private-files.service";
+import { PayoutAccountsModule } from "../payout-accounts/payout-accounts.module";
 
 @Module({
-  imports: [AuthModule, OpsModule, DashboardModule, LegalModule],
+  imports: [AuthModule, OpsModule, DashboardModule, LegalModule, PayoutAccountsModule],
   controllers: [MerchantsController, ApiKeysController],
   providers: [MerchantsService, KycService, PrivateFilesService, IdentityDocumentsService],
   exports: [MerchantsService, KycService],

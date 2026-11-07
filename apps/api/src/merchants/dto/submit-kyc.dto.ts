@@ -30,10 +30,17 @@ export class SubmitKycDto {
   @MinLength(5)
   legalRepDocumentId?: string;
 
-  @ApiProperty({ example: "BNB 4012345678", description: "Payout bank account" })
+  /** Legacy free-text account; ignored. The account now comes from a proven PayoutAccount (payoutAccountId). */
+  @ApiPropertyOptional({ description: "Legacy, ignored" })
+  @IsOptional()
   @IsString()
-  @MinLength(5)
-  payoutBankAccount!: string;
+  @MaxLength(300)
+  payoutBankAccount?: string;
+
+  @ApiProperty({ description: "A payout account sent with its proof (POST /v1/dashboard/payout_accounts), waiting or approved" })
+  @IsString()
+  @MaxLength(40)
+  payoutAccountId!: string;
 
   @ApiPropertyOptional({ description: "USD account (bank, account number, SWIFT/ABA) for international payouts." })
   @IsOptional()

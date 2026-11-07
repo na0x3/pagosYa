@@ -29,7 +29,7 @@ describe("SupportService", () => {
 
     const select = prisma.merchant.findUnique.mock.calls[0][0].select;
     expect(select.kycSubmissions.select).toMatchObject({ payoutBankAccount: true, payoutUsdBankAccount: true });
-    expect(dossier.merchant.kycSubmissions[0]).toMatchObject({ payoutBankAccount: "••••••••4000", payoutUsdBankAccount: "•••••••7766" });
+    expect(dossier.merchant.kycSubmissions[0]).toMatchObject({ payoutBankAccount: "····4000", payoutUsdBankAccount: "US-····7766" });
   });
 
   it("lets an authenticated merchant submit a traceable case in SENT status", async () => {

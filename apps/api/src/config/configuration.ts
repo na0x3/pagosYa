@@ -13,6 +13,12 @@ export interface BanecoQrConfig {
 
 export interface DlocalConfig {
   enabled: boolean;
+  /**
+   * Product switch for international payments as a whole (INTERNATIONAL_PAYMENTS_ENABLED). Off by default while dLocal
+   * has not confirmed the account: no checkout offer, no new merchant requests or approvals, no dLocal charge, in any
+   * environment. `enabled` still says whether the real dLocal client (vs fixtures) would be used once it is on.
+   */
+  internationalPaymentsEnabled: boolean;
   baseUrl: string;
   login: string;
   transKey: string;
@@ -39,6 +45,7 @@ function nonNegativeNumber(value: string | undefined, fallback: number): number 
 export function parseDlocalConfig(env: NodeJS.ProcessEnv): DlocalConfig {
   return {
     enabled: env.DLOCAL_ENABLED === "true",
+    internationalPaymentsEnabled: env.INTERNATIONAL_PAYMENTS_ENABLED === "true",
     baseUrl: env.DLOCAL_BASE_URL ?? "https://sandbox.dlocal.com",
     login: env.DLOCAL_LOGIN ?? "",
     transKey: env.DLOCAL_TRANS_KEY ?? "",
@@ -298,27 +305,36 @@ function parseBoundedInteger(name: string, value: string | undefined, fallback: 
   return parsed;
 }
 
+// The daily payout batch holds one connection for a merchant's settlement lock while it reads through another, so a
+// single-connection pool would wait on itself until pool_timeout.
+const MIN_DATABASE_POOL_SIZE = 2;
+
 function databaseUrlWithPoolSettings(value: string): string {
   if (!value) return value;
+  let url: URL;
   try {
-    const url = new URL(value);
-    if (!url.searchParams.has("connection_limit")) {
-      url.searchParams.set("connection_limit", String(parseBoundedInteger("DATABASE_POOL_SIZE", process.env.DATABASE_POOL_SIZE, 10, 1, 100)));
-    }
-    if (!url.searchParams.has("pool_timeout")) {
-      url.searchParams.set("pool_timeout", String(parseBoundedInteger("DATABASE_POOL_TIMEOUT_SECONDS", process.env.DATABASE_POOL_TIMEOUT_SECONDS, 10, 1, 60)));
-    }
-    return url.toString();
+    url = new URL(value);
   } catch {
     return value;
   }
+  const explicitLimit = url.searchParams.get("connection_limit");
+  if (explicitLimit === null) {
+    url.searchParams.set("connection_limit", String(parseBoundedInteger("DATABASE_POOL_SIZE", process.env.DATABASE_POOL_SIZE, 10, MIN_DATABASE_POOL_SIZE, 100)));
+  } else if (!(Number.parseInt(explicitLimit, 10) >= MIN_DATABASE_POOL_SIZE)) {
+    throw new Error(`DATABASE_URL connection_limit must be at least ${MIN_DATABASE_POOL_SIZE}`);
+  }
+  if (!url.searchParams.has("pool_timeout")) {
+    url.searchParams.set("pool_timeout", String(parseBoundedInteger("DATABASE_POOL_TIMEOUT_SECONDS", process.env.DATABASE_POOL_TIMEOUT_SECONDS, 10, 1, 60)));
+  }
+  return url.toString();
 }
 
 /**
  * dLocal fixture mode (DLOCAL_ENABLED=false) fakes payments, so international
  * charges may only be offered outside production unless the real client is on.
  */
-export function dlocalChargesAllowed(dlocal: Pick<DlocalConfig, "enabled">, environment: string | undefined): boolean {
+export function dlocalChargesAllowed(dlocal: Pick<DlocalConfig, "enabled" | "internationalPaymentsEnabled">, environment: string | undefined): boolean {
+  if (!dlocal.internationalPaymentsEnabled) return false;
   return dlocal.enabled || environment !== "production";
 }
 

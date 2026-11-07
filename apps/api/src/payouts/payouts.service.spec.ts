@@ -1,6 +1,8 @@
 import { KycStatus, LedgerDirection, MerchantStatus, PayoutStatus, SettlementMode } from "@prisma/client";
 import { PayoutsService } from "./payouts.service";
 
+const approvedAccount = { id: "pa_1", bankCode: "BNB", accountNumber: "4012345678", holderName: "Ana Pérez", status: "APPROVED", payableFrom: new Date("2026-01-01T00:00:00Z") };
+
 function makeFakePrisma() {
   const prisma: any = {
     ledgerEntry: { groupBy: jest.fn() },
@@ -13,6 +15,7 @@ function makeFakePrisma() {
       }),
     },
     payout: { findFirst: jest.fn(), create: jest.fn(), findMany: jest.fn() },
+    payoutAccount: { findFirst: jest.fn(async ({ where }: any) => (where.status === "APPROVED" && where.currency === "BOB" ? approvedAccount : null)) },
     merchantKycSubmission: { findFirst: jest.fn() },
     $executeRaw: jest.fn().mockResolvedValue(0),
     inTransaction: false,
@@ -106,7 +109,7 @@ describe("PayoutsService.createDuePayouts", () => {
     await service.createDuePayouts();
 
     expect(prisma.payout.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ merchantId: "m_1", amount: 5000, bankAccount: "BNB 123" }),
+      data: expect.objectContaining({ merchantId: "m_1", amount: 5000, bankAccount: "Banco Nacional de Bolivia 4012345678 — Ana Pérez", payoutAccountId: "pa_1" }),
     });
   });
 
@@ -121,6 +124,40 @@ describe("PayoutsService.createDuePayouts", () => {
     await service.createDuePayouts();
 
     expect(prisma.payout.create).not.toHaveBeenCalled();
+  });
+
+  it("keeps paying the other merchants when one merchant's check-and-create fails", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant, { ...aggregatorMerchant, id: "m_2" }]);
+    prisma.payout.findFirst.mockResolvedValue(null);
+    prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123" });
+    prisma.payout.create.mockRejectedValueOnce(new Error("deadlock detected"));
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
+    const logError = jest.spyOn((service as any).logger, "error").mockImplementation(() => undefined);
+
+    await expect(service.createDuePayouts()).resolves.toBeUndefined();
+
+    expect(prisma.payout.create).toHaveBeenCalledTimes(2);
+    expect(prisma.payout.create).toHaveBeenLastCalledWith({ data: expect.objectContaining({ merchantId: "m_2" }) });
+    expect(logError).toHaveBeenCalledWith(expect.stringContaining("m_1"), expect.anything());
+  });
+
+  it("keeps paying the other merchants when reading one merchant's balance fails", async () => {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant, { ...aggregatorMerchant, id: "m_2" }]);
+    prisma.payout.findFirst.mockResolvedValue(null);
+    prisma.ledgerEntry.groupBy
+      .mockRejectedValueOnce(new Error("connection reset"))
+      .mockResolvedValue([{ currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB 123" });
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
+    jest.spyOn((service as any).logger, "error").mockImplementation(() => undefined);
+
+    await service.createDuePayouts();
+
+    expect(prisma.payout.create).toHaveBeenCalledTimes(1);
+    expect(prisma.payout.create).toHaveBeenCalledWith({ data: expect.objectContaining({ merchantId: "m_2" }) });
   });
 
   it("checks and creates each payout inside a transaction that holds the merchant's settlement lock", async () => {
@@ -229,7 +266,7 @@ describe("PayoutsService multi-currency", () => {
     ]);
   });
 
-  it("creates separate BOB and USD payouts to the matching bank accounts", async () => {
+  it("pays the BOB balance to its approved account and holds the USD one until dollar accounts are checked", async () => {
     const prisma = makeFakePrisma();
     prisma.merchant.findMany.mockResolvedValue([aggregatorMerchant]);
     prisma.payout.findFirst.mockResolvedValue(null);
@@ -242,9 +279,9 @@ describe("PayoutsService multi-currency", () => {
 
     await service.createDuePayouts();
 
-    expect(prisma.payout.create).toHaveBeenCalledWith({ data: expect.objectContaining({ amount: 5000, currency: "BOB", bankAccount: "BNB 123" }) });
-    expect(prisma.payout.create).toHaveBeenCalledWith({ data: expect.objectContaining({ amount: 900, currency: "USD", bankAccount: "US 987" }) });
-    expect(prisma.payout.findFirst).toHaveBeenCalledWith({ where: expect.objectContaining({ merchantId: "m_1", currency: "USD" }) });
+    expect(prisma.payout.create).toHaveBeenCalledWith({ data: expect.objectContaining({ amount: 5000, currency: "BOB", bankAccount: "Banco Nacional de Bolivia 4012345678 — Ana Pérez", payoutAccountId: "pa_1" }) });
+    expect(prisma.payout.create).toHaveBeenCalledTimes(1);
+    expect(prisma.payout.create).not.toHaveBeenCalledWith({ data: expect.objectContaining({ currency: "USD" }) });
   });
 
   it("holds a USD balance when no USD bank account is on file", async () => {
@@ -298,5 +335,68 @@ describe("PayoutsService.payoutBlocker", () => {
     const prisma = withMerchant(eligible);
     prisma.payout.findFirst.mockResolvedValue({ id: "payout_pending" });
     await expect(new PayoutsService(prisma as any, termsAccepted() as any).payoutBlocker("m_1", "BOB")).resolves.toBe("in_flight");
+  });
+});
+
+describe("PayoutsService payout account", () => {
+  const merchant = { id: "m_1", settlementMode: SettlementMode.AGGREGATOR, status: MerchantStatus.ACTIVE };
+  function ready() {
+    const prisma = makeFakePrisma();
+    prisma.merchant.findMany.mockResolvedValue([merchant]);
+    prisma.merchant.findUnique.mockResolvedValue(merchant);
+    prisma.payout.findFirst.mockResolvedValue(null);
+    prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "BOB", direction: LedgerDirection.CREDIT, _sum: { amount: 5000 } }]);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutBankAccount: "BNB legacy text" });
+    return prisma;
+  }
+
+  it("never pays the legacy free-text account: no approved account means account_missing", async () => {
+    const prisma = ready();
+    prisma.payoutAccount.findFirst.mockResolvedValue(null);
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
+    await expect(service.payoutBlocker("m_1", "BOB")).resolves.toBe("account_missing");
+    await service.createDuePayouts();
+    expect(prisma.payout.create).not.toHaveBeenCalled();
+  });
+
+  it("pays nothing while a change waits for review, even with an approved account", async () => {
+    const prisma = ready();
+    prisma.payoutAccount.findFirst.mockImplementation(async ({ where }: any) => (where.status === "PENDING_REVIEW" ? { id: "pa_2" } : approvedAccount));
+    await expect(new PayoutsService(prisma as any, termsAccepted() as any).payoutBlocker("m_1", "BOB")).resolves.toBe("account_review");
+  });
+
+  it("waits until the approved change is payable", async () => {
+    const prisma = ready();
+    prisma.payoutAccount.findFirst.mockImplementation(async ({ where }: any) => (where.status === "APPROVED" ? { ...approvedAccount, payableFrom: new Date(Date.now() + 3_600_000) } : null));
+    await expect(new PayoutsService(prisma as any, termsAccepted() as any).payoutBlocker("m_1", "BOB")).resolves.toBe("account_waiting");
+  });
+
+  it("checks a pause and the terms before the account", async () => {
+    const prisma = ready();
+    prisma.payoutAccount.findFirst.mockResolvedValue(null);
+    const terms = { needsMerchantAcceptance: jest.fn().mockResolvedValue(true) };
+    await expect(new PayoutsService(prisma as any, terms as any).payoutBlocker("m_1", "BOB")).resolves.toBe("terms");
+  });
+
+  it("records which approved account a payout went to", async () => {
+    const prisma = ready();
+    await new PayoutsService(prisma as any, termsAccepted() as any).createDuePayouts();
+    expect(prisma.payout.create).toHaveBeenCalledWith({ data: expect.objectContaining({ payoutAccountId: "pa_1", bankAccount: "Banco Nacional de Bolivia 4012345678 — Ana Pérez" }) });
+  });
+});
+
+describe("PayoutsService dollar payouts", () => {
+  it("never pays a dollar balance until dollar accounts are checked like bolivianos accounts", async () => {
+    const prisma = makeFakePrisma();
+    const merchant = { id: "m_1", settlementMode: SettlementMode.AGGREGATOR, status: MerchantStatus.ACTIVE };
+    prisma.merchant.findMany.mockResolvedValue([merchant]);
+    prisma.merchant.findUnique.mockResolvedValue(merchant);
+    prisma.payout.findFirst.mockResolvedValue(null);
+    prisma.ledgerEntry.groupBy.mockResolvedValue([{ currency: "USD", direction: LedgerDirection.CREDIT, _sum: { amount: 900 } }]);
+    prisma.merchantKycSubmission.findFirst.mockResolvedValue({ status: KycStatus.APPROVED, payoutUsdBankAccount: "US 987" });
+    const service = new PayoutsService(prisma as any, termsAccepted() as any);
+    await expect(service.payoutBlocker("m_1", "USD")).resolves.toBe("no_account");
+    await service.createDuePayouts();
+    expect(prisma.payout.create).not.toHaveBeenCalled();
   });
 });

@@ -6,6 +6,7 @@ import { AddSupportNoteDto } from "./dto/add-support-note.dto";
 import { CreateSupportCaseDto } from "./dto/create-support-case.dto";
 import { CreateMerchantSupportCaseDto } from "./dto/create-merchant-support-case.dto";
 import { AuditLogService } from "./audit-log.service";
+import { maskAccountText } from "../payout-accounts/payout-account-rules";
 
 export interface SupportActor {
   id: string;
@@ -299,13 +300,13 @@ export class SupportService {
             ...user,
             activeSessions: sessions.filter((session) => !session.revokedAt && session.expiresAt.getTime() > now).length,
           })),
-          payouts: merchant.payouts.map(({ bankAccount, ...payout }) => ({ ...payout, bankAccount: maskTail(bankAccount) })),
+          payouts: merchant.payouts.map(({ bankAccount, ...payout }) => ({ ...payout, bankAccount: maskAccountText(bankAccount) })),
           kycSubmissions: merchant.kycSubmissions.map((kyc) => ({
             ...kyc,
             taxId: maskTail(kyc.taxId),
             legalRepDocumentId: maskTail(kyc.legalRepDocumentId),
-            payoutBankAccount: maskTail(kyc.payoutBankAccount),
-            payoutUsdBankAccount: maskTail(kyc.payoutUsdBankAccount),
+            payoutBankAccount: maskAccountText(kyc.payoutBankAccount),
+            payoutUsdBankAccount: maskAccountText(kyc.payoutUsdBankAccount),
           })),
         },
       };

@@ -1,5 +1,6 @@
 import { escapeHtml as esc } from "./html.mjs";
-import { nextLevelSentence, nextPayoutLabel, releaseDateLabel, settlementPolicySentence } from "./settlement.mjs";
+import { nextLevelSentence, nextPayoutLabel, payoutBlockerLabel, releaseDateLabel, settlementPolicySentence } from "./settlement.mjs";
+import { maskAccountText } from "./payout-accounts.mjs";
 
 /**
  * Finanzas: balances, settlement, international payments, payouts and the finance charts (moved from dashboard.js
@@ -31,7 +32,7 @@ export function createFinancesPanel(deps) {
           <dt>Saldo por desembolsar (${currency})</dt>
           <dd>${money(entry.available ?? entry.payableBalance, currency)}</dd>
           ${held ? `<p class="balance-held">${held}</p>` : ""}
-          <p>${esc(nextPayoutLabel(entry.nextPayoutAt) || "Se transfiere a tu cuenta bancaria en el próximo desembolso.")}</p>
+          <p>${esc(nextPayoutLabel(entry.nextPayoutAt) || payoutBlockerLabel(entry.payoutBlocker, entry.currency, { payableFrom: deps.payoutWaitingFrom?.() }) || "Se transfiere a tu cuenta bancaria en el próximo desembolso.")}</p>
         </div>`;
       })
       .join("");
@@ -58,6 +59,10 @@ export function createFinancesPanel(deps) {
 
   function renderInternationalCard(intl) {
     if (!intl) return "";
+    // Switched off platform-wide (INTERNATIONAL_PAYMENTS_ENABLED): nothing to request until it returns.
+    if (intl.available === false) {
+      return '<section class="panel" role="region" aria-label="Pagos internacionales"><h3>Pagos internacionales</h3><p>Los pagos internacionales no están disponibles por ahora.</p></section>';
+    }
     const fee = `${(intl.feeBps / 100).toFixed(1).replace(".", ",")}%`;
     const states = {
       OFF: `<p>Recibe pagos de compradores fuera de Bolivia con tarjeta y métodos locales. Se cobra en USD con una comisión de ${fee}.</p>
@@ -253,6 +258,8 @@ export function createFinancesPanel(deps) {
   // full account number on every line.
   function maskBankAccount(s) {
     const str = String(s ?? "");
+    // Payouts now carry "{bank} {number} — {holder}": mask the number only, so the merchant can tell which account it was.
+    if (/\d{6,}/.test(str)) return maskAccountText(str);
     const digits = str.replace(/\D/g, "");
     if (digits.length <= 4) return str;
     return str.slice(0, -4).replace(/[0-9]/g, "•") + str.slice(-4);

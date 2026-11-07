@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException } from "@nestjs/common";
 import { InternationalPaymentsService } from "./international-payments.service";
 
-function setup(merchant: Record<string, unknown> = {}, rate = 6.96, updateManyCount = 1, env: { environment?: string; enabled?: boolean } = {}) {
+function setup(merchant: Record<string, unknown> = {}, rate = 6.96, updateManyCount = 1, env: { environment?: string; enabled?: boolean; international?: boolean } = {}) {
   const tx = { merchant: { updateMany: jest.fn().mockResolvedValue({ count: updateManyCount }) } };
   const prisma = {
     merchant: {
@@ -17,7 +17,7 @@ function setup(merchant: Record<string, unknown> = {}, rate = 6.96, updateManyCo
     { id: "PX", type: "BANK_TRANSFER", name: "Pix" },
   ]) };
   const auditLog = { record: jest.fn() };
-  const dlocal = { bobPerUsd: rate, intlFeeBps: 590, costBps: 0, enabled: env.enabled ?? false };
+  const dlocal = { bobPerUsd: rate, intlFeeBps: 590, costBps: 0, enabled: env.enabled ?? false, internationalPaymentsEnabled: env.international ?? true };
   const config = { get: jest.fn((key: string) => (key === "app.environment" ? env.environment ?? "development" : dlocal)) };
   const service = new InternationalPaymentsService(prisma as any, client as any, auditLog as any, config as any);
   return { service, prisma, tx, client, auditLog };
@@ -67,6 +67,37 @@ describe("InternationalPaymentsService", () => {
     await expect(setup({ internationalPaymentsStatus: "ENABLED" }, 6.96, 1, { environment: "production", enabled: false }).service.availableForIntent({ merchantId: "m_1" })).resolves.toBe(false);
     await expect(setup({ internationalPaymentsStatus: "ENABLED" }, 6.96, 1, { environment: "production", enabled: true }).service.availableForIntent({ merchantId: "m_1" })).resolves.toBe(true);
     await expect(setup({ internationalPaymentsStatus: "ENABLED" }, 6.96, 1, { environment: "development", enabled: false }).service.availableForIntent({ merchantId: "m_1" })).resolves.toBe(true);
+  });
+
+  describe("while international payments are switched off", () => {
+    const off = (merchant: Record<string, unknown>) => setup(merchant, 6.96, 1, { environment: "production", enabled: true, international: false });
+
+    it("is never available for an intent, even with dLocal live and the merchant approved", async () => {
+      await expect(off({ internationalPaymentsStatus: "ENABLED" }).service.availableForIntent({ merchantId: "m_1" })).resolves.toBe(false);
+    });
+
+    it("refuses a merchant's request and says so", async () => {
+      const { service, prisma } = off({});
+      await expect(service.request("m_1")).rejects.toThrow("Los pagos internacionales no están disponibles por ahora.");
+      expect(prisma.merchant.update).not.toHaveBeenCalled();
+    });
+
+    it("refuses to approve a request but still lets ops reject one", async () => {
+      const { service, tx } = off({ internationalPaymentsStatus: "REQUESTED" });
+      await expect(service.decide("m_1", "approve", "motivo largo", actor)).rejects.toThrow("Los pagos internacionales están desactivados.");
+      await expect(service.decide("m_1", "reject", "motivo largo", actor)).resolves.toEqual({ status: "REJECTED" });
+      expect(tx.merchant.updateMany).toHaveBeenCalledTimes(1);
+    });
+
+    it("tells ops the feature is switched off", () => {
+      expect(off({}).service.availability()).toEqual({ available: false });
+      expect(setup({}).service.availability()).toEqual({ available: true });
+    });
+
+    it("tells the dashboard the feature is unavailable", async () => {
+      await expect(off({}).service.statusFor("m_1")).resolves.toEqual(expect.objectContaining({ available: false }));
+      await expect(setup({}).service.statusFor("m_1")).resolves.toEqual(expect.objectContaining({ available: true }));
+    });
   });
 
   it("quotes USD and lists methods, caching per country", async () => {

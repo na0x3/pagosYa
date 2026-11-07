@@ -37,6 +37,19 @@ import { renderStore } from "./storefront/store-page";
 import { rememberConfirmationMotif } from "./checkout-motif";
 
 async function main() {
+  const complaintToken = /^\/reclamos\/s\/([^/]+)\/?$/.exec(window.location.pathname)?.[1];
+  if (complaintToken) {
+    const { mountComplaintTracking } = await import("./complaints/complaints-page");
+    let token = "";
+    try { token = decodeURIComponent(complaintToken); } catch {}
+    await mountComplaintTracking(app, token);
+    return;
+  }
+  if (/^\/reclamos\/?$/.test(window.location.pathname)) {
+    const { mountComplaintForm } = await import("./complaints/complaints-page");
+    mountComplaintForm(app, new URLSearchParams(window.location.search).get("ref"));
+    return;
+  }
   const verificationRoute = /^\/verificar\/([^/]+)\/?$/.exec(window.location.pathname)?.[1];
   if (verificationRoute) {
     let slug = '';

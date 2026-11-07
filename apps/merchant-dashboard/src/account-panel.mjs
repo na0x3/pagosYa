@@ -175,7 +175,20 @@ export function createAccountPanel(deps) {
         const [ciFrontDocId, ciBackDocId, selfieDocId] = await Promise.all(
           ["kycDocFront", "kycDocBack", "kycDocSelfie"].map((id) => uploadKycPhoto(document.getElementById(id))),
         );
-        const payload = { ...data, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId };
+        // The account goes first, with its proof; the identity then points at it (ASFI payout account ownership).
+        let payoutAccountId = document.getElementById("kycAccountExisting")?.dataset.accountId;
+        if (!payoutAccountId) {
+          const accountForm = new FormData();
+          for (const key of ["bankCode", "accountNumber", "holderName"]) accountForm.append(key, String(data[key] ?? ""));
+          const proof = document.getElementById("kycAccountProof")?.files?.[0];
+          if (proof) accountForm.append("proof", proof);
+          payoutAccountId = (await api("/dashboard/payout_accounts", { method: "POST", body: accountForm })).id;
+          // Remembered before the identity call: if that fails, a retry reuses this account instead of sending it again.
+          await deps.payoutAccounts?.show();
+          deps.payoutAccounts?.sync();
+        }
+        for (const key of ["bankCode", "accountNumber", "holderName", "payoutBankAccount"]) delete data[key];
+        const payload = { ...data, targetLevel: Number(data.targetLevel), ciFrontDocId, ciBackDocId, selfieDocId, payoutAccountId };
         for (const key of Object.keys(payload)) if (payload[key] === "" || payload[key] === undefined) delete payload[key];
         await api("/merchants/kyc", { method: "POST", body: JSON.stringify(payload) });
         await refresh();

@@ -23,6 +23,9 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
 import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-sections.mjs";
 import { playImmersiveMove } from "/src/immersive.mjs";
 import { lowStock, renderRestock } from "/src/restock.mjs";
+import { bankOptionsHtml, mountPayoutAccountPanel } from "/src/payout-account-panel.mjs";
+import { ownerFitsLevel } from "/src/payout-accounts.mjs";
+import { mountComplaintsPanel } from "/src/complaints-panel.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -609,6 +612,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     if (nextView === "assistant") assistantPanel.show();
     if (nextView === "proposals") proposals.show();
     if (nextView === "contracts") contracts.show();
+    if (nextView === "complaints") complaintsPanel.show();
     if (nextView === "connect-ai" && sessionToken) void mcpConnect?.reload();
     if (remember) {
       try { localStorage.setItem(DASHBOARD_VIEW_KEY, nextView); } catch { /* storage unavailable: the view still opens */ }
@@ -725,6 +729,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   // Cuenta: account card, KYC, terms and the affiliation level (src/account-panel.mjs).
   const accountPanel = createAccountPanel({
     api, emailEl, errorEl, infoEl, profileMenuEl, setDashboardView, setButtonBusy, refresh,
+    payoutAccounts: { show: () => payoutPanel.show(), sync: () => syncKycAccountFields() },
     stores: () => lastStores,
     profileSessionsPayload: () => lastProfileSessionsPayload,
     loadProfileSessions: (...args) => loadProfileSessions(...args),
@@ -867,9 +872,35 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     return monetaryValuesHidden ? "••••••" : (cents / 100).toFixed(2);
   }
 
+  // Desembolsos → Cuenta para desembolsos (ASFI payout account ownership, merged 2026-11-07).
+  const payoutPanel = mountPayoutAccountPanel({ api });
+  const kycBankSelect = document.querySelector('#kycForm select[name="bankCode"]');
+  if (kycBankSelect) kycBankSelect.innerHTML = bankOptionsHtml();
+  // The identity form reuses an account already approved or under review instead of asking for another.
+  function syncKycAccountFields() {
+    const { approved, waiting } = payoutPanel.current();
+    const targetLevel = Number(document.querySelector('#kycForm [name="targetLevel"]')?.value || 1);
+    // An approved account is reused only for a level its owner fits; a business level needs one in the company's name.
+    const existing = waiting ?? (approved && ownerFitsLevel(approved.ownerType, targetLevel) ? approved : null);
+    const note = document.getElementById("kycAccountExisting");
+    const fields = document.getElementById("kycAccountFields");
+    if (!note || !fields) return;
+    note.hidden = !existing;
+    note.dataset.accountId = existing?.id ?? "";
+    note.textContent = existing ? `Tus desembolsos irán a ${existing.bankName ?? existing.bankCode} ····${existing.accountLast4} (${existing.holderName}).` : "";
+    // form.inline children are display:grid, which beats [hidden]; set it outright.
+    fields.hidden = Boolean(existing);
+    fields.style.display = existing ? "none" : "";
+    fields.querySelectorAll("input, select").forEach((el) => { el.required = !existing; });
+  }
+  document.querySelector('#kycForm [name="targetLevel"]')?.addEventListener("change", () => syncKycAccountFields());
+  // Reclamos (ASFI sub-project 4): complaints pagosYa sent this merchant for their side.
+  const complaintsPanel = mountComplaintsPanel({ api, signedIn: () => !!sessionToken });
+
   // Finanzas: balances, settlement, international payments, payouts and the finance charts (src/finances-panel.mjs).
   const financesPanel = createFinancesPanel({
     api, money, moneyNumber, renderOverview,
+    payoutWaitingFrom: () => payoutPanel.current().waitingPayableFrom,
     storeId: () => currentStoreId,
     stores: () => lastStores,
     setSettlement: (schedule) => { lastSettlement = schedule; },
@@ -1249,10 +1280,15 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
       lastBalances = balance.balances?.length
         ? balance.balances
         : [{ currency: balance.currency || "BOB", payableBalance: balance.payableBalance || 0 }];
+      await payoutPanel.show();
+      syncKycAccountFields();
       renderBalanceCards(lastBalances);
       document.getElementById("payoutHoldBanner").hidden = !balance.payoutsHeld;
       renderSettlementPanel(settlementSchedule);
       document.getElementById("internationalPaymentsCard").innerHTML = renderInternationalCard(international);
+      // No USD payouts while international payments are off, so the verification form doesn't ask for a USD account.
+      const usdAccountField = document.querySelector('input[name="payoutUsdBankAccount"]')?.closest("div");
+      if (usdAccountField) usdAccountField.hidden = international?.available === false;
       const selectedStore = lastStores.find((store) => store.id === currentStoreId) || null;
       const paymentStore = (selectedStore?.checkoutMode || "payment") === "payment";
 

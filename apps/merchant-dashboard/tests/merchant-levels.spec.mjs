@@ -68,6 +68,9 @@ async function openCompliance(page, limits, posted = [], { kycStatus = "NOT_SUBM
       if (path === "/merchants/kyc") {
         return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "PENDING_REVIEW" }) });
       }
+      if (path === "/dashboard/payout_accounts") {
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ id: "pa_new", status: "PENDING_REVIEW" }) });
+      }
     }
     if (path.startsWith("/dashboard/limits")) {
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(limits) });
@@ -81,6 +84,7 @@ async function openCompliance(page, limits, posted = [], { kycStatus = "NOT_SUBM
     }
     let body = {};
     if (path === "/stores") body = [store];
+    else if (path === "/dashboard/payout_accounts") body = [];
     else if (path.endsWith("/visual-studio")) body = { proposals: [], versions: [] };
     else if (path === "/merchants/kyc") body = { status: kycStatus };
     else if (path === "/merchants/invoicing_profile") body = { status: "NOT_CONFIGURED" };
@@ -139,10 +143,13 @@ test("uploads three photos and submits a level 1 application without NIT", async
   for (const id of ["#kycDocFront", "#kycDocBack", "#kycDocSelfie"]) await page.setInputFiles(id, photo);
   await page.fill("#kycForm [name=legalName]", "Juana Mamani");
   await page.fill("#kycForm [name=legalRepDocumentId]", "7654321 LP");
-  await page.fill("#kycForm [name=payoutBankAccount]", "BNB 4012345678");
+  await page.selectOption("#kycForm [name=bankCode]", "BNB");
+  await page.fill("#kycForm [name=accountNumber]", "4012345678");
+  await page.fill("#kycForm [name=holderName]", "Juana Mamani");
+  await page.setInputFiles("#kycAccountProof", photo);
   await page.click("#kycForm button[type=submit]");
   await expect.poll(() => posted.find((p) => p.path === "/merchants/kyc")?.body)
-    .toMatchObject({ targetLevel: 1, ciFrontDocId: "doc_CI_FRONT", ciBackDocId: "doc_CI_BACK", selfieDocId: "doc_SELFIE" });
+    .toMatchObject({ targetLevel: 1, ciFrontDocId: "doc_CI_FRONT", ciBackDocId: "doc_CI_BACK", selfieDocId: "doc_SELFIE", payoutAccountId: "pa_new" });
   expect(posted.find((p) => p.path === "/merchants/kyc").body.taxId).toBeUndefined();
 });
 

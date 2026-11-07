@@ -31,6 +31,7 @@ import { markBusinessDocumentPaid } from "../business-documents/cobro-payment";
 import { emitStoreEvent, orderEventPayload } from "../extensions/store-events";
 import { applyRenewalPaid, createSubscriptionsFromOrder } from "../operations/subscription-enrollment";
 import { applyMembershipJoin, applyMembershipRenewalPaid } from "../memberships/membership-enrollment";
+import { appendComplaintsFooter, complaintsTextLine, complaintsUrl } from "../complaints/complaint-links";
 
 const idPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 24);
 const secretPart = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 24);
@@ -910,7 +911,11 @@ export class PaymentIntentsService {
       }
 
       const sentSubject = subject ?? (appointment ? `Cita confirmada en ${merchantName}` : `Recibo de tu compra en ${merchantName}`);
-      const body = `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}${subscriptionBlock ? `\n${subscriptionBlock}\n` : ""}\nGracias por tu compra.`;
+      // ASFI: every receipt carries the complaints channel, outside whatever the store authored.
+      const checkoutOrigin = this.config?.get<string>("app.checkoutOrigin");
+      const complaintsLink = complaintsUrl(typeof checkoutOrigin === "string" ? checkoutOrigin : "http://localhost:5174", intent.id);
+      if (html) html = appendComplaintsFooter(html, complaintsLink);
+      const body = `Hola${intent.customerName ? ` ${intent.customerName}` : ""},\n\nTu pago fue confirmado.${appointment ? `\nServicio: ${appointment.offeringName ?? "Cita"}${appointment.startsAt ? `\nFecha: ${new Date(appointment.startsAt).toLocaleString("es-BO", { timeZone: "America/La_Paz" })}` : ""}` : ""}\n\nOrden: ${intent.id}\n${itemLines}Total: ${formatAmount(intent.amount, intent.currency)}${originalTotal}${trackingLine}${subscriptionBlock ? `\n${subscriptionBlock}\n` : ""}${complaintsTextLine(complaintsLink)}\nGracias por tu compra.`;
       // A failed lookup costs the threading, never the receipt.
       const threaded = await this.receiptThreading(order?.storeId ?? null, intent).catch(() => null);
       const plain = { to: intent.customerEmail, ...(html ? { html } : {}), subject: sentSubject, body };

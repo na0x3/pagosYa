@@ -444,6 +444,7 @@
     <section class="growth-view assistant-view" id="assistantSection" data-dashboard-page="assistant" aria-label="Asistente" hidden><div id="assistantRoot"></div></section>
     <section class="proposals-view" id="proposalsSection" data-dashboard-page="proposals" aria-label="Propuestas" hidden><div id="proposalsRoot"></div></section>
     <section class="contracts-view" id="contractsSection" data-dashboard-page="contracts" aria-label="Contratos" hidden><div id="contractsRoot"></div></section>
+    <section class="complaints-view" id="complaintsSection" data-dashboard-page="complaints" aria-label="Reclamos" hidden><div id="complaintsRoot"></div></section>
     <section class="block charge-links-workspace" id="chargeLinksSection" data-dashboard-page="charge-links">
       <header class="charge-links-banner" aria-labelledby="chargeLinksBannerTitle">
         <div class="charge-links-banner-copy">
@@ -803,7 +804,13 @@
           <div><label>Foto del CI (anverso)</label><input type="file" accept="image/png,image/jpeg,image/webp" id="kycDocFront" data-slot="CI_FRONT" required></div>
           <div><label>Foto del CI (reverso)</label><input type="file" accept="image/png,image/jpeg,image/webp" id="kycDocBack" data-slot="CI_BACK" required></div>
           <div><label>Selfie sosteniendo tu CI</label><input type="file" accept="image/png,image/jpeg,image/webp" id="kycDocSelfie" data-slot="SELFIE" required></div>
-          <div><label>Cuenta bancaria a tu nombre para pagos</label><input name="payoutBankAccount" required></div>
+          <p id="kycAccountExisting" class="muted" hidden></p>
+          <div id="kycAccountFields">
+            <div><label>Banco para tus desembolsos</label><select name="bankCode" required><option value="">Elige tu banco</option></select></div>
+            <div><label>Número de cuenta</label><input name="accountNumber" inputmode="numeric" required></div>
+            <div><label>Titular de la cuenta (como aparece en el comprobante)</label><input name="holderName" required></div>
+            <div><label>Certificado o captura de tu banco con tu nombre y el número de cuenta</label><input type="file" accept="image/png,image/jpeg,application/pdf" id="kycAccountProof" required></div>
+          </div>
           <div><label>Cuenta en USD para desembolsos internacionales (opcional)</label><input name="payoutUsdBankAccount" maxlength="300"></div>
           <button class="primary" type="submit">Enviar verificación</button>
         </form>
@@ -914,6 +921,7 @@
     </section>
 
     <section class="block" id="payoutsSection" data-dashboard-page="payouts">
+      <div class="panel" id="payoutAccountPanel"></div>
       <div class="panel settlement-panel" id="settlementPanel" hidden>
         <h2>Cuándo recibes tu dinero</h2>
         <p id="settlementPolicy"></p>
