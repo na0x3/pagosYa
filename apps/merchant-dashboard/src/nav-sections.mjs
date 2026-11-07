@@ -53,7 +53,7 @@ export function sectionOf(view, marketingTab) {
     const tab = section.tabs.find(t => t.view === view && (view !== "marketing" || t.marketingTab === marketingTab));
     if (tab) return { section, tab };
   }
-  if (view === "marketing") return { section: CLIENTES, tab: CLIENTES.tabs[0] };
+  if (view === "marketing" && CLIENTES) return { section: CLIENTES, tab: CLIENTES.tabs[0] };
   const owner = NAV_SECTIONS.find(s => s.alsoViews?.includes(view));
   if (owner) return { section: owner, tab: null };
   return { section: NAV_SECTIONS[0], tab: NAV_SECTIONS[0].tabs[0] };

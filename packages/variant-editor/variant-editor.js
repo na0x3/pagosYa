@@ -143,13 +143,14 @@
       if (input instanceof HTMLInputElement && input.hasAttribute('data-variant-photo')) {
         const rowElement = /** @type {HTMLElement} */ (input.closest('[data-row]'));
         const row = rows[Number(rowElement.dataset.row)];
-        const boxes = [...rowElement.querySelectorAll('input[data-variant-photo]')];
+        const boxes = Array.from(rowElement.querySelectorAll('input[data-variant-photo]'));
         const selected = boxes.filter(box => /** @type {HTMLInputElement} */ (box).checked);
         if (selected.length > 8) { input.checked = false; return; }
         row.imageUrls = selected.map(box => /** @type {HTMLInputElement} */ (box).value);
         row.imageUrl = row.imageUrls[0]; row.imageDirty = true;
         boxes.forEach(box => { const field = /** @type {HTMLInputElement} */ (box); field.disabled = !field.checked && selected.length >= 8; });
-        rowElement.querySelector('summary').textContent = selected.length ? `${selected.length} ${selected.length === 1 ? 'foto' : 'fotos'}` : 'Sin fotos';
+        const summary = rowElement.querySelector('summary');
+        if (summary) summary.textContent = selected.length ? `${selected.length} ${selected.length === 1 ? 'foto' : 'fotos'}` : 'Sin fotos';
         notify();
       }
     });
