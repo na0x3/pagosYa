@@ -31,7 +31,8 @@ harness.describeDb('ExtensionDeliveryService (real Postgres)', () => {
   // Review focus 3: one failing extension never holds back the others, and gives up with a readable error.
   it('delivers with decrypted secrets, retries a failure with back-off, then gives up and tells the merchant', async () => {
     const created = await event();
-    let now = new Date('2026-10-01T12:00:00Z');
+    // A minute after the rows' real creation time (a fixed 2026-10-01 stopped working once that date had passed: nothing was due).
+    let now = new Date(Date.now() + 60_000);
     await service.runOnce(now);
     expect(calls).toEqual([`${created.id}:tk`]);
     expect(await db.extensionDelivery.findFirstOrThrow({ where: { eventId: created.id, extensionId: 'ok' } })).toMatchObject({ status: 'DONE', attempts: 1 });
@@ -52,7 +53,7 @@ harness.describeDb('ExtensionDeliveryService (real Postgres)', () => {
     const created = await event();
     await db.storeExtension.update({ where: { storeId_extensionId: { storeId, extensionId: 'ok' } }, data: { enabled: false } });
     await db.storeExtension.delete({ where: { storeId_extensionId: { storeId, extensionId: 'broken' } } });
-    await service.runOnce(new Date('2026-10-02T00:00:00Z'));
+    await service.runOnce(new Date(Date.now() + 86_400_000));
     expect((await db.extensionDelivery.findMany({ where: { eventId: created.id } })).every(row => row.status === 'DONE')).toBe(true);
     expect(calls).toHaveLength(1);
   });
