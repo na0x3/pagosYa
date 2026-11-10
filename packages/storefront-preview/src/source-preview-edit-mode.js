@@ -281,7 +281,7 @@
   window.addEventListener('resize', onViewing);
   window.addEventListener('load', onViewing);
 
-  /** YAPI tour (spec 2026-11-09): the Studio names the step; the preview scrolls to it and rings it for a moment. */
+  /** YAPI tour (spec 2026-11-09): the Studio names the step; the preview scrolls to it and lights it alone (spotlight, 2026-11-10). */
   function tourTarget(data) {
     if (data.kind === 'cart') return document.querySelector('[data-cart-open], [data-pagosya-cart-open], [data-pagosya-cart]');
     if (data.kind === 'product') return document.querySelector('[data-pagosya-catalog], [data-pagosya-product]');
@@ -301,19 +301,35 @@
     return found;
   }
   var tourStyle = null;
+  // Owner 2026-11-10 («focus on that section on screen, like user can only see that section»): the step's section stays lit and the
+  // rest of the page goes dark around it (a spotlight), until the next step, the end of the tour, or a tap outside it.
+  function tourClear() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-pagosya-tour-focus]'), function (el) { el.removeAttribute('data-pagosya-tour-focus'); });
+    document.documentElement.removeAttribute('data-pagosya-touring');
+  }
   function tourFocus(data) {
+    if (data.clear) { tourClear(); return; }
     var element = tourTarget(data);
-    if (!element) return;
+    if (!element) { tourClear(); return; }
     if (!tourStyle) {
       tourStyle = document.createElement('style');
-      tourStyle.textContent = '[data-pagosya-tour-focus]{outline:2px solid #2f6bff;outline-offset:-2px;animation:pagosya-tour 1s ease-in-out 3}'
-        + '@keyframes pagosya-tour{50%{outline-color:transparent}}@media (prefers-reduced-motion: reduce){[data-pagosya-tour-focus]{animation:none}}';
+      tourStyle.textContent = '[data-pagosya-tour-focus]{position:relative;z-index:2147483000;box-shadow:0 0 0 100vmax rgba(12,12,14,.84);border-radius:6px;transition:box-shadow .45s ease}'
+        + 'html[data-pagosya-touring] [data-pagosya-tour-focus] *{visibility:visible}'
+        + 'html[data-pagosya-touring] .pagosya-chat-launcher,html[data-pagosya-touring] [data-pagosya-chat-launcher]{visibility:hidden}'
+        + '@media (prefers-reduced-motion: reduce){[data-pagosya-tour-focus]{transition:none}}';
       document.head.appendChild(tourStyle);
+      document.addEventListener('click', function (event) {
+        var lit = document.querySelector('[data-pagosya-tour-focus]');
+        if (lit && !lit.contains(event.target)) tourClear();
+      }, true);
     }
-    Array.prototype.forEach.call(document.querySelectorAll('[data-pagosya-tour-focus]'), function (el) { el.removeAttribute('data-pagosya-tour-focus'); });
+    tourClear();
     element.setAttribute('data-pagosya-tour-focus', '');
+    document.documentElement.setAttribute('data-pagosya-touring', '');
     var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (element.scrollIntoView) element.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center' });
+    // A section taller than the screen starts at its top; a shorter one sits in the middle.
+    var tall = element.getBoundingClientRect().height > window.innerHeight * 0.9;
+    if (element.scrollIntoView) element.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: tall ? 'start' : 'center' });
   }
 
   window.addEventListener('message', function (event) {

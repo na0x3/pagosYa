@@ -1121,10 +1121,19 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   function focusTourStep() {
     const newest = [...messages].reverse().find(message => message.role !== 'USER');
     const step = newest ? tourViewOf(newest, messages)?.step : null;
+    // The tour moved past its sections (ended, or a step without one): the preview's spotlight goes away.
+    if (newest && !step && tourFocused && tourFocused !== newest.id) {
+      tourFocused = newest.id;
+      app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')?.contentWindow?.postMessage({ type: 'pagosya:tour-focus', clear: true }, '*');
+      return;
+    }
     if (!newest || !step || tourFocused === newest.id) return;
     tourFocused = newest.id;
     const payload = tourFocusPayload(step);
-    if (payload) { setTimeout(() => app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')?.contentWindow?.postMessage(payload, '*'), 300); return; }
+    const frame = () => app.querySelector<HTMLIFrameElement>('.source-frame-wrap iframe')?.contentWindow;
+    if (payload) { setTimeout(() => frame()?.postMessage(payload, '*'), 300); return; }
+    // The popup and other steps without a section: nothing on the page stays dark.
+    frame()?.postMessage({ type: 'pagosya:tour-focus', clear: true }, '*');
     if (step.kind === 'popup' && storeId) void api.popupPreview(storeId).then(preview => (window as Window & { PAGOSYA_POPUP_PREVIEW?: (settings: object, config: object) => void })
       .PAGOSYA_POPUP_PREVIEW?.(preview.settings, { slug: preview.slug, apiBaseUrl: API_BASE_URL, data: { storeName: preview.storeName } })).catch(() => undefined);
   }
