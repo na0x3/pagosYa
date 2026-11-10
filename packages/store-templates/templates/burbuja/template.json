@@ -1,0 +1,425 @@
+{
+  "id": "burbuja",
+  "name": "Burbuja",
+  "category": "belleza",
+  "description": "Belleza y cuidado personal en calma: gris suave y minúsculas, cada producto bajo una palabra enorme, valores junto a un retrato.",
+  "tags": [
+    "cosmética",
+    "skincare",
+    "belleza",
+    "cuidado personal",
+    "velas",
+    "jabones"
+  ],
+  "sitePurpose": "shop",
+  "order": 67,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (estilos hechos a mano, 2026-11-10)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "bu-hero",
+      "role": "hero",
+      "demo": "bu-hero.jpg"
+    },
+    {
+      "slot": "bu-crema",
+      "role": "product",
+      "demo": "bu-crema.jpg"
+    },
+    {
+      "slot": "bu-serum",
+      "role": "product",
+      "demo": "bu-serum.jpg"
+    },
+    {
+      "slot": "bu-tubo",
+      "role": "product",
+      "demo": "bu-tubo.jpg"
+    },
+    {
+      "slot": "bu-pote",
+      "role": "product",
+      "demo": "bu-pote.jpg"
+    },
+    {
+      "slot": "bu-rutina",
+      "role": "lifestyle",
+      "demo": "bu-rutina.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "burbuja-dmsans",
+    "colors": {
+      "paper": "#fff7f5",
+      "ink": "#2a1d22",
+      "muted": "#f8e6e6",
+      "accent": "#e2447d",
+      "deep": "#2a1d22"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "burbuja",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "bigname",
+      "button": "pill",
+      "corners": "round",
+      "density": "airy",
+      "texture": "none",
+      "titles": "normal",
+      "photos": "natural",
+      "pdp": "split-scroll",
+      "filters": "chips",
+      "grid": "grid3",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Muestra de regalo en cada pedido"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "title": "tu piel, sin filtro",
+        "text": "Cremas y sérums suaves, hechos en lotes pequeños.",
+        "cta": "ver la rutina",
+        "link": "#productos",
+        "photo": "slot:bu-hero"
+      },
+      {
+        "type": "products-words",
+        "look": "grey",
+        "title": "la rutina",
+        "cta": "ver todo",
+        "items": [
+          {
+            "title": "Crema Nube",
+            "value": "hidrata"
+          },
+          {
+            "title": "Sérum Gota",
+            "value": "trata"
+          },
+          {
+            "title": "Bálsamo Rosa",
+            "value": "protege"
+          },
+          {
+            "title": "Jabón Espuma",
+            "value": "limpia"
+          }
+        ],
+        "card": "line"
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "pocos ingredientes, mucho cuidado",
+        "text": "Fórmulas cortas que tu piel entiende, sin rellenos ni promesas raras.",
+        "cta": "conócenos",
+        "link": "about",
+        "photo": "slot:bu-serum"
+      },
+      {
+        "type": "statement-inline",
+        "title": "una de cada cosa, realmente buena",
+        "photo": "slot:bu-crema",
+        "photo2": "slot:bu-tubo",
+        "cta": "ver la tienda",
+        "link": "products"
+      },
+      {
+        "type": "story-split",
+        "look": "left",
+        "title": "el bálsamo que siempre llevas",
+        "text": "Labios, codos y manos: una sola barra para todo el día.",
+        "cta": "verlo",
+        "link": "products",
+        "photo": "slot:bu-tubo"
+      },
+      {
+        "type": "products-lookbook",
+        "title": "la rutina de la mañana",
+        "cta": "ver la rutina",
+        "link": "products",
+        "photo": "slot:bu-rutina",
+        "products": [
+          "demo-1",
+          "demo-2",
+          "demo-3"
+        ]
+      },
+      {
+        "type": "detail-hotspots",
+        "title": "mírala de cerca",
+        "text": "Toca los + para ver cada detalle.",
+        "photo": "slot:bu-pote",
+        "items": [
+          {
+            "title": "textura de gel crema",
+            "x": 40,
+            "y": 45
+          },
+          {
+            "title": "sin perfume",
+            "x": 62,
+            "y": 62
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "para regalar",
+        "text": "Cajas listas con lazo y una nota a mano.",
+        "cta": "ver regalos",
+        "link": "products",
+        "photo": "slot:bu-crema"
+      },
+      {
+        "type": "steps-howto",
+        "title": "tres pasos, nada más",
+        "items": [
+          {
+            "title": "limpia",
+            "text": "Por la mañana y por la noche."
+          },
+          {
+            "title": "trata",
+            "text": "Tres gotas de sérum."
+          },
+          {
+            "title": "hidrata",
+            "text": "Una capa fina de crema."
+          }
+        ],
+        "photo": "slot:bu-serum"
+      },
+      {
+        "type": "photo-scroller",
+        "title": "tú + burbuja",
+        "items": [
+          {
+            "title": "Rutina",
+            "text": "La mañana empieza aquí.",
+            "photo": "slot:bu-rutina"
+          },
+          {
+            "title": "Crema",
+            "text": "Se absorbe en segundos.",
+            "photo": "slot:bu-crema"
+          },
+          {
+            "title": "Pote",
+            "text": "Para la noche.",
+            "photo": "slot:bu-pote"
+          }
+        ]
+      },
+      {
+        "type": "values-portrait",
+        "look": "left",
+        "title": "Cuidar, proteger y nutrir la piel que ya tienes, con resultados que se notan con el tiempo.",
+        "cta": "nuestros valores",
+        "link": "about",
+        "photo": "slot:bu-hero",
+        "items": [
+          {
+            "title": "cuidado",
+            "text": "Fórmulas suaves para todos los días."
+          },
+          {
+            "title": "ingredientes",
+            "text": "Pocos, conocidos y bien elegidos."
+          },
+          {
+            "title": "lotes pequeños",
+            "text": "Hechos cada mes, nunca de más."
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "preguntas",
+        "items": [
+          {
+            "title": "¿Sirve para piel sensible?",
+            "text": "Sí, no lleva perfume."
+          },
+          {
+            "title": "¿Cuánto dura?",
+            "text": "Unos dos meses con uso diario."
+          },
+          {
+            "title": "¿Hacen envíos?",
+            "text": "A todo el país en dos a cuatro días."
+          }
+        ]
+      },
+      {
+        "type": "closing-photo",
+        "title": "tu momento, todos los días",
+        "cta": "ver productos",
+        "link": "products",
+        "photo": "slot:bu-rutina"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "cómo usarla",
+        "text": "Del tamaño de una arveja, sobre la piel húmeda, mañana y noche.",
+        "photo": "slot:bu-rutina"
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "antes de pedir",
+        "items": [
+          {
+            "title": "¿Qué contiene?",
+            "text": "La lista completa está en la etiqueta."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En dos a cuatro días."
+          }
+        ]
+      }
+    ],
+    "choices": {
+      "fonts": [
+        "burbuja-dmsans",
+        "burbuja-manrope",
+        "burbuja-outfit",
+        "burbuja-figtree",
+        "burbuja-geist"
+      ],
+      "variants": {
+        "photos": [
+          "natural",
+          "rounded"
+        ],
+        "footer": [
+          "bigname",
+          "minimal"
+        ]
+      },
+      "looks": {
+        "products-words": [
+          "grey",
+          "white"
+        ],
+        "story-split": [
+          "right",
+          "left"
+        ],
+        "values-portrait": [
+          "left",
+          "right"
+        ]
+      },
+      "swaps": {
+        "cover-full": [
+          "cover-full",
+          "cover-centered",
+          "cover-split"
+        ]
+      },
+      "orders": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        [
+          0,
+          1,
+          3,
+          2,
+          5,
+          4,
+          7,
+          6,
+          9,
+          8,
+          10,
+          11,
+          12
+        ],
+        [
+          0,
+          2,
+          1,
+          4,
+          3,
+          6,
+          5,
+          8,
+          7,
+          10,
+          9,
+          11,
+          12
+        ]
+      ],
+      "bands": [
+        {},
+        {
+          "3": "muted",
+          "8": "muted"
+        },
+        {
+          "5": "muted"
+        }
+      ]
+    },
+    "demo": {
+      "storeName": "Burbuja",
+      "tagline": "Cuidado de la piel, sin filtro",
+      "products": [
+        {
+          "name": "Crema Nube",
+          "price": 240,
+          "description": "Gel crema hidratante, 50 ml.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Sérum Gota",
+          "price": 290,
+          "description": "Ácido hialurónico, 30 ml.",
+          "category": "Rostro"
+        },
+        {
+          "name": "Bálsamo Rosa",
+          "price": 150,
+          "description": "Labios y codos.",
+          "category": "Cuerpo"
+        },
+        {
+          "name": "Jabón Espuma",
+          "price": 90,
+          "description": "Jabón suave, 120 g.",
+          "category": "Cuerpo"
+        }
+      ]
+    }
+  }
+}

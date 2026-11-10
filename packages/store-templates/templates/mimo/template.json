@@ -1,0 +1,418 @@
+{
+  "id": "mimo",
+  "name": "Mimo",
+  "category": "mascotas",
+  "description": "Mascotas, niños y juguetes con cariño: paneles de color junto a fotos, favoritos por categoría y el nombre en letras de colores.",
+  "tags": [
+    "mascotas",
+    "perros",
+    "gatos",
+    "niños",
+    "juguetes",
+    "bebés"
+  ],
+  "sitePurpose": "shop",
+  "order": 69,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (estilos hechos a mano, 2026-11-10)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "mi-hero",
+      "role": "hero",
+      "demo": "mi-hero.jpg"
+    },
+    {
+      "slot": "mi-cuerda",
+      "role": "product",
+      "demo": "mi-cuerda.jpg"
+    },
+    {
+      "slot": "mi-bolsa",
+      "role": "product",
+      "demo": "mi-bolsa.jpg"
+    },
+    {
+      "slot": "mi-cama",
+      "role": "product",
+      "demo": "mi-cama.jpg"
+    },
+    {
+      "slot": "mi-gato",
+      "role": "lifestyle",
+      "demo": "mi-gato.jpg"
+    },
+    {
+      "slot": "mi-juego",
+      "role": "lifestyle",
+      "demo": "mi-juego.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "mimo-fredoka",
+    "colors": {
+      "paper": "#fffaf0",
+      "ink": "#23263a",
+      "muted": "#fdf0d6",
+      "accent": "#f5a524",
+      "deep": "#23263a"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "mimo",
+      "icons": "line",
+      "header": "boxed",
+      "announce": "plain",
+      "footer": "signup",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "photos": "rounded",
+      "pdp": "gallery-left",
+      "filters": "chips",
+      "grid": "grid3",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío gratis desde Bs 200 · Un premio en cada caja"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "title": "Conoce a *Nube*",
+        "text": "La cama más suave que hicimos, ahora en tres tamaños.",
+        "cta": "Ver la cama",
+        "link": "products",
+        "photo": "slot:mi-hero"
+      },
+      {
+        "type": "perks-rows",
+        "title": "Hecho para *ellos*",
+        "photo": "slot:mi-cama",
+        "items": [
+          {
+            "title": "Materiales suaves",
+            "text": "Nada que raspe ni se deshaga.",
+            "value": "Suave"
+          },
+          {
+            "title": "Lavable",
+            "text": "Fundas que van a la lavadora.",
+            "value": "Fácil"
+          },
+          {
+            "title": "Probado en casa",
+            "text": "Una semana con nuestros perros.",
+            "value": "Real"
+          }
+        ]
+      },
+      {
+        "type": "photo-scroller",
+        "title": "Así viven *con nosotros*",
+        "items": [
+          {
+            "title": "Juego",
+            "text": "Tarde de cuerda.",
+            "photo": "slot:mi-juego"
+          },
+          {
+            "title": "Siesta",
+            "text": "En su cama nueva.",
+            "photo": "slot:mi-cama"
+          },
+          {
+            "title": "Gato",
+            "text": "También para ellos.",
+            "photo": "slot:mi-gato"
+          }
+        ]
+      },
+      {
+        "type": "products-slider",
+        "title": "Juguetes *favoritos*",
+        "cta": "Ver todos",
+        "link": "category:Juguetes",
+        "card": "round-add"
+      },
+      {
+        "type": "categories-tiles",
+        "title": "Compra *por mascota*",
+        "items": [
+          {
+            "title": "Perros",
+            "photo": "slot:mi-juego",
+            "link": "products"
+          },
+          {
+            "title": "Gatos",
+            "photo": "slot:mi-gato",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "block-split",
+        "look": "left",
+        "title": "Visítanos en la tienda",
+        "text": "Ven con tu mascota: tenemos agua, premios y sitio para jugar.",
+        "cta": "Ver dirección",
+        "link": "products",
+        "photo": "slot:mi-gato"
+      },
+      {
+        "type": "products-slider",
+        "title": "Para *comer*",
+        "cta": "Ver todo",
+        "link": "category:Comida"
+      },
+      {
+        "type": "usecases",
+        "title": "Un día *con Mimo*",
+        "items": [
+          {
+            "title": "Mañana de juego",
+            "text": "La cuerda que aguanta todo.",
+            "photo": "slot:mi-cuerda"
+          },
+          {
+            "title": "Siesta larga",
+            "text": "En la cama más suave.",
+            "photo": "slot:mi-cama"
+          }
+        ]
+      },
+      {
+        "type": "block-split",
+        "look": "right",
+        "title": "Únete a la manada",
+        "text": "Novedades, premios y fotos de nuestros amigos.",
+        "cta": "Suscribirme",
+        "link": "products",
+        "photo": "slot:mi-juego"
+      },
+      {
+        "type": "benefits-bento",
+        "title": "Por qué *nos eligen*",
+        "photo": "slot:mi-hero",
+        "items": [
+          {
+            "title": "Elegido por veterinarios",
+            "text": "Cada producto pasa una revisión.",
+            "icon": "shield"
+          },
+          {
+            "title": "Cambios fáciles",
+            "text": "Si no le queda, lo cambiamos.",
+            "icon": "refresh"
+          },
+          {
+            "title": "Ayuda por WhatsApp",
+            "text": "Te ayudamos a elegir.",
+            "icon": "message"
+          }
+        ]
+      },
+      {
+        "type": "letters-split",
+        "look": "left",
+        "eyebrow": "MIMO",
+        "title": "Una parte de cada compra va a refugios",
+        "text": "Cada mes donamos comida y camas a refugios de la ciudad.",
+        "cta": "Saber más",
+        "link": "about",
+        "photo": "slot:mi-cama"
+      },
+      {
+        "type": "block-split",
+        "look": "left",
+        "title": "Damos una parte a refugios",
+        "text": "Cada mes llevamos comida y camas a refugios de la ciudad.",
+        "cta": "Saber más",
+        "link": "about",
+        "photo": "slot:mi-bolsa"
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Hacen envíos?",
+            "text": "Sí, a toda la ciudad en 24 horas."
+          },
+          {
+            "title": "¿Puedo cambiar el tamaño?",
+            "text": "Sí, dentro de 7 días."
+          },
+          {
+            "title": "¿Tienen para gatos?",
+            "text": "Sí, juguetes, camas y comida."
+          }
+        ]
+      },
+      {
+        "type": "closing-wordmark",
+        "title": "Colas felices, *todos los días*",
+        "cta": "Ver la tienda",
+        "link": "products",
+        "photo": "slot:mi-bolsa"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Antes de pedir",
+        "items": [
+          {
+            "title": "¿Qué tamaño elijo?",
+            "text": "Te ayudamos por WhatsApp."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En 24 horas en la ciudad."
+          }
+        ]
+      }
+    ],
+    "choices": {
+      "fonts": [
+        "mimo-fredoka",
+        "mimo-baloo",
+        "mimo-titan",
+        "mimo-bowlby",
+        "mimo-rubik"
+      ],
+      "variants": {
+        "titles": [
+          "normal",
+          "upper"
+        ],
+        "button": [
+          "pill",
+          "cushion",
+          "chunky"
+        ],
+        "footer": [
+          "signup",
+          "card"
+        ]
+      },
+      "looks": {
+        "block-split": [
+          "left",
+          "right"
+        ],
+        "letters-split": [
+          "left",
+          "right"
+        ]
+      },
+      "swaps": {
+        "cover-full": [
+          "cover-full",
+          "cover-half",
+          "cover-split"
+        ]
+      },
+      "orders": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ],
+        [
+          0,
+          2,
+          1,
+          4,
+          3,
+          5,
+          7,
+          6,
+          8,
+          10,
+          9,
+          11,
+          12,
+          13
+        ],
+        [
+          0,
+          1,
+          3,
+          2,
+          5,
+          4,
+          6,
+          8,
+          7,
+          9,
+          11,
+          10,
+          12,
+          13
+        ]
+      ],
+      "bands": [
+        {},
+        {
+          "2": "muted",
+          "7": "muted"
+        },
+        {
+          "4": "muted",
+          "9": "muted"
+        }
+      ]
+    },
+    "demo": {
+      "storeName": "Mimo",
+      "tagline": "Todo para tu mascota",
+      "products": [
+        {
+          "name": "Cuerda Nudo",
+          "price": 45,
+          "description": "Algodón trenzado.",
+          "category": "Juguetes"
+        },
+        {
+          "name": "Croquetas Huerta",
+          "price": 180,
+          "description": "Bolsa de 3 kg.",
+          "category": "Comida"
+        },
+        {
+          "name": "Cama Nube",
+          "price": 320,
+          "description": "Talla mediana.",
+          "category": "Camas"
+        },
+        {
+          "name": "Snack Dental",
+          "price": 60,
+          "description": "Bolsa de 10.",
+          "category": "Comida"
+        }
+      ]
+    }
+  }
+}

@@ -219,7 +219,8 @@ export function withOnlyTheme(css: string, theme: string | undefined, sections?:
 const NOTE = /\/\*(?! ?\/?(?:theme|lb|v):| ?pagosya)[\s\S]*?\*\//g;
 const VARIANT_BLOCK = /\/\* v:([a-z]+)=([a-z0-9-]+) \*\/[\s\S]*?\/\* \/v:\1=\2 \*\//g;
 const emptyVariant = (part: string, value: string) => `/* v:${part}=${value} *//* /v:${part}=${value} */`;
-const PRODUCT_SECTIONS = ['products-grid', 'products-tabs', 'products-slider'];
+// Hand-made styles (2026-11-10): their own product sections carry the store's card too.
+const PRODUCT_SECTIONS = ['products-grid', 'products-tabs', 'products-slider', 'products-rows', 'products-words'];
 
 /** Template frame variety (spec 2026-11-03): the template sheet carries every footer, button, library card and product page between
  *  «/* v:part=value *\/» markers; a store keeps the blocks of the ones it uses and an empty marker for the rest, so a refill that

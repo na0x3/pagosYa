@@ -61,6 +61,12 @@ import { listTemplates, templateManifest, templateSourceFiles, type TemplateCopy
 import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates, leastUsedDraw, randomPick, readTemplateRandom, templateSwitchRequest } from './source-template-pick';
 import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, intakePhone, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
+import sharp from 'sharp';
+import { photoTint, withRowTints } from './source-row-tints';
+/** The hand-made styles (2026-11-10, each after a real store): long pages of their own, never topped up with generic sections. */
+const HAND_MADE_THEMES = new Set(['merienda', 'burbuja', 'neon', 'mimo', 'oliva', 'joya', 'origen', 'morada', 'vigor', 'ramo']);
+import { uploadPath } from './source-product-photos';
+import { sourcePublicApiUrl } from './source-store-config';
 /** Owner 2026-11-02: the template a one- or two-product store starts on (the product whole at the top). */
 const ONE_PRODUCT_TEMPLATE = 'unico';
 import { DEFAULT_RETENTION } from '../retention/retention.dto';
@@ -913,9 +919,13 @@ export class SourceChatService {
     }
     // Owner 2026-11-06 («too short, there should be more things on the main page»): a template home under 11 sections gets
     // library sections the store can really fill (its place, its code, delivery, how it works…), before its closing.
-    if (template) layout = await this.topUpHome(merchantId, storeId, layout, facts);
+    // Owner 2026-11-10 («less sections and like same template»): a hand-made style is a long page of its own; the generic top-up
+    // (visit, code, services) made every style end the same way, so it does not run on them.
+    if (template && !HAND_MADE_THEMES.has(theme)) layout = await this.topUpHome(merchantId, storeId, layout, facts);
     // Spec 2026-11-09 personalizador («para todos»): a store with a product that has options gets it once, after its product grid.
     layout = withPersonalizer(layout, facts);
+    // Spec 2026-11-10 Merienda: each product row in its product's own colour, read from its photo.
+    layout = await withRowTints(layout, name => this.productPhotoTint(merchantId, storeId, name));
     this.productLogger.log(JSON.stringify({ event: 'section_library_layout', storeId, asked: (answer?.blocks ?? []).length, kept: layout.map(block => block.type),
       // What the model sent for each block (photo indexes, item count): tells a left-out section from one the checks dropped.
       answered: (answer?.blocks as Array<{ type?: string; photo?: number; photo2?: number; items?: Array<{ photo?: number }> }> ?? []).map(block => `${block.type}:${block.photo ?? ''}/${block.photo2 ?? ''}/${(block.items ?? []).length}i[${(block.items ?? []).map(item => item.photo ?? '').join(',')}]`),
@@ -993,6 +1003,23 @@ export class SourceChatService {
       this.productLogger.warn(JSON.stringify({ event: 'template_qa_failed', storeId, revision, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
     }
   }
+
+  /** Spec 2026-11-10 Merienda: a product's colour from its first photo — only an upload of this platform, read from this API (never
+   *  a link the merchant pasted), shrunk to 32 px; null without a clear colour. */
+  private async productPhotoTint(merchantId: string, storeId: string, name: string): Promise<string | null> {
+    this.catalogForTints ??= new Map();
+    const catalog = this.catalogForTints.get(storeId) ?? this.generation.catalog(merchantId, storeId);
+    this.catalogForTints.set(storeId, catalog);
+    setTimeout(() => this.catalogForTints?.delete(storeId), 60_000).unref?.();
+    const item = ((await catalog).items as Array<{ name?: string; imageUrls?: string[] }>).find(entry => entry.name === name);
+    const path = item?.imageUrls?.map(uploadPath).find(url => /^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(url));
+    if (!path) return null;
+    const response = await fetch(new URL(path, sourcePublicApiUrl(this.config)), { signal: AbortSignal.timeout(5_000) });
+    if (!response.ok) return null;
+    const { data, info } = await sharp(Buffer.from(await response.arrayBuffer())).resize(32, 32, { fit: 'cover' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    return photoTint(data, info.channels);
+  }
+  private catalogForTints?: Map<string, ReturnType<SourceGenerationService['catalog']>>;
 
   /** The store's real facts for the section library: catalogue, uploads, shown codes, reviews, links (spec 2026-10-31). */
   private async libraryFacts(merchantId: string, storeId: string, files: SourceProjectSnapshot['files'], request: string, maxPhotos: number) {

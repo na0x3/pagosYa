@@ -1,0 +1,417 @@
+{
+  "id": "morada",
+  "name": "Morada",
+  "category": "hogar",
+  "description": "Hogar y decoración bien hecha: crema cálida, serif de libro, bandas carbón con categorías y ambientes, y la historia del taller.",
+  "tags": [
+    "hogar",
+    "decoración",
+    "muebles",
+    "cocina",
+    "textiles",
+    "iluminación"
+  ],
+  "sitePurpose": "shop",
+  "order": 73,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (estilos hechos a mano, 2026-11-10)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "mo-hero",
+      "role": "hero",
+      "demo": "mo-hero.jpg"
+    },
+    {
+      "slot": "mo-sala",
+      "role": "lifestyle",
+      "demo": "mo-sala.jpg"
+    },
+    {
+      "slot": "mo-sillon",
+      "role": "product",
+      "demo": "mo-sillon.jpg"
+    },
+    {
+      "slot": "mo-dormitorio",
+      "role": "lifestyle",
+      "demo": "mo-dormitorio.jpg"
+    },
+    {
+      "slot": "mo-jarron",
+      "role": "product",
+      "demo": "mo-jarron.jpg"
+    },
+    {
+      "slot": "mo-cocina",
+      "role": "lifestyle",
+      "demo": "mo-cocina.jpg"
+    },
+    {
+      "slot": "mo-cuenco",
+      "role": "product",
+      "demo": "mo-cuenco.jpg"
+    },
+    {
+      "slot": "mo-material",
+      "role": "detail",
+      "demo": "mo-material.jpg"
+    },
+    {
+      "slot": "mo-calma",
+      "role": "lifestyle",
+      "demo": "mo-calma.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "morada-newsreader",
+    "colors": {
+      "paper": "#f6f1e8",
+      "ink": "#2d2d2b",
+      "muted": "#ece5d8",
+      "accent": "#7a5c3e",
+      "deep": "#2d2d2b"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "morada",
+      "icons": "line",
+      "header": "links",
+      "announce": "plain",
+      "footer": "bignav",
+      "button": "square",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "photos": "natural",
+      "pdp": "gallery-left",
+      "filters": "sidebar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Envío e instalación en la ciudad · Cambios en 30 días"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "title": "Capas para *la temporada*",
+        "text": "Muebles y objetos hechos para durar, en madera, lino y cerámica.",
+        "cta": "Ver la colección",
+        "link": "products",
+        "photo": "slot:mo-sala"
+      },
+      {
+        "type": "products-slider",
+        "title": "Nuestros *favoritos*",
+        "cta": "Ver todo",
+        "link": "products",
+        "card": "classic"
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "title": "Para *la temporada*",
+        "text": "Jarrones, mantas y cuencos para la casa en invierno.",
+        "cta": "Ver lo nuevo",
+        "link": "products",
+        "photo": "slot:mo-jarron"
+      },
+      {
+        "type": "categories-tiles",
+        "title": "Compra *por categoría*",
+        "items": [
+          {
+            "title": "Muebles",
+            "photo": "slot:mo-sillon",
+            "link": "products"
+          },
+          {
+            "title": "Decoración",
+            "photo": "slot:mo-jarron",
+            "link": "products"
+          },
+          {
+            "title": "Cocina",
+            "photo": "slot:mo-cuenco",
+            "link": "products"
+          },
+          {
+            "title": "Textiles",
+            "photo": "slot:mo-dormitorio",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "left",
+        "eyebrow": "Desde el taller",
+        "title": "Hecho a mano, *desde cero*",
+        "text": "Diseñamos y fabricamos cada pieza en nuestro taller, con maderas de la región.",
+        "cta": "Conócenos",
+        "link": "about",
+        "photo": "slot:mo-material"
+      },
+      {
+        "type": "image-columns",
+        "title": "Por *ambiente*",
+        "items": [
+          {
+            "title": "Sala",
+            "text": "Para recibir.",
+            "photo": "slot:mo-sala",
+            "link": "products"
+          },
+          {
+            "title": "Dormitorio",
+            "text": "Para descansar.",
+            "photo": "slot:mo-dormitorio",
+            "link": "products"
+          },
+          {
+            "title": "Cocina",
+            "text": "Para cocinar juntos.",
+            "photo": "slot:mo-cocina",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "promo-pair",
+        "items": [
+          {
+            "title": "Para arquitectos y diseñadores",
+            "photo": "slot:mo-cuenco",
+            "link": "products"
+          },
+          {
+            "title": "Quiénes somos",
+            "photo": "slot:mo-calma",
+            "link": "about"
+          }
+        ]
+      },
+      {
+        "type": "products-lookbook",
+        "title": "Arma *tu sala*",
+        "cta": "Ver la sala",
+        "link": "products",
+        "photo": "slot:mo-sillon",
+        "products": [
+          "demo-1",
+          "demo-2",
+          "demo-4"
+        ]
+      },
+      {
+        "type": "steps-howto",
+        "title": "Cómo *trabajamos*",
+        "photo": "slot:mo-cocina",
+        "items": [
+          {
+            "title": "Diseñamos",
+            "text": "Cada pieza, en el taller."
+          },
+          {
+            "title": "Fabricamos",
+            "text": "Con madera y lino locales."
+          },
+          {
+            "title": "Instalamos",
+            "text": "En tu casa, sin costo."
+          }
+        ]
+      },
+      {
+        "type": "photo-scroller",
+        "title": "En *sus casas*",
+        "items": [
+          {
+            "title": "Sala",
+            "text": "Una sala en Sopocachi.",
+            "photo": "slot:mo-sala"
+          },
+          {
+            "title": "Dormitorio",
+            "text": "Lino y madera.",
+            "photo": "slot:mo-dormitorio"
+          },
+          {
+            "title": "Calma",
+            "text": "Domingo en casa.",
+            "photo": "slot:mo-calma"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Hacen envíos e instalación?",
+            "text": "Sí, en la ciudad, sin costo."
+          },
+          {
+            "title": "¿Puedo pedir medidas?",
+            "text": "Sí, fabricamos a medida."
+          },
+          {
+            "title": "¿Cambios?",
+            "text": "Dentro de 30 días."
+          }
+        ]
+      },
+      {
+        "type": "closing-wordmark",
+        "title": "Una casa *que dura*",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:mo-hero"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "title": "Cuidado",
+        "photo": "slot:mo-material",
+        "items": [
+          {
+            "title": "Limpia",
+            "text": "Con un paño seco."
+          },
+          {
+            "title": "Protege",
+            "text": "Del sol directo."
+          },
+          {
+            "title": "Aceita",
+            "text": "La madera, cada año."
+          }
+        ]
+      }
+    ],
+    "choices": {
+      "fonts": [
+        "morada-newsreader",
+        "morada-lora",
+        "morada-crimson",
+        "morada-fraunces",
+        "morada-caslon"
+      ],
+      "looks": {
+        "story-split": [
+          "right",
+          "left"
+        ]
+      },
+      "swaps": {
+        "cover-full": [
+          "cover-full",
+          "cover-split",
+          "cover-centered"
+        ]
+      },
+      "orders": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        [
+          0,
+          2,
+          1,
+          3,
+          5,
+          4,
+          7,
+          6,
+          8,
+          9,
+          10,
+          11
+        ],
+        [
+          0,
+          1,
+          3,
+          2,
+          4,
+          6,
+          5,
+          8,
+          7,
+          9,
+          10,
+          11
+        ]
+      ],
+      "bands": [
+        {
+          "3": "deep",
+          "5": "deep"
+        },
+        {
+          "2": "deep",
+          "6": "deep"
+        },
+        {
+          "3": "deep",
+          "7": "deep"
+        }
+      ],
+      "variants": {
+        "footer": [
+          "bignav",
+          "columns"
+        ]
+      }
+    },
+    "demo": {
+      "storeName": "Morada",
+      "tagline": "Hogar hecho para durar",
+      "products": [
+        {
+          "name": "Sillón Lino",
+          "price": 3200,
+          "description": "Lino y madera de roble.",
+          "category": "Muebles"
+        },
+        {
+          "name": "Jarrón Arena",
+          "price": 280,
+          "description": "Cerámica arena.",
+          "category": "Decoración"
+        },
+        {
+          "name": "Cuenco Roble",
+          "price": 190,
+          "description": "Roble torneado.",
+          "category": "Cocina"
+        },
+        {
+          "name": "Manta Tejida",
+          "price": 450,
+          "description": "Lana tejida a mano.",
+          "category": "Textiles"
+        }
+      ]
+    }
+  }
+}

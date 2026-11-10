@@ -14,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PublicStoresService } from '../stores/public-stores.service';
 import { SourceProjectsService } from './source-projects.service';
 import type { SourceProjectSnapshot } from './source-project';
+import { drawPresetChoices } from './source-preset-choices';
 import { assembleTemplateRevision, readMasterState, refillMasterFiles, refillPlantillaFiles, resolvePresetTemplate, starterBrandBlock, templateDemoRevision, TEMPLATE_STORE_DATA_PATH, withPreset, type StarterBrandColours } from './source-templates';
 import { plantillaFallback, plantillaFillFromRead } from './source-plantilla-fill';
 import { MASTER_COPY_CAPS, MASTER_TEMPLATE_ID, accentInk, paletteForBrand, type MasterFill, type MasterVariants } from './source-master';
@@ -92,8 +93,10 @@ export class SourceTemplatesService {
   /** The pieces `apply` saves and `preview` shows: the template filled with this store's name, products and photos. */
   private async assemble(merchantId: string, storeId: string, templateId: string, expectedRevision?: number, fill?: MasterFill, extraFiles?: SourceProjectFileDto[], variants?: MasterVariants, plantillaCopy?: Record<string, string>, dna?: Record<string, string>,
     starterRoll?: { variants: Partial<MasterVariants>; palette?: string; fonts?: string }) {
-    const chosen = this.registry.templateManifest(templateId);
-    if (!chosen) throw new NotFoundException('Esa plantilla no existe.');
+    const listed = this.registry.templateManifest(templateId);
+    if (!listed) throw new NotFoundException('Esa plantilla no existe.');
+    // Spec 2026-11-10 Merienda: a style with choices gets this store's own font, parts and section looks (same store, same draw).
+    const chosen = listed.preset?.choices ? { ...listed, preset: drawPresetChoices(listed.preset, storeId) } : listed;
     // Plantillas presets (2026-10-22): a preset is saved as its master (Esencial) with the preset's look and starting words,
     // so every master path (refill, chat edits, menus, sections) keeps working on the store.
     const { manifest, preset, sourceId } = resolvePresetTemplate(chosen, id => this.registry.templateManifest(id));

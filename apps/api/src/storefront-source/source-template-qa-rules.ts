@@ -6,7 +6,7 @@
 export function evaluateTemplateRules(): string[] {
   const out: string[] = [];
   const main = document.querySelector('main') || document.body;
-  const productish = '[data-product-id],[data-pagosya-product],[data-pagosya-catalog],[data-pagosya-spotlight],.menu-item,[data-pya-motion="marquee"],.es-marquee,.ui-marquee,[data-carousel],.es-carousel';
+  const productish = '[data-product-id],[data-pagosya-product],[data-pagosya-catalog],[data-pagosya-spotlight],.menu-item,[data-pya-motion="marquee"],.es-marquee,.ui-marquee,[data-carousel],.es-carousel,.lb-names';
   const visible = (el: Element) => { const r = (el as HTMLElement).getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 40 && r.height > 40 && s.display !== 'none' && s.visibility !== 'hidden' && Number(s.opacity) > 0.05; };
   // color-mix() computes to «color(srgb r g b / a)» with 0–1 channels: scale them like rgb() (rhode live 2026-10-31 false alarms).
   const rgb = (value: string) => { const n = (value.match(/[\d.]+/g) || []).map(Number); return /^color\(srgb/.test(value) ? n.map((v, i) => i < 3 ? v * 255 : v) : n; };

@@ -131,7 +131,8 @@ function Head({ block, index, align = 'start', level = 2, aside }: { block: Libr
 export const LIBRARY_CARDS = ['classic', 'ribbon', 'soft', 'framed', 'arch', 'overlay', 'line', 'portrait', 'swatch', 'badge', 'polaroid', 'round-add', 'list', 'scallop', 'caps'] as const;
 export type LibraryCard = typeof LIBRARY_CARDS[number];
 export function libraryCard(layout: LibraryBlock[]): LibraryCard {
-  const card = layout.find(block => ['products-grid', 'products-tabs', 'products-slider'].includes(block.type))?.card;
+  // Hand-made styles (2026-11-10): their own product sections carry the card too (products-rows, products-words).
+  const card = layout.find(block => ['products-grid', 'products-tabs', 'products-slider', 'products-rows', 'products-words'].includes(block.type))?.card;
   return (LIBRARY_CARDS as readonly string[]).includes(card ?? '') ? card as LibraryCard : 'classic';
 }
 
@@ -546,15 +547,18 @@ function StoryList({ block, index }: { block: LibraryBlock; index: number }) {
 }
 
 function StatementInline({ block, index }: { block: LibraryBlock; index: number }) {
-  const words = (block.title ?? '').split(/\s+/).filter(Boolean);
+  // Live 2026-11-10 (NOA on Joya: «vestido *hecho a tu medida*» showed its asterisks): a *marked* phrase reads in the theme's
+  // emphasis, whichever photo chip falls inside it.
+  const words = (block.title ?? '').split('*').flatMap((part, at) => part.split(/\s+/).filter(Boolean).map(word => ({ word, marked: at % 2 === 1 })));
   if (words.length < 4 || !block.photo) return null;
   const first = Math.max(1, Math.round(words.length / 3)), second = Math.max(first + 1, Math.round(words.length * 2 / 3));
   const chip = (src?: string) => src ? <span className="lb-statement__chip"><img src={src} alt="" aria-hidden="true" loading="lazy" /></span> : null;
+  const run = (from: number, to: number) => words.slice(from, to).map((entry, at) => <span key={from + at}>{at ? ' ' : ''}{entry.marked ? <em className="lb-em">{entry.word}</em> : entry.word}</span>);
   return <Band block={{ ...block, band: block.band ?? 'muted' }} index={index}>
     <Reveal className="lb-statement">
       {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
       <h2 id={`lb-${index}-title`} className="lb-statement__text">
-        {words.slice(0, first).join(' ')} {chip(block.photo)} {words.slice(first, second).join(' ')} {chip(block.photo2)} {words.slice(second).join(' ')}
+        {run(0, first)} {chip(block.photo)} {run(first, second)} {chip(block.photo2)} {run(second, words.length)}
       </h2>
       {block.text ? <p className="lb-lede">{block.text}</p> : null}
       <Actions block={block} />
@@ -1496,6 +1500,262 @@ function ProductPersonalizer({ block, index }: { block: LibraryBlock; index: num
 }
 /* /lb:product-personalizer */
 
+/* ---------------------------------------------------------------- Merienda (spec 2026-11-10, after bakeme.pages.dev) */
+
+/** Huge chunky capitals on the brand's colour, the product photo in the store's photo treatment with a round sticker of 1–3 words
+ *  (eyebrow), and the curved ribbon of words (items). Looks: side (photo right), stack (photo under the title), tilt (photo left). */
+function CoverMega({ block, index }: { block: LibraryBlock; index: number }) {
+  const words = (block.items ?? []).map(item => item.title).filter(Boolean);
+  const ribbon = `${(words.length ? words : [store.name]).join('  ✦  ')}  ✦  `.repeat(6);
+  const look = block.look === 'stack' || block.look === 'tilt' ? block.look : 'side';
+  return <Bleed block={{ ...block, look }} index={index} id="inicio" className="lb-cover">
+    <div className="lb-mega__inner">
+      <div className="lb-mega__copy">
+        <Head block={{ ...block, eyebrow: undefined, text: undefined }} index={index} level={1} />
+        {block.text ? <p className="lb-cover__sub">{block.text}</p> : null}
+        <Actions block={block} tone="ink" />
+      </div>
+      {block.photo ? <div className="lb-mega__media"><Photo src={block.photo} className="lb-fx" eager />{block.eyebrow ? <span className="lb-mega__sticker">{block.eyebrow}</span> : null}</div> : null}
+    </div>
+    <svg className="lb-ribbon" viewBox="0 0 1440 200" preserveAspectRatio="none" aria-hidden="true">
+      <path id={`lb-${index}-curve`} d="M-40,150 C320,40 560,40 760,110 S1180,190 1480,60" fill="none" />
+      <path className="lb-ribbon__band" d="M-40,150 C320,40 560,40 760,110 S1180,190 1480,60" />
+      <text className="lb-ribbon__text"><textPath href={`#lb-${index}-curve`} startOffset="0">{ribbon}<animate attributeName="startOffset" from="0%" to="-50%" dur="40s" repeatCount="indefinite" /></textPath></text>
+    </svg>
+  </Bleed>;
+}
+
+/** Each product on its own tint (Bake Me's flavours): its name huge, one line from the store (items[i].text), and the store's own
+ *  product card — photo, price and «Agregar» — drawn by the kit. Looks: alternate (sides switch), cards (two per row), stack. */
+function ProductsRows({ block, index }: { block: LibraryBlock; index: number }) {
+  const names = (block.products ?? []).slice(0, 5);
+  if (names.length < 2) return null;
+  const look = block.look === 'cards' || block.look === 'stack' ? block.look : 'alternate';
+  const lineOf = (name: string) => block.items?.find(item => item.title === name)?.text;
+  // The product's colour, read from its photo at build (a #hex in the item's value); without one the theme's tints stay.
+  const tintOf = (name: string) => { const value = block.items?.find(item => item.title === name)?.value; return value && /^#[0-9a-f]{6}$/i.test(value) ? value : undefined; };
+  return <Band block={{ ...block, look }} index={index} id="sabores">
+    <Head block={block} index={index} align="center" />
+    <ul className="lb-rows" data-count={names.length}>{names.map((name, at) => <li key={name} className="lb-rows__row" data-tint={at % 4}
+      style={tintOf(name) ? { ['--mer-photo' as string]: tintOf(name) } as CSSProperties : undefined}>
+      <Reveal className="lb-rows__words">
+        <h3 className="lb-rows__name">{name}</h3>
+        {lineOf(name) ? <p className="lb-rows__line">{lineOf(name)}</p> : null}
+      </Reveal>
+      <div className="es-grid lb-rows__card" data-es-grid="grid1" data-pagosya-catalog data-products={name} />
+    </li>)}</ul>
+  </Band>;
+}
+
+/** The products' names huge, one per line, lit one at a time as the page scrolls past (all lit without motion), each a link with its
+ *  photo beside the lit name. Looks: light (grey → ink), outline (outlined → filled). */
+function NamesList({ block, index }: { block: LibraryBlock; index: number }) {
+  const items = (block.items ?? []).filter(item => item.title).slice(0, 6);
+  if (items.length < 3) return null;
+  const look = block.look === 'outline' ? 'outline' : 'light';
+  // Long product names («Comida fresca pollo y manzana 500 g», Pawby) shrink the whole list so each still fits on a line or two.
+  const longest = Math.max(...items.map(item => item.title.length));
+  return <Band block={{ ...block, look }} index={index} extra={{ 'data-lb-progress': '', 'data-lb-steps': String(items.length) }}>
+    {block.eyebrow ? <p className="es-eyebrow lb-eyebrow lb-names__eyebrow">{block.eyebrow}</p> : null}
+    {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
+    <ol className="lb-names" style={{ ['--names-len' as string]: Math.max(10, longest) } as CSSProperties}>{items.map((item, at) => <li key={at} data-i={at}>
+      <a className="lb-names__link" href={href(item.link)}><span className="lb-names__word">{item.title}</span>{item.photo ? <img className="lb-names__photo lb-fx" src={item.photo} alt="" aria-hidden="true" loading="lazy" decoding="async" /> : null}</a>
+    </li>)}</ol>
+  </Band>;
+}
+
+/** A big sentence about the product with two of its photos as stickers. Looks: left (words left, stickers right), center. */
+function StatementSticker({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.title || !block.photo) return null;
+  const look = block.look === 'center' ? 'center' : 'left';
+  return <Band block={{ ...block, look }} index={index}>
+    <div className="lb-stsk">
+      <Reveal className="lb-stsk__words">
+        {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+        <h2 id={`lb-${index}-title`} className="lb-stsk__title"><Marked text={block.title} /></h2>
+        {block.text ? <p className="lb-lede">{block.text}</p> : null}
+        <Actions block={block} />
+      </Reveal>
+      <div className="lb-stsk__media">
+        <Photo src={block.photo} className="lb-fx lb-stsk__one" />
+        {block.photo2 ? <Photo src={block.photo2} className="lb-fx lb-stsk__two" /> : null}
+      </div>
+    </div>
+  </Band>;
+}
+
+/* ---------------------------------------------------------------- hand-made styles, round 2 (spec 2026-11-10, real stores) */
+
+/** Burbuja, after rhode («prep / the kit / blush»): a sideways row of tall product cards, each under one giant lowercase word that
+ *  says what the product is for (items: title = the product's exact name, value = the word). Looks: grey (cards on grey), white. */
+function ProductsWords({ block, index }: { block: LibraryBlock; index: number }) {
+  const items = (block.items ?? []).filter(item => item.title).slice(0, 8);
+  if (items.length < 3) return null;
+  const look = block.look === 'white' ? 'white' : 'grey';
+  return <Band block={{ ...block, look }} index={index} id="productos">
+    <Head block={block} index={index} align="split" aside={<a className="es-link" href="productos.html">{block.cta || 'Ver todo'} <Icons.IconArrowRight /></a>} />
+    <ul className="lb-words">{items.map((item, at) => <li key={at} className="lb-words__card">
+      <p className="lb-words__word" aria-hidden="true">{(item.value || item.title).toLowerCase()}</p>
+      <div className="es-grid lb-words__product" data-es-grid="grid1" data-pagosya-catalog data-products={item.title} />
+    </li>)}</ul>
+  </Band>;
+}
+
+/** Burbuja, after rhode («to restore, protect and nurture…»): one statement with a button and 2–4 values that open on a tap, beside
+ *  a black-and-white portrait. Looks: left (words left), right. */
+function ValuesPortrait({ block, index }: { block: LibraryBlock; index: number }) {
+  const items = (block.items ?? []).filter(item => item.title).slice(0, 4);
+  if (!block.title || !block.photo || items.length < 2) return null;
+  const look = block.look === 'right' ? 'right' : 'left';
+  return <Band block={{ ...block, look }} index={index}>
+    <div className="lb-values">
+      <div className="lb-values__words">
+        <Reveal>
+          <h2 id={`lb-${index}-title`} className="lb-values__title"><Marked text={block.title} /></h2>
+          {block.cta ? <p className="lb-values__cta"><Button label={block.cta} link={block.link} tone="ghost" /></p> : null}
+        </Reveal>
+        <ul className="lb-values__list">{items.map((item, at) => <li key={at}><details>
+          <summary>{item.title}<Icons.IconArrowRight /></summary>{item.text ? <p>{item.text}</p> : null}
+        </details></li>)}</ul>
+      </div>
+      <div className="lb-values__photo"><Photo src={block.photo} /></div>
+    </div>
+  </Band>;
+}
+
+/** Neón, after Kith: a campaign — a full-bleed photo with its title bottom-left and two buttons bottom-right — then four products of
+ *  that collection (link = category:Name; without one, or with a category an earlier campaign shows, the photo alone). Looks: tall, wide. */
+function CampaignStrip({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.photo) return null;
+  const category = block.link?.startsWith('category:') ? block.link.slice(9) : undefined;
+  const look = block.look === 'wide' ? 'wide' : 'tall';
+  return <Bleed block={{ ...block, look }} index={index}>
+    <div className="lb-campaign__photo">
+      <Photo src={block.photo} />
+      <div className="lb-campaign__bar">
+        <div className="lb-campaign__words">
+          {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+          {block.title ? <h2 id={`lb-${index}-title`} className="lb-campaign__title"><Marked text={block.title} /></h2> : null}
+          {block.text ? <p className="lb-campaign__text">{block.text}</p> : null}
+        </div>
+        <Actions block={block} tone="light" second="light" />
+      </div>
+    </div>
+    {category ? <div className="es-grid lb-campaign__products" data-es-grid="grid4" data-pagosya-catalog data-catalog-limit={4} data-category={category} /> : null}
+  </Bleed>;
+}
+
+/** Mimo, after Wild One («Experience Wild One IRL»): a colour panel (a light mix of the brand colour) with a centred title, a line and
+ *  a button, beside a photo that fills its half. Looks: left (panel left), right. */
+function BlockSplit({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.title || !block.photo) return null;
+  const look = block.look === 'right' ? 'right' : 'left';
+  return <Bleed block={{ ...block, look }} index={index} extra={{ 'data-tint': String(index % 3) }}>
+    <div className="lb-block">
+      <div className="lb-block__panel"><Reveal className="lb-block__words">
+        {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+        <h2 id={`lb-${index}-title`} className="lb-block__title"><Marked text={block.title} /></h2>
+        {block.text ? <p className="lb-lede">{block.text}</p> : null}
+        <Actions block={block} />
+      </Reveal></div>
+      <div className="lb-block__photo"><Photo src={block.photo} /></div>
+    </div>
+  </Bleed>;
+}
+
+/** Mimo, after Wild One («A DOG A DAY»): a short word (eyebrow: the store's name or one word, up to 8 letters) in colourful letter
+ *  tiles with the store's photo in the second tile, beside a title, a line and a button. Looks: left (tiles left), right. */
+function LettersSplit({ block, index }: { block: LibraryBlock; index: number }) {
+  const word = (block.eyebrow || String(store.name ?? '')).normalize('NFC').replace(/[^\p{L}\p{N}]/gu, '').slice(0, 8).toUpperCase();
+  if (!block.title || !block.photo || word.length < 2) return null;
+  const look = block.look === 'right' ? 'right' : 'left';
+  const letters = word.split('');
+  return <Band block={{ ...block, look }} index={index}>
+    <div className="lb-letters">
+      <div className="lb-letters__grid" aria-label={word} data-count={letters.length + 1}>
+        <span className="lb-letters__tile" data-shape="0" data-tint="0" aria-hidden="true">{letters[0]}</span>
+        <span className="lb-letters__tile lb-letters__tile--photo" aria-hidden="true"><Photo src={block.photo} /></span>
+        {letters.slice(1).map((letter, at) => <span key={at} className="lb-letters__tile" data-shape={(at + 1) % 4} data-tint={(at + 1) % 3} aria-hidden="true">{letter}</span>)}
+      </div>
+      <Reveal className="lb-letters__words">
+        <h2 id={`lb-${index}-title`} className="lb-letters__title"><Marked text={block.title} /></h2>
+        {block.text ? <p className="lb-lede">{block.text}</p> : null}
+        <Actions block={block} />
+      </Reveal>
+    </div>
+  </Band>;
+}
+
+/** Oliva, after Graza («Olive oil so fresh, / you can taste it»): a big serif sentence in two lines (title split by « / »), the first
+ *  to the left and the second to the right, a small round photo between them and one quiet line under. */
+function StatementOffset({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.title || !block.photo) return null;
+  const [first, ...rest] = block.title.split(' / ');
+  return <Band block={block} index={index}>
+    <Reveal className="lb-offset">
+      <h2 id={`lb-${index}-title`} className="lb-offset__title"><span className="lb-offset__one"><Marked text={first} /></span>
+        <img className="lb-offset__photo lb-fx" src={block.photo} alt="" aria-hidden="true" loading="lazy" decoding="async" />
+        {rest.length ? <span className="lb-offset__two"><Marked text={rest.join(' ')} /></span> : null}</h2>
+      {block.text ? <p className="lb-offset__text">{block.text}</p> : null}
+      {block.cta ? <Button label={block.cta} link={block.link} tone="ghost" /> : null}
+    </Reveal>
+  </Band>;
+}
+
+/** Oliva, after Graza («GRAZA — Olive oil the way it should be»): the store's name huge, one line, then its products, each under a
+ *  nickname in quotes (items: title = the product's exact name, value = the nickname), and a full-width button to everything. */
+function ProductsNicknames({ block, index }: { block: LibraryBlock; index: number }) {
+  const items = (block.items ?? []).filter(item => item.title).slice(0, 4);
+  if (items.length < 2) return null;
+  return <Band block={block} index={index} id="productos">
+    <div className="lb-nick__head">
+      <p className="lb-nick__name" aria-hidden="true">{store.name}</p>
+      {block.title ? <h2 id={`lb-${index}-title`} className="lb-nick__title"><Marked text={block.title} /></h2> : null}
+    </div>
+    <ul className="lb-nick" data-count={items.length}>{items.map((item, at) => <li key={at}>
+      {item.value ? <p className="lb-nick__nick">“{item.value}”</p> : null}
+      <div className="es-grid lb-nick__card" data-es-grid="grid1" data-pagosya-catalog data-products={item.title} />
+    </li>)}</ul>
+    <p className="lb-nick__all"><a className="es-btn es-btn--accent lb-btn" href="productos.html">{block.cta || 'Ver todo'}<Icons.IconArrowRight /></a></p>
+  </Band>;
+}
+
+/** Oliva, after Graza («So many ways to Graza»): a band in the brand's colour with the store's words running along its top, the ways
+ *  to use the product scattered big at different sizes (items: 3 to 8 verbs), a photo beside them and one button. */
+function VerbsPhoto({ block, index }: { block: LibraryBlock; index: number }) {
+  const verbs = (block.items ?? []).map(item => item.title).filter(Boolean).slice(0, 8);
+  if (verbs.length < 3 || !block.photo) return null;
+  const line = `${(block.title || store.name).replace(/\*/g, '')}  ·  `.repeat(8);
+  return <Bleed block={block} index={index}>
+    <p className="lb-verbs__run" aria-hidden="true"><span>{line}</span><span>{line}</span></p>
+    <div className="lb-verbs">
+      <div className="lb-verbs__words">
+        {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
+        <ul className="lb-verbs__list">{verbs.map((verb, at) => <li key={at} data-v={at % 4}>{verb}</li>)}</ul>
+        <Actions block={block} />
+      </div>
+      <div className="lb-verbs__photo"><Photo src={block.photo} />{block.text ? <p className="lb-verbs__note">{block.text}</p> : null}</div>
+    </div>
+  </Bleed>;
+}
+
+/** Origen, after Onyx Coffee Lab (Peru · Ecuador · Colombia): 2 to 4 photos with an arched top, each place or line's name over its
+ *  photo, a short line under and a link (items with photo; link = category:Name or products). */
+function OriginsArches({ block, index }: { block: LibraryBlock; index: number }) {
+  const items = (block.items ?? []).filter(item => item.photo && item.title).slice(0, 4);
+  if (items.length < 2) return null;
+  return <Band block={block} index={index}>
+    <Head block={block} index={index} align="center" />
+    <ul className="lb-arches" data-count={items.length}>{items.map((item, at) => <li key={at}><Reveal delay={at * 90}>
+      <a className="lb-arches__card" href={href(item.link)}>
+        <span className="lb-arches__photo"><Photo src={item.photo} /><span className="lb-arches__name">{item.title}</span></span>
+        {item.text ? <span className="lb-arches__text">{item.text}</span> : null}
+        <span className="lb-arches__more">{block.cta || 'Ver más'} <Icons.IconArrowRight /></span>
+      </a>
+    </Reveal></li>)}</ul>
+  </Band>;
+}
+
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
   'cover-split': CoverSplit, 'hero-split': HeroSplit, 'variant-cards': VariantCards, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
@@ -1516,6 +1776,9 @@ const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) =
   'cover-shoppable': CoverShoppable, 'cover-video': CoverVideo, 'categories-mosaic': CategoriesMosaic, 'icon-columns': IconColumns,
   'products-slider': ProductsSlider, 'social-posts': SocialPosts, 'social-marquee': SocialMarquee, 'shop-look': ShopLook, 'press-quotes': PressQuotes,
   'cover-duo': CoverDuo, 'promo-lines': PromoLines, 'story-sunburst': StorySunburst, 'perks-rows': PerksRows, 'before-after': BeforeAfter,
+  'cover-mega': CoverMega, 'products-rows': ProductsRows, 'names-list': NamesList, 'statement-sticker': StatementSticker,
+  'products-words': ProductsWords, 'values-portrait': ValuesPortrait, 'campaign-strip': CampaignStrip, 'block-split': BlockSplit, 'letters-split': LettersSplit,
+  'statement-offset': StatementOffset, 'products-nicknames': ProductsNicknames, 'verbs-photo': VerbsPhoto, 'origins-arches': OriginsArches,
 };
 export const LIBRARY_SECTIONS = Object.keys(SECTIONS);
 

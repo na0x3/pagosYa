@@ -12,6 +12,48 @@ const facts = (over: Partial<LibraryFacts> = {}): LibraryFacts => ({
 const types = (layout: Array<{ type: string }>) => layout.map(block => block.type);
 
 describe('section library', () => {
+  // Spec 2026-11-10 hand-made styles (Merienda, Burbuja, Neón, Mimo): their own sections inside a template's fixed home.
+  // Live 2026-11-10 (Perra Please on Neón, one category): three campaigns showed the same four sauces three times.
+  it('gives each category\'s products to one campaign only; another campaign keeps its photo and links to the catalogue', () => {
+    const fixed = [{ type: 'campaign-strip' }, { type: 'campaign-strip' }, { type: 'campaign-strip' }] as never;
+    const layout = validateLibraryLayout({ blocks: [
+      { type: 'campaign-strip', title: 'Galletas', photo: 0, cta: 'Comprar', link: 'category:Galletas' },
+      { type: 'campaign-strip', title: 'Más galletas', photo: 1, cta: 'Comprar', link: 'category:Galletas' },
+      { type: 'campaign-strip', title: 'Cajas', photo: 2, cta: 'Comprar', link: 'category:Cajas' },
+    ] as never }, facts(), { fixed });
+    expect(layout.map(block => block.link)).toEqual(['category:Galletas', 'products', 'category:Cajas']);
+  });
+
+  it('keeps a nickname over each real product and drops a name that is not a product', () => {
+    const [block] = validateLibraryLayout({ blocks: [{ type: 'products-nicknames', title: 'Como debe ser', cta: 'Ver todo', items: [
+      { title: 'Brownie', value: '«Para la tarde»' }, { title: 'caja surtida', value: 'Regalo' }, { title: 'Torta inventada', value: 'nada' }] }] as never },
+      facts(), { fixed: [{ type: 'products-nicknames' }] as never });
+    expect(block.items).toEqual([{ title: 'Brownie', value: 'Para la tarde' }, { title: 'Caja surtida', value: 'Regalo' }]);
+  });
+
+  it('puts one lowercase word over each real product in the tall cards and drops a name that is not a product', () => {
+    const [block] = validateLibraryLayout({ blocks: [{ type: 'products-words', title: 'Para cada momento', items: [
+      { title: 'Galleta de chocolate', value: 'Antojo' }, { title: 'caja surtida', value: 'Para Regalar' }, { title: 'Brownie', value: 'merienda' }, { title: 'Torta inventada', value: 'nada' }] }] as never },
+      facts(), { fixed: [{ type: 'products-words' }] as never });
+    expect(block.items).toEqual([{ title: 'Galleta de chocolate', value: 'antojo' }, { title: 'Caja surtida', value: 'para regalar' }, { title: 'Brownie', value: 'merienda' }]);
+  });
+
+  it('keeps the cover\'s ribbon words, one line per real product in the rows, and links each big name to its product', () => {
+    const fixed = [{ type: 'cover-mega' }, { type: 'products-rows' }, { type: 'names-list' }, { type: 'statement-sticker' }] as never;
+    const layout = validateLibraryLayout({ blocks: [
+      { type: 'cover-mega', title: 'Galletas de verdad', photo: 0, eyebrow: 'Hecho hoy', items: [{ title: 'Horneá' }, { title: 'Disfrutá' }] },
+      { type: 'products-rows', title: 'Elige tu sabor', products: ['Galleta de chocolate', 'Caja surtida'], items: [{ title: 'galleta de chocolate', text: 'Chips de chocolate amargo.' }, { title: 'Torta inventada', text: 'No existe.' }] },
+      { type: 'names-list', eyebrow: '¿Cuál es tu favorito?', items: [{ title: 'Brownie', photo: 1 }, { title: 'Caja surtida', photo: 2 }, { title: 'Galleta de chocolate', photo: 3 }] },
+      { type: 'statement-sticker', title: 'Horneado cada mañana', photo: 4, photo2: 1 },
+    ] as never }, facts(), { fixed });
+    const byType = Object.fromEntries(layout.map(block => [block.type, block]));
+    expect(byType['cover-mega'].items).toEqual([{ title: 'Horneá' }, { title: 'Disfrutá' }]);
+    expect(byType['products-rows'].products).toEqual(['Galleta de chocolate', 'Caja surtida']);
+    expect(byType['products-rows'].items).toEqual([{ title: 'Galleta de chocolate', text: 'Chips de chocolate amargo.' }]);
+    expect(byType['names-list'].items!.map(item => item.link)).toEqual(['product:p3', 'product:p2', 'product:p1']);
+    expect(byType['statement-sticker'].photo2).toBeDefined();
+  });
+
   it('every catalogue id is unique and the schema lists them all', () => {
     const ids = LIBRARY_CATALOG.map(section => section.id);
     expect(new Set(ids).size).toBe(ids.length);

@@ -1,0 +1,404 @@
+{
+  "id": "oliva",
+  "name": "Oliva",
+  "category": "comida",
+  "description": "Despensa y productos de la tierra con carácter: serif cálida, bandas del color de la marca, cada producto con su apodo y mil formas de usarlo.",
+  "tags": [
+    "despensa",
+    "aceites",
+    "miel",
+    "quesos",
+    "salsas",
+    "café",
+    "productos de la tierra"
+  ],
+  "sitePurpose": "shop",
+  "order": 70,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (estilos hechos a mano, 2026-11-10)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "ol-hero",
+      "role": "hero",
+      "demo": "ol-hero.jpg"
+    },
+    {
+      "slot": "ol-miel",
+      "role": "product",
+      "demo": "ol-miel.jpg"
+    },
+    {
+      "slot": "ol-queso",
+      "role": "product",
+      "demo": "ol-queso.jpg"
+    },
+    {
+      "slot": "ol-huevos",
+      "role": "product",
+      "demo": "ol-huevos.jpg"
+    },
+    {
+      "slot": "ol-pan",
+      "role": "product",
+      "demo": "ol-pan.jpg"
+    },
+    {
+      "slot": "ol-granja",
+      "role": "lifestyle",
+      "demo": "ol-granja.jpg"
+    },
+    {
+      "slot": "ol-canasta",
+      "role": "lifestyle",
+      "demo": "ol-canasta.jpg"
+    },
+    {
+      "slot": "ol-mesa",
+      "role": "lifestyle",
+      "demo": "ol-mesa.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "oliva-gloock",
+    "colors": {
+      "paper": "#f8e6da",
+      "ink": "#2f3a1c",
+      "muted": "#f1d9c9",
+      "accent": "#cddc39",
+      "deep": "#2f3a1c"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "oliva",
+      "icons": "line",
+      "header": "split",
+      "announce": "ticker",
+      "footer": "wordmark",
+      "button": "pill",
+      "corners": "soft",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "photos": "rounded",
+      "pdp": "gallery-left",
+      "filters": "chips",
+      "grid": "grid3",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Cosechado esta semana · Envío en 24 horas"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "title": "Lo del campo hace *todo mejor*",
+        "text": "Miel, quesos, huevos y pan de productores que conocemos.",
+        "cta": "Ver la despensa",
+        "link": "products",
+        "photo": "slot:ol-hero"
+      },
+      {
+        "type": "block-split",
+        "look": "right",
+        "eyebrow": "El trío de la casa",
+        "title": "Arma tu *canasta*",
+        "text": "Miel, queso y pan para la semana.",
+        "cta": "Ver la canasta",
+        "link": "products",
+        "photo": "slot:ol-miel"
+      },
+      {
+        "type": "statement-offset",
+        "title": "Tan fresco / que se nota.",
+        "text": "Lo cosechamos el lunes y llega a tu mesa esa misma semana.",
+        "photo": "slot:ol-huevos"
+      },
+      {
+        "type": "products-nicknames",
+        "title": "Lo de la granja, *como debe ser*",
+        "cta": "Ver todo",
+        "card": "classic",
+        "items": [
+          {
+            "title": "Miel de Abeja",
+            "value": "Dulce"
+          },
+          {
+            "title": "Queso Fresco",
+            "value": "Suave"
+          },
+          {
+            "title": "Huevos de Campo",
+            "value": "Dorados"
+          }
+        ]
+      },
+      {
+        "type": "verbs-photo",
+        "title": "Tantas formas de comerlo",
+        "text": "Pan de masa madre con miel, recién tostado.",
+        "cta": "Ver recetas",
+        "link": "products",
+        "photo": "slot:ol-pan",
+        "items": [
+          {
+            "title": "Untar"
+          },
+          {
+            "title": "Hornear"
+          },
+          {
+            "title": "Rallar"
+          },
+          {
+            "title": "Freír"
+          },
+          {
+            "title": "Compartir"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "eyebrow": "Nuestros productores",
+        "title": "Hecho por gente que *cuida la tierra*",
+        "text": "Trabajamos con doce familias del valle, a menos de dos horas de la ciudad.",
+        "cta": "Conócelos",
+        "link": "about",
+        "photo": "slot:ol-granja"
+      },
+      {
+        "type": "products-slider",
+        "title": "Para la *despensa*",
+        "cta": "Ver todo",
+        "link": "products"
+      },
+      {
+        "type": "steps-howto",
+        "title": "Del campo *a tu puerta*",
+        "photo": "slot:ol-canasta",
+        "items": [
+          {
+            "title": "Cosechamos",
+            "text": "Los lunes, con cada productor."
+          },
+          {
+            "title": "Preparamos",
+            "text": "Tu canasta, a mano."
+          },
+          {
+            "title": "Llevamos",
+            "text": "A tu casa el mismo día."
+          }
+        ]
+      },
+      {
+        "type": "usecases",
+        "title": "Para *cada comida*",
+        "items": [
+          {
+            "title": "Desayuno",
+            "text": "Huevos, pan y miel.",
+            "photo": "slot:ol-huevos"
+          },
+          {
+            "title": "Para picar",
+            "text": "Queso fresco con fruta.",
+            "photo": "slot:ol-queso"
+          }
+        ]
+      },
+      {
+        "type": "photo-scroller",
+        "title": "Qué más *estamos cocinando*",
+        "items": [
+          {
+            "title": "Mesa",
+            "text": "Domingo en casa.",
+            "photo": "slot:ol-mesa"
+          },
+          {
+            "title": "Queso",
+            "text": "Recién hecho.",
+            "photo": "slot:ol-queso"
+          },
+          {
+            "title": "Pan",
+            "text": "De masa madre.",
+            "photo": "slot:ol-pan"
+          }
+        ]
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿De dónde viene?",
+            "text": "De doce productores del valle."
+          },
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En 24 horas en la ciudad."
+          },
+          {
+            "title": "¿Cuánto dura la miel?",
+            "text": "Años, si la guardas cerrada."
+          }
+        ]
+      },
+      {
+        "type": "closing-photo",
+        "title": "La despensa, *como debe ser*",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:ol-mesa"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Antes de pedir",
+        "items": [
+          {
+            "title": "¿Cuándo llega?",
+            "text": "En 24 horas en la ciudad."
+          },
+          {
+            "title": "¿Cómo se guarda?",
+            "text": "En un lugar fresco y seco."
+          }
+        ]
+      }
+    ],
+    "choices": {
+      "fonts": [
+        "oliva-gloock",
+        "oliva-dmserif",
+        "oliva-young",
+        "oliva-fraunces",
+        "oliva-caslon"
+      ],
+      "variants": {
+        "photos": [
+          "rounded",
+          "natural"
+        ],
+        "footer": [
+          "wordmark",
+          "columns"
+        ]
+      },
+      "looks": {
+        "block-split": [
+          "right",
+          "left"
+        ],
+        "story-split": [
+          "right",
+          "left"
+        ]
+      },
+      "swaps": {
+        "cover-full": [
+          "cover-full",
+          "cover-centered",
+          "cover-split"
+        ]
+      },
+      "orders": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        [
+          0,
+          3,
+          2,
+          1,
+          5,
+          4,
+          6,
+          8,
+          7,
+          9,
+          10,
+          11
+        ],
+        [
+          0,
+          2,
+          1,
+          4,
+          3,
+          6,
+          5,
+          7,
+          9,
+          8,
+          10,
+          11
+        ]
+      ],
+      "bands": [
+        {},
+        {
+          "5": "muted",
+          "7": "muted"
+        },
+        {
+          "2": "muted",
+          "8": "muted"
+        }
+      ]
+    },
+    "demo": {
+      "storeName": "Oliva",
+      "tagline": "Productos de la tierra",
+      "products": [
+        {
+          "name": "Miel de Abeja",
+          "price": 60,
+          "description": "Frasco de 500 g.",
+          "category": "Dulces"
+        },
+        {
+          "name": "Queso Fresco",
+          "price": 45,
+          "description": "Pieza de 400 g.",
+          "category": "Lácteos"
+        },
+        {
+          "name": "Huevos de Campo",
+          "price": 30,
+          "description": "Docena.",
+          "category": "Granja"
+        },
+        {
+          "name": "Pan de Masa Madre",
+          "price": 25,
+          "description": "Pieza de 700 g.",
+          "category": "Panadería"
+        }
+      ]
+    }
+  }
+}

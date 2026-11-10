@@ -1,0 +1,382 @@
+{
+  "id": "origen",
+  "name": "Origen",
+  "category": "comida",
+  "description": "Cafeterías y tostadores: portada oscura, serif elegante, los orígenes bajo arcos y bandas de foto profundas entre páginas crema.",
+  "tags": [
+    "café",
+    "tostadores",
+    "cafetería",
+    "té",
+    "chocolate"
+  ],
+  "sitePurpose": "shop",
+  "order": 72,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (estilos hechos a mano, 2026-11-10)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "or-hero",
+      "role": "hero",
+      "demo": "or-hero.jpg"
+    },
+    {
+      "slot": "or-finca",
+      "role": "lifestyle",
+      "demo": "or-finca.jpg"
+    },
+    {
+      "slot": "or-bolsas",
+      "role": "product",
+      "demo": "or-bolsas.jpg"
+    },
+    {
+      "slot": "or-taza",
+      "role": "product",
+      "demo": "or-taza.jpg"
+    },
+    {
+      "slot": "or-mesa",
+      "role": "lifestyle",
+      "demo": "or-mesa.jpg"
+    },
+    {
+      "slot": "or-taller",
+      "role": "lifestyle",
+      "demo": "or-taller.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "origen-cormorant",
+    "colors": {
+      "paper": "#f4efe6",
+      "ink": "#171513",
+      "muted": "#e9e1d4",
+      "accent": "#8a5a2b",
+      "deep": "#171513"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "origen",
+      "icons": "line",
+      "header": "centered",
+      "announce": "plain",
+      "footer": "photo",
+      "button": "square",
+      "corners": "sharp",
+      "density": "airy",
+      "texture": "none",
+      "titles": "normal",
+      "photos": "natural",
+      "pdp": "editorial",
+      "filters": "bar",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Tostado cada lunes · Envío gratis desde Bs 200"
+    },
+    "layout": [
+      {
+        "type": "cover-full",
+        "title": "Café *de origen*",
+        "text": "Granos de pequeñas fincas, tostados en lotes cortos en la ciudad.",
+        "cta": "Ver los cafés",
+        "link": "products",
+        "photo": "slot:or-hero"
+      },
+      {
+        "type": "promo-pair",
+        "items": [
+          {
+            "title": "Cajas de regalo",
+            "photo": "slot:or-bolsas",
+            "link": "products"
+          },
+          {
+            "title": "Origen y finca",
+            "photo": "slot:or-finca",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "marquee-photo",
+        "title": "Tostado cada semana",
+        "photo": "slot:or-mesa",
+        "items": [
+          {
+            "title": "Tostado cada semana"
+          },
+          {
+            "title": "De pequeñas fincas"
+          }
+        ],
+        "cta": "Ver los cafés",
+        "link": "products"
+      },
+      {
+        "type": "products-slider",
+        "title": "Recién *tostados*",
+        "cta": "Ver todo",
+        "link": "products",
+        "card": "line"
+      },
+      {
+        "type": "origins-arches",
+        "title": "Nuestros *orígenes*",
+        "cta": "Ver el café",
+        "items": [
+          {
+            "title": "Perú",
+            "text": "Notas de cacao y panela.",
+            "photo": "slot:or-finca",
+            "link": "products"
+          },
+          {
+            "title": "Ecuador",
+            "text": "Floral y dulce.",
+            "photo": "slot:or-bolsas",
+            "link": "products"
+          },
+          {
+            "title": "Colombia",
+            "text": "Caramelo y fruta roja.",
+            "photo": "slot:or-taza",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "story-split",
+        "look": "right",
+        "eyebrow": "Del árbol a tu taza",
+        "title": "Conocemos a *cada productor*",
+        "text": "Compramos directo a familias que visitamos cada cosecha, y pagamos por encima del precio justo.",
+        "cta": "Nuestra historia",
+        "link": "about",
+        "photo": "slot:or-taller"
+      },
+      {
+        "type": "steps-howto",
+        "title": "Cómo *prepararlo*",
+        "photo": "slot:or-taza",
+        "items": [
+          {
+            "title": "Muele",
+            "text": "Medio fino, justo antes."
+          },
+          {
+            "title": "Mide",
+            "text": "15 g por cada 250 ml."
+          },
+          {
+            "title": "Espera",
+            "text": "Cuatro minutos y sirve."
+          }
+        ]
+      },
+      {
+        "type": "statement-inline",
+        "title": "Tostamos poco, para que llegue *recién hecho* a tu casa",
+        "photo": "slot:or-hero",
+        "photo2": "slot:or-bolsas"
+      },
+      {
+        "type": "usecases",
+        "title": "Para *cada momento*",
+        "items": [
+          {
+            "title": "En casa",
+            "text": "Prensa francesa y domingo.",
+            "photo": "slot:or-mesa"
+          },
+          {
+            "title": "En la oficina",
+            "text": "Una bolsa para todo el equipo.",
+            "photo": "slot:or-taza"
+          }
+        ]
+      },
+      {
+        "type": "promo-banner",
+        "title": "Suscríbete y *nunca te falte*",
+        "text": "Una bolsa recién tostada cada dos semanas.",
+        "cta": "Suscribirme",
+        "link": "products",
+        "photo": "slot:or-finca"
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Cuándo tuestan?",
+            "text": "Todos los lunes."
+          },
+          {
+            "title": "¿Lo muelen?",
+            "text": "Sí, dinos cómo lo preparas."
+          },
+          {
+            "title": "¿Cuánto dura?",
+            "text": "Un mes cerrado, en lugar fresco."
+          }
+        ]
+      },
+      {
+        "type": "closing-wordmark",
+        "title": "Café *de origen*",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:or-mesa"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "title": "Cómo prepararlo",
+        "photo": "slot:or-taza",
+        "items": [
+          {
+            "title": "Muele",
+            "text": "Medio fino."
+          },
+          {
+            "title": "Mide",
+            "text": "15 g por 250 ml."
+          },
+          {
+            "title": "Espera",
+            "text": "Cuatro minutos."
+          }
+        ]
+      }
+    ],
+    "choices": {
+      "fonts": [
+        "origen-cormorant",
+        "origen-playfair",
+        "origen-bodoni",
+        "origen-instrument",
+        "origen-newsreader"
+      ],
+      "variants": {
+        "photos": [
+          "natural",
+          "framed"
+        ],
+        "footer": [
+          "photo",
+          "visit"
+        ]
+      },
+      "looks": {
+        "story-split": [
+          "right",
+          "left"
+        ]
+      },
+      "swaps": {
+        "cover-full": [
+          "cover-full",
+          "cover-stage"
+        ]
+      },
+      "orders": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        [
+          0,
+          2,
+          1,
+          4,
+          3,
+          6,
+          5,
+          8,
+          7,
+          9,
+          10,
+          11
+        ],
+        [
+          0,
+          1,
+          3,
+          2,
+          5,
+          4,
+          7,
+          6,
+          9,
+          8,
+          10,
+          11
+        ]
+      ],
+      "bands": [
+        {
+          "2": "deep",
+          "5": "deep"
+        },
+        {
+          "1": "deep",
+          "8": "deep"
+        },
+        {
+          "4": "deep",
+          "9": "deep"
+        }
+      ]
+    },
+    "demo": {
+      "storeName": "Origen",
+      "tagline": "Café de pequeñas fincas",
+      "products": [
+        {
+          "name": "Café Perú",
+          "price": 75,
+          "description": "Bolsa de 250 g.",
+          "category": "Cafés"
+        },
+        {
+          "name": "Café Ecuador",
+          "price": 80,
+          "description": "Bolsa de 250 g.",
+          "category": "Cafés"
+        },
+        {
+          "name": "Café Colombia",
+          "price": 75,
+          "description": "Bolsa de 250 g.",
+          "category": "Cafés"
+        },
+        {
+          "name": "Caja Degustación",
+          "price": 180,
+          "description": "Tres orígenes.",
+          "category": "Cajas"
+        }
+      ]
+    }
+  }
+}

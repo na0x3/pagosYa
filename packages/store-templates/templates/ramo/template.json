@@ -1,0 +1,399 @@
+{
+  "id": "ramo",
+  "name": "Ramo",
+  "category": "hogar",
+  "description": "Flores, plantas y regalos con cariño: fotos redondas por ocasión, serif cálida, tarjetas de ocasión y paneles de color junto a la foto.",
+  "tags": [
+    "flores",
+    "plantas",
+    "regalos",
+    "ramos",
+    "detalles",
+    "eventos"
+  ],
+  "sitePurpose": "shop",
+  "order": 75,
+  "curated": true,
+  "extends": "esencial",
+  "reference": {
+    "theme": "pagosYa original (estilos hechos a mano, 2026-11-10)",
+    "url": ""
+  },
+  "photos": [
+    {
+      "slot": "ra-peonia",
+      "role": "hero",
+      "demo": "ra-peonia.jpg"
+    },
+    {
+      "slot": "ra-monstera",
+      "role": "product",
+      "demo": "ra-monstera.jpg"
+    },
+    {
+      "slot": "ra-sanse",
+      "role": "product",
+      "demo": "ra-sanse.jpg"
+    },
+    {
+      "slot": "ra-potus",
+      "role": "product",
+      "demo": "ra-potus.jpg"
+    },
+    {
+      "slot": "ra-ficus",
+      "role": "product",
+      "demo": "ra-ficus.jpg"
+    },
+    {
+      "slot": "ra-ramo",
+      "role": "product",
+      "demo": "ra-ramo.jpg"
+    }
+  ],
+  "preset": {
+    "palette": "mono",
+    "fonts": "ramo-young",
+    "colors": {
+      "paper": "#fffdf8",
+      "ink": "#2b2420",
+      "muted": "#f7efe6",
+      "accent": "#8c1d3f",
+      "deep": "#2b2420"
+    },
+    "kind": "other",
+    "variants": {
+      "theme": "ramo",
+      "icons": "line",
+      "header": "search",
+      "announce": "chip",
+      "footer": "card",
+      "button": "pill",
+      "corners": "round",
+      "density": "regular",
+      "texture": "none",
+      "titles": "normal",
+      "photos": "rounded",
+      "pdp": "gallery-left",
+      "filters": "chips",
+      "grid": "grid4",
+      "cards": "compact"
+    },
+    "copy": {
+      "announcement": "Bs 20 menos en tu primer pedido · Entrega el mismo día"
+    },
+    "layout": [
+      {
+        "type": "categories-tiles",
+        "look": "circles",
+        "title": "¿Para qué *ocasión*?",
+        "items": [
+          {
+            "title": "Ramos",
+            "photo": "slot:ra-ramo",
+            "link": "products"
+          },
+          {
+            "title": "Plantas",
+            "photo": "slot:ra-monstera",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "cover-split",
+        "title": "Regala *momentos*, no solo flores",
+        "text": "Ramos y plantas entregados el mismo día, con una nota escrita a mano.",
+        "cta": "Ver los ramos",
+        "link": "products",
+        "photo": "slot:ra-peonia"
+      },
+      {
+        "type": "image-columns",
+        "title": "Para *cada ocasión*",
+        "items": [
+          {
+            "title": "Cumpleaños",
+            "text": "Color y alegría.",
+            "photo": "slot:ra-peonia",
+            "link": "products"
+          },
+          {
+            "title": "Gracias",
+            "text": "Un detalle que se nota.",
+            "photo": "slot:ra-potus",
+            "link": "products"
+          },
+          {
+            "title": "Te extraño",
+            "text": "Para quien está lejos.",
+            "photo": "slot:ra-ficus",
+            "link": "products"
+          }
+        ]
+      },
+      {
+        "type": "products-slider",
+        "title": "Los *más pedidos*",
+        "cta": "Ver todo",
+        "link": "products",
+        "card": "soft"
+      },
+      {
+        "type": "block-split",
+        "look": "left",
+        "title": "Plantas pequeñas, *gran magia*",
+        "text": "Plantas que se cuidan solas, en macetas de barro.",
+        "cta": "Ver plantas",
+        "link": "products",
+        "photo": "slot:ra-sanse"
+      },
+      {
+        "type": "products-cards",
+        "look": "soft",
+        "title": "Para *regalar hoy*",
+        "cta": "Ver todo",
+        "link": "products",
+        "products": [
+          "Ramo Peonía",
+          "Monstera"
+        ]
+      },
+      {
+        "type": "steps-howto",
+        "title": "Así *funciona*",
+        "photo": "slot:ra-ramo",
+        "items": [
+          {
+            "title": "Elige",
+            "text": "El ramo o la planta."
+          },
+          {
+            "title": "Escribe",
+            "text": "Tu nota, a mano por nosotros."
+          },
+          {
+            "title": "Entregamos",
+            "text": "El mismo día, antes de las 6 pm."
+          }
+        ]
+      },
+      {
+        "type": "photo-scroller",
+        "title": "Cuidados *del blog*",
+        "items": [
+          {
+            "title": "Revivir flores",
+            "text": "Cómo hacer que duren.",
+            "photo": "slot:ra-peonia"
+          },
+          {
+            "title": "Regar plantas",
+            "text": "Menos es más.",
+            "photo": "slot:ra-potus"
+          },
+          {
+            "title": "Notas",
+            "text": "Qué escribir en la tarjeta.",
+            "photo": "slot:ra-ramo"
+          }
+        ]
+      },
+      {
+        "type": "benefits-bento",
+        "title": "Felicidad *garantizada*",
+        "photo": "slot:ra-monstera",
+        "items": [
+          {
+            "title": "Flores frescas",
+            "text": "Del mercado cada mañana.",
+            "icon": "leaf"
+          },
+          {
+            "title": "Entrega el mismo día",
+            "text": "Antes de las 6 pm.",
+            "icon": "truck"
+          },
+          {
+            "title": "Si no te gusta, lo cambiamos",
+            "text": "Sin preguntas.",
+            "icon": "heart"
+          }
+        ]
+      },
+      {
+        "type": "block-split",
+        "look": "right",
+        "title": "Únete al *club*",
+        "text": "Puntos en cada pedido y un ramo gratis al año.",
+        "cta": "Unirme",
+        "link": "products",
+        "photo": "slot:ra-ficus"
+      },
+      {
+        "type": "faq-split",
+        "look": "lines",
+        "title": "Preguntas",
+        "items": [
+          {
+            "title": "¿Entregan el mismo día?",
+            "text": "Sí, si pides antes de las 2 pm."
+          },
+          {
+            "title": "¿Puedo escribir una nota?",
+            "text": "Sí, la escribimos a mano."
+          },
+          {
+            "title": "¿Cuánto duran las flores?",
+            "text": "Una semana con agua limpia."
+          }
+        ]
+      },
+      {
+        "type": "closing-wordmark",
+        "title": "Regala *algo vivo*",
+        "cta": "Ver todo",
+        "link": "products",
+        "photo": "slot:ra-peonia"
+      }
+    ],
+    "productLayout": [
+      {
+        "type": "steps-howto",
+        "title": "Cuidados",
+        "photo": "slot:ra-potus",
+        "items": [
+          {
+            "title": "Agua",
+            "text": "Cambia cada dos días."
+          },
+          {
+            "title": "Luz",
+            "text": "Sin sol directo."
+          },
+          {
+            "title": "Corte",
+            "text": "Tallos en diagonal."
+          }
+        ]
+      }
+    ],
+    "choices": {
+      "fonts": [
+        "ramo-young",
+        "ramo-fraunces",
+        "ramo-dmserif",
+        "ramo-playfair",
+        "ramo-gloock"
+      ],
+      "variants": {
+        "photos": [
+          "rounded",
+          "natural"
+        ],
+        "footer": [
+          "card",
+          "signup"
+        ]
+      },
+      "looks": {
+        "block-split": [
+          "left",
+          "right"
+        ]
+      },
+      "swaps": {
+        "cover-split": [
+          "cover-split",
+          "cover-full",
+          "cover-half"
+        ]
+      },
+      "orders": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        [
+          0,
+          1,
+          3,
+          2,
+          4,
+          6,
+          5,
+          7,
+          9,
+          8,
+          10,
+          11
+        ],
+        [
+          1,
+          0,
+          2,
+          3,
+          5,
+          4,
+          7,
+          6,
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "bands": [
+        {},
+        {
+          "3": "muted",
+          "7": "muted"
+        },
+        {
+          "2": "muted",
+          "8": "muted"
+        }
+      ]
+    },
+    "demo": {
+      "storeName": "Ramo",
+      "tagline": "Flores y plantas el mismo día",
+      "products": [
+        {
+          "name": "Ramo Peonía",
+          "price": 240,
+          "description": "Peonías y rosas.",
+          "category": "Ramos"
+        },
+        {
+          "name": "Monstera",
+          "price": 180,
+          "description": "Maceta de 20 cm.",
+          "category": "Plantas"
+        },
+        {
+          "name": "Sansevieria",
+          "price": 120,
+          "description": "Maceta de barro.",
+          "category": "Plantas"
+        },
+        {
+          "name": "Potus",
+          "price": 90,
+          "description": "Para colgar.",
+          "category": "Plantas"
+        }
+      ]
+    }
+  }
+}

@@ -100,6 +100,21 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'promo-lines', role: 'promo', use: 'Dos tarjetas grandes de foto redondeadas (items = 2 con photo, title, text y link), cada una con una etiqueta redonda sobre la foto (items.value, 1 a 3 palabras: «Nuevo», «Sin azúcar», solo lo que el comercio dijo) y un botón debajo (cta). Dos líneas, dos sabores, dos colecciones.', needs: { items: [2, 2], itemPhotos: 2 } },
   { id: 'story-sunburst', role: 'story', use: 'Banda de color suave: titular, texto y botón a un lado; al otro la foto en un círculo con rayos de color que giran despacio (marcas tranquilas: anillos finos). Para lo que hace especial al producto: ingredientes, origen, cómo se hace. look rings = anillos finos en lugar de rayos (marcas tranquilas); left = la foto a la izquierda.', needs: { photos: 1 }, looks: ['rings', 'left'] },
   { id: 'perks-rows', role: 'benefits', use: 'Una foto enmarcada sobre un panel a rayas y, al lado, 2 a 4 filas con lo que gana el cliente al comprar aquí (items: title = el beneficio, text = una línea, value = una etiqueta corta como «Gratis» o «10% menos», link): suscripción, envío, recojo, un código. Solo beneficios que la tienda tiene de verdad.', needs: { photos: 1, items: [2, 4] } },
+  // Merienda (spec 2026-11-10, after bakeme.pages.dev): the playful snack-shop style's own sections.
+  { id: 'cover-mega', role: 'cover', use: 'Portada de la tienda alegre: titular enorme en mayúsculas (title, 2 a 6 palabras), una línea (text), botón; photo = la mejor foto del producto; eyebrow = el sticker redondo (1 a 3 palabras, un hecho del producto: «Hecho hoy»); items = 2 a 4 palabras cortas para la cinta curva que corre abajo.', needs: { photos: 1, items: [0, 4] }, looks: ['side', 'stack', 'tilt'], templateOnly: true },
+  { id: 'products-rows', role: 'products', use: 'Los productos uno por fila, cada uno en su color con su nombre enorme y su tarjeta de compra: products = 2 a 5 nombres exactos; items = los mismos productos (title = nombre exacto, text = una línea de ese producto, de su descripción o de lo que dijo el comercio).', needs: { products: [2, 5], items: [0, 5] }, looks: ['alternate', 'cards', 'stack'], templateOnly: true },
+  { id: 'names-list', role: 'products', use: 'Los nombres de los productos enormes, uno por línea, que se iluminan al bajar (items = 3 a 8: title = nombre exacto del producto, photo = su foto). eyebrow = una línea corta encima («¿Cuál es tu favorito?»).', needs: { items: [3, 8], itemPhotos: 3 }, looks: ['light', 'outline'], templateOnly: true },
+  { id: 'statement-sticker', role: 'story', use: 'Una frase grande sobre el producto (title, 3 a 7 palabras, un hecho: cómo se hace, cómo se come), una línea (text) y dos fotos del producto como stickers (photo y photo2).', needs: { photos: 1 }, looks: ['left', 'center'], templateOnly: true },
+  // Hand-made styles round 2 (owner 2026-11-10 «all of them are the same»): each style's own sections, after a real store.
+  { id: 'products-words', role: 'products', use: 'Fila deslizable de tarjetas altas de producto, cada una bajo UNA palabra enorme en minúsculas que dice para qué sirve (items = 3 a 8: title = nombre exacto del producto, value = esa palabra, 1 o 2 palabras, ≤ 14 letras: «prepara», «el kit», «rubor»).', needs: { items: [3, 8] }, looks: ['grey', 'white'], templateOnly: true },
+  { id: 'values-portrait', role: 'story', use: 'Una frase de lo que la marca cuida (title, 10 a 20 palabras) con botón, y 2 a 4 valores que se abren (items: title = el valor en 1 o 2 palabras, text = una línea), junto a un retrato en blanco y negro (photo: una persona o las manos).', needs: { photos: 1, items: [2, 4] }, looks: ['left', 'right'], templateOnly: true },
+  { id: 'campaign-strip', role: 'promo', use: 'Una campaña: foto a todo el ancho (photo: ambiente, persona usando el producto) con title y text abajo a la izquierda y dos botones (cta, cta2) a la derecha; debajo 4 productos de esa colección (link = category:Nombre exacto de una categoría; cada campaña de la página, otra categoría).', needs: { photos: 1 }, looks: ['tall', 'wide'], templateOnly: true },
+  { id: 'block-split', role: 'story', use: 'Un panel de color con un título corto, una línea y un botón, al lado de una foto que llena su mitad (photo: ambiente o el producto en uso).', needs: { photos: 1 }, looks: ['left', 'right'], templateOnly: true },
+  { id: 'letters-split', role: 'story', use: 'Una palabra corta en mosaicos de letras de colores (eyebrow: el nombre de la tienda o UNA palabra de 2 a 8 letras) con una foto en uno de los mosaicos (photo), junto a un título, una línea y un botón.', needs: { photos: 1 }, looks: ['left', 'right'], templateOnly: true },
+  { id: 'statement-offset', role: 'story', use: 'Una frase grande en dos líneas separadas por « / » (title: «Tan fresco / que se nota.»), una a la izquierda y otra a la derecha, con una foto redonda pequeña al medio (photo) y una línea abajo (text).', needs: { photos: 1 }, templateOnly: true },
+  { id: 'products-nicknames', role: 'products', use: 'El nombre de la tienda enorme, una línea (title) y sus productos, cada uno bajo un apodo entre comillas (items = 2 a 4: title = nombre exacto del producto, value = el apodo, 1 o 2 palabras: «Dulce», «Para freír»), con un botón a todo el ancho (cta).', needs: { items: [2, 4] }, templateOnly: true },
+  { id: 'verbs-photo', role: 'benefits', use: 'Banda del color de la marca: las formas de usar el producto (items = 3 a 8 verbos o palabras cortas: «Untar», «Hornear», «Compartir») grandes y desordenadas junto a una foto (photo), con una nota bajo la foto (text) y un botón. title = la frase que corre arriba («Tantas formas de comerlo»).', needs: { photos: 1, items: [3, 8] }, templateOnly: true },
+  { id: 'origins-arches', role: 'story', use: 'De 2 a 4 fotos con arco arriba, el nombre de cada origen, zona o línea encima de su foto (items: title = 1 a 2 palabras, text = una línea, photo = su foto, link), y cta = el texto del enlace («Ver el café»).', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
   { id: 'before-after', role: 'proof', use: 'Antes y después: dos fotos en un mismo marco (photo = antes, photo2 = después) que el cliente compara arrastrando una barra. Solo si el comercio habla de un antes y un después (limpieza, restauración, belleza, peluquería) y tiene esas dos fotos.', needs: { photos: 2, pair: true } },
 ];
 const ART_WORDS = /\b(laminas?|cuadros?|arte|prints?|posters?|ilustracion(?:es)?|enmarcad[ao]s?|galeria)\b/;
@@ -347,7 +362,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (photoless) { /* no photo */ } else if ((needs.photos ?? 0) >= 1 || single || raw.template?.photo || besidePhoto || ['compare-table', 'faq-split', 'visit-store', 'promo-code', 'closing-wordmark', 'statement-inline'].includes(section.id)) {
       const photo = photoOf(raw.photo); if (photo) block.photo = photo;
     }
-    if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline' || raw.template?.photo2) { const photo2 = photoOf(raw.photo2); if (photo2) block.photo2 = photo2; }
+    if ((needs.photos ?? 0) >= 2 || section.id === 'statement-inline' || section.id === 'statement-sticker' || raw.template?.photo2) { const photo2 = photoOf(raw.photo2); if (photo2) block.photo2 = photo2; }
     const liveCap = section.id === 'product-hero' || section.id === 'hero-split' ? 32 : section.id === 'chips-marquee' ? 48 : section.id === 'detail-hotspots' ? 60 : 0;
     // Items: capped words, a known icon, an item photo where the section shows one, a value only in the comparison.
     const [minItems, maxItems] = needs.items ?? [0, 0];
@@ -362,6 +377,9 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
       const text = clip(item.text, TEXT_CAPS.itemText); if (text) out.text = text;
       if (item.icon && (LIBRARY_ICON_NAMES as readonly string[]).includes(item.icon)) out.icon = item.icon;
       if (section.id === 'compare-table') out.value = item.value === 'yes' ? 'yes' : 'no';
+      // products-words: the one lowercase word over each product's card.
+      if (section.id === 'products-words') { const word = clip(item.value, 16); if (word) out.value = word.toLowerCase(); }
+      if (section.id === 'products-nicknames') { const nick = clip(item.value, 18); if (nick) out.value = nick.replace(/[«»"“”]/g, ''); }
       // A sticker (promo-lines) or a pill (perks-rows): a few words, and every number in it one the merchant wrote.
       if (TAGGED.has(section.id)) { const tag = clip(item.value, 22); if (tag && (tag.match(/\d+/g) ?? []).every(number => new RegExp(`(?<!\\d|\\d[.,])${number}(?!\\d|[.,]\\d)`).test(backedWords))) out.value = tag; }
       // A percentage ring shows only a number the merchant wrote («94%»).
@@ -388,6 +406,11 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (section.id === 'promo-trio' && !single) items = items.filter(item => item.photo);
     if (section.id === 'categories-list') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));
     if (section.id === 'categories-tiles') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));
+    // Merienda: a name that is a product links to it and reads as the product's own name; a row's line belongs to its product.
+    if (section.id === 'names-list') items = items.map(item => { const product = productByName.get(fold(item.title)); return product ? { ...item, title: product.name, link: `product:${product.id}` } : item; });
+    if (section.id === 'products-nicknames') items = items.filter(item => productByName.has(fold(item.title))).map(item => ({ ...item, title: productByName.get(fold(item.title))!.name }));
+    if (section.id === 'products-words') items = items.filter(item => productByName.has(fold(item.title))).map(item => ({ ...item, title: productByName.get(fold(item.title))!.name }));
+    if (section.id === 'products-rows') items = items.filter(item => productByName.has(fold(item.title))).map(item => ({ title: productByName.get(fold(item.title))!.name, ...(item.text ? { text: item.text } : {}) }));
     if (needs.itemPhotos) items = items.filter(item => item.photo);
     // Meat House live 2026-11-07 («pon texto moviéndose que diga pedidos con 24 hrs de anticipación»): one dictated phrase runs on
     // its own, repeated so the band fills (the strip each store already has draws two words or more). Pieces that together are the
@@ -432,6 +455,13 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if ((block.band === 'deep' || block.band === 'accent') && ['products-grid', 'products-tabs', 'products-cards', 'products-spotlight', 'products-lookbook', 'product-personalizer'].includes(section.id)) delete block.band;
     if ((block.band === 'deep' || block.band === 'accent') && !block.photo && !block.products && !block.product && !(block.items ?? []).some(item => item.photo) && section.id !== 'categories-tiles' && !section.decor) delete block.band;
     blocks.push(block);
+  }
+  // Live 2026-11-10 (Perra Please on Neón, one category): each category's four products under one campaign only; a later campaign
+  // of the same (or no) category keeps its photo and words and sends to the catalogue.
+  const campaigns = new Set<string>();
+  for (const block of blocks) if (block.type === 'campaign-strip') {
+    if (block.link?.startsWith('category:') && !campaigns.has(block.link)) campaigns.add(block.link);
+    else block.link = 'products';
   }
   return fixedMode ? blocks : frameLayout(blocks, facts, used);
 }
