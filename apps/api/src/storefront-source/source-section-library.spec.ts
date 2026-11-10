@@ -1,4 +1,4 @@
-import { buildLibraryFacts, carriedSections, libraryTopUp, withTopUp, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
+import { withPersonalizer, buildLibraryFacts, carriedSections, libraryTopUp, withTopUp, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
 
 const facts = (over: Partial<LibraryFacts> = {}): LibraryFacts => ({
   storeName: 'Dulce Nube', what: 'Galletas artesanales', story: '', city: 'La Paz', request: '', tone: 'calm',
@@ -374,5 +374,45 @@ describe('top-up', () => {
     expect(types(withTopUp(home(['cover-split', 'products-grid', 'closing-photo']), home(['visit-store', 'promo-code']))))
       .toEqual(['cover-split', 'products-grid', 'visit-store', 'promo-code', 'closing-photo']);
     expect(types(withTopUp(home(['cover-split', 'products-grid']), home(['visit-store'])))).toEqual(['cover-split', 'products-grid', 'visit-store']);
+  });
+});
+
+// Spec 2026-11-09 personalizador: the product with real options on a big stage; the frame only in art stores.
+describe('personalizador (2026-11-09)', () => {
+  const opt = (pairs: Array<[string, string]>, photo?: string) => ({ options: pairs.map(([name, value]) => ({ name, value })), ...(photo ? { imageUrls: [photo] } : {}) });
+  const input = (over: Record<string, unknown> = {}) => ({ storeName: 'Vórtice', what: 'Licuadoras en Santa Cruz', story: '', city: 'Santa Cruz', request: '', tone: 'calm' as const,
+    items: [{ id: 'cup', name: 'Vaso extra', imageUrls: ['/v1/uploads/cup.jpg'] },
+      { id: 'one', name: 'Licuadora uno', imageUrls: ['/v1/uploads/one.jpg'], variants: [opt([['Color', 'Negro']]), opt([['Color', 'Rosa']])] },
+      { id: 'two', name: 'Licuadora dos', imageUrls: ['/v1/uploads/two.jpg'], variants: [opt([['Color', 'Negro']], '/v1/uploads/n.jpg'), opt([['Color', 'Rosa']], '/v1/uploads/r.jpg')] }],
+    categories: [], uploads: [], codes: [], reviews: 0, ...over });
+
+  it('facts: the product with options and the most photographed ones; art stores by their words', () => {
+    const out = buildLibraryFacts(input() as never);
+    expect(out.optioned).toEqual({ id: 'two', name: 'Licuadora dos', groups: ['Color'] });
+    expect(out.art).toBe(false);
+    expect(buildLibraryFacts(input({ what: 'Láminas de arte para decorar' }) as never).art).toBe(true);
+    expect(buildLibraryFacts(input({ items: [{ id: 'cup', name: 'Vaso extra' }, { id: 'x', name: 'Uno solo', variants: [opt([['Color', 'Negro']])] }] }) as never).optioned).toBeUndefined();
+  });
+
+  it('validation: always the optioned product, the frame only in art stores, never on a dark band; no options → no section', () => {
+    const optioned = { id: 'p2', name: 'Caja surtida', groups: ['Sabor'] };
+    const [block] = validateLibraryLayout({ blocks: [{ type: 'product-personalizer', product: 'p1', look: 'frame', band: 'deep' } as never] }, facts({ optioned }), { fixed: [{ type: 'product-personalizer' }] });
+    expect(block).toMatchObject({ type: 'product-personalizer', product: 'p2', look: 'stage' });
+    expect(block.band).toBeUndefined();
+    expect(validateLibraryLayout({ blocks: [{ type: 'product-personalizer' } as never] }, facts({ optioned, art: true }), { fixed: [{ type: 'product-personalizer' }] })[0].look).toBe('frame');
+    expect(validateLibraryLayout({ blocks: [{ type: 'product-personalizer', product: 'p1' } as never] }, facts(), { fixed: [{ type: 'product-personalizer' }] })).toEqual([]);
+    expect(librarySectionBlocker('product-personalizer', facts())).toBe('ninguno de tus productos tiene opciones (colores, tallas o sabores)');
+    expect(librarySectionBlocker('product-personalizer', facts({ optioned }))).toBeNull();
+  });
+
+  it('every eligible home gets it once: after the main grid, else before the closing section', () => {
+    const optioned = { id: 'p2', name: 'Caja surtida', groups: ['Sabor'] };
+    const home = [{ type: 'cover-split' }, { type: 'products-grid' }, { type: 'faq-split' }, { type: 'closing-photo' }];
+    const out = withPersonalizer(home, facts({ optioned }));
+    expect(types(out)).toEqual(['cover-split', 'products-grid', 'product-personalizer', 'faq-split', 'closing-photo']);
+    expect(out[2]).toEqual({ type: 'product-personalizer', product: 'p2', look: 'stage' });
+    expect(withPersonalizer(out, facts({ optioned }))).toBe(out);
+    expect(types(withPersonalizer([{ type: 'cover-split' }, { type: 'closing-photo' }], facts({ optioned, art: true })))).toEqual(['cover-split', 'product-personalizer', 'closing-photo']);
+    expect(withPersonalizer(home, facts())).toBe(home);
   });
 });

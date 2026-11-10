@@ -68,6 +68,7 @@ export const PARTS = [
   'look/lively.js',
   'look/press.js',
   'product/variant-cards.js',
+  'product/personalizer.js',
   'shared/start.js',
 ];
 

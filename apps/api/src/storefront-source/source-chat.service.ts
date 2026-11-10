@@ -76,7 +76,7 @@ import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy } from './source-templates';
 import { readMoodAsk } from './source-mood-ask';
 import { nextTitleStyle, readTitleAsk } from './source-title-style';
-import { buildLibraryFacts, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
+import { buildLibraryFacts, withPersonalizer, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
 import { applyCatalogOps, catalogChangeEmpty, emptyCatalogChange, relinkCategories, withCategoryMenuRenames, withoutCategoryMenuLinks, type CatalogChange } from './source-catalog-edit';
 import { writeCatalogChange } from './source-catalog-write';
 import type { ProductVariant } from '../payment-links/product-variants';
@@ -914,6 +914,8 @@ export class SourceChatService {
     // Owner 2026-11-06 («too short, there should be more things on the main page»): a template home under 11 sections gets
     // library sections the store can really fill (its place, its code, delivery, how it works…), before its closing.
     if (template) layout = await this.topUpHome(merchantId, storeId, layout, facts);
+    // Spec 2026-11-09 personalizador («para todos»): a store with a product that has options gets it once, after its product grid.
+    layout = withPersonalizer(layout, facts);
     this.productLogger.log(JSON.stringify({ event: 'section_library_layout', storeId, asked: (answer?.blocks ?? []).length, kept: layout.map(block => block.type),
       // What the model sent for each block (photo indexes, item count): tells a left-out section from one the checks dropped.
       answered: (answer?.blocks as Array<{ type?: string; photo?: number; photo2?: number; items?: Array<{ photo?: number }> }> ?? []).map(block => `${block.type}:${block.photo ?? ''}/${block.photo2 ?? ''}/${(block.items ?? []).length}i[${(block.items ?? []).map(item => item.photo ?? '').join(',')}]`),

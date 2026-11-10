@@ -281,6 +281,27 @@ export function withCurrentSectionCss<F extends { path: string; content: string 
   return content === sheet.content ? files : files.map(file => file === sheet ? { ...file, content } : file);
 }
 
+/** Spec 2026-11-09 personalizador: a store's library.tsx is a copy from its build. When its layout uses a section that copy has no
+ *  renderer for, the template's marked block («lb:product-personalizer») goes in before the section map and gets its entry; a copy
+ *  without those anchors is left as it is (the section then simply does not draw). */
+const LIBRARY_CODE_SECTIONS = [{ type: 'product-personalizer', component: 'ProductPersonalizer', after: "'products-spotlight': ProductsSpotlight," }] as const;
+export function withLibrarySectionCode<F extends { path: string; content: string }>(files: F[]): F[] {
+  const data = files.find(file => file.path === TEMPLATE_STORE_DATA_PATH)?.content ?? '';
+  const library = files.find(file => file.path === 'components/library.tsx');
+  if (!library) return files;
+  let content = library.content;
+  for (const section of LIBRARY_CODE_SECTIONS) {
+    if (!data.includes(`"type":"${section.type}"`) || content.includes(`'${section.type}':`)) continue;
+    const anchor = 'const SECTIONS: Record<string';
+    if (!content.includes(anchor) || !content.includes(section.after)) continue;
+    const source = templateSourceFiles(MASTER_TEMPLATE_ID).find(file => file.path === 'components/library.tsx')?.content ?? '';
+    const block = source.match(new RegExp(`/\\* lb:${section.type} \\*/[\\s\\S]*?/\\* /lb:${section.type} \\*/`))?.[0];
+    if (!block) continue;
+    content = content.replace(anchor, `${block}\n\n${anchor}`).replace(section.after, `${section.after} '${section.type}': ${section.component},`);
+  }
+  return content === library.content ? files : files.map(file => file === library ? { ...file, content } : file);
+}
+
 /** Template frame variety (2026-11-03): a refill brings the store's variant blocks («v:part=value») in line with its footer, button,
  *  card and product page — the chosen ones from the template's current sheet, the others empty. Only a template store's sheet. */
 export function withCurrentVariantCss<F extends { path: string; content: string }>(files: F[], choices: Record<string, unknown>): F[] {
@@ -436,7 +457,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
     }
     return file;
   }), variants);
-  const pages = withFeatureSlots(withCurrentVariantCss(withCurrentSectionCss(withEsencialCatalogPages(withCurrentSectionedPages(out))), frameChoices(variants as Record<string, unknown>, (change.layout ?? state.layout ?? []) as { type?: unknown; card?: unknown }[])));
+  const pages = withFeatureSlots(withCurrentVariantCss(withCurrentSectionCss(withLibrarySectionCode(withEsencialCatalogPages(withCurrentSectionedPages(out)))), frameChoices(variants as Record<string, unknown>, (change.layout ?? state.layout ?? []) as { type?: unknown; card?: unknown }[])));
   return variants.menu && variants.menu !== 'none' ? withStoreMenuMounts(pages) : pages;
 }
 

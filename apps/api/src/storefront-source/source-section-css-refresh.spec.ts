@@ -1,5 +1,5 @@
 import { templateSourceFiles } from '@pagosya/store-templates';
-import { withCurrentSectionCss, withCurrentThemeBlock } from './source-templates';
+import { withCurrentSectionCss, withCurrentThemeBlock, withLibrarySectionCode } from './source-templates';
 
 // 2026-11-02 (Taller Lienzo): a store's section blocks are the platform's; a refill brings each one to the template's current version.
 describe('withCurrentSectionCss', () => {
@@ -33,5 +33,26 @@ describe('withCurrentThemeBlock', () => {
     expect(withCurrentThemeBlock(out, 'pancita')).toBe(out);
     expect(withCurrentThemeBlock(css, 'nadie')).toBe(css);
     expect(withCurrentThemeBlock(css, 'none')).toBe(css);
+  });
+});
+
+// Spec 2026-11-09 personalizador: a store built before the section carries an older library.tsx; a layout that uses the section brings
+// its renderer in (from the template's own marked block), and nothing else in the file changes.
+describe('withLibrarySectionCode', () => {
+  const library = 'function ProductsSpotlight() { return null; }\nconst SECTIONS: Record<string, any> = {\n  \'products-spotlight\': ProductsSpotlight, \'product-hero\': ProductHero,\n};\n';
+  const files = (layout: string) => [{ path: 'components/store-data.tsx', content: `export const layout: any[] = ${layout};` }, { path: 'components/library.tsx', content: library }];
+  it('adds the renderer and its entry when the layout uses the section', () => {
+    const out = withLibrarySectionCode(files('[{"type":"product-personalizer","product":"p1","look":"stage"}]'));
+    const code = out[1].content;
+    expect(code).toContain('function ProductPersonalizer(');
+    expect(code).toContain("'products-spotlight': ProductsSpotlight, 'product-personalizer': ProductPersonalizer,");
+    expect(code.indexOf('function ProductPersonalizer(')).toBeLessThan(code.indexOf('const SECTIONS'));
+    expect(withLibrarySectionCode(out)).toBe(out);
+  });
+  it('leaves a store whose layout does not use it, or whose file lacks the anchors, alone', () => {
+    const plain = files('[{"type":"products-grid"}]');
+    expect(withLibrarySectionCode(plain)).toBe(plain);
+    const odd = [{ path: 'components/store-data.tsx', content: 'export const layout: any[] = [{"type":"product-personalizer"}];' }, { path: 'components/library.tsx', content: 'export default 1;' }];
+    expect(withLibrarySectionCode(odd)).toBe(odd);
   });
 });

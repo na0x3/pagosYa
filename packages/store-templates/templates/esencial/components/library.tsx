@@ -1483,11 +1483,24 @@ function BeforeAfter({ block, index }: { block: LibraryBlock; index: number }) {
   </Band>;
 }
 
+/* lb:product-personalizer */
+/** Spec 2026-11-09 personalizador (the Oct-27 «Marco» look the owner liked): the kit draws the product's own choices on a big stage
+ *  into the host — circles for colours, pills for sizes and flavours, its price and «Añadir al carrito». The frame look only in art
+ *  stores. A product without options hides the section. */
+function ProductPersonalizer({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.product) return null;
+  return <Band block={block} index={index} id="personaliza">
+    {block.title || block.eyebrow ? <Head block={block} index={index} /> : null}
+    <div data-pagosya-personalizer="" data-product-id={block.product} data-look={block.look === 'frame' ? 'frame' : 'stage'} />
+  </Band>;
+}
+/* /lb:product-personalizer */
+
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
   'cover-split': CoverSplit, 'hero-split': HeroSplit, 'variant-cards': VariantCards, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
   'detail-hotspots': DetailHotspots, 'chips-marquee': ChipsMarquee,
-  'products-grid': ProductsGrid, 'products-tabs': ProductsGrid, 'products-spotlight': ProductsSpotlight, 'product-hero': ProductHero, 'products-cards': ProductsCards, 'products-lookbook': ProductsLookbook, 'categories-tiles': CategoriesTiles,
+  'products-grid': ProductsGrid, 'products-tabs': ProductsGrid, 'products-spotlight': ProductsSpotlight, 'product-personalizer': ProductPersonalizer, 'product-hero': ProductHero, 'products-cards': ProductsCards, 'products-lookbook': ProductsLookbook, 'categories-tiles': CategoriesTiles,
   'story-split': StorySplit, 'story-checker': StoryChecker, 'story-overlay': StoryOverlay, 'story-list': StoryList, 'statement-inline': StatementInline,
   'benefits-orbit': BenefitsOrbit, 'benefits-bento': BenefitsBento, 'compare-table': CompareTable, 'steps-howto': StepsHowto, 'usecases': Usecases,
   'reviews-wall': Reviews, 'reviews-cards': Reviews,
