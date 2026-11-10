@@ -122,7 +122,7 @@ export function hostedAssetSource(value: string): string | null {
   } catch { return null; }
 }
 
-export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; accountForms?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[]; assetSources?: string[]; inlineText?: boolean; popupDemo?: boolean; scrollY?: number; inlineProducts?: Record<string, { price: boolean }> } = {}): string {
+export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.html", navigation: Partial<PreviewNavigation> & { paymentForm?: boolean; accountForms?: boolean; editing?: boolean; hosted?: boolean; imageSources?: string[]; assetSources?: string[]; inlineText?: boolean; popupDemo?: boolean; scrollY?: number; /** Spec 2026-11-10 rasca y elige: the shopper's favourite, kept by the parent page. */ favourite?: string; inlineProducts?: Record<string, { price: boolean }> } = {}): string {
   const imageSources = (navigation.imageSources || []).map(uploadImageSource).filter((source): source is string => Boolean(source));
   const entry = snapshot.files.find((file) => file.path === page && file.encoding !== "base64");
   if (!entry) throw new Error("Esta revisión no incluye la página seleccionada.");
@@ -201,7 +201,7 @@ export function sourcePreviewDocument(snapshot: SourceSnapshot, page = "index.ht
   const flag = doc.createElement("script");
   const encoded = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
   const mediaAssets = Object.fromEntries(snapshot.files.filter(file => /\.(png|jpe?g|webp|avif|gif|svg|mp4)$/i.test(file.path)).map(file => [file.path, data(file)]));
-  flag.textContent = `${previewAssetsRuntime}(${encoded(mediaAssets)},${encoded(page)},${navigation.editing === true && navigation.hosted !== true});\nwindow.PAGOSYA_PREVIEW=true;window.PAGOSYA_HOSTED=${navigation.hosted === true};${navigation.popupDemo === true ? 'window.PAGOSYA_POPUP_DEMO=true;' : ''}window.PAGOSYA_PREVIEW_PAGE=${encoded(page)};window.PAGOSYA_PREVIEW_QUERY=${encoded(navigation.query || "")};window.PAGOSYA_PREVIEW_CART=${encoded(navigation.cart || [])};
+  flag.textContent = `${previewAssetsRuntime}(${encoded(mediaAssets)},${encoded(page)},${navigation.editing === true && navigation.hosted !== true});\nwindow.PAGOSYA_PREVIEW=true;window.PAGOSYA_HOSTED=${navigation.hosted === true};${typeof navigation.favourite === 'string' && navigation.favourite ? `window.PAGOSYA_FAVOURITE=${encoded(navigation.favourite.slice(0, 140))};` : ''}${navigation.popupDemo === true ? 'window.PAGOSYA_POPUP_DEMO=true;' : ''}window.PAGOSYA_PREVIEW_PAGE=${encoded(page)};window.PAGOSYA_PREVIEW_QUERY=${encoded(navigation.query || "")};window.PAGOSYA_PREVIEW_CART=${encoded(navigation.cart || [])};
     new MutationObserver(() => {
       const theme = document.documentElement.dataset.theme;
       if (theme === 'light' || theme === 'dark') parent.postMessage({type:'pagosya:source-theme', theme}, '*');

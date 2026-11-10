@@ -45,6 +45,8 @@ export class RetentionSubscribeDto {
   /** Spec 2026-11-10 rasca y elige: the store's interest answers chosen, and the favourite (a product id, or «id:option value»). */
   @IsOptional() @IsArray() @ArrayMaxSize(6) @ArrayUnique() @IsString({ each: true }) @MaxLength(28, { each: true }) answers?: string[];
   @IsOptional() @IsString() @MaxLength(140) favourite?: string;
+  /** Which contact the game asked for (a published store's parent page asks it in pagosYa's form). */
+  @IsOptional() @IsIn(['whatsapp', 'email']) contact?: 'whatsapp' | 'email';
   /** Spec 2026-11-09 A/B tests: the store page's test visit, so a B visitor gets B's code and the signup counts for B. */
   @IsOptional() @IsString() @MaxLength(64) sourceVisitToken?: string;
 }

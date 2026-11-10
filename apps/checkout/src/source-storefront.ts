@@ -34,6 +34,10 @@ export function hostedRetentionMethod(path: string, hasPayload: boolean): 'GET' 
 
 /** Spec 2026-11-09 YAPI A/B tests: the popup read and the signup carry the store's test visit, so a B visitor sees B's popup and gets
  *  B's code; every other retention path is forwarded as it came. */
+/** Spec 2026-11-10 rasca y elige: the favourite this shopper chose in a store's popup game, kept on this page. */
+export function favouriteOf(slug: string): string {
+  try { const value = localStorage.getItem(`pagosya:fav:${slug}`) || ''; return value.length <= 140 ? value : ''; } catch { return ''; }
+}
 export function hostedRetentionRequest(apiBase: string, slug: string, path: string, payload: Record<string, unknown> | undefined, visit: string | undefined): { url: string; body?: Record<string, unknown> } {
   const url = `${apiBase}/stores/public/${encodeURIComponent(slug)}/retention${path ? '/' + path : ''}${visit && path === '' ? `?visit=${encodeURIComponent(visit)}` : ''}`;
   if (!payload) return { url };
@@ -140,7 +144,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   let navigation: Partial<PreviewNavigation> = { query: '?' + initialQuery };
   try { const theme = sessionStorage.getItem(themeKey); if (theme === 'light' || theme === 'dark') navigation.theme = theme; } catch {}
   navigation.cart = previewCart(cartStorage.load());
-  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, accountForms: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
+  const show = (page = 'index.html') => { frame.srcdoc = sourcePreviewDocument(prepared, page, { ...navigation, hosted: true, ...(favouriteOf(slug) ? { favourite: favouriteOf(slug) } : {}), accountForms: true, imageSources: [imageSource], assetSources: assetSource ? [assetSource] : [] }); };
   // The store draws its account pages; this origin keeps the session, calls the API and guards typed passwords
   // (spec 2026-10-08-store-built-in-account-pages-design). An emailed token is read here and never reaches the store.
   const emailToken = takeAccountEmailToken(location, history);
@@ -204,6 +208,8 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       }
       return;
     }
+    // Spec 2026-11-10 rasca y elige: the frame cannot keep the shopper's favourite; this page does, and hands it back on every page.
+    if (data?.type === 'pagosya:favourite') { if (typeof data.id === 'string' && data.id.length <= 140) { try { localStorage.setItem(`pagosya:fav:${slug}`, data.id); } catch {} } return; }
     if (data?.type === 'pagosya:funnel') return; // Older kits still post steps; the steps arrive as pagosya:analytics.
     if (data?.type === 'pagosya:analytics') { if (Array.isArray(data.events)) data.events.slice(0, 40).forEach(analytics.record); return; }
     // The merchant's ad tags live on this page (overnight 2026-10-29); the sandboxed kit hands its pixel events up here.

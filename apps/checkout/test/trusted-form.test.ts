@@ -75,3 +75,18 @@ it('collects the courier address and door pin in pagosYa\'s dialog, starting fro
   (dialog().querySelector('[data-cancel]') as HTMLButtonElement).click();
   expect(await again).toBeNull();
 });
+
+// Spec 2026-11-10 rasca y elige: a store that asks for WhatsApp gets only the number (and consent) in pagosYa's dialog; the game's
+// choices travel with the request, never a contact field from the frame.
+it('asks for the WhatsApp only when the popup game asks for it, and keeps the game choices', async () => {
+  const pending = collectPersonalFields('retention', { path: 'subscribe', payload: { contact: 'whatsapp', answers: ['Para regalar'], favourite: 'p1' } }, { storeName: 'Miga Dorada' });
+  expect(dialog().querySelector('[name=email]')).toBeNull();
+  expect(dialog().querySelector('[name=phone]')!.getAttribute('type')).toBe('tel');
+  expect(dialog().textContent).toContain('Tu WhatsApp');
+  fill('phone', '7123 4567');
+  (dialog().querySelector('[name=consent]') as HTMLInputElement).checked = true;
+  submit();
+  expect(await pending).toEqual({ phone: '7123 4567', consent: true });
+  expect(withoutPersonalFields('retention', { path: 'subscribe', payload: { contact: 'whatsapp', phone: 'x', answers: ['a'], favourite: 'p1', gameToken: 't' } }))
+    .toEqual({ path: 'subscribe', payload: { contact: 'whatsapp', answers: ['a'], favourite: 'p1', gameToken: 't' } });
+});
