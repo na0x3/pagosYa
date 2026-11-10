@@ -1,0 +1,53 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvzxwwx40001j4sm6yhfaixf",
+  "slug": "delcsvzp",
+  "photos": {
+    "de33bc1a-b618-485b-8aa6-31216fe9205b.jpg": "/v1/uploads/187a63bf-c07c-40da-aad6-7389cdeb7018.jpg",
+    "2e09471e-efda-4558-93ef-bea3ffe6fa21.jpg": "/v1/uploads/627f1246-0ee0-411c-a73e-06581b58b5ec.jpg",
+    "4080b2c9-a912-40fe-a69f-2b82a6d066b5.jpg": "/v1/uploads/924b3193-d501-4806-bda7-1ed2e7d940cc.jpg",
+    "c82547a6-34eb-481c-9380-cdda926d5605.jpg": "/v1/uploads/9263bd34-945c-48b1-9ad9-03766d221713.jpg",
+    "fa525aa4-78b7-4070-8322-bbced1c85c34.jpg": "/v1/uploads/7ce63936-7c38-4d61-9234-fa52e9e2b31e.jpg",
+    "d1fac0a9-32b2-4ce6-9a48-37f7ffc70cb4.jpg": "/v1/uploads/05d383c5-c43c-4f9d-9a7d-947f568d804a.jpg",
+    "329f02f3-f555-4658-86a1-51d69c149d38.jpg": "/v1/uploads/59df5d04-4f73-4975-a1ef-d895a04fcdc5.jpg",
+    "4c00d94a-3277-4c80-b3ed-7373b86aba23.jpg": "/v1/uploads/33ce81b6-024e-4906-8f9d-04582328e987.jpg",
+    "45ca0593-b118-4c59-ad99-148895a2ebf5.jpg": "/v1/uploads/25d845b3-e2dd-4fcb-8716-815b4bf8b0ec.jpg",
+    "7753d5a7-1bba-42f0-a1ca-faa6dbc96777.jpg": "/v1/uploads/a50cff15-7673-467d-9d61-ddda4cf25abc.jpg",
+    "f7636b8b-5410-40c9-86e1-03d7fa1c144a.jpg": "/v1/uploads/a815c13c-cf77-4105-adc2-a3ce502c1613.jpg",
+    "fadd9539-315f-4ee9-bb82-f24342404cc3.jpg": "/v1/uploads/1b7529fc-c125-4b25-868d-6017ac2e0ca2.jpg",
+    "5cf2b7e9-3603-483c-9fcc-50b182674cb1.jpg": "/v1/uploads/666f2ee0-5043-4c5f-874a-3a44fdaf8e29.jpg",
+    "brand:0d2fb4eb273a61d945c7535f20c444cd.jpg": "",
+    "brand:1ed4b3d06c3673919e46c7bf8c9c5fc5.jpg": "",
+    "brand:5467569d269d48c5a3b88b98e3b92c2a.jpg": "",
+    "brand:6424b9c7fe3b6d038bbf508caf490cc1.jpg": "",
+    "brand:68b4b99981fb23b898414712a3d2b013.jpg": "",
+    "brand:6b140618c96fd1477562f49698bb2391.jpg": "",
+    "brand:864d7a87e70fcaadf13a4571baf1e8f4.jpg": "",
+    "brand:b90555ce9c0c12166b4c48999a196bb7.jpg": "",
+    "brand:dce66be07b2360a074241f74e3abbe88.jpg": "",
+    "brand:eef5a66fe3744a2667b2fab41eeba4e3.jpg": ""
+  },
+  "categories": {
+    "Básicos": "cmvzxwwxw0003j4smyiu602wu",
+    "Gráficos": "cmvzxwwy40005j4sm1z96qie6"
+  },
+  "products": {
+    "Hoodie Boxy Esencial": "cmvzxwwzh000fj4sm2obglp46",
+    "Hoodie Marino Oversize": "cmvzxwwzv000lj4smeum54iyo",
+    "Hoodie Café Relajado": "cmvzxwx02000rj4sm5xncs1fo",
+    "Hoodie Lavado Niebla": "cmvzxwx07000vj4smlo93l6qo",
+    "Hoodie Bagels": "cmvzxwx0d000zj4smhk6u3zy1",
+    "Hoodie Slow Sunday": "cmvzxwx0i0015j4smtqiax7bw",
+    "Hoodie No Weak Days": "cmvzxwx0o0019j4sm8td6zlh4"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmvzxwx2s001jj4sm8ot06xik"
+}

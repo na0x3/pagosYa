@@ -1,0 +1,36 @@
+{
+  "merchantId": "cmw1njpbo0000h8xk0nthomg4",
+  "storeId": "cmw2ewd4h0001wiy2f9l0z0zu",
+  "slug": "kvued320",
+  "photos": {
+    "ramo-flores-azules-rojas.jpg": "/v1/uploads/8ac2f8ac-bfb2-441e-8a94-97725c3459b4.jpg",
+    "ventana-mediterranea-limones.jpg": "/v1/uploads/22aeeec5-6d5d-42a5-a571-1b36f3cc95e7.jpg",
+    "cafe-good-news.jpg": "/v1/uploads/3b03a293-3a3d-4cbc-8fa0-d70e9f30d90e.jpg",
+    "tienda-discos-vintage.jpg": "/v1/uploads/bfb8d742-c8ea-46ea-bba0-c0eb3fb05457.jpg",
+    "casa-jardin-soleado.jpg": "/v1/uploads/0e5b95e8-d274-451c-a3da-b67ad33181d0.jpg",
+    "mercado-mediterraneo.jpg": "/v1/uploads/0b24ed39-9360-4a0d-8adb-da6ce8a3ed72.jpg",
+    "cafe-azulejos-talavera.jpg": "/v1/uploads/cee69b79-dc83-4968-9b3d-f7b685f03a76.jpg",
+    "te-libros-bodegon.jpg": "/v1/uploads/8b2901f3-9bdc-4c77-8d61-1244f321a82a.jpg",
+    "retrato-caballero-clasico.jpg": "/v1/uploads/737cd258-2797-4102-9518-b3f9d2bd7508.jpg",
+    "cafe-jardin-impresionista.jpg": "/v1/uploads/56715339-9284-42a9-9d2d-388d19ea6b35.jpg"
+  },
+  "categories": {},
+  "products": {
+    "Ramo de Flores Azules y Rojas": "cmw2ewd4o0005wiy2etp3irii",
+    "Ventana Mediterránea con Limones": "cmw2ewd4r0009wiy2yuujefmb",
+    "Café Good News": "cmw2ewd4v000dwiy2xm3jnsl5",
+    "Tienda de Discos Vintage": "cmw2ewd4y000hwiy2iq0m43aj",
+    "Casa en Jardín Soleado": "cmw2ewd51000lwiy22sbt0jau",
+    "Mercado Mediterráneo": "cmw2ewd53000pwiy241z8pmik",
+    "Café sobre Azulejos": "cmw2ewd57000twiy23b47gxxc",
+    "Té y Libros": "cmw2ewd59000xwiy2c02d644m",
+    "Retrato de Caballero Clásico": "cmw2ewd5c0011wiy2fur5h2dm",
+    "Café en el Jardín": "cmw2ewd5e0015wiy22646g19v"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true
+  }
+}

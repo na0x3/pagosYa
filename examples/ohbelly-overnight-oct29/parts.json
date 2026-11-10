@@ -1,0 +1,24 @@
+{
+ "390": {
+  "header": "es-header",
+  "logoImgHeader": false,
+  "logoImgFooter": false,
+  "menu": true,
+  "search": true,
+  "account": true,
+  "cart": true,
+  "paper": "rgb(247, 240, 238)",
+  "heading": "\"Young Serif\", Georgia, serif"
+ },
+ "1280": {
+  "header": "es-header",
+  "logoImgHeader": false,
+  "logoImgFooter": false,
+  "menu": true,
+  "search": true,
+  "account": true,
+  "cart": true,
+  "paper": "rgb(247, 240, 238)",
+  "heading": "\"Young Serif\", Georgia, serif"
+ }
+}

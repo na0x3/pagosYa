@@ -1,0 +1,46 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvr6dk4c0001zgioac8yri7u",
+  "slug": "dwd3qp88",
+  "photos": {
+    "290a83a6ce51b3bddf09623c6879f59e.jpg": "/v1/uploads/1f5ee7cd-8b9f-4757-b908-d59d9850e4d8.jpg",
+    "4a959acb83855d19b861f3d782a9f9a6.jpg": "/v1/uploads/324e1995-a0b7-4b63-8be0-cc2bbd058be5.jpg",
+    "5c3ec40d74f2c16f2e78a6006fa9687c.jpg": "/v1/uploads/5f51a5b3-1f3d-4a77-a938-d24f00cafd0d.jpg",
+    "785af4cfab106f84c7838a41df4e7556.jpg": "/v1/uploads/fbb8448e-245a-4ec9-88d0-61a83dc20350.jpg",
+    "7971ac84adb4fa247c543d7a68d9132d.jpg": "/v1/uploads/41bd4f06-884d-456f-924d-0277a514eb35.jpg",
+    "c25e39e87775604f245ad74e8ea4812f.jpg": "/v1/uploads/77978be2-6124-45d3-88d5-2a7783d7a1f6.jpg",
+    "e53b28b87c8226d5a636f1a597b3bd23.jpg": "/v1/uploads/6907bce2-eb94-4775-832c-1c7ce5e97968.jpg",
+    "e988046130889db1e6b549cf3d16a152.jpg": "/v1/uploads/6f8f0e42-8d5c-4dcb-8bc0-d85c446b068d.jpg",
+    "f3cd6a8456d2b7b66628e632d944787a.jpg": "/v1/uploads/bb68f9fb-ffa6-4c7d-8019-ed4ec79bf164.jpg",
+    "f7d69fddc14861c3a2c7ca317ce6044b.jpg": "/v1/uploads/ee4bd2c3-c1d5-4764-9acc-539a8a038821.jpg",
+    "ff45a56c936813975e079fd348815393.jpg": "/v1/uploads/b8fab826-f5cc-4cdb-8014-496b6136de03.jpg",
+    "ab2d8d5c12fc367521f4a3375198c16e_720w.mp4": "/v1/uploads/edf6d5d3-60ef-42db-a142-d35db21f27c5.mp4",
+    "ea9eb8e146ca54a380fbb07d209a352d_720w.mp4": "/v1/uploads/e628bcc8-02cf-4458-9937-cc3df7310775.mp4",
+    "logo.jpg": "/v1/uploads/d9b36a48-2066-4cc3-b79b-57a71069446b.jpg",
+    "croissant-0.jpg": "/v1/uploads/02fcf1a1-0603-4dc8-9f39-03ef4eb8a34b.jpg",
+    "croissant-1.jpg": "/v1/uploads/d6232cd0-c953-4bb8-b1b6-e6bc8204aebc.jpg",
+    "croissant-2.jpg": "/v1/uploads/cf0c8b2a-c741-469b-8402-7e76c9cfc403.jpg",
+    "croissant-3.jpg": "/v1/uploads/5b7ecc1b-058e-44c3-a8ec-843822ab13a6.jpg"
+  },
+  "categories": {
+    "Panes": "cmvr6dkgt0013zgioadc69ub2",
+    "Croissants": "cmvr6dkgw0015zgiofv6gtofy",
+    "Para llevar": "cmvr6dkgw0017zgioih23gq4t"
+  },
+  "products": {
+    "Hogaza BAEK de masa madre": "cmvr6dkhb0019zgiohh20t45k",
+    "Baguette de semillas": "cmvr6dki1001bzgioe36lsi6b",
+    "Pan de centeno rebanado": "cmvr6dkih001dzgioubqd6xxd",
+    "Croissant BAEK": "cmvr6dkil001fzgio4xihtcxc",
+    "Bolsa de la mañana": "cmvr6dkip001hzgiorxeo0bby",
+    "Caja para cafeterías": "cmvr6dkis001jzgiodufpdfk7",
+    "Bolsa de lona BAEK": "cmvr6dkix001lzgiolll1y3pr"
+  },
+  "done": {
+    "settings": true,
+    "subscriptions": true,
+    "promo-codes": true,
+    "recommendations": true,
+    "shipping": true
+  }
+}

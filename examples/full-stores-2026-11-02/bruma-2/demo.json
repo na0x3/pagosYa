@@ -1,0 +1,37 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw010zwu0001ye1jgvhzn1xa",
+  "slug": "pcbkwl4r",
+  "photos": {
+    "kit-viaje-capilar-premium.jpg": "/v1/uploads/a762cd92-b4f8-42ba-b0b3-32b364101789.jpg",
+    "box-infusiones-raond.jpg": "/v1/uploads/83a28fc8-ba8d-4d74-ab45-cb0b80caeed8.jpg",
+    "cesta-kevin-murphy-essentials.jpg": "/v1/uploads/01c61d97-ec68-4863-a05f-2f9d05c3e61f.jpg",
+    "travel-set-salt-stone.jpg": "/v1/uploads/702a8ce4-0036-4540-965e-8d07195f93fc.jpg",
+    "duo-capilar-coelho-intense.jpg": "/v1/uploads/0b8b1886-d464-4c67-9874-a0da7d475a68.jpg",
+    "tote-accesorios-miu-miu-lifestyle.jpg": "/v1/uploads/449d7f9e-c5b6-4238-9e2f-9d9a69a2c943.jpg"
+  },
+  "categories": {
+    "Cuidado capilar": "cmw010zwx0003ye1jecpl7ane",
+    "Bienestar": "cmw010zwy0005ye1jpbdbo557",
+    "Cuidado personal": "cmw010zwz0007ye1jgvn925zs",
+    "Accesorios": "cmw010zx00009ye1jffyecdcu"
+  },
+  "products": {
+    "Kit de viaje capilar premium": "cmw010zx4000dye1j01ifkj9l",
+    "Box de infusiones funcionales Raond": "cmw010zx7000hye1jsnukxbnh",
+    "Cesta Kevin Murphy Essentials": "cmw010zxa000lye1js47t9tmz",
+    "Travel set Salt & Stone": "cmw010zxe000pye1j07dlhkve",
+    "Dúo capilar Coelho Intense": "cmw010zxg000tye1je0j0ivah",
+    "Tote de accesorios Miu Miu lifestyle": "cmw010zxk000xye1jz0zz4yu4"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmw010zy00017ye1jh87glmt2"
+}

@@ -1,0 +1,26 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw16ar3t0001h6y3noj99gn7",
+  "slug": "85g3rkp4",
+  "photos": {
+    "PHOTO-2026-10-23-17-39-00.jpg": "/v1/uploads/04fa4e91-b0b6-4ecc-8ed3-e034adeae97e.jpg",
+    "fa86190ce69cd3c328bc32bb15f9f129.jpg": "/v1/uploads/f80b6b92-ecde-47a9-8f97-b69ea9e34ce9.jpg",
+    "6bfb59b06ec40238e756884eb4ee0af5.jpg": "/v1/uploads/b5262b94-cae5-4321-bd6e-0b72a596e3fd.jpg",
+    "13c0adef197cd5a30ebb20aa4c036767.jpg": "/v1/uploads/189bc7d5-7791-4821-af24-f9701c9d7ffb.jpg",
+    "c7dfb7871747a37c128a69d9ac931a46.jpg": "/v1/uploads/f4b74286-3466-4df1-bc2b-fd7ff1c5b35b.jpg"
+  },
+  "categories": {},
+  "products": {
+    "Helado de tofu con caramelo": "cmw16ar50000dh6y3zrkcb47f"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmw16ar61000jh6y3vzkh3jjj"
+}

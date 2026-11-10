@@ -1,0 +1,10 @@
+sku;nombre;precio;categoria;stock;descripcion;imagenes
+RB-01;Sillón Lino Arena;4800,00;Sala;4;Estructura de roble macizo y funda de lino lavado que se quita y se lava.;sillon-lino.jpg
+RB-02;Sillón de Terraza en Teca;3900,00;Exterior;3;Teca maciza y cojín de tela para exterior.;sillon-exterior.jpg
+RB-03;Cama de Roble 2 Plazas;6900,00;Dormitorio;2;Roble macizo y uniones a la vista. Respaldo de 110 cm.;cama-roble.jpg
+RB-04;Estante de Nogal;3200,00;Sala;3;Nogal macizo, cinco repisas, 180 cm de alto.;estante-nogal.jpg
+RB-05;Repisas de Cocina;1450,00;Cocina;6;Juego de dos repisas de roble con ménsulas ocultas.;repisas-cocina.jpg
+RB-06;Cojín de Lino;260,00;Deco;20;Lino lavado, 50 × 50 cm, funda con cierre.;cojin-lino.jpg
+RB-07;Cuenco de Madera;310,00;Deco;10;Torneado en una sola pieza de algarrobo.;cuenco-madera.jpg
+RB-08;Canasto Tejido;280,00;Deco;8;Fibra natural y asas de cuero.;canasto.jpg
+RB-09;Jarra de Gres;240,00;Cocina;12;Gres esmaltado a mano, 1 litro.;jarra-gres.jpg

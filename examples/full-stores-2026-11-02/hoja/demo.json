@@ -1,0 +1,37 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvzfg1ju000162ngk66f1wk3",
+  "slug": "85x9rrdx",
+  "photos": {
+    "ghosts-dolly-alderton.jpg": "/v1/uploads/a4703f67-3675-46d1-a662-9547e8cffe64.jpg",
+    "intermezzo-sally-rooney.jpg": "/v1/uploads/35e1270f-c2b5-4969-ba6b-d4241f724206.jpg",
+    "women-who-think-too-much.jpg": "/v1/uploads/33509633-9a69-42a5-88f6-7de66dbcd6dc.jpg",
+    "pack-libros-contemporaneos.jpg": "/v1/uploads/a9eb9f06-cad2-44e6-83f0-7caca9da8216.jpg",
+    "tuesdays-with-morrie.jpg": "/v1/uploads/d32aedd5-71a6-4b06-a7b9-3c8da8880c8c.jpg",
+    "cuaderno-i-think-we-should-kiss.jpg": "/v1/uploads/1045cd46-4319-4df9-9e6e-421050a7ef3c.jpg",
+    "better-than-the-movies.jpg": "/v1/uploads/4bab59a1-548c-47e4-8cd0-5ac8650cdcd3.jpg"
+  },
+  "categories": {
+    "Libros": "cmvzfg1kx000362ngdjp1ok9c",
+    "Papelería": "cmvzfg1l7000562ngbq0bv6qf"
+  },
+  "products": {
+    "Ghosts - Dolly Alderton": "cmvzfg1ma000962ngrx55jxoi",
+    "Intermezzo - Sally Rooney": "cmvzfg1mz000d62ngzjd567qk",
+    "Women Who Think Too Much - Susan Nolen-Hoeksema": "cmvzfg1nl000h62ngabjnms9g",
+    "Pack de libros contemporáneos": "cmvzfg1o2000l62ngdu559c0c",
+    "Tuesdays with Morrie - Mitch Albom": "cmvzfg1oc000p62ngtb4kt7cl",
+    "Cuaderno I Think We Should Kiss": "cmvzfg1oj000t62ngxcaoirt8",
+    "Better Than the Movies - Lynn Painter": "cmvzfg1pv000x62ng9dn4ynp2"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmvzfg1sx001762ngfpml7oia"
+}

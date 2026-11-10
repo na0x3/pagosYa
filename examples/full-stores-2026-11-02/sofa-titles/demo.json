@@ -1,0 +1,27 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw16aw3i0001101y1jrii4rx",
+  "slug": "yxu3wk74",
+  "photos": {
+    "1f1b7cf14664b72a3fc2d0819f60db3c.jpg": "/v1/uploads/cf091d13-da98-421e-8f93-4a35558b9c2f.jpg",
+    "71eb16096469f778d4ee129adde2914f.jpg": "/v1/uploads/f5404ef1-c81d-4f9a-9dff-c7a2afe7c422.jpg",
+    "8fdba10235e6e2383efc4b65765e9e82.jpg": "/v1/uploads/6d950cc1-500a-41dc-b019-d0d60ee0138e.jpg",
+    "2f7e565b779066c7fd34dd0b9823723c.jpg": "/v1/uploads/7594fa43-b890-4d86-98c1-6b54c9b8dc17.jpg",
+    "467d2bf631a172c21668d82dc65347cc.jpg": "/v1/uploads/82284fc3-ae22-4cc1-a807-9dfa7cae74bd.jpg",
+    "0701890069319004a52277e8fd6360e1.jpg": "/v1/uploads/ef6088c6-0536-468c-bc5d-f91faebb98e7.jpg"
+  },
+  "categories": {},
+  "products": {
+    "Sofá cama plegable": "cmw16aw4o000f101y3k0oi0rj"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmw16aw55000l101ycqbdd8jj"
+}

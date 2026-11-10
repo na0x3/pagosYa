@@ -1,0 +1,47 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw5de2zb0001x3ieq7e5ngaj",
+  "slug": "4gvph3wc",
+  "photos": {
+    "107365c7-9f6e-432a-b2d8-78f5bf589989.jpg": "/v1/uploads/3405ce4b-237f-4a17-8236-2cf126c40a60.jpg",
+    "37670859-3780-49cb-95e4-b04440b0af06.jpg": "/v1/uploads/97a4ab7a-fb8d-4a56-a599-95bb1c756289.jpg",
+    "e9e97a20-ab5c-455b-a915-5469347f6998.jpg": "/v1/uploads/a701f972-4323-44da-b51b-3e992e6b0cad.jpg",
+    "eb133206-54ed-43c6-a4ec-72ec8f383282.jpg": "/v1/uploads/ed34ce2e-bbb6-4869-a17a-0d325ab706fa.jpg",
+    "01190e74-387c-4e46-9ba3-07309e518e72.jpg": "/v1/uploads/a74eddaf-18e2-4b9a-8e75-6890ebe7be82.jpg",
+    "b91c6207-0104-4314-aa94-4182a1e363bd.jpg": "/v1/uploads/948a2206-5b4b-43cc-be1d-473bc5ed5f17.jpg",
+    "brand:06e1bb3425f034f8388b7b3192290251.jpg": "/v1/uploads/625de3b8-4af2-4d73-8509-9e734f7bebf3.jpg",
+    "brand:1881e5c95ce9c0333b2cc2350d09f388.jpg": "/v1/uploads/641469a0-6c99-4077-926a-3df5c40abc30.jpg",
+    "brand:20139e99e9031b8b099e6c878bbbba36.jpg": "/v1/uploads/2b84c9b1-546d-47c7-8c12-022cba2d33b7.jpg",
+    "brand:2b7b39e506bc08bd324aedd4d422315b.jpg": "",
+    "brand:50e579f381805d31fbe75049452b34ab.jpg": "/v1/uploads/23faa741-be9d-45c7-8dba-481df5591f80.jpg",
+    "brand:72560d72e46d293e08b89e4b218ab2d8.jpg": "/v1/uploads/b4588b27-3c79-45e6-a344-5b88be7444aa.jpg",
+    "brand:75de7bf4f505528f84070f2cd3b83889.jpg": "",
+    "brand:9517dd3657ecca843cdea4180834bc79.jpg": "",
+    "brand:9ae2dfc279d10b92354486d521b90a76.jpg": "/v1/uploads/4f712a32-5008-424c-bd01-828dbe7f71f3.jpg",
+    "brand:9bd96312acc48db8f38d4c27058c31c2.jpg": "/v1/uploads/ba4b4f8d-8c76-46d7-80e2-b98bc8373098.jpg",
+    "brand:c0e1a19bc4a78b0321f737f813b7dd07.jpg": "/v1/uploads/cb464f8f-691b-463a-b679-5ed2b8aaf402.jpg",
+    "brand:cdd3b0af3f022038e35af7d0b5ad89de.jpg": "",
+    "brand:d73dc78e70de1ad13cd2da04dc84b541.jpg": ""
+  },
+  "categories": {
+    "Aceites": "cmw5de2zj0003x3ier5c2kch6",
+    "Packs": "cmw5de2zk0005x3ie3c35dfku"
+  },
+  "products": {
+    "Aceite de maní prensado en madera": "cmw5de30a000bx3iei0fbdkga",
+    "Aceite de mostaza prensado en madera": "cmw5de30e000fx3iegoy60t3y",
+    "Aceite de sésamo prensado en madera": "cmw5de30i000jx3ie4r2u531h",
+    "Aceite de coco prensado en madera": "cmw5de30k000nx3ie73ckemze",
+    "Pack degustación 4 aceites": "cmw5de30m000rx3iejefyy6qh"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmw5de38z001fx3ie6q08yex2"
+}

@@ -1,0 +1,24 @@
+{
+ "390": {
+  "header": "es-header",
+  "logoImgHeader": false,
+  "logoImgFooter": false,
+  "menu": true,
+  "search": true,
+  "account": true,
+  "cart": true,
+  "paper": "rgb(247, 238, 238)",
+  "heading": "Fraunces, Georgia, serif"
+ },
+ "1280": {
+  "header": "es-header",
+  "logoImgHeader": false,
+  "logoImgFooter": false,
+  "menu": true,
+  "search": true,
+  "account": true,
+  "cart": true,
+  "paper": "rgb(247, 238, 238)",
+  "heading": "Fraunces, Georgia, serif"
+ }
+}

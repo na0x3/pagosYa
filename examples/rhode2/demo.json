@@ -1,0 +1,41 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvvx8y2d000171lp6jy5vxfk",
+  "slug": "jft47lnq",
+  "photos": {
+    "rhode-lip-tint-berry-red.jpg": "/v1/uploads/e972abd2-1035-4ad0-9c14-b37a5fd6ffec.jpg",
+    "rhode-pocket-blush-coleccion.jpg": "/v1/uploads/33be33fe-fb8c-45c3-85f0-e0f1e8aa311e.jpg",
+    "rhode-lip-tint-mocha.jpg": "/v1/uploads/a6758be2-91e7-4e0c-be1c-17b0199f22d7.jpg",
+    "rhode-lip-tint-rose.jpg": "/v1/uploads/2584754b-fdc8-434f-ba0f-6dde6cf41885.jpg",
+    "rhode-lip-drip-set.jpg": "/v1/uploads/d884355e-83d2-4846-8019-2550584df1df.jpg",
+    "rhode-pocket-blush-cocoa-rose.jpg": "/v1/uploads/e22a5ace-fac9-4a90-97f0-9a362a7d7ece.jpg",
+    "rhode-lip-treatment-cocoa.jpg": "/v1/uploads/4ff7db76-f8b9-4747-bf63-9d98b8b73677.jpg",
+    "rhode-lip-treatment-lemon-cream.jpg": "/v1/uploads/772e03db-7dd7-4775-bf07-e6d09573f266.jpg",
+    "rhode-lip-tint-berry-pink.jpg": "/v1/uploads/bd2e0b24-529e-4f27-b3c8-13f275342f42.jpg",
+    "rhode-lip-tint-chocolate.png": "/v1/uploads/0ecb806a-faa3-4fb8-a2e5-982bcf9d0a4c.png",
+    "rhode-lip-tint-hazelnut-cocoa.jpg": "/v1/uploads/03307f11-a542-4c4c-9cd6-9187165058f2.jpg"
+  },
+  "categories": {
+    "Labios": "cmvvx8y2q000371lp2h4cnvfa",
+    "Rubor": "cmvvx8y2t000571lpv9x038lz",
+    "Sets": "cmvvx8y2u000771lppr77nouk"
+  },
+  "products": {
+    "RH-LIP-001": "cmvvx8y52000b71lpfqf0cs2l",
+    "RH-BLU-001": "cmvvx8y5y000f71lpvnck3tku",
+    "RH-LIP-002": "cmvvx8y67000j71lpdwzgqtie",
+    "RH-LIP-003": "cmvvx8y6h000n71lpn751gfrz",
+    "RH-SET-001": "cmvvx8y6m000r71lp4jr5ik9e",
+    "RH-BLU-002": "cmvvx8y6r000v71lpwbvm7ri8",
+    "RH-LIP-004": "cmvvx8y6v000z71lp8dnmz28b",
+    "RH-LIP-005": "cmvvx8y70001371lpno77k3kl",
+    "RH-LIP-006": "cmvvx8y74001771lpnr6eh6ow",
+    "RH-LIP-007": "cmvvx8y7f001b71lp9yljrswc",
+    "RH-LIP-008": "cmvvx8y7p001f71lpeu92m3sh"
+  },
+  "done": {
+    "settings": true,
+    "promo-codes": true,
+    "shipping": true
+  }
+}

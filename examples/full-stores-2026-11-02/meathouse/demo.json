@@ -1,0 +1,42 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw54fiws0001b7ec0s204w68",
+  "slug": "kqnu5svt",
+  "photos": {
+    "brand:011f278aa2ebe132a79b2eae9b044af5.jpg": "/v1/uploads/adf2a776-c020-4ccf-8594-00f7d1f67366.jpg",
+    "brand:053ee3d2b93845868dba28c1f246825f.jpg": "/v1/uploads/55e9e825-c2ef-4bf3-a177-860aa33f00af.jpg",
+    "brand:2069631805338aeffe87bcfe06923ad8.jpg": "/v1/uploads/ecfb3198-dd54-4531-b848-08333e92f001.jpg",
+    "brand:2796c44ec9ad1f986b9b41b5a16848df.jpg": "/v1/uploads/eb416206-7fe3-40e5-a688-ee0ef2aaa5db.jpg",
+    "brand:8926753e9c8d1b8e64288ae4998a4785.jpg": "/v1/uploads/bf1417e2-3f70-4827-a49f-fd5e05da0aca.jpg",
+    "brand:8db9e92206d02a15023a71ab099f6b7e.jpg": "/v1/uploads/02016a6e-5f71-4a7e-ba05-21016d65d992.jpg",
+    "brand:a7271b4adfa057b37437772399cf62db.jpg": "/v1/uploads/e7515754-9450-41c6-9ca4-6ee2f14c58a5.jpg",
+    "brand:f3f773a5e23c03482043fa839e8eb9de.jpg": "/v1/uploads/4a2caba6-6de9-4294-b47b-ae10c54c65dc.jpg",
+    "brand:f9b345532fb232187987dc86105d24c8.jpg": "/v1/uploads/626d19de-5685-48c4-9632-3e3bebca7ff7.jpg",
+    "8926753e9c8d1b8e64288ae4998a4785.jpg": "/v1/uploads/ce25ab55-109d-4100-8880-735df73d42f6.jpg",
+    "2069631805338aeffe87bcfe06923ad8.jpg": "/v1/uploads/f7ebd6bf-1a23-4640-a52b-17950d97ae9a.jpg",
+    "2796c44ec9ad1f986b9b41b5a16848df.jpg": "/v1/uploads/cfa905e7-7332-4e6a-9d67-3dc59962065e.jpg",
+    "f3f773a5e23c03482043fa839e8eb9de.jpg": "/v1/uploads/a10d400c-44bc-433f-97b9-80be2af17326.jpg",
+    "a7271b4adfa057b37437772399cf62db.jpg": "/v1/uploads/313523e0-fbc9-42c4-8115-64ab8f66c603.jpg"
+  },
+  "categories": {
+    "Cortes": "cmw54fixj000lb7eccdriw3xh",
+    "Para compartir": "cmw54fixl000nb7ecysg9r1jd"
+  },
+  "products": {
+    "Bife de chorizo madurado 400 g": "cmw54fixo000rb7ecghzk4isl",
+    "Ojo de bife 350 g": "cmw54fixt000vb7echv8zky91",
+    "Picaña entera 1,2 kg": "cmw54fixw000zb7ecfz37fom7",
+    "Costillas BBQ (media costillar)": "cmw54fixz0013b7ec56xqr1pv",
+    "Tabla asado para 4": "cmw54fiy10017b7ect94lip7v"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmw54fiyr001fb7ecs1ahloe6"
+}

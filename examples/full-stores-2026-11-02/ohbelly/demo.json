@@ -1,0 +1,47 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmvzjbvmn00016jttlpsudqer",
+  "slug": "jsidcylq",
+  "photos": {
+    "2da0031b-1e0f-4e82-a7a3-28ecab2903c6.jpg": "/v1/uploads/4201ca7c-ceb3-494b-81d6-4570e2e59a04.jpg",
+    "3fd4654c-ecab-4b25-b5b9-b4250e302897.jpg": "/v1/uploads/196ac0b9-bb81-4286-b128-9ff90a060746.jpg",
+    "aedfb9c5-0642-44ae-8372-5e31bf1c58d9.jpg": "/v1/uploads/f23572f8-51f3-4787-bac1-c84698d99e13.jpg",
+    "a0bbd4a0-961b-4bd9-84eb-cf9f196b1e75.jpg": "/v1/uploads/6fe5e167-f7b1-4e39-9d0e-fb3c55ce11ef.jpg",
+    "d2f6b450-70e7-4ed2-905f-27c0a0be5c87.jpg": "/v1/uploads/952e1f94-bb77-4d42-93b0-9def4b8f6b0b.jpg",
+    "a4c7f26f-7377-4d52-bd72-10b32e022009.jpg": "/v1/uploads/0f877dfb-2d85-4b3b-bb17-4ab75f5775fd.jpg",
+    "1bd33697-c18a-4076-ba7a-7b486b794313.jpg": "/v1/uploads/2fd4100e-88ef-4b08-be41-d2768924d7ab.jpg",
+    "b460e41b-3215-4300-8075-99f65bff900f.jpg": "/v1/uploads/0d77f96c-a012-4b1a-9b92-dc0d2bd42ab6.jpg",
+    "790aa124-f884-452a-85a6-9a2a1f4bb9ef.jpg": "/v1/uploads/6424a33f-1dc1-4c08-a73b-cafcffc380c9.jpg",
+    "f5bb55a2-c70b-425e-bdee-03532094c254.jpg": "/v1/uploads/2bfe404a-be90-460b-b246-aa18149c566b.jpg",
+    "92d5e1d5-ae27-491e-9d1c-28f95e36c47a.jpg": "/v1/uploads/16fbb1de-37e6-44aa-8fbb-ff5de9876851.jpg",
+    "brand:4be456a2e973560c3bf1ee4ec56c71f3.jpg": "",
+    "brand:73c866436950ae6bf59f31a6abc935a2.jpg": "",
+    "brand:7678c5c5da3c90d9a567db7d62dd65f8.jpg": "/v1/uploads/9563d0d7-256c-4705-adce-8557c0028a71.jpg",
+    "brand:98d044f2c43fa474a808f0bd7f87d9fa.jpg": "",
+    "brand:d1da82a1b1a4a4219b122d8a547ce25a.jpg": "",
+    "brand:dc25c70c7cd63986310d5a46d4549158.jpg": "",
+    "brand:ee8e49e17d5ff2dae518b8974ae95a8a.jpg": ""
+  },
+  "categories": {
+    "Sodas": "cmvzjbvn300036jttplj4hnyu",
+    "Packs": "cmvzjbvn600056jtt64vmcuqt",
+    "Regalos": "cmvzjbvnd00076jtt5t66sw8q"
+  },
+  "products": {
+    "Oh Belly soda prebiótica": "cmvzjbvow000l6jttj8pv59e5",
+    "Pack surtido x6": "cmvzjbvoz000p6jttus06iikv",
+    "Caja nevera x12": "cmvzjbvp3000v6jtthdawd4jb",
+    "Caja regalo Oh Belly": "cmvzjbvp6000z6jttj0umbios",
+    "Póster Oh Belly": "cmvzjbvp800136jtt7ujf6u7n"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmvzjbvpu001f6jtt04jv3kgf"
+}

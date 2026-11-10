@@ -1,0 +1,31 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw5bx6y400013xqj3tgloq5s",
+  "slug": "h44fd71e",
+  "photos": {
+    "532f68d7c9032f323475c3cef707877f.jpg": "/v1/uploads/9d136cca-2f06-433d-aba7-74be11528e7e.jpg",
+    "caaa2183c0f0ab7befe4dac267b4a23c.jpg": "/v1/uploads/d32e82c2-e488-4f40-8eb3-0ff654086842.jpg",
+    "217e5ee60b12db89aad83f31e3fb7a2a.jpg": "/v1/uploads/58a69aa2-aa90-4b3d-a796-f5c78a9b53ee.jpg",
+    "843e679bc08decea7d1abe69bc182ae4.jpg": "/v1/uploads/b83c4253-843b-4e6c-b014-96ab751d2c15.jpg",
+    "9caf6c2e1fb28e2423165dbb4e5ba9f2.jpg": "/v1/uploads/d42ab8d4-f255-4d3c-88e8-c4976433f732.jpg",
+    "1c76a941a132392b49ba187f6626f2e0.jpg": "/v1/uploads/f8e0a23f-31d6-422e-bf0d-994cfd8bfb3d.jpg",
+    "1dce1042f1052c8d4c081dda3b867bd2.jpg": "/v1/uploads/b62622b9-4e89-43ee-a8f6-b0f3aa5994b1.jpg",
+    "534db44a63aad1cf2f62fe74ce9a4c7c.jpg": "/v1/uploads/59060448-b177-4ce6-b7a0-a0ffe2dc0f57.jpg"
+  },
+  "categories": {},
+  "products": {
+    "Pesto Besto 250 g": "cmw5bx6yw000b3xqj8hn33j32",
+    "Caja de 3 frascos": "cmw5bx6z2000h3xqjt00bafwf",
+    "Caja de regalo Besto": "cmw5bx6z7000n3xqjqe2bke0e"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmw5bx6zo000t3xqj6qxufg5c"
+}

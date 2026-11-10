@@ -1,0 +1,12 @@
+sku;nombre;precio;categoria;stock;descripcion;imagenes
+LIB-001;Ghosts - Dolly Alderton;89,90;Libros;8;Novela contemporánea sobre relaciones, amistad y vida adulta.;ghosts-dolly-alderton.jpg
+LIB-002;Intermezzo - Sally Rooney;99,90;Libros;7;Novela contemporánea centrada en vínculos familiares, duelo y relaciones.;intermezzo-sally-rooney.jpg
+LIB-003;Women Who Think Too Much - Susan Nolen-Hoeksema;94,90;Libros;6;Psicología sobre el sobrepensamiento y cómo recuperar el equilibrio.;women-who-think-too-much.jpg
+LIB-004;Tuesdays with Morrie - Mitch Albom;84,90;Libros;9;Memorias y reflexiones sobre la vida y las lecciones de un profesor.;tuesdays-with-morrie.jpg
+LIB-005;Better Than the Movies - Lynn Painter;89,90;Libros;8;Comedia romántica juvenil sobre amor, cine y expectativas.;better-than-the-movies.jpg
+PACK-001;Pack de libros contemporáneos;249,90;Libros;4;Pack de novelas contemporáneas y románticas, para regalar o leer de corrido.;pack-libros-contemporaneos.jpg
+PAP-001;Cuaderno I Think We Should Kiss;49,90;Papelería;10;Cuaderno en azul y rosa para notas y journaling.;cuaderno-i-think-we-should-kiss.jpg
+CAF-001;Matcha latte helado + cookie;34,90;Café y algo dulce;15;Matcha latte helado y una cookie red velvet con topping cremoso. Para leer el primer capítulo.;combo-matcha-cookie-verde.jpg
+CAF-002;Desayuno de lectura con latte helado;59,90;Café y algo dulce;10;Croissants, pastries de almendra y latte helado en vaso sellado.;desayuno-box-latte-ellena.jpg
+CAF-003;Caja de 3 rolls rellenos;42,90;Café y algo dulce;12;Tres rolls daneses rellenos, para el desayuno o la merienda.;caja-rolls-ellena-auto.jpg
+CAF-004;Galletas chocochip;24,90;Café y algo dulce;20;Galletas de la casa con trozos de chocolate.;galletas-chocochip-bandeja.jpg
