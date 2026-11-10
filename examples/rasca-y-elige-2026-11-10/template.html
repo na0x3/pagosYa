@@ -1,0 +1,324 @@
+<title>Rasca y elige · ejemplos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Unbounded:wght@700;900&family=Archivo:wght@500;700;800;900&display=swap">
+<style>
+/* Layout: a review sheet — intro and the five steps, then one live mini-store per example, each in its own colours. */
+:root{--bg:#f6f5f1;--fg:#1d1c19;--muted:#6b675e;--line:#dedbd2;--card:#fff;--accent:#2d55c8;
+  --display:'Bricolage Grotesque',ui-sans-serif,system-ui,sans-serif;--body:'Figtree',ui-sans-serif,system-ui,sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#151513;--fg:#efede6;--muted:#a19d92;--line:#33322d;--card:#1e1e1b;--accent:#8aa6ff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#151513;--fg:#efede6;--muted:#a19d92;--line:#33322d;--card:#1e1e1b;--accent:#8aa6ff;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body)}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:clamp(16px,4vw,40px);padding-block:40px 80px;display:grid;gap:52px}
+.eyebrow{font:600 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font:800 clamp(32px,5vw,52px)/1.02 var(--display);margin:8px 0 12px;text-wrap:balance}
+.intro p{margin:0 0 10px;color:var(--muted);max-width:68ch}
+.flow{list-style:none;margin:18px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;counter-reset:s}
+.flow li{counter-increment:s;padding:12px 14px 12px 46px;position:relative;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:14px}
+.flow li::before{content:counter(s);position:absolute;left:12px;top:12px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--fg);color:var(--bg);font-weight:800;font-size:13px}
+.flow b{display:block}
+.example{display:grid;gap:12px}
+.ex-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}
+.ex-head h2{font:800 24px/1.1 var(--display);margin:0}
+.ex-head .tag{font-size:13px;color:var(--muted)}
+.ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--card)}
+.seg button{font:600 13px/1 var(--body);padding:8px 12px;border:0;border-radius:999px;background:none;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.again{font:600 13px/1 var(--body);padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--fg);cursor:pointer}
+.note{margin:0;font-size:14px;color:var(--muted);max-width:80ch}
+
+/* ——— The mini store (its own colours, set per store) ——— */
+.st{--paper:#fff;--ink:#111;--accent:#111;--soft:#eee;--head:var(--body);position:relative;height:660px;border-radius:18px;overflow:hidden;background:var(--paper);color:var(--ink);border:1px solid var(--line)}
+.st__scroll{position:absolute;inset:0;overflow-y:auto;scroll-behavior:smooth}
+.st__bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;border-bottom:1px solid color-mix(in srgb,var(--ink) 12%,transparent);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.st__logo{font-family:var(--head);font-size:20px;letter-spacing:0;text-transform:none}
+.st__hero{padding:48px 28px 56px;background:var(--soft)}
+.st__hero h3{margin:0 0 10px;font:900 clamp(34px,6vw,64px)/.95 var(--head);letter-spacing:-.01em;text-transform:uppercase;max-width:12ch}
+.st__hero p{margin:0;max-width:44ch;opacity:.8}
+.st__grid{padding:34px 28px 28px}
+.st__grid h4{margin:0 0 14px;font:800 22px/1.1 var(--head)}
+.st__cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
+.st__card{position:relative;display:grid;gap:6px;font-size:13px;font-weight:600}
+.st__card img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block}
+.st__card span{opacity:.7;font-weight:500}
+.st__fav-tag{position:absolute;left:8px;top:8px;padding:5px 9px;border-radius:999px;background:var(--ink);color:var(--paper);font:800 10px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;transform:rotate(-3deg)}
+.st__band{margin:10px 28px 22px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:center;padding:22px;border-radius:20px;background:var(--soft)}
+.st__band img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:14px;display:block}
+.st__band h4{margin:6px 0 8px;font:900 30px/1 var(--head);text-transform:uppercase}
+.st__band .price{font-weight:800;font-size:18px}
+.st__band .add{margin-top:14px;display:inline-flex;padding:13px 22px;border-radius:999px;border:0;background:var(--ink);color:var(--paper);font:800 13px/1 var(--body);letter-spacing:.08em;text-transform:uppercase}
+.st__band .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:var(--paper);font:800 11px/1 var(--body);letter-spacing:.1em;text-transform:uppercase}
+.st__band.is-flash{animation:flash 1.4s ease}
+@keyframes flash{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 60%,transparent)}100%{box-shadow:0 0 0 18px transparent}}
+.st__next{margin:0 28px 34px;padding:14px 16px;border:1px dashed color-mix(in srgb,var(--ink) 30%,transparent);border-radius:14px;font-size:13px}
+.st__next b{display:block;margin-bottom:8px}
+.st__next .st__cards{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.st__panel{margin:0 28px 34px;padding:14px 16px;border-radius:14px;background:color-mix(in srgb,var(--ink) 6%,transparent);font-size:13px}
+.st__panel b{display:block;margin-bottom:6px}
+.st__panel code{font:700 12px/1.4 ui-monospace,Menlo,monospace}
+
+/* Launcher */
+.st__launch{position:absolute;left:14px;bottom:14px;z-index:3;display:inline-flex;align-items:center;gap:8px;padding:6px 16px 6px 6px;border:0;border-radius:999px;background:var(--paper);color:var(--ink);box-shadow:0 8px 24px rgba(0,0,0,.18);font:800 13px/1 var(--body);letter-spacing:.04em;text-transform:uppercase;font-style:italic;cursor:pointer}
+.st__launch canvas{width:40px;height:40px}
+.st__launch[hidden]{display:none}
+
+/* Popup */
+.pop{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:14px;background:rgba(20,12,6,.55)}
+.pop[hidden]{display:none}
+.pop__card{position:relative;width:min(100%,440px);max-height:100%;overflow-y:auto;padding:26px 24px 22px;border-radius:26px;background:var(--paper);color:var(--ink);text-align:center;display:grid;gap:12px;justify-items:center;box-shadow:0 30px 60px rgba(0,0,0,.3)}
+.pop__x{position:absolute;right:12px;top:12px;width:34px;height:34px;border:0;border-radius:50%;background:none;color:var(--ink);font-size:22px;cursor:pointer}
+.pop__chip{padding:6px 12px;border-radius:999px;background:var(--soft);font:800 11px/1 var(--body);letter-spacing:.1em;text-transform:uppercase}
+.pop__title{margin:0;font:900 34px/1 var(--head);text-transform:uppercase;text-wrap:balance;text-shadow:2px 2px 0 color-mix(in srgb,var(--accent) 45%,transparent)}
+.pop__lead{margin:0;font-size:15px;opacity:.85;max-width:32ch}
+.pop__stage{position:relative;width:280px;max-width:100%;aspect-ratio:var(--ratio,1.35);touch-action:none}
+.pop__prize{position:absolute;inset:6%;display:grid;place-items:center;align-content:center;gap:4px;border-radius:var(--prize-radius,50%);background:var(--accent);color:var(--paper)}
+.pop__prize strong{font:900 30px/1 var(--head)}
+.pop__prize span{font-size:13px}
+.pop__stage canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab;transition:opacity .5s ease}
+.pop__stage canvas.is-gone{opacity:0;pointer-events:none}
+.pop__link{border:0;background:none;color:inherit;font:600 14px/1.3 var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.pop__won{width:100%;display:grid;place-items:center;gap:2px;padding:14px;border-radius:18px;background:var(--accent);color:var(--paper)}
+.pop__won strong{font:900 28px/1 var(--head)}
+.pop__q{margin:4px 0 0;font-weight:700}
+.pop__steps{display:flex;gap:6px}
+.pop__steps i{width:22px;height:5px;border-radius:9px;background:color-mix(in srgb,var(--ink) 18%,transparent)}
+.pop__steps i.on{background:var(--ink)}
+.pop__chips{width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.pop__opt{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 16px;border:2px solid color-mix(in srgb,var(--ink) 22%,transparent);border-radius:999px;background:var(--paper);color:var(--ink);font:800 13px/1 var(--body);cursor:pointer}
+.pop__opt span{font-size:18px}
+.pop__opt[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--paper)}
+.pop__tiles{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pop__tile{display:grid;gap:6px;padding:6px 6px 8px;border:2px solid transparent;border-radius:14px;background:var(--soft);color:inherit;font:800 11px/1.15 var(--body);text-transform:uppercase;font-style:italic;cursor:pointer}
+.pop__tile img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block}
+.pop__tile:hover,.pop__tile:focus-visible{border-color:var(--ink)}
+.pop form{width:100%;display:grid;gap:10px;text-align:left}
+.pop label{display:grid;gap:6px;font-weight:700;font-size:14px}
+.pop input{width:100%;min-height:48px;padding:0 16px;border:2px solid var(--ink);border-radius:14px;background:var(--paper);color:var(--ink);font:500 16px var(--body)}
+.pop__go{min-height:50px;border:0;border-radius:999px;background:var(--ink);color:var(--paper);font:800 13px/1.2 var(--body);letter-spacing:.06em;text-transform:uppercase;font-style:italic;cursor:pointer;padding:0 18px}
+.pop__go:disabled{opacity:.4;cursor:not-allowed}
+.pop__code{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:12px 14px;border:2px dashed var(--ink);border-radius:14px;font:900 20px/1 var(--head);letter-spacing:.06em}
+.pop__code button{font:700 12px/1 var(--body);padding:8px 12px;border-radius:999px;border:0;background:var(--ink);color:var(--paper);cursor:pointer}
+.pop :focus-visible,.st__launch:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+/* Store looks */
+.st--miga{--paper:#fff8ef;--ink:#3b2414;--accent:#b5652b;--soft:#f6e3cc;--head:'Fraunces',Georgia,serif}
+.st--oh{--paper:#fff4ec;--ink:#5a3208;--accent:#9c640a;--soft:#fbe2c6;--head:'Unbounded',ui-sans-serif,sans-serif}
+.st--oh .st__hero h3,.st--oh .st__band h4{font-size:clamp(24px,4.2vw,42px)}
+.st--oh .pop__title{font-size:24px}
+.st--bx{--paper:#efede9;--ink:#141b33;--accent:#141b33;--soft:#dfe1e6;--head:'Archivo',ui-sans-serif,sans-serif}
+@media (max-width:700px){.st{height:700px}.st__band{grid-template-columns:minmax(0,1fr)}.pop__tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){.st__scroll{scroll-behavior:auto}.pop__stage canvas{transition:none}.st__band.is-flash{animation:none}}
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <span class="eyebrow">pagosYa · YAPI · ejemplos para aprobar antes de construir</span>
+    <h1>Rasca, elige lo que te gusta y te lleva a ello</h1>
+    <p>Es el flujo de Bake Me hecho para cada tienda con sus propias cosas: la tarjeta para rascar dibujada según su rubro y pintada en sus colores, preguntas escritas para esa tienda, sus productos reales con foto, su código. Toca «Rasca y gana» abajo a la izquierda de cada tienda y haz el recorrido completo; todo funciona (nada se envía).</p>
+    <ol class="flow">
+      <li><b>Rasca</b>La tarjeta tiene la forma del rubro: galleta con chispas, lata, polerón.</li>
+      <li><b>¿Qué te interesa?</b>Opciones escritas para esa tienda; puedes tocar varias.</li>
+      <li><b>¿Cuál es tu favorito?</b>Sus productos reales, con foto.</li>
+      <li><b>Guarda el premio</b>Por WhatsApp o por correo, como elija el comercio. Recibe su código.</li>
+      <li><b>Va a su favorito</b>Marcado «Tu favorito»; en sus próximas visitas sale primero. El comercio ve lo que eligió.</li>
+    </ol>
+  </header>
+
+  <section class="example" data-ex="miga" aria-labelledby="h-miga">
+    <div class="ex-head"><h2 id="h-miga">Miga Dorada · panadería</h2><span class="tag">galleta con chispas · 6 productos reales · MIGA10</span></div>
+    <div class="ctrl">El comercio pide: <span class="seg" role="group" aria-label="Contacto que pide la tienda"><button type="button" data-contact="wa" aria-pressed="true">WhatsApp</button><button type="button" data-contact="mail" aria-pressed="false">Correo</button></span> <button type="button" class="again" data-again>Volver a empezar</button></div>
+    <div class="st st--miga"></div>
+  </section>
+
+  <section class="example" data-ex="oh" aria-labelledby="h-oh">
+    <div class="ex-head"><h2 id="h-oh">Oh Belly · sodas</h2><span class="tag">lata · sus 5 sabores (una sola soda: el favorito es el sabor) · PANCITA10</span></div>
+    <div class="ctrl">El comercio pide: <span class="seg" role="group" aria-label="Contacto que pide la tienda"><button type="button" data-contact="wa" aria-pressed="true">WhatsApp</button><button type="button" data-contact="mail" aria-pressed="false">Correo</button></span> <button type="button" class="again" data-again>Volver a empezar</button></div>
+    <div class="st st--oh"></div>
+  </section>
+
+  <section class="example" data-ex="bx" aria-labelledby="h-bx">
+    <div class="ex-head"><h2 id="h-bx">BOXY · polerones</h2><span class="tag">polerón · 6 modelos reales · BOXY10</span></div>
+    <div class="ctrl">El comercio pide: <span class="seg" role="group" aria-label="Contacto que pide la tienda"><button type="button" data-contact="wa" aria-pressed="false">WhatsApp</button><button type="button" data-contact="mail" aria-pressed="true">Correo</button></span> <button type="button" class="again" data-again>Volver a empezar</button></div>
+    <div class="st st--bx"></div>
+  </section>
+
+  <p class="note">Productos, fotos, precios y códigos son los de cada tienda de prueba. Las opciones de «¿qué te interesa?» son ejemplos de lo que YAPI escribiría con lo que vende cada tienda. En la tienda real, lo que eligió el cliente queda guardado con su número o correo en el panel del comercio; hoy pagosYa no envía mensajes de WhatsApp, así que el comercio ve la lista y les escribe él.</p>
+</div>
+
+<script>
+(function () {
+  const STORES = {
+    miga: { name: 'Miga Dorada', menu: ['Cookies', 'Cajas', 'Desayunos'], shape: 'cookie', code: 'MIGA10', prize: '10 %',
+      hero: ['Horneado esta mañana', 'Rolls, cookies rellenas y cajas para regalar, desde Sopocachi.'], noun: 'galleta', grid: 'Lo más pedido',
+      interest: ['¿Para qué buscas algo rico?', [['🍪', 'Para mí'], ['🎁', 'Para regalar'], ['☕', 'Desayunos'], ['🏢', 'Para la oficina'], ['🎉', 'Para una fiesta']]],
+      items: [['Galletas chocochip artesanales', 2490, '{{miga-0.jpg}}'], ['Torre de cookies rellenas', 3990, '{{miga-1.jpg}}'], ['Caja de rolls rellenos', 4290, '{{miga-2.jpg}}'],
+        ['Matcha latte + cookie velvet', 3490, '{{miga-3.jpg}}'], ['Colección cookies Pantone', 4990, '{{miga-4.jpg}}'], ['Degustación de cookies', 3690, '{{miga-5.jpg}}']] },
+    oh: { name: 'OH BELLY', menu: ['Sodas', 'Packs', 'Regalos'], shape: 'can', code: 'PANCITA10', prize: '10 %', question: '¿cuál es tu sabor favorito?',
+      hero: ['Soda que te cae bien', 'Prebiótica, con fruta de verdad, en 5 sabores.'], noun: 'lata', grid: 'Los 5 sabores',
+      interest: ['¿Cuándo tomas Oh Belly?', [['🌿', 'Para cuidar la panza'], ['🍽️', 'Con la comida'], ['🏋️', 'Después de entrenar'], ['🥂', 'Para compartir'], ['🎁', 'Para regalar']]],
+      items: [['Limón y jengibre', 1800, '{{oh-e0738e26-e3fc-4fde-a34f-022623cb7735.jpg}}'], ['Pera e hinojo', 1800, '{{oh-d7603282-dfb2-49f5-baf7-20329cc98fa6.jpg}}'], ['Sandía y menta', 1800, '{{oh-157613f7-29ae-4e0a-a398-d4b8715c166d.jpg}}'],
+        ['Naranja y cúrcuma', 1800, '{{oh-402e9917-9111-46f9-9e12-24a717fe6878.jpg}}'], ['Arándano y manzanilla', 1800, '{{oh-778ae7d1-7918-4b51-a63f-3a939ae88158.jpg}}']] },
+    bx: { name: 'boxy', menu: ['Hoodies', 'Nuevos', 'Más vendidos'], shape: 'hoodie', code: 'BOXY10', prize: '10 %',
+      hero: ['Hoodies que se sienten', 'Algodón perchado de 380 g, corte amplio.'], noun: 'polerón', grid: 'Hoodies',
+      interest: ['¿Qué estilo te va?', [['🧥', 'Oversize'], ['🤍', 'Colores neutros'], ['🎨', 'Con estampado'], ['🎁', 'Para regalar'], ['❄️', 'Para el frío']]],
+      items: [['Hoodie Boxy Esencial', 32000, '{{boxy-0.jpg}}'], ['Hoodie Marino Oversize', 34000, '{{boxy-1.jpg}}'], ['Hoodie Café Relajado', 34000, '{{boxy-2.jpg}}'],
+        ['Hoodie Lavado Niebla', 36000, '{{boxy-3.jpg}}'], ['Hoodie Bagels', 38000, '{{boxy-4.jpg}}'], ['Hoodie Slow Sunday', 38000, '{{boxy-5.jpg}}']] },
+  };
+  const money = c => 'Bs ' + (c / 100).toLocaleString('es-BO', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
+  const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+  const cssVar = (el, name) => getComputedStyle(el).getPropertyValue(name).trim();
+  const steps = n => `<div class="pop__steps" aria-hidden="true">${[1, 2, 3, 4].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</div>`;
+
+  // ——— The scratch surfaces, drawn per business in the store's colours ———
+  function seeded(n) { let s = n; return () => (s = (s * 9301 + 49297) % 233280) / 233280; }
+  function shapePath(ctx, shape, w, h) {
+    ctx.beginPath();
+    if (shape === 'cookie') {
+      const cx = w / 2, cy = h / 2, rx = w * 0.47, ry = h * 0.45, rnd = seeded(7);
+      for (let i = 0; i <= 40; i++) { const a = i / 40 * Math.PI * 2, k = 1 + (rnd() - 0.5) * 0.05; const x = cx + Math.cos(a) * rx * k, y = cy + Math.sin(a) * ry * k; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.closePath();
+    } else if (shape === 'can') {
+      const x = w * 0.27, y = h * 0.04, cw = w * 0.46, ch = h * 0.92, r = cw * 0.16;
+      ctx.moveTo(x + r, y); ctx.lineTo(x + cw - r, y); ctx.quadraticCurveTo(x + cw, y, x + cw, y + r); ctx.lineTo(x + cw, y + ch - r);
+      ctx.quadraticCurveTo(x + cw, y + ch, x + cw - r, y + ch); ctx.lineTo(x + r, y + ch); ctx.quadraticCurveTo(x, y + ch, x, y + ch - r); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+    } else {
+      const u = w / 100, v = h / 100;
+      ctx.moveTo(38 * u, 8 * v); ctx.quadraticCurveTo(50 * u, 0, 62 * u, 8 * v); ctx.lineTo(66 * u, 16 * v); ctx.lineTo(84 * u, 22 * v); ctx.lineTo(96 * u, 70 * v);
+      ctx.lineTo(84 * u, 74 * v); ctx.lineTo(76 * u, 44 * v); ctx.lineTo(76 * u, 96 * v); ctx.lineTo(24 * u, 96 * v); ctx.lineTo(24 * u, 44 * v); ctx.lineTo(16 * u, 74 * v);
+      ctx.lineTo(4 * u, 70 * v); ctx.lineTo(16 * u, 22 * v); ctx.lineTo(34 * u, 16 * v); ctx.closePath();
+    }
+  }
+  function paintSurface(canvas, shape, colours, label) {
+    const ctx = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.save(); shapePath(ctx, shape, w, h);
+    if (shape === 'cookie') {
+      const g = ctx.createRadialGradient(w * .45, h * .4, w * .05, w / 2, h / 2, w * .55); g.addColorStop(0, '#f0c48f'); g.addColorStop(1, '#d99a5b');
+      ctx.fillStyle = g; ctx.fill(); ctx.clip();
+      const rnd = seeded(13); ctx.fillStyle = colours.ink;
+      for (let i = 0; i < 26; i++) { ctx.beginPath(); ctx.ellipse(rnd() * w, rnd() * h, w * (.012 + rnd() * .016), w * (.009 + rnd() * .011), rnd() * 3, 0, Math.PI * 2); ctx.fill(); }
+    } else if (shape === 'can') {
+      const g = ctx.createLinearGradient(w * .27, 0, w * .73, 0); g.addColorStop(0, '#d9d9d9'); g.addColorStop(.35, '#ffffff'); g.addColorStop(1, '#bdbdbd');
+      ctx.fillStyle = g; ctx.fill(); ctx.clip();
+      ctx.fillStyle = colours.accent; ctx.fillRect(0, h * .3, w, h * .4);
+      ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(0, h * .04, w, h * .05); ctx.fillRect(0, h * .91, w, h * .05);
+    } else {
+      ctx.fillStyle = colours.ink; ctx.fill(); ctx.clip();
+      ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = Math.max(1.5, w * .006);
+      ctx.beginPath(); ctx.moveTo(w * .46, h * .2); ctx.lineTo(w * .45, h * .34); ctx.moveTo(w * .54, h * .2); ctx.lineTo(w * .55, h * .34); ctx.stroke();
+      ctx.beginPath(); ctx.rect(w * .34, h * .62, w * .32, h * .18); ctx.stroke();
+    }
+    ctx.restore();
+    if (!label) return;
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `900 ${Math.round(w * (shape === 'can' ? .072 : .1))}px ${colours.head}`;
+    if (shape === 'can') { ctx.fillStyle = colours.paper; ctx.fillText('RASCA', w / 2, h * .45); ctx.fillText('AQUÍ', w / 2, h * .55); }
+    else { ctx.fillStyle = shape === 'hoodie' ? colours.paper : colours.ink; ctx.fillText(label, w / 2, shape === 'hoodie' ? h * .5 : h / 2); }
+    ctx.restore();
+  }
+  function filled(ctx, w, h) { const d = ctx.getImageData(0, 0, w, h).data; let n = 0; for (let i = 3; i < d.length; i += 32) if (d[i] > 40) n++; return n; }
+
+  function mountStore(section) {
+    const key = section.dataset.ex, S = STORES[key], st = section.querySelector('.st');
+    let contact = section.querySelector('[data-contact][aria-pressed="true"]').dataset.contact, favourite = null, interests = [];
+    st.innerHTML = `<div class="st__scroll">
+      <div class="st__bar"><span class="st__logo">${esc(S.name)}</span><span>${S.menu.map(esc).join(' · ')}</span><span>Carrito</span></div>
+      <div class="st__hero"><h3>${esc(S.hero[0])}</h3><p>${esc(S.hero[1])}</p></div>
+      <div class="st__grid"><h4>${esc(S.grid)}</h4><div class="st__cards" data-grid></div></div>
+      <div data-fav-zone></div>
+    </div>
+    <button type="button" class="st__launch"><canvas width="80" height="80" aria-hidden="true"></canvas>Rasca y gana</button>
+    <div class="pop" hidden role="dialog" aria-modal="true" aria-label="Rasca y gana"><div class="pop__card"></div></div>`;
+    const colours = { ink: cssVar(st, '--ink'), paper: cssVar(st, '--paper'), accent: cssVar(st, '--accent'), head: cssVar(st, '--head') };
+    const grid = st.querySelector('[data-grid]'), zone = st.querySelector('[data-fav-zone]'), scroller = st.querySelector('.st__scroll');
+    const drawGrid = first => {
+      const order = first == null ? S.items.map((_, i) => i) : [first, ...S.items.map((_, i) => i).filter(i => i !== first)];
+      grid.innerHTML = order.map(i => `<div class="st__card">${i === first ? '<span class="st__fav-tag">Tu favorito</span>' : ''}<img src="${S.items[i][2]}" alt=""><div>${esc(S.items[i][0])}</div><span>${money(S.items[i][1])}</span></div>`).join('');
+    };
+    drawGrid(null);
+    const launch = st.querySelector('.st__launch'), pop = st.querySelector('.pop'), card = st.querySelector('.pop__card');
+    paintSurface(launch.querySelector('canvas'), S.shape, colours, '');
+    const close = () => { pop.hidden = true; };
+    const closer = () => { card.querySelector('.pop__x').onclick = close; };
+    pop.addEventListener('click', e => { if (e.target === pop) close(); });
+    launch.addEventListener('click', () => { pop.hidden = false; scratchStep(); });
+
+    function scratchStep() {
+      const ratio = S.shape === 'cookie' ? 1.35 : S.shape === 'can' ? 1.05 : 1.1;
+      card.innerHTML = `<button type="button" class="pop__x" aria-label="Cerrar">×</button><span class="pop__chip">Bienvenida de ${esc(S.name)}</span>
+        <h3 class="pop__title">¡Rasca y gana!</h3><p class="pop__lead">Pasa el dedo (o el mouse) por la ${esc(S.noun)} y descubre tu regalo.</p>
+        <div class="pop__stage" style="--ratio:${ratio};--prize-radius:${S.shape === 'cookie' ? '50%' : '22px'}"><div class="pop__prize"><strong>${esc(S.prize)} OFF</strong><span>en tu primer pedido</span></div><canvas aria-hidden="true"></canvas></div>
+        <button type="button" class="pop__link" data-reveal>Revelar sin rascar</button>`;
+      closer();
+      const canvas = card.querySelector('.pop__stage canvas');
+      const w = 560, h = Math.round(560 / ratio); canvas.width = w; canvas.height = h;
+      paintSurface(canvas, S.shape, colours, 'RASCA AQUÍ');
+      const ctx = canvas.getContext('2d'), start = filled(ctx, w, h); let down = false, done = false, moves = 0, last = null;
+      const at = e => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) * w / r.width, (e.clientY - r.top) * h / r.height]; };
+      const reveal = () => { if (done) return; done = true; canvas.classList.add('is-gone'); setTimeout(interestStep, 650); };
+      // A stroke from the last point, so a fast swipe clears a whole stripe, not a few dots.
+      const scratch = e => { if (!down || done) return; const [x, y] = at(e); ctx.globalCompositeOperation = 'destination-out'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 62;
+        ctx.beginPath(); ctx.moveTo(...(last || [x + .1, y])); ctx.lineTo(x, y); ctx.stroke(); last = [x, y];
+        if (++moves % 3 === 0 && 1 - filled(ctx, w, h) / start > 0.45) reveal(); };
+      canvas.addEventListener('pointerdown', e => { down = true; last = null; canvas.setPointerCapture(e.pointerId); scratch(e); });
+      canvas.addEventListener('pointermove', scratch);
+      canvas.addEventListener('pointerup', e => { scratch(e); down = false; last = null; if (!done && 1 - filled(ctx, w, h) / start > 0.45) reveal(); });
+      card.querySelector('[data-reveal]').onclick = reveal;
+    }
+    function interestStep() {
+      card.innerHTML = `<button type="button" class="pop__x" aria-label="Cerrar">×</button>${steps(1)}<span class="pop__chip">¡Ganaste!</span>
+        <div class="pop__won"><strong>${esc(S.prize)} OFF</strong><span>en tu primer pedido</span></div>
+        <p class="pop__q">Antes de guardarlo: ${esc(S.interest[0])}</p><p class="pop__lead" style="font-size:13px">Puedes elegir varias.</p>
+        <div class="pop__chips">${S.interest[1].map(([icon, label]) => `<button type="button" class="pop__opt" aria-pressed="false" data-interest="${esc(label)}"><span aria-hidden="true">${icon}</span>${esc(label)}</button>`).join('')}</div>
+        <button type="button" class="pop__go" data-next disabled>Siguiente</button><button type="button" class="pop__link" data-skip>Saltar</button>`;
+      closer();
+      const next = card.querySelector('[data-next]');
+      card.querySelectorAll('[data-interest]').forEach(b => b.onclick = () => { b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); interests = [...card.querySelectorAll('[data-interest][aria-pressed="true"]')].map(x => x.dataset.interest); next.disabled = !interests.length; });
+      next.onclick = favouriteStep; card.querySelector('[data-skip]').onclick = () => { interests = []; favouriteStep(); };
+    }
+    function favouriteStep() {
+      card.innerHTML = `<button type="button" class="pop__x" aria-label="Cerrar">×</button>${steps(2)}<span class="pop__chip">${interests.length ? esc(interests.join(' · ')) : '¡Casi!'}</span>
+        <p class="pop__q">${esc(S.question ? S.question.replace(/^./, c => c.toUpperCase()) : '¿Cuál es tu favorito?')}</p>
+        <div class="pop__tiles">${S.items.map((item, i) => `<button type="button" class="pop__tile" data-pick="${i}"><img src="${item[2]}" alt="">${esc(item[0])}</button>`).join('')}</div>`;
+      closer();
+      card.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { favourite = Number(b.dataset.pick); saveStep(); });
+    }
+    function saveStep() {
+      const fav = S.items[favourite][0], wa = contact === 'wa';
+      card.innerHTML = `<button type="button" class="pop__x" aria-label="Cerrar">×</button>${steps(3)}<span class="pop__chip">Tu favorito: ${esc(fav)}</span>
+        <h3 class="pop__title">Guarda tu ${esc(S.prize)}</h3>
+        <p class="pop__lead">${wa ? `Súmate a las novedades de ${esc(S.name)} por WhatsApp: lo nuevo y las promos, sin spam.` : `Recibe las novedades de ${esc(S.name)} en tu correo: lo nuevo y las promos, sin spam.`}</p>
+        <form novalidate><label>${wa ? 'Tu WhatsApp' : 'Tu correo'}<input id="c-${key}" ${wa ? 'type="tel" inputmode="tel" placeholder="7xx xxxxx" autocomplete="tel"' : 'type="email" placeholder="tu@correo.com" autocomplete="email"'}></label>
+        <button type="submit" class="pop__go">Suscribirme y ver ${esc(fav)}</button></form>
+        <button type="button" class="pop__link" data-skip>No, gracias: solo ver ${esc(fav)}</button>`;
+      closer();
+      card.querySelector('form').addEventListener('submit', e => { e.preventDefault(); codeStep(); });
+      card.querySelector('[data-skip]').onclick = () => goToFavourite(false);
+    }
+    function codeStep() {
+      const fav = S.items[favourite][0];
+      card.innerHTML = `<button type="button" class="pop__x" aria-label="Cerrar">×</button>${steps(4)}<span class="pop__chip">¡Listo!</span>
+        <h3 class="pop__title">Tu código</h3><div class="pop__code"><span>${esc(S.code)}</span><button type="button" data-copy>Copiar</button></div>
+        <p class="pop__lead">Se aplica en el carrito. Ahora te llevamos a tu favorito.</p><button type="button" class="pop__go" data-go>Ver ${esc(fav)}</button>`;
+      closer();
+      card.querySelector('[data-copy]').onclick = e => { const b = e.currentTarget; const done = () => { b.textContent = 'Copiado'; }; try { navigator.clipboard.writeText(S.code).then(done, () => { b.textContent = S.code; }); } catch { b.textContent = S.code; } };
+      card.querySelector('[data-go]').onclick = () => goToFavourite(true);
+    }
+    function goToFavourite(claimed) {
+      close(); launch.hidden = claimed;
+      const [name, amount, photo] = S.items[favourite];
+      zone.innerHTML = `<div class="st__band is-flash"><img src="${photo}" alt=""><div><span class="pill">Tu favorito</span><h4>${esc(name)}</h4><p class="price">${money(amount)}</p>
+        ${claimed ? `<p style="margin:6px 0 0;font-size:13px">Tu ${esc(S.prize)} con <b>${esc(S.code)}</b> se aplica en el carrito.</p>` : ''}<button type="button" class="add">Agregar · ${money(amount)}</button></div></div>
+        <div class="st__next"><b>En su próxima visita, «${esc(name)}» sale primero y marcado:</b><div class="st__cards" data-next></div></div>
+        <div class="st__panel"><b>Lo que ve el comercio en su panel</b>${claimed ? `${contact === 'wa' ? 'WhatsApp' : 'Correo'} · ` : 'Sin suscripción · '}interesa: <code>${esc(interests.join(', ') || '—')}</code> · favorito: <code>${esc(name)}</code></div>`;
+      zone.querySelector('[data-next]').innerHTML = [favourite, ...S.items.map((_, i) => i).filter(i => i !== favourite)].slice(0, 4).map((i, n) => `<div class="st__card">${n === 0 ? '<span class="st__fav-tag">Tu favorito</span>' : ''}<img src="${S.items[i][2]}" alt=""><div>${esc(S.items[i][0])}</div></div>`).join('');
+      drawGrid(favourite);
+      requestAnimationFrame(() => { const band = zone.querySelector('.st__band'); scroller.scrollTo({ top: band.offsetTop - 12 }); });
+    }
+    section.querySelector('.seg').onclick = e => { const b = e.target.closest('[data-contact]'); if (!b) return; section.querySelectorAll('[data-contact]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); contact = b.dataset.contact; if (!pop.hidden && card.querySelector('form')) saveStep(); };
+    section.querySelector('[data-again]').onclick = () => mountStore(section);
+  }
+  document.querySelectorAll('[data-ex]').forEach(mountStore);
+})();
+</script>
