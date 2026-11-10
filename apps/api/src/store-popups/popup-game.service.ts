@@ -45,8 +45,8 @@ export class PopupGameService {
   /** Checked before any signup, so an expired or edited prize subscribes nobody (review 2026-11-09). */
   async validPrize(storeId: string, token: string): Promise<boolean> { return readGameToken(token, storeId, this.secret()) !== null; }
   /** The winner's own code: one use, not shown in emails or the assistant; once per email. */
-  async claim(storeId: string, token: string, wasSubscribed: boolean): Promise<{ code?: string; message?: string }> {
-    if (wasSubscribed) return { message: 'Este correo ya recibió su premio.' };
+  async claim(storeId: string, token: string, wasSubscribed: boolean, by: 'email' | 'phone' = 'email'): Promise<{ code?: string; message?: string }> {
+    if (wasSubscribed) return { message: by === 'phone' ? 'Este número ya recibió su premio.' : 'Este correo ya recibió su premio.' };
     const percent = readGameToken(token, storeId, this.secret());
     if (percent === null) return { message: EXPIRED };
     const game = readGame((await this.stored(storeId)).popupGame) ?? 'wheel';

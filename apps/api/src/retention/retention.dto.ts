@@ -30,7 +30,9 @@ export class RetentionSettingsDto {
 }
 export class RetentionEmailDto { @IsEmail() @MaxLength(254) email!: string; }
 export class RetentionPaymentCardDto { @IsString() @MinLength(20) @MaxLength(200) trackingToken!: string; }
-export class RetentionSubscribeDto extends RetentionEmailDto {
+export class RetentionSubscribeDto {
+  /** Spec 2026-11-10 rasca y elige: a WhatsApp signup sends the number and no email. */
+  @ValidateIf((dto: RetentionSubscribeDto) => !dto.phone) @IsEmail() @MaxLength(254) email!: string;
   @Equals(true) consent!: boolean;
   /** The popup asks for the welcome code; the inline form never gets one. */
   @IsOptional() @IsIn(['popup']) source?: 'popup';
@@ -40,6 +42,9 @@ export class RetentionSubscribeDto extends RetentionEmailDto {
   /** Spec 2026-11-09 popup games: the signed prize from /play, and the shopper's tap answer. */
   @IsOptional() @IsString() @MaxLength(400) gameToken?: string;
   @IsOptional() @IsString() @MaxLength(40) answer?: string;
+  /** Spec 2026-11-10 rasca y elige: the store's interest answers chosen, and the favourite (a product id, or «id:option value»). */
+  @IsOptional() @IsArray() @ArrayMaxSize(6) @ArrayUnique() @IsString({ each: true }) @MaxLength(28, { each: true }) answers?: string[];
+  @IsOptional() @IsString() @MaxLength(140) favourite?: string;
   /** Spec 2026-11-09 A/B tests: the store page's test visit, so a B visitor gets B's code and the signup counts for B. */
   @IsOptional() @IsString() @MaxLength(64) sourceVisitToken?: string;
 }

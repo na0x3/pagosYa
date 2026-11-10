@@ -16,7 +16,7 @@ import { DEFAULT_RETENTION, RetentionSettings, RetentionSettingsDto, RetentionCa
 import { comebackCode, qualifyingDays, unusedDays } from './retention-policy';
 import { reminderCart } from './reminder-cart';
 import { pickPopupLook, readPopupLook, type PopupLookSettings } from '../store-popups/popup-looks';
-import { readGame, type PopupGameSettings, readShape, readInterests, readContact } from '../store-popups/popup-games';
+import { readGame, type PopupGameSettings, readShape, readInterests, readContact, whatsappDigits } from '../store-popups/popup-games';
 import { PopupGameService } from '../store-popups/popup-game.service';
 import { popupWordsFor } from '../storefront-source/source-ab';
 // Plans 2026-11-07: the kinds that stop at the plan's monthly emails; everything else (receipts, notices, replies) always goes out.
@@ -133,15 +133,22 @@ export class RetentionService {
     const settings = await this.settings(storeId);
     return { slug: store.slug, storeName: store.name, settings: { ...publicRetentionSettings(settings, store.slug), signupEnabled: true, signupVisual: await this.signupVisual(storeId) } };
   }
-  async subscribe(store: { id: string; slug: string; name: string }, rawEmail: string, profile: Pick<RetentionSubscribeDto, 'name' | 'phone' | 'interests' | 'source' | 'gameToken' | 'answer' | 'sourceVisitToken'> = {}) {
+  async subscribe(store: { id: string; slug: string; name: string }, rawEmail: string | null, profile: Pick<RetentionSubscribeDto, 'name' | 'phone' | 'interests' | 'source' | 'gameToken' | 'answer' | 'sourceVisitToken' | 'answers' | 'favourite'> = {}) {
     // Spec 2026-11-09 A/B tests: a B visitor's signup gets B's code; a new row remembers the test visit it came from.
     const { settings, visitId } = await this.settingsFor(store.id, profile.sourceVisitToken);
     if (!settings.signupEnabled) throw new BadRequestException('Las suscripciones están desactivadas.');
+    // Spec 2026-11-10 rasca y elige: the store's own interest answers only, and a favourite that is really one of its products.
+    const allowed = new Set((readInterests(settings as PopupGameSettings)?.answers ?? []).map(entry => entry.label));
+    const chosen = (profile.answers ?? []).filter(label => allowed.has(label));
+    const favourite = await this.realFavourite(store.id, profile.favourite);
+    if (!rawEmail) return this.subscribeWhatsapp(store, settings, visitId, profile, chosen, favourite);
     const email = normalized(rawEmail);
     // Spec 2026-11-09 popup games: the tap answer joins the interests when it is one of the store's own answers.
     const answer = profile.answer && (settings as PopupGameSettings).popupQuestion?.answers?.includes(profile.answer) ? profile.answer : undefined;
-    const interests = answer ? [...(profile.interests ?? []), answer] : profile.interests;
-    const details = { ...(profile.name !== undefined ? { name: profile.name.trim() || null } : {}), ...(profile.phone !== undefined ? { phone: profile.phone.trim() || null } : {}), ...(interests !== undefined ? { interests } : {}) };
+    const tapped = [...(answer ? [answer] : []), ...chosen];
+    const interests = tapped.length ? [...(profile.interests ?? []), ...tapped.filter(label => !(profile.interests ?? []).includes(label))] : profile.interests;
+    const details = { ...(profile.name !== undefined ? { name: profile.name.trim() || null } : {}), ...(profile.phone !== undefined ? { phone: profile.phone.trim() || null } : {}), ...(interests !== undefined ? { interests } : {}),
+      ...(profile.favourite !== undefined ? { favourite } : {}) };
     // A prize goes to an email only once: one already subscribed before this request gets none.
     // Review 2026-11-09: a dead or expired prize subscribes nobody (so playing again still works); only an active subscriber has had a
     // prize (a cart-only email is inactive).
@@ -157,6 +164,29 @@ export class RetentionService {
     });
     // Only a popup signup, only this store's active code: the code never sits in a page or the public settings.
     if (profile.gameToken && this.games) return { subscribed: true, ...(await this.games.claim(store.id, profile.gameToken, existed)) };
+    const code = profile.source === 'popup' && settings.popupPromoCodeId ? await this.prisma.promoCode.findFirst({ where: { id: settings.popupPromoCodeId, storeId: store.id, isActive: true } }) : null;
+    return { subscribed: true, ...(code ? { code: code.code } : {}) };
+  }
+  /** Spec 2026-11-10 rasca y elige: «id» of a product of this store, or «id:value» of one of its option values; null otherwise. */
+  private async realFavourite(storeId: string, raw: string | undefined): Promise<string | null> {
+    if (!raw) return null;
+    const at = raw.indexOf(':'), id = at < 0 ? raw : raw.slice(0, at), value = at < 0 ? '' : raw.slice(at + 1);
+    const [product] = await this.prisma.paymentLink.findMany({ where: { storeId, id }, select: { id: true, variants: true }, take: 1 });
+    if (!product) return null;
+    if (!value) return product.id;
+    const variants = Array.isArray(product.variants) ? product.variants as Array<{ name?: string; options?: Array<{ value?: string }> }> : [];
+    return variants.some(variant => variant?.name === value || (variant?.options ?? []).some(option => option?.value === value)) ? `${product.id}:${value}` : null;
+  }
+  /** Spec 2026-11-10 rasca y elige: a popup signup by WhatsApp — its own list (pagosYa sends no WhatsApp), one prize per number. */
+  private async subscribeWhatsapp(store: { id: string }, settings: RetentionSettings, visitId: string | null | undefined, profile: Pick<RetentionSubscribeDto, 'phone' | 'gameToken' | 'source'>, interests: string[], favourite: string | null) {
+    const phone = whatsappDigits(profile.phone ?? '');
+    if (!phone) throw new BadRequestException(profile.phone ? 'Escribe tu WhatsApp con 8 números, como 71234567.' : 'Escribe tu correo.');
+    if (profile.gameToken && this.games && !(await this.games.validPrize(store.id, profile.gameToken))) throw new BadRequestException('Tu premio venció; vuelve a jugar.');
+    const before = await this.prisma.storeWhatsappSubscriber.findUnique({ where: { storeId_phone: { storeId: store.id, phone } }, select: { isActive: true } });
+    await this.prisma.storeWhatsappSubscriber.upsert({ where: { storeId_phone: { storeId: store.id, phone } },
+      create: { storeId: store.id, phone, interests, favourite, ...(visitId ? { sourceVisitId: visitId } : {}) },
+      update: { isActive: true, ...(interests.length ? { interests } : {}), ...(favourite ? { favourite } : {}) } });
+    if (profile.gameToken && this.games) return { subscribed: true, ...(await this.games.claim(store.id, profile.gameToken, Boolean(before?.isActive), 'phone')) };
     const code = profile.source === 'popup' && settings.popupPromoCodeId ? await this.prisma.promoCode.findFirst({ where: { id: settings.popupPromoCodeId, storeId: store.id, isActive: true } }) : null;
     return { subscribed: true, ...(code ? { code: code.code } : {}) };
   }

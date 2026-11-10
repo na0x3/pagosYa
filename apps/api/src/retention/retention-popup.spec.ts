@@ -207,3 +207,38 @@ describe('rasca y elige public settings (spec 2026-11-10)', () => {
     expect((tx.storeRetention.updateMany.mock.calls[0] as any)[0].data.settings).toMatchObject({ popupShape: 'cookie', popupInterests: INTERESTS, popupFavourite: { text: 'x' }, popupContact: 'email' });
   });
 });
+
+describe('rasca y elige signups (spec 2026-11-10)', () => {
+  const INTERESTS = { text: '¿Qué te interesa?', answers: [{ label: 'Para regalar', icon: '🎁' }, { label: 'Desayunos', icon: '☕' }] };
+  const setup = (saved: Record<string, unknown> = {}, existing: Record<string, unknown> | null = null) => {
+    const made = service({ popupGame: 'scratch', popupInterests: INTERESTS, popupContact: 'whatsapp', ...saved });
+    const whatsapp = { findUnique: jest.fn(async () => existing), upsert: jest.fn(async ({ create }: any) => ({ id: 'w1', ...create })) };
+    (made.prisma as any).storeWhatsappSubscriber = whatsapp; (made.tx as any).storeWhatsappSubscriber = whatsapp;
+    (made.prisma as any).paymentLink = { findMany: jest.fn(async ({ where }: any) => [{ id: 'p1', variants: [] }, { id: 'soda', variants: [{ options: [{ name: 'Sabor', value: 'Sandía y menta' }] }] }].filter(p => p.id === where.id)) };
+    made.s.games = { validPrize: jest.fn(async () => true), claim: jest.fn(async (_s: string, _t: string, existed: boolean, by?: string) => existed ? { message: by === 'phone' ? 'Este número ya recibió su premio.' : 'Este correo ya recibió su premio.' } : { code: 'RASCA10-ABCDEF' }) };
+    return { ...made, whatsapp };
+  };
+  it('a WhatsApp signup keeps the number, the store own answers and a real favourite, and gets the prize', async () => {
+    const { s, whatsapp } = setup();
+    const out = await s.subscribe(store, null, { phone: '7123 4567', answers: ['Para regalar', 'Inventado'], favourite: 'p1', gameToken: 't', consent: true, source: 'popup' });
+    expect(out).toEqual({ subscribed: true, code: 'RASCA10-ABCDEF' });
+    expect(whatsapp.upsert.mock.calls[0][0].create).toMatchObject({ storeId: 's1', phone: '59171234567', interests: ['Para regalar'], favourite: 'p1' });
+  });
+  it('a flavour of a one-product store is a favourite; anything else is dropped', async () => {
+    const { s, whatsapp } = setup();
+    await s.subscribe(store, null, { phone: '71234567', favourite: 'soda:Sandía y menta', consent: true });
+    expect(whatsapp.upsert.mock.calls[0][0].create.favourite).toBe('soda:Sandía y menta');
+    await s.subscribe(store, null, { phone: '71234567', favourite: 'other-store-product', consent: true });
+    expect(whatsapp.upsert.mock.calls[1][0].create.favourite).toBeNull();
+  });
+  it('the same number gets no second prize; a wrong number is refused in plain words', async () => {
+    const { s } = setup({}, { isActive: true });
+    await expect(s.subscribe(store, null, { phone: '71234567', gameToken: 't', consent: true })).resolves.toEqual({ subscribed: true, message: 'Este número ya recibió su premio.' });
+    await expect(s.subscribe(store, null, { phone: '123', consent: true })).rejects.toThrow('Escribe tu WhatsApp con 8 números, como 71234567.');
+  });
+  it('an email store keeps the favourite and the answers on the email subscriber', async () => {
+    const { s, tx } = setup({ popupContact: 'email' });
+    await s.subscribe(store, 'Ana@Mail.com', { favourite: 'p1', answers: ['Desayunos'], consent: true });
+    expect((tx.storeNewsletterSubscriber.upsert.mock.calls[0] as any)[0].create).toMatchObject({ email: 'ana@mail.com', favourite: 'p1', interests: ['Desayunos'] });
+  });
+});

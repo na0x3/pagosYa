@@ -948,6 +948,8 @@ model Store {
   emailDeliveries              StoreEmailDelivery[]
   inboxThreads                 StoreInboxThread[]
   newsletterSubscribers        StoreNewsletterSubscriber[]
+  /// Spec 2026-11-10 rasca y elige: popup signups by WhatsApp.
+  whatsappSubscribers          StoreWhatsappSubscriber[]
   debtCollectionLinks          DebtCollectionLink[]
   consumerAffiliations         ConsumerInstitutionAffiliation[]
   promoCodes                   PromoCode[]
@@ -1178,6 +1180,8 @@ model StoreNewsletterSubscriber {
   name             String?
   phone            String?
   interests        String[] @default([])
+  /// Spec 2026-11-10 rasca y elige: the product (or «product:option value») the shopper chose as favourite.
+  favourite        String?
   isActive         Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -1188,6 +1192,24 @@ model StoreNewsletterSubscriber {
   @@unique([storeId, email])
   @@index([storeId, createdAt])
   @@index([sourceVisitId])
+}
+
+/// Spec 2026-11-10 rasca y elige: a popup signup by WhatsApp (pagosYa sends no WhatsApp; the merchant writes to the list).
+model StoreWhatsappSubscriber {
+  id            String   @id @default(cuid())
+  storeId       String
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// Digits with the country code: 59171234567.
+  phone         String
+  interests     String[] @default([])
+  favourite     String?
+  isActive      Boolean  @default(true)
+  sourceVisitId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([storeId, phone])
+  @@index([storeId, createdAt])
 }
 
 enum MediaAssetKind {

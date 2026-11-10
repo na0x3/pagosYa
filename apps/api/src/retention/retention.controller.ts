@@ -59,7 +59,7 @@ export class RetentionPublicController {
     return shown;
   }
   @Post('subscribe') @Throttle({ default: { limit: 5, ttl: 60000 } })
-  async subscribe(@Param('slug') slug: string, @Body() dto: RetentionSubscribeDto) { return this.retention.subscribe(await findActiveStoreBySlug(this.prisma, slug), dto.email, dto); }
+  async subscribe(@Param('slug') slug: string, @Body() dto: RetentionSubscribeDto) { return this.retention.subscribe(await findActiveStoreBySlug(this.prisma, slug), dto.email || null, dto); }
   @Post('unsubscribe/:token') @Throttle({ default: { limit: 10, ttl: 60000 } })
   async unsubscribe(@Param('slug') slug: string, @Param('token') token: string) { return this.retention.unsubscribe((await findActiveStoreBySlug(this.prisma, slug)).id, token); }
   @Post('cards') @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -67,7 +67,7 @@ export class RetentionPublicController {
   @Get('cards/:token') @Header('Cache-Control', 'no-store') @Throttle({ default: { limit: 30, ttl: 60000 } })
   async card(@Param('slug') slug: string, @Param('token') token: string) { return this.retention.card((await findActiveStoreBySlug(this.prisma, slug)).id, token); }
   @Post('carts') @Throttle({ default: { limit: 5, ttl: 60000 } })
-  async cart(@Param('slug') slug: string, @Body() dto: RetentionCartDto) { return this.retention.saveCart((await findActiveStoreBySlug(this.prisma, slug)).id, dto); }
+  async cart(@Param('slug') slug: string, @Body() dto: RetentionCartDto) { if (!dto.email) throw new BadRequestException('Escribe tu correo.'); return this.retention.saveCart((await findActiveStoreBySlug(this.prisma, slug)).id, dto); }
   @Get('carts/:token') @Throttle({ default: { limit: 30, ttl: 60000 } })
   async restore(@Param('slug') slug: string, @Param('token') token: string) { return this.retention.restoreCart((await findActiveStoreBySlug(this.prisma, slug)).id, token); }
 }
