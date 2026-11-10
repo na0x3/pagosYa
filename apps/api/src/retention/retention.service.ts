@@ -41,6 +41,21 @@ export function publicRetentionSettings(s: RetentionSettings & PopupLookSettings
       popupShape: readShape(s.popupShape), popupInterests: readInterests(s), popupFavourite: s.popupFavourite && typeof s.popupFavourite.text === 'string' ? { text: s.popupFavourite.text } : null,
       popupContact: readContact(s.popupContact) } : {}) };
 }
+/** Spec 2026-11-10 rasca y elige: a favourite as the merchant reads it — the product, a flavour as «Producto · Sabor»; null when gone. */
+export function favouriteName(favourite: string | null | undefined, products: ReadonlyArray<{ id: string; name: string }>): string | null {
+  if (!favourite) return null;
+  const at = favourite.indexOf(':'), id = at < 0 ? favourite : favourite.slice(0, at), value = at < 0 ? '' : favourite.slice(at + 1);
+  const product = products.find(entry => entry.id === id);
+  return product ? (value ? `${product.name} · ${value}` : product.name) : null;
+}
+/** The five most chosen favourites, by name. */
+export function favouriteTally(favourites: ReadonlyArray<string | null | undefined>, products: ReadonlyArray<{ id: string; name: string }>) {
+  const counts = new Map<string, number>();
+  for (const favourite of favourites) { const name = favouriteName(favourite, products); if (name) counts.set(name, (counts.get(name) ?? 0) + 1); }
+  return [...counts].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 5);
+}
+/** 59171234567 → +591 7123 4567. */
+export const whatsappShown = (digits: string) => /^591\d{8}$/.test(digits) ? `+591 ${digits.slice(3, 7)} ${digits.slice(7)}` : /^591\d{7}$/.test(digits) ? `+591 ${digits.slice(3, 6)} ${digits.slice(6)}` : digits;
 /** Settings Ajustes may not send but must keep: the email workspace, dismissed suggestions and the popup look. */
 const KEPT_SETTINGS = ['emailWorkspace', 'suggestionsDismissedAt', 'popupLook', 'popupLookPrevious', 'popupPhoto', 'popupGame', 'popupGamePrizes', 'popupQuestion', 'popupShape', 'popupInterests', 'popupFavourite', 'popupContact'] as const;
 @Injectable()
@@ -80,7 +95,16 @@ export class RetentionService {
       this.prisma.storeEmailDelivery.groupBy({ by: ['status'], where: { storeId }, _count: true }),
       this.prisma.storeEmailDelivery.findMany({ where: { storeId, status: 'FAILED' }, orderBy: { createdAt: 'desc' }, take: 10, select: { id: true, kind: true, attempts: true, lastError: true, dueAt: true, createdAt: true } }),
     ]);
-    return { settings, subscribers, subscriberCount, cards, carts, campaigns, deliveries, failedDeliveries, emailConfigured: Boolean(this.config.get('app.email.resendApiKey')) };
+    // Spec 2026-11-10 rasca y elige: the WhatsApp list and the favourites chosen in the popup (both lists).
+    const [whatsapp, whatsappCount, chosenByEmail, products] = await Promise.all([
+      this.prisma.storeWhatsappSubscriber.findMany({ where: { storeId, isActive: true }, orderBy: { createdAt: 'desc' }, take: 50, select: { phone: true, interests: true, favourite: true, createdAt: true } }),
+      this.prisma.storeWhatsappSubscriber.count({ where: { storeId, isActive: true } }),
+      this.prisma.storeNewsletterSubscriber.findMany({ where: { storeId, isActive: true, favourite: { not: null } }, select: { favourite: true }, take: 2000 }),
+      this.prisma.paymentLink.findMany({ where: { storeId }, select: { id: true, name: true } }),
+    ]);
+    const whatsappSubscribers = whatsapp.map(row => ({ phone: whatsappShown(row.phone), interests: row.interests, favourite: favouriteName(row.favourite, products), createdAt: row.createdAt }));
+    const favourites = favouriteTally([...whatsapp.map(row => row.favourite), ...chosenByEmail.map(row => row.favourite)], products);
+    return { settings, subscribers, subscriberCount, whatsappSubscribers, whatsappCount, favourites, cards, carts, campaigns, deliveries, failedDeliveries, emailConfigured: Boolean(this.config.get('app.email.resendApiKey')) };
   }
   async save(merchantId: string, storeId: string, dto: RetentionSettingsDto) {
     await this.owner(merchantId, storeId);

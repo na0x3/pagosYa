@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { pickPopupLook } from '../store-popups/popup-looks';
-import { RetentionService, publicRetentionSettings } from './retention.service';
+import { RetentionService, favouriteName, favouriteTally, publicRetentionSettings, whatsappShown } from './retention.service';
 import { DEFAULT_RETENTION } from './retention.dto';
 
 // The signup popup (plan 2026-10-20-store-popup): its timing and welcome code live in the store's retention settings,
@@ -240,5 +240,18 @@ describe('rasca y elige signups (spec 2026-11-10)', () => {
     const { s, tx } = setup({ popupContact: 'email' });
     await s.subscribe(store, 'Ana@Mail.com', { favourite: 'p1', answers: ['Desayunos'], consent: true });
     expect((tx.storeNewsletterSubscriber.upsert.mock.calls[0] as any)[0].create).toMatchObject({ email: 'ana@mail.com', favourite: 'p1', interests: ['Desayunos'] });
+  });
+});
+
+describe('rasca y elige panel (spec 2026-11-10)', () => {
+  const products = [{ id: 'p1', name: 'Torre de cookies' }, { id: 'soda', name: 'Oh Belly soda' }];
+  it('names each favourite (a flavour as «Producto · Sabor») and counts the most chosen, deleted products left out', () => {
+    expect(favouriteName('soda:Sandía y menta', products)).toBe('Oh Belly soda · Sandía y menta');
+    expect(favouriteName('p1', products)).toBe('Torre de cookies');
+    expect(favouriteName('gone', products)).toBeNull();
+    expect(favouriteTally(['p1', 'soda:Sandía y menta', 'p1', 'gone', null], products)).toEqual([{ name: 'Torre de cookies', count: 2 }, { name: 'Oh Belly soda · Sandía y menta', count: 1 }]);
+  });
+  it('shows a WhatsApp number the way people write it', () => {
+    expect(whatsappShown('59171234567')).toBe('+591 7123 4567');
   });
 });

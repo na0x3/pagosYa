@@ -112,3 +112,18 @@ describe('Comeback workspaces', () => {
     expect(vi.mocked(api.writeRetention).mock.calls[0][3]).toMatchObject({ rewardLabel: 'Un postre', welcomeEnabled: true, welcomeSubject: 'Hola {{store}}', welcomeBody: 'Bienvenida', recoveryEnabled: true, recoveryHours: 48, reviewRequestsEnabled: true });
   });
 });
+
+describe('rasca y elige subscribers (spec 2026-11-10)', () => {
+  it('lists the WhatsApp signups with what they chose, and the most chosen favourites', async () => {
+    api.retention = vi.fn().mockResolvedValue({ ...state(), whatsappCount: 2, whatsappSubscribers: [{ phone: '+591 7123 4567', interests: ['Para regalar', 'Desayunos'], favourite: 'Torre de cookies', createdAt: '2026-11-10T12:00:00Z' }],
+      favourites: [{ name: 'Torre de cookies', count: 3 }, { name: 'Caja de rolls', count: 1 }] }) as never;
+    await openRetention(api, 's1', undefined, { host, view: 'customers' });
+    const text = host.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('Por WhatsApp (2)');
+    expect(text).toContain('+591 7123 4567');
+    expect(text).toContain('Favorito: Torre de cookies');
+    expect(host.querySelectorAll('[data-whatsapp-subscriber] .retention-chip')).toHaveLength(2);
+    expect(text).toContain('Favoritos más elegidos');
+    expect(text).toContain('Torre de cookies · 3');
+  });
+});
