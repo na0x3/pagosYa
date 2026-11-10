@@ -63,10 +63,60 @@ describe('popup games render (spec 2026-11-09)', () => {
   });
   it('reveals the exact prize, then asks the question', async () => {
     const [m] = (await measurePopup({ storeName: 'Miga Dorada', settings: { ...WORDS, popupLook: 'clasica', popupGame: 'wheel', popupGameSlices: SLICES.slice(0, 2), popupQuestion: { text: '¿Para quién compras?', answers: ['Para mí', 'Para regalar'] } }, look: LIGHT, photo: PHOTO, actions: ['play', 'claim'] }, [{ width: 390, height: 844 }]))!;
-    expect(m.game?.step).toBe('question');
+    expect(m.game?.step).toBe('interests');
   });
   it('leaves the corner tab after closing without claiming', async () => {
     const [m] = (await measurePopup({ storeName: 'Miga Dorada', settings: { ...WORDS, popupLook: 'portada', popupGame: 'scratch', popupGameSlices: SLICES.slice(0, 2) }, look: LIGHT, photo: PHOTO, actions: ['close'] }, [{ width: 390, height: 844 }]))!;
     expect(m.game?.tab?.visible).toBe(true);
+  });
+});
+
+describe('rasca y elige render (spec 2026-11-10)', () => {
+  const SLICES = ['10 % de descuento', '15 % de descuento'];
+  const INTERESTS = { text: '¿Para qué buscas algo rico?', answers: [{ label: 'Para mí', icon: '🍪' }, { label: 'Para regalar', icon: '🎁' }, { label: 'Desayunos', icon: '☕' }] };
+  const photo = (name: string) => `https://popup-check.invalid/${name}.jpg`;
+  const ITEMS = [{ id: 'p1', name: 'Torre de cookies', imageUrls: [photo('p1')] }, { id: 'p2', name: 'Caja de rolls', imageUrls: [photo('p2')] }, { id: 'p3', name: 'Desayuno box', imageUrls: [photo('p3')] },
+    { id: 'p4', name: 'Sin foto', imageUrls: [] }, { id: 'p5', name: 'Club', imageUrls: [photo('p5')], fulfillmentType: 'MEMBERSHIP', membershipPeriods: [{ months: 1 }] }, { id: 'p6', name: 'Agotado', imageUrls: [photo('p6')], stock: 0 }];
+  const SODA = [{ id: 'soda', name: 'Oh Belly', imageUrls: [photo('soda')], variants: ['Limón', 'Pera', 'Sandía', 'Naranja'].map((value, at) => ({ id: `v${at}`, name: value, amount: 1800, options: [{ name: 'Sabor', value }], imageUrls: [photo(`v${at}`)] })) }];
+  const settings = (over: Record<string, unknown> = {}) => ({ ...WORDS, popupLook: 'clasica', popupGame: 'scratch', popupGameSlices: SLICES, popupShape: 'cookie', popupInterests: INTERESTS, popupFavourite: { text: '¿Cuál es tu favorito?' }, popupContact: 'whatsapp', ...over });
+  const run = async (over: Record<string, unknown>, actions: NonNullable<Parameters<typeof measurePopup>[0]['actions']>, items: unknown[] = ITEMS, hosted = false) =>
+    (await measurePopup({ storeName: 'Miga Dorada', settings: settings(over), look: LIGHT, photo: PHOTO, actions, items, hosted }, [{ width: 390, height: 844 }]))![0];
+  for (const shape of ['cookie', 'can', 'bottle', 'cup', 'flower', 'garment', 'box', 'bag']) {
+    it(`draws the ${shape} card big enough on desktop and phone`, async () => {
+      const measures = (await measurePopup({ storeName: 'Miga Dorada', settings: settings({ popupShape: shape }), look: LIGHT, photo: PHOTO, items: ITEMS }))!;
+      for (const m of measures) { expect(m.game?.shape).toBe(shape); expect(m.game!.play!.height).toBeGreaterThanOrEqual(160); expect(m.smallText).toEqual([]); }
+    });
+  }
+  it('three quick strokes reveal the prize', async () => {
+    expect((await run({}, ['scratch'])).game?.step).toBe('reveal');
+  });
+  it('asks what interests them, several answers, «Siguiente» only after one', async () => {
+    const asked = await run({}, ['play', 'claim']);
+    expect(asked.game).toMatchObject({ step: 'interests', answers: 3, nextDisabled: true });
+    expect((await run({}, ['play', 'claim', 'interest'])).game?.nextDisabled).toBe(false);
+  });
+  it('the favourite tiles are the products with a photo, never a membership or a sold-out one', async () => {
+    expect((await run({}, ['play', 'claim', 'interest', 'next'])).game).toMatchObject({ step: 'favourite', tiles: ['Torre de cookies', 'Caja de rolls', 'Desayuno box'] });
+  });
+  it('a one-product store chooses its flavour; fewer than three choices skip the step', async () => {
+    expect((await run({}, ['play', 'claim', 'skip'], SODA)).game).toMatchObject({ step: 'favourite', tiles: ['Limón', 'Pera', 'Sandía', 'Naranja'] });
+    expect((await run({}, ['play', 'claim', 'skip'], ITEMS.slice(0, 2))).game?.step).toBe('contact');
+  });
+  it('asks the WhatsApp (or the email) to save the prize, naming the favourite', async () => {
+    const whatsapp = await run({}, ['play', 'claim', 'skip', 'favourite']);
+    expect(whatsapp.game).toMatchObject({ step: 'contact', contactType: 'tel', submitLabel: 'Suscribirme y ver Torre de cookies' });
+    expect((await run({ popupContact: 'email' }, ['play', 'claim', 'skip', 'favourite'])).game?.contactType).toBe('email');
+  });
+  it('«No, gracias» tells the store page the favourite (remembering it is checked on a real page, source-commerce-favourite)', async () => {
+    expect((await run({}, ['play', 'claim', 'skip', 'favourite', 'nothanks'])).game).toMatchObject({ favouriteEvent: 'p1' });
+  });
+  it('on a published store the number is asked in pagosYa\'s secure form, the button still shows', async () => {
+    const hosted = await run({}, ['play', 'claim', 'skip', 'favourite'], ITEMS, true);
+    expect(hosted.game?.contactType).toBeNull();
+    expect(hosted.boxes.submit?.visible).toBe(true);
+  });
+  it('an old store with one text question reads it as interests', async () => {
+    const old = await run({ popupInterests: undefined, popupQuestion: { text: '¿Para quién?', answers: ['Para mí', 'Para regalar'] } }, ['play', 'claim']);
+    expect(old.game).toMatchObject({ step: 'interests', answers: 2 });
   });
 });

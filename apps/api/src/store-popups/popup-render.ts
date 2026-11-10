@@ -16,10 +16,14 @@ export type PopupMeasure = { width: number; height: number; dialogOpen: boolean;
   /** Spec 2026-11-09 popup looks: the look drawn (null = the built-in layout), whether a name field is shown, the photo's src. */
   look?: string | null; nameField?: boolean; photoSrc?: string | null;
   /** Spec 2026-11-09 popup games: the game's step, its play area and the corner tab. */
-  game?: { step: string | null; play: PopupBox | null; tab: PopupBox | null; wonSize?: number | null } };
+  game?: { step: string | null; play: PopupBox | null; tab: PopupBox | null; wonSize?: number | null;
+    /** Spec 2026-11-10 rasca y elige: the card's shape, the interest answers, «Siguiente» blocked, the favourite tiles, the contact field,
+     *  the button's words, the favourite remembered on the device and the event the store page gets. */
+    shape?: string | null; answers?: number; nextDisabled?: boolean | null; tiles?: string[]; contactType?: string | null; submitLabel?: string | null; remembered?: string | null; favouriteEvent?: string | null } };
 export type PopupRenderInput = { storeName: string; settings: Record<string, unknown>; look: PopupLook; photo?: { bytes: Buffer; contentType: string }; hosted?: boolean;
   /** The page's API base (default the check's own origin); an upload-path kit photo is fetched from it. */ apiBaseUrl?: string;
-  /** Spec 2026-11-09 popup games: steps run after the popup opens, then measured. */ actions?: Array<'play' | 'claim' | 'close'> };
+  /** Spec 2026-11-09 popup games: steps run after the popup opens, then measured. */ actions?: Array<'play' | 'claim' | 'close' | 'scratch' | 'interest' | 'next' | 'skip' | 'favourite' | 'nothanks'>;
+  /** Spec 2026-11-10 rasca y elige: the store's catalogue (the favourite tiles). */ items?: unknown[] };
 
 export const POPUP_PHOTO_URL = 'https://popup-check.invalid/photo';
 export const POPUP_SIZES = [{ width: 1280, height: 800 }, { width: 390, height: 844 }] as const;
@@ -32,12 +36,12 @@ function pageHtml(input: PopupRenderInput) {
   if (look.radius && /^\d{1,2}px$/.test(look.radius)) tokens.push(`--store-radius:${look.radius}`);
   const retention = { ...input.settings, signupEnabled: true, popupTrigger: 'load',
     signupVisual: { brand: { name: input.storeName }, imageUrl: input.photo ? POPUP_PHOTO_URL : null, interests: [] } };
-  const config = { slug: 'popup-check', demo: true, apiBaseUrl: input.apiBaseUrl ?? 'https://popup-check.invalid', data: { storeName: input.storeName, retention } };
+  const config = { slug: 'popup-check', demo: true, apiBaseUrl: input.apiBaseUrl ?? 'https://popup-check.invalid', data: { storeName: input.storeName, retention, ...(input.items ? { items: input.items } : {}) } };
   // JSON in a script: «<» escaped so no store word can close the tag.
   const json = JSON.stringify(config).replace(/</g, '\\u003c');
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>:root{${tokens.join(';')}}body{margin:0;min-height:100vh;background:var(--store-background,#fff)}</style></head>
-<body><main><h1>${input.storeName.replace(/[<&]/g, '')}</h1></main><script>${input.hosted ? 'window.PAGOSYA_HOSTED=true;' : ''}window.PAGOSYA_CONFIG=${json};</script></body></html>`;
+<body><main><h1>${input.storeName.replace(/[<&]/g, '')}</h1></main><script>document.addEventListener('pagosya:favourite', e => { window.__favourite = e.detail && e.detail.id; });${input.hosted ? 'window.PAGOSYA_HOSTED=true;' : ''}window.PAGOSYA_CONFIG=${json};</script></body></html>`;
 }
 
 /** Runs in the page: boxes, visibility, contrast of the title and the email label against their nearest opaque background. */
@@ -92,7 +96,14 @@ function measureInPage(): Omit<PopupMeasure, 'width' | 'height'> {
   };
   return {
     look: dialog?.querySelector('[data-popup-look]')?.getAttribute('data-popup-look') ?? null,
-    game: { step: document.querySelector('[data-game-step]')?.getAttribute('data-game-step') ?? null, play: box(document.querySelector('[data-game-play]')), tab: box(document.querySelector('.pagosya-game-tab')), wonSize: document.querySelector('.game-won') ? parseFloat(getComputedStyle(document.querySelector('.game-won')!).fontSize) : null },
+    game: { shape: document.querySelector('.game-scratch')?.getAttribute('data-shape') ?? null, answers: document.querySelectorAll('.game-interest').length,
+      nextDisabled: (document.querySelector('[data-game-action=next]') as HTMLButtonElement | null)?.disabled ?? null,
+      tiles: Array.from(document.querySelectorAll('.game-tile')).map(tile => (tile.textContent ?? '').trim()),
+      contactType: (document.querySelector('.pagosya-game form input[name=phone], .pagosya-game form input[name=email]') as HTMLInputElement | null)?.type ?? null,
+      submitLabel: (document.querySelector('.pagosya-game form [type=submit]')?.textContent ?? '').trim() || null,
+      remembered: (() => { try { return localStorage.getItem('pagosya:fav:popup-check'); } catch { return null; } })(),
+      favouriteEvent: ((window as unknown as { __favourite?: string }).__favourite) ?? null,
+      step: document.querySelector('[data-game-step]')?.getAttribute('data-game-step') ?? null, play: box(document.querySelector('[data-game-play]')), tab: box(document.querySelector('.pagosya-game-tab')), wonSize: document.querySelector('.game-won') ? parseFloat(getComputedStyle(document.querySelector('.game-won')!).fontSize) : null },
     nameField: Boolean(dialog?.querySelector('input[name=name]')),
     photoSrc: photo?.getAttribute('src') ?? null,
     smallText: texts.filter(el => parseFloat(getComputedStyle(el).fontSize) < 12).map(el => `${words(el)} (${getComputedStyle(el).fontSize})`),
@@ -129,6 +140,20 @@ export async function measurePopup(input: PopupRenderInput, sizes: ReadonlyArray
       for (const action of input.actions ?? []) {
         if (action === 'play') { await page.click('[data-game-action=play]'); await page.waitForSelector('[data-game-step=reveal]', { timeout: 6_000 }).catch(() => undefined); }
         if (action === 'claim') await page.click('[data-game-action=claim]');
+        // Three quick strokes across the card, as a finger would (spec 2026-11-10: strokes, not dots).
+        if (action === 'scratch') {
+          const card = await page.locator('.game-scratch canvas').boundingBox();
+          if (card) for (const y of [0.3, 0.5, 0.7]) {
+            await page.mouse.move(card.x + card.width * 0.08, card.y + card.height * y); await page.mouse.down();
+            await page.mouse.move(card.x + card.width * 0.92, card.y + card.height * y, { steps: 3 }); await page.mouse.up();
+          }
+          await page.waitForSelector('[data-game-step=reveal]', { timeout: 4_000 }).catch(() => undefined);
+        }
+        if (action === 'interest') await page.click('.game-interest >> nth=0');
+        if (action === 'next') await page.click('[data-game-action=next]');
+        if (action === 'skip') await page.click('[data-game-action=skip]');
+        if (action === 'favourite') await page.click('.game-tile >> nth=0');
+        if (action === 'nothanks') await page.click('[data-game-action=nothanks]');
         // The dialog's close event fires after the click; the corner tab is added then.
         if (action === 'close') { await page.click('dialog[open] .signup-close'); await page.waitForSelector('.pagosya-game-tab', { timeout: 2_000 }).catch(() => undefined); }
       }
