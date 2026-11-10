@@ -108,6 +108,18 @@
     .cart-drawer .order-recommendations li,.cart-drawer .order-recommendations li:not(:has(img)){grid-template-columns:1fr;align-items:start;scroll-snap-align:start;padding:10px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:12px}
     .cart-drawer .order-recommendations li img{width:72px;height:72px;object-fit:cover;border-radius:8px}
     .cart-drawer .order-recommendations li{gap:6px;font-size:13px}.cart-drawer .order-recommendations li :is(button,a){min-height:36px;padding:6px 12px;font-size:13px}
+    /* Owner 2026-11-09 (Remolino): «Añadir» was plain text beside a filled «Elegir»; both are pills in the pay button's colour. */
+    .cart-drawer .order-recommendations li :is(button,a){justify-content:center;border:0;border-radius:999px;background:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,#20211d))));color:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,#fff)));font-weight:600;text-decoration:none;cursor:pointer}
+    /* «¿Prefieres terminar después?» under the guarantee line: a quiet divider, a small title and an outlined pill — never a second «Pagar». */
+    .cart-drawer [data-retention-recovery]{width:auto;margin:20px 0 0;padding:18px 0 0;border:0;border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);background:none;color:inherit;font:inherit}
+    .cart-drawer [data-retention-recovery] h3{margin:0 0 6px;font:inherit;font-size:15px;font-weight:600;line-height:1.3}
+    .cart-drawer [data-retention-recovery] p{margin:0;font-size:13px;line-height:1.45;opacity:.75;max-width:none}
+    .cart-drawer [data-retention-recovery] form{display:grid;gap:10px;max-width:none;margin-top:10px}
+    .cart-drawer [data-retention-recovery] .retention-email{gap:6px;font-size:13px}
+    .cart-drawer [data-retention-recovery] input[type=email]{min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,currentColor 22%,transparent);border-radius:999px;background:transparent;color:inherit;font-size:14px}
+    .cart-drawer [data-retention-recovery] .retention-consent{gap:8px;font-size:12.5px;line-height:1.45;opacity:.8}
+    .cart-drawer [data-retention-recovery] input[type=checkbox]{width:16px;height:16px;flex:0 0 16px;margin:1px 0 0}
+    .cart-drawer [data-retention-recovery] button{width:100%;min-height:46px;padding:0 20px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:15px;font-weight:600}
     .cart-drawer .checkout-button[data-busy]{opacity:.7;cursor:progress}
     .checkout-review__summary>.checkout-review__count{margin:4px 0 8px;font-size:14px;line-height:1.4;opacity:.7}
     .order-recommendations{margin:20px 0 0}

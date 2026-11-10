@@ -547,7 +547,11 @@ ${LOOK_TYPE}${POPUP_LOOKS[lookId].css}
       document.querySelectorAll('[data-pagosya-cart], [data-retention-cart-host]').forEach(panel => {
         if (panel.querySelector('[data-retention-recovery]') || !getCart().length) return;
         // In the calm checkout the reminder belongs in the order column, under the pay button, not after the whole shell.
-        const el = document.createElement('section'); el.className = 'pagosya-retention'; el.setAttribute('data-retention-recovery', ''); (panel.querySelector(':scope > .pya-co__main') || panel).append(el);
+        const el = document.createElement('section'); el.className = 'pagosya-retention'; el.setAttribute('data-retention-recovery', '');
+        // Owner 2026-11-09 (Remolino): in the cart it follows the guarantee line under «Pagar», inside the store's cart template —
+        // at the panel's end it sat outside the template's padding, flush against the edge.
+        const guarantee = panel.querySelector('.cart-guarantee');
+        if (guarantee) guarantee.after(el); else (panel.querySelector(':scope > .pya-co__main') || panel).append(el);
         form(el, `<h3>¿Prefieres terminar después?</h3><form><label class="retention-email"><span class="retention-label">Tu correo</span><input type="email" name="email" autocomplete="email" maxlength="254" required placeholder="tu@gmail.com" value="${escape(state.email)}"></label><label class="retention-consent"><input type="checkbox" name="consent" required ${state.consent ? 'checked' : ''}>Acepto recibir un recordatorio de este carrito si no termino la compra.</label><button type="submit">Guardar y recordármelo</button></form>`, async data => {
           state.email = String(data.get('email') ?? state.email ?? '').trim(); state.consent = true;
           const result = await api('carts', { email: state.email || undefined, consent: true, items: getCart(), ...(state.token ? { token: state.token } : {}) }); saveToken(result.token);

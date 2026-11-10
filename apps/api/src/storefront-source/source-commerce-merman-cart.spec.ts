@@ -83,6 +83,13 @@ it('«Te puede gustar» suggests what is not in the cart, adds it with one tap, 
     expect(await row.locator('h3').textContent()).toBe('Te puede gustar');
     expect(await row.textContent()).toContain('Café de altura');
     expect(await row.textContent()).not.toContain('Taza de barro');
+    // Owner 2026-11-09 (Remolino): «Añadir» was plain text beside a filled «Elegir» — both are pills in the pay button's colour.
+    const look = await page.evaluate(() => {
+      const style = (el: Element | null) => el ? getComputedStyle(el) : null;
+      const pick = style(document.querySelector('.cart-drawer [data-part="cart-suggestions"] [data-add]')), pay = style(document.querySelector('.cart-drawer .checkout-button'));
+      return { round: parseFloat(pick!.borderTopLeftRadius) >= 18, sameColour: pick!.backgroundColor === pay!.backgroundColor, sameInk: pick!.color === pay!.color };
+    });
+    expect(look).toEqual({ round: true, sameColour: true, sameInk: true });
     await row.locator('[data-add]').first().click();
     await page.locator('.cart-drawer [data-part="cart-line"]').nth(1).waitFor();
     expect(await page.locator('.cart-drawer [data-part="cart-suggestions"]').count()).toBe(0);
