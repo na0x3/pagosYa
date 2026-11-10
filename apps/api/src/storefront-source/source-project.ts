@@ -25,7 +25,9 @@ const SECRET = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|(?:sk_live_|sk
 // The installed bundle includes commerce, consent, retention, video and motion.
 // 2026-10-19: the bundle reached about 595 000 characters and Lana Andina's first save failed at the old 600 000 cap
 // («Invalid source file content»); source-runtime.spec.ts now fails before the bundle gets within 20 % of this one.
-export const MAX_COMMERCE_RUNTIME = 900_000;
+// Live 2026-11-10: privacy + commerce + retention + chat reached 902 kB (Merman cart, personalizador, rasca y elige) and every save
+// failed («Invalid source file content»), first builds included. A sanity cap on pagosYa's own runtime, never the merchant's code.
+export const MAX_COMMERCE_RUNTIME = 1_250_000;
 
 /** Files the platform writes from the store's source on every save, never by hand. */
 function platformOutput(path: string, compiledSheet: boolean): boolean {

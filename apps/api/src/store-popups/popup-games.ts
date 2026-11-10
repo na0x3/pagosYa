@@ -74,7 +74,13 @@ const SHAPE_WORDS: Array<[PopupShape, RegExp]> = [
 /** The business's shape for the scratch card; a shopping bag when no word fits. */
 export function popupShapeFor(words: string): PopupShape {
   const text = foldWords(words);
-  return SHAPE_WORDS.find(([, pattern]) => pattern.test(text))?.[0] ?? 'bag';
+  // The word the store says most wins (live BOXY 2026-11-10: one «Hoodie Café Relajado» among seven hoodies made it a cup); ties keep the order.
+  let best: PopupShape = 'bag', most = 0;
+  for (const [shape, pattern] of SHAPE_WORDS) {
+    const count = (text.match(new RegExp(pattern.source, 'g')) ?? []).length;
+    if (count > most) { best = shape; most = count; }
+  }
+  return best;
 }
 export type InterestAnswer = { label: string; icon: string };
 export type PopupInterests = { text: string; answers: InterestAnswer[] };

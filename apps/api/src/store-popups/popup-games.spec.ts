@@ -47,6 +47,8 @@ describe('rasca y elige helpers (spec 2026-11-10)', () => {
     expect(popupShapeFor('hoodies y poleras oversize')).toBe('garment');
     expect(popupShapeFor('canastas de frutas a domicilio')).toBe('box');
     expect(popupShapeFor('licuadoras')).toBe('bag');
+    // Live BOXY 2026-11-10: one «Hoodie Café Relajado» made it a cup; the word said most wins.
+    expect(popupShapeFor('Hoodie Boxy Esencial Hoodie Marino Oversize Hoodie Café Relajado Hoodie Bagels')).toBe('garment');
     expect(readShape('can')).toBe('can');
     expect(readShape('rocket')).toBeNull();
   });
