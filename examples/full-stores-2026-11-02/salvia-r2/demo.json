@@ -1,0 +1,40 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwatjsa60001gtffc322ubhv",
+  "slug": "2ite4udc",
+  "photos": {
+    "brand:amigas.jpg": "/v1/uploads/17d5d9b7-f9e0-4520-8c1c-618d84ceb497.jpg",
+    "brand:envoltorio.jpg": "/v1/uploads/58989a6d-c0e2-4cf2-ba8e-ec896945b447.jpg",
+    "brand:mesa.jpg": "/v1/uploads/dd638838-4d08-41da-8b75-33cdcd46aaea.jpg",
+    "brand:rutina.jpg": "/v1/uploads/38665823-5caf-4c30-a21c-16c9704f8e55.jpg",
+    "serum-rosa.jpg": "/v1/uploads/b0daee3f-870c-44ad-8b7e-9d1fdfd017ec.jpg",
+    "bruma-lavanda.jpg": "/v1/uploads/9c3435a5-b0e4-4930-a123-1d94ffd07e05.jpg",
+    "vela-cedro.jpg": "/v1/uploads/db19acef-190a-4fe3-b797-952749a5518b.jpg",
+    "crema-manos.jpg": "/v1/uploads/859e7160-5e77-494c-88f1-ff1c82d4d621.jpg",
+    "aceite-corporal.jpg": "/v1/uploads/4ab5b59a-446c-4343-8201-2058734f12af.jpg",
+    "balsamo.jpg": "/v1/uploads/422d14b4-2b0a-4186-9822-1f422be50707.jpg"
+  },
+  "categories": {
+    "Rostro": "cmwatjsak000bgtffrihttr2y",
+    "Cuerpo": "cmwatjsak000dgtffdt79knsp",
+    "Casa": "cmwatjsal000fgtffx8fm7uqf"
+  },
+  "products": {
+    "Sérum de Rosa Mosqueta": "cmwatjsan000jgtfftgh0lvv3",
+    "Bruma de Lavanda": "cmwatjsaq000ngtffzj6w0u0a",
+    "Vela de Cedro y Ámbar": "cmwatjsat000rgtffyt66dmo0",
+    "Crema de Manos de Caléndula": "cmwatjsav000vgtffmvkytluw",
+    "Aceite Corporal de Almendras": "cmwatjsay000zgtffpzvb4aaa",
+    "Bálsamo Reparador": "cmwatjsb00013gtffgqd9gfw0"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwatjsbh001bgtffcmik8ew4"
+}

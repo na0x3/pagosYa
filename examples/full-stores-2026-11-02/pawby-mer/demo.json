@@ -1,0 +1,44 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwapca5d00016vn7i22ya0fp",
+  "slug": "t4ap07kl",
+  "photos": {
+    "brand:5e60bf6b8389897b0e1593620a0e95b3.jpg": "/v1/uploads/eec31d76-5a45-48db-87fd-58264899e47d.jpg",
+    "brand:83c65ac60fed9cedf4857337f63df2e8.jpg": "/v1/uploads/5a448def-76cf-4083-bdbe-1e55eb39668b.jpg",
+    "brand:d806ce5380ab28e546ee4de856ffe7f4.jpg": "/v1/uploads/20780347-6e76-41d9-ba78-0a4c404132ae.jpg",
+    "brand:dc8eaa398b58a9bdd18e121026a6794e.jpg": "/v1/uploads/3ab17bbf-156d-4b74-9f63-800a9f06467b.jpg",
+    "brand:dd7f88684e91509a1f0021342e65f40b.jpg": "/v1/uploads/cabba6d2-c1f4-48a9-95a8-71546a7aad24.jpg",
+    "brand:e087d897db68b7193ce1322ed9b49656.jpg": "/v1/uploads/7f3fb331-7d1b-4536-9fef-f766257c9a41.jpg",
+    "brand:f3145c8f9b1fc6a1006c21eb411ef8b2.jpg": "/v1/uploads/c2f9e714-5274-49de-bb21-412f3c2bfee4.jpg",
+    "dc8eaa398b58a9bdd18e121026a6794e.jpg": "/v1/uploads/43fee0ca-5414-40b5-96f2-e09e755db386.jpg",
+    "f3145c8f9b1fc6a1006c21eb411ef8b2.jpg": "/v1/uploads/f8df37bf-a6bf-48a6-b7ca-1a5c4cfe5781.jpg",
+    "dd7f88684e91509a1f0021342e65f40b.jpg": "/v1/uploads/13f47291-9011-4b91-ab88-4230201dc8c4.jpg",
+    "5e60bf6b8389897b0e1593620a0e95b3.jpg": "/v1/uploads/18c0dad1-a0e7-427a-9ef4-3cdd411e8dd6.jpg",
+    "d806ce5380ab28e546ee4de856ffe7f4.jpg": "/v1/uploads/467ae524-59a4-4dde-a579-bc60125e118c.jpg",
+    "83c65ac60fed9cedf4857337f63df2e8.jpg": "/v1/uploads/5290071a-bba0-4f43-a5ed-9e0637b8bc63.jpg"
+  },
+  "categories": {
+    "Comida fresca": "cmwapca5r000h6vn7pu7cj4qz",
+    "Croquetas": "cmwapca5s000j6vn7zxtbdl73",
+    "Snacks": "cmwapca5s000l6vn79kkn15gv",
+    "Accesorios": "cmwapca5t000n6vn7qxgiunb1"
+  },
+  "products": {
+    "Comida fresca pollo y manzana 500 g": "cmwapca5u000r6vn7tlxi77hx",
+    "Comida gourmet res y verduras 500 g": "cmwapca5y000v6vn7j2a3f89u",
+    "Plan semanal 7 porciones": "cmwapca60000z6vn77f2g54kv",
+    "Croquetas naturales 2 kg": "cmwapca6200136vn7gbt8ffkc",
+    "Snacks relajantes 150 g": "cmwapca6400176vn76jkt3srb",
+    "Cama acolchada": "cmwapca65001b6vn7ogkf94ng"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwapca6l001j6vn77zpmx7u4"
+}
