@@ -31,6 +31,8 @@ import { merchantAsksForPhotoGroup, sourceMediaPolicy } from './source-media-des
 import { recoverStorePhotos } from './source-redesign-photos';
 import { repairSourcePhotoGroups } from './source-photo-groups';
 import { bundleSourceCatalogMedia } from './source-catalog-media';
+import { publicRetentionSettings } from '../retention/retention.service';
+import { DEFAULT_RETENTION } from '../retention/retention.dto';
 import { asksForBold, designCategory, frameForRun, frameFresh, frameInputs, parseFrameDraw, FRAME_CATALOGUE, FRAME_DRAW_FILE } from './design-engine/frame-draw';
 import { readConfigFile, sanitizeLook, type StoreLook } from './store-look';
 import { readControls, withControlsConfig, type StoreControls } from './store-controls';
@@ -231,7 +233,9 @@ export class SourceGenerationService {
     if (!owner) throw new NotFoundException("Store not found");
     const data = await this.publicStores.getStorePublic(owner.slug, { trackView: false, ownerMerchantId: merchantId });
     const retention = await this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } });
-    return { retention: retention?.settings || {}, storeName: data.storeName, creditsEnabled: data.creditsEnabled, digitalGoodsEnabled: data.digitalGoodsEnabled, shippingEnabled: data.shippingEnabled, shippingPickupEnabled: data.shippingPickupEnabled, shippingCarriersEnabled: data.shippingCarriersEnabled, bundlesEnabled: data.bundlesEnabled, subscriptionsEnabled: data.subscriptionsEnabled, logoUrl: data.logoUrl, tagline: data.tagline, checkoutMode: data.checkoutMode,
+    // Owner 2026-11-10: the preview's popup reads what a shopper's store reads (the game's prize labels), not the saved row.
+    const shownRetention = retention?.settings ? publicRetentionSettings({ ...DEFAULT_RETENTION, ...(retention.settings as object) }, owner.slug) : {};
+    return { retention: shownRetention, storeName: data.storeName, creditsEnabled: data.creditsEnabled, digitalGoodsEnabled: data.digitalGoodsEnabled, shippingEnabled: data.shippingEnabled, shippingPickupEnabled: data.shippingPickupEnabled, shippingCarriersEnabled: data.shippingCarriersEnabled, bundlesEnabled: data.bundlesEnabled, subscriptionsEnabled: data.subscriptionsEnabled, logoUrl: data.logoUrl, tagline: data.tagline, checkoutMode: data.checkoutMode,
       contactPhone: data.contactPhone, leadCaptureUrl: data.leadCaptureUrl,
       contactFormEnabled: data.contactFormEnabled, contactTitle: data.contactTitle, contactSubtitle: data.contactSubtitle,
       categories: data.categories, locations: data.locations, items: data.items,

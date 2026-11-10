@@ -912,6 +912,19 @@ describe('Independent source generation',()=>{
     stores.getStorePublic.mockResolvedValueOnce({ storeName: 'Café', items: [], categories: [], cartRecommendationsEnabled: true, cartRecommendationProductIds: ['p1'], bundles: [{ id: 'b1', name: 'Dúo', kind: 'FIXED', items: [{ productId: 'p1', quantity: 2 }], minimumQuantity: 2, discountPercent: 10 }] });
     expect(await service.catalog('m', 's')).toEqual(expect.objectContaining({ cartRecommendationsEnabled: true, cartRecommendationProductIds: ['p1'], bundles: [expect.objectContaining({ id: 'b1', kind: 'FIXED' })] }));
   });
+  // Owner 2026-11-10: «rasca y gana» asked by chat never showed in the store preview. The kit plays a game only from the
+  // public shape (prize labels as popupGameSlices); the preview got the raw saved settings and fell back to the plain popup.
+  it('gives the preview the popup settings a shopper gets: the game with its prize labels, never the codes or chances', async () => {
+    const { service, prisma, stores } = setup();
+    stores.getStorePublic.mockResolvedValue({ storeName: 'Café', items: [], categories: [] });
+    prisma.storeRetention.findUnique.mockResolvedValueOnce({ settings: { signupEnabled: true, popupTrigger: 'delay', popupDelaySeconds: 12, popupGame: 'scratch', popupShape: 'cookie', popupPromoCodeId: 'code-1',
+      popupGamePrizes: [{ label: '5 % de descuento', chance: 60, percent: 5 }, { label: '10 % de descuento', chance: 40, percent: 10 }] } });
+    const { retention } = await service.catalog('m', 's') as { retention: Record<string, unknown> };
+    expect(retention).toEqual(expect.objectContaining({ signupEnabled: true, popupGame: 'scratch', popupShape: 'cookie', popupGameSlices: ['5 % de descuento', '10 % de descuento'], popupHasCode: true }));
+    expect(retention).not.toHaveProperty('popupGamePrizes');
+    expect(retention).not.toHaveProperty('popupPromoCodeId');
+    expect((await service.catalog('m', 's') as { retention: unknown }).retention).toEqual({});
+  });
   // baek 2026-10-17: the owner never saw the store bot in Studio. The preview's data is this catalog, which dropped the
   // assistant; only the Studio display routes ask for it, so a saved config.js never carries the bot's settings.
   it('carries the store assistant only when the caller asks for it (the Studio preview)', async () => {
