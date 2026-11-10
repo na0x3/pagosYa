@@ -196,9 +196,9 @@ describe('rasca y elige public settings (spec 2026-11-10)', () => {
     expect(off.popupShape).toBeUndefined();
     expect(off.popupInterests).toBeUndefined();
   });
-  it('reads an old text question as interests, an unknown shape as none, and WhatsApp by default', () => {
+  it('reads an old text question as interests, an unknown shape as none, and an old game keeps the email (review M4)', () => {
     const out = publicRetentionSettings({ ...DEFAULT_RETENTION, ...GAME, popupShape: 'rocket', popupQuestion: { text: '¿Para quién?', answers: ['Para mí', 'Para regalar'] } } as never) as Record<string, unknown>;
-    expect(out).toMatchObject({ popupShape: null, popupContact: 'whatsapp', popupInterests: { text: '¿Para quién?', answers: [{ label: 'Para mí', icon: '' }, { label: 'Para regalar', icon: '' }] } });
+    expect(out).toMatchObject({ popupShape: null, popupContact: 'email', popupInterests: { text: '¿Para quién?', answers: [{ label: 'Para mí', icon: '' }, { label: 'Para regalar', icon: '' }] } });
   });
   it('keeps them when Ajustes saves without them', async () => {
     const { s, tx } = service();
@@ -253,5 +253,30 @@ describe('rasca y elige panel (spec 2026-11-10)', () => {
   });
   it('shows a WhatsApp number the way people write it', () => {
     expect(whatsappShown('59171234567')).toBe('+591 7123 4567');
+  });
+});
+
+describe('rasca y elige review fixes (2026-11-10)', () => {
+  it('validates any email sent, with or without a phone; a cart always needs one (review I1)', async () => {
+    const { plainToInstance } = await import('class-transformer');
+    const { validate } = await import('class-validator');
+    const { RetentionSubscribeDto, RetentionCartDto } = await import('./retention.dto');
+    const errors = async (cls: any, body: object) => (await validate(plainToInstance(cls, body) as object)).map(e => e.property);
+    expect(await errors(RetentionSubscribeDto, { phone: '71234567', email: 'not-an-email', consent: true })).toContain('email');
+    expect(await errors(RetentionSubscribeDto, { phone: '71234567', email: {}, consent: true })).toContain('email');
+    expect(await errors(RetentionSubscribeDto, { phone: '71234567', consent: true })).toEqual([]);
+    expect(await errors(RetentionSubscribeDto, { consent: true })).toContain('email');
+    expect(await errors(RetentionCartDto, { phone: '71234567', consent: true, items: [{ paymentLinkId: 'p1', quantity: 1 }] })).toContain('email');
+    // Review I2: an older question's answers reach 40 characters.
+    expect(await errors(RetentionSubscribeDto, { email: 'ana@mail.com', consent: true, answers: ['x'.repeat(40)] })).toEqual([]);
+  });
+  it('a number goes to the WhatsApp list only when the store game asks for WhatsApp (review M1)', async () => {
+    const made = service({ popupGame: 'scratch', popupContact: 'email' });
+    (made.prisma as any).paymentLink = { findMany: jest.fn(async () => []) };
+    (made.prisma as any).storeWhatsappSubscriber = { findUnique: jest.fn(), upsert: jest.fn() };
+    await expect(made.s.subscribe(store, null, { phone: '71234567', consent: true })).rejects.toThrow('Escribe tu correo.');
+    const plain = service({});
+    (plain.prisma as any).paymentLink = { findMany: jest.fn(async () => []) };
+    await expect(plain.s.subscribe(store, null, { phone: '71234567', consent: true })).rejects.toThrow('Escribe tu correo.');
   });
 });

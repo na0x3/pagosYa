@@ -70,10 +70,20 @@ describe('rasca y elige helpers (spec 2026-11-10)', () => {
     expect(favouriteQuestionFor('hoodies', 7)).toBe('¿Qué modelo te gusta más?');
     expect(favouriteQuestionFor('panadería', 8)).toBe('¿Cuál es tu favorito?');
     expect(readContact('email')).toBe('email');
-    expect(readContact(undefined)).toBe('whatsapp');
+    // Review M4: a game from before kept its email; new games are switched to WhatsApp when turned on.
+    expect(readContact(undefined)).toBe('email');
+    expect(readContact('whatsapp')).toBe('whatsapp');
     expect(whatsappDigits('7123 4567')).toBe('59171234567');
     expect(whatsappDigits('+591 71234567')).toBe('59171234567');
     expect(whatsappDigits('123')).toBeNull();
     expect(whatsappDigits('ana71234567@mail.com')).toBeNull();
+  });
+});
+
+describe('rasca y elige review fixes (2026-11-10)', () => {
+  it('«te» is a pronoun, not tea: a florist stays a flower; «té» still means a cup (review I5)', () => {
+    expect(popupShapeFor('Flores frescas que te alegran el día')).toBe('flower');
+    expect(interestsFor('Flores frescas que te alegran el día', []).text).toBe('¿Para qué ocasión?');
+    expect(popupShapeFor('Té de hierbas, infusiones y tazas')).toBe('cup');
   });
 });

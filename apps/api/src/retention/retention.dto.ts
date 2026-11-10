@@ -32,7 +32,8 @@ export class RetentionEmailDto { @IsEmail() @MaxLength(254) email!: string; }
 export class RetentionPaymentCardDto { @IsString() @MinLength(20) @MaxLength(200) trackingToken!: string; }
 export class RetentionSubscribeDto {
   /** Spec 2026-11-10 rasca y elige: a WhatsApp signup sends the number and no email. */
-  @ValidateIf((dto: RetentionSubscribeDto) => !dto.phone) @IsEmail() @MaxLength(254) email!: string;
+  // Review I1: any email sent is checked; only a number with no email skips it (a cart, which has items, always needs one).
+  @ValidateIf((dto: RetentionSubscribeDto) => dto.email !== undefined || !dto.phone || Array.isArray((dto as { items?: unknown }).items)) @IsEmail() @MaxLength(254) email!: string;
   @Equals(true) consent!: boolean;
   /** The popup asks for the welcome code; the inline form never gets one. */
   @IsOptional() @IsIn(['popup']) source?: 'popup';
@@ -43,7 +44,7 @@ export class RetentionSubscribeDto {
   @IsOptional() @IsString() @MaxLength(400) gameToken?: string;
   @IsOptional() @IsString() @MaxLength(40) answer?: string;
   /** Spec 2026-11-10 rasca y elige: the store's interest answers chosen, and the favourite (a product id, or «id:option value»). */
-  @IsOptional() @IsArray() @ArrayMaxSize(6) @ArrayUnique() @IsString({ each: true }) @MaxLength(28, { each: true }) answers?: string[];
+  @IsOptional() @IsArray() @ArrayMaxSize(6) @ArrayUnique() @IsString({ each: true }) @MaxLength(40, { each: true }) answers?: string[];
   @IsOptional() @IsString() @MaxLength(140) favourite?: string;
   /** Which contact the game asked for (a published store's parent page asks it in pagosYa's form). */
   @IsOptional() @IsIn(['whatsapp', 'email']) contact?: 'whatsapp' | 'email';

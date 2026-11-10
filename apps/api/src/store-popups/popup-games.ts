@@ -61,12 +61,13 @@ export function questionFor(categories: string[]): GameQuestion {
 export const POPUP_SHAPES = ['cookie', 'can', 'bottle', 'cup', 'flower', 'garment', 'box', 'bag'] as const;
 export type PopupShape = (typeof POPUP_SHAPES)[number];
 export const readShape = (value: unknown): PopupShape | null => ((POPUP_SHAPES as readonly unknown[]).includes(value) ? value as PopupShape : null);
-const foldWords = (text: string) => String(text ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+// Review I5: «té» (tea) is told from the pronoun «te» before the accents go; then everything folds.
+const foldWords = (text: string) => String(text ?? '').replace(/(?<!\p{L})t[ée]s?(?!\p{L})/giu, match => /é/i.test(match) ? ' infusion ' : match).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const SHAPE_WORDS: Array<[PopupShape, RegExp]> = [
   ['cookie', /\b(cookies?|galletas?|panader\w*|pasteler\w*|reposter\w*|brownies?|rolls?|horne\w*)\b/],
   ['can', /\b(sodas?|latas?|cervezas?|energizantes?|kombuchas?)\b/],
   ['bottle', /\b(botellas?|vinos?|salsas?|aceites?|jugos?|licores?|perfumes?)\b/],
-  ['cup', /\b(cafe\w*|te|tes|matcha|infusion\w*|tazas?)\b/],
+  ['cup', /\b(cafe\w*|matcha|infusion\w*|tazas?)\b/],
   ['flower', /\b(flor\w*|ramos?|plantas?)\b/],
   ['garment', /\b(ropa|hoodies?|poleras?|polerones?|vestidos?|camisas?|moda|prendas?|polos?)\b/],
   ['box', /\b(cajas?|canastas?|regalos?|frutas?|verduras?|boxes?)\b/],
@@ -91,7 +92,7 @@ const SECTOR_INTERESTS: Array<[RegExp, PopupInterests]> = [
     { label: 'Para cuidarme', icon: '🌿' }, { label: 'Con la comida', icon: '🍽️' }, { label: 'Después de entrenar', icon: '🏋️' }, { label: 'Para compartir', icon: '🥂' }, { label: 'Para regalar', icon: '🎁' }] }],
   [/\b(ropa|hoodies?|poleras?|polerones?|vestidos?|moda|prendas?)\b/, { text: '¿Qué estilo te va?', answers: [
     { label: 'Oversize', icon: '🧥' }, { label: 'Colores neutros', icon: '🤍' }, { label: 'Con estampado', icon: '🎨' }, { label: 'Para regalar', icon: '🎁' }, { label: 'Para el frío', icon: '❄️' }] }],
-  [/\b(cafe\w*|te|matcha)\b/, { text: '¿Cómo te gusta tu café?', answers: [
+  [/\b(cafe\w*|matcha|infusion\w*)\b/, { text: '¿Cómo te gusta tu café?', answers: [
     { label: 'Para empezar el día', icon: '☀️' }, { label: 'Para llevar', icon: '🥤' }, { label: 'Con algo dulce', icon: '🍰' }, { label: 'Para regalar', icon: '🎁' }] }],
   [/\b(flor\w*|ramos?|plantas?)\b/, { text: '¿Para qué ocasión?', answers: [
     { label: 'Cumpleaños', icon: '🎂' }, { label: 'Aniversario', icon: '💐' }, { label: 'Para mi casa', icon: '🏡' }, { label: 'Para disculparme', icon: '🙏' }] }],
@@ -99,7 +100,10 @@ const SECTOR_INTERESTS: Array<[RegExp, PopupInterests]> = [
 const CATEGORY_ICONS = ['✨', '⭐', '🛍️', '💡', '❤️'];
 /** «¿Qué te interesa?»: the sector's answers, else the store's categories (and «Para regalar»), else who it is for. */
 export function interestsFor(words: string, categories: string[]): PopupInterests {
-  const sector = SECTOR_INTERESTS.find(([pattern]) => pattern.test(foldWords(words)));
+  // The sector the store's words name most (as the card's shape: review I5).
+  const text = foldWords(words);
+  let sector: [RegExp, PopupInterests] | undefined, most = 0;
+  for (const entry of SECTOR_INTERESTS) { const count = (text.match(new RegExp(entry[0].source, 'g')) ?? []).length; if (count > most) { sector = entry; most = count; } }
   if (sector) return { text: sector[1].text, answers: sector[1].answers.map(answer => ({ ...answer })) };
   const names = categories.map(name => name.trim()).filter(name => name && name.length <= 28).slice(0, 5);
   const gift = names.some(name => foldWords(name) === 'para regalar') ? [] : [{ label: 'Para regalar', icon: '🎁' }];
@@ -124,7 +128,8 @@ export function favouriteQuestionFor(words: string, productCount: number): strin
   if (/\b(ropa|hoodies?|poleras?|polerones?|vestidos?|moda|prendas?|zapat\w*|modelos?)\b/.test(text)) return '¿Qué modelo te gusta más?';
   return '¿Cuál es tu favorito?';
 }
-export const readContact = (value: unknown): 'whatsapp' | 'email' => (value === 'email' ? 'email' : 'whatsapp');
+/** Review M4: a game turned on before rasca y elige has no contact and keeps the email; turning a game on writes «whatsapp». */
+export const readContact = (value: unknown): 'whatsapp' | 'email' => (value === 'whatsapp' ? 'whatsapp' : 'email');
 /** A Bolivian WhatsApp (7–8 digits starting 2–7, +591 or 00591 optional) as 591XXXXXXXX; null for anything else. */
 export function whatsappDigits(raw: string): string | null {
   if (/@/.test(String(raw ?? ''))) return null;

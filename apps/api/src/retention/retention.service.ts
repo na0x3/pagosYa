@@ -165,7 +165,11 @@ export class RetentionService {
     const allowed = new Set((readInterests(settings as PopupGameSettings)?.answers ?? []).map(entry => entry.label));
     const chosen = (profile.answers ?? []).filter(label => allowed.has(label));
     const favourite = await this.realFavourite(store.id, profile.favourite);
-    if (!rawEmail) return this.subscribeWhatsapp(store, settings, visitId, profile, chosen, favourite);
+    // Review M1: a number goes to the WhatsApp list only when the store's game asks for WhatsApp.
+    if (!rawEmail) {
+      if (!(readGame((settings as PopupGameSettings).popupGame) && readContact((settings as PopupGameSettings).popupContact) === 'whatsapp')) throw new BadRequestException('Escribe tu correo.');
+      return this.subscribeWhatsapp(store, settings, visitId, profile, chosen, favourite);
+    }
     const email = normalized(rawEmail);
     // Spec 2026-11-09 popup games: the tap answer joins the interests when it is one of the store's own answers.
     const answer = profile.answer && (settings as PopupGameSettings).popupQuestion?.answers?.includes(profile.answer) ? profile.answer : undefined;

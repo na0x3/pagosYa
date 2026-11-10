@@ -529,6 +529,16 @@ describe('popup A/B tests', () => {
     expect(shown.experiment.stale).toBe(false);
   });
 
+  it('a popup test counts the WhatsApp signups too (review I4, rasca y elige 2026-11-10)', async () => {
+    const { prisma } = popupPublishing({ running: { id: 'e0', activeStoreId: 's', status: 'RUNNING', kind: 'popup', request: 'x', controlRevision: 4, variantRevision: 4, startedAt: new Date(), extendedUntil: null } });
+    prisma.storeSourceVisit.groupBy.mockResolvedValue([{ variant: 'A', _count: 100 }, { variant: 'B', _count: 100 }]);
+    prisma.storeNewsletterSubscriber.findMany.mockResolvedValue([{ sourceVisit: { variant: 'A' } }]);
+    prisma.$queryRaw = jest.fn(async () => [{ variant: 'B', n: 7 }, { variant: 'A', n: 2 }]);
+    const { publicationState } = await import('./source-publishing.service');
+    const shown: any = await publicationState(prisma, 's');
+    expect(shown.experiment.variants.map((v: any) => v.signups)).toEqual([3, 7]);
+  });
+
   it('a test with no answer after 28 days is stale until «Seguir 2 semanas más»', async () => {
     const started = new Date(Date.now() - 29 * 86400000);
     const { service, prisma, experiments } = popupPublishing({ running: { id: 'e0', activeStoreId: 's', status: 'RUNNING', kind: 'design', controlRevision: 4, variantRevision: 6, startedAt: started, extendedUntil: null } });

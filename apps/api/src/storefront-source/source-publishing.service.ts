@@ -69,6 +69,10 @@ export async function publicationState(prisma: PrismaService, storeId: string) {
       // Spec 2026-11-09 A/B tests: a new popup signup carries the visit it came from (set only while a test runs).
       experiment.kind === 'popup' ? prisma.storeNewsletterSubscriber.findMany({ where: { storeId, sourceVisit: { experimentId: experiment.id } }, take: 20001, select: { sourceVisit: { select: { variant: true } } } }) : Promise.resolve([] as Array<{ sourceVisit: { variant: string } | null }>),
     ]);
+    // Review I4 (rasca y elige 2026-11-10): popup signups by WhatsApp count too.
+    const whatsappSignups: Array<{ variant: string; n: number }> = experiment.kind === 'popup' && typeof prisma.$queryRaw === 'function'
+      ? await (prisma.$queryRaw`SELECT v."variant" AS variant, COUNT(*)::int AS n FROM "StoreWhatsappSubscriber" w JOIN "StoreSourceVisit" v ON v."id" = w."sourceVisitId" WHERE w."storeId" = ${storeId} AND v."experimentId" = ${experiment.id} GROUP BY v."variant"` as Promise<Array<{ variant: string; n: number }>>).catch(() => [])
+      : [];
     const variants = ['A', 'B'].map(variant => {
       const buyers = new Set<string>(); const revenue = new Map<string, number>(); let paidOrders = 0;
       for (const order of orders.slice(0, 10000)) {
@@ -79,7 +83,7 @@ export async function publicationState(prisma: PrismaService, storeId: string) {
         revenue.set(order.currency, (revenue.get(order.currency) || 0) + net);
       }
       const visitors = visits.find(v => v.variant === variant)?._count || 0;
-      const signed = signups.filter(row => row.sourceVisit?.variant === variant).length;
+      const signed = signups.filter(row => row.sourceVisit?.variant === variant).length + Number(whatsappSignups.find(row => row.variant === variant)?.n ?? 0);
       return { variant, revision: variant === 'A' ? experiment.controlRevision : experiment.variantRevision, visitors, buyers: buyers.size, signups: signed, paidOrders, conversionRate: visitors ? buyers.size / visitors : 0, revenue: [...revenue].map(([currency, amount]) => ({ currency, amount })) };
     });
     // A popup test is judged on signups; a design test on purchases (spec 2026-11-09 §2).
