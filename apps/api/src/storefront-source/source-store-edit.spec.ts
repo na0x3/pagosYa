@@ -113,6 +113,19 @@ describe('store edit (YAPI edits everything, spec 2026-11-03)', () => {
       expect(applyStoreOps(state(), [op('popup', 'prizes', bad)]).refused).toEqual(['Los premios van de 2 a 6, cada uno de 1 % a 50 %, sin repetir; si das las probabilidades, deben sumar 100.']);
     expect(readStoreOps([op('popup', 'prizes', '10, 20')])).toHaveLength(1);
   });
+  it('changes the card shape, the contact asked for and the interests (spec 2026-11-10 rasca y elige)', () => {
+    expect(applyStoreOps(state(), [op('popup', 'shape', 'lata')]).change.popupGame).toEqual({ shape: 'can' });
+    expect(applyStoreOps(state(), [op('popup', 'shape', 'galleta')]).done).toEqual(['la tarjeta para rascar ahora tiene forma de galleta']);
+    expect(applyStoreOps(state(), [op('popup', 'shape', 'sin forma')]).change.popupGame).toEqual({ shape: null });
+    expect(applyStoreOps(state(), [op('popup', 'shape', 'cohete')]).refused).toEqual(['Las formas son: galleta, lata, botella, taza, flor, prenda, caja y bolsa.']);
+    expect(applyStoreOps(state(), [op('popup', 'contact', 'correo')]).change.popupGame).toEqual({ contact: 'email' });
+    expect(applyStoreOps(state(), [op('popup', 'contact', 'WhatsApp')]).done).toEqual(['tu juego ahora pide el WhatsApp para guardar el premio']);
+    expect(applyStoreOps(state(), [op('popup', 'contact', 'paloma')]).refused).toEqual(['El juego puede pedir WhatsApp o correo.']);
+    expect(applyStoreOps(state(), [op('popup', 'interests', '¿Qué buscas?|Para mí|Para regalar|Para la oficina')]).change.popupGame).toEqual({ interests: { text: '¿Qué buscas?', answers: [{ label: 'Para mí', icon: '' }, { label: 'Para regalar', icon: '' }, { label: 'Para la oficina', icon: '' }] } });
+    expect(applyStoreOps(state(), [op('popup', 'interests', 'sin intereses')]).change.popupGame).toEqual({ interests: null });
+    expect(applyStoreOps(state(), [op('popup', 'interests', '¿Qué?|una')]).refused).toEqual(['Escribe la pregunta y 2 a 6 respuestas cortas.']);
+    expect(applyStoreOps(state(), [op('popup', 'question', '¿Para quién?|Para mí|Para regalar')]).change.popupGame).toEqual({ question: { text: '¿Para quién?', answers: ['Para mí', 'Para regalar'] }, interests: { text: '¿Para quién?', answers: [{ label: 'Para mí', icon: '' }, { label: 'Para regalar', icon: '' }] } });
+  });
   it('turns the popup into a game, moves the top prize, sets or drops the question (spec 2026-11-09)', () => {
     expect(applyStoreOps(state(), [op('popup', 'game', 'scratch')]).change.popupGame).toEqual({ game: 'scratch' });
     expect(applyStoreOps(state(), [op('popup', 'game', 'scratch')]).change.popup).toEqual({ signupEnabled: true });
@@ -121,8 +134,8 @@ describe('store edit (YAPI edits everything, spec 2026-11-03)', () => {
     expect(applyStoreOps(state(), [op('popup', 'game', 'tragamonedas')]).refused).toEqual(['Los juegos son rasca y gana y ruleta.']);
     expect(applyStoreOps(state(), [op('popup', 'prize', '25 %')]).change.popupGame).toEqual({ topPrize: 25 });
     expect(applyStoreOps(state(), [op('popup', 'prize', '80')]).refused).toEqual(['El premio mayor va de 5 % a 50 %.']);
-    expect(applyStoreOps(state(), [op('popup', 'question', 'sin pregunta')]).change.popupGame).toEqual({ question: null });
-    expect(applyStoreOps(state(), [op('popup', 'question', '¿Cuál es tu sabor favorito?|Chocolate|Vainilla|Frutilla')]).change.popupGame).toEqual({ question: { text: '¿Cuál es tu sabor favorito?', answers: ['Chocolate', 'Vainilla', 'Frutilla'] } });
+    expect(applyStoreOps(state(), [op('popup', 'question', 'sin pregunta')]).change.popupGame).toEqual({ question: null, interests: null });
+    expect(applyStoreOps(state(), [op('popup', 'question', '¿Cuál es tu sabor favorito?|Chocolate|Vainilla|Frutilla')]).change.popupGame).toMatchObject({ question: { text: '¿Cuál es tu sabor favorito?', answers: ['Chocolate', 'Vainilla', 'Frutilla'] } });
     expect(applyStoreOps(state(), [op('popup', 'question', 'solo texto')]).refused).toEqual(['Escribe la pregunta y 2 a 4 respuestas.']);
     expect(storeChangeEmpty(applyStoreOps(state(), [op('popup', 'game', 'wheel')]).change)).toBe(false);
     expect(applyStoreOps(state(), [op('popup', 'game', 'wheel'), op('popup', 'prize', '30 %')]).change.popupGame).toEqual({ game: 'wheel', topPrize: 30 });

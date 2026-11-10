@@ -10,11 +10,13 @@ import type { ProductVariant } from '../payment-links/product-variants';
 import { isFilterStyle, type FilterStyle } from './source-filter-style';
 import type { MasterPart } from './source-master';
 import { nextPopupLook, POPUP_LOOK_NAMES, readPopupLook, type PopupLookId } from '../store-popups/popup-looks';
+import { readShape, type PopupInterests, type PopupShape } from '../store-popups/popup-games';
 
 export const STORE_PARTS = ['about', 'contact', 'policy', 'faq', 'announcement', 'header', 'footer', 'social', 'popup', 'catalog', 'product'] as const;
 export type StorePart = typeof STORE_PARTS[number];
+const SHAPE_NAMES: Record<string, PopupShape> = { galleta: 'cookie', lata: 'can', botella: 'bottle', taza: 'cup', flor: 'flower', prenda: 'garment', caja: 'box', bolsa: 'bag' };
 export const STORE_FIELDS = ['tagline', 'text', 'phone', 'email', 'whatsapp', ...STORE_POLICY_KEYS, 'add', 'set', 'remove', 'instagram', 'tiktok', 'facebook', 'youtube', 'x',
-  'on', 'off', 'title', 'button', 'discount', 'name', 'price', 'description', 'photo', 'filters', 'color', 'style', 'redesign', 'undo', 'game', 'prize', 'question', 'prizes'] as const;
+  'on', 'off', 'title', 'button', 'discount', 'name', 'price', 'description', 'photo', 'filters', 'color', 'style', 'redesign', 'undo', 'game', 'prize', 'question', 'prizes', 'shape', 'contact', 'interests'] as const;
 export type StoreOp = { part: StorePart; field: string; at: number; title: string; value: string };
 
 export type StoreEditProduct = { id: string; name: string; amount: number; description: string; imageUrls: string[]; options: boolean;
@@ -64,7 +66,8 @@ export type StoreChange = {
   /** Spec 2026-11-08: the popup design — a new one (optionally with a chosen photo), its photo only, or one step back. */
   popupLook?: { action: 'look'; look: PopupLookId } | { action: 'photo'; photo: string } | { action: 'undo' };
   /** Spec 2026-11-09 popup games: a game on/off, the top prize, or the tap question (null = none). */
-  popupGame?: { game?: 'scratch' | 'wheel' | 'off'; topPrize?: number; question?: { text: string; answers: string[] } | null; prizes?: Array<{ percent: number; chance?: number }> };
+  popupGame?: { game?: 'scratch' | 'wheel' | 'off'; topPrize?: number; question?: { text: string; answers: string[] } | null; prizes?: Array<{ percent: number; chance?: number }>;
+    /** Spec 2026-11-10 rasca y elige. */ shape?: PopupShape | null; contact?: 'whatsapp' | 'email'; interests?: PopupInterests | null };
   catalogTitle?: string;
   filterStyle?: FilterStyle;
   /** Part colours to save over the theme's: #rrggbb, or "" to give the part back to the theme. */
@@ -190,6 +193,7 @@ La tienda también tiene datos propios en «tienda» (no son secciones de la por
   ventana» (value = una foto de «fotos», f0, f1…; «esta foto» = la primera con de "mensaje"). field undo = «vuelve a la ventana anterior».
   field game = un juego en la ventana (value scratch = «rasca y gana», wheel = «ruleta», off = sin juego). field prize = el premio mayor del
   juego (value «25 %»). field prizes = todos los premios (value «10, 15, 20, 30», o con probabilidades «10:60, 30:40»). field question = la pregunta del juego (value «pregunta|respuesta|respuesta…», 2 a 4 respuestas, o «sin pregunta»).
+  field shape = la forma de la tarjeta para rascar (value galleta, lata, botella, taza, flor, prenda, caja, bolsa o «sin forma»). field contact = lo que pide para guardar el premio (value whatsapp o correo). field interests = la pregunta «¿qué te interesa?» con varias respuestas (value «pregunta|respuesta|respuesta…», 2 a 6; «sin intereses» la quita).
 - catalog: field title = el título de la página de todos los productos. field filters = cómo se filtra el catálogo («filtros»):
   bar (botón de filtrar y barra arriba), chips (filtros como botones), sidebar (columna de filtros a la izquierda) o browse (la
   tienda grande, «como Nike»: columna de filtros, «Ocultar filtros», «Recoger hoy» y las fotos de cada color en los productos).
@@ -448,12 +452,34 @@ export function applyStoreOps(state: StoreEditState, ops: readonly StoreOp[], ph
           done.push(`tu juego ahora da ${list.length > 1 ? `${list.slice(0, -1).join(', ')} y ${list.at(-1)}` : list[0]} de descuento${withChance ? '' : ' (los premios grandes salen menos)'}`);
         } else if (op.field === 'question') {
           const value = op.value.trim();
-          if (/^sin pregunta$/i.test(value)) { change.popupGame = { ...change.popupGame, question: null }; done.push('quité la pregunta del juego'); break; }
+          if (/^sin pregunta$/i.test(value)) { change.popupGame = { ...change.popupGame, question: null, interests: null }; done.push('quité la pregunta del juego'); break; }
           const [text, ...answers] = value.split('|').map(part => oneLine(part, 80));
           const clean = answers.filter(Boolean).map(answer => answer.slice(0, 40));
           if (!text || !safe(text) || clean.length < 2 || clean.length > 4 || !clean.every(safe)) { refused.push('Escribe la pregunta y 2 a 4 respuestas.'); break; }
-          change.popupGame = { ...change.popupGame, question: { text, answers: clean } };
+          change.popupGame = { ...change.popupGame, question: { text, answers: clean }, interests: { text, answers: clean.map(label => ({ label, icon: '' })) } };
           done.push(`el juego ahora pregunta «${short(text)}»`);
+        } else if (op.field === 'shape') {
+          // Spec 2026-11-10 rasca y elige: the scratch card's shape, by its Spanish name.
+          const value = op.value.trim().toLowerCase();
+          if (/^sin forma$/.test(value)) { change.popupGame = { ...change.popupGame, shape: null }; done.push('la tarjeta para rascar ya no tiene forma'); break; }
+          const shape = SHAPE_NAMES[value] ?? readShape(value);
+          if (!shape) { refused.push('Las formas son: galleta, lata, botella, taza, flor, prenda, caja y bolsa.'); break; }
+          change.popupGame = { ...change.popupGame, shape };
+          done.push(`la tarjeta para rascar ahora tiene forma de ${Object.keys(SHAPE_NAMES).find(name => SHAPE_NAMES[name] === shape)}`);
+        } else if (op.field === 'contact') {
+          const value = op.value.trim().toLowerCase();
+          const contact = /^(whatsapp|wsp|wpp|numero|número|celular)$/.test(value) ? 'whatsapp' : /^(correo|email|e-mail|mail)$/.test(value) ? 'email' : null;
+          if (!contact) { refused.push('El juego puede pedir WhatsApp o correo.'); break; }
+          change.popupGame = { ...change.popupGame, contact };
+          done.push(`tu juego ahora pide el ${contact === 'whatsapp' ? 'WhatsApp' : 'correo'} para guardar el premio`);
+        } else if (op.field === 'interests') {
+          const value = op.value.trim();
+          if (/^sin intereses$/i.test(value)) { change.popupGame = { ...change.popupGame, interests: null }; done.push('quité la pregunta de intereses del juego'); break; }
+          const [text, ...answers] = value.split('|').map(part => oneLine(part, 80));
+          const clean = [...new Set(answers.filter(Boolean).map(answer => answer.slice(0, 28)))];
+          if (!text || !safe(text) || clean.length < 2 || clean.length > 6 || !clean.every(safe)) { refused.push('Escribe la pregunta y 2 a 6 respuestas cortas.'); break; }
+          change.popupGame = { ...change.popupGame, interests: { text, answers: clean.map(label => ({ label, icon: '' })) } };
+          done.push(`el juego ahora pregunta «${short(text)}» y deja elegir varias respuestas`);
         }
         if (Object.keys(popup).length) change.popup = popup;
         break;

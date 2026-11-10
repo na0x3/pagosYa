@@ -1513,6 +1513,10 @@ export class SourceChatService {
     if (game?.topPrize !== undefined) await this.popupGames?.setTopPrize(storeId, game.topPrize);
     if (game?.prizes) await this.popupGames?.setPrizes(storeId, game.prizes);
     if (game?.question !== undefined) await this.popupGames?.setQuestion(storeId, game.question);
+    // Spec 2026-11-10 rasca y elige: the card's shape, the contact asked for, the interests.
+    if (game?.shape !== undefined) await this.popupGames?.setShape(storeId, game.shape);
+    if (game?.contact !== undefined) await this.popupGames?.setContact(storeId, game.contact);
+    if (game?.interests !== undefined) await this.popupGames?.setInterests(storeId, game.interests);
   }
 
   /** Fix 4 (2026-11-02): the shipping price the merchant named, set on the store's delivery zones (all of them: one price for the
