@@ -44,6 +44,10 @@ it('draws the product\'s colours as circles and its sizes as pills, with its pri
     expect(facts).toMatchObject({ name: 'Polera Remolino', swatches: ['Negro', 'Rosa'], chips: ['S', 'M'], button: 'Añadir al carrito', frame: false });
     expect(facts.price).toMatch(/120,00/);
     expect(facts.black).toBe('rgb(41, 43, 41)');
+    // Live 2026-11-09: the button's offset shadow took the button's own (light) text colour and vanished; it is the store's ink.
+    const shade = await tab.locator(`${pz} .pz__btn`).evaluate(el => ({ shadow: getComputedStyle(el).boxShadow, ink: getComputedStyle(el).color, text: getComputedStyle(el.closest('.pz')!).color }));
+    expect(shade.shadow).toContain(shade.text);
+    expect(shade.shadow).not.toContain(shade.ink);
   });
 });
 

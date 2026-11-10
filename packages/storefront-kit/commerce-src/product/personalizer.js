@@ -43,8 +43,8 @@
       .pz__qty{display:inline-flex;align-items:center;border:2px solid currentColor;border-radius:999px;overflow:hidden}
       .pz__qty button{width:42px;height:48px;border:0;background:none;color:inherit;font:inherit;font-size:18px;font-weight:700;cursor:pointer}
       .pz__qty output{min-width:28px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
-      .pz__btn{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 28px;border:2px solid currentColor;border-radius:999px;background:${accent};color:${accentInk};box-shadow:4px 5px 0 currentColor;font:inherit;font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
-      .pz__btn:active{transform:translate(3px,4px);box-shadow:1px 1px 0 currentColor}
+      .pz__btn{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 28px;border:2px solid var(--pz-ink,currentColor);border-radius:999px;background:${accent};color:${accentInk};box-shadow:4px 5px 0 var(--pz-ink,currentColor);font:inherit;font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+      .pz__btn:active{transform:translate(3px,4px);box-shadow:1px 1px 0 var(--pz-ink,currentColor)}
       .pz__btn:disabled{opacity:.5;cursor:not-allowed}
       .pz :focus-visible{outline:3px solid currentColor;outline-offset:3px}
       @media (max-width:760px){.pz{grid-template-columns:minmax(0,1fr)}.pz__stage{min-height:300px}}
@@ -88,6 +88,8 @@
         ${groups.map(field).join('')}<p class="pz__stock" role="status"></p><p class="pz__price"></p>
         <div class="pz__buy">${whatsapp ? '' : '<div class="pz__qty"><button type="button" data-pz-minus aria-label="Uno menos">−</button><output>1</output><button type="button" data-pz-plus aria-label="Uno más">+</button></div>'}
         <button type="button" class="pz__btn">${whatsapp ? 'Pedir por WhatsApp' : 'Añadir al carrito'}</button></div></div></div>`;
+      // Live 2026-11-09: the button's offset shadow is the section's ink — its own currentColor is the light text on the accent.
+      host.style.setProperty('--pz-ink', getComputedStyle(host).color);
       const photo = host.querySelector('.pz__photo'), button = host.querySelector('.pz__btn'), frameEl = host.querySelector('.pz__frame');
       const update = () => {
         const variant = current(), left = variant ? remaining(product, variant) : 0;

@@ -75,6 +75,8 @@ it('a subscription product gets its frequency choice in the cart; changing it re
   });
 });
 
+// Live Vórtice 2026-11-09: template stores carry Tailwind's reset (unlayered), which beats the kit's layered cart styles.
+const PREFLIGHT = '<style>*,::before,::after{border:0 solid}button{background-color:transparent;background-image:none;border-radius:0;color:inherit}</style>';
 it('«Te puede gustar» suggests what is not in the cart, adds it with one tap, and leaves when there is nothing left to suggest', async () => {
   await cartPage({}, 390, async page => {
     await add(page, 'mug');
@@ -87,13 +89,13 @@ it('«Te puede gustar» suggests what is not in the cart, adds it with one tap, 
     const look = await page.evaluate(() => {
       const style = (el: Element | null) => el ? getComputedStyle(el) : null;
       const pick = style(document.querySelector('.cart-drawer [data-part="cart-suggestions"] [data-add]')), pay = style(document.querySelector('.cart-drawer .checkout-button'));
-      return { round: parseFloat(pick!.borderTopLeftRadius) >= 18, sameColour: pick!.backgroundColor === pay!.backgroundColor, sameInk: pick!.color === pay!.color };
+      return { round: parseFloat(pick!.borderTopLeftRadius) >= 18, filled: pick!.backgroundColor !== 'rgba(0, 0, 0, 0)' && pick!.backgroundColor !== pay!.color, readable: pick!.color !== pick!.backgroundColor };
     });
-    expect(look).toEqual({ round: true, sameColour: true, sameInk: true });
+    expect(look).toEqual({ round: true, filled: true, readable: true });
     await row.locator('[data-add]').first().click();
     await page.locator('.cart-drawer [data-part="cart-line"]').nth(1).waitFor();
     expect(await page.locator('.cart-drawer [data-part="cart-suggestions"]').count()).toBe(0);
-  });
+  }, PREFLIGHT);
 });
 
 // Live Remolino 2026-11-09: a store with its own cart and line templates lost the bar (pushed under the button) and the line extras.

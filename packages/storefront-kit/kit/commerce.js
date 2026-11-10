@@ -4023,18 +4023,19 @@
     .cart-drawer .order-recommendations li,.cart-drawer .order-recommendations li:not(:has(img)){grid-template-columns:1fr;align-items:start;scroll-snap-align:start;padding:10px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:12px}
     .cart-drawer .order-recommendations li img{width:72px;height:72px;object-fit:cover;border-radius:8px}
     .cart-drawer .order-recommendations li{gap:6px;font-size:13px}.cart-drawer .order-recommendations li :is(button,a){min-height:36px;padding:6px 12px;font-size:13px}
-    /* Owner 2026-11-09 (Remolino): «Añadir» was plain text beside a filled «Elegir»; both are pills in the pay button's colour. */
-    .cart-drawer .order-recommendations li :is(button,a){justify-content:center;border:0;border-radius:999px;background:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,#20211d))));color:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,#fff)));font-weight:600;text-decoration:none;cursor:pointer}
+    /* Owner 2026-11-09 (Remolino): «Añadir» was plain text beside a filled «Elegir»; both are pills in the pay button's colour.
+       Live Vórtice: a template's Tailwind reset (unlayered) beat this layer, so the pill's colours and shape are !important. */
+    .cart-drawer .order-recommendations li :is(button,a){justify-content:center;border:0!important;border-radius:999px!important;background:var(--store-accent,var(--brand-accent,var(--accent,var(--ink,#20211d))))!important;color:var(--store-accent-foreground,var(--brand-accent-foreground,var(--paper,#fff)))!important;font-weight:600;text-decoration:none;cursor:pointer}
     /* «¿Prefieres terminar después?» under the guarantee line: a quiet divider, a small title and an outlined pill — never a second «Pagar». */
     .cart-drawer [data-retention-recovery]{width:auto;margin:20px 0 0;padding:18px 0 0;border:0;border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);background:none;color:inherit;font:inherit}
     .cart-drawer [data-retention-recovery] h3{margin:0 0 6px;font:inherit;font-size:15px;font-weight:600;line-height:1.3}
     .cart-drawer [data-retention-recovery] p{margin:0;font-size:13px;line-height:1.45;opacity:.75;max-width:none}
     .cart-drawer [data-retention-recovery] form{display:grid;gap:10px;max-width:none;margin-top:10px}
     .cart-drawer [data-retention-recovery] .retention-email{gap:6px;font-size:13px}
-    .cart-drawer [data-retention-recovery] input[type=email]{min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,currentColor 22%,transparent);border-radius:999px;background:transparent;color:inherit;font-size:14px}
+    .cart-drawer [data-retention-recovery] input[type=email]{min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,currentColor 22%,transparent)!important;border-radius:999px!important;background:transparent;color:inherit;font-size:14px}
     .cart-drawer [data-retention-recovery] .retention-consent{gap:8px;font-size:12.5px;line-height:1.45;opacity:.8}
     .cart-drawer [data-retention-recovery] input[type=checkbox]{width:16px;height:16px;flex:0 0 16px;margin:1px 0 0}
-    .cart-drawer [data-retention-recovery] button{width:100%;min-height:46px;padding:0 20px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:15px;font-weight:600}
+    .cart-drawer [data-retention-recovery] button{width:100%;min-height:46px;padding:0 20px;border:1px solid currentColor!important;border-radius:999px!important;background:transparent!important;color:inherit!important;font:inherit;font-size:15px;font-weight:600}
     .cart-drawer .checkout-button[data-busy]{opacity:.7;cursor:progress}
     .checkout-review__summary>.checkout-review__count{margin:4px 0 8px;font-size:14px;line-height:1.4;opacity:.7}
     .order-recommendations{margin:20px 0 0}
@@ -7405,8 +7406,8 @@
       .pz__qty{display:inline-flex;align-items:center;border:2px solid currentColor;border-radius:999px;overflow:hidden}
       .pz__qty button{width:42px;height:48px;border:0;background:none;color:inherit;font:inherit;font-size:18px;font-weight:700;cursor:pointer}
       .pz__qty output{min-width:28px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
-      .pz__btn{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 28px;border:2px solid currentColor;border-radius:999px;background:${accent};color:${accentInk};box-shadow:4px 5px 0 currentColor;font:inherit;font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
-      .pz__btn:active{transform:translate(3px,4px);box-shadow:1px 1px 0 currentColor}
+      .pz__btn{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 28px;border:2px solid var(--pz-ink,currentColor);border-radius:999px;background:${accent};color:${accentInk};box-shadow:4px 5px 0 var(--pz-ink,currentColor);font:inherit;font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+      .pz__btn:active{transform:translate(3px,4px);box-shadow:1px 1px 0 var(--pz-ink,currentColor)}
       .pz__btn:disabled{opacity:.5;cursor:not-allowed}
       .pz :focus-visible{outline:3px solid currentColor;outline-offset:3px}
       @media (max-width:760px){.pz{grid-template-columns:minmax(0,1fr)}.pz__stage{min-height:300px}}
@@ -7450,6 +7451,8 @@
         ${groups.map(field).join('')}<p class="pz__stock" role="status"></p><p class="pz__price"></p>
         <div class="pz__buy">${whatsapp ? '' : '<div class="pz__qty"><button type="button" data-pz-minus aria-label="Uno menos">−</button><output>1</output><button type="button" data-pz-plus aria-label="Uno más">+</button></div>'}
         <button type="button" class="pz__btn">${whatsapp ? 'Pedir por WhatsApp' : 'Añadir al carrito'}</button></div></div></div>`;
+      // Live 2026-11-09: the button's offset shadow is the section's ink — its own currentColor is the light text on the accent.
+      host.style.setProperty('--pz-ink', getComputedStyle(host).color);
       const photo = host.querySelector('.pz__photo'), button = host.querySelector('.pz__btn'), frameEl = host.querySelector('.pz__frame');
       const update = () => {
         const variant = current(), left = variant ? remaining(product, variant) : 0;
