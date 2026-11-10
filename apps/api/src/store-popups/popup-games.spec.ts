@@ -1,4 +1,4 @@
-import { createGameToken, drawPrize, prizeLabel, prizePercent, questionFor, readGame, readGameToken, rebalance, winnerCode } from './popup-games';
+import { POPUP_SHAPES, readShape, popupShapeFor, interestsFor, readInterests, favouriteQuestionFor, readContact, whatsappDigits, createGameToken, drawPrize, prizeLabel, prizePercent, questionFor, readGame, readGameToken, rebalance, winnerCode } from './popup-games';
 
 const PRIZES = [{ percent: 5, label: '5 %', chance: 40 }, { percent: 10, label: '10 %', chance: 30 }, { percent: 15, label: '15 %', chance: 20 }, { percent: 20, label: '20 %', chance: 10 }];
 describe('popup games', () => {
@@ -34,5 +34,44 @@ describe('popup games', () => {
   it('rebalances chances to 100 with larger prizes rarer', () => {
     expect(rebalance([5, 10, 15, 20])).toEqual([40, 30, 20, 10]);
     const three = rebalance([10, 20, 30]); expect(three.reduce((a, b) => a + b, 0)).toBe(100); expect(three[0]).toBeGreaterThan(three[2]);
+  });
+});
+
+describe('rasca y elige helpers (spec 2026-11-10)', () => {
+  it('picks the shape from the business words', () => {
+    expect(popupShapeFor('Panadería de autor: cookies rellenas y rolls')).toBe('cookie');
+    expect(popupShapeFor('soda prebiótica en lata, 5 sabores')).toBe('can');
+    expect(popupShapeFor('salsa picante de locoto en botella')).toBe('bottle');
+    expect(popupShapeFor('café de especialidad y matcha')).toBe('cup');
+    expect(popupShapeFor('arreglos florales y ramos')).toBe('flower');
+    expect(popupShapeFor('hoodies y poleras oversize')).toBe('garment');
+    expect(popupShapeFor('canastas de frutas a domicilio')).toBe('box');
+    expect(popupShapeFor('licuadoras')).toBe('bag');
+    expect(readShape('can')).toBe('can');
+    expect(readShape('rocket')).toBeNull();
+  });
+  it('writes interests for the sector, with an emoji each, 3–6 answers; else from the categories', () => {
+    const bakery = interestsFor('panadería, cookies', ['Cookies', 'Cajas']);
+    expect(bakery.text).toBe('¿Para qué buscas algo rico?');
+    expect(bakery.answers.map(a => a.label)).toEqual(['Para mí', 'Para regalar', 'Desayunos', 'Para la oficina', 'Para una fiesta']);
+    expect(bakery.answers.every(a => a.icon && a.label.length <= 28)).toBe(true);
+    expect(interestsFor('licuadoras', ['Personales', 'De vaso', 'Accesorios']).answers.map(a => a.label)).toEqual(['Personales', 'De vaso', 'Accesorios', 'Para regalar']);
+    expect(interestsFor('licuadoras', []).answers.map(a => a.label)).toEqual(['Para mí', 'Para regalar', 'Para compartir']);
+  });
+  it('reads an old text question as interests without icons; nothing → null', () => {
+    expect(readInterests({ popupQuestion: { text: '¿Para quién?', answers: ['Para mí', 'Para regalar'] } })).toEqual({ text: '¿Para quién?', answers: [{ label: 'Para mí', icon: '' }, { label: 'Para regalar', icon: '' }] });
+    expect(readInterests({})).toBeNull();
+    expect(readInterests({ popupInterests: null, popupQuestion: { text: 'x', answers: ['a', 'b'] } })).toBeNull();
+  });
+  it('asks the favourite in the store word; contact defaults to WhatsApp; numbers are Bolivian', () => {
+    expect(favouriteQuestionFor('soda en 5 sabores', 1)).toBe('¿Cuál es tu sabor favorito?');
+    expect(favouriteQuestionFor('hoodies', 7)).toBe('¿Qué modelo te gusta más?');
+    expect(favouriteQuestionFor('panadería', 8)).toBe('¿Cuál es tu favorito?');
+    expect(readContact('email')).toBe('email');
+    expect(readContact(undefined)).toBe('whatsapp');
+    expect(whatsappDigits('7123 4567')).toBe('59171234567');
+    expect(whatsappDigits('+591 71234567')).toBe('59171234567');
+    expect(whatsappDigits('123')).toBeNull();
+    expect(whatsappDigits('ana71234567@mail.com')).toBeNull();
   });
 });
