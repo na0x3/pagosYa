@@ -237,7 +237,7 @@ test('exported contact form submits to the store inbox and partner code follows 
   await page.goto('https://store.test/index.html');
   await page.getByRole('button',{name:'Añadir Café',exact:true}).click();
   await page.getByRole('button',{name:/^Pedido/}).click();
-  await page.getByRole('button',{name:'Continuar con mi pedido'}).click();
+  await page.getByRole('button',{name:/^(Pagar •|Continuar con mi pedido)/}).click();
   await page.getByRole('button',{name:'Pagar con pagosYa'}).click();
   await expect(page).toHaveURL(/\/s\/test#client_secret/);
   expect(checkout).toMatchObject({partnerCode:'partner_test_123',items:[{paymentLinkId:'p1',quantity:1}]});

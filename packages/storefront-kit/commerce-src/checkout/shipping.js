@@ -132,12 +132,12 @@
     if (!status || preview || config.demo) return;
     status.textContent = 'Comprobando ofertas…';
     try {
-      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), locationId: panel.querySelector('[name=location]')?.value || undefined, fulfillmentMethod: panel.querySelector('[name=method]')?.value || undefined }) });
+      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), promoCode: promoCode || undefined, locationId: panel.querySelector('[name=location]')?.value || undefined, fulfillmentMethod: panel.querySelector('[name=method]')?.value || undefined }) });
       const quote = await response.json(); if (!response.ok) throw new Error(quote.message || 'No se pudieron comprobar las ofertas.');
       if (panel.querySelector('[data-bundle-quote-status]') !== status) return;
       panel.dataset.discountedSubtotal = String(quote.subtotal - quote.discountAmount);
       if (!panel.querySelector('[name=shippingZoneId]')?.value) panel.querySelector('.order-total strong').textContent = money(quote.subtotal - quote.discountAmount, quote.currency);
-      status.textContent = quote.discountAmount ? `Oferta aplicada: −${money(quote.discountAmount, quote.currency)}.` : 'No hay ofertas aplicables a esta selección.';
+      status.textContent = promoCode ? '' : quote.discountAmount ? `Oferta aplicada: −${money(quote.discountAmount, quote.currency)}.` : 'No hay ofertas aplicables a esta selección.';
     } catch (error) { status.textContent = error.message || 'No se pudieron comprobar las ofertas.'; }
   }
   async function shippingQuote(panel) {
@@ -150,7 +150,7 @@
     syncShippingAddress(panel);
     button.disabled = true; status.textContent = 'Calculando envío…';
     try {
-      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), fulfillmentMethod: 'delivery', locationId: panel.querySelector('[name=location]')?.value || undefined, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined, shippingZoneId: selected || undefined, creditCode: panel.querySelector('[name=creditCode]')?.value.trim() || undefined, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) }) });
+      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), promoCode: promoCode || undefined, fulfillmentMethod: 'delivery', locationId: panel.querySelector('[name=location]')?.value || undefined, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined, shippingZoneId: selected || undefined, creditCode: panel.querySelector('[name=creditCode]')?.value.trim() || undefined, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) }) });
       const quote = await response.json(); if (!response.ok) throw new Error(quote.message || 'No se pudo calcular el envío.');
       for (const option of quote.shippingOptions || []) shippingRateCarriers.set(option.id, option.carrierId || null);
       if (panel.querySelector('[name=shippingZoneId]') !== select || select.value !== selected) return;
@@ -170,13 +170,55 @@
     const button = panel.querySelector('[data-credit-apply]'); button.disabled = true;
     panel.dataset.creditReady = 'false'; status.textContent = 'Validando saldo…';
     try {
-      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), creditCode: code || undefined, fulfillmentMethod: panel.querySelector('[name=method]')?.value || undefined, locationId: panel.querySelector('[name=location]')?.value || undefined, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined, shippingZoneId: panel.querySelector('[name=shippingZoneId]')?.value || undefined, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) }) });
+      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), promoCode: promoCode || undefined, creditCode: code || undefined, fulfillmentMethod: panel.querySelector('[name=method]')?.value || undefined, locationId: panel.querySelector('[name=location]')?.value || undefined, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined, shippingZoneId: panel.querySelector('[name=shippingZoneId]')?.value || undefined, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) }) });
       const quote = await response.json(); if (!response.ok) throw new Error(quote.message || 'No se pudo aplicar el saldo.');
       if (panel.querySelector('[name=creditCode]')?.value.trim() !== code || !button.isConnected) return;
       panel.dataset.creditReady = 'true';
       panel.querySelector('.order-total strong').textContent = money(quote.amount, quote.currency);
       status.textContent = `Saldo aplicado: ${money(quote.creditAmount || 0, quote.currency)}. Restante a pagar: ${money(quote.amount, quote.currency)}.`;
     } catch (error) { status.textContent = error.message || 'No se pudo aplicar el saldo.'; }
+    finally { button.disabled = false; }
+  }
+  // Discount code (owner 2026-11-07): pagosYa's own quote says whether the code exists and what it takes off; the frame never decides.
+  async function applyPromo(panel) {
+    const input = panel.querySelector('[name=promoCode]'), status = panel.querySelector('[data-promo-status]'), button = panel.querySelector('[data-promo-apply]');
+    if (!input || !status || !button) return;
+    const typed = input.value.trim().toUpperCase();
+    if (promoCode && typed === promoCode) {
+      rememberPromo(''); input.value = ''; button.textContent = 'Aplicar'; status.textContent = 'Quitaste el código.';
+      if (!preview && !config.demo) await promoQuote(panel, '');
+      return;
+    }
+    if (!PROMO_PATTERN.test(typed)) { status.textContent = typed ? 'Ese código no existe en esta tienda.' : 'Escribe tu código.'; input.focus(); return; }
+    if (preview || config.demo) { status.textContent = 'El código se valida en la tienda publicada.'; return; }
+    await promoQuote(panel, typed);
+  }
+  /** Quotes the cart with `code` (none: without a code) and shows the new total; a code the store refuses is forgotten. */
+  async function promoQuote(panel, code = promoCode) {
+    const status = panel.querySelector('[data-promo-status]'), button = panel.querySelector('[data-promo-apply]');
+    if (!status || !button || preview || config.demo) return;
+    const zone = panel.querySelector('[name=shippingZoneId]')?.value || undefined;
+    button.disabled = true;
+    if (code) status.textContent = 'Validando código…';
+    try {
+      const response = await request(`${config.apiBaseUrl}/stores/public/${encodeURIComponent(config.slug)}/shipping/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', body: JSON.stringify({ items: checkoutItems(), promoCode: code || undefined, creditCode: panel.dataset.creditReady === 'true' ? panel.querySelector('[name=creditCode]')?.value.trim() || undefined : undefined, fulfillmentMethod: panel.querySelector('[name=method]')?.value || undefined, locationId: panel.querySelector('[name=location]')?.value || undefined, shippingCountry: panel.querySelector('[name=shippingCountry]')?.value.trim().toUpperCase() || undefined, shippingPostalCode: panel.querySelector('[name=shippingPostalCode]')?.value.trim() || undefined, shippingZoneId: zone, shippingDestination: shippingDestination(panel), shippingDepartment: shippingDepartment(panel) }) });
+      const quote = await response.json();
+      if (!button.isConnected) return;
+      if (!response.ok) {
+        if (code === promoCode) { rememberPromo(''); button.textContent = 'Aplicar'; }
+        status.textContent = code ? 'Ese código no existe en esta tienda o ya no está activo.' : (Array.isArray(quote.message) ? quote.message.join(' ') : quote.message) || 'No se pudo actualizar el total.';
+        return;
+      }
+      panel.dataset.discountedSubtotal = String(quote.subtotal - (quote.discountAmount || 0));
+      panel.querySelector('.order-total strong').textContent = money(quote.amount, quote.currency);
+      panel.querySelector('.order-total span').textContent = zone ? 'Total' : 'Subtotal';
+      // The pack-offer line spoke for the cart without the code; the code's own line speaks now.
+      const offers = panel.querySelector('[data-bundle-quote-status]'); if (offers) offers.textContent = '';
+      if (!code) return;
+      rememberPromo(code); button.textContent = 'Quitar';
+      const input = panel.querySelector('[name=promoCode]'); if (input) input.value = code;
+      status.textContent = quote.discountAmount ? `${code} aplicado: −${money(quote.discountAmount, quote.currency)}.` : `${code} está activo, pero tu pedido ya tiene una oferta mayor.`;
+    } catch (error) { if (button.isConnected) status.textContent = error.message || 'No se pudo validar el código. Inténtalo de nuevo.'; }
     finally { button.disabled = false; }
   }
   function validateDelivery(panel) {

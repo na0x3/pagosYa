@@ -116,7 +116,7 @@ test('source studio generates, previews commerce, edits a file, restores and dow
   await frame.getByRole('button',{name:'Añadir Café americano',exact:true}).click();
   await expect(frame.locator('[data-cart-count]')).toHaveText('1');
   await frame.getByRole('link', { name: /^Pedido/ }).click();
-  await frame.getByRole('button',{name:'Continuar con mi pedido',exact:true}).click();await expect(frame.getByRole('heading',{name:'Revisa tu pedido'})).toBeVisible();await frame.getByRole('button',{name:'Continuar al pago de prueba'}).click();await expect(page.getByRole('dialog', {name:'Formulario de pago de pagosYa'})).toBeVisible();await expect(page.getByRole('dialog').locator('iframe')).toHaveAttribute('src', /source_payment_preview=1/);await page.getByRole('dialog').getByRole('button',{name:'Volver al pedido'}).click();await expect(frame.getByRole('heading',{name:'Revisa tu pedido'})).toBeVisible();
+  await frame.getByRole('button',{name:/^(Pagar •|Continuar con mi pedido)/}).click();await expect(frame.getByRole('heading',{name:'Revisa tu pedido'})).toBeVisible();await frame.getByRole('button',{name:'Continuar al pago de prueba'}).click();await expect(page.getByRole('dialog', {name:'Formulario de pago de pagosYa'})).toBeVisible();await expect(page.getByRole('dialog').locator('iframe')).toHaveAttribute('src', /source_payment_preview=1/);await page.getByRole('dialog').getByRole('button',{name:'Volver al pedido'}).click();await expect(frame.getByRole('heading',{name:'Revisa tu pedido'})).toBeVisible();
   await page.getByRole('button',{name:'Código',exact:true}).click();const editor=page.getByRole('textbox',{name:'Código del archivo'});await editor.fill((await editor.inputValue()).replace('Un buen día','Una buena mañana'));
   await expect(page.getByRole('button',{name:'Descargar ZIP'})).toBeDisabled();await page.getByRole('button',{name:'Guardar cambios'}).click();expect(patch.revision).toBe(1);expect(patch.path).toBe('index.html');expect(patch).not.toHaveProperty('files');
   await expect(page.getByRole('button',{name:'Enviar a YAPI'})).toBeEnabled();
@@ -384,7 +384,7 @@ test('portable catalog keeps prices readable when authored CSS used absolute add
   await expect(frame.locator('[data-pagosya-checkout]')).toBeHidden();
   await card.locator('.menu-add').click();
   await frame.getByRole('link', { name: /^Pedido/ }).click();
-  await frame.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await frame.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   await expect(frame.getByRole('heading', { name: 'Revisa tu pedido' })).toBeVisible();
 });
 

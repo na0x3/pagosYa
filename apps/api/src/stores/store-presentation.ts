@@ -678,6 +678,7 @@ export function storeUpdateData(
       cartRecommendationProductIds: dto.cartRecommendationProductIds as Prisma.InputJsonValue,
     }),
     ...(dto.showLowStockToCustomers !== undefined && { showLowStockToCustomers: dto.showLowStockToCustomers }),
+    ...(dto.whatsappButton !== undefined && { whatsappButton: dto.whatsappButton }),
     // Ajustes edits the four policy texts; the merchant's own FAQ questions ride in the same JSON and are kept.
     ...(dto.policies !== undefined && { policies: { ...storePolicies(dto.policies), ...storeFaqField(currentStore?.policies) } as Prisma.InputJsonValue }),
     ...(dto.publicVisibility !== undefined && { publicVisibility: dto.publicVisibility }),

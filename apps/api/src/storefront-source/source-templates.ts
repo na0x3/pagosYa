@@ -3,7 +3,7 @@ import { uploadPath } from './source-product-photos';
  * authored source never contains merchant text; it imports `./store-data`, which this module writes with every value
  * JSON-encoded, so no store name or photo URL is ever pasted into JSX. */
 import type { MasterCopy } from '@pagosya/store-templates';
-import { MASTER_TEMPLATE_ID, bindThemeAccent, frameChoices, refreshVariantBlocks, masterCopy, readableAccentText, masterDnaFonts, masterDnaLook, masterFilterStyle, masterProductStyle, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, templateLook, withMasterTheme, withOnlyTheme, type MasterColour, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
+import { MASTER_TEMPLATE_ID, bindThemeAccent, frameChoices, refreshVariantBlocks, masterCopy, readableAccentText, masterDnaFonts, masterDnaLook, masterFilterStyle, masterProductStyle, masterShowcase, masterLook, masterPhotoUrl, masterThemeCss, mergeLookParts, templateLook, withMasterTheme, withOnlyTheme, type MasterColour, type MasterFill, type MasterLook, type MasterSection, type MasterVariants } from './source-master';
 import { readFile } from 'node:fs/promises';
 import { templateDemoPhoto, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
 import { plantillaFillFromRead } from './source-plantilla-fill';
@@ -380,7 +380,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   const themeId = String((state.variants as Record<string, unknown> | undefined)?.theme ?? 'none');
   const themed = themeId !== 'none' ? templateManifest(themeId)?.preset?.colors as Partial<Record<MasterColour, string>> | undefined : undefined;
   const look = themed && change.look && state.look ? templateLook(settings, state.look as MasterLook, change.look)
-    : masterLook(settings, { ...(state.look ?? {}), ...(change.look ?? {}), colors: change.look?.colors ?? state.look?.colors ?? {} });
+    : masterLook(settings, { ...(state.look ?? {}), ...(change.look ?? {}), colors: change.look?.colors ?? state.look?.colors ?? {}, parts: mergeLookParts(state.look?.parts, change.look?.parts) });
   const photos = sameAsBundled({ ...state.photos, ...(change.heroPhoto !== undefined ? { hero: masterPhotoUrl(change.heroPhoto, apiUrl) } : {}), ...(change.storyPhoto !== undefined ? { story: masterPhotoUrl(change.storyPhoto, apiUrl) } : {}) }, change.photoSources);
   const variants = { ...(state.variants ?? { sections: [] }), ...Object.fromEntries(Object.entries(change.variants ?? {}).filter(([part, id]) => part !== 'sections' && (settings.variants?.[part] ?? []).includes(String(id)))) } as MasterVariants;
   // Chunky colour titles (spec 2026-11-03): the theme block carries the chosen title style's font.

@@ -13,7 +13,7 @@ import { forwardPixelEvent } from './store-pixels';
 import { privacy } from './privacy';
 import { sourcePreviewDocument, receivePreviewNavigation, type SourceSnapshot, type PreviewNavigation, hostedImageUrls, hostedCatalogImages } from '@pagosya/storefront-preview';
 import { API_BASE_URL, type Store } from './api';
-import { sourceVisitorId, rememberSourceVisit } from './source-attribution';
+import { sourceVisitorId, rememberSourceVisit, sourceVisitToken } from './source-attribution';
 import { storePartnerCode } from './partner-referral';
 
 type Cadence = 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
@@ -23,6 +23,23 @@ const CART_TTL = 30 * 24 * 60 * 60 * 1000;
 const cartId = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 64;
 
 // Copy only selections across the untrusted frame/storage boundary, never prices.
+/** The retention paths a published store's frame may ask the parent to forward: reads, the writes, and (spec 2026-11-09 popup
+ *  games) the prize draw `play`; null for anything else or a read with a body. */
+export function hostedRetentionMethod(path: string, hasPayload: boolean): 'GET' | 'POST' | null {
+  const read = path === '' || /^(cards|carts)\/[a-f0-9]{64}$/.test(path);
+  const write = ['subscribe', 'cards', 'carts', 'play'].includes(path) || /^unsubscribe\/[a-f0-9-]{36}$/.test(path);
+  if (read) return hasPayload ? null : 'GET';
+  return write ? 'POST' : null;
+}
+
+/** Spec 2026-11-09 YAPI A/B tests: the popup read and the signup carry the store's test visit, so a B visitor sees B's popup and gets
+ *  B's code; every other retention path is forwarded as it came. */
+export function hostedRetentionRequest(apiBase: string, slug: string, path: string, payload: Record<string, unknown> | undefined, visit: string | undefined): { url: string; body?: Record<string, unknown> } {
+  const url = `${apiBase}/stores/public/${encodeURIComponent(slug)}/retention${path ? '/' + path : ''}${visit && path === '' ? `?visit=${encodeURIComponent(visit)}` : ''}`;
+  if (!payload) return { url };
+  return { url, body: visit && path === 'subscribe' ? { ...payload, sourceVisitToken: visit } : payload };
+}
+
 export function validatedCart(value: unknown, extrasKey: 'extras' | 'extraIds' = 'extras'): StoredCartItem[] | null {
   if (!Array.isArray(value) || value.length > 100) return null;
   const items: StoredCartItem[] = [];
@@ -254,10 +271,11 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       const retry = (message: string) => { if (!interactive || attempt >= 4) return false; previous = { error: message, values: Object.fromEntries(Object.entries(personal).filter(([, value]) => value !== undefined && value !== null).map(([key, value]) => [key, typeof value === 'boolean' ? value : String(value)])) }; return true; };
       if (data.action === 'retention') {
         const path = typeof body.path === 'string' ? body.path : '';
-        const read = path === '' || /^(cards|carts)\/[a-f0-9]{64}$/.test(path);
-        const write = ['subscribe', 'cards', 'carts'].includes(path) || /^unsubscribe\/[a-f0-9-]{36}$/.test(path);
-        if ((!read && !write) || (read && body.payload)) throw new Error('Solicitud no válida.');
-        const result = await fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/retention${path ? '/' + path : ''}`, { method: read ? 'GET' : 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, ...(read ? {} : { body: JSON.stringify(body.payload || {}) }), signal: AbortSignal.timeout(18000) });
+        const method = hostedRetentionMethod(path, Boolean(body.payload));
+        if (!method) throw new Error('Solicitud no válida.');
+        const read = method === 'GET';
+        const forwarded = hostedRetentionRequest(API_BASE_URL, slug, path, read ? undefined : (body.payload || {}) as Record<string, unknown>, sourceVisitToken(slug));
+        const result = await fetch(forwarded.url, { method: read ? 'GET' : 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' }, ...(read ? {} : { body: JSON.stringify(forwarded.body) }), signal: AbortSignal.timeout(18000) });
         const json = await result.json();
         if (!result.ok && result.status < 500 && retry(Array.isArray(json.message) ? json.message.join(' ') : json.message || 'Revisa los datos.')) continue;
         if (result.ok && path === 'carts' && /^[a-f0-9]{64}$/.test(json.token)) { recoveryToken = json.token; try { sessionStorage.setItem(`pagosya:recovery:${slug}`, recoveryToken!); } catch {} }
@@ -265,7 +283,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
       }
       const checkout = data.action === 'checkout';
       const shipping = data.action === 'shipping', content = data.action === 'content', review = data.action === 'review';
-      const payload = checkout || shipping ? { funnelToken: checkout ? funnel.token() : undefined, items: body.items, recoveryToken: body.recoveryToken || recoveryToken, creditCode: body.creditCode, subscriptionConsent: checkout && body.subscriptionConsent === true ? true : undefined, locationId: body.locationId, fulfillmentMethod: body.fulfillmentMethod, shippingCountry: body.shippingCountry, shippingPostalCode: body.shippingPostalCode, shippingZoneId: body.shippingZoneId, shippingAddress: body.shippingAddress, shippingDestination: body.shippingDestination, shippingDepartment: body.shippingDepartment, sourceVisitToken: checkout && privacy.analyticsAllowed(slug) ? site.visitToken || undefined : undefined, partnerCode: checkout ? storePartnerCode(slug) : undefined }
+      const payload = checkout || shipping ? { funnelToken: checkout ? funnel.token() : undefined, items: body.items, recoveryToken: body.recoveryToken || recoveryToken, creditCode: body.creditCode, promoCode: typeof body.promoCode === 'string' ? body.promoCode : undefined, subscriptionConsent: checkout && body.subscriptionConsent === true ? true : undefined, locationId: body.locationId, fulfillmentMethod: body.fulfillmentMethod, shippingCountry: body.shippingCountry, shippingPostalCode: body.shippingPostalCode, shippingZoneId: body.shippingZoneId, shippingAddress: body.shippingAddress, shippingDestination: body.shippingDestination, shippingDepartment: body.shippingDepartment, sourceVisitToken: checkout && privacy.analyticsAllowed(slug) ? site.visitToken || undefined : undefined, partnerCode: checkout ? storePartnerCode(slug) : undefined }
         : review ? { trackingToken: body.trackingToken, productId: body.productId, displayName: body.displayName, rating: body.rating, body: body.body }
         : { items: [], name: body.name, email: body.email, phone: body.phone, message: body.message, ...leadOrigin(frameBody) };
       const endpoint = checkout ? 'cart-checkout' : shipping ? 'shipping/quote' : review ? 'content/reviews' : content ? `content?locale=${encodeURIComponent(typeof body.locale === 'string' ? body.locale.slice(0, 8) : 'es')}` : 'leads';

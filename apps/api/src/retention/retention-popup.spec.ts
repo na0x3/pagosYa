@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { pickPopupLook } from '../store-popups/popup-looks';
 import { RetentionService, publicRetentionSettings } from './retention.service';
 import { DEFAULT_RETENTION } from './retention.dto';
 
@@ -59,5 +60,128 @@ describe('public popup settings', () => {
     const out = publicRetentionSettings({ ...DEFAULT_RETENTION, signupEnabled: true, popupTrigger: 'exit', popupDelaySeconds: 5, popupPromoCodeId: 'own' } as any);
     expect(out).toMatchObject({ signupEnabled: true, popupTrigger: 'exit', popupDelaySeconds: 5, popupHasCode: true });
     expect(JSON.stringify(out)).not.toMatch(/own|PEPPA10|popupPromoCodeId/);
+  });
+});
+
+describe('popup looks (spec 2026-11-09)', () => {
+  it('keeps the look, photo and previous look when Ajustes saves without them', async () => {
+    const { s, tx } = service();
+    tx.storeRetention.findUnique.mockResolvedValue({ settings: { ...DEFAULT_RETENTION, popupLook: 'postal', popupLookPrevious: 'cartel', popupPhoto: '/v1/uploads/a.jpg' }, revision: 3 } as never);
+    await s.save('m1', 's1', dto({ revision: 3 }));
+    expect((tx.storeRetention.updateMany.mock.calls[0] as any)[0].data.settings).toMatchObject({ popupLook: 'postal', popupLookPrevious: 'cartel', popupPhoto: '/v1/uploads/a.jpg' });
+  });
+  it('records the previous look when Ajustes changes it', async () => {
+    const { s, tx } = service();
+    tx.storeRetention.findUnique.mockResolvedValue({ settings: { ...DEFAULT_RETENTION, popupLook: 'postal' }, revision: 3 } as never);
+    await s.save('m1', 's1', dto({ revision: 3, popupLook: 'revista' }));
+    expect((tx.storeRetention.updateMany.mock.calls[0] as any)[0].data.settings).toMatchObject({ popupLook: 'revista', popupLookPrevious: 'postal' });
+  });
+  it('gives the store page a look for every store, and the chosen photo, never the previous look', () => {
+    const saved = publicRetentionSettings({ ...DEFAULT_RETENTION, popupLook: 'etiqueta', popupLookPrevious: 'postal', popupPhoto: '/v1/uploads/a.jpg' } as never, 'miga') as Record<string, unknown>;
+    expect(saved).toMatchObject({ popupLook: 'etiqueta', popupPhoto: '/v1/uploads/a.jpg' });
+    expect(saved).not.toHaveProperty('popupLookPrevious');
+    expect(publicRetentionSettings(DEFAULT_RETENTION as never, 'miga')).toMatchObject({ popupLook: pickPopupLook('miga') });
+    expect(publicRetentionSettings({ ...DEFAULT_RETENTION, popupLook: 'ruleta' } as never, 'miga')).toMatchObject({ popupLook: pickPopupLook('miga') });
+  });
+});
+
+describe('popup looks — Ajustes through the real DTO (review 2026-11-09)', () => {
+  it('keeps the saved look when the Studio form does not send one', async () => {
+    const { plainToInstance } = require('class-transformer');
+    const { RetentionSettingsDto } = require('./retention.dto');
+    const { s, tx } = service();
+    tx.storeRetention.findUnique.mockResolvedValue({ settings: { ...DEFAULT_RETENTION, popupLook: 'revista' }, revision: 3 } as never);
+    await s.save('m1', 's1', plainToInstance(RetentionSettingsDto, { ...DEFAULT_RETENTION, revision: 3, signupEnabled: true }));
+    expect((tx.storeRetention.updateMany.mock.calls[0] as any)[0].data.settings).toMatchObject({ popupLook: 'revista' });
+  });
+});
+
+describe('popup games (spec 2026-11-09)', () => {
+  const PRIZES = [{ promoCodeId: 'p5', label: '5 % de descuento', chance: 60 }, { promoCodeId: 'p10', label: '10 % de descuento', chance: 40 }];
+  it('tells the page the game, its prize labels and the question — never the codes', () => {
+    const shown = publicRetentionSettings({ ...DEFAULT_RETENTION, popupGame: 'wheel', popupGamePrizes: PRIZES, popupQuestion: { text: '¿Para quién?', answers: ['Para mí', 'Para regalar'] } } as never, 'miga') as Record<string, unknown>;
+    expect(shown).toMatchObject({ popupGame: 'wheel', popupGameSlices: ['5 % de descuento', '10 % de descuento'], popupQuestion: { text: '¿Para quién?' } });
+    expect(JSON.stringify(shown)).not.toMatch(/p5|p10|popupGamePrizes/);
+    expect(publicRetentionSettings({ ...DEFAULT_RETENTION, popupGame: 'wheel', popupGamePrizes: PRIZES.slice(0, 1) } as never, 'miga')).not.toHaveProperty('popupGame');
+  });
+  it('keeps the game when Ajustes saves', async () => {
+    const { s, tx } = service();
+    tx.storeRetention.findUnique.mockResolvedValue({ settings: { ...DEFAULT_RETENTION, popupGame: 'scratch', popupGamePrizes: PRIZES, popupQuestion: null }, revision: 3 } as never);
+    await s.save('m1', 's1', dto({ revision: 3 }));
+    expect((tx.storeRetention.updateMany.mock.calls[0] as any)[0].data.settings).toMatchObject({ popupGame: 'scratch', popupGamePrizes: PRIZES });
+  });
+  it('a game signup returns the prize code and stores a valid answer', async () => {
+    const { s, prisma, tx } = service({ popupGame: 'scratch', popupGamePrizes: PRIZES, popupQuestion: { text: '¿Para quién?', answers: ['Para mí', 'Para regalar'] } });
+    (s as any).games = { validPrize: jest.fn(async () => true), claim: jest.fn(async () => ({ code: 'RASCA10' })) };
+    (prisma as any).storeNewsletterSubscriber = { findUnique: jest.fn(async () => null) };
+    expect(await s.subscribe(store, 'ana@example.com', { source: 'popup', gameToken: 't', answer: 'Para regalar' } as never)).toEqual({ subscribed: true, code: 'RASCA10' });
+    expect((s as any).games.claim).toHaveBeenCalledWith('s1', 't', false);
+    expect((tx.storeNewsletterSubscriber.upsert.mock.calls[0] as any)[0].create.interests).toEqual(['Para regalar']);
+  });
+});
+
+describe('popup games — claims (review 2026-11-09)', () => {
+  const PRIZES = [{ promoCodeId: 'p5', label: '5 % de descuento', chance: 60 }, { promoCodeId: 'p10', label: '10 % de descuento', chance: 40 }];
+  it('an expired or dead prize subscribes nobody, so playing again still works', async () => {
+    const { s, prisma, tx } = service({ popupGame: 'scratch', popupGamePrizes: PRIZES });
+    (s as any).games = { validPrize: jest.fn(async () => false), claim: jest.fn() };
+    (prisma as any).storeNewsletterSubscriber = { findUnique: jest.fn(async () => null) };
+    await expect(s.subscribe(store, 'ana@example.com', { source: 'popup', gameToken: 'old' } as never)).rejects.toThrow('Tu premio venció; vuelve a jugar.');
+    expect(tx.storeNewsletterSubscriber.upsert).not.toHaveBeenCalled();
+  });
+  it('an email that only saved a cart (inactive) still gets its prize', async () => {
+    const { s, prisma } = service({ popupGame: 'scratch', popupGamePrizes: PRIZES });
+    (s as any).games = { validPrize: jest.fn(async () => true), claim: jest.fn(async () => ({ code: 'RASCA5' })) };
+    (prisma as any).storeNewsletterSubscriber = { findUnique: jest.fn(async () => ({ id: 'x', isActive: false })) };
+    await s.subscribe(store, 'ana@example.com', { source: 'popup', gameToken: 't' } as never);
+    expect((s as any).games.claim).toHaveBeenCalledWith('s1', 't', false);
+  });
+});
+
+// Spec 2026-11-09 YAPI A/B tests: a B visitor of a running popup test sees B's popup and gets B's code; a new signup carries its visit.
+describe('popup A/B tests', () => {
+  const visits: Record<string, any> = {
+    tokB: { id: 'vB', variant: 'B', experiment: { kind: 'popup', variantSettings: { discount: 15, percentA: 10, look: 'revista' }, variantPromoCodeId: 'codeB' } },
+    tokA: { id: 'vA', variant: 'A', experiment: { kind: 'popup', variantSettings: { discount: 15, percentA: 10, look: 'revista' }, variantPromoCodeId: 'codeB' } },
+  };
+  function abService() {
+    const built = service({ popupPromoCodeId: 'own', popupLook: 'postal', signupBody: 'Recetas y un 10 % de bienvenida.' });
+    (built.prisma as any).storeSourceVisit = { findFirst: jest.fn(async ({ where }: any) => visits[where.token] ?? null) };
+    CODES.push({ id: 'codeB', storeId: 's1', code: 'BIENVENIDA15-AB12', isActive: true });
+    return built;
+  }
+  const upsertArg = (tx: any) => (tx.storeNewsletterSubscriber.upsert.mock.calls as any[])[0][0];
+  afterEach(() => { const at = CODES.findIndex(c => c.id === 'codeB'); if (at >= 0) CODES.splice(at, 1); });
+
+  it('a B visitor sees B look and B percent; an A visitor, no visitor or a stranger token sees A', async () => {
+    const { s } = abService();
+    const b = publicRetentionSettings((await s.settingsFor('s1', 'tokB')).settings, 'peppa');
+    expect(b).toMatchObject({ popupLook: 'revista', signupBody: 'Recetas y un 15 % de bienvenida.', popupHasCode: true });
+    for (const token of ['tokA', undefined, 'nope']) {
+      const a = publicRetentionSettings((await s.settingsFor('s1', token)).settings, 'peppa');
+      expect(a).toMatchObject({ popupLook: 'postal', signupBody: 'Recetas y un 10 % de bienvenida.' });
+    }
+  });
+
+  it('only a running popup test of this store counts: the visit is read with those conditions', async () => {
+    const { s, prisma } = abService();
+    await s.settingsFor('s1', 'tokB');
+    expect((prisma as any).storeSourceVisit.findFirst.mock.calls[0][0].where).toMatchObject({ token: 'tokB', experiment: { storeId: 's1', status: 'RUNNING', kind: 'popup' }, createdAt: { gte: expect.any(Date) } });
+  });
+
+  it('a B popup signup gets B code and its new row carries the visit', async () => {
+    const { s, tx } = abService();
+    expect(await s.subscribe(store, 'ana@example.com', { source: 'popup', sourceVisitToken: 'tokB' })).toEqual({ subscribed: true, code: 'BIENVENIDA15-AB12' });
+    expect(upsertArg(tx).create).toMatchObject({ sourceVisitId: 'vB' });
+    expect(upsertArg(tx).update.sourceVisitId).toBeUndefined();
+  });
+
+  it('an existing subscriber is not a new B signup, and an A signup keeps A code', async () => {
+    const { s, tx } = abService();
+    await s.subscribe(store, 'ana@example.com', { source: 'popup', sourceVisitToken: 'tokB' });
+    expect(Object.keys(upsertArg(tx).update)).not.toContain('sourceVisitId');
+    const a = abService();
+    expect(await a.s.subscribe(store, 'eva@example.com', { source: 'popup', sourceVisitToken: 'tokA' })).toEqual({ subscribed: true, code: 'PEPPA10' });
+    expect(upsertArg(a.tx).create).toMatchObject({ sourceVisitId: 'vA' });
   });
 });

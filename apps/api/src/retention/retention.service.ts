@@ -1,5 +1,6 @@
+import { PlansService } from '../plans/plans.service';
 import { workspaceMail, workspaceSender, renderEmailText } from '../email-workspace/email-workspace.config';
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
 import { randomBytes } from 'node:crypto';
@@ -14,6 +15,12 @@ import { EmailProvider } from '../dashboard/interfaces/email-provider.interface'
 import { DEFAULT_RETENTION, RetentionSettings, RetentionSettingsDto, RetentionCartDto, RetentionCampaignDto, RetentionSubscribeDto } from './retention.dto';
 import { comebackCode, qualifyingDays, unusedDays } from './retention-policy';
 import { reminderCart } from './reminder-cart';
+import { pickPopupLook, readPopupLook, type PopupLookSettings } from '../store-popups/popup-looks';
+import { readGame, type PopupGameSettings } from '../store-popups/popup-games';
+import { PopupGameService } from '../store-popups/popup-game.service';
+import { popupWordsFor } from '../storefront-source/source-ab';
+// Plans 2026-11-07: the kinds that stop at the plan's monthly emails; everything else (receipts, notices, replies) always goes out.
+const PROMOTIONAL_KINDS = new Set(['CAMPAIGN', 'WELCOME', 'RECOVERY', 'REVIEW_REQUEST', 'CARD']);
 const token = () => randomBytes(32).toString('hex');
 const normalized = (email: string) => email.trim().toLowerCase();
 const REVIEW_REQUEST_DELAY_MS = 24 * 60 * 60 * 1000;
@@ -22,14 +29,21 @@ const safeDeliveryError = (error: unknown) => {
   return message.replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '[correo oculto]').slice(0, 500);
 };
 type Db = Prisma.TransactionClient;
-/** What a store page may know about its signup and popup: the timing and whether a code exists, never the code. */
-export function publicRetentionSettings(s: RetentionSettings) {
-  return { comebackEnabled: s.comebackEnabled, visitsRequired: s.visitsRequired, rewardLabel: s.rewardLabel, signupEnabled: s.signupEnabled, signupTitle: s.signupTitle, signupBody: s.signupBody, signupButton: s.signupButton, recoveryEnabled: s.recoveryEnabled, popupTrigger: s.popupTrigger, popupDelaySeconds: s.popupDelaySeconds, popupHasCode: Boolean(s.popupPromoCodeId) };
+/** What a store page may know about its signup and popup: the timing, whether a code exists (never the code), and the popup look
+ *  (spec 2026-11-09: the saved one, else a stable pick from the slug, so every store has one) with its chosen photo. */
+export function publicRetentionSettings(s: RetentionSettings & PopupLookSettings & PopupGameSettings, slug?: string) {
+  const look = readPopupLook(s.popupLook) ?? (slug ? pickPopupLook(slug) : null);
+  return { comebackEnabled: s.comebackEnabled, visitsRequired: s.visitsRequired, rewardLabel: s.rewardLabel, signupEnabled: s.signupEnabled, signupTitle: s.signupTitle, signupBody: s.signupBody, signupButton: s.signupButton, recoveryEnabled: s.recoveryEnabled, popupTrigger: s.popupTrigger, popupDelaySeconds: s.popupDelaySeconds, popupHasCode: Boolean(s.popupPromoCodeId),
+    ...(look ? { popupLook: look } : {}), ...(s.popupPhoto ? { popupPhoto: s.popupPhoto } : {}),
+    // Spec 2026-11-09 popup games: the game, its prize labels and the question — never the codes.
+    ...(readGame(s.popupGame) && (s.popupGamePrizes?.length ?? 0) >= 2 ? { popupGame: s.popupGame, popupGameSlices: s.popupGamePrizes!.map(p => p.label), ...(s.popupQuestion ? { popupQuestion: s.popupQuestion } : {}) } : {}) };
 }
+/** Settings Ajustes may not send but must keep: the email workspace, dismissed suggestions and the popup look. */
+const KEPT_SETTINGS = ['emailWorkspace', 'suggestionsDismissedAt', 'popupLook', 'popupLookPrevious', 'popupPhoto', 'popupGame', 'popupGamePrizes', 'popupQuestion'] as const;
 @Injectable()
 export class RetentionService {
   private working = false;
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, @Inject(EMAIL_PROVIDER) private readonly email: EmailProvider, @Optional() private readonly plans?: PlansService, @Optional() private readonly games?: PopupGameService) {}
   async owner(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId } });
     if (!store) throw new NotFoundException('Tienda no encontrada.'); return store;
@@ -37,6 +51,17 @@ export class RetentionService {
   async settings(storeId: string, db: Db = this.prisma) {
     const row = await db.storeRetention.findUnique({ where: { storeId } });
     return { ...DEFAULT_RETENTION, ...(row?.settings as object || {}), revision: row?.revision || 0, startedAt: row?.startedAt || new Date() };
+  }
+  /** Spec 2026-11-09 A/B tests: the settings a shopper sees — B's look, words and code for a B visitor of this store's running popup
+   *  test (a visit at most 30 days old); everyone else, and every A visitor, the store's own. */
+  async settingsFor(storeId: string, visitToken?: string) {
+    const settings = await this.settings(storeId);
+    const visit = visitToken ? await this.prisma.storeSourceVisit.findFirst({ where: { token: visitToken, createdAt: { gte: new Date(Date.now() - 30 * 86400000) }, experiment: { storeId, status: 'RUNNING', kind: 'popup' } },
+      select: { id: true, variant: true, experiment: { select: { variantSettings: true, variantPromoCodeId: true } } } }).catch(() => null) : null;
+    if (!visit || visit.variant !== 'B') return { settings, visitId: visit?.id };
+    const b = (visit.experiment.variantSettings ?? {}) as { discount?: number; percentA?: number; look?: string };
+    return { visitId: visit.id, settings: { ...settings, ...popupWordsFor(settings as unknown as Record<string, unknown>, b), ...(b.look ? { popupLook: b.look } : {}),
+      ...(visit.experiment.variantPromoCodeId ? { popupPromoCodeId: visit.experiment.variantPromoCodeId } : {}) } };
   }
   private link(slug: string, key: string, value: string) {
     const url = new URL(`/s/${encodeURIComponent(slug)}`, this.config.get<string>('app.checkoutOrigin'));
@@ -59,13 +84,20 @@ export class RetentionService {
     try { new Intl.DateTimeFormat('en', { timeZone: dto.timezone }); } catch { throw new BadRequestException('Zona horaria inválida.'); }
     for (const field of ['rewardLabel', 'signupTitle', 'signupButton', 'welcomeSubject', 'welcomeBody'] as const) if (!dto[field].trim()) throw new BadRequestException('Completa los textos de la configuración.');
     if (dto.popupPromoCodeId && !(await this.prisma.promoCode.findFirst({ where: { id: dto.popupPromoCodeId, storeId, isActive: true } }))) throw new BadRequestException('Elige un código activo de esta tienda.');
-    const { revision, ...settings } = dto;
+    // The DTO class declares every optional field, so one the form did not send is an own key holding undefined: dropped here, or it
+    // would erase a kept value (review 2026-11-09: a save without popupLook wiped the merchant's chosen look).
+    const { revision, ...sent } = dto;
+    const settings = Object.fromEntries(Object.entries(sent).filter(([, value]) => value !== undefined)) as Omit<RetentionSettingsDto, 'revision'>;
     try {
       return await this.prisma.$transaction(async tx => {
         const prior = await this.settings(storeId, tx);
         if (prior.revision && prior.timezone !== dto.timezone) throw new BadRequestException('La zona horaria de las compras queda fijada al crear el programa.');
         if (!revision) return tx.storeRetention.create({ data: { storeId, settings } });
-        const result = await tx.storeRetention.updateMany({ where: { storeId, revision }, data: { settings: { ...settings, ...((prior as any).emailWorkspace ? { emailWorkspace: (prior as any).emailWorkspace } : {}), ...((prior as any).suggestionsDismissedAt ? { suggestionsDismissedAt: (prior as any).suggestionsDismissedAt } : {}) }, revision: { increment: 1 } } });
+        const kept = Object.fromEntries(KEPT_SETTINGS.filter(key => (prior as Record<string, unknown>)[key] !== undefined).map(key => [key, (prior as Record<string, unknown>)[key]]));
+        // A value Ajustes sends wins over a kept one; a changed look keeps the old one for «vuelve a la ventana anterior».
+        const priorLook = (prior as PopupLookSettings).popupLook;
+        const changedLook = Boolean(settings.popupLook && priorLook && settings.popupLook !== priorLook);
+        const result = await tx.storeRetention.updateMany({ where: { storeId, revision }, data: { settings: { ...kept, ...settings, ...(changedLook ? { popupLookPrevious: priorLook } : {}) } as Prisma.InputJsonValue, revision: { increment: 1 } } });
         if (!result.count) throw new ConflictException('La configuración cambió. Vuelve a abrir esta sección.');
         return { saved: true };
       });
@@ -92,20 +124,36 @@ export class RetentionService {
     ]);
     return { brand: comebackBrand(store), imageUrl: products.flatMap(p => p.imageUrls).find(url => !/\.(mp4|webm|mov)(\?|$)/i.test(url)) || store.bannerUrl || null, interests: categories.map(c => c.name) };
   }
-  async subscribe(store: { id: string; slug: string; name: string }, rawEmail: string, profile: Pick<RetentionSubscribeDto, 'name' | 'phone' | 'interests' | 'source'> = {}) {
-    const settings = await this.settings(store.id);
+  /** «Ver ventana de suscripción» in the Studio: what the store page would get, for this merchant's store, published or not. */
+  async popupPreview(merchantId: string, storeId: string) {
+    const store = await this.owner(merchantId, storeId);
+    const settings = await this.settings(storeId);
+    return { slug: store.slug, storeName: store.name, settings: { ...publicRetentionSettings(settings, store.slug), signupEnabled: true, signupVisual: await this.signupVisual(storeId) } };
+  }
+  async subscribe(store: { id: string; slug: string; name: string }, rawEmail: string, profile: Pick<RetentionSubscribeDto, 'name' | 'phone' | 'interests' | 'source' | 'gameToken' | 'answer' | 'sourceVisitToken'> = {}) {
+    // Spec 2026-11-09 A/B tests: a B visitor's signup gets B's code; a new row remembers the test visit it came from.
+    const { settings, visitId } = await this.settingsFor(store.id, profile.sourceVisitToken);
     if (!settings.signupEnabled) throw new BadRequestException('Las suscripciones están desactivadas.');
     const email = normalized(rawEmail);
-    const details = { ...(profile.name !== undefined ? { name: profile.name.trim() || null } : {}), ...(profile.phone !== undefined ? { phone: profile.phone.trim() || null } : {}), ...(profile.interests !== undefined ? { interests: profile.interests } : {}) };
+    // Spec 2026-11-09 popup games: the tap answer joins the interests when it is one of the store's own answers.
+    const answer = profile.answer && (settings as PopupGameSettings).popupQuestion?.answers?.includes(profile.answer) ? profile.answer : undefined;
+    const interests = answer ? [...(profile.interests ?? []), answer] : profile.interests;
+    const details = { ...(profile.name !== undefined ? { name: profile.name.trim() || null } : {}), ...(profile.phone !== undefined ? { phone: profile.phone.trim() || null } : {}), ...(interests !== undefined ? { interests } : {}) };
+    // A prize goes to an email only once: one already subscribed before this request gets none.
+    // Review 2026-11-09: a dead or expired prize subscribes nobody (so playing again still works); only an active subscriber has had a
+    // prize (a cart-only email is inactive).
+    if (profile.gameToken && this.games && !(await this.games.validPrize(store.id, profile.gameToken))) throw new BadRequestException('Tu premio venció; vuelve a jugar.');
+    const existed = profile.gameToken ? Boolean((await this.prisma.storeNewsletterSubscriber.findUnique({ where: { storeId_email: { storeId: store.id, email } }, select: { isActive: true } }))?.isActive) : false;
     if (profile.interests?.length) {
       const allowed = await this.prisma.category.findMany({ where: { storeId: store.id, name: { in: profile.interests } }, select: { name: true } });
       if (profile.interests.some(name => !allowed.some(c => c.name === name))) throw new BadRequestException('Revisa tus intereses; las categorías de la tienda cambiaron.');
     }
     await this.prisma.$transaction(async tx => {
-      const subscriber = await tx.storeNewsletterSubscriber.upsert({ where: { storeId_email: { storeId: store.id, email } }, create: { storeId: store.id, email, ...details }, update: { isActive: true, ...details } });
+      const subscriber = await tx.storeNewsletterSubscriber.upsert({ where: { storeId_email: { storeId: store.id, email } }, create: { storeId: store.id, email, ...details, ...(visitId ? { sourceVisitId: visitId } : {}) }, update: { isActive: true, ...details } });
       if (settings.welcomeEnabled) await this.enqueue(tx, { storeId: store.id, email, kind: 'WELCOME', sourceId: subscriber.id, dedupeKey: `welcome:${subscriber.id}`, subject: settings.welcomeSubject.replaceAll('{{store}}', () => store.name), body: settings.welcomeBody.replaceAll('{{store}}', () => store.name) });
     });
     // Only a popup signup, only this store's active code: the code never sits in a page or the public settings.
+    if (profile.gameToken && this.games) return { subscribed: true, ...(await this.games.claim(store.id, profile.gameToken, existed)) };
     const code = profile.source === 'popup' && settings.popupPromoCodeId ? await this.prisma.promoCode.findFirst({ where: { id: settings.popupPromoCodeId, storeId: store.id, isActive: true } }) : null;
     return { subscribed: true, ...(code ? { code: code.code } : {}) };
   }
@@ -372,6 +420,11 @@ export class RetentionService {
         if (row.kind.startsWith('WORKSPACE_') && row.kind !== 'WORKSPACE_ORDER_CONFIRMATION') allowed = allowed && Boolean(mail.templates[row.kind.slice(10)]?.enabled);
         if (row.kind.startsWith('STAFF_')) allowed = allowed && mail.staff.enabled && mail.staff.recipients.some(recipient => recipient.email === row.email && recipient.events.includes(row.kind.slice(6)));
         if (!allowed) { await this.prisma.storeEmailDelivery.update({ where: { id: row.id }, data: { status: 'CANCELED' } }); continue; }
+        // Plans 2026-11-07: promotions stop at the plan's emails for the month; receipts, notices and replies always go out.
+        if (PROMOTIONAL_KINDS.has(row.kind) && this.plans) {
+          const room = await this.plans.emailsLeft(row.storeId);
+          if (room.left <= 0) { await this.prisma.storeEmailDelivery.update({ where: { id: row.id }, data: { status: 'CANCELED', lastError: `Plan ${room.plan.name}: llegaste a los ${room.plan.emailsPerMonth} correos del mes.` } }); continue; }
+        }
         const unsubscribe = ['CAMPAIGN','WELCOME','RECOVERY','REVIEW_REQUEST'].includes(row.kind) && subscriber ? `\n\nDejar de recibir correos de esta tienda:\n${this.link(row.store.slug, 'unsubscribe', subscriber.unsubscribeToken)}` : '';
         const configured = ['RECOVERY','REVIEW_REQUEST'].includes(row.kind) ? mail.templates[row.kind] : undefined;
         const subject = configured ? renderEmailText(configured.subject, {store:row.store.name}) : row.subject;

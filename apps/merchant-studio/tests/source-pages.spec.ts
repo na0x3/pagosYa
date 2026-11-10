@@ -84,7 +84,7 @@ for (const width of [1280, 390]) test(`full product tabs and automatic checkout 
   await expect(frame.locator('[data-cart-count]')).toHaveText('1');
   await page.screenshot({ path: `/tmp/pagosya-product-${width}.png`, fullPage: true });
   expect(await frame.locator('body').evaluate(el => el.scrollWidth <= window.innerWidth)).toBe(true);
-  await frame.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await frame.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   await expect(frame.getByRole('heading', { name: 'Revisa tu pedido' })).toBeVisible();
   if (width === 390) await frame.locator('[data-shell-summary]').click();
   await expect(frame.locator('.pya-co__line')).toContainText('Bolso de algodón');
@@ -119,7 +119,7 @@ test('exported pages refresh the catalog and create a PagosYa checkout with the 
   });
   await page.goto('https://store.test/product.html?id=p1');
   await page.getByRole('button', { name: 'Añadir al pedido', exact: true }).click();
-  await page.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await page.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   await expect(page).toHaveURL('https://store.test/checkout.html');
   await expect(page.locator('.pya-co__line')).toContainText('Bolso de algodón');
   await page.getByRole('radio', { name: 'Entrega a domicilio' }).check();

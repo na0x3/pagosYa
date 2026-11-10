@@ -2,7 +2,9 @@ import { publicAssistant } from './assistant-public-settings';
 
 const now = new Date('2026-10-13T15:00:00Z');
 const store = { id: 's1', name: 'Café', logoUrl: '/v1/uploads/logo.png', contactPhone: '+591 70000000', publishedSourceRevision: 2, shippingEnabled: true };
-const prisma = (row: any, used = 0): any => ({ storeAssistant: { findUnique: jest.fn().mockResolvedValue(row) }, assistantConversation: { count: jest.fn().mockResolvedValue(used) } });
+// The store's merchant plan (2026-11-07) gives conversations too; Gratis gives none, so the store's own cap decides here.
+const prisma = (row: any, used = 0, plan = 'FREE'): any => ({ storeAssistant: { findUnique: jest.fn().mockResolvedValue(row) }, assistantConversation: { count: jest.fn().mockResolvedValue(used) },
+  store: { findUnique: jest.fn().mockResolvedValue({ merchant: { plan } }) } });
 const on = { enabled: true, name: 'Carla', greeting: null, avatarUrl: null, monthlyCap: 300 };
 
 describe('public assistant settings', () => {
@@ -19,6 +21,8 @@ describe('public assistant settings', () => {
     expect(await publicAssistant(prisma({ ...on, enabled: false }), store, false, true, now)).toBeNull();
     expect(await publicAssistant(prisma(on), { ...store, publishedSourceRevision: null }, false, true, now)).toBeNull();
     expect(await publicAssistant(prisma(on, 300), store, false, true, now)).toBeNull();
+    // A paid plan lifts a lower store cap to the plan's conversations.
+    expect(await publicAssistant(prisma(on, 300, 'EMPRENDEDOR'), store, false, true, now)).not.toBeNull();
   });
 
   it('shows in the owner\'s own preview before the first publish, never to visitors', async () => {

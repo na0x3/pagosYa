@@ -1,10 +1,11 @@
+import { PlansService } from '../plans/plans.service';
 import { boundedSourceFindings, requireSourceChecks, sourceRuntimeDigest, SourceCheckResultDto } from './source-check-results';
 import { assumedFactsBlockMessage, assumedFactsCheckRow } from './assumed-facts';
 import { pendingAssumptions, readVoice } from './store-voice';
 import { isPublicStore, PUBLIC_STORE_WHERE } from '../stores/active-store';
 import { assertSourceCommerceContract } from './source-commerce-contract';
 import { currentSourceRuntime, currentSourceRuntimeBundle, withSourceRuntime, type SourceRuntimeFiles, type TrustedSourceRuntimeBundle } from './source-runtime';
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -14,6 +15,8 @@ import { withSeededDna } from './source-dna';
 import { isSourceMotifFile } from './source-motifs';
 import { isKitCreativeFile } from './source-creative-assets';
 import { sanitizeMotifSvg } from './source-svg-sanitize';
+import { popupWordsFor, signupEvidence, staleTest } from './source-ab';
+import { readPopupLook, type PopupLookId } from '../store-popups/popup-looks';
 
 const PUBLIC_ASSET = /\.(png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i;
 /** Lucide line icons the asset library bundles (assets/icons/NAME.svg). */
@@ -59,10 +62,12 @@ export async function publicationState(prisma: PrismaService, storeId: string) {
   const experiment = await prisma.storeSourceExperiment.findFirst({ where: { storeId, status: 'RUNNING' } }) || await prisma.storeSourceExperiment.findFirst({ where: { storeId }, orderBy: [{ endedAt: { sort: 'desc', nulls: 'last' } }, { startedAt: 'desc' }] });
   let test: any = null;
   if (experiment) {
-    const [visits, orders] = await Promise.all([
+    const [visits, orders, signups] = await Promise.all([
       prisma.storeSourceVisit.groupBy({ by: ['variant'], where: { experimentId: experiment.id }, _count: true }),
       prisma.storeOrder.findMany({ where: { storeId, sourceVisit: { experimentId: experiment.id }, paymentIntent: { livemode: true, status: 'SUCCEEDED' } }, take: 10001,
         select: { sourceVisitId: true, sourceVisit: { select: { variant: true } }, amount: true, currency: true, paymentIntent: { select: { transactions: { where: { type: 'REFUND', status: 'SUCCEEDED' }, select: { amount: true } } } } } }),
+      // Spec 2026-11-09 A/B tests: a new popup signup carries the visit it came from (set only while a test runs).
+      experiment.kind === 'popup' ? prisma.storeNewsletterSubscriber.findMany({ where: { storeId, sourceVisit: { experimentId: experiment.id } }, take: 20001, select: { sourceVisit: { select: { variant: true } } } }) : Promise.resolve([] as Array<{ sourceVisit: { variant: string } | null }>),
     ]);
     const variants = ['A', 'B'].map(variant => {
       const buyers = new Set<string>(); const revenue = new Map<string, number>(); let paidOrders = 0;
@@ -74,9 +79,13 @@ export async function publicationState(prisma: PrismaService, storeId: string) {
         revenue.set(order.currency, (revenue.get(order.currency) || 0) + net);
       }
       const visitors = visits.find(v => v.variant === variant)?._count || 0;
-      return { variant, revision: variant === 'A' ? experiment.controlRevision : experiment.variantRevision, visitors, buyers: buyers.size, paidOrders, conversionRate: visitors ? buyers.size / visitors : 0, revenue: [...revenue].map(([currency, amount]) => ({ currency, amount })) };
+      const signed = signups.filter(row => row.sourceVisit?.variant === variant).length;
+      return { variant, revision: variant === 'A' ? experiment.controlRevision : experiment.variantRevision, visitors, buyers: buyers.size, signups: signed, paidOrders, conversionRate: visitors ? buyers.size / visitors : 0, revenue: [...revenue].map(([currency, amount]) => ({ currency, amount })) };
     });
-    test = { ...experiment, activeStoreId: undefined, variants, evidence: experimentEvidence(variants[0], variants[1], experiment.startedAt, new Date(), orders.length > 10000), truncated: orders.length > 10000 };
+    // A popup test is judged on signups; a design test on purchases (spec 2026-11-09 §2).
+    const evidence = experiment.kind === 'popup' ? signupEvidence(variants[0], variants[1], experiment.startedAt) : experimentEvidence(variants[0], variants[1], experiment.startedAt, new Date(), orders.length > 10000);
+    const days = Math.max(0, Math.floor((Date.now() - new Date(experiment.startedAt).getTime()) / 86400000));
+    test = { ...experiment, activeStoreId: undefined, variants, evidence, truncated: orders.length > 10000, days, stale: experiment.status === 'RUNNING' && !evidence.winner && staleTest(new Date(experiment.startedAt), experiment.extendedUntil ? new Date(experiment.extendedUntil) : null) };
   }
   return { contactFormEnabled: store.contactFormEnabled, payments: store.checkoutMode === 'payment' ? store.merchant.status === 'ACTIVE' ? 'live' : 'test' : 'contact', revision: store.publishedSourceRevision, runtimeDigest: store.publishedRuntimeDigest, version: store.sourcePublicationVersion, publishedAt: store.sourcePublishedAt, active: isPublicStore(store), slug: store.slug, experiment: test };
 }
@@ -89,7 +98,7 @@ export function priceToConfirmMessage(names: string[]): string {
 
 @Injectable()
 export class SourcePublishingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, @Optional() private readonly plans?: PlansService) {}
   async owner(merchantId: string, storeId: string) {
     const store = await this.prisma.store.findFirst({ where: { id: storeId, merchantId } });
     if (!store) throw new NotFoundException('Tienda no encontrada');
@@ -164,6 +173,8 @@ export class SourcePublishingService {
   }
   async publish(merchantId: string, storeId: string, revision: number, expected: number) {
     const store = await this.owner(merchantId, storeId);
+    // Plans 2026-11-07: the Gratis plan builds and previews; publishing opens the plans in the Studio.
+    await this.plans?.assertCanPublish(merchantId);
     if (store.status !== 'ACTIVE') throw new BadRequestException('Activa la tienda antes de publicar este diseño.');
     const snapshot = await this.snapshot(storeId, revision);
     assertSourceCommerceContract(snapshot);
@@ -180,36 +191,104 @@ export class SourcePublishingService {
     });
   }
   async visibility(merchantId: string, storeId: string, published: boolean, expected: number) {
+    if (published) await this.plans?.assertCanPublish(merchantId);
     if (published) { const store = await this.owner(merchantId, storeId); if (store.publishedSourceRevision) assertSourceCommerceContract(await this.snapshot(storeId, store.publishedSourceRevision)); }
     return this.change(merchantId, storeId, expected, async tx => {
       const store = await tx.store.findUniqueOrThrow({ where: { id: storeId } });
       if (!store.publishedSourceRevision) throw new BadRequestException('Publica un diseño antes de cambiar su visibilidad.');
       if (published && store.status !== 'ACTIVE') throw new BadRequestException('Activa tu tienda desde el panel antes de publicarla.');
-      if (!published) await tx.storeSourceExperiment.updateMany({ where: { storeId, status: 'RUNNING' }, data: { status: 'STOPPED', activeStoreId: null, endedAt: new Date() } });
+      if (!published) {
+        // Spec 2026-11-09 A/B tests: a popup test's hidden B code ends with the test.
+        const running = await tx.storeSourceExperiment.findFirst({ where: { storeId, status: 'RUNNING' } });
+        if (running?.variantPromoCodeId) await tx.promoCode.updateMany({ where: { id: running.variantPromoCodeId, storeId }, data: { isActive: false } });
+        await tx.storeSourceExperiment.updateMany({ where: { storeId, status: 'RUNNING' }, data: { status: 'STOPPED', activeStoreId: null, endedAt: new Date() } });
+      }
       await tx.store.update({ where: { id: storeId }, data: { sourcePublicationPaused: !published, ...(published ? { publicVisibility: true } : {}) } });
     });
   }
-  async start(merchantId: string, storeId: string, revision: number, expected: number) {
+  /** What every test needs before it starts: a paid plan, a public store with integrated payments, and no other test running. */
+  private async testGate(merchantId: string, storeId: string) {
     const store = await this.owner(merchantId, storeId);
+    await this.plans?.assertCanPublish(merchantId);
     if (!isPublicStore(store) || !store.publishedSourceRevision) throw new BadRequestException('Publica tu diseño y activa la tienda antes de iniciar una prueba.');
     if (store.checkoutMode !== 'payment') throw new BadRequestException('Activa los pagos integrados para comparar compras confirmadas.');
-    const [a, b] = await Promise.all([this.snapshot(storeId, store.publishedSourceRevision), this.snapshot(storeId, revision)]);
+    const running = await this.prisma.storeSourceExperiment.findUnique({ where: { activeStoreId: storeId } });
+    if (running) throw new ConflictException(`Ya tienes una prueba de «${running.request || (running.kind === 'popup' ? 'tu ventana' : 'tu diseño')}» corriendo. ¿La termino para empezar esta?`);
+    return store;
+  }
+  async start(merchantId: string, storeId: string, revision: number, expected: number, request?: string) {
+    const store = await this.testGate(merchantId, storeId);
+    const [a, b] = await Promise.all([this.snapshot(storeId, store.publishedSourceRevision!), this.snapshot(storeId, revision)]);
     assertSourceCommerceContract(a); assertSourceCommerceContract(b);
     this.assertNoPendingAssumptions(b);
     const authored = (s: SourceProjectSnapshot) => JSON.stringify(s.files.filter(f => /\.(html|css|js)$/.test(f.path) && !['config.js', 'commerce.js'].includes(f.path)).sort((x,y)=>x.path.localeCompare(y.path)));
-    if (store.publishedSourceRevision === revision || authored(a) === authored(b)) throw new BadRequestException('Elige una alternativa con un cambio de diseño para comparar.');
+    if (store.publishedSourceRevision === revision || authored(a) === authored(b)) throw new BadRequestException('La versión B quedó igual a tu tienda; dime qué cambio quieres probar.');
     const runtime = await currentSourceRuntimeBundle();
     await requireSourceChecks(this.prisma, storeId, revision, b, runtime.digest);
     return this.change(merchantId, storeId, expected, async tx => {
       await this.recordRuntime(tx, storeId, runtime);
-      await tx.storeSourceExperiment.create({ data: { storeId, activeStoreId: storeId, controlRevision: store.publishedSourceRevision!, variantRevision: revision } });
+      await tx.storeSourceExperiment.create({ data: { storeId, activeStoreId: storeId, controlRevision: store.publishedSourceRevision!, variantRevision: revision, kind: 'design', ...(request ? { request: request.slice(0, 200) } : {}) } });
     });
+  }
+  /** Spec 2026-11-09 A/B tests: a popup test runs on the published design; B differs only in its popup. A different percent gets its own
+   *  hidden code, so a B shopper's welcome code matches what B promised. */
+  async startPopupTest(merchantId: string, storeId: string, variant: { discount?: number; look?: PopupLookId }, request: string, expected: number) {
+    const store = await this.testGate(merchantId, storeId);
+    const settings = ((await this.prisma.storeRetention.findUnique({ where: { storeId } }))?.settings ?? {}) as Record<string, unknown>;
+    const codeA = typeof settings.popupPromoCodeId === 'string' ? await this.prisma.promoCode.findFirst({ where: { id: settings.popupPromoCodeId, storeId, isActive: true } }) : null;
+    const percentA = codeA?.discountType === 'PERCENT' ? Number(codeA.discountValue) : 0;
+    const discount = variant.discount && variant.discount !== percentA ? variant.discount : undefined;
+    const look = readPopupLook(variant.look) ?? undefined;
+    if (!discount && !look) throw new BadRequestException('La versión B quedó igual a tu tienda; dime qué cambio quieres probar.');
+    return this.change(merchantId, storeId, expected, async tx => {
+      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const code = discount ? await tx.promoCode.create({ data: { storeId, code: `BIENVENIDA${discount}-${Array.from({ length: 4 }, () => alphabet[randomInt(alphabet.length)]).join('')}`, discountType: 'PERCENT', discountValue: discount, isActive: true, showInEmails: false } }) : null;
+      await tx.storeSourceExperiment.create({ data: { storeId, activeStoreId: storeId, kind: 'popup', controlRevision: store.publishedSourceRevision!, variantRevision: store.publishedSourceRevision!,
+        variantSettings: { ...(discount ? { discount, percentA } : {}), ...(look ? { look } : {}) }, ...(code ? { variantPromoCodeId: code.id } : {}), request: request.slice(0, 200) } });
+    });
+  }
+  /** The merchant's choice ends a test whatever the numbers say (spec 2026-11-09: YAPI recommends, the merchant decides). */
+  async finishWith(merchantId: string, storeId: string, expected: number, experimentId: string, keep: 'A' | 'B', stopped = false) {
+    return this.change(merchantId, storeId, expected, async tx => {
+      const test = await tx.storeSourceExperiment.findFirst({ where: { id: experimentId, storeId, status: 'RUNNING' } });
+      if (!test) throw new ConflictException('Esta prueba ya terminó.');
+      const ended = await tx.storeSourceExperiment.updateMany({ where: { id: experimentId, storeId, status: 'RUNNING' }, data: { status: stopped ? 'STOPPED' : 'COMPLETED', activeStoreId: null, winner: stopped ? null : keep, endedAt: new Date() } });
+      if (!ended.count) throw new ConflictException('Esta prueba ya terminó.');
+      if (test.kind !== 'popup') {
+        if (keep === 'B') await tx.store.update({ where: { id: storeId }, data: { publishedSourceRevision: test.variantRevision, sourcePublishedAt: new Date() } });
+        return;
+      }
+      if (keep === 'A') {
+        if (test.variantPromoCodeId) await tx.promoCode.updateMany({ where: { id: test.variantPromoCodeId, storeId }, data: { isActive: false } });
+        return;
+      }
+      const row = await tx.storeRetention.findUnique({ where: { storeId } });
+      if (!row) throw new ConflictException('No encontré la ventana de suscripción de tu tienda.');
+      const settings = (row.settings ?? {}) as Record<string, unknown>;
+      const b = (test.variantSettings ?? {}) as { discount?: number; percentA?: number; look?: PopupLookId };
+      const next: Record<string, unknown> = { ...settings, ...popupWordsFor(settings, b) };
+      if (b.look) { next.popupLookPrevious = settings.popupLook; next.popupLook = b.look; }
+      if (test.variantPromoCodeId) next.popupPromoCodeId = test.variantPromoCodeId;
+      await tx.storeRetention.update({ where: { storeId }, data: { settings: next as Prisma.InputJsonValue, revision: { increment: 1 } } });
+    });
+  }
+  /** «Seguir 2 semanas más»: no stale card for another 14 days. */
+  async extend(merchantId: string, storeId: string, experimentId: string) {
+    await this.owner(merchantId, storeId);
+    const changed = await this.prisma.storeSourceExperiment.updateMany({ where: { id: experimentId, storeId, status: 'RUNNING' }, data: { extendedUntil: new Date(Date.now() + 14 * 86400000) } });
+    if (!changed.count) throw new ConflictException('Esta prueba ya terminó.');
+    return publicationState(this.prisma, storeId);
   }
   async finish(merchantId: string, storeId: string, expected: number, experimentId: string, apply: boolean) {
     await this.owner(merchantId, storeId);
     const state = await publicationState(this.prisma, storeId);
     if (!state.experiment || state.experiment.id !== experimentId || state.experiment.status !== 'RUNNING') throw new ConflictException('Esta prueba ya no está activa.');
     const winner = apply ? state.experiment.evidence.winner : null;
+    // Final review 2026-11-09: the «Pruebas A/B» page's buttons end a popup test by the popup rules (B's popup on a win, B's code off).
+    if (state.experiment.kind === 'popup') {
+      if (apply && !winner) throw new BadRequestException('Todavía no hay evidencia suficiente para aplicar un ganador.');
+      return this.finishWith(merchantId, storeId, expected, experimentId, apply ? winner as 'A' | 'B' : 'A', !apply);
+    }
     if (apply && !winner) throw new BadRequestException('Todavía no hay evidencia suficiente para aplicar un ganador.');
     return this.change(merchantId, storeId, expected, async tx => {
       const ended = await tx.storeSourceExperiment.updateMany({ where: { id: experimentId, storeId, status: 'RUNNING' }, data: { status: apply ? 'COMPLETED' : 'STOPPED', activeStoreId: null, winner, endedAt: new Date() } });

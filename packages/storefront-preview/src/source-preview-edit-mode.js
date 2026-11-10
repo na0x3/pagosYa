@@ -281,7 +281,43 @@
   window.addEventListener('resize', onViewing);
   window.addEventListener('load', onViewing);
 
+  /** YAPI tour (spec 2026-11-09): the Studio names the step; the preview scrolls to it and rings it for a moment. */
+  function tourTarget(data) {
+    if (data.kind === 'cart') return document.querySelector('[data-cart-open], [data-pagosya-cart-open], [data-pagosya-cart]');
+    if (data.kind === 'product') return document.querySelector('[data-pagosya-catalog], [data-pagosya-product]');
+    if (data.part === 'header') return document.querySelector('header');
+    if (data.part === 'footer') return document.querySelector('footer');
+    if (data.part === 'main') return document.querySelector('main');
+    if (typeof data.at !== 'number') return null;
+    var page = data.page === 'product' ? '[data-lb-product]' : '[data-lb-home]';
+    var box = document.querySelector(page);
+    if (!box) return null;
+    var found = null;
+    Array.prototype.forEach.call(box.children, function (child) {
+      if (found || !child.hasAttribute('data-lb')) return;
+      var address = addressOf(child, box);
+      if (address && address.at === data.at) found = child;
+    });
+    return found;
+  }
+  var tourStyle = null;
+  function tourFocus(data) {
+    var element = tourTarget(data);
+    if (!element) return;
+    if (!tourStyle) {
+      tourStyle = document.createElement('style');
+      tourStyle.textContent = '[data-pagosya-tour-focus]{outline:2px solid #2f6bff;outline-offset:-2px;animation:pagosya-tour 1s ease-in-out 3}'
+        + '@keyframes pagosya-tour{50%{outline-color:transparent}}@media (prefers-reduced-motion: reduce){[data-pagosya-tour-focus]{animation:none}}';
+      document.head.appendChild(tourStyle);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('[data-pagosya-tour-focus]'), function (el) { el.removeAttribute('data-pagosya-tour-focus'); });
+    element.setAttribute('data-pagosya-tour-focus', '');
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (element.scrollIntoView) element.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center' });
+  }
+
   window.addEventListener('message', function (event) {
+    if (event.source === parent && event.data && event.data.type === 'pagosya:tour-focus') { tourFocus(event.data); return; }
     // Only the Studio (the parent window) may switch edit mode.
     if (event.source !== parent) return;
     var data = event.data;

@@ -740,8 +740,11 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     onboardingChecked = true;
     const shown = sectionOf(document.body.dataset.dashboardView, document.getElementById("marketingTabs").dataset.tab);
     renderSectionPills(shown.section, shown.tab);
+    // Owner 2026-11-07: an account just created here gets a short welcome, then names its first store.
+    if (sessionStorage.getItem("pagosya_welcome") === "1") { sessionStorage.removeItem("pagosya_welcome"); document.getElementById("welcomeDialog").showModal(); return; }
     if (!lastStores.length) openCreateStoreDialog();
   }
+  document.getElementById("welcomeStart").addEventListener("click", () => { document.getElementById("welcomeDialog").close(); openCreateStoreDialog(); });
 
   function openCreateStore() {
     openCreateStoreDialog();
@@ -1319,6 +1322,34 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     }
   }
 
+  // Owner 2026-11-07 («que se pueda crear cuenta desde el website y entras directamente al dashboard»): the same card signs up
+  // (business, email, password; the terms when pagosYa has published them). The website's «Crear cuenta» opens it with #crear-cuenta.
+  let signupMode = false;
+  let signupTermsVersion = null;
+  function setSignupMode(on) {
+    signupMode = on;
+    document.getElementById("loginTitle").textContent = on ? "Crea tu cuenta gratis" : "Bienvenido de vuelta";
+    document.getElementById("loginSub").textContent = on ? "Arma tu tienda con YAPI hoy; elige un plan cuando quieras publicarla." : "Entra a tu panel de comercio para continuar.";
+    document.querySelectorAll("[data-signup-only]").forEach((el) => { el.hidden = !on || (el.id === "signupTermsRow" && !signupTermsVersion); });
+    document.getElementById("signupBusiness").required = on;
+    document.getElementById("signupTerms").required = on && Boolean(signupTermsVersion);
+    passwordEl.autocomplete = on ? "new-password" : "current-password";
+    passwordEl.minLength = on ? 8 : 0;
+    document.getElementById("login").textContent = on ? "Crear mi cuenta" : "Continuar";
+    document.getElementById("showForgot").hidden = on;
+    document.getElementById("merchantGoogleAuth")?.classList.toggle("is-signup", on);
+    document.getElementById("loginSwitchText").textContent = on ? "¿Ya tienes cuenta?" : "¿No tienes cuenta?";
+    document.getElementById("loginSwitch").textContent = on ? "Inicia sesión" : "Crea tu cuenta gratis";
+    errorEl.textContent = "";
+    if (on && signupTermsVersion === null) void loadSignupTerms();
+  }
+  async function loadSignupTerms() {
+    try { signupTermsVersion = (await api("/legal/merchant-terms"))?.version || ""; } catch { signupTermsVersion = ""; }
+    if (signupMode) setSignupMode(true);
+  }
+  document.getElementById("loginSwitch").addEventListener("click", () => setSignupMode(!signupMode));
+  if (location.hash === "#crear-cuenta") setSignupMode(true);
+
   loginFormEl.addEventListener("submit", async (event) => {
     event.preventDefault();
     const loginButton = document.getElementById("login");
@@ -1326,17 +1357,26 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     errorEl.textContent = "";
     infoEl.textContent = "";
     sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value);
-    setButtonBusy(loginButton, true, "Ingresando…");
+    setButtonBusy(loginButton, true, signupMode ? "Creando tu cuenta…" : "Ingresando…");
     try {
-      const result = await api("/dashboard/login", {
-        method: "POST",
-        body: JSON.stringify({ email: emailEl.value, password: passwordEl.value }),
-      });
+      const termsEl = document.getElementById("signupTerms");
+      const result = signupMode
+        ? await api("/merchants/register", {
+          method: "POST",
+          body: JSON.stringify({ name: document.getElementById("signupBusiness").value.trim(), email: emailEl.value.trim(), password: passwordEl.value,
+            ...(signupTermsVersion && termsEl.checked ? { termsVersion: signupTermsVersion } : {}) }),
+        })
+        : await api("/dashboard/login", {
+          method: "POST",
+          body: JSON.stringify({ email: emailEl.value, password: passwordEl.value }),
+        });
+      // A brand-new account opens with the short welcome before its first store (owner 2026-11-07).
+      if (signupMode) { sessionStorage.setItem("pagosya_welcome", "1"); history.replaceState(null, "", location.pathname + location.search); setSignupMode(false); }
       await completeMerchantLogin(result);
     } catch (err) {
       errorEl.textContent = "Error: " + err.message;
     } finally {
-      setButtonBusy(loginButton, false, "Iniciar sesión");
+      setButtonBusy(loginButton, false, signupMode ? "Crear mi cuenta" : "Continuar");
     }
   });
 

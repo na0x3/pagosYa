@@ -21,7 +21,10 @@ export function renderSuggestions(cards: SuggestionCard[], disabled: boolean): s
 export async function applySuggestion(card: SuggestionCard, deps: { send(text: string): unknown; api: RetentionApi; storeId: string }): Promise<string> {
   if (card.kind !== 'popup') { await deps.send(card.instruction); return ''; }
   const { settings } = await deps.api.retention(deps.storeId);
-  const { startedAt: _startedAt, ...current } = settings || {};
+  // Keys only the server keeps are never sent back: the settings form refuses unknown fields (review 2026-11-09: 400 on stores with a
+  // chat-chosen popup photo or previous look).
+  const { startedAt: _startedAt, popupLookPrevious: _previous, popupPhoto: _photo, emailWorkspace: _workspace, suggestionsDismissedAt: _dismissed,
+    popupKit: _kit, popupKitPrevious: _kitPrevious, popupKitTriedAt: _kitTried, ...current } = settings || {};
   await deps.api.writeRetention(deps.storeId, '', 'PUT', { ...current, signupEnabled: true, popupTrigger: 'both' });
   return 'Listo: el popup de suscripción está activado. Puedes elegir un código de bienvenida en Tu comunidad.';
 }

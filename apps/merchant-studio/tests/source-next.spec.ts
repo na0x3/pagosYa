@@ -87,7 +87,7 @@ for (const width of [1280, 390]) test(`React storefront supports state, assets a
   await expect(frame.locator('[data-pagosya-product-page]')).toContainText('Café filtrado');
   await expect(frame.locator('[data-cart-count]')).toHaveText('1');
   await frame.getByRole('button', { name: /Mi pedido/ }).click();
-  await frame.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await frame.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   await expect(frame.getByRole('heading', { name: '¿Cómo quieres recibir tu pedido?' })).toBeVisible();
   await frame.getByRole('button', { name: 'Continuar al pago de prueba' }).click();
   await expect(frame.getByRole('heading', { name: 'Pago de prueba' })).toBeVisible();

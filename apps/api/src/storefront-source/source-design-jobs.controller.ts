@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Header, Param, Post, UseGuards } from '@nestjs/common';
+import { PlansService } from '../plans/plans.service';
+import { Body, Controller, Get, Header, Param, Post, UseGuards, Optional } from '@nestjs/common';
 import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 import { Throttle } from '@nestjs/throttler';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
@@ -15,13 +16,13 @@ export class SourceDesignJobDto {
 @UseGuards(MerchantAuthGuard)
 @Controller('v1/stores/:storeId/source-project/design-jobs')
 export class SourceDesignJobsController {
-  constructor(private readonly jobs: SourceDesignJobsService) {}
+  constructor(private readonly jobs: SourceDesignJobsService, @Optional() private readonly plans?: PlansService) {}
   @Get() @Header('Cache-Control', 'private, no-store')
   latest(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string) { return this.jobs.latest(merchant.id, storeId); }
   @Get(':id') @Header('Cache-Control', 'private, no-store')
   get(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Param('id') id: string) { return this.jobs.get(merchant.id, storeId, id); }
   @Post() @Throttle({ default: { limit: 3, ttl: 60000 } })
-  create(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() input: SourceDesignJobDto) { return this.jobs.create(merchant.id, storeId, input); }
+  async create(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() input: SourceDesignJobDto) { await this.plans?.assertCredits(storeId, merchant.id); return this.jobs.create(merchant.id, storeId, input); }
   @Post(':id/cancel')
   cancel(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Param('id') id: string) { return this.jobs.cancel(merchant.id, storeId, id); }
   @Post(':id/resume') @Throttle({ default: { limit: 3, ttl: 60000 } })

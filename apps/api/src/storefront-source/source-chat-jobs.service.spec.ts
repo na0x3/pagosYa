@@ -314,3 +314,33 @@ describe('a first design and a spent quota (2026-10-28)', () => {
     expect((chatJobView({ ...job, status: 'COMPLETED' }) as any)).toMatchObject({ firstDesign: false, designNext: false });
   });
 });
+
+// Spec 2026-11-09 YAPI A/B tests: a design test ask is marked when queued; the saved B gets its test card.
+describe('A/B design tests', () => {
+  it('a design test ask is queued with its words as abRequest; a popup ask and an ordinary ask are not', async () => {
+    const { service, prisma } = setup();
+    prisma.storeAgentMessage = { findMany: jest.fn().mockResolvedValue([]) };
+    prisma.storeSourceChatJob.create.mockImplementation(async ({ data }: any) => ({ ...job, ...data }));
+    const queued = async (instruction: string) => { prisma.storeSourceChatJob.create.mockClear(); await service.create('m', 's', { requestId: '00000000-0000-4000-8000-00000000000a', revision: 1, instruction } as any); return prisma.storeSourceChatJob.create.mock.calls[0][0].data.input; };
+    expect(await queued('prueba otra portada')).toMatchObject({ abRequest: 'prueba otra portada' });
+    expect((await queued('prueba si 15% atrae más que 10%')).abRequest).toBeUndefined();
+    expect((await queued('cambia la portada')).abRequest).toBeUndefined();
+  });
+  it('the saved B gets the test card with its revision; a failed or revision-less edit gets none', async () => {
+    const { service, chat } = setup();
+    const ab = { proposeDesign: jest.fn(async () => ({})) };
+    (service as any).ab = ab;
+    const abJob = { ...job, input: { ...input, instruction: 'prueba otra portada', abRequest: 'prueba otra portada' } };
+    chat.send.mockResolvedValue({ assistantMessage: { metadata: {} }, revision: { revision: 7, label: 'Versión B' } });
+    await service.run(abJob);
+    await new Promise(resolve => setImmediate(resolve));
+    expect(ab.proposeDesign).toHaveBeenCalledWith('s', 7, 'prueba otra portada');
+    ab.proposeDesign.mockClear();
+    chat.send.mockResolvedValue({ assistantMessage: { metadata: { failed: true } } });
+    await service.run(abJob);
+    chat.send.mockResolvedValue({ assistantMessage: { metadata: {} } });
+    await service.run(abJob);
+    await new Promise(resolve => setImmediate(resolve));
+    expect(ab.proposeDesign).not.toHaveBeenCalled();
+  });
+});

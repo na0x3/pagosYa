@@ -31,7 +31,7 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'cover-half', role: 'cover', use: 'Portada mitad foto, mitad color con el titular centrado; si hay un código de descuento activo puede mostrarlo. Buena para una oferta o un lanzamiento.', needs: { photos: 1 } },
   { id: 'cover-centered', role: 'cover', use: 'Portada tranquila: titular centrado y una foto ancha debajo. Para marcas serenas, de lujo o artesanales.', needs: { photos: 1 } },
   { id: 'cover-ribbon', role: 'cover', use: 'Portada divertida de color con la foto en un círculo y una cinta curva de palabras que se mueve abajo (items = 2 a 4 palabras). Solo marcas alegres (snacks, bebidas, dulces, juguetes).', needs: { photos: 1, items: [2, 4], mood: 'bold' } },
-  { id: 'strip-marquee', role: 'strip', use: 'Franja de palabras que se desplaza (items = 3 a 6 palabras cortas: sabores, tonos, valores). Va justo después de la portada.', needs: { items: [3, 6] }, looks: ['solid', 'line', 'tilt'] },
+  { id: 'strip-marquee', role: 'strip', use: 'Franja de palabras que se desplaza (items = 3 a 6 palabras cortas: sabores, tonos, valores; si el comercio dictó la frase, items = solo esa frase, tal cual). Va justo después de la portada, o bajo el menú si el comercio lo pide.', needs: { items: [1, 6] }, looks: ['solid', 'line', 'tilt'] },
   { id: 'strip-services', role: 'strip', use: 'Franja de servicios con iconos: envío, recojo, pago seguro, cambios. El texto lo pone pagosYa desde los datos reales de la tienda; tú solo eliges si va.', needs: { services: true } },
   { id: 'strip-badges', role: 'strip', use: 'Insignias redondas con icono de cualidades del producto (items = 3 a 6, 1 a 3 palabras cada una), solo cualidades que el comercio dijo o que están en sus productos.', needs: { items: [3, 6] } },
   { id: 'products-grid', role: 'products', use: 'La grilla principal de productos con buscador, filtros y orden. Obligatoria, una sola vez.', needs: {}, looks: ['grid4', 'grid3'] },
@@ -381,6 +381,12 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (section.id === 'categories-list') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));
     if (section.id === 'categories-tiles') items = items.filter(item => categoryByName.has(fold(item.title))).map(item => ({ ...item, title: categoryByName.get(fold(item.title))!, link: `category:${categoryByName.get(fold(item.title))}` }));
     if (needs.itemPhotos) items = items.filter(item => item.photo);
+    // Meat House live 2026-11-07 («pon texto moviéndose que diga pedidos con 24 hrs de anticipación»): one dictated phrase runs on
+    // its own, repeated so the band fills (the strip each store already has draws two words or more). Pieces that together are the
+    // merchant's own phrase («Pedidos» ✦ «con 24 hrs» ✦ «de anticipación», the same day) run whole; a list of single words stays.
+    const whole = items.map(item => item.title).join(' ');
+    if (section.id === 'strip-marquee' && items.length > 1 && whole.split(/\s+/).length > items.length && merchantWords.includes(fold(whole))) items = [{ title: whole }];
+    if (section.id === 'strip-marquee' && items.length && items.length < 3) items = Array.from({ length: items.length === 1 ? 3 : 4 }, (_, at) => ({ ...items[at % items.length] }));
     if (section.id === 'strip-services') items = facts.services.slice(0, 4);
     if (section.id === 'visit-store' && facts.location) items = [{ title: 'Dirección', text: facts.location.address, icon: 'pin' }, ...(facts.location.hours ? [{ title: 'Horario', text: facts.location.hours, icon: 'clock' }] : [])];
     if (items.length) block.items = items;

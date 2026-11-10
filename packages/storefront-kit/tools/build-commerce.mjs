@@ -28,6 +28,7 @@ export const PARTS = [
   'catalog/offers.js',
   'catalog/card-insides.js',
   'cart/lines.js',
+  'cart/merman.js',
   'product/dialog-style.js',
   'product/setup.js',
   'product/offer-squares.js',
@@ -51,6 +52,7 @@ export const PARTS = [
   'templates/kit-templates.js',
   'cart/render.js',
   'contact/form.js',
+  'contact/whatsapp-bubble.js',
   'look/dna-css.js',
   'catalog/card-extras.js',
   'checkout/shipping.js',
@@ -64,6 +66,7 @@ export const PARTS = [
   'look/fit-headlines.js',
   'look/motion-pieces.js',
   'look/lively.js',
+  'look/press.js',
   'product/variant-cards.js',
   'shared/start.js',
 ];

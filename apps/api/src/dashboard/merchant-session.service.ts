@@ -90,6 +90,9 @@ export class MerchantSessionService {
     return this.issueSession(user);
   }
 
+  /** The first session of an account just created on the dashboard's own sign-up (its email is not confirmed yet). */
+  startNewAccount(user: { id: string; merchantId: string; email: string }) { return this.issueSession(user); }
+
   private async issueSession(user: { id: string; merchantId: string; email: string }) {
     const token = `dash_${generateSecretPart()}`;
     // Session tokens carry ~190 bits of randomness, so a deterministic SHA-256

@@ -24,6 +24,8 @@ export function sourceStoreConfigData(publicStore: SourcePublicStore, apiUrl: UR
     bannerUrl: publicStore.bannerUrl ? new URL(publicStore.bannerUrl, apiUrl).href : null,
     tagline: publicStore.tagline, checkoutMode: firstRevision ? "payment" : publicStore.checkoutMode,
     contactPhone: publicStore.contactPhone, leadCaptureUrl: publicStore.leadCaptureUrl,
+    // The floating WhatsApp button (owner 2026-11-08): on unless the merchant turned it off; beside the assistant when both are on.
+    whatsappButton: publicStore.whatsappButton !== false,
     aboutText: publicStore.aboutText, contactEmail: publicStore.contactEmail, policies: publicStore.policies,
     // YAPI edits everything (spec 2026-11-03): the merchant's own FAQ questions, and the store's links (Instagram, TikTok…) the
     // kit adds to the footer's information links.

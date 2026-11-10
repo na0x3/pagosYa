@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { PlansService } from "../plans/plans.service";
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Interval } from "@nestjs/schedule";
 import { CustomDomainStatus, MerchantStatus } from "@prisma/client";
@@ -56,7 +57,7 @@ export function normalizeCustomDomainHostname(input: string): string {
 export class CustomDomainsService {
   private reconciliationCycleStartedAt: Date | null = null;
 
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService, @Optional() private readonly plans?: PlansService) {}
 
   private targetHostname(): string {
     return (this.config.get<string>("app.customDomains.target") ?? "stores.pagosya.bo").trim().toLowerCase().replace(/\.$/, "");
@@ -161,6 +162,7 @@ export class CustomDomainsService {
 
   async create(merchantId: string, storeId: string, input: string) {
     await this.ownedStore(merchantId, storeId);
+    await this.plans?.assertCustomDomain(merchantId);
     const hostname = normalizeCustomDomainHostname(input);
     if (this.reservedHostnames().has(hostname)) {
       throw new BadRequestException("Ese dominio pertenece a la infraestructura de pagosYa.");

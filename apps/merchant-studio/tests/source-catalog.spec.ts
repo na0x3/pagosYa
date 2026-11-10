@@ -127,7 +127,7 @@ test('checkout opens a full review, supports returning with the cart intact and 
   await preview(page);
   const frame = page.frameLocator('iframe');
   await frame.getByRole('button', { name: 'Añadir Una foto', exact: true }).click();
-  await frame.getByRole('button', { name: 'Continuar con mi pedido', exact: true }).click();
+  await frame.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   const checkout = frame.locator('[data-pagosya-checkout]');
   await expect(checkout.getByRole('heading', { name: 'Revisa tu pedido' })).toBeVisible();
   // At 390px the order summary starts folded under «Ver resumen del pedido».
@@ -138,7 +138,7 @@ test('checkout opens a full review, supports returning with the cart intact and 
   await checkout.getByRole('button', { name: 'Seguir comprando' }).click();
   await expect(checkout).not.toBeVisible();
   await expect(frame.locator('[data-cart-count]')).toHaveText('2');
-  await frame.getByRole('button', { name: 'Continuar con mi pedido', exact: true }).click();
+  await frame.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   await page.screenshot({ path: '.test-artifacts/source-checkout-mobile.png' });
   expect(await checkout.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await checkout.getByRole('button', { name: 'Continuar al pago de prueba' }).click();

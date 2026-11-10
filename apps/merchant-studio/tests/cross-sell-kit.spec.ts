@@ -66,7 +66,7 @@ test('the cart suggests the recommended products that are not in it yet', async 
   await page.locator('[data-cart-open]').first().click();
   const cartPanel = page.locator('[data-pagosya-cart]').first();
   const suggestions = cartPanel.locator('.order-recommendations li');
-  await expect(cartPanel.getByRole('heading', { name: 'Súmale algo más' })).toBeVisible();
+  await expect(cartPanel.getByRole('heading', { name: 'Te puede gustar' })).toBeVisible();
   await expect(suggestions).toHaveCount(2);
   await expect(suggestions.nth(1).getByRole('link', { name: 'Elegir opciones de Taza' })).toHaveAttribute('href', /product\.html\?id=mug/);
   await suggestions.nth(0).getByRole('button', { name: 'Añadir Leche' }).click();

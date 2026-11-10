@@ -288,6 +288,9 @@ model Merchant {
   // Set when the free YAPI build after a Shopify import is saved (spec 2026-09-27 §3): one per merchant.
   importBuildUsedAt           DateTime?
   storeImports                StoreImport[]
+  // Plans 2026-11-07: the monthly YAPI credits and whether stores may be published (FREE may not). Ops sets it by hand.
+  plan                        MerchantPlan                @default(FREE)
+  creditGrants                MerchantCreditGrant[]
 }
 
 // A human login for the merchant dashboard — deliberately separate from
@@ -884,6 +887,8 @@ model Store {
   // URL. The latter two never create a PaymentIntent and do not require NIT.
   checkoutMode                 String                           @default("payment")
   leadCaptureUrl               String?
+  /// The floating WhatsApp button (owner 2026-11-08): on for any store with a number, beside the assistant when both are on.
+  whatsappButton               Boolean                          @default(true)
   // Merchant-controlled cross-sell shelf inside the cart review. Recommendations
   // are explicitly selected by the merchant and always exclude cart items.
   cartRecommendationsEnabled   Boolean                          @default(true)
@@ -1176,9 +1181,13 @@ model StoreNewsletterSubscriber {
   isActive         Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  /// Spec 2026-11-09 A/B tests: the test visit a new popup signup came from.
+  sourceVisitId    String?
+  sourceVisit      StoreSourceVisit? @relation(fields: [sourceVisitId], references: [id], onDelete: SetNull)
 
   @@unique([storeId, email])
   @@index([storeId, createdAt])
+  @@index([sourceVisitId])
 }
 
 enum MediaAssetKind {
@@ -1363,6 +1372,9 @@ model StoreSourceProject {
   storeId   String               @id
   store     Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
   revision  Int                  @default(0)
+  /// Mi tienda (2026-11-07): facts YAPI assumed still waiting on the revision in pendingFactsRevision; recounted when revision moves on.
+  pendingFacts         Int?
+  pendingFactsRevision Int?
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
   versions  StoreSourceVersion[]
@@ -1509,6 +1521,8 @@ model PromoCode {
   showInEmails    Boolean           @default(false)
   /// Only codes the merchant marked for the store assistant can be offered in its chat.
   showInAssistant Boolean           @default(false)
+  /// Spec 2026-11-09 popup games: a winner's own code is usable once (paid orders counted); null = unlimited.
+  maxUses         Int?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -2366,6 +2380,13 @@ model StoreSourceExperiment {
   startedAt       DateTime           @default(now())
   endedAt         DateTime?
   visits          StoreSourceVisit[]
+  /// Spec 2026-11-09 A/B tests: 'design' (two revisions) or 'popup' (one revision, B's popup in variantSettings).
+  kind               String    @default("design")
+  variantSettings    Json?
+  variantPromoCodeId String?
+  request            String?
+  lastNoteAt         DateTime?
+  extendedUntil      DateTime?
 
   @@index([storeId, startedAt])
 }
@@ -2379,6 +2400,7 @@ model StoreSourceVisit {
   variant      String
   createdAt    DateTime              @default(now())
   orders       StoreOrder[]
+  subscribers  StoreNewsletterSubscriber[]
 
   @@unique([experimentId, visitorHash])
   @@index([experimentId, variant])
@@ -2983,6 +3005,26 @@ model BoardState {
 }
 
 // Negative side of the AI reward-credit balance: credits applied to a finished YAPI generation.
+enum MerchantPlan {
+  FREE
+  EMPRENDEDOR
+  PRO
+}
+
+// Extra YAPI credits ops gives a merchant for one America/La_Paz month ("2026-11"), on top of the plan's.
+model MerchantCreditGrant {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  month      String
+  credits    Int
+  reason     String
+  actorLabel String
+  createdAt  DateTime @default(now())
+
+  @@index([merchantId, month])
+}
+
 model AiCreditRedemption {
   id           String   @id @default(cuid())
   merchantId   String

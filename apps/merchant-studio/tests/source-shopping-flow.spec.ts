@@ -14,7 +14,7 @@ for (const width of [1280, 390]) test(`cart drawer and full-page fulfillment at 
   await trigger.click();
   const drawer = page.getByRole('dialog', { name: 'Tu pedido' });
   await expect(drawer).toContainText('Tu pedido está vacío');
-  await expect(drawer.getByRole('button', { name: 'Continuar con mi pedido' })).toBeDisabled();
+  await expect(drawer.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ })).toBeDisabled();
   await page.keyboard.press('Escape');
   await expect(trigger).toBeFocused();
   await expect(page.locator('[data-pagosya-cart]')).toBeHidden();
@@ -36,7 +36,7 @@ for (const width of [1280, 390]) test(`cart drawer and full-page fulfillment at 
   await page.screenshot({ path: `/tmp/pagosya-cart-drawer-${width}.png` });
   await drawer.getByRole('button', { name: 'Quitar una unidad de Bolso de algodón' }).click();
   await expect(drawer.locator('.quantity output')).toHaveText('1');
-  await drawer.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await drawer.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   await expect(drawer).not.toBeVisible();
   await expect(page.getByRole('heading', { name: '¿Cómo quieres recibir tu pedido?' })).toBeVisible();
   await expect(page.locator('[data-branch-address]')).toContainText('Calle 10');

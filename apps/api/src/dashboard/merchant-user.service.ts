@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, ConflictException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "node:crypto";
 import * as argon2 from "argon2";
@@ -154,6 +154,22 @@ export class MerchantUserService {
    * null (and does nothing) if the email is already verified or has a still-
    * fresh unverified claim, so callers can skip sending anything in that case.
    */
+  /** Owner 2026-11-07 («crear cuenta desde el website y entras directamente al dashboard»): the account is made with the
+   *  merchant's own password and they go straight in; the confirmation email still goes out (a send failure is logged, not
+   *  fatal — they can ask for it again). Logging in later still needs the confirmed email. */
+  /** Checked before a new business is created, so a used email never leaves an empty business behind. */
+  async emailTaken(email: string) {
+    const existing = await this.prisma.merchantUser.findUnique({ where: { email } });
+    return Boolean(existing && !this.isStaleUnverified(existing));
+  }
+
+  async createForNewAccount(merchantId: string, email: string, password: string) {
+    const user = await this.upsertUnverifiedUser(merchantId, email, password);
+    if (!user) throw new ConflictException("Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.");
+    await this.issueVerification(user.id, email).catch(() => undefined);
+    return { id: user.id, merchantId: user.merchantId, email: user.email };
+  }
+
   private async upsertUnverifiedUser(merchantId: string, email: string, password: string) {
     const existing = await this.prisma.merchantUser.findUnique({ where: { email } });
     if (existing && !this.isStaleUnverified(existing)) return null;

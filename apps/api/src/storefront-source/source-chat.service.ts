@@ -1,6 +1,13 @@
+import { SourceTourService } from './source-tour.service';
+import { keepsStep, TOUR_REQUEST } from './source-tour';
+import { AB_END, AB_REQUEST, AB_STATUS, abKind } from './source-ab';
+import { SourceAbService } from './source-ab.service';
 import { appendFileSync } from 'node:fs';
 import { applyPageOps, withExtraPages, type ExtraPage } from './source-extra-pages';
 import { SourceThumbnailsService } from './source-thumbnails.service';
+import { PopupLookService } from '../store-popups/popup-look.service';
+import { PopupGameService } from '../store-popups/popup-game.service';
+import { pickPopupLook, readPopupLook } from '../store-popups/popup-looks';
 import { outsideFocus, pointFocus } from './source-point-focus';
 import { randomUUID } from 'node:crypto';
 import { SOURCE_MODEL_CHOICES } from './source-generation-policy';
@@ -75,7 +82,7 @@ import { writeCatalogChange } from './source-catalog-write';
 import type { ProductVariant } from '../payment-links/product-variants';
 import { applyStoreOps, readCatalogTitle, storeChangeEmpty, withCatalogTitle, type StoreChange, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
 import { storeFaq, storePolicies } from '../stores/store-presentation';
-import { MENU_PAGES, MENU_PAGE_NAMES, MENU_PAGE_URLS, applyLayoutOps, layoutAdds, layoutEditReply, menuPagesFor, withPageImprove, type LayoutPage, type MenuPage } from './source-layout-edit';
+import { MENU_PAGES, MENU_PAGE_NAMES, MENU_PAGE_URLS, applyLayoutOps, bandUnderMenu, layoutAdds, layoutEditReply, menuPagesFor, withPageImprove, type LayoutPage, type MenuPage } from './source-layout-edit';
 import { keptMenuPages, sectionablePage, withSectionedPages } from './source-content-pages';
 import { bolivianos, readShippingAsk, type ShippingAsk } from './source-shipping-ask';
 import { plainReply } from './source-plain-reply';
@@ -274,7 +281,7 @@ export class SourceChatService {
   homeMeasurer = measureBuiltHome;
   private readonly productLogger = new Logger('ProductSource');
   constructor(private readonly prisma: PrismaService, private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly dialogue: SourceConversationService, private readonly templates: SourceTemplatesService, private readonly config: ConfigService, @Optional() private readonly uploads?: UploadsService,
-    @Optional() private readonly plans?: SourceStorePlanService, @Optional() private readonly thumbnails?: SourceThumbnailsService) {}
+    @Optional() private readonly plans?: SourceStorePlanService, @Optional() private readonly thumbnails?: SourceThumbnailsService, @Optional() private readonly popupLooks?: PopupLookService, @Optional() private readonly popupGames?: PopupGameService, @Optional() private readonly tour?: SourceTourService, @Optional() private readonly ab?: SourceAbService) {}
   /** Spec 2026-10-12: how long a pick or a new request waits for a style run that is stopping to let go of the store. */
   /** Computed on first use from the deadlines the style run awaits (source-style-release.ts); tests set it directly. */
   protected styleReleaseWaitMs?: number;
@@ -1205,6 +1212,8 @@ export class SourceChatService {
     const trace = (outcome: string, extra: Record<string, unknown> = {}) => this.traceQuickEdit({ storeId, request: input.instruction.slice(0, 300),
       ...(read ? { ops: read.ops.length, store: read.store.length, catalog: (read.catalog ?? []).length, rest: read.rest.slice(0, 300), ask: read.ask ?? '' } : {}), outcome, ...extra });
     if (!read) { trace('no-answer'); return null; }
+    // Live Remolino 2026-11-09: a classic home (no sections) is not this edit's to change; a home op hands the whole request on.
+    if (!layout.length && read.ops.some(op => (op.page ?? 'home') === 'home' && !op.op.startsWith('page-'))) { trace('classic-home'); return null; }
     // Owner 2026-11-06 («no podemos dejar nada a la suerte»): improving a menu page always adds its sections, whatever the model read.
     read = withPageImprove(read, input.instruction, pages, templateTypes);
     // Live 2026-11-05: a change that needs the merchant's words first (a FAQ answer) is asked for, never «No logré que se vea».
@@ -1246,7 +1255,8 @@ export class SourceChatService {
         const sectionFacts = { ...facts, request, ...(fresh.length >= 3 ? { photos: fresh } : {}) };
         const answer = await this.dialogue.composeLibrary(merchantId, { storeId, facts: sectionFacts, template: [{ type: add.type }] }).catch(error => { if (error instanceof SourceProviderQuotaException) throw error; return null; });
         const [block] = answer ? validateLibraryLayout(answer as never, sectionFacts, { fixed: [{ type: add.type }] }) : [];
-        if (block) added.push({ to: add.to, block }); else refusedAdds.push(`No pude agregar esa sección: ${libraryDropReason(add.type)}.`);
+        if (!block) this.traceQuickEdit({ storeId, stage: 'section-dropped', type: add.type, to: add.to, about: add.about, answer: JSON.stringify(answer ?? null).slice(0, 2000) });
+        if (block) added.push({ to: bandUnderMenu(block.type, input.instruction) ? 0 : add.to, block }); else refusedAdds.push(`No pude agregar esa sección: ${libraryDropReason(add.type)}.`);
       }
       return { added, refusedAdds };
     };
@@ -1291,11 +1301,14 @@ export class SourceChatService {
       extraPages: extra.map(page => page.slug), focus: focus ? { pagina: focus.pagina, secciones: focus.secciones, partes: focus.partes, mirando: Boolean(focus.mirando) } : null, outsideFocus: outsideFocus(ops, focus) }));
     // The store's data first: a refused write (a check the database makes) is said, never «Listo».
     // The announcement, the footer line, the catalogue title and its filter style are files; everything else the store edit changes is data.
-    const { copy: _copy, catalogTitle: _title, filterStyle: _filters, ...data } = store.change;
+    const { copy: _copy, catalogTitle: _title, filterStyle: _filters, parts: _parts, footerStyle: _footer, ...data } = store.change;
     let dataChanged = false;
     const catalogWrite = !catalogChangeEmpty(catalog.change);
     const dataEmpty = storeChangeEmpty({ ...data, products: data.products });
-    if (!storeChangeEmpty(store.change) || catalogWrite) {
+    // Final review 2026-11-09: a design test's B is a revision — the store's data and catalog are live for everyone, so they wait.
+    const testB = Boolean(input.abRequest) && (!dataEmpty || catalogWrite);
+    if (testB) refused.push('En una prueba A/B solo cambian el diseño o la ventana; no cambié los datos de tu tienda (textos de páginas, productos o precios).');
+    if (!testB && (!storeChangeEmpty(store.change) || catalogWrite)) {
       const written = dataEmpty && !catalogWrite ? true : await (async () => {
         await workflow.report('saving');
         return this.writeStoreChange(merchantId, storeId, store.change, catalogWrite ? catalog.change : undefined).then(() => (dataChanged = true), error => {
@@ -1303,8 +1316,11 @@ export class SourceChatService {
           return false;
         });
       })();
-      if (written) { done.push(...store.done, ...catalog.done); refused.push(...catalog.notes); }
-      else refused.push(catalogWrite && dataEmpty ? 'No pude guardar los cambios del catálogo. Inténtalo de nuevo en un momento.'
+      if (written) {
+        done.push(...store.done, ...catalog.done); refused.push(...catalog.notes);
+        // Spec 2026-11-09 A/B tests: the live popup is version A of a running popup test — the merchant is told the change reaches it.
+        if ((store.change.popup || store.change.popupLook) && await this.ab?.popupTestRunning(storeId).catch(() => false)) refused.push('Ojo: tienes una prueba de la ventana corriendo; este cambio también lo ve la versión A.');
+      } else refused.push(catalogWrite && dataEmpty ? 'No pude guardar los cambios del catálogo. Inténtalo de nuevo en un momento.'
         : 'No pude guardar los cambios de los datos de tu tienda. Inténtalo de nuevo en un momento.');
     }
     // Links to a renamed or removed category follow it on every page, only once the change is saved; the menu follows in the files.
@@ -1324,7 +1340,9 @@ export class SourceChatService {
       ...(JSON.stringify(productNow) !== JSON.stringify(productLayout) ? { productLayout: productNow } : {}), ...(store.change.copy ? { copy: store.change.copy } : {}),
       ...(pagesNowChanged ? { pageLayouts: pagesNow } : {}), ...(extraNowChanged ? { extraPages: extraNow } : {}),
       // Browse catalogue (spec 2026-11-06): the catalogue's style is the store's filters variant, written to config.js by the refill.
-      ...(store.change.filterStyle ? { variants: { filters: store.change.filterStyle } } : {}) };
+      ...(store.change.filterStyle || store.change.footerStyle ? { variants: { ...(store.change.filterStyle ? { filters: store.change.filterStyle } : {}), ...(store.change.footerStyle ? { footer: store.change.footerStyle } : {}) } } : {}),
+      // Miga Dorada 2026-11-07: a part's own colour rides in the look; the refill draws it over the theme's.
+      ...(store.change.parts ? { look: { parts: store.change.parts } } : {}) };
     // Final review 2026-11-06: a question, or catalog ops that changed nothing, is answered here — never the slow design edit.
     if (!done.length && !refused.length && !read.ask && !(read.catalog ?? []).length) { trace('handed-on'); return null; }
     trace('replied', { done: done.length, refused: refused.length });
@@ -1353,7 +1371,7 @@ export class SourceChatService {
         ? { files: <T extends { path: string; content: string }>(list: T[]) => withoutRemovedCategories(withExtra(withSectionedPages(title !== undefined ? withCatalogTitle(list, title) : list, sectioned))) } : {};
       // Spec §6: data already saved stays saved when the preview fails to build; the merchant is told, never a bare error.
       try {
-        saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraNowChanged || store.change.copy || store.change.filterStyle || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
+        saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraNowChanged || store.change.copy || store.change.filterStyle || store.change.parts || store.change.footerStyle || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
           { refreshData: true, ...pageFiles });
       } catch (error) {
         if (!dataChanged) throw error;
@@ -1378,7 +1396,7 @@ export class SourceChatService {
   /** YAPI edits everything (spec 2026-11-03): the store's own data as the edit call reads it. */
   private async storeEditState(merchantId: string, storeId: string, files: SourceProjectSnapshot['files']): Promise<StoreEditState> {
     const [record, links, retention, catalog] = await Promise.all([
-      this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { tagline: true, aboutText: true, contactPhone: true, contactEmail: true, policies: true } }),
+      this.prisma.store.findFirst({ where: { id: storeId, merchantId }, select: { slug: true, tagline: true, aboutText: true, contactPhone: true, contactEmail: true, whatsappButton: true, policies: true } }),
       this.prisma.storeLink.findMany({ where: { storeId }, orderBy: { sortOrder: 'asc' }, select: { label: true, url: true } }),
       this.prisma.storeRetention.findUnique({ where: { storeId }, select: { settings: true } }),
       this.generation.catalog(merchantId, storeId),
@@ -1386,7 +1404,8 @@ export class SourceChatService {
     if (!record) throw new Error('store not found');
     const settings = { ...DEFAULT_RETENTION, ...((retention?.settings ?? {}) as Record<string, unknown>) } as typeof DEFAULT_RETENTION & { popupPromoCodeId?: string | null };
     const code = settings.popupPromoCodeId ? await this.prisma.promoCode.findFirst({ where: { id: settings.popupPromoCodeId, storeId, isActive: true }, select: { discountType: true, discountValue: true } }) : null;
-    const copy = (readMasterState(files).copy ?? {}) as { announcement?: string; tagline?: string };
+    const master = readMasterState(files);
+    const copy = (master.copy ?? {}) as { announcement?: string; tagline?: string };
     const items = (catalog.items ?? []) as Array<{ id: string; name: string; amount: number; description?: string | null; imageUrls?: string[]; variants?: unknown[] }>;
     // Part 2 (spec 2026-11-05 creates anything): the catalog rows the chat may change; any read that fails leaves its part out.
     const safely = <T,>(run: () => Promise<T>, fallback: T): Promise<T> => Promise.resolve().then(run).catch(() => fallback);
@@ -1401,14 +1420,17 @@ export class SourceChatService {
     ]);
     const row = new Map(rows.map(entry => [entry.id, entry]));
     return {
-      tagline: record.tagline ?? '', aboutText: record.aboutText ?? '', contactPhone: record.contactPhone ?? '', contactEmail: record.contactEmail ?? '',
+      tagline: record.tagline ?? '', aboutText: record.aboutText ?? '', contactPhone: record.contactPhone ?? '', contactEmail: record.contactEmail ?? '', whatsappButton: record.whatsappButton,
       policies: storePolicies(record.policies), faq: storeFaq(record.policies),
       announcement: copy.announcement ?? '', footer: copy.tagline ?? '',
       links,
       popup: { on: Boolean(settings.signupEnabled), title: String(settings.signupTitle ?? ''), text: String(settings.signupBody ?? ''), button: String(settings.signupButton ?? ''),
-        discount: code?.discountType === 'PERCENT' ? Number(code.discountValue) : 0 },
+        discount: code?.discountType === 'PERCENT' ? Number(code.discountValue) : 0,
+        look: readPopupLook((settings as Record<string, unknown>).popupLook) ?? pickPopupLook(record.slug), previous: Boolean(readPopupLook((settings as Record<string, unknown>).popupLookPrevious)) },
       catalogTitle: readCatalogTitle(files),
       ...(typeof readConfigFile(files).filterStyle === 'string' ? { filterStyle: String(readConfigFile(files).filterStyle) } : {}),
+      ...(master.look?.parts ? { parts: master.look.parts } : {}),
+      ...(typeof master.variants?.footer === 'string' ? { footerStyle: master.variants.footer, footerStyles: templateManifest(MASTER_TEMPLATE_ID)?.master?.variants?.footer ?? [] } : {}),
       products: items.map(item => {
         const saved = row.get(item.id);
         return { id: item.id, name: item.name, amount: Number(item.amount) || 0, description: item.description ?? '', imageUrls: (item.imageUrls ?? []).map(url => uploadOnly(url) ?? url),
@@ -1445,8 +1467,8 @@ export class SourceChatService {
   /** YAPI edits everything (spec 2026-11-03): the store's data the edit changed, written as Ajustes and the product editor write it. */
   private async writeStoreChange(merchantId: string, storeId: string, change: StoreChange, catalog?: CatalogChange) {
     await this.prisma.$transaction(async tx => {
-      if (change.store || change.policies) {
-        await tx.store.update({ where: { id: storeId }, data: { ...(change.store ?? {}), ...(change.policies ? { policies: change.policies as Prisma.InputJsonValue } : {}) } });
+      if (change.store || change.policies || change.whatsappButton !== undefined) {
+        await tx.store.update({ where: { id: storeId }, data: { ...(change.store ?? {}), ...(change.whatsappButton !== undefined ? { whatsappButton: change.whatsappButton } : {}), ...(change.policies ? { policies: change.policies as Prisma.InputJsonValue } : {}) } });
       }
       if (change.links) {
         await tx.storeLink.deleteMany({ where: { storeId } });
@@ -1474,6 +1496,17 @@ export class SourceChatService {
       const next = { ...DEFAULT_RETENTION, ...(current ?? {}), ...words, ...(code ? { popupPromoCodeId: code.id } : {}) };
       await this.prisma.storeRetention.upsert({ where: { storeId }, create: { storeId, settings: next as never }, update: { settings: next as never } });
     }
+    // Spec 2026-11-09 popup looks: the look, its photo or one step back, after the popup's words.
+    if (change.popupLook?.action === 'look') await this.popupLooks?.setLook(storeId, change.popupLook.look);
+    if (change.popupLook?.action === 'photo') await this.popupLooks?.setPhoto(storeId, change.popupLook.photo);
+    if (change.popupLook?.action === 'undo') await this.popupLooks?.undo(storeId);
+    // Spec 2026-11-09 popup games: on/off (four real codes on), the top prize, the question.
+    const game = change.popupGame;
+    // One message may carry several (review 2026-11-09: «una ruleta con premio mayor de 30 %»): the game first, then its prize and question.
+    if (game?.game) await (game.game === 'off' ? this.popupGames?.disable(storeId) : this.popupGames?.enable(storeId, game.game));
+    if (game?.topPrize !== undefined) await this.popupGames?.setTopPrize(storeId, game.topPrize);
+    if (game?.prizes) await this.popupGames?.setPrizes(storeId, game.prizes);
+    if (game?.question !== undefined) await this.popupGames?.setQuestion(storeId, game.question);
   }
 
   /** Fix 4 (2026-11-02): the shipping price the merchant named, set on the store's delivery zones (all of them: one price for the
@@ -1693,7 +1726,7 @@ export class SourceChatService {
     if (input.directionId && (!tappedDirection || current.revision)) throw new BadRequestException('Elige una de las direcciones sugeridas en el último mensaje de YAPI.');
     const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: { updatedAt: new Date() } });
     const userMessage = await this.prisma.storeAgentMessage.create({ data: {
-      threadId: thread.id, channel: 'source', role: 'USER', content: input.resumeWords?.trim() || (input.personalTouch ? 'Toque personal' : input.instruction.trim()),
+      threadId: thread.id, channel: 'source', role: 'USER', content: input.tourWords?.trim() || input.resumeWords?.trim() || (input.personalTouch ? 'Toque personal' : input.instruction.trim()),
       metadata: { assetUrls: input.assetUrls || [], revision: input.revision, ...(input.requestId ? { requestId: input.requestId } : {}) },
     } });
     // Store voice (spec 2026-10-14): the message right after YAPI's kind question is its answer. It is kept word for word on the
@@ -1711,6 +1744,32 @@ export class SourceChatService {
     // Studio sent with it (a chip tap carries no setupAction). Photos sent with it join the build.
     // Final review 2026-11-04: only a plain answer does — a product photo, a pasted link, «restart» or a template/style/plan tap keeps
     // its own flow (the open question is left behind). Photos answering it are images only and lead the build's photos.
+    // Spec 2026-11-09 A/B tests: status, end and popup test asks are answered from the test's own numbers (no model call); a design ask
+    // (abRequest, set when the job was queued) first checks the test can start, then builds B by the usual edit.
+    if (current.revision && this.ab && !input.personalTouch && !input.resumeWords && !input.tourStepId) {
+      const text = input.instruction;
+      const asked = input.abRequest ? null : AB_STATUS.test(text) ? () => this.ab!.status(storeId) : AB_END.test(text) ? () => this.ab!.end(storeId) : null;
+      if (asked) { await workflow.finish('completed'); return { userMessage, assistantMessage: await asked(), setup: null }; }
+      if (input.abRequest || AB_REQUEST.test(text)) {
+        const blocked = await this.ab.blocker(merchantId, storeId);
+        if (blocked) {
+          await workflow.finish('completed');
+          return { userMessage, assistantMessage: await this.ab.blocked(storeId, blocked), setup: null };
+        }
+        if (!input.abRequest && abKind(text) === 'popup') { await workflow.finish('completed'); return { userMessage, assistantMessage: await this.ab.proposePopup(storeId, text), setup: null }; }
+        if (input.abRequest) input = { ...input, instruction: `Versión B para una prueba A/B (no publicar): ${input.abRequest}` };
+      }
+    }
+    // YAPI store tour (spec 2026-11-09): «muéstrame mi tienda» walks the store section by section — no model call, no credits.
+    if (current.revision && this.tour && !input.personalTouch && !input.resumeWords && !input.tourStepId && TOUR_REQUEST.test(input.instruction)) {
+      await workflow.finish('completed');
+      return { userMessage, assistantMessage: await this.tour.start(storeId), setup: null };
+    }
+    // Owner 2026-11-09: «perdón me equivoqué, sí me gustaba» answers the tour — the section stays, the next step comes.
+    if (input.tourStepId && this.tour && keepsStep(input.tourWords ?? input.instruction)) {
+      const kept = await this.tour.keep(storeId);
+      if (kept) { await workflow.finish('completed'); return { userMessage, assistantMessage: kept, setup: null }; }
+    }
     const plainAnswer = (!input.setupAction || input.setupAction === 'generate') && !input.templateId && !input.directionId && !input.planId && !input.stylePick
       && !/https?:\/\/|www\./i.test(input.instruction);
     const openIntake = plainAnswer && !input.personalTouch && !input.resumeWords && this.intakeOn() ? pendingIntake(history.messages, current.revision) : null;
@@ -1948,15 +2007,16 @@ export class SourceChatService {
       // YAPI edits everything (spec 2026-11-03; live on Miga: «activa una ventana de suscripción con 10%» got a cadence question
       // from the conversation step): on a template store the store edit reads a change request first. What it cannot do follows as
       // its own request; a request it has nothing for (a question, a redesign, a logo) goes on to the conversation step unchanged.
+      // Live Remolino 2026-11-09: a store without home sections too — its popup, policies and codes are the store edit's, never a rewrite.
       let storeEditTried = false;
       const firstFiles = previous ? (previous.snapshot as unknown as SourceProjectSnapshot).files : [];
       // Final review 2026-11-05 (point-at): a template section or circle goes here too; a classic section id still does not.
       const pointed = Boolean(input.selection && (input.selection.area || input.selection.page));
       if (previous && !input.personalTouch && !input.redesign && !input.layoutRest && (!input.selection || pointed) && !input.resumeDraft && !productLink && !referenceUrls.length
         && this.config.get<boolean>('app.yapiMasterTemplate') === true && (previous.snapshot as unknown as SourceProjectSnapshot).brief?.templateId === MASTER_TEMPLATE_ID
-        && readsMasterData(firstFiles) && !sourceRedesignRequested(input.instruction) && (readMasterState(firstFiles).layout ?? []).length) {
+        && readsMasterData(firstFiles) && !sourceRedesignRequested(input.instruction)) {
         storeEditTried = true;
-        const done = await this.templateLayoutEdit(merchantId, storeId, thread.id, userMessage, workflow, input, current.revision, readMasterState(firstFiles).layout as LayoutBlock[]);
+        const done = await this.templateLayoutEdit(merchantId, storeId, thread.id, userMessage, workflow, input, current.revision, (readMasterState(firstFiles).layout ?? []) as LayoutBlock[]);
         if (done) return done;
       }
       // A personal-touch redesign (the first design included) is rework of the template, never a local edit (live check 2026-10-28).

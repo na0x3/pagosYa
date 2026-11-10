@@ -18,7 +18,12 @@ const HEX = /^#[0-9a-f]{6}$/i;
 
 export type MasterColour = 'paper' | 'ink' | 'muted' | 'accent' | 'deep';
 export const MASTER_COLOURS: readonly MasterColour[] = ['paper', 'ink', 'muted', 'accent', 'deep'];
-export type MasterLook = { palette: string; fonts: string; colors: Partial<Record<MasterColour, string>>; titles?: string[] };
+/** Miga Dorada 2026-11-07 («que el footer sea rosado»): the parts a merchant may colour on their own, over the theme's fixed colour. */
+export type MasterPart = 'header' | 'footer' | 'announce';
+export const MASTER_PARTS: readonly MasterPart[] = ['header', 'footer', 'announce'];
+export type MasterLook = { palette: string; fonts: string; colors: Partial<Record<MasterColour, string>>; titles?: string[];
+  /** A part's own background colour (#rrggbb); a part left out keeps its theme's colour. */
+  parts?: Partial<Record<MasterPart, string>> };
 export type MasterFill = { copy?: Partial<MasterCopy>; look?: Partial<MasterLook>; heroPhoto?: string | null; storyPhoto?: string | null;
   /** Section library (spec 2026-10-31): the home's blocks, in order (store-data `layout`); photos already bundled. */
   layout?: unknown[];
@@ -80,7 +85,40 @@ export function masterLook(settings: MasterSettings, partial: Partial<MasterLook
   for (const key of MASTER_COLOURS) { const value = partial.colors?.[key]; if (typeof value === 'string' && HEX.test(value)) colors[key] = value.toLowerCase(); }
   // Chunky colour titles (spec 2026-11-03): up to four title colours from the store's photos.
   const titles = (partial.titles ?? []).filter(value => typeof value === 'string' && HEX.test(value)).map(value => value.toLowerCase()).slice(0, 4);
-  return { palette, fonts, colors, ...(titles.length ? { titles } : {}) };
+  const parts = lookParts(partial.parts);
+  return { palette, fonts, colors, ...(titles.length ? { titles } : {}), ...(Object.keys(parts).length ? { parts } : {}) };
+}
+
+/** The part colours that are #rrggbb, lower case. */
+function lookParts(parts: unknown): Partial<Record<MasterPart, string>> {
+  const given = (parts && typeof parts === 'object' ? parts : {}) as Record<string, unknown>;
+  return Object.fromEntries(MASTER_PARTS.flatMap(part => typeof given[part] === 'string' && HEX.test(given[part] as string) ? [[part, (given[part] as string).toLowerCase()]] : []));
+}
+
+/** The saved part colours with a change over them: a hex sets the part, "" gives it back to the theme, anything else is ignored. */
+export function mergeLookParts(current: unknown, change: unknown): Partial<Record<MasterPart, string>> {
+  const out = lookParts(current);
+  const asked = (change && typeof change === 'object' ? change : {}) as Record<string, unknown>;
+  for (const part of MASTER_PARTS) {
+    const value = asked[part];
+    if (value === '') delete out[part];
+    else if (typeof value === 'string' && HEX.test(value)) out[part] = value.toLowerCase();
+  }
+  return out;
+}
+
+/** A part's colour drawn over every theme (they paint it a fixed hex): its words follow in a colour that reads on it, but not a box
+ *  inside with its own colour — the footer's ticker strip, signup form and dark boxes, a dropdown panel, the cart count, a button. */
+export function masterPartsCss(parts: Partial<Record<MasterPart, string>> | undefined): string {
+  const rules: string[] = [];
+  const ink = (hex: string) => bestInkFor(hex, '#ffffff');
+  if (parts?.announce) rules.push(`.es-announce{background:${parts.announce}!important;color:${ink(parts.announce)}!important}`,
+    '.es-announce :is(p,span,a){color:inherit!important}');
+  if (parts?.header) rules.push(`.es-header{background:${parts.header}!important;color:${ink(parts.header)}!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}`,
+    '.es-header :is(a,button,span,p,.es-logo,.es-icon-btn):not(.es-btn):not(.es-btn *):not(.es-cart-count):not(.es-header__search *):not([class*="panel"] *):not([class*="drop"] *){color:inherit!important}');
+  if (parts?.footer) rules.push(`.es-footer{background-color:${parts.footer}!important;color:${ink(parts.footer)}!important}`,
+    '.es-footer:not([data-es-footer="column"]) :is(a,p,h2,h3,label,span,small,li,.es-footer__big,.es-footer__word):not(.es-footer__ticker *):not(.es-footer__signup *):not(button *):not([data-es-footer="twotone"] .es-footer__brand *){color:inherit!important}');
+  return rules.join('\n');
 }
 
 /** The palette with the merchant's own colours over it; text is always readable on paper, accent and deep. */
@@ -157,7 +195,10 @@ export function masterThemeBlock(colours: Record<MasterColour, string>, headingF
 export function masterThemeCss(settings: MasterSettings, look: MasterLook, titleStyle?: string): string {
   const pair = settings.fonts.find(f => f.id === look.fonts) ?? settings.fonts[0];
   const c = masterColours(settings, look);
-  return masterThemeBlock({ paper: c.paper, ink: c.ink, muted: c.muted, accent: c.accent, deep: c.deep }, pair.heading, pair.body, (pair as { mono?: string }).mono, { colours: look.titles, style: titleStyle });
+  const block = masterThemeBlock({ paper: c.paper, ink: c.ink, muted: c.muted, accent: c.accent, deep: c.deep }, pair.heading, pair.body, (pair as { mono?: string }).mono, { colours: look.titles, style: titleStyle });
+  // Inside the block, so every refill redraws the part colours from the look.
+  const parts = masterPartsCss(look.parts);
+  return parts ? block.replace(MASTER_THEME_END, `${parts}\n${MASTER_THEME_END}`) : block;
 }
 
 /** 34 templates (2026-10-31): the template stylesheet carries every theme between «/* theme:id *\/» and «/* /theme:id *\/»; a store
@@ -253,7 +294,9 @@ export function templateLook(settings: MasterSettings, current: MasterLook, chan
   const asked = String(change.colors?.accent ?? '').toLowerCase();
   const palette = after.palette !== before.palette ? settings.palettes.find(p => p.id === after.palette) : undefined;
   const accent = HEX.test(asked) && asked !== before.colors.accent ? asked : palette ? palette.accent.toLowerCase() : before.colors.accent;
-  return { palette: after.palette, fonts: after.fonts, colors: { ...before.colors, ...(accent ? { accent } : {}) }, ...(change.titles ? { titles: after.titles } : before.titles ? { titles: before.titles } : {}) };
+  const parts = mergeLookParts(before.parts, change.parts);
+  return { palette: after.palette, fonts: after.fonts, colors: { ...before.colors, ...(accent ? { accent } : {}) }, ...(change.titles ? { titles: after.titles } : before.titles ? { titles: before.titles } : {}),
+    ...(Object.keys(parts).length ? { parts } : {}) };
 }
 
 export function withMasterTheme(css: string, block: string): string {

@@ -605,6 +605,11 @@ export class CreateStoreDto {
   @IsIn(["payment", "whatsapp", "external"])
   checkoutMode?: string;
 
+  @ApiPropertyOptional({ description: "Show the floating WhatsApp button when the store has a number (beside the assistant when both are on)." })
+  @IsOptional()
+  @IsBoolean()
+  whatsappButton?: boolean;
+
   @ApiPropertyOptional({ description: "Optional legacy http(s) destination for external lead stores.", nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)

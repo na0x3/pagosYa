@@ -419,3 +419,123 @@ describe('a listing price waiting for the merchant blocks publishing (spec 2026-
     expect(priceToConfirmMessage(['A', 'B'])).toBe('Antes de publicar, confirma los precios de «A», «B»: YAPI los tomó de los anuncios. Edítalos en Productos.');
   });
 });
+
+// Spec 2026-11-09 YAPI A/B tests: popup tests, the merchant's chosen winner, signups in the numbers.
+describe('popup A/B tests', () => {
+  function popupPublishing(over: { running?: any; percent?: number } = {}) {
+    const store: any = { id: 's', merchantId: 'm', slug: 'remo', status: 'ACTIVE', publicVisibility: true, sourcePublicationPaused: false, publishedSourceRevision: 4, checkoutMode: 'payment', merchant: { status: 'ACTIVE' }, contactFormEnabled: false, sourcePublicationVersion: 0 };
+    const experiments: any[] = over.running ? [over.running] : [];
+    const codes: any[] = [{ id: 'codeA', storeId: 's', code: 'BIENVENIDA10', discountType: 'PERCENT', discountValue: over.percent ?? 10, isActive: true }];
+    const retention: any = { storeId: 's', revision: 1, settings: { signupEnabled: true, popupPromoCodeId: 'codeA', popupLook: 'postal', signupTitle: 'Únete', signupBody: 'Recetas y un 10 % de bienvenida.' } };
+    const prisma: any = {
+      store: { findFirst: jest.fn(async () => store), findUniqueOrThrow: jest.fn(async () => store), updateMany: jest.fn(async () => ({ count: 1 })), update: jest.fn(async ({ data }) => Object.assign(store, data)) },
+      storeSourceExperiment: {
+        findUnique: jest.fn(async ({ where }) => experiments.find(e => e.activeStoreId === where.activeStoreId) ?? null),
+        findFirst: jest.fn(async ({ where }) => experiments.find(e => !where.status || e.status === where.status) ?? null),
+        create: jest.fn(async ({ data }) => { const row = { id: `e${experiments.length}`, status: 'RUNNING', startedAt: new Date(), ...data }; experiments.push(row); return row; }),
+        updateMany: jest.fn(async ({ where, data }) => { const hit = experiments.filter(e => e.id === (where.id ?? e.id) && e.status === (where.status ?? e.status)); hit.forEach(e => Object.assign(e, data)); return { count: hit.length }; }),
+      },
+      storeSourceVisit: { groupBy: jest.fn(async () => []) },
+      storeOrder: { findMany: jest.fn(async () => []) },
+      storeNewsletterSubscriber: { findMany: jest.fn(async () => []) },
+      storeRetention: { findUnique: jest.fn(async () => retention), update: jest.fn(async ({ data }) => { retention.settings = data.settings; return retention; }) },
+      promoCode: {
+        findFirst: jest.fn(async ({ where }) => codes.find(c => c.id === where.id) ?? null),
+        create: jest.fn(async ({ data }) => { const row = { id: `code${codes.length}`, ...data }; codes.push(row); return row; }),
+        updateMany: jest.fn(async ({ where, data }) => { const hit = codes.filter(c => c.id === where.id); hit.forEach(c => Object.assign(c, data)); return { count: hit.length }; }),
+      },
+    };
+    prisma.$transaction = jest.fn(async (work: any) => work(prisma));
+    const service = new SourcePublishingService(prisma, { assertCanPublish: jest.fn() } as any);
+    return { service, prisma, store, experiments, codes, retention };
+  }
+
+  it('a popup test runs on the published design and makes B its own hidden code only when the percent differs', async () => {
+    const { service, experiments, codes } = popupPublishing();
+    await service.startPopupTest('m', 's', { discount: 15 }, '15% vs 10%', 0);
+    expect(experiments[0]).toMatchObject({ kind: 'popup', controlRevision: 4, variantRevision: 4, request: '15% vs 10%', variantSettings: { discount: 15 }, variantPromoCodeId: 'code1' });
+    expect(codes[1]).toMatchObject({ discountType: 'PERCENT', discountValue: 15, showInEmails: false, isActive: true });
+    expect(codes[1].code).toMatch(/^BIENVENIDA15-[A-Z2-9]{4}$/);
+    const look = popupPublishing();
+    await look.service.startPopupTest('m', 's', { look: 'revista' }, 'estilo revista', 0);
+    expect(look.codes).toHaveLength(1);
+    expect(look.experiments[0].variantPromoCodeId).toBeUndefined();
+  });
+
+  it('a second test is refused while one runs, naming it', async () => {
+    const { service } = popupPublishing({ running: { id: 'e0', activeStoreId: 's', status: 'RUNNING', kind: 'popup', request: '15% vs 10%', startedAt: new Date() } });
+    await expect(service.startPopupTest('m', 's', { discount: 20 }, '20%', 0)).rejects.toThrow('Ya tienes una prueba de «15% vs 10%» corriendo. ¿La termino para empezar esta?');
+  });
+
+  it('keeping B without evidence applies it: the look, the code and the words with its percent', async () => {
+    const { service, experiments, retention, codes } = popupPublishing();
+    await service.startPopupTest('m', 's', { discount: 15, look: 'revista' }, '15% vs 10%', 0);
+    await service.finishWith('m', 's', 1, experiments[0].id, 'B');
+    expect(experiments[0]).toMatchObject({ status: 'COMPLETED', winner: 'B', activeStoreId: null });
+    expect(retention.settings).toMatchObject({ popupLook: 'revista', popupLookPrevious: 'postal', popupPromoCodeId: codes[1].id, signupBody: 'Recetas y un 15 % de bienvenida.' });
+    expect(codes[0].isActive).toBe(true);
+  });
+
+  it('keeping A turns B code off and leaves the popup alone', async () => {
+    const { service, experiments, retention, codes } = popupPublishing();
+    await service.startPopupTest('m', 's', { discount: 15 }, '15% vs 10%', 0);
+    await service.finishWith('m', 's', 1, experiments[0].id, 'A');
+    expect(experiments[0]).toMatchObject({ status: 'COMPLETED', winner: 'A' });
+    expect(codes[1].isActive).toBe(false);
+    expect(retention.settings.popupPromoCodeId).toBe('codeA');
+  });
+
+  it('a design test kept as B publishes B', async () => {
+    const { service, store, experiments } = popupPublishing({ running: { id: 'd1', activeStoreId: 's', status: 'RUNNING', kind: 'design', controlRevision: 4, variantRevision: 6, startedAt: new Date() } });
+    await service.finishWith('m', 's', 0, 'd1', 'B');
+    expect(store.publishedSourceRevision).toBe(6);
+    expect(experiments[0]).toMatchObject({ status: 'COMPLETED', winner: 'B' });
+  });
+
+  it('the A/B page buttons follow the popup rules: stop turns B code off, apply B sets the popup (final review 2026-11-09)', async () => {
+    const stop = popupPublishing();
+    await stop.service.startPopupTest('m', 's', { discount: 15 }, '15% vs 10%', 0);
+    await stop.service.finish('m', 's', 1, stop.experiments[0].id, false);
+    expect(stop.experiments[0]).toMatchObject({ status: 'STOPPED', winner: null });
+    expect(stop.codes[1].isActive).toBe(false);
+    const apply = popupPublishing();
+    await apply.service.startPopupTest('m', 's', { discount: 15 }, '15% vs 10%', 0);
+    Object.assign(apply.experiments[0], { startedAt: new Date(Date.now() - 9 * 86400000) });
+    apply.prisma.storeSourceVisit.groupBy.mockResolvedValue([{ variant: 'A', _count: 300 }, { variant: 'B', _count: 300 }]);
+    apply.prisma.storeNewsletterSubscriber.findMany.mockResolvedValue([...Array(20).fill({ sourceVisit: { variant: 'A' } }), ...Array(60).fill({ sourceVisit: { variant: 'B' } })]);
+    await apply.service.finish('m', 's', 1, apply.experiments[0].id, true);
+    expect(apply.experiments[0]).toMatchObject({ status: 'COMPLETED', winner: 'B' });
+    expect(apply.retention.settings).toMatchObject({ popupPromoCodeId: apply.codes[1].id, signupBody: 'Recetas y un 15 % de bienvenida.' });
+  });
+
+  it('unpublishing turns B code off', async () => {
+    const { service, experiments, codes } = popupPublishing();
+    await service.startPopupTest('m', 's', { discount: 15 }, '15% vs 10%', 0);
+    await service.visibility('m', 's', false, 1);
+    expect(experiments[0].status).toBe('STOPPED');
+    expect(codes[1].isActive).toBe(false);
+  });
+
+  it('the numbers count signups per version, judge a popup test on them, and say when it is stale', async () => {
+    const started = new Date(Date.now() - 30 * 86400000);
+    const { prisma } = popupPublishing({ running: { id: 'e0', activeStoreId: 's', status: 'RUNNING', kind: 'popup', request: '15% vs 10%', controlRevision: 4, variantRevision: 4, startedAt: started, extendedUntil: null } });
+    prisma.storeSourceVisit.groupBy.mockResolvedValue([{ variant: 'A', _count: 300 }, { variant: 'B', _count: 300 }]);
+    prisma.storeNewsletterSubscriber.findMany.mockResolvedValue([...Array(20).fill({ sourceVisit: { variant: 'A' } }), ...Array(60).fill({ sourceVisit: { variant: 'B' } })]);
+    const { publicationState } = await import('./source-publishing.service');
+    const shown: any = await publicationState(prisma, 's');
+    expect(shown.experiment).toMatchObject({ kind: 'popup', request: '15% vs 10%', days: 30 });
+    expect(shown.experiment.variants.map((v: any) => v.signups)).toEqual([20, 60]);
+    expect(shown.experiment.evidence.winner).toBe('B');
+    expect(shown.experiment.stale).toBe(false);
+  });
+
+  it('a test with no answer after 28 days is stale until «Seguir 2 semanas más»', async () => {
+    const started = new Date(Date.now() - 29 * 86400000);
+    const { service, prisma, experiments } = popupPublishing({ running: { id: 'e0', activeStoreId: 's', status: 'RUNNING', kind: 'design', controlRevision: 4, variantRevision: 6, startedAt: started, extendedUntil: null } });
+    const { publicationState } = await import('./source-publishing.service');
+    expect(((await publicationState(prisma, 's')) as any).experiment.stale).toBe(true);
+    await service.extend('m', 's', 'e0');
+    expect(experiments[0].extendedUntil.getTime()).toBeGreaterThan(Date.now() + 13 * 86400000);
+    expect(((await publicationState(prisma, 's')) as any).experiment.stale).toBe(false);
+  });
+});

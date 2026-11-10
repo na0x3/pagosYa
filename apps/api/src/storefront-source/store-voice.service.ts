@@ -69,20 +69,31 @@ export class StoreVoiceService {
     return { revision: result.revision, label: result.label, removed: !still };
   }
 
-  /** Mi tienda: facts waiting on each store's current revision, read in PostgreSQL (only voice.json travels). Read-only. */
+  /** Mi tienda: facts waiting on each active store's current revision. The count is kept on the project for the revision it was made
+   *  for (2026-11-07: reading every store's snapshot took 10–12 s and 852 MB for 297 stores on each panel load); only a store with a
+   *  newer revision is read again (only voice.json travels), whatever path saved it. A count that cannot be saved is still answered. */
   async pendingCounts(merchantId: string): Promise<{ counts: Record<string, number> }> {
-    const rows = await this.prisma.$queryRaw<Array<{ storeId: string; voice: string | null }>>(Prisma.sql`
-      SELECT s.id AS "storeId",
-        (SELECT f->>'content' FROM jsonb_array_elements(v.snapshot->'files') f WHERE f->>'path' = ${VOICE_FILE} LIMIT 1) AS voice
-      FROM "Store" s
-      JOIN "StoreSourceProject" p ON p."storeId" = s.id
-      JOIN "StoreSourceVersion" v ON v."storeId" = p."storeId" AND v.revision = p.revision
-      WHERE s."merchantId" = ${merchantId} AND p.revision > 0
+    const projects = await this.prisma.$queryRaw<Array<{ storeId: string; revision: number; pendingFacts: number | null; pendingFactsRevision: number | null }>>(Prisma.sql`
+      SELECT p."storeId", p.revision, p."pendingFacts", p."pendingFactsRevision"
+      FROM "Store" s JOIN "StoreSourceProject" p ON p."storeId" = s.id
+      WHERE s."merchantId" = ${merchantId} AND s.status = 'ACTIVE' AND p.revision > 0
     `);
     const counts: Record<string, number> = {};
+    const stale = projects.filter(project => project.pendingFactsRevision !== project.revision || project.pendingFacts === null);
+    for (const project of projects) if (!stale.includes(project) && project.pendingFacts) counts[project.storeId] = project.pendingFacts;
+    if (!stale.length) return { counts };
+    const rows = await this.prisma.$queryRaw<Array<{ storeId: string; revision: number; voice: string | null }>>(Prisma.sql`
+      SELECT v."storeId", v.revision,
+        (SELECT f->>'content' FROM jsonb_array_elements(v.snapshot->'files') f WHERE f->>'path' = ${VOICE_FILE} LIMIT 1) AS voice
+      FROM "StoreSourceVersion" v
+      WHERE (v."storeId", v.revision) IN (${Prisma.join(stale.map(project => Prisma.sql`(${project.storeId}, ${project.revision})`))})
+    `);
     for (const row of rows) {
       const waiting = row.voice ? pendingAssumptions(readVoice([{ path: VOICE_FILE, content: row.voice }])).length : 0;
       if (waiting) counts[row.storeId] = waiting;
+      // Raw, so the project's updatedAt stays the time of its last real change; a newer save in between is left to count itself.
+      await this.prisma.$executeRaw(Prisma.sql`UPDATE "StoreSourceProject" SET "pendingFacts" = ${waiting}, "pendingFactsRevision" = ${row.revision}
+        WHERE "storeId" = ${row.storeId} AND revision = ${row.revision}`).catch(() => undefined);
     }
     return { counts };
   }

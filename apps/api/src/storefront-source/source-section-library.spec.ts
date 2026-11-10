@@ -71,6 +71,19 @@ describe('section library', () => {
     expect(promo.link).toBe('category:Galletas');
   });
 
+  it('runs one dictated phrase on its own, repeated so the band fills (Meat House 2026-11-07)', () => {
+    const [one] = validateLibraryLayout({ blocks: [{ type: 'strip-marquee', items: [{ title: 'Pedidos con 24 hrs de anticipación' }] }] } as never, facts(), { fixed: [{ type: 'strip-marquee' }] });
+    expect(one.items?.map(item => item.title)).toEqual(Array(3).fill('Pedidos con 24 hrs de anticipación'));
+    const [two] = validateLibraryLayout({ blocks: [{ type: 'strip-marquee', items: [{ title: 'Asado' }, { title: 'Parrilla' }] }] } as never, facts(), { fixed: [{ type: 'strip-marquee' }] });
+    expect(two.items?.map(item => item.title)).toEqual(['Asado', 'Parrilla', 'Asado', 'Parrilla']);
+    // The model cut the dictated phrase into pieces: they run as the one phrase.
+    const request = 'despues del header pon texto moviendose que diga pedidos con 24 hrs de anticipacion';
+    const [cut] = validateLibraryLayout({ blocks: [{ type: 'strip-marquee', items: [{ title: 'Pedidos' }, { title: 'con 24 hrs' }, { title: 'de anticipación' }] }] } as never, facts({ request }), { fixed: [{ type: 'strip-marquee' }] });
+    expect(cut.items?.map(item => item.title)).toEqual(Array(3).fill('Pedidos con 24 hrs de anticipación'));
+    const [words] = validateLibraryLayout({ blocks: [{ type: 'strip-marquee', items: [{ title: 'Asado' }, { title: 'Parrilla' }, { title: 'Carbón' }] }] } as never, facts({ request: 'franja asado parrilla carbón' }), { fixed: [{ type: 'strip-marquee' }] });
+    expect(words.items?.map(item => item.title)).toEqual(['Asado', 'Parrilla', 'Carbón']);
+  });
+
   it('never leaves two blocks of one role side by side', () => {
     const layout = validateLibraryLayout({ blocks: [
       { type: 'cover-split', title: 'Hola', photo: 0 },

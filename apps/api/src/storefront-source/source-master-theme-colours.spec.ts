@@ -1,5 +1,5 @@
 import { templateManifest } from '@pagosya/store-templates';
-import { bindThemeAccent, templateLook } from './source-master';
+import { MASTER_THEME_END, bindThemeAccent, masterLook, masterThemeCss, templateLook } from './source-master';
 
 // Spec 2026-11-01 template quick edits §2: a template's accent follows the store's colour.
 describe('template colours', () => {
@@ -69,6 +69,34 @@ describe('template colours', () => {
     expect(named.colors).toEqual({ ...current.colors, accent: '#2e8b57' });
     // No colour asked: unchanged.
     expect(templateLook(settings, current, { palette: 'mono', fonts: 'zancada', colors: { ...current.colors } }).colors).toEqual(current.colors);
+  });
+
+  // Miga Dorada 2026-11-07 («que el footer sea rosado»): every theme paints its footer, header and bar a fixed colour; a part's own
+  // colour is drawn over it and the rest of the store keeps its colours.
+  it('a part colour is kept with the look, merged, and "" gives the part back to the template', () => {
+    const settings = templateManifest('esencial')!.master!;
+    const current = { palette: 'mono', fonts: 'zancada', colors: { paper: '#1f1f1f', ink: '#ffffff', muted: '#2b2b2b', accent: '#dfff1f', deep: '#151515' }, parts: { header: '#112233' } };
+    const pink = templateLook(settings, current, { parts: { footer: '#F4C2CC' } });
+    expect(pink.colors).toEqual(current.colors);
+    expect(pink.parts).toEqual({ header: '#112233', footer: '#f4c2cc' });
+    expect(templateLook(settings, pink, { parts: { header: '' } }).parts).toEqual({ footer: '#f4c2cc' });
+    expect(templateLook(settings, pink, { parts: { footer: 'rosado' } }).parts).toEqual(pink.parts);
+    expect(templateLook(settings, current, { colors: { accent: '#2e8b57' } }).parts).toEqual({ header: '#112233' });
+    expect(masterLook(settings, { parts: { footer: '#abc', announce: '#a0b0c0', menu: '#ffffff' } as never }).parts).toEqual({ announce: '#a0b0c0' });
+  });
+
+  it('draws a part colour over every theme, with text that reads on it', () => {
+    const settings = templateManifest('esencial')!.master!;
+    const css = masterThemeCss(settings, masterLook(settings, { parts: { footer: '#f4c2cc', header: '#1d3b2a', announce: '#ffd400' } }));
+    expect(css).toContain('.es-footer{background-color:#f4c2cc!important;color:#111111!important}');
+    expect(css).toContain('.es-header{background:#1d3b2a!important;color:#ffffff!important');
+    expect(css).toContain('.es-announce{background:#ffd400!important;color:#111111!important}');
+    // The words inside follow, but not a box with its own colour (the ticker strip, a dropdown panel, the cart count).
+    expect(css).toMatch(/\.es-footer:not\(\[data-es-footer="column"\]\) :is\([^)]*\):not\(\.es-footer__ticker \*\)[^{]*\{color:inherit!important\}/);
+    expect(css).toMatch(/\.es-header :is\([^)]*\)[^{]*:not\(\[class\*="panel"\] \*\)[^{]*\{color:inherit!important\}/);
+    // Inside the master theme block, so the next refill redraws it.
+    expect(css.indexOf('.es-footer{')).toBeLessThan(css.indexOf(MASTER_THEME_END));
+    expect(masterThemeCss(settings, masterLook(settings, {}))).not.toContain('.es-footer{');
   });
 });
 

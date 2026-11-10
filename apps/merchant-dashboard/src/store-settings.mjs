@@ -23,7 +23,7 @@ const POLICY_FIELDS = /** @type {const} */ ([
 /** @typedef {{ id: string, name: string, address: string, mapEmbedUrl: string, highlight: string, description: string, pickupEnabled: boolean, deliveryEnabled: boolean, openingHours: OpeningHours[], inventory: Record<string, number | null | undefined> }} EditableLocation */
 /** @typedef {{ label: string, url: string }} StoreLink */
 /** @typedef {{ id: string, name: string, status?: string, stock?: number | null, locationStocks?: Record<string, number | null> }} Product */
-/** @typedef {{ id: string, name?: string, tagline?: string | null, logoUrl?: string | null, checkoutMode?: string, contactPhone?: string | null, contactEmail?: string | null, showLowStockToCustomers?: boolean, publicVisibility?: boolean, policies?: Record<string, string>, links?: StoreLink[], locations?: any[], locationMapUrl?: string | null, locationHighlight?: string | null, locationDescription?: string | null }} Store */
+/** @typedef {{ id: string, name?: string, tagline?: string | null, logoUrl?: string | null, checkoutMode?: string, whatsappButton?: boolean, contactPhone?: string | null, contactEmail?: string | null, showLowStockToCustomers?: boolean, publicVisibility?: boolean, policies?: Record<string, string>, links?: StoreLink[], locations?: any[], locationMapUrl?: string | null, locationHighlight?: string | null, locationDescription?: string | null }} Store */
 
 /** @type {Record<string, string>} */
 /** @param {unknown} value */
@@ -121,8 +121,9 @@ const TEMPLATE = `<form class="store-settings-form" novalidate>
         ${uiChoice({ icon: "message-circle", group: "storeCheckoutMode", value: "whatsapp", title: "Recibir por WhatsApp", text: "El pedido te llega como mensaje." })}
         ${uiChoice({ icon: "mail", group: "storeCheckoutMode", value: "external", title: "Captar interesados", text: "El cliente deja su correo y su carrito." })}
       </div>
+      ${uiOption({ icon: "message-circle", attrs: 'id="storeWhatsappButton"', checked: true, title: "Botón de WhatsApp en tu tienda", text: "Un botón verde abre un chat contigo, también junto al asistente." })}
       <div class="visual-whatsapp-phone" data-whatsapp hidden>
-        <label for="storeContactPhoneInput">Número que recibirá los pedidos</label>
+        <label for="storeContactPhoneInput" data-whatsapp-label>Número que recibirá los pedidos</label>
         <input id="storeContactPhoneInput" name="contactPhone" type="tel" maxlength="40" placeholder="+591 71234567" aria-describedby="storeWhatsappPhoneHelp">
         <span class="faint" id="storeWhatsappPhoneHelp">Incluye el código de país.</span>
       </div>
@@ -186,7 +187,7 @@ export function mountStoreSettings(root, deps) {
   /** @param {string} selector @returns {any} */
   const $ = (selector) => root.querySelector(selector);
   const nameInput = $("#storeNameInput"), taglineInput = $("#storeTaglineInput"), phoneInput = $("#storeContactPhoneInput");
-  const emailInput = $("#storeContactEmailInput"), lowStockInput = $("#storeShowLowStock"), logoInput = $("#storeLogoInput");
+  const emailInput = $("#storeContactEmailInput"), lowStockInput = $("#storeShowLowStock"), whatsappButtonInput = $("#storeWhatsappButton"), logoInput = $("#storeLogoInput");
   const visibilityInput = /** @type {HTMLInputElement} */ ($("#storePublicVisibility"));
   const policyInput = (/** @type {string} */ key) => /** @type {HTMLTextAreaElement} */ ($(`#storePolicy-${key}`));
   const logoPreview = $("[data-logo-preview]"), logoRemove = $("[data-logo-remove]"), logoEmpty = $("[data-logo-empty]"), logoPick = $("[data-logo-pick]");
@@ -213,7 +214,9 @@ export function mountStoreSettings(root, deps) {
 
   function syncMode() {
     const current = mode();
-    $("[data-whatsapp]").hidden = current !== "whatsapp";
+    // Owner 2026-11-08: the number also feeds the floating WhatsApp button, whatever the checkout.
+    $("[data-whatsapp]").hidden = current !== "whatsapp" && !whatsappButtonInput.checked;
+    $("[data-whatsapp-label]").textContent = current === "whatsapp" ? "Número que recibirá los pedidos" : "Tu número de WhatsApp";
     phoneInput.required = current === "whatsapp";
     $("[data-lead-help]").hidden = current !== "external";
     $("[data-payment-requirement]").textContent = current === "payment"
@@ -340,7 +343,7 @@ export function mountStoreSettings(root, deps) {
   }
 
   form.addEventListener("change", (/** @type {any} */ event) => {
-    if (event.target.name === "storeCheckoutMode") syncMode();
+    if (event.target.name === "storeCheckoutMode" || event.target === whatsappButtonInput) syncMode();
     if (event.target === visibilityInput) syncVisibility();
   });
   // Any edit, including list buttons below, marks the form so a background refresh keeps it.
@@ -451,6 +454,7 @@ export function mountStoreSettings(root, deps) {
       contactPhone: phoneInput.value.trim() || null,
       contactEmail: emailInput.value.trim() || null,
       showLowStockToCustomers: lowStockInput.checked,
+      whatsappButton: whatsappButtonInput.checked,
       publicVisibility: visibilityInput.checked,
       ...(fullNavOn() && { policies: Object.fromEntries(POLICY_FIELDS.map(([key]) => [key, policyInput(key).value.trim() || null])) }),
       ...(nextMode !== "external" && { leadCaptureUrl: null }),
@@ -488,6 +492,7 @@ export function mountStoreSettings(root, deps) {
       phoneInput.value = store.contactPhone || "";
       emailInput.value = store.contactEmail || "";
       lowStockInput.checked = store.showLowStockToCustomers === true;
+      whatsappButtonInput.checked = store.whatsappButton !== false;
       visibilityInput.checked = store.publicVisibility === true;
       for (const [key] of POLICY_FIELDS) policyInput(key).value = store.policies?.[key] || "";
       const checkoutMode = ["payment", "whatsapp", "external"].includes(store.checkoutMode || "") ? store.checkoutMode : "payment";

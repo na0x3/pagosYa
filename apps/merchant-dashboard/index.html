@@ -93,7 +93,11 @@
       <div class="login-card">
         <a class="login-brand" href="./" aria-label="pagosYa"><img src="/assets/pagosya-star-yellow.png" alt="" width="56" height="56"></a>
         <h2 id="loginTitle">Bienvenido de vuelta</h2>
-        <p class="login-sub">Entra a tu panel de comercio para continuar.</p>
+        <p class="login-sub" id="loginSub">Entra a tu panel de comercio para continuar.</p>
+        <div class="login-field" data-signup-only hidden>
+          <label for="signupBusiness">Nombre de tu negocio</label>
+          <input id="signupBusiness" type="text" placeholder="Tienda Ejemplo" autocomplete="organization" minlength="2" maxlength="80">
+        </div>
         <div class="login-field">
           <label for="email">Correo</label>
           <input id="email" type="email" placeholder="dueno@tienda-ejemplo.bo" autocomplete="email" required>
@@ -108,8 +112,10 @@
             </button>
           </div>
         </div>
+        <label class="login-terms" data-signup-only hidden id="signupTermsRow"><input id="signupTerms" type="checkbox"> <span>Acepto los <a href="https://pagosya.bo/terminos/comercios" target="_blank" rel="noopener">términos para comercios</a> de pagosYa</span></label>
         <button class="primary login-submit" id="login" type="submit">Continuar</button>
         <button class="login-forgot" id="showForgot" type="button">¿Olvidaste tu contraseña?</button>
+        <p class="login-switch"><span id="loginSwitchText">¿No tienes cuenta?</span> <button type="button" id="loginSwitch">Crea tu cuenta gratis</button></p>
         <div class="merchant-google-auth" id="merchantGoogleAuth" hidden>
           <div class="merchant-login-divider"><span>o</span></div>
           <div class="merchant-google-button" id="merchantGoogleButton" aria-label="Continuar con Google"></div>
@@ -120,7 +126,7 @@
           <input id="apiBase" value="http://localhost:3001/v1">
         </details>
       </div>
-      <p class="login-foot">El acceso se crea desde tu integración con <code>POST /v1/dashboard/signup</code>, nunca desde esta página.</p>
+      <p class="login-foot">Crear tu cuenta es gratis: armas tu tienda con YAPI y eliges un plan cuando quieras publicarla.</p>
     </div>
   </form>
 
@@ -956,5 +962,17 @@
 <link rel="stylesheet" href="/variant-editor.css">
 <script src="/variant-editor.js"></script>
 <script type="module" src="/src/dashboard.js"></script>
+  <dialog class="welcome-dialog" id="welcomeDialog" aria-labelledby="welcomeTitle">
+    <img src="/assets/pagosya-star-yellow.png" alt="" width="64" height="64">
+    <h2 id="welcomeTitle">¡Bienvenido a pagosYa!</h2>
+    <p>Tu cuenta está lista. Así funciona:</p>
+    <ol class="welcome-steps">
+      <li><strong>Cuéntale a YAPI qué vendes.</strong><span>Arma tu tienda con tus productos y tus fotos en unos minutos.</span></li>
+      <li><strong>Revísala y pídele cambios.</strong><span>Colores, textos, secciones: escríbelo como se lo dirías a una persona.</span></li>
+      <li><strong>Publícala y cobra.</strong><span>Cuando esté lista, elige un plan para publicarla y recibir pagos con QR y tarjeta.</span></li>
+    </ol>
+    <p class="welcome-note" id="welcomeNote">Te enviamos un correo para confirmar tu cuenta; confírmalo para volver a entrar la próxima vez.</p>
+    <button class="primary" id="welcomeStart" type="button">Crear mi tienda</button>
+  </dialog>
 </body>
 </html>

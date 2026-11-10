@@ -1,5 +1,6 @@
 import type { PrismaService } from '../prisma/prisma.service';
 import { laPazMonthStart } from './assistant-text';
+import { PLANS } from '../plans/plans';
 
 export type PublicAssistant = { name: string; greeting: string; avatarUrl: string | null; handoff: 'whatsapp' | 'form'; suggestions: string[] };
 
@@ -15,7 +16,9 @@ export async function publicAssistant(
   const row = await prisma.storeAssistant.findUnique({ where: { storeId: store.id } });
   if (!row?.enabled) return null;
   const used = await prisma.assistantConversation.count({ where: { storeId: store.id, preview: false, startedAt: { gte: laPazMonthStart(now) } } });
-  if (used >= row.monthlyCap) return null;
+  // Plans 2026-11-07: the plan's monthly conversations, or more when ops raised this store.
+  const owner = await prisma.store.findUnique({ where: { id: store.id }, select: { merchant: { select: { plan: true } } } });
+  if (used >= Math.max(row.monthlyCap, owner ? PLANS[owner.merchant.plan].assistantConversations : 0)) return null;
   const custom = row.name?.trim();
   return {
     name: custom || `Asistente de ${store.name}`,

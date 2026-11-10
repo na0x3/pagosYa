@@ -67,6 +67,28 @@
     const readable = accent && ink && contrastRatio(accent, ink) >= 4.5 && contrastRatio(accent, [255, 255, 255]) >= 3;
     root.style.setProperty('--pya-accent', readable ? `rgb(${accent.join(',')})` : '#1a1a1a');
     root.style.setProperty('--pya-accent-ink', readable ? `rgb(${ink.join(',')})` : '#ffffff');
+    // Spec 2026-11-09 Merman checkout: the summary column in the store's darkest colour (its text or its accent) with white text; a store
+    // whose colours are all light gets near-black, so the column always reads.
+    let text = null;
+    try { text = parseRgb(getComputedStyle(document.body).color); } catch { text = null; }
+    const white = [255, 255, 255];
+    const darkest = [text, accent].filter(Boolean).sort((a, b) => contrastRatio(b, white) - contrastRatio(a, white))[0];
+    const summary = darkest && contrastRatio(darkest, white) >= 7 ? darkest : [22, 22, 22];
+    root.style.setProperty('--pya-summary', `rgb(${summary.join(',')})`);
+    root.style.setProperty('--pya-summary-ink', '#ffffff');
+  }
+  /* Spec 2026-11-09 Merman checkout: three promises with icons — the store's guarantee, secure payment and its delivery time. */
+  function checkoutTrustLines() {
+    const delivery = typeof store.policies?.delivery === 'string' ? store.policies.delivery.trim().split(/(?<=[.!?])\s+/)[0]?.slice(0, 120) : '';
+    const icon = path => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+    return `<ul class="pya-co__assure" data-part="checkout-trust"><li>${icon('<path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6z"/><path d="m9 12 2 2 4-4"/>')}<span>${escape(cartGuaranteeText())}</span></li><li>${icon('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}<span>Pagos seguros · Tus datos viajan cifrados</span></li><li>${icon('<path d="M3 6h11v9H3z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="7" cy="17" r="1.6"/><circle cx="17" cy="17" r="1.6"/>')}<span>Envío · ${escape(delivery || 'Coordinamos la entrega contigo')}</span></li></ul>`;
+  }
+  /* «Lo que dicen nuestros clientes»: one real review the API chose (a real order's, 4★+); none → nothing. */
+  function checkoutReviewCard() {
+    const review = store.checkoutReview;
+    if (!review || typeof review.body !== 'string' || !review.body.trim()) return '';
+    const stars = Math.max(1, Math.min(5, Math.round(Number(review.rating) || 5)));
+    return `<figure class="pya-co__review" data-part="checkout-review"><figcaption class="pya-co__review-title">Lo que dicen nuestros clientes</figcaption><span class="pya-co__stars" aria-label="${stars} de 5 estrellas">${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}</span><blockquote>«${escape(review.body.trim())}»</blockquote><p class="pya-co__review-who"><strong>${escape(review.name || '')}</strong> · Compra verificada${review.productName ? ` · ${escape(review.productName)}` : ''}</p></figure>`;
   }
   // Everything around the open checkout leaves the tab order: its own siblings and those of every ancestor.
   function inertAround(node, saved) {
@@ -84,6 +106,11 @@
     toggle.querySelector('[data-shell-summary-label]').textContent = open ? 'Ocultar resumen del pedido' : 'Ver resumen del pedido';
   });
   function checkoutPhoto(firstLineImage) { return storeAssetUrl(store.bannerUrl) || firstLineImage || ''; }
+  /* Spec 2026-11-09 Merman checkout: a band across the top — the store's banner photo (else its accent) with the logo centred. */
+  function checkoutBand() {
+    const photo = storeAssetUrl(store.bannerUrl);
+    return `<div class="pya-co__band" data-part="checkout-band"${photo ? ` data-photo style="background-image:linear-gradient(rgba(0,0,0,.28),rgba(0,0,0,.28)),url('${escape(photo).replace(/'/g, '%27')}')"` : ''}>${shellBrand()}</div>`;
+  }
   function shellLineMarkup({ id, p, name, amount, quantity, image, option, unit, stock, canAdd }) {
     return `<li class="pya-co__line" data-part="cart-line">${image ? `<span class="pya-co__thumb"><img src="${escape(image)}" alt="" loading="lazy"><b class="pya-co__qty" aria-label="Cantidad ${quantity}">${quantity}</b></span>` : ''}<span class="pya-co__line-text"><strong>${escape(p.name)}</strong>${option ? `<small>${escape(option)}</small>` : ''}${unit ? `<small>${escape(unit)}</small>` : ''}${stock ? `<small class="order-item__stock">${escape(stock)}</small>` : ''}<span class="pya-co__stepper"><button type="button" data-remove="${escape(id)}" aria-label="Quitar una unidad de ${escape(name)}">−</button><output>${quantity}</output><button type="button" data-add="${escape(id)}" aria-label="Añadir una unidad de ${escape(name)}"${canAdd ? '' : ' disabled'}>+</button></span></span><span class="pya-co__line-price">${money(amount * quantity, p.currency)}</span></li>`;
   }
@@ -95,11 +122,18 @@
     const inner = document.createElement('div'); inner.className = 'pya-co__summary-inner';
     inner.innerHTML = `${photo ? `<img class="pya-co__photo" src="${escape(photo)}" alt="">` : ''}<h2 class="pya-co__title">${escape(CART_WORD || 'Tu pedido')}${count ? ` <span class="pya-co__count">· ${count} ${count === 1 ? 'producto' : 'productos'}</span>` : ''}</h2>`;
     inner.append(...take('.pya-co__lines,.order-recommendations'));
+    // Spec 2026-11-09 Merman checkout: one suggestion, «Completa tu compra».
+    const complete = inner.querySelector('.order-recommendations');
+    if (complete) { complete.setAttribute('aria-label', 'Completa tu compra'); const title = complete.querySelector('h3'); if (title) title.textContent = 'Completa tu compra'; [...complete.querySelectorAll('li')].slice(1).forEach(item => item.remove()); }
+    const promo = el.querySelector('[data-promo-field]');
+    if (promo) { const code = document.createElement('div'); code.className = 'pya-co__code'; code.append(promo, ...[el.querySelector('[data-promo-apply]'), el.querySelector('[data-promo-status]')].filter(Boolean)); inner.append(code); }
     const credit = el.querySelector('[name=creditCode]')?.closest('label');
     if (credit) { const code = document.createElement('div'); code.className = 'pya-co__code'; code.append(credit, ...[el.querySelector('[data-credit-apply]'), el.querySelector('[data-credit-status]')].filter(Boolean)); inner.append(code); }
     const totals = document.createElement('div'); totals.className = 'pya-co__totals';
     totals.append(...take('.pagosya-secure-note,.order-savings,.order-total,.order-note,[data-bundle-quote-status]'));
-    inner.append(totals); aside.append(inner);
+    inner.append(totals);
+    inner.insertAdjacentHTML('beforeend', checkoutReviewCard());
+    aside.append(inner);
     const main = document.createElement('div'); main.className = 'pya-co__main';
     const delivery = take('label.order-field,fieldset[data-delivery-address],fieldset[data-shipping]');
     if (delivery.length) {
@@ -119,7 +153,7 @@
     if (mode === 'done') main.insertAdjacentHTML('beforeend', `<div class="pya-co__done"><span class="pya-co__check">${CHECK_ICON}</span><p><strong>Pedido de prueba</strong></p><ol class="pya-co__next"><li>El comercio confirma tu pago.</li><li>Prepara tu pedido.</li><li>Te avisa cuando sale o está listo para recoger.</li></ol></div>`);
     const button = take('.pya-co__pay')[0];
     main.append(...take('.commerce-consent'));
-    if (button) { main.append(button); if (mode !== 'done' && paying) main.insertAdjacentHTML('beforeend', trustStrip()); }
+    if (button) { main.append(button); if (mode !== 'done' && paying) main.insertAdjacentHTML('beforeend', checkoutTrustLines() + trustStrip()); }
     const feedback = document.createElement('p'); feedback.setAttribute('data-pagosya-checkout-status', ''); feedback.hidden = true;
     main.append(feedback, ...[...el.children].filter(child => child !== aside && child !== main));
     el.replaceChildren(main, aside);

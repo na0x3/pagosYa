@@ -1,7 +1,8 @@
 /* Calm dashboard, Part B (docs/superpowers/specs/2026-10-21-calm-dashboard-yapi-immersive-design.md): roomy, soft and
    premium. Linked after every other dashboard stylesheet so it wins; glass only on the floating layers (top bar, sidebar,
    section pills, menus, dialogs), content cards stay solid.
-   Owner 2026-10-29: dark grey with a blue gradient behind everything; blue actions, YAPI keeps its yellow. */
+   Owner 2026-10-29: dark grey with a blue gradient behind everything; blue actions, YAPI keeps its yellow.
+   Owner 2026-11-07 («que el tono del dashboard sea blanco por default»): the same layout on white, a faint blue wash behind. */
 @font-face { font-family: "Instrument Serif"; src: url("/fonts/instrument-serif.ttf") format("truetype"); font-display: swap; }
 
 /* ── Tokens ──────────────────────────────────────────────
@@ -9,36 +10,35 @@
 body.is-logged-in {
   --pm-serif: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
   --pm-ease: cubic-bezier(.22,1,.36,1);
-  color-scheme: dark;
-  --pm-bg: #121214;
-  --pm-glass: rgb(30 30 35 / .62);
-  --pm-glass-strong: rgb(26 26 31 / .88);
-  --pm-glass-edge: rgb(255 255 255 / .08);
+  color-scheme: light;
+  --pm-bg: #fafaf9;
+  --pm-glass: rgb(255 255 255 / .72);
+  --pm-glass-strong: rgb(255 255 255 / .92);
+  --pm-glass-edge: rgb(24 24 27 / .08);
   --pm-blur: saturate(1.4) blur(22px);
-  --pm-shadow-float: 0 24px 60px -24px rgb(0 0 0 / .65), 0 2px 10px rgb(0 0 0 / .25);
-  --pm-shadow-card: 0 1px 2px rgb(0 0 0 / .3), 0 10px 30px -18px rgb(0 0 0 / .55);
-  --pm-shadow-lift: 0 1px 2px rgb(0 0 0 / .35), 0 6px 16px -10px rgb(0 0 0 / .6);
-  --pm-hover: rgb(255 255 255 / .06);
-  --pm-active: #2b2b31;
-  --pm-field: #141417;
-  --pg-bg: var(--pm-bg); --pg-surface: #1b1b1f; --pg-surface-raised: #26262b; --pg-surface-muted: #26262b; --workspace-sidebar: transparent;
-  --pg-text: #ededef; --pg-text-muted: #a1a1aa; --pg-text-faint: #8b8b94;
-  --pg-border: rgb(255 255 255 / .08); --pg-border-strong: rgb(255 255 255 / .15);
-  --pg-ink: #3b82f6; --pg-ink-hover: #2563eb; --pg-accent: #60a5fa; --pg-accent-soft: rgb(59 130 246 / .16);
-  --pg-success: #4ade80; --pg-success-soft: rgb(74 222 128 / .12); --pg-warning: #fbbf24; --pg-warning-soft: rgb(251 191 36 / .12);
-  --pg-error: #f87171; --pg-error-soft: rgb(248 113 113 / .12);
-  --pg-focus-ring: rgb(59 130 246 / .35);
+  --pm-shadow-float: 0 24px 60px -28px rgb(24 24 27 / .28), 0 2px 10px rgb(24 24 27 / .06);
+  --pm-shadow-card: 0 1px 2px rgb(24 24 27 / .05), 0 10px 30px -20px rgb(24 24 27 / .18);
+  --pm-shadow-lift: 0 1px 2px rgb(24 24 27 / .06), 0 6px 16px -10px rgb(24 24 27 / .2);
+  --pm-hover: rgb(24 24 27 / .05);
+  --pm-active: #ececee;
+  --pm-field: #ffffff;
+  --pg-bg: var(--pm-bg); --pg-surface: #ffffff; --pg-surface-raised: #ffffff; --pg-surface-muted: #f4f4f5; --workspace-sidebar: transparent;
+  --pg-text: #18181b; --pg-text-muted: #57575e; --pg-text-faint: #7a7a82;
+  --pg-border: rgb(24 24 27 / .08); --pg-border-strong: rgb(24 24 27 / .15);
+  --pg-ink: #2563eb; --pg-ink-hover: #1d4ed8; --pg-accent: #2563eb; --pg-accent-soft: rgb(37 99 235 / .1);
+  --pg-success: #15803d; --pg-success-soft: rgb(22 163 74 / .1); --pg-warning: #b45309; --pg-warning-soft: rgb(245 158 11 / .12);
+  --pg-error: #b91c1c; --pg-error-soft: rgb(220 38 38 / .08);
+  --pg-focus-ring: rgb(37 99 235 / .3);
   --calm-radius: 20px; --calm-radius-sm: 14px;
   --calm-shadow: var(--pm-shadow-card); --calm-shadow-lg: var(--pm-shadow-float);
 }
 
 /* ── Page ─────────────────────────────────────────────── */
-html:has(> body.is-logged-in) { background: #121214; color-scheme: dark; }
+html:has(> body.is-logged-in) { background: #fafaf9; color-scheme: light; }
 body.is-logged-in {
   background:
-    radial-gradient(1100px 700px at 8% -10%, rgb(37 99 235 / .30), transparent 60%),
-    radial-gradient(900px 600px at 100% 0%, rgb(56 189 248 / .14), transparent 60%),
-    radial-gradient(1000px 800px at 60% 110%, rgb(29 78 216 / .24), transparent 60%),
+    radial-gradient(1100px 700px at 8% -10%, rgb(37 99 235 / .07), transparent 60%),
+    radial-gradient(900px 600px at 100% 0%, rgb(56 189 248 / .06), transparent 60%),
     var(--pm-bg);
   background-attachment: fixed;
   font-size: 15px;
@@ -67,7 +67,7 @@ body.is-logged-in .section-tab[aria-current="page"] { background: var(--pm-activ
 body.is-logged-in :is(.profile-menu, .profile-menu[popover]) { background: var(--pm-glass-strong); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); border: 1px solid var(--pm-glass-edge); border-radius: 22px; box-shadow: var(--pm-shadow-float); }
 /* The MCP dialog (Conecta tu IA) is dark by design: it keeps its own surface. */
 body.is-logged-in dialog:not(.mcp-dialog) { border: 1px solid var(--pm-glass-edge); border-radius: 28px; background: var(--pm-glass-strong); -webkit-backdrop-filter: var(--pm-blur); backdrop-filter: var(--pm-blur); box-shadow: var(--pm-shadow-float); }
-body.is-logged-in dialog:not(.mcp-dialog)::backdrop { background: rgb(0 0 0 / .55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+body.is-logged-in dialog:not(.mcp-dialog)::backdrop { background: rgb(24 24 27 / .32); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   body.is-logged-in :is(.dashboard-sidebar, .topbar, .section-tabs, .profile-menu, dialog:not(.mcp-dialog)) { background: var(--pm-glass-strong); }
 }
@@ -169,9 +169,9 @@ body.is-logged-in .workspace-yapi-status { position: absolute; left: 58px; botto
 body.is-logged-in .workspace-yapi-status:empty { display: none; }
 .yapi-ghost {
   position: fixed; z-index: 2147483000; box-sizing: border-box; overflow: hidden; pointer-events: none; transform-origin: top left;
-  padding: 16px 20px; border: 1px solid rgb(255 255 255 / .1); border-radius: 24px; color: #ededef;
-  background: rgb(30 30 35 / .78); -webkit-backdrop-filter: saturate(1.6) blur(24px); backdrop-filter: saturate(1.6) blur(24px);
-  box-shadow: 0 30px 70px -30px rgb(0 0 0 / .7); font: italic 400 18px/1.35 "Instrument Serif", ui-serif, Georgia, serif;
+  padding: 16px 20px; border: 1px solid rgb(24 24 27 / .08); border-radius: 24px; color: #18181b;
+  background: rgb(255 255 255 / .86); -webkit-backdrop-filter: saturate(1.6) blur(24px); backdrop-filter: saturate(1.6) blur(24px);
+  box-shadow: 0 30px 70px -30px rgb(24 24 27 / .3); font: italic 400 18px/1.35 "Instrument Serif", ui-serif, Georgia, serif;
 }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 600ms; animation-timing-function: cubic-bezier(.22,1,.36,1); }
 @media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }

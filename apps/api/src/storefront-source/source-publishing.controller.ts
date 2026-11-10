@@ -1,7 +1,8 @@
 import { SourceCheckResultDto } from './source-check-results';
 import { Body, Controller, Get, Header, Param, Post, Query, UseGuards, Headers, Res, StreamableFile } from '@nestjs/common';
 import type { Response } from 'express';
-import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, Min, MaxLength, Max, Matches } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Min, MaxLength, Max, Matches } from 'class-validator';
+import { POPUP_LOOK_IDS, type PopupLookId } from '../store-popups/popup-looks';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentMerchant } from '../auth/decorators/current-merchant.decorator';
 import { MerchantAuthGuard } from '../dashboard/guards/merchant-auth.guard';
@@ -35,6 +36,20 @@ class FinishDto {
   @IsBoolean() apply!: boolean;
 }
 class VisitDto { @IsOptional() @IsUUID('4') visitorId?: string; }
+/** Spec 2026-11-09 A/B tests: the merchant's words travel with the test; a popup test names B's percent and/or look. */
+class StartTestDto extends PublishDto { @IsOptional() @IsString() @MaxLength(200) request?: string; }
+class PopupTestDto {
+  @IsInt() @Min(0) publicationVersion!: number;
+  @IsOptional() @IsInt() @Min(5) @Max(50) discount?: number;
+  @IsOptional() @IsIn(POPUP_LOOK_IDS as unknown as string[]) look?: PopupLookId;
+  @IsString() @MaxLength(200) request!: string;
+}
+class KeepDto {
+  @IsInt() @Min(0) publicationVersion!: number;
+  @IsString() @MaxLength(100) experimentId!: string;
+  @IsIn(['A', 'B']) keep!: 'A' | 'B';
+}
+class ExtendDto { @IsString() @MaxLength(100) experimentId!: string; }
 
 @Controller('v1/stores/:storeId/source-project')
 @UseGuards(MerchantAuthGuard)
@@ -57,8 +72,20 @@ export class SourcePublishingController {
     return this.publishing.visibility(m.id, id, body.published, body.publicationVersion);
   }
   @Post('experiments')
-  start(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: PublishDto) {
-    return this.publishing.start(m.id, id, body.revision, body.publicationVersion);
+  start(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: StartTestDto) {
+    return this.publishing.start(m.id, id, body.revision, body.publicationVersion, body.request);
+  }
+  @Post('experiments/popup')
+  startPopup(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: PopupTestDto) {
+    return this.publishing.startPopupTest(m.id, id, { discount: body.discount, look: body.look }, body.request, body.publicationVersion);
+  }
+  @Post('experiments/keep')
+  keep(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: KeepDto) {
+    return this.publishing.finishWith(m.id, id, body.publicationVersion, body.experimentId, body.keep);
+  }
+  @Post('experiments/extend')
+  extend(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: ExtendDto) {
+    return this.publishing.extend(m.id, id, body.experimentId);
   }
   @Post('experiments/finish')
   finish(@CurrentMerchant() m: { id: string }, @Param('storeId') id: string, @Body() body: FinishDto) {

@@ -53,6 +53,39 @@ describe('Comeback workspaces', () => {
     await vi.waitFor(() => expect(host.querySelector('.comeback-reward')?.textContent).toBe('Mi premio'));
     expect(host.querySelector<HTMLButtonElement>('[type=submit]')!.disabled).toBe(false);
   });
+  it('sends the popup look only when the merchant changed it (review 2026-11-09: a stale form undid a chat change)', async () => {
+    const withLook = state(); (withLook.settings as Record<string, unknown>).popupLook = 'cartel';
+    vi.mocked(api.retention).mockResolvedValue(withLook as never);
+    await openRetention(api, 's1', undefined, { host, view: 'program' });
+    const look = host.querySelector<HTMLSelectElement>('[name=popupLook]')!;
+    expect(look.value).toBe('cartel');
+    host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(api.writeRetention).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(api.writeRetention).mock.calls[0][3]).not.toHaveProperty('popupLook');
+  });
+  it('sends a popup look the merchant picked', async () => {
+    const withLook = state(); (withLook.settings as Record<string, unknown>).popupLook = 'cartel';
+    vi.mocked(api.retention).mockResolvedValue(withLook as never);
+    await openRetention(api, 's1', undefined, { host, view: 'program' });
+    host.querySelector<HTMLSelectElement>('[name=popupLook]')!.value = 'revista';
+    host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(api.writeRetention).toHaveBeenCalled());
+    expect(vi.mocked(api.writeRetention).mock.calls[0][3]).toMatchObject({ popupLook: 'revista' });
+  });
+  it('turns a game on and moves its top prize (spec 2026-11-09)', async () => {
+    (api as any).popupGame = vi.fn().mockResolvedValue({ popupGame: 'wheel', popupGamePrizes: [], popupQuestion: null });
+    await openRetention(api, 's1', undefined, { host, view: 'program' });
+    host.querySelector<HTMLSelectElement>('[name=popupGame]')!.value = 'wheel';
+    host.querySelector<HTMLButtonElement>('[data-save-game]')!.click();
+    await vi.waitFor(() => expect((api as any).popupGame).toHaveBeenCalledWith('s1', { game: 'wheel' }));
+    // The save reloads the settings and redraws the panel: wait for it before the second change.
+    await vi.waitFor(() => expect(api.retention).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(host.querySelector<HTMLButtonElement>('[data-save-game]')!.disabled).toBe(false));
+    host.querySelector<HTMLSelectElement>('[name=popupGame]')!.value = 'wheel';
+    host.querySelector<HTMLInputElement>('[name=topPrize]')!.value = '25';
+    host.querySelector<HTMLButtonElement>('[data-save-game]')!.click();
+    await vi.waitFor(() => expect((api as any).popupGame).toHaveBeenLastCalledWith('s1', { game: 'wheel', topPrize: 25 }));
+  });
   it('lets the merchant choose when the signup popup appears and its welcome code', async () => {
     (api as any).promoCodes = vi.fn().mockResolvedValue([{ id: 'own', code: 'PEPPA10', isActive: true }, { id: 'off', code: 'OLD', isActive: false }]);
     await openRetention(api, 's1', undefined, { host, view: 'program' });

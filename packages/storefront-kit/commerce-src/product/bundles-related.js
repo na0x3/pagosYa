@@ -21,13 +21,23 @@
     return offers.length ? `<section class="product-detail__bundles" aria-labelledby="product-bundles-title"><h2 id="product-bundles-title">Llévalo en paquete</h2>${offers.join('')}</section>` : '';
   }
   /* "Súmale algo más": the owner's cart picks that are not in the cart yet. */
-  function cartSuggestionsMarkup() {
-    if (store.cartRecommendationsEnabled === false || !cart.size) return '';
+  /* Spec 2026-11-09 Merman cart: the merchant's chosen products first; with none chosen, «Te puede gustar» picks — the cart's categories
+   * first, then the best-seller, then the catalogue — never one already in the cart. Up to 6 (the checkout's «Completa tu compra» takes the first). */
+  function cartSuggestionItems() {
+    if (store.cartRecommendationsEnabled === false || !cart.size) return [];
     const inCart = new Set(cartItems().map(item => item.id));
     const ids = Array.isArray(store.cartRecommendationProductIds) ? store.cartRecommendationProductIds : [];
-    const items = [...new Set(ids)].map(id => products().find(item => item.id === id)).filter(item => item && !inCart.has(item.id) && limit(item) !== 0).slice(0, 3);
+    const chosen = [...new Set(ids)].map(id => products().find(item => item.id === id)).filter(Boolean);
+    const categories = new Set([...inCart].map(id => products().find(item => item.id === id)?.categoryId).filter(Boolean));
+    const rank = item => categories.has(item.categoryId) ? 0 : item.id === store.topSellerId ? 1 : 2;
+    const picked = chosen.length ? chosen : products().map((item, index) => ({ item, index })).sort((a, b) => rank(a.item) - rank(b.item) || a.index - b.index).map(entry => entry.item);
+    // A membership joins through its own page (final review 2026-11-09: its «Añadir» did nothing here).
+    return picked.filter(item => item && !inCart.has(item.id) && !isMembership(item) && limit(item) !== 0).slice(0, 6);
+  }
+  function cartSuggestionsMarkup() {
+    const items = cartSuggestionItems();
     if (!items.length) return '';
-    return `<section class="order-recommendations" aria-label="Súmale algo más"><h3>Súmale algo más</h3><ul>${items.map(item => {
+    return `<section class="order-recommendations" data-part="cart-suggestions" aria-label="Te puede gustar"><h3>Te puede gustar</h3><ul>${items.map(item => {
       const image = galleryImages(item)[0];
       return `<li>${image ? `<img src="${escape(image)}" alt="" loading="lazy" />` : ''}<span><strong>${escape(item.name)}</strong><span>${money(price(item), item.currency)}</span></span>${simpleProduct(item) ? `<button type="button" data-add="${escape(lineKey(item.id))}" aria-label="Añadir ${escape(item.name)}">Añadir</button>` : `<a href="${escape(productHref(item))}" aria-label="Elegir opciones de ${escape(item.name)}">Elegir</a>`}</li>`;
     }).join('')}</ul></section>`;

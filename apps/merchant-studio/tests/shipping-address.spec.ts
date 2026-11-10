@@ -39,7 +39,7 @@ async function open(page: Page, data: Record<string, unknown>, { leaflet = true 
   await expect(page.locator('#pagosya-product-title')).toBeVisible();
   await page.locator('.product-detail__buy').click();
   await page.locator('[data-cart-open]').first().click();
-  await page.getByRole('button', { name: 'Continuar con mi pedido' }).first().click();
+  await page.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).first().click();
   await page.getByRole('combobox', { name: 'Entrega', exact: true }).selectOption('delivery');
   return Object.assign(bodies, { checkouts });
 }
@@ -218,7 +218,7 @@ async function openHosted(page: Page, data: Record<string, unknown>, hostedQuote
   await expect(frame.locator('#pagosya-product-title')).toBeVisible();
   await frame.locator('.product-detail__buy').click();
   await frame.locator('[data-cart-open]').first().click();
-  await frame.getByRole('button', { name: 'Continuar con mi pedido' }).first().click();
+  await frame.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).first().click();
   await frame.getByRole('combobox', { name: 'Entrega', exact: true }).selectOption('delivery');
   return { frame, requests };
 }

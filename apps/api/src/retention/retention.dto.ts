@@ -3,6 +3,7 @@ import { ArrayMaxSize, ArrayMinSize, ArrayUnique, Equals, IsArray, IsBoolean, Is
 export const POPUP_TRIGGERS = ['load', 'delay', 'exit', 'both'] as const;
 export type PopupTrigger = typeof POPUP_TRIGGERS[number];
 import { CartItemDto } from '../payment-links/dto/cart-checkout.dto';
+import { POPUP_LOOK_IDS } from '../store-popups/popup-looks';
 export class RetentionSettingsDto {
   @IsInt() @Min(0) revision!: number;
   @IsBoolean() comebackEnabled!: boolean;
@@ -16,6 +17,8 @@ export class RetentionSettingsDto {
   @IsOptional() @IsIn(POPUP_TRIGGERS) popupTrigger?: PopupTrigger;
   @IsOptional() @IsInt() @Min(0) @Max(60) popupDelaySeconds?: number;
   @IsOptional() @ValidateIf((_, value) => value !== null) @IsString() @MaxLength(40) popupPromoCodeId?: string | null;
+  /** Spec 2026-11-09 popup looks: the merchant's chosen look (absent = YAPI's pick). */
+  @IsOptional() @IsIn(POPUP_LOOK_IDS) popupLook?: string;
   @IsString() @MinLength(1) @MaxLength(60) signupButton!: string;
   @IsBoolean() recoveryEnabled!: boolean;
   @IsInt() @Min(1) @Max(168) recoveryHours!: number;
@@ -34,6 +37,21 @@ export class RetentionSubscribeDto extends RetentionEmailDto {
   @IsOptional() @IsString() @MaxLength(100) name?: string;
   @IsOptional() @IsString() @MaxLength(40) phone?: string;
   @IsOptional() @IsArray() @ArrayMaxSize(8) @ArrayUnique() @IsString({ each: true }) @MaxLength(100, { each: true }) interests?: string[];
+  /** Spec 2026-11-09 popup games: the signed prize from /play, and the shopper's tap answer. */
+  @IsOptional() @IsString() @MaxLength(400) gameToken?: string;
+  @IsOptional() @IsString() @MaxLength(40) answer?: string;
+  /** Spec 2026-11-09 A/B tests: the store page's test visit, so a B visitor gets B's code and the signup counts for B. */
+  @IsOptional() @IsString() @MaxLength(64) sourceVisitToken?: string;
+}
+class GameQuestionDto {
+  @IsString() @MinLength(1) @MaxLength(80) text!: string;
+  @IsArray() @ArrayMinSize(2) @ArrayMaxSize(4) @IsString({ each: true }) @MaxLength(40, { each: true }) answers!: string[];
+}
+/** Spec 2026-11-09 popup games: the Studio's «Juego» panel (its own route; Ajustes keeps its fields). */
+export class PopupGameDto {
+  @IsOptional() @IsIn(['scratch', 'wheel', 'off']) game?: 'scratch' | 'wheel' | 'off';
+  @IsOptional() @IsInt() @Min(5) @Max(50) topPrize?: number;
+  @IsOptional() @ValidateIf((_, value) => value !== null) @ValidateNested() @Type(() => GameQuestionDto) question?: GameQuestionDto | null;
 }
 export class RetentionCartDto extends RetentionSubscribeDto {
   @IsOptional() @Matches(/^[a-f0-9]{64}$/) token?: string;

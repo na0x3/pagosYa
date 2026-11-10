@@ -33,6 +33,9 @@
         photo.hidden = !view.image;
         if (view.image) { photo.src = view.image; photo.alt = ''; photo.loading = 'lazy'; } else photo.removeAttribute('src');
       }
+      // Spec 2026-11-09 Merman cart (live Remolino): the line's saving and frequency choice travel with it (the same nodes, so their listeners too).
+      const extras = [li.querySelector('[data-part="cart-line-save"]'), li.querySelector('.order-item__cadence')].filter(Boolean);
+      if (extras.length) field('quantity').before(...extras);
       field('quantity').replaceChildren(li.querySelector('.quantity'));
       const remove = field('remove');
       if (remove) { remove.setAttribute('type', 'button'); remove.setAttribute('data-remove-line', view.id); remove.setAttribute('aria-label', `Quitar ${view.name} del pedido`); }
@@ -52,6 +55,8 @@
       const name = Object.keys(CART_PARTS).find(key => part.matches(CART_PARTS[key]));
       const target = name && slot(name);
       if (target) target.append(part);
+      // Spec 2026-11-09 Merman cart (live Remolino): the free-shipping bar leads the panel, above the lines — never under the button.
+      else if (part.matches('.cart-free')) slot('lines').before(part);
       else { anchor.after(part); anchor = part; }
     }
     const policies = slot('policies');

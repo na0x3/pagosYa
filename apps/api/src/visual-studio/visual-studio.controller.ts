@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Put, Param, Post, UseGuards } from "@nestjs/common";
+import { PlansService } from "../plans/plans.service";
+import { Body, Controller, Get, Put, Param, Post, UseGuards, Optional } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { MerchantAuthGuard } from "../dashboard/guards/merchant-auth.guard";
@@ -22,6 +23,7 @@ export class VisualStudioController {
     private readonly visualStudio: VisualStudioService,
     private readonly visualProposals: VisualProposalsService,
     private readonly storeAgent: StoreAgentService,
+    @Optional() private readonly plans?: PlansService,
   ) {}
 
   @Get(":id/visual-studio")
@@ -30,7 +32,8 @@ export class VisualStudioController {
   }
 
   @Post(":id/visual-proposals")
-  generateVisualProposals(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: GenerateVisualProposalsDto) {
+  async generateVisualProposals(@CurrentMerchant() merchant: { id: string }, @Param("id") id: string, @Body() dto: GenerateVisualProposalsDto) {
+    await this.plans?.assertCredits(id, merchant.id);
     return this.visualProposals.generate(merchant.id, id, dto);
   }
 
@@ -41,11 +44,12 @@ export class VisualStudioController {
 
   @Post(":id/agent-conversation/messages")
   @Throttle({ default: { limit: 12, ttl: 60_000 } })
-  sendAgentMessage(
+  async sendAgentMessage(
     @CurrentMerchant() merchant: { id: string },
     @Param("id") id: string,
     @Body() dto: SendStoreAgentMessageDto,
   ) {
+    await this.plans?.assertCredits(id, merchant.id);
     return this.storeAgent.send(merchant.id, id, dto);
   }
 

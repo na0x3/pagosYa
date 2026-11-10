@@ -218,6 +218,9 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
         if (!state.codes) { refused.push('No pude leer tus códigos de descuento: inténtalo de nuevo en un momento.'); break; }
         const discount = discountValue(op.value);
         const typed = op.name.trim().toUpperCase().replace(/\s+/g, '');
+        // Live 2026-11-07 («GRATIS100 de 100%» got «dime el descuento»): a percentage outside 1–99 is named for what it is.
+        const percent = /^(\d{1,3})\s*(?:%|por ?ciento)$/i.exec(op.value.trim());
+        if (!discount && percent) { refused.push(`No creé el código${typed ? ` ${short(typed, 32)}` : ''}: el descuento de un código va de 1 % a 99 % (con ${percent[1]} % el pedido saldría ${Number(percent[1]) >= 100 ? 'gratis' : 'sin descuento'}).`); break; }
         if (!discount) { refused.push(`No creé el código${typed ? ` ${short(typed, 32)}` : ''}: dime el descuento, por ejemplo «20 %» o «Bs 30».`); break; }
         let code = typed;
         if (!code) {

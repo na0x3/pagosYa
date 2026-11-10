@@ -42,7 +42,7 @@ for (const width of [1280, 390]) test(`a fully templated store shops end to end 
   await expect(shop.locator('.linea [data-cart-field="name"]')).toHaveText('Galletas de pollo');
   await expect(shop.locator('[data-cart-slot="total"] .order-total')).toBeVisible();
   await browserPage.screenshot({ path: `${SHOTS}/cart-${width}.png` });
-  await shop.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await shop.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   // The one calm checkout (spec 2026-10-20) draws the review whatever review template the store carries.
   const checkout = shop.locator('.pya-checkout');
   // On a phone the order summary starts folded under «Ver resumen del pedido».
@@ -152,7 +152,7 @@ for (const width of [1280, 390]) test(`the calm checkout draws the checkout over
   await browserPage.emulateMedia({ reducedMotion: 'reduce' });
   const shop = await mount(browserPage, TEMPLATES + CHECKOUT);
   await shop.getByRole('button', { name: /Mi canasta/ }).first().click();
-  await shop.getByRole('button', { name: 'Continuar con mi pedido' }).click();
+  await shop.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   const root = shop.locator('.pya-checkout');
   await expect(root).toBeVisible();
   await expect(shop.locator('.caja, [data-checkout-root]')).toHaveCount(0);

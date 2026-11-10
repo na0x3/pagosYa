@@ -41,7 +41,7 @@ test('hosted visitors opt in before attribution, can revoke it, and retain check
   await frame.getByRole('link', { name: 'Ver detalle de Café Yungas' }).click();
   await expect(page).toHaveURL(/\/p\/p1$/); await expect(page).toHaveTitle('Café Yungas · Café Origen');
   await frame.getByRole('button', { name: 'Añadir al pedido', exact: true }).click();
-  await frame.getByRole('button', { name: 'Continuar con mi pedido', exact: true }).click();
+  await frame.getByRole('button', { name: /^(Pagar •|Continuar con mi pedido)/ }).click();
   await expect(page.locator('meta[name=robots]')).toHaveAttribute('content', 'noindex, nofollow');
   await frame.getByRole('button', { name: 'Pagar con pagosYa' }).click();
   await expect(page.getByText('Pago listo')).toBeVisible();
