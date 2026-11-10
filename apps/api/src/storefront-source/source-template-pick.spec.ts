@@ -70,6 +70,12 @@ describe('template switch request', () => {
     expect(templateSwitchRequest('Cámbiala a la plantilla Tacón por favor', templates)).toEqual({ id: 'tacon' });
     expect(templateSwitchRequest('quiero la plantilla muro', templates)).toEqual({ id: 'muro' });
   });
+  // Live 2026-11-10 (Salvia): «una botica de autor… la botica con su horario… Usa la plantilla Burbuja» got Botica — «la botica» in the
+  // business's own words matched before the template it asked for by name.
+  it('the template named after «plantilla» wins over a business word that is also a template name', () => {
+    const named = pickableTemplates([manifest('botica', { name: 'Botica' }), manifest('burbuja', { name: 'Burbuja' })]);
+    expect(templateSwitchRequest('Somos Salvia, una botica de autor. Queremos la botica con su horario. Usa la plantilla Burbuja.', named)).toEqual({ id: 'burbuja' });
+  });
   it('another template, none named', () => {
     expect(templateSwitchRequest('prueba otra plantilla', templates)).toBe('other');
     expect(templateSwitchRequest('cambia la plantilla, no me gusta', templates)).toBe('other');
