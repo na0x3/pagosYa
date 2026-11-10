@@ -49,3 +49,12 @@ it('the popup\'s choice moves it first at once and goes to it', async () => {
 it('a favourite that no longer exists changes nothing', async () => {
   expect(await grid("localStorage.setItem('pagosya:fav:{slug}', 'gone')")).toEqual({ order: ['p1', 'p2', 'p3', 'p4'], tags: [] });
 });
+
+// Final review 2026-11-10 (I3): in the sandboxed store frame a relative location.href resolved against the parent page; «Ver X» on a page
+// without the favourite's card follows a real link, which the frame routes like any click.
+it('goes to the favourite\'s own page through a real link when its card is not on this page', async () => {
+  await grid("HTMLAnchorElement.prototype.click = function () { window.__followed = this.getAttribute('href'); };", async page => {
+    await page.evaluate(() => { document.querySelectorAll('[data-pagosya-catalog]').forEach(el => el.remove()); document.dispatchEvent(new CustomEvent('pagosya:favourite', { detail: { id: 'p2', go: true } })); });
+    expect(await page.evaluate(() => (window as unknown as { __followed?: string }).__followed)).toMatch(/product\.html\?id=p2$/);
+  }).catch(error => { if (!String(error).includes('waitFor')) throw error; });
+});

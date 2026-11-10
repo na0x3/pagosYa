@@ -34,5 +34,9 @@
     const productId = id.split(':')[0];
     const card = document.querySelector(`[data-pagosya-catalog] [data-product-id="${CSS.escape(productId)}"], [data-pagosya-product-page][data-product-id="${CSS.escape(productId)}"]`);
     if (card) card.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
-    else if (products().some(p => p.id === productId)) location.href = pageHref(config.productPage || 'product.html', '?id=' + encodeURIComponent(productId));
+    // A real link (final review I3): the sandboxed store frame routes link clicks; a relative location.href resolved against the parent page.
+    else if (products().some(p => p.id === productId)) {
+      const link = document.createElement('a'); link.href = pageHref(config.productPage || 'product.html', '?id=' + encodeURIComponent(productId)); link.hidden = true;
+      document.body.append(link); link.click(); link.remove();
+    }
   });

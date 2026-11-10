@@ -105,6 +105,9 @@ describe('rasca y elige render (spec 2026-11-10)', () => {
   it('asked for the favourite flavour, a store of several products shows the flavours (live Oh Belly 2026-11-10)', async () => {
     expect((await run({ popupFavourite: { text: '¿Cuál es tu sabor favorito?' } }, ['play', 'claim', 'skip'], [...ITEMS, ...SODA])).game?.tiles).toEqual(['Limón', 'Pera', 'Sandía', 'Naranja']);
   });
+  it('a merchant who removed the favourite question gets no favourite step (final review 2026-11-10)', async () => {
+    expect((await run({ popupFavourite: null }, ['play', 'claim', 'skip'])).game?.step).toBe('contact');
+  });
   it('asks the WhatsApp (or the email) to save the prize, naming the favourite', async () => {
     const whatsapp = await run({}, ['play', 'claim', 'skip', 'favourite']);
     expect(whatsapp.game).toMatchObject({ step: 'contact', contactType: 'tel', submitLabel: 'Suscribirme y ver Torre de cookies' });

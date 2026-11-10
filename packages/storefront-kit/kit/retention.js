@@ -232,7 +232,8 @@
     const shape = game === 'scratch' ? (SHAPES.includes(settings.popupShape) ? settings.popupShape : 'card') : '';
     const interests = popupInterests(settings);
     const favouriteText = settings.popupFavourite && typeof settings.popupFavourite.text === 'string' ? settings.popupFavourite.text : '¿Cuál es tu favorito?';
-    const tiles = favouriteTiles(items, photoUrl || (value => value), /sabor/i.test(favouriteText.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+    // A merchant who removed the favourite question (popupFavourite null) gets no favourite step (final review M5).
+    const tiles = settings.popupFavourite === null ? [] : favouriteTiles(items, photoUrl || (value => value), /sabor/i.test(favouriteText.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
     const contact = settings.popupContact === 'email' ? 'email' : 'whatsapp';
     const hostedPage = window.PAGOSYA_HOSTED === true;
     const get = key => { try { return localStorage.getItem(key); } catch { return null; } };
