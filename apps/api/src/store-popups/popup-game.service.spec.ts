@@ -66,3 +66,34 @@ describe('PopupGameService (single-use codes, spec addendum 2026-11-09)', () => 
   });
 });
 
+
+describe('rasca y elige settings (spec 2026-11-10)', () => {
+  const bakery = () => {
+    const made = setup();
+    made.prisma.store = { findUnique: jest.fn(async () => ({ name: 'Miga Dorada', onboarding: { what: 'Panadería de autor: cookies rellenas y rolls' } })) };
+    made.prisma.paymentLink = { findMany: jest.fn(async () => [{ name: 'Torre de cookies' }, { name: 'Caja de rolls' }, { name: 'Desayuno box' }]) };
+    return made;
+  };
+  it('turning a game on writes the shape, the interests, the favourite question and WhatsApp from the store words', async () => {
+    const { service, read } = bakery();
+    await service.enable('s1', 'scratch');
+    expect(read()).toMatchObject({ popupShape: 'cookie', popupContact: 'whatsapp', popupFavourite: { text: '¿Cuál es tu favorito?' } });
+    expect((read()!.popupInterests as any).answers.map((a: any) => a.label)).toEqual(['Para mí', 'Para regalar', 'Desayunos', 'Para la oficina', 'Para una fiesta']);
+  });
+  it('keeps what the merchant set; the setters write each part (null removes interests)', async () => {
+    const { service, read } = bakery();
+    await service.setShape('s1', 'can');
+    await service.setContact('s1', 'email');
+    await service.enable('s1', 'wheel');
+    expect(read()).toMatchObject({ popupShape: 'can', popupContact: 'email' });
+    await service.setInterests('s1', null);
+    await service.enable('s1', 'scratch');
+    expect(read()!.popupInterests).toBeNull();
+  });
+  it('a store the words say nothing about gets a bag and its categories as interests', async () => {
+    const { service, read } = setup();
+    await service.enable('s1', 'scratch');
+    expect(read()).toMatchObject({ popupShape: 'bag', popupContact: 'whatsapp' });
+    expect((read()!.popupInterests as any).answers.map((a: any) => a.label)).toEqual(['Gelatos', 'Copas', 'Para regalar']);
+  });
+});

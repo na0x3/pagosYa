@@ -7,7 +7,8 @@ export type PopupGame = (typeof POPUP_GAMES)[number];
 export type GamePrize = { percent?: number; promoCodeId?: string; label: string; chance: number };
 export const prizePercent = (prize: GamePrize) => (Number.isInteger(prize.percent) ? prize.percent! : Number(/^(\d+)/.exec(prize.label)?.[1] ?? 0));
 export type GameQuestion = { text: string; answers: string[] };
-export type PopupGameSettings = { popupGame?: string | null; popupGamePrizes?: GamePrize[]; popupQuestion?: GameQuestion | null };
+export type PopupGameSettings = { popupGame?: string | null; popupGamePrizes?: GamePrize[]; popupQuestion?: GameQuestion | null;
+  /** Spec 2026-11-10 rasca y elige. */ popupShape?: string | null; popupInterests?: unknown; popupFavourite?: { text: string } | null; popupContact?: string };
 export const readGame = (value: unknown): PopupGame | null => ((POPUP_GAMES as readonly unknown[]).includes(value) ? value as PopupGame : null);
 
 /** roll is 0..99; prizes are in order and their chances sum to 100. */
@@ -95,7 +96,8 @@ export function interestsFor(words: string, categories: string[]): PopupInterest
   const sector = SECTOR_INTERESTS.find(([pattern]) => pattern.test(foldWords(words)));
   if (sector) return { text: sector[1].text, answers: sector[1].answers.map(answer => ({ ...answer })) };
   const names = categories.map(name => name.trim()).filter(name => name && name.length <= 28).slice(0, 5);
-  const answers = names.length >= 2 ? [...names.map((label, at) => ({ label, icon: CATEGORY_ICONS[at % CATEGORY_ICONS.length] })), { label: 'Para regalar', icon: '🎁' }]
+  const gift = names.some(name => foldWords(name) === 'para regalar') ? [] : [{ label: 'Para regalar', icon: '🎁' }];
+  const answers = names.length >= 2 ? [...names.map((label, at) => ({ label, icon: CATEGORY_ICONS[at % CATEGORY_ICONS.length] })), ...gift]
     : [{ label: 'Para mí', icon: '🙋' }, { label: 'Para regalar', icon: '🎁' }, { label: 'Para compartir', icon: '🤝' }];
   return { text: '¿Qué te interesa?', answers: answers.slice(0, 6) };
 }

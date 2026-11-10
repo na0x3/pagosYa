@@ -185,3 +185,25 @@ describe('popup A/B tests', () => {
     expect(upsertArg(a.tx).create).toMatchObject({ sourceVisitId: 'vA' });
   });
 });
+
+describe('rasca y elige public settings (spec 2026-11-10)', () => {
+  const GAME = { popupGame: 'scratch', popupGamePrizes: [{ percent: 5, label: '5 %', chance: 60 }, { percent: 10, label: '10 %', chance: 40 }] };
+  const INTERESTS = { text: '¿Qué te interesa?', answers: [{ label: 'Para mí', icon: '🙋' }, { label: 'Para regalar', icon: '🎁' }] };
+  it('hands the page the shape, interests, favourite question and contact while a game is on', () => {
+    const out = publicRetentionSettings({ ...DEFAULT_RETENTION, ...GAME, popupShape: 'can', popupInterests: INTERESTS, popupFavourite: { text: '¿Cuál es tu sabor favorito?' }, popupContact: 'email' } as never) as Record<string, unknown>;
+    expect(out).toMatchObject({ popupShape: 'can', popupInterests: INTERESTS, popupFavourite: { text: '¿Cuál es tu sabor favorito?' }, popupContact: 'email' });
+    const off = publicRetentionSettings({ ...DEFAULT_RETENTION, popupShape: 'can', popupInterests: INTERESTS } as never) as Record<string, unknown>;
+    expect(off.popupShape).toBeUndefined();
+    expect(off.popupInterests).toBeUndefined();
+  });
+  it('reads an old text question as interests, an unknown shape as none, and WhatsApp by default', () => {
+    const out = publicRetentionSettings({ ...DEFAULT_RETENTION, ...GAME, popupShape: 'rocket', popupQuestion: { text: '¿Para quién?', answers: ['Para mí', 'Para regalar'] } } as never) as Record<string, unknown>;
+    expect(out).toMatchObject({ popupShape: null, popupContact: 'whatsapp', popupInterests: { text: '¿Para quién?', answers: [{ label: 'Para mí', icon: '' }, { label: 'Para regalar', icon: '' }] } });
+  });
+  it('keeps them when Ajustes saves without them', async () => {
+    const { s, tx } = service();
+    tx.storeRetention.findUnique.mockResolvedValue({ settings: { ...DEFAULT_RETENTION, popupShape: 'cookie', popupInterests: INTERESTS, popupFavourite: { text: 'x' }, popupContact: 'email' }, revision: 3 } as never);
+    await s.save('m1', 's1', dto({ revision: 3 }));
+    expect((tx.storeRetention.updateMany.mock.calls[0] as any)[0].data.settings).toMatchObject({ popupShape: 'cookie', popupInterests: INTERESTS, popupFavourite: { text: 'x' }, popupContact: 'email' });
+  });
+});

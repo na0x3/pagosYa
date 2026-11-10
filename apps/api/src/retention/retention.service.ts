@@ -16,7 +16,7 @@ import { DEFAULT_RETENTION, RetentionSettings, RetentionSettingsDto, RetentionCa
 import { comebackCode, qualifyingDays, unusedDays } from './retention-policy';
 import { reminderCart } from './reminder-cart';
 import { pickPopupLook, readPopupLook, type PopupLookSettings } from '../store-popups/popup-looks';
-import { readGame, type PopupGameSettings } from '../store-popups/popup-games';
+import { readGame, type PopupGameSettings, readShape, readInterests, readContact } from '../store-popups/popup-games';
 import { PopupGameService } from '../store-popups/popup-game.service';
 import { popupWordsFor } from '../storefront-source/source-ab';
 // Plans 2026-11-07: the kinds that stop at the plan's monthly emails; everything else (receipts, notices, replies) always goes out.
@@ -36,10 +36,13 @@ export function publicRetentionSettings(s: RetentionSettings & PopupLookSettings
   return { comebackEnabled: s.comebackEnabled, visitsRequired: s.visitsRequired, rewardLabel: s.rewardLabel, signupEnabled: s.signupEnabled, signupTitle: s.signupTitle, signupBody: s.signupBody, signupButton: s.signupButton, recoveryEnabled: s.recoveryEnabled, popupTrigger: s.popupTrigger, popupDelaySeconds: s.popupDelaySeconds, popupHasCode: Boolean(s.popupPromoCodeId),
     ...(look ? { popupLook: look } : {}), ...(s.popupPhoto ? { popupPhoto: s.popupPhoto } : {}),
     // Spec 2026-11-09 popup games: the game, its prize labels and the question — never the codes.
-    ...(readGame(s.popupGame) && (s.popupGamePrizes?.length ?? 0) >= 2 ? { popupGame: s.popupGame, popupGameSlices: s.popupGamePrizes!.map(p => p.label), ...(s.popupQuestion ? { popupQuestion: s.popupQuestion } : {}) } : {}) };
+    ...(readGame(s.popupGame) && (s.popupGamePrizes?.length ?? 0) >= 2 ? { popupGame: s.popupGame, popupGameSlices: s.popupGamePrizes!.map(p => p.label), ...(s.popupQuestion ? { popupQuestion: s.popupQuestion } : {}),
+      // Spec 2026-11-10 rasca y elige: the card's shape, the interests, the favourite question and the contact asked for.
+      popupShape: readShape(s.popupShape), popupInterests: readInterests(s), popupFavourite: s.popupFavourite && typeof s.popupFavourite.text === 'string' ? { text: s.popupFavourite.text } : null,
+      popupContact: readContact(s.popupContact) } : {}) };
 }
 /** Settings Ajustes may not send but must keep: the email workspace, dismissed suggestions and the popup look. */
-const KEPT_SETTINGS = ['emailWorkspace', 'suggestionsDismissedAt', 'popupLook', 'popupLookPrevious', 'popupPhoto', 'popupGame', 'popupGamePrizes', 'popupQuestion'] as const;
+const KEPT_SETTINGS = ['emailWorkspace', 'suggestionsDismissedAt', 'popupLook', 'popupLookPrevious', 'popupPhoto', 'popupGame', 'popupGamePrizes', 'popupQuestion', 'popupShape', 'popupInterests', 'popupFavourite', 'popupContact'] as const;
 @Injectable()
 export class RetentionService {
   private working = false;

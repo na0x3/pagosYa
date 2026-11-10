@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomInt } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { createGameToken, DEFAULT_PRIZES, drawPrize, prizeLabel, prizePercent, questionFor, readGame, readGameToken, rebalance, winnerCode, type GamePrize, type GameQuestion, type PopupGame, type PopupGameSettings } from './popup-games';
+import { favouriteQuestionFor, interestsFor, popupShapeFor, type PopupInterests, type PopupShape, createGameToken, DEFAULT_PRIZES, drawPrize, prizeLabel, prizePercent, questionFor, readGame, readGameToken, rebalance, winnerCode, type GamePrize, type GameQuestion, type PopupGame, type PopupGameSettings } from './popup-games';
 
 const TOKEN_MS = 30 * 60_000;
 const EXPIRED = 'Tu premio venció; vuelve a jugar.';
@@ -61,9 +61,21 @@ export class PopupGameService {
   async enable(storeId: string, game: PopupGame) {
     const settings = await this.stored(storeId);
     const categories = await this.prisma.category.findMany({ where: { storeId }, select: { name: true }, orderBy: { sortOrder: 'asc' }, take: 8 });
+    const names = categories.map((c: { name: string }) => c.name);
+    // Spec 2026-11-10 rasca y elige: the card's shape, the interests and the favourite question come from the store's own words.
+    const store = await this.prisma.store?.findUnique({ where: { id: storeId }, select: { name: true, onboarding: true } }).catch(() => null);
+    const products: Array<{ name: string }> = await this.prisma.paymentLink?.findMany({ where: { storeId }, select: { name: true }, take: 12 }).catch(() => []) ?? [];
+    const words = [(store?.onboarding as { what?: string } | null)?.what ?? '', ...names, ...products.map(product => product.name)].join(' ');
     return this.write(storeId, { popupGame: game, popupGamePrizes: this.prizesFor([...DEFAULT_PRIZES]),
-      popupQuestion: (settings.popupQuestion as GameQuestion | null | undefined) ?? questionFor(categories.map((c: { name: string }) => c.name)) });
+      popupQuestion: (settings.popupQuestion as GameQuestion | null | undefined) ?? questionFor(names),
+      popupShape: settings.popupShape !== undefined ? settings.popupShape as string | null : popupShapeFor(words),
+      popupInterests: settings.popupInterests !== undefined ? settings.popupInterests : interestsFor(words, names),
+      popupFavourite: settings.popupFavourite !== undefined ? settings.popupFavourite as { text: string } | null : { text: favouriteQuestionFor(words, products.length) },
+      popupContact: (settings.popupContact as string | undefined) ?? 'whatsapp' });
   }
+  setShape(storeId: string, shape: PopupShape | null) { return this.write(storeId, { popupShape: shape }); }
+  setContact(storeId: string, contact: 'whatsapp' | 'email') { return this.write(storeId, { popupContact: contact }); }
+  setInterests(storeId: string, interests: PopupInterests | null) { return this.write(storeId, { popupInterests: interests }); }
   disable(storeId: string) { return this.write(storeId, { popupGame: null }); }
   async setTopPrize(storeId: string, percent: number) {
     const saved = ((await this.stored(storeId)).popupGamePrizes as GamePrize[] | undefined) ?? [];
