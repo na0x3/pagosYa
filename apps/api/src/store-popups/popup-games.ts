@@ -1,4 +1,4 @@
-import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 
 /** Spec 2026-11-09 popup games: rasca y gana and ruleta; everyone wins a real prize, drawn and signed by the server. */
 export const POPUP_GAMES = ['scratch', 'wheel'] as const;
@@ -39,6 +39,12 @@ export const DEFAULT_PRIZES = [5, 10, 15, 20] as const;
 const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 /** The winner's own one-use code (spec addendum 2026-11-09): RULETA15-K7QM2X — no 0/O/1/I to misread. */
 export const winnerCode = (game: PopupGame, percent: number) => `${game === 'scratch' ? 'RASCA' : 'RULETA'}${percent}-${Array.from({ length: 6 }, () => CODE_LETTERS[randomInt(CODE_LETTERS.length)]).join('')}`;
+/** Deferred minor fixed 2026-11-10: the code comes from the signed game itself, so one game gives one code — the store's unique code
+ *  index refuses a second claim of the same prize (another email, a double submit) without a new table. */
+export const winnerCodeFor = (game: PopupGame, percent: number, token: string) => {
+  const bytes = createHash('sha256').update(token).digest();
+  return `${game === 'scratch' ? 'RASCA' : 'RULETA'}${percent}-${Array.from({ length: 6 }, (_, at) => CODE_LETTERS[bytes[at] % CODE_LETTERS.length]).join('')}`;
+};
 export const prizeLabel = (percent: number) => `${percent} % de descuento`;
 /** Larger prizes rarer: weights n…1 by size, scaled to 100 (the remainder goes to the smallest prize). */
 export function rebalance(percents: number[]): number[] {

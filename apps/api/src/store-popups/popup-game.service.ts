@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomInt } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { favouriteQuestionFor, interestsFor, popupShapeFor, type PopupInterests, type PopupShape, createGameToken, DEFAULT_PRIZES, drawPrize, prizeLabel, prizePercent, questionFor, readGame, readGameToken, rebalance, winnerCode, type GamePrize, type GameQuestion, type PopupGame, type PopupGameSettings } from './popup-games';
+import { favouriteQuestionFor, interestsFor, popupShapeFor, type PopupInterests, type PopupShape, createGameToken, DEFAULT_PRIZES, drawPrize, prizeLabel, prizePercent, questionFor, readGame, readGameToken, rebalance, winnerCodeFor, type GamePrize, type GameQuestion, type PopupGame, type PopupGameSettings } from './popup-games';
 
 const TOKEN_MS = 30 * 60_000;
 const EXPIRED = 'Tu premio venció; vuelve a jugar.';
@@ -50,13 +50,13 @@ export class PopupGameService {
     const percent = readGameToken(token, storeId, this.secret());
     if (percent === null) return { message: EXPIRED };
     const game = readGame((await this.stored(storeId)).popupGame) ?? 'wheel';
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        const row = await this.prisma.promoCode.create({ data: { storeId, code: winnerCode(game, percent), discountType: 'PERCENT', discountValue: percent, maxUses: 1, isActive: true, showInEmails: false, showInAssistant: false } });
-        return { code: row.code };
-      } catch (error) { if ((error as { code?: string }).code !== 'P2002') throw error; }
+    try {
+      const row = await this.prisma.promoCode.create({ data: { storeId, code: winnerCodeFor(game, percent, token), discountType: 'PERCENT', discountValue: percent, maxUses: 1, isActive: true, showInEmails: false, showInAssistant: false } });
+      return { code: row.code };
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') return { message: 'Este premio ya se canjeó.' };
+      throw error;
     }
-    return { message: EXPIRED };
   }
   async enable(storeId: string, game: PopupGame) {
     const settings = await this.stored(storeId);

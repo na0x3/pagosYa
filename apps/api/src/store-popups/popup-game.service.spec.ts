@@ -7,7 +7,7 @@ function setup() {
   const prisma: any = {
     storeRetention: { findUnique: jest.fn(async () => (settings ? { settings } : null)), upsert: jest.fn(async ({ update }: any) => { settings = update.settings; }) },
     category: { findMany: jest.fn(async () => [{ name: 'Gelatos' }, { name: 'Copas' }, { name: 'Para regalar' }]) },
-    promoCode: { create: jest.fn(async ({ data }: any) => { created.push(data); return data; }) },
+    promoCode: { create: jest.fn(async ({ data }: any) => { if (created.some(row => row.code === data.code)) throw Object.assign(new Error('unique'), { code: 'P2002' }); created.push(data); return data; }) },
   };
   return { service: new PopupGameService(prisma, { get: jest.fn(() => 'secret') } as never), created, prisma, read: () => settings };
 }
@@ -34,8 +34,12 @@ describe('PopupGameService (single-use codes, spec addendum 2026-11-09)', () => 
     const first = await service.claim('s1', token, false);
     expect(first.code).toMatch(/^RULETA15-[A-HJ-NP-Z2-9]{6}$/);
     expect(created[0]).toMatchObject({ storeId: 's1', code: first.code, discountType: 'PERCENT', discountValue: 15, maxUses: 1, isActive: true, showInEmails: false, showInAssistant: false });
-    const second = await service.claim('s1', token, false);
-    expect(second.code).not.toBe(first.code);
+    // Deferred minor fixed 2026-11-10: one game, one code — a second claim of the same prize (another email, a double submit) gets none.
+    await expect(service.claim('s1', token, false)).resolves.toEqual({ message: 'Este premio ya se canjeó.' });
+    expect(created).toHaveLength(1);
+    const other = await service.claim('s1', createGameToken('s1', 15, Date.now() + 90_000, 'secret'), false);
+    expect(other.code).toMatch(/^RULETA15-[A-HJ-NP-Z2-9]{6}$/);
+    expect(other.code).not.toBe(first.code);
     await expect(service.claim('s1', token, true)).resolves.toEqual({ message: 'Este correo ya recibió su premio.' });
     await expect(service.claim('s1', 'bad.token', false)).resolves.toEqual({ message: 'Tu premio venció; vuelve a jugar.' });
   });

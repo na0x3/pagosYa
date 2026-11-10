@@ -96,15 +96,23 @@ export class RetentionService {
       this.prisma.storeEmailDelivery.findMany({ where: { storeId, status: 'FAILED' }, orderBy: { createdAt: 'desc' }, take: 10, select: { id: true, kind: true, attempts: true, lastError: true, dueAt: true, createdAt: true } }),
     ]);
     // Spec 2026-11-10 rasca y elige: the WhatsApp list and the favourites chosen in the popup (both lists).
-    const [whatsapp, whatsappCount, chosenByEmail, products] = await Promise.all([
-      this.prisma.storeWhatsappSubscriber.findMany({ where: { storeId, isActive: true }, orderBy: { createdAt: 'desc' }, take: 50, select: { phone: true, interests: true, favourite: true, createdAt: true } }),
+    const [whatsapp, whatsappCount, chosenByEmail] = await Promise.all([
+      this.prisma.storeWhatsappSubscriber.findMany({ where: { storeId, isActive: true }, orderBy: { createdAt: 'desc' }, take: 50, select: { id: true, phone: true, interests: true, favourite: true, createdAt: true } }),
       this.prisma.storeWhatsappSubscriber.count({ where: { storeId, isActive: true } }),
       this.prisma.storeNewsletterSubscriber.findMany({ where: { storeId, isActive: true, favourite: { not: null } }, select: { favourite: true }, take: 2000 }),
-      this.prisma.paymentLink.findMany({ where: { storeId }, select: { id: true, name: true } }),
     ]);
-    const whatsappSubscribers = whatsapp.map(row => ({ phone: whatsappShown(row.phone), interests: row.interests, favourite: favouriteName(row.favourite, products), createdAt: row.createdAt }));
+    // Deferred minor fixed 2026-11-10: only the products someone chose, to name them (the whole catalogue loaded on every open).
+    const chosenIds = [...new Set([...whatsapp.map(row => row.favourite), ...chosenByEmail.map(row => row.favourite)].filter((id): id is string => Boolean(id)))];
+    const products = chosenIds.length ? await this.prisma.paymentLink.findMany({ where: { storeId, id: { in: chosenIds } }, select: { id: true, name: true } }) : [];
+    const whatsappSubscribers = whatsapp.map(row => ({ id: row.id, phone: whatsappShown(row.phone), interests: row.interests, favourite: favouriteName(row.favourite, products), createdAt: row.createdAt }));
     const favourites = favouriteTally([...whatsapp.map(row => row.favourite), ...chosenByEmail.map(row => row.favourite)], products);
     return { settings, subscribers, subscriberCount, whatsappSubscribers, whatsappCount, favourites, cards, carts, campaigns, deliveries, failedDeliveries, emailConfigured: Boolean(this.config.get('app.email.resendApiKey')) };
+  }
+  /** A number the merchant takes off the WhatsApp list (the customer asked to stop); it stays stored, inactive. */
+  async removeWhatsapp(merchantId: string, storeId: string, id: string) {
+    await this.owner(merchantId, storeId);
+    const { count } = await this.prisma.storeWhatsappSubscriber.updateMany({ where: { id, storeId }, data: { isActive: false } });
+    return { removed: count };
   }
   async save(merchantId: string, storeId: string, dto: RetentionSettingsDto) {
     await this.owner(merchantId, storeId);

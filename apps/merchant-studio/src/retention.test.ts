@@ -126,4 +126,12 @@ describe('rasca y elige subscribers (spec 2026-11-10)', () => {
     expect(text).toContain('Favoritos más elegidos');
     expect(text).toContain('Torre de cookies · 3');
   });
+  // Deferred minor fixed 2026-11-10: a customer who asks to stop is taken off the list (pagosYa sends no WhatsApp; the merchant does).
+  it('takes a number off the WhatsApp list with «Quitar»', async () => {
+    api.retention = vi.fn().mockResolvedValue({ ...state(), whatsappCount: 1, whatsappSubscribers: [{ id: 'w1', phone: '+591 7123 4567', interests: [], favourite: null, createdAt: '2026-11-10T12:00:00Z' }], favourites: [] }) as never;
+    api.writeRetention = vi.fn().mockResolvedValue({ removed: 1 }) as never;
+    await openRetention(api, 's1', undefined, { host, view: 'customers' });
+    host.querySelector<HTMLButtonElement>('[data-remove-whatsapp="w1"]')!.click();
+    await vi.waitFor(() => expect(api.writeRetention).toHaveBeenCalledWith('s1', 'whatsapp/w1/remove', 'POST', {}));
+  });
 });
