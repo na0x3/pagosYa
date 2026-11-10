@@ -1,4 +1,4 @@
-import { BUILD_NOW, INTAKE_SCHEMA, intakeFacts, intakeInstruction, intakeMessage, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState } from './source-intake';
+import { BUILD_NOW, INTAKE_SCHEMA, intakeFacts, intakeInstruction, intakeMessage, intakePhone, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState } from './source-intake';
 
 const state = (extra: Partial<IntakeState> = {}): IntakeState => ({ pending: true, words: 'hola quiero mi tienda para vender laminas', photos: [], asked: [], answers: [], ...extra });
 const facts = intakeFacts({ name: 'Láminas Lu', onboarding: { what: 'laminas de arte', story: '' }, products: [{ name: 'Café', imageUrls: ['/v1/uploads/a.jpg'] }, { name: 'Té', imageUrls: [] }],
@@ -86,5 +86,22 @@ describe('pendingIntake', () => {
     expect(pendingIntake([open], 2)).toBeNull();
     expect(pendingIntake([open, { role: 'ASSISTANT', metadata: { sourceRevision: 1 } }], 0)).toBeNull();
     expect(pendingIntake([{ role: 'ASSISTANT', metadata: { intake: state({ pending: false }) } }], 0)).toBeNull();
+  });
+});
+
+// Live check 2026-11-09 (Miga, Bruma, Pawby): «¿Quieres un WhatsApp?» → «Sí, al 71234567» never reached the store, so the build had no
+// number and YAPI's own checklist then said WhatsApp was missing.
+describe('the number in the answers', () => {
+  const asked = (answer: string, question = '¿Quieres incluir un WhatsApp para pedidos?') => state({ answers: [{ topic: 'musts', question, answer }] });
+  it('finds the WhatsApp the merchant gave when asked', () => {
+    expect(intakePhone(asked('Sí, al 71234567'))).toBe('71234567');
+    expect(intakePhone(asked('si +591 7222 3344 porfa'))).toBe('+591 7222 3344');
+    expect(intakePhone(state({ words: 'Vendo licuadoras, mi whatsapp es 75556677' }))).toBe('75556677');
+  });
+  it('takes nothing that is not a phone', () => {
+    expect(intakePhone(asked('Sí'))).toBeNull();
+    expect(intakePhone(asked('Envíos desde Bs 200, el 10 %'))).toBeNull();
+    expect(intakePhone(asked('Cálida', '¿Qué estilo quieres?'))).toBeNull();
+    expect(intakePhone(state({ words: 'Somos una panadería, horneamos 120 cookies por día desde 2019' }))).toBeNull();
   });
 });

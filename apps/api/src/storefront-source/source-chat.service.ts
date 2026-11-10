@@ -59,7 +59,7 @@ import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
 import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates, leastUsedDraw, randomPick, readTemplateRandom, templateSwitchRequest } from './source-template-pick';
-import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
+import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, intakePhone, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
 /** Owner 2026-11-02: the template a one- or two-product store starts on (the product whole at the top). */
 const ONE_PRODUCT_TEMPLATE = 'unico';
@@ -767,6 +767,10 @@ export class SourceChatService {
       const state: IntakeState = intake ?? { pending: true, words: instruction, ...(merchantRequest ? { request: merchantRequest } : {}), photos: chatPhotos, asked: [], answers: [] };
       const asked = await this.askBeforeBuild(merchantId, storeId, threadId, userMessage, workflow, state);
       if (asked) return asked;
+      // Live check 2026-11-09: a WhatsApp given in the answers is saved as the store number (never over one already set), so the
+      // build and its checklist see it.
+      const phone = intakePhone(state);
+      if (phone) await this.prisma.store.updateMany({ where: { id: storeId, OR: [{ contactPhone: null }, { contactPhone: '' }] }, data: { contactPhone: phone } }).catch(() => null);
       if (state.answers.length) {
         const words = intakeInstruction(state);
         userMessage = { ...userMessage, content: words };
