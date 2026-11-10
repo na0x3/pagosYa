@@ -1,0 +1,44 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmw9ys3mn0001vuxum1go6tqk",
+  "slug": "ffurpqwd",
+  "photos": {
+    "brand:5e60bf6b8389897b0e1593620a0e95b3.jpg": "/v1/uploads/96c7e638-3767-44d0-b348-13ec16cf1d01.jpg",
+    "brand:83c65ac60fed9cedf4857337f63df2e8.jpg": "/v1/uploads/dd02179a-803a-4ad7-bdb4-57fd5b303700.jpg",
+    "brand:d806ce5380ab28e546ee4de856ffe7f4.jpg": "/v1/uploads/c13ba33f-547c-4ce4-be38-df639f9db8af.jpg",
+    "brand:dc8eaa398b58a9bdd18e121026a6794e.jpg": "/v1/uploads/a91b5117-739e-46de-9a1d-a958eb18a630.jpg",
+    "brand:dd7f88684e91509a1f0021342e65f40b.jpg": "/v1/uploads/5088bf60-4314-4d07-8868-244839eecf8e.jpg",
+    "brand:e087d897db68b7193ce1322ed9b49656.jpg": "/v1/uploads/4d2e7f58-41b8-4c71-8d2a-962b3f004cbb.jpg",
+    "brand:f3145c8f9b1fc6a1006c21eb411ef8b2.jpg": "/v1/uploads/01172c9a-b0ac-49f5-9ce4-5cf4e6f4a30f.jpg",
+    "dc8eaa398b58a9bdd18e121026a6794e.jpg": "/v1/uploads/8fd8a7c7-f9d4-4591-8307-8227ec728b11.jpg",
+    "f3145c8f9b1fc6a1006c21eb411ef8b2.jpg": "/v1/uploads/34db5fd4-0902-46c5-bb96-273e98704df6.jpg",
+    "dd7f88684e91509a1f0021342e65f40b.jpg": "/v1/uploads/484059ed-48ef-4801-969f-2d61c66de6c3.jpg",
+    "5e60bf6b8389897b0e1593620a0e95b3.jpg": "/v1/uploads/dca9c2a8-f656-4572-af6b-240dc7996727.jpg",
+    "d806ce5380ab28e546ee4de856ffe7f4.jpg": "/v1/uploads/13f199cc-a768-4b23-b47a-c795a33dd4a5.jpg",
+    "83c65ac60fed9cedf4857337f63df2e8.jpg": "/v1/uploads/d642c780-59db-4b97-a3f7-e8ef8780893d.jpg"
+  },
+  "categories": {
+    "Comida fresca": "cmw9ys3na000hvuxucofpisuy",
+    "Croquetas": "cmw9ys3nb000jvuxul9bjorba",
+    "Snacks": "cmw9ys3nc000lvuxutzw1upi4",
+    "Accesorios": "cmw9ys3nc000nvuxu32d05fji"
+  },
+  "products": {
+    "Comida fresca pollo y manzana 500 g": "cmw9ys3ng000rvuxu4vs5w40e",
+    "Comida gourmet res y verduras 500 g": "cmw9ys3nj000vvuxuc5cwo0i6",
+    "Plan semanal 7 porciones": "cmw9ys3nn000zvuxufb7zhygo",
+    "Croquetas naturales 2 kg": "cmw9ys3np0013vuxuckhxmhte",
+    "Snacks relajantes 150 g": "cmw9ys3nr0017vuxuzg8idzpr",
+    "Cama acolchada": "cmw9ys3nt001bvuxugxjac7ob"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmw9ys3oa001jvuxujow61kge"
+}
