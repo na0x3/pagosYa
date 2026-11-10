@@ -85,6 +85,8 @@ describe('rasca y elige render (spec 2026-11-10)', () => {
     it(`draws the ${shape} card big enough on desktop and phone`, async () => {
       const measures = (await measurePopup({ storeName: 'Miga Dorada', settings: settings({ popupShape: shape }), look: LIGHT, photo: PHOTO, items: ITEMS }))!;
       for (const m of measures) { expect(m.game?.shape).toBe(shape); expect(m.game!.play!.height).toBeGreaterThanOrEqual(160); expect(m.smallText).toEqual([]); }
+      // Live Oh Belly 2026-11-10: the prize panel stuck out on both sides of the can; it sits inside each shape.
+      expect(measures[0].game!.prizeWidth!).toBeLessThanOrEqual(({ can: 0.46, bottle: 0.4, cup: 0.6, garment: 0.52, flower: 0.66, box: 0.8, bag: 0.72, cookie: 0.8 } as Record<string, number>)[shape]);
     });
   }
   it('three quick strokes reveal the prize', async () => {

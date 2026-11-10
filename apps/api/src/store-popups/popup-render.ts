@@ -19,7 +19,7 @@ export type PopupMeasure = { width: number; height: number; dialogOpen: boolean;
   game?: { step: string | null; play: PopupBox | null; tab: PopupBox | null; wonSize?: number | null;
     /** Spec 2026-11-10 rasca y elige: the card's shape, the interest answers, «Siguiente» blocked, the favourite tiles, the contact field,
      *  the button's words, the favourite remembered on the device and the event the store page gets. */
-    shape?: string | null; answers?: number; nextDisabled?: boolean | null; tiles?: string[]; contactType?: string | null; submitLabel?: string | null; remembered?: string | null; favouriteEvent?: string | null } };
+    shape?: string | null; prizeWidth?: number | null; answers?: number; nextDisabled?: boolean | null; tiles?: string[]; contactType?: string | null; submitLabel?: string | null; remembered?: string | null; favouriteEvent?: string | null } };
 export type PopupRenderInput = { storeName: string; settings: Record<string, unknown>; look: PopupLook; photo?: { bytes: Buffer; contentType: string }; hosted?: boolean;
   /** The page's API base (default the check's own origin); an upload-path kit photo is fetched from it. */ apiBaseUrl?: string;
   /** Spec 2026-11-09 popup games: steps run after the popup opens, then measured. */ actions?: Array<'play' | 'claim' | 'close' | 'scratch' | 'interest' | 'next' | 'skip' | 'favourite' | 'nothanks'>;
@@ -96,7 +96,8 @@ function measureInPage(): Omit<PopupMeasure, 'width' | 'height'> {
   };
   return {
     look: dialog?.querySelector('[data-popup-look]')?.getAttribute('data-popup-look') ?? null,
-    game: { shape: document.querySelector('.game-scratch')?.getAttribute('data-shape') ?? null, answers: document.querySelectorAll('.game-interest').length,
+    game: { shape: document.querySelector('.game-scratch')?.getAttribute('data-shape') ?? null,
+      prizeWidth: (() => { const prize = document.querySelector('.game-scratch .game-prize'), card = document.querySelector('.game-scratch canvas'); return prize && card ? prize.getBoundingClientRect().width / card.getBoundingClientRect().width : null; })(), answers: document.querySelectorAll('.game-interest').length,
       nextDisabled: (document.querySelector('[data-game-action=next]') as HTMLButtonElement | null)?.disabled ?? null,
       tiles: Array.from(document.querySelectorAll('.game-tile')).map(tile => (tile.textContent ?? '').trim()),
       contactType: (document.querySelector('.pagosya-game form input[name=phone], .pagosya-game form input[name=email]') as HTMLInputElement | null)?.type ?? null,
