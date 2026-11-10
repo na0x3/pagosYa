@@ -211,27 +211,29 @@
   }
   // The favourite tiles: the store's products with a photo (not sold out, never a membership); with fewer than three, the photographed
   // option values of a product (a one-soda store chooses its flavour); fewer than three in all → no step.
-  function favouriteTiles(items, photoUrl) {
+  function favouriteTiles(items, photoUrl, byOption) {
     const list = Array.isArray(items) ? items.filter(p => p && p.id && p.name) : [];
     const firstPhoto = value => photoUrl((Array.isArray(value.imageUrls) && value.imageUrls[0]) || value.imageUrl || '');
     const products = list.filter(p => p.fulfillmentType !== 'MEMBERSHIP' && !(typeof p.stock === 'number' && p.stock <= 0) && firstPhoto(p));
-    if (products.length >= 3) return products.slice(0, 6).map(p => ({ id: String(p.id), label: String(p.name), photo: firstPhoto(p) }));
-    for (const p of list) {
+    // Live Oh Belly 2026-11-10: asked for the favourite flavour, the shopper sees the flavours, not the packs and the poster.
+    const options = () => { for (const p of list) {
       const seen = new Set();
       const values = (Array.isArray(p.variants) ? p.variants : []).filter(v => v && !(typeof v.stock === 'number' && v.stock <= 0) && firstPhoto(v)).map(v => ({ value: String((v.options && v.options[0] && v.options[0].value) || v.name || ''), photo: firstPhoto(v) }))
         .filter(v => v.value && !seen.has(v.value) && seen.add(v.value));
       if (values.length >= 3) return values.slice(0, 6).map(v => ({ id: `${p.id}:${v.value}`, label: v.value, photo: v.photo }));
-    }
-    return [];
+    } return []; };
+    if (byOption) { const values = options(); if (values.length) return values; }
+    if (products.length >= 3) return products.slice(0, 6).map(p => ({ id: String(p.id), label: String(p.name), photo: firstPhoto(p) }));
+    return options();
   }
   function mountGame(dialog, { game, settings, formHtml, api, demo, remember, slug, items, photoUrl }) {
     const box = dialog.querySelector('.pagosya-game');
     const slices = settings.popupGameSlices.slice(0, 6).map(String);
     const shape = game === 'scratch' ? (SHAPES.includes(settings.popupShape) ? settings.popupShape : 'card') : '';
     const interests = popupInterests(settings);
-    const tiles = favouriteTiles(items, photoUrl || (value => value));
-    const contact = settings.popupContact === 'email' ? 'email' : 'whatsapp';
     const favouriteText = settings.popupFavourite && typeof settings.popupFavourite.text === 'string' ? settings.popupFavourite.text : '¿Cuál es tu favorito?';
+    const tiles = favouriteTiles(items, photoUrl || (value => value), /sabor/i.test(favouriteText.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+    const contact = settings.popupContact === 'email' ? 'email' : 'whatsapp';
     const hostedPage = window.PAGOSYA_HOSTED === true;
     const get = key => { try { return localStorage.getItem(key); } catch { return null; } };
     const set = (key, value) => { try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch {} };

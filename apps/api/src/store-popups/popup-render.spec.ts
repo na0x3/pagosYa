@@ -102,6 +102,9 @@ describe('rasca y elige render (spec 2026-11-10)', () => {
     expect((await run({}, ['play', 'claim', 'skip'], SODA)).game).toMatchObject({ step: 'favourite', tiles: ['Limón', 'Pera', 'Sandía', 'Naranja'] });
     expect((await run({}, ['play', 'claim', 'skip'], ITEMS.slice(0, 2))).game?.step).toBe('contact');
   });
+  it('asked for the favourite flavour, a store of several products shows the flavours (live Oh Belly 2026-11-10)', async () => {
+    expect((await run({ popupFavourite: { text: '¿Cuál es tu sabor favorito?' } }, ['play', 'claim', 'skip'], [...ITEMS, ...SODA])).game?.tiles).toEqual(['Limón', 'Pera', 'Sandía', 'Naranja']);
+  });
   it('asks the WhatsApp (or the email) to save the prize, naming the favourite', async () => {
     const whatsapp = await run({}, ['play', 'claim', 'skip', 'favourite']);
     expect(whatsapp.game).toMatchObject({ step: 'contact', contactType: 'tel', submitLabel: 'Suscribirme y ver Torre de cookies' });
