@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { templatesDir } from '@pagosya/store-templates';
 import { LIBRARY_CATALOG, libraryAnswerSchema, type LayoutBlock } from './source-section-library';
 import { HOME_REVIEW_PROBLEMS } from './agent/home-writer-review';
 
@@ -13,6 +16,17 @@ const roleOf = (type: string) => BY_ID.get(type)?.role;
 const MAIN_GRID = new Set(['products-grid', 'products-tabs']);
 const BANDS = ['paper', 'muted', 'accent', 'deep', ''];
 const add = (map: Record<string, string[]>, type: string, look: string) => { const list = (map[type] ??= []); if (!list.includes(look)) list.push(look); };
+
+let fitCache: SectionFit | undefined;
+/** section-fit.json (spec 2026-11-11), read once; a missing or unreadable file means no template is composed. */
+export function readSectionFit(): SectionFit {
+  if (fitCache) return fitCache;
+  try {
+    const raw = JSON.parse(readFileSync(join(templatesDir, 'esencial', 'section-fit.json'), 'utf8'));
+    fitCache = { fit: raw.fit ?? {}, signature: raw.signature ?? {}, vetoed: raw.vetoed ?? {} };
+  } catch { fitCache = { fit: {}, signature: {} }; }
+  return fitCache;
+}
 
 export function composerTemplate(id: string, name: string, preset: { layout?: readonly LayoutBlock[]; choices?: { looks?: Readonly<Record<string, readonly string[]>> } } | undefined,
   data: SectionFit): ComposerTemplate | null {

@@ -81,7 +81,10 @@ import { isFashionStore } from './source-master-fashion';
 import { fashionCollections } from './source-fashion-collections';
 import { collectionSlug } from '../collections/collection-slug';
 import { masterLayoutFindings } from './source-master-check';
-import { readMasterState, readPlantillaCopy } from './source-templates';
+import { readMasterState, readPlantillaCopy, resolvePresetTemplate } from './source-templates';
+import { runComposer } from './source-composer-run';
+import { applyComposerChanges, composerCheck, composerTemplate, readSectionFit } from './source-composer';
+import { captureAgentDraft } from './agent/agent-capture';
 import { readMoodAsk } from './source-mood-ask';
 import { nextTitleStyle, readTitleAsk } from './source-title-style';
 import { buildLibraryFacts, withPersonalizer, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
@@ -905,16 +908,24 @@ export class SourceChatService {
     const facts = await this.libraryFacts(merchantId, storeId, snapshot.files, input.checklistWords ?? input.earlierAsks ?? '', template ? 24 : 14);
     if (!facts.photos.length && !template) throw new PersonalTouchSkipped('no photos for the library');
     await workflow.report('design');
+    // Spec 2026-11-11 store composer: a first build on a template with an approved signature gets a home composed for the brand.
+    const composerOn = this.config.get<boolean>('app.yapiComposer') === true && Boolean(template) && !carried && templateRevision === revision
+      && input.firstDesign === true && facts.photos.length > 0;
+    const composedHome = composerOn ? await this.composeTemplateHome(merchantId, storeId, revision, theme, facts).catch(error => {
+      if (quotaSpent(error) || sourceRequestContext.getStore()?.signal?.aborted) throw error;
+      this.productLogger.warn(JSON.stringify({ event: 'store_composer_failed', storeId, theme, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
+      return null;
+    }) : null;
     // A failed call on a template (anything but a spent quota or a cancel) falls back below instead of keeping the demo words.
     let callFailed = false;
-    const answer = facts.photos.length ? await this.dialogue.composeLibrary(merchantId, { storeId, facts, ...(template ? { template } : {}) }).catch(error => {
+    const answer = composedHome ? composedHome.answer : facts.photos.length ? await this.dialogue.composeLibrary(merchantId, { storeId, facts, ...(template ? { template } : {}) }).catch(error => {
       if (!template || quotaSpent(error) || sourceRequestContext.getStore()?.signal?.aborted) throw error;
       this.productLogger.warn(JSON.stringify({ event: 'section_library_call_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
       callFailed = true;
       return null;
     }) : null;
     if (!answer && !template) throw new Error('the library call failed');
-    let layout = answer ? validateLibraryLayout(answer as never, facts, template ? { fixed: template } : {}) : [];
+    let layout = composedHome ? composedHome.layout! : answer ? validateLibraryLayout(answer as never, facts, template ? { fixed: template } : {}) : [];
     // A cover, the grid and a closing are always there; fewer than five blocks means the answer gave almost nothing usable.
     // On a template, against its own length (Foco has two sections): at least half of them, never fewer than one.
     const least = template ? Math.max(1, Math.ceil(template.length / 2)) : 5;
@@ -929,7 +940,7 @@ export class SourceChatService {
     // library sections the store can really fill (its place, its code, delivery, how it works…), before its closing.
     // Owner 2026-11-10 («less sections and like same template»): a hand-made style is a long page of its own; the generic top-up
     // (visit, code, services) made every style end the same way, so it does not run on them.
-    if (template && !HAND_MADE_THEMES.has(theme)) layout = await this.topUpHome(merchantId, storeId, layout, facts);
+    if (template && !composedHome && !HAND_MADE_THEMES.has(theme)) layout = await this.topUpHome(merchantId, storeId, layout, facts);
     // Spec 2026-11-09 personalizador («para todos»): a store with a product that has options gets it once, after its product grid.
     layout = withPersonalizer(layout, facts);
     // Spec 2026-11-10 Merienda: each product row in its product's own colour, read from its photo.
@@ -954,7 +965,7 @@ export class SourceChatService {
     await workflow.report('saving');
     // Lively one-product stores + chunky colour titles (spec 2026-11-03): YAPI's mood and title style for the product are saved with the home on Único.
     const libraryLook = libraryVariants(theme, answer as never, facts);
-    const saved = await this.templates.refill(merchantId, storeId, revision, { layout, ...(productTemplate ? { productLayout } : {}), ...(libraryLook ? { variants: libraryLook } : {}) }, 'Portada de YAPI');
+    const saved = await this.templates.refill(merchantId, storeId, revision, { layout, ...(productTemplate ? { productLayout } : {}), ...(libraryLook ? { variants: libraryLook } : {}) }, composedHome ? 'Portada compuesta por YAPI' : 'Portada de YAPI');
     await workflow.finish('completed');
     // Live 2026-11-10 (Oh Belly / Pawby r8: ChatGPT timed out, then could not renew its session): the bare home was saved as if it
     // were the design. Now the chat says so and keeps the request; «sigue» composes the template's sections again.
@@ -968,6 +979,48 @@ export class SourceChatService {
     // reply's metadata (templateQa), never to the merchant's chat.
     if (this.config.get<boolean>('app.yapiTemplateQa') === true) void this.logTemplateQa(merchantId, storeId, saved.revision, assistantMessage.id);
     return { userMessage, assistantMessage, revision: saved };
+  }
+
+  /** Spec 2026-11-11 store composer: the brand's home composed inside its template; null hands the build to fill mode. */
+  private async composeTemplateHome(merchantId: string, storeId: string, revision: number, theme: string, facts: LibraryFacts) {
+    const manifest = this.templates.registry.templateManifest(theme);
+    if (!manifest) return null;
+    const resolved = resolvePresetTemplate(manifest, id => this.templates.registry.templateManifest(id));
+    const template = composerTemplate(theme, resolved.manifest.name, resolved.preset as never, readSectionFit());
+    if (!template) return null;
+    const recent = await this.templates.recentThemeHomes(storeId, theme);
+    const photos = facts.photos.map(photo => photo.url);
+    const composed = { allowed: template.allowed, looks: template.looks };
+    const signal = sourceRequestContext.getStore()?.signal;
+    const result = await runComposer({
+      compose: feedback => this.dialogue.composeHome(merchantId, { storeId, facts, template, recent, feedback }),
+      validate: answer => validateLibraryLayout(answer as never, facts, { composed }),
+      check: layout => composerCheck(layout, template, recent),
+      capture: async layout => {
+        const draft = await this.templates.refillDraft(merchantId, storeId, revision, { layout });
+        const desk = await captureAgentDraft(draft as never, 1280, signal);
+        const phone = await captureAgentDraft(draft as never, 390, signal);
+        return [...(desk.sections?.length ? desk.sections : [desk.image]), ...(phone.sections?.length ? phone.sections : [phone.image])];
+      },
+      review: (layout, images) => this.dialogue.reviewHome(merchantId, { storeId, layout, template, recent, photoCount: photos.length, images }),
+      apply: (layout, problems) => applyComposerChanges(layout, problems, template, photos),
+      rewrite: async (layout, at) => {
+        const next = [...layout];
+        // Highest first, so a section that cannot be written can be dropped without shifting the ones still to write.
+        for (const index of [...at].sort((a, b) => b - a)) {
+          const fixed = [{ type: next[index].type }];
+          const answer = await this.dialogue.composeLibrary(merchantId, { storeId, facts, template: fixed }).catch(error => { if (quotaSpent(error)) throw error; return null; });
+          const [block] = answer ? validateLibraryLayout(answer as never, facts, { fixed }) : [];
+          if (block) next[index] = { ...block, ...(next[index].band ? { band: next[index].band } : {}) }; else next.splice(index, 1);
+        }
+        return { layout: next, microUsd: 0 };
+      },
+      trace: entry => this.traceQuickEdit({ storeId, stage: 'composer', theme, ...entry }),
+      maxMicroUsd: Math.round((this.config.get<number>('app.yapiComposerMaxUsd') ?? 10) * 1_000_000),
+      ...(signal ? { signal } : {}),
+    });
+    this.productLogger.log(JSON.stringify({ event: 'store_composer', storeId, theme, outcome: result.outcome, rounds: result.rounds, usd: result.spentMicroUsd / 1e6, kept: result.layout?.map(block => block.type) ?? [] }));
+    return result.layout ? result : null;
   }
 
   /** Owner 2026-11-06 («no podemos dejar nada a la suerte»): one JSON line per quick edit in YAPI_TRACE_FILE (dev only) — what the
