@@ -91,7 +91,7 @@ function proposeSignature(id: string, own: LayoutBlock[], css: string): string[]
   const proposed: Record<string, string[]> = { ...(previous.proposed ?? {}) };
   if (process.argv.includes('--propose-only')) {
     const css = readFileSync(join(templatesDir, 'esencial', 'styles', 'globals.css'), 'utf8');
-    for (const id of ids) proposed[id] = proposeSignature(id, resolvePresetTemplate(templateManifest(id)!, templateManifest).preset.layout ?? [], css);
+    for (const id of ids) proposed[id] = proposeSignature(id, ((resolvePresetTemplate(templateManifest(id)!, templateManifest).preset as any)?.layout ?? []) as LayoutBlock[], css);
     writeFileSync(OUT, `${JSON.stringify({ ...previous, proposed }, null, 1)}\n`);
     for (const id of ids) console.log(`${id}: ${proposed[id].join(' + ') || '(fill mode)'}`);
     return;
