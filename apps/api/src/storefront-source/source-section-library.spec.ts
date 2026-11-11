@@ -473,6 +473,18 @@ describe('composed mode (spec 2026-11-11 store composer)', () => {
     expect(out.map(block => block.type)).not.toContain('reviews-cards');
     expect(out.find(block => block.type === 'cover-mega')?.look).toBe('tilt');
   });
+  it('a template that opens without a cover keeps its opener first and gets no cover added (owner 2026-11-11)', () => {
+    const opened = { allowed: ['promo-banner', 'products-grid', 'story-split', 'closing-wordmark'], looks: {}, opener: 'promo-banner' };
+    const out = validateLibraryLayout({ blocks: [
+      { type: 'story-split', title: 'Nuestra historia', text: 'Horneamos cada día.', photo: 1 },
+      { type: 'promo-banner', title: 'Temporada', text: 'Lo nuevo de la casa.', photo: 0 },
+      { type: 'products-grid', title: 'Productos' },
+      { type: 'closing-wordmark', title: 'Hasta pronto' },
+    ] } as never, facts(), { composed: opened });
+    expect(out[0].type).toBe('promo-banner');
+    expect(out[1].type).toBe('products-grid');
+    expect(out.some(block => block.type.startsWith('cover-'))).toBe(false);
+  });
   it('without composed, a template-only section is still dropped (free mode unchanged)', () => {
     const out = validateLibraryLayout({ blocks: [{ type: 'cover-mega', look: 'tilt', title: 'Hola', photo: 0 }] } as never, facts());
     expect(out.map(block => block.type)).not.toContain('cover-mega');

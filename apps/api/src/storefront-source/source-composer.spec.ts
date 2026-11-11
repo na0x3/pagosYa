@@ -133,3 +133,37 @@ describe('what the composer reads', () => {
     expect(readComposerReview('{oops')).toEqual([]);
   });
 });
+
+describe('a template whose home opens without a cover (owner 2026-11-11: its opener stays first)', () => {
+  const own = [{ type: 'promo-banner' }, { type: 'products-grid' }, { type: 'statement-reveal' }, { type: 'story-split' }, { type: 'closing-photo' }] as LayoutBlock[];
+  const tacon = composerTemplate('tacon', 'Tacón', { layout: own },
+    { fit: { tacon: ['benefits-bento', 'faq-split', 'categories-list', 'press-quotes', 'icon-columns'] }, signature: { tacon: ['promo-banner', 'statement-reveal'] } })!;
+  const page = (rest: string[]): LayoutBlock[] => [{ type: 'promo-banner' }, { type: 'products-grid' }, ...rest.map(type => ({ type }))];
+  it('keeps its opener in place of a cover, not as a bar above one', () => {
+    expect(tacon.opener).toBe('promo-banner');
+    expect(tacon.lead).toBeUndefined();
+  });
+  it('passes a home that starts with the opener and has no cover', () => {
+    expect(composerCheck(page(['statement-reveal', 'benefits-bento', 'faq-split', 'press-quotes', 'closing-photo']), tacon, [])).toEqual([]);
+  });
+  it('refuses a home that does not start with the opener, or adds a cover', () => {
+    const late: LayoutBlock[] = [{ type: 'products-grid' }, { type: 'promo-banner' }, { type: 'statement-reveal' }, { type: 'benefits-bento' }, { type: 'faq-split' }, { type: 'press-quotes' }, { type: 'closing-photo' }];
+    expect(composerCheck(late, tacon, []).join(' ')).toMatch(/promo-banner va primera/);
+    const covered: LayoutBlock[] = [{ type: 'promo-banner' }, { type: 'cover-full' }, { type: 'products-grid' }, { type: 'statement-reveal' }, { type: 'benefits-bento' }, { type: 'faq-split' }, { type: 'closing-photo' }];
+    expect(composerCheck(covered, tacon, []).join(' ')).toMatch(/sin otra portada/);
+  });
+  it('compares recent homes by their order, since the opener is the same in every store', () => {
+    const recent = [homeSummary('Lola', page(['statement-reveal', 'categories-list', 'icon-columns', 'story-split', 'closing-photo']))];
+    expect(recent[0].cover).toBe('promo-banner:');
+    expect(composerCheck(page(['statement-reveal', 'benefits-bento', 'faq-split', 'press-quotes', 'closing-photo']), tacon, recent)).toEqual([]);
+    expect(composerCheck(page(['statement-reveal', 'categories-list', 'icon-columns', 'story-split', 'closing-photo']), tacon, recent).join(' ')).toMatch(/se parece a la tienda Lola/);
+  });
+  it('a review never moves the opener or puts a section above it', () => {
+    const start = page(['statement-reveal', 'benefits-bento', 'faq-split', 'press-quotes', 'closing-photo']);
+    const { layout } = applyComposerChanges(start, [{ problem: 'x', at: 0, kind: 'move', value: '3' }, { problem: 'x', at: 3, kind: 'move', value: '0' }], tacon, []);
+    expect(layout.map(block => block.type)).toEqual(start.map(block => block.type));
+  });
+  it('the prompt says the opener opens the page and no cover is added', () => {
+    expect(composerPrompt(tacon, [], [])).toMatch(/promo-banner abre la página.*sin otra portada/s);
+  });
+});

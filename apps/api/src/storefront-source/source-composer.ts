@@ -6,7 +6,8 @@ import { HOME_REVIEW_PROBLEMS } from './agent/home-writer-review';
 
 /** Spec 2026-11-11 store composer: what a template lets its composed home use. `fit` and `signature` come from section-fit.json. */
 export type SectionFit = { fit: Record<string, string[]>; signature: Record<string, string[]>; vetoed?: Record<string, string[]> };
-export type ComposerTemplate = { id: string; name: string; signature: string[]; allowed: string[]; looks: Record<string, string[]>; lead?: string };
+/** `opener`: the first section of a template whose own home has no cover (Tacón's banner); it stays first in place of a cover. */
+export type ComposerTemplate = { id: string; name: string; signature: string[]; allowed: string[]; looks: Record<string, string[]>; lead?: string; opener?: string };
 export type HomeSummary = { store: string; cover: string; types: string[] };
 export type ComposerChangeKind = 'swap' | 'look' | 'move' | 'photo' | 'band' | 'remove';
 export type ComposerProblem = { problem: string; at: number; kind: ComposerChangeKind; value: string };
@@ -40,7 +41,9 @@ export function composerTemplate(id: string, name: string, preset: { layout?: re
   for (const block of own) if (block.look) add(looks, block.type, block.look);
   for (const [type, list] of Object.entries(preset?.choices?.looks ?? {})) for (const look of list) add(looks, type, look);
   const first = own[0];
-  const lead = first && ['strip', 'promo'].includes(roleOf(first.type) ?? '') ? first.type : undefined;
+  // Owner 2026-11-11: a home with no cover keeps its opener first (the signature starts with it); others may keep a bar above the cover.
+  if (!own.some(block => roleOf(block.type) === 'cover')) return signature[0] === first.type ? { id, name, signature: [...signature], allowed, looks, opener: first.type } : null;
+  const lead = ['strip', 'promo'].includes(roleOf(first.type) ?? '') ? first.type : undefined;
   return { id, name, signature: [...signature], allowed, looks, ...(lead ? { lead } : {}) };
 }
 
@@ -49,7 +52,8 @@ export function lookOptions(template: ComposerTemplate, type: string): string[] 
 }
 
 export function homeSummary(store: string, layout: readonly { type: string; look?: string }[]): HomeSummary {
-  const cover = layout.find(block => roleOf(block.type) === 'cover');
+  // A home without a cover is known by its opener.
+  const cover = layout.find(block => roleOf(block.type) === 'cover') ?? layout[0];
   return { store, cover: cover ? `${cover.type}:${cover.look ?? ''}` : '', types: layout.map(block => block.type) };
 }
 
@@ -75,8 +79,13 @@ export function composerCheck(layout: readonly LayoutBlock[], template: Composer
   const types = layout.map(block => block.type);
   if (types.length < 7 || types.length > 12) reasons.push(`la portada lleva entre 7 y 12 secciones (mandaste ${types.length})`);
   const top = template.lead && types[0] === template.lead ? 1 : 0;
-  if (roleOf(types[top] ?? '') !== 'cover') reasons.push(template.lead ? `la portada va primera, o segunda debajo de ${template.lead}` : 'la portada va primera');
-  if (types.slice(top + 1).some(type => roleOf(type) === 'cover')) reasons.push('una sola portada');
+  if (template.opener) {
+    if (types[0] !== template.opener) reasons.push(`${template.opener} va primera: abre la página de ${template.name}`);
+    if (types.some(type => roleOf(type) === 'cover')) reasons.push(`${template.name} va sin otra portada: ${template.opener} hace de portada`);
+  } else {
+    if (roleOf(types[top] ?? '') !== 'cover') reasons.push(template.lead ? `la portada va primera, o segunda debajo de ${template.lead}` : 'la portada va primera');
+    if (types.slice(top + 1).some(type => roleOf(type) === 'cover')) reasons.push('una sola portada');
+  }
   for (const type of template.signature) {
     const count = types.filter(other => other === type).length;
     if (count !== 1) reasons.push(`la sección firma ${type} va una vez (está ${count})`);
@@ -90,7 +99,8 @@ export function composerCheck(layout: readonly LayoutBlock[], template: Composer
     if (!tooClose(mine, other)) continue;
     reasons.push(`se parece a la tienda ${other.store}: la misma portada (${other.cover}) y ${commonOrder(mine.types, other.types)} de ${Math.min(mine.types.length, other.types.length)} secciones en el mismo orden`);
   }
-  const repeated = recent.slice(0, 2).find(other => other.cover && other.cover === mine.cover);
+  // The opener is the same in every store on its template; there only the order tells two homes apart.
+  const repeated = template.opener ? undefined : recent.slice(0, 2).find(other => other.cover && other.cover === mine.cover);
   if (repeated) reasons.push(`la portada ${mine.cover} es la misma que la tienda ${repeated.store}: usa otro look u otra portada`);
   return reasons;
 }
@@ -127,8 +137,8 @@ export function applyComposerChanges(layout: readonly LayoutBlock[], problems: r
       rows = rows.filter(entry => entry !== row); applied.push(`quité ${type}`);
     } else if (change.kind === 'move') {
       const to = Number(change.value);
-      const cover = rows.findIndex(entry => roleOf(entry.block.type) === 'cover');
-      if (role === 'cover' || type === template.lead || !Number.isInteger(to) || to <= cover || to >= rows.length) continue;
+      const cover = rows.findIndex(entry => (template.opener ? entry.block.type === template.opener : roleOf(entry.block.type) === 'cover'));
+      if (role === 'cover' || type === template.lead || type === template.opener || !Number.isInteger(to) || to <= cover || to >= rows.length) continue;
       rows = rows.filter(entry => entry !== row); rows.splice(to, 0, row); applied.push(`${type} a la posición ${to}`);
     }
   }
@@ -151,8 +161,9 @@ export function composerAnswerSchema(photoCount: number, template: ComposerTempl
 export function composerPrompt(template: ComposerTemplate, recent: readonly HomeSummary[], feedback: readonly string[]): string {
   return `MODO COMPOSITOR (manda sobre las reglas de arriba): la tienda usa la plantilla ${template.name}. Su encabezado, menú, pie, tarjetas, fuentes
 y colores ya están puestos; tú armas SOLO su portada, con secciones de «catalogue» (todas probadas dentro de esta plantilla).
-- Secciones firma de ${template.name}, cada una UNA vez: ${template.signature.join(', ')}. ${template.signature[0]} es la portada y va arriba${template.lead
-    ? ` (o justo debajo de ${template.lead}, la barra de la plantilla, si la usas)` : ''}. Elige su look entre los suyos.
+- Secciones firma de ${template.name}, cada una UNA vez: ${template.signature.join(', ')}. ${template.opener
+    ? `${template.opener} abre la página (es la apertura de ${template.name}) y va arriba, sin otra portada`
+    : `${template.signature[0]} es la portada y va arriba${template.lead ? ` (o justo debajo de ${template.lead}, la barra de la plantilla, si la usas)` : ''}`}. Elige su look entre los suyos.
 - El resto es tuyo, para ESTA marca: qué secciones, cuántas (en total de 7 a 12), en qué orden, el look de cada una, las bandas y las fotos.
   Mira las fotos: la portada lleva la que mejor cuenta la marca.
 - ${template.name} ya armó estas portadas para otras tiendas; la tuya se ve distinta (otra portada u otro look, otro orden, otras secciones):

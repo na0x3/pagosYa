@@ -990,7 +990,7 @@ export class SourceChatService {
     if (!template) return null;
     const recent = await this.templates.recentThemeHomes(storeId, theme);
     const photos = facts.photos.map(photo => photo.url);
-    const composed = { allowed: template.allowed, looks: template.looks };
+    const composed = { allowed: template.allowed, looks: template.looks, ...(template.opener ? { opener: template.opener } : {}) };
     const signal = sourceRequestContext.getStore()?.signal;
     const result = await runComposer({
       compose: feedback => this.dialogue.composeHome(merchantId, { storeId, facts, template, recent, feedback }),

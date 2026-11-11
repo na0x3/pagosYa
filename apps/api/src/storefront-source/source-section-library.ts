@@ -264,7 +264,7 @@ export type LayoutBlock = { type: string; look?: string; band?: string; eyebrow?
  *  the store cannot back, goes. Nothing is added or moved. */
 export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | undefined, facts: LibraryFacts, options: { fixed?: LayoutBlock[]; now?: number;
   /** Spec 2026-11-11 store composer: a home composed inside a template — its allowed sections and looks, its photo rule. */
-  composed?: { allowed: readonly string[]; looks: Readonly<Record<string, readonly string[]>> } } = {}): LayoutBlock[] {
+  composed?: { allowed: readonly string[]; looks: Readonly<Record<string, readonly string[]>>; opener?: string } } = {}): LayoutBlock[] {
   const fixedMode = Boolean(options.fixed?.length);
   const composed = options.composed;
   // A template's photo rule (twice, never neighbouring) for its fixed home and for a home composed inside it.
@@ -469,7 +469,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (block.link?.startsWith('category:') && !campaigns.has(block.link)) campaigns.add(block.link);
     else block.link = 'products';
   }
-  return fixedMode ? blocks : frameLayout(blocks, facts, used);
+  return fixedMode ? blocks : frameLayout(blocks, facts, used, composed?.opener);
 }
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -513,14 +513,15 @@ export function withoutDemoWords(filled: LayoutBlock[], template: LayoutBlock[],
   return out;
 }
 
-/** The frame every page keeps: a cover first, the main grid early, a closing last; no two neighbours on the same band. */
-function frameLayout(blocks: LayoutBlock[], facts: LibraryFacts, used: Set<number>): LayoutBlock[] {
+/** The frame every page keeps: a cover first, the main grid early, a closing last; no two neighbours on the same band.
+ *  `opener`: a composed home on a template that opens without a cover (owner 2026-11-11) keeps that section first instead. */
+function frameLayout(blocks: LayoutBlock[], facts: LibraryFacts, used: Set<number>, opener?: string): LayoutBlock[] {
   const free = () => { const at = facts.photos.findIndex((_, index) => !used.has(index)); if (at < 0) return undefined; used.add(at); return facts.photos[at].url; };
   let out = blocks.filter(block => BY_ID.get(block.type)?.role !== 'closing');
   const closing = blocks.find(block => BY_ID.get(block.type)?.role === 'closing');
-  const coverAt = out.findIndex(block => BY_ID.get(block.type)?.role === 'cover');
+  const coverAt = out.findIndex(block => (opener ? block.type === opener : BY_ID.get(block.type)?.role === 'cover'));
   if (coverAt > 0) out = [out[coverAt], ...out.filter((_, index) => index !== coverAt)];
-  if (coverAt < 0) { const photo = free(); out = [{ type: photo ? 'cover-split' : 'cover-centered', title: facts.storeName, ...(facts.what ? { text: clip(facts.what, TEXT_CAPS.text) } : {}), cta: 'Ver productos', link: 'products', ...(photo ? { photo } : {}) }, ...out]; }
+  if (coverAt < 0 && !opener) { const photo = free(); out = [{ type: photo ? 'cover-split' : 'cover-centered', title: facts.storeName, ...(facts.what ? { text: clip(facts.what, TEXT_CAPS.text) } : {}), cta: 'Ver productos', link: 'products', ...(photo ? { photo } : {}) }, ...out]; }
   // The moving words belong under the cover (the catalogue says so); anywhere else they read as a stray band.
   const marqueeAt = out.findIndex(block => block.type === 'strip-marquee');
   if (marqueeAt > 1) out.splice(1, 0, out.splice(marqueeAt, 1)[0]);
