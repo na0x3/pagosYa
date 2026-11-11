@@ -1,4 +1,5 @@
 import { applyComposerChanges, commonOrder, composerCheck, composerTemplate, homeSummary, lookOptions, tooClose, type SectionFit } from './source-composer';
+import { composerAnswerSchema, composerCatalogue, composerPrompt, composerReviewText, readComposerReview } from './source-composer';
 import type { LayoutBlock } from './source-section-library';
 
 const data: SectionFit = {
@@ -101,5 +102,34 @@ describe('review changes', () => {
     ], T, []);
     expect(out.layout).toEqual(layout);
     expect(out.applied).toEqual([]);
+  });
+});
+
+describe('what the composer reads', () => {
+  it('the prompt names the signature, the recent homes and what failed last time', () => {
+    const text = composerPrompt(T, [{ store: 'Miga', cover: 'cover-mega:side', types: ['cover-mega', 'products-rows'] }], ['falta products-rows']);
+    expect(text).toMatch(/Merienda/);
+    expect(text).toMatch(/cover-mega, products-rows/);
+    expect(text).toMatch(/Miga: cover-mega:side/);
+    expect(text).toMatch(/falta products-rows/);
+  });
+  it('the catalogue is the allowed sections with every look they may take', () => {
+    const cover = composerCatalogue(T).find(section => section.id === 'cover-mega')!;
+    expect(cover.looks).toEqual(expect.arrayContaining(['side', 'stack', 'tilt']));
+    expect(composerCatalogue(T).map(section => section.id)).not.toContain('reviews-cards');
+  });
+  it('the answer schema offers only allowed sections and accepts the template\'s own looks', () => {
+    const schema = composerAnswerSchema(5, T) as any;
+    expect(schema.properties.blocks.items.properties.look.enum).toEqual(expect.arrayContaining(['side', 'lines', 'alternate']));
+    expect(schema.properties.blocks.items.properties.type.enum).toEqual(T.allowed);
+  });
+  it('the review sees numbered sections and reads back only known problems and changes', () => {
+    expect(composerReviewText(home(['products-rows']), T, [], 4)).toMatch(/^0\. cover-mega \(side\)/m);
+    expect(readComposerReview({ problemas: [
+      { problema: 'palabras cortadas', seccion: 2, cambio: 'look', valor: 'tilt' },
+      { problema: 'inventado', seccion: 1, cambio: 'look', valor: 'x' },
+      { problema: 'palabras cortadas', seccion: 1, cambio: 'repaint', valor: 'x' },
+    ] })).toEqual([{ problem: 'palabras cortadas', at: 2, kind: 'look', value: 'tilt' }]);
+    expect(readComposerReview('{oops')).toEqual([]);
   });
 });

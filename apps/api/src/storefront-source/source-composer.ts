@@ -1,4 +1,5 @@
-import { LIBRARY_CATALOG, type LayoutBlock } from './source-section-library';
+import { LIBRARY_CATALOG, libraryAnswerSchema, type LayoutBlock } from './source-section-library';
+import { HOME_REVIEW_PROBLEMS } from './agent/home-writer-review';
 
 /** Spec 2026-11-11 store composer: what a template lets its composed home use. `fit` and `signature` come from section-fit.json. */
 export type SectionFit = { fit: Record<string, string[]>; signature: Record<string, string[]>; vetoed?: Record<string, string[]> };
@@ -118,4 +119,70 @@ export function applyComposerChanges(layout: readonly LayoutBlock[], problems: r
     }
   }
   return { layout: rows.map(entry => entry.block), applied, rewrite: rows.flatMap((entry, at) => (swapped.has(entry.origin) ? [at] : [])) };
+}
+
+export function composerCatalogue(template: ComposerTemplate) {
+  return template.allowed.map(id => { const section = BY_ID.get(id)!; const looks = lookOptions(template, id);
+    return { id, role: section.role, use: section.use, ...(looks.length ? { looks } : {}) }; });
+}
+
+export function composerAnswerSchema(photoCount: number, template: ComposerTemplate): object {
+  const schema = JSON.parse(JSON.stringify(libraryAnswerSchema(photoCount)));
+  const block = schema.properties.blocks.items.properties;
+  block.type.enum = [...template.allowed];
+  block.look.enum = [...new Set([...block.look.enum, ...Object.values(template.looks).flat()])];
+  return schema;
+}
+
+export function composerPrompt(template: ComposerTemplate, recent: readonly HomeSummary[], feedback: readonly string[]): string {
+  return `MODO COMPOSITOR (manda sobre las reglas de arriba): la tienda usa la plantilla ${template.name}. Su encabezado, menú, pie, tarjetas, fuentes
+y colores ya están puestos; tú armas SOLO su portada, con secciones de «catalogue» (todas probadas dentro de esta plantilla).
+- Secciones firma de ${template.name}, cada una UNA vez: ${template.signature.join(', ')}. ${template.signature[0]} es la portada y va arriba${template.lead
+    ? ` (o justo debajo de ${template.lead}, la barra de la plantilla, si la usas)` : ''}. Elige su look entre los suyos.
+- El resto es tuyo, para ESTA marca: qué secciones, cuántas (en total de 7 a 12), en qué orden, el look de cada una, las bandas y las fotos.
+  Mira las fotos: la portada lleva la que mejor cuenta la marca.
+- ${template.name} ya armó estas portadas para otras tiendas; la tuya se ve distinta (otra portada u otro look, otro orden, otras secciones):
+${recent.map(other => `  · ${other.store}: ${other.cover} → ${other.types.join(', ')}`).join('\n') || '  (ninguna todavía)'}
+${feedback.length ? `- Tu respuesta anterior no pasó estas revisiones; corrígelas:\n${feedback.map(reason => `  · ${reason}`).join('\n')}` : ''}`.trim();
+}
+
+export const COMPOSER_PROBLEMS = [...HOME_REVIEW_PROBLEMS, 'se parece a otra tienda de la plantilla'] as const;
+const CHANGES: readonly ComposerChangeKind[] = ['swap', 'look', 'move', 'photo', 'band', 'remove'];
+
+export function composerReviewSchema(): object {
+  return { type: 'object', additionalProperties: false, required: ['problemas'], properties: { problemas: { type: 'array', maxItems: 6, items: {
+    type: 'object', additionalProperties: false, required: ['problema', 'seccion', 'cambio', 'valor'], properties: {
+      problema: { type: 'string', enum: [...COMPOSER_PROBLEMS] }, seccion: { type: 'integer', minimum: 0, maximum: 20 },
+      cambio: { type: 'string', enum: [...CHANGES] }, valor: { type: 'string' } } } } } };
+}
+
+export function composerReviewPrompt(): string {
+  return `Revisas la portada de una tienda antes de guardarla. Recibes capturas de página entera cortadas de arriba abajo: primero escritorio
+(1280 px), luego celular (390 px), y la lista numerada de sus secciones.
+Informa SOLO estos problemas, cuando se ven claramente: ${COMPOSER_PROBLEMS.join('; ')}.
+No opines de gustos. Cada problema trae UN cambio sobre una sección por su número:
+swap (valor = otra sección de «Puede usar»), look (valor = uno de sus looks), move (valor = la nueva posición),
+photo (valor = el número de otra foto), band (paper, muted, accent, deep o vacío), remove (valor vacío).
+Nunca quites ni cambies una sección [firma] ni la grilla principal; nunca muevas la portada. Si no hay problemas, devuelve la lista vacía.`;
+}
+
+export function composerReviewText(layout: readonly LayoutBlock[], template: ComposerTemplate, recent: readonly HomeSummary[], photoCount: number): string {
+  const lines = layout.map((block, at) => `${at}. ${block.type}${block.look ? ` (${block.look})` : ''}${block.band ? ` banda ${block.band}` : ''}${block.title ? ` — «${block.title}»` : ''}${
+    template.signature.includes(block.type) ? ' [firma]' : ''}${lookOptions(template, block.type).length ? ` looks: ${lookOptions(template, block.type).join('/')}` : ''}`);
+  return `${lines.join('\n')}
+Puede usar: ${template.allowed.join(', ')}.
+Fotos de la tienda: 0 a ${Math.max(0, photoCount - 1)}.
+Otras portadas recientes de ${template.name}:
+${recent.map(other => `· ${other.store}: ${other.types.join(', ')}`).join('\n') || '(ninguna)'}`;
+}
+
+export function readComposerReview(raw: unknown): ComposerProblem[] {
+  let value = raw;
+  if (typeof value === 'string') { try { value = JSON.parse(value); } catch { return []; } }
+  const list = (value as { problemas?: unknown } | null)?.problemas;
+  return (Array.isArray(list) ? list : []).flatMap(entry => {
+    const { problema, seccion, cambio, valor } = (entry ?? {}) as Record<string, unknown>;
+    return (COMPOSER_PROBLEMS as readonly string[]).includes(String(problema)) && Number.isInteger(seccion) && (CHANGES as readonly string[]).includes(String(cambio))
+      ? [{ problem: String(problema), at: seccion as number, kind: cambio as ComposerChangeKind, value: typeof valor === 'string' ? valor : '' }] : [];
+  }).slice(0, 6);
 }

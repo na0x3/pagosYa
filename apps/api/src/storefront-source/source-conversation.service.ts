@@ -38,7 +38,8 @@ import { brandContext } from '../brand/brand-profile';
 import { SourceRequestBudget } from './source-request-budget';
 import type { sourceSiteContext } from './source-context';
 import { LISTING_READ_PROMPT, LISTING_READ_SCHEMA } from './product-source/product-screenshot';
-import { SOURCE_MODELS, sourceConversationModel, sourcePromptCacheKey, type SourceModelChoice } from './source-generation-policy';
+import { SOURCE_MODELS, sourceConversationModel, sourcePromptCacheKey, sourceUsage, type SourceModelChoice } from './source-generation-policy';
+import { composerAnswerSchema, composerCatalogue, composerPrompt, composerReviewPrompt, composerReviewSchema, composerReviewText, readComposerReview, type ComposerProblem, type ComposerTemplate, type HomeSummary } from './source-composer';
 import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -311,19 +312,77 @@ export class SourceConversationService {
 
   /** Section library (spec 2026-10-31): one structured call that picks, orders and fills the home's sections. The raw answer, which
    *  validateLibraryLayout makes safe; null when it fails twice. Photos are the merchant's uploads, shown to the model by index. */
-  async composeLibrary(merchantId: string, input: { storeId: string; model?: string; facts: LibraryFacts; template?: LayoutBlock[] }): Promise<{ blocks?: unknown[] } | null> {
-    // Its own model, not the capped conversation one: the picks and words are the store's whole look (terra by default).
-    const model = input.model || this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
-    const provider = sourceProvider(this.config, model);
-    const photos = input.facts.photos.map(photo => photo.url);
-    const owned = photos.length ? new Set((await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: photos } }, select: { url: true } })).map(asset => asset.url)) : new Set<string>();
+  /** The store's own photos as low-detail images, each after its number (shared by the library and the composer). */
+  private async libraryImages(merchantId: string, urls: readonly string[]) {
+    const owned = urls.length ? new Set((await this.prisma.mediaAsset.findMany({ where: { merchantId, url: { in: [...urls] } }, select: { url: true } })).map(asset => asset.url)) : new Set<string>();
     const images: Array<{ type: 'input_text'; text: string } | { type: 'input_image'; image_url: string; detail: 'low' }> = [];
-    for (const [index, url] of photos.entries()) {
+    for (const [index, url] of urls.entries()) {
       const filename = url.split('/').at(-1)!;
       if (!this.uploads.contentTypeFor(filename).startsWith('image/')) continue;
       const bytes = owned.has(url) ? await this.uploads.getBuffer(filename).catch(() => null) : null;
       if (bytes && bytes.length <= 4_000_000) images.push({ type: 'input_text', text: `Foto ${index}` }, { type: 'input_image', image_url: `data:${this.uploads.contentTypeFor(filename)};base64,${bytes.toString('base64')}`, detail: 'low' });
     }
+    return images;
+  }
+
+  /** Spec 2026-11-11 store composer: the brand's home composed inside its template, from the sections that fit it. */
+  async composeHome(merchantId: string, input: { storeId: string; facts: LibraryFacts; template: ComposerTemplate; recent: HomeSummary[]; feedback: string[] }):
+    Promise<{ answer: { blocks?: unknown[]; mood?: unknown; titleStyle?: unknown } | null; microUsd: number }> {
+    const model = this.config.get<string>('app.yapiComposerModel') || 'gpt-5.6-sol';
+    const provider = sourceProvider(this.config, model);
+    const photos = input.facts.photos.map(photo => photo.url);
+    const images = await this.libraryImages(merchantId, photos);
+    const { photos: _urls, ...rest } = input.facts;
+    const facts = { ...rest, photos: input.facts.photos.map((photo, index) => ({ index, ...(photo.product ? { product: photo.product } : {}), ...(photo.category ? { category: photo.category } : {}) })),
+      icons: LIBRARY_ICON_NAMES, catalogue: composerCatalogue(input.template) };
+    const started = Date.now(); let body: any = null; let status = 'FAILED';
+    try {
+      const response = await fetch(provider.endpoint, {
+        method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(240_000),
+        body: JSON.stringify({ model, store: false, instructions: `${LIBRARY_PROMPT}\n\n${composerPrompt(input.template, input.recent, input.feedback)}`,
+          input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(facts) }, ...images] }],
+          text: { format: { type: 'json_schema', name: 'store_composer', strict: true, schema: composerAnswerSchema(photos.length, input.template) } },
+          reasoning: { effort: this.config.get<'low' | 'medium' | 'high'>('app.yapiComposerEffort') ?? 'medium' }, max_output_tokens: 16000 }),
+      });
+      body = await response.json().catch(() => null);
+      checkSourceProviderQuota(response.status, body, provider.name);
+      const microUsd = sourceUsage(model as never, body?.usage)?.providerMicroUsd ?? 0;
+      if (!response.ok) return { answer: null, microUsd };
+      status = 'COMPLETED';
+      return { answer: sourceResponseJson(body) as { blocks?: unknown[] }, microUsd };
+    } finally { await this.metering?.record(input.storeId, 'source-composer', model, body, Date.now() - started, status); }
+  }
+
+  /** Spec 2026-11-11 store composer: the composed home looked at, desktop then phone; only problems with a change the code can apply. */
+  async reviewHome(_merchantId: string, input: { storeId: string; layout: LayoutBlock[]; template: ComposerTemplate; recent: HomeSummary[]; photoCount: number; images: string[] }):
+    Promise<{ problems: ComposerProblem[]; microUsd: number }> {
+    const model = this.config.get<string>('app.yapiComposerModel') || 'gpt-5.6-sol';
+    const provider = sourceProvider(this.config, model);
+    const started = Date.now(); let body: any = null; let status = 'FAILED';
+    try {
+      const response = await fetch(provider.endpoint, {
+        method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(180_000),
+        body: JSON.stringify({ model, store: false, instructions: composerReviewPrompt(),
+          input: [{ role: 'user', content: [{ type: 'input_text', text: composerReviewText(input.layout, input.template, input.recent, input.photoCount) },
+            ...input.images.map(image_url => ({ type: 'input_image', image_url, detail: 'high' }))] }],
+          text: { format: { type: 'json_schema', name: 'composer_review', strict: true, schema: composerReviewSchema() } },
+          reasoning: { effort: this.config.get<'low' | 'medium' | 'high'>('app.yapiComposerEffort') ?? 'medium' }, max_output_tokens: 4000 }),
+      });
+      body = await response.json().catch(() => null);
+      checkSourceProviderQuota(response.status, body, provider.name);
+      const microUsd = sourceUsage(model as never, body?.usage)?.providerMicroUsd ?? 0;
+      if (!response.ok) return { problems: [], microUsd };
+      status = 'COMPLETED';
+      return { problems: readComposerReview(sourceResponseJson(body)), microUsd };
+    } finally { await this.metering?.record(input.storeId, 'source-composer-review', model, body, Date.now() - started, status); }
+  }
+
+  async composeLibrary(merchantId: string, input: { storeId: string; model?: string; facts: LibraryFacts; template?: LayoutBlock[] }): Promise<{ blocks?: unknown[] } | null> {
+    // Its own model, not the capped conversation one: the picks and words are the store's whole look (terra by default).
+    const model = input.model || this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
+    const provider = sourceProvider(this.config, model);
+    const photos = input.facts.photos.map(photo => photo.url);
+    const images = await this.libraryImages(merchantId, photos);
     const { photos: _urls, ...rest } = input.facts;
     const facts = { ...rest, photos: input.facts.photos.map((photo, index) => ({ index, ...(photo.product ? { product: photo.product } : {}), ...(photo.category ? { category: photo.category } : {}) })),
       icons: LIBRARY_ICON_NAMES,

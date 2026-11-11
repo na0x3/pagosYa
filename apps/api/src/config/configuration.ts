@@ -167,6 +167,11 @@ export interface AppConfig {
   /** Owner 2026-11-06 («no podemos dejar nada a la suerte»): a dev JSONL file where the quick edit writes what it read and did. */
   yapiTraceFile: string;
   yapiSectionLibraryModel: string;
+  /** Spec 2026-11-11 store composer: a template store's first home composed for the brand (YAPI_COMPOSER=1), its model, effort and cap. */
+  yapiComposer: boolean;
+  yapiComposerModel: string;
+  yapiComposerEffort: 'low' | 'medium' | 'high';
+  yapiComposerMaxUsd: number;
   /** Spec 2026-10-29: tool calls of the one continuation after a run used its steps unfinished; 0 turns it off. */
   yapiAgentContinueCalls: number;
   /** The capped edit that builds what the check found missing. Off by default (Remolino 2026-10-27: the agent drew giant combo
@@ -562,6 +567,10 @@ export default (): { app: AppConfig } => {
     yapiTemplateQa: process.env.YAPI_TEMPLATE_QA !== '0' && process.env.NODE_ENV !== 'test',
     yapiTraceFile: process.env.YAPI_TRACE_FILE?.trim() ?? '',
     yapiSectionLibraryModel: process.env.YAPI_SECTION_LIBRARY_MODEL || 'gpt-5.6-terra',
+    yapiComposer: process.env.YAPI_COMPOSER === '1',
+    yapiComposerModel: process.env.YAPI_COMPOSER_MODEL || 'gpt-5.6-sol',
+    yapiComposerEffort: (['low', 'medium', 'high'] as const).find(effort => effort === process.env.YAPI_COMPOSER_EFFORT) ?? 'medium',
+    yapiComposerMaxUsd: Number(process.env.YAPI_COMPOSER_MAX_USD) > 0 ? Number(process.env.YAPI_COMPOSER_MAX_USD) : 10,
     yapiAgentContinueCalls: process.env.YAPI_AGENT_CONTINUE_CALLS?.trim() && Number.isFinite(Number(process.env.YAPI_AGENT_CONTINUE_CALLS)) ? Math.max(0, Math.floor(Number(process.env.YAPI_AGENT_CONTINUE_CALLS))) : 12,
     yapiChecklistFix: process.env.YAPI_CHECKLIST_FIX === '1',
     yapiChecklistModel: process.env.YAPI_CHECKLIST_MODEL || 'gpt-5.6-terra',
