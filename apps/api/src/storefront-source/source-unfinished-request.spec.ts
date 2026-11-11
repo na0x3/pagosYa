@@ -22,3 +22,9 @@ it('a newer plan card ends the search: an older kept request never jumps ahead o
   const kept = { metadata: { pendingRequest: { instruction: 'x', direct: false } } };
   expect(pendingRequestIn([{ metadata: { plan: { card: [] } } }, kept])).toBeUndefined();
 });
+it('a bare home saved when ChatGPT failed keeps its own request: «sigue» composes the template it came from', () => {
+  // Live 2026-11-10 (Oh Belly r8): the note sits on the saved revision itself, so the request is read before its sourceRevision ends the search.
+  const bare = { metadata: { sourceRevision: 2, pendingRequest: { instruction: 'Portada', direct: true, sectionLibraryFrom: 1 } } };
+  expect(pendingRequestIn([bare])).toEqual({ instruction: 'Portada', direct: true, sectionLibraryFrom: 1 });
+  expect(pendingRequestIn([{ metadata: { sourceRevision: 3 } }, bare])).toBeUndefined();
+});

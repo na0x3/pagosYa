@@ -386,6 +386,8 @@ export class SourceTemplatesService {
       for (const raw of list as Array<Record<string, unknown> & { items?: Array<Record<string, unknown>> }>) {
         const block: Record<string, unknown> = { ...raw };
         for (const key of ['photo', 'photo2'] as const) { if (key in block) { const asset = await swap(block[key]); if (asset) block[key] = asset; else delete block[key]; } }
+        // Cut-outs (2026-11-10): the list of floating photos names them as the block does, or the page cannot tell them apart.
+        if (Array.isArray(raw.cut)) block.cut = (await Promise.all(raw.cut.map(swap))).filter(Boolean);
         if (Array.isArray(raw.items)) block.items = await Promise.all(raw.items.map(async item => { if (!('photo' in item)) return item; const asset = await swap(item.photo); const { photo: _photo, ...rest } = item; return asset ? { ...rest, photo: asset } : rest; }));
         blocks.push(block);
       }

@@ -20,6 +20,8 @@ export type LibraryBlock = {
   endsAt?: string;
   /** social-* only: the store's own account (from its links) — its @name and address. */
   handle?: string; social?: string;
+  /** Hand-made styles (2026-11-10): the photos of this block that are product cut-outs (transparent), drawn floating. */
+  cut?: string[];
 };
 
 const ICONS: Record<string, (props: { className?: string }) => ReactElement> = {
@@ -1515,7 +1517,7 @@ function CoverMega({ block, index }: { block: LibraryBlock; index: number }) {
         {block.text ? <p className="lb-cover__sub">{block.text}</p> : null}
         <Actions block={block} tone="ink" />
       </div>
-      {block.photo ? <div className="lb-mega__media"><Photo src={block.photo} className="lb-fx" eager />{block.eyebrow ? <span className="lb-mega__sticker">{block.eyebrow}</span> : null}</div> : null}
+      {block.photo ? <div className="lb-mega__media"><Photo src={block.photo} className={block.cut?.includes(block.photo) ? 'lb-fx lb-cut' : 'lb-fx'} eager />{block.eyebrow ? <span className="lb-mega__sticker">{block.eyebrow}</span> : null}</div> : null}
     </div>
     <svg className="lb-ribbon" viewBox="0 0 1440 200" preserveAspectRatio="none" aria-hidden="true">
       <path id={`lb-${index}-curve`} d="M-40,150 C320,40 560,40 760,110 S1180,190 1480,60" fill="none" />
@@ -1559,7 +1561,7 @@ function NamesList({ block, index }: { block: LibraryBlock; index: number }) {
     {block.eyebrow ? <p className="es-eyebrow lb-eyebrow lb-names__eyebrow">{block.eyebrow}</p> : null}
     {block.title ? <h2 id={`lb-${index}-title`} className="lb-visually-hidden"><Marked text={block.title} /></h2> : null}
     <ol className="lb-names" style={{ ['--names-len' as string]: Math.max(10, longest) } as CSSProperties}>{items.map((item, at) => <li key={at} data-i={at}>
-      <a className="lb-names__link" href={href(item.link)}><span className="lb-names__word">{item.title}</span>{item.photo ? <img className="lb-names__photo lb-fx" src={item.photo} alt="" aria-hidden="true" loading="lazy" decoding="async" /> : null}</a>
+      <a className="lb-names__link" href={href(item.link)}><span className="lb-names__word">{item.title}</span>{item.photo ? <img className={`lb-names__photo lb-fx${block.cut?.includes(item.photo) ? ' lb-cut' : ''}`} src={item.photo} alt="" aria-hidden="true" loading="lazy" decoding="async" /> : null}</a>
     </li>)}</ol>
   </Band>;
 }
@@ -1577,8 +1579,8 @@ function StatementSticker({ block, index }: { block: LibraryBlock; index: number
         <Actions block={block} />
       </Reveal>
       <div className="lb-stsk__media">
-        <Photo src={block.photo} className="lb-fx lb-stsk__one" />
-        {block.photo2 ? <Photo src={block.photo2} className="lb-fx lb-stsk__two" /> : null}
+        <Photo src={block.photo} className={`lb-fx lb-stsk__one${block.cut?.includes(block.photo) ? ' lb-cut' : ''}`} />
+        {block.photo2 ? <Photo src={block.photo2} className={`lb-fx lb-stsk__two${block.cut?.includes(block.photo2) ? ' lb-cut' : ''}`} /> : null}
       </div>
     </div>
   </Band>;
@@ -1694,7 +1696,7 @@ function StatementOffset({ block, index }: { block: LibraryBlock; index: number 
   return <Band block={block} index={index}>
     <Reveal className="lb-offset">
       <h2 id={`lb-${index}-title`} className="lb-offset__title"><span className="lb-offset__one"><Marked text={first} /></span>
-        <img className="lb-offset__photo lb-fx" src={block.photo} alt="" aria-hidden="true" loading="lazy" decoding="async" />
+        <img className={`lb-offset__photo lb-fx${block.cut?.includes(block.photo) ? ' lb-cut' : ''}`} src={block.photo} alt="" aria-hidden="true" loading="lazy" decoding="async" />
         {rest.length ? <span className="lb-offset__two"><Marked text={rest.join(' ')} /></span> : null}</h2>
       {block.text ? <p className="lb-offset__text">{block.text}</p> : null}
       {block.cta ? <Button label={block.cta} link={block.link} tone="ghost" /> : null}

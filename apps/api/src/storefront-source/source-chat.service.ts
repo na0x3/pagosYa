@@ -62,7 +62,9 @@ import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates,
 import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, intakePhone, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
 import sharp from 'sharp';
+import { join } from 'node:path';
 import { photoTint, withRowTints } from './source-row-tints';
+import { CUTOUT_THEMES, photoCutout, withCutouts } from './source-photo-cutout';
 /** The hand-made styles (2026-11-10, each after a real store): long pages of their own, never topped up with generic sections. */
 const HAND_MADE_THEMES = new Set(['merienda', 'burbuja', 'neon', 'mimo', 'oliva', 'joya', 'origen', 'morada', 'vigor', 'ramo']);
 import { uploadPath } from './source-product-photos';
@@ -890,19 +892,25 @@ export class SourceChatService {
     const home = snapshot.files.find(file => file.path === 'components/home.tsx')?.content ?? '';
     if (!snapshot.files.some(file => file.path === 'components/library.tsx') || !/\blayout\b/.test(home)) throw new PersonalTouchSkipped('the store predates the section library');
     const state = readMasterState(snapshot.files);
+    // «sigue» after a failed call (2026-11-10): the store shows a bare home, so the template's sections come from the revision before it.
+    const templateRevision = input.sectionLibraryFrom ?? revision;
+    const sections = templateRevision !== revision
+      ? readMasterState(((await this.projects.version(merchantId, storeId, templateRevision)).snapshot as unknown as SourceProjectSnapshot).files) : state;
     // 34 templates: a store wearing a whole template (variants.theme) keeps that template's home; YAPI only fills it, from a larger
     // pool of the store's photos (a template home has many photo places).
     const theme = String((state.variants as Record<string, unknown> | undefined)?.theme ?? 'none');
     // Fix 6 (2026-11-02): after a template switch, the sections the store had that the new template lacks ride along, filled anew.
-    const carried = theme !== 'none' && (state.layout ?? []).length && input.carry?.length ? withCarriedSections(state.layout as LayoutBlock[], (input.carry as LayoutBlock[]).filter(block => !(state.layout as LayoutBlock[]).some(own => own.type === block.type))) : undefined;
-    const template = carried ?? (theme !== 'none' && (state.layout ?? []).length ? state.layout as LayoutBlock[] : undefined);
+    const carried = theme !== 'none' && (sections.layout ?? []).length && input.carry?.length ? withCarriedSections(sections.layout as LayoutBlock[], (input.carry as LayoutBlock[]).filter(block => !(sections.layout as LayoutBlock[]).some(own => own.type === block.type))) : undefined;
+    const template = carried ?? (theme !== 'none' && (sections.layout ?? []).length ? sections.layout as LayoutBlock[] : undefined);
     const facts = await this.libraryFacts(merchantId, storeId, snapshot.files, input.checklistWords ?? input.earlierAsks ?? '', template ? 24 : 14);
     if (!facts.photos.length && !template) throw new PersonalTouchSkipped('no photos for the library');
     await workflow.report('design');
     // A failed call on a template (anything but a spent quota or a cancel) falls back below instead of keeping the demo words.
+    let callFailed = false;
     const answer = facts.photos.length ? await this.dialogue.composeLibrary(merchantId, { storeId, facts, ...(template ? { template } : {}) }).catch(error => {
       if (!template || quotaSpent(error) || sourceRequestContext.getStore()?.signal?.aborted) throw error;
       this.productLogger.warn(JSON.stringify({ event: 'section_library_call_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
+      callFailed = true;
       return null;
     }) : null;
     if (!answer && !template) throw new Error('the library call failed');
@@ -926,6 +934,8 @@ export class SourceChatService {
     layout = withPersonalizer(layout, facts);
     // Spec 2026-11-10 Merienda: each product row in its product's own colour, read from its photo.
     layout = await withRowTints(layout, name => this.productPhotoTint(merchantId, storeId, name));
+    // Owner 2026-11-10 («model on our server»): in the styles that float their products, those photos become cut-outs.
+    if (CUTOUT_THEMES.has(theme) && this.config.get<boolean>('app.yapiPhotoCutouts') !== false) layout = await withCutouts(layout, url => this.productCutout(merchantId, storeId, url));
     this.productLogger.log(JSON.stringify({ event: 'section_library_layout', storeId, asked: (answer?.blocks ?? []).length, kept: layout.map(block => block.type),
       // What the model sent for each block (photo indexes, item count): tells a left-out section from one the checks dropped.
       answered: (answer?.blocks as Array<{ type?: string; photo?: number; photo2?: number; items?: Array<{ photo?: number }> }> ?? []).map(block => `${block.type}:${block.photo ?? ''}/${block.photo2 ?? ''}/${(block.items ?? []).length}i[${(block.items ?? []).map(item => item.photo ?? '').join(',')}]`),
@@ -933,7 +943,7 @@ export class SourceChatService {
     // Owner 2026-10-31 («the inside of each product card»): the template's sections under the product page's buy box, filled by a
     // second call the same way. They speak for every product (the page is shared), so the model is told so; the checks read only
     // the merchant's words. A failed call leaves the product page without them, never with the demo words.
-    const productTemplate = template && (state.productLayout ?? []).length ? state.productLayout as LayoutBlock[] : undefined;
+    const productTemplate = template && (sections.productLayout ?? []).length ? sections.productLayout as LayoutBlock[] : undefined;
     let productLayout: LayoutBlock[] = [];
     if (productTemplate) {
       const pageFacts = { ...facts, request: `${facts.request}\n(Página de producto: estas secciones van debajo del botón de compra de CADA producto. Escríbelas para todos los productos de la tienda — para qué sirven, cómo se usan, por qué elegirlos —, nunca para uno solo, y sin repetir la portada.)`.trim() };
@@ -946,8 +956,14 @@ export class SourceChatService {
     const libraryLook = libraryVariants(theme, answer as never, facts);
     const saved = await this.templates.refill(merchantId, storeId, revision, { layout, ...(productTemplate ? { productLayout } : {}), ...(libraryLook ? { variants: libraryLook } : {}) }, 'Portada de YAPI');
     await workflow.finish('completed');
+    // Live 2026-11-10 (Oh Belly / Pawby r8: ChatGPT timed out, then could not renew its session): the bare home was saved as if it
+    // were the design. Now the chat says so and keeps the request; «sigue» composes the template's sections again.
     const assistantMessage = await this.prisma.storeAgentMessage.create({ data: { threadId, channel: 'source', role: 'ASSISTANT',
-      content: 'Armé la portada de tu tienda con secciones pensadas para tus productos y tus fotos. Revisa la vista previa.', metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label } } });
+      content: callFailed
+        ? 'ChatGPT no respondió a tiempo, así que por ahora tu página de inicio muestra solo la portada y tus productos. Escríbeme «sigue» y armo todas las secciones de la plantilla.'
+        : 'Armé la portada de tu tienda con secciones pensadas para tus productos y tus fotos. Revisa la vista previa.',
+      metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label,
+        ...(callFailed ? { pendingRequest: { instruction: SECTION_LIBRARY_BRIEF, direct: true, sectionLibraryFrom: templateRevision } } : {}) } } });
     // Owner 2026-11-02 («check and log»): the new home is checked in the background; the findings go to the product log and to this
     // reply's metadata (templateQa), never to the merchant's chat.
     if (this.config.get<boolean>('app.yapiTemplateQa') === true) void this.logTemplateQa(merchantId, storeId, saved.revision, assistantMessage.id);
@@ -1020,6 +1036,20 @@ export class SourceChatService {
     return photoTint(data, info.channels);
   }
   private catalogForTints?: Map<string, ReturnType<SourceGenerationService['catalog']>>;
+  /** A product photo's cut-out, saved as a new upload of the store (only this platform's uploads are read); null for a scene.
+   *  It is filed in the store's media like any upload: the save bundles only the merchant's own photos and dropped the rest. */
+  private async productCutout(merchantId: string, storeId: string, url: string): Promise<string | null> {
+    const path = uploadPath(url);
+    const filename = /^\/v1\/uploads\/([a-f0-9-]+\.(?:png|jpe?g|webp))$/i.exec(path)?.[1];
+    if (!filename || !this.uploads) return null;
+    const original = await this.uploads.getBuffer(filename);
+    if (!original) return null;
+    const cut = await photoCutout(original, join(this.config.get<string>('app.uploadsDir') ?? 'uploads', '..', 'models', 'silueta.onnx'));
+    if (!cut) return null;
+    const stored = await this.uploads.saveBuffer(cut, 'image/webp');
+    await this.prisma.mediaAsset.create({ data: { merchantId, storeId, url: stored.url, storageKey: stored.filename, mimeType: stored.mimeType, byteSize: stored.byteSize } });
+    return stored.url;
+  }
 
   /** The store's real facts for the section library: catalogue, uploads, shown codes, reviews, links (spec 2026-10-31). */
   private async libraryFacts(merchantId: string, storeId: string, files: SourceProjectSnapshot['files'], request: string, maxPhotos: number) {

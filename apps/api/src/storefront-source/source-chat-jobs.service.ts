@@ -87,7 +87,9 @@ export class SourceChatJobsService implements OnModuleDestroy {
     // Owner 2026-10-22: «sigue» after a request that did not finish runs that request again, as it was kept.
     // A new store (revision 0) resumes too: a failed first plan keeps its request and its setup action (final review 2026-10-22).
     const pending = !input.personalTouch && continuesRequest(input.instruction) ? pendingRequestIn(history) : undefined;
-    if (pending) input = { ...input, instruction: pending.instruction, resumeWords: input.instruction.trim(), ...(pending.setupAction ? { setupAction: pending.setupAction as SourceMessageInput['setupAction'] } : {}), ...(pending.direct ? { personalTouch: true, ownRequest: true } : {}) };
+    if (pending) input = { ...input, instruction: pending.instruction, resumeWords: input.instruction.trim(), ...(pending.setupAction ? { setupAction: pending.setupAction as SourceMessageInput['setupAction'] } : {}), ...(pending.direct ? { personalTouch: true, ownRequest: true } : {}),
+      // A home whose sections could not be composed (2026-11-10) is composed again, from the template's own sections.
+      ...(pending.sectionLibraryFrom ? { sectionLibrary: true, sectionLibraryFrom: pending.sectionLibraryFrom, firstDesign: true } : {}) };
     // Spec 2026-11-09 A/B tests: a design test ask builds B by the usual edit; the words travel so the saved B gets its test card.
     const abAsk = !input.personalTouch && !input.resumeWords && !input.tourStepId && AB_REQUEST.test(input.instruction);
     if (abAsk && abKind(input.instruction) === 'design') input = { ...input, abRequest: input.instruction.trim().slice(0, 200) };

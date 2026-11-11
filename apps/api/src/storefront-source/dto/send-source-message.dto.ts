@@ -77,6 +77,8 @@ export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolea
   homeWriter?: boolean;
   /** Spec 2026-10-31: the home composed from the section library, after the polish of a new master store. */
   sectionLibrary?: boolean;
+  /** «sigue» after a library call that failed (2026-11-10): the revision whose template sections to fill (the store now shows a bare home). */
+  sectionLibraryFrom?: number;
   /** Owner 2026-10-27: the follow-up is a guarded personal touch (source-guarded-touch.ts). */
   guardedTouch?: boolean;
   /** Spec 2026-11-01 template quick edits: the part of a request the layout edit could not do, run after it as its own edit. */
