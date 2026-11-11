@@ -76,7 +76,7 @@ import { checklistFixBrief, checklistReply, storeDigest, type BriefChecklist, ty
 import { buildStarters, pickSkeleton, pickStarter, recentStarters, type StarterEntry } from './source-starter-pick';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { writerTemplate } from './source-home-writer-stage';
-import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook, type MasterFill, type MasterVariants } from './source-master';
+import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook, menuForFill, type MasterFill, type MasterVariants } from './source-master';
 import { isFashionStore } from './source-master-fashion';
 import { fashionCollections } from './source-fashion-collections';
 import { collectionSlug } from '../collections/collection-slug';
@@ -1172,10 +1172,13 @@ export class SourceChatService {
     const manifest = templateManifest(MASTER_TEMPLATE_ID)!;
     const recent = await Promise.resolve(this.prisma.mediaAsset.findMany({ where: { merchantId }, orderBy: { createdAt: 'desc' }, take: 8, select: { url: true } })).catch(() => [] as Array<{ url: string }>);
     // Photos only: the hero video sits in the same record, and a video chosen as the hero photo draws a broken image.
-    const photos = [...new Set([...Object.values(state.photos), ...(recent ?? []).map(asset => asset.url)])].filter(url => url && !/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url)).slice(0, 8);
+    const still = (url: string) => Boolean(url) && !/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
+    // The menu's tile photos come right after the store's own, numbered, so a menu edit keeps the ones it was not asked to change.
+    const shownMenu = menuForFill(currentMenu, [...new Set(Object.values(state.photos))].filter(still));
+    const photos = [...new Set([...shownMenu.photos, ...(recent ?? []).map(asset => asset.url)])].filter(still).slice(0, 8);
     const read = await this.dialogue.fillMaster(merchantId, { storeId, storeName: state.store?.name ?? '', what: options.polish?.what ?? '', story: options.polish?.story ?? '', city: state.store?.city ?? '', products: options.polish?.products ?? [], photos,
       palettes: manifest.master!.palettes.map(({ id, name }) => ({ id, name })), fonts: manifest.master!.fonts.map(({ id, name }) => ({ id, name })), variantCatalogue: manifest.master!.variants, sectionCatalogue: withoutPhotoGroups(manifest.master!.sections ?? [], request, (state.sections ?? []).some(section => section.id === 'gallery')),
-      current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? ''), menu: currentMenu, featureCopy: ((state.features ?? {}) as { copy?: object }).copy ?? {} }, request, menuTargets });
+      current: { copy: masterCopy(manifest.master!, state.copy ?? {}), look: masterLook(manifest.master!, state.look ?? {}), heroPhoto: photos.indexOf(state.photos.hero ?? ''), storyPhoto: photos.indexOf(state.photos.story ?? ''), menu: shownMenu.menu, featureCopy: ((state.features ?? {}) as { copy?: object }).copy ?? {} }, request, menuTargets });
     // The merchant's clear words win over a read that missed them: «quiero un menú desplegable» turns it on, «quita…» off.
     const asked = instructionAsksStoreMenu(request);
     const fullFill = read ? masterFillFromRead(read, photos, true) : null;
@@ -1437,6 +1440,9 @@ export class SourceChatService {
         saved = await this.templates.refill(merchantId, storeId, revision, filesChange, dataChanged || productChanged || menuChanged.length || extraNowChanged || store.change.copy || store.change.filterStyle || store.change.parts || store.change.footerStyle || title !== undefined ? 'Cambios de YAPI' : 'Portada actualizada',
           { refreshData: true, ...pageFiles });
       } catch (error) {
+        // NOA 2026-11-11: «una sección rg en el menú» failed as «el código del diseño nuevo tenía un error» with the cause only on the
+        // console; the trace keeps the error and the change, so the save can be replayed.
+        trace('save-failed', { reason: String((error as Error)?.message ?? error).slice(0, 2000), change: JSON.stringify(filesChange).slice(0, 12000) });
         if (!dataChanged) throw error;
         this.productLogger.warn(JSON.stringify({ event: 'store_edit_refill_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
         previewFailed = true;

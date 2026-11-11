@@ -380,7 +380,9 @@ export class SourceTemplatesService {
     }
     // Section library (spec 2026-10-31): every photo a block shows is bundled too; one that cannot be is left out of its block.
     // The product page's sections (owner 2026-10-31) the same way.
-    const swap = async (value: unknown) => typeof value !== 'string' || !value ? undefined : BUNDLED_PHOTO.test(value) ? value : (await bundle(value))?.asset;
+    // NOA 2026-11-11: a template photo named by its store-data key («slot:pa-hero1», library.tsx `slotted`) is already the store's;
+    // bundling it as an upload failed, so «más secciones» emptied the cover and every template photo on the home.
+    const swap = async (value: unknown) => typeof value !== 'string' || !value ? undefined : BUNDLED_PHOTO.test(value) || /^slot:[\w-]+$/.test(value) ? value : (await bundle(value))?.asset;
     const bundled = async (list: unknown[]) => {
       const blocks: unknown[] = [];
       for (const raw of list as Array<Record<string, unknown> & { items?: Array<Record<string, unknown>> }>) {

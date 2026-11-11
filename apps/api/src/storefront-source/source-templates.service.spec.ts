@@ -156,6 +156,19 @@ describe('SourceTemplatesService', () => {
     expect(['bar', 'chips', 'sidebar']).toContain(JSON.parse(files.find(f => f.path === 'config.js').content.match(/= ([\s\S]*);\n$/)![1]).filterStyle);
   });
 
+  it('a section keeps the template photo it names by slot when the layout is saved (NOA 2026-11-11: «más secciones» emptied the hero)', async () => {
+    const { templates: base, projects, prisma } = service(0);
+    const uploads = { getBuffer: jest.fn(async () => Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])) };
+    (prisma as any).mediaAsset = { findMany: jest.fn(async () => []) };
+    const templates = new SourceTemplatesService(prisma as any, (base as any).publicStores, projects as any, (base as any).config, uploads as any);
+    const { change } = await (templates as any).bundleMasterPhotos('m1', {
+      layout: [{ type: 'promo-banner', title: 'Hola', photo: 'slot:pa-hero1' }, { type: 'shop-look', photo: 'slot:fi-story', items: [{ title: 'Uno', photo: 'slot:pa-p1' }] }, { type: 'steps-howto', photo: 'https://elsewhere.test/x.jpg' }],
+      pageLayouts: { about: [{ type: 'story-split', photo: 'slot:at-detalle' }] },
+    });
+    expect(change.layout).toEqual([{ type: 'promo-banner', title: 'Hola', photo: 'slot:pa-hero1' }, { type: 'shop-look', photo: 'slot:fi-story', items: [{ title: 'Uno', photo: 'slot:pa-p1' }] }, { type: 'steps-howto' }]);
+    expect(change.pageLayouts.about[0].photo).toBe('slot:at-detalle');
+  });
+
   it('a menu change is checked against the live catalog, so a category made after the build can be linked (final review 2026-10-21)', async () => {
     const real = jest.requireActual('@pagosya/store-templates');
     const { templates: base, prisma } = service(2);

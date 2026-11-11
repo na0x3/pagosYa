@@ -115,7 +115,27 @@ it('the fashion variants reach the kit config: card design and product-page styl
   expect(masterProductStyle({ pdp: 'gallery-left' } as any)).toEqual({});
 });
 
-import { menuGroupsFromRead } from './source-master';
+import { menuForFill, menuGroupsFromRead } from './source-master';
+/** NOA VARGAS 2026-11-11: a menu edit dropped every dropdown photo — the fill saw them as URLs it could not answer with. */
+describe('menu shown to the fill', () => {
+  const menu = { style: 'panel' as const, groups: [
+    { label: 'Colección', links: [{ label: 'Novias', to: 'category:c1' }], tilesTitle: 'Por ocasión', tiles: [{ title: 'Novias', image: 'http://localhost:3001/v1/uploads/n.jpg', to: 'category:c1' }], footer: { label: 'Ver toda la tienda', to: 'all' } },
+    { label: 'Detalles', links: [{ label: 'Contacto', to: 'page:contact' }] },
+  ] };
+  it('numbers each tile photo in the photo list, so an untouched tile comes back with its photo', () => {
+    const shown = menuForFill(menu, ['/v1/uploads/hero.jpg']);
+    expect(shown.photos).toEqual(['/v1/uploads/hero.jpg', 'http://localhost:3001/v1/uploads/n.jpg']);
+    expect(shown.menu!.groups[0].tiles).toEqual([{ title: 'Novias', photo: 1, to: 'category:c1' }]);
+    const read = shown.menu!.groups.map(group => ({ label: group.label, links: group.links.map(link => ({ label: link.label ?? '', target: link.to })), tilesTitle: group.tilesTitle ?? '',
+      tiles: (group.tiles ?? []).map(tile => ({ title: tile.title, photo: tile.photo, target: tile.to })), footerLabel: group.footer?.label ?? '', footerTarget: group.footer?.to ?? '' }));
+    expect(menuGroupsFromRead(read, shown.photos)).toEqual(menu.groups);
+  });
+  it('reuses a photo already in the list and leaves a store without a menu alone', () => {
+    expect(menuForFill(menu, ['http://localhost:3001/v1/uploads/n.jpg']).photos).toEqual(['http://localhost:3001/v1/uploads/n.jpg']);
+    expect(menuForFill(null, ['/v1/uploads/a.jpg'])).toEqual({ photos: ['/v1/uploads/a.jpg'], menu: null });
+  });
+});
+
 /** Dropdown menu spec 2026-10-21: the fill read's menu. */
 describe('menu from the fill read', () => {
   const photos = ['/v1/uploads/a.jpg', '/v1/uploads/b.jpg'];

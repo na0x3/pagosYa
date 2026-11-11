@@ -3,7 +3,7 @@
 import type { MasterCopy, MasterSettings } from '@pagosya/store-templates';
 import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 import { bestInkFor, contrastRatio } from './sketch/sketch-schema';
-import type { StoreMenuGroup } from './source-store-menu';
+import type { StoreMenu, StoreMenuGroup } from './source-store-menu';
 import type { FeatureCopy } from './source-master-features';
 import { TITLE_STYLES, isTitleStyle, type TitleStyle } from './source-title-style';
 
@@ -388,6 +388,17 @@ export function menuGroupsFromRead(groups: MasterRead['menuGroups'], photos: rea
       ...(group.footerTarget ? { footer: { label: group.footerLabel, to: group.footerTarget } } : {}),
     };
   });
+}
+
+/** The menu as the fill sees it: each tile's photo is its number in the photo list (added when missing), the way the fill answers;
+ *  shown as a URL it had no way to keep, and a menu edit dropped every dropdown photo (NOA VARGAS 2026-11-11). */
+export type FillMenu = { style: StoreMenu['style']; groups: Array<Omit<StoreMenuGroup, 'tiles'> & { tiles?: Array<{ title: string; photo: number; to: string }> }> };
+export function menuForFill(menu: StoreMenu | null, photos: readonly string[]): { photos: string[]; menu: FillMenu | null } {
+  const list = [...photos];
+  if (!menu) return { photos: list, menu: null };
+  const number = (image: string) => { if (!list.includes(image)) list.push(image); return list.indexOf(image); };
+  const groups = (menu.groups ?? []).map(({ tiles, ...group }) => ({ ...group, ...(tiles ? { tiles: tiles.map(tile => ({ title: tile.title, photo: number(tile.image), to: tile.to })) } : {}) }));
+  return { photos: list, menu: { style: menu.style, groups } };
 }
 
 /** Variety spec §2–3: the rolled variant per part (header, hero, grid…) plus the chosen business sections. */

@@ -126,7 +126,7 @@ import type { SendSourceMessageDto } from './dto/send-source-message.dto';
 import { applySourceEdits, sourceEditSchema, SourceEditConflict } from "./source-edits";
 import { AgentToolbox } from './agent/agent-tools';
 import { agentLimits, agentRunHeadroom } from './agent/agent-loop';
-import { sourceDraftRetry, type SourceDraftRetry } from './source-draft-retry';
+import { draftSavedByItsRequest, sourceDraftRetry, type SourceDraftRetry } from './source-draft-retry';
 import { agentPreviewSnapshot } from './agent/agent-capture';
 import { snapshotWithProductTheme } from './product-theme';
 import { CLAUDE_COMPANION_MODEL, brandPalette, completedCredits, fillsProductPagesAfterSave } from './source-generation-run';
@@ -258,6 +258,8 @@ export class SourceGenerationService {
     const run = await this.prisma.storeSourceGeneration.findFirst({ where: { storeId, baseRevision: current.revision, createdAt: { gte: new Date(Date.now() - 24 * 60 * 60_000) } }, orderBy: { createdAt: 'desc' }, select: { status: true, checkpoint: true, createdAt: true, requestJobId: true } });
     const checkpoint = run?.checkpoint as any;
     if (!run || !['FAILED', 'PARTIAL', 'BLOCKED', 'INTERRUPTED'].includes(run.status) || !Array.isArray(checkpoint?.files)) return { at: null };
+    const job = run.requestJobId ? await this.prisma.storeSourceChatJob.findFirst({ where: { id: run.requestJobId, storeId, merchantId }, select: { input: true, lastCommittedRevision: true } }) : null;
+    if (draftSavedByItsRequest(job, current.revision)) return { at: null };
     const at = run.createdAt.getTime();
     if (since === at) return { at, interrupted: true };
     const base = current.revision
@@ -282,7 +284,6 @@ export class SourceGenerationService {
     const snapshot = await agentPreviewSnapshot({ brief: base.brief, files }, checkpoint.preview?.files ?? checkpoint.files);
     const theme = checkpoint.preview ? checkpoint.preview.theme : checkpoint.theme;
     // The request that built this draft, so "Guardar borrador" can finish it (resumeDraft) instead of starting over.
-    const job = run.requestJobId ? await this.prisma.storeSourceChatJob.findFirst({ where: { id: run.requestJobId, storeId, merchantId }, select: { input: true } }) : null;
     const retry = sourceDraftRetry(job?.input);
     return { at, interrupted: true, files: (theme ? snapshotWithProductTheme(snapshot, theme) : snapshot).files, ...(retry ? { retry } : {}) };
   }
