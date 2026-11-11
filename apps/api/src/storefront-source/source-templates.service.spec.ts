@@ -169,6 +169,35 @@ describe('SourceTemplatesService', () => {
     expect(change.pageLayouts.about[0].photo).toBe('slot:at-detalle');
   });
 
+  it('refillDraft prepares the composed home without saving a revision (spec 2026-11-11)', async () => {
+    const real = jest.requireActual('@pagosya/store-templates');
+    const { templates: base, prisma } = service(2);
+    const config = `window.PAGOSYA_CONFIG = ${JSON.stringify({ dna: {}, data: { categories: [], items: [] } })};\n`;
+    const projects = { current: jest.fn(), save: jest.fn(), prepare: jest.fn(async (input: any) => ({ ...input, prepared: true })),
+      version: jest.fn(async () => ({ snapshot: { brief: { templateId: 'esencial', sitePurpose: 'shop' }, files: [{ path: 'config.js', content: config }, { path: 'components/store-data.tsx', content: '' }] } })) };
+    const templates = new SourceTemplatesService(prisma as any, (base as any).publicStores, projects as any, (base as any).config);
+    templates.registry = { ...templates.registry, templateManifest: real.templateManifest, templateSourceFiles: real.templateSourceFiles };
+    const draft: any = await templates.refillDraft('m1', 's1', 2, { layout: [{ type: 'cover-mega', title: 'Hola' }] } as never);
+    expect(projects.save).not.toHaveBeenCalled();
+    expect(draft.prepared).toBe(true);
+    expect(draft.files.find((file: any) => file.path === 'components/store-data.tsx').content).toContain('"cover-mega"');
+  });
+
+  it('recentThemeHomes reads the latest home of recent stores on the same template, newest first (spec 2026-11-11)', async () => {
+    const { templates, prisma } = service(0);
+    const real = jest.requireActual('./source-templates');
+    const data = (theme: string, types: string[]) => real.templateStoreDataFile({ name: 'x' }, {}, { copy: {}, look: {}, variants: { theme }, layout: types.map(type => ({ type })) }).content;
+    (prisma as any).$queryRaw = jest.fn(async () => [
+      { name: 'Miga', data: data('merienda', ['cover-mega', 'products-rows']) },
+      { name: 'Brillo', data: data('neon', ['cover-ribbon']) },
+      { name: 'Canasta', data: data('merienda', ['cover-mega', 'story-split']) },
+      { name: 'Vacía', data: null },
+    ]);
+    const homes = await templates.recentThemeHomes('s1', 'merienda');
+    expect(homes.map(home => home.store)).toEqual(['Miga', 'Canasta']);
+    expect(homes[0]).toEqual({ store: 'Miga', cover: 'cover-mega:', types: ['cover-mega', 'products-rows'] });
+  });
+
   it('a menu change is checked against the live catalog, so a category made after the build can be linked (final review 2026-10-21)', async () => {
     const real = jest.requireActual('@pagosya/store-templates');
     const { templates: base, prisma } = service(2);

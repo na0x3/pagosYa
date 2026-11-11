@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { homeSummary, type HomeSummary } from './source-composer';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import sharp from 'sharp';
 import { UploadsService } from '../uploads/uploads.service';
@@ -260,7 +261,8 @@ export class SourceTemplatesService {
   /** Spec 2026-10-19 §3.1: a content edit on a master store — data and theme only, as a new revision. */
   /** `options` (YAPI edits everything, spec 2026-11-03): `files` changes the store's files after the refill (the catalogue title);
    *  `refreshData` writes the live store data into config.js, so the preview shows what the edit just wrote to the database. */
-  async refill(merchantId: string, storeId: string, revision: number, change: MasterFill, label: string, options: { files?: <T extends { path: string; content: string }>(files: T[]) => T[]; refreshData?: boolean } = {}) {
+  /** The store's files with a MasterFill applied, its photos bundled: what refill saves and what refillDraft only prepares. */
+  private async refilledFiles(merchantId: string, storeId: string, revision: number, change: MasterFill, options: { files?: <T extends { path: string; content: string }>(files: T[]) => T[]; refreshData?: boolean } = {}) {
     const previous = await this.projects.version(merchantId, storeId, revision);
     const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
     const manifest = snapshot.brief?.templateId ? this.registry.templateManifest(snapshot.brief.templateId) : undefined;
@@ -271,7 +273,36 @@ export class SourceTemplatesService {
     const live = change.menu || options.refreshData ? await this.liveConfigData(merchantId, storeId).catch(() => undefined) : undefined;
     const refilled = refillMasterFiles(live ? withLiveCatalog(snapshot.files, live) : snapshot.files, manifest, bundled.change, sourcePublicApiUrl(this.config));
     const files = options.files ? options.files(refilled) : refilled;
-    return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: [...files, ...bundled.files.filter(asset => !files.some(file => file.path === asset.path))] });
+    return { brief: snapshot.brief, files: [...files, ...bundled.files.filter(asset => !files.some(file => file.path === asset.path))] };
+  }
+
+  async refill(merchantId: string, storeId: string, revision: number, change: MasterFill, label: string, options: { files?: <T extends { path: string; content: string }>(files: T[]) => T[]; refreshData?: boolean } = {}) {
+    const { brief, files } = await this.refilledFiles(merchantId, storeId, revision, change, options);
+    return this.projects.save(merchantId, storeId, { revision, label, brief, files });
+  }
+
+  /** Spec 2026-11-11 store composer: a composed home built for its photographs only — prepared, never saved. */
+  async refillDraft(merchantId: string, storeId: string, revision: number, change: MasterFill) {
+    const { brief, files } = await this.refilledFiles(merchantId, storeId, revision, change);
+    return this.projects.prepare({ revision, label: 'Borrador del compositor', brief, files } as never);
+  }
+
+  /** Spec 2026-11-11 store composer: the homes of the latest stores on the same template (other stores), newest first. Only
+   *  store-data is read, in SQL, from the latest revision of each of the 40 newest stores. */
+  async recentThemeHomes(storeId: string, theme: string, limit = 6): Promise<HomeSummary[]> {
+    try {
+      const rows = await this.prisma.$queryRaw<Array<{ name: string; data: string | null }>>(Prisma.sql`
+        SELECT s.name, (
+          SELECT f->>'content' FROM "StoreSourceVersion" v, jsonb_array_elements(v.snapshot->'files') f
+          WHERE v."storeId" = s.id AND f->>'path' = ${TEMPLATE_STORE_DATA_PATH} ORDER BY v.revision DESC LIMIT 1) AS data
+        FROM "Store" s WHERE s.id <> ${storeId} ORDER BY s."createdAt" DESC LIMIT 40`);
+      return rows.flatMap(row => {
+        if (!row.data) return [];
+        const state = readMasterState([{ path: TEMPLATE_STORE_DATA_PATH, content: row.data }]);
+        const layout = (state.layout ?? []) as Array<{ type: string; look?: string }>;
+        return String((state.variants as Record<string, unknown> | undefined)?.theme ?? '') === theme && layout.length ? [homeSummary(row.name, layout)] : [];
+      }).slice(0, limit);
+    } catch { return []; }
   }
 
   private async liveConfigData(merchantId: string, storeId: string) {
