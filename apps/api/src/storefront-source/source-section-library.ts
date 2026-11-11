@@ -262,8 +262,13 @@ export type LayoutBlock = { type: string; look?: string; band?: string; eyebrow?
 /** 34 templates (2026-10-31): `fixed` is a template's home — the answer only fills it. Its blocks keep their order, type, look, band
  *  and card; each takes the answer's first block of the same type (its words, photos, items); a block the answer left out, or that
  *  the store cannot back, goes. Nothing is added or moved. */
-export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | undefined, facts: LibraryFacts, options: { fixed?: LayoutBlock[]; now?: number } = {}): LayoutBlock[] {
+export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | undefined, facts: LibraryFacts, options: { fixed?: LayoutBlock[]; now?: number;
+  /** Spec 2026-11-11 store composer: a home composed inside a template — its allowed sections and looks, its photo rule. */
+  composed?: { allowed: readonly string[]; looks: Readonly<Record<string, readonly string[]>> } } = {}): LayoutBlock[] {
   const fixedMode = Boolean(options.fixed?.length);
+  const composed = options.composed;
+  // A template's photo rule (twice, never neighbouring) for its fixed home and for a home composed inside it.
+  const twice = fixedMode || Boolean(composed);
   const now = options.now ?? Date.now();
   const merchantWords = fold(`${facts.what} ${facts.story} ${facts.request}`);
   // Lively parts may also repeat the store's notes and its products' own descriptions (spec 2026-11-03).
@@ -279,7 +284,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   const takePhoto = (index: unknown): string | undefined => {
     const at = typeof index === 'number' ? index : -1;
     if (at < 0 || at >= facts.photos.length) return undefined;
-    if (fixedMode) {
+    if (twice) {
       const places = spots.get(at) ?? [];
       if (places.length >= 2 || places.includes(here) || places.includes(here - 1)) return undefined;
       // Owner 2026-11-02 («unused photos first»): a photo shows a second time only once every photo of the store has shown.
@@ -292,7 +297,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   // Template mode (live check 2026-10-31: the model left every photo place after the 11th empty): a place the answer left without a
   // photo takes the store's least-shown photo the rule allows — one of the category named, when there is one.
   const pick = (category?: string): string | undefined => {
-    if (!fixedMode) return undefined;
+    if (!twice) return undefined;
     const order = facts.photos.map((photo, at) => ({ at, shown: (spots.get(at) ?? []).length, match: category && photo.category && fold(photo.category) === fold(category) ? 0 : 1 }))
       .sort((a, b) => Math.sign(a.shown) - Math.sign(b.shown) || a.match - b.match || a.shown - b.shown || a.at - b.at);
     for (const { at } of order) { const url = takePhoto(at); if (url) return url; }
@@ -319,7 +324,8 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   }) : answered;
   for (const raw of sequence) {
     const section = BY_ID.get(String(raw.type ?? ''));
-    if (!section || (section.templateOnly && !fixedMode)) continue;
+    if (!section || (section.templateOnly && !fixedMode && !composed?.allowed.includes(section.id))) continue;
+    if (composed && !composed.allowed.includes(section.id)) continue;
     const needs = section.needs;
     if (needs.mood === 'bold' && facts.tone !== 'bold') continue;
     if (needs.reviews && facts.reviews <= 0) continue;
@@ -340,7 +346,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     const block: LayoutBlock = { type: section.id };
     if (section.id === 'products-grid' || section.id === 'products-tabs' || section.id === 'products-slider') block.card = (LIBRARY_CARDS as readonly string[]).includes(raw.card ?? '') ? raw.card : defaultCard(facts);
     // A template's own look wins (arch, caption, uneven, parallax…); a free answer may only use the section's listed looks.
-    if (raw.look && (raw.template || section.looks?.includes(raw.look))) block.look = raw.look;
+    if (raw.look && (raw.template || section.looks?.includes(raw.look) || composed?.looks[section.id]?.includes(raw.look))) block.look = raw.look;
     // Owner rule 2026-10-29 (no section of only words on a plain ground), enforced on templates 2026-11-02: the icon columns stand
     // beside a photo, the category list shows its photos instead of the giant-letter stack, and the big paragraph has no photo to take.
     if (section.id === 'statement-reveal') continue;

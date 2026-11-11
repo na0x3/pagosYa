@@ -458,3 +458,23 @@ describe('personalizador (2026-11-09)', () => {
     expect(withPersonalizer(home, facts())).toBe(home);
   });
 });
+
+describe('composed mode (spec 2026-11-11 store composer)', () => {
+  const composed = { allowed: ['cover-mega', 'products-rows', 'story-split', 'closing-wordmark'], looks: { 'cover-mega': ['side', 'tilt'] } };
+  it('keeps template-only sections the template allows, with the template\'s looks, and drops the rest', () => {
+    const out = validateLibraryLayout({ blocks: [
+      { type: 'cover-mega', look: 'tilt', title: 'Hola', photo: 0, items: [{ title: 'Uno' }, { title: 'Dos' }] },
+      { type: 'products-rows', title: 'Sabores' },
+      { type: 'reviews-cards', title: 'Opiniones' },
+      { type: 'story-split', title: 'Nuestra historia', text: 'Horneamos cada día.', photo: 1 },
+      { type: 'closing-wordmark', title: 'Hasta pronto' },
+    ] } as never, facts(), { composed });
+    expect(out.map(block => block.type)).toEqual(expect.arrayContaining(['cover-mega', 'story-split', 'closing-wordmark']));
+    expect(out.map(block => block.type)).not.toContain('reviews-cards');
+    expect(out.find(block => block.type === 'cover-mega')?.look).toBe('tilt');
+  });
+  it('without composed, a template-only section is still dropped (free mode unchanged)', () => {
+    const out = validateLibraryLayout({ blocks: [{ type: 'cover-mega', look: 'tilt', title: 'Hola', photo: 0 }] } as never, facts());
+    expect(out.map(block => block.type)).not.toContain('cover-mega');
+  });
+});
