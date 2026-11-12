@@ -73,3 +73,10 @@ describe('studio spike: the cover title never sits on the photo on a computer (o
     expect(STUDIO_RULES).toMatch(/nunca va encima de la foto/);
   });
 });
+
+describe('studio spike: real names and nothing cut off (Oh Belly studio 2026-11-12: «Sabor uno», a sticker off the edge)', () => {
+  it('says so in the rules', () => {
+    expect(STUDIO_RULES).toMatch(/nunca nombres de relleno/);
+    expect(STUDIO_RULES).toMatch(/nada se sale de la pantalla/);
+  });
+});

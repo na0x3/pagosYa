@@ -9,7 +9,8 @@ export const STUDIO_RULES = `MODO ESTUDIO (como Lovable). Esta tienda tiene que 
 4. Cada foto se muestra a lo sumo a su tamaño real: nunca más ancha que su tamaño real. Las fotos del comercio suelen ser pequeñas (unos 700 px): ponlas en marcos, tarjetas, collages o junto al titular; a todo el ancho solo una foto grande (las fotos de marca generadas para esta tienda lo son).
 5. Una portada con personalidad: una fuente de titular con carácter usada muy grande, una sola idea de marca, detalles propios (etiquetas, marcos, bandas del color de la marca, movimiento del kit). Nada genérico.
 6. En escritorio el titular de la portada nunca va encima de la foto: al lado, debajo o sobre un fondo de color de la marca. En celular puede ir sobre la foto solo si se lee bien (texto claro sobre una zona oscura).
-7. El encabezado, el menú, las tarjetas de producto, la ficha, el carrito y el checkout son de la plantilla; la portada usa sus secciones probadas cuando sirven.`;
+7. Los textos dicen cosas reales de esta tienda: nunca nombres de relleno («Sabor uno», «Producto 1», «Colección A»); los productos con su nombre de store-data. Y nada se sale de la pantalla: etiquetas y stickers dentro del borde, también en celular.
+8. El encabezado, el menú, las tarjetas de producto, la ficha, el carrito y el checkout son de la plantilla; la portada usa sus secciones probadas cuando sirven.`;
 
 /** Colours written by hand in the home: hex (other than white and black), rgb(), rgba(), hsl(), outside comments and links. */
 export function rawColours(code: string): string[] {
