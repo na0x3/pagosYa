@@ -141,16 +141,17 @@ export function evaluateLopsided(): string[] {
     }
     for (const el of Array.from(band.querySelectorAll('*'))) {
       const media = /^(?:img|video|picture|svg|canvas)$/i.test(el.tagName);
-      // A photo still loading has no height yet: its frame stands in for it.
+      // A photo still loading has no height yet: its frame stands in for it. A painted box counts (Pawby studio3: a full-width pill
+      // button 40 px tall), unless it covers the band, which is the band's own background.
       const b = (media && el.getBoundingClientRect().height < 8 && el.parentElement ? el.parentElement : el).getBoundingClientRect();
       if (b.width < 8 || b.height < 8) continue;
       const style = getComputedStyle(el);
-      const painted = b.width >= 120 && b.height >= 120 && (style.backgroundImage !== 'none' || !/rgba\(0, 0, 0, 0\)|transparent/.test(style.backgroundColor));
+      const painted = b.width >= 120 && b.height >= 24 && !(b.width >= r.width * 0.95 && b.height >= r.height * 0.5) && (style.backgroundImage !== 'none' || !/rgba\(0, 0, 0, 0\)|transparent/.test(style.backgroundColor));
       if (media || painted) { left = Math.min(left, b.left); right = Math.max(right, b.right); }
     }
     if (!isFinite(left)) continue;
     const used = right - left;
-    if (used < W * 0.55 && Math.abs((left + right) / 2 - W / 2) > W * 0.15) {
+    if (used < W * 0.5 && Math.abs((left + right) / 2 - W / 2) > W * 0.15) {
       const title = (band.querySelector('h2,h3')?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40);
       out.push(`BLOQUEA: La sección «${title}» se apila en un costado (usa ${Math.round(used)} de ${W} px) y deja medio ancho vacío: arregla su grilla para que llene el ancho, con la foto grande a un lado y el texto al otro.`);
     }
