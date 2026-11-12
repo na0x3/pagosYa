@@ -519,6 +519,14 @@ describe('press quotes need the press in the merchant\'s words (live test 2026-1
     expect(librarySectionBlocker('press-quotes', facts())).toMatch(/medio/);
     expect(librarySectionBlocker('press-quotes', facts({ story: 'La revista Ego nos dijo «el mejor pan de La Paz».' }))).toBeNull();
   });
+  it('a style word is not press: «una tienda elegante, de revista» (NOA, composer test 2026-11-12)', () => {
+    expect(librarySectionBlocker('press-quotes', facts({ request: 'Quiero una tienda completa y elegante, de revista, con muchas secciones.' }))).toMatch(/medio/);
+    expect(librarySectionBlocker('press-quotes', facts({ story: 'Salimos en el diario Página Siete.' }))).toBeNull();
+  });
+  it('a countdown needs the end date in the merchant\'s words (Oh Belly, composer test 2026-11-12)', () => {
+    expect(librarySectionBlocker('promo-countdown', facts({ request: 'Usa el código BELLY10.' }))).toMatch(/fecha/);
+    expect(librarySectionBlocker('promo-countdown', facts({ request: 'La oferta dura hasta el 30 de noviembre.' }))).toBeNull();
+  });
 });
 
 describe('composed mode (spec 2026-11-11 store composer)', () => {

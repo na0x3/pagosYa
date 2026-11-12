@@ -108,7 +108,8 @@ export function composerCheck(layout: readonly LayoutBlock[], template: Composer
   }
   // The opener is the same in every store on its template; there only the order tells two homes apart.
   // A template with one cover and one look (Estudio, live test 2026-11-11) has no other cover to give; the order tells them apart.
-  const covers = template.allowed.filter(type => roleOf(type) === 'cover');
+  // Motion 2026-11-12: a signature cover is fixed too, so there only its looks can change.
+  const covers = roleOf(template.signature[0]) === 'cover' ? [template.signature[0]] : template.allowed.filter(type => roleOf(type) === 'cover');
   const oneCover = covers.length === 1 && lookOptions(template, covers[0]).length <= 1;
   const repeated = template.opener || oneCover ? undefined : recent.slice(0, 2).find(other => other.cover && other.cover === mine.cover);
   if (repeated) reasons.push(`la portada ${mine.cover} es la misma que la tienda ${repeated.store}: usa otro look u otra portada`);

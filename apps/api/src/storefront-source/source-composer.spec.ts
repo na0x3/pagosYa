@@ -154,6 +154,13 @@ describe('a template with one cover and no other look (live test 2026-11-11: Est
     const recent = [homeSummary('Taller Roble', page(['categories-list', 'story-split', 'benefits-bento', 'faq-split', 'closing-photo']))];
     expect(composerCheck(page(['story-split', 'categories-list', 'press-quotes', 'closing-photo', 'faq-split']), estudio, recent)).toEqual([]);
   });
+  it('a signature cover with one look is never asked to change, even with other covers in the fit (Motion, composer test 2026-11-12)', () => {
+    const motion = composerTemplate('motion', 'Motion', { layout: [{ type: 'hero-split' }, { type: 'products-tabs' }, { type: 'categories-mosaic' }] as LayoutBlock[] },
+      { fit: { motion: ['story-split', 'faq-split', 'closing-photo', 'cover-half', 'benefits-bento'] }, signature: { motion: ['hero-split', 'categories-mosaic'] } })!;
+    const page = (rest: string[]): LayoutBlock[] => [{ type: 'hero-split' }, { type: 'products-tabs' }, ...rest.map(type => ({ type }))];
+    const recent = [homeSummary('Oh Belly · light', page(['categories-mosaic', 'story-split', 'benefits-bento', 'faq-split', 'closing-photo']))];
+    expect(composerCheck(page(['story-split', 'categories-mosaic', 'faq-split', 'benefits-bento', 'closing-photo']), motion, recent).join(' ')).not.toMatch(/otro look u otra portada/);
+  });
 });
 
 describe('a template whose home opens without a cover (owner 2026-11-11: its opener stays first)', () => {

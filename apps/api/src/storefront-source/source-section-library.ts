@@ -732,8 +732,14 @@ export function librarySectionBlocker(type: string, facts: LibraryFacts): string
   if (needs.categories && facts.categories.length < needs.categories) return `necesita al menos ${needs.categories} categorías con productos`;
   if (needs.services && facts.services.length < 2) return 'aún no tienes envío ni recojo configurados';
   if (needs.mood === 'bold' && facts.tone !== 'bold') return 'va solo con marcas atrevidas';
-  // Live test 2026-11-11: Oh Belly got press quotes nobody gave; the press comes only from the merchant's words.
-  if (needs.press && !/\b(revista|periodico|diario|radio|entrevista|prensa|television|tv|podcast|nota en|salimos en)\b/.test(fold(`${facts.what} ${facts.story} ${facts.request}`))) return 'necesito que me cuentes en qué medio salió tu marca (diario, revista, radio o entrevista) y qué dijo';
+  const said = fold(`${facts.what} ${facts.story} ${facts.request}`);
+  // Live test 2026-11-11: Oh Belly got press quotes nobody gave; the press comes only from the merchant's words. A medium alone is
+  // not press (NOA 2026-11-12: «una tienda elegante, de revista»): it has to have said or published something about the brand.
+  const medium = /\b(revista|periodico|diario|radio|television|tv|podcast|prensa|canal)\b/.test(said);
+  const mention = /\b(dijo|dijeron|escribio|escribieron|publico|publicaron|nombro|entrevist\w*|salimos|aparecimos|nota sobre)\b/.test(said);
+  if (needs.press && !(medium && mention) && !/\b(salimos en|aparecimos en|nos entrevist\w*)\b/.test(said)) return 'necesito que me cuentes en qué medio salió tu marca (diario, revista, radio o entrevista) y qué dijo';
+  // Oh Belly 2026-11-12: a countdown with no end date in the merchant's words is dropped after writing; it is not offered at all.
+  if (needs.date && !new RegExp(`\\b\\d{1,2}\\s*(de\\s+)?(${MONTHS.join('|')})|\\b\\d{1,2}/\\d{1,2}\\b`).test(said)) return libraryDropReason(type);
   if (needs.pair && !/\bantes\b/.test(fold(`${facts.what} ${facts.story} ${facts.request}`))) return 'necesito que me cuentes qué cambia antes y después, y las dos fotos';
   if (needs.products && facts.products.length < needs.products[0]) return `necesita al menos ${needs.products[0]} productos`;
   if (needs.product && !facts.products.length) return 'aún no tienes productos';
