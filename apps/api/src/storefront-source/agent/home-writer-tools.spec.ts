@@ -309,6 +309,15 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
     expect(kept).toEqual(brief);
     expect((await b.run('check', '{}')).output).not.toMatch(/brief/i);
   });
+  it('studio: Tailwind utilities are real classes — the store build compiles them (owner 2026-11-12 «why not tailwind like them»)', async () => {
+    expect(inventedClasses('<div className="md:grid-cols-2 bg-[var(--es-paper)] oh-grid" />', '', '.md\\:grid-cols-2{}.bg-\\[var\\(--es-paper\\)\\]{}')).toEqual(['oh-grid']);
+    const b = studioBox();
+    expect((await b.run('read_chassis', '{}')).output).toContain('TAILWIND 3 está disponible');
+    b.workspace.write(HOME_PATH, b.workspace.read(HOME_PATH).replace('<Shell>', '<Shell><section className="grid md:grid-cols-2 gap-6 px-6 md:px-16 bg-[var(--es-paper)] oh-band"><h2 className="text-5xl md:text-8xl font-[family-name:var(--es-heading)]">Hola mundo bonito</h2></section>'));
+    const out = (await b.run('check', '{}')).output;
+    expect(out).toMatch(/no existen en styles\/globals\.css y no hacen nada: oh-band\./);
+    expect(out).not.toMatch(/md:grid-cols-2|bg-\[var/);
+  });
   it('studio: the store writes its own footer (owner 2026-11-12 «the footer is the same always»)', async () => {
     const b = new HomeWriterToolbox({ workspace: new AgentWorkspace(sorbo.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base: sorbo, gate: async () => null, template, studio: true, footer: true });
     const chassis = (await b.run('read_chassis', '{}')).output;

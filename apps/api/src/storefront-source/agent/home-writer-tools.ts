@@ -129,12 +129,18 @@ export function shoutedHeadings(code: string): string[] {
 }
 
 /** Class names in the home or footer outside the template (es-), kit (ui-) and platform (pagosya-) names that no stylesheet defines. */
-export function inventedClasses(code: string, css: string): string[] {
+export function inventedClasses(code: string, css: string, compiled = ''): string[] {
   const names = new Set<string>();
   for (const match of code.matchAll(/className=(?:"([^"]*)"|'([^']*)'|\{\s*['"`]([^'"`]*)['"`]\s*\})/g)) for (const name of (match[1] ?? match[2] ?? match[3] ?? '').split(/\s+/)) if (name) names.add(name);
+  // Tailwind (owner 2026-11-12 «why not tailwind like them»): the store build compiles every utility a file uses into styles.css,
+  // escaped (md\:grid-cols-2, bg-\[var\(--es-paper\)\]); a class found there is real.
+  const tailwind = (name: string) => compiled.includes(`.${name.replace(/[^a-zA-Z0-9_-]/g, char => `\\${char}`)}`);
   // The template's own es- names include hooks with no rule of their own (es-reviews), so only names outside it are checked.
-  return [...names].filter(name => !/^(es-|ui-|pagosya-)/.test(name) && !new RegExp(`\\.${name.replace(/[-]/g, '\\-')}(?![\\w-])`).test(css));
+  return [...names].filter(name => !/^(es-|ui-|pagosya-)/.test(name) && !new RegExp(`\\.${name.replace(/[-]/g, '\\-')}(?![\\w-])`).test(css) && !tailwind(name));
 }
+
+/** Owner 2026-11-12 («why not tailwind like them»): Amboras's AI writes Tailwind; ours can too — the store build already runs it. */
+export const TAILWIND_BRIEF = `TAILWIND 3 está disponible en todos los archivos que escribes (la tienda lo compila): úsalo para el diseño — columnas que cambian en celular y computadora (grid md:grid-cols-2 lg:grid-cols-12), espacios (px-6 md:px-16 py-24), tamaños (text-5xl md:text-8xl), estados (hover:opacity-80 transition), alineación (flex items-end justify-between), proporciones (aspect-[4/5] object-cover). Colores y fuentes SIEMPRE con los tokens: bg-[var(--es-paper)] text-[color:var(--es-ink)] border-[color:var(--es-muted)] font-[family-name:var(--es-heading)] — nunca un hex. Las clases es- de la plantilla siguen sirviendo; style={{…}} solo para lo que Tailwind no hace.`;
 
 const rgb = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
 /** Near enough to read as the same colour (RGB distance). */
@@ -266,8 +272,9 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           if (moving < 2) verdict.blocking.push('Esta tienda tiene portada animada y usa menos de 2 movimientos del kit: agrega al menos dos de ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase o Hero scrollGrow (importados de \'@pagosya/ui\').');
           else if (moving < 3) verdict.advice.push('La portada animada usa menos de 3 movimientos del kit (ScrollScale, ParallaxStack, Statement, Marquee, EntranceGroup, ProductShowcase, scrollGrow).');
           // Live check 2026-10-30 (Oh Belly ujy3rqxr): the writer cannot write CSS, so a class it invents (oh-grid) does nothing.
-          const invented = inventedClasses(`${this.workspace.read(HOME_PATH)}\n${this.footerCode()}`, this.workspace.read(GLOBALS));
-          if (invented.length) verdict.blocking.push(`Estas clases no existen en styles/globals.css y no hacen nada: ${invented.slice(0, 6).join(', ')}. Usa clases es- de la plantilla o style={{…}} para el diseño.`);
+          const compiledCss = snapshot.files.find(file => file.path === 'styles.css')?.content ?? '';
+          const invented = inventedClasses(`${this.workspace.read(HOME_PATH)}\n${this.footerCode()}${this.ctx.chassis ? CHASSIS_PARTS.map(part => `\n${this.partCode(part)}`).join('') : ''}`, this.workspace.read(GLOBALS), compiledCss);
+          if (invented.length) verdict.blocking.push(`Estas clases no existen en styles/globals.css y no hacen nada: ${invented.slice(0, 6).join(', ')}. Usa Tailwind (la tienda lo compila), clases es- de la plantilla o style={{…}}.`);
           if (this.ctx.playful) {
             const ambient = ambientPartsUsed(`${this.workspace.read(HOME_PATH)}\n${this.footerCode()}`).length;
             if (ambient < 2) verdict.blocking.push(`Esta tienda es divertida y su portada debe moverse sin esperar al scroll: usa al menos dos de ${AMBIENT_PARTS.join(', ')} (importados de '@pagosya/ui').`);
@@ -389,7 +396,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
     const chassisBriefs = this.ctx.chassis ? [CHASSIS_BRIEF,
       this.ctx.plan ? `PLAN DE DISEÑO de esta tienda (distinto de las últimas tiendas; síguelo):\n${(Object.keys(this.ctx.plan) as Array<keyof DesignPlan>).map(key => (DESIGN_PLAN_TEXT[key] as Record<string, string>)[this.ctx.plan![key]]).join('\n')}` : '',
       `Cableado de la plantilla (solo los ganchos; no copies su forma):\n--- Header ---\n${fn(shell, 'Header')}\n--- CartParts ---\n${fn(shell, 'CartParts')}\n--- CardTemplate (library.tsx) ---\n${fn(library, 'CardTemplate')}\n--- components/product.tsx ---\n${this.workspace.read(CHASSIS_PATHS.product)}`] : [];
-    return [KIT_BRIEF, ...(this.ctx.template ? [templateBrief(this.ctx.template, Boolean(this.ctx.studio))] : []), ...(this.ctx.studio ? [BRIEF_GUIDE] : []), ...chassisBriefs, ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []),
+    return [KIT_BRIEF, ...(this.ctx.template ? [templateBrief(this.ctx.template, Boolean(this.ctx.studio))] : []), ...(this.ctx.studio ? [BRIEF_GUIDE, TAILWIND_BRIEF] : []), ...chassisBriefs, ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []),
       ...(this.ctx.footer && (!this.ctx.template || this.ctx.studio) ? [FOOTER_BRIEF, templateFooter ? `El pie actual de la plantilla (solo como referencia de los ganchos; el tuyo debe verse distinto):\n${templateFooter}` : ''] : []),
       `import { … } from './store-data' — exporta: ${exported.join(', ')}. Productos, precios, fotos y logo salen de ahí; nunca los escribas a mano.`,
       `Archivos de fotos: ${photos.join(', ') || 'ninguno (portada solo tipográfica)'}`,
