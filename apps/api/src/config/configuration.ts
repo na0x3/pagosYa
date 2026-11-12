@@ -154,7 +154,8 @@ export interface AppConfig {
   yapiTemplatePick: boolean;
   /** Owner 2026-11-04: YAPI_TEMPLATE_RANDOM=pick draws one of YAPI's three templates, =all any store template; unset keeps the least used (read at API start: restart after changing it). */
   yapiTemplateRandom: string;
-  /** Spec 2026-11-04 writer on templates §1: the owner's chosen templates (YAPI_TEMPLATE_POOL, comma list); empty = every template. */
+  /** Spec 2026-11-04 writer on templates §1: the owner's chosen templates (YAPI_TEMPLATE_POOL, comma list); empty = every template.
+   *  Owner 2026-11-11/12 took Gumdrop and Shrine Pro out of the dev pool (backups in .superpowers/benchmarks). */
   yapiTemplatePool: string[];
   /** Spec 2026-11-04 §7: only the owner/dev sees the Studio's model select (YAPI_MODEL_PICKER=1). */
   yapiModelPicker: boolean;
