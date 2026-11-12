@@ -1,4 +1,4 @@
-import { withPersonalizer, buildLibraryFacts, carriedSections, libraryTopUp, withTopUp, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
+import { LIBRARY_FILL_PROMPT, withoutRepeatedProductRows, withPersonalizer, buildLibraryFacts, carriedSections, libraryTopUp, withTopUp, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
 
 const facts = (over: Partial<LibraryFacts> = {}): LibraryFacts => ({
   storeName: 'Dulce Nube', what: 'Galletas artesanales', story: '', city: 'La Paz', request: '', tone: 'calm',
@@ -456,6 +456,31 @@ describe('personalizador (2026-11-09)', () => {
     expect(withPersonalizer(out, facts({ optioned }))).toBe(out);
     expect(types(withPersonalizer([{ type: 'cover-split' }, { type: 'closing-photo' }], facts({ optioned, art: true })))).toEqual(['cover-split', 'product-personalizer', 'closing-photo']);
     expect(withPersonalizer(home, facts())).toBe(home);
+  });
+});
+
+// Owner 2026-11-11 (Nov 10 vs Oct 30 comparison): Pawby showed its five products in three rows; Oct 30 carried one brand idea.
+describe('no repeated product rows', () => {
+  const products = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `Producto ${i}` }));
+  const types = (layout: { type: string }[]) => layout.map(block => block.type);
+  const home = [{ type: 'cover-full' }, { type: 'products-grid' }, { type: 'products-slider' }, { type: 'story-split' }, { type: 'products-cards' }, { type: 'faq-split' }, { type: 'products-slider' }, { type: 'closing-photo' }];
+  it('a store with few products keeps the main grid and one more product row', () => {
+    expect(types(withoutRepeatedProductRows(home, facts({ products: products(5) } as never)))).toEqual(['cover-full', 'products-grid', 'products-slider', 'story-split', 'faq-split', 'closing-photo']);
+  });
+  it('a store with 8 or more products keeps two', () => {
+    expect(types(withoutRepeatedProductRows(home, facts({ products: products(8) } as never)))).toEqual(['cover-full', 'products-grid', 'products-slider', 'story-split', 'products-cards', 'faq-split', 'closing-photo']);
+  });
+  it('one featured product, categories and the main grid never count as a row', () => {
+    const page = [{ type: 'products-grid' }, { type: 'products-spotlight' }, { type: 'categories-tiles' }, { type: 'products-rows' }, { type: 'product-personalizer' }];
+    expect(types(withoutRepeatedProductRows(page, facts({ products: products(3) } as never)))).toEqual(types(page));
+  });
+});
+
+describe('one brand idea in a template home', () => {
+  it('the fill asks for one idea of the brand in the cover, the titles, the strip and the closing line', () => {
+    expect(LIBRARY_FILL_PROMPT).toMatch(/UNA idea de marca/);
+    expect(LIBRARY_FILL_PROMPT).toMatch(/franja/);
+    expect(LIBRARY_FILL_PROMPT).toMatch(/cierre/);
   });
 });
 

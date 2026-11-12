@@ -189,6 +189,11 @@ sección ni en dos secciones seguidas), y deja vacío (o sin items) lo que la ti
 look, band y card los pone la plantilla: déjalos vacíos. Escribe TODAS las secciones completas hasta la última (preguntas con sus
 respuestas, puntos, columnas, títulos de categorías y productos exactos para los puntos de shop-look): una sección que mandas vacía
 desaparece. Si te faltan fotos, deja photo en -1: el código pone una foto de la tienda.
+UNA idea de marca (owner 2026-11-11): antes de escribir, elige una sola idea para esta tienda, una palabra o un juego de palabras con
+su nombre o con lo que vende (Remolino → girar, giro, vueltas; Pawby → hogar, plato, un momento Pawby), y llévala por toda la portada:
+el titular de la portada es una frase con esa idea, nunca una descripción («Que todo gire a tu ritmo», no «Licuadoras para batidos»);
+dos o tres títulos de sección la retoman sin repetirse; las palabras de la franja que se mueve son palabras de la marca (no «Envío a
+domicilio»); y la sección de cierre termina con una frase grande de esa idea. La idea es voz, no datos: nada inventado.
 - mood: «colourful» para productos alegres, de casa o de regalo que piden juego (un sofá nube, una bebida, juguetes, dulces); «calm» para productos serios o técnicos (herramientas, cuidado de la piel, salud, finanzas). Fuera de la plantilla Único no cambia nada.
 - titleStyle: el estilo de los títulos según el producto: «burbuja» (juguetes, mascotas, dulces, snacks, fiestas, niños), «redonda» (casa, muebles, cocina, ropa de cama), «firme» (tecnología, belleza, herramientas), «poster» (deportes, bebidas, ropa urbana). Fuera de la plantilla Único no cambia nada.
 - Etiquetas (product-hero items), frases (chips-marquee) y notas (detail-hotspots): solo hechos que están en los datos (lo que dijo el comercio, la descripción del producto, sus notas de entrega). Ningún plazo, número, premio o calificación que no esté escrito. Si no hay hechos, déjalos vacíos.`;
@@ -678,6 +683,16 @@ export function withTopUp<T extends { type: string }>(layout: readonly T[], adde
 
 /** Personalizador (spec 2026-11-09, owner «Personalizador para todos»): every home of a store with an optioned product gets it once —
  *  after the main product grid, else before the closing section. Words stay the template's: the kit draws the product's own. */
+/** Owner 2026-11-11 (Pawby showed its five products in three rows): besides the main grid, a store with fewer than 8 products shows
+ *  one row of its catalogue, with 8 or more two; later rows go, and the top-up fills the page with other sections. One featured
+ *  product, categories and the main grid are not rows. */
+const CATALOGUE_ROWS = new Set(['products-slider', 'products-cards', 'products-lookbook', 'products-rows', 'products-words', 'products-nicknames']);
+export function withoutRepeatedProductRows<T extends { type: string }>(layout: readonly T[], facts: LibraryFacts): T[] {
+  const keep = facts.products.length >= 8 ? 2 : 1;
+  let rows = 0;
+  return layout.filter(block => !CATALOGUE_ROWS.has(block.type) || ++rows <= keep);
+}
+
 export function withPersonalizer<T extends { type: string }>(layout: readonly T[], facts: LibraryFacts): T[] {
   if (!facts.optioned || layout.some(block => block.type === 'product-personalizer')) return layout as T[];
   const block = { type: 'product-personalizer', product: facts.optioned.id, look: facts.art ? 'frame' : 'stage' } as unknown as T;

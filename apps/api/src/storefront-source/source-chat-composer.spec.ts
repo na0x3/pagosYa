@@ -56,6 +56,12 @@ describe('the store composer in the first build (spec 2026-11-11)', () => {
     expect(dialogue.composeLibrary).toHaveBeenCalledWith('m1', expect.objectContaining({ template: expect.any(Array) }));
     expect(refill.mock.calls[0][4]).toBe('Portada de YAPI');
   });
+  it('fill mode drops repeated product rows before the top-up (owner 2026-11-11)', async () => {
+    const rows = jest.spyOn(library, 'withoutRepeatedProductRows');
+    const { run } = build(false);
+    await run();
+    expect(rows).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ type: 'cover-mega' })]), expect.objectContaining({ what: 'Cereales' }));
+  });
   it('a composer that cannot pass its check falls back to fill mode', async () => {
     const { refill, dialogue, run } = build(true);
     dialogue.composeHome.mockResolvedValue({ answer: { blocks: [{ type: 'cover-mega' }, { type: 'faq-split' }] }, microUsd: 1 });

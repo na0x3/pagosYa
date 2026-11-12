@@ -87,7 +87,7 @@ import { applyComposerChanges, composerCheck, composerTemplate, readSectionFit }
 import { captureAgentDraft } from './agent/agent-capture';
 import { readMoodAsk } from './source-mood-ask';
 import { nextTitleStyle, readTitleAsk } from './source-title-style';
-import { buildLibraryFacts, withPersonalizer, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
+import { buildLibraryFacts, withoutRepeatedProductRows, withPersonalizer, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
 import { applyCatalogOps, catalogChangeEmpty, emptyCatalogChange, relinkCategories, withCategoryMenuRenames, withoutCategoryMenuLinks, type CatalogChange } from './source-catalog-edit';
 import { writeCatalogChange } from './source-catalog-write';
 import type { ProductVariant } from '../payment-links/product-variants';
@@ -940,6 +940,8 @@ export class SourceChatService {
     // library sections the store can really fill (its place, its code, delivery, how it works…), before its closing.
     // Owner 2026-11-10 («less sections and like same template»): a hand-made style is a long page of its own; the generic top-up
     // (visit, code, services) made every style end the same way, so it does not run on them.
+    // Owner 2026-11-11 (Pawby showed its five products in three rows): one row of the catalogue besides the grid (two with 8+ products).
+    layout = withoutRepeatedProductRows(layout, facts);
     if (template && !composedHome && !HAND_MADE_THEMES.has(theme)) layout = await this.topUpHome(merchantId, storeId, layout, facts);
     // Spec 2026-11-09 personalizador («para todos»): a store with a product that has options gets it once, after its product grid.
     layout = withPersonalizer(layout, facts);
