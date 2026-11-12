@@ -249,9 +249,17 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
             const hidden = hiddenCardParts(this.workspace.read(HOME_PATH));
             if (hidden.length) verdict.blocking.push(`La portada deja las tarjetas de producto sin su foto: ${hidden.slice(0, 4).join(', ')}. Las tarjetas son de la plantilla; quita esa regla.`);
           }
+          // Amboras 2026-11-12 (their check_build: «ADVISORY (warn-only, never a build failure)»): in the studio only what breaks the shop
+          // blocks — the footer's platform hooks, the product grid and its cards' photos; every design finding is advice to act on.
+          // Oh Belly studio6 looped on a contrast block until the run failed and fell back to the template.
+          if (this.ctx.studio) {
+            const hard = (line: string) => /^(Falta el pie|Al pie le falta|La grilla de productos perdió|La portada deja las tarjetas)/.test(line);
+            verdict.advice.unshift(...verdict.blocking.filter(line => !hard(line)));
+            verdict.blocking.splice(0, verdict.blocking.length, ...verdict.blocking.filter(hard));
+          }
           this.lastVerify = { version: this.workspace.version, clean: !verdict.blocking.length, hard: verdict.blocking.length > 0 };
           return { output: [verdict.blocking.length ? `Debes corregir:\n- ${verdict.blocking.join('\n- ')}` : 'Nada que corregir.',
-            verdict.advice.length ? `Consejos (opcionales):\n- ${verdict.advice.join('\n- ')}` : '', 'Capturas de escritorio y celular adjuntas.'].filter(Boolean).join('\n'),
+            verdict.advice.length ? `${this.ctx.studio ? 'Avisos de diseño (no bloquean; corrígelos con una sola edición antes de finish)' : 'Consejos (opcionales)'}:\n- ${verdict.advice.join('\n- ')}` : '', 'Capturas de escritorio y celular adjuntas.'].filter(Boolean).join('\n'),
             // Token cut 2026-10-30: the captures check already took, so a run needs no separate screenshot calls.
             images: captures.map(capture => capture.image) };
         }

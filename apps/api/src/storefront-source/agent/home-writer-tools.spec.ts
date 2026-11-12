@@ -249,6 +249,9 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
     const first = (await b.run('check', '{}')).output;
     expect(first).toMatch(/Empieza por el sistema de diseño/);
     expect(first).toMatch(/colores escritos a mano: #ff3300/);
+    // Amboras 2026-11-12: design findings advise, never block — the draft can still finish.
+    expect(first).toMatch(/^Nada que corregir\.\nAvisos de diseño \(no bloquean/);
+    expect(b.draftIsClean()).toBe(true);
   });
   it('studio: check refuses a kit variable that does not exist', async () => {
     const b = studioBox();
@@ -259,7 +262,9 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
   it('studio: check refuses a home that hides the photos of the product cards (NOA studio3 2026-11-12)', async () => {
     const b = studioBox();
     b.workspace.write(HOME_PATH, b.workspace.read(HOME_PATH).replace('<Shell>', '<Shell><style>{`.es-catalog .es-card__media{display:none!important}`}</style>'));
-    expect((await b.run('check', '{}')).output).toMatch(/tarjetas de producto sin su foto: \.es-catalog \.es-card__media/);
+    const out = (await b.run('check', '{}')).output;
+    expect(out).toMatch(/^Debes corregir:\n- La portada deja las tarjetas de producto sin su foto: \.es-catalog \.es-card__media/);
+    expect(b.draftIsClean()).toBe(false);
   });
   it('write_footer is refused', async () => {
     expect((await sorboBox().run('write_footer', JSON.stringify({ content: 'export default function StoreFooter() { return <footer />; }' }))).output).toBe('Esta tienda usa el pie de su plantilla; no escribas uno.');
