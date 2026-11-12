@@ -167,7 +167,8 @@ export interface AppConfig {
   /** Owner 2026-11-06 («no podemos dejar nada a la suerte»): a dev JSONL file where the quick edit writes what it read and did. */
   yapiTraceFile: string;
   yapiSectionLibraryModel: string;
-  /** Spec 2026-11-11 store composer: a template store's first home composed for the brand (YAPI_COMPOSER=1), its model, effort and cap. */
+  /** Spec 2026-11-11 store composer: a template store's first home composed for the brand (YAPI_COMPOSER=1), its model, effort and cap.
+   *  Turned on in dev 2026-11-11 late (owner: «intenta poner el compositor»); off again by removing the line from apps/api/.env. */
   yapiComposer: boolean;
   yapiComposerModel: string;
   yapiComposerEffort: 'low' | 'medium' | 'high';
