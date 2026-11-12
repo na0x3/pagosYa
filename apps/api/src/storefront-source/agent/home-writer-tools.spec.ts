@@ -24,8 +24,10 @@ const branded = async (b: HomeWriterToolbox) => {
 const tokens = (font: string) => JSON.stringify({ paper: '#f4efe6', ink: '#1d2a22', muted: '#e8e1d4', accent: '#b5562b', deep: '#2f4a33', heading: font, body: font });
 
 describe('HomeWriterToolbox', () => {
-  it('offers exactly the eight tools; write_part only to a chassis store', () => {
-    expect(HOME_WRITER_TOOLS.map(t => t.name)).toEqual(['read_chassis', 'write_home', 'write_footer', 'write_part', 'set_tokens', 'check', 'screenshot', 'finish']);
+  it('offers exactly the nine tools; write_brief only in the studio, write_part only to a chassis store', () => {
+    expect(HOME_WRITER_TOOLS.map(t => t.name)).toEqual(['read_chassis', 'write_home', 'write_footer', 'write_brief', 'write_part', 'set_tokens', 'check', 'screenshot', 'finish']);
+    expect(homeWriterTools({ footer: true }).map(t => t.name)).not.toContain('write_brief');
+    expect(homeWriterTools({ footer: true, studio: true }).map(t => t.name)).toContain('write_brief');
     expect(homeWriterTools({ footer: true }).map(t => t.name)).not.toContain('write_part');
     expect(homeWriterTools({ footer: true, chassis: true }).map(t => t.name)).toContain('write_part');
   });
@@ -246,6 +248,9 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
   });
   it('studio: check asks for the design system first and refuses colours written by hand', async () => {
     const b = studioBox();
+    await b.run('write_brief', JSON.stringify({ idea: 'Una tienda de sodas alegres que burbujean como una fiesta de barrio.', palette: 'fondo crema #fbf8f2, texto #1d2a22, botones naranja #e0602b, banda #efe7da.',
+      type: 'Fraunces para títulos, Figtree para el texto; sin mayúsculas.', device: 'Pegatinas inclinadas sobre las fotos.', moment: 'Una tira de sabores que se mueve sola.',
+      structure: 'encabezado con el logo al centro → portada con la lata → sabores → reseñas → pie de color', images: 'portada = la lata naranja; sabores = las cinco latas; reseñas = la foto de la fiesta.' }));
     const home = b.workspace.read(HOME_PATH).replace('<Shell>', '<Shell><section style={{ background: \'#ff3300\' }}>Hola</section>');
     b.workspace.write(HOME_PATH, home);
     const first = (await b.run('check', '{}')).output;
@@ -289,6 +294,20 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
     expect((await b.run('write_part', JSON.stringify({ part: 'card', content: card }))).output).toMatch(/a la tarjeta de producto le falta: el botón de agregar \(data-product-add\)/);
     expect(b.workspace.read('components/Shell.tsx')).toContain('<StoreCard />');
     expect((await b.run('check', '{}')).output).toMatch(/^Debes corregir:[\s\S]*A la tarjeta de producto le falta: el botón de agregar[\s\S]*Falta escribir cart/);
+  });
+  it('studio: the design brief comes first — check blocks until it is complete, and it is handed to the store\'s direction (Amboras 2026-11-12)', async () => {
+    let kept: unknown = null;
+    const b = new HomeWriterToolbox({ workspace: new AgentWorkspace(sorbo.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base: sorbo, gate: async () => null, template, studio: true, onBrief: brief => { kept = brief; } });
+    expect((await b.run('read_chassis', '{}')).output).toContain('BRIEF DE DISEÑO (write_brief');
+    expect((await b.run('check', '{}')).output).toMatch(/^Debes corregir:\n- Falta el brief de diseño/);
+    expect((await b.run('write_brief', JSON.stringify({ idea: 'bonita', palette: '#000000', type: 'x', device: 'y', moment: 'z', structure: 'portada', images: 'fotos' }))).output)
+      .toMatch(/^Brief guardado, pero le falta: idea.*paleta.*estructura.*imágenes/);
+    const brief = { idea: 'Un atelier de alta costura a la luz de las velas; marfil y calas que salen del negro.', palette: 'fondo tinta #0c0b0a, texto y botones marfil #f2ede3, banda papel #efe9df, texto suave piedra #a39d93; sin acentos de color.',
+      type: 'Bodoni Moda para títulos en peso normal; Jost Light para el texto; sin cursivas ni mayúsculas.', device: 'Líneas finas marfil que enmarcan las secciones.', moment: 'El vestido de la portada en Parallax, más lento que la página.',
+      structure: 'encabezado con el nombre al centro → portada negra con el vestido → historia en banda marfil → colecciones → cita para prueba → pie negro', images: 'portada = vestido con cala; historia = falda con calas; colecciones = los tres retratos de estudio.' };
+    expect((await b.run('write_brief', JSON.stringify(brief))).output).toMatch(/^Brief guardado\. Ahora set_tokens/);
+    expect(kept).toEqual(brief);
+    expect((await b.run('check', '{}')).output).not.toMatch(/brief/i);
   });
   it('studio: the store writes its own footer (owner 2026-11-12 «the footer is the same always»)', async () => {
     const b = new HomeWriterToolbox({ workspace: new AgentWorkspace(sorbo.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base: sorbo, gate: async () => null, template, studio: true, footer: true });

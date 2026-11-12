@@ -2,7 +2,40 @@
  * animated look for most bold brands. The writer keeps its freedom; it only starts from a different brief. */
 
 export type HomeDirectionId = 'editorial' | 'producto' | 'lookbook' | 'bandas' | 'manifiesto' | 'historia';
-export type HomeDirectionChoice = { direction: HomeDirectionId; animated: boolean; footer?: HomeFooterId; playful?: boolean; plan?: DesignPlan };
+export type HomeDirectionChoice = { direction: HomeDirectionId; animated: boolean; footer?: HomeFooterId; playful?: boolean; plan?: DesignPlan; brief?: DesignBrief };
+
+/** The design brief a studio writer commits before any code (Amboras's .amboras/design-brief.md, read 2026-11-12): one idea, a
+ *  palette with jobs, type with rules, one graphic device, one signature moment, the structure and which photo goes where. */
+export const DESIGN_BRIEF_FIELDS = ['idea', 'palette', 'type', 'device', 'moment', 'structure', 'images'] as const;
+export type DesignBrief = Record<(typeof DESIGN_BRIEF_FIELDS)[number], string>;
+export const DESIGN_BRIEF_LABELS: DesignBrief = { idea: 'Idea', palette: 'Paleta', type: 'Tipografía', device: 'Recurso gráfico', moment: 'Momento firma', structure: 'Estructura', images: 'Imágenes' };
+/** What a brief still needs before the code starts; empty when it is complete. */
+export function briefProblems(brief: Partial<DesignBrief>): string[] {
+  const text = (key: keyof DesignBrief) => String(brief[key] ?? '').trim();
+  const missing: string[] = [];
+  if (text('idea').length < 20 || text('idea').length > 260) missing.push('idea: una sola frase (20 a 260 letras) que diga qué evoca la tienda');
+  if ((text('palette').match(/#[0-9a-f]{6}\b/gi) ?? []).length < 3) missing.push('paleta: al menos 3 colores con su hex y su trabajo (fondo, texto, botones…)');
+  for (const key of ['type', 'device', 'moment'] as const) if (text(key).length < 12) missing.push(`${DESIGN_BRIEF_LABELS[key].toLowerCase()}: dilo en una frase concreta`);
+  if (!/(encabezado|header)/i.test(text('structure')) || !/(pie|footer)/i.test(text('structure')) || text('structure').split(/→|->|,|;/).length < 4)
+    missing.push('estructura: encabezado → cada sección en orden → pie, cada una con su forma');
+  if (text('images').length < 20) missing.push('imágenes: qué foto va en qué sección');
+  return missing;
+}
+const briefOf = (value: unknown): DesignBrief | undefined => {
+  const brief = value as Record<string, unknown> | null;
+  return brief && typeof brief === 'object' && DESIGN_BRIEF_FIELDS.every(key => typeof brief[key] === 'string')
+    ? Object.fromEntries(DESIGN_BRIEF_FIELDS.map(key => [key, String(brief[key]).slice(0, 2000)])) as DesignBrief : undefined;
+};
+/** How the writer writes its brief (studio), after Amboras's NOA brief. */
+export const BRIEF_GUIDE = `BRIEF DE DISEÑO (write_brief, ANTES de set_tokens y de cualquier código; todo lo demás se construye desde él):
+- idea: una frase que diga qué evoca la tienda (ej. «un atelier de alta costura a la luz de las velas; vestidos marfil y calas que salen del negro, todo lo demás contenido»).
+- palette: 4 a 6 colores con hex y su trabajo (fondo, texto y botones, banda, texto suave, líneas) y qué NO se usa (ej. «sin acentos de color; el verde solo vive en las fotos»).
+- type: las dos fuentes del catálogo y sus reglas (peso, tracking, mayúsculas sí o no, cursiva sí o no).
+- device: UN recurso gráfico que se repite (líneas finas que enmarcan, fotos que se funden con el fondo, etiquetas numeradas…).
+- moment: UN momento firma al bajar (un parallax en la portada, un titular que crece, una tira que se mueve…), con la parte del kit que lo hace.
+- structure: encabezado (según el PLAN DE DISEÑO) → cada sección en orden con su forma → pie.
+- images: qué foto de la tienda va en cada sección (por su archivo o su clave), y por qué.
+Elige desde las fotos y las palabras del comercio; nunca un brief genérico.`;
 
 /** Store chassis (spec 2026-11-12): the design plan a chassis store's writer follows for the parts every store used to share —
  *  picked per store, each choice never one of the last three stores', like Amboras's committed design plan. */
@@ -158,8 +191,9 @@ export function parseHomeDirection(content: string | undefined): HomeDirectionCh
     if (!value || typeof value !== 'object' || Array.isArray(value) || !IDS.includes(value.direction) || typeof value.animated !== 'boolean') return null;
     // Footer and playful came later (2026-10-30): an older file without them is still read.
     const plan = planOf(value.plan);
+    const brief = briefOf(value.brief);
     return { direction: value.direction, animated: value.animated, ...(FOOTER_IDS.includes(value.footer) ? { footer: value.footer } : {}), ...(value.playful === true ? { playful: true } : {}),
-      ...(plan ? { plan } : {}) };
+      ...(plan ? { plan } : {}), ...(brief ? { brief } : {}) };
   } catch { return null; }
 }
 

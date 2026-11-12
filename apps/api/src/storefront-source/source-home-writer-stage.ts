@@ -15,7 +15,7 @@ import { nextSourceFile } from './source-next';
 import { sourcePromptCacheKey, sourceUsage } from './source-generation-policy';
 import type { AgentStageContext } from './source-agent-stage';
 import { readConfigFile } from './store-look';
-import { HOME_DIRECTIONS, HOME_FOOTERS, HOME_MOTION_BRIEF, HOME_PLAYFUL_BRIEF, isPlayfulBusiness, parseHomeDirection, pickDesignPlan, pickHomeDirection, pickHomeFooter, type DesignPlan, type HomeDirectionChoice, type HomeDirectionId, type HomeFooterId } from './home-directions';
+import { HOME_DIRECTIONS, HOME_FOOTERS, HOME_MOTION_BRIEF, HOME_PLAYFUL_BRIEF, isPlayfulBusiness, parseHomeDirection, pickDesignPlan, pickHomeDirection, pickHomeFooter, type DesignBrief, type DesignPlan, type HomeDirectionChoice, type HomeDirectionId, type HomeFooterId } from './home-directions';
 import { recentLooks } from './source-recent-looks';
 import { readMasterState } from './source-templates';
 import { MASTER_THEME_END, MASTER_THEME_START } from './source-master';
@@ -32,7 +32,7 @@ export function homeWriterInstructions(opts: { template?: string; studio?: boole
   // Store chassis (spec 2026-11-12, after Amboras): the store designs its own header, card, cart and product page from its plan.
   if (opts.template && opts.studio && opts.chassis) return `Eres el diseñador de una tienda pagosYa que parte de la plantilla ${opts.template}. Diseñas sus piezas propias: ${HOME_PATH} (write_home), ${FOOTER_PATH} (write_footer), el encabezado, la tarjeta de producto, el carrito y la ficha de producto (write_part), y su sistema de diseño (set_tokens: colores y fuentes).
 El checkout y la cuenta son de la plataforma. Toda página va dentro de <Shell>.
-Orden: read_chassis (trae el plan de diseño y el cableado de cada pieza); set_tokens; write_home; write_part header; write_footer; write_part card; write_part cart; write_part product; check (devuelve lo que debes corregir, los avisos de diseño y las capturas de la portada y de la ficha); corrige; check; finish.
+Orden: read_chassis (trae el plan de diseño y el cableado de cada pieza); write_brief (el brief de diseño, desde las fotos y las palabras del comercio); set_tokens con su paleta y sus fuentes; write_home; write_part header; write_footer; write_part card; write_part cart; write_part product; check (devuelve lo que debes corregir, los avisos de diseño y las capturas de la portada y de la ficha); corrige; check; finish.
 Los textos de un bloque de <LibraryHome> van en sus campos; el resto como texto JSX literal.
 ${STUDIO_RULES}
 ${HOME_WRITER_RULES}`;
@@ -40,7 +40,7 @@ ${HOME_WRITER_RULES}`;
   // Owner 2026-11-12 («the footer is the same always»): the studio writes the store's own footer too.
   if (opts.template && opts.studio) return `Eres el diseñador de la PORTADA y el PIE de una tienda pagosYa que usa la plantilla ${opts.template}. Solo cambias ${HOME_PATH} (completo, con write_home), ${FOOTER_PATH} (completo, con write_footer) y su sistema de diseño (set_tokens: colores y fuentes).
 El encabezado, el menú, la ficha de producto, el carrito y el checkout son de la plantilla: no los dibujes ni los imites. Toda la portada va dentro de <Shell>.
-Orden: read_chassis; set_tokens; escribe la portada entera en una sola llamada; write_footer con el pie; check (devuelve lo que debes corregir y las capturas de escritorio y celular); corrige; check; finish.
+Orden: read_chassis; write_brief (el brief de diseño, desde las fotos y las palabras del comercio); set_tokens con su paleta y sus fuentes; escribe la portada entera en una sola llamada; write_footer con el pie; check (devuelve lo que debes corregir y las capturas de escritorio y celular); corrige; check; finish.
 Los textos de un bloque de <LibraryHome> van en sus campos; el resto como texto JSX literal.
 ${STUDIO_RULES}
 ${HOME_WRITER_RULES}`;
@@ -66,7 +66,7 @@ export function writerTemplate(files: readonly SourceProjectFileDto[]): WriterTe
 
 type LoopInput = { model: AgentModel; files: SourceProjectFileDto[]; base: AgentPreviewBase; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; task: string;
   images?: unknown[]; signal?: AbortSignal; limits?: Partial<typeof AGENT_LIMITS>; onStep?: (step: AgentStep) => void | Promise<void>; animated?: boolean;
-  footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[]; template?: WriterTemplate; reviewer?: HomeReviewer; /** Spike 2026-11-12 (YAPI_STUDIO). */ studio?: boolean; /** Store chassis (spec 2026-11-12). */ chassis?: boolean; plan?: DesignPlan };
+  footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[]; template?: WriterTemplate; reviewer?: HomeReviewer; /** Spike 2026-11-12 (YAPI_STUDIO). */ studio?: boolean; /** Store chassis (spec 2026-11-12). */ chassis?: boolean; plan?: DesignPlan; /** Amboras's design brief, kept with the direction. */ onBrief?: (brief: DesignBrief) => void };
 
 /** Spec 2026-10-30 home writer variety: the writer's task — the merchant's words, the store's page direction, what the last
  *  stores already used, and the motion brief only for an animated store. */
@@ -140,8 +140,8 @@ export async function runHomeWriterLoop(input: LoopInput) {
   const workspace = new AgentWorkspace(input.files, { redesign: true, lockedShell: true });
   const toolbox = new HomeWriterToolbox({ workspace, base: input.base, gate: input.gate, ...(input.signal ? { signal: input.signal } : {}), ...(input.animated ? { animated: true } : {}),
     ...(input.footer ? { footer: true } : {}), ...(input.playful ? { playful: true } : {}), ...(input.calm ? { calm: true } : {}), ...(input.brandColours?.length ? { brandColours: input.brandColours } : {}),
-    ...(input.template ? { template: input.template } : {}), ...(input.reviewer ? { reviewer: input.reviewer } : {}), ...(input.studio ? { studio: true } : {}), ...(input.chassis ? { chassis: true, ...(input.plan ? { plan: input.plan } : {}) } : {}) });
-  const outcome = await runAgent({ model: input.model, toolbox, tools: homeWriterTools({ footer: Boolean(input.footer) && (!input.template || Boolean(input.studio)), chassis: Boolean(input.chassis) }), verifyTool: 'check',
+    ...(input.template ? { template: input.template } : {}), ...(input.reviewer ? { reviewer: input.reviewer } : {}), ...(input.studio ? { studio: true } : {}), ...(input.chassis ? { chassis: true, ...(input.plan ? { plan: input.plan } : {}) } : {}), ...(input.onBrief ? { onBrief: input.onBrief } : {}) });
+  const outcome = await runAgent({ model: input.model, toolbox, tools: homeWriterTools({ footer: Boolean(input.footer) && (!input.template || Boolean(input.studio)), chassis: Boolean(input.chassis), studio: Boolean(input.studio) }), verifyTool: 'check',
     instructions: homeWriterInstructions(input.template ? { template: input.template.name, ...(input.studio ? { studio: true } : {}), ...(input.chassis ? { chassis: true } : {}) } : {}), signal: input.signal, onStep: input.onStep,
     limits: { ...HOME_WRITER_LIMITS, ...input.limits }, opening: agentOpening(input.task, [], input.images ?? []) });
   // A run that changed nothing is not a new design (review 2026-10-29): the store keeps its template home and says nothing.
@@ -212,6 +212,8 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
     avoid: { fonts: template ? [] : [...new Set(looks.map(look => look.heading).filter((font): font is string => Boolean(font)))], papers: [...new Set(looks.map(look => look.paper).filter((paper): paper is string => Boolean(paper)))] } });
   const out = await runHomeWriterLoop({ model, files: oldFiles.filter(file => nextSourceFile(file.path)), base, gate, task, signal, animated: choice.animated,
     footer: Boolean(choice.footer) && ownFooter, ...(template ? { template } : {}), ...(studio ? { studio: true } : {}), ...(chassis ? { chassis: true, ...(choice.plan ? { plan: choice.plan } : {}) } : {}), reviewer, playful, calm, brandColours,
+    // Amboras's design brief: saved with the store's direction (home-direction.json) the moment it is written.
+    ...(studio ? { onBrief: (brief: DesignBrief) => { choice.brief = brief; } } : {}),
     // Store chassis: four more files to write and check.
     limits: { ...homeWriterLimits(chatgptPlan, started + runTimeout), ...(chassis ? { toolCalls: 60 } : {}) },
     images: images.map(image => ({ ...(image as object), detail: 'low' })),
