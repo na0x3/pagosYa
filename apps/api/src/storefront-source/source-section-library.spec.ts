@@ -506,6 +506,12 @@ describe('one brand idea in a template home', () => {
     expect(LIBRARY_FILL_PROMPT).toMatch(/franja/);
     expect(LIBRARY_FILL_PROMPT).toMatch(/cierre/);
   });
+  // Owner 2026-11-11: Pawby put «momento» in 8 of 10 titles; the idea stays in the cover, at most two titles and the closing line.
+  it('keeps the idea light: at most two other titles, the rest say plainly what their section shows', () => {
+    expect(LIBRARY_FILL_PROMPT).toMatch(/como máximo dos títulos/);
+    expect(LIBRARY_FILL_PROMPT).toMatch(/los demás títulos dicen claro lo que muestra su sección/);
+    expect(LIBRARY_FILL_PROMPT).not.toMatch(/dos o tres títulos/);
+  });
 });
 
 describe('composed mode (spec 2026-11-11 store composer)', () => {

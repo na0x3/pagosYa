@@ -192,8 +192,10 @@ desaparece. Si te faltan fotos, deja photo en -1: el código pone una foto de la
 UNA idea de marca (owner 2026-11-11): antes de escribir, elige una sola idea para esta tienda, una palabra o un juego de palabras con
 su nombre o con lo que vende (Remolino → girar, giro, vueltas; Pawby → hogar, plato, un momento Pawby), y llévala por toda la portada:
 el titular de la portada es una frase con esa idea, nunca una descripción («Que todo gire a tu ritmo», no «Licuadoras para batidos»);
-dos o tres títulos de sección la retoman sin repetirse; las palabras de la franja que se mueve son palabras de la marca (no «Envío a
-domicilio»); y la sección de cierre termina con una frase grande de esa idea. La idea es voz, no datos: nada inventado.
+como máximo dos títulos de sección más la retoman, con palabras distintas; los demás títulos dicen claro lo que muestra su sección
+(«Nuestros sabores», «Cómo funciona»), sin la palabra de la idea; las palabras de la franja que se mueve son palabras de la marca (no
+«Envío a domicilio»); y la sección de cierre termina con una frase grande de esa idea. Una idea ligera, no un estribillo. La idea es voz,
+no datos: nada inventado.
 - mood: «colourful» para productos alegres, de casa o de regalo que piden juego (un sofá nube, una bebida, juguetes, dulces); «calm» para productos serios o técnicos (herramientas, cuidado de la piel, salud, finanzas). Fuera de la plantilla Único no cambia nada.
 - titleStyle: el estilo de los títulos según el producto: «burbuja» (juguetes, mascotas, dulces, snacks, fiestas, niños), «redonda» (casa, muebles, cocina, ropa de cama), «firme» (tecnología, belleza, herramientas), «poster» (deportes, bebidas, ropa urbana). Fuera de la plantilla Único no cambia nada.
 - Etiquetas (product-hero items), frases (chips-marquee) y notas (detail-hotspots): solo hechos que están en los datos (lo que dijo el comercio, la descripción del producto, sus notas de entrega). Ningún plazo, número, premio o calificación que no esté escrito. Si no hay hechos, déjalos vacíos.`;
