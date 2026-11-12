@@ -93,9 +93,11 @@ Usa el logo ({store.logo}) o el nombre; colores con var(--es-…). Nunca negro s
 export function shellWithStoreFooter(shell: string): string | null {
   if (/import StoreFooter from '\.\/footer'/.test(shell)) return shell;
   if ((shell.match(/<Footer\s*\/>/g) ?? []).length !== 1) return null;
+  // Above the first import: after the last one it could land inside an import that spans lines (the kit Shell's icon list, studio
+  // 2026-11-12 — every footer failed to compile and Oh Belly's writer ran out of calls on 19 write_footer).
   const lines = shell.split('\n');
-  const lastImport = lines.reduce((at, line, index) => /^import\s/.test(line) ? index : at, -1);
-  lines.splice(lastImport + 1, 0, "import StoreFooter from './footer';");
+  const firstImport = Math.max(0, lines.findIndex(line => /^import\s/.test(line)));
+  lines.splice(firstImport, 0, "import StoreFooter from './footer';");
   return lines.join('\n').replace(/<Footer\s*\/>/, '<StoreFooter />');
 }
 

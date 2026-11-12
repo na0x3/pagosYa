@@ -134,9 +134,10 @@ const extra = (ctx: object) => {
 
 describe('the footer YAPI writes', () => {
   it('swaps the template footer in the Shell once, and leaves a Shell it cannot read alone', () => {
-    const shell = "import { a } from 'b';\nimport { store } from './store-data';\nexport default function Shell() { return <div><Header />{children}<Footer /></div>; }";
+    // The last import spans two lines (the kit Shell's icon list): the new import goes above the first one (studio 2026-11-12).
+    const shell = "import { a } from 'b';\nimport { IconA,\n  IconB } from './icons';\nexport default function Shell() { return <div><Header />{children}<Footer /></div>; }";
     const swapped = shellWithStoreFooter(shell)!;
-    expect(swapped).toContain("import { store } from './store-data';\nimport StoreFooter from './footer';");
+    expect(swapped).toContain("import StoreFooter from './footer';\nimport { a } from 'b';\nimport { IconA,\n  IconB } from './icons';");
     expect(swapped).toContain('<StoreFooter />');
     expect(shellWithStoreFooter(swapped)).toBe(swapped);
     expect(shellWithStoreFooter('export default function Shell() { return <div />; }')).toBeNull();
