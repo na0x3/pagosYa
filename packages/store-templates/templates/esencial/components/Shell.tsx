@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode, type CSSProperties } from 'react';
 import { CartTemplate, CartLineTemplate, AddedTemplate, ReviewTemplate, KitSlot } from '@pagosya/ui';
 import { store, copy, variants, photos, layout } from './store-data';
+import * as storeData from './store-data';
 import { CardRibbons, CardTemplate, ThemeMotion, libraryCard, type LibraryBlock } from './library';
 
 /** The rolled variant of a part (variety spec §2); the first catalogue id when the store has none. */
@@ -70,7 +71,9 @@ function useMenu(): NavLink[] {
   // Premium landing (spec 2026-11-03): the shop header names the home's own parts.
   if (shopPage()) return [{ label: 'Producto', href: 'index.html#comprar' },
     ...((layout as LibraryBlock[]).some(block => block.type === 'variant-cards') ? [{ label: 'Colores', href: 'index.html#colores' }] : []), ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
-  return [{ label: frame().shop, href: 'productos.html' }, ...categories, ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
+  // Owner 2026-11-12 («the entire stores are only product pages»): «Nosotros» once YAPI gave it sections.
+  const about = ((storeData as { pageLayouts?: Record<string, unknown[]> }).pageLayouts?.about ?? []).length > 0;
+  return [{ label: frame().shop, href: 'productos.html' }, ...categories, ...(about ? [{ label: 'Nosotros', href: 'nosotros.html' }] : []), ...(faq ? [{ label: 'Preguntas', href: 'index.html#preguntas' }] : [])];
 }
 
 /** Lively one-product stores (spec 2026-11-03): in the colourful mood a store with no logo image shows its name letter by letter,

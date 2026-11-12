@@ -156,3 +156,11 @@ export function withExtraPageLinks(menu: StoreMenu | undefined, pages: ReadonlyA
   }
   return { menu: { style: menu?.style ?? 'dropdowns', groups }, refused };
 }
+
+/** Owner 2026-11-12 («the entire stores are only product pages»): a studio store's «Nosotros», once it has sections, is a plain link
+ *  in the store menu's bar — unless the menu already links it or has no room. A store without a menu shows it in the kit's own. */
+export function withAboutLink(menu: StoreMenu | undefined): StoreMenu | undefined {
+  const groups = menu?.groups ?? [];
+  if (!menu || !groups.length || groups.length >= STORE_MENU_LIMITS.groups || groups.some(group => group.links.some(link => link.to === 'page:about'))) return menu;
+  return { ...menu, groups: [...groups, { label: 'Nosotros', links: [{ label: 'Nosotros', to: 'page:about' }], direct: true }] };
+}

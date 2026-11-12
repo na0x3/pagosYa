@@ -37,7 +37,7 @@ export type MasterFacts = { storeName: string; products: string[]; photos: strin
 export type PlantillaFacts = { storeName: string; tagline: string; products: string[]; photos: string[]; slots: NonNullable<registry.TemplateManifest['copy']> };
 const HEX = /^#[0-9a-f]{6}$/i;
 import { sourcePublicApiUrl, sourceStoreConfigData, withLiveCatalog } from './source-store-config';
-import { storeMenuContext, storeMenuTargetList } from './source-store-menu';
+import { readStoreMenu, storeMenuContext, storeMenuTargetList, withAboutLink, withStoreMenuConfig } from './source-store-menu';
 
 /** Plantillas: apply a designer-made store as the next revision (free, no AI call). */
 /** YAPI plan card (spec 2026-10-22): what a checked plan pins on a master store. */
@@ -288,8 +288,12 @@ export class SourceTemplatesService {
     const previous = await this.projects.version(merchantId, storeId, revision);
     const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
     const bundled = await this.bundleMasterPhotos(merchantId, change);
-    const files = withStudioPages(snapshot.files, { ...(bundled.change.productLayout ? { productLayout: bundled.change.productLayout } : {}),
+    const paged = withStudioPages(snapshot.files, { ...(bundled.change.productLayout ? { productLayout: bundled.change.productLayout } : {}),
       ...(bundled.change.pageLayouts ? { pageLayouts: bundled.change.pageLayouts } : {}) });
+    // «Nosotros» with sections joins the store menu's bar (the kit's own menu reads store-data for it).
+    const menu = readStoreMenu(paged);
+    const linked = bundled.change.pageLayouts?.about?.length ? withAboutLink(menu) : menu;
+    const files = linked && linked !== menu ? withStoreMenuConfig(paged, paged, linked) : paged;
     return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: [...files, ...bundled.files.filter(asset => !files.some(file => file.path === asset.path))] });
   }
 
