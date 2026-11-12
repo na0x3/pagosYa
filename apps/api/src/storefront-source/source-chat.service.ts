@@ -979,7 +979,15 @@ export class SourceChatService {
     await workflow.report('saving');
     // Lively one-product stores + chunky colour titles (spec 2026-11-03): YAPI's mood and title style for the product are saved with the home on Único.
     const libraryLook = libraryVariants(theme, answer as never, facts);
-    const saved = await this.templates.refill(merchantId, storeId, revision, { layout, ...(productTemplate ? { productLayout } : {}), ...(libraryLook ? { variants: libraryLook } : {}) }, composedHome ? 'Portada compuesta por YAPI' : 'Portada de YAPI');
+    const homeSaved = await this.templates.refill(merchantId, storeId, revision, { layout, ...(productTemplate ? { productLayout } : {}), ...(libraryLook ? { variants: libraryLook } : {}) }, composedHome ? 'Portada compuesta por YAPI' : 'Portada de YAPI');
+    // Owner 2026-11-12 («cant we just reuse sections»): a new template store's «Nosotros» from the template's sections too, as part of
+    // the first design; a failed call leaves the plain page.
+    const paged = template && input.firstDesign === true && templateRevision === revision
+      ? await this.ownPages(merchantId, storeId, homeSaved.revision, input.checklistWords ?? input.earlierAsks ?? '', { product: false }).catch(error => {
+        this.productLogger.warn(JSON.stringify({ event: 'about_page_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
+        return null;
+      }) : null;
+    const saved = paged ?? homeSaved;
     await workflow.finish('completed');
     // Live 2026-11-10 (Oh Belly / Pawby r8: ChatGPT timed out, then could not renew its session): the bare home was saved as if it
     // were the design. Now the chat says so and keeps the request; «sigue» composes the template's sections again.
@@ -1006,22 +1014,22 @@ export class SourceChatService {
     return productLayout;
   }
 
-  /** Owner 2026-11-12 («the entire stores are only product pages… cant we just reuse sections»): after a studio home, the product
-   *  page's template sections are written for the store (never the template's demo words) and «Nosotros» gets up to five library
-   *  sections the template fits (aboutPageTypes). Null when there was nothing to write. */
-  private async studioPages(merchantId: string, storeId: string, revision: number, words: string) {
+  /** Owner 2026-11-12 («the entire stores are only product pages… cant we just reuse sections»): after a new template store's home,
+   *  «Nosotros» gets up to five library sections the template fits (aboutPageTypes); with `product` (a studio home) the product
+   *  page's template sections are written for the store too (never the template's demo words). Null when there was nothing to write. */
+  private async ownPages(merchantId: string, storeId: string, revision: number, words: string, opts: { product: boolean }) {
     const files = ((await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot).files;
     const template = writerTemplate(files as SourceProjectFileDto[]);
     if (!template) return null;
     const state = readMasterState(files);
     const facts = await this.libraryFacts(merchantId, storeId, files, words, 24);
     const productTemplate = (state.productLayout ?? []) as LayoutBlock[];
-    const productLayout = productTemplate.length ? await this.productPageSections(merchantId, storeId, facts, productTemplate) : undefined;
+    const productLayout = opts.product && productTemplate.length ? await this.productPageSections(merchantId, storeId, facts, productTemplate) : undefined;
     const pages = (state.pageLayouts ?? {}) as Record<string, unknown[]>;
     const fit = readSectionFit();
     const home = files.find(file => file.path === 'components/home.tsx')?.content ?? '';
     const types = (pages.about ?? []).length || !facts.photos.length || !sectionablePage(files, 'about') ? []
-      : aboutPageTypes({ fit: fit.fit[template.id] ?? [], vetoed: fit.vetoed?.[template.id] ?? [], home: [...home.matchAll(/type:\s*['"]([\w-]+)['"]/g)].map(match => match[1]),
+      : aboutPageTypes({ fit: fit.fit[template.id] ?? [], vetoed: fit.vetoed?.[template.id] ?? [], home: [...((state.layout ?? []) as LayoutBlock[]).map(block => block.type), ...[...home.matchAll(/type:\s*['"]([\w-]+)['"]/g)].map(match => match[1])],
         blocked: type => Boolean(librarySectionBlocker(type, facts)) });
     let about: LayoutBlock[] = [];
     if (types.length) {
@@ -2140,7 +2148,7 @@ export class SourceChatService {
         // Owner 2026-11-12 («the entire stores are only product pages»): a studio store's product page and «Nosotros» follow its home.
         // The home is saved already, so a failed step only leaves those pages as they were.
         const pages = this.config.get<boolean>('app.yapiStudio') === true
-          ? await this.studioPages(merchantId, storeId, written.revision.revision, input.checklistWords ?? input.earlierAsks ?? '').catch(error => {
+          ? await this.ownPages(merchantId, storeId, written.revision.revision, input.checklistWords ?? input.earlierAsks ?? '', { product: true }).catch(error => {
             this.productLogger.warn(JSON.stringify({ event: 'studio_pages_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
             return null;
           }) : null;
