@@ -249,6 +249,12 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
     expect(first).toMatch(/Empieza por el sistema de diseño/);
     expect(first).toMatch(/colores escritos a mano: #ff3300/);
   });
+  it('studio: check refuses a kit variable that does not exist', async () => {
+    const b = studioBox();
+    await b.run('set_tokens', JSON.stringify({ paper: '#fbf8f2', ink: '#1d2a22', muted: '#efe7da', accent: '#2f6b4a', deep: '#1f3a2b', heading: 'fraunces', body: 'figtree' }));
+    b.workspace.write(HOME_PATH, b.workspace.read(HOME_PATH).replace('<Shell>', '<Shell><h2 style={{ fontFamily: \'var(--es-font-heading)\' }}>Hola mundo bonito</h2>'));
+    expect((await b.run('check', '{}')).output).toMatch(/no existen en el sistema de diseño: --es-font-heading/);
+  });
   it('write_footer is refused', async () => {
     expect((await sorboBox().run('write_footer', JSON.stringify({ content: 'export default function StoreFooter() { return <footer />; }' }))).output).toBe('Esta tienda usa el pie de su plantilla; no escribas uno.');
   });

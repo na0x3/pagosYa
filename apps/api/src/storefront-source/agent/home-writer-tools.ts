@@ -9,7 +9,7 @@ import { evaluateCalmTitles, evaluateHomeWriterRules, evaluatePlayfulCover, home
 import { AMBIENT_PARTS, HOME_MOTION_BRIEF, ambientPartsUsed, motionPartsUsed } from '../home-directions';
 import { SHELL_PATH } from './agent-workspace';
 import type { HomeReviewer } from './home-writer-review';
-import { evaluateSharpPhotos, rawColours } from '../source-studio-spike';
+import { evaluateSharpPhotos, evaluateTitleScale, rawColours, unknownKitVars } from '../source-studio-spike';
 
 /* Spec 2026-10-29 home page writer: Amboras's recipe on the locked Esencial chassis — one home file and the tokens. */
 export const HOME_PATH = 'components/home.tsx';
@@ -207,7 +207,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
         case 'check': {
           const snapshot = await agentPreviewSnapshot(this.ctx.base, this.workspace.files());
           const captures: Array<{ width: number; errors: string[]; image: string; thumbnail?: string }> = [];
-          for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules, ...(this.ctx.calm ? [evaluateCalmTitles] : []), ...(this.ctx.playful ? [evaluatePlayfulCover] : []), ...(this.ctx.studio ? [evaluateSharpPhotos] : [])]));
+          for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules, ...(this.ctx.calm ? [evaluateCalmTitles] : []), ...(this.ctx.playful ? [evaluatePlayfulCover] : []), ...(this.ctx.studio ? [evaluateSharpPhotos, evaluateTitleScale] : [])]));
           this.lastImages = captures.map(capture => capture.image);
           const verdict = homeWriterVerdict(captures);
           // Review 2026-10-30: the merchant's progress shows the check's capture, now that screenshot calls are rare.
@@ -238,6 +238,8 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           if (this.ctx.studio) {
             if (!this.tokensSet) verdict.blocking.push('Empieza por el sistema de diseño: set_tokens con los colores y las fuentes de la marca.');
             const raw = rawColours(this.workspace.read(HOME_PATH));
+            const unknown = unknownKitVars(this.workspace.read(HOME_PATH), this.workspace.read(GLOBALS));
+            if (unknown.length) verdict.blocking.push(`Estas variables no existen en el sistema de diseño: ${unknown.slice(0, 6).join(', ')}. Las del kit: --es-paper, --es-ink, --es-muted, --es-accent, --es-deep, --es-heading (fuente de títulos), --es-body (fuente de texto).`);
             if (raw.length) verdict.blocking.push(`La portada tiene colores escritos a mano: ${raw.slice(0, 6).join(', ')}. Usa solo var(--es-paper/ink/muted/accent/deep) o color-mix de ellos.`);
           }
           this.lastVerify = { version: this.workspace.version, clean: !verdict.blocking.length, hard: verdict.blocking.length > 0 };

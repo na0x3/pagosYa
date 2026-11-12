@@ -5,12 +5,13 @@
 export const STUDIO_RULES = `MODO ESTUDIO (como Lovable). Esta tienda tiene que verse como SU marca, no como la plantilla:
 1. Antes de escribir, piensa qué evoca la marca (en una frase) y en qué tiendas hermosas reales te inspiras (dos o tres), y dilo en tu primer mensaje.
 2. Primero el sistema de diseño: set_tokens con los 5 colores de la marca y DOS fuentes del catálogo que vayan con ella (puedes cambiar las de la plantilla). Después escribes la portada.
-3. La portada se pinta solo con el sistema de diseño: var(--es-paper), var(--es-ink), var(--es-muted), var(--es-accent), var(--es-deep) y color-mix de ellos. Nunca un color escrito a mano (#…, rgb(…), hsl(…)); blanco y negro solo para texto sobre foto.
-4. Cada foto se muestra a lo sumo a su tamaño real: nunca más ancha que su tamaño real. Las fotos del comercio suelen ser pequeñas (unos 700 px): ponlas en marcos, tarjetas, collages o junto al titular; a todo el ancho solo una foto grande (las fotos de marca generadas para esta tienda lo son).
-5. Una portada con personalidad: una fuente de titular con carácter usada muy grande, una sola idea de marca, detalles propios (etiquetas, marcos, bandas del color de la marca, movimiento del kit). Nada genérico.
-6. En escritorio el titular de la portada nunca va encima de la foto: al lado, debajo o sobre un fondo de color de la marca. En celular puede ir sobre la foto solo si se lee bien (texto claro sobre una zona oscura).
-7. Los textos dicen cosas reales de esta tienda: nunca nombres de relleno («Sabor uno», «Producto 1», «Colección A»); los productos con su nombre de store-data. Y nada se sale de la pantalla: etiquetas y stickers dentro del borde, también en celular.
-8. El encabezado, el menú, las tarjetas de producto, la ficha, el carrito y el checkout son de la plantilla; la portada usa sus secciones probadas cuando sirven.`;
+3. Variables del kit: var(--es-heading) es la fuente de los títulos y var(--es-body) la del texto (no hay otras de fuente). Cada título de sección (h2) con la fuente var(--es-heading) y tamaño de titular: 40 px o más en escritorio.
+4. La portada se pinta solo con el sistema de diseño: var(--es-paper), var(--es-ink), var(--es-muted), var(--es-accent), var(--es-deep) y color-mix de ellos. Nunca un color escrito a mano (#…, rgb(…), hsl(…)); blanco y negro solo para texto sobre foto.
+5. Cada foto se muestra a lo sumo a su tamaño real: nunca más ancha que su tamaño real. Las fotos del comercio suelen ser pequeñas (unos 700 px): ponlas en marcos, tarjetas, collages o junto al titular; a todo el ancho solo una foto grande (las fotos de marca generadas para esta tienda lo son).
+6. Una portada con personalidad: una fuente de titular con carácter usada muy grande, una sola idea de marca, detalles propios (etiquetas, marcos, bandas del color de la marca, movimiento del kit). Nada genérico.
+7. En escritorio el titular de la portada nunca va encima de la foto: al lado, debajo o sobre un fondo de color de la marca. En celular puede ir sobre la foto solo si se lee bien (texto claro sobre una zona oscura).
+8. Los textos dicen cosas reales de esta tienda: nunca nombres de relleno («Sabor uno», «Producto 1», «Colección A»); los productos con su nombre de store-data. Y nada se sale de la pantalla: etiquetas y stickers dentro del borde, también en celular.
+9. El encabezado, el menú, las tarjetas de producto, la ficha, el carrito y el checkout son de la plantilla; la portada usa sus secciones probadas cuando sirven.`;
 
 /** Colours written by hand in the home: hex (other than white and black), rgb(), rgba(), hsl(), outside comments and links. */
 export function rawColours(code: string): string[] {
@@ -66,4 +67,24 @@ export function studioImageMaker(deps: { apiKey: string; model: string; fetch?: 
       return deps.save(Buffer.from(encoded, 'base64'));
     },
   };
+}
+
+/** Kit variables the home names that neither the stylesheet nor the home itself defines (live 2026-11-12: NOA and Oh Belly wrote
+ *  var(--es-font-heading) for --es-heading, so every title fell back to the text font). */
+export function unknownKitVars(code: string, css: string): string[] {
+  const defined = new Set([...`${css}\n${code}`.matchAll(/(--es-[\w-]+)\s*:/g)].map(match => match[1]));
+  return [...new Set([...code.matchAll(/var\(\s*(--es-[\w-]+)/g)].map(match => match[1]).filter(name => !defined.has(name)))];
+}
+
+/** Runs in the page (page.evaluate): no imports, no closures. A section title at text size on a computer (NOA studio2 2026-11-12). */
+export function evaluateTitleScale(): string[] {
+  if (window.innerWidth < 900) return [];
+  const out: string[] = [];
+  for (const el of Array.from(document.querySelectorAll('main h2'))) {
+    const r = el.getBoundingClientRect();
+    if (r.width < 20 || el.closest('[data-pagosya-catalog],.menu-item,[data-pagosya-spotlight]')) continue;
+    const size = parseFloat(getComputedStyle(el).fontSize);
+    if (size < 30) out.push(`BLOQUEA: El título de sección «${(el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40)}» mide ${Math.round(size)} px, como el texto: dale tamaño de titular (40 px o más) y la fuente var(--es-heading).`);
+  }
+  return out.slice(0, 4);
 }

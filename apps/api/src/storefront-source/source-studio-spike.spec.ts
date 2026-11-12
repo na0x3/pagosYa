@@ -1,4 +1,4 @@
-import { rawColours, studioImageMaker, studioImagePrompts, studioImages, STUDIO_RULES } from './source-studio-spike';
+import { rawColours, studioImageMaker, unknownKitVars, studioImagePrompts, studioImages, STUDIO_RULES } from './source-studio-spike';
 import { homeWriterInstructions } from './source-home-writer-stage';
 
 /** Spike 2026-11-12 (owner: «find how they operate and replicate it»): Lovable's way on our template stores. */
@@ -78,5 +78,17 @@ describe('studio spike: real names and nothing cut off (Oh Belly studio 2026-11-
   it('says so in the rules', () => {
     expect(STUDIO_RULES).toMatch(/nunca nombres de relleno/);
     expect(STUDIO_RULES).toMatch(/nada se sale de la pantalla/);
+  });
+});
+
+describe('studio spike: titles in the brand font at a title size (NOA studio2 2026-11-12: var(--es-font-heading), body-size h2)', () => {
+  it('finds kit variables the stylesheet never defines', () => {
+    const css = ':root{--es-paper:#fff;--es-ink:#111;--es-heading:\'Fraunces\';--es-body:\'Figtree\'}';
+    const code = '<h1 style={{ fontFamily: \'var(--es-font-heading)\', color: \'var(--es-ink)\' }}>Hola</h1><style>{`[data-x]{--es-gap:2rem;margin:var(--es-gap)}`}</style>';
+    expect(unknownKitVars(code, css)).toEqual(['--es-font-heading']);
+  });
+  it('names the real variables in the rules', () => {
+    expect(STUDIO_RULES).toMatch(/var\(--es-heading\)/);
+    expect(STUDIO_RULES).toMatch(/título de sección/);
   });
 });
