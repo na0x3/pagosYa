@@ -50,8 +50,8 @@ merchant's message, logo, product photos and catalogue, and returns a **brand pr
 
 The merchant sees it as YAPI's last intake question: a card with the colour swatches, a sample of the fonts and the idea, and
 «¿Construyo tu tienda así?». «Sí» builds; any other answer is read as a change to the profile («más oscuro», «sin rosado») and the card
-comes back once. A merchant who does not answer within the intake's usual wait gets the profile as proposed. The profile is saved
-with the store's brief so later chat edits keep it.
+comes back once, after which YAPI builds with it. Like the other intake questions, the build waits for the answer; «sigue» or
+«arma la tienda ya» counts as «Sí». The profile is saved with the store's brief so later chat edits keep it.
 
 ### Part 2: Brand style over the template
 
