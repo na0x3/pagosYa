@@ -233,6 +233,22 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
     const css = masterThemeBlock({ paper: '#ffffff', ink: '#111111', muted: '#eeeeee', accent: '#2255aa', deep: '#112244' }, 'archivo', 'archivo', 'space-mono');
     expect(templateFonts(css)).toEqual({ heading: 'archivo', body: 'archivo', mono: 'space-mono' });
   });
+  // Spike 2026-11-12 (YAPI_STUDIO): Lovable's way — the design system (colours and fonts) is the store's own.
+  const studioBox = () => new HomeWriterToolbox({ workspace: new AgentWorkspace(sorbo.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base: sorbo, gate: async () => null, template, studio: true });
+  it('studio: set_tokens takes the brand\'s own fonts on a template, keeping its label font', async () => {
+    const b = studioBox();
+    const out = (await b.run('set_tokens', JSON.stringify({ paper: '#fbf8f2', ink: '#1d2a22', muted: '#efe7da', accent: '#2f6b4a', deep: '#1f3a2b', heading: 'fraunces', body: 'figtree' }))).output;
+    expect(out).toMatch(/^Colores y fuentes guardados/);
+    expect(templateFonts(b.workspace.read('styles/globals.css'))).toMatchObject({ heading: 'fraunces', body: 'figtree' });
+  });
+  it('studio: check asks for the design system first and refuses colours written by hand', async () => {
+    const b = studioBox();
+    const home = b.workspace.read(HOME_PATH).replace('<Shell>', '<Shell><section style={{ background: \'#ff3300\' }}>Hola</section>');
+    b.workspace.write(HOME_PATH, home);
+    const first = (await b.run('check', '{}')).output;
+    expect(first).toMatch(/Empieza por el sistema de diseño/);
+    expect(first).toMatch(/colores escritos a mano: #ff3300/);
+  });
   it('write_footer is refused', async () => {
     expect((await sorboBox().run('write_footer', JSON.stringify({ content: 'export default function StoreFooter() { return <footer />; }' }))).output).toBe('Esta tienda usa el pie de su plantilla; no escribas uno.');
   });

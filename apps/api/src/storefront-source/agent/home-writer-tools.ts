@@ -9,6 +9,7 @@ import { evaluateCalmTitles, evaluateHomeWriterRules, evaluatePlayfulCover, home
 import { AMBIENT_PARTS, HOME_MOTION_BRIEF, ambientPartsUsed, motionPartsUsed } from '../home-directions';
 import { SHELL_PATH } from './agent-workspace';
 import type { HomeReviewer } from './home-writer-review';
+import { evaluateSharpPhotos, rawColours } from '../source-studio-spike';
 
 /* Spec 2026-10-29 home page writer: Amboras's recipe on the locked Esencial chassis — one home file and the tokens. */
 export const HOME_PATH = 'components/home.tsx';
@@ -146,7 +147,9 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
      *  never shouts; the brand's own accent/deep colours (store-data look.colors) stay. */
     footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[];
     /** Spec 2026-11-04: the template the store wears; its footer and fonts stay. */ template?: WriterTemplate;
-    /** Spec 2026-11-04 §5: a look at the captures before saving, at most reviewRounds (2) times. */ reviewer?: HomeReviewer; reviewRounds?: number }) {}
+    /** Spec 2026-11-04 §5: a look at the captures before saving, at most reviewRounds (2) times. */ reviewer?: HomeReviewer; reviewRounds?: number;
+    /** Spike 2026-11-12 (YAPI_STUDIO): Lovable's way — the store's own fonts, the design system first, no colour by hand, no stretched photo. */ studio?: boolean }) {}
+  private tokensSet = false;
   get workspace() { return this.ctx.workspace; }
   draftIsClean() { return Boolean(this.lastVerify?.clean && this.lastVerify.version === this.workspace.version); }
 
@@ -180,7 +183,9 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           return { output: missing.length ? `Pie escrito y compilado, pero le falta: ${missing.join('; ')}.` : 'Pie escrito y compilado.' };
         }
         case 'set_tokens': {
-          const kept = this.ctx.template ? templateFonts(this.workspace.read(GLOBALS)) : null;
+          const kept = this.ctx.template && !this.ctx.studio ? templateFonts(this.workspace.read(GLOBALS)) : null;
+          // Studio: the brand picks its fonts; a template's third face (labels) stays.
+          const labels = this.ctx.template && this.ctx.studio ? templateFonts(this.workspace.read(GLOBALS))?.mono : undefined;
           const fonts = kept ? [kept.heading, kept.body] : [String(args.heading), String(args.body)];
           const unknown = kept ? undefined : fonts.find(id => !SOURCE_FONT_CATALOG.some(font => font.id === id));
           if (unknown) return { output: `La fuente ${unknown} no está en el catálogo; usa un id de read_chassis.` };
@@ -190,10 +195,11 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           if (brand.length && ![colours.accent, colours.deep].some(colour => brand.some(own => nearColour(colour, own)))) {
             return { output: `Esta marca tiene sus propios colores (${brand.join(', ')}): usa uno de ellos (o uno muy cercano) como accent o deep. Varía el fondo y la fuente, no el color de la marca.` };
           }
-          const block = masterThemeBlock(colours, fonts[0], fonts[1], kept?.mono);
+          const block = masterThemeBlock(colours, fonts[0], fonts[1], kept?.mono ?? labels);
           const written = this.workspace.write(GLOBALS, withMasterTheme(this.workspace.read(GLOBALS), block));
           if (!written.ok) return { output: written.message };
           step('set_tokens', 'Eligiendo colores y fuentes');
+          this.tokensSet = true;
           const ink = /--es-ink:([^;]+);/.exec(block)?.[1] ?? colours.ink;
           const fixedInk = ink.toLowerCase() !== colours.ink.toLowerCase() ? ` El texto no se leía sobre el fondo; usé ${ink}.` : '';
           return { output: kept ? `Colores guardados. Las fuentes son de la plantilla ${this.ctx.template!.name}; se mantienen.${fixedInk}` : `Colores y fuentes guardados.${fixedInk}` };
@@ -201,7 +207,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
         case 'check': {
           const snapshot = await agentPreviewSnapshot(this.ctx.base, this.workspace.files());
           const captures: Array<{ width: number; errors: string[]; image: string; thumbnail?: string }> = [];
-          for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules, ...(this.ctx.calm ? [evaluateCalmTitles] : []), ...(this.ctx.playful ? [evaluatePlayfulCover] : [])]));
+          for (const width of [1280, 390] as const) captures.push(await captureAgentDraft(snapshot, width, this.ctx.signal, 'index.html', [], 'normal', undefined, [evaluateHomeWriterRules, ...(this.ctx.calm ? [evaluateCalmTitles] : []), ...(this.ctx.playful ? [evaluatePlayfulCover] : []), ...(this.ctx.studio ? [evaluateSharpPhotos] : [])]));
           this.lastImages = captures.map(capture => capture.image);
           const verdict = homeWriterVerdict(captures);
           // Review 2026-10-30: the merchant's progress shows the check's capture, now that screenshot calls are rare.
@@ -229,6 +235,11 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
             if (shouted.length) verdict.blocking.push(`Esta marca es tranquila: escribe los títulos con mayúscula inicial, no todo en mayúsculas («${shouted.slice(0, 3).join('», «')}»). Las mayúsculas solo para etiquetas pequeñas.`);
           }
           if (!/data-pagosya-catalog[^>]*data-pagosya-filters|data-pagosya-filters[^>]*data-pagosya-catalog/.test(this.workspace.read(HOME_PATH))) verdict.blocking.push('La grilla de productos perdió ordenar y filtrar por color y talla: deja data-pagosya-filters data-filters-style="chips" en el elemento data-pagosya-catalog, como en la portada de la plantilla.');
+          if (this.ctx.studio) {
+            if (!this.tokensSet) verdict.blocking.push('Empieza por el sistema de diseño: set_tokens con los colores y las fuentes de la marca.');
+            const raw = rawColours(this.workspace.read(HOME_PATH));
+            if (raw.length) verdict.blocking.push(`La portada tiene colores escritos a mano: ${raw.slice(0, 6).join(', ')}. Usa solo var(--es-paper/ink/muted/accent/deep) o color-mix de ellos.`);
+          }
           this.lastVerify = { version: this.workspace.version, clean: !verdict.blocking.length, hard: verdict.blocking.length > 0 };
           return { output: [verdict.blocking.length ? `Debes corregir:\n- ${verdict.blocking.join('\n- ')}` : 'Nada que corregir.',
             verdict.advice.length ? `Consejos (opcionales):\n- ${verdict.advice.join('\n- ')}` : '', 'Capturas de escritorio y celular adjuntas.'].filter(Boolean).join('\n'),

@@ -108,6 +108,8 @@ import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
 import { UploadsService, detectedImageDimensions, detectedMediaMime } from '../uploads/uploads.service';
 import { readSourceReferenceResource, readSourceWebsite } from './source-website-fetch';
+import { studioImages } from './source-studio-spike';
+import { VisualAiService } from '../visual-studio/visual-ai.service';
 import { BRAND_SOURCE_QUESTION, brandSourceAnswer, brandSourceIntent, brandSourceOther, brandSourceOwnSite, brandSourcePointsAtSite, brandSourceTouchesLook } from './brand-source-intent';
 import { brandWebsiteNotes, extractBrandWebsite, type BrandQuote } from './brand-source-website';
 import { importBrandImages } from './brand-source-import';
@@ -293,7 +295,7 @@ export class SourceChatService {
   homeMeasurer = measureBuiltHome;
   private readonly productLogger = new Logger('ProductSource');
   constructor(private readonly prisma: PrismaService, private readonly projects: SourceProjectsService, private readonly generation: SourceGenerationService, private readonly dialogue: SourceConversationService, private readonly templates: SourceTemplatesService, private readonly config: ConfigService, @Optional() private readonly uploads?: UploadsService,
-    @Optional() private readonly plans?: SourceStorePlanService, @Optional() private readonly thumbnails?: SourceThumbnailsService, @Optional() private readonly popupLooks?: PopupLookService, @Optional() private readonly popupGames?: PopupGameService, @Optional() private readonly tour?: SourceTourService, @Optional() private readonly ab?: SourceAbService) {}
+    @Optional() private readonly plans?: SourceStorePlanService, @Optional() private readonly thumbnails?: SourceThumbnailsService, @Optional() private readonly popupLooks?: PopupLookService, @Optional() private readonly popupGames?: PopupGameService, @Optional() private readonly tour?: SourceTourService, @Optional() private readonly ab?: SourceAbService, @Optional() private readonly visualAi?: VisualAiService) {}
   /** Spec 2026-10-12: how long a pick or a new request waits for a style run that is stopping to let go of the store. */
   /** Computed on first use from the deadlines the style run awaits (source-style-release.ts); tests set it directly. */
   protected styleReleaseWaitMs?: number;
@@ -700,7 +702,8 @@ export class SourceChatService {
   /** Spec 2026-11-04 §2: a template from the owner's pool is written by the home writer, not filled by the section library. */
   private templateWriterOn(templateId: string) {
     const pool = this.config.get<string[]>('app.yapiTemplatePool') ?? [];
-    return pool.includes(templateId) && this.config.get<boolean>('app.yapiHomeWriter') === true;
+    // Spike 2026-11-12 (YAPI_STUDIO): the writer, Lovable's way, designs a pooled template store's home.
+    return pool.includes(templateId) && (this.config.get<boolean>('app.yapiHomeWriter') === true || this.config.get<boolean>('app.yapiStudio') === true);
   }
   private writerFollowUp(revision: number, checklistWords?: string): SourceMessageInput {
     return { instruction: `${HOME_WRITER_BRIEF}${checklistWords ? `\n\nMensaje del comercio:\n${checklistWords}` : ''}`, revision, personalTouch: true, homeWriter: true, firstDesign: true, redesign: true,
@@ -863,8 +866,12 @@ export class SourceChatService {
   /** Spec 2026-10-29: the home page writer — generate() with execution.homeWriter: no conversation call, no planner. */
   private async homeWriter(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, input: SourceMessageInput, previous: { snapshot: unknown }, budget: ReturnType<SourceGenerationService['newBudget']>) {
     const before = previous.snapshot as unknown as SourceProjectSnapshot;
+    // Spike 2026-11-12 (YAPI_STUDIO): brand images made first reach the writer as the store's photos (Lovable never leaves a placeholder).
+    const studioUrls = this.config.get<boolean>('app.yapiStudio') === true
+      ? await studioImages(this.visualAi, merchantId, storeId, (await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true } }).catch(() => null))?.name ?? '', input.checklistWords ?? input.instruction) : [];
+    const assetUrls = [...new Set([...(input.assetUrls ?? []), ...studioUrls])];
     const revision = await this.generation.generate(merchantId, storeId, { revision: input.revision, brief: before.brief, instruction: input.instruction, model: input.model,
-      ...(input.assetUrls?.length ? { assetUrls: input.assetUrls } : {}) }, budget, [], workflow.report, { homeWriter: true, redesign: true, firstDesign: true });
+      ...(assetUrls.length ? { assetUrls } : {}) }, budget, [], workflow.report, { homeWriter: true, redesign: true, firstDesign: true });
     if ('styleProposal' in revision) throw new Error('home writer: unexpected style proposal');
     // Spec §1: the writer changes only the home and the theme block; anything else undoes the run.
     const after = (await this.projects.version(merchantId, storeId, revision.revision)).snapshot as unknown as SourceProjectSnapshot;

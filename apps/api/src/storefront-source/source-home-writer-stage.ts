@@ -19,6 +19,7 @@ import { HOME_DIRECTIONS, HOME_FOOTERS, HOME_MOTION_BRIEF, HOME_PLAYFUL_BRIEF, i
 import { recentLooks } from './source-recent-looks';
 import { readMasterState } from './source-templates';
 import { MASTER_THEME_END, MASTER_THEME_START } from './source-master';
+import { STUDIO_RULES } from './source-studio-spike';
 
 const HOME_WRITER_RULES = `Estilo (como Amboras): titulares de 72 px o más en escritorio con interlineado apretado, etiquetas pequeñas en mayúsculas (por ejemplo «01 / 04»), una portada amplia donde el texto tiene espacio, bandas del color de la marca, al menos 6 secciones (portada, productos con data-pagosya-catalog, historia, beneficios, preguntas, cierre).
 Reglas que bloquean: cada foto una sola vez; nunca 3 fotos o más juntas; nunca una banda oscura (negra) solo con texto — usa una foto real, un fondo claro o el color de la marca; la portada muestra productos (data-pagosya-catalog, o data-pagosya-spotlight con ids reales).
@@ -27,7 +28,14 @@ Los textos van como texto JSX literal (<h1>Deja que el aceite haga lo suyo.</h1>
 Productos, precios, fotos y logo vienen de './store-data'. Los consejos de check son opcionales; lo que dice «Debes corregir» no.`;
 
 /** Spec 2026-10-29 §2–3: Amboras's recipe, our rules. Spec 2026-11-04: inside a template, only the home and the colours. */
-export function homeWriterInstructions(opts: { template?: string } = {}): string {
+export function homeWriterInstructions(opts: { template?: string; studio?: boolean } = {}): string {
+  // Spike 2026-11-12 (YAPI_STUDIO): Lovable's order — the design system (colours and fonts) first, then the home painted only by it.
+  if (opts.template && opts.studio) return `Eres el diseñador de la PORTADA de una tienda pagosYa que usa la plantilla ${opts.template}. Solo cambias ${HOME_PATH} (completo, con write_home) y su sistema de diseño (set_tokens: colores y fuentes).
+El encabezado, el menú, el pie, la ficha de producto, el carrito y el checkout son de la plantilla: no los dibujes ni los imites. Toda la portada va dentro de <Shell>.
+Orden: read_chassis; set_tokens; escribe la portada entera en una sola llamada; check (devuelve lo que debes corregir y las capturas de escritorio y celular); corrige; check; finish.
+Los textos de un bloque de <LibraryHome> van en sus campos; el resto como texto JSX literal.
+${STUDIO_RULES}
+${HOME_WRITER_RULES}`;
   if (opts.template) return `Eres el diseñador de la PORTADA de una tienda pagosYa que usa la plantilla ${opts.template}. Solo cambias ${HOME_PATH} (completo, con write_home) y los colores (set_tokens; las fuentes son de la plantilla y se mantienen).
 El encabezado, el menú, el pie, la ficha de producto, el carrito y el checkout son de la plantilla: no los dibujes ni los imites. Toda la portada va dentro de <Shell>.
 Orden: read_chassis (trae la portada actual y las secciones probadas de la plantilla); escribe la portada entera en una sola llamada; set_tokens con los colores de la marca; check (devuelve lo que debes corregir y las capturas de escritorio y celular); corrige; check; finish. Usa screenshot solo si necesitas otra vista.
@@ -50,7 +58,7 @@ export function writerTemplate(files: readonly SourceProjectFileDto[]): WriterTe
 
 type LoopInput = { model: AgentModel; files: SourceProjectFileDto[]; base: AgentPreviewBase; gate: (files: SourceProjectFileDto[]) => Promise<string | null>; task: string;
   images?: unknown[]; signal?: AbortSignal; limits?: Partial<typeof AGENT_LIMITS>; onStep?: (step: AgentStep) => void | Promise<void>; animated?: boolean;
-  footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[]; template?: WriterTemplate; reviewer?: HomeReviewer };
+  footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[]; template?: WriterTemplate; reviewer?: HomeReviewer; /** Spike 2026-11-12 (YAPI_STUDIO). */ studio?: boolean };
 
 /** Spec 2026-10-30 home writer variety: the writer's task — the merchant's words, the store's page direction, what the last
  *  stores already used, and the motion brief only for an animated store. */
@@ -124,9 +132,9 @@ export async function runHomeWriterLoop(input: LoopInput) {
   const workspace = new AgentWorkspace(input.files, { redesign: true, lockedShell: true });
   const toolbox = new HomeWriterToolbox({ workspace, base: input.base, gate: input.gate, ...(input.signal ? { signal: input.signal } : {}), ...(input.animated ? { animated: true } : {}),
     ...(input.footer ? { footer: true } : {}), ...(input.playful ? { playful: true } : {}), ...(input.calm ? { calm: true } : {}), ...(input.brandColours?.length ? { brandColours: input.brandColours } : {}),
-    ...(input.template ? { template: input.template } : {}), ...(input.reviewer ? { reviewer: input.reviewer } : {}) });
+    ...(input.template ? { template: input.template } : {}), ...(input.reviewer ? { reviewer: input.reviewer } : {}), ...(input.studio ? { studio: true } : {}) });
   const outcome = await runAgent({ model: input.model, toolbox, tools: homeWriterTools({ footer: Boolean(input.footer) && !input.template }), verifyTool: 'check',
-    instructions: homeWriterInstructions(input.template ? { template: input.template.name } : {}), signal: input.signal, onStep: input.onStep,
+    instructions: homeWriterInstructions(input.template ? { template: input.template.name, ...(input.studio ? { studio: true } : {}) } : {}), signal: input.signal, onStep: input.onStep,
     limits: { ...HOME_WRITER_LIMITS, ...input.limits }, opening: agentOpening(input.task, [], input.images ?? []) });
   // A run that changed nothing is not a new design (review 2026-10-29): the store keeps its template home and says nothing.
   const accepted = workspace.changedPaths().length > 0
@@ -144,6 +152,8 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
   const master = readMasterState(previousFiles);
   // Spec 2026-11-04: on a themed template the footer and fonts are the template's; the writer writes the home and the colours.
   const template = writerTemplate(previousFiles);
+  // Spike 2026-11-12 (owner: «find how they operate and replicate it»): Lovable's way on a template store.
+  const studio = Boolean(template) && config.get<boolean>('app.yapiStudio') === true;
   const variants = (master.variants ?? {}) as Record<string, unknown>;
   // Owner 2026-10-30: fun businesses (sweets, fizzy drinks, toys, games, kids) are always animated and move without scrolling.
   const storeData = previousFiles.find(file => file.path === 'components/store-data.tsx')?.content ?? '';
@@ -181,14 +191,14 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
     ? anthropicAgentModel({ endpoint: agentProvider.endpoint, apiKey: agentProvider.apiKey, model: plan.model, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), signal, onTurn: onTurn(phase) })
     : openAiAgentModel({ endpoint: provider.endpoint, apiKey, model: plan.model, providerName: provider.name, budget, maxOutputTokens: Math.min(plan.maxOutputTokens, 16_000), reasoningEffort: effort, signal, onTurn: onTurn(phase),
       // Every turn resends the transcript; a stable key lets the provider bill that prefix at the cached rate (review 2026-10-29).
-      promptCacheKey: sourcePromptCacheKey(phase, phase === 'home-review' ? homeReviewInstructions() : homeWriterInstructions(template ? { template: template.name } : {}), storeId) });
+      promptCacheKey: sourcePromptCacheKey(phase, phase === 'home-review' ? homeReviewInstructions() : homeWriterInstructions(template ? { template: template.name, ...(studio ? { studio: true } : {}) } : {}), storeId) });
   const model = makeModel('home-writer');
   const reviewer = createHomeReviewer(makeModel('home-review'));
   const task = homeWriterTask({ instruction: dto.instruction, storeName: (data as { storeName?: string }).storeName ?? '', direction: choice.direction, animated: choice.animated,
     footer: choice.footer, playful, calm, brandColours,
     avoid: { fonts: template ? [] : [...new Set(looks.map(look => look.heading).filter((font): font is string => Boolean(font)))], papers: [...new Set(looks.map(look => look.paper).filter((paper): paper is string => Boolean(paper)))] } });
   const out = await runHomeWriterLoop({ model, files: oldFiles.filter(file => nextSourceFile(file.path)), base, gate, task, signal, animated: choice.animated,
-    footer: Boolean(choice.footer) && !template, ...(template ? { template } : {}), reviewer, playful, calm, brandColours, limits: homeWriterLimits(chatgptPlan, started + runTimeout),
+    footer: Boolean(choice.footer) && !template, ...(template ? { template } : {}), ...(studio ? { studio: true } : {}), reviewer, playful, calm, brandColours, limits: homeWriterLimits(chatgptPlan, started + runTimeout),
     images: images.map(image => ({ ...(image as object), detail: 'low' })),
     onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); } });
   if (!out.accepted) throw new BadGatewayException(`YAPI no pudo terminar la portada${out.outcome.reason ? `: ${out.outcome.reason}` : ''}`);

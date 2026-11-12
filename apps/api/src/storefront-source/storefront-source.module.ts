@@ -11,6 +11,7 @@ import { SourceChatJobsController } from './source-chat-jobs.controller';
 import { SourceStartersController } from './source-starters.controller';
 import { SourceStartersService } from './source-starters.service';
 import { SourceFontsController } from './source-fonts.controller';
+import { VisualAiService } from '../visual-studio/visual-ai.service';
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { DashboardModule } from "../dashboard/dashboard.module";
@@ -58,7 +59,7 @@ import { ProductPageModule } from '../product-content/product-page.module';
 @Module({
   imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule, StoreEmailModule, StorePopupModule, ProductPageModule],
   controllers: [SourceTourController, SourceAbController,SketchStudioController, SourceChatJobsController, SourceFontsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController, StoreVoiceController, AssumedFactCountsController, SourceStartersController],
-  providers: [SourceTourService, SourceAbService,SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceThumbnailsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService, StoreVoiceService, SourceStorePlanService, SourceStartersService, { provide: StorePlanParts, useValue: storePlanParts }],
+  providers: [SourceTourService, SourceAbService,SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceThumbnailsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService, StoreVoiceService, SourceStorePlanService, SourceStartersService, VisualAiService, { provide: StorePlanParts, useValue: storePlanParts }],
   exports: [SourceProjectsService, SourceTemplatesService, SourceChatService],
 })
 export class StorefrontSourceModule {}
