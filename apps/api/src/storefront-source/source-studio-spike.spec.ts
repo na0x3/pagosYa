@@ -1,4 +1,4 @@
-import { rawColours, studioImagePrompts, studioImages, STUDIO_RULES } from './source-studio-spike';
+import { rawColours, studioImageMaker, studioImagePrompts, studioImages, STUDIO_RULES } from './source-studio-spike';
 import { homeWriterInstructions } from './source-home-writer-stage';
 
 /** Spike 2026-11-12 (owner: «find how they operate and replicate it»): Lovable's way on our template stores. */
@@ -49,5 +49,27 @@ describe('studio spike: brand images never stop the build', () => {
   it('no image service or none configured: no images', async () => {
     expect(await studioImages(undefined, 'm1', 's1', 'X', 'Y')).toEqual([]);
     expect(await studioImages({ canGenerateStorefrontImages: () => false, generateStorefrontImage: jest.fn() }, 'm1', 's1', 'X', 'Y')).toEqual([]);
+  });
+});
+
+describe('studio spike: images with their own key on the ChatGPT plan (live 2026-11-12: the plan blanks the OpenAI key)', () => {
+  it('asks the image model for a jpeg of the right shape and saves it', async () => {
+    const fetchImage = jest.fn(async () => ({ ok: true, json: async () => ({ data: [{ b64_json: Buffer.from('jpeg-bytes').toString('base64') }] }) }));
+    const save = jest.fn(async (bytes: Buffer) => ({ url: `/v1/uploads/${bytes.toString()}.jpg` }));
+    const maker = studioImageMaker({ apiKey: 'k', model: 'gpt-image-2', fetch: fetchImage as never, save });
+    expect(maker.canGenerateStorefrontImages()).toBe(true);
+    expect(await maker.generateStorefrontImage('m', 's', 'Oh Belly', { prompt: 'Sodas', aspectRatio: 'portrait' })).toEqual({ url: '/v1/uploads/jpeg-bytes.jpg' });
+    const body = JSON.parse((fetchImage.mock.calls[0] as any)[1].body);
+    expect(body).toMatchObject({ model: 'gpt-image-2', size: '1024x1536', output_format: 'jpeg' });
+    expect(body.prompt).toMatch(/Sodas[\s\S]*Sin texto/);
+  });
+  it('no key: no images', () => {
+    expect(studioImageMaker({ apiKey: '', model: 'gpt-image-2', save: jest.fn() }).canGenerateStorefrontImages()).toBe(false);
+  });
+});
+
+describe('studio spike: the cover title never sits on the photo on a computer (owner: Oh Belly hero, NOA studio 2026-11-12)', () => {
+  it('says so in the rules', () => {
+    expect(STUDIO_RULES).toMatch(/nunca va encima de la foto/);
   });
 });

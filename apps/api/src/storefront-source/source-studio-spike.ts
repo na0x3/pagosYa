@@ -8,7 +8,8 @@ export const STUDIO_RULES = `MODO ESTUDIO (como Lovable). Esta tienda tiene que 
 3. La portada se pinta solo con el sistema de diseño: var(--es-paper), var(--es-ink), var(--es-muted), var(--es-accent), var(--es-deep) y color-mix de ellos. Nunca un color escrito a mano (#…, rgb(…), hsl(…)); blanco y negro solo para texto sobre foto.
 4. Cada foto se muestra a lo sumo a su tamaño real: nunca más ancha que su tamaño real. Las fotos del comercio suelen ser pequeñas (unos 700 px): ponlas en marcos, tarjetas, collages o junto al titular; a todo el ancho solo una foto grande (las fotos de marca generadas para esta tienda lo son).
 5. Una portada con personalidad: una fuente de titular con carácter usada muy grande, una sola idea de marca, detalles propios (etiquetas, marcos, bandas del color de la marca, movimiento del kit). Nada genérico.
-6. El encabezado, el menú, las tarjetas de producto, la ficha, el carrito y el checkout son de la plantilla; la portada usa sus secciones probadas cuando sirven.`;
+6. En escritorio el titular de la portada nunca va encima de la foto: al lado, debajo o sobre un fondo de color de la marca. En celular puede ir sobre la foto solo si se lee bien (texto claro sobre una zona oscura).
+7. El encabezado, el menú, las tarjetas de producto, la ficha, el carrito y el checkout son de la plantilla; la portada usa sus secciones probadas cuando sirven.`;
 
 /** Colours written by hand in the home: hex (other than white and black), rgb(), rgba(), hsl(), outside comments and links. */
 export function rawColours(code: string): string[] {
@@ -46,4 +47,22 @@ export async function studioImages(visual: StudioImageMaker | undefined, merchan
   const made = await Promise.all(studioImagePrompts(storeName, words).map(request =>
     visual.generateStorefrontImage(merchantId, storeId, storeName, request).then(asset => asset.url).catch(() => null)));
   return made.filter((url): url is string => Boolean(url));
+}
+
+/** Live 2026-11-12: on the ChatGPT plan the API blanks the OpenAI key (nothing metered by accident); studio images get their own. */
+export function studioImageMaker(deps: { apiKey: string; model: string; fetch?: typeof fetch; save(bytes: Buffer): Promise<{ url: string }> }): StudioImageMaker {
+  return {
+    canGenerateStorefrontImages: () => Boolean(deps.apiKey && deps.model),
+    async generateStorefrontImage(_merchantId, _storeId, _storeName, request) {
+      const size = request.aspectRatio === 'portrait' ? '1024x1536' : '1536x1024';
+      const response = await (deps.fetch ?? fetch)('https://api.openai.com/v1/images/generations', {
+        method: 'POST', headers: { Authorization: `Bearer ${deps.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(150_000),
+        body: JSON.stringify({ model: deps.model, n: 1, size, quality: 'medium', output_format: 'jpeg', output_compression: 86, moderation: 'auto',
+          prompt: `${request.prompt}\nFotografía editorial original. Sin texto, sin logotipos, sin marcas de agua, sin precios.` }) });
+      const body = await response.json().catch(() => null) as { data?: Array<{ b64_json?: string }>; error?: { message?: string } } | null;
+      const encoded = body?.data?.[0]?.b64_json;
+      if (!response.ok || !encoded) throw new Error(body?.error?.message ?? 'el modelo de imágenes no devolvió una imagen');
+      return deps.save(Buffer.from(encoded, 'base64'));
+    },
+  };
 }

@@ -108,7 +108,7 @@ import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
 import { UploadsService, detectedImageDimensions, detectedMediaMime } from '../uploads/uploads.service';
 import { readSourceReferenceResource, readSourceWebsite } from './source-website-fetch';
-import { studioImages } from './source-studio-spike';
+import { studioImageMaker, studioImages } from './source-studio-spike';
 import { VisualAiService } from '../visual-studio/visual-ai.service';
 import { BRAND_SOURCE_QUESTION, brandSourceAnswer, brandSourceIntent, brandSourceOther, brandSourceOwnSite, brandSourcePointsAtSite, brandSourceTouchesLook } from './brand-source-intent';
 import { brandWebsiteNotes, extractBrandWebsite, type BrandQuote } from './brand-source-website';
@@ -868,7 +868,13 @@ export class SourceChatService {
     const before = previous.snapshot as unknown as SourceProjectSnapshot;
     // Spike 2026-11-12 (YAPI_STUDIO): brand images made first reach the writer as the store's photos (Lovable never leaves a placeholder).
     const studioUrls = this.config.get<boolean>('app.yapiStudio') === true
-      ? await studioImages(this.visualAi, merchantId, storeId, (await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true } }).catch(() => null))?.name ?? '', input.checklistWords ?? input.instruction) : [];
+      ? await studioImages(this.visualAi?.canGenerateStorefrontImages() ? this.visualAi : studioImageMaker({
+          apiKey: this.config.get<string>('app.yapiStudioImageKey') ?? '', model: this.config.get<string>('app.openAi.imageModel') ?? 'gpt-image-2',
+          save: async bytes => {
+            const stored = await this.uploads!.saveBuffer(bytes, 'image/jpeg');
+            await this.prisma.mediaAsset.create({ data: { merchantId, storeId, url: stored.url, storageKey: stored.filename, kind: 'AI_DERIVED', mimeType: stored.mimeType, byteSize: stored.byteSize } });
+            return { url: stored.url };
+          } }), merchantId, storeId, (await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true } }).catch(() => null))?.name ?? '', input.checklistWords ?? input.instruction) : [];
     const assetUrls = [...new Set([...(input.assetUrls ?? []), ...studioUrls])];
     const revision = await this.generation.generate(merchantId, storeId, { revision: input.revision, brief: before.brief, instruction: input.instruction, model: input.model,
       ...(assetUrls.length ? { assetUrls } : {}) }, budget, [], workflow.report, { homeWriter: true, redesign: true, firstDesign: true });
