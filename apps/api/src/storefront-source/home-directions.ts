@@ -2,7 +2,43 @@
  * animated look for most bold brands. The writer keeps its freedom; it only starts from a different brief. */
 
 export type HomeDirectionId = 'editorial' | 'producto' | 'lookbook' | 'bandas' | 'manifiesto' | 'historia';
-export type HomeDirectionChoice = { direction: HomeDirectionId; animated: boolean; footer?: HomeFooterId; playful?: boolean };
+export type HomeDirectionChoice = { direction: HomeDirectionId; animated: boolean; footer?: HomeFooterId; playful?: boolean; plan?: DesignPlan };
+
+/** Store chassis (spec 2026-11-12): the design plan a chassis store's writer follows for the parts every store used to share —
+ *  picked per store, each choice never one of the last three stores', like Amboras's committed design plan. */
+export const DESIGN_PLAN_OPTIONS = {
+  navbar: ['bar', 'centered', 'drawer', 'split'],
+  card: ['frame', 'bare', 'tinted', 'overlay'],
+  pdp: ['gallery', 'stacked', 'editorial', 'centered'],
+  cart: ['drawer', 'panel', 'sheet'],
+} as const;
+export type DesignPlan = { [K in keyof typeof DESIGN_PLAN_OPTIONS]: (typeof DESIGN_PLAN_OPTIONS)[K][number] };
+export const DESIGN_PLAN_TEXT: { [K in keyof DesignPlan]: Record<DesignPlan[K], string> } = {
+  navbar: {
+    bar: 'ENCABEZADO: logo a la izquierda, los enlaces en una fila al centro o a la derecha, íconos al final.',
+    centered: 'ENCABEZADO: el logo centrado y grande; debajo (o a los lados) una fila corta de enlaces; íconos a la derecha.',
+    drawer: 'ENCABEZADO: solo logo, un botón de menú e íconos — TODOS los enlaces van en el cajón, también en computadora.',
+    split: 'ENCABEZADO: enlaces a la izquierda, el logo en el centro, íconos a la derecha.',
+  },
+  card: {
+    frame: 'TARJETA: la foto dentro de un marco (borde fino o fondo suave con margen), nombre y precio debajo, botón de agregar visible.',
+    bare: 'TARJETA: la foto de borde a borde sin caja, el nombre y el precio en una línea debajo, el botón aparece como texto o ícono.',
+    tinted: 'TARJETA: un panel con el color suave de la marca detrás de la foto recortada; nombre grande; botón como píldora.',
+    overlay: 'TARJETA: nombre y precio sobre la parte baja de la foto (con degradado para que se lean), botón de agregar en una esquina.',
+  },
+  pdp: {
+    gallery: 'FICHA DE PRODUCTO: galería grande a la izquierda (miniaturas al lado o debajo) y la compra a la derecha, fija al bajar.',
+    stacked: 'FICHA DE PRODUCTO: las fotos apiladas a todo el ancho de una columna y la compra en una columna angosta fija al lado.',
+    editorial: 'FICHA DE PRODUCTO: una foto grande arriba a todo el ancho, debajo el título enorme y la compra; las secciones como revista.',
+    centered: 'FICHA DE PRODUCTO: la foto centrada sobre un fondo de color, el título y la compra centrados debajo.',
+  },
+  cart: {
+    drawer: 'CARRITO: cajón que entra desde la derecha, angosto, con las líneas y el total abajo fijo.',
+    panel: 'CARRITO: cajón ancho desde la derecha con dos zonas: tus productos y, al lado o abajo, las sugerencias.',
+    sheet: 'CARRITO: en celular sube desde abajo como hoja; en computadora es un cajón a la derecha.',
+  },
+};
+const PLAN_KEYS = Object.keys(DESIGN_PLAN_OPTIONS) as Array<keyof DesignPlan>;
 
 export const HOME_DIRECTIONS: Record<HomeDirectionId, string> = {
   editorial: `DIRECCIÓN: EDITORIAL.
@@ -105,13 +141,25 @@ export function pickHomeFooter(seed: string, recent: HomeFooterId[], playful: bo
   return pickFresh(seed, 'footer', FOOTER_IDS.filter(id => playful || id !== 'juguete'), recent, id => playful && id === 'juguete' ? 2 : 1);
 }
 
+/** Store chassis (spec 2026-11-12): each part's style never one of the last three stores'. */
+export function pickDesignPlan(seed: string, recent: readonly DesignPlan[]): DesignPlan {
+  return Object.fromEntries(PLAN_KEYS.map(key => [key, pickFresh(seed, `plan-${key}`, DESIGN_PLAN_OPTIONS[key] as readonly string[], recent.map(plan => plan[key]))])) as DesignPlan;
+}
+const planOf = (value: unknown): DesignPlan | undefined => {
+  const plan = value as Record<string, unknown> | null;
+  return plan && typeof plan === 'object' && PLAN_KEYS.every(key => (DESIGN_PLAN_OPTIONS[key] as readonly unknown[]).includes(plan[key]))
+    ? Object.fromEntries(PLAN_KEYS.map(key => [key, plan[key]])) as DesignPlan : undefined;
+};
+
 /** The saved home-direction.json, or null for anything that is not exactly that shape. */
 export function parseHomeDirection(content: string | undefined): HomeDirectionChoice | null {
   try {
     const value = JSON.parse(content ?? '');
     if (!value || typeof value !== 'object' || Array.isArray(value) || !IDS.includes(value.direction) || typeof value.animated !== 'boolean') return null;
     // Footer and playful came later (2026-10-30): an older file without them is still read.
-    return { direction: value.direction, animated: value.animated, ...(FOOTER_IDS.includes(value.footer) ? { footer: value.footer } : {}), ...(value.playful === true ? { playful: true } : {}) };
+    const plan = planOf(value.plan);
+    return { direction: value.direction, animated: value.animated, ...(FOOTER_IDS.includes(value.footer) ? { footer: value.footer } : {}), ...(value.playful === true ? { playful: true } : {}),
+      ...(plan ? { plan } : {}) };
   } catch { return null; }
 }
 

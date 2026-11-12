@@ -24,8 +24,10 @@ const branded = async (b: HomeWriterToolbox) => {
 const tokens = (font: string) => JSON.stringify({ paper: '#f4efe6', ink: '#1d2a22', muted: '#e8e1d4', accent: '#b5562b', deep: '#2f4a33', heading: font, body: font });
 
 describe('HomeWriterToolbox', () => {
-  it('offers exactly the seven tools', () => {
-    expect(HOME_WRITER_TOOLS.map(t => t.name)).toEqual(['read_chassis', 'write_home', 'write_footer', 'set_tokens', 'check', 'screenshot', 'finish']);
+  it('offers exactly the eight tools; write_part only to a chassis store', () => {
+    expect(HOME_WRITER_TOOLS.map(t => t.name)).toEqual(['read_chassis', 'write_home', 'write_footer', 'write_part', 'set_tokens', 'check', 'screenshot', 'finish']);
+    expect(homeWriterTools({ footer: true }).map(t => t.name)).not.toContain('write_part');
+    expect(homeWriterTools({ footer: true, chassis: true }).map(t => t.name)).toContain('write_part');
   });
   it('read_chassis names the kit parts, the store data, the fonts and the current home', async () => {
     const out = (await box().run('read_chassis', '{}')).output;
@@ -268,6 +270,25 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
   });
   it('write_footer is refused', async () => {
     expect((await sorboBox().run('write_footer', JSON.stringify({ content: 'export default function StoreFooter() { return <footer />; }' }))).output).toBe('Esta tienda usa el pie de su plantilla; no escribas uno.');
+  });
+  it('chassis: every part is the store\'s own — written, pointed at by the Shell, compiled, and checked for its wiring (spec 2026-11-12)', async () => {
+    const plan = { navbar: 'drawer', card: 'bare', pdp: 'stacked', cart: 'sheet' } as const;
+    const b = new HomeWriterToolbox({ workspace: new AgentWorkspace(sorbo.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base: sorbo, gate: async () => null, template, studio: true, chassis: true, plan });
+    const chassis = (await b.run('read_chassis', '{}')).output;
+    expect(chassis).toContain('CHASIS');
+    expect(chassis).toContain('TODOS los enlaces van en el cajón');
+    expect(chassis).toContain('--- CartParts ---');
+    expect((await b.run('check', '{}')).output).toMatch(/Falta escribir header con write_part/);
+    const header = `import { IconSearch } from './icons';\nexport default function StoreHeader() { return <header style={{ display: 'flex' }}><a href="index.html">Tienda</a><a href="productos.html">Productos</a><a href="buscar.html" aria-label="Buscar"><IconSearch /></a><a data-pagosya-account="login" href="acceso-ingresar.html">Cuenta</a><button type="button" data-cart-open>Bolsa <span data-cart-count>0</span></button></header>; }\n`;
+    expect((await b.run('write_part', JSON.stringify({ part: 'header', content: header }))).output).toBe('Pieza escrita y compilada.');
+    expect(b.workspace.read('components/Shell.tsx')).toMatch(/^import StoreHeader from '\.\/header';/m);
+    expect(b.workspace.read('components/Shell.tsx')).toContain('<StoreHeader />');
+    // The kit's cart stays until the store writes its own; a part without its wiring says what to put back.
+    expect(b.workspace.read('components/Shell.tsx')).toContain('<CartParts />');
+    const card = `export default function StoreCard() { return <template data-pagosya-product-template><article><a data-product-link href="product.html"><img data-product-field="image" alt="Foto del producto" /></a><h3 data-product-field="name">Producto</h3><p data-product-field="price" /></article></template>; }\n`;
+    expect((await b.run('write_part', JSON.stringify({ part: 'card', content: card }))).output).toMatch(/a la tarjeta de producto le falta: el botón de agregar \(data-product-add\)/);
+    expect(b.workspace.read('components/Shell.tsx')).toContain('<StoreCard />');
+    expect((await b.run('check', '{}')).output).toMatch(/^Debes corregir:[\s\S]*A la tarjeta de producto le falta: el botón de agregar[\s\S]*Falta escribir cart/);
   });
   it('studio: the store writes its own footer (owner 2026-11-12 «the footer is the same always»)', async () => {
     const b = new HomeWriterToolbox({ workspace: new AgentWorkspace(sorbo.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base: sorbo, gate: async () => null, template, studio: true, footer: true });

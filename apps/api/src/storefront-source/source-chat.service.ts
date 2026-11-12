@@ -102,7 +102,8 @@ import { visibleChanges } from './source-visible-change';
 import { isPlayfulBusiness } from './home-directions';
 import { instructionAsksStoreMenu, instructionOnlyAboutStoreMenu, instructionTouchesStoreMenu, readStoreMenu, storeMenuContext, storeMenuTargetList, withExtraPageLinks, withStoreMenuConfig } from './source-store-menu';
 import { readConfigFile } from './store-look';
-import { FOOTER_PATH, shellWithStoreFooter } from './agent/home-writer-tools';
+import { FOOTER_PATH } from './agent/home-writer-tools';
+import { CHASSIS_PATHS, partsInShell, shellWithStoreParts } from './agent/chassis-parts';
 import { buildSuggestions, withRedesignOffer } from './source-suggestions';
 import { templateDemoPath } from './source-templates';
 import { withLiveCatalog } from './source-store-config';
@@ -885,9 +886,10 @@ export class SourceChatService {
     const after = (await this.projects.version(merchantId, storeId, revision.revision)).snapshot as unknown as SourceProjectSnapshot;
     // Owner 2026-10-30: the writer also writes the footer; the Shell may change only by pointing at it (live check BOXY eajm1flt
     // was undone here because footer.tsx and the Shell counted as strays).
+    // Store chassis (spec 2026-11-12): the Shell may also point at the store's own header, cart and card, and those part files are its own.
     const swappedShell = (file: { path: string; content: string }) => { const old = before.files.find(entry => entry.path === file.path)?.content;
-      return file.path === 'components/Shell.tsx' && old !== undefined && shellWithStoreFooter(old) === file.content; };
-    const strayed = after.files.filter(file => nextSourceFile(file.path) && !['components/home.tsx', 'styles/globals.css', 'components/store-data.tsx', FOOTER_PATH].includes(file.path)
+      return file.path === 'components/Shell.tsx' && old !== undefined && shellWithStoreParts(old, partsInShell(file.content)) === file.content; };
+    const strayed = after.files.filter(file => nextSourceFile(file.path) && !['components/home.tsx', 'styles/globals.css', 'components/store-data.tsx', FOOTER_PATH, ...Object.values(CHASSIS_PATHS)].includes(file.path)
       && !swappedShell(file) && before.files.find(old => old.path === file.path)?.content !== file.content).map(file => file.path);
     // Review I4: the product page, cart, checkout and account look live outside the components (config.js, brand.css, frame-draw.json).
     const look = (files: SourceProjectSnapshot['files']) => { const config = readConfigFile(files); const { display: _display, text: _text, ...dna } = (config.dna ?? {}) as Record<string, unknown>;

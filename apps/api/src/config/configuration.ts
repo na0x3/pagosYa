@@ -174,6 +174,8 @@ export interface AppConfig {
   yapiComposer: boolean;
   /** Spike 2026-11-12 (owner: «find how they operate and replicate it»): Lovable's way on template stores (YAPI_STUDIO=1). */
   yapiStudio: boolean;
+  /** Store chassis (spec 2026-11-12): a studio store also writes its own header, card, cart and product page (YAPI_CHASSIS=1). */
+  yapiChassis: boolean;
   /** Spike 2026-11-12: the studio's brand images keep the OpenAI key the ChatGPT plan blanks for everything else. */
   yapiStudioImageKey: string;
   yapiComposerModel: string;
@@ -577,6 +579,7 @@ export default (): { app: AppConfig } => {
     yapiComposer: process.env.YAPI_COMPOSER === '1',
     // On in dev since 2026-11-12 for the owner's test; off by removing YAPI_STUDIO from apps/api/.env.
     yapiStudio: process.env.YAPI_STUDIO === '1',
+    yapiChassis: process.env.YAPI_CHASSIS === '1',
     yapiStudioImageKey: process.env.YAPI_STUDIO === '1' ? process.env.YAPI_STUDIO_IMAGE_KEY || process.env.OPENAI_API_KEY || '' : '',
     yapiComposerModel: process.env.YAPI_COMPOSER_MODEL || 'gpt-5.6-sol',
     yapiComposerEffort: (['low', 'medium', 'high'] as const).find(effort => effort === process.env.YAPI_COMPOSER_EFFORT) ?? 'medium',

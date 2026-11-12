@@ -10,6 +10,8 @@ import { AMBIENT_PARTS, HOME_MOTION_BRIEF, ambientPartsUsed, motionPartsUsed } f
 import { SHELL_PATH } from './agent-workspace';
 import type { HomeReviewer } from './home-writer-review';
 import { evaluateCardPhotos, evaluateLopsided, evaluateSharpPhotos, evaluateTitleScale, hiddenCardParts, rawColours, unknownKitVars } from '../source-studio-spike';
+import { CHASSIS_BRIEF, CHASSIS_PARTS, CHASSIS_PATHS, PART_PROBLEM_START, partProblemLine, partProblems, partsInShell, shellWithStoreParts, type ChassisPart, type ShellPart } from './chassis-parts';
+import { DESIGN_PLAN_TEXT, type DesignPlan } from '../home-directions';
 
 /* Spec 2026-10-29 home page writer: Amboras's recipe on the locked Esencial chassis — one home file and the tokens. */
 export const HOME_PATH = 'components/home.tsx';
@@ -29,15 +31,16 @@ export const HOME_WRITER_TOOLS: readonly AgentToolDefinition[] = [
   strictTool('read_chassis', 'Lee lo que la portada puede usar: partes del kit, datos de la tienda (store-data), fotos, fuentes y la portada actual.', {}),
   strictTool('write_home', 'Escribe components/home.tsx COMPLETO (reemplaza el archivo). Mantén <Shell>. Los textos van como texto JSX literal.', { content: text }),
   strictTool('write_footer', 'Escribe components/footer.tsx COMPLETO: export default function StoreFooter() con el pie de la tienda. Los textos van como texto JSX literal.', { content: text }),
+  strictTool('write_part', 'Store chassis: escribe COMPLETA una pieza de la tienda — header (components/header.tsx), card (components/card.tsx), cart (components/cart.tsx) o product (components/product.tsx). Mantén su cableado (ganchos data-* y <KitSlot>); el diseño es tuyo.', { part: { type: 'string', enum: ['header', 'card', 'cart', 'product'] }, content: text }),
   strictTool('set_tokens', 'Fija los 5 colores de la tienda (hex) y dos fuentes del catálogo (ids de read_chassis).', { paper: hex, ink: hex, muted: hex, accent: hex, deep: hex, heading: text, body: text }),
   strictTool('check', 'Comprueba la portada en escritorio y celular: lo que debes corregir, los consejos y las dos capturas.', {}),
   strictTool('screenshot', 'Otra captura de la portada, solo si check no bastó (máximo 8 en total).', { width: { type: 'integer', enum: [1280, 390] } }),
   strictTool('finish', 'Termina: resumen para el comercio en español, 1–2 frases simples, sin términos técnicos.', { summary: text }),
 ];
 
-/** On a template store the footer is the template's: no write_footer (spec 2026-11-04 §2). */
-export function homeWriterTools(opts: { footer: boolean }): readonly AgentToolDefinition[] {
-  return HOME_WRITER_TOOLS.filter(tool => opts.footer || tool.name !== 'write_footer');
+/** On a template store the footer is the template's: no write_footer (spec 2026-11-04 §2). write_part only for a chassis store. */
+export function homeWriterTools(opts: { footer: boolean; chassis?: boolean }): readonly AgentToolDefinition[] {
+  return HOME_WRITER_TOOLS.filter(tool => (opts.footer || tool.name !== 'write_footer') && (opts.chassis === true || tool.name !== 'write_part'));
 }
 
 /** The theme block's fonts by role (--es-heading, --es-body, --es-mono → catalog ids), or null when the block names none.
@@ -153,7 +156,23 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
     footer?: boolean; playful?: boolean; calm?: boolean; brandColours?: string[];
     /** Spec 2026-11-04: the template the store wears; its footer and fonts stay. */ template?: WriterTemplate;
     /** Spec 2026-11-04 §5: a look at the captures before saving, at most reviewRounds (2) times. */ reviewer?: HomeReviewer; reviewRounds?: number;
-    /** Spike 2026-11-12 (YAPI_STUDIO): Lovable's way — the store's own fonts, the design system first, no colour by hand, no stretched photo. */ studio?: boolean }) {}
+    /** Spike 2026-11-12 (YAPI_STUDIO): Lovable's way — the store's own fonts, the design system first, no colour by hand, no stretched photo. */ studio?: boolean;
+    /** Store chassis (spec 2026-11-12): the store writes its own header, card, cart and product page, following its design plan. */ chassis?: boolean; plan?: DesignPlan }) {}
+  /** The template's Shell before any part of YAPI's: every swap is made from it (chassis-parts shellWithStoreParts). */
+  private baseShellText: string | null = null;
+  private readonly written = new Set<ShellPart>();
+  private baseShell() { return this.baseShellText ??= this.workspace.read(SHELL_PATH); }
+  /** The Shell drawing the parts written so far; null when this Shell cannot draw them. */
+  private swapShell(part: ShellPart): boolean {
+    const parts = new Set([...this.written, part]);
+    const next = shellWithStoreParts(this.baseShell(), parts);
+    if (!next) return [...parts].every(each => partsInShell(this.workspace.read(SHELL_PATH)).has(each));
+    this.workspace.setShell(next);
+    this.written.add(part);
+    return true;
+  }
+  /** A chassis part's file as written, or '' before write_part. */
+  private partCode(part: ChassisPart) { try { return this.ctx.workspace.changedPaths().includes(CHASSIS_PATHS[part]) ? this.workspace.read(CHASSIS_PATHS[part]) : ''; } catch { return ''; } }
   private tokensSet = false;
   get workspace() { return this.ctx.workspace; }
   draftIsClean() { return Boolean(this.lastVerify?.clean && this.lastVerify.version === this.workspace.version); }
@@ -176,16 +195,27 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
         case 'write_footer': {
           if (this.ctx.template && !this.ctx.studio) return { output: 'Esta tienda usa el pie de su plantilla; no escribas uno.' };
           const content = String(args.content ?? '');
-          const shell = shellWithStoreFooter(this.workspace.read(SHELL_PATH));
-          if (!shell) return { output: 'Esta tienda no admite un pie propio; deja el de la plataforma y termina la portada.' };
           const written = this.workspace.write(FOOTER_PATH, content);
           if (!written.ok) return { output: written.message };
-          this.workspace.setShell(shell);
+          if (!this.swapShell('footer')) return { output: 'Esta tienda no admite un pie propio; deja el de la plataforma y termina la portada.' };
           step('write_home', 'Escribiendo el pie de página');
           const missing = footerProblems(content);
           try { await agentPreviewSnapshot(this.ctx.base, this.workspace.files()); }
           catch (error) { return { output: `Pie escrito, pero no compila: ${(error as Error).message.slice(0, 1500)}` }; }
           return { output: missing.length ? `Pie escrito y compilado, pero le falta: ${missing.join('; ')}.` : 'Pie escrito y compilado.' };
+        }
+        case 'write_part': {
+          if (!this.ctx.chassis) return { output: 'Esta tienda usa las piezas de su plantilla.' };
+          const part = String(args.part) as ChassisPart;
+          if (!CHASSIS_PARTS.includes(part)) return { output: 'part debe ser header, card, cart o product.' };
+          const written = this.workspace.write(CHASSIS_PATHS[part], String(args.content ?? ''));
+          if (!written.ok) return { output: written.message };
+          if (part !== 'product' && !this.swapShell(part)) return { output: `Esta tienda no admite ${part} propio; deja el de la plantilla.` };
+          step('write_home', { header: 'Diseñando el encabezado', card: 'Diseñando las tarjetas', cart: 'Diseñando el carrito', product: 'Diseñando la ficha de producto' }[part]);
+          const missing = partProblems(part, String(args.content ?? ''));
+          try { await agentPreviewSnapshot(this.ctx.base, this.workspace.files()); }
+          catch (error) { return { output: `Pieza escrita, pero no compila: ${(error as Error).message.slice(0, 1500)}` }; }
+          return { output: missing.length ? `Pieza escrita y compilada, pero ${partProblemLine(part, missing).replace(/^./, c => c.toLowerCase())}` : 'Pieza escrita y compilada.' };
         }
         case 'set_tokens': {
           const kept = this.ctx.template && !this.ctx.studio ? templateFonts(this.workspace.read(GLOBALS)) : null;
@@ -249,11 +279,28 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
             const hidden = hiddenCardParts(this.workspace.read(HOME_PATH));
             if (hidden.length) verdict.blocking.push(`La portada deja las tarjetas de producto sin su foto: ${hidden.slice(0, 4).join(', ')}. Las tarjetas son de la plantilla; quita esa regla.`);
           }
+          // Store chassis (spec 2026-11-12): every part is the store's own and keeps its wiring.
+          const extraImages: string[] = [];
+          if (this.ctx.chassis) {
+            for (const part of CHASSIS_PARTS) {
+              const code = this.partCode(part);
+              if (!code) { verdict.blocking.push(`Falta escribir ${part} con write_part (la pieza de la plantilla no se usa en esta tienda).`); continue; }
+              const missing = partProblems(part, code);
+              if (missing.length) verdict.blocking.push(partProblemLine(part, missing));
+            }
+            if (this.partCode('product')) for (const width of [1280, 390] as const) {
+              try {
+                const page = await captureAgentDraft(snapshot, width, this.ctx.signal, 'product.html', [], 'normal');
+                extraImages.push(page.image);
+                verdict.advice.push(...page.errors.map(error => `(ficha ${width}) ${error}`));
+              } catch (error) { verdict.advice.push(`(ficha ${width}) no se pudo capturar: ${(error as Error).message.slice(0, 200)}`); }
+            }
+          }
           // Amboras 2026-11-12 (their check_build: «ADVISORY (warn-only, never a build failure)»): in the studio only what breaks the shop
           // blocks — the footer's platform hooks, the product grid and its cards' photos; every design finding is advice to act on.
           // Oh Belly studio6 looped on a contrast block until the run failed and fell back to the template.
           if (this.ctx.studio) {
-            const hard = (line: string) => /^(Falta el pie|Al pie le falta|La grilla de productos perdió|La portada deja las tarjetas)/.test(line);
+            const hard = (line: string) => /^(Falta el pie|Al pie le falta|La grilla de productos perdió|La portada deja las tarjetas|Falta escribir)/.test(line) || PART_PROBLEM_START.test(line);
             verdict.advice.unshift(...verdict.blocking.filter(line => !hard(line)));
             verdict.blocking.splice(0, verdict.blocking.length, ...verdict.blocking.filter(hard));
           }
@@ -261,7 +308,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           return { output: [verdict.blocking.length ? `Debes corregir:\n- ${verdict.blocking.join('\n- ')}` : 'Nada que corregir.',
             verdict.advice.length ? `${this.ctx.studio ? 'Avisos de diseño (no bloquean; corrígelos con una sola edición antes de finish)' : 'Consejos (opcionales)'}:\n- ${verdict.advice.join('\n- ')}` : '', 'Capturas de escritorio y celular adjuntas.'].filter(Boolean).join('\n'),
             // Token cut 2026-10-30: the captures check already took, so a run needs no separate screenshot calls.
-            images: captures.map(capture => capture.image) };
+            images: [...captures.map(capture => capture.image), ...extraImages] };
         }
         case 'screenshot': {
           if (this.shots >= HOME_WRITER_LIMITS.screenshots) return { output: 'No quedan capturas. Usa check y termina.' };
@@ -318,7 +365,14 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
     const photos = this.ctx.base.files.filter(file => file.path.startsWith('assets/') && /\.(jpe?g|png|webp|mp4)$/i.test(file.path)).map(file => file.path);
     const fonts = SOURCE_FONT_CATALOG.map(font => `${font.id} (${font.family}, ${font.role})`).join(', ');
     const templateFooter = /export function Footer\(\)[\s\S]*?\n\}\n/.exec(this.workspace.read(SHELL_PATH))?.[0];
-    return [KIT_BRIEF, ...(this.ctx.template ? [templateBrief(this.ctx.template, Boolean(this.ctx.studio))] : []), ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []),
+    // Store chassis (spec 2026-11-12): the plan, each part's note and the template's parts as wiring only.
+    const shell = this.baseShell();
+    const fn = (source: string, name: string) => new RegExp(`export function ${name}\\([^)]*\\)[\\s\\S]*?\\n\\}\\n`).exec(source)?.[0] ?? '';
+    let library = ''; try { library = this.workspace.read('components/library.tsx'); } catch { library = ''; }
+    const chassisBriefs = this.ctx.chassis ? [CHASSIS_BRIEF,
+      this.ctx.plan ? `PLAN DE DISEÑO de esta tienda (distinto de las últimas tiendas; síguelo):\n${(Object.keys(this.ctx.plan) as Array<keyof DesignPlan>).map(key => (DESIGN_PLAN_TEXT[key] as Record<string, string>)[this.ctx.plan![key]]).join('\n')}` : '',
+      `Cableado de la plantilla (solo los ganchos; no copies su forma):\n--- Header ---\n${fn(shell, 'Header')}\n--- CartParts ---\n${fn(shell, 'CartParts')}\n--- CardTemplate (library.tsx) ---\n${fn(library, 'CardTemplate')}\n--- components/product.tsx ---\n${this.workspace.read(CHASSIS_PATHS.product)}`] : [];
+    return [KIT_BRIEF, ...(this.ctx.template ? [templateBrief(this.ctx.template, Boolean(this.ctx.studio))] : []), ...chassisBriefs, ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []),
       ...(this.ctx.footer && (!this.ctx.template || this.ctx.studio) ? [FOOTER_BRIEF, templateFooter ? `El pie actual de la plantilla (solo como referencia de los ganchos; el tuyo debe verse distinto):\n${templateFooter}` : ''] : []),
       `import { … } from './store-data' — exporta: ${exported.join(', ')}. Productos, precios, fotos y logo salen de ahí; nunca los escribas a mano.`,
       `Archivos de fotos: ${photos.join(', ') || 'ninguno (portada solo tipográfica)'}`,
