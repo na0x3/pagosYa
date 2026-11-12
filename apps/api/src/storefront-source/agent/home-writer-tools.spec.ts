@@ -255,6 +255,11 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
     b.workspace.write(HOME_PATH, b.workspace.read(HOME_PATH).replace('<Shell>', '<Shell><h2 style={{ fontFamily: \'var(--es-font-heading)\' }}>Hola mundo bonito</h2>'));
     expect((await b.run('check', '{}')).output).toMatch(/no existen en el sistema de diseño: --es-font-heading/);
   });
+  it('studio: check refuses a home that hides the photos of the product cards (NOA studio3 2026-11-12)', async () => {
+    const b = studioBox();
+    b.workspace.write(HOME_PATH, b.workspace.read(HOME_PATH).replace('<Shell>', '<Shell><style>{`.es-catalog .es-card__media{display:none!important}`}</style>'));
+    expect((await b.run('check', '{}')).output).toMatch(/tarjetas de producto sin su foto: \.es-catalog \.es-card__media/);
+  });
   it('write_footer is refused', async () => {
     expect((await sorboBox().run('write_footer', JSON.stringify({ content: 'export default function StoreFooter() { return <footer />; }' }))).output).toBe('Esta tienda usa el pie de su plantilla; no escribas uno.');
   });

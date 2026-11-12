@@ -1,4 +1,4 @@
-import { BUILD_NOW, INTAKE_SCHEMA, intakeFacts, intakeInstruction, intakeMessage, intakePhone, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState } from './source-intake';
+import { BUILD_NOW, INTAKE_SCHEMA, intakeFacts, intakeInstruction, intakeRequest, intakeMessage, intakePhone, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState } from './source-intake';
 
 const state = (extra: Partial<IntakeState> = {}): IntakeState => ({ pending: true, words: 'hola quiero mi tienda para vender laminas', photos: [], asked: [], answers: [], ...extra });
 const facts = intakeFacts({ name: 'Láminas Lu', onboarding: { what: 'laminas de arte', story: '' }, products: [{ name: 'Café', imageUrls: ['/v1/uploads/a.jpg'] }, { name: 'Té', imageUrls: [] }],
@@ -103,5 +103,16 @@ describe('the number in the answers', () => {
     expect(intakePhone(asked('Envíos desde Bs 200, el 10 %'))).toBeNull();
     expect(intakePhone(asked('Cálida', '¿Qué estilo quieres?'))).toBeNull();
     expect(intakePhone(state({ words: 'Somos una panadería, horneamos 120 cookies por día desde 2019' }))).toBeNull();
+  });
+});
+
+describe('the merchant\'s request after the questions (live 2026-11-12: «Usa la plantilla Mimo» lost after the brand-material question)', () => {
+  it('keeps every word the merchant said before the questions, with the answers', () => {
+    const state: IntakeState = { pending: false, words: 'Son mías, úsalas.', request: 'Pawby, comida para perros. Usa la plantilla Mimo.\n\nSon mías, úsalas.', photos: [], asked: ['look'],
+      answers: [{ topic: 'look', question: '¿Cómo quieres que se vea?', answer: 'Alegre' }] };
+    expect(intakeRequest(state)).toBe('Pawby, comida para perros. Usa la plantilla Mimo.\n\nSon mías, úsalas.\n\nRespuestas del comercio:\n- ¿Cómo quieres que se vea? → Alegre');
+  });
+  it('no request of their own: none', () => {
+    expect(intakeRequest({ pending: false, words: 'hola', photos: [], asked: [], answers: [] })).toBeUndefined();
   });
 });

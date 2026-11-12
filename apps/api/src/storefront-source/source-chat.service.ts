@@ -59,7 +59,7 @@ import { mergeOnboarding } from '../stores/store-onboarding';
 import { kindQuestionNote, nextKindQuestion, pendingFactsNote, type VoiceReceipt } from './store-voice';
 import { listTemplates, templateManifest, templateSourceFiles, type TemplateCopySlot, type TemplateManifest } from '@pagosya/store-templates';
 import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates, leastUsedDraw, randomPick, readTemplateRandom, templateSwitchRequest } from './source-template-pick';
-import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeMessage, intakePhone, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
+import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeRequest, intakeMessage, intakePhone, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
 import sharp from 'sharp';
 import { join } from 'node:path';
@@ -791,7 +791,7 @@ export class SourceChatService {
         userMessage = { ...userMessage, content: words };
         instruction = words;
         chatPhotos = state.photos.slice(0, 8);
-        merchantRequest = state.request ? words : undefined;
+        merchantRequest = intakeRequest(state);
         replyPrefix = `Listo, ya tengo lo que necesito. ${replyPrefix}`;
       }
     }

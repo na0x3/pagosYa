@@ -11,7 +11,8 @@ export const STUDIO_RULES = `MODO ESTUDIO (como Lovable). Esta tienda tiene que 
 6. Una portada con personalidad: una fuente de titular con carácter usada muy grande, una sola idea de marca, detalles propios (etiquetas, marcos, bandas del color de la marca, movimiento del kit). Nada genérico.
 7. En escritorio el titular de la portada nunca va encima de la foto: al lado, debajo o sobre un fondo de color de la marca. En celular puede ir sobre la foto solo si se lee bien (texto claro sobre una zona oscura).
 8. Los textos dicen cosas reales de esta tienda: nunca nombres de relleno («Sabor uno», «Producto 1», «Colección A»); los productos con su nombre de store-data. Y nada se sale de la pantalla: etiquetas y stickers dentro del borde, también en celular.
-9. El encabezado, el menú, las tarjetas de producto, la ficha, el carrito y el checkout son de la plantilla; la portada usa sus secciones probadas cuando sirven.`;
+9. El encabezado, el menú, las tarjetas de producto, la ficha, el carrito y el checkout son de la plantilla; la portada usa sus secciones probadas cuando sirven. Las tarjetas de producto llevan su foto: nunca la ocultes ni la cambies con CSS.
+10. Cada sección llena el ancho: foto grande a un lado y texto al otro, o centrada; nunca todo apilado en un costado con medio ancho vacío.`;
 
 /** Colours written by hand in the home: hex (other than white and black), rgb(), rgba(), hsl(), outside comments and links. */
 export function rawColours(code: string): string[] {
@@ -87,4 +88,65 @@ export function evaluateTitleScale(): string[] {
     if (size < 30) out.push(`BLOQUEA: El título de sección «${(el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40)}» mide ${Math.round(size)} px, como el texto: dale tamaño de titular (40 px o más) y la fuente var(--es-heading).`);
   }
   return out.slice(0, 4);
+}
+
+/** CSS in the home that hides a part of the template's product cards (live 2026-11-12, NOA studio3: the writer hid every card
+ *  photo with .es-catalog .es-card__media{display:none!important} to draw a list of names). */
+export function hiddenCardParts(code: string): string[] {
+  const found: string[] = [];
+  for (const match of code.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!/display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0(?![.\d])/.test(match[2])) continue;
+    for (const selector of match[1].split(',').map(part => part.replace(/^[\s`'"]+|[\s`'"]+$/g, '').trim()))
+      if (/\.(?:es-card|lb-card|menu-item)\b[^,]*(?:\bimg\b|__media|__image)|__media\b|menu-item__image/.test(selector)) found.push(selector);
+  }
+  return [...new Set(found)];
+}
+
+/** Runs in the page (page.evaluate): no imports, no closures. Product cards drawn without their photo. */
+export function evaluateCardPhotos(): string[] {
+  let lost = 0;
+  for (const card of Array.from(document.querySelectorAll('main .es-card, main .menu-item'))) {
+    const r = card.getBoundingClientRect();
+    if (r.width < 60 || r.height < 60) continue;
+    const img = card.querySelector('img[src]');
+    if (img && img.getAttribute('src') && img.getBoundingClientRect().width < 20) lost++;
+  }
+  return lost ? [`BLOQUEA: ${lost} tarjetas de producto se ven sin su foto. Las tarjetas son de la plantilla: no ocultes ni cambies su foto.`] : [];
+}
+
+/** Runs in the page (page.evaluate): no imports, no closures. On a computer, a section whose words and photos all sit on one side
+ *  and leave half the width empty (live 2026-11-12, NOA studio3 «Esculpir antes que adornar»: a 154 px photo and a narrow column). */
+export function evaluateLopsided(): string[] {
+  const W = window.innerWidth;
+  const main = document.querySelector('main');
+  if (W < 900 || !main) return [];
+  const out: string[] = [];
+  for (const band of Array.from(main.querySelectorAll(':scope > section, :scope > div > section'))) {
+    const r = band.getBoundingClientRect();
+    if (r.height < 300 || r.width < W * 0.9) continue;
+    let left = Infinity; let right = -Infinity;
+    const walker = document.createTreeWalker(band, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!(node.textContent || '').trim()) continue;
+      const range = document.createRange(); range.selectNodeContents(node);
+      const b = range.getBoundingClientRect();
+      if (b.width >= 1) { left = Math.min(left, b.left); right = Math.max(right, b.right); }
+    }
+    for (const el of Array.from(band.querySelectorAll('*'))) {
+      const media = /^(?:img|video|picture|svg|canvas)$/i.test(el.tagName);
+      // A photo still loading has no height yet: its frame stands in for it.
+      const b = (media && el.getBoundingClientRect().height < 8 && el.parentElement ? el.parentElement : el).getBoundingClientRect();
+      if (b.width < 8 || b.height < 8) continue;
+      const style = getComputedStyle(el);
+      const painted = b.width >= 120 && b.height >= 120 && (style.backgroundImage !== 'none' || !/rgba\(0, 0, 0, 0\)|transparent/.test(style.backgroundColor));
+      if (media || painted) { left = Math.min(left, b.left); right = Math.max(right, b.right); }
+    }
+    if (!isFinite(left)) continue;
+    const used = right - left;
+    if (used < W * 0.55 && Math.abs((left + right) / 2 - W / 2) > W * 0.15) {
+      const title = (band.querySelector('h2,h3')?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+      out.push(`BLOQUEA: La sección «${title}» se apila en un costado (usa ${Math.round(used)} de ${W} px) y deja medio ancho vacío: arregla su grilla para que llene el ancho, con la foto grande a un lado y el texto al otro.`);
+    }
+  }
+  return out.slice(0, 3);
 }

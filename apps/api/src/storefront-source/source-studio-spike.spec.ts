@@ -1,4 +1,4 @@
-import { rawColours, studioImageMaker, unknownKitVars, studioImagePrompts, studioImages, STUDIO_RULES } from './source-studio-spike';
+import { hiddenCardParts, rawColours, studioImageMaker, unknownKitVars, studioImagePrompts, studioImages, STUDIO_RULES } from './source-studio-spike';
 import { homeWriterInstructions } from './source-home-writer-stage';
 
 /** Spike 2026-11-12 (owner: «find how they operate and replicate it»): Lovable's way on our template stores. */
@@ -90,5 +90,19 @@ describe('studio spike: titles in the brand font at a title size (NOA studio2 20
   it('names the real variables in the rules', () => {
     expect(STUDIO_RULES).toMatch(/var\(--es-heading\)/);
     expect(STUDIO_RULES).toMatch(/título de sección/);
+  });
+});
+
+describe('studio spike: product cards keep their photos (NOA studio3 2026-11-12: .es-catalog .es-card__media{display:none})', () => {
+  it('finds a home that hides the photo of the template\'s product cards', () => {
+    expect(hiddenCardParts('<style>{`.es-catalog .es-card{padding:26px}.es-catalog .es-card__media{display:none!important}`}</style>')).toEqual(['.es-catalog .es-card__media']);
+    expect(hiddenCardParts('<style>{`.menu-item img { visibility: hidden }`}</style>')).toEqual(['.menu-item img']);
+  });
+  it('lets the cards be framed and spaced', () => {
+    expect(hiddenCardParts('<style>{`.es-catalog .es-card{border:0;padding:12px}.es-card__media img{border-radius:8px}.es-hero{display:none}`}</style>')).toEqual([]);
+  });
+  it('says so in the rules, with the grid filling the width', () => {
+    expect(STUDIO_RULES).toMatch(/tarjetas de producto llevan su foto/);
+    expect(STUDIO_RULES).toMatch(/medio ancho vacío/);
   });
 });
