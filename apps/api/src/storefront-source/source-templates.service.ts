@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { homeSummary, type HomeSummary } from './source-composer';
+import { withStudioPages } from './source-content-pages';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import sharp from 'sharp';
 import { UploadsService } from '../uploads/uploads.service';
@@ -279,6 +280,17 @@ export class SourceTemplatesService {
   async refill(merchantId: string, storeId: string, revision: number, change: MasterFill, label: string, options: { files?: <T extends { path: string; content: string }>(files: T[]) => T[]; refreshData?: boolean } = {}) {
     const { brief, files } = await this.refilledFiles(merchantId, storeId, revision, change, options);
     return this.projects.save(merchantId, storeId, { revision, label, brief, files });
+  }
+
+  /** Owner 2026-11-12 («the entire stores are only product pages»): a studio store's product page and menu pages get the template's
+   *  sections, photos bundled like a refill's; only those store-data lines and the pages that draw them change (withStudioPages). */
+  async saveStudioPages(merchantId: string, storeId: string, revision: number, change: Pick<MasterFill, 'productLayout' | 'pageLayouts'>, label: string) {
+    const previous = await this.projects.version(merchantId, storeId, revision);
+    const snapshot = previous.snapshot as unknown as SourceProjectSnapshot;
+    const bundled = await this.bundleMasterPhotos(merchantId, change);
+    const files = withStudioPages(snapshot.files, { ...(bundled.change.productLayout ? { productLayout: bundled.change.productLayout } : {}),
+      ...(bundled.change.pageLayouts ? { pageLayouts: bundled.change.pageLayouts } : {}) });
+    return this.projects.save(merchantId, storeId, { revision, label, brief: snapshot.brief, files: [...files, ...bundled.files.filter(asset => !files.some(file => file.path === asset.path))] });
   }
 
   /** Spec 2026-11-11 store composer: a composed home built for its photographs only — prepared, never saved. */

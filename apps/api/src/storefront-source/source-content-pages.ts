@@ -129,3 +129,42 @@ export function withStandardPages(files: SourceProjectFileDto[]): { files: Sourc
   const patched = withNavSlot(shell.content);
   return { files: [...files.map(file => (file === shell && patched ? { ...file, content: patched } : file)), ...pages], added: pages.map(page => page.path), slotAdded: patched !== null };
 }
+
+/** Owner 2026-11-12 («the entire stores are only product pages… cant we just reuse sections»): the roles of a studio store's
+ *  «Nosotros», in order — a page header, the story, what the brand stands for, how it works, a closing — each the first section of
+ *  its role that the template fits, the owner did not veto and the store can fill; one the home already shows only when no other is
+ *  left. A role with none is left out. */
+const ABOUT_ROLES: readonly (readonly string[])[] = [
+  ['cover-centered', 'cover-split', 'cover-half', 'cover-duo'],
+  ['story-split', 'story-overlap', 'story-stack', 'story-list', 'story-overlay', 'story-collage', 'origins-arches', 'block-split'],
+  ['benefits-bento', 'icon-columns', 'image-columns', 'values-portrait', 'benefits-orbit', 'perks-rows', 'checker-rows', 'statement-inline', 'statement-reveal'],
+  ['steps-howto', 'story-timeline', 'usecases', 'photo-scroller', 'detail-hotspots'],
+  ['closing-photo', 'closing-wordmark'],
+];
+export function aboutPageTypes(input: { fit: readonly string[]; vetoed: readonly string[]; home: readonly string[]; blocked: (type: string) => boolean }): string[] {
+  const chosen: string[] = [];
+  for (const role of ABOUT_ROLES) {
+    const usable = role.filter(type => input.fit.includes(type) && !input.vetoed.includes(type) && !chosen.includes(type) && !input.blocked(type));
+    const pick = usable.find(type => !input.home.includes(type)) ?? usable[0];
+    if (pick) chosen.push(pick);
+  }
+  return chosen;
+}
+
+/** A studio store's product page and menu pages, written into store-data line by line and nothing else: a template refill would
+ *  redraw the studio's own colours and fonts (globals.css) from the template's. A menu page with sections is drawn from them. */
+export function withStudioPages<T extends { path: string; content: string }>(files: T[], change: { productLayout?: unknown[]; pageLayouts?: Record<string, unknown[]> }): T[] {
+  const line = (content: string, name: string, type: string, value: unknown) => {
+    const pattern = new RegExp(`^export const ${name}: ${type.replace(/[[\]]/g, '\\$&')} = .*;$`, 'm');
+    return pattern.test(content) ? content.replace(pattern, () => `export const ${name}: ${type} = ${JSON.stringify(value)};`) : content;
+  };
+  const data = files.map(file => {
+    if (file.path !== 'components/store-data.tsx') return file;
+    let content = file.content;
+    if (change.productLayout) content = line(content, 'productLayout', 'any[]', change.productLayout);
+    if (change.pageLayouts) content = line(content, 'pageLayouts', 'Record<string, any[]>', change.pageLayouts);
+    return content === file.content ? file : { ...file, content };
+  });
+  const kinds = MENU_KINDS.filter(kind => (change.pageLayouts?.[kind] ?? []).length > 0);
+  return kinds.length ? withSectionedPages(data, kinds) : data;
+}

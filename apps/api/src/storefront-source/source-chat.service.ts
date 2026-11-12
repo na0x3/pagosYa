@@ -95,7 +95,7 @@ import type { ProductVariant } from '../payment-links/product-variants';
 import { applyStoreOps, readCatalogTitle, storeChangeEmpty, withCatalogTitle, type StoreChange, type StoreEditPhoto, type StoreEditState } from './source-store-edit';
 import { storeFaq, storePolicies } from '../stores/store-presentation';
 import { MENU_PAGES, MENU_PAGE_NAMES, MENU_PAGE_URLS, applyLayoutOps, bandUnderMenu, layoutAdds, layoutEditReply, menuPagesFor, withPageImprove, type LayoutPage, type MenuPage } from './source-layout-edit';
-import { keptMenuPages, sectionablePage, withSectionedPages } from './source-content-pages';
+import { aboutPageTypes, keptMenuPages, sectionablePage, withSectionedPages } from './source-content-pages';
 import { bolivianos, readShippingAsk, type ShippingAsk } from './source-shipping-ask';
 import { plainReply } from './source-plain-reply';
 import { visibleChanges } from './source-visible-change';
@@ -975,13 +975,7 @@ export class SourceChatService {
     // second call the same way. They speak for every product (the page is shared), so the model is told so; the checks read only
     // the merchant's words. A failed call leaves the product page without them, never with the demo words.
     const productTemplate = template && (sections.productLayout ?? []).length ? sections.productLayout as LayoutBlock[] : undefined;
-    let productLayout: LayoutBlock[] = [];
-    if (productTemplate) {
-      const pageFacts = { ...facts, request: `${facts.request}\n(Página de producto: estas secciones van debajo del botón de compra de CADA producto. Escríbelas para todos los productos de la tienda — para qué sirven, cómo se usan, por qué elegirlos —, nunca para uno solo, y sin repetir la portada.)`.trim() };
-      const pageAnswer = await this.dialogue.composeLibrary(merchantId, { storeId, facts: pageFacts, template: productTemplate }).catch(() => null);
-      productLayout = pageAnswer ? validateLibraryLayout(pageAnswer as never, facts, { fixed: productTemplate }) : [];
-      this.productLogger.log(JSON.stringify({ event: 'section_library_product_page', storeId, asked: productTemplate.length, kept: productLayout.map(block => block.type) }));
-    }
+    const productLayout = productTemplate ? await this.productPageSections(merchantId, storeId, facts, productTemplate) : [];
     await workflow.report('saving');
     // Lively one-product stores + chunky colour titles (spec 2026-11-03): YAPI's mood and title style for the product are saved with the home on Único.
     const libraryLook = libraryVariants(theme, answer as never, facts);
@@ -999,6 +993,46 @@ export class SourceChatService {
     // reply's metadata (templateQa), never to the merchant's chat.
     if (this.config.get<boolean>('app.yapiTemplateQa') === true) void this.logTemplateQa(merchantId, storeId, saved.revision, assistantMessage.id);
     return { userMessage, assistantMessage, revision: saved };
+  }
+
+  /** Owner 2026-10-31 («the inside of each product card»): the template's sections under the product page's buy box, filled by their
+   *  own call. They speak for every product (the page is shared), so the model is told so; the checks read only the merchant's words.
+   *  A failed call leaves the product page without them, never with the demo words. */
+  private async productPageSections(merchantId: string, storeId: string, facts: LibraryFacts, productTemplate: LayoutBlock[]): Promise<LayoutBlock[]> {
+    const pageFacts = { ...facts, request: `${facts.request}\n(Página de producto: estas secciones van debajo del botón de compra de CADA producto. Escríbelas para todos los productos de la tienda — para qué sirven, cómo se usan, por qué elegirlos —, nunca para uno solo, y sin repetir la portada.)`.trim() };
+    const pageAnswer = await this.dialogue.composeLibrary(merchantId, { storeId, facts: pageFacts, template: productTemplate }).catch(() => null);
+    const productLayout = pageAnswer ? validateLibraryLayout(pageAnswer as never, facts, { fixed: productTemplate }) : [];
+    this.productLogger.log(JSON.stringify({ event: 'section_library_product_page', storeId, asked: productTemplate.length, kept: productLayout.map(block => block.type) }));
+    return productLayout;
+  }
+
+  /** Owner 2026-11-12 («the entire stores are only product pages… cant we just reuse sections»): after a studio home, the product
+   *  page's template sections are written for the store (never the template's demo words) and «Nosotros» gets up to five library
+   *  sections the template fits (aboutPageTypes). Null when there was nothing to write. */
+  private async studioPages(merchantId: string, storeId: string, revision: number, words: string) {
+    const files = ((await this.projects.version(merchantId, storeId, revision)).snapshot as unknown as SourceProjectSnapshot).files;
+    const template = writerTemplate(files as SourceProjectFileDto[]);
+    if (!template) return null;
+    const state = readMasterState(files);
+    const facts = await this.libraryFacts(merchantId, storeId, files, words, 24);
+    const productTemplate = (state.productLayout ?? []) as LayoutBlock[];
+    const productLayout = productTemplate.length ? await this.productPageSections(merchantId, storeId, facts, productTemplate) : undefined;
+    const pages = (state.pageLayouts ?? {}) as Record<string, unknown[]>;
+    const fit = readSectionFit();
+    const home = files.find(file => file.path === 'components/home.tsx')?.content ?? '';
+    const types = (pages.about ?? []).length || !facts.photos.length || !sectionablePage(files, 'about') ? []
+      : aboutPageTypes({ fit: fit.fit[template.id] ?? [], vetoed: fit.vetoed?.[template.id] ?? [], home: [...home.matchAll(/type:\s*['"]([\w-]+)['"]/g)].map(match => match[1]),
+        blocked: type => Boolean(librarySectionBlocker(type, facts)) });
+    let about: LayoutBlock[] = [];
+    if (types.length) {
+      const fixed = types.map(type => ({ type })) as LayoutBlock[];
+      const aboutFacts = { ...facts, request: `${facts.request}\n(Página «Nosotros» de la tienda: la primera sección es el encabezado de la página — quiénes son, en una línea —; las demás cuentan su historia, lo que defienden y cómo trabajan, con sus fotos y sus datos reales, sin repetir la portada ni inventar fechas, premios o cifras.)`.trim() };
+      const answer = await this.dialogue.composeLibrary(merchantId, { storeId, facts: aboutFacts, template: fixed }).catch(() => null);
+      about = answer ? validateLibraryLayout(answer as never, aboutFacts, { fixed }) : [];
+      this.productLogger.log(JSON.stringify({ event: 'studio_about_page', storeId, asked: types, kept: about.map(block => block.type) }));
+    }
+    if (productLayout === undefined && !about.length) return null;
+    return this.templates.saveStudioPages(merchantId, storeId, revision, { ...(productLayout ? { productLayout } : {}), ...(about.length ? { pageLayouts: { ...pages, about } } : {}) }, 'Páginas de YAPI');
   }
 
   /** Spec 2026-11-11 store composer: the brand's home composed inside its template; null hands the build to fill mode. */
@@ -2103,7 +2137,14 @@ export class SourceChatService {
           const templated = writerTemplate(((previous.snapshot as unknown as SourceProjectSnapshot)?.files ?? []) as SourceProjectFileDto[]);
           throw new PersonalTouchSkipped('home writer kept the template', templated ? this.libraryFollowUp(revisionNow, input.checklistWords) : checkAfter(revisionNow));
         }
-        const after = checkAfter(written.revision.revision);
+        // Owner 2026-11-12 («the entire stores are only product pages»): a studio store's product page and «Nosotros» follow its home.
+        // The home is saved already, so a failed step only leaves those pages as they were.
+        const pages = this.config.get<boolean>('app.yapiStudio') === true
+          ? await this.studioPages(merchantId, storeId, written.revision.revision, input.checklistWords ?? input.earlierAsks ?? '').catch(error => {
+            this.productLogger.warn(JSON.stringify({ event: 'studio_pages_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
+            return null;
+          }) : null;
+        const after = checkAfter(pages?.revision ?? written.revision.revision);
         return after ? { ...written, followUp: after } : written;
       }
       if (input.briefCheck) return await this.briefCheck(merchantId, storeId, thread.id, userMessage, workflow, input, current.revision, previous);
