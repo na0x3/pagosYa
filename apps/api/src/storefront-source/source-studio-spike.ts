@@ -12,7 +12,8 @@ export const STUDIO_RULES = `MODO ESTUDIO (como Lovable). Esta tienda tiene que 
 7. En escritorio el titular de la portada nunca va encima de la foto: al lado, debajo o sobre un fondo de color de la marca. En celular puede ir sobre la foto solo si se lee bien (texto claro sobre una zona oscura).
 8. Los textos dicen cosas reales de esta tienda: nunca nombres de relleno («Sabor uno», «Producto 1», «Colección A»); los productos con su nombre de store-data. Y nada se sale de la pantalla: etiquetas y stickers dentro del borde, también en celular.
 9. El encabezado, el menú, las tarjetas de producto, la ficha, el carrito y el checkout son de la plantilla; la portada usa sus secciones probadas cuando sirven. Las tarjetas de producto llevan su foto: nunca la ocultes ni la cambies con CSS.
-10. Cada sección llena el ancho: foto grande a un lado y texto al otro, o centrada; nunca todo apilado en un costado con medio ancho vacío.`;
+10. Cada sección llena el ancho: foto grande a un lado y texto al otro, o centrada; nunca todo apilado en un costado con medio ancho vacío.
+11. Cada sección muestra lo que su título promete: opiniones solo con opiniones reales del comercio, cifras solo con datos suyos. Si no las tiene, esa sección no va.`;
 
 /** Colours written by hand in the home: hex (other than white and black), rgb(), rgba(), hsl(), outside comments and links. */
 export function rawColours(code: string): string[] {

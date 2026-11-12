@@ -109,4 +109,7 @@ describe('studio spike: product cards keep their photos (NOA studio3 2026-11-12:
     expect(STUDIO_RULES).toMatch(/tarjetas de producto llevan su foto/);
     expect(STUDIO_RULES).toMatch(/medio ancho vacío/);
   });
+  it('a section shows what its title promises (Oh Belly studio3: «La panza tiene la palabra» with no reviews)', () => {
+    expect(STUDIO_RULES).toMatch(/opiniones solo con opiniones reales/);
+  });
 });
