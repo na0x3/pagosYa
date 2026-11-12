@@ -744,7 +744,41 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     if (sessionStorage.getItem("pagosya_welcome") === "1") { sessionStorage.removeItem("pagosya_welcome"); document.getElementById("welcomeDialog").showModal(); return; }
     if (!lastStores.length) openCreateStoreDialog();
   }
-  document.getElementById("welcomeStart").addEventListener("click", () => { document.getElementById("welcomeDialog").close(); openCreateStoreDialog(); });
+  // Owner 2026-11-12 (Amboras's setup steps): role → what pagosYa should help with → WhatsApp, one screen each; Continuar stays off
+  // until the step is answered. The answers are kept on the merchant, then the first store gets its name. A failed save never
+  // stops the merchant: the store comes first.
+  const setupForm = document.getElementById("setupForm");
+  let setupStep = 1;
+  const setupAnswered = () => setupStep === 1 ? Boolean(setupForm.querySelector('input[name="role"]:checked'))
+    : setupStep === 2 ? Boolean(setupForm.querySelector('input[name="goals"]:checked'))
+    : document.getElementById("setupPhone").value.replace(/\D/g, "").length >= 7;
+  function showSetupStep(step) {
+    setupStep = step;
+    setupForm.querySelectorAll("[data-setup-step]").forEach((section) => { section.hidden = Number(section.dataset.setupStep) !== step; });
+    document.querySelectorAll("#welcomeDialog .setup-bar i").forEach((bar, index) => bar.classList.toggle("is-on", index < step));
+    document.getElementById("setupCount").textContent = `Paso ${step} de 3`;
+    document.getElementById("setupBack").hidden = step === 1;
+    document.getElementById("setupNext").disabled = !setupAnswered();
+  }
+  setupForm.addEventListener("input", () => { document.getElementById("setupNext").disabled = !setupAnswered(); });
+  document.getElementById("setupBack").addEventListener("click", () => showSetupStep(Math.max(1, setupStep - 1)));
+  setupForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!setupAnswered()) return;
+    if (setupStep < 3) { showSetupStep(setupStep + 1); return; }
+    const next = document.getElementById("setupNext");
+    setButtonBusy(next, true, "Guardando…");
+    const answers = {
+      role: setupForm.querySelector('input[name="role"]:checked')?.value,
+      goals: [...setupForm.querySelectorAll('input[name="goals"]:checked')].map((input) => input.value),
+      phone: document.getElementById("setupPhoneCode").value + document.getElementById("setupPhone").value.replace(/\D/g, ""),
+    };
+    try { await api("/dashboard/onboarding", { method: "POST", body: JSON.stringify(answers) }); } catch { /* the store comes first */ }
+    setButtonBusy(next, false, "Continuar →");
+    document.getElementById("welcomeDialog").close();
+    openCreateStoreDialog();
+  });
+  showSetupStep(1);
 
   function openCreateStore() {
     openCreateStoreDialog();

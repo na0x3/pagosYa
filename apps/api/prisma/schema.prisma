@@ -291,6 +291,8 @@ model Merchant {
   // Plans 2026-11-07: the monthly YAPI credits and whether stores may be published (FREE may not). Ops sets it by hand.
   plan                        MerchantPlan                @default(FREE)
   creditGrants                MerchantCreditGrant[]
+  /// Owner 2026-11-12 (Amboras's setup steps): role, what pagosYa should help with, WhatsApp; null until answered.
+  onboarding                  Json?
 }
 
 // A human login for the merchant dashboard — deliberately separate from

@@ -962,17 +962,44 @@
 <link rel="stylesheet" href="/variant-editor.css">
 <script src="/variant-editor.js"></script>
 <script type="module" src="/src/dashboard.js"></script>
-  <dialog class="welcome-dialog" id="welcomeDialog" aria-labelledby="welcomeTitle">
-    <img src="/assets/pagosya-star-yellow.png" alt="" width="64" height="64">
-    <h2 id="welcomeTitle">¡Bienvenido a pagosYa!</h2>
-    <p>Tu cuenta está lista. Así funciona:</p>
-    <ol class="welcome-steps">
-      <li><strong>Cuéntale a YAPI qué vendes.</strong><span>Arma tu tienda con tus productos y tus fotos en unos minutos.</span></li>
-      <li><strong>Revísala y pídele cambios.</strong><span>Colores, textos, secciones: escríbelo como se lo dirías a una persona.</span></li>
-      <li><strong>Publícala y cobra.</strong><span>Cuando esté lista, elige un plan para publicarla y recibir pagos con QR y tarjeta.</span></li>
-    </ol>
-    <p class="welcome-note" id="welcomeNote">Te enviamos un correo para confirmar tu cuenta; confírmalo para volver a entrar la próxima vez.</p>
-    <button class="primary" id="welcomeStart" type="button">Crear mi tienda</button>
+  <!-- Owner 2026-11-12 (Amboras's setup steps): three questions right after sign-up, then the first store's name. -->
+  <dialog class="welcome-dialog setup-dialog" id="welcomeDialog" aria-labelledby="setupTitle1">
+    <div class="setup-head"><span>Tu tienda</span><span class="setup-count" id="setupCount">Paso 1 de 3</span><button type="button" class="setup-back" id="setupBack" hidden>← Atrás</button></div>
+    <div class="setup-bar" aria-hidden="true"><i class="is-on"></i><i></i><i></i></div>
+    <form id="setupForm" novalidate>
+      <section data-setup-step="1">
+        <h2 id="setupTitle1">¿Qué te describe mejor?</h2>
+        <p>Nos ayuda a conocer tu negocio.</p>
+        <div class="setup-options">
+          <label class="setup-option"><input type="radio" name="role" value="owner"><span><strong>Dueño o dueña</strong><small>Es mi negocio</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="marketing"><span><strong>Marketing</strong><small>Ventas, campañas, contenido</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="operations"><span><strong>Operaciones</strong><small>Pedidos, inventario, envíos</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="designer"><span><strong>Diseño</strong><small>Marca y diseño de la tienda</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="developer"><span><strong>Desarrollo</strong><small>Integraciones y sistemas</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="agency"><span><strong>Agencia</strong><small>Trabajo para clientes</small></span></label>
+          <label class="setup-option"><input type="radio" name="role" value="other"><span><strong>Otro</strong><small>Algo distinto</small></span></label>
+        </div>
+      </section>
+      <section data-setup-step="2" hidden>
+        <h2>¿En qué quieres que te ayude pagosYa?</h2>
+        <p>Elige todas las que quieras.</p>
+        <div class="setup-options">
+          <label class="setup-option"><input type="checkbox" name="goals" value="store"><span><strong>Crear mi tienda con IA</strong></span></label>
+          <label class="setup-option"><input type="checkbox" name="goals" value="products"><span><strong>Agregar mis productos</strong></span></label>
+          <label class="setup-option"><input type="checkbox" name="goals" value="payments"><span><strong>Cobros y envíos</strong></span></label>
+          <label class="setup-option"><input type="checkbox" name="goals" value="domain"><span><strong>Conectar mi dominio</strong></span></label>
+          <label class="setup-option"><input type="checkbox" name="goals" value="emails"><span><strong>Correos de lanzamiento</strong></span></label>
+          <label class="setup-option"><input type="checkbox" name="goals" value="analytics"><span><strong>Ver mis ventas y visitas</strong></span></label>
+        </div>
+      </section>
+      <section data-setup-step="3" hidden>
+        <h2>¿Cuál es tu WhatsApp?</h2>
+        <p>Solo te escribimos si pasa algo urgente con tu tienda.</p>
+        <label class="setup-phone"><span class="setup-phone__code"><select id="setupPhoneCode" aria-label="Código de país"><option value="+591" selected>🇧🇴 +591</option><option value="+51">🇵🇪 +51</option><option value="+56">🇨🇱 +56</option><option value="+54">🇦🇷 +54</option><option value="+595">🇵🇾 +595</option><option value="+55">🇧🇷 +55</option></select></span><input id="setupPhone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="70000000" aria-label="Número de WhatsApp"></label>
+        <p class="welcome-note" id="welcomeNote">Te enviamos un correo para confirmar tu cuenta; confírmalo para volver a entrar la próxima vez.</p>
+      </section>
+      <button class="primary" id="setupNext" type="submit" disabled>Continuar →</button>
+    </form>
   </dialog>
 </body>
 </html>

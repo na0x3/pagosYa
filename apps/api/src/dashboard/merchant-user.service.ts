@@ -33,6 +33,13 @@ export class MerchantUserService {
     private readonly sessions: MerchantSessionService,
   ) {}
 
+  /** Owner 2026-11-12 (Amboras's setup steps): the answers right after sign-up, kept on the merchant. */
+  async saveOnboarding(merchantId: string, answers: { role?: string; goals?: string[]; phone?: string }) {
+    const onboarding = { ...(answers.role ? { role: answers.role } : {}), goals: answers.goals ?? [], ...(answers.phone ? { phone: answers.phone } : {}), at: new Date().toISOString() };
+    await this.prisma.merchant.update({ where: { id: merchantId }, data: { onboarding } });
+    return { saved: true };
+  }
+
   /**
    * Always resolves the same way regardless of whether `email` is already
    * claimed. Returning a different result for "taken" vs "available" would

@@ -15,6 +15,7 @@ import { GoogleLoginDto } from "../auth/dto/google-login.dto";
 import { DeleteAccountDto } from "../auth/dto/delete-account.dto";
 import { UpdateMerchantSessionDto } from "./dto/update-merchant-session.dto";
 import { AcknowledgeProgressCelebrationDto, ClaimProgressCelebrationsDto } from "./dto/claim-progress-celebrations.dto";
+import { SaveOnboardingDto } from "./dto/save-onboarding.dto";
 
 @ApiTags("dashboard")
 @Controller("v1/dashboard")
@@ -110,6 +111,14 @@ export class DashboardController {
   @UseGuards(MerchantSessionGuard)
   dailyLoginReward(@Req() req: { merchantUser: { id: string } }) {
     return this.sessions.claimDailyLoginStar(req.merchantUser.id);
+  }
+
+  /** Owner 2026-11-12 (Amboras's setup steps): role, what pagosYa should help with, WhatsApp — once, right after sign-up. */
+  @Post("onboarding")
+  @ApiBearerAuth()
+  @UseGuards(MerchantSessionGuard)
+  saveOnboarding(@Req() req: { merchant: { id: string } }, @Body() dto: SaveOnboardingDto) {
+    return this.merchantUsers.saveOnboarding(req.merchant.id, dto);
   }
 
   @Post("progress-celebrations")
