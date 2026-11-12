@@ -267,17 +267,23 @@ export function withCurrentThemeBlock(css: string, theme: string): string {
  *  without the developer notes (as withOnlyTheme ships them). Sections the store does not carry are left out. */
 export function withCurrentSectionCss<F extends { path: string; content: string }>(files: F[]): F[] {
   const sheet = files.find(file => file.path === 'styles/globals.css');
-  if (!sheet || !sheet.content.includes('/* lb:') || !files.some(file => file.path === TEMPLATE_STORE_DATA_PATH)) return files;
+  const data = files.find(file => file.path === TEMPLATE_STORE_DATA_PATH)?.content;
+  if (!sheet || !sheet.content.includes('/* lb:') || data === undefined) return files;
   const source = templateSourceFiles(MASTER_TEMPLATE_ID).find(file => file.path === 'styles/globals.css')?.content ?? '';
   // One tag can mark several blocks (story-overlap has two): the store's n-th block of a tag takes the template's n-th.
   const latest = new Map<string, string[]>();
   for (const match of source.matchAll(/\/\* lb:([a-z0-9,-]+) \*\/[\s\S]*?\/\* \/lb:\1 \*\//g)) latest.set(match[1], [...(latest.get(match[1]) ?? []), match[0].replace(/\/\*(?! ?\/?(?:theme|lb):| ?pagosya)[\s\S]*?\*\//g, '')]);
   const seen = new Map<string, number>();
   // The colour binding ran before this (the accent as words): a fresh block gets it too.
-  const content = readableAccentText(sheet.content.replace(/\/\* lb:([a-z0-9,-]+) \*\/[\s\S]*?\/\* \/lb:\1 \*\//g, (block, ids: string) => {
+  let content = readableAccentText(sheet.content.replace(/\/\* lb:([a-z0-9,-]+) \*\/[\s\S]*?\/\* \/lb:\1 \*\//g, (block, ids: string) => {
     const at = seen.get(ids) ?? 0; seen.set(ids, at + 1);
     return latest.get(ids)?.[at] ?? block;
   }));
+  // 2026-11-11 (Remolino's perks-rows drew unstyled): a section the store's pages use that its sheet has no block for gets the
+  // template's (a section added after the first build: a top-up, a sharp cover, a quick edit).
+  const used = new Set([...data.matchAll(/"type":"([a-z0-9-]+)"/g)].map(match => match[1]));
+  const missing = [...latest].filter(([ids]) => !seen.has(ids) && ids.split(',').some(id => used.has(id))).flatMap(([, blocks]) => blocks);
+  if (missing.length) content = `${content.trimEnd()}\n\n${readableAccentText(missing.join('\n'))}\n`;
   return content === sheet.content ? files : files.map(file => file === sheet ? { ...file, content } : file);
 }
 

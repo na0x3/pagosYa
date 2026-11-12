@@ -16,6 +16,15 @@ describe('withCurrentSectionCss', () => {
     expect(source).toContain('/* lb:cover-stage */');
     expect(withCurrentSectionCss([data, out])[1]).toBe(out);
   });
+  it('adds the blocks of sections its layout uses but its sheet does not carry (Remolino perks-rows, 2026-11-11)', () => {
+    const composed = { path: 'components/store-data.tsx', content: 'export const layout: any[] = [{"type":"cover-stage"},{"type":"perks-rows"}];' };
+    const sheet = { path: 'styles/globals.css', content: ':root{--x:1}\n/* lb:cover-stage */\n.x{}\n/* /lb:cover-stage */\n' };
+    const [, out] = withCurrentSectionCss([composed, sheet]);
+    expect(out.content).toContain('/* lb:perks-rows */');
+    expect(out.content).toContain('.lb-perks{display:grid');
+    expect(out.content).not.toContain('/* lb:story-overlap */');
+    expect(withCurrentSectionCss([composed, out])[1]).toBe(out);
+  });
   it('leaves a store without section blocks, or without template data, alone', () => {
     const plain = [{ path: 'styles/globals.css', content: '/* lb:story-overlap */x/* /lb:story-overlap */' }];
     expect(withCurrentSectionCss(plain)).toBe(plain);

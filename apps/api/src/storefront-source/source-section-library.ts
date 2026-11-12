@@ -137,7 +137,7 @@ export type LibraryFacts = {
   /** An art store (láminas, cuadros, prints…): the personalizador hangs its product in a frame. */
   art?: boolean;
   categories: string[];
-  photos: Array<{ url: string; product?: string; category?: string }>;
+  photos: Array<{ url: string; product?: string; category?: string; width?: number }>;
   codes: Array<{ code: string; offer: string }>;
   services: Array<{ title: string; text: string; icon: string }>;
   location?: { name: string; address: string; hours?: string };
@@ -687,6 +687,24 @@ export function withTopUp<T extends { type: string }>(layout: readonly T[], adde
  *  one row of its catalogue, with 8 or more two; later rows go, and the top-up fills the page with other sections. One featured
  *  product, categories and the main grid are not rows. */
 const CATALOGUE_ROWS = new Set(['products-slider', 'products-cards', 'products-lookbook', 'products-rows', 'products-words', 'products-nicknames']);
+/** Owner 2026-11-11 («no blurry cover photos»: Oh Belly's 736 px photos filled a 1280 px cover): a full-width cover takes the widest
+ *  photo of SHARP_COVER px or more (the section that had it gets the cover's photo); a store with none gets the framed cover, with the
+ *  same words and photo. A photo of unknown size is left alone. */
+const FULL_WIDTH_COVERS = new Set(['cover-full', 'cover-stage', 'cover-shoppable']);
+export const SHARP_COVER = 1100;
+export function withSharpCover<T extends LayoutBlock>(layout: readonly T[], facts: LibraryFacts): T[] {
+  const at = layout.findIndex(block => BY_ID.get(block.type)?.role === 'cover');
+  const cover = layout[at];
+  if (!cover || !FULL_WIDTH_COVERS.has(cover.type) || !cover.photo) return [...layout];
+  const width = facts.photos.find(photo => photo.url === cover.photo)?.width;
+  if (!width || width >= SHARP_COVER) return [...layout];
+  const wide = facts.photos.filter(photo => (photo.width ?? 0) >= SHARP_COVER).sort((a, b) => b.width! - a.width!)[0];
+  if (wide) return layout.map((block, index) => index === at ? { ...block, photo: wide.url } : block.photo === wide.url ? { ...block, photo: cover.photo } : block);
+  const { eyebrow, title, text, cta, link, photo } = cover;
+  const framed = { type: 'cover-split', look: 'frame', ...(eyebrow ? { eyebrow } : {}), ...(title ? { title } : {}), ...(text ? { text } : {}), ...(cta ? { cta } : {}), ...(link ? { link } : {}), photo } as unknown as T;
+  return layout.map((block, index) => index === at ? framed : block);
+}
+
 export function withoutRepeatedProductRows<T extends { type: string }>(layout: readonly T[], facts: LibraryFacts): T[] {
   const keep = facts.products.length >= 8 ? 2 : 1;
   let rows = 0;

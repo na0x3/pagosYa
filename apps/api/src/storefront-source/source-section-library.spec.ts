@@ -1,4 +1,4 @@
-import { LIBRARY_FILL_PROMPT, withoutRepeatedProductRows, withPersonalizer, buildLibraryFacts, carriedSections, libraryTopUp, withTopUp, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
+import { LIBRARY_FILL_PROMPT, withSharpCover, withoutRepeatedProductRows, withPersonalizer, buildLibraryFacts, carriedSections, libraryTopUp, withTopUp, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
 
 const facts = (over: Partial<LibraryFacts> = {}): LibraryFacts => ({
   storeName: 'Dulce Nube', what: 'Galletas artesanales', story: '', city: 'La Paz', request: '', tone: 'calm',
@@ -473,6 +473,30 @@ describe('no repeated product rows', () => {
   it('one featured product, categories and the main grid never count as a row', () => {
     const page = [{ type: 'products-grid' }, { type: 'products-spotlight' }, { type: 'categories-tiles' }, { type: 'products-rows' }, { type: 'product-personalizer' }];
     expect(types(withoutRepeatedProductRows(page, facts({ products: products(3) } as never)))).toEqual(types(page));
+  });
+});
+
+// Owner 2026-11-11 («no blurry cover photos»): Oh Belly's 736 px photos filled a 1280 px cover.
+describe('no blurry cover photos', () => {
+  const photos = (...widths: (number | undefined)[]) => widths.map((width, i) => ({ url: `/v1/uploads/p${i}.jpg`, ...(width ? { width } : {}) }));
+  const cover = { type: 'cover-stage', look: 'right', eyebrow: 'Oh Belly', title: 'Que la panza baile', text: 'Soda prebiótica.', cta: 'Ver sodas', link: 'products', photo: '/v1/uploads/p0.jpg', items: [{ title: 'x', photo: '/v1/uploads/p2.jpg' }] };
+  it('a full-width cover takes the widest sharp photo, and the section that had it gets the small one', () => {
+    const layout = [cover, { type: 'story-split', photo: '/v1/uploads/p1.jpg' }];
+    const out = withSharpCover(layout as never, facts({ photos: photos(736, 1600, 800) } as never));
+    expect(out[0]).toEqual(expect.objectContaining({ type: 'cover-stage', photo: '/v1/uploads/p1.jpg', title: 'Que la panza baile' }));
+    expect(out[1].photo).toBe('/v1/uploads/p0.jpg');
+  });
+  it('with no photo wide enough it becomes the framed cover with the same words and photo', () => {
+    const out = withSharpCover([cover, { type: 'faq-split' }] as never, facts({ photos: photos(736, 736) } as never));
+    expect(out[0]).toEqual({ type: 'cover-split', look: 'frame', eyebrow: 'Oh Belly', title: 'Que la panza baile', text: 'Soda prebiótica.', cta: 'Ver sodas', link: 'products', photo: '/v1/uploads/p0.jpg' });
+    expect(out[1].type).toBe('faq-split');
+  });
+  it('leaves a sharp full-width cover, a framed cover and a photo of unknown size alone', () => {
+    const sharp = [{ ...cover, photo: '/v1/uploads/p1.jpg' }];
+    expect(withSharpCover(sharp as never, facts({ photos: photos(736, 1600) } as never))).toEqual(sharp);
+    const framed = [{ type: 'cover-split', photo: '/v1/uploads/p0.jpg' }];
+    expect(withSharpCover(framed as never, facts({ photos: photos(500) } as never))).toEqual(framed);
+    expect(withSharpCover([cover] as never, facts({ photos: photos(undefined) } as never))).toEqual([cover]);
   });
 });
 

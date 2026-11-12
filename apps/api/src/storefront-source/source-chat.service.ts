@@ -87,7 +87,8 @@ import { applyComposerChanges, composerCheck, composerTemplate, readSectionFit }
 import { captureAgentDraft } from './agent/agent-capture';
 import { readMoodAsk } from './source-mood-ask';
 import { nextTitleStyle, readTitleAsk } from './source-title-style';
-import { buildLibraryFacts, withoutRepeatedProductRows, withPersonalizer, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
+import { withPhotoWidths } from './source-photo-size';
+import { buildLibraryFacts, withSharpCover, withoutRepeatedProductRows, withPersonalizer, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
 import { applyCatalogOps, catalogChangeEmpty, emptyCatalogChange, relinkCategories, withCategoryMenuRenames, withoutCategoryMenuLinks, type CatalogChange } from './source-catalog-edit';
 import { writeCatalogChange } from './source-catalog-write';
 import type { ProductVariant } from '../payment-links/product-variants';
@@ -942,6 +943,8 @@ export class SourceChatService {
     // (visit, code, services) made every style end the same way, so it does not run on them.
     // Owner 2026-11-11 (Pawby showed its five products in three rows): one row of the catalogue besides the grid (two with 8+ products).
     layout = withoutRepeatedProductRows(layout, facts);
+    // Owner 2026-11-11 («no blurry cover photos»): a full-width cover gets a photo wide enough, or becomes the framed cover.
+    layout = withSharpCover(layout, facts);
     if (template && !composedHome && !HAND_MADE_THEMES.has(theme)) layout = await this.topUpHome(merchantId, storeId, layout, facts);
     // Spec 2026-11-09 personalizador («para todos»): a store with a product that has options gets it once, after its product grid.
     layout = withPersonalizer(layout, facts);
@@ -1128,11 +1131,13 @@ export class SourceChatService {
     const onboarding = (record?.onboarding ?? {}) as { what?: string; story?: string };
     const storeData = files.find(file => file.path === 'components/store-data.tsx')?.content ?? '';
     const bold = (state.variants as Record<string, unknown> | undefined)?.mood === 'bold' || isPlayfulBusiness(`${request}\n${onboarding.what ?? ''}\n${storeData}`);
-    return buildLibraryFacts({ storeName: state.store?.name || catalog.storeName, what: onboarding.what ?? '', story: onboarding.story ?? '', city: state.store?.city ?? '', request, tone: bold ? 'bold' : 'calm',
+    const facts = buildLibraryFacts({ storeName: state.store?.name || catalog.storeName, what: onboarding.what ?? '', story: onboarding.story ?? '', city: state.store?.city ?? '', request, tone: bold ? 'bold' : 'calm',
       items: catalog.items as never, categories: catalog.categories ?? [], locations: catalog.locations as never, shippingEnabled: catalog.shippingEnabled, shippingPickupEnabled: catalog.shippingPickupEnabled,
       contactPhone: record?.contactPhone ?? catalog.contactPhone, uploads: uploads.map(asset => asset.url),
       codes: codes.filter(code => code.showInEmails || code.showInAssistant || code.id === popupCode), reviews, links,
       zones, policies: (record?.policies ?? {}) as Record<string, unknown>, assistantNotes: assistant?.notes ?? '' }, maxPhotos);
+    // Owner 2026-11-11 («no blurry cover photos»): how wide each photo is, for the cover.
+    return { ...facts, photos: await withPhotoWidths(facts.photos, this.config.get<string>('app.uploadsDir') ?? 'uploads') };
   }
 
   private async masterPolish(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, request: string, revision: number, previous: { snapshot: unknown } | null) {

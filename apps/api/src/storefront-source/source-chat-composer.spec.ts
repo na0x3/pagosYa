@@ -62,6 +62,12 @@ describe('the store composer in the first build (spec 2026-11-11)', () => {
     await run();
     expect(rows).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ type: 'cover-mega' })]), expect.objectContaining({ what: 'Cereales' }));
   });
+  it('fill mode keeps the cover photo sharp before saving (owner 2026-11-11)', async () => {
+    const sharpCover = jest.spyOn(library, 'withSharpCover');
+    const { run } = build(false);
+    await run();
+    expect(sharpCover).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ type: 'cover-mega' })]), expect.objectContaining({ what: 'Cereales' }));
+  });
   it('a composer that cannot pass its check falls back to fill mode', async () => {
     const { refill, dialogue, run } = build(true);
     dialogue.composeHome.mockResolvedValue({ answer: { blocks: [{ type: 'cover-mega' }, { type: 'faq-split' }] }, microUsd: 1 });
