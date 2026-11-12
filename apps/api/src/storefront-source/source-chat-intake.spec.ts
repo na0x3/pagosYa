@@ -58,6 +58,18 @@ it('a chip answer (no setupAction) goes back to the questions, then builds with 
   expect(out.followUp.checklistWords).toContain('Respuestas del comercio:\n- ¿Cómo quieres que se vea tu tienda? → Colorida');
 });
 
+it('after an earlier question the build still reads the store\'s first words (live 2026-11-12: Remolino studio3, Pawby «Usa la plantilla Mimo»)', async () => {
+  messages.push({ threadId: 't1', role: 'USER', content: 'Crea la tienda de Remolino: licuadoras para batidos, cremas y hielo picado. Quiero muchas secciones.', id: 'a', createdAt: new Date() },
+    { threadId: 't1', role: 'ASSISTANT', content: '¿Qué cadencia quieres para el pack semanal?', id: 'b', createdAt: new Date() });
+  intakeStep.mockResolvedValueOnce(question('look', '¿Cómo quieres que se vea tu tienda?')).mockResolvedValueOnce(ready);
+  settle();
+  await first('Usa el catálogo tal como está. Arma la tienda ya.');
+  const out = await reply('Colorida');
+  expect(applyMaster).toHaveBeenCalledTimes(1);
+  expect(out.followUp.checklistWords).toContain('licuadoras para batidos, cremas y hielo picado');
+  expect(out.followUp.checklistWords).toContain('- ¿Cómo quieres que se vea tu tienda? → Colorida');
+});
+
 it('«Créala ya» builds without asking again', async () => {
   intakeStep.mockResolvedValueOnce(question('look', '¿Cómo quieres que se vea?'));
   await first('quiero vender laminas');

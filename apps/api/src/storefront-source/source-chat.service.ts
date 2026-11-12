@@ -787,11 +787,13 @@ export class SourceChatService {
       const phone = intakePhone(state);
       if (phone) await this.prisma.store.updateMany({ where: { id: storeId, OR: [{ contactPhone: null }, { contactPhone: '' }] }, data: { contactPhone: phone } }).catch(() => null);
       if (state.answers.length) {
-        const words = intakeInstruction(state);
+        // Live 2026-11-12 (Remolino studio3): after an earlier question the intake words were the last short answer alone, so the
+        // writer and its checklist never read the store's description; the merchant's whole request goes on when there is one.
+        const words = intakeRequest(state) ?? intakeInstruction(state);
         userMessage = { ...userMessage, content: words };
         instruction = words;
         chatPhotos = state.photos.slice(0, 8);
-        merchantRequest = intakeRequest(state);
+        merchantRequest = state.request ? words : undefined;
         replyPrefix = `Listo, ya tengo lo que necesito. ${replyPrefix}`;
       }
     }
