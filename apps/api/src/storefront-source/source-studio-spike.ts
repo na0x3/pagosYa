@@ -94,10 +94,16 @@ export function evaluateTitleScale(): string[] {
  *  photo with .es-catalog .es-card__media{display:none!important} to draw a list of names). */
 export function hiddenCardParts(code: string): string[] {
   const found: string[] = [];
+  // Oh Belly studio3: the same, under the writer's own name for the product grid ([data-belly=main] img).
+  const grids = [...code.matchAll(/<[a-zA-Z][^<>]*\bdata-pagosya-catalog\b[^<>]*>/g)].flatMap(tag => [...tag[0].matchAll(/\b(data-[\w-]+)=["']([^"']+)["']/g)]
+    .filter(attr => !attr[1].startsWith('data-pagosya') && !attr[1].startsWith('data-es-')).map(attr => `[${attr[1]}=${attr[2]}]`));
   for (const match of code.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     if (!/display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0(?![.\d])/.test(match[2])) continue;
-    for (const selector of match[1].split(',').map(part => part.replace(/^[\s`'"]+|[\s`'"]+$/g, '').trim()))
-      if (/\.(?:es-card|lb-card|menu-item)\b[^,]*(?:\bimg\b|__media|__image)|__media\b|menu-item__image/.test(selector)) found.push(selector);
+    for (const selector of match[1].split(',').map(part => part.replace(/^[\s`'"]+|[\s`'"]+$/g, '').trim())) {
+      const plain = selector.replace(/["']/g, '');
+      if (/\.(?:es-card|lb-card|menu-item)\b[^,]*(?:\bimg\b|__media|__image)|__media\b|menu-item__image/.test(selector)
+        || (/\b(?:img|picture)\b/.test(plain) && grids.some(grid => plain.includes(grid)))) found.push(selector);
+    }
   }
   return [...new Set(found)];
 }

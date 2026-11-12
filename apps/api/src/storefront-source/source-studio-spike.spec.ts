@@ -98,6 +98,10 @@ describe('studio spike: product cards keep their photos (NOA studio3 2026-11-12:
     expect(hiddenCardParts('<style>{`.es-catalog .es-card{padding:26px}.es-catalog .es-card__media{display:none!important}`}</style>')).toEqual(['.es-catalog .es-card__media']);
     expect(hiddenCardParts('<style>{`.menu-item img { visibility: hidden }`}</style>')).toEqual(['.menu-item img']);
   });
+  it('finds photos hidden under the writer\'s own name for the product grid (Oh Belly studio3 2026-11-12)', () => {
+    const code = '<style>{`[data-belly=main] img,[data-belly=main] picture,[data-belly=hero] img{display:none}`}</style><div className="es-grid" data-belly="main" data-pagosya-catalog data-pagosya-filters />';
+    expect(hiddenCardParts(code)).toEqual(['[data-belly=main] img', '[data-belly=main] picture']);
+  });
   it('lets the cards be framed and spaced', () => {
     expect(hiddenCardParts('<style>{`.es-catalog .es-card{border:0;padding:12px}.es-card__media img{border-radius:8px}.es-hero{display:none}`}</style>')).toEqual([]);
   });
