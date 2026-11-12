@@ -397,7 +397,7 @@ export class SourceChatService {
 
   /** Spec 2026-09-26 §1.3: v1 is the template as applied today; v2 is a free adaptation. A failed adaptation keeps v1. */
   /** Spec 2026-10-19 §2: Esencial applied and filled in one call; the store is saved even when the call fails. */
-  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[] = [], merchantRequest?: string, replyPrefix = '', planned?: { plan: StorePlan; applied: AppliedPlan }) {
+  private async useMasterTemplate(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[] = [], merchantRequest?: string, replyPrefix = '', planned?: { plan: StorePlan; applied: AppliedPlan }, pickedModel?: SourceMessageInput['model']) {
     await workflow.report('saving');
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { name: true, onboarding: true, logoUrl: true } });
     const onboarding = (store?.onboarding ?? {}) as { what?: string; story?: string; contact?: { city?: string }; photos?: string[]; template?: string };
@@ -479,7 +479,7 @@ export class SourceChatService {
     // §2: a template from the owner's pool is written by the home writer instead.
     const checklist = this.checklistOn() && userMessage.content.trim() ? userMessage.content.trim().slice(0, 4000) : undefined;
     const followUp: SourceMessageInput | undefined = templatePick
-      ? (this.templateWriterOn(templatePick.id) ? this.writerFollowUp(saved.revision, checklist) : this.libraryFollowUp(saved.revision, checklist))
+      ? (this.templateWriterOn(templatePick.id) ? this.writerFollowUp(saved.revision, checklist, pickedModel) : this.libraryFollowUp(saved.revision, checklist))
       : written ? { instruction: `${merchantRequest ? `${written}\n\nMensajes del comercio:\n${merchantRequest}` : written}${coverLine}`, revision: saved.revision, personalTouch: true, ownRequest: true, redesign: true, firstDesign: true, motion: 'expressive', requestId: randomUUID(), model: this.redesignModel(), ...withAssets }
       : planBrief ? { instruction: merchantRequest ? `${planBrief}\n\nMensajes del comercio:\n${merchantRequest}` : planBrief, revision: saved.revision, personalTouch: true, ownRequest: true, requestId: randomUUID(), model: 'auto', ...withAssets }
       : touching ? { instruction: merchantRequest ? `${OWN_REQUEST_BRIEF}\n\nMensajes del comercio:\n${merchantRequest}` : PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, ...(merchantRequest ? { ownRequest: true } : {}), requestId: randomUUID(), model: 'auto', ...withAssets }
@@ -706,10 +706,12 @@ export class SourceChatService {
     // Spike 2026-11-12 (YAPI_STUDIO): the writer, Lovable's way, designs a pooled template store's home.
     return pool.includes(templateId) && (this.config.get<boolean>('app.yapiHomeWriter') === true || this.config.get<boolean>('app.yapiStudio') === true);
   }
-  private writerFollowUp(revision: number, checklistWords?: string): SourceMessageInput {
+  /** Owner 2026-11-12 («in amboras you can choose the models it uses»): the model picked in the chat writes the first design; «auto»
+   *  (or none) is the dev default (YAPI_HOME_WRITER_MODEL). */
+  private writerFollowUp(revision: number, checklistWords?: string, pickedModel?: SourceMessageInput['model']): SourceMessageInput {
     return { instruction: `${HOME_WRITER_BRIEF}${checklistWords ? `\n\nMensaje del comercio:\n${checklistWords}` : ''}`, revision, personalTouch: true, homeWriter: true, firstDesign: true, redesign: true,
       ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), maxCredits: HOME_WRITER_MAX_CREDITS,
-      model: (this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] };
+      model: (pickedModel && pickedModel !== 'auto' ? pickedModel : this.config.get<string>('app.yapiHomeWriterModel') ?? 'gpt-5.6-sol') as SourceMessageInput['model'] };
   }
   // Owner 2026-11-06 («en miga dorada de panes escribe cosas de zapatos»: the template's demo words showed until the sections were
   // written): the sections are part of the first design, so the Studio keeps «YAPI está diseñando tu tienda» until they are saved.
@@ -776,7 +778,7 @@ export class SourceChatService {
     return { userMessage, assistantMessage, setup: null };
   }
 
-  private async firstBuild(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[], instruction: string, merchantRequest?: string, replyPrefix = '', setupAction?: string, intake?: IntakeState | false) {
+  private async firstBuild(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, draft: SourceSetupDraft, revision: number, chatPhotos: string[], instruction: string, merchantRequest?: string, replyPrefix = '', setupAction?: string, intake?: IntakeState | false, pickedModel?: SourceMessageInput['model']) {
     // Spec 2026-11-04 §1: before a new store's first build, YAPI asks what is still missing; the build then reads the first words
     // with every answer. A link flow (product link, listing screenshot) passes false and is never interrupted.
     if (intake !== false && revision === 0 && this.intakeOn()) {
@@ -801,14 +803,14 @@ export class SourceChatService {
     // Owner 2026-10-24: with starters on, a new store starts from its starter at once; the plan card is for later edits.
     // Owner 2026-10-31: with the template pick on, the picked template is the plan — the plan card's colours and sections are for
     // plain Esencial and would not fit a whole template; the merchant's words still reach its fill and the check.
-    if (!this.planOn() || this.startersOn() || this.templatePickOn()) return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix);
+    if (!this.planOn() || this.startersOn() || this.templatePickOn()) return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix, undefined, pickedModel);
     const store = await this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true } }).catch(() => null);
     const what = ((store?.onboarding ?? {}) as { what?: string }).what ?? draft.answers?.context ?? '';
     const drafted = await this.plans!.draft(merchantId, storeId, { revision, request: merchantRequest ?? instruction, what, photos: chatPhotos });
     if (!drafted) return this.planFailed(threadId, userMessage, workflow, instruction, setupAction);
     // Free-first: every first build waits for «Construir», so the approved plan is what YAPI designs from.
     if (!merchantRequest || this.freeFirst()) return this.planCard(threadId, userMessage, workflow, drafted, 'new');
-    return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix, drafted);
+    return this.useMasterTemplate(merchantId, storeId, threadId, userMessage, workflow, draft, revision, chatPhotos, merchantRequest, replyPrefix, drafted, pickedModel);
   }
 
   /** «Hacer cambios»: the plan's parts, look and sections saved as data; its own sections go to the follow-up. */
@@ -1973,7 +1975,7 @@ export class SourceChatService {
       const state: IntakeState = { ...openIntake, photos: [...new Set([...images, ...openIntake.photos])].slice(0, 24),
         answers: [...openIntake.answers, { topic: openIntake.question?.topic ?? 'what', question: openIntake.question?.text ?? '', answer }] };
       await workflow.report('interpreting');
-      return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, state.photos.slice(0, 8), state.words, state.request, '', 'generate', state);
+      return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, state.photos.slice(0, 8), state.words, state.request, '', 'generate', state, input.model);
     }
     // Owner 2026-10-31 (switching templates later): «cámbiala a la plantilla Tacón» or «prueba otra plantilla» on a built store
     // switches it to that whole template (or YAPI's next-best pick), filled again with the store's own words and photos.
@@ -2076,7 +2078,7 @@ export class SourceChatService {
       const onboarding = walkthrough?.onboarding as { purpose?: string } | null | undefined;
       if (onboarding && onboarding.purpose !== 'showcase') {
         await workflow.report('interpreting');
-        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, (input.assetUrls || []).slice(0, 8), input.instruction, ownDesignRequest(input.instruction, history.messages), '', input.setupAction);
+        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, (input.assetUrls || []).slice(0, 8), input.instruction, ownDesignRequest(input.instruction, history.messages), '', input.setupAction, undefined, input.model);
       }
     }
     let retryDecision: SourceConversationDecision | undefined;
@@ -2508,7 +2510,7 @@ export class SourceChatService {
         const chatPhotos = assetUrls.filter(url => ['product', 'business', 'team', 'background'].includes(decision.imageUses.find(use => use.url === url)?.role ?? ''));
         const ownRequest = ownDesignRequest(input.instruction, history.messages);
         const productRequest = productImport ? `${ownRequest ?? input.instruction}\n\n${productSourcePrompt(productImport.product, productImport.listingDescription, productImport.videoUrls?.length ?? 0)}\nConstruye la tienda alrededor de este producto.` : undefined;
-        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos, input.instruction, productRequest ?? ownRequest, productNote, undefined, productImport ? false : undefined);
+        return await this.firstBuild(merchantId, storeId, thread.id, userMessage, workflow, setupDraft, current.revision, chatPhotos, input.instruction, productRequest ?? ownRequest, productNote, undefined, productImport ? false : undefined, input.model);
       }
       // "Elige tu estilo": new stores and full redesigns get two styles to pick from (one calm, one bold); a kept template stays its own style.
       // A copy follows its blueprint: no style cards (spec 2026-10-18 B §3).
