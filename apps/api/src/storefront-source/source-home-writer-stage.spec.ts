@@ -197,6 +197,10 @@ describe('writer on a template (spec 2026-11-04)', () => {
     expect(text).not.toContain('write_footer');
     expect(text).toContain('plantilla Sorbo');
     expect(homeWriterInstructions()).toContain('write_footer');
+    // Owner 2026-11-12 («the footer is the same always»): the studio writes it.
+    const studio = homeWriterInstructions({ template: 'Sorbo', studio: true });
+    expect(studio).toContain('write_footer');
+    expect(studio).not.toMatch(/el pie, la ficha/);
   });
 });
 

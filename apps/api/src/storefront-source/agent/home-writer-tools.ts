@@ -56,9 +56,12 @@ export function templateFonts(globalsCss: string): { heading: string; body: stri
 
 /** What a template store's home may use besides the kit: the template's tested sections, each with the store's own example.
  *  Library photos resolve «slot:<key>» through store-data photos (library.tsx `slotted`). */
-export function templateBrief(template: WriterTemplate): string {
+export function templateBrief(template: WriterTemplate, studio = false): string {
   const examples = template.layout.slice(0, 14).map(block => `- ${String((block as { type?: unknown }).type ?? '')}: ${JSON.stringify(block)}`).join('\n');
-  return `PLANTILLA ${template.name}: el encabezado, el menú, el pie, las tarjetas de producto y la ficha de producto son de la plantilla; no los cambies ni los imites. Sus fuentes se quedan; tú eliges los colores.
+  // Owner 2026-11-12 («the footer is the same always»): in the studio the footer is the writer's; the brand picks its fonts.
+  const fixed = studio ? 'el encabezado, el menú, las tarjetas de producto y la ficha de producto son de la plantilla; no los cambies ni los imites. El pie lo escribes tú.'
+    : 'el encabezado, el menú, el pie, las tarjetas de producto y la ficha de producto son de la plantilla; no los cambies ni los imites. Sus fuentes se quedan; tú eliges los colores.';
+  return `PLANTILLA ${template.name}: ${fixed}
 Secciones probadas de la plantilla — úsalas tal cual, cambia sus textos, o mézclalas con tus propias secciones:
 import { LibraryHome } from './library' y <LibraryHome layout={[{ type: 'cover-split', … }]} /> con uno o varios bloques seguidos. Cada bloque va con los campos de su ejemplo.
 Toda la portada va dentro de <Shell><main data-lb-home>…</main></Shell>: así una sección inclinada (marquee) no hace que el celular se desplace de lado.
@@ -69,7 +72,7 @@ ${examples}`;
 
 /** What the kit and the template give the home; the writer composes with these instead of inventing commerce parts. */
 const KIT_BRIEF = `PARTES DISPONIBLES (no inventes otras partes de comercio):
-- import Shell from './Shell' — envuelve SIEMPRE toda la portada: <Shell>…</Shell> (encabezado, menú y carrito son de la plataforma; el pie lo escribes tú con write_footer, salvo en una tienda con plantilla).
+- import Shell from './Shell' — envuelve SIEMPRE toda la portada: <Shell>…</Shell> (encabezado, menú y carrito son de la plataforma; el pie lo escribes tú con write_footer cuando tienes esa herramienta).
 - import { Parallax, Reveal } from '@pagosya/ui' — <Reveal> anima al entrar; <Parallax> mueve una foto al hacer scroll.
 - Grilla de productos: copia la de la portada actual tal cual — data-pagosya-catalog con data-pagosya-filters data-filters-style="chips" (ordenar, color y talla) y data-es-cards={variant('cards', 'compact')} (import { variant } from './Shell'), para que las tarjetas de moda muestren sus tallas. El kit dibuja tarjetas, precios y el botón de agregar.
 - Un producto destacado: <div data-pagosya-spotlight="ID"></div> con un id real de los productos.
@@ -169,7 +172,7 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
           return { output: 'Portada escrita y compilada. Llama check o screenshot.' };
         }
         case 'write_footer': {
-          if (this.ctx.template) return { output: 'Esta tienda usa el pie de su plantilla; no escribas uno.' };
+          if (this.ctx.template && !this.ctx.studio) return { output: 'Esta tienda usa el pie de su plantilla; no escribas uno.' };
           const content = String(args.content ?? '');
           const shell = shellWithStoreFooter(this.workspace.read(SHELL_PATH));
           if (!shell) return { output: 'Esta tienda no admite un pie propio; deja el de la plataforma y termina la portada.' };
@@ -305,8 +308,8 @@ export class HomeWriterToolbox implements AgentLoopToolbox {
     const photos = this.ctx.base.files.filter(file => file.path.startsWith('assets/') && /\.(jpe?g|png|webp|mp4)$/i.test(file.path)).map(file => file.path);
     const fonts = SOURCE_FONT_CATALOG.map(font => `${font.id} (${font.family}, ${font.role})`).join(', ');
     const templateFooter = /export function Footer\(\)[\s\S]*?\n\}\n/.exec(this.workspace.read(SHELL_PATH))?.[0];
-    return [KIT_BRIEF, ...(this.ctx.template ? [templateBrief(this.ctx.template)] : []), ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []),
-      ...(this.ctx.footer && !this.ctx.template ? [FOOTER_BRIEF, templateFooter ? `El pie actual de la plantilla (solo como referencia de los ganchos; el tuyo debe verse distinto):\n${templateFooter}` : ''] : []),
+    return [KIT_BRIEF, ...(this.ctx.template ? [templateBrief(this.ctx.template, Boolean(this.ctx.studio))] : []), ...(this.ctx.animated ? [HOME_MOTION_BRIEF] : []),
+      ...(this.ctx.footer && (!this.ctx.template || this.ctx.studio) ? [FOOTER_BRIEF, templateFooter ? `El pie actual de la plantilla (solo como referencia de los ganchos; el tuyo debe verse distinto):\n${templateFooter}` : ''] : []),
       `import { … } from './store-data' — exporta: ${exported.join(', ')}. Productos, precios, fotos y logo salen de ahí; nunca los escribas a mano.`,
       `Archivos de fotos: ${photos.join(', ') || 'ninguno (portada solo tipográfica)'}`,
       `fuentes: ${fonts}`,

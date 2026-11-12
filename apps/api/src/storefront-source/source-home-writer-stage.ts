@@ -30,9 +30,10 @@ Productos, precios, fotos y logo vienen de './store-data'. Los consejos de check
 /** Spec 2026-10-29 §2–3: Amboras's recipe, our rules. Spec 2026-11-04: inside a template, only the home and the colours. */
 export function homeWriterInstructions(opts: { template?: string; studio?: boolean } = {}): string {
   // Spike 2026-11-12 (YAPI_STUDIO): Lovable's order — the design system (colours and fonts) first, then the home painted only by it.
-  if (opts.template && opts.studio) return `Eres el diseñador de la PORTADA de una tienda pagosYa que usa la plantilla ${opts.template}. Solo cambias ${HOME_PATH} (completo, con write_home) y su sistema de diseño (set_tokens: colores y fuentes).
-El encabezado, el menú, el pie, la ficha de producto, el carrito y el checkout son de la plantilla: no los dibujes ni los imites. Toda la portada va dentro de <Shell>.
-Orden: read_chassis; set_tokens; escribe la portada entera en una sola llamada; check (devuelve lo que debes corregir y las capturas de escritorio y celular); corrige; check; finish.
+  // Owner 2026-11-12 («the footer is the same always»): the studio writes the store's own footer too.
+  if (opts.template && opts.studio) return `Eres el diseñador de la PORTADA y el PIE de una tienda pagosYa que usa la plantilla ${opts.template}. Solo cambias ${HOME_PATH} (completo, con write_home), ${FOOTER_PATH} (completo, con write_footer) y su sistema de diseño (set_tokens: colores y fuentes).
+El encabezado, el menú, la ficha de producto, el carrito y el checkout son de la plantilla: no los dibujes ni los imites. Toda la portada va dentro de <Shell>.
+Orden: read_chassis; set_tokens; escribe la portada entera en una sola llamada; write_footer con el pie; check (devuelve lo que debes corregir y las capturas de escritorio y celular); corrige; check; finish.
 Los textos de un bloque de <LibraryHome> van en sus campos; el resto como texto JSX literal.
 ${STUDIO_RULES}
 ${HOME_WRITER_RULES}`;
@@ -133,7 +134,7 @@ export async function runHomeWriterLoop(input: LoopInput) {
   const toolbox = new HomeWriterToolbox({ workspace, base: input.base, gate: input.gate, ...(input.signal ? { signal: input.signal } : {}), ...(input.animated ? { animated: true } : {}),
     ...(input.footer ? { footer: true } : {}), ...(input.playful ? { playful: true } : {}), ...(input.calm ? { calm: true } : {}), ...(input.brandColours?.length ? { brandColours: input.brandColours } : {}),
     ...(input.template ? { template: input.template } : {}), ...(input.reviewer ? { reviewer: input.reviewer } : {}), ...(input.studio ? { studio: true } : {}) });
-  const outcome = await runAgent({ model: input.model, toolbox, tools: homeWriterTools({ footer: Boolean(input.footer) && !input.template }), verifyTool: 'check',
+  const outcome = await runAgent({ model: input.model, toolbox, tools: homeWriterTools({ footer: Boolean(input.footer) && (!input.template || Boolean(input.studio)) }), verifyTool: 'check',
     instructions: homeWriterInstructions(input.template ? { template: input.template.name, ...(input.studio ? { studio: true } : {}) } : {}), signal: input.signal, onStep: input.onStep,
     limits: { ...HOME_WRITER_LIMITS, ...input.limits }, opening: agentOpening(input.task, [], input.images ?? []) });
   // A run that changed nothing is not a new design (review 2026-10-29): the store keeps its template home and says nothing.
@@ -154,6 +155,8 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
   const template = writerTemplate(previousFiles);
   // Spike 2026-11-12 (owner: «find how they operate and replicate it»): Lovable's way on a template store.
   const studio = Boolean(template) && config.get<boolean>('app.yapiStudio') === true;
+  // Owner 2026-11-12 («the footer is the same always»): a studio store writes its own footer, like the Oct 30 writer.
+  const ownFooter = !template || studio;
   const variants = (master.variants ?? {}) as Record<string, unknown>;
   // Owner 2026-10-30: fun businesses (sweets, fizzy drinks, toys, games, kids) are always animated and move without scrolling.
   const storeData = previousFiles.find(file => file.path === 'components/store-data.tsx')?.content ?? '';
@@ -162,8 +165,8 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
   const saved = parseHomeDirection(previousFiles.find(file => file.path === 'home-direction.json')?.content);
   const recent = saved?.footer ? null : await recentHomeDirections(prisma as never, storeId);
   const choice: HomeDirectionChoice = saved
-    ? { ...saved, animated: saved.animated || playful, footer: template ? undefined : (saved.footer ?? pickHomeFooter(storeId, recent?.footers ?? [], playful)), ...(playful ? { playful: true } : {}) }
-    : { ...pickHomeDirection({ seed: storeId, recent: recent?.directions ?? [], recentFooters: recent?.footers ?? [], fashion: variants.cards === 'fashion', mood: calm ? 'calm' : 'bold', playful }), ...(template ? { footer: undefined } : {}) };
+    ? { ...saved, animated: saved.animated || playful, footer: ownFooter ? (saved.footer ?? pickHomeFooter(storeId, recent?.footers ?? [], playful)) : undefined, ...(playful ? { playful: true } : {}) }
+    : { ...pickHomeDirection({ seed: storeId, recent: recent?.directions ?? [], recentFooters: recent?.footers ?? [], fashion: variants.cards === 'fashion', mood: calm ? 'calm' : 'bold', playful }), ...(ownFooter ? {} : { footer: undefined }) };
   const brandColours = brandColoursOf(storeData);
   const looks = await recentLooks(prisma as never, storeId, 6).catch(() => []);
   // The same acceptance chain every build passes, in its lenient form (artwork and edit-scope rules are for chat edits).
@@ -198,7 +201,7 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
     footer: choice.footer, playful, calm, brandColours,
     avoid: { fonts: template ? [] : [...new Set(looks.map(look => look.heading).filter((font): font is string => Boolean(font)))], papers: [...new Set(looks.map(look => look.paper).filter((paper): paper is string => Boolean(paper)))] } });
   const out = await runHomeWriterLoop({ model, files: oldFiles.filter(file => nextSourceFile(file.path)), base, gate, task, signal, animated: choice.animated,
-    footer: Boolean(choice.footer) && !template, ...(template ? { template } : {}), ...(studio ? { studio: true } : {}), reviewer, playful, calm, brandColours, limits: homeWriterLimits(chatgptPlan, started + runTimeout),
+    footer: Boolean(choice.footer) && ownFooter, ...(template ? { template } : {}), ...(studio ? { studio: true } : {}), reviewer, playful, calm, brandColours, limits: homeWriterLimits(chatgptPlan, started + runTimeout),
     images: images.map(image => ({ ...(image as object), detail: 'low' })),
     onStep: async step => { await progress?.detail?.({ label: step.label, ...(step.thumbnail ? { thumbnail: step.thumbnail } : {}) }); } });
   if (!out.accepted) throw new BadGatewayException(`YAPI no pudo terminar la portada${out.outcome.reason ? `: ${out.outcome.reason}` : ''}`);

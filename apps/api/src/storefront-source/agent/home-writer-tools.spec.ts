@@ -263,6 +263,15 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
   it('write_footer is refused', async () => {
     expect((await sorboBox().run('write_footer', JSON.stringify({ content: 'export default function StoreFooter() { return <footer />; }' }))).output).toBe('Esta tienda usa el pie de su plantilla; no escribas uno.');
   });
+  it('studio: the store writes its own footer (owner 2026-11-12 «the footer is the same always»)', async () => {
+    const b = new HomeWriterToolbox({ workspace: new AgentWorkspace(sorbo.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base: sorbo, gate: async () => null, template, studio: true, footer: true });
+    const chassis = (await b.run('read_chassis', '{}')).output;
+    expect(chassis).toContain('PIE (components/footer.tsx');
+    expect(chassis).toContain('El pie lo escribes tú.');
+    expect((await b.run('check', '{}')).output).toMatch(/Falta el pie/);
+    expect((await b.run('write_footer', JSON.stringify({ content: 'export default function StoreFooter() { return <footer />; }' }))).output).not.toMatch(/pie de su plantilla/);
+    expect(b.workspace.read('components/Shell.tsx')).toContain('<StoreFooter />');
+  });
 });
 
 describe('the visual review at finish (spec 2026-11-04 §5)', () => {
