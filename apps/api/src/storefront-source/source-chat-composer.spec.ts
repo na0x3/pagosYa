@@ -14,7 +14,9 @@ const files = [
   { path: 'components/library.tsx', content: '' },
 ];
 const seven = ['cover-mega', 'products-rows', 'story-split', 'names-list', 'benefits-bento', 'faq-split', 'closing-photo'];
-const facts = { what: 'Cereales', story: '', request: '', notes: '', products: [], categories: [], photos: [{ url: '/v1/uploads/a.jpg' }, { url: '/v1/uploads/b.jpg' }], codes: [], services: [], reviews: 0, tone: 'bold' };
+// Enough to fill the seven sections (products-rows wants two products, names-list three photos): the composer is offered only those.
+const facts = { what: 'Cereales', story: '', request: '', notes: '', products: [{ id: 'p1', name: 'Avena' }, { id: 'p2', name: 'Granola' }], categories: [],
+  photos: [{ url: '/v1/uploads/a.jpg' }, { url: '/v1/uploads/b.jpg' }, { url: '/v1/uploads/c.jpg' }], codes: [], services: [], reviews: 0, tone: 'bold' };
 const workflow = { report: jest.fn(), finish: jest.fn(), value: {} };
 
 function build(on: boolean) {
@@ -67,6 +69,16 @@ describe('the store composer in the first build (spec 2026-11-11)', () => {
     const { run } = build(false);
     await run();
     expect(sharpCover).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ type: 'cover-mega' })]), expect.objectContaining({ what: 'Cereales' }));
+  });
+  it('the composer is offered only the sections this store can fill (live test 2026-11-11)', async () => {
+    jest.spyOn(composer, 'readSectionFit').mockReturnValue({ fit: { merienda: [...seven, 'reviews-cards'] }, signature: { merienda: ['cover-mega', 'reviews-cards'] } });
+    const { dialogue, run } = build(true);
+    dialogue.composeHome.mockResolvedValue({ answer: { blocks: seven.map(type => ({ type })) }, microUsd: 1 });
+    await run();
+    const { template } = dialogue.composeHome.mock.calls[0][1];
+    expect(template.allowed).toContain('story-split');
+    expect(template.allowed).not.toContain('reviews-cards');
+    expect(template.signature).toEqual(['cover-mega']);
   });
   it('a composer that cannot pass its check falls back to fill mode', async () => {
     const { refill, dialogue, run } = build(true);

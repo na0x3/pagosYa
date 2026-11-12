@@ -1,5 +1,5 @@
 import { applyComposerChanges, commonOrder, composerCheck, composerTemplate, homeSummary, lookOptions, tooClose, type SectionFit } from './source-composer';
-import { composerAnswerSchema, composerCatalogue, composerPrompt, composerReviewText, readComposerReview } from './source-composer';
+import { composerAnswerSchema, composerCatalogue, composerPrompt, composerReviewText, fillableTemplate, readComposerReview } from './source-composer';
 import type { LayoutBlock } from './source-section-library';
 
 const data: SectionFit = {
@@ -131,6 +131,28 @@ describe('what the composer reads', () => {
       { problema: 'palabras cortadas', seccion: 1, cambio: 'repaint', valor: 'x' },
     ] })).toEqual([{ problem: 'palabras cortadas', at: 2, kind: 'look', value: 'tilt' }]);
     expect(readComposerReview('{oops')).toEqual([]);
+  });
+});
+
+describe('what the store can fill (live test 2026-11-11: Oh Belly had no press quotes, Remolino no services)', () => {
+  it('drops a signature section the store cannot fill, never its cover, and offers only sections it can fill', () => {
+    const gum = composerTemplate('gumdrop', 'Gumdrop', { layout: [{ type: 'cover-ribbon' }, { type: 'press-quotes' }, { type: 'compare-table' }] as LayoutBlock[] },
+      { fit: { gumdrop: ['story-split', 'strip-services', 'faq-split'] }, signature: { gumdrop: ['cover-ribbon', 'press-quotes', 'compare-table'] } })!;
+    const view = fillableTemplate(gum, type => !['press-quotes', 'strip-services', 'cover-ribbon'].includes(type));
+    expect(view.signature).toEqual(['cover-ribbon', 'compare-table']);
+    expect(view.allowed).toEqual(expect.arrayContaining(['cover-ribbon', 'compare-table', 'story-split', 'faq-split']));
+    expect(view.allowed).not.toContain('press-quotes');
+    expect(view.allowed).not.toContain('strip-services');
+  });
+});
+
+describe('a template with one cover and no other look (live test 2026-11-11: Estudio)', () => {
+  it('does not ask for another cover it cannot give; the order still tells homes apart', () => {
+    const estudio = composerTemplate('estudio', 'Estudio', { layout: [{ type: 'cover-half' }, { type: 'products-grid' }, { type: 'categories-list' }] as LayoutBlock[] },
+      { fit: { estudio: ['story-split', 'benefits-bento', 'faq-split', 'press-quotes', 'closing-photo'] }, signature: { estudio: ['cover-half', 'categories-list'] } })!;
+    const page = (rest: string[]): LayoutBlock[] => [{ type: 'cover-half' }, { type: 'products-grid' }, ...rest.map(type => ({ type }))];
+    const recent = [homeSummary('Taller Roble', page(['categories-list', 'story-split', 'benefits-bento', 'faq-split', 'closing-photo']))];
+    expect(composerCheck(page(['story-split', 'categories-list', 'press-quotes', 'closing-photo', 'faq-split']), estudio, recent)).toEqual([]);
   });
 });
 

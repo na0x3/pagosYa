@@ -83,7 +83,7 @@ import { collectionSlug } from '../collections/collection-slug';
 import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy, resolvePresetTemplate } from './source-templates';
 import { runComposer } from './source-composer-run';
-import { applyComposerChanges, composerCheck, composerTemplate, readSectionFit } from './source-composer';
+import { applyComposerChanges, composerCheck, composerTemplate, fillableTemplate, readSectionFit } from './source-composer';
 import { captureAgentDraft } from './agent/agent-capture';
 import { readMoodAsk } from './source-mood-ask';
 import { nextTitleStyle, readTitleAsk } from './source-title-style';
@@ -991,8 +991,10 @@ export class SourceChatService {
     const manifest = this.templates.registry.templateManifest(theme);
     if (!manifest) return null;
     const resolved = resolvePresetTemplate(manifest, id => this.templates.registry.templateManifest(id));
-    const template = composerTemplate(theme, resolved.manifest.name, resolved.preset as never, readSectionFit());
-    if (!template) return null;
+    const found = composerTemplate(theme, resolved.manifest.name, resolved.preset as never, readSectionFit());
+    if (!found) return null;
+    // Live test 2026-11-11: a signature or offer the store cannot fill (press, services, reviews) failed every round.
+    const template = fillableTemplate(found, type => !librarySectionBlocker(type, facts));
     const recent = await this.templates.recentThemeHomes(storeId, theme);
     const photos = facts.photos.map(photo => photo.url);
     const composed = { allowed: template.allowed, looks: template.looks, ...(template.opener ? { opener: template.opener } : {}) };

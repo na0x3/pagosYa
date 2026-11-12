@@ -514,6 +514,13 @@ describe('one brand idea in a template home', () => {
   });
 });
 
+describe('press quotes need the press in the merchant\'s words (live test 2026-11-11)', () => {
+  it('blocks press-quotes until the merchant names a newspaper, magazine, radio or interview', () => {
+    expect(librarySectionBlocker('press-quotes', facts())).toMatch(/medio/);
+    expect(librarySectionBlocker('press-quotes', facts({ story: 'La revista Ego nos dijo «el mejor pan de La Paz».' }))).toBeNull();
+  });
+});
+
 describe('composed mode (spec 2026-11-11 store composer)', () => {
   const composed = { allowed: ['cover-mega', 'products-rows', 'story-split', 'closing-wordmark'], looks: { 'cover-mega': ['side', 'tilt'] } };
   it('keeps template-only sections the template allows, with the template\'s looks, and drops the rest', () => {
