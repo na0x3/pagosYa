@@ -573,6 +573,7 @@ export default (): { app: AppConfig } => {
     yapiTraceFile: process.env.YAPI_TRACE_FILE?.trim() ?? '',
     yapiSectionLibraryModel: process.env.YAPI_SECTION_LIBRARY_MODEL || 'gpt-5.6-terra',
     yapiComposer: process.env.YAPI_COMPOSER === '1',
+    // On in dev since 2026-11-12 for the owner's test; off by removing YAPI_STUDIO from apps/api/.env.
     yapiStudio: process.env.YAPI_STUDIO === '1',
     yapiComposerModel: process.env.YAPI_COMPOSER_MODEL || 'gpt-5.6-sol',
     yapiComposerEffort: (['low', 'medium', 'high'] as const).find(effort => effort === process.env.YAPI_COMPOSER_EFFORT) ?? 'medium',
