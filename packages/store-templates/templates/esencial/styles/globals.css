@@ -887,7 +887,8 @@ body .es .es-pdp__title #pagosya-product-title{font-family:var(--es-heading);fon
   .es-origin[data-es-side="end"] .es-origin__figure>img{order:2}
 }
 /* Owner 2026-10-29 («the title a little different», NOA's «PIEZAS DE ALTA COSTURA»): uppercase cover and section titles, set tight. */
-.es[data-es-titles="upper"] :is(.es-display,.es-h2){text-transform:uppercase;letter-spacing:-.03em;line-height:.95}
+/* NOA 2026-11-11 («text is all cramped up»): uppercase titles get a little air. */
+.es[data-es-titles="upper"] :is(.es-display,.es-h2){text-transform:uppercase;letter-spacing:-.02em;line-height:1.04}
 /* Chunky colour titles (spec 2026-11-03): the four styles YAPI picks per product on Único. The font comes from the theme block
    (--es-title-font); a store without one falls back to its heading font. */
 .es:is([data-es-titles="burbuja"],[data-es-titles="redonda"],[data-es-titles="firme"],[data-es-titles="poster"]) :is(.es-display,.es-h2,.lb-title){font-family:var(--es-title-font,var(--es-heading));line-height:1.04;letter-spacing:0;text-transform:none}
@@ -1952,13 +1953,16 @@ main[data-lb-home]{overflow-x:clip}
 .lb-overlap__b{right:4%;top:0;box-shadow:0 30px 60px -36px rgba(0,0,0,.5)}
 .lb-overlap__points{display:grid;gap:14px;margin:24px 0 0;padding:0;list-style:none}
 .lb-overlap__points li{display:grid;grid-template-columns:auto 1fr;gap:12px;line-height:1.55}
+/* NOA 2026-11-11 («text is all cramped up»): each point's title on its own line, the list read from the left. */
+.lb-overlap__points strong{display:block;margin-bottom:2px}
+.lb-story-overlap[data-lb-look="pair"] .lb-overlap__points{justify-items:start;text-align:left;max-width:46ch}
 .lb-overlap__points i{font-style:normal;color:var(--es-accent)}
 .lb-overlap__a{transform:translateY(calc((var(--p,.5) - .5) * 90px))}
 .lb-overlap__b{transform:translateY(calc((var(--p,.5) - .5) * -90px))}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap{grid-template-columns:1.2fr 1fr}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__photos{min-height:clamp(380px,42vw,600px)}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__a{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto}
-.lb-story-overlap[data-lb-look="pair"] .lb-overlap__b{position:absolute;left:auto;top:auto;right:-30%;bottom:6%;z-index:2;width:34%;transform:none;box-shadow:0 24px 40px -24px rgba(0,0,0,.45)}
+.lb-story-overlap[data-lb-look="pair"] .lb-overlap__b{position:absolute;left:auto;top:auto;right:-10%;bottom:6%;z-index:2;width:34%;transform:none;box-shadow:0 24px 40px -24px rgba(0,0,0,.45)}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__photos{overflow:visible}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__words{padding-bottom:clamp(120px,14vw,200px)}
 .lb-story-overlap[data-lb-look="pair"] .lb-overlap__words{display:grid;justify-items:center;text-align:center}
@@ -2852,7 +2856,7 @@ main[data-lb-home]{overflow-x:clip}
 [data-es-theme="broadcast"] .es-header{min-height:70px;background:var(--es-paper);border-bottom:0}
 [data-es-theme="broadcast"] .es-logo{font:400 24px/1 'Instrument Serif',var(--es-heading);letter-spacing:.02em}
 [data-es-theme="broadcast"] .es-header__links a{font-size:13px}
-[data-es-theme="broadcast"] :is(.es-h2,.lb-title,.lb-head h2,.lb-stage__title){font-weight:600;letter-spacing:.01em;text-transform:uppercase}
+[data-es-theme="broadcast"] :is(.es-h2,.lb-title,.lb-head h2,.lb-stage__title){font-weight:600;letter-spacing:.01em;text-transform:uppercase;line-height:1.12}
 [data-es-theme="broadcast"] .lb-stage__title{font-size:clamp(36px,4.4vw,60px)}
 [data-es-theme="broadcast"] .es-btn,[data-es-theme="broadcast"] .es-pdp .product-detail__buy{min-height:40px;padding:0 20px;border-radius:99px;font-size:11px;letter-spacing:.12em}
 [data-es-theme="broadcast"] .es-btn svg{display:none}
