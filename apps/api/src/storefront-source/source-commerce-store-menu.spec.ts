@@ -318,4 +318,30 @@ describe('store menu', () => {
       expect(w.document.activeElement).toBe(toggle);
     }
   });
+  it('bestsellers show three real products with price and Agregar; with no badge the title says Destacados', async () => {
+    const { all, q } = await open({ menu: { model: 'bestsellers', groups: [{ label: 'Tienda', links: [{ to: 'category:C1' }] }] } });
+    expect(all('.pym-best [data-add]').length).toBe(3);
+    expect(q('.pym-best-title').textContent).toBe('Destacados');
+  });
+  it('offer shows only a real offer; with none the tile is the first best seller', async () => {
+    const none = await open({ menu: { model: 'offer' } });
+    expect(none.q('.pym-offer').getAttribute('data-kind')).toBe('product');
+    const real = await open({ menu: { model: 'offer' }, data: { ...DATA, freeShippingFrom: 25000 } });
+    expect(real.q('.pym-offer').textContent).toMatch(/Envío gratis desde Bs\s?250/);
+  });
+  it('search opens on a search field with Populares chips, never «Lo más buscado»', async () => {
+    const { q, w } = await open({ menu: { model: 'search' } });
+    expect(q('.pym-search input[type=search]')).not.toBeNull();
+    expect(w.document.body.textContent).toMatch(/Populares/);
+    expect(w.document.body.textContent).not.toMatch(/más buscado/i);
+  });
+  it('need groups show their live starting price', async () => {
+    const { q } = await open({ menu: { model: 'need', groups: [{ label: 'Dormir mejor', note: 'Tés para la noche', links: [{ to: 'category:C1' }] }] } });
+    expect(q('.pym-need-from').textContent).toMatch(/^desde Bs\s?10/);
+  });
+  it('the thumb bar has the cart count and lifts the page and floating buttons above it on a phone', async () => {
+    const { q, w } = await open({ menu: { model: 'thumb' } });
+    expect(q('.pym-thumbbar [data-cart-count]')).not.toBeNull();
+    expect(w.document.documentElement.style.getPropertyValue('--pym-bottom-bar')).toBe('64px');
+  });
 });

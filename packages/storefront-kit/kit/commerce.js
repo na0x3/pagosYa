@@ -6984,7 +6984,34 @@
       .pym-panel[data-model=index] .pym-links a{grid-template-columns:minmax(0,1fr) auto}
       .pym-panel[data-model=index] .pym-links a::before,.pym-panel[data-model=index] .pym-note{display:none}
     }
-    @media (prefers-reduced-motion:reduce){.pym-panel[data-model] *{transition:none!important;animation:none!important}}`;
+    @media (prefers-reduced-motion:reduce){.pym-panel[data-model] *{transition:none!important;animation:none!important}}
+    .pym-best ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;list-style:none;margin:0;padding:0}
+    .pym-best li{display:grid;gap:6px;align-content:start}.pym-best li>a{display:grid;gap:4px;color:inherit;text-decoration:none;font-size:14px}
+    .pym-best img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:var(--kit-radius,8px)}
+    .pym-best-title{margin:0 0 10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
+    .pym-add{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;border:0;background:var(--store-accent,#111);color:var(--store-on-accent,#fff);font:inherit;font-weight:600;text-decoration:none;cursor:pointer}
+    .pym-panel[data-model=bestsellers] .pym-group{display:grid;grid-template-columns:minmax(160px,220px) minmax(0,1fr);gap:28px}
+    .pym-panel[data-model=bestsellers] .pym-links{grid-template-columns:1fr}.pym-panel[data-model=bestsellers] .pym-tiles{display:none}
+    .pym-panel[data-model=need] .pym-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+    .pym-need{display:grid;grid-template-columns:56px minmax(0,1fr);gap:4px 12px;align-items:center;padding:12px;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:14px}
+    .pym-need img{grid-row:1 / span 3;width:56px;height:56px;border-radius:50%;object-fit:cover}
+    .pym-need-label{font-family:var(--store-heading-font,inherit);font-size:18px}.pym-need-from{font-size:12px;opacity:.75}
+    .pym-panel[data-model=need] .pym-tiles{display:none}
+    .pym-offer{position:relative;display:grid;align-content:end;gap:4px;min-height:200px;margin-bottom:20px;padding:18px;border-radius:14px;overflow:hidden;color:#fff;background:var(--store-accent,#111);text-decoration:none;isolation:isolate}
+    .pym-offer img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1;filter:brightness(.62)}
+    .pym-offer b{font-family:var(--store-heading-font,inherit);font-size:24px;line-height:1.1}
+    .pym-search{margin-bottom:16px}.pym-search input{width:100%;height:52px;border:2px solid currentColor;border-radius:999px;padding:0 20px;font:inherit;font-size:16px;background:transparent;color:inherit}
+    .pym-popular{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}.pym-popular a{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;background:color-mix(in srgb,currentColor 8%,transparent);font-size:13px;color:inherit;text-decoration:none}
+    .pym-panel[data-model=search] .pym-tabs,.pym-panel[data-model=search] .pym-tiles{display:none}
+    .pym-thumbbar{display:none}
+    @media (max-width:860px){
+      .pym-thumbbar{position:fixed;left:0;right:0;bottom:0;z-index:900;display:grid;grid-template-columns:repeat(4,1fr);height:64px;padding-bottom:env(safe-area-inset-bottom,0px);background:var(--store-background,#fff);color:var(--store-foreground,#111);border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
+      .pym-thumbbar a,.pym-thumbbar button{display:grid;place-items:center;min-height:44px;border:0;background:none;color:inherit;font:inherit;font-size:12px;text-decoration:none}
+      body{padding-bottom:var(--pym-bottom-bar,0px)}
+      [data-pagosya-contact]:not([data-contact-inline]),.pagosya-whatsapp{bottom:calc(var(--pym-bottom-bar,0px) + 16px)!important}
+      .pym-panel[data-model=bestsellers] .pym-group,.pym-panel[data-model=need] .pym-group{grid-template-columns:1fr}
+      .pym-best ul{display:flex;overflow-x:auto}.pym-best li{flex:0 0 140px}
+    }`;
   // ---- Store menu (spec 2026-10-21 dropdown menu) ----
   // config.header.menu = { style: 'panel' | 'dropdowns', groups? } turns the menu on. The host header holds the mounts
   // [data-pagosya-store-menu="toggle"] (☰, opens the panel) and optionally [data-pagosya-store-menu="links"] (desktop top links
@@ -7171,9 +7198,31 @@
       }).filter((tile, index, list) => tile && list.findIndex(other => other && (other.image === tile.image || other.href === tile.href)) === index).slice(0, 3);
       const shownTiles = tiles.length ? tiles : storeMenuDiscoverTiles(group);
       const footerTarget = group.footer ? storeMenuTarget(group.footer.to) : null;
-      return { label: String(group.label || '').slice(0, 28), links, direct: group.direct === true && links.length === 1, tilesTitle: shownTiles.length ? String(group.tilesTitle || '') : '', tiles: shownTiles, footer: footerTarget ? { href: footerTarget.href, label: String(group.footer.label || footerTarget.label).slice(0, 28) } : null };
+      return { label: String(group.label || '').slice(0, 28), note: String(group.note || '').slice(0, 60), links, direct: group.direct === true && links.length === 1, tilesTitle: shownTiles.length ? String(group.tilesTitle || '') : '', tiles: shownTiles, footer: footerTarget ? { href: footerTarget.href, label: String(group.footer.label || footerTarget.label).slice(0, 28) } : null };
     }).filter(group => group.label && group.links.length);
   }
+  // Selling menus (spec 2026-11-15): only the store's real data — badged products first, a real offer or none, live prices.
+  const STORE_MENU_BADGES = /más vendido|nuevo/i;
+  const storeMenuBadge = item => String(item.highlight || item.badge || '');
+  function storeMenuBest() {
+    const pool = products().filter(item => storeMenuPhoto((item.imageUrls || [])[0]));
+    return [...pool.filter(item => STORE_MENU_BADGES.test(storeMenuBadge(item))), ...pool.filter(item => !STORE_MENU_BADGES.test(storeMenuBadge(item)))].slice(0, 3);
+  }
+  function storeMenuOffer() {
+    const goal = Number(store.freeShippingFrom);
+    if (Number.isInteger(goal) && goal > 0) return { kind: 'shipping', title: `Envío gratis desde ${money(goal, 'BOB')}`, href: pageHref('productos.html') };
+    const pack = store.bundlesEnabled && Array.isArray(store.bundles) ? store.bundles.find(b => b && Number(b.discountPercent) > 0) : null;
+    if (pack) return { kind: 'pack', title: String(pack.label || 'Pack').slice(0, 40), detail: `Ahorras ${Math.round(Number(pack.discountPercent))}%`, href: pageHref('productos.html') };
+    return null;
+  }
+  const storeMenuFrom = links => {
+    const prices = links.flatMap(link => { const id = new URL(link.href, location.href).searchParams.get('f_categoria'); return id ? products().filter(item => filterFold(item.categoryId) === id).map(price) : []; });
+    return prices.length ? `desde ${money(Math.min(...prices), 'BOB')}` : '';
+  };
+  const storeMenuProductHref = item => pageHref(config.productPage || 'product.html', '?id=' + encodeURIComponent(item.id));
+  // An item with options opens its page (a size or a colour comes first), like the catalogue's cards.
+  const storeMenuBuy = item => optionGroups(item) ? `<a class="pym-add" data-product="${escape(item.id)}" href="${escape(storeMenuProductHref(item))}">Elegir</a>` : `<button type="button" class="pym-add" data-add="${escape(item.id)}" data-quantity="1">Agregar</button>`;
+  const storeMenuCard = item => `<li><a href="${escape(storeMenuProductHref(item))}"><img src="${escape(item.imageUrls[0])}" alt="" loading="lazy"><span>${escape(String(item.name || '').slice(0, 40))}</span><b>${escape(money(price(item), item.currency || 'BOB'))}</b></a>${storeMenuBuy(item)}</li>`;
   let storeMenuCount = 0;
   const storeMenuOpenState = { host: null, close: null };
   function renderStoreMenu(host, menu) {
@@ -7209,14 +7258,33 @@
     const tileHtml = tile => `<li><a href="${escape(tile.href)}"><img src="${escape(tile.image)}" alt="" loading="lazy"><span${model === 'mega' ? ' class="pym-tile-title"' : ''}>${escape(tile.title)}</span>${tile.price ? `<small class="pym-price">${escape(tile.price)}</small>` : ''}</a></li>`;
     const firstPhoto = (groups.find(group => group.tiles.length) || { tiles: [] }).tiles[0] || groups.flatMap(group => group.links).find(link => link.image);
     const heroPhoto = swaps && firstPhoto ? `<div class="pym-hero-photo"><img src="${escape(firstPhoto.image)}" alt="" loading="lazy"></div>` : '';
-    panel.innerHTML = heroPhoto + `<div class="pym-tabs" role="tablist" aria-label="Menú"${groups.length === 1 ? ' data-single' : ''}>${groups.map((group, index) => `<button type="button" class="pym-tab" role="tab" id="${id}-tab-${index}" aria-controls="${id}-group-${index}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${escape(group.label)}</button>`).join('')}</div>`
+    const best = (model === 'bestsellers' || model === 'offer' || model === 'search') ? storeMenuBest() : [];
+    const offer = model === 'offer' ? storeMenuOffer() : null;
+    const offerHtml = model !== 'offer' ? '' : offer
+      ? `<a class="pym-offer" data-kind="${offer.kind}" href="${escape(offer.href)}">${best[0] ? `<img src="${escape(best[0].imageUrls[0])}" alt="" loading="lazy">` : ''}<b>${escape(offer.title)}</b>${offer.detail ? `<span>${escape(offer.detail)}</span>` : ''}</a>`
+      : best[0] ? `<a class="pym-offer" data-kind="product" href="${escape(storeMenuProductHref(best[0]))}"><img src="${escape(best[0].imageUrls[0])}" alt="" loading="lazy"><b>${escape(best[0].name)}</b><span>${escape(money(price(best[0]), best[0].currency || 'BOB'))}</span></a>` : '';
+    const popular = [...storeMenuCategories().map(c => ({ label: c.name, href: pageHref('productos.html', '?f_categoria=' + encodeURIComponent(filterFold(c.id))) })), ...products().map(item => ({ label: item.name, href: storeMenuProductHref(item) }))].slice(0, 6);
+    const searchHtml = model !== 'search' ? '' : `<form class="pym-search" action="${escape(pageHref('buscar.html'))}" role="search"><input type="search" name="q" placeholder="Busca productos" aria-label="Buscar"></form><p class="pym-tiles-title">Populares</p><div class="pym-popular">${popular.map(chip => `<a href="${escape(chip.href)}">${escape(String(chip.label).slice(0, 28))}</a>`).join('')}</div>${best.length ? `<div class="pym-best"><ul>${best.map(storeMenuCard).join('')}</ul></div>` : ''}`;
+    panel.innerHTML = heroPhoto + offerHtml + searchHtml + `<div class="pym-tabs" role="tablist" aria-label="Menú"${groups.length === 1 ? ' data-single' : ''}>${groups.map((group, index) => `<button type="button" class="pym-tab" role="tab" id="${id}-tab-${index}" aria-controls="${id}-group-${index}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${escape(group.label)}</button>`).join('')}</div>`
       + groups.map((group, index) => `<div class="pym-group" role="tabpanel" id="${id}-group-${index}" aria-labelledby="${id}-tab-${index}"${index ? ' hidden' : ''}>`
+        + (model === 'need' ? `<div class="pym-need">${group.tiles[0] ? `<img src="${escape(group.tiles[0].image)}" alt="" loading="lazy">` : ''}<span class="pym-need-label">${escape(group.label)}</span>${group.note ? `<span class="pym-note">${escape(group.note)}</span>` : ''}<span class="pym-need-from">${escape(storeMenuFrom(group.links))}</span></div>` : '')
         + `<ul class="pym-links">${group.links.map(linkHtml).join('')}</ul>`
+        + (model === 'bestsellers' && best.length ? `<div class="pym-best"><p class="pym-best-title">${best.some(item => STORE_MENU_BADGES.test(storeMenuBadge(item))) ? 'Lo más vendido' : 'Destacados'}</p><ul>${best.map(storeMenuCard).join('')}</ul></div>` : '')
         + (group.tiles.length && model !== 'index' ? `<div class="pym-tiles">${group.tilesTitle ? `<p class="pym-tiles-title">${escape(group.tilesTitle)}</p>` : ''}<ul>${group.tiles.map(tileHtml).join('')}</ul></div>` : '')
         + (group.footer ? `<a class="pym-footer" href="${escape(group.footer.href)}">${escape(group.footer.label)}</a>` : '')
         + '</div>').join('')
       + (extras ? `<div class="pym-extras">${extras}</div>` : '');
     host.appendChild(panel);
+    // Thumb bar (spec 2026-11-15): four buttons fixed at the bottom of the phone; the page and the floating buttons sit above it.
+    document.querySelectorAll('.pym-thumbbar').forEach(bar => bar.remove());
+    if (model === 'thumb') {
+      const bar = document.createElement('nav');
+      bar.className = 'pym-thumbbar'; bar.setAttribute('aria-label', 'Accesos');
+      bar.innerHTML = `<a href="${escape(pageHref('index.html'))}">Inicio</a><button type="button" data-thumb-menu aria-controls="${id}">Categorías</button><a href="${escape(pageHref('buscar.html'))}">Buscar</a><button type="button" data-cart-open>Bolsa <span data-cart-count>0</span></button>`;
+      document.body.appendChild(bar);
+      document.documentElement.style.setProperty('--pym-bottom-bar', '64px');
+      bar.querySelector('[data-thumb-menu]').addEventListener('click', event => { event.stopPropagation(); toggleMount.querySelector('[data-store-menu-toggle]').click(); });
+    } else document.documentElement.style.removeProperty('--pym-bottom-bar');
     // Overlay and split: the big photo follows the link under the pointer or the keyboard focus.
     if (swaps) panel.querySelectorAll('a[data-photo-for]').forEach(link => { const show = () => { const img = panel.querySelector('.pym-hero-photo img'); if (img) img.src = link.getAttribute('data-photo-for'); }; link.addEventListener('pointerenter', show); link.addEventListener('focus', show); });
     const toggle = toggleMount.querySelector('[data-store-menu-toggle]');
