@@ -172,3 +172,16 @@ test("on the slate «Tu cuenta» card the payout-hold warning keeps its own red 
 test("keyboard focus stays visible on the slate card and the dark MCP dialog", () => {
   assert.match(css(), /body\.is-logged-in :is\(\.panel\.overview-account, \.mcp-dialog\) :focus-visible \{ outline-color: #fff; \}/);
 });
+
+// Store mascots (spec 2026-11-16-store-mascots-design.md): Inicio's row of four glass cards under the greeting.
+test("mascots on Inicio: a row under the greeting, filled from the finances, low stock and setup steps", () => {
+  const js = read("./dashboard.js");
+  assert.match(read("../index.html"), /<p class="overview-greeting" id="overviewGreeting">Hola<\/p>\n\s*<ul class="mascot-row" id="overviewMascots" aria-label="Tu tienda hoy" hidden><\/ul>/);
+  assert.match(js, /import \{ renderMascotBubbles, renderMascotCards, storeSummary \} from "\/src\/store-mascots\.mjs";/);
+  assert.match(js, /function renderMascots\(\) \{[^]*?storeSummary\(\{ finances: lastFinances, money, lowStock: lastLowStock, steps: lastSetupSteps \}\)/);
+  assert.match(js, /lastLowStock = lowStock\(links\);/);
+  const s = css();
+  assert.match(s, /body\.is-logged-in \.mascot-row \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/);
+  assert.match(s, /body\.is-logged-in \.mascot-card \{[^}]*background: var\(--cl-glass\);[^}]*backdrop-filter: var\(--cl-blur\);/);
+  assert.match(s, /@media \(max-width: 720px\) \{ body\.is-logged-in \.mascot-row \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \} \}/);
+});

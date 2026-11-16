@@ -151,3 +151,16 @@ body.is-logged-in .yapi-welcome textarea { color: var(--cl-ink); caret-color: va
 .yapi-welcome-skip:hover { color: var(--cl-ink); background: rgb(23 25 28 / .06); }
 .yapi-welcome :focus-visible { outline: 2px solid var(--cl-ink); }
 .yapi-welcome-composer textarea:is(:focus, :focus-visible) { outline: none; border: 0; box-shadow: none; }
+
+/* ── Store mascots (spec 2026-11-16-store-mascots-design.md) ─────────────
+   Inicio: YAPI's star family under the greeting, one glass card each — mascot, sentence, link. */
+body.is-logged-in .mascot-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 14px 0 18px; padding: 0; list-style: none; }
+body.is-logged-in .mascot-row[hidden] { display: none; }
+body.is-logged-in .mascot-card { display: grid; grid-template-rows: auto 1fr auto; gap: 8px; min-width: 0; padding: 16px 16px 14px; border-radius: 20px;
+  background: var(--cl-glass); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
+body.is-logged-in .mascot-card .mascot { width: 52px; height: 52px; transform-origin: 50% 60%; transition: transform .3s var(--cl-ease); }
+body.is-logged-in .mascot-card:hover .mascot { transform: rotate(-8deg) scale(1.06); }
+body.is-logged-in .mascot-text { margin: 0; color: var(--cl-ink); font: 500 14.5px/1.4 var(--cl-body); text-wrap: pretty; }
+body.is-logged-in .mascot-link { justify-self: start; color: var(--cl-ink); font: 600 13.5px/1 var(--cl-body); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 720px) { body.is-logged-in .mascot-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { body.is-logged-in .mascot-card:hover .mascot { transform: none; } }

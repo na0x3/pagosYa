@@ -23,6 +23,7 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
 import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-sections.mjs";
 import { playImmersiveMove } from "/src/immersive.mjs";
 import { lowStock, renderRestock } from "/src/restock.mjs";
+import { renderMascotBubbles, renderMascotCards, storeSummary } from "/src/store-mascots.mjs";
 import { renderSellingCard } from "/src/selling-card.mjs";
 import { mountTareas } from "/src/tareas.mjs";
 import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
@@ -141,6 +142,10 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
   let lastPayments = [];
   let lastPayouts = [];
   let lastFinances = null;
+  // What the store mascots read (renderMascots): low stock from the catalog, the setup steps from Inicio, and their last summary.
+  let lastLowStock = [];
+  let lastSetupSteps = [];
+  let lastMascotItems = [];
   // Documentos → Cobros (D1); the module owns its view, this is only the glue.
   const cobros = mountCobrosPanel({
     api,
@@ -187,8 +192,10 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
   /** Inicio › Por reponer: products about to sell out; «Reponer» opens the product at its stock step. */
   function showRestock(links) {
     const card = document.getElementById("overviewRestock");
-    card.innerHTML = renderRestock(lowStock(links));
+    lastLowStock = lowStock(links);
+    card.innerHTML = renderRestock(lastLowStock);
     card.hidden = !card.innerHTML;
+    renderMascots();
   }
   document.getElementById("overviewRestock").addEventListener("click", event => {
     const button = event.target.closest("[data-restock-id]"); if (!button) return;
@@ -953,6 +960,14 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
     return (store.publishedSourceRevision ? !store.sourcePublicationPaused : store.websitePublishedRevision > 0) ? "published" : "draft";
   }
 
+  // Inicio › the store's mascots (spec 2026-11-16-store-mascots-design.md): YAPI's star family tells the store's news in real numbers.
+  function renderMascots() {
+    lastMascotItems = storeSummary({ finances: lastFinances, money, lowStock: lastLowStock, steps: lastSetupSteps });
+    const row = document.getElementById("overviewMascots");
+    row.innerHTML = renderMascotCards(lastMascotItems);
+    row.hidden = !lastMascotItems.length;
+  }
+
   // Greeting, key figures and the setup checklist; re-run whenever the finances or the money visibility change.
   function renderOverview() {
     if (!lastFinances) return;
@@ -961,14 +976,16 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
     document.getElementById("overviewKpis").innerHTML = renderOverviewKpis(overviewKpis({ finances: lastFinances, money }));
     const store = lastStores.find((entry) => entry.id === currentStoreId);
     const setup = document.getElementById("overviewSetup");
-    setup.innerHTML = renderSetupSteps(setupSteps({
+    lastSetupSteps = setupSteps({
       kycStatus: lastKyc?.status,
       invoicingConfigured: Boolean(lastInvoicingProfile?.cuis),
       storePublished: store ? storePublicationState(store) === "published" : false,
       paymentCount: lastTotalFinances?.paymentCount ?? lastFinances.paymentCount,
       paymentStore: (store?.checkoutMode || "payment") === "payment",
-    }));
+    });
+    setup.innerHTML = renderSetupSteps(lastSetupSteps);
     setup.hidden = !setup.innerHTML;
+    renderMascots();
     void loadSelling();
     // Inicio › the store at a glance and three things YAPI can do (calm dashboard polish 2026-11-16).
     const storeCard = document.getElementById("overviewStore");
