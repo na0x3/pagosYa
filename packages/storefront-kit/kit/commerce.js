@@ -7011,7 +7011,32 @@
       [data-pagosya-contact]:not([data-contact-inline]),.pagosya-whatsapp{bottom:calc(var(--pym-bottom-bar,0px) + 16px)!important}
       .pym-panel[data-model=bestsellers] .pym-group,.pym-panel[data-model=need] .pym-group{grid-template-columns:1fr}
       .pym-best ul{display:flex;overflow-x:auto}.pym-best li{flex:0 0 140px}
-    }`;
+    }
+    .pym-circles{display:flex;justify-content:center;gap:26px;padding:10px 24px 22px;overflow-x:auto}
+    .pym-circles a{display:grid;justify-items:center;gap:8px;color:inherit;text-decoration:none;font-size:14px;flex:none}
+    .pym-circles img{width:88px;height:88px;border-radius:50%;object-fit:cover;outline:2px solid transparent;outline-offset:4px}
+    .pym-circles a:is(:hover,:focus-visible) img{outline-color:var(--store-accent,currentColor)}
+    .pym-rail{display:none}
+    .pym-panel[data-model=stickers]{position:fixed;inset:0;max-height:none;z-index:1000;border:0;padding:clamp(24px,6vw,80px);background:var(--store-accent,#ffe14d);color:var(--store-on-accent,#1e1b4b)}
+    .pym-panel[data-model=stickers] .pym-links{display:flex;flex-wrap:wrap;gap:18px 22px;align-content:center;min-height:60dvh}
+    .pym-panel[data-model=stickers] .pym-links li:nth-child(odd) a{transform:rotate(-5deg)}.pym-panel[data-model=stickers] .pym-links li:nth-child(even) a{transform:rotate(4deg)}
+    .pym-panel[data-model=stickers] .pym-links a{display:inline-flex;align-items:center;gap:10px;padding:10px 22px 10px 10px;border:3px solid currentColor;border-radius:999px;background:var(--store-background,#fff);color:var(--store-foreground,#111);box-shadow:5px 5px 0 currentColor;font-family:var(--store-heading-font,inherit);font-size:clamp(20px,2.6vw,28px);text-decoration:none;transition:transform .2s}
+    .pym-panel[data-model=stickers] .pym-links a:is(:hover,:focus-visible){transform:rotate(0) scale(1.05)}
+    .pym-sticker-photo img{width:44px;height:44px;border-radius:50%;object-fit:cover;display:block}
+    .pym-panel[data-model=stickers] .pym-tiles{display:none}
+    .pym-dock{position:fixed;left:50%;bottom:calc(18px + var(--pym-bottom-bar,0px));transform:translateX(-50%);z-index:950;display:flex;gap:6px;padding:6px;border-radius:999px;background:var(--store-foreground,#111);color:var(--store-background,#fff);box-shadow:0 18px 40px -16px #0008}
+    .pym-dock button{min-height:44px;padding:0 18px;border:0;border-radius:999px;background:none;color:inherit;font:inherit;font-weight:600;cursor:pointer}
+    .pym-dock button[aria-expanded=true],.pym-dock button:hover{background:var(--store-accent,#fff);color:var(--store-on-accent,#111)}
+    .pym-panel[data-model=dock]{position:fixed;left:50%;right:auto;top:auto;bottom:86px;transform:translateX(-50%);width:min(680px,94vw);max-height:60dvh;border:0;border-radius:22px;box-shadow:0 30px 60px -20px #0009}
+    .pym-panel[data-model=dock] .pym-tabs{display:none}
+    @media (min-width:1280px){
+      .pym-rail{position:fixed;inset:0 auto 0 0;width:200px;display:grid;grid-template-rows:auto 1fr auto;gap:24px;padding:24px 22px;border-right:1px solid color-mix(in srgb,currentColor 12%,transparent);background:var(--store-background,#fff);color:var(--store-foreground,#111);z-index:40;overflow:auto}
+      .pym-rail .pym-links{grid-template-columns:1fr;align-content:start}
+      body:has(.pym-rail){padding-left:200px}
+      [data-store-menu-model=rail] [data-pagosya-store-menu="toggle"]{display:none}
+    }
+    @media (max-width:860px){.pym-circles{justify-content:flex-start;gap:14px}.pym-circles img{width:64px;height:64px}.pym-dock{left:10px;right:10px;transform:none;justify-content:space-between}}
+    @media (prefers-reduced-motion:reduce){.pym-panel[data-model=stickers] .pym-links a{transform:none!important}}`;
   // ---- Store menu (spec 2026-10-21 dropdown menu) ----
   // config.header.menu = { style: 'panel' | 'dropdowns', groups? } turns the menu on. The host header holds the mounts
   // [data-pagosya-store-menu="toggle"] (☰, opens the panel) and optionally [data-pagosya-store-menu="links"] (desktop top links
@@ -7251,10 +7276,11 @@
     panel.hidden = true;
     panel.setAttribute('data-store-menu-panel', '');
     panel.setAttribute('aria-label', 'Menú');
-    panel.setAttribute('data-model', model);
+    // The rail is a drawer wherever it cannot stand as a column (below 1280 px); its column is drawn below.
+    panel.setAttribute('data-model', model === 'rail' ? 'drawer' : model);
     const countOf = href => { const id = new URL(href, location.href).searchParams.get('f_categoria'); const n = id ? products().filter(item => filterFold(item.categoryId) === id).length : 0; return n ? `${n} ${n === 1 ? 'producto' : 'productos'}` : ''; };
     const swaps = model === 'overlay' || model === 'split';
-    const linkHtml = link => `<li><a href="${escape(link.href)}"${swaps && link.image ? ` data-photo-for="${escape(link.image)}"` : ''}><span class="pym-link-label">${escape(link.label)}</span>${link.note ? `<span class="pym-note">${escape(link.note)}</span>` : ''}${model === 'index' ? `<span class="pym-count">${escape(countOf(link.href))}</span>` : ''}</a></li>`;
+    const linkHtml = link => `<li><a href="${escape(link.href)}"${swaps && link.image ? ` data-photo-for="${escape(link.image)}"` : ''}>${model === 'stickers' && link.image ? `<span class="pym-sticker-photo"><img src="${escape(link.image)}" alt="" loading="lazy"></span>` : ''}<span class="pym-link-label">${escape(link.label)}</span>${link.note ? `<span class="pym-note">${escape(link.note)}</span>` : ''}${model === 'index' ? `<span class="pym-count">${escape(countOf(link.href))}</span>` : ''}</a></li>`;
     const tileHtml = tile => `<li><a href="${escape(tile.href)}"><img src="${escape(tile.image)}" alt="" loading="lazy"><span${model === 'mega' ? ' class="pym-tile-title"' : ''}>${escape(tile.title)}</span>${tile.price ? `<small class="pym-price">${escape(tile.price)}</small>` : ''}</a></li>`;
     const firstPhoto = (groups.find(group => group.tiles.length) || { tiles: [] }).tiles[0] || groups.flatMap(group => group.links).find(link => link.image);
     const heroPhoto = swaps && firstPhoto ? `<div class="pym-hero-photo"><img src="${escape(firstPhoto.image)}" alt="" loading="lazy"></div>` : '';
@@ -7349,6 +7375,33 @@
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     });
+    // Always-visible menus and the dock (spec 2026-11-15): drawn once per render, outside the panel.
+    document.querySelectorAll('.pym-circles,.pym-rail,.pym-dock').forEach(el => el.remove());
+    if (model === 'circles' && !document.querySelector('[data-pagosya-checkout-page]')) {
+      const row = document.createElement('nav');
+      row.className = 'pym-circles'; row.setAttribute('aria-label', 'Categorías');
+      row.innerHTML = storeMenuCategories().map(category => ({ category, image: storeMenuLinkPhoto('category:' + category.id), target: storeMenuTarget('category:' + category.id) }))
+        .filter(entry => entry.image && entry.target).map(entry => `<a href="${escape(entry.target.href)}"><img src="${escape(entry.image)}" alt="" loading="lazy"><span>${escape(String(entry.category.name).slice(0, 28))}</span></a>`).join('');
+      if (row.children.length) host.after(row);
+    }
+    if (model === 'rail') {
+      const aside = document.createElement('aside');
+      aside.className = 'pym-rail'; aside.setAttribute('aria-label', 'Menú');
+      const logo = host.querySelector('[data-nav-logo]');
+      aside.innerHTML = (logo ? `<div class="pym-rail-logo">${logo.outerHTML}</div>` : '') + `<ul class="pym-links">${groups[0].links.map(link => `<li><a href="${escape(link.href)}">${escape(link.label)}</a></li>`).join('')}</ul>` + (extras ? `<div class="pym-extras">${extras}</div>` : '');
+      document.body.prepend(aside);
+    }
+    if (model === 'dock') {
+      const dock = document.createElement('nav');
+      dock.className = 'pym-dock'; dock.setAttribute('aria-label', 'Menú');
+      dock.innerHTML = groups.map((group, index) => `<button type="button" data-dock="${index}" aria-controls="${id}">${escape(group.label)}</button>`).join('');
+      dock.querySelectorAll('[data-dock]').forEach(button => button.addEventListener('click', event => {
+        event.stopPropagation();
+        const index = Number(button.getAttribute('data-dock'));
+        if (!panel.hidden && panes[index] && !panes[index].hidden) close(true); else open('panel', index, button, true);
+      }));
+      document.body.appendChild(dock);
+    }
     host.__pagosyaStoreMenu = { close, panel };
   }
   function renderStoreMenus() {

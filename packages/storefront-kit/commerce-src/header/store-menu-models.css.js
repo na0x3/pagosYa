@@ -76,4 +76,29 @@
       [data-pagosya-contact]:not([data-contact-inline]),.pagosya-whatsapp{bottom:calc(var(--pym-bottom-bar,0px) + 16px)!important}
       .pym-panel[data-model=bestsellers] .pym-group,.pym-panel[data-model=need] .pym-group{grid-template-columns:1fr}
       .pym-best ul{display:flex;overflow-x:auto}.pym-best li{flex:0 0 140px}
-    }`;
+    }
+    .pym-circles{display:flex;justify-content:center;gap:26px;padding:10px 24px 22px;overflow-x:auto}
+    .pym-circles a{display:grid;justify-items:center;gap:8px;color:inherit;text-decoration:none;font-size:14px;flex:none}
+    .pym-circles img{width:88px;height:88px;border-radius:50%;object-fit:cover;outline:2px solid transparent;outline-offset:4px}
+    .pym-circles a:is(:hover,:focus-visible) img{outline-color:var(--store-accent,currentColor)}
+    .pym-rail{display:none}
+    .pym-panel[data-model=stickers]{position:fixed;inset:0;max-height:none;z-index:1000;border:0;padding:clamp(24px,6vw,80px);background:var(--store-accent,#ffe14d);color:var(--store-on-accent,#1e1b4b)}
+    .pym-panel[data-model=stickers] .pym-links{display:flex;flex-wrap:wrap;gap:18px 22px;align-content:center;min-height:60dvh}
+    .pym-panel[data-model=stickers] .pym-links li:nth-child(odd) a{transform:rotate(-5deg)}.pym-panel[data-model=stickers] .pym-links li:nth-child(even) a{transform:rotate(4deg)}
+    .pym-panel[data-model=stickers] .pym-links a{display:inline-flex;align-items:center;gap:10px;padding:10px 22px 10px 10px;border:3px solid currentColor;border-radius:999px;background:var(--store-background,#fff);color:var(--store-foreground,#111);box-shadow:5px 5px 0 currentColor;font-family:var(--store-heading-font,inherit);font-size:clamp(20px,2.6vw,28px);text-decoration:none;transition:transform .2s}
+    .pym-panel[data-model=stickers] .pym-links a:is(:hover,:focus-visible){transform:rotate(0) scale(1.05)}
+    .pym-sticker-photo img{width:44px;height:44px;border-radius:50%;object-fit:cover;display:block}
+    .pym-panel[data-model=stickers] .pym-tiles{display:none}
+    .pym-dock{position:fixed;left:50%;bottom:calc(18px + var(--pym-bottom-bar,0px));transform:translateX(-50%);z-index:950;display:flex;gap:6px;padding:6px;border-radius:999px;background:var(--store-foreground,#111);color:var(--store-background,#fff);box-shadow:0 18px 40px -16px #0008}
+    .pym-dock button{min-height:44px;padding:0 18px;border:0;border-radius:999px;background:none;color:inherit;font:inherit;font-weight:600;cursor:pointer}
+    .pym-dock button[aria-expanded=true],.pym-dock button:hover{background:var(--store-accent,#fff);color:var(--store-on-accent,#111)}
+    .pym-panel[data-model=dock]{position:fixed;left:50%;right:auto;top:auto;bottom:86px;transform:translateX(-50%);width:min(680px,94vw);max-height:60dvh;border:0;border-radius:22px;box-shadow:0 30px 60px -20px #0009}
+    .pym-panel[data-model=dock] .pym-tabs{display:none}
+    @media (min-width:1280px){
+      .pym-rail{position:fixed;inset:0 auto 0 0;width:200px;display:grid;grid-template-rows:auto 1fr auto;gap:24px;padding:24px 22px;border-right:1px solid color-mix(in srgb,currentColor 12%,transparent);background:var(--store-background,#fff);color:var(--store-foreground,#111);z-index:40;overflow:auto}
+      .pym-rail .pym-links{grid-template-columns:1fr;align-content:start}
+      body:has(.pym-rail){padding-left:200px}
+      [data-store-menu-model=rail] [data-pagosya-store-menu="toggle"]{display:none}
+    }
+    @media (max-width:860px){.pym-circles{justify-content:flex-start;gap:14px}.pym-circles img{width:64px;height:64px}.pym-dock{left:10px;right:10px;transform:none;justify-content:space-between}}
+    @media (prefers-reduced-motion:reduce){.pym-panel[data-model=stickers] .pym-links a{transform:none!important}}`;

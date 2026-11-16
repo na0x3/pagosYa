@@ -237,10 +237,11 @@
     panel.hidden = true;
     panel.setAttribute('data-store-menu-panel', '');
     panel.setAttribute('aria-label', 'Menú');
-    panel.setAttribute('data-model', model);
+    // The rail is a drawer wherever it cannot stand as a column (below 1280 px); its column is drawn below.
+    panel.setAttribute('data-model', model === 'rail' ? 'drawer' : model);
     const countOf = href => { const id = new URL(href, location.href).searchParams.get('f_categoria'); const n = id ? products().filter(item => filterFold(item.categoryId) === id).length : 0; return n ? `${n} ${n === 1 ? 'producto' : 'productos'}` : ''; };
     const swaps = model === 'overlay' || model === 'split';
-    const linkHtml = link => `<li><a href="${escape(link.href)}"${swaps && link.image ? ` data-photo-for="${escape(link.image)}"` : ''}><span class="pym-link-label">${escape(link.label)}</span>${link.note ? `<span class="pym-note">${escape(link.note)}</span>` : ''}${model === 'index' ? `<span class="pym-count">${escape(countOf(link.href))}</span>` : ''}</a></li>`;
+    const linkHtml = link => `<li><a href="${escape(link.href)}"${swaps && link.image ? ` data-photo-for="${escape(link.image)}"` : ''}>${model === 'stickers' && link.image ? `<span class="pym-sticker-photo"><img src="${escape(link.image)}" alt="" loading="lazy"></span>` : ''}<span class="pym-link-label">${escape(link.label)}</span>${link.note ? `<span class="pym-note">${escape(link.note)}</span>` : ''}${model === 'index' ? `<span class="pym-count">${escape(countOf(link.href))}</span>` : ''}</a></li>`;
     const tileHtml = tile => `<li><a href="${escape(tile.href)}"><img src="${escape(tile.image)}" alt="" loading="lazy"><span${model === 'mega' ? ' class="pym-tile-title"' : ''}>${escape(tile.title)}</span>${tile.price ? `<small class="pym-price">${escape(tile.price)}</small>` : ''}</a></li>`;
     const firstPhoto = (groups.find(group => group.tiles.length) || { tiles: [] }).tiles[0] || groups.flatMap(group => group.links).find(link => link.image);
     const heroPhoto = swaps && firstPhoto ? `<div class="pym-hero-photo"><img src="${escape(firstPhoto.image)}" alt="" loading="lazy"></div>` : '';
@@ -335,6 +336,33 @@
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     });
+    // Always-visible menus and the dock (spec 2026-11-15): drawn once per render, outside the panel.
+    document.querySelectorAll('.pym-circles,.pym-rail,.pym-dock').forEach(el => el.remove());
+    if (model === 'circles' && !document.querySelector('[data-pagosya-checkout-page]')) {
+      const row = document.createElement('nav');
+      row.className = 'pym-circles'; row.setAttribute('aria-label', 'Categorías');
+      row.innerHTML = storeMenuCategories().map(category => ({ category, image: storeMenuLinkPhoto('category:' + category.id), target: storeMenuTarget('category:' + category.id) }))
+        .filter(entry => entry.image && entry.target).map(entry => `<a href="${escape(entry.target.href)}"><img src="${escape(entry.image)}" alt="" loading="lazy"><span>${escape(String(entry.category.name).slice(0, 28))}</span></a>`).join('');
+      if (row.children.length) host.after(row);
+    }
+    if (model === 'rail') {
+      const aside = document.createElement('aside');
+      aside.className = 'pym-rail'; aside.setAttribute('aria-label', 'Menú');
+      const logo = host.querySelector('[data-nav-logo]');
+      aside.innerHTML = (logo ? `<div class="pym-rail-logo">${logo.outerHTML}</div>` : '') + `<ul class="pym-links">${groups[0].links.map(link => `<li><a href="${escape(link.href)}">${escape(link.label)}</a></li>`).join('')}</ul>` + (extras ? `<div class="pym-extras">${extras}</div>` : '');
+      document.body.prepend(aside);
+    }
+    if (model === 'dock') {
+      const dock = document.createElement('nav');
+      dock.className = 'pym-dock'; dock.setAttribute('aria-label', 'Menú');
+      dock.innerHTML = groups.map((group, index) => `<button type="button" data-dock="${index}" aria-controls="${id}">${escape(group.label)}</button>`).join('');
+      dock.querySelectorAll('[data-dock]').forEach(button => button.addEventListener('click', event => {
+        event.stopPropagation();
+        const index = Number(button.getAttribute('data-dock'));
+        if (!panel.hidden && panes[index] && !panes[index].hidden) close(true); else open('panel', index, button, true);
+      }));
+      document.body.appendChild(dock);
+    }
     host.__pagosyaStoreMenu = { close, panel };
   }
   function renderStoreMenus() {

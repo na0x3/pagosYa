@@ -344,4 +344,25 @@ describe('store menu', () => {
     expect(q('.pym-thumbbar [data-cart-count]')).not.toBeNull();
     expect(w.document.documentElement.style.getPropertyValue('--pym-bottom-bar')).toBe('64px');
   });
+  it('circles put one round photo per category under the header and never on checkout', async () => {
+    const shop = await open({ menu: { model: 'circles' } });
+    expect(shop.all('header + .pym-circles a img').length).toBe(4);
+    const checkout = await open({ menu: { model: 'circles' }, host: HOST + '<main data-pagosya-checkout-page></main>' });
+    expect(checkout.q('.pym-circles')).toBeNull();
+  });
+  it('rail is a left column on wide screens and a drawer below 1280 px', async () => {
+    const { q } = await open({ menu: { model: 'rail' } });
+    expect(q('.pym-rail a')).not.toBeNull();
+    expect(q('.pym-panel').getAttribute('data-model')).toBe('drawer');
+  });
+  it('stickers give each link a round photo; dock opens its group as a sheet from the bottom pill', async () => {
+    const stickers = await open({ menu: { model: 'stickers', groups: [{ label: 'Tienda', links: [{ to: 'category:C1' }, { to: 'category:c2' }] }] } });
+    expect(stickers.all('.pym-links a .pym-sticker-photo').length).toBe(2);
+    const dock = await open({ menu: { model: 'dock', groups: [{ label: 'Tienda', links: [{ to: 'all' }] }, { label: 'Telas', links: [{ to: 'category:c3' }] }] } });
+    const pills = dock.all('.pym-dock button');
+    expect(pills.map((b: any) => b.textContent)).toEqual(['Tienda', 'Telas']);
+    pills[1].click();
+    expect(dock.q('.pym-panel').hidden).toBe(false);
+    expect(dock.all('.pym-group').filter((g: any) => !g.hidden)[0].textContent).toContain('Seda');
+  });
 });
