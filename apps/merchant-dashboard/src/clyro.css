@@ -7,10 +7,10 @@
 /* ── Tokens ────────────────────────────────────────────
    Green and red stay the site's for dots and fills; text uses the darker -text shades, which read at 4.5:1 on cream and white. */
 body.is-logged-in, body.is-logged-out {
-  --cl-paper: #fdfcf6; --cl-ink: #17191c; --cl-ink-soft: #5d6066; --cl-text-faint: #6b6d72; --cl-line: #e7e5dc; --cl-slate: #233a4a;
+  --cl-paper: #fdfcf6; --cl-ink: #17191c; --cl-ink-soft: #5d6066; --cl-text-faint: #5f6166; --cl-line: #e7e5dc; --cl-slate: #233a4a;
   --cl-night: #15191c; --cl-yellow: #ffd82f; --cl-surface: #ffffff;
-  --cl-green: #3f9d6b; --cl-green-text: #2c7550; --cl-green-soft: #e6f3ec;
-  --cl-red: #d9534f; --cl-red-text: #b13a36; --cl-red-soft: #fbeceb;
+  --cl-green: #3f9d6b; --cl-green-text: #276b49; --cl-green-soft: #e6f3ec;
+  --cl-red: #d9534f; --cl-red-text: #a83430; --cl-red-soft: #fbeceb;
   --cl-ease: cubic-bezier(.22,1,.36,1);
   --cl-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --cl-body: "Onest", ui-sans-serif, system-ui, sans-serif;
@@ -18,6 +18,15 @@ body.is-logged-in, body.is-logged-out {
     radial-gradient(70% 50% at 50% 80%, #f6e1d3 0%, transparent 75%), #fdfcf6;
   --cl-shadow: 0 1px 2px rgb(23 25 28 / .04), 0 10px 30px -22px rgb(23 25 28 / .22);
   --cl-shadow-float: 0 10px 30px -18px rgb(23 25 28 / .35), 0 2px 8px rgb(23 25 28 / .05);
+  /* Glass (owner 2026-11-16, «make it more glassmorphism»): white frost over the page's colour wash. */
+  --cl-glass: rgb(255 255 255 / .5); --cl-glass-strong: rgb(255 255 255 / .8); --cl-glass-edge: rgb(255 255 255 / .75);
+  --cl-blur: blur(22px) saturate(160%);
+  --cl-glass-shadow: inset 0 1px 0 rgb(255 255 255 / .85), 0 1px 2px rgb(23 25 28 / .04), 0 18px 40px -26px rgb(23 25 28 / .3);
+  --cl-wash-page: radial-gradient(1000px 720px at 2% 4%, #c9e9d6 0%, transparent 64%), radial-gradient(900px 680px at 100% 0%, #f8d5c0 0%, transparent 62%),
+    radial-gradient(900px 700px at 70% 70%, #dcdff5 0%, transparent 66%), radial-gradient(1100px 760px at 20% 100%, #f8d5c0 0%, transparent 64%), #fdfcf6;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  body.is-logged-in, body.is-logged-out { --cl-glass: rgb(255 255 255 / .94); --cl-glass-strong: rgb(255 255 255 / .97); }
 }
 body.is-logged-in {
   --pg-font-sans: var(--cl-body); --pm-serif: var(--cl-display); --pm-ease: var(--cl-ease);
@@ -33,14 +42,13 @@ body.is-logged-in {
   --pg-warning: #8a5a12; --pg-warning-soft: #fbf1df;
   --pg-focus-ring: rgb(23 25 28 / .18);
   --calm-radius: 20px; --calm-radius-sm: 12px; --calm-shadow: var(--cl-shadow); --calm-shadow-lg: var(--cl-shadow-float);
-  background: var(--cl-paper); background-attachment: scroll; color: var(--cl-ink); font-family: var(--cl-body);
+  background: var(--cl-wash-page); background-attachment: fixed; color: var(--cl-ink); font-family: var(--cl-body);
 }
 html:has(> body.is-logged-in), html:has(> body.is-logged-out) { background: #fdfcf6; }
 
 /* ── Shell ─────────────────────────────────────────────
    premium.css places the floating sidebar and the pill top bar; here they only change colour, line and blur. */
-body.is-logged-in .dashboard-sidebar { background: var(--cl-paper); border: 1px solid var(--cl-line); box-shadow: var(--cl-shadow);
-  -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.is-logged-in .dashboard-sidebar { background: var(--cl-glass); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
 body.is-logged-in .dashboard-nav-button { border-radius: 999px; color: var(--cl-ink-soft); font-family: var(--cl-body); font-weight: 500;
   transition: background-color .16s var(--cl-ease), color .16s var(--cl-ease); }
 body.is-logged-in .dashboard-nav-button:hover { background: rgb(23 25 28 / .06); color: var(--cl-ink); }
@@ -48,21 +56,22 @@ body.is-logged-in .dashboard-nav-button[aria-current="page"],
 body.is-logged-in .dashboard-nav-group > .dashboard-nav-button:not(.dashboard-nav-summary)[aria-current="page"] {
   background: var(--cl-ink); border-color: var(--cl-ink); color: #fff; box-shadow: none; border-radius: 999px; }
 body.is-logged-in .dashboard-nav-button[aria-current="page"] .dashboard-nav-icon { color: #fff; }
-body.is-logged-in > .topbar { border: 1px solid var(--cl-line); border-radius: 999px; background: rgb(253 252 246 / .8); box-shadow: var(--cl-shadow-float);
-  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
-body.is-logged-in .workspace-yapi { background: var(--cl-surface); border: 1px solid var(--cl-line); border-radius: 999px; box-shadow: var(--cl-shadow-float); }
+body.is-logged-in > .topbar { border-radius: 999px; background: var(--cl-glass); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
+body.is-logged-in .workspace-yapi { border-radius: 999px; background: var(--cl-glass-strong); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
 body.is-logged-in .workspace-yapi button.primary { border-radius: 999px; }
 body.is-logged-in :is(.workspace-title, .panel .section-head h2, .ui-head h3, .overview-greeting) {
   font-family: var(--cl-display); font-weight: 500; letter-spacing: -.05em; line-height: 1.02; color: var(--cl-ink); }
 body.is-logged-in .workspace-title { font-size: clamp(34px, 4.4vw, 52px); }
-body.is-logged-in .workspace-header { background: var(--cl-wash); border-radius: 28px; padding: 28px 28px 24px; }
+/* The page carries the wash now; the title sits straight on it. */
+body.is-logged-in .workspace-header { background: none; border-radius: 0; padding: 12px 4px 4px; }
 body.is-logged-in .workspace-description { color: var(--cl-ink-soft); }
 /* The one slate band: Inicio's «Tu cuenta» card. */
-body.is-logged-in .panel.overview-account { background: var(--cl-slate); border-color: var(--cl-slate); color: #fff; }
-body.is-logged-in .panel.overview-account :is(h2, dt, dd, p, a) { color: inherit; }
+body.is-logged-in .panel.overview-account { background: rgb(35 58 74 / .9); border-color: rgb(255 255 255 / .18); color: #fff; }
+body.is-logged-in .panel.overview-account :is(h2, dt, dd, p:not(.payout-hold-banner), a) { color: inherit; }
+body.is-logged-in .panel.overview-account .payout-hold-banner { background: var(--cl-red-soft); color: var(--cl-red-text); border-radius: 12px; }
 body.is-logged-in .panel.overview-account :is(.overview-account-list > div, .overview-balance) { border-color: rgb(255 255 255 / .16); }
 body.is-logged-in .panel.overview-account .badge { background: rgb(255 255 255 / .14); color: #fff; border-color: transparent; }
-@media (max-width: 600px) { body.is-logged-in .workspace-header { padding: 20px 18px 18px; border-radius: 22px; } }
+@media (max-width: 600px) { body.is-logged-in .workspace-header { padding: 8px 2px 2px; } }
 
 /* ── Controls ──────────────────────────────────────────
    premium.css already draws pills, 44px fields and 20px cards; here they take the site's ink, line and press. */
@@ -77,16 +86,18 @@ body.is-logged-in :is(input:where(:not([type=checkbox]):not([type=radio]):not([t
   border-color: var(--cl-line); border-radius: 12px; font-family: var(--cl-body); }
 body.is-logged-in :is(input, select, textarea):focus-visible { outline: none; border-color: var(--cl-ink); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
 body.is-logged-in :is(button, a, summary):focus-visible { outline: 2px solid var(--cl-ink); outline-offset: 2px; }
-body.is-logged-in :is(.panel, .card) { background: var(--cl-surface); border: 1px solid var(--cl-line); border-radius: 20px; box-shadow: var(--cl-shadow); }
-body.is-logged-in .section-tabs { background: rgb(253 252 246 / .86); border: 1px solid var(--cl-line); border-radius: 999px; box-shadow: none; }
+body.is-logged-in :is(.panel.overview-account, .mcp-dialog) :focus-visible { outline-color: #fff; }
+body.is-logged-in :is(.panel, .card) { border-radius: 20px; background: var(--cl-glass); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
+body.is-logged-in .overview-store { background: var(--cl-glass); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
+body.is-logged-in .overview-kpis { border-radius: 20px; overflow: hidden; background: var(--cl-glass); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
+body.is-logged-in .section-tabs { border-radius: 999px; background: var(--cl-glass); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
 body.is-logged-in .section-tab { border-radius: 999px; font-family: var(--cl-body); font-weight: 500; color: var(--cl-ink-soft); }
 body.is-logged-in .section-tab:hover { background: rgb(23 25 28 / .06); color: var(--cl-ink); }
 body.is-logged-in .section-tab[aria-current="page"] { background: var(--cl-ink); color: #fff; box-shadow: none; }
 body.is-logged-in th { color: var(--cl-ink-soft); font-family: var(--cl-body); font-weight: 500; letter-spacing: 0; text-transform: none; }
 body.is-logged-in :is(th, td) { border-color: var(--cl-line); }
 body.is-logged-in .badge { font-family: var(--cl-body); font-weight: 500; }
-body.is-logged-in dialog:not(.mcp-dialog), body.is-logged-in :is(.profile-menu, .profile-menu[popover]) { background: var(--cl-surface); border: 1px solid var(--cl-line);
-  border-radius: 20px; box-shadow: var(--cl-shadow-float); -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.is-logged-in dialog:not(.mcp-dialog), body.is-logged-in :is(.profile-menu, .profile-menu[popover]) { border-radius: 20px; background: var(--cl-glass-strong); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
 body.is-logged-in :is(.overview-kpi dd, .value, .finance-total-value) { font-family: var(--cl-display); font-weight: 500; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 body.is-logged-in :is(#error, #info):not(:empty) { border-radius: 16px; font-family: var(--cl-body); }
 body.is-logged-in #info:not(:empty) { color: var(--cl-ink); }
@@ -96,19 +107,18 @@ body.is-logged-in #info:not(:empty) { color: var(--cl-ink); }
    The site's cream wash behind both halves; the copy sits on it in ink, the form in one white card (the koi are retired). */
 body.is-logged-out { background: var(--cl-paper); color: var(--cl-ink); font-family: var(--cl-body); }
 body.is-logged-out :is(h1, h2, p, span, strong, label, button, input, a, summary, li) { font-family: var(--cl-body); }
-body.is-logged-out .login-split { background: var(--cl-wash); min-height: 100dvh; color: var(--cl-ink); }
+body.is-logged-out .login-split { background: var(--cl-wash-page); min-height: 100dvh; color: var(--cl-ink); }
 body.is-logged-out .login-hero { background: transparent; color: var(--cl-ink); box-shadow: none; }
 body.is-logged-out .login-hero-shader { display: none; }
 body.is-logged-out .login-hero-star { filter: drop-shadow(0 16px 30px rgb(23 25 28 / .14)); }
 body.is-logged-out .login-hero-copy h1 { font-family: var(--cl-display); font-weight: 500; letter-spacing: -.05em; line-height: 1.02; color: var(--cl-ink); text-shadow: none;
   font-size: clamp(2.4rem, 4.4vw, 3.6rem); }
 body.is-logged-out .login-hero-copy p { color: var(--cl-ink-soft); text-shadow: none; }
-body.is-logged-out .login-hero-cards li { background: rgb(255 255 255 / .72); border: 1px solid var(--cl-line); border-radius: 16px; box-shadow: none;
-  -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.is-logged-out .login-hero-cards li { border-radius: 16px; background: var(--cl-glass); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
 body.is-logged-out .login-hero-cards strong { color: var(--cl-ink); font-family: var(--cl-display); font-weight: 500; letter-spacing: -.03em; }
 body.is-logged-out .login-hero-cards span { color: var(--cl-ink-soft); }
-body.is-logged-out .login-card { box-sizing: border-box; width: min(100%, 448px); padding: clamp(24px, 3vw, 36px); background: var(--cl-surface); border: 1px solid var(--cl-line); border-radius: 20px;
-  box-shadow: var(--cl-shadow-float); color: var(--cl-ink); }
+body.is-logged-out .login-card { box-sizing: border-box; width: min(100%, 448px); padding: clamp(24px, 3vw, 36px); border-radius: 20px; color: var(--cl-ink);
+  background: var(--cl-glass-strong); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
 body.is-logged-out .login-card h2 { font-family: var(--cl-display); font-weight: 500; letter-spacing: -.05em; line-height: 1.02; color: var(--cl-ink); }
 body.is-logged-out :is(.login-sub, .login-switch, .login-terms, .login-foot) { color: var(--cl-ink-soft); }
 body.is-logged-out .login-card input:not([type="checkbox"]) { background: var(--cl-surface); border: 1px solid var(--cl-line); border-radius: 12px; color: var(--cl-ink); }
@@ -122,13 +132,12 @@ body.is-logged-out :is(.login-forgot, .login-switch button) { color: var(--cl-in
 
 /* ── YAPI's welcome ────────────────────────────────────
    The site's cream wash, the star, a Bricolage greeting and one white box (the ASCII butterflies are retired). */
-.yapi-welcome { background: var(--cl-wash); color: var(--cl-ink); }
+.yapi-welcome { background: var(--cl-wash-page); color: var(--cl-ink); }
 .yapi-welcome-star { filter: drop-shadow(0 10px 24px rgb(23 25 28 / .12)); }
 .yapi-welcome-greeting { font-family: var(--cl-display); font-weight: 500; letter-spacing: -.05em; line-height: 1.02; color: var(--cl-ink); text-shadow: none;
   font-size: clamp(30px, 6vw, 48px); }
-.yapi-welcome-composer { background: var(--cl-surface); border: 1px solid var(--cl-line); border-radius: 24px; box-shadow: var(--cl-shadow-float);
-  -webkit-backdrop-filter: none; backdrop-filter: none; font-family: var(--cl-body); }
-.yapi-welcome-liquid .yapi-welcome-composer { backdrop-filter: none; }
+.yapi-welcome-composer { border-radius: 24px; font-family: var(--cl-body); background: var(--cl-glass-strong); border: 1px solid var(--cl-glass-edge); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur); }
+.yapi-welcome-liquid .yapi-welcome-composer { backdrop-filter: var(--cl-blur); }
 .yapi-welcome-composer::after { display: none; }
 .yapi-welcome-composer:focus-within { border-color: var(--cl-ink); box-shadow: 0 0 0 3px rgb(23 25 28 / .12), var(--cl-shadow-float); }
 /* The welcome opens before body takes .is-logged-in, so these rules key on the composer, not the body class. */

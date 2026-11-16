@@ -29,7 +29,7 @@ test("tokens: the site's paper, ink, line, slate and wash; YAPI's yellow only as
 
 test("no blue and no Instrument Serif survive in the signed-in page: clyro.css overrides both", () => {
   const s = css();
-  assert.match(s, /body\.is-logged-in \{[^}]*background: var\(--cl-paper\);/);
+  assert.match(s, /body\.is-logged-in \{[^}]*background: var\(--cl-wash-page\);/);
   assert.match(s, /--pm-serif: var\(--cl-display\)/);
 });
 
@@ -54,14 +54,14 @@ test("every text token reads at 4.5:1 or more on cream and on white", () => {
 
 test("shell: cream sidebar with an ink pill for the page, a frosted pill top bar, the YAPI bar as a white pill", () => {
   const s = css();
-  assert.match(s, /body\.is-logged-in \.dashboard-sidebar \{[^}]*background: var\(--cl-paper\);/);
+  assert.match(s, /body\.is-logged-in \.dashboard-sidebar \{[^}]*background: var\(--cl-glass\);/);
   assert.match(s, /body\.is-logged-in \.dashboard-nav-button\[aria-current="page"\][^{]*\{[^}]*background: var\(--cl-ink\);[^}]*color: #fff;[^}]*border-radius: 999px;/);
-  assert.match(s, /body\.is-logged-in > \.topbar \{[^}]*border-radius: 999px;[^}]*backdrop-filter: blur\(20px\)/);
-  assert.match(s, /body\.is-logged-in \.workspace-yapi \{[^}]*background: var\(--cl-surface\);[^}]*border-radius: 999px;/);
+  assert.match(s, /body\.is-logged-in > \.topbar \{[^}]*border-radius: 999px;[^}]*backdrop-filter: var\(--cl-blur\)/);
+  assert.match(s, /body\.is-logged-in \.workspace-yapi \{[^}]*border-radius: 999px;[^}]*background: var\(--cl-glass-strong\);/);
   assert.match(s, /body\.is-logged-in :is\(\.workspace-title, \.panel \.section-head h2, \.ui-head h3, \.overview-greeting\) \{[^}]*font-family: var\(--cl-display\);[^}]*font-weight: 500;[^}]*letter-spacing: -\.05em;/);
-  assert.match(s, /body\.is-logged-in \.workspace-header \{[^}]*background: var\(--cl-wash\);/);
+  assert.match(s, /body\.is-logged-in \.workspace-header \{[^}]*background: none;/);
   // The one slate band per screen: Inicio's «Tu cuenta» card.
-  assert.match(s, /body\.is-logged-in \.panel\.overview-account \{[^}]*background: var\(--cl-slate\);[^}]*color: #fff;/);
+  assert.match(s, /body\.is-logged-in \.panel\.overview-account \{[^}]*background: rgb\(35 58 74 \/ \.9\);[^}]*color: #fff;/);
 });
 
 test("controls: ink and white pills that press, segmented tabs, 12px fields with an ink ring, white 20px cards, soft status pills", () => {
@@ -72,7 +72,7 @@ test("controls: ink and white pills that press, segmented tabs, 12px fields with
   // Low weight on purpose (as premium.css): the YAPI bar's and the welcome's own textareas must still win.
   assert.match(s, /body\.is-logged-in :is\(input:where\(:not\(\[type=checkbox\]\):not\(\[type=radio\]\):not\(\[type=file\]\):not\(\[type=range\]\):not\(\.ui-switch\)\), select, textarea\) \{[^}]*border-radius: 12px;/);
   assert.match(s, /body\.is-logged-in :is\(input, select, textarea\):focus-visible \{[^}]*box-shadow: 0 0 0 3px var\(--pg-focus-ring\);/);
-  assert.match(s, /body\.is-logged-in :is\(\.panel, \.card\) \{[^}]*background: var\(--cl-surface\);[^}]*border: 1px solid var\(--cl-line\);[^}]*border-radius: 20px;/);
+  assert.match(s, /body\.is-logged-in :is\(\.panel, \.card\) \{[^}]*border-radius: 20px;[^}]*background: var\(--cl-glass\);/);
   assert.match(s, /body\.is-logged-in \.section-tabs \{[^}]*border-radius: 999px;/);
   assert.match(s, /body\.is-logged-in \.section-tab\[aria-current="page"\] \{[^}]*background: var\(--cl-ink\);[^}]*color: #fff;/);
   assert.match(s, /body\.is-logged-in dialog:not\(\.mcp-dialog\)[^{]*\{[^}]*border-radius: 20px;/);
@@ -87,10 +87,10 @@ test("login: no koi, no shader — cream wash, the yellow star, a Bricolage titl
   assert.doesNotMatch(js, /animal: "koi"/);
   assert.doesNotMatch(js, /mountLoginShader\(host\)/);
   const s = css();
-  assert.match(s, /body\.is-logged-out \.login-split \{[^}]*background: var\(--cl-wash\);/);
+  assert.match(s, /body\.is-logged-out \.login-split \{[^}]*background: var\(--cl-wash-page\);/);
   assert.match(s, /body\.is-logged-out \.login-hero \{[^}]*background: transparent;/);
   assert.match(s, /body\.is-logged-out \.login-hero-copy h1 \{[^}]*font-family: var\(--cl-display\);[^}]*color: var\(--cl-ink\);/);
-  assert.match(s, /body\.is-logged-out \.login-card \{[^}]*background: var\(--cl-surface\);[^}]*border-radius: 20px;/);
+  assert.match(s, /body\.is-logged-out \.login-card \{[^}]*border-radius: 20px;/);
   assert.match(s, /body\.is-logged-out \.login-card button\.primary\.login-submit \{[^}]*background: var\(--cl-ink\);[^}]*border-radius: 999px;/);
 });
 
@@ -103,9 +103,9 @@ test("welcome: cream wash, the star, a Bricolage greeting and a white composer w
   assert.doesNotMatch(welcome, /animal: "butterflies"/);
   assert.doesNotMatch(read("../index.html"), /class="yapi-welcome-sky"/);
   const s = css();
-  assert.match(s, /\.yapi-welcome \{[^}]*background: var\(--cl-wash\);[^}]*color: var\(--cl-ink\);/);
+  assert.match(s, /\.yapi-welcome \{[^}]*background: var\(--cl-wash-page\);[^}]*color: var\(--cl-ink\);/);
   assert.match(s, /\.yapi-welcome-greeting \{[^}]*font-family: var\(--cl-display\);[^}]*color: var\(--cl-ink\);[^}]*text-shadow: none;/);
-  assert.match(s, /\.yapi-welcome-composer \{[^}]*background: var\(--cl-surface\);[^}]*border: 1px solid var\(--cl-line\);/);
+  assert.match(s, /\.yapi-welcome-composer \{[^}]*background: var\(--cl-glass-strong\);[^}]*border: 1px solid var\(--cl-glass-edge\);/);
   // Before body takes .is-logged-in too: the welcome opens first.
   assert.match(s, /\n\.yapi-welcome-composer textarea \{[^}]*color: var\(--cl-ink\);/);
   assert.match(s, /\.yapi-welcome-send \{[^}]*background: var\(--cl-ink\);[^}]*color: #fff;/);
@@ -119,4 +119,56 @@ test("no panel paints the old blue", () => {
   for (const file of ["./premium.css", "./calm.css", "./ui-kit.css", "./dashboard.css"]) {
     assert.doesNotMatch(read(file), /#2563eb|#1d4ed8|rgb\(37 99 235/i, file);
   }
+});
+
+// Owner 2026-11-16 («make it more glassmorphism»): a soft colour wash behind the whole page, the surfaces frosted glass over it.
+test("glass: the page carries the wash, and sidebar, top bar, cards, tabs, dialogs and the YAPI bar are frosted glass", () => {
+  const s = css();
+  for (const token of ["--cl-glass: rgb(255 255 255 / .5)", "--cl-glass-strong: rgb(255 255 255 / .8)", "--cl-glass-edge: rgb(255 255 255 / .75)",
+    "--cl-blur: blur(22px) saturate(160%)", "--cl-wash-page:"]) assert.ok(s.includes(token), token);
+  assert.match(s, /body\.is-logged-in \{[^}]*background: var\(--cl-wash-page\);[^}]*background-attachment: fixed;/);
+  for (const selector of [/body\.is-logged-in \.dashboard-sidebar \{/, /body\.is-logged-in > \.topbar \{/, /body\.is-logged-in :is\(\.panel, \.card\) \{/,
+    /body\.is-logged-in \.section-tabs \{/, /body\.is-logged-in \.overview-kpis \{/, /body\.is-logged-in dialog:not\(\.mcp-dialog\)[^{]*\{/, /body\.is-logged-in \.workspace-yapi \{/]) {
+    const rule = new RegExp(selector.source + "[^}]*").exec(s)?.[0] ?? "";
+    assert.match(rule, /background: var\(--cl-glass(-strong)?\);/, selector.source);
+    assert.match(rule, /backdrop-filter: var\(--cl-blur\);/, selector.source);
+    assert.match(rule, /border: 1px solid var\(--cl-glass-edge\);/, selector.source);
+  }
+  assert.match(s, /body\.is-logged-in \.workspace-header \{[^}]*background: none;/);
+  assert.match(s, /@supports not \(\(backdrop-filter: blur\(1px\)\) or \(-webkit-backdrop-filter: blur\(1px\)\)\) \{[^]*--cl-glass: rgb\(255 255 255 \/ \.94\)/);
+  assert.match(s, /body\.is-logged-out \.login-card \{[^}]*background: var\(--cl-glass-strong\);[^}]*backdrop-filter: var\(--cl-blur\);/);
+  assert.match(s, /\.yapi-welcome-composer \{[^}]*background: var\(--cl-glass-strong\);[^}]*backdrop-filter: var\(--cl-blur\);/);
+});
+
+test("glass: titles and descriptions read on the bare wash, and every text token reads on frost over its deepest colours", () => {
+  const blobs = ["#c9e9d6", "#f8d5c0", "#dcdff5"];
+  // Page titles and descriptions sit straight on the wash.
+  for (const ground of blobs) for (const text of ["--cl-ink", "--cl-ink-soft"]) {
+    const value = ratio(token(text), ground);
+    assert.ok(value >= 4.5, `${text} on ${ground}: ${value.toFixed(2)}`);
+  }
+  // Everything else sits in a card: white at the glass alpha over the deepest blob.
+  const alpha = Number(/--cl-glass: rgb\(255 255 255 \/ (\.\d+)\)/.exec(css())[1]);
+  const frost = (hex) => "#" + [1, 3, 5].map((i) => Math.round(255 * alpha + parseInt(hex.slice(i, i + 2), 16) * (1 - alpha)).toString(16).padStart(2, "0")).join("");
+  for (const ground of blobs.map(frost)) for (const text of ["--cl-ink", "--cl-ink-soft", "--cl-text-faint", "--cl-green-text", "--cl-red-text"]) {
+    const value = ratio(token(text), ground);
+    assert.ok(value >= 4.5, `${text} on frost ${ground}: ${value.toFixed(2)}`);
+  }
+  assert.ok(blobs.every((blob) => css().includes(blob)), "the wash uses these colours");
+});
+
+test("Inicio's store card is glass like the panels", () => {
+  assert.match(css(), /body\.is-logged-in \.overview-store \{[^}]*background: var\(--cl-glass\);[^}]*backdrop-filter: var\(--cl-blur\);/);
+});
+
+// Final review 2026-11-16: the slate card's white text must not reach the payout-hold warning (white on pale pink).
+test("on the slate «Tu cuenta» card the payout-hold warning keeps its own red on pink", () => {
+  const s = css();
+  assert.match(s, /body\.is-logged-in \.panel\.overview-account :is\(h2, dt, dd, p:not\(\.payout-hold-banner\), a\) \{ color: inherit; \}/);
+  assert.match(s, /body\.is-logged-in \.panel\.overview-account \.payout-hold-banner \{[^}]*background: var\(--cl-red-soft\);[^}]*color: var\(--cl-red-text\);/);
+});
+
+// Final review 2026-11-16: an ink focus ring vanishes on dark surfaces (the slate card, the dark «Conecta tu IA» dialog).
+test("keyboard focus stays visible on the slate card and the dark MCP dialog", () => {
+  assert.match(css(), /body\.is-logged-in :is\(\.panel\.overview-account, \.mcp-dialog\) :focus-visible \{ outline-color: #fff; \}/);
 });
