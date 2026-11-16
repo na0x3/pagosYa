@@ -70,12 +70,15 @@ export function readConfigData(files: readonly SourceProjectFileDto[]): Record<s
 /** Live 2026-11-15 (Oh Belly r22: «Hablemos» stood empty): the design is built from an old template revision whose config.js still
  *  said contactFormEnabled false after the store turned the form on, and the runtime hides the form's slot. The store's own
  *  settings win over the copy in config.js. */
-export function withStoreSettings<T extends SourceProjectFileDto>(files: readonly T[], settings: { contactFormEnabled: boolean }): T[] {
+export function withStoreSettings<T extends SourceProjectFileDto>(files: readonly T[], settings: { contactFormEnabled: boolean; retention?: Record<string, unknown> | null }): T[] {
   return files.map(file => {
     if (file.path !== 'config.js') return file;
     const config = readConfigData([file]);
-    if (!config.data || config.data.contactFormEnabled === settings.contactFormEnabled) return file;
-    return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, data: { ...config.data, contactFormEnabled: settings.contactFormEnabled } })};` };
+    if (!config.data) return file;
+    // Heroes + menus plan 2026-11-15: the popup and game settings too, so «Rasca y elige» switched on later shows on V2 stores.
+    const data = { ...config.data, contactFormEnabled: settings.contactFormEnabled, ...(settings.retention !== undefined ? { retention: settings.retention } : {}) };
+    if (JSON.stringify(data) === JSON.stringify(config.data)) return file;
+    return { ...file, content: `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...config, data })};` };
   });
 }
 

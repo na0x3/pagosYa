@@ -21,6 +21,8 @@ import { joinV2Parts, mergeV2Fix, readV2Part, v2Hint, v2Repairs, v2FixInput, v2F
 import type { V2File } from './v2-context';
 import { v2CartSheet } from './v2-kit-baseline';
 import { mergeSectionFix, sectionFixPlan, v2SectionFixInput, v2SectionFixPrompt, v2SectionFixSchema } from './v2-section-fix';
+import { publicRetentionSettings } from '../../retention/retention.service';
+import { DEFAULT_RETENTION } from '../../retention/retention.dto';
 import { wordsLookPrompt, wordsLookSchema } from './v2-words';
 import { allowedHeroIdeas, drawsLibre, heroIdea, readHeroMarker } from './v2-heroes';
 import { allowedMenus } from './v2-menus';
@@ -139,8 +141,12 @@ export class SourceV2PrototypeService {
    *  blocks), over its last template revision — what reassemble and the look start from. */
   /** The base revision's files with the store's current settings in config.js (withStoreSettings). */
   private async withSettings<T extends { path: string; content: string }>(storeId: string, files: T[]): Promise<T[]> {
-    const store = await this.prisma.store?.findUnique({ where: { id: storeId }, select: { contactFormEnabled: true } });
-    return store ? withStoreSettings(files as never[], store) as unknown as T[] : files;
+    const store = await this.prisma.store?.findUnique({ where: { id: storeId }, select: { contactFormEnabled: true, slug: true } });
+    if (!store) return files;
+    // The shopper's shape of the popup and game settings, as the template build bakes them (source-generation catalog()).
+    const row = await this.prisma.storeRetention?.findUnique({ where: { storeId }, select: { settings: true } }).catch(() => null);
+    const retention = row?.settings ? publicRetentionSettings({ ...DEFAULT_RETENTION, ...(row.settings as object) }, store.slug) as Record<string, unknown> : null;
+    return withStoreSettings(files as never[], { contactFormEnabled: store.contactFormEnabled, retention }) as unknown as T[];
   }
 
   private async latestDesign(merchantId: string, storeId: string) {

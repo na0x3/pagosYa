@@ -784,4 +784,10 @@ describe('v2 photos with words (owner 2026-11-15: DooBoo hero cut through its wo
     const home = { path: 'components/home.tsx' as const, content: `export default function Home(){ return <main><img src="${ctx.photos[0].path}" alt="x" /></main>; }` };
     expect(v2Repairs([home], { goods: '', ownIcons: true, photos: ctx.photos } as never).files[0].content).toMatch(/data-pagosya-words/);
   });
+  it("the store's current game and popup settings win over an old config.js copy", () => {
+    const stale = [{ path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"data":{"contactFormEnabled":true,"retention":null}};' }];
+    const out = withStoreSettings(stale, { contactFormEnabled: true, retention: { popupGame: 'scratch', popupGameSlices: [{ label: '10%' }] } });
+    expect(readConfigData(out).data.retention).toEqual({ popupGame: 'scratch', popupGameSlices: [{ label: '10%' }] });
+  });
+
 });
