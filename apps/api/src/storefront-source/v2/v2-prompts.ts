@@ -869,9 +869,12 @@ export function v2ContractProblems(files: readonly V2File[], context: V2Context)
   // over the giant wordmark, the Comprar/Ayuda columns, BELLY10 — and the real footer followed with the same). A home section with its
   // own <footer>, or four of the footer's link and heading words, is a second footer.
   const footerWords = new Set([...(shell.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '').matchAll(/>\s*([^<>{}]{3,24}?)\s*</g)].map(match => match[1].trim().toLowerCase()).filter(word => /[a-záéíóúñ]/i.test(word)));
+  const catalogWords = new Set([...context.categories, ...context.products.map(product => product.name)].map(word => word.trim().toLowerCase()));
   for (const chunk of home.split(/(?=<section\b)/).slice(1)) {
     const echoed = new Set([...chunk.matchAll(/>\s*([^<>{}]{3,24}?)\s*</g)].map(match => match[1].trim().toLowerCase()).filter(word => footerWords.has(word)));
-    if (/<footer\b/.test(chunk) || echoed.size >= 4) { problems.push(`La sección «${chunk.match(/className="([^"]+)"/)?.[1] ?? 'final'}» repite el pie de página (${[...echoed].slice(0, 5).join(', ') || '<footer>'}): el pie ya está en Shell. Termina la portada con una sección propia, sin columnas de enlaces, sin el nombre gigante de la marca y sin el código del pie.`); break; }
+    // The store's own category and product names may repeat (a category section names what the footer lists — rhode, live 2026-11-16).
+    const ownWords = [...echoed].filter(word => !catalogWords.has(word));
+    if (/<footer\b/.test(chunk) || echoed.size >= 4 && ownWords.length >= 2) { problems.push(`La sección «${chunk.match(/className="([^"]+)"/)?.[1] ?? 'final'}» repite el pie de página (${[...echoed].slice(0, 5).join(', ') || '<footer>'}): el pie ya está en Shell. Termina la portada con una sección propia, sin columnas de enlaces, sin el nombre gigante de la marca y sin el código del pie.`); break; }
   }
   // Each photo and cut-out once on the home, outside the stage and the rail (live 2026-11-15, Oh Belly rev 18: the lemons photo three
   // times, a can cut-out in three sections). The browser check compares addresses, so it never saw a cut-out repeated in a hidden slide.

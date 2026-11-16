@@ -336,6 +336,10 @@ export default function Home() { return <main><ScrollScale className="a" style={
       : file.path === 'components/home.tsx' ? { ...file, content: file.content.replace('</main>', `${closing}</main>`) } : file);
     expect(v2ContractProblems(withFooter('<section className="ob-closing"><h3>Comprar</h3><a>Sodas</a><a>Packs</a><h3>Ayuda</h3></section>'), context).join()).toMatch(/«ob-closing» repite el pie/);
     expect(v2ContractProblems(withFooter('<section className="ob-offer"><h2>10% en tu primera compra</h2><a>Comprar</a></section>'), context).join()).not.toMatch(/repite el pie/);
+    // Live 2026-11-16 (rhode failed 4 rounds): a category section names the categories the footer lists too — that is not a second footer.
+    const shop = { ...context, categories: ['Labios', 'Rubor', 'Sets'] } as V2Context;
+    const footerCats = withFooter('<section className="v2-runway"><a>Todo</a><a>Labios</a><a>Rubor</a><a>Sets</a></section>').map(file => file.path === 'components/Shell.tsx' ? { ...file, content: file.content.replace('</footer>', '<a>Todo</a><a>Labios</a><a>Rubor</a><a>Sets</a></footer>') } : file);
+    expect(v2ContractProblems(footerCats as never, shop).join()).not.toMatch(/repite el pie/);
     expect(freeMin({ photos: Array.from({ length: 6 }, (_, i) => ({ path: `assets/p${i}.jpg`, width: 800, height: 800, shape: 'square' as const })) })).toBe(9);
   });
   it('gives the product template one root, the page one contact form, KineticHeadline its text (live 2026-11-15, DooBoo r3)', () => {
