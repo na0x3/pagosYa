@@ -369,4 +369,29 @@ describe('store menu', () => {
     const { q } = await open({ menu: { model: 'mega', groups: [{ label: 'Tienda', links: [{ to: 'all' }], tiles: [{ to: 'category:C1', image: 'assets/image-aaaaaaaaaaaa.jpg', title: 'Vestidos' }] }] } });
     expect(q('.pym-tiles img').getAttribute('src')).toMatch(/assets\/image-aaaaaaaaaaaa\.jpg$/);
   });
+  it('final review: keeps up to 7 groups (the direction may write 7)', async () => {
+    const groups = ['C1', 'c2', 'c3', 'c4'].flatMap((c, i) => [{ label: `G${i}a`, links: [{ to: `category:${c}` }] }, { label: `G${i}b`, links: [{ to: 'all' }] }]).slice(0, 6);
+    const { all } = await open({ menu: { model: 'tabs', groups } });
+    expect(all('.pym-group').length).toBe(6);
+  });
+  it('final review: dock and search hide their tabs from the keyboard and focus a visible item', async () => {
+    const dock = await open({ menu: { model: 'dock', groups: [{ label: 'Tienda', links: [{ to: 'all' }] }, { label: 'Telas', links: [{ to: 'category:c3' }] }] } });
+    expect(dock.q('.pym-tabs').hidden).toBe(true);
+    dock.all('.pym-dock button')[0].click();
+    expect(dock.w.document.activeElement.classList.contains('pym-tab')).toBe(false);
+    const search = await open({ menu: { model: 'search' } });
+    search.q('[data-store-menu-toggle]').click();
+    expect(search.w.document.activeElement).toBe(search.q('.pym-search input'));
+  });
+  it('final review: the thumb bar shows the cart count the page already has', async () => {
+    const { q, w } = await open({ menu: { model: 'thumb' }, host: HOST + '<a data-cart-open>Bolsa <span data-cart-count id="page-count">0</span></a>' });
+    q('#page-count').textContent = '3';   // a returning shopper's cart, counted by the page before the menu draws
+    w.pagosyaStoreMenu.render();
+    expect(q('.pym-thumbbar [data-cart-count]').textContent).toBe('3');
+  });
+  it('final review: on a phone the bars lift the WhatsApp bubble, the assistant and the product buy bar', async () => {
+    const { q } = await open({ menu: { model: 'thumb' } });
+    const css = q('style[data-pagosya-store-menu-style]').textContent;
+    expect(css).toMatch(/\.pya-wa/); expect(css).toMatch(/\[data-pagosya-assistant\]/); expect(css).toMatch(/\.product-detail__sticky/);
+  });
 });

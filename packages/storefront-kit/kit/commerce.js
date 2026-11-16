@@ -7008,7 +7008,8 @@
       .pym-thumbbar{position:fixed;left:0;right:0;bottom:0;z-index:900;display:grid;grid-template-columns:repeat(4,1fr);height:64px;padding-bottom:env(safe-area-inset-bottom,0px);background:var(--store-background,#fff);color:var(--store-foreground,#111);border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
       .pym-thumbbar a,.pym-thumbbar button{display:grid;place-items:center;min-height:44px;border:0;background:none;color:inherit;font:inherit;font-size:12px;text-decoration:none}
       body{padding-bottom:var(--pym-bottom-bar,0px)}
-      [data-pagosya-contact]:not([data-contact-inline]),.pagosya-whatsapp{bottom:calc(var(--pym-bottom-bar,0px) + 16px)!important}
+      [data-pagosya-contact]:not([data-contact-inline]),.pya-wa,[data-pagosya-assistant]{bottom:calc(var(--pym-bottom-bar,0px) + 16px)!important}
+      .product-detail__sticky{bottom:var(--pym-bottom-bar,0px)!important}
       .pym-panel[data-model=bestsellers] .pym-group,.pym-panel[data-model=need] .pym-group{grid-template-columns:1fr}
       .pym-best ul{display:flex;overflow-x:auto}.pym-best li{flex:0 0 140px}
     }
@@ -7024,6 +7025,7 @@
     .pym-panel[data-model=stickers] .pym-links a:is(:hover,:focus-visible){transform:rotate(0) scale(1.05)}
     .pym-sticker-photo img{width:44px;height:44px;border-radius:50%;object-fit:cover;display:block}
     .pym-panel[data-model=stickers] .pym-tiles{display:none}
+    body:has(.pym-dock) :is(.pya-wa,[data-pagosya-assistant]){bottom:92px!important}body:has(.pym-dock) .product-detail__sticky{bottom:80px!important}
     .pym-dock{position:fixed;left:50%;bottom:calc(18px + var(--pym-bottom-bar,0px));transform:translateX(-50%);z-index:950;display:flex;gap:6px;padding:6px;border-radius:999px;background:var(--store-foreground,#111);color:var(--store-background,#fff);box-shadow:0 18px 40px -16px #0008}
     .pym-dock button{min-height:44px;padding:0 18px;border:0;border-radius:999px;background:none;color:inherit;font:inherit;font-weight:600;cursor:pointer}
     .pym-dock button[aria-expanded=true],.pym-dock button:hover{background:var(--store-accent,#fff);color:var(--store-on-accent,#111)}
@@ -7204,7 +7206,7 @@
   }
   /** Groups with every link, tile and footer resolved; a repeated label is shown once, and a group with no link left is dropped. */
   function resolveStoreMenuGroups(groups) {
-    return (Array.isArray(groups) ? groups : []).slice(0, 4).map(group => {
+    return (Array.isArray(groups) ? groups : []).slice(0, 7).map(group => {
       const seen = new Set();
       const links = (Array.isArray(group.links) ? group.links : []).map(link => {
         // A link may carry a one-line note (index, need) and its photo (overlay, split swap the big photo to it).
@@ -7292,7 +7294,7 @@
       : best[0] ? `<a class="pym-offer" data-kind="product" href="${escape(storeMenuProductHref(best[0]))}"><img src="${escape(best[0].imageUrls[0])}" alt="" loading="lazy"><b>${escape(best[0].name)}</b><span>${escape(money(price(best[0]), best[0].currency || 'BOB'))}</span></a>` : '';
     const popular = [...storeMenuCategories().map(c => ({ label: c.name, href: pageHref('productos.html', '?f_categoria=' + encodeURIComponent(filterFold(c.id))) })), ...products().map(item => ({ label: item.name, href: storeMenuProductHref(item) }))].slice(0, 6);
     const searchHtml = model !== 'search' ? '' : `<form class="pym-search" action="${escape(pageHref('buscar.html'))}" role="search"><input type="search" name="q" placeholder="Busca productos" aria-label="Buscar"></form><p class="pym-tiles-title">Populares</p><div class="pym-popular">${popular.map(chip => `<a href="${escape(chip.href)}">${escape(String(chip.label).slice(0, 28))}</a>`).join('')}</div>${best.length ? `<div class="pym-best"><ul>${best.map(storeMenuCard).join('')}</ul></div>` : ''}`;
-    panel.innerHTML = heroPhoto + offerHtml + searchHtml + `<div class="pym-tabs" role="tablist" aria-label="Menú"${groups.length === 1 ? ' data-single' : ''}>${groups.map((group, index) => `<button type="button" class="pym-tab" role="tab" id="${id}-tab-${index}" aria-controls="${id}-group-${index}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${escape(group.label)}</button>`).join('')}</div>`
+    panel.innerHTML = heroPhoto + offerHtml + searchHtml + `<div class="pym-tabs" role="tablist" aria-label="Menú"${groups.length === 1 ? ' data-single' : ''}${model === 'dock' || model === 'search' ? ' hidden' : ''}>${groups.map((group, index) => `<button type="button" class="pym-tab" role="tab" id="${id}-tab-${index}" aria-controls="${id}-group-${index}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${escape(group.label)}</button>`).join('')}</div>`
       + groups.map((group, index) => `<div class="pym-group" role="tabpanel" id="${id}-group-${index}" aria-labelledby="${id}-tab-${index}"${index ? ' hidden' : ''}>`
         + (model === 'need' ? `<div class="pym-need">${group.tiles[0] ? `<img src="${escape(group.tiles[0].image)}" alt="" loading="lazy">` : ''}<span class="pym-need-label">${escape(group.label)}</span>${group.note ? `<span class="pym-note">${escape(group.note)}</span>` : ''}<span class="pym-need-from">${escape(storeMenuFrom(group.links))}</span></div>` : '')
         + `<ul class="pym-links">${group.links.map(linkHtml).join('')}</ul>`
@@ -7307,7 +7309,7 @@
     if (model === 'thumb') {
       const bar = document.createElement('nav');
       bar.className = 'pym-thumbbar'; bar.setAttribute('aria-label', 'Accesos');
-      bar.innerHTML = `<a href="${escape(pageHref('index.html'))}">Inicio</a><button type="button" data-thumb-menu aria-controls="${id}">Categorías</button><a href="${escape(pageHref('buscar.html'))}">Buscar</a><button type="button" data-cart-open>Bolsa <span data-cart-count>0</span></button>`;
+      bar.innerHTML = `<a href="${escape(pageHref('index.html'))}">Inicio</a><button type="button" data-thumb-menu aria-controls="${id}">Categorías</button><a href="${escape(pageHref('buscar.html'))}">Buscar</a><button type="button" data-cart-open>Bolsa <span data-cart-count>${escape(([...document.querySelectorAll('[data-cart-count]')].find(el => !el.closest('.pym-thumbbar')) || {}).textContent || '0')}</span></button>`;
       document.body.appendChild(bar);
       document.documentElement.style.setProperty('--pym-bottom-bar', '64px');
       bar.querySelector('[data-thumb-menu]').addEventListener('click', event => { event.stopPropagation(); toggleMount.querySelector('[data-store-menu-toggle]').click(); });
@@ -7344,7 +7346,9 @@
       storeMenuOpenState.host = host; storeMenuOpenState.close = close;
       if (mode === 'panel' && lockedFrom === null) { lockedFrom = document.documentElement.style.overflow; document.documentElement.style.overflow = 'hidden'; }
       if (mode === 'dropdown') unlock();
-      if (focus) (mode === 'panel' ? tabs.find(tab => tab.getAttribute('aria-selected') === 'true') : focusable()[0])?.focus({ preventScroll: true });
+      // Search opens on its field; models that hide their tabs (dock, search) start on the first thing that can be used.
+      const start = model === 'search' ? panel.querySelector('.pym-search input') : mode === 'panel' && !tabs[0]?.closest('[hidden]') ? tabs.find(tab => tab.getAttribute('aria-selected') === 'true') : focusable()[0];
+      if (focus) start?.focus({ preventScroll: true });
     }
     toggle.addEventListener('click', () => (panel.hidden || panel.getAttribute('data-mode') !== 'panel' ? open('panel', 0, toggle, true) : close(true)));
     // Each top button opens its own group: direct page links (plain <a>) are not buttons, so the list index is not the group's.

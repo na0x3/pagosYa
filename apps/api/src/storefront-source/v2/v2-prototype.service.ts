@@ -25,7 +25,7 @@ import { publicRetentionSettings } from '../../retention/retention.service';
 import { DEFAULT_RETENTION } from '../../retention/retention.dto';
 import { wordsLookPrompt, wordsLookSchema } from './v2-words';
 import { allowedHeroIdeas, drawsLibre, heroIdea, readHeroMarker } from './v2-heroes';
-import { allowedMenus } from './v2-menus';
+import { allowedMenus, cleanMenu } from './v2-menus';
 import { freeBlocking, runV2Build, withContextMenu, type V2Attempt, type V2BuildDeps } from './v2-run';
 import { captureV2Look, v2LookInput, v2LookLines, v2LookPrompt, v2LookSchema, type V2LookCapture, type V2LookProblem } from './v2-look';
 import { apiRoot, buildInSandbox } from './v2-sandbox';
@@ -291,7 +291,8 @@ export class SourceV2PrototypeService {
     if (!direction) throw new Error('la dirección de arte no llegó');
     state.direction = direction;
     // The store's menu as the direction chose it (spec 2026-11-15 store menu models): checked by the contract, written into config.js.
-    context.menu = direction.menu;
+    // Cleaned in code (final review C1): a menu the writer cannot change never blocks the build.
+    context.menu = direction.menu ? cleanMenu(direction.menu, context) : undefined;
     context.heroIdea = direction.hero?.idea;
     // The chosen idea's real reference frames go to the half that writes the hero (examples/v2-proto/references/_heroes).
     const heroShots: Content[] = await Promise.all((heroIdea(context.heroIdea)?.frames ?? []).map(async frame => {

@@ -15,7 +15,7 @@ import { FREE_BLOCKERS } from './v2-run';
 import { allowedHeroIdeas, drawsLibre, heroMarker, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
 import { existsSync as heroFrameExists, readFileSync as readRuleSource } from 'node:fs';
 import { join as heroJoin } from 'node:path';
-import { allowedMenus, menuProblems, V2_MENU_MODELS, v2MenuSchema, withStoreMenu } from './v2-menus';
+import { allowedMenus, cleanMenu, menuProblems, V2_MENU_MODELS, v2MenuSchema, withStoreMenu } from './v2-menus';
 import { SourceV2PrototypeController } from './v2-prototype.controller';
 
 const context: V2Context = {
@@ -710,7 +710,22 @@ describe('v2 menus (spec 2026-11-15 store menu models)', () => {
     expect(v2DirectionInput(ctx)).toMatch(/MENÚ[\s\S]*overlay: [\s\S]*drawer: /);
     expect(v2DirectionInput(ctx)).not.toMatch(/mega: /);
     const withMenu = { ...ctx, menu: { model: 'overlay', groups: [{ label: 'Una categoría con un nombre demasiado largo', links: [{ to: 'all' }] }] } } as V2Context;
-    expect(v2ContractProblems(good, withMenu).join()).toMatch(/28 letras/);
+    // Final review C1: the writer cannot change the menu, so a menu problem never blocks a build — the menu is cleaned in code.
+    expect(v2ContractProblems(good, withMenu).join()).not.toMatch(/28 letras|menú/i);
+  });
+
+  it('final review: cleans the direction’s menu in code — short labels, store photos once, two levels, 7 groups', () => {
+    const photos = [{ path: 'assets/a.jpg', width: 800, height: 800, shape: 'square' as const }];
+    const messy = { model: 'mega', groups: [
+      { label: 'Una categoría con un nombre demasiado largo para el menú', links: [{ to: 'all' }, { to: 'collection:x/category:y' }, { to: 'a/b/c' }], tiles: [{ to: 'all', image: 'assets/a.jpg' }, { to: 'all', image: 'assets/a.jpg' }, { to: 'all', image: 'https://cdn.x/y.jpg' }] },
+      ...Array.from({ length: 8 }, (_, i) => ({ label: `G${i}`, links: [{ to: 'all' }] })),
+    ] };
+    const clean = cleanMenu(messy, { photos });
+    expect(menuProblems(clean, { photos })).toEqual([]);
+    expect(clean.groups).toHaveLength(7);
+    expect(clean.groups[0].label.length).toBeLessThanOrEqual(28);
+    expect(clean.groups[0].tiles).toEqual([{ to: 'all', image: 'assets/a.jpg' }]);
+    expect(clean.groups[0].links.map(l => l.to)).toEqual(['all', 'collection:x/category:y']);
   });
 
 });

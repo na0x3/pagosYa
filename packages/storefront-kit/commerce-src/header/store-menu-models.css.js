@@ -73,7 +73,8 @@
       .pym-thumbbar{position:fixed;left:0;right:0;bottom:0;z-index:900;display:grid;grid-template-columns:repeat(4,1fr);height:64px;padding-bottom:env(safe-area-inset-bottom,0px);background:var(--store-background,#fff);color:var(--store-foreground,#111);border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
       .pym-thumbbar a,.pym-thumbbar button{display:grid;place-items:center;min-height:44px;border:0;background:none;color:inherit;font:inherit;font-size:12px;text-decoration:none}
       body{padding-bottom:var(--pym-bottom-bar,0px)}
-      [data-pagosya-contact]:not([data-contact-inline]),.pagosya-whatsapp{bottom:calc(var(--pym-bottom-bar,0px) + 16px)!important}
+      [data-pagosya-contact]:not([data-contact-inline]),.pya-wa,[data-pagosya-assistant]{bottom:calc(var(--pym-bottom-bar,0px) + 16px)!important}
+      .product-detail__sticky{bottom:var(--pym-bottom-bar,0px)!important}
       .pym-panel[data-model=bestsellers] .pym-group,.pym-panel[data-model=need] .pym-group{grid-template-columns:1fr}
       .pym-best ul{display:flex;overflow-x:auto}.pym-best li{flex:0 0 140px}
     }
@@ -89,6 +90,7 @@
     .pym-panel[data-model=stickers] .pym-links a:is(:hover,:focus-visible){transform:rotate(0) scale(1.05)}
     .pym-sticker-photo img{width:44px;height:44px;border-radius:50%;object-fit:cover;display:block}
     .pym-panel[data-model=stickers] .pym-tiles{display:none}
+    body:has(.pym-dock) :is(.pya-wa,[data-pagosya-assistant]){bottom:92px!important}body:has(.pym-dock) .product-detail__sticky{bottom:80px!important}
     .pym-dock{position:fixed;left:50%;bottom:calc(18px + var(--pym-bottom-bar,0px));transform:translateX(-50%);z-index:950;display:flex;gap:6px;padding:6px;border-radius:999px;background:var(--store-foreground,#111);color:var(--store-background,#fff);box-shadow:0 18px 40px -16px #0008}
     .pym-dock button{min-height:44px;padding:0 18px;border:0;border-radius:999px;background:none;color:inherit;font:inherit;font-weight:600;cursor:pointer}
     .pym-dock button[aria-expanded=true],.pym-dock button:hover{background:var(--store-accent,#fff);color:var(--store-on-accent,#111)}

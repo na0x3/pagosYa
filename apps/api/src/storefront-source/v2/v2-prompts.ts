@@ -4,7 +4,7 @@ import { uiRuntime } from '../source-creative';
 import { repairNextAuthoredMarkup } from '../source-next';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import { V2_FILES, type V2Context, type V2File } from './v2-context';
-import { menuProblems, V2_MENU_MODELS, v2MenuSchema, type V2Menu } from './v2-menus';
+import { V2_MENU_MODELS, v2MenuSchema, type V2Menu } from './v2-menus';
 import { markWordPhotos } from './v2-words';
 import { heroIdea, heroMarker, MIX_NOTE, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
 import { readV2LibraryFile, V2_HERO_TYPES, V2_KIT_TEXT, V2_LIBRARY_FILE, v2LibraryCatalogText, v2LibrarySchema, type V2LibraryEntry } from './v2-library';
@@ -878,8 +878,6 @@ export function v2ContractProblems(files: readonly V2File[], context: V2Context)
   if (spare) for (const [path, count] of uses) if (count > 1) problems.push(`La foto ${path} aparece ${count} veces en la portada: cada foto y cada recorte van una sola vez.`);
   if (problems.some(line => / que no es un recorte:/.test(line))) problems.push(`Recortes que sí puedes usar en las vitrinas: ${(context.cutouts ?? []).map(cut => `${cut.path} (${cut.product ? `${cut.product} · ` : ''}${cut.name})`).join(', ') || '(ninguno: quita la vitrina)'}.`);
   for (const [, path] of all.matchAll(/["'(](assets\/[\w.-]+\.(?:jpe?g|png|webp))["')]/g)) if (!photos.has(path)) problems.push(`La foto ${path} no existe en la tienda.`);
-  // The direction's menu keeps the selling rules (spec 2026-11-15 store menu models).
-  if (context.menu) problems.push(...menuProblems(context.menu, context));
   return [...new Set(problems)];
 }
 

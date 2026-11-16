@@ -55,6 +55,18 @@ export function menuProblems(menu: V2Menu, context: Pick<V2Context, 'photos'>): 
   return [...new Set(out)];
 }
 
+/** Final review 2026-11-15 (C1): the writer cannot change the menu, so the direction's menu is cleaned in code instead of failing the
+ *  build — at most 7 groups, labels cut to 28 letters, only the store's photos and each once, links two levels deep at most. */
+export function cleanMenu(menu: V2Menu, context: Pick<V2Context, 'photos'>): V2Menu {
+  const known = new Set(context.photos.map(photo => photo.path)), seen = new Set<string>();
+  return { model: menu.model, groups: menu.groups.slice(0, 7).map(group => ({
+    ...group,
+    label: group.label.slice(0, 28).trim(),
+    links: group.links.filter(link => link.to.split('/').length <= 2),
+    tiles: (group.tiles ?? []).filter(tile => known.has(tile.image) && !seen.has(tile.image) && seen.add(tile.image)),
+  })).filter(group => group.label && group.links.length) };
+}
+
 /** config.js with the store's menu in header.menu; the rest of the config as it was. */
 export function withStoreMenu<T extends { path: string; content: string }>(files: T[], menu: V2Menu): T[] {
   return files.map(file => {
