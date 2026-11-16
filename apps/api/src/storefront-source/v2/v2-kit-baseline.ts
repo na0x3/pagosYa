@@ -6,6 +6,9 @@ import postcss from 'postcss';
  *  so any rule the design writes wins, and generic --kit-* tokens the design sets in :root (with safe fallbacks). Not a template
  *  layer: no colours, fonts or layout of a theme — only the sizes and structure of parts the platform draws. */
 export const V2_KIT_BASELINE = `/* v2:kit-baseline — sizes of the parts the platform draws; the design's own rules win (zero specificity) */
+/* Live 2026-11-16 (Oh Belly r24): a design's own wrapper around the header (isolation, z-index) put the whole header — its menu panel
+   and its sticky bar — under the page; a wrapper that holds only the header draws no box of its own. */
+:is(header,div,nav,section):has(> .ui-nav):not(:has(main)){display:contents}
 :where([data-product-slot]) :where(img, svg, video){max-width:100%;height:auto}
 :where([data-part=payments]){display:grid;justify-items:start;gap:8px;margin:4px 0}
 :where([data-part=payments]) :where(p){margin:0;font-size:12.5px;opacity:.7}

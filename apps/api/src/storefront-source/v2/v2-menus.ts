@@ -2,7 +2,7 @@ import { readConfigData, type V2Context } from './v2-context';
 
 /** Owner 2026-11-15 («changing menu per store, its always the same»; «put all of them»): the store's menu is one of the kit's 16
  *  models (commerce-src/header/store-menu.js), chosen by the V2 direction per store and written into config.js header.menu. */
-export type V2Menu = { model: string; groups: Array<{ label: string; note?: string; links: Array<{ to: string; note?: string }>; tiles?: Array<{ to: string; image: string }> }> };
+export type V2Menu = { model: string; groups: Array<{ label: string; note?: string; links: Array<{ to: string; label?: string; note?: string }>; tiles?: Array<{ to: string; image: string }> }> };
 
 /** The 16 kit menu models (spec 2026-11-15 store menu models), one line each on the stores they suit. */
 export const V2_MENU_MODELS: readonly { id: string; fits: string }[] = [
@@ -32,7 +32,8 @@ export const allowedMenus = (used: readonly string[]): string[] => {
 };
 
 export function v2MenuSchema(allowed: readonly string[]): object {
-  const link = { type: 'object', additionalProperties: false, required: ['to', 'note'], properties: { to: { type: 'string' }, note: { type: 'string' } } };
+  // Every link carries its label: section: and extra: targets have no name of their own (live 2026-11-16, Oh Belly r24 lost a group).
+  const link = { type: 'object', additionalProperties: false, required: ['to', 'label', 'note'], properties: { to: { type: 'string' }, label: { type: 'string' }, note: { type: 'string' } } };
   const tile = { type: 'object', additionalProperties: false, required: ['to', 'image'], properties: { to: { type: 'string' }, image: { type: 'string' } } };
   return { type: 'object', additionalProperties: false, required: ['model', 'groups'], properties: {
     model: { type: 'string', enum: [...allowed] },

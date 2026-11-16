@@ -81,7 +81,8 @@
     if (value === 'all') return { href: pageHref('productos.html'), label: 'Todos los productos' };
     if (value === 'new') return products().length ? { href: pageHref('productos.html', '?orden=novedades'), label: 'Novedades' } : null;
     if (value.startsWith('category:')) {
-      const category = storeMenuCategories().find(entry => entry.id === value.slice(9));
+      // By id, or by name (live 2026-11-16: YAPI wrote «category:Sodas»).
+      const category = storeMenuCategories().find(entry => entry.id === value.slice(9)) || storeMenuCategories().find(entry => filterFold(entry.name) === filterFold(value.slice(9)));
       return category ? { href: pageHref('productos.html', '?f_categoria=' + encodeURIComponent(filterFold(category.id))), label: category.name } : null;
     }
     // Owner 2026-10-28: «Mujer → Zapatos» is the Mujer collection showing one category (collection:<slug>/category:<id>).

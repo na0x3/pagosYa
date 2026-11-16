@@ -394,4 +394,8 @@ describe('store menu', () => {
     const css = q('style[data-pagosya-store-menu-style]').textContent;
     expect(css).toMatch(/\.pya-wa/); expect(css).toMatch(/\[data-pagosya-assistant\]/); expect(css).toMatch(/\.product-detail__sticky/);
   });
+  it('live 2026-11-16: a category link written by name finds the category', async () => {
+    const { all } = await open({ menu: { model: 'tabs', groups: [{ label: 'Tienda', links: [{ to: 'category:Vestidos' }, { to: 'section:historia', label: 'Nuestra historia' }] }] } });
+    expect(all('.pym-links a').map((a: any) => a.textContent)).toEqual(['Vestidos', 'Nuestra historia']);
+  });
 });

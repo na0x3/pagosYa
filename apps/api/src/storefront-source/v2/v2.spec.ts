@@ -684,6 +684,11 @@ describe('v2 prototype: the build loop', () => {
 });
 
 describe('v2 menus (spec 2026-11-15 store menu models)', () => {
+  it('live 2026-11-16 (Oh Belly r24): a wrapper around the header never puts the menu under the page; menu links carry a label', () => {
+    expect(withKitBaseline('.ob-header{isolation:isolate}')).toMatch(/:has\(> \.ui-nav\)[^{]*\{[^}]*display:\s*contents/);
+    const link = (v2MenuSchema(['dropdown']) as any).properties.groups.items.properties.links.items;
+    expect(link.required).toContain('label');
+  });
   it('checks the selling rules: 7 top links, plain names, real photos once', () => {
     const photos = [{ path: 'assets/a.jpg', width: 800, height: 800, shape: 'square' as const }];
     const ok = { model: 'mega', groups: [{ label: 'Tienda', links: [{ to: 'all' }], tiles: [{ to: 'all', image: 'assets/a.jpg' }] }] };
