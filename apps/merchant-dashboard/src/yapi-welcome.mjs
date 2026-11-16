@@ -1,6 +1,6 @@
 /**
- * YAPI's welcome (owner 2026-11-15, after the «7 ASCII animals» browser): opening the panel lands on a dark screen where
- * ASCII butterflies cross behind the YAPI star, the greeting and one glass box — «¿Qué quieres crear o mejorar?». Writing
+ * YAPI's welcome (owner 2026-11-15): opening the panel lands on the site's cream wash with the YAPI star, the greeting and
+ * one white box — «¿Qué quieres crear o mejorar?» (spec 2026-11-16, Clyro; the ASCII butterflies are retired). Writing
  * there opens YAPI with those words; «Ir a mi panel» (or Escape) goes on to Inicio. Once per visit, and never over a link
  * that asked for another screen.
  */
@@ -38,11 +38,6 @@ export function showYapiWelcome({ root, greeting, onAsk, onClose }) {
   root.hidden = false;
   root.classList.remove("is-leaving");
   document.body.classList.add("yapi-welcome-open");
-  let stopAnimals = () => {};
-  void mountAsciiAnimals(root.querySelector("canvas"), { animal: "butterflies", theme: "dark" }).then((stop) => {
-    if (!stop) return;
-    if (root.hidden) stop(); else stopAnimals = stop;
-  });
 
   let closed = false;
   const close = () => {
@@ -50,7 +45,7 @@ export function showYapiWelcome({ root, greeting, onAsk, onClose }) {
     closed = true;
     document.removeEventListener("keydown", onKey);
     document.body.classList.remove("yapi-welcome-open");
-    const done = () => { root.hidden = true; root.classList.remove("is-leaving"); stopAnimals(); onClose?.(); };
+    const done = () => { root.hidden = true; root.classList.remove("is-leaving"); onClose?.(); };
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { done(); return; }
     root.classList.add("is-leaving");
     setTimeout(done, 420);

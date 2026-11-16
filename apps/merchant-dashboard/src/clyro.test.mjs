@@ -97,3 +97,20 @@ test("login: no koi, no shader — cream wash, the yellow star, a Bricolage titl
 test("login: the Google button is never wider than the card it sits in (a 390px phone has ~300px inside the card)", () => {
   assert.match(read("./dashboard.js"), /width: Math\.min\(320, document\.getElementById\("merchantGoogleButton"\)\.clientWidth \|\| 320\)/);
 });
+
+test("welcome: cream wash, the star, a Bricolage greeting and a white composer with dark text — no butterflies", () => {
+  const welcome = read("./yapi-welcome.mjs");
+  assert.doesNotMatch(welcome, /animal: "butterflies"/);
+  assert.doesNotMatch(read("../index.html"), /class="yapi-welcome-sky"/);
+  const s = css();
+  assert.match(s, /\.yapi-welcome \{[^}]*background: var\(--cl-wash\);[^}]*color: var\(--cl-ink\);/);
+  assert.match(s, /\.yapi-welcome-greeting \{[^}]*font-family: var\(--cl-display\);[^}]*color: var\(--cl-ink\);[^}]*text-shadow: none;/);
+  assert.match(s, /\.yapi-welcome-composer \{[^}]*background: var\(--cl-surface\);[^}]*border: 1px solid var\(--cl-line\);/);
+  // Before body takes .is-logged-in too: the welcome opens first.
+  assert.match(s, /\n\.yapi-welcome-composer textarea \{[^}]*color: var\(--cl-ink\);/);
+  assert.match(s, /\.yapi-welcome-send \{[^}]*background: var\(--cl-ink\);[^}]*color: #fff;/);
+});
+
+test("welcome: the focused field draws no box of its own — the composer's ink border is the focus mark", () => {
+  assert.match(css(), /\n\.yapi-welcome-composer textarea:is\(:focus, :focus-visible\) \{ outline: none; border: 0; box-shadow: none; \}/);
+});

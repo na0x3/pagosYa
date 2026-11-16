@@ -119,3 +119,26 @@ body.is-logged-out .login-card button.primary.login-submit:hover { background: #
 body.is-logged-out .login-card button.primary.login-submit:active { transform: scale(.97); }
 body.is-logged-out :is(.login-forgot, .login-switch button) { color: var(--cl-ink); }
 @media (prefers-reduced-motion: reduce) { body.is-logged-out .login-card button.primary.login-submit:active { transform: none; } }
+
+/* ── YAPI's welcome ────────────────────────────────────
+   The site's cream wash, the star, a Bricolage greeting and one white box (the ASCII butterflies are retired). */
+.yapi-welcome { background: var(--cl-wash); color: var(--cl-ink); }
+.yapi-welcome-star { filter: drop-shadow(0 10px 24px rgb(23 25 28 / .12)); }
+.yapi-welcome-greeting { font-family: var(--cl-display); font-weight: 500; letter-spacing: -.05em; line-height: 1.02; color: var(--cl-ink); text-shadow: none;
+  font-size: clamp(30px, 6vw, 48px); }
+.yapi-welcome-composer { background: var(--cl-surface); border: 1px solid var(--cl-line); border-radius: 24px; box-shadow: var(--cl-shadow-float);
+  -webkit-backdrop-filter: none; backdrop-filter: none; font-family: var(--cl-body); }
+.yapi-welcome-liquid .yapi-welcome-composer { backdrop-filter: none; }
+.yapi-welcome-composer::after { display: none; }
+.yapi-welcome-composer:focus-within { border-color: var(--cl-ink); box-shadow: 0 0 0 3px rgb(23 25 28 / .12), var(--cl-shadow-float); }
+/* The welcome opens before body takes .is-logged-in, so these rules key on the composer, not the body class. */
+.yapi-welcome-composer textarea { color: var(--cl-ink); caret-color: var(--cl-ink); font-family: var(--cl-body); }
+body.is-logged-in .yapi-welcome textarea { color: var(--cl-ink); caret-color: var(--cl-ink); font-family: var(--cl-body); }
+.yapi-welcome-composer textarea::placeholder { color: var(--cl-text-faint); }
+.yapi-welcome-field svg { color: var(--cl-text-faint); }
+.yapi-welcome-note { color: #8a5a12; }
+.yapi-welcome-send { background: var(--cl-ink); color: #fff; }
+.yapi-welcome-skip { color: var(--cl-ink-soft); font-family: var(--cl-body); }
+.yapi-welcome-skip:hover { color: var(--cl-ink); background: rgb(23 25 28 / .06); }
+.yapi-welcome :focus-visible { outline: 2px solid var(--cl-ink); }
+.yapi-welcome-composer textarea:is(:focus, :focus-visible) { outline: none; border: 0; box-shadow: none; }
