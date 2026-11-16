@@ -1,3 +1,4 @@
+import { sellingForVisitor, stopSellingTest } from '../selling/selling-store';
 import { PlansService } from '../plans/plans.service';
 import { boundedSourceFindings, requireSourceChecks, sourceRuntimeDigest, SourceCheckResultDto } from './source-check-results';
 import { assumedFactsBlockMessage, assumedFactsCheckRow } from './assumed-facts';
@@ -187,7 +188,9 @@ export class SourcePublishingService {
     const runtime = await currentSourceRuntimeBundle();
     await requireSourceChecks(this.prisma, storeId, revision, snapshot, runtime.digest);
     return this.change(merchantId, storeId, expected, async tx => {
-      if (await tx.storeSourceExperiment.findUnique({ where: { activeStoreId: storeId } })) throw new ConflictException('Detén la prueba antes de publicar otro diseño.');
+      // A selling test always serves the published design, so it never blocks publishing (spec 2026-11-16).
+      const running = await tx.storeSourceExperiment.findUnique({ where: { activeStoreId: storeId } });
+      if (running && running.kind !== 'selling') throw new ConflictException('Detén la prueba antes de publicar otro diseño.');
       await this.recordRuntime(tx, storeId, runtime);
       // A new publication was checked against the latest kit, so it clears any earlier rollback pin.
       await tx.store.update({ where: { id: storeId }, data: { publicVisibility: true, sourcePublicationPaused: false, publishedSourceRevision: revision, publishedRuntimeDigest: null, sourcePublishedAt: new Date() } });
@@ -216,7 +219,9 @@ export class SourcePublishingService {
     await this.plans?.assertCanPublish(merchantId);
     if (!isPublicStore(store) || !store.publishedSourceRevision) throw new BadRequestException('Publica tu diseño y activa la tienda antes de iniciar una prueba.');
     if (store.checkoutMode !== 'payment') throw new BadRequestException('Activa los pagos integrados para comparar compras confirmadas.');
-    const running = await this.prisma.storeSourceExperiment.findUnique({ where: { activeStoreId: storeId } });
+    let running = await this.prisma.storeSourceExperiment.findUnique({ where: { activeStoreId: storeId } });
+    // The merchant's own test wins over an automatic selling test (spec 2026-11-16): that one stops, undone.
+    if (running?.kind === 'selling') { await stopSellingTest(this.prisma as never, running.id, 'Pausado: empezaste tu propia prueba'); running = null; }
     if (running) throw new ConflictException(`Ya tienes una prueba de «${running.request || (running.kind === 'popup' ? 'tu ventana' : 'tu diseño')}» corriendo. ¿La termino para empezar esta?`);
     return store;
   }
@@ -306,7 +311,7 @@ export class SourcePublishingService {
     const store = await this.prisma.store.findFirst({ where: { slug, ...PUBLIC_STORE_WHERE }, select: { id: true, publishedSourceRevision: true, publishedRuntimeDigest: true } });
     if (!store) throw new NotFoundException('Tienda no encontrada');
     if (!store.publishedSourceRevision) return { published: false };
-    let revision = store.publishedSourceRevision, visitToken: string | null = null;
+    let revision = store.publishedSourceRevision, visitToken: string | null = null, variant: string | undefined;
     const experiment = await this.prisma.storeSourceExperiment.findUnique({ where: { activeStoreId: store.id } });
     // Missing visitor id is an untracked view of the control (merchant preview).
     if (experiment && visitorId) {
@@ -319,8 +324,11 @@ export class SourcePublishingService {
         if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') throw error;
         visit = await this.prisma.storeSourceVisit.findUniqueOrThrow({ where: key });
       }
-      revision = visit.variant === 'B' ? experiment.variantRevision : experiment.controlRevision; visitToken = visit.token;
+      // A selling test (spec 2026-11-16) differs only in its switches: both sides see the published design.
+      if (experiment.kind !== 'selling') revision = visit.variant === 'B' ? experiment.variantRevision : experiment.controlRevision;
+      visitToken = visit.token; variant = visit.variant;
     }
+    const selling = await sellingForVisitor(this.prisma as never, store.id, experiment, variant);
     const { snapshot, files } = await this.publicRevisionFiles(store.id, revision, store.publishedRuntimeDigest);
     // Export tooling is private. Only the selected public revision's browser assets leave the API.
     const assetPath = `/stores/public/${encodeURIComponent(slug)}/source-site/assets/${await this.assetVersion(store.id, revision)}/`;
@@ -334,7 +342,7 @@ export class SourcePublishingService {
       .filter(f => (/\.(html|css|js|png|jpe?g|webp|gif|avif|mp4|woff2?|ttf)$/i.test(f.path) || isSourceMotifFile(f.path) && f.encoding !== 'base64' || isKitCreativeFile(f) || ICON_PATH.test(f.path)) && !['server.mjs', 'build.mjs'].includes(f.path))
       // Binary media is served by publicAsset; the site JSON only names it.
       .map(f => f.encoding === 'base64' && PUBLIC_ASSET.test(f.path) ? { path: f.path, encoding: 'url' as const, content: '' } : f);
-    return { published: true, revision, visitToken, analyticsAvailable: true, assetPath, snapshot: { ...snapshot, brief: {}, files: publicFiles } };
+    return { published: true, revision, visitToken, selling, analyticsAvailable: true, assetPath, snapshot: { ...snapshot, brief: {}, files: publicFiles } };
   }
 
   /** One in-flight load per revision: a burst of first requests shares it instead of each decoding the snapshot. */

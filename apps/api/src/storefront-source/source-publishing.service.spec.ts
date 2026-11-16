@@ -549,3 +549,30 @@ describe('popup A/B tests', () => {
     expect(((await publicationState(prisma, 's')) as any).experiment.stale).toBe(false);
   });
 });
+
+describe('la tienda que vende sola (spec 2026-11-16)', () => {
+  const files = [{ path: 'index.html', content: '<main></main>', encoding: 'utf8' }, { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {};', encoding: 'utf8' }];
+  function serviceWith(visitVariant: 'A' | 'B') {
+    const prisma: any = {
+      store: { findFirst: jest.fn().mockResolvedValue({ id: 's1', publishedSourceRevision: 9, publishedRuntimeDigest: null }) },
+      storeSourceExperiment: { findUnique: jest.fn().mockResolvedValue({ id: 'e1', kind: 'selling', controlRevision: 7, variantRevision: 7, variantSettings: { buyWord: 'Lo quiero' } }) },
+      storeSourceVisit: { upsert: jest.fn().mockResolvedValue({ variant: visitVariant, token: 'tok' }) },
+      storeSellingChange: { findMany: jest.fn().mockResolvedValue([{ kind: 'stickyBuy', status: 'KEPT', settings: { stickyBuy: true }, endedAt: new Date() }]) },
+      storeSourceVersion: { findUnique: jest.fn() },
+    };
+    const service = new SourcePublishingService(prisma);
+    const snapshot = jest.spyOn(service, 'snapshot').mockResolvedValue({ schemaVersion: 1, brief: { businessType: '', audience: '', primaryAction: '', visualDirection: '' }, files } as any);
+    jest.spyOn(service as any, 'assetVersion').mockResolvedValue('9-aaaaaaaaaaaa');
+    return { service, snapshot };
+  }
+  it('serves the published design to both sides of a selling test and gives side B its switches over the kept ones', async () => {
+    const b = serviceWith('B');
+    const siteB: any = await b.service.publicSite('demo', 'visitor-1');
+    expect(siteB.revision).toBe(9);
+    expect(siteB.selling).toEqual({ stickyBuy: true, buyWord: 'Lo quiero' });
+    const a = serviceWith('A');
+    const siteA: any = await a.service.publicSite('demo', 'visitor-2');
+    expect(siteA.revision).toBe(9);
+    expect(siteA.selling).toEqual({ stickyBuy: true });
+  });
+});
