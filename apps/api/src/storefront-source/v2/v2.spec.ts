@@ -893,3 +893,20 @@ describe('v2 assembly fixes 2026-11-16', () => {
     expect(newestStores(rows, 20)).toEqual(['dooboo', 'oh', 'gram']);
   });
 });
+
+describe('spec 2026-11-16 store quality: the new checks reach a V2 run and its look', () => {
+  it('turns the new findings into fix lines with their section', () => {
+    const findings = ['photo-less-tile', 'hero-actions', 'hollow-tiles', 'squeezed-title', 'repeated-facts']
+      .map((rule, part) => ({ rule, severity: 'advice', part, line: `CONSEJO: ${rule}` }))
+      .concat([{ rule: 'phone-cut-tiles', severity: 'block', part: 6, line: 'BLOQUEA: phone-cut-tiles' }]);
+    expect(freeBlocking(findings)).toEqual(['[sección 0] photo-less-tile', '[sección 1] hero-actions', '[sección 2] hollow-tiles', '[sección 3] squeezed-title', '[sección 4] repeated-facts', '[sección 6] phone-cut-tiles']);
+  });
+  it('asks the look for the same defects', () => {
+    const prompt = v2LookPrompt();
+    expect(prompt).toMatch(/foto de producto encima de las letras/);
+    expect(prompt).toMatch(/tarjetas de color sin foto/);
+    expect(prompt).toMatch(/botones de la portada/);
+    expect(prompt).toMatch(/una palabra por línea/);
+    expect(prompt).toMatch(/cortadas en el borde/);
+  });
+});

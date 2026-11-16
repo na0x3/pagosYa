@@ -17,10 +17,12 @@ const MINOR = /La misma foto aparece dos veces|usa otra letra/;
 /** Free mode's blocking page checks (owner 2026-11-14, like Amboras's advisory checks): what is broken, not what is a matter of
  *  taste — sideways scroll, text over text or cut in half, unreadable text, a band of only words or only a photo, a squeezed phone
  *  title, a photo twice. */
-export const FREE_BLOCKERS = new Set(['h-overflow', 'overlapping-text', 'broken-words', 'low-contrast', 'text-only-band', 'dark-text-band', 'dark-colour-text-band', 'photo-only-band', 'phone-squeezed-title', 'repeated-photo', 'cropped-words']);
+// Spec 2026-11-16 store quality: the defects that reached saved designs (Bake Lab, NOA) — phone-cut-tiles here, five more below.
+export const FREE_BLOCKERS = new Set(['h-overflow', 'overlapping-text', 'broken-words', 'low-contrast', 'text-only-band', 'dark-text-band', 'dark-colour-text-band', 'photo-only-band', 'phone-squeezed-title', 'repeated-photo', 'cropped-words', 'phone-cut-tiles']);
 /** Advice for templates, breakage for a written home (owner 2026-11-14 «meathouse is all messed up»): a decorative word over the
  *  title, big words a photo covers, words cut off by their box. */
-export const FREE_ADVICE_BLOCKERS = new Set(['decor-over-text', 'covered-text', 'clipped-text', 'empty-section', 'weak-hero', 'huge-photo', 'pale-page']);
+export const FREE_ADVICE_BLOCKERS = new Set(['decor-over-text', 'covered-text', 'clipped-text', 'empty-section', 'weak-hero', 'huge-photo', 'pale-page',
+  'photo-less-tile', 'hero-actions', 'hollow-tiles', 'squeezed-title', 'repeated-facts']);
 // Each line names its block of <main> («[sección N] ») so a fix can rewrite only that section (v2-section-fix).
 export const freeBlocking = (findings: readonly { rule: string; severity: string; line: string; part?: number | null }[]) =>
   findings.filter(finding => (finding.severity === 'block' && FREE_BLOCKERS.has(finding.rule)) || FREE_ADVICE_BLOCKERS.has(finding.rule))

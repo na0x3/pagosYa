@@ -141,6 +141,10 @@ navegador (portada en escritorio por secciones S0, S1…; el celular en tramos c
 Nombra solo lo que un cliente vería mal, en este orden de importancia:
 - algo roto o sin terminar: una caja, recuadro o columna vacía; un formulario o bloque apretado en una columna estrecha; un botón sin
   estilo; texto encima de otro texto o de una foto que lo hace ilegible; algo que se sale o queda cortado;
+- una foto de producto encima de las letras de un título (aunque sea un recorte sin fondo); tarjetas de color sin foto al lado de
+  otras con foto; los botones de la portada dibujados como palabras con raya en vez de botones; tarjetas altas con un hueco vacío
+  entre el número y el título; un título apretado con una palabra por línea; la misma dirección o frase en tres lugares;
+- en el celular: tarjetas cortadas en el borde de la pantalla;
 - el mismo dato o mensaje repetido en varias secciones (los mismos números en una cinta, una lista y unas tarjetas) o los mismos
   productos ofrecidos en dos secciones distintas: dejar cada dato y cada producto en un solo lugar
 - la misma foto dos veces en una página (también en la página de producto: un capítulo con la misma foto que la galería del
