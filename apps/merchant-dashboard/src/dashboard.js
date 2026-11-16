@@ -106,7 +106,14 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
     storeId: () => currentStoreId,
     categories: () => lastCategories,
     paymentLinks: () => lastPaymentLinks,
-    setPaymentLinks: (links) => { lastPaymentLinks = links; showRestock(links); },
+    setPaymentLinks: (links) => {
+      lastPaymentLinks = links; showRestock(links);
+      // A store without products starts in the guide (its catalog would be empty anyway).
+      if (!links.length && document.body.dataset.dashboardView === "products" && !document.querySelector(".product-yapi-guide")?.hasAttribute("data-open")) {
+        document.querySelector(".product-yapi-guide")?.setAttribute("data-open", "");
+        syncStoreResourceViews("products");
+      }
+    },
     renderBulkDiscountProducts: (...args) => renderBulkDiscountProducts(...args),
     refreshFinancesInBackground: (...args) => refreshFinancesInBackground(...args),
   });
@@ -480,9 +487,14 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
       const frame = document.getElementById(id);
       if (frame.dataset.storeId && frame.dataset.storeId !== currentStoreId) { unloadFrame(frame); delete frame.dataset.storeId; delete frame.dataset.ready; delete frame.dataset.pendingProduct; delete frame.dataset.pendingStep; }
       if (view !== kind) continue;
-      frame.hidden = !currentStoreId || !sessionToken || kind === "marketing" && ["emails", "promotions"].includes(document.getElementById("marketingTabs").dataset.tab);
+      // Productos leads with the catalog (dashboard polish 2026-11-16): the guide opens on «Añadir producto con YAPI», on «Editar»,
+      // or by itself when the store has no products yet; it still loads in the background so it is ready.
+      const guide = kind === "products" ? document.querySelector(".product-yapi-guide") : null;
+      const closedGuide = Boolean(guide && !guide.hasAttribute("data-open"));
+      frame.hidden = !currentStoreId || !sessionToken || closedGuide || kind === "marketing" && ["emails", "promotions"].includes(document.getElementById("marketingTabs").dataset.tab);
+      if (guide) document.getElementById("closeProductGuide").hidden = closedGuide;
       const empty = document.querySelector(`[data-resource-empty="${kind}"]`); if (empty) empty.hidden = Boolean(currentStoreId && sessionToken);
-      if (!frame.hidden && !frame.getAttribute("src")) {
+      if ((!frame.hidden || closedGuide && currentStoreId && sessionToken) && !frame.getAttribute("src")) {
         sessionStorage.setItem("pagosya_merchant_api_base", apiBaseEl.value.replace(/\/$/, ""));
         frame.dataset.storeId = currentStoreId;
         loadFrame(frame, `/studio/?embedded=1&${kind === "products" ? "productGuide=1" : `library=${kind}${kind === "marketing" ? `&tab=${document.getElementById("marketingTabs").dataset.tab}` : ""}`}&store=${encodeURIComponent(currentStoreId)}`);
@@ -491,7 +503,12 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
     // Correos is drawn here, not in the frame: shown for the selected store (loaded once per store).
     if (view === "marketing" && sessionToken && document.getElementById("marketingTabs").dataset.tab === "emails") emailStudio?.show();
   }
+  document.getElementById("closeProductGuide").addEventListener("click", () => {
+    document.querySelector(".product-yapi-guide").removeAttribute("data-open");
+    syncStoreResourceViews("products");
+  });
   document.getElementById("startProductGuide").addEventListener("click", () => {
+    document.querySelector(".product-yapi-guide").setAttribute("data-open", "");
     syncStoreResourceViews("products");
     document.getElementById("productGuideFrame").scrollIntoView({ block: "center", behavior: "smooth" });
     document.getElementById("productGuideFrame").contentWindow?.postMessage({type:"pagosya:product-guide-new"}, location.origin);

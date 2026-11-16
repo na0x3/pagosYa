@@ -245,6 +245,9 @@ body.is-logged-in .tarea-start:disabled { opacity: .45; cursor: default; }
 @keyframes tarea-pulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { body.is-logged-in .tarea-card, body.is-logged-in .tarea-dot { transition: none; animation: none; } }
 
+body.is-logged-in .product-yapi-guide-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+body.is-logged-in .product-yapi-guide:not([data-open]) > header { border-bottom: 0; }
+
 /* ── Inicio › Por reponer ── */
 body.is-logged-in .overview-restock { grid-column: 1 / -1; order: 3; }
 body.is-logged-in .overview-restock h2 { margin: 0 0 4px; font: 400 24px/1.2 var(--pm-serif); }

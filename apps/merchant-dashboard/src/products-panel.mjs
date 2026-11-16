@@ -28,6 +28,7 @@ export function createProductsPanel(deps) {
   /** `step` (Crecimiento): open the guide at description, price, photos or stock instead of the first question. */
   function beginPaymentLinkEdit(link, step = null) {
     if (!link) return;
+    document.querySelector(".product-yapi-guide")?.setAttribute("data-open", "");
     syncStoreResourceViews("products");
     const guide = document.getElementById("productGuideFrame");
     if (guide.dataset.ready === "true") guide.contentWindow?.postMessage({type:"pagosya:product-guide-edit", storeId: deps.storeId(), product: link, ...(step ? { step } : {})}, location.origin);

@@ -32,7 +32,7 @@ test('Inicio shows the card and «Reponer» opens the product at its stock step'
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const js = readFileSync(new URL('./dashboard.js', import.meta.url), 'utf8');
   assert.match(html, /<section class="panel overview-restock" id="overviewRestock" aria-labelledby="overviewRestockTitle" hidden><\/section>/);
-  assert.match(js, /setPaymentLinks: \(links\) => \{ lastPaymentLinks = links; showRestock\(links\); \},/);
+  assert.match(js, /setPaymentLinks: \(links\) => \{\s*lastPaymentLinks = links; showRestock\(links\);/);
   assert.match(js, /editProductById\(button\.dataset\.restockId, "stock"\)/);
 });
 
