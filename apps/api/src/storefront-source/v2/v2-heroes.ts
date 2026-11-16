@@ -1,4 +1,4 @@
-import type { V2Context } from './v2-context';
+import { readConfigData, type V2Context } from './v2-context';
 
 export type V2HeroIdea = { id: 'laps' | 'lift' | 'hearthen' | 'zahra' | 'zippa' | 'buyfirst' | 'halflife' | 'specsheet' | 'libre'; name: string; needs: 'cutout' | 'person' | 'atmosphere' | 'action' | 'any'; brief: string; frames: string[] };
 
@@ -42,4 +42,17 @@ export const heroIdea = (id: string | undefined): V2HeroIdea | null => (id === '
 export const heroMarker = (id: string) => `// @pagosya-hero ${id}`;
 export function readHeroMarker(home: string): string | null {
   return home.match(/^\/\/ @pagosya-hero ([a-z]+)\s*$/m)?.[1] ?? null;
+}
+
+/** Final minors M1 + M2 (2026-11-16): what a saved design shows — its hero idea, menu model and header look («over|top:pills|plain»).
+ *  Used for the merchant's other stores (so they are not repeated) and for a look round (which keeps its hero idea); a broken or
+ *  missing snapshot reads as nothing. */
+export function readStoreLooks(files: ReadonlyArray<{ path: string; content: string }> | null | undefined): { hero: string | null; menu: string | null; header: string | null } {
+  const list = Array.isArray(files) ? files : [];
+  const read = (path: string) => list.find(file => file.path === path)?.content ?? '';
+  let menu: string | null = null;
+  try { const model = readConfigData(list as never).header?.menu?.model; menu = typeof model === 'string' ? model : null; } catch { menu = null; }
+  const nav = read('components/Shell.tsx').match(/<NavShell\b[^>]*>/)?.[0] ?? '';
+  const header = nav ? `${/\sover[\s/>]/.test(nav) ? 'over' : 'top'}:${/linkStyle="pills"/.test(nav) ? 'pills' : 'plain'}` : null;
+  return { hero: readHeroMarker(read('components/home.tsx')), menu, header };
 }

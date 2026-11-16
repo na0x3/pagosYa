@@ -24,7 +24,7 @@ import { mergeSectionFix, sectionFixPlan, v2SectionFixInput, v2SectionFixPrompt,
 import { publicRetentionSettings } from '../../retention/retention.service';
 import { DEFAULT_RETENTION } from '../../retention/retention.dto';
 import { wordsLookPrompt, wordsLookSchema } from './v2-words';
-import { allowedHeroIdeas, drawsLibre, heroIdea, readHeroMarker } from './v2-heroes';
+import { allowedHeroIdeas, drawsLibre, heroIdea, readStoreLooks } from './v2-heroes';
 import { allowedMenus, cleanMenu } from './v2-menus';
 import { freeBlocking, runV2Build, withContextMenu, type V2Attempt, type V2BuildDeps } from './v2-run';
 import { captureV2Look, v2LookInput, v2LookLines, v2LookPrompt, v2LookSchema, type V2LookCapture, type V2LookProblem } from './v2-look';
@@ -181,6 +181,8 @@ export class SourceV2PrototypeService {
     // A look or a reassembly keeps the menu the design was saved with.
     const savedMenu = readConfigData(design.files).header?.menu;
     if (savedMenu && typeof savedMenu.model === 'string' && Array.isArray(savedMenu.groups)) context.menu = savedMenu;
+    // …and its hero idea, so a look round's repairs keep the marker on home.tsx (minor M1).
+    context.heroIdea = readStoreLooks(design.files).hero ?? undefined;
     return { head, from: latestV2.revision, written, base, baseRevision, files, context };
   }
 
@@ -188,20 +190,14 @@ export class SourceV2PrototypeService {
   /** The hero ideas and menu models the merchant's latest other V2 stores use (heroes + menus plan 2026-11-15). Twenty stores are
    *  enough: with 8 ideas and 16 models, older stores would only repeat what these already show. */
   private async merchantHistory(merchantId: string, storeId: string): Promise<{ heroes: string[]; menus: string[]; headers: string[] }> {
-    const stores = await this.prisma.store.findMany({ where: { merchantId, id: { not: storeId } }, select: { id: true }, orderBy: { createdAt: 'desc' }, take: 20 });
-    const heroes = new Set<string>(), menus = new Set<string>(), headers = new Set<string>();
-    for (const { id } of stores) {
-      const version = await this.prisma.storeSourceVersion.findFirst({ where: { storeId: id, label: { startsWith: V2_LABEL } }, orderBy: { revision: 'desc' }, select: { snapshot: true } });
-      const files = ((version?.snapshot as { files?: Array<{ path: string; content: string }> } | null)?.files ?? []);
-      if (!files.length) continue;
-      const hero = readHeroMarker(files.find(file => file.path === 'components/home.tsx')?.content ?? '');
-      if (hero && hero !== 'libre') heroes.add(hero);
-      const model = readConfigData(files as never).header?.menu?.model;
-      if (typeof model === 'string') menus.add(model);
-      const nav = (files.find(file => file.path === 'components/Shell.tsx')?.content ?? '').match(/<NavShell\b[^>]*>/)?.[0] ?? '';
-      if (nav) headers.add(`${/\sover[\s/>]/.test(nav) ? 'over' : 'top'}:${/linkStyle="pills"/.test(nav) ? 'pills' : 'plain'}`);
-    }
-    return { heroes: [...heroes], menus: [...menus], headers: [...headers] };
+    // Read together, and a store that cannot be read is skipped: history only steers variety, it never stops a build (minor M2).
+    const stores = await this.prisma.store.findMany({ where: { merchantId, id: { not: storeId } }, select: { id: true }, orderBy: { createdAt: 'desc' }, take: 20 }).catch(() => []);
+    const looks = await Promise.all(stores.map(({ id }) => this.prisma.storeSourceVersion
+      .findFirst({ where: { storeId: id, label: { startsWith: V2_LABEL } }, orderBy: { revision: 'desc' }, select: { snapshot: true } })
+      .then(version => readStoreLooks((version?.snapshot as { files?: Array<{ path: string; content: string }> } | null)?.files))
+      .catch(() => readStoreLooks(null))));
+    const pick = (key: 'hero' | 'menu' | 'header') => [...new Set(looks.map(look => look[key]).filter((value): value is string => Boolean(value) && value !== 'libre'))];
+    return { heroes: pick('hero'), menus: pick('menu'), headers: pick('header') };
   }
 
   private async templateBase(storeId: string): Promise<number> {

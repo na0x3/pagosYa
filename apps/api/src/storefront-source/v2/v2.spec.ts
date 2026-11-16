@@ -1,6 +1,7 @@
 import { assembleV2Files, OWN_CARDS_REQUEST, OWN_ICONS_REQUEST, readConfigData, type V2Context, type V2File, withStoreSettings } from './v2-context';
 import { composeV2Home, halfChapters, readV2Half } from './v2-prompts';
 import { kitProps } from './v2-prompts';
+import { readStoreLooks } from './v2-heroes';
 import { uiRuntime } from '../source-creative';
 import { backstageCopy, freeMin, joinV2Parts, mergeV2Fix, readV2Part, showcaseRules, v2ContractProblems, v2DirectionInput, v2DirectionSchema, v2HalfInput, v2Hint, v2Repairs } from './v2-prompts';
 import { freeBlocking, runV2Build } from './v2-run';
@@ -853,5 +854,13 @@ describe('v2 assembly fixes 2026-11-16', () => {
     const d = { hero: { idea: 'zippa', composition: 'c', photo: '' }, sections: ['a', 'b', 'c', 'd'].map(role => ({ role, composition: 'x', photo: '', why: '' })), header: { over: true, tone: 'light', links: 'plain', announce: [] } } as never;
     expect(v2HalfInput(context, d, 'a', [], { facts: '' })).toMatch(/CABECERA FLOTA/);
     expect(v2HalfInput(context, d, 'b', [], { facts: '' })).not.toMatch(/CABECERA FLOTA/);
+  });
+  it('final minors M1+M2: one reader gives a saved design its hero idea, menu model and header look, and skips broken snapshots', () => {
+    const files = [{ path: 'components/home.tsx', content: '// @pagosya-hero zippa\nexport default function Home(){}' },
+      { path: 'components/Shell.tsx', content: '<NavShell over tone="light" linkStyle="pills" brand={<b/>} />' },
+      { path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"header":{"menu":{"model":"mega","groups":[]}}};' }];
+    expect(readStoreLooks(files)).toEqual({ hero: 'zippa', menu: 'mega', header: 'over:pills' });
+    expect(readStoreLooks([{ path: 'config.js', content: 'not js' }])).toEqual({ hero: null, menu: null, header: null });
+    expect(readStoreLooks(null as never)).toEqual({ hero: null, menu: null, header: null });
   });
 });
