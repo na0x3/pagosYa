@@ -25,10 +25,10 @@ body.is-logged-in {
   --pg-bg: var(--pm-bg); --pg-surface: #ffffff; --pg-surface-raised: #ffffff; --pg-surface-muted: #f4f4f5; --workspace-sidebar: transparent;
   --pg-text: #18181b; --pg-text-muted: #57575e; --pg-text-faint: #7a7a82;
   --pg-border: rgb(24 24 27 / .08); --pg-border-strong: rgb(24 24 27 / .15);
-  --pg-ink: #2563eb; --pg-ink-hover: #1d4ed8; --pg-accent: #2563eb; --pg-accent-soft: rgb(37 99 235 / .1);
+  --pg-ink: #17191c; --pg-ink-hover: #000; --pg-accent: #17191c; --pg-accent-soft: rgb(23 25 28 / .06);
   --pg-success: #15803d; --pg-success-soft: rgb(22 163 74 / .1); --pg-warning: #b45309; --pg-warning-soft: rgb(245 158 11 / .12);
   --pg-error: #b91c1c; --pg-error-soft: rgb(220 38 38 / .08);
-  --pg-focus-ring: rgb(37 99 235 / .3);
+  --pg-focus-ring: rgb(23 25 28 / .18);
   --calm-radius: 20px; --calm-radius-sm: 14px;
   --calm-shadow: var(--pm-shadow-card); --calm-shadow-lg: var(--pm-shadow-float);
 }
@@ -37,7 +37,7 @@ body.is-logged-in {
 html:has(> body.is-logged-in) { background: #fafaf9; color-scheme: light; }
 body.is-logged-in {
   background:
-    radial-gradient(1100px 700px at 8% -10%, rgb(37 99 235 / .07), transparent 60%),
+    radial-gradient(1100px 700px at 8% -10%, rgb(23 25 28 / .03), transparent 60%),
     radial-gradient(900px 600px at 100% 0%, rgb(56 189 248 / .06), transparent 60%),
     var(--pm-bg);
   background-attachment: fixed;

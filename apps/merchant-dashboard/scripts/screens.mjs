@@ -32,7 +32,9 @@ for (const [size, viewport] of Object.entries(SIZES)) {
   for (const view of VIEWS) {
     await page.evaluate((hash) => { location.hash = hash; }, view);
     await page.waitForTimeout(2200);
-    await page.screenshot({ path: `${out}/${view}-${size}.jpg`, quality: 70, fullPage: size === "phone" });
+    // A phone shot covers the whole page up to 6000px (a long store list would make an empty JPEG).
+    const height = size === "phone" ? Math.min(6000, await page.evaluate(() => document.documentElement.scrollHeight)) : viewport.height;
+    await page.screenshot({ path: `${out}/${view}-${size}.jpg`, quality: 70, fullPage: size === "phone", clip: { x: 0, y: 0, width: viewport.width, height } });
     console.log(JSON.stringify({ view, size, overflow: await overflow(page) }));
   }
   await context.close();

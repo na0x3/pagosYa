@@ -114,3 +114,9 @@ test("welcome: cream wash, the star, a Bricolage greeting and a white composer w
 test("welcome: the focused field draws no box of its own — the composer's ink border is the focus mark", () => {
   assert.match(css(), /\n\.yapi-welcome-composer textarea:is\(:focus, :focus-visible\) \{ outline: none; border: 0; box-shadow: none; \}/);
 });
+
+test("no panel paints the old blue", () => {
+  for (const file of ["./premium.css", "./calm.css", "./ui-kit.css", "./dashboard.css"]) {
+    assert.doesNotMatch(read(file), /#2563eb|#1d4ed8|rgb\(37 99 235/i, file);
+  }
+});
