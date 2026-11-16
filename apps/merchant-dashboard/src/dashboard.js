@@ -966,6 +966,7 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
     const row = document.getElementById("overviewMascots");
     row.innerHTML = renderMascotCards(lastMascotItems);
     row.hidden = !lastMascotItems.length;
+    welcome?.summary(renderMascotBubbles(lastMascotItems));
   }
 
   // Greeting, key figures and the setup checklist; re-run whenever the finances or the money visibility change.
@@ -1267,6 +1268,8 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
         },
         onClose: () => { welcome = null; },
       });
+      // The mascots' short version, when the finances are already in (renderMascots fills it when they arrive later).
+      welcome.summary(renderMascotBubbles(lastMascotItems));
     });
   }
 

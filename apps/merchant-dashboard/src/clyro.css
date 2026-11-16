@@ -164,3 +164,15 @@ body.is-logged-in .mascot-text { margin: 0; color: var(--cl-ink); font: 500 14.5
 body.is-logged-in .mascot-link { justify-self: start; color: var(--cl-ink); font: 600 13.5px/1 var(--cl-body); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 720px) { body.is-logged-in .mascot-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { body.is-logged-in .mascot-card:hover .mascot { transform: none; } }
+/* YAPI's welcome: up to three mascots under the greeting, each with a one-line bubble, popping in one after another. */
+.yapi-welcome-mascots { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 14px; width: 100%; margin: -10px 0 22px; }
+.yapi-welcome-mascots:empty { display: none; }
+.mascot-bubble { display: flex; align-items: center; gap: 8px; max-width: 300px; animation: mascot-pop .5s var(--cl-ease) both;
+  animation-delay: calc(var(--i) * 90ms + 200ms); }
+.mascot-bubble .mascot { flex: none; width: 44px; height: 44px; }
+.mascot-bubble p { position: relative; margin: 0; padding: 9px 13px; border-radius: 16px 16px 16px 6px; border: 1px solid var(--cl-glass-edge);
+  background: var(--cl-glass-strong); box-shadow: var(--cl-glass-shadow); -webkit-backdrop-filter: var(--cl-blur); backdrop-filter: var(--cl-blur);
+  color: var(--cl-ink); font: 500 13.5px/1.35 var(--cl-body); text-align: left; }
+@keyframes mascot-pop { 0% { opacity: 0; transform: translateY(10px) scale(.92); } 60% { opacity: 1; transform: translateY(-3px) scale(1.02); } 100% { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .mascot-bubble { animation: none; } }
+@media (max-width: 600px) { .yapi-welcome-mascots { flex-direction: column; align-items: center; margin-top: -8px; } .mascot-bubble { max-width: 100%; } }

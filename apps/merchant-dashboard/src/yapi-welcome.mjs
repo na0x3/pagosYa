@@ -78,5 +78,7 @@ export function showYapiWelcome({ root, greeting, onAsk, onClose }) {
     close,
     greet: (text) => { root.querySelector("[data-welcome-greeting]").textContent = text; },
     note: (text) => { note.textContent = text; },
+    /** The store mascots' bubbles under the greeting (src/store-mascots.mjs renderMascotBubbles). */
+    summary: (html) => { root.querySelector("[data-welcome-mascots]").innerHTML = html; },
   };
 }

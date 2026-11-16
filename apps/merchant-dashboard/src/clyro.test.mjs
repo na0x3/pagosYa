@@ -185,3 +185,15 @@ test("mascots on Inicio: a row under the greeting, filled from the finances, low
   assert.match(s, /body\.is-logged-in \.mascot-card \{[^}]*background: var\(--cl-glass\);[^}]*backdrop-filter: var\(--cl-blur\);/);
   assert.match(s, /@media \(max-width: 720px\) \{ body\.is-logged-in \.mascot-row \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \} \}/);
 });
+
+test("mascots on YAPI's welcome: up to three bubbles under the greeting that pop in, still for reduced motion", () => {
+  assert.match(read("../index.html"), /data-welcome-greeting>Hola<\/h1>\n\s*<div class="yapi-welcome-mascots" data-welcome-mascots aria-live="polite"><\/div>/);
+  assert.match(read("./yapi-welcome.mjs"), /summary: \(html\) => \{ root\.querySelector\("\[data-welcome-mascots\]"\)\.innerHTML = html; \}/);
+  const js = read("./dashboard.js");
+  assert.match(js, /welcome\?\.summary\(renderMascotBubbles\(lastMascotItems\)\);/);
+  assert.match(js, /welcome\.summary\(renderMascotBubbles\(lastMascotItems\)\);/);
+  const s = css();
+  assert.match(s, /\.mascot-bubble \{[^}]*animation: mascot-pop \.5s var\(--cl-ease\) both;[^}]*animation-delay: calc\(var\(--i\) \* 90ms \+ 200ms\);/);
+  assert.match(s, /\.mascot-bubble p \{[^}]*background: var\(--cl-glass-strong\);[^}]*color: var\(--cl-ink\);/);
+  assert.match(s, /@media \(prefers-reduced-motion: reduce\) \{ \.mascot-bubble \{ animation: none; \} \}/);
+});
