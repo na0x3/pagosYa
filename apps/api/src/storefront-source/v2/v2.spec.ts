@@ -707,7 +707,8 @@ describe('v2 menus (spec 2026-11-15 store menu models)', () => {
   });
   it('limits the direction to unused models, all of them when every one is used', () => {
     expect((v2MenuSchema(['overlay', 'drawer']) as any).properties.model.enum).toEqual(['overlay', 'drawer']);
-    expect(allowedMenus(V2_MENU_MODELS.map(m => m.id))).toHaveLength(16);
+    // Every model the gate allows (rail waits for its two-store check, spec risk).
+    expect(allowedMenus(V2_MENU_MODELS.map(m => m.id))).toHaveLength(15);
     expect(allowedMenus(['tabs'])).not.toContain('tabs');
   });
   it('asks the direction for a menu among the allowed models and checks the chosen one in the contract', () => {
@@ -869,5 +870,9 @@ describe('v2 assembly fixes 2026-11-16', () => {
     expect(text).toMatch(/IDEA DE PORTADA «Foto de acción/);
     expect(text).toMatch(/CABECERA FLOTA/);
     expect(writerInput(context, d, 'system')).not.toMatch(/IDEA DE PORTADA/);
+  });
+  it('spec 2026-11-15 rail gate: YAPI cannot pick the rail menu until it is checked on two stores', () => {
+    expect(allowedMenus([])).not.toContain('rail');
+    expect(allowedMenus([])).toContain('mega');
   });
 });

@@ -24,9 +24,13 @@ export const V2_MENU_MODELS: readonly { id: string; fits: string }[] = [
   { id: 'thumb', fits: 'cuatro botones fijos abajo en el celular; ropa y tiendas que se compran desde el teléfono' },
 ];
 
+/** Spec 2026-11-15 risk: «rail» narrows every page by 200 px on wide screens, so YAPI may pick it only after it has been checked
+ *  live on two stores; take it out of this list then. */
+export const V2_MENU_UNCHECKED: readonly string[] = ['rail'];
+
 /** The models this merchant's other stores have not used; every model once all are used. */
 export const allowedMenus = (used: readonly string[]): string[] => {
-  const all = V2_MENU_MODELS.map(m => m.id);
+  const all = V2_MENU_MODELS.map(m => m.id).filter(id => !V2_MENU_UNCHECKED.includes(id));
   const free = all.filter(id => !used.includes(id));
   return free.length ? free : all;
 };
