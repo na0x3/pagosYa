@@ -63,3 +63,20 @@ test("shell: cream sidebar with an ink pill for the page, a frosted pill top bar
   // The one slate band per screen: Inicio's «Tu cuenta» card.
   assert.match(s, /body\.is-logged-in \.panel\.overview-account \{[^}]*background: var\(--cl-slate\);[^}]*color: #fff;/);
 });
+
+test("controls: ink and white pills that press, segmented tabs, 12px fields with an ink ring, white 20px cards, soft status pills", () => {
+  const s = css();
+  assert.match(s, /body\.is-logged-in button\.primary[^{]*\{[^}]*background: var\(--cl-ink\);[^}]*color: #fff;[^}]*border-radius: 999px;/);
+  assert.match(s, /body\.is-logged-in :is\(button\.secondary, button\.ghost, \.button-like\.ghost\) \{[^}]*background: var\(--cl-surface\);[^}]*border: 1px solid var\(--cl-line\);/);
+  assert.match(s, /:active \{ transform: scale\(\.97\); \}/);
+  // Low weight on purpose (as premium.css): the YAPI bar's and the welcome's own textareas must still win.
+  assert.match(s, /body\.is-logged-in :is\(input:where\(:not\(\[type=checkbox\]\):not\(\[type=radio\]\):not\(\[type=file\]\):not\(\[type=range\]\):not\(\.ui-switch\)\), select, textarea\) \{[^}]*border-radius: 12px;/);
+  assert.match(s, /body\.is-logged-in :is\(input, select, textarea\):focus-visible \{[^}]*box-shadow: 0 0 0 3px var\(--pg-focus-ring\);/);
+  assert.match(s, /body\.is-logged-in :is\(\.panel, \.card\) \{[^}]*background: var\(--cl-surface\);[^}]*border: 1px solid var\(--cl-line\);[^}]*border-radius: 20px;/);
+  assert.match(s, /body\.is-logged-in \.section-tabs \{[^}]*border-radius: 999px;/);
+  assert.match(s, /body\.is-logged-in \.section-tab\[aria-current="page"\] \{[^}]*background: var\(--cl-ink\);[^}]*color: #fff;/);
+  assert.match(s, /body\.is-logged-in dialog:not\(\.mcp-dialog\)[^{]*\{[^}]*border-radius: 20px;/);
+  assert.match(s, /@media \(prefers-reduced-motion: reduce\) \{[^}]*transform: none/);
+  assert.match(s, /body\.is-logged-in :is\(\.overview-kpi dd, \.value, \.finance-total-value\) \{[^}]*font-family: var\(--cl-display\);/);
+  assert.match(s, /body\.is-logged-in :is\(#error, #info\):not\(:empty\) \{[^}]*border-radius: 16px;/);
+});

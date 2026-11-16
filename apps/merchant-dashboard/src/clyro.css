@@ -63,3 +63,31 @@ body.is-logged-in .panel.overview-account :is(h2, dt, dd, p, a) { color: inherit
 body.is-logged-in .panel.overview-account :is(.overview-account-list > div, .overview-balance) { border-color: rgb(255 255 255 / .16); }
 body.is-logged-in .panel.overview-account .badge { background: rgb(255 255 255 / .14); color: #fff; border-color: transparent; }
 @media (max-width: 600px) { body.is-logged-in .workspace-header { padding: 20px 18px 18px; border-radius: 22px; } }
+
+/* ── Controls ──────────────────────────────────────────
+   premium.css already draws pills, 44px fields and 20px cards; here they take the site's ink, line and press. */
+body.is-logged-in button.primary, body.is-logged-in .button-like.primary { background: var(--cl-ink); border: 1px solid var(--cl-ink); color: #fff;
+  border-radius: 999px; font-family: var(--cl-body); font-weight: 500; transition: transform .16s var(--cl-ease), background-color .16s var(--cl-ease); }
+body.is-logged-in button.primary:hover, body.is-logged-in .button-like.primary:hover { background: #000; border-color: #000; }
+body.is-logged-in :is(button.secondary, button.ghost, .button-like.ghost) { background: var(--cl-surface); border: 1px solid var(--cl-line); color: var(--cl-ink);
+  font-family: var(--cl-body); font-weight: 500; transition: transform .16s var(--cl-ease), border-color .16s var(--cl-ease); }
+body.is-logged-in :is(button.secondary, button.ghost, .button-like.ghost):hover { background: var(--cl-surface); border-color: #cfccbf; }
+body.is-logged-in :is(button.primary, button.secondary, button.ghost, .button-like):active { transform: scale(.97); }
+body.is-logged-in :is(input:where(:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not(.ui-switch)), select, textarea) {
+  border-color: var(--cl-line); border-radius: 12px; font-family: var(--cl-body); }
+body.is-logged-in :is(input, select, textarea):focus-visible { outline: none; border-color: var(--cl-ink); box-shadow: 0 0 0 3px var(--pg-focus-ring); }
+body.is-logged-in :is(button, a, summary):focus-visible { outline: 2px solid var(--cl-ink); outline-offset: 2px; }
+body.is-logged-in :is(.panel, .card) { background: var(--cl-surface); border: 1px solid var(--cl-line); border-radius: 20px; box-shadow: var(--cl-shadow); }
+body.is-logged-in .section-tabs { background: rgb(253 252 246 / .86); border: 1px solid var(--cl-line); border-radius: 999px; box-shadow: none; }
+body.is-logged-in .section-tab { border-radius: 999px; font-family: var(--cl-body); font-weight: 500; color: var(--cl-ink-soft); }
+body.is-logged-in .section-tab:hover { background: rgb(23 25 28 / .06); color: var(--cl-ink); }
+body.is-logged-in .section-tab[aria-current="page"] { background: var(--cl-ink); color: #fff; box-shadow: none; }
+body.is-logged-in th { color: var(--cl-ink-soft); font-family: var(--cl-body); font-weight: 500; letter-spacing: 0; text-transform: none; }
+body.is-logged-in :is(th, td) { border-color: var(--cl-line); }
+body.is-logged-in .badge { font-family: var(--cl-body); font-weight: 500; }
+body.is-logged-in dialog:not(.mcp-dialog), body.is-logged-in :is(.profile-menu, .profile-menu[popover]) { background: var(--cl-surface); border: 1px solid var(--cl-line);
+  border-radius: 20px; box-shadow: var(--cl-shadow-float); -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.is-logged-in :is(.overview-kpi dd, .value, .finance-total-value) { font-family: var(--cl-display); font-weight: 500; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+body.is-logged-in :is(#error, #info):not(:empty) { border-radius: 16px; font-family: var(--cl-body); }
+body.is-logged-in #info:not(:empty) { color: var(--cl-ink); }
+@media (prefers-reduced-motion: reduce) { body.is-logged-in :is(button.primary, button.secondary, button.ghost, .button-like):active { transform: none; } }
