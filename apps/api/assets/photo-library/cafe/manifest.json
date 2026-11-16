@@ -1,0 +1,124 @@
+{
+  "sector": "cafe",
+  "label": "Café",
+  "keywords": [
+    "cafe",
+    "cafeteria",
+    "espresso",
+    "latte",
+    "capuchino",
+    "barista",
+    "tostado",
+    "grano",
+    "granos",
+    "cold brew",
+    "molido"
+  ],
+  "photos": [
+    {
+      "file": "cosechando-cafe.jpg",
+      "subject": "cosechando cafe",
+      "shape": "tall",
+      "source": "https://www.rawpixel.com/image/6039408/photo-image-public-domain-leaf-tree",
+      "license": "CC0"
+    },
+    {
+      "file": "granos-de-cafe.jpg",
+      "subject": "granos de cafe",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3338773/free-photo-image-coffee-bean-cc0",
+      "license": "CC0"
+    },
+    {
+      "file": "vertiendo-leche-en-latte.jpg",
+      "subject": "vertiendo leche en latte",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3338229/free-photo-image-coffee-cc0-creative-commons",
+      "license": "CC0"
+    },
+    {
+      "file": "cafe-con-ventanales.jpg",
+      "subject": "cafe con ventanales",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3301932/free-photo-image-interior-cafe",
+      "license": "CC0"
+    },
+    {
+      "file": "barista-sirviendo.jpg",
+      "subject": "barista sirviendo",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3303274/free-photo-image-coffee-beverage-camera",
+      "license": "CC0"
+    },
+    {
+      "file": "cafe-de-filtro.jpg",
+      "subject": "cafe de filtro",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5917256/image-public-domain-person-coffee",
+      "license": "CC0"
+    },
+    {
+      "file": "maquina-de-espresso.jpg",
+      "subject": "maquina de espresso",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5906525/photo-image-public-domain-person-coffee",
+      "license": "CC0"
+    },
+    {
+      "file": "latte-en-taza-azul.jpg",
+      "subject": "latte en taza azul",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5907010/photo-image-public-domain-art-coffee",
+      "license": "CC0"
+    },
+    {
+      "file": "espresso-saliendo.jpg",
+      "subject": "espresso saliendo",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5970329/barista-coffee",
+      "license": "CC0"
+    },
+    {
+      "file": "barista-con-jarra.jpg",
+      "subject": "barista con jarra",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5926501/photo-image-public-domain-hands-person",
+      "license": "CC0"
+    },
+    {
+      "file": "latte-art-desde-arriba.jpg",
+      "subject": "latte art desde arriba",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5908079/image-public-domain-art-coffee",
+      "license": "CC0"
+    },
+    {
+      "file": "moliendo-granos-a-mano.jpg",
+      "subject": "moliendo granos a mano",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5921743/photo-image-public-domain-hand-green",
+      "license": "CC0"
+    },
+    {
+      "file": "interior-de-cafeteria.jpg",
+      "subject": "interior de cafeteria",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5913650/image-public-domain-free-interior-design",
+      "license": "CC0"
+    },
+    {
+      "file": "tazas-de-espresso.jpg",
+      "subject": "tazas de espresso",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3282753/free-photo-image-tea-towel-coffee",
+      "license": "CC0"
+    },
+    {
+      "file": "granos-tostandose.jpg",
+      "subject": "granos tostandose",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6042182/photo-image-background-public-domain-coffee",
+      "license": "CC0"
+    }
+  ]
+}
