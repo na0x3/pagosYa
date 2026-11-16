@@ -1015,6 +1015,6 @@ function heroNotes(direction: V2Direction): { heroBrief: string; headerNote: str
   const heroBrief = idea ? `IDEA DE PORTADA «${idea.name}»: ${idea.brief}${idea.id === 'libre' ? '' : ` ${MIX_NOTE}`} Diséñala con el estilo de esta tienda (su letra, sus colores, su voz); de las referencias aprende la composición, nunca sus colores ni textos.\n\n` : '';
   // Headers plan Task 13: a floating header sits over the hero, so the hero keeps its words clear of it.
   const floats = (direction as { header?: { over?: boolean } }).header?.over;
-  const headerNote = floats ? 'LA CABECERA FLOTA encima de tu portada (transparente): la portada empieza arriba del todo, a todo el ancho, con foto o color hasta el borde superior, y deja ~90 px libres arriba antes del titular.\n\n' : '';
+  const headerNote = floats ? 'LA CABECERA FLOTA encima de tu portada (transparente): la portada empieza arriba del todo, a todo el ancho, con foto o color hasta el borde superior, y su contenido (titular, textos, botones) empieza debajo de la cabecera: paddingTop: «calc(var(--ui-nav-h, 88px) + 24px)» en el contenedor del texto, también en el celular.\n\n' : '';
   return { heroBrief, headerNote };
 }

@@ -855,6 +855,8 @@ describe('v2 assembly fixes 2026-11-16', () => {
   it('headers plan Task 13: a floating header tells the hero half to leave room at the top', () => {
     const d = { hero: { idea: 'zippa', composition: 'c', photo: '' }, sections: ['a', 'b', 'c', 'd'].map(role => ({ role, composition: 'x', photo: '', why: '' })), header: { over: true, tone: 'light', links: 'plain', announce: [] } } as never;
     expect(v2HalfInput(context, d, 'a', [], { facts: '' })).toMatch(/CABECERA FLOTA/);
+    expect(v2HalfInput(context, d, 'a', [], { facts: '' })).toMatch(/calc\(var\(--ui-nav-h/);
+    expect(uiRuntime()).toMatch(/documentElement\.style\.setProperty\('--ui-nav-h'/);
     expect(v2HalfInput(context, d, 'b', [], { facts: '' })).not.toMatch(/CABECERA FLOTA/);
   });
   it('final minors M1+M2: one reader gives a saved design its hero idea, menu model and header look, and skips broken snapshots', () => {

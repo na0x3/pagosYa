@@ -1945,7 +1945,8 @@ export function NavShell({ brand, links = [], structure = 'bar', actions = 'icon
   useEffect(() => {
     if (!over) return;
     const header = headerRef.current;
-    const measure = () => header?.style.setProperty('--ui-nav-h', `${header.offsetHeight}px`);
+    // On :root too, so the first section can keep its words below the floating header (live 2026-11-16, DooBoo on the phone).
+    const measure = () => { if (!header) return; header.style.setProperty('--ui-nav-h', `${header.offsetHeight}px`); document.documentElement.style.setProperty('--ui-nav-h', `${header.offsetHeight}px`); };
     const onScroll = () => setScrolled(window.scrollY > 40);
     measure(); onScroll();
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
