@@ -419,4 +419,9 @@ describe('store menu', () => {
     close.click();
     expect(q('.pym-panel').hidden).toBe(true);
   });
+  it('live 2026-11-16 (DooBoo r12 phone): the full-screen menu takes the store ink, its links stay readable and the close button has room', async () => {
+    expect(commerce).toMatch(/\.pym-panel\[data-model=overlay\]\{background:var\(--store-accent,var\(--es-ink/);
+    expect(commerce).toMatch(/\.pym-panel\[data-model=overlay\] \.pym-links a\{color:inherit/);
+    expect(commerce).toMatch(/\.pym-panel:is\(\[data-model=overlay\],\[data-model=split\],\[data-model=drawer\]\)\{padding-top:72px/);
+  });
 });
