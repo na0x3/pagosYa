@@ -79,4 +79,16 @@ describe('template rules: store quality 2026-11-16', () => {
       <section data-lb-at="2"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">${[1, 2, 3].map(n => `<div style="height:160px;background:#eee;padding:16px"><b>${n}</b><p>Texto corto</p></div>`).join('')}</div></section>`);
     expect(found.find(f => f.rule === 'hollow-tiles')).toBeUndefined();
   });
+
+  it('squeezed-title: a section title broken into a word per line in a narrow column (Bake Lab r3 «Cinco maneras de empezar»)', async () => {
+    const found = await rules(1280, `${cover}
+      <section data-lb-at="1" style="display:grid;grid-template-columns:220px 1fr;gap:24px"><h2 style="font-size:52px;line-height:1">Cinco maneras de empezar</h2>
+        <div style="height:300px;background:#eee"></div></section>`);
+    expect(found).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'squeezed-title', part: 1 })]));
+  });
+  it('squeezed-title: a three-line headline in a wide column passes', async () => {
+    const found = await rules(1280, `<section data-lb-at="0"><h1 style="font-size:96px;line-height:1;max-width:760px">Deja que el aceite haga lo suyo</h1>
+        <a href="#" style="display:inline-block;padding:12px 20px;background:#111;color:#fff">Comprar</a><img src="${picture}" width="600" height="400" alt=""></section>`);
+    expect(found.find(f => f.rule === 'squeezed-title')).toBeUndefined();
+  });
 });

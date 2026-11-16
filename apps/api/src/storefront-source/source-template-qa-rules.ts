@@ -459,5 +459,19 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
     }
     if (hollow) push('hollow-tiles', hollow, `CONSEJO: Tarjetas altas casi vacías (${quote(hollow)}): las palabras quedan arriba y abajo con un hueco grande en medio. Hazlas más bajas, junta el texto o pon una foto en el hueco.`);
   }
+  // Spec 2026-11-16 store quality (Bake Lab r3 «Cinco / maneras / de / empezar» in a 200 px column): on a computer a title of 28 px or
+  // more never stands one word per line, nor four lines in a column under a third of the page.
+  if (window.innerWidth >= 1000) {
+    const pageWidth = main.getBoundingClientRect().width;
+    const squeezedTitle = Array.from(main.querySelectorAll('h1,h2')).find(h => {
+      if (h.closest(productish) || !visible(h)) return false;
+      const s = getComputedStyle(h), size = parseFloat(s.fontSize);
+      if (size < 28) return false;
+      const lh = parseFloat(s.lineHeight) || size * 1.2, r = h.getBoundingClientRect();
+      const lines = Math.round(r.height / lh), words = (h.textContent || '').trim().split(/\s+/).length;
+      return (lines >= 4 && r.width < .32 * pageWidth) || (lines >= 3 && words / lines <= 1.2);
+    });
+    if (squeezedTitle) push('squeezed-title', squeezedTitle, `CONSEJO: El título ${quote(squeezedTitle)} queda apretado (una palabra por línea): dale una columna más ancha o un tamaño menor para que entre en dos o tres líneas.`);
+  }
   return out;
 }
