@@ -1799,6 +1799,15 @@ const NAV_CSS = `
   .ui-nav .ui-nav__badge{position:absolute;top:2px;right:0}
   .ui-nav[data-actions=pill] [data-nav-action=bag]{padding:0 8px;background:none;color:inherit}
 }
+/* Floating header (owner 2026-11-15, Zippa/Halcy): over the first section, transparent, solid once scrolled. */
+.ui-nav[data-over]{margin-bottom:calc(-1 * var(--ui-nav-h,72px));background:transparent;transition:background-color .25s,color .25s,box-shadow .25s}
+.ui-nav[data-over][data-tone=light]{color:#fff}
+.ui-nav[data-over][data-scrolled]{background:var(--es-paper,#fff);color:var(--es-ink,#111);box-shadow:0 1px 0 color-mix(in srgb,currentColor 12%,transparent)}
+/* Pill links (Halcy): each link its own rounded pill; the highlighted one in the accent. */
+.ui-nav[data-links=pills] .ui-nav__links{gap:6px}
+.ui-nav[data-links=pills] .ui-nav__links a{min-height:40px;padding:0 16px;border-radius:999px;background:var(--es-paper,#fff);color:var(--es-ink,#111);box-shadow:0 1px 2px #0002}
+.ui-nav[data-links=pills] .ui-nav__links a[data-highlight]{background:var(--es-accent,#111);color:var(--es-paper,#fff)}
+@media (prefers-reduced-motion:reduce){.ui-nav[data-over]{transition:none}}
 /* The merchant's store menu (store-menu.js) replaces the store's own links and toggle where it is on. */
 .ui-nav__store-toggle:empty,.ui-nav__store-links:empty{display:none}
 .ui-nav[data-store-menu=panel] .ui-nav__toggles{display:inline-flex}
@@ -1856,11 +1865,18 @@ export type NavShellLink = { label: ReactNode; href: string };
  *  cart: what the store sells, so the bag is drawn as a shirt, a ring, a cup… (NAV_GOODS).
  *  Below 768 px every structure is menu button · logo · search and bag. Pass looks with className, barClassName, brandClassName,
  *  linksClassName, actionsClassName, badgeClassName, panelClassName and toggleClassName. */
-export function NavShell({ brand, links = [], structure = 'bar', actions = 'icons', cart, labels, className, barClassName, brandClassName, linksClassName, actionsClassName, badgeClassName, panelClassName, toggleClassName }: {
+export function NavShell({ brand, links = [], structure = 'bar', actions = 'icons', cart, labels, over = false, tone = 'dark', linkStyle = 'plain', highlight, className, barClassName, brandClassName, linksClassName, actionsClassName, badgeClassName, panelClassName, toggleClassName }: {
   brand: ReactNode; links?: NavShellLink[]; structure?: 'bar' | 'centered' | 'split' | 'drawer'; actions?: 'icons' | 'labels' | 'pill';
   /** What the store sells (gem, shirt, coffee, paw…): the bag is drawn as it; unknown or empty keeps the bag. */
   cart?: string;
-  labels?: { search?: string; account?: string; bag?: string }; className?: string; barClassName?: string; brandClassName?: string;
+  labels?: { search?: string; account?: string; bag?: string };
+  /** Owner 2026-11-15 (Zippa, Halcy): the header floats over the first section, transparent, and turns solid once the page scrolls. */
+  over?: boolean;
+  /** Text and icon colour while it floats: light on a dark photo, dark on a light one. */
+  tone?: 'light' | 'dark';
+  /** Links as plain words or as rounded pills (Halcy); `highlight` is the href of the one link drawn as the accent pill. */
+  linkStyle?: 'plain' | 'pills'; highlight?: string;
+  className?: string; barClassName?: string; brandClassName?: string;
   linksClassName?: string; actionsClassName?: string; badgeClassName?: string; panelClassName?: string; toggleClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -1887,7 +1903,7 @@ export function NavShell({ brand, links = [], structure = 'bar', actions = 'icon
   const words = { search: labels?.search || 'Buscar', account: labels?.account || 'Mi cuenta', bag: labels?.bag || 'Bolsa' };
   const join = (...names: Array<string | undefined>) => names.filter(Boolean).join(' ');
   const row = (items: NavShellLink[], side?: 'left' | 'right') => <nav className={join('ui-nav__links', linksClassName)} data-nav-links data-side={side} aria-label={side === 'right' ? 'Más secciones' : 'Principal'}>
-    <span className="ui-nav__own" data-store-menu-replaces>{items.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</span>
+    <span className="ui-nav__own" data-store-menu-replaces>{items.map(link => <a key={link.href} href={link.href} data-highlight={highlight && link.href === highlight ? '' : undefined}>{link.label}</a>)}</span>
     {side === 'right' ? null : <span className="ui-nav__store-links" data-pagosya-store-menu="links" />}
   </nav>;
   const half = Math.ceil(links.length / 2);
@@ -1901,7 +1917,22 @@ export function NavShell({ brand, links = [], structure = 'bar', actions = 'icon
     <span className="ui-nav__store-toggle" data-pagosya-store-menu="toggle" />
     <button ref={toggleRef} type="button" className={join('ui-nav__toggle', toggleClassName)} data-nav-toggle data-store-menu-replaces aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(true)}><span className="ui-nav__bars" aria-hidden="true" /><span className="ui-nav__sr">Menú</span></button>
   </span>;
-  return <header className={join('ui-nav', className)} data-nav-shell data-structure={structure} data-actions={actions}>
+  // A floating header measures itself (the page starts under it) and turns solid once the page scrolls or the menu opens.
+  const headerRef = useRef<HTMLElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    if (!over) return;
+    const header = headerRef.current;
+    const measure = () => header?.style.setProperty('--ui-nav-h', `${header.offsetHeight}px`);
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    measure(); onScroll();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    if (header && observer) observer.observe(header);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { observer?.disconnect(); window.removeEventListener('scroll', onScroll); };
+  }, [over]);
+  return <header ref={headerRef} className={join('ui-nav', className)} data-nav-shell data-structure={structure} data-actions={actions}
+    data-over={over ? '' : undefined} data-tone={over ? tone : undefined} data-scrolled={over && (scrolled || open) ? '' : undefined} data-links={linkStyle === 'pills' ? 'pills' : undefined}>
     <NavStyles />
     <div className={join('ui-nav__bar', barClassName)}>
       {toggles}

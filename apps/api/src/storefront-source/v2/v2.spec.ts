@@ -1,5 +1,7 @@
 import { assembleV2Files, OWN_CARDS_REQUEST, OWN_ICONS_REQUEST, readConfigData, type V2Context, type V2File, withStoreSettings } from './v2-context';
 import { composeV2Home, halfChapters, readV2Half } from './v2-prompts';
+import { kitProps } from './v2-prompts';
+import { uiRuntime } from '../source-creative';
 import { backstageCopy, freeMin, joinV2Parts, mergeV2Fix, readV2Part, showcaseRules, v2ContractProblems, v2DirectionInput, v2DirectionSchema, v2HalfInput, v2Hint, v2Repairs } from './v2-prompts';
 import { freeBlocking, runV2Build } from './v2-run';
 import { v2LookLines } from './v2-look';
@@ -823,5 +825,12 @@ describe('v2 assembly fixes 2026-11-16', () => {
       { path: 'components/v2-library.tsx' as const, content: "import { LibraryBlockView } from './library';\nexport function V2Slot(){ return null; }" }];
     const lib = assembleV2Files(base as never, written as never).find(file => file.path === 'components/library.tsx')!;
     expect(lib.content).toMatch(/LibraryBlockView/);
+  });
+  it('headers plan Task 11: NavShell can float over the hero, take a tone and draw its links as pills with one highlighted', () => {
+    const props = kitProps().get('NavShell')!;
+    for (const prop of ['over', 'tone', 'linkStyle', 'highlight']) expect(props.has(prop)).toBe(true);
+    const ui = uiRuntime();
+    expect(ui).toMatch(/\.ui-nav\[data-over\]/); expect(ui).toMatch(/\.ui-nav\[data-over\]\[data-scrolled\]/);
+    expect(ui).toMatch(/\.ui-nav\[data-links=pills\]/); expect(ui).toMatch(/\[data-highlight\]/);
   });
 });
