@@ -112,4 +112,20 @@ describe('template rules: store quality 2026-11-16', () => {
     await tab.close();
     expect(found.find(f => f.rule === 'repeated-facts')).toBeUndefined();
   });
+
+  const phoneCover = `<section data-lb-at="0"><h1 style="font-size:40px">Tienda</h1><a href="#" style="display:inline-block;padding:12px 20px;background:#111;color:#fff">Comprar</a><img src="${picture}" style="width:100%;height:auto" alt=""></section>`;
+  it('phone-cut-tiles: category tiles cut at the screen edge inside a clipped row (Bake Lab r3 phone)', async () => {
+    const found = await rules(390, `${phoneCover}
+      <section data-lb-at="1" style="overflow:hidden"><div style="display:grid;grid-template-columns:repeat(4,220px);gap:12px">
+        ${['Galletas', 'Pastelería', 'Combos', 'Cajas'].map(name => `<div style="height:200px;background:#6b7a4a;color:#fff">${name}</div>`).join('')}
+      </div></section>`);
+    expect(found).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'phone-cut-tiles', part: 1, severity: 'block' })]));
+  });
+  it('phone-cut-tiles: a row that scrolls sideways, a marquee and product rails pass', async () => {
+    const found = await rules(390, `${phoneCover}
+      <section data-lb-at="1"><div style="display:flex;gap:12px;overflow-x:auto">${[1, 2, 3, 4].map(n => `<div style="flex:0 0 220px;height:200px;background:#ddd">Uno ${n}</div>`).join('')}</div></section>
+      <section data-lb-at="2" style="overflow:hidden"><div data-pya-motion="marquee" style="display:flex;width:2000px">${[1, 2, 3].map(n => `<div style="flex:0 0 300px;height:120px">Texto ${n}</div>`).join('')}</div></section>
+      <section data-lb-at="3" style="overflow:hidden"><div data-pagosya-catalog style="display:flex;width:1200px">${[1, 2, 3].map(n => `<article class="menu-item" style="flex:0 0 300px;height:200px">P ${n}</article>`).join('')}</div></section>`);
+    expect(found.find(f => f.rule === 'phone-cut-tiles')).toBeUndefined();
+  });
 });

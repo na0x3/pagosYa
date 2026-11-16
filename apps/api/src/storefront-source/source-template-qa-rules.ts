@@ -495,5 +495,18 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
     const repeated = [...places.entries()].find(([, entry]) => entry.where.size >= 3);
     if (repeated) push('repeated-facts', repeated[1].el, `CONSEJO: «${repeated[0].slice(0, 40)}» aparece en ${repeated[1].where.size} lugares de la portada: déjalo en un solo lugar (la sección de la tienda o el pie) y usa el espacio para algo nuevo.`);
   }
+  // Spec 2026-11-16 store quality (Bake Lab r3 phone: «after Pastelería a cut green column, the rest off screen»): on the phone a tile
+  // that starts on screen and ends past its edge, inside a row that neither scrolls nor moves, is cut — even when the page does not
+  // scroll sideways (a parent clips it, so h-overflow says nothing).
+  if (window.innerWidth < 600) {
+    const scrolls = (el: Element) => { for (let node = el.parentElement; node && node !== document.body; node = node.parentElement) if (/auto|scroll/.test(getComputedStyle(node).overflowX)) return true; return false; };
+    const moving = '[data-pya-motion="marquee"],.es-marquee,.ui-marquee,[data-carousel],.es-carousel';
+    const cutTile = Array.from(main.querySelectorAll('*')).find(el => {
+      const r = el.getBoundingClientRect();
+      return r.width >= 100 && r.width < window.innerWidth * .95 && r.height >= 80 && r.left < window.innerWidth - 10 && r.right > window.innerWidth + 20
+        && !scrolls(el) && !el.closest(moving) && !el.closest(productish) && !el.closest('header,footer');
+    });
+    if (cutTile) push('phone-cut-tiles', cutTile, `BLOQUEA: En el celular ${quote(cutTile)} queda cortada en el borde de la pantalla: apila las tarjetas (gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 10rem), 1fr))') o haz una fila que se desliza (overflowX: 'auto').`);
+  }
   return out;
 }
