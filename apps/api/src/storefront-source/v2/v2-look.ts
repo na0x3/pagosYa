@@ -62,6 +62,19 @@ const mainBlocks = (page: Page) => page.evaluate(() => {
   });
 });
 
+/** Spec 2026-11-15 (store menus; live 2026-11-16, Oh Belly r24's panel opened under the page): the store menu opened by its first
+ *  button, as a shot of the screen; nothing when the store has no menu button. The menu is closed again afterwards. */
+async function menuShot(page: Page, label: string, out: V2LookShot[]) {
+  const button = await page.$('.pym-top:visible, [data-store-menu-toggle]:visible, .pym-dock [data-dock]:visible').catch(() => null);
+  if (!button) return;
+  await button.click({ timeout: 3_000 }).catch(() => null);
+  await page.waitForTimeout(450);
+  const shot = await page.screenshot({ type: 'jpeg', quality: 62, timeout: 10_000 }).catch(() => null);
+  if (shot) out.push({ page: 'home', label, section: null, jpeg: shot });
+  await page.keyboard.press('Escape').catch(() => null);
+  await page.waitForTimeout(200);
+}
+
 async function strips(page: Page, width: number, tall: number, count: number, out: V2LookShot[], kind: V2LookShot['page'], name: string) {
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
   for (let i = 0, y = 0; i < count && y < height; i++, y += tall) {
@@ -82,6 +95,7 @@ export async function captureV2Look(snapshot: SourceProjectSnapshot, uploads?: V
     await settle(page, 'index.html');
     const first = await page.screenshot({ type: 'jpeg', quality: 62, timeout: 10_000 }).catch(() => null);
     if (first) shots.push({ page: 'home', label: 'Primera pantalla (escritorio)', section: null, jpeg: first });
+    await menuShot(page, 'Menú abierto (escritorio)', shots);
     const blocks = (await mainBlocks(page)).filter(entry => entry.shown).slice(0, MAX_SECTIONS);
     sections = blocks.map(block => block.index);
     for (const block of blocks) {
@@ -95,6 +109,7 @@ export async function captureV2Look(snapshot: SourceProjectSnapshot, uploads?: V
     const page = await context.newPage();
     await page.setViewportSize(PHONE);
     await settle(page, 'index.html');
+    await menuShot(page, 'Menú abierto (celular)', shots);
     const blocks = await mainBlocks(page);
     await page.evaluate((list: Array<{ index: number; top: number; shown: boolean }>) => {
       for (const block of list.filter(entry => entry.shown)) {
@@ -133,6 +148,8 @@ Nombra solo lo que un cliente vería mal, en este orden de importancia:
 - una sección que es casi toda aire (un gran espacio vacío a un lado o debajo), o una foto demasiado grande que se come la pantalla
   (más de unos 720 px de ancho y 780 de alto en escritorio);
 - en el celular: columnas que no se reacomodaron, títulos partidos, cosas diminutas;
+- las capturas «Menú abierto»: el menú se ve encima de la página, entero y legible, con sus enlaces; nómbralo si quedó
+  debajo de la página, vacío, cortado o tapando el botón que lo cierra;
 - la página de producto: que muestre la compra (fotos, nombre, precio, botón) y después los capítulos de la marca; si parece la
   página simple sin capítulos, dilo.
 La etiqueta rosa «S3» del celular la puso la revisión, no es parte de la tienda.

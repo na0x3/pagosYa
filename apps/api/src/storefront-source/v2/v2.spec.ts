@@ -2,6 +2,7 @@ import { assembleV2Files, OWN_CARDS_REQUEST, OWN_ICONS_REQUEST, readConfigData, 
 import { composeV2Home, halfChapters, readV2Half } from './v2-prompts';
 import { kitProps, v2WriterInput as writerInput } from './v2-prompts';
 import { readStoreLooks } from './v2-heroes';
+import { v2LookPrompt } from './v2-look';
 import { uiRuntime } from '../source-creative';
 import { backstageCopy, freeMin, joinV2Parts, mergeV2Fix, readV2Part, showcaseRules, v2ContractProblems, v2DirectionInput, v2DirectionSchema, v2HalfInput, v2Hint, v2Repairs } from './v2-prompts';
 import { freeBlocking, runV2Build } from './v2-run';
@@ -874,5 +875,8 @@ describe('v2 assembly fixes 2026-11-16', () => {
   it('spec 2026-11-15 rail gate: YAPI cannot pick the rail menu until it is checked on two stores', () => {
     expect(allowedMenus([])).not.toContain('rail');
     expect(allowedMenus([])).toContain('mega');
+  });
+  it('spec 2026-11-15: the look sees the menu open and names a menu under the page, empty or cut', () => {
+    expect(v2LookPrompt()).toMatch(/Menú abierto[\s\S]*debajo de la página/);
   });
 });
