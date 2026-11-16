@@ -36,3 +36,30 @@ body.is-logged-in {
   background: var(--cl-paper); background-attachment: scroll; color: var(--cl-ink); font-family: var(--cl-body);
 }
 html:has(> body.is-logged-in), html:has(> body.is-logged-out) { background: #fdfcf6; }
+
+/* ── Shell ─────────────────────────────────────────────
+   premium.css places the floating sidebar and the pill top bar; here they only change colour, line and blur. */
+body.is-logged-in .dashboard-sidebar { background: var(--cl-paper); border: 1px solid var(--cl-line); box-shadow: var(--cl-shadow);
+  -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.is-logged-in .dashboard-nav-button { border-radius: 999px; color: var(--cl-ink-soft); font-family: var(--cl-body); font-weight: 500;
+  transition: background-color .16s var(--cl-ease), color .16s var(--cl-ease); }
+body.is-logged-in .dashboard-nav-button:hover { background: rgb(23 25 28 / .06); color: var(--cl-ink); }
+body.is-logged-in .dashboard-nav-button[aria-current="page"],
+body.is-logged-in .dashboard-nav-group > .dashboard-nav-button:not(.dashboard-nav-summary)[aria-current="page"] {
+  background: var(--cl-ink); border-color: var(--cl-ink); color: #fff; box-shadow: none; border-radius: 999px; }
+body.is-logged-in .dashboard-nav-button[aria-current="page"] .dashboard-nav-icon { color: #fff; }
+body.is-logged-in > .topbar { border: 1px solid var(--cl-line); border-radius: 999px; background: rgb(253 252 246 / .8); box-shadow: var(--cl-shadow-float);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+body.is-logged-in .workspace-yapi { background: var(--cl-surface); border: 1px solid var(--cl-line); border-radius: 999px; box-shadow: var(--cl-shadow-float); }
+body.is-logged-in .workspace-yapi button.primary { border-radius: 999px; }
+body.is-logged-in :is(.workspace-title, .panel .section-head h2, .ui-head h3, .overview-greeting) {
+  font-family: var(--cl-display); font-weight: 500; letter-spacing: -.05em; line-height: 1.02; color: var(--cl-ink); }
+body.is-logged-in .workspace-title { font-size: clamp(34px, 4.4vw, 52px); }
+body.is-logged-in .workspace-header { background: var(--cl-wash); border-radius: 28px; padding: 28px 28px 24px; }
+body.is-logged-in .workspace-description { color: var(--cl-ink-soft); }
+/* The one slate band: Inicio's «Tu cuenta» card. */
+body.is-logged-in .panel.overview-account { background: var(--cl-slate); border-color: var(--cl-slate); color: #fff; }
+body.is-logged-in .panel.overview-account :is(h2, dt, dd, p, a) { color: inherit; }
+body.is-logged-in .panel.overview-account :is(.overview-account-list > div, .overview-balance) { border-color: rgb(255 255 255 / .16); }
+body.is-logged-in .panel.overview-account .badge { background: rgb(255 255 255 / .14); color: #fff; border-color: transparent; }
+@media (max-width: 600px) { body.is-logged-in .workspace-header { padding: 20px 18px 18px; border-radius: 22px; } }

@@ -51,3 +51,15 @@ test("every text token reads at 4.5:1 or more on cream and on white", () => {
   assert.ok(ratio("#ffffff", token("--cl-ink")) >= 4.5, "white on an ink pill");
   assert.ok(ratio("#ffffff", token("--cl-slate")) >= 4.5, "white on the slate band");
 });
+
+test("shell: cream sidebar with an ink pill for the page, a frosted pill top bar, the YAPI bar as a white pill", () => {
+  const s = css();
+  assert.match(s, /body\.is-logged-in \.dashboard-sidebar \{[^}]*background: var\(--cl-paper\);/);
+  assert.match(s, /body\.is-logged-in \.dashboard-nav-button\[aria-current="page"\][^{]*\{[^}]*background: var\(--cl-ink\);[^}]*color: #fff;[^}]*border-radius: 999px;/);
+  assert.match(s, /body\.is-logged-in > \.topbar \{[^}]*border-radius: 999px;[^}]*backdrop-filter: blur\(20px\)/);
+  assert.match(s, /body\.is-logged-in \.workspace-yapi \{[^}]*background: var\(--cl-surface\);[^}]*border-radius: 999px;/);
+  assert.match(s, /body\.is-logged-in :is\(\.workspace-title, \.panel \.section-head h2, \.ui-head h3, \.overview-greeting\) \{[^}]*font-family: var\(--cl-display\);[^}]*font-weight: 500;[^}]*letter-spacing: -\.05em;/);
+  assert.match(s, /body\.is-logged-in \.workspace-header \{[^}]*background: var\(--cl-wash\);/);
+  // The one slate band per screen: Inicio's «Tu cuenta» card.
+  assert.match(s, /body\.is-logged-in \.panel\.overview-account \{[^}]*background: var\(--cl-slate\);[^}]*color: #fff;/);
+});
