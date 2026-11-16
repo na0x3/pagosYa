@@ -6970,7 +6970,9 @@
     .pym-panel[data-model=index] .pym-links a::before{counter-increment:pymi;content:counter(pymi,decimal-leading-zero);font-size:12px;opacity:.6}
     .pym-panel[data-model=index] .pym-link-label{font-family:var(--store-heading-font,inherit);font-size:22px}
     .pym-panel[data-model=index] .pym-count{text-align:right;font-size:13px;font-variant-numeric:tabular-nums;opacity:.75}
-    .pym-note{font-size:13px;opacity:.7}
+    .pym-note{display:block;font-size:13px;opacity:.7}
+    .pym-links a:has(.pym-note){flex-direction:column;align-items:flex-start;justify-content:center;gap:2px}
+    .pym-panel[data-model=dropdown]{left:50%;right:auto;transform:translateX(-50%);width:min(620px,94vw);padding:22px 24px;border-radius:0 0 16px 16px;box-shadow:0 22px 40px -22px #0006}
     @media (max-width:860px){
       .pym-panel[data-model=mega] .pym-group{grid-template-columns:1fr}
       .pym-panel[data-model=mega] .pym-tiles{display:block}.pym-panel[data-model=mega] .pym-tiles ul{display:flex;overflow-x:auto;gap:8px}
