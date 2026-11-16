@@ -635,6 +635,31 @@ export function readHeroMarker(home: string): string | null {
 
 (Only `cutout` is a hard filter; `person`, `atmosphere`, `action` are judged by the direction model from the photos it sees: «elige la idea solo si la tienda tiene esa foto».)
 
+- [ ] **Step 3b: Against standardisation (owner 2026-11-15: «won't this standardize too much?»)**
+
+Add a ninth, open idea and let ideas be mixed:
+
+```ts
+export const LIBRE: V2HeroIdea = { id: 'libre' as V2HeroIdea['id'], name: 'Portada libre', needs: 'any', frames: [],
+  brief: 'Inventa tu propia portada para ESTA marca: ninguna de las ideas de la lista, algo que solo esta tienda tendría. Mira las referencias como inspiración de oficio (escala, movimiento, cómo se muestra el producto), nunca como receta. Mismas reglas: titular entero en la primera pantalla, fotos con letras enteras, solo datos reales, movimiento con estado final quieto.' };
+/** About one store in three gets the open brief, stable per store (the same store keeps its draw between rebuilds). */
+export const drawsLibre = (storeId: string) => [...storeId].reduce((sum, c) => (sum * 31 + c.charCodeAt(0)) >>> 0, 7) % 3 === 0;
+export const MIX_NOTE = 'Empieza desde esta idea; puedes torcerla o mezclarla con otra de la lista si la marca lo pide — nunca la copies tal cual.';
+```
+
+Test (add to «v2 hero briefs»):
+
+```ts
+it('gives about a third of the stores an open hero brief, the same draw every time', () => {
+  const ids = Array.from({ length: 300 }, (_, i) => `store-${i}`);
+  const share = ids.filter(drawsLibre).length / ids.length;
+  expect(share).toBeGreaterThan(0.25); expect(share).toBeLessThan(0.42);
+  expect(drawsLibre('store-7')).toBe(drawsLibre('store-7'));
+});
+```
+
+Wiring: when `drawsLibre(storeId)`, set `context.heroesAllowed = ['libre']` and give half `a` the `LIBRE` brief plus 6 frames (the first frame of six different ideas); otherwise the half `a` brief ends with `MIX_NOTE`. Both `libre` and the 8 ids are valid markers for `merchantHistory` (`libre` never blocks itself: `allowedHeroIdeas` ignores it in `used`). New ideas are added later by appending to `V2_HERO_IDEAS` and dropping frames in `_heroes/` — no other code changes.
+
 - [ ] **Step 4: Wire it in**
 
 - `v2DirectionSchema`: in `hero.properties` add `idea: { type: 'string', enum: context.heroesAllowed ?? V2_HERO_IDEAS.map(h => h.id) }`, add `'idea'` to `hero.required`.
