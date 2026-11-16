@@ -201,7 +201,8 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
     if (covered.size >= 3) break;
     const range = document.createRange(); range.selectNodeContents(node);
     for (const first of Array.from(range.getClientRects()).filter(r => r.width >= 4 && r.height >= 4)) {
-      window.scrollTo(0, Math.max(0, window.scrollY + first.top - 100));
+      // Instant (Bake Lab r3: a page with html { scroll-behavior: smooth } was measured before it moved, so every sample missed).
+      window.scrollTo({ top: Math.max(0, window.scrollY + first.top - 100), behavior: 'instant' as ScrollBehavior });
       const r = Array.from(range.getClientRects()).find(rect => Math.abs(rect.left - first.left) < 1 && Math.abs(rect.width - first.width) < 1) ?? first;
       const y = r.top + r.height / 2;
       // Spec 2026-11-16 (Bake Lab r3: a 220 px cookie tower over the middle of a 900 px headline met one of five samples): nine
@@ -214,7 +215,7 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
       if (over.length >= 2 || wide) { covered.add(quote(owner)); coveredAt = coveredAt ?? owner; break; }
     }
   }
-  window.scrollTo(0, start);
+  window.scrollTo({ top: start, behavior: 'instant' as ScrollBehavior });
   if (over) push('decor-over-text', over.owner, `CONSEJO: La palabra decorativa ${quote(over.owner)} queda encima de textos de verdad: muévela a su propio espacio o deja el texto fuera de ella.`);
   if (covered.size) push('covered-text', coveredAt, `CONSEJO: Una foto tapa letras grandes (${[...covered].join('; ')}): el texto tiene que verse entero; dale su propio espacio o ponlo encima de la foto.`);
   // Owner 2026-11-14 («sections still look empty»): a section with a big empty block — at least 30% of its width, 300 px tall and 22% of
@@ -399,7 +400,8 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
     const media = (el: Element) => Boolean(el.querySelector('img,picture,video')) || [el, ...Array.from(el.querySelectorAll('*'))].some(node => /url\(/.test(getComputedStyle(node).backgroundImage));
     const painted = (el: Element) => { const s = getComputedStyle(el), c = rgb(s.backgroundColor); return (c.length >= 3 && (c[3] === undefined || c[3] > .5)) || parseFloat(s.borderTopWidth) >= 1; };
     let lone: Element | null = null;
-    for (const row of Array.from(main.querySelectorAll('div,ul,section'))) {
+    // A row can be any box (Bake Lab r3's category mosaic is a <nav> of links).
+    for (const row of Array.from(main.querySelectorAll('div,ul,ol,section,nav'))) {
       if (lone) break;
       if (row.closest(productish) || row.closest('header,footer')) continue;
       const tiles = Array.from(row.children).filter(child => { const r = child.getBoundingClientRect(); return visible(child) && r.width >= 120 && r.height >= 120; });

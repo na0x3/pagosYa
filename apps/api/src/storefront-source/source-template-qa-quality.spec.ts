@@ -30,6 +30,16 @@ describe('template rules: store quality 2026-11-16', () => {
     expect(found).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'covered-text', part: 1 })]));
   });
 
+  it('covered-text: also below the fold on a page that scrolls smoothly (Bake Lab r3: html { scroll-behavior: smooth })', async () => {
+    const found = await rules(1280, `<style>html{scroll-behavior:smooth}</style>${cover}
+      <section data-lb-at="1" style="height:1400px"></section>
+      <section data-lb-at="2" style="position:relative;text-align:center">
+        <h2 style="font-size:120px;margin:0;line-height:1">HASTA EL</h2>
+        <img src="${cutout}" alt="" style="position:absolute;left:50%;top:0;width:220px;height:240px;transform:translateX(-50%)">
+      </section>`);
+    expect(found).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'covered-text', at: 2 })]));
+  });
+
   const tile = (inner: string, paint = 'background:#6b7a4a') => `<div style="height:220px;${paint}">${inner}</div>`;
   it('photo-less-tile: painted tiles without a photo beside tiles with one (Bake Lab r3 «Combos», «Cajas»)', async () => {
     const found = await rules(1280, `${cover}
@@ -39,6 +49,16 @@ describe('template rules: store quality 2026-11-16', () => {
         ${tile('<b>Combos</b>')}${tile('<b>Cajas</b>')}
       </div></section>`);
     expect(found).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'photo-less-tile', part: 1, severity: 'advice' })]));
+  });
+  it('photo-less-tile: also in a category mosaic built as a <nav> of links (Bake Lab r3 nav.v2-category-mosaic)', async () => {
+    const link = (inner: string, paint = 'background:#6b7a4a') => `<a href="#" style="display:block;height:280px;${paint}">${inner}</a>`;
+    const found = await rules(1280, `${cover}
+      <section data-lb-at="1"><nav style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px">
+        ${link(`<img src="${picture}" style="width:100%;height:100%;object-fit:cover" alt=""><span>Galletas</span>`, 'height:576px')}
+        ${link(`<img src="${picture}" style="width:100%;height:100%;object-fit:cover" alt=""><span>Pastelería</span>`)}
+        ${link('<span>Combos</span>')}${link('<span>Cajas</span>')}
+      </nav></section>`);
+    expect(found).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'photo-less-tile', part: 1 })]));
   });
   it('photo-less-tile: not for a row where no tile has a photo, nor for product cards', async () => {
     const found = await rules(1280, `${cover}
