@@ -16,7 +16,7 @@ import { V2_LIBRARY_FILE, v2LibraryCss, v2LibrarySources } from './v2-library';
 /** what: what YAPI saw in it («lata Lemon · Ginger»), so a stage screen is named after what it shows. */
 export type V2Cutout = { path: string; product: string; name: string; width: number; height: number; what?: string };
 /** product: the photo is a copy of that product's own photo (same picture, another file), so it already shows in its card. */
-export type V2Photo = { path: string; width: number; height: number; shape: 'wide' | 'tall' | 'square'; product?: string };
+export type V2Photo = { path: string; width: number; height: number; shape: 'wide' | 'tall' | 'square'; product?: string; /** Shows words, a logo or packaging text: never cropped (2026-11-15). */ words?: boolean };
 export type V2Product = { id: string; name: string; category: string; about: string; photos: number };
 export type V2Context = {
   storeName: string; tagline: string; about: string; request: string; checkoutMode: string;

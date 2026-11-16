@@ -21,6 +21,7 @@ import { joinV2Parts, mergeV2Fix, readV2Part, v2Hint, v2Repairs, v2FixInput, v2F
 import type { V2File } from './v2-context';
 import { v2CartSheet } from './v2-kit-baseline';
 import { mergeSectionFix, sectionFixPlan, v2SectionFixInput, v2SectionFixPrompt, v2SectionFixSchema } from './v2-section-fix';
+import { wordsLookPrompt, wordsLookSchema } from './v2-words';
 import { allowedHeroIdeas, drawsLibre, heroIdea, readHeroMarker } from './v2-heroes';
 import { allowedMenus } from './v2-menus';
 import { freeBlocking, runV2Build, withContextMenu, type V2Attempt, type V2BuildDeps } from './v2-run';
@@ -227,6 +228,7 @@ export class SourceV2PrototypeService {
     files.push(...cut.files);
     context.cutouts = cut.cutouts;
     await this.markProductPhotos(files, context);
+    await this.markWordPhotos(storeId, files, context, state);
     const showcaseFiles = cut.cutouts.length >= 2 ? await readdir(join(referencesDir(), '_showcase')).then(names => Promise.all(names.filter(name => /\.jpe?g$/.test(name)).sort().slice(0, 6)
       .map(async name => ({ name, shot: { type: 'input_image', image_url: `data:image/jpeg;base64,${(await readFile(join(referencesDir(), '_showcase', name))).toString('base64')}`, detail: 'low' } as Content })))).catch(() => []) : [];
     const showcaseShots = showcaseFiles.map(entry => entry.shot);
@@ -397,6 +399,7 @@ export class SourceV2PrototypeService {
     files.push(...cut.files.filter(file => !files.some(known => known.path === file.path)));
     context.cutouts = cut.cutouts;
     await this.markProductPhotos(files, context);
+    await this.markWordPhotos(storeId, files, context, state);
     const model = this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol';
     state.model = model;
     const read = readV2LibraryFile(written.find(file => file.path === V2_LIBRARY_FILE)?.content ?? '');
@@ -552,6 +555,38 @@ export class SourceV2PrototypeService {
   /** Owner 2026-11-15 («there are some repeated things», Oh Belly rev 18): a store photo that is a product's own photo saved again
    *  (the can among lemons, the fridge, the gift boxes) already shows in that product's card; the writer is told so, and a store that
    *  has little else gets fewer chapters (freeMin) instead of the same picture three times. */
+  /** Owner 2026-11-15 (DooBoo r10): which store photos carry words, a logo or packaging text — one low-detail look for the photos not
+   *  seen yet, the answer kept per photo (cutoutsDir/<hash>.words.json) so later rounds and rebuilds never ask again. YAPI_V2_WORDS=0
+   *  skips; a failed look leaves the photos unmarked (nothing blocks). */
+  private async markWordPhotos(storeId: string, files: readonly { path: string; content: string; encoding?: 'utf8' | 'base64' }[], context: V2Context, state: V2RunState) {
+    if (process.env.YAPI_V2_WORDS === '0' || !context.photos.length) return;
+    const keyOf = (path: string) => { const file = files.find(entry => entry.path === path); return file ? createHash('sha256').update(file.content).digest('hex').slice(0, 24) : null; };
+    const unknown: V2Context['photos'] = [];
+    for (const photo of context.photos) {
+      const key = keyOf(photo.path);
+      const saved = key ? await readFile(join(cutoutsDir(), `${key}.words.json`), 'utf8').then(text => JSON.parse(text) as { words?: boolean }).catch(() => null) : null;
+      if (saved && typeof saved.words === 'boolean') photo.words = saved.words; else unknown.push(photo);
+    }
+    if (!unknown.length) return;
+    try {
+      const shots = (await Promise.all(unknown.slice(0, 16).map(async photo => ({ photo, url: await photoDataUrl(files as never, photo.path, 384) })))).filter(entry => entry.url);
+      if (!shots.length) return;
+      const model = this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol';
+      const raw = await this.call<{ words?: boolean[] }>(storeId, 'v2-words', model, wordsLookPrompt, shots.map(entry => ({ type: 'input_image', image_url: entry.url!, detail: 'low' } as Content)), wordsLookSchema(shots.length), 'v2_words', 2_000, state, 'low');
+      await mkdir(cutoutsDir(), { recursive: true });
+      await Promise.all(shots.map(async (entry, i) => {
+        const words = raw?.words?.[i];
+        if (typeof words !== 'boolean') return;
+        entry.photo.words = words;
+        const key = keyOf(entry.photo.path);
+        if (key) await writeFile(join(cutoutsDir(), `${key}.words.json`), JSON.stringify({ words }));
+      }));
+    } catch (error) {
+      if (spent(error)) throw error;
+      this.log.warn(JSON.stringify({ event: 'v2_words_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
+    }
+  }
+
   private async markProductPhotos(files: readonly { path: string; content: string; encoding?: 'utf8' | 'base64' }[], context: V2Context) {
     if (!this.uploads) return;
     const items = (readConfigData(files as never).data?.items ?? []) as Array<{ name: string; imageUrls?: unknown[] }>;

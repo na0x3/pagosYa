@@ -10,6 +10,8 @@ import { signatureDistance, type SectionShape } from './v2-signature';
 import { cardText, pickReferences, storeShapes } from './v2-references';
 import { buildV2Library, readV2LibraryFile, v2LibraryFile, withoutRepeatedPhotos, withUniquePhotos } from './v2-library';
 import { SourceV2PrototypeService } from './v2-prototype.service';
+import { cropShare, markWordPhotos } from './v2-words';
+import { FREE_BLOCKERS } from './v2-run';
 import { allowedHeroIdeas, drawsLibre, heroMarker, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
 import { existsSync as heroFrameExists } from 'node:fs';
 import { join as heroJoin } from 'node:path';
@@ -753,4 +755,25 @@ describe('v2 hero briefs (heroes plan 2026-11-15)', () => {
     expect(readHeroMarker(v2Repairs([{ ...home, content: `${heroMarker('laps')}\n${home.content}` }], { goods: '', ownIcons: true, heroIdea: 'hearthen' } as never).files[0].content)).toBe('hearthen');
   });
 
+});
+
+describe('v2 photos with words (owner 2026-11-15: DooBoo hero cut through its words)', () => {
+  it('measures how much of a photo a box cuts; contain never cuts', () => {
+    expect(cropShare({ w: 800, h: 1000 }, { w: 400, h: 500 }, 'cover')).toBe(0);
+    expect(cropShare({ w: 800, h: 1000 }, { w: 500, h: 400 }, 'contain')).toBe(0);
+    expect(cropShare({ w: 800, h: 1000 }, { w: 500, h: 400 }, 'cover')).toBeCloseTo(0.36, 2);   // shown 500×625 of which 500×400
+  });
+  it('marks the images that show a photo with words', () => {
+    expect(markWordPhotos('<img src="assets/a.jpg" alt="x" /><img src="assets/b.jpg" alt="y" />', new Set(['assets/a.jpg'])))
+      .toBe('<img src="assets/a.jpg" data-pagosya-words alt="x" /><img src="assets/b.jpg" alt="y" />');
+  });
+  it('a cropped photo with words blocks a free-mode build', () => {
+    expect(FREE_BLOCKERS.has('cropped-words')).toBe(true);
+  });
+  it('tells the direction which photos have words and marks them in the repairs', () => {
+    const ctx = { ...context, photos: [{ ...context.photos[0], words: true }] } as V2Context;
+    expect(v2DirectionInput(ctx)).toMatch(/tiene letras: muéstrala ENTERA/);
+    const home = { path: 'components/home.tsx' as const, content: `export default function Home(){ return <main><img src="${ctx.photos[0].path}" alt="x" /></main>; }` };
+    expect(v2Repairs([home], { goods: '', ownIcons: true, photos: ctx.photos } as never).files[0].content).toMatch(/data-pagosya-words/);
+  });
 });

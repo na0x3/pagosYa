@@ -288,6 +288,15 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
       .filter(({ r }) => r.height > 820 || (r.width > 760 && r.height > 520) || (r.width <= 760 && r.width * r.height > 500_000));
     if (huge.length) push('huge-photo', huge[0].el, `CONSEJO: Fotos demasiado grandes (${huge.slice(0, 3).map(({ r }) => `${Math.round(r.width)}×${Math.round(r.height)} px`).join(', ')}): en escritorio una foto mide como mucho unos 720 px de ancho y 780 de alto, y una banda a todo el ancho 480 px de alto. Achícala y deja que la letra y la composición hagan el trabajo.`);
   }
+  // Owner 2026-11-15 (DooBoo r10): a photo with words (marked data-pagosya-words by the V2 repairs) is never cropped; the arithmetic
+  // is v2-words.ts cropShare, repeated here because rules run inside the page.
+  const croppedWords = Array.from(document.querySelectorAll('main img[data-pagosya-words]')).map(el => {
+    const img = el as HTMLImageElement, r = img.getBoundingClientRect(), fit = getComputedStyle(img).objectFit;
+    const scale = Math.max(r.width / (img.naturalWidth || 1), r.height / (img.naturalHeight || 1));
+    const share = fit === 'cover' && img.naturalWidth && img.naturalHeight ? 1 - (r.width * r.height) / (img.naturalWidth * scale * img.naturalHeight * scale) : 0;
+    return { img, share };
+  }).filter(({ share }) => share > 0.06);
+  if (croppedWords.length) push('cropped-words', croppedWords[0].img, `BLOQUEA: Una foto con letras quedó cortada (${(croppedWords[0].img.getAttribute('src') || '').split('/').pop()}): muéstrala entera — en su propio formato (aspect-ratio de la foto) o con objectFit: 'contain' sobre un fondo de la paleta.`);
   // Owner 2026-11-14 («sometimes it's too white»): a home that is mostly pale paper — five light sections in a row, or more than 70% of
   // them light. Calibrated: V2 Gramiyaa r3 (liked; longest light run 4, 64% light) passes; Gramiyaa r5 (10 light in a row) and NOA r6
   // (77% light) do not; Meat House r7 (dark, red and light bands) passes.

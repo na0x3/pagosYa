@@ -5,6 +5,7 @@ import { repairNextAuthoredMarkup } from '../source-next';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import { V2_FILES, type V2Context, type V2File } from './v2-context';
 import { menuProblems, V2_MENU_MODELS, v2MenuSchema, type V2Menu } from './v2-menus';
+import { markWordPhotos } from './v2-words';
 import { heroIdea, heroMarker, MIX_NOTE, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
 import { readV2LibraryFile, V2_HERO_TYPES, V2_KIT_TEXT, V2_LIBRARY_FILE, v2LibraryCatalogText, v2LibrarySchema, type V2LibraryEntry } from './v2-library';
 export { mergeV2LibraryEntries } from './v2-library';
@@ -53,7 +54,7 @@ ${context.products.map(product => `- ${product.id} · ${product.name} · ${produ
 MODO DE PAGO: ${context.checkoutMode || '(no dicho)'}${context.whatsapp ? ' · tiene WhatsApp' : ''} · PACKS ACTIVOS: ${context.packs}${context.packs ? '' : ' (no hagas una sección de packs)'}
 LUGARES: ${context.places.length ? context.places.map(place => `\n- ${place}`).join('') : '(ninguno: la tienda es solo en línea)'}
 FOTOS DE LA TIENDA (ruta · tamaño · forma), en el mismo orden que las imágenes adjuntas:
-${context.photos.map(photo => `- ${photo.path} · ${photo.width}×${photo.height} · ${photo.shape}${photo.product ? ` · es la foto del producto «${photo.product}» (ya sale en su tarjeta)` : ''}`).join('\n') || '(ninguna)'}${context.cutouts?.length ? `
+${context.photos.map(photo => `- ${photo.path} · ${photo.width}×${photo.height} · ${photo.shape}${photo.product ? ` · es la foto del producto «${photo.product}» (ya sale en su tarjeta)` : ''}${photo.words ? ' · tiene letras: muéstrala ENTERA, nunca recortada' : ''}`).join('\n') || '(ninguna)'}${context.cutouts?.length ? `
 RECORTES (fotos sin fondo; ruta · id del producto o «—» si es una foto de la tienda · nombre · tamaño):
 ${context.cutouts.map(cut => `- ${cut.path} · ${cut.product || '—'} · ${cut.name}${cut.what ? ` · muestra: ${cut.what}` : ''} · ${cut.width}×${cut.height}`).join('\n')}` : ''}`;
 
@@ -671,6 +672,8 @@ export function v2Repairs(files: readonly V2File[], header?: Pick<V2Context, 'go
     content = oneContactForm(content, repairs, file.path);
     content = kineticText(content, repairs, file.path);
     if (file.path === 'components/home.tsx' && header?.photos) content = oncePhotos(content, header, repairs);
+    // Photos with words are marked so the page rule «cropped-words» can measure them (2026-11-15).
+    if (header?.photos) content = markWordPhotos(content, new Set(header.photos.filter(photo => photo.words).map(photo => photo.path)));
     // The home carries its hero idea (heroes plan 2026-11-15), so the merchant's next store starts from another one.
     if (file.path === 'components/home.tsx' && header?.heroIdea && readHeroMarker(content) !== header.heroIdea) content = `${heroMarker(header.heroIdea)}\n${content.replace(/^\/\/ @pagosya-hero [a-z]+\s*\n/m, '')}`;
     content = kitPropsOnly(content, repairs, file.path);
