@@ -1,0 +1,38 @@
+/* The new pagosYa site's look (Clyro) on the whole panel, the login and YAPI's welcome — spec
+   docs/superpowers/specs/2026-11-16-dashboard-clyro-design.md, values from pagosYaWeb globals.css `.cl`. Linked after every other
+   sheet: it remaps the tokens calm.css and premium.css set, then restyles what reads no token. Studio is untouched. */
+@font-face { font-family: "Bricolage Grotesque"; src: url("/fonts/bricolage-grotesque.woff2") format("woff2"); font-weight: 200 800; font-display: swap; }
+@font-face { font-family: "Onest"; src: url("/fonts/onest.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+
+/* ── Tokens ────────────────────────────────────────────
+   Green and red stay the site's for dots and fills; text uses the darker -text shades, which read at 4.5:1 on cream and white. */
+body.is-logged-in, body.is-logged-out {
+  --cl-paper: #fdfcf6; --cl-ink: #17191c; --cl-ink-soft: #5d6066; --cl-text-faint: #6b6d72; --cl-line: #e7e5dc; --cl-slate: #233a4a;
+  --cl-night: #15191c; --cl-yellow: #ffd82f; --cl-surface: #ffffff;
+  --cl-green: #3f9d6b; --cl-green-text: #2c7550; --cl-green-soft: #e6f3ec;
+  --cl-red: #d9534f; --cl-red-text: #b13a36; --cl-red-soft: #fbeceb;
+  --cl-ease: cubic-bezier(.22,1,.36,1);
+  --cl-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --cl-body: "Onest", ui-sans-serif, system-ui, sans-serif;
+  --cl-wash: radial-gradient(60% 55% at 12% 30%, #dcefe4 0%, transparent 70%), radial-gradient(55% 60% at 88% 22%, #f9e7da 0%, transparent 70%),
+    radial-gradient(70% 50% at 50% 80%, #f6e1d3 0%, transparent 75%), #fdfcf6;
+  --cl-shadow: 0 1px 2px rgb(23 25 28 / .04), 0 10px 30px -22px rgb(23 25 28 / .22);
+  --cl-shadow-float: 0 10px 30px -18px rgb(23 25 28 / .35), 0 2px 8px rgb(23 25 28 / .05);
+}
+body.is-logged-in {
+  --pg-font-sans: var(--cl-body); --pm-serif: var(--cl-display); --pm-ease: var(--cl-ease);
+  --pm-bg: var(--cl-paper); --pm-glass: rgb(253 252 246 / .8); --pm-glass-strong: rgb(253 252 246 / .94); --pm-glass-edge: var(--cl-line);
+  --pm-shadow-card: var(--cl-shadow); --pm-shadow-float: var(--cl-shadow-float); --pm-shadow-lift: var(--cl-shadow);
+  --pm-hover: rgb(23 25 28 / .06); --pm-active: rgb(23 25 28 / .08); --pm-field: var(--cl-surface);
+  --pg-bg: var(--cl-paper); --pg-surface: var(--cl-surface); --pg-surface-raised: var(--cl-surface); --pg-surface-muted: #f4f2ea; --workspace-sidebar: transparent;
+  --pg-text: var(--cl-ink); --pg-text-muted: var(--cl-ink-soft); --pg-text-faint: var(--cl-text-faint);
+  --pg-border: var(--cl-line); --pg-border-strong: #d6d3c6;
+  --pg-ink: var(--cl-ink); --pg-ink-hover: #000; --pg-accent: var(--cl-ink); --pg-accent-soft: rgb(23 25 28 / .06);
+  --pg-brand: var(--cl-ink); --pg-brand-hover: #000; --pg-brand-text: #fff;
+  --pg-success: var(--cl-green-text); --pg-success-soft: var(--cl-green-soft); --pg-error: var(--cl-red-text); --pg-error-soft: var(--cl-red-soft);
+  --pg-warning: #8a5a12; --pg-warning-soft: #fbf1df;
+  --pg-focus-ring: rgb(23 25 28 / .18);
+  --calm-radius: 20px; --calm-radius-sm: 12px; --calm-shadow: var(--cl-shadow); --calm-shadow-lg: var(--cl-shadow-float);
+  background: var(--cl-paper); background-attachment: scroll; color: var(--cl-ink); font-family: var(--cl-body);
+}
+html:has(> body.is-logged-in), html:has(> body.is-logged-out) { background: #fdfcf6; }

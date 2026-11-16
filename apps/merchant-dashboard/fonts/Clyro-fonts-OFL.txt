@@ -1,0 +1,10 @@
+Fonts for the Clyro look (spec docs/superpowers/specs/2026-11-16-dashboard-clyro-design.md), latin subset, variable weight.
+
+bricolage-grotesque.woff2 — Bricolage Grotesque, (c) The Bricolage Grotesque Project Authors.
+  From @fontsource-variable/bricolage-grotesque@5.3.0:
+  https://cdn.jsdelivr.net/npm/@fontsource-variable/bricolage-grotesque@5.3.0/files/bricolage-grotesque-latin-wght-normal.woff2
+onest.woff2 — Onest, (c) The Onest Project Authors.
+  From @fontsource-variable/onest@5.3.1:
+  https://cdn.jsdelivr.net/npm/@fontsource-variable/onest@5.3.1/files/onest-latin-wght-normal.woff2
+
+Both are licensed under the SIL Open Font License, Version 1.1 — https://openfontlicense.org
