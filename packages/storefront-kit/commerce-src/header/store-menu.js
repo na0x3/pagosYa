@@ -16,14 +16,18 @@
     .pym-top{display:inline-flex;align-items:center;min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;font-size:13px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;cursor:pointer}
     /* A menu group with one page (Nosotros) is a link, not a button: same line and look as its neighbours (owner 2026-11-13). */
     .pym-top[aria-expanded="true"]{text-decoration:underline;text-underline-offset:6px}
-    .pym-panel{position:absolute;left:0;right:0;top:100%;z-index:40;max-height:calc(100dvh - 72px);overflow:auto;padding:24px max(20px,calc((100% - 1280px)/2));background:var(--store-background,#fff);color:var(--store-foreground,#111);border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);box-shadow:0 24px 48px -24px rgb(0 0 0 / .25);text-align:left;animation:pym-in .18s ease-out}
+    .pym-panel{position:absolute;left:0;right:0;top:100%;z-index:40;max-height:calc(100dvh - 72px);overflow:auto;padding:24px max(20px,calc((100% - 1280px)/2));background:var(--store-background,var(--kit-paper,#fff));color:var(--store-foreground,var(--kit-ink,#111));border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);box-shadow:0 24px 48px -24px rgb(0 0 0 / .25);text-align:left;animation:pym-in .18s ease-out}
     .pym-panel[hidden],.pym-group[hidden]{display:none!important}
     @keyframes pym-in{from{opacity:0;transform:translateY(-6px)}}
     @media (prefers-reduced-motion: reduce){.pym-panel{animation:none}}
     .pym-tabs{display:flex;width:max-content;max-width:100%;margin:0 0 20px;border:1px solid currentColor}
+    /* Owner 2026-11-16 (Bake Lab phone: «COM-PRAR», «DESA-YUNA-R»): tab names never break; a row too wide scrolls sideways and stays
+       clear of the close button. */
+    .pym-tabs{overflow-x:auto;scrollbar-width:none}.pym-tabs::-webkit-scrollbar{display:none}
+    .pym-panel:is([data-mode=panel],[data-model=overlay],[data-model=split],[data-model=drawer]) .pym-tabs{max-width:calc(100% - 52px)}
     .pym-panel[data-mode="dropdown"] .pym-tabs,.pym-tabs[data-single]{display:none}
-    .pym-tab{min-height:44px;padding:10px 20px;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
-    .pym-tab[aria-selected="true"]{background:var(--store-foreground,#111);color:var(--store-background,#fff)}
+    .pym-tab{flex:none;white-space:nowrap;min-height:44px;padding:10px 20px;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+    .pym-tab[aria-selected="true"]{background:var(--store-foreground,var(--kit-ink,#111));color:var(--store-background,var(--kit-paper,#fff))}
     .pym-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 32px;margin:0;padding:0;list-style:none}
     .pym-links a{display:flex;align-items:center;min-height:44px;color:inherit;font-size:15px;text-decoration:none}
     .pym-links a:hover{text-decoration:underline;text-underline-offset:5px}
@@ -33,16 +37,16 @@
     .pym-tiles a{display:grid;gap:8px;color:inherit;font-size:14px;text-decoration:none}
     .pym-tiles img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover}
     .pym-price{font-size:13px;opacity:.75}
-    .pym-footer{display:flex;align-items:center;justify-content:center;min-height:52px;margin-top:24px;background:var(--store-foreground,#111);color:var(--store-background,#fff);font-size:13px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none}
+    .pym-footer{display:flex;align-items:center;justify-content:center;min-height:52px;margin-top:24px;background:var(--store-foreground,var(--kit-ink,#111));color:var(--store-background,var(--kit-paper,#fff));font-size:13px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none}
     .pym-extras{display:flex;flex-wrap:wrap;gap:4px 24px;margin-top:20px;padding-top:16px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
     .pym-extras a{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-size:14px}
     /* Owner 2026-10-29 («a little menu with the accent of the brand colors, font»): the menu wears the brand where the store sets it. */
-    .pym-panel{background:var(--store-surface,var(--store-background,#fff));border-top:3px solid var(--store-accent,currentColor)}
-    .pym-tab[aria-selected="true"]{background:var(--store-accent,var(--store-foreground,#111));color:var(--store-on-accent,var(--store-background,#fff))}
-    .pym-links a{font-family:var(--store-heading-font,inherit);font-size:19px}
-    .pym-links a:hover{color:var(--store-accent,inherit)}
-    .pym-tiles a{font-family:var(--store-heading-font,inherit)}
-    .pym-footer{background:var(--store-accent,var(--store-foreground,#111));color:var(--store-on-accent,var(--store-background,#fff))}
+    .pym-panel{background:var(--store-surface,var(--kit-paper,var(--store-background,var(--kit-paper,#fff))));border-top:3px solid var(--store-accent,var(--kit-accent,currentColor))}
+    .pym-tab[aria-selected="true"]{background:var(--store-accent,var(--kit-accent,var(--store-foreground,var(--kit-ink,#111))));color:var(--store-on-accent,var(--kit-on-accent,var(--store-background,var(--kit-paper,#fff))))}
+    .pym-links a{font-family:var(--store-heading-font,var(--kit-display,inherit));font-size:19px}
+    .pym-links a:hover{color:var(--store-accent,var(--kit-accent,inherit))}
+    .pym-tiles a{font-family:var(--store-heading-font,var(--kit-display,inherit))}
+    .pym-footer{background:var(--store-accent,var(--kit-accent,var(--store-foreground,var(--kit-ink,#111))));color:var(--store-on-accent,var(--kit-on-accent,var(--store-background,var(--kit-paper,#fff))))}
     .pym-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
     @media (min-width:861px){
       [data-store-menu="dropdowns"][data-store-menu-links] [data-pagosya-store-menu="toggle"]{display:none}

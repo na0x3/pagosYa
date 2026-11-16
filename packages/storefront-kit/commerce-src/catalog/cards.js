@@ -189,6 +189,10 @@
   function labelDecoratedAddButtons() {
     document.querySelectorAll('.menu-add[data-add]').forEach(button => {
       if ((button.textContent || '').trim() || !button.querySelector('svg')) return;
+      // Owner 2026-11-16 («que adentro del product card tenga iconos como antes»): a V2 card asks for a word with a hidden «+» marker;
+      // it gets the bag and «Agregar», the atelier card's button, instead of the bare word.
+      const marker = getComputedStyle(button, '::before');
+      if (marker.display === 'none' && /^["']\+["']$/.test(marker.content)) { button.innerHTML = `${BAG_ICON}<span>Agregar</span>`; return; }
       if (['::before', '::after'].some(pseudo => /^["'].*\S.*["']$/.test(getComputedStyle(button, pseudo).content))) button.textContent = 'Añadir';
     });
   }
