@@ -39,6 +39,7 @@ import { createHash } from 'node:crypto';
 import sharp from 'sharp';
 import { productCutout } from '../source-photo-cutout';
 import { uploadPath } from '../source-product-photos';
+import { matchSector, photoLibraryDir, planLibraryTopUp, readPhotoLibrary } from './v2-photo-library';
 import { layoutSignature, signatureDistance, type SectionShape } from './v2-signature';
 
 /** V2 prototype (docs/superpowers/specs/2026-11-14-v2-prototype-design.md): an AI-written home + product page for one store, built in
@@ -232,6 +233,10 @@ export class SourceV2PrototypeService {
     const cut = await stage('cutouts', () => this.productCutouts(storeId, files, this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol', state), result => result.cutouts.length);
     files.push(...cut.files);
     context.cutouts = cut.cutouts;
+    const libraryPhotos = await this.topUpLibraryPhotos(merchantId, storeId, files).catch(error => {
+      this.log.warn(JSON.stringify({ event: 'v2_library_photos_failed', storeId, error: String((error as Error)?.message ?? error) }));
+      return { added: 0, sector: null as string | null };
+    });
     const own = await this.storePhotos(merchantId, storeId, files);
     files.push(...own.files);
     context.photos.push(...own.photos);
@@ -380,6 +385,7 @@ export class SourceV2PrototypeService {
     const saved = await stage('save', () => this.save(merchantId, storeId, revision, built.input, built.snapshot, model, Date.now() - started, built.attempts));
     state.revision = saved.revision; state.status = 'DONE';
     await this.postLookDone(storeId, state, saved.revision);
+    if (libraryPhotos.added) await this.postChat(storeId, `Agregué ${libraryPhotos.added} fotos de ambiente de nuestra biblioteca; puedes cambiarlas o quitarlas en Tienda › Medios.`, { libraryPhotos });
     this.log.log(JSON.stringify({ event: 'v2_prototype', storeId, baseRevision: revision, revision: saved.revision, ms: Date.now() - started, usd: state.usd,
       attempts: built.attempts.map(attempt => attempt.outcome), distanceFromTemplate: checks.distanceFromTemplate, blocking: checks.rules.map(rule => rule.blocking.length) }));
   }
@@ -596,6 +602,40 @@ export class SourceV2PrototypeService {
       if (spent(error)) throw error;
       this.log.warn(JSON.stringify({ event: 'v2_words_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
     }
+  }
+
+  /** Spec 2026-11-16 store quality, Part 1 (owner «Curated library»): a store with fewer than 12 usable photos of its own gets
+   *  photos of its kind of business from the library, once — copied into its uploads like any photo the merchant adds, so
+   *  storePhotos, the section library and the merchant's Medios tab all see them. No sector match, no photos. */
+  private async topUpLibraryPhotos(merchantId: string, storeId: string, files: readonly { path: string; content: string }[], dir = photoLibraryDir()) {
+    if (!this.uploads) return { added: 0, sector: null as string | null };
+    const store = await this.prisma.store.findUnique({ where: { id: storeId }, select: { onboarding: true } });
+    const onboarding = (store?.onboarding ?? {}) as Record<string, unknown> & { what?: string; libraryPhotos?: unknown };
+    const assets = await this.prisma.mediaAsset.findMany({ where: { merchantId, storeId, mimeType: { in: ['image/jpeg', 'image/png', 'image/webp'] } }, select: { url: true }, take: 80 });
+    let usable = 0;
+    for (const asset of assets) {
+      const filename = /([\w-]+\.(?:png|jpe?g|webp))$/i.exec(asset.url)?.[1];
+      const bytes = filename ? await this.uploads.getBuffer(filename).catch(() => null) : null;
+      const meta = bytes ? await sharp(bytes).metadata().catch(() => null) : null;
+      if (meta?.width && meta.height && Math.max(meta.width, meta.height) >= 400) usable++;
+    }
+    const want = planLibraryTopUp({ usable, already: Boolean(onboarding.libraryPhotos) });
+    if (!want) return { added: 0, sector: null as string | null };
+    const data = (readConfigData(files as never).data ?? {}) as { categories?: Array<{ name?: string }>; items?: Array<{ name?: string }> };
+    const words = [onboarding.what ?? '', ...(data.categories ?? []).map(c => c.name ?? ''), ...(data.items ?? []).map(i => i.name ?? '')].join(' · ');
+    const sector = matchSector(words, await readPhotoLibrary(dir));
+    if (!sector) return { added: 0, sector: null as string | null };
+    let added = 0;
+    for (const photo of sector.photos.slice(0, want)) {
+      const bytes = await readFile(join(sector.dir, photo.file)).catch(() => null);
+      if (!bytes) continue;
+      const mime = /\.png$/i.test(photo.file) ? 'image/png' : /\.webp$/i.test(photo.file) ? 'image/webp' : 'image/jpeg';
+      const asset = await this.uploads.saveBuffer(bytes, mime);
+      await this.prisma.mediaAsset.create({ data: { merchantId, storeId, url: asset.url, storageKey: asset.filename, mimeType: asset.mimeType, byteSize: asset.byteSize } });
+      added++;
+    }
+    await this.prisma.store.update({ where: { id: storeId }, data: { onboarding: { ...onboarding, libraryPhotos: { sector: sector.sector, count: added, at: new Date().toISOString() } } as never } });
+    return { added, sector: sector.sector };
   }
 
   /** Owner 2026-11-16 (The Bake Lab: «too few pictures, only the product photos»): a V2 design only had the photos bundled in its
