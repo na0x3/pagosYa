@@ -14,6 +14,7 @@ import { privacy } from './privacy';
 import { sourcePreviewDocument, receivePreviewNavigation, type SourceSnapshot, type PreviewNavigation, hostedImageUrls, hostedCatalogImages } from '@pagosya/storefront-preview';
 import { API_BASE_URL, type Store } from './api';
 import { sourceVisitorId, rememberSourceVisit, sourceVisitToken } from './source-attribution';
+import { readRecent, rememberRecent, sellingConfig } from './selling-config';
 import { storePartnerCode } from './partner-referral';
 
 type Cadence = 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
@@ -122,7 +123,9 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   if (!config) throw new Error('No se pudo cargar la configuración de esta tienda.');
   const match = config.content.match(/^\s*window\.PAGOSYA_CONFIG\s*=\s*([\s\S]*?);?\s*$/);
   const settings = match ? JSON.parse(match[1]) : {};
-  config.content = `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...settings, demo: false, slug, data: store, apiBaseUrl: API_BASE_URL, checkoutOrigin: location.origin })};`;
+  // «La tienda que vende sola» (spec 2026-11-16): this visitor's selling switches and what they looked at before (owner previews: neither).
+  const selling = merchantPreview ? {} : sellingConfig(site, readRecent(slug));
+  config.content = `window.PAGOSYA_CONFIG = ${JSON.stringify({ ...settings, demo: false, slug, data: store, apiBaseUrl: API_BASE_URL, checkoutOrigin: location.origin, ...selling })};`;
   // Mount immediately: photos load lazily from the platform's upload directory, the one image source the sandbox allows.
   const { snapshot: prepared, imageSource } = hostedImageUrls(API_BASE_URL)(snapshot);
   if (!document.querySelector('link[rel=canonical]')) document.title = store.storeName;
@@ -211,7 +214,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
     // Spec 2026-11-10 rasca y elige: the frame cannot keep the shopper's favourite; this page does, and hands it back on every page.
     if (data?.type === 'pagosya:favourite') { if (typeof data.id === 'string' && data.id.length <= 140) { try { localStorage.setItem(`pagosya:fav:${slug}`, data.id); } catch {} } return; }
     if (data?.type === 'pagosya:funnel') return; // Older kits still post steps; the steps arrive as pagosya:analytics.
-    if (data?.type === 'pagosya:analytics') { if (Array.isArray(data.events)) data.events.slice(0, 40).forEach(analytics.record); return; }
+    if (data?.type === 'pagosya:analytics') { if (Array.isArray(data.events)) { data.events.slice(0, 40).forEach(analytics.record); if (!merchantPreview) rememberRecent(slug, data.events.slice(0, 40)); } return; }
     // The merchant's ad tags live on this page (overnight 2026-10-29); the sandboxed kit hands its pixel events up here.
     if (data?.type === 'pagosya:pixel') { if (!merchantPreview) forwardPixelEvent(data, window as unknown as Parameters<typeof forwardPixelEvent>[1]); return; }
     if (data?.type === 'pagosya:source-external' && typeof data.url === 'string') {
