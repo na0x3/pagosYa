@@ -2,7 +2,7 @@
 
 Date: 2026-11-16 · Owner decisions 2026-11-15: option A (small automatic changes, each kept only if it sells more, weekly summary +
 undo); first version = changes 1, 2, 5, 7, 12, 14; a dashboard catalogue of one-click YAPI jobs like Amboras's card («Homepage design ·
-56 min · 500 credits»). Status: DRAFT for the owner's review — nothing built.
+56 min · 500 credits»). Status: APPROVED by the owner 2026-11-16 («yes» to all three open questions: ≥5% over 14 days/300 visits, «Mejora automática» on by default, the draft credit prices) — not built yet.
 
 ## Part 1 — La tienda que vende sola
 
