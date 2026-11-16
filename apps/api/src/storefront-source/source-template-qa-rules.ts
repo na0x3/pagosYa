@@ -393,5 +393,23 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
     const wide = Array.from(document.querySelectorAll('main *, footer *')).find(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.right > window.innerWidth + 1 && !held(el); });
     push('h-overflow', wide, `BLOQUEA: La página se mueve de lado (${document.documentElement.scrollWidth} px en una pantalla de ${window.innerWidth} px)${wide ? `: ${(wide.textContent || '').trim() ? quote(wide) : `<${wide.tagName.toLowerCase()}>`} sale del ancho` : ''}. Nada puede pasar del ancho de la pantalla.`);
   }
+  // Spec 2026-11-16 store quality (Bake Lab r3 «Combos», «Cajas»): in a row of three or more tiles, a painted tile without a photo
+  // while its neighbours have one looks unfinished.
+  {
+    const media = (el: Element) => Boolean(el.querySelector('img,picture,video')) || [el, ...Array.from(el.querySelectorAll('*'))].some(node => /url\(/.test(getComputedStyle(node).backgroundImage));
+    const painted = (el: Element) => { const s = getComputedStyle(el), c = rgb(s.backgroundColor); return (c.length >= 3 && (c[3] === undefined || c[3] > .5)) || parseFloat(s.borderTopWidth) >= 1; };
+    let lone: Element | null = null;
+    for (const row of Array.from(main.querySelectorAll('div,ul,section'))) {
+      if (lone) break;
+      if (row.closest(productish) || row.closest('header,footer')) continue;
+      const tiles = Array.from(row.children).filter(child => { const r = child.getBoundingClientRect(); return visible(child) && r.width >= 120 && r.height >= 120; });
+      if (tiles.length < 3) continue;
+      const heights = tiles.map(t => t.getBoundingClientRect().height);
+      if (Math.max(...heights) > 2.2 * Math.min(...heights)) continue;
+      const bare = tiles.filter(t => !media(t) && painted(t));
+      if (bare.length && tiles.some(media)) lone = bare[0];
+    }
+    if (lone) push('photo-less-tile', lone, `CONSEJO: La tarjeta ${quote(lone)} es un bloque de color sin foto junto a otras con foto: dale una foto de la tienda que aún no uses, igual que a sus vecinas.`);
+  }
   return out;
 }

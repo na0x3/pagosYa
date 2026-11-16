@@ -29,4 +29,25 @@ describe('template rules: store quality 2026-11-16', () => {
       </section>`);
     expect(found).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'covered-text', part: 1 })]));
   });
+
+  const tile = (inner: string, paint = 'background:#6b7a4a') => `<div style="height:220px;${paint}">${inner}</div>`;
+  it('photo-less-tile: painted tiles without a photo beside tiles with one (Bake Lab r3 «Combos», «Cajas»)', async () => {
+    const found = await rules(1280, `${cover}
+      <section data-lb-at="1"><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        ${tile(`<img src="${picture}" style="width:100%;height:100%;object-fit:cover" alt=""><b>Galletas</b>`)}
+        ${tile(`<img src="${picture}" style="width:100%;height:100%;object-fit:cover" alt=""><b>Pastelería</b>`)}
+        ${tile('<b>Combos</b>')}${tile('<b>Cajas</b>')}
+      </div></section>`);
+    expect(found).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'photo-less-tile', part: 1, severity: 'advice' })]));
+  });
+  it('photo-less-tile: not for a row where no tile has a photo, nor for product cards', async () => {
+    const found = await rules(1280, `${cover}
+      <section data-lb-at="1"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">${tile('<b>Uno</b>')}${tile('<b>Dos</b>')}${tile('<b>Tres</b>')}</div></section>
+      <section data-lb-at="2"><div data-pagosya-catalog style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <article class="menu-item" style="height:240px"><img src="${picture}" style="width:100%" alt=""></article>
+        <article class="menu-item" style="height:240px;background:#eee">Sin foto</article>
+        <article class="menu-item" style="height:240px"><img src="${picture}" style="width:100%" alt=""></article>
+      </div></section>`);
+    expect(found.find(f => f.rule === 'photo-less-tile')).toBeUndefined();
+  });
 });
