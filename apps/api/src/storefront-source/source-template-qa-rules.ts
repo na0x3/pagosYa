@@ -427,5 +427,37 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
     };
     if (actions.length && !actions.some(boxed)) push('hero-actions', actions[0], `CONSEJO: En la portada ${quote(actions[0])} es una palabra con raya, no un botón: dale forma de botón (fondo o borde, minHeight 44 px, padding 0 22px) y deja como texto solo una acción secundaria.`);
   }
+  // Spec 2026-11-16 store quality (NOA r2 «01 Conversación», Bake Lab r2 «Para llevar a la mesa»): tall tiles whose words sit at
+  // the top and the bottom with a big empty gap between — at least 140 px and 45% of the tile — in half the row or more.
+  {
+    const marks = (tile: Element) => {
+      const rects: DOMRect[] = [];
+      const walker = document.createTreeWalker(tile, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (!(node.textContent || '').trim()) continue;
+        const range = document.createRange(); range.selectNodeContents(node);
+        rects.push(...Array.from(range.getClientRects()));
+      }
+      for (const el of Array.from(tile.querySelectorAll('img,video,svg,picture,input,textarea,select,button'))) rects.push(el.getBoundingClientRect());
+      return rects.filter(r => r.width > 0 && r.height > 0).sort((a, b) => a.top - b.top);
+    };
+    const gap = (tile: Element) => {
+      const box = tile.getBoundingClientRect();
+      if (/url\(/.test(getComputedStyle(tile).backgroundImage)) return 0;
+      let edge = box.top, widest = 0;
+      for (const m of marks(tile)) { widest = Math.max(widest, m.top - edge); edge = Math.max(edge, m.bottom); }
+      return Math.max(widest, box.bottom - edge);
+    };
+    let hollow: Element | null = null;
+    for (const row of Array.from(main.querySelectorAll('div,ul,section'))) {
+      if (hollow) break;
+      if (row.closest(productish) || row.closest('header,footer')) continue;
+      const tiles = Array.from(row.children).filter(child => { const r = child.getBoundingClientRect(); return visible(child) && r.width >= 120 && r.height >= 220; });
+      if (tiles.length < 3) continue;
+      const empty = tiles.filter(t => { const g = gap(t), h = t.getBoundingClientRect().height; return g >= 140 && g >= .45 * h; });
+      if (empty.length >= Math.ceil(tiles.length / 2)) hollow = empty[0];
+    }
+    if (hollow) push('hollow-tiles', hollow, `CONSEJO: Tarjetas altas casi vacías (${quote(hollow)}): las palabras quedan arriba y abajo con un hueco grande en medio. Hazlas más bajas, junta el texto o pon una foto en el hueco.`);
+  }
   return out;
 }

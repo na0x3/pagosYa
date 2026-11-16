@@ -64,4 +64,19 @@ describe('template rules: store quality 2026-11-16', () => {
         <a href="#">Ver cómo se hace</a><img src="${picture}" width="600" height="400" alt=""></section>`);
     expect(found.find(f => f.rule === 'hero-actions')).toBeUndefined();
   });
+
+  const stepTile = (n: string, title: string) => `<div style="height:420px;display:flex;flex-direction:column;justify-content:space-between;background:#8a2533;color:#fff;padding:24px"><b style="font-size:64px">${n}</b><span style="font-size:24px">${title}</span></div>`;
+  it('hollow-tiles: tall tiles with the number on top, the title at the bottom and nothing between (NOA r2)', async () => {
+    const found = await rules(1280, `${cover}
+      <section data-lb-at="1"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0">${stepTile('01', 'Conversación')}${stepTile('02', 'Construcción')}${stepTile('03', 'Pruebas')}</div></section>`);
+    expect(found).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'hollow-tiles', part: 1 })]));
+  });
+  it('hollow-tiles: photo tiles and short tiles pass', async () => {
+    const found = await rules(1280, `${cover}
+      <section data-lb-at="1"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        ${[1, 2, 3].map(() => `<div style="height:420px;position:relative"><img src="${picture}" style="width:100%;height:100%;object-fit:cover" alt=""><b style="position:absolute;bottom:12px;left:12px">Uno</b></div>`).join('')}
+      </div></section>
+      <section data-lb-at="2"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">${[1, 2, 3].map(n => `<div style="height:160px;background:#eee;padding:16px"><b>${n}</b><p>Texto corto</p></div>`).join('')}</div></section>`);
+    expect(found.find(f => f.rule === 'hollow-tiles')).toBeUndefined();
+  });
 });
