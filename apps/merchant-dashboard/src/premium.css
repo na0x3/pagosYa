@@ -248,6 +248,14 @@ body.is-logged-in .tarea-start:disabled { opacity: .45; cursor: default; }
 body.is-logged-in .product-yapi-guide-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 body.is-logged-in .product-yapi-guide:not([data-open]) > header { border-bottom: 0; }
 
+/* ── Pedidos › first-order state (dashboard polish 2026-11-16) ── */
+body.is-logged-in .orders-empty-row td { padding: 28px 12px; }
+body.is-logged-in .orders-empty { display: flex; gap: 18px; align-items: flex-start; max-width: 620px; }
+body.is-logged-in .orders-empty svg { flex: none; width: 48px; height: 48px; padding: 10px; border-radius: 14px; background: var(--pm-hover); color: #3f3f46; }
+body.is-logged-in .orders-empty strong { display: block; margin-bottom: 4px; font-size: 16px; }
+body.is-logged-in .orders-empty p { margin: 0 0 12px; color: var(--pg-text-muted); line-height: 1.5; }
+body.is-logged-in .orders-empty .ui-button { display: inline-flex; align-items: center; min-height: 38px; padding: 0 14px; border: 1px solid var(--pg-border); border-radius: 999px; color: inherit; text-decoration: none; font-weight: 550; }
+
 /* ── Inicio › Por reponer ── */
 body.is-logged-in .overview-restock { grid-column: 1 / -1; order: 3; }
 body.is-logged-in .overview-restock h2 { margin: 0 0 4px; font: 400 24px/1.2 var(--pm-serif); }

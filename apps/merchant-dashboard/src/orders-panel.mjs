@@ -82,7 +82,8 @@ export function createOrdersPanel(deps) {
   }
 
   function emptyPaymentRowHtml() {
-    if (deps.payments().length === 0) return `<tr><td colspan="6" class="muted">Todavía no hay pedidos ni interesados.</td></tr>`;
+    // A calm first-order state (dashboard polish 2026-11-16): what will show here and the one thing that brings the first order.
+    if (deps.payments().length === 0) return `<tr class="orders-empty-row"><td colspan="6"><div class="orders-empty"><svg viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14h32l-3 22a4 4 0 0 1-4 3H15a4 4 0 0 1-4-3L8 14z"/><path d="M17 14a7 7 0 0 1 14 0"/></svg><div><strong>Tu primer pedido aparecerá aquí</strong><p>Verás quién compró, qué eligió, cómo pagó y en qué estado va la entrega. Comparte el enlace de tu tienda para recibir el primero.</p><a class="ui-button is-quiet" href="#dashboard-growth" data-dashboard-view="growth">Compartir mi tienda</a></div></div></td></tr>`;
     const incomplete = paymentStatusFilter === "active"
       ? deps.payments().filter((payment) => payment.status === "REQUIRES_PAYMENT_METHOD").length
       : 0;
