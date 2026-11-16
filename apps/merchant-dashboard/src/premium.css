@@ -176,6 +176,25 @@ body.is-logged-in .workspace-yapi-status:empty { display: none; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 600ms; animation-timing-function: cubic-bezier(.22,1,.36,1); }
 @media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
 
+/* ── Inicio › Tu tienda esta semana (spec 2026-11-16, la tienda que vende sola) ── */
+body.is-logged-in .overview-selling { grid-column: 1 / -1; order: 2; }
+body.is-logged-in .selling-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+body.is-logged-in .selling-head h2 { margin: 0 0 4px; font: 400 24px/1.2 var(--pm-serif); }
+body.is-logged-in .selling-switch { display: inline-flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 14px 0 8px; border: 1px solid var(--pg-border); border-radius: 999px; background: var(--pm-field); color: inherit; font: 550 14px/1 inherit; cursor: pointer; }
+body.is-logged-in .selling-switch__track { position: relative; width: 34px; height: 20px; border-radius: 999px; background: #d4d4d8; transition: background-color .2s var(--pm-ease); }
+body.is-logged-in .selling-switch__track span { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .2); transition: transform .2s var(--pm-ease); }
+body.is-logged-in .selling-switch[aria-checked="true"] .selling-switch__track { background: #18181b; }
+body.is-logged-in .selling-switch[aria-checked="true"] .selling-switch__track span { transform: translateX(14px); }
+body.is-logged-in .selling-list { list-style: none; margin: 16px 0 0; padding: 0; }
+body.is-logged-in .selling-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--pg-border); }
+body.is-logged-in .selling-tag { justify-self: start; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--pm-hover); color: var(--pg-text-muted); }
+body.is-logged-in .selling-row.is-trying .selling-tag { background: #eef2ff; color: #3730a3; }
+body.is-logged-in .selling-row.is-kept .selling-tag { background: #ecfdf3; color: #166534; }
+body.is-logged-in .selling-row.is-undone .selling-text { color: var(--pg-text-muted); }
+body.is-logged-in .selling-empty { margin: 14px 0 0; color: var(--pg-text-muted); max-width: 64ch; }
+@media (max-width: 640px) { body.is-logged-in .selling-row { grid-template-columns: minmax(0, 1fr) auto; } body.is-logged-in .selling-tag { grid-column: 1 / -1; } }
+@media (prefers-reduced-motion: reduce) { body.is-logged-in .selling-switch__track, body.is-logged-in .selling-switch__track span { transition: none; } }
+
 /* ── Inicio › Por reponer ── */
 body.is-logged-in .overview-restock { grid-column: 1 / -1; order: 3; }
 body.is-logged-in .overview-restock h2 { margin: 0 0 4px; font: 400 24px/1.2 var(--pm-serif); }

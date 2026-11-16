@@ -23,6 +23,7 @@ import { createProfileSessions } from "/src/profile-sessions.mjs";
 import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } from "/src/nav-sections.mjs";
 import { playImmersiveMove } from "/src/immersive.mjs";
 import { lowStock, renderRestock } from "/src/restock.mjs";
+import { renderSellingCard } from "/src/selling-card.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -941,7 +942,37 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
       paymentStore: (store?.checkoutMode || "payment") === "payment",
     }));
     setup.hidden = !setup.innerHTML;
+    void loadSelling();
   }
+
+  /* Inicio › «Tu tienda esta semana» (spec 2026-11-16, la tienda que vende sola): only for a published store. */
+  let sellingRequest = 0;
+  async function loadSelling() {
+    const card = document.getElementById("overviewSelling");
+    const store = lastStores.find((entry) => entry.id === currentStoreId);
+    if (!card || !store || !store.publishedSourceRevision) { if (card) card.hidden = true; return; }
+    const request = ++sellingRequest;
+    try {
+      const summary = await api(`/stores/${encodeURIComponent(store.id)}/selling`);
+      if (request !== sellingRequest) return;
+      card.innerHTML = renderSellingCard(summary);
+      card.hidden = !card.innerHTML;
+    } catch { if (request === sellingRequest) card.hidden = true; }
+  }
+  document.getElementById("overviewSelling")?.addEventListener("click", async (event) => {
+    const card = event.currentTarget;
+    const undo = event.target.closest("[data-selling-undo]");
+    const auto = event.target.closest("[data-selling-auto]");
+    if (!undo && !auto || !currentStoreId) return;
+    const base = `/stores/${encodeURIComponent(currentStoreId)}/selling`;
+    (undo || auto).disabled = true;
+    try {
+      const summary = undo
+        ? await api(`${base}/${encodeURIComponent(undo.dataset.sellingUndo)}/undo`, { method: "POST" })
+        : await api(base, { method: "PATCH", body: JSON.stringify({ autoImprove: auto.getAttribute("aria-checked") !== "true" }) });
+      card.innerHTML = renderSellingCard(summary);
+    } catch { (undo || auto).disabled = false; }
+  });
 
 
   function setPasswordVisible(visible) {
