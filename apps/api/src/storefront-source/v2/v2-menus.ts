@@ -24,13 +24,13 @@ export const V2_MENU_MODELS: readonly { id: string; fits: string }[] = [
   { id: 'thumb', fits: 'cuatro botones fijos abajo en el celular; ropa y tiendas que se compran desde el teléfono' },
 ];
 
-/** Spec 2026-11-15 risk: «rail» narrows every page by 200 px on wide screens, so YAPI may pick it only after it has been checked
- *  live on two stores; take it out of this list then. */
-export const V2_MENU_UNCHECKED: readonly string[] = ['rail'];
+/** Spec 2026-11-16 store quality (owner «Keep 5»): new stores pick from the five menus that looked right on every store; the kit
+ *  still draws all 16, so a design saved with another model keeps it. */
+export const V2_MENU_OFFERED: readonly string[] = ['mega', 'drawer', 'circles', 'overlay', 'dropdown'];
 
-/** The models this merchant's other stores have not used; every model once all are used. */
+/** The offered models this merchant's other stores have not used; all five once every one is used. */
 export const allowedMenus = (used: readonly string[]): string[] => {
-  const all = V2_MENU_MODELS.map(m => m.id).filter(id => !V2_MENU_UNCHECKED.includes(id));
+  const all = V2_MENU_MODELS.map(m => m.id).filter(id => V2_MENU_OFFERED.includes(id));
   const free = all.filter(id => !used.includes(id));
   return free.length ? free : all;
 };
