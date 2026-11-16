@@ -87,6 +87,22 @@ const BRANDS: Record<string, Brand> = {
       colours: [{ value: 'Original', photos: [] }, { value: 'Ajo', photos: [] }, { value: 'Ahumada', photos: [] }] }],
     articles: [],
   },
+  // Owner 2026-11-16 («create one for the bake lab but with the full pictures»): the bakery catalogue plus 18 CC0 bakery and café
+  // photos from rawpixel via Openverse (examples/full-stores-2026-11-02/bakelab/fuentes-cc0.tsv), so the design has more than product shots.
+  bakelab: {
+    name: 'The Bake Lab', tagline: 'Cookies, rolls y café recién hechos en Sopocachi.', folder: 'catalogo_bakery_pagosya', csv: 'productos_bakery.csv', city: 'La Paz',
+    brandPhotos: resolve(__dirname, '../../../examples/full-stores-2026-11-02/bakelab/marca'),
+    what: 'Laboratorio de horno: cookies rellenas, rolls, cajas surtidas para regalar y desayunos con café, para llevar o recibir en casa.',
+    story: 'The Bake Lab empezó como un horno chico en Sopocachi donde probábamos una receta nueva cada semana. Hoy horneamos cada mañana en tandas pequeñas, con mantequilla de verdad y chocolate belga, y servimos café en el mostrador.',
+    about: 'Horneamos cada mañana en Sopocachi: cookies, rolls, cajas surtidas y desayunos con café.',
+    badges: { 'Torre de cookies rellenas gourmet': 'Más pedido', 'Colección cookies Pantone': 'Edición limitada' },
+    location: { name: 'The Bake Lab Sopocachi', address: 'Calle Belisario Salinas 410, Sopocachi, La Paz', description: 'Horno, mostrador y mesas: recoge tu pedido o quédate a tomar un café.', hours: WEEK('07:30', '20:00', ['08:00', '14:00']) },
+    zone: { name: 'La Paz ciudad', fee: 1200, freeAbove: 15000, minutes: 90, departments: ['LA_PAZ'] },
+    code: { code: 'LAB10', percent: 10 }, instagram: 'https://www.instagram.com/thebakelab.lpz',
+    assistant: { name: 'Lab', greeting: 'Hola, soy Lab. ¿Te ayudo a elegir cookies, una caja para regalar o un desayuno?', notes: 'The Bake Lab es un horno con café en Sopocachi, La Paz. Horneamos cada mañana. Entregas en La Paz ciudad en unos 90 minutos (Bs 12, gratis desde Bs 150) o recojo en Calle Belisario Salinas 410. Cajas surtidas para regalar con tarjeta escrita a mano.' },
+    policies: { returns: 'Si tu pedido llega dañado, escríbenos el mismo día con una foto y lo reponemos.', delivery: 'Entregamos en La Paz ciudad en unos 90 minutos, de lunes a sábado. Recojo gratis en nuestro horno de Sopocachi.', privacy: 'Usamos tus datos solo para tu pedido y, si te suscribes, para contarte la receta de la semana.', terms: TERMS },
+    articles: [{ slug: 'receta-de-la-semana', title: 'Así nace la receta de la semana', excerpt: 'Probamos, horneamos y la pones a prueba tú.', body: 'Cada lunes probamos una cookie nueva en el horno.\n\nLa servimos en el mostrador toda la semana.\n\nSi gusta, entra al menú del mes siguiente.' }],
+  },
   miga: {
     name: 'Miga Dorada', tagline: 'Panadería y cookies de autor en Sopocachi.', folder: 'catalogo_bakery_pagosya', csv: 'productos_bakery.csv', city: 'La Paz',
     what: 'Panadería de autor: rolls rellenos, cookies gourmet, cajas para regalar y desayunos con café para llevar o recibir en casa.',
@@ -433,6 +449,9 @@ const BRANDS: Record<string, Brand> = {
     articles: [{ slug: 'batido-verde', title: 'Batido verde de 3 ingredientes', excerpt: 'Espinaca, plátano y leche.', body: 'Pon un puñado de espinaca, un plátano congelado y un vaso de leche.\n\nLicúa 30 segundos.\n\nListo: verde, frío y sin grumos.' }],
   },
 };
+// Owner 2026-11-16 («a ver haz un noa vargas ahora», after The Bake Lab): NOA's catalogue plus 16 CC0 atelier, bridal and calla photos
+// from rawpixel via Openverse (examples/full-stores-2026-11-02/noaphotos/fuentes-cc0.tsv), so the design has more than product shots.
+BRANDS.noaphotos = { ...BRANDS.noa, brandPhotos: resolve(__dirname, '../../../examples/full-stores-2026-11-02/noaphotos/marca') };
 
 const parse = (csv: string): Row[] => {
   const [head, ...lines] = csv.replace(/^﻿/, '').trim().split(/\r?\n/);
