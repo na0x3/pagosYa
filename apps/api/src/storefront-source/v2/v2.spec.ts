@@ -5,7 +5,7 @@ import { newestStores, readStoreLooks } from './v2-heroes';
 import { v2LookPrompt } from './v2-look';
 import { uiRuntime } from '../source-creative';
 import { backstageCopy, freeMin, joinV2Parts, mergeV2Fix, readV2Part, showcaseRules, v2ContractProblems, v2DirectionInput, v2DirectionSchema, v2HalfInput, v2Hint, v2Repairs } from './v2-prompts';
-import { freeBlocking, runV2Build } from './v2-run';
+import { freeBlocking, inspectionRules, runV2Build } from './v2-run';
 import { v2LookLines } from './v2-look';
 import { classesIn, cssFor, homeSections, mergeSectionFix, problemsBySection, sectionFixPlan } from './v2-section-fix';
 import { v2CartSheet, withKitBaseline } from './v2-kit-baseline';
@@ -908,5 +908,12 @@ describe('spec 2026-11-16 store quality: the new checks reach a V2 run and its l
     expect(prompt).toMatch(/botones de la portada/);
     expect(prompt).toMatch(/una palabra por línea/);
     expect(prompt).toMatch(/cortadas en el borde/);
+  });
+  it('names the rules behind each attempt, by width (benchmark, Part 4)', () => {
+    const widths = [
+      { width: 1280, findings: [{ rule: 'hero-actions', severity: 'advice' }, { rule: 'small-headline', severity: 'advice' }] },
+      { width: 390, findings: [{ rule: 'phone-cut-tiles', severity: 'block' }] },
+    ];
+    expect(inspectionRules(widths, true)).toEqual(['desktop:hero-actions', 'phone:phone-cut-tiles']);
   });
 });

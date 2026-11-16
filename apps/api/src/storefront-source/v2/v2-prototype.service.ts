@@ -26,7 +26,7 @@ import { DEFAULT_RETENTION } from '../../retention/retention.dto';
 import { wordsLookPrompt, wordsLookSchema } from './v2-words';
 import { allowedHeroIdeas, drawsLibre, heroIdea, newestStores, readStoreLooks } from './v2-heroes';
 import { allowedMenus, cleanMenu } from './v2-menus';
-import { freeBlocking, runV2Build, withContextMenu, type V2Attempt, type V2BuildDeps } from './v2-run';
+import { freeBlocking, inspectionRules, runV2Build, withContextMenu, type V2Attempt, type V2BuildDeps } from './v2-run';
 import { captureV2Look, v2LookInput, v2LookLines, v2LookPrompt, v2LookSchema, type V2LookCapture, type V2LookProblem } from './v2-look';
 import { apiRoot, buildInSandbox } from './v2-sandbox';
 import { SourceChatService } from '../source-chat.service';
@@ -72,6 +72,8 @@ type Stage = { stage: string; ms: number; detail?: unknown };
 export type V2RunState = {
   status: 'RUNNING' | 'DONE' | 'FAILED'; startedAt: string; baseRevision?: number; revision?: number; error?: string; model?: string;
   stages: Stage[]; direction?: V2Direction; attempts?: V2Attempt[]; usd: number;
+  /** Spec 2026-11-16 store quality, Part 4: the rules behind each checked attempt («desktop:rule», «phone:rule»). */
+  inspections?: Array<{ at: string; rules: string[] }>;
   looks?: Array<{ attempt: number; ms: number; shots: number; dir: string; problems: string[] }>; references?: string[]; cards?: number; ownCards?: boolean; library?: { slots: string[]; dropped: Record<string, string> };
   checks?: { rules: Array<{ width: number; blocking: string[] }>; shopping: unknown; signature: SectionShape[]; templateSignature: SectionShape[]; distanceFromTemplate: number };
 };
@@ -495,8 +497,12 @@ export class SourceV2PrototypeService {
       // The template rules' hint «o muestra los productos (data-pagosya-catalog …)» sent the writer into repeating product rows
       // (live 2026-11-14: BOXY, rhode, Pawby); for V2 a section of words gets a store photo or goes.
       // Free mode (owner 2026-11-14, like Amboras's advisory checks): only real breakage blocks; taste rules stay out of the loop.
-      inspect: async snapshot => (await templateQaFindings(snapshot)).flatMap(({ width, blocking, findings }) => (context.free ? freeBlocking(findings) : blocking)
-        .map(line => `${width === 390 ? 'Celular' : 'Escritorio'}: ${v2Hint(line).slice(0, 280)}`)),
+      inspect: async snapshot => {
+        const widths = await templateQaFindings(snapshot);
+        (state.inspections ??= []).push({ at: new Date().toISOString(), rules: inspectionRules(widths, Boolean(context.free)) });
+        return widths.flatMap(({ width, blocking, findings }) => (context.free ? freeBlocking(findings) : blocking)
+          .map(line => `${width === 390 ? 'Celular' : 'Escritorio'}: ${v2Hint(line).slice(0, 280)}`));
+      },
       commerce: snapshot => { try { assertSourceCommerceContract(snapshot); return null; } catch (error) { return String((error as { response?: { message?: string } })?.response?.message ?? (error as Error)?.message ?? error); } },
       // Owner 2026-11-15 (like Amboras's bot screenshotting its page): YAPI looks at what it built. YAPI_V2_LOOK=0 turns it off.
       ...(process.env.YAPI_V2_LOOK === '0' ? {} : { look: (snapshot: SourceProjectSnapshot, attempt: number) => this.lookAt(storeId, model, context, state, snapshot, attempt) }),

@@ -28,6 +28,12 @@ export const freeBlocking = (findings: readonly { rule: string; severity: string
   findings.filter(finding => (finding.severity === 'block' && FREE_BLOCKERS.has(finding.rule)) || FREE_ADVICE_BLOCKERS.has(finding.rule))
     .map(finding => `${typeof finding.part === 'number' ? `[sección ${finding.part}] ` : ''}${finding.line.replace(/^(BLOQUEA|CONSEJO):\s*/, '')}`);
 
+/** Spec 2026-11-16 store quality, Part 4: the rules that sent an attempt back, «desktop:rule» / «phone:rule», for the benchmark. */
+export const inspectionRules = (widths: readonly { width: number; findings: readonly { rule: string; severity: string }[] }[], free: boolean) =>
+  widths.flatMap(({ width, findings }) => findings
+    .filter(f => free ? (f.severity === 'block' && FREE_BLOCKERS.has(f.rule)) || FREE_ADVICE_BLOCKERS.has(f.rule) : f.severity === 'block')
+    .map(f => `${width === 390 ? 'phone' : 'desktop'}:${f.rule}`));
+
 export type V2Attempt = { attempt: number; ms: number; outcome: 'built' | 'visual' | 'contract' | 'build' | 'commerce' | 'no-answer'; problems: string[]; repairs?: string[] };
 export type V2BuildDeps = {
   write: (feedback: string[], previous?: V2File[]) => Promise<V2File[] | null>;
