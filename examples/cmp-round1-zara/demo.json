@@ -1,0 +1,34 @@
+{
+  "from": "cmvpunz6w0001v9k12d3428gn",
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwf958gw0001u2bvfpxixj7z",
+  "slug": "lpbddy41",
+  "categories": {
+    "cmvpunz7n000rv9k19qgmgfc5": "cmwf958h40003u2bvlzwn5s3g",
+    "cmvpunz7p000tv9k1pdcatkz0": "cmwf958h60005u2bvq285j6xb",
+    "cmvpunz7p000vv9k1drr2leex": "cmwf958h60007u2bvx9uc7drw"
+  },
+  "products": {
+    "cmvpunz7y000xv9k1bgw99djx": "cmwf958hn000bu2bv6dsnmios",
+    "cmvpunz8l000zv9k1npu9is4h": "cmwf958if000fu2bvhokqcte9",
+    "cmvpunz8p0011v9k1lm00c8dt": "cmwf958jd000lu2bv33uazko5",
+    "cmvpunz8s0013v9k1jf8u7ffv": "cmwf958jj000pu2bvmtzpbpvd",
+    "cmvpunz8w0015v9k1fz1h1hpv": "cmwf958jp000tu2bv8n28y6bp",
+    "cmvpunz8z0017v9k1ybd2n46c": "cmwf958jw000xu2bvj7uqeked",
+    "cmvpunz920019v9k1l80os85g": "cmwf958k20011u2bvvee1er3k"
+  },
+  "assetUrls": [
+    "/v1/uploads/928829dd-ac98-42b0-b157-a9a807f4636c.jpg",
+    "/v1/uploads/8418de5a-85d8-4b68-ab72-4281a62ede1d.jpg",
+    "/v1/uploads/73e6446d-5539-4db0-9679-678c50c52d5f.jpg",
+    "/v1/uploads/e3b541fe-3459-4152-8c4c-b6e1475a612a.jpg",
+    "/v1/uploads/93ab77cc-a3fe-423d-8e49-da7b58b7814d.jpg",
+    "/v1/uploads/f09d9a59-df9d-4d22-a7aa-47369955cc61.jpg",
+    "/v1/uploads/95974cf9-cdd8-4399-8020-4971861b67e7.jpg",
+    "/v1/uploads/523971de-9ceb-46c9-83d7-e842ffbde9f4.jpg",
+    "/v1/uploads/b6c93e7a-0f68-4d7a-9fe7-831802e39ee4.jpg",
+    "/v1/uploads/fcce05b1-ca7d-48c1-9dce-e51b227543ac.jpg",
+    "/v1/uploads/d37ec83a-aacd-4861-b446-fc586ee6332f.jpg",
+    "/v1/uploads/fa3d081e-76e2-4877-baf3-8929b6b75e71.jpg"
+  ]
+}

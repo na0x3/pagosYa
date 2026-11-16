@@ -1,0 +1,683 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.buckmason.com/?g=men",
+    "title": "Buck Mason® Official Site",
+    "width": 1440,
+    "pageHeight": 5961,
+    "fonts": {
+      "h1": {
+        "family": "acumin-pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop New Arrivals"
+      },
+      "h2": null,
+      "body": {
+        "family": "acumin-pro-condensed",
+        "size": "16.445px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.3289px",
+        "text": "Find a Store"
+      },
+      "button": {
+        "family": "sans-serif",
+        "size": "13.65px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "acumin-pro",
+        "size": "14.3px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 114,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Skip to content",
+        "Click to view our Access",
+        "Go to homepage",
+        "Men",
+        "Women",
+        "Made in USA",
+        "The Journal",
+        "Open Search dialog",
+        "Our Stores",
+        "Your account",
+        "Open cart dialog"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 28,
+        "h": 733,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "acumin-pro",
+          "size": "13px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop New Arrivals"
+        },
+        "words": 3,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 772,
+        "h": 543,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 25,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 1325,
+        "h": 796,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2131,
+        "h": 796,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2937,
+        "h": 2132,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": null,
+        "words": 100,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.buckmason.com/?g=men",
+    "title": "Buck Mason® Official Site",
+    "width": 390,
+    "pageHeight": 7221,
+    "fonts": {
+      "h1": {
+        "family": "acumin-pro",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop New Arrivals"
+      },
+      "h2": null,
+      "body": {
+        "family": "acumin-pro-condensed",
+        "size": "16.445px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.3289px",
+        "text": "Find a Store"
+      },
+      "button": {
+        "family": "sans-serif",
+        "size": "13.65px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "acumin-pro",
+        "size": "14.3px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 118,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Skip to content",
+        "Click to view our Access",
+        "Open Main Menu dialog",
+        "Go to homepage",
+        "Open Search dialog",
+        "Open cart dialog",
+        "Men",
+        "Women"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 118,
+        "h": 650,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "acumin-pro",
+          "size": "13px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop New Arrivals"
+        },
+        "words": 3,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 768,
+        "h": 782,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 25,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1553,
+        "h": 985,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2542,
+        "h": 978,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3520,
+        "h": 2531,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": null,
+        "words": 100,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.buckmason.com/collections/mens-new-arrivals?f=7451",
+    "title": "Men's New Arrivals — Henleys, Cardigans & Denim | Buck Mason",
+    "width": 1440,
+    "pageHeight": 64209,
+    "fonts": {
+      "h1": {
+        "family": "acumin-pro-condensed",
+        "size": "20.15px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.403px",
+        "text": "Mens New Arrivals"
+      },
+      "h2": {
+        "family": "acumin-pro-condensed",
+        "size": "19.5px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.39px",
+        "text": "About the Collection"
+      },
+      "body": {
+        "family": "acumin-pro-condensed",
+        "size": "32.5px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.65px",
+        "text": "Our Stores"
+      },
+      "button": {
+        "family": "acumin-pro-condensed",
+        "size": "12.675px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.2535px",
+        "text": "SHIP INTL"
+      },
+      "nav": {
+        "family": "acumin-pro",
+        "size": "14.3px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 115,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Skip to content",
+        "Click to view our Access",
+        "Go to homepage",
+        "Men",
+        "Women",
+        "Made in USA",
+        "The Journal",
+        "Open Search dialog",
+        "Our Stores",
+        "Your account",
+        "Open cart dialog"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 243,
+        "h": 62941,
+        "bg": "rgb(255, 255, 255)",
+        "images": 266,
+        "video": true,
+        "heading": null,
+        "words": 3993,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.buckmason.com/collections/mens-new-arrivals?f=7451",
+    "title": "Men's New Arrivals — Henleys, Cardigans & Denim | Buck Mason",
+    "width": 390,
+    "pageHeight": 187140,
+    "fonts": {
+      "h1": {
+        "family": "acumin-pro-condensed",
+        "size": "17.55px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.351px",
+        "text": "Mens New Arrivals"
+      },
+      "h2": {
+        "family": "acumin-pro-condensed",
+        "size": "19.5px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.39px",
+        "text": "About the Collection"
+      },
+      "body": {
+        "family": "acumin-pro-condensed",
+        "size": "23.4px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.468px",
+        "text": "Our Stores"
+      },
+      "button": {
+        "family": "acumin-pro-condensed",
+        "size": "12.675px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.2535px",
+        "text": "SHIP INTL"
+      },
+      "nav": {
+        "family": "acumin-pro",
+        "size": "14.3px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 118,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Skip to content",
+        "Click to view our Access",
+        "Open Main Menu dialog",
+        "Go to homepage",
+        "Open Search dialog",
+        "Open cart dialog",
+        "Men",
+        "Women"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 180,
+        "h": 101,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 282,
+        "h": 185527,
+        "bg": "rgb(255, 255, 255)",
+        "images": 266,
+        "video": true,
+        "heading": null,
+        "words": 2971,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.buckmason.com/products/dress-navy-shaggy-alpaca-saddle-crew",
+    "title": "Dress Navy Shaggy Alpaca Saddle Crew | Buck Mason",
+    "width": 1440,
+    "pageHeight": 4910,
+    "fonts": {
+      "h1": {
+        "family": "acumin-pro-condensed",
+        "size": "20px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "0.4px",
+        "text": "Shaggy Alpaca Saddle Crew"
+      },
+      "h2": null,
+      "body": {
+        "family": "acumin-pro-condensed",
+        "size": "16.445px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.3289px",
+        "text": "Find a Store"
+      },
+      "button": {
+        "family": "acumin-pro-condensed",
+        "size": "12.35px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.247px",
+        "text": "Size/Fit Guide"
+      },
+      "nav": {
+        "family": "acumin-pro",
+        "size": "14.3px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 115,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Skip to content",
+        "Click to view our Access",
+        "Go to homepage",
+        "Men",
+        "Women",
+        "Made in USA",
+        "The Journal",
+        "Open Search dialog",
+        "Our Stores",
+        "Your account",
+        "Open cart dialog"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 128,
+        "h": 1221,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "acumin-pro-condensed",
+          "size": "20px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "0.4px",
+          "text": "Shaggy Alpaca Saddle Crew"
+        },
+        "words": 72,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1415,
+        "h": 2603,
+        "bg": "rgb(255, 255, 255)",
+        "images": 20,
+        "video": false,
+        "heading": null,
+        "words": 157,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Select Size to Add to Cart",
+      "aboveFold": true,
+      "top": 445,
+      "x": 833,
+      "width": 495,
+      "bg": "rgb(170, 170, 170)"
+    },
+    "price": {
+      "family": "acumin-pro",
+      "size": "13px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "Shaggy Alpaca Saddle CrewBs 3,497"
+    },
+    "galleryImages": 26,
+    "swatches": 9,
+    "selects": 0,
+    "accordions": 8
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.buckmason.com/products/dress-navy-shaggy-alpaca-saddle-crew",
+    "title": "Dress Navy Shaggy Alpaca Saddle Crew | Buck Mason",
+    "width": 390,
+    "pageHeight": 15130,
+    "fonts": {
+      "h1": {
+        "family": "acumin-pro-condensed",
+        "size": "20px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "0.4px",
+        "text": "Shaggy Alpaca Saddle Crew"
+      },
+      "h2": null,
+      "body": {
+        "family": "acumin-pro-condensed",
+        "size": "16.445px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.3289px",
+        "text": "Find a Store"
+      },
+      "button": {
+        "family": "acumin-pro-condensed",
+        "size": "12.35px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.247px",
+        "text": "Size/Fit Guide"
+      },
+      "nav": {
+        "family": "acumin-pro",
+        "size": "14.3px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 118,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Skip to content",
+        "Click to view our Access",
+        "Open Main Menu dialog",
+        "Go to homepage",
+        "Open Search dialog",
+        "Open cart dialog",
+        "Men",
+        "Women"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 210,
+        "h": 1607,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 64,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1856,
+        "h": 12102,
+        "bg": "rgb(255, 255, 255)",
+        "images": 20,
+        "video": false,
+        "heading": null,
+        "words": 157,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Select Size to Add to Cart",
+      "aboveFold": false,
+      "top": 1051,
+      "x": 20,
+      "width": 350,
+      "bg": "rgb(170, 170, 170)"
+    },
+    "price": {
+      "family": "acumin-pro",
+      "size": "13px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "Shaggy Alpaca Saddle CrewBs 3,497"
+    },
+    "galleryImages": 23,
+    "swatches": 9,
+    "selects": 0,
+    "accordions": 8
+  }
+}

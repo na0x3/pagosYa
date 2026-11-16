@@ -1,0 +1,69 @@
+{
+  "host": "kotn.com",
+  "name": "Kotn",
+  "at": "2026-11-14T15:12:29.993Z",
+  "mood": "Editorial directo, táctil y sobrio; lujo cotidiano construido con escala fotográfica, tipografía neutra y muy poca interfaz visible.",
+  "idea": "Alternar grandes escenas de campaña a sangre con carruseles de producto extremadamente densos, dejando que la textura y el color de las prendas hagan casi todo el trabajo visual.",
+  "header": "Cabecera sticky de 72 px totales sobre fondo blanco. En escritorio combina una franja superior crema muy baja, de unos 20–22 px, para mensajes como envío gratuito y enlaces secundarios, con una navegación principal de unos 50 px. El logotipo KOTN queda centrado geométricamente; a la izquierda aparecen seis enlaces —Women, Men, Accessories, Home, About y Gift Guide— y a la derecha selector EN/CAD, Search, My Account y Bag. Tipografía de navegación de 16 px, sin mayúsculas forzadas. En teléfono conserva los 72 px y la franja promocional: menú hamburguesa y búsqueda a la izquierda, logotipo centrado y bolsa como icono a la derecha; desaparecen todos los enlaces escritos. El aviso de cookies y los botones flotantes de accesibilidad/chat que tapan parte de algunas capturas no forman parte de la composición principal y se ignoran.",
+  "hero": "Bloque a sangre inmediatamente bajo la cabecera, de 780 px de alto tanto en escritorio como en teléfono. Usa una sola fotografía horizontal en escritorio y el mismo bodegón con recorte vertical y object-fit: cover en móvil. En escritorio, titular y subtítulo se centran aproximadamente en el medio de la imagen; el CTA blanco queda más abajo, cerca del tercio inferior. El titular “Gifts That Last” mide 56 px en Söhne Breit, peso 400 y tracking −1,12 px; debajo hay una línea breve y un botón blanco rectangular, sin borde visible, de aproximadamente 200 × 42 px. En teléfono el titular baja a 48 px con tracking −0,96 px, se parte en dos líneas y queda centrado en la mitad inferior; el subtítulo permanece debajo y el botón aparece próximo al borde inferior. No hay velo uniforme evidente: la legibilidad se obtiene escogiendo una zona oscura de la fotografía para el texto blanco.",
+  "catalog": "Cabecera de colección muy escueta: “Products” a la izquierda, 40 px y peso 300 en escritorio, dentro de una banda de unos 108 px; en móvil baja a 32 px. “Filter & Sort” con signo + se alinea a la derecha justo sobre la cuadrícula, sin barra lateral permanente. Escritorio: 4 columnas, márgenes laterales cercanos a 16 px y calles de unos 10 px; 24 productos y fotografías verticales 2:3. Teléfono: 2 columnas con aproximadamente 10 px de margen y 6–8 px entre tarjetas; nombres largos se truncan para conservar el ritmo. El control de filtros sigue en una sola línea, alineado a la derecha. No hay fondos de sección, bordes de tarjeta ni paginación protagonista: la cuadrícula ocupa prácticamente todo el ancho.",
+  "card": "Fotografía vertical con relación ancho/alto aproximada de 0,67, es decir 2:3, sobre fondo gris cálido muy claro. Una pequeña etiqueta rectangular —“New”, “Sale” o “Sold out”— se coloca dentro de la esquina superior izquierda. Debajo aparecen nombre en 14 px aproximadamente, muestras de color cuadradas de 16–20 px, precio actual y, cuando corresponde, precio anterior tachado. La información ocupa poca altura y se alinea a la izquierda; no hay marco ni sombra. En la portada las bandas comerciales usan hasta 8 tarjetas por fila en escritorio, por lo que cada ficha es muy estrecha; en teléfono se convierten en carruseles horizontales con cerca de dos tarjetas visibles. No se observa un botón de compra rápida permanente. Las capturas no confirman de forma fiable una segunda imagen al pasar el cursor; si se implementa, debe mantenerse como hover discreto sin mover textos ni dimensiones.",
+  "product": "En escritorio la zona principal empieza bajo la cabecera y se divide aproximadamente en 2/3 para galería y 1/3 para compra. La galería usa dos columnas de imágenes grandes, separadas por unos 10 px: las dos primeras ocupan casi 945 px de ancho conjunto y unos 700 px de alto visible, y el resto continúa debajo hasta completar cinco vistas. A la derecha hay una caja de compra de unos 444 px, con título de 20 px, precio, párrafo descriptivo, etiqueta de color, dos swatches cuadrados, talla O/S y CTA negro de ancho completo. El botón “Add to bag — $148.00” está sobre el pliegue en escritorio, a unos 460 px desde arriba. Debajo aparecen tres acordeones: Fabric & Care, Size & Fit y Shipping & Returns, cada uno con + a la derecha. En teléfono la galería se vuelve un carrusel de una imagen a la vez, de unos 390 × 355 px, con flechas pequeñas y marcadores; después vienen título, precio, descripción, colores, talla y botón de 358 px entre márgenes de 16 px. El CTA queda a unos 1045 px y por tanto fuera del primer pliegue. Más abajo hay “You may also like” como carrusel horizontal de tarjetas, seguido por un bloque About Us con vídeo/imagen.",
+  "cart": "Es una página completa, no un cajón. Solo se aportó captura de escritorio; no hay captura del carrito en teléfono. Bajo la cabecera aparece “Shopping Cart (1)” en 14 px. La zona principal, de unos 536 px de alto, se reparte en una columna de artículos cercana a dos tercios y un resumen de compra a la derecha. Cada fila muestra miniatura vertical grande a la izquierda, nombre, color, talla y precio; el control de cantidad usa −, número y +, y “Remove” queda como enlace subrayado separado. El resumen presenta total, mensaje de envío, campo o aviso promocional y un CTA negro de checkout de ancho completo, seguido por pago acelerado/iconos de métodos de pago. No se ven ventas adicionales dentro del carrito. El pie crema, con newsletter y columnas de enlaces, comienza inmediatamente después.",
+  "type": "Familia principal Söhne: grotesca neutral, usada en navegación, cuerpo, fichas y controles. Söhne Breit se reserva para el gran titular del hero, aportando anchura sin recurrir a negrita. Hero: 56 px en escritorio y 48 px en teléfono, peso 400, tracking de −2%; H1 de catálogo: 40/32 px, peso 300 y tracking −2%; títulos de producto y sección: 20 px, peso 400 y tracking −0,4 px; nombres de tarjeta y controles: alrededor de 14 px; cuerpo auxiliar: 12 px, peso 500 y tracking 0,12 px; navegación y CTA principal: 16 px. Predomina la caja normal, sin versales sistemáticas. La jerarquía se construye mediante escala, anchura tipográfica y espacio, no mediante muchos pesos.",
+  "colour": "La interfaz se limita a blanco #FFFFFF como fondo principal y negro casi puro, aproximadamente #030302, para texto y botones de compra. Una crema muy pálida, cercana a #F3EFE4, identifica la banda promocional y el pie. Las etiquetas de producto usan blanco roto o rosa apagado según estado; los precios rebajados se diferencian mediante tachado, no con un color intenso. Burdeos, azul, taupe y verde aparecen sobre todo dentro de fotografías y swatches: la marca evita competir con el producto mediante un color corporativo de interfaz.",
+  "photos": "Se combinan tres tratamientos. Primero, campañas y bodegones a sangre con sombras profundas, recorte cerrado y textiles ocupando casi todo el encuadre. Segundo, fichas de catálogo sobre fondos gris cálido homogéneos, con modelos de cuerpo entero o recortes frontales y escala consistente entre productos. Tercero, imágenes de detalle y contexto doméstico en producto: manta enrollada, cama vestida y acercamientos de trama. La luz es suave y difusa; los fondos se mantienen beige, blanco roto o gris para que destaquen el tejido y la silueta. Los módulos editoriales alternan retrato, detalle y producto en uso, evitando que toda la página parezca un inventario.",
+  "motion": "Hay un vídeo visible en el bloque About Us de portada y otro al final de la página de producto. Los carruseles de producto muestran flechas laterales y se desplazan horizontalmente; en teléfono dejan asomar la siguiente tarjeta para comunicar el gesto de arrastre. La galería móvil de producto también funciona como carrusel con flechas y paginación. No se observa marquesina animada. Las capturas estáticas no permiten confirmar transiciones, autoplay ni cambio de foto al hover, por lo que conviene no añadir animaciones ornamentales más allá de deslizamientos y estados de enlace.",
+  "phone": "La navegación escrita se sustituye por cuatro señales: menú, búsqueda, logo y bolsa. El hero conserva 780 px de altura, cambia a recorte vertical y parte el titular en dos líneas. Los trípticos editoriales de portada pasan de 3 columnas a una secuencia de bloques de una columna, cada imagen con rótulo y CTA superpuestos. Las bandas de 8 productos no intentan encajar ocho columnas: mantienen tarjetas estrechas en un carrusel horizontal con unas dos visibles. Las categorías también se apilan en una columna; Instagram pasa de 4 a 2 columnas. El catálogo reduce la cuadrícula de 4 a 2 columnas. En producto desaparece la galería de dos columnas y queda un carrusel a ancho completo, seguido por toda la información de compra en flujo vertical con márgenes de 16 px. El botón de compra no es sticky y queda fuera del primer pliegue. No hay evidencia visual del carrito móvil.",
+  "signature": "El gesto propio es intercalar escenas editoriales de gran escala con estanterías horizontales de producto de hasta ocho columnas: la página cambia repetidamente de contemplar textura y personas a comparar muchas prendas sin introducir cajas, fondos o decoraciones intermedias.",
+  "home": [
+    {
+      "role": "Presentar la campaña estacional y conducir a la guía de regalos.",
+      "composition": "Hero fotográfico a sangre de 780 px, con titular blanco centrado de 56/48 px, subtítulo corto y CTA blanco colocado en el tercio inferior."
+    },
+    {
+      "role": "Dividir la guía de regalos por destinatario.",
+      "composition": "Tres imágenes editoriales en una fila en escritorio —Gifts For Her, Gifts For Him y Gifts For Home— dentro de una sección de 463 px; títulos y pequeños botones se apoyan sobre las fotos. En teléfono se apilan como tres paneles de una columna y la sección crece hasta unos 1094 px."
+    },
+    {
+      "role": "Ofrecer una primera selección comercial inmediatamente después de la campaña.",
+      "composition": "“Our Top Picks for Gifts”, título de 20 px y carrusel de 16 productos; se muestran 8 tarjetas por fila en escritorio dentro de 677 px de alto. En teléfono mantiene un rail horizontal de tarjetas 2:3, de aproximadamente media pantalla de ancho."
+    },
+    {
+      "role": "Recuperar pausa editorial y mostrar el producto puesto.",
+      "composition": "Díptico de retratos a sangre, dos columnas aproximadamente iguales y 699 px de alto, con primeros planos de punto y fondos neutros; casi sin texto."
+    },
+    {
+      "role": "Vender la categoría estacional principal.",
+      "composition": "“Shop Seasonal Knitwear” repite la banda de 16 productos y 8 visibles, con título y controles de carrusel en extremos opuestos. Fondo blanco, 677 px de alto."
+    },
+    {
+      "role": "Facilitar acceso por familia de producto.",
+      "composition": "“Shop by category” usa tres fotografías grandes en columnas iguales, de unos 517 px de alto en escritorio, con rótulos breves sobre la imagen. En teléfono se apilan y ocupan unos 1148 px."
+    },
+    {
+      "role": "Introducir novedad sin cambiar el sistema visual.",
+      "composition": "“Shop New Arrivals” vuelve al carrusel comercial de 16 tarjetas, 8 visibles en escritorio y desplazamiento horizontal en teléfono; título de 20 px sobre fondo blanco."
+    },
+    {
+      "role": "Explicar la marca mediante atmósfera antes que mediante texto largo.",
+      "composition": "Bloque About us de 780 px a sangre con vídeo; el texto es mínimo y pequeño, de unos 12 px, superpuesto o próximo a la imagen en movimiento."
+    },
+    {
+      "role": "Convertir el impacto social en una cifra memorable.",
+      "composition": "Módulo de unos 464 px con una imagen y el titular “25 schools funded. 5,127 farms supported.” en 20 px, acompañado por un párrafo breve. En móvil se comprime a unos 380 px."
+    },
+    {
+      "role": "Cerrar con prueba social visual.",
+      "composition": "“Follow along on Instagram”: cuatro imágenes en una fila en escritorio dentro de 423 px; en teléfono se reorganizan en 2 columnas y unos 478 px, antes del pie."
+    }
+  ],
+  "lessons": [
+    "Construye el ritmo de una portada alternando módulos de densidad opuesta: una imagen enorme, una parrilla comercial apretada y otra pausa editorial. Así se evita que una página larga se sienta uniforme.",
+    "Mantén una geometría fotográfica fija para comparar productos: relación 2:3, fondo constante, etiqueta siempre en la misma esquina y textos debajo con altura controlada.",
+    "En móvil no reduzcas una parrilla editorial hasta volverla ilegible: convierte las bandas de muchas columnas en carruseles con parte de la siguiente tarjeta visible.",
+    "Reserva la tipografía expresiva para una sola función. Aquí Söhne Breit aparece en el hero, mientras Söhne resuelve navegación, producto y contenido; esa disciplina crea jerarquía sin sumar fuentes.",
+    "Haz que el color de marca viva en el material fotográfico y utiliza una interfaz casi binaria —blanco, negro y una banda crema— cuando el catálogo ya contiene muchos tonos y texturas.",
+    "En la ficha de producto, sitúa compra y galería en paralelo en escritorio, pero conserva en móvil un orden inequívoco: imagen, información, variantes, CTA, acordeones y recomendaciones."
+  ]
+}

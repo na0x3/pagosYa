@@ -1,0 +1,657 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://us.tonies.com/",
+    "title": "tonies® - Audio Player for Kids | Fun Screen Free Toys",
+    "width": 1440,
+    "pageHeight": 6381,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Wonder",
+        "size": "48px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Listening Grows Holiday Magic"
+      },
+      "body": {
+        "family": "Wonder",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Unlock a world of imagination, learning and screen-free fun "
+      },
+      "button": {
+        "family": "Wonder",
+        "size": "14px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "0.08px",
+        "text": "Added Add"
+      },
+      "nav": {
+        "family": "Wonder",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(244, 241, 237)",
+    "header": {
+      "height": 100,
+      "position": "static",
+      "bg": "rgb(244, 241, 237)",
+      "links": [
+        "Tonies",
+        "Tonieboxes",
+        "Tonieplay",
+        "Bundle & Save",
+        "Accessories",
+        "Shop All",
+        "Search"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 136,
+        "h": 5112,
+        "bg": "rgb(244, 241, 237)",
+        "images": 77,
+        "video": true,
+        "heading": {
+          "family": "Wonder",
+          "size": "48px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Listening Grows Holiday Magic"
+        },
+        "words": 689,
+        "perRow": 17,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 16,
+      "columns": 16,
+      "photoRatio": 0.68,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://us.tonies.com/",
+    "title": "tonies® - Audio Player for Kids | Fun Screen Free Toys",
+    "width": 390,
+    "pageHeight": 6964,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Wonder",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Listening Grows Holiday Magic"
+      },
+      "body": {
+        "family": "Wonder",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Unlock a world of imagination, learning and screen-free fun "
+      },
+      "button": {
+        "family": "Wonder",
+        "size": "14px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "0.08px",
+        "text": "Added Add"
+      },
+      "nav": {
+        "family": "Wonder",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(244, 241, 237)",
+    "header": {
+      "height": 72,
+      "position": "static",
+      "bg": "rgb(244, 241, 237)",
+      "links": [
+        "Search"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 167,
+        "h": 5425,
+        "bg": "rgb(244, 241, 237)",
+        "images": 51,
+        "video": true,
+        "heading": {
+          "family": "Wonder",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Listening Grows Holiday Magic"
+        },
+        "words": 630,
+        "perRow": 17,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 16,
+      "columns": 16,
+      "photoRatio": 0.68,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://us.tonies.com/collections/all?sort_by=manual",
+    "title": "Shop All: Tonies Figures, Tonieplay Games & Accessories | tonies®",
+    "width": 1440,
+    "pageHeight": 9203,
+    "fonts": {
+      "h1": {
+        "family": "Wonder",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.08px",
+        "text": "All Tonieboxes, Tonies, Tonieplay Games & Accessories"
+      },
+      "h2": null,
+      "body": {
+        "family": "Wonder",
+        "size": "18px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "normal",
+        "text": "539 Products"
+      },
+      "button": {
+        "family": "Wonder",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "See more"
+      },
+      "nav": {
+        "family": "Wonder",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(244, 241, 237)",
+    "header": {
+      "height": 100,
+      "position": "static",
+      "bg": "rgb(244, 241, 237)",
+      "links": [
+        "Tonies",
+        "Tonieboxes",
+        "Tonieplay",
+        "Bundle & Save",
+        "Accessories",
+        "Shop All",
+        "Search"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 136,
+        "h": 7918,
+        "bg": "rgb(244, 241, 237)",
+        "images": 87,
+        "video": false,
+        "heading": {
+          "family": "Wonder",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "0.08px",
+          "text": "All Tonieboxes, Tonies, Tonieplay Games & Accessories"
+        },
+        "words": 711,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 42,
+      "columns": 4,
+      "photoRatio": 0.71,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://us.tonies.com/collections/all?_su_rec=jpebsoAeHgCWV82DuVftKQCrE-MSjHOjRVrgOVt9bM_tbLWaOS6TB8N6JyVd0YWUr57vRbbD649WmN9Mxen7SC8DEUJnQDVvz0uiJXcc5653-XwB9Jgcls5WAzwBUYCEomffkms5QdwLCt1_F0WD_Igailckzvktqx99HrII5COqigFNgGSqk79Qv-HpUionIJlzzvsK17GAYxfNX2A7MWmptTnRKopLcFUYWlkZrCCNen4hdX6W82dbFHjsWGBUmzkmqWP883YVPNd4HZXtl9D9C2NAdat3_3nkG3cVT0r6YWSk16L94D0dk5hucAlI5tNrn9g-94cHkztSuXBPxWljUI8Y6_J2DcKItMdN&_su_rec_id=8cece175-e5f6-45a8-947a-078c466441ae-1794667781&sort_by=manual",
+    "title": "Shop All: Tonies Figures, Tonieplay Games & Accessories | tonies®",
+    "width": 390,
+    "pageHeight": 12449,
+    "fonts": {
+      "h1": {
+        "family": "Wonder",
+        "size": "20px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.08px",
+        "text": "All Tonieboxes, Tonies, Tonieplay Games & Accessories"
+      },
+      "h2": null,
+      "body": {
+        "family": "Wonder",
+        "size": "18px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "normal",
+        "text": "539 Products"
+      },
+      "button": {
+        "family": "Wonder",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "See more"
+      },
+      "nav": {
+        "family": "Wonder",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(244, 241, 237)",
+    "header": {
+      "height": 72,
+      "position": "static",
+      "bg": "rgb(244, 241, 237)",
+      "links": [
+        "Search"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 167,
+        "h": 10894,
+        "bg": "rgb(244, 241, 237)",
+        "images": 45,
+        "video": false,
+        "heading": {
+          "family": "Wonder",
+          "size": "20px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "0.08px",
+          "text": "All Tonieboxes, Tonies, Tonieplay Games & Accessories"
+        },
+        "words": 762,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 42,
+      "columns": 2,
+      "photoRatio": 0.71,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://us.tonies.com/products/fcs-sing-along-songs-tonie?variant=68254970249367",
+    "title": "Favorite Children's Songs: Sing-Along Songs Tonie – tonies®",
+    "width": 1440,
+    "pageHeight": 5479,
+    "fonts": {
+      "h1": {
+        "family": "Wonder",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Favorite Children's Songs: Sing-Along Songs Tonie"
+      },
+      "h2": {
+        "family": "Wonder",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Sing & Dance with Favorite Children's Songs: Sing-Along Song"
+      },
+      "body": {
+        "family": "Wonder",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Regular price $19.99"
+      },
+      "button": {
+        "family": "Wonder",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Wonder",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 100,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Tonies",
+        "Tonieboxes",
+        "Tonieplay",
+        "Bundle & Save",
+        "Accessories",
+        "Shop All",
+        "Search"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 136,
+        "h": 4115,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "Wonder",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Favorite Children's Songs: Sing-Along Songs Tonie"
+        },
+        "words": 591,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Successfully Added!\n            \n       ",
+      "aboveFold": true,
+      "top": 615,
+      "x": 938,
+      "width": 486,
+      "bg": "rgb(210, 0, 15)"
+    },
+    "price": {
+      "family": "Wonder",
+      "size": "24px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "Regular price $19.99"
+    },
+    "galleryImages": 6,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 15
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://us.tonies.com/products/fcs-sing-along-songs-tonie?variant=68254970249367",
+    "title": "Favorite Children's Songs: Sing-Along Songs Tonie – tonies®",
+    "width": 390,
+    "pageHeight": 6925,
+    "fonts": {
+      "h1": {
+        "family": "Wonder",
+        "size": "24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "1.03px",
+        "text": "Favorite Children's Songs: Sing-Along Songs Tonie"
+      },
+      "h2": {
+        "family": "Wonder",
+        "size": "24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Sing & Dance with Favorite Children's Songs: Sing-Along Song"
+      },
+      "body": {
+        "family": "Wonder",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Regular price $19.99"
+      },
+      "button": {
+        "family": "Wonder",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Wonder",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Search"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 167,
+        "h": 5310,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "Wonder",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "1.03px",
+          "text": "Favorite Children's Songs: Sing-Along Songs Tonie"
+        },
+        "words": 583,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Successfully Added!\n            \n       ",
+      "aboveFold": false,
+      "top": 946,
+      "x": 16,
+      "width": 358,
+      "bg": "rgb(210, 0, 15)"
+    },
+    "price": {
+      "family": "Wonder",
+      "size": "20px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "Regular price $19.99"
+    },
+    "galleryImages": 1,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 15
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://us.tonies.com/cart",
+    "title": "Your Shopping Cart – tonies®",
+    "width": 1440,
+    "pageHeight": 2251,
+    "fonts": {
+      "h1": {
+        "family": "Wonder",
+        "size": "28px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Your Cart"
+      },
+      "h2": {
+        "family": "Wonder",
+        "size": "28px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Recommended For You"
+      },
+      "body": {
+        "family": "Wonder",
+        "size": "8px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "*Discount offers valid for US residents only. By clicking “S"
+      },
+      "button": {
+        "family": "Wonder",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Remove"
+      },
+      "nav": {
+        "family": "Wonder",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 100,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Tonies",
+        "Tonieboxes",
+        "Tonieplay",
+        "Bundle & Save",
+        "Accessories",
+        "Shop All",
+        "Search",
+        "1"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 136,
+        "h": 330,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Wonder",
+          "size": "28px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Your Cart"
+        },
+        "words": 31,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 466,
+        "h": 652,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Wonder",
+          "size": "28px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Recommended For You"
+        },
+        "words": 151,
+        "perRow": 6,
+        "fullBleed": true
+      }
+    ]
+  }
+}

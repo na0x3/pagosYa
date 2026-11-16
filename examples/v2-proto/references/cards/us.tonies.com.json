@@ -1,0 +1,65 @@
+{
+  "host": "us.tonies.com",
+  "name": "Tonies",
+  "at": "2026-11-14T15:25:37.701Z",
+  "mood": "Lúdico, familiar y directo: rojo de juguete, formas redondeadas y personajes a gran escala.",
+  "idea": "Presentar un ecosistema infantil sin pantallas alternando demostraciones en contexto con figuras aisladas, como si la página fuese una estantería de juguetes.",
+  "header": "En escritorio hay una franja superior de unos 36 px con el mensaje promocional centrado y «Sign In» a la derecha. Debajo, cabecera estática de 100 px sobre fondo crema: logo rojo a la izquierda; seis enlaces centrados —Tonies, Tonieboxes, Tonieplay, Bundle & Save, Accessories y Shop All—, con «Bundle & Save» dentro de una pastilla roja; búsqueda y bolsa a la derecha. No queda fija al desplazarse. En teléfono conserva la franja promocional y usa una cabecera de 72 px: menú y búsqueda a la izquierda, logo centrado y bolsa dentro de un botón redondeado a la derecha. Una tercera fila horizontal, desplazable y no plegada en menú, muestra las categorías como pastillas grises.",
+  "hero": "En escritorio ocupa aproximadamente 480 px de alto bajo la cabecera, a sangre y con esquinas inferiores muy redondeadas. Usa fondo rojo: el tercio izquierdo contiene titular de 48 px, párrafo de 20 px y dos botones; los dos tercios derechos combinan una fotografía de niños recortada dentro de un arco y un bodegón de Tonieboxes sobre una forma blanca irregular. En teléfono cambia el orden: primero aparece la imagen, de unos 840 px de alto, con el arco fotográfico y el bodegón superpuesto; después se colocan titular de 32 px, texto de 18 px y botones casi a todo el ancho. Así evita encoger la composición de escritorio y convierte el hero en una secuencia vertical.",
+  "catalog": "Cabecera de colección sobre fondo crema con breadcrumb, título de 32 px en escritorio y 20 px en teléfono, descripción breve con enlace «See more», recuento de 539 productos y un único botón «Filter & Sort». No hay una barra lateral permanente. La retícula es de cuatro columnas en 1440 px y dos columnas en 390 px; contiene 42 tarjetas y se prolonga hasta unos 9203 px en escritorio y 12449 px en móvil. Las piezas promocionales ocupan módulos de la misma retícula para interrumpir el inventario sin crear otra sección. En móvil el breadcrumb y la descripción se apilan, mientras recuento y filtro comparten una línea.",
+  "card": "Tarjeta vertical con fotografía sobre un panel blanco de esquinas redondeadas; la relación medida ancho/alto de la zona visual es aproximadamente 0,71, equivalente a un retrato cercano a 5:7. La figura se muestra centrada, aislada y con mucho aire. Algunas tarjetas llevan una etiqueta celeste flotando sobre el borde superior —«BEST SELLER» o «NOW FOR AGES 1+»—. Bajo la imagen aparece una barra roja «Add» casi a todo el ancho y, a su derecha, un control circular con triángulo que permite escuchar una muestra. Después vienen nombre, precio, edad y categoría en texto pequeño. No se documenta una segunda foto al pasar ni selectores de color; las tarjetas promocionales sustituyen botón y ficha por una llamada gráfica completa.",
+  "product": "En escritorio comienza con breadcrumb y una composición de dos columnas: galería de unos 862 px a la izquierda y caja de compra de unos 486 px a la derecha. La imagen principal mezcla uso real y producto; hay seis imágenes en la galería. A la derecha, sobre el pliegue, aparecen título de 32 px, valoración, distintivo de edad, precio de 24 px, frase introductoria, reproductor de muestra, botón rojo «Add To Cart», botón delineado «Subscribe & Save» y promesa de entrega. No hay muestras de color; existe un selector y se detectan 15 bloques desplegables o informativos. Debajo siguen opciones de compra, envío, advertencia sobre imanes, pago fraccionado y una transición naranja con silueta de orejas hacia «Sing & Dance», características en pastillas, descripción, lista de pistas, contenido de la caja, duración, enlaces de exploración y reseñas. En teléfono el orden es título, edad, valoración, precio, imagen aislada y miniaturas; la frase y la compra quedan después, por lo que el botón principal aparece cerca de y=946 y no entra en el primer pliegue. La galería móvil muestra una imagen principal, aunque las miniaturas permiten acceder al resto.",
+  "cart": "Es una página completa, no un cajón. En escritorio presenta «Your Cart» a 28 px y una fila tabular con miniatura, nombre, precio, control de cantidad y subtotal; el resumen queda a la derecha con total de $19.99, aviso promocional, botón rojo «Proceed to Checkout» y enlace Shop Pay. Debajo hay una sección «Recommended For You» de aproximadamente 652 px con carrusel de seis productos visibles y etiquetas promocionales. La captura y las medidas solo documentan el carrito en escritorio; no se aportó una vista de teléfono.",
+  "type": "Toda la interfaz usa Wonder, una sans redondeada cuyos terminales y formas blandas remiten al producto infantil. En portada: titular de 48/700 y cuerpo de 20/400 en escritorio; 32/700 y 18/400 en teléfono. Navegación de 16/700 y botones de 14/600 con tracking mínimo de 0,08 px. En catálogo, H1 de 32 px en escritorio y 20 px en móvil; el recuento usa 18/600. En producto, título de 32/700 y precio de 24/400 en escritorio; 24/700 con tracking de 1,03 px y precio de 20 px en teléfono. Predomina la caja normal, no las mayúsculas: la jerarquía depende de peso, escala y bloques de color, no de espaciado extremo.",
+  "colour": "El fondo principal de portada y catálogo es crema cálido rgb(244, 241, 237), que separa las tarjetas blancas sin recurrir a bordes. El rojo de marca, próximo a rgb(210, 0, 15), trabaja como logo, hero, botones de compra y selección activa. La tinta es carbón casi negro para mantener contraste sin competir con el rojo. Blanco para tarjetas, controles y texto sobre fondos rojos. Celeste identifica novedades y edades; verde lima señala ahorro; naranja separa el contenido editorial de la ficha de producto. Las bandas de color siempre tienen una función concreta: promoción, acción, etiqueta o cambio de capítulo.",
+  "photos": "Se combinan dos sistemas. El catálogo usa recortes de producto aislado sobre blanco, centrados y a escala consistente para poder comparar figuras. Los bloques editoriales usan escenas domésticas con niños manipulando el producto, encuadres cercanos y colores cálidos. El hero superpone fotografía en arco, producto recortado y formas blancas, en vez de depender de una sola imagen rectangular. En producto, la imagen principal demuestra la relación entre niña, figura y Toniebox; las miniaturas incluyen vistas aisladas, bodegones, material informativo y otra escena de uso.",
+  "motion": "Hay un vídeo visible en portada y varios carruseles horizontales: ofertas, marcas/licencias, situaciones de uso y recomendaciones. En teléfono estos carruseles dejan la siguiente tarjeta cortada para comunicar que se pueden arrastrar. Las flechas circulares aparecen sobre el borde de las tarjetas. El control triangular de cada producto reproduce una muestra de audio y la ficha incluye un reproductor con línea de tiempo. No hay evidencia visible de marquesina ni de cambio a una segunda foto al pasar el cursor.",
+  "phone": "La navegación se divide en tres estratos: anuncio, cabecera de 72 px y categorías desplazables. El hero deja de ser una composición lateral y apila imagen, mensaje y CTA. Las retículas de cuatro columnas pasan a dos; los carruseles conservan tarjetas relativamente anchas y muestran un fragmento del siguiente elemento. Las secciones de tres columnas —por ejemplo, Tonieboxes, Tonies y escucha— pasan a módulos verticales. En catálogo, descripción, recuento y filtro se compactan sin ocultar el contexto. En producto, la caja de compra se desarma en una sola columna y la galería precede a los botones; los CTA miden unos 358 px dentro de márgenes de 16 px. Los tamaños tipográficos bajan, pero se conserva el mismo peso alto y las mismas formas redondeadas.",
+  "signature": "Las dos orejas de gato de la Toniebox se convierten en lenguaje de interfaz: aparecen en el símbolo del logo, en siluetas blancas del hero, en la transición naranja de la ficha y en el pequeño cabezal del reproductor.",
+  "home": [
+    {
+      "role": "Explicar el producto y activar la campaña estacional.",
+      "composition": "Hero rojo a sangre con texto en un tercio e imagen compuesta en dos tercios; arco fotográfico, bodegón superpuesto, copos y estrellas como fondo. Debajo, una banda crema alinea tres garantías: 100 días, envío gratis sobre $45 y pago posterior."
+    },
+    {
+      "role": "Convertir las familias principales en accesos visuales inmediatos.",
+      "composition": "Carrusel horizontal de grandes recortes de Tonieboxes, figuras y Tonieplay sobre tarjetas blancas con decoración estacional. En móvil se ven aproximadamente cuatro módulos pequeños y el siguiente queda cortado."
+    },
+    {
+      "role": "Capturar demanda sensible al precio.",
+      "composition": "Título de oferta y carrusel de producto; el primer módulo es una pieza promocional rosa con «40% off» y CTA, seguido de tarjetas comerciales con etiqueta de ahorro, foto, botón Add, audio, nombre y precio. En escritorio caben varias tarjetas; en móvil se muestran unas dos y media."
+    },
+    {
+      "role": "Demostrar el uso real en vez de seguir describiéndolo.",
+      "composition": "Vídeo panorámico centrado, con relación cercana a 16:9 y ancho contenido en escritorio; en teléfono ocupa todo el ancho. Muestra a un niño colocando una figura sobre el reproductor."
+    },
+    {
+      "role": "Ordenar la oferta en tres puertas de entrada.",
+      "composition": "Tres columnas tituladas «Meet the Tonieboxes», «Meet the Tonies» y «Meet happy listening», cada una con un bodegón grande y un botón rojo. Fondo crema, sin cajas visibles. En móvil se apilan y cada imagen conserva gran escala."
+    },
+    {
+      "role": "Aprovechar el reconocimiento de licencias.",
+      "composition": "Carrusel de tarjetas casi cuadradas con imágenes de Disney, Bluey, Pokémon, Hasbro y DreamWorks. Los logos están integrados en fotografías oscuras, no en una lista tipográfica; una flecha circular señala el desplazamiento."
+    },
+    {
+      "role": "Traducir el catálogo en beneficios cotidianos.",
+      "composition": "Carrusel editorial de tarjetas altas: «For story time», «For adventure», «For learning» y otras. Cada tarjeta lleva título y frase arriba, con fotografía familiar ocupando la mayor parte del módulo; la siguiente tarjeta queda parcialmente visible."
+    },
+    {
+      "role": "Mostrar amplitud de contenidos y personajes.",
+      "composition": "Bloque «Songs, stories, games and more» con texto centrado y una hilera de figuras aisladas sobre el fondo crema, tratada como desfile visual más que como catálogo con precio."
+    },
+    {
+      "role": "Aportar prueba social y disponibilidad fuera de la tienda.",
+      "composition": "Tres testimonios en columnas con cinco estrellas rojas, titular corto y párrafo; después, «Find tonies» y una fila de logotipos grandes de Amazon, Target, Walmart y Kohl’s. En móvil ambas filas se apilan o se convierten en desplazamiento horizontal."
+    }
+  ],
+  "lessons": [
+    "Construye el hero móvil de nuevo en lugar de reducir el de escritorio: conserva los mismos activos, pero ordena primero demostración, después argumento y finalmente acción.",
+    "Usa fondos distintos para separar niveles sin llenar la interfaz de bordes: crema para página, blanco para producto y rojo para acción o campaña.",
+    "Mantén una escala fotográfica estable en el catálogo; el aire alrededor de cada figura permite comparar siluetas muy diferentes.",
+    "Inserta módulos promocionales dentro de la misma retícula del producto para romper la monotonía sin obligar al usuario a abandonar el flujo de compra.",
+    "Haz que la característica diferencial del producto se repita como forma gráfica; aquí las orejas conectan logo, hero, reproductor y separadores.",
+    "Añade la prueba del producto en el punto de decisión: el audio se escucha tanto desde la tarjeta como desde la ficha, antes de añadir al carrito."
+  ]
+}

@@ -1,0 +1,847 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.daniellefrankelstudio.com/",
+    "title": "A Bridal Label Made in New York – Danielle Frankel",
+    "width": 1440,
+    "pageHeight": 6265,
+    "fonts": {
+      "h1": {
+        "family": "Canela Light",
+        "size": "28px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Danielle Frankel"
+      },
+      "h2": {
+        "family": "Canela Light",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Country/region"
+      },
+      "body": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "The Spring 27 collection is a lighter expression of Danielle"
+      },
+      "button": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(248, 248, 244)",
+    "header": {
+      "height": 39,
+      "position": "fixed",
+      "bg": "rgb(248, 248, 244)",
+      "links": [
+        "Shop",
+        "Bridal",
+        "Veils & Headpieces",
+        "Footwear",
+        "Accessories",
+        "Birkenstock & Danielle F",
+        "Archive",
+        "Collections",
+        "S27",
+        "XI",
+        "X",
+        "IX",
+        "VIII",
+        "VII",
+        "VI",
+        "Custom Studio"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 40,
+        "h": 748,
+        "bg": "rgb(248, 248, 244)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 833,
+        "h": 1372,
+        "bg": "rgb(248, 248, 244)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 155,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2205,
+        "h": 960,
+        "bg": "rgb(248, 248, 244)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3210,
+        "h": 912,
+        "bg": "rgb(248, 248, 244)",
+        "images": 2,
+        "video": true,
+        "heading": null,
+        "words": 6,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 4167,
+        "h": 960,
+        "bg": "rgb(248, 248, 244)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 5171,
+        "h": 896,
+        "bg": "rgb(248, 248, 244)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 28,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.daniellefrankelstudio.com/",
+    "title": "A Bridal Label Made in New York – Danielle Frankel",
+    "width": 390,
+    "pageHeight": 6236,
+    "fonts": {
+      "h1": {
+        "family": "Canela Light",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Danielle Frankel"
+      },
+      "h2": {
+        "family": "Canela Light",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Country/region"
+      },
+      "body": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "The Spring 27 collection is a lighter expression of Danielle"
+      },
+      "button": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Canela Light",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": ""
+      }
+    },
+    "page": "rgb(248, 248, 244)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(248, 248, 244)",
+      "links": [
+        "Bridal",
+        "Veils & Headpieces",
+        "Footwear",
+        "Accessories",
+        "Birkenstock & Danielle F",
+        "Archive",
+        "S27",
+        "XI",
+        "X",
+        "IX",
+        "VIII",
+        "VII",
+        "VI",
+        "Custom Studio",
+        "Appointments",
+        "ACCOUNT"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 56,
+        "h": 309,
+        "bg": "rgb(248, 248, 244)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 399,
+        "h": 1623,
+        "bg": "rgb(248, 248, 244)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 155,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2022,
+        "h": 390,
+        "bg": "rgb(248, 248, 244)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2445,
+        "h": 1108,
+        "bg": "rgb(248, 248, 244)",
+        "images": 2,
+        "video": true,
+        "heading": null,
+        "words": 6,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3587,
+        "h": 1016,
+        "bg": "rgb(248, 248, 244)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4636,
+        "h": 1037,
+        "bg": "rgb(248, 248, 244)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 28,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.daniellefrankelstudio.com/collections/all",
+    "title": "Shop All – Danielle Frankel",
+    "width": 1440,
+    "pageHeight": 6372,
+    "fonts": {
+      "h1": {
+        "family": "Canela Light",
+        "size": "28px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "Canela Light",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Country/region"
+      },
+      "body": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "© 2026 Danielle Frankel Studio"
+      },
+      "button": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(248, 248, 244)",
+    "header": {
+      "height": 39,
+      "position": "fixed",
+      "bg": "rgb(248, 248, 244)",
+      "links": [
+        "Shop",
+        "Bridal",
+        "Veils & Headpieces",
+        "Footwear",
+        "Accessories",
+        "Birkenstock & Danielle F",
+        "Archive",
+        "Collections",
+        "S27",
+        "XI",
+        "X",
+        "IX",
+        "VIII",
+        "VII",
+        "VI",
+        "Custom Studio"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 40,
+        "h": 5982,
+        "bg": "rgb(248, 248, 244)",
+        "images": 37,
+        "video": false,
+        "heading": {
+          "family": "Canela Light",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Shop All"
+        },
+        "words": 47,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.daniellefrankelstudio.com/collections/all?_su_rec=7ybtA4tyuNBjkBIudxJ24G2YVwoXmBroYAT0oL4KaPObHtLWAbitNtjirrnbcuXgXMXmY3g28NhMQo8XXnhffs6zBe8AZVzXnBHEnM0oQjx6Jl2wR8q_EjIfr3MSu7JpJH6F6pFaLTcufu5iPlVczyONsyK-LZAPl49nHNF9MWGp74S0cObx9cOmKTn9_aYp3uxKTx5RZHn0nHwSpCR_PnrZCV2TsuL-DE7Sy4JDW0vZNmjORbbKf6Zipn9ckntLJBRm6YaFAIoqCnG2cbIlZx1hhq_hWkFNJBIT6JiNmXg0ychUIjg0g0b2jENGF8ynsaqgVsI2e-oHsJ0iQ3Au9ECS1tAMWgLzmYBdgaPNzSEeACYnV0kho943&_su_rec_id=0147856a-71d8-4775-97a5-65003b9ee32b-1794667299",
+    "title": "Shop All – Danielle Frankel",
+    "width": 390,
+    "pageHeight": 15688,
+    "fonts": {
+      "h1": {
+        "family": "Canela Light",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "Canela Light",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Country/region"
+      },
+      "body": {
+        "family": "Canela Light",
+        "size": "9px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "0.6px",
+        "text": "© 2026 Danielle Frankel Studio"
+      },
+      "button": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Canela Light",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": ""
+      }
+    },
+    "page": "rgb(248, 248, 244)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(248, 248, 244)",
+      "links": [
+        "Bridal",
+        "Veils & Headpieces",
+        "Footwear",
+        "Accessories",
+        "Birkenstock & Danielle F",
+        "Archive",
+        "S27",
+        "XI",
+        "X",
+        "IX",
+        "VIII",
+        "VII",
+        "VI",
+        "Custom Studio",
+        "Appointments",
+        "ACCOUNT"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 56,
+        "h": 15010,
+        "bg": "rgb(248, 248, 244)",
+        "images": 30,
+        "video": false,
+        "heading": {
+          "family": "Canela Light",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Shop All"
+        },
+        "words": 47,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.daniellefrankelstudio.com/products/miriam",
+    "title": "Miriam – Danielle Frankel",
+    "width": 1440,
+    "pageHeight": 2127,
+    "fonts": {
+      "h1": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.6px",
+        "text": "Miriam"
+      },
+      "h2": {
+        "family": "Canela Light",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Country/region"
+      },
+      "body": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.8px",
+        "text": "Sits at natural waist, tailored cady pant with ivory grosgra"
+      },
+      "button": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(248, 248, 244)",
+    "header": {
+      "height": 39,
+      "position": "fixed",
+      "bg": "rgb(248, 248, 244)",
+      "links": [
+        "Shop",
+        "Bridal",
+        "Veils & Headpieces",
+        "Footwear",
+        "Accessories",
+        "Birkenstock & Danielle F",
+        "Archive",
+        "Collections",
+        "S27",
+        "XI",
+        "X",
+        "IX",
+        "VIII",
+        "VII",
+        "VI",
+        "Custom Studio"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 40,
+        "h": 1900,
+        "bg": "rgb(248, 248, 244)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Canela Light",
+          "size": "12px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "0.6px",
+          "text": "Miriam"
+        },
+        "words": 125,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Canela Light",
+      "size": "12px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "0.6px",
+      "text": "Miriam Shipping calculated at checkout. Sits at natural wais"
+    },
+    "galleryImages": 4,
+    "swatches": 15,
+    "selects": 0,
+    "accordions": 15
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.daniellefrankelstudio.com/products/miriam",
+    "title": "Miriam – Danielle Frankel",
+    "width": 390,
+    "pageHeight": 1749,
+    "fonts": {
+      "h1": {
+        "family": "Canela Light",
+        "size": "16px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "28%",
+        "text": "Miriam"
+      },
+      "h2": {
+        "family": "Canela Light",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Country/region"
+      },
+      "body": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.8px",
+        "text": "Sits at natural waist, tailored cady pant with ivory grosgra"
+      },
+      "button": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Canela Light",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": ""
+      }
+    },
+    "page": "rgb(248, 248, 244)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(248, 248, 244)",
+      "links": [
+        "Bridal",
+        "Veils & Headpieces",
+        "Footwear",
+        "Accessories",
+        "Birkenstock & Danielle F",
+        "Archive",
+        "S27",
+        "XI",
+        "X",
+        "IX",
+        "VIII",
+        "VII",
+        "VI",
+        "Custom Studio",
+        "Appointments",
+        "ACCOUNT"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 56,
+        "h": 1199,
+        "bg": "rgb(248, 248, 244)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Canela Light",
+          "size": "16px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "28%",
+          "text": "Miriam"
+        },
+        "words": 123,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Canela Light",
+      "size": "12px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "0.6px",
+      "text": "Miriam Shipping calculated at checkout. Sits at natural wais"
+    },
+    "galleryImages": 4,
+    "swatches": 15,
+    "selects": 0,
+    "accordions": 16
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.daniellefrankelstudio.com/cart",
+    "title": "Your Shopping Cart – Danielle Frankel",
+    "width": 1440,
+    "pageHeight": 1356,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Canela Light",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Country/region"
+      },
+      "body": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Loading..."
+      },
+      "button": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Canela Light",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(248, 248, 244)",
+    "header": {
+      "height": 39,
+      "position": "fixed",
+      "bg": "rgb(248, 248, 244)",
+      "links": [
+        "Shop",
+        "Bridal",
+        "Veils & Headpieces",
+        "Footwear",
+        "Accessories",
+        "Birkenstock & Danielle F",
+        "Archive",
+        "Collections",
+        "S27",
+        "XI",
+        "X",
+        "IX",
+        "VIII",
+        "VII",
+        "VI",
+        "Custom Studio"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 40,
+        "h": 956,
+        "bg": "rgb(248, 248, 244)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 738,
+        "h": 162,
+        "bg": "rgb(248, 248, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Canela Light",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Subtotal:"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

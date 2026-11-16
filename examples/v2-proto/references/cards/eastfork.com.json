@@ -1,0 +1,69 @@
+{
+  "host": "eastfork.com",
+  "name": "East Fork",
+  "at": "2026-11-14T15:33:26.390Z",
+  "mood": "Artesanía cotidiana, mesa abundante y cultura editorial; combina la franqueza de un catálogo con escenas cálidas de comida y taller.",
+  "idea": "Alternar grandes escenas de mesa con módulos comerciales muy estructurados, de modo que la cerámica se venda tanto como objeto aislado como parte de una forma de vivir.",
+  "header": "En escritorio hay tres franjas fijas que ocupan 147 px en total: barra de anuncio oliva de unos 36 px; cabecera utilitaria blanca; y navegación de categorías, con 111 px entre estas dos últimas. La barra superior reparte cinco enlaces promocionales a la izquierda y un mensaje de entrega con flechas en el lado derecho. En la cabecera, Search queda a la izquierda, el logotipo centrado y Account + Cart a la derecha. Debajo aparecen ocho enlaces espaciados a todo el ancho: Gifts, New & Noteworthy, Pottery, Table, Kitchen, Drinkware, Home & Garden y About. Líneas negras finas separan las franjas. En teléfono se conservan la barra oliva de 36 px y una cabecera blanca fija de 63 px: hamburguesa a la izquierda, logotipo centrado y carrito como círculo crema a la derecha; búsqueda, cuenta y categorías pasan al menú. El contenido comienza a y=147 en escritorio y y=99 en móvil.",
+  "hero": "Una fotografía horizontal a sangre ocupa 753 px de alto en escritorio, desde y=147 hasta y=900. Presenta tartas y fuentes vistas casi cenitalmente, recortadas por los cuatro bordes para producir abundancia. Titular, texto y CTA se superponen centrados cerca del tercio inferior, en blanco sobre una degradación oscura localizada: “New Arrivals” a 38 px/600, descripción de 16 px en unas tres líneas y botón blanco compacto. En teléfono la composición conserva 745 px de alto, por lo que se vuelve casi vertical: la misma escena se recorta agresivamente por los laterales, el texto baja hasta el último cuarto y el titular pasa a 30 px. El aviso de cookies visible sobre esta zona en algunas capturas no pertenece al diseño del hero y debe ignorarse.",
+  "catalog": "La captura de Shop All registra solo 2 productos, pero sus tarjetas no aparecen en el tramo capturado; después de la cabecera de colección se muestra directamente un módulo alternativo de categorías. La cabecera tiene “Shop All” a 58 px, alineado a la izquierda dentro de un bloque de 147 px. Debajo queda una gran zona de aire y, en una barra inferior, botón Filter a la izquierda y contador + “Sort by Best Selling” a la derecha, separados del contenido por una regla negra. El módulo “Looking for something else?” usa título centrado de 40 px, subtítulo y tres imágenes de categoría en columnas iguales, con esquinas redondeadas y rótulos sobre la foto. En teléfono, “Shop All” baja a 48 px; Filter y el contador comparten una fila de aproximadamente 72 px, mientras que el control de orden no se ve. El módulo alternativo empieza a y=288, usa título centrado de 38 px y apila las tres categorías en una sola columna. No hay evidencia suficiente para establecer la retícula normal de tarjetas del catálogo.",
+  "card": "Las tarjetas observables están en el carrusel comercial de la portada, no en la captura incompleta del catálogo. En escritorio el carrusel enseña aproximadamente cinco productos completos a la vez dentro de una pista horizontal; cada tarjeta usa foto casi cuadrada sobre fondo marfil o rosa muy pálido, nombre en Quincy CF de unos 18 px/800 y precio debajo. Insignias pequeñas tipo “Best Seller”, “New” o ahorro se colocan en la esquina superior de la imagen. Flechas negras cuadradas se superponen en los extremos del carrusel y algunas tarjetas muestran un pequeño botón negro “+” para compra rápida. En teléfono aparecen unas 2,1 tarjetas por pantalla, separadas por reglas verticales; el nombre baja a 16 px. No se puede confirmar una segunda fotografía al pasar ni selectores de color en la tarjeta.",
+  "product": "En escritorio comienza con una miga de pan horizontal y luego una composición aproximada 58/42. A la izquierda, una galería de gran formato: imagen principal casi cuadrada sobre fondo crema, una franja de la siguiente imagen asomando a la derecha y controles inferiores con flechas y puntos. A la derecha, caja de compra con título Quincy CF de 36 px/700, precio de $96, financiación, descripción breve, selector de cantidad −/+, y CTA azul #0047BB de 342 px de ancho. Todo esto está sobre el pliegue; el botón empieza alrededor de y=386. Siguen plazo de envío, política de devolución, exclusión de descuentos, testimonio con estrellas y tres acordeones: About abierto, Details y Care cerrados. También aparecen iconos de fabricación, origen, seguridad alimentaria y lavavajillas/microondas, más un bloque “Build Your Collection”. La ficha contiene 13 imágenes y 16 muestras registradas, aunque este producto no muestra un desplegable convencional. Debajo se encadenan “Explore More La Sirène” con cuatro productos, un banner 50/50 “Discover the Full Collection” y otra selección “Explore More East Fork”. En móvil, la miga se mantiene en una línea compacta; galería, información y compra se apilan. La foto queda dentro de márgenes de unos 15 px, el título conserva 36 px y el CTA azul mide unos 200 px junto al control de cantidad. Los acordeones pasan a ancho completo. En recorridos posteriores aparece una barra de compra fija al pie con nombre y precio a la izquierda y Add to Cart a la derecha.",
+  "cart": "No hay una captura utilizable del carrito abierto: la imagen facilitada vuelve a mostrar la portada y el navegador solo confirma “Cart (1)” en la cabecera. Por tanto, no se pueden determinar con rigor si es cajón o página, la composición de filas, totales, checkout ni ventas adicionales.",
+  "type": "Galano Classic estructura navegación, cuerpo y la mayoría de titulares: cuerpo de 14–16 px/400, navegación de 16 px/400 y titulares comerciales de 24–40 px/600, con tracking muy leve de −0,1 px. Los grandes títulos de colección llegan a 58 px en escritorio y 48 px en teléfono. Quincy CF, una serif robusta y de contraste moderado, se reserva para nombres de producto y títulos con mayor carácter: 18 px/800 en tarjetas y 36 px/700 en la ficha. Toma aparece en CTAs editoriales: 14 px, mayúsculas y trazo manual inclinado. La combinación asigna a la sans la arquitectura y a la serif o manuscrita los momentos de producto y acción; no se abusa de mayúsculas.",
+  "colour": "El fondo general es blanco #FFFFFF y la tinta principal casi negra. El oliva apagado de la barra de anuncio funciona como banda de urgencia y crea contraste con texto blanco. Marfil, crema y rosa empolvado se usan detrás de objetos para separar la cerámica blanca del lienzo. Terracota, marrón y naranja proceden sobre todo de alimentos, madera y esmaltes, dando continuidad entre módulos. El azul saturado #0047BB se reserva para la acción principal de compra y para la colección La Sirène; por ser escaso, el CTA destaca sin necesitar mayor tamaño. Reglas negras de 1 px organizan cabecera, filtros y acordeones.",
+  "photos": "Hay dos registros. El comercial aísla cada pieza, frontal o en tres cuartos, con mucho aire y sombras blandas sobre fondos crema; la escala se mantiene constante para comparar formas. El editorial llena el encuadre con comida, manos, manteles, libros, taller y horno, usando luz cálida y recortes que dejan objetos fuera de campo. Los banners son panorámicos y a sangre; las tarjetas editoriales usan recortes verticales o cuadrados con esquinas discretamente redondeadas. La portada alterna ambos registros para que cada bloque de producto aislado quede contextualizado por una escena de uso.",
+  "motion": "No hay vídeo ni marquesina detectados. Sí se ven carruseles horizontales con flechas y paginación en el rail de productos, la paleta de esmaltes y la galería de producto. Es probable el desplazamiento por arrastre en teléfono y una transición entre imágenes al pulsar puntos o flechas. La segunda foto al pasar sobre una tarjeta no está documentada. La cabecera y la barra de compra de producto son fijas; los acordeones abren y cierran contenido.",
+  "phone": "La página no reduce simplemente la escala: cambia la jerarquía. La navegación de tres franjas se comprime a anuncio + cabecera de 63 px; las categorías desaparecen tras la hamburguesa. Los banners conservan alturas grandes —hero de 745 px— y cambian a recortes verticales. Las parejas de columnas se apilan a una columna, mientras los carruseles mantienen tarjetas parciales para sugerir deslizamiento. La sección de productos enseña unas dos tarjetas y una fracción; Dinnerware Sets pasa de dos columnas a una. La ficha de producto apila galería, título, precio, compra y acordeones, y añade compra fija al pie. En catálogo las tres categorías pasan de 3 a 1 columna. Los titulares no se reducen de forma uniforme: el hero baja de 38 a 30 px, Shop All de 58 a 48 px, pero el H1 de producto permanece en 36 px.",
+  "signature": "“The Palette”: una hilera de platos fotografiados desde arriba, cada esmalte identificado con una anotación manuscrita alrededor de la pieza, convierte el selector de color en una lámina de taller en vez de una fila genérica de muestras.",
+  "home": [
+    {
+      "role": "Presentar la campaña estacional y llevar a novedades.",
+      "composition": "Hero fotográfico a sangre de 753 px en escritorio y 745 px en teléfono, con texto blanco centrado en el tercio inferior, degradación oscura local y CTA compacto."
+    },
+    {
+      "role": "Dar accesos rápidos a familias comerciales.",
+      "composition": "Banda breve bajo el hero; en teléfono se reconoce como una matriz 2×2 de botones grandes —Pottery, Gift the Table, Stock Your Kitchen y Best Sellers— con fondos oliva, terracota, crema y negro. En escritorio se extiende horizontalmente."
+    },
+    {
+      "role": "Permitir compra inmediata de productos destacados.",
+      "composition": "Carrusel de 10 artículos y 438 px de alto en escritorio. Aproximadamente cinco tarjetas visibles, fotos casi cuadradas, insignias y flechas superpuestas. En móvil mide 341 px y deja visibles dos tarjetas más una fracción."
+    },
+    {
+      "role": "Introducir la guía de regalos como campaña editorial.",
+      "composition": "Banner de 638 px con fotografía de objetos de mesa sobre fondo terracota. Titular de 38 px, texto y botón se superponen a la izquierda; la escena ocupa el ancho. En móvil conserva unos 602 px y el texto se sitúa sobre la imagen."
+    },
+    {
+      "role": "Separar dos rutas de compra por uso.",
+      "composition": "Dos tarjetas iguales en escritorio —Dinnerware Sets y Drinkware— con título de 24 px sobre fondos crema y producto recortado en gran escala. El bloque mide 538 px. En móvil se apilan en una columna dentro de 567 px."
+    },
+    {
+      "role": "Contar una colección mediante una escena inmersiva.",
+      "composition": "Banner “The Founder's Collection” de unos 620 px, con textiles y platos ornamentados en tonos rojos y verdes. Texto blanco superpuesto en una esquina y CTA pequeño; en teléfono el recorte se vuelve vertical."
+    },
+    {
+      "role": "Explicar el sistema de esmaltes y facilitar la elección de color.",
+      "composition": "Sección “The Palette” de 488 px: columna de introducción a la izquierda y carrusel de platos vistos desde arriba a la derecha, con nombres manuscritos y flechas. En teléfono crece a 771 px y apila texto y carrusel."
+    },
+    {
+      "role": "Construir confianza mediante historia y fabricación.",
+      "composition": "Fotografía de estanterías del taller a sangre, 720 px de alto, con titular “15 Years of East Fork”, párrafo y botón centrados sobre una banda oscura sutil. En móvil ocupa 624 px."
+    },
+    {
+      "role": "Extender la marca más allá del producto.",
+      "composition": "Bloque de Journal de 735 px con cuatro columnas: imagen, titular serif de artículo y resumen. Los temas mezclan recetas, salud comunitaria, comida y producción. En la captura móvil el contenido conserva comportamiento horizontal o tarjetas compactas en vez de una larga pila."
+    },
+    {
+      "role": "Cerrar con manifiesto, navegación y captación.",
+      "composition": "Frase centrada “EAST FORK is a vessel for…” seguida por pie rosa muy pálido: enlaces agrupados en columnas, formulario de newsletter, iconos sociales y sellos de certificación. En móvil debe apilar grupos y mantener el formulario a ancho completo."
+    }
+  ],
+  "lessons": [
+    "Asigna una función concreta a cada registro fotográfico: producto aislado para comparar y escena abundante para generar deseo; alternarlos evita una portada monótona.",
+    "Mantén la acción principal en un único color reservado. Aquí el azul intenso casi no aparece fuera de Add to Cart, por lo que destaca incluso en una interfaz con muchas imágenes.",
+    "Diseña el móvil mediante nuevos recortes y orden de lectura, no reduciendo el escritorio: conserva banners altos, apila módulos y deja asomar la siguiente tarjeta para comunicar desplazamiento.",
+    "Usa tipografías por función: sans para arquitectura y lectura, serif para nombres de producto y una manuscrita solo en CTAs o anotaciones. Tres voces funcionan si cada una tiene un trabajo estable.",
+    "Convierte atributos funcionales en contenido editorial. La paleta de esmaltes no es una lista de círculos: platos reales, escala grande y notas manuscritas hacen memorable una decisión de variante.",
+    "Intercala venta, contexto, historia y artículos. La secuencia evita colocar muchas retículas iguales seguidas y permite que una tienda con catálogo limitado se sienta rica en contenido."
+  ]
+}

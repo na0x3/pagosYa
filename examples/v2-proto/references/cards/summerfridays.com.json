@@ -1,0 +1,61 @@
+{
+  "host": "summerfridays.com",
+  "name": "Summer Fridays",
+  "at": "2026-11-14T14:53:01.702Z",
+  "mood": "Vacaciones costeras, cosmética apetecible y optimismo editorial, expresados con luz cálida, fondos empolvados y mucho producto aislado.",
+  "idea": "Alternar grandes escenas de campaña con carruseles comerciales muy densos, usando el color de cada familia de producto como fondo y sistema de navegación.",
+  "header": "Dos niveles y posición sticky. Arriba hay una barra de anuncio azul grisáceo de unos 44 px con “FREE SHIPPING ON U.S. ORDERS $35+” centrado y enlace subrayado. Debajo, en escritorio, una cabecera blanca de 57 px: cuatro enlaces a la izquierda —Shop, Gifts, About, Blog—, logotipo tipográfico centrado y, a la derecha, Rewards, Account, selector de país, búsqueda y bolsa con contador. En teléfono, barra de anuncio de unos 44 px más cabecera blanca de 70 px: menú y lupa a la izquierda, logo centrado en dos líneas y bolsa a la derecha; desaparecen los enlaces textuales. El conjunto ocupa aproximadamente 101 px en escritorio y 114 px en móvil antes del contenido.",
+  "hero": "Bloque full bleed de 900 px de alto en escritorio, desde y=101 hasta y=1001. La imagen está construida como un díptico 50/50: persona entrando al mar a la izquierda y bodegón de fragancias en beige a la derecha. El mensaje se centra sobre la unión de ambas mitades: píldora “NEW”, titular blanco de 55 px, bajada de 16–18 px y botón blanco de unos 150 × 42 px. En teléfono mide 844 px: se elimina la mitad humana y se usa un recorte vertical del bodegón, con producto entrando desde la parte inferior. El titular baja a 40 px, la bajada se parte en dos líneas y el botón crece hasta unos 150 × 48 px. El aviso de cookies semitransparente tapa parte de la captura del hero; no forma parte de la composición editorial y debe ignorarse.",
+  "catalog": "Cabecera de contenido con margen lateral aproximado de 60 px en escritorio y 10 px en teléfono. El H1 “Shop All Products & Collections” mide 30 px. En escritorio aparecen debajo un botón oscuro “Filter your search”, dos filas de chips —categorías y necesidades— y “Sort By” alineado al extremo derecho. La cuadrícula tiene 4 columnas, huecos de unos 7 px y 23 productos; en móvil pasa a 2 columnas casi sin calle central. En teléfono se conservan H1, filtro y orden, pero se ocultan las filas de chips para no consumir altura. La zona de productos mide unos 3419 px en escritorio y 5057 px en móvil. No hay una barra lateral permanente: el filtrado se abre desde un control compacto.",
+  "card": "Tarjeta sin caja exterior ni sombra; la retícula y el fondo blanco hacen la separación. La foto es casi cuadrada, con producto pequeño y centrado sobre fondo crema, dejando mucho aire alrededor. Insignias de premios se colocan en la esquina superior izquierda. Debajo aparecen nombre, variante cuando corresponde, descripción de una o dos líneas, selector de tamaño o variante y muestras circulares de color. El cierre es una franja gris muy clara de ancho completo con “ADD TO BAG” a la izquierda y precio a la derecha, ambos en 11–13 px y mayúsculas espaciadas. Las tarjetas de Lip Butter Balm muestran aproximadamente ocho muestras y un signo “+”. No se demuestra una segunda foto al pasar en las capturas; no debe asumirse.",
+  "product": "En escritorio, el primer bloque mide 801 px y se divide en tres zonas: imagen principal a la izquierda, ocupando cerca del 56% del ancho; columna estrecha de miniaturas en torno al 10%; y caja de compra a la derecha, de unos 30%. La fotografía principal es un bodegón crema con el neceser muy ampliado y situado bajo el centro. La caja de compra queda sobre el pliegue: H1 de 26 px, condición de regalo, línea de puntos/recompensas, selector de cantidad y botón azul de 269 px de ancho con precio $0. Al tratarse de un obsequio promocional no hay variantes visibles relevantes ni una narrativa larga de ingredientes. En teléfono, la galería va primero a ancho completo, seguida por puntos o flechas discretas; después aparecen título, condición, recompensa y una fila compacta de cantidad más botón. Al hacer scroll se ve una barra de compra fija en el borde inferior. Debajo vienen un carrusel “You May Also Like”, Reviews con llamada “Be the First to Review”, galería social y pie. Las métricas automáticas detectan muchos swatches y acordeones porque cuentan elementos de las recomendaciones y del resto de la página; no equivalen a 408 variantes del neceser.",
+  "cart": "No hay una captura válida del carrito. La URL de carrito redirigió a la portada: solo se aprecia el contador de la bolsa cambiado a 1. No se puede determinar si el carrito real es cajón o página, ni documentar filas, totales o ventas adicionales.",
+  "type": "Toda la interfaz usa Futura PT, de construcción geométrica y peso medio 450. El H1 del hero mide 55 px en escritorio y 40 px en teléfono, con tracking negativo de aproximadamente −0.9/−0.76 px. Los H2 son de 26 px con −0.52 px; el H1 de catálogo es de 30 px con −0.75 px. Navegación y cuerpo usan 16 px con tracking leve de 0.13 px. Botones y precios bajan a 13 px, pasan a mayúsculas y abren el espaciado hasta 1.1 px. La jerarquía no depende de mezclar familias, sino de escala, caja, tracking y contraste de fondo.",
+  "colour": "Blanco puro rgb(255,255,255) para página y cabecera; negro casi puro para navegación y texto. Azul grisáceo como banda institucional y CTA de compra: el botón medido usa rgb(92,120,153), aproximadamente #5C7899. Crema cálido y beige rosado dominan los fondos fotográficos. Las colecciones convierten el color del envase en escenario: rosa empolvado para Lip Butter Balm, terracota suave para Lip Stain y azul pálido para hidratación. Gris claro rgb(238,237,236) organiza botones rápidos y bloques informativos. El color no se usa como adorno suelto: identifica familias, separa capítulos y señala acciones.",
+  "photos": "Dos tratamientos coordinados. Primero, campaña en vida real: mar, piel, manos y primeros planos, recortados a sangre. Segundo, catálogo de estudio: producto aislado y frontal sobre crema, a escala pequeña, con sombra corta y suave. En los módulos de colección se exagera el vacío y se alinean varios envases como figuras sobre un escenario monocromo. Las escenas editoriales usan recortes cerrados; las fichas comerciales mantienen encuadre y altura constantes. Premios circulares se superponen a las fotos en vez de ocupar espacio textual debajo.",
+  "motion": "La portada contiene un carrusel horizontal de favoritos de comunidad con flechas laterales, tarjetas parcialmente visibles y contenido de vídeo/UGC; las mediciones registran vídeo en esa sección y múltiples recursos móviles. Las colecciones de Lip Stain y Lip Butter Balm también funcionan como carruseles, con productos repartidos horizontalmente y flechas en los extremos. Las recomendaciones de producto y la galería social son carruseles. No se observa marquesina textual. No hay evidencia suficiente para afirmar zoom, parallax o cambio de foto al hover.",
+  "phone": "La navegación se comprime a iconos y logo en dos líneas. El hero abandona el díptico y selecciona una sola mitad de la campaña para producir un recorte vertical legible. Los módulos comerciales no se apilan siempre: los carruseles conservan una tarjeta principal y dejan asomar las vecinas para comunicar desplazamiento. El bloque de tres campañas pasa de 3 columnas a 1; la cuadrícula de hidratantes pasa de 4 a 2; el catálogo también pasa de 4 a 2. Los filtros detallados desaparecen detrás de un botón. En producto, galería y compra se apilan y aparece un CTA fijo inferior. Se mantienen los títulos de 26–30 px, por lo que la adaptación depende más del reflujo y el recorte que de reducir drásticamente la tipografía.",
+  "signature": "Convertir cada colección en una pasarela monocroma: envases muy separados flotan sobre un fondo tomado de su propia gama, con un único producto seleccionado y su compra centrada debajo.",
+  "home": [
+    {
+      "role": "Presentar la campaña y conducir a los sets de edición limitada.",
+      "composition": "Hero full bleed de 900 px en escritorio y 844 px en teléfono. Díptico fotográfico 50/50 en escritorio; recorte vertical exclusivo del bodegón en móvil. Texto y CTA centrados sobre la imagen."
+    },
+    {
+      "role": "Aportar prueba social y convertir contenido de comunidad en compra.",
+      "composition": "Sección de 684–689 px con H2 de 26 px y carrusel horizontal de tarjetas altas. Mezcla vídeo UGC, bodegones y producto; cada panel añade miniatura, nombre, variante o muestras, precio y compra rápida. En móvil ocupa casi todo el ancho y deja visibles fragmentos de las tarjetas vecinas."
+    },
+    {
+      "role": "Lanzar la colección Flushed Lip Stain y permitir elegir tono sin salir del capítulo.",
+      "composition": "Escenario terracota de unos 844 px en escritorio y 823 px en móvil. Título centrado arriba; cinco lápices muy separados en horizontal. La información del tono activo, muestras, botón con precio y enlace “Learn More” se concentra en el centro inferior."
+    },
+    {
+      "role": "Explicar las tres grandes promesas de la marca mediante campañas.",
+      "composition": "Tres paneles fotográficos iguales en una fila, dentro de un bloque de 575 px: Skincare + Hybrid-Makeup, Lip Butter Balm y Eczema-Safe Essentials. Cada foto lleva texto blanco y enlace en la esquina inferior izquierda. En móvil se convierten en una columna y la sección crece hasta 1404 px."
+    },
+    {
+      "role": "Mostrar amplitud cromática de Lip Butter Balm.",
+      "composition": "Bloque rosa empolvado de unos 842 px. Título centrado y carrusel de tubos aislados, espaciados regularmente. El producto activo se resuelve abajo con nombre, variante, frase breve, compra y precio. Mantiene la estructura horizontal también en teléfono."
+    },
+    {
+      "role": "Facilitar comparación directa entre hidratantes cotidianos.",
+      "composition": "Sección blanca de 592 px con H2 alineado a la izquierda y cuadrícula de 4 tarjetas; pasa a 2 columnas y 889 px en móvil. Fotos homogéneas de estudio, insignias en la esquina y texto funcional debajo."
+    },
+    {
+      "role": "Captar registros y explicar servicios de relación con la marca.",
+      "composition": "Bloque de 692 px dividido aproximadamente 50/50: a la izquierda, retrato vertical enmarcado por rayas azul claro y blanco; a la derecha, título, texto del club y tres filas separadas por líneas para suscripción, SMS y reciclaje. En móvil las partes se apilan."
+    },
+    {
+      "role": "Cerrar con comunidad y trasladar tráfico a redes.",
+      "composition": "Banda azul grisácea de 439 px con “Follow us @summerfridays” y una tira horizontal de 8 imágenes cuadradas o casi cuadradas. En teléfono conserva el carrusel y mide unos 395 px."
+    }
+  ],
+  "lessons": [
+    "Usa el color del producto como arquitectura: asigna un fondo estable a cada familia para que el usuario reconozca el capítulo antes de leer.",
+    "Separa campaña y comercio dentro de la misma página: primero una imagen emocional a sangre; inmediatamente después, tarjetas con nombre, variante, precio y compra.",
+    "En móvil no reduzcas mecánicamente un díptico: elige la mitad con mejor espacio negativo y crea un recorte vertical específico.",
+    "Mantén la compra rápida en una franja de posición constante dentro de todas las tarjetas; así precios y CTA se pueden recorrer visualmente en línea.",
+    "Haz comparables las fotos de catálogo mediante fondo, escala y altura de producto constantes, reservando los recortes expresivos para módulos editoriales.",
+    "Cuando una colección tiene muchos tonos, evita una cuadrícula interminable: usa una pasarela horizontal, muestras compactas y una sola ficha activa."
+  ]
+}

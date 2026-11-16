@@ -1,0 +1,423 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://seed.com/",
+    "title": "Seed • Whole Body Health Starts in the Gut",
+    "width": 1440,
+    "pageHeight": 7691,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Seed Sans",
+        "size": "48px",
+        "weight": "350",
+        "case": "none",
+        "tracking": "-1.2px",
+        "text": "A life-changinghealth routine, builtfor your microbiome."
+      },
+      "body": {
+        "family": "Seed Sans",
+        "size": "16px",
+        "weight": "350",
+        "case": "none",
+        "tracking": "-0.16px",
+        "text": "DS-01® is a clinically validated 24-strain probiotic for dig"
+      },
+      "button": {
+        "family": "Seed Sans",
+        "size": "14px",
+        "weight": "350",
+        "case": "none",
+        "tracking": "-0.14px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Seed Sans",
+        "size": "20px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "[logo]Home"
+      }
+    },
+    "page": "rgb(28, 58, 19)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "[logo]Home",
+        "Shop",
+        "Science",
+        "Learn",
+        "Sign in"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 5,
+    "sections": [
+      {
+        "y": 0,
+        "h": 844,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Seed Sans",
+          "size": "48px",
+          "weight": "350",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "A life-changinghealth routine, builtfor your microbiome."
+        },
+        "words": 32,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 844,
+        "h": 285,
+        "bg": "rgb(239, 241, 228)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Seed Sans",
+          "size": "32px",
+          "weight": "350",
+          "case": "none",
+          "tracking": "-0.64px",
+          "text": "DS-01® benefits you can feel in as little as 7 days.°"
+        },
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1129,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Seed Sans",
+          "size": "12px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Prebiotic Outer Capsule"
+        },
+        "words": 58,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1849,
+        "h": 709,
+        "bg": "rgb(239, 241, 228)",
+        "images": 4,
+        "video": true,
+        "heading": {
+          "family": "Seed Sans",
+          "size": "40px",
+          "weight": "350",
+          "case": "none",
+          "tracking": "-0.8px",
+          "text": "Whole-body benefits start here."
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2558,
+        "h": 760,
+        "bg": "rgb(252, 252, 247)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Seed Sans",
+          "size": "48px",
+          "weight": "350",
+          "case": "none",
+          "tracking": "-0.72px",
+          "text": "You are more than human."
+        },
+        "words": 44,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3318,
+        "h": 741,
+        "bg": "rgb(28, 58, 19)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 35,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4058,
+        "h": 1075,
+        "bg": "rgb(252, 252, 247)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5133,
+        "h": 246,
+        "bg": "rgb(252, 252, 247)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5380,
+        "h": 501,
+        "bg": "rgb(252, 252, 247)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 5881,
+        "h": 832,
+        "bg": "rgb(252, 252, 247)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://seed.com/",
+    "title": "Seed • Whole Body Health Starts in the Gut",
+    "width": 390,
+    "pageHeight": 844,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Seed Sans",
+        "size": "32px",
+        "weight": "350",
+        "case": "none",
+        "tracking": "-0.8px",
+        "text": "A life-changing healthroutine, built for yourmicrobiome"
+      },
+      "body": {
+        "family": "Seed Sans",
+        "size": "16px",
+        "weight": "350",
+        "case": "none",
+        "tracking": "-0.16px",
+        "text": "DS-01® is a clinically validated 24-strain probiotic for dig"
+      },
+      "button": {
+        "family": "Seed Sans",
+        "size": "14px",
+        "weight": "350",
+        "case": "none",
+        "tracking": "-0.14px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Seed Sans",
+        "size": "20px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "[logo]Home"
+      }
+    },
+    "page": "rgb(28, 58, 19)",
+    "header": {
+      "height": 48,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "[logo]Home",
+        "Open menu"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 5,
+    "sections": [
+      {
+        "y": -1688,
+        "h": 788,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Seed Sans",
+          "size": "32px",
+          "weight": "350",
+          "case": "none",
+          "tracking": "-0.8px",
+          "text": "A life-changing healthroutine, built for yourmicrobiome"
+        },
+        "words": 32,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": -900,
+        "h": 558,
+        "bg": "rgb(239, 241, 228)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Seed Sans",
+          "size": "24px",
+          "weight": "350",
+          "case": "none",
+          "tracking": "-0.36px",
+          "text": "DS-01® benefits you can feel in as little as 7 days.°"
+        },
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": -342,
+        "h": 936,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Seed Sans",
+          "size": "12px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Prebiotic Outer Capsule"
+        },
+        "words": 58,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 593,
+        "h": 879,
+        "bg": "rgb(239, 241, 228)",
+        "images": 4,
+        "video": true,
+        "heading": {
+          "family": "Seed Sans",
+          "size": "32px",
+          "weight": "350",
+          "case": "none",
+          "tracking": "-0.64px",
+          "text": "Whole-body benefits start here."
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1472,
+        "h": 719,
+        "bg": "rgb(252, 252, 247)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Seed Sans",
+          "size": "32px",
+          "weight": "350",
+          "case": "none",
+          "tracking": "-0.48px",
+          "text": "You are more than human."
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2192,
+        "h": 778,
+        "bg": "rgb(28, 58, 19)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 35,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2970,
+        "h": 817,
+        "bg": "rgb(252, 252, 247)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3786,
+        "h": 154,
+        "bg": "rgb(252, 252, 247)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3940,
+        "h": 469,
+        "bg": "rgb(252, 252, 247)",
+        "images": 7,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4409,
+        "h": 764,
+        "bg": "rgb(252, 252, 247)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 31,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  }
+}

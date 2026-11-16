@@ -1,0 +1,69 @@
+{
+  "host": "bluebottlecoffee.com",
+  "name": "Blue Bottle",
+  "at": "2026-11-14T14:50:54.594Z",
+  "mood": "Editorial de producto, preciso y ritual; la sobriedad del blanco se contrapone a escenas de café oscuras y estacionales.",
+  "idea": "Construir la tienda como un catálogo tipográfico blanco donde el azul de la botella identifica la marca y las campañas se presentan mediante bodegones cinematográficos de ancho completo.",
+  "header": "En escritorio ocupa 116 px antes del contenido. Arriba lleva una barra de anuncio centrada —«Get the perfect gift…» con enlace subrayado— y selector de país a la derecha. Debajo, una navegación amplia: cuatro enlaces en mayúsculas alineados a la izquierda (Shop, Best Sellers, Subscriptions, Visit Us & Learn), isotipo de botella azul exactamente centrado y tres acciones lineales a la derecha: buscar, cuenta y bolsa. No hay wordmark. Las capturas no permiten confirmar que sea fijo. En teléfono se conserva el anuncio y aparece una fila con menú hamburguesa a la izquierda, botella centrada y búsqueda, cuenta y bolsa a la derecha; en portada añade debajo una tira horizontal desplazable de categorías en cápsulas con borde negro. Esa tira no aparece en la ficha de producto.",
+  "hero": "En escritorio forma una sección de 642 px desde y=116: primero, fotografía o vídeo de campaña a sangre de aproximadamente 1440 × 450 px; después, bloque blanco con titular de 24 px, texto breve y botón gris oscuro de unos 350 × 48 px alineados a la izquierda, mientras la paginación 01–02–03 queda a la derecha. No superpone texto sobre la imagen. En teléfono, la imagen se recorta a un marco cercano a 390 × 312 px y conserva el regalo como centro visual; debajo van los números del carrusel centrados, un titular de 20 px que rompe en dos líneas, párrafo y botón casi a todo el ancho. El espacio en blanco convierte foto, paginación y argumento en tres franjas claramente separadas.",
+  "catalog": "No se proporcionó captura del catálogo, ni en escritorio ni en teléfono; por tanto no se pueden verificar su cabecera, número de columnas, filtros u ordenación. Las medidas automáticas asociadas a portada no bastan para describir responsablemente una PLP y no se usan como sustituto.",
+  "card": "Las tarjetas visibles en «Holiday Best Sellers» usan una foto de producto aislado sobre fondo blanco roto, generalmente en marco cuadrado o ligeramente vertical; la medición general detecta una relación aproximada de 1,25 en escritorio y 1:1 en teléfono. Debajo aparecen nombre en mayúsculas, una línea descriptiva, precio alineado al extremo derecho y, ocasionalmente, etiquetas pequeñas como «Best Seller». En teléfono el carrusel deja ver una tarjeta completa y parte de la siguiente; incorpora un botón oscuro «Add to Cart» bajo cada tarjeta y después un botón secundario con borde para entrar en toda la colección. No hay evidencia suficiente para afirmar que exista segunda fotografía al pasar ni selector de color en la tarjeta.",
+  "product": "En escritorio, la zona principal ocupa un bloque gris cálido #F6F6F3 de 1074 px de alto. Se divide aproximadamente en 60/40: gran galería a la izquierda, con el producto aislado y mucho aire, y caja de compra a la derecha. Sobre el pliegue aparecen título, subtítulo, selector de cantidad −/1/+, botón oscuro «Add to Cart | $32», ayuda de envío y una venta cruzada «Pair it with» con miniatura y botón delineado. La galería declara 12 imágenes y usa paginación 01–02–03 en lugar de miniaturas visibles; no hay muestras de color y la medición registra un selector. Debajo aparece una introducción editorial con texto centrado e iconos de atributos —origen artesanal, capacidad, material y edición limitada—; después, composición de dos columnas con descripción a la izquierda y foto ambiental a la derecha, seguida por una franja de reseñas históricas. Se detectan 11 elementos desplegables o acordeones en el documento, aunque no todos quedan abiertos en las capturas. En teléfono todo se apila: imagen grande, paginación, título, compra, venta cruzada, relato y atributos. El botón de compra reaparece fijo en el borde inferior durante el desplazamiento. La sección inicial móvil mide 1669 px, frente a 1074 px en escritorio.",
+  "cart": "Es un cajón lateral derecho, no una página independiente. En la captura de escritorio ocupa aproximadamente el 40% del ancho y oscurece el resto de la ficha con una capa gris. Arriba muestra «Your Cart», botón de cierre y una barra de progreso para envío gratuito. Cada fila presenta nombre, precio, miniatura, control compacto de cantidad y eliminación. Después incluye «You may also like» con un producto recomendado y botón delineado, paginación 01–02–03, total estimado y un CTA oscuro de ancho completo para finalizar compra; debajo queda el enlace para añadir código promocional. No se proporcionó captura del carrito en teléfono.",
+  "type": "La combinación usa ABC Marfa Regular para titulares y ABC Diatype Regular para lectura funcional. Marfa aporta los encabezados geométricos en mayúsculas: 24 px en portada de escritorio, 20 px en teléfono, peso 400 y tracking de 1,6 px; el H1 de producto sube a 32 px en escritorio y vuelve a 20 px en móvil. Algunos títulos editoriales usan Diatype en mayúsculas con tracking más abierto: 2,4 px en escritorio y 2 px en teléfono. El cuerpo se mantiene pequeño, normalmente 12 px, sin tracking añadido. Botones: Diatype de 14 px en portada y 16 px en producto, en caja normal. La jerarquía no depende de negritas: se produce mediante mayúsculas espaciadas, escala, ancho de bloque y grandes intervalos verticales.",
+  "colour": "El sistema se apoya en blanco #FFFFFF para catálogo y respiración, gris cálido #F6F6F3 para alternar capítulos y tinta casi negra para texto. Los CTA primarios usan gris carbón RGB(51,51,51) con texto blanco; los secundarios son blancos con borde negro fino. El azul cian de la botella funciona como firma, no como relleno general: aparece en logo y detalles del producto. La campaña añade verde oliva, negro y marrón mediante las fotografías. El widget de privacidad verde es una interfaz externa y no debe tomarse como color principal de la tienda.",
+  "photos": "Hay dos registros coordinados. El comercial aísla tazas, café y accesorios sobre blanco o gris muy claro, a escala contenida y con sombras suaves; facilita comparar productos. El editorial usa bodegones de baja iluminación, fondos verde oliva o negros, bandejas metálicas y ramas estacionales. En escritorio esas escenas se muestran en franjas panorámicas o módulos 1/2; en teléfono reciben recortes más verticales sin añadir texto encima. Las secciones de regalo también emplean composiciones cenitales en cuadrícula. El azul del isotipo se mantiene visible dentro de imágenes oscuras como punto de reconocimiento.",
+  "motion": "La portada contiene un vídeo y el hero funciona como carrusel de tres diapositivas, señalado por 01–02–03; la pausa visible sobre el módulo de guía sugiere otro contenido reproducible o carrusel. Las filas de productos y categorías se comportan como carruseles horizontales en teléfono porque dejan asomar el siguiente elemento. La galería de producto también usa paginación numerada. No se ve una marquesina automática. Tampoco puede confirmarse transición de segunda imagen al pasar por una tarjeta.",
+  "phone": "A 390 px desaparecen los cuatro enlaces de escritorio y entra la hamburguesa; el logo sigue centrado y se conservan tres acciones. Los módulos 50/50 pasan a una sola columna, normalmente con imagen primero y texto después, y los titulares bajan de 24 a 20 px. Los listados de colección pasan de cuatro elementos por fila a dos; las selecciones comerciales se convierten en carruseles de una tarjeta más un fragmento de la siguiente. El hero separa imagen, paginación y texto, y su CTA ocupa casi todo el ancho con márgenes cercanos a 20 px. En producto, la columna de compra cae bajo la galería, la venta cruzada se conserva en una fila compacta y aparece un CTA de compra fijo inferior. El documento se alarga de 7883 a 9881 px en portada y de 4061 a 5800 px en producto: no comprime contenido, lo serializa.",
+  "signature": "Usar únicamente la silueta de una botella azul, sin nombre escrito, como eje exacto del encabezado y repetir ese mismo punto azul sobre tazas, cajas y bodegones oscuros.",
+  "home": [
+    {
+      "role": "Presentar la campaña estacional y conducir a la colección.",
+      "composition": "Hero de 642 px en escritorio y 619 px medidos en teléfono: vídeo o foto a sangre arriba, argumento comercial en banda blanca debajo y paginación 01–02–03 separada del texto."
+    },
+    {
+      "role": "Convertir el interés de campaña en compra inmediata.",
+      "composition": "«Holiday Best Sellers», 764 px en escritorio y 794 px en teléfono. Título alineado a la izquierda y fila de productos aislados; en escritorio se ven cuatro tarjetas principales, mientras el teléfono muestra un carrusel con una tarjeta completa, parte de la siguiente, botones rápidos y CTA secundario."
+    },
+    {
+      "role": "Ofrecer una ruta de descubrimiento para quien compra regalos.",
+      "composition": "Banda gris cálida #F6F6F3 de 624 px en escritorio y 661 px en móvil. En escritorio divide texto y CTA a la izquierda de un mosaico cenital 2 × 2 a la derecha; en teléfono apila el mosaico, el título, el párrafo y un botón delineado de ancho amplio."
+    },
+    {
+      "role": "Segmentar el surtido por intención y presupuesto.",
+      "composition": "«Shop By Collection», 644 px en escritorio y 822 px en teléfono. Cuatro categorías con imagen, título y breve descriptor; cuatro columnas en escritorio y dos columnas en móvil."
+    },
+    {
+      "role": "Dar protagonismo editorial a una novedad concreta.",
+      "composition": "Bloque gris cálido de 832 px en escritorio y 931 px en teléfono. En escritorio presenta una gran fotografía cuadrada a la izquierda y texto con CTA a la derecha; en móvil se apila, conservando la imagen como pieza dominante."
+    },
+    {
+      "role": "Humanizar la selección mediante recomendación experta.",
+      "composition": "«Barista Picks for Holiday Gifting», 480 px en escritorio y 699 px en teléfono. Encabezado centrado y una fila de recomendaciones compactas con miniatura, nombre, notas y persona que recomienda; en móvil se transforma en recorrido horizontal."
+    },
+    {
+      "role": "Explicar el servicio recurrente antes de pedir la suscripción.",
+      "composition": "Módulo gris cálido de 894 px en escritorio y 1425 px en teléfono. Dos columnas: texto, CTA y listas de beneficios a la izquierda; bodegón de caja y bebida a la derecha. En móvil las columnas se vuelven una secuencia vertical y se conservan las listas, por eso aumenta mucho la altura."
+    },
+    {
+      "role": "Trasladar la experiencia de marca del comercio electrónico a sus cafeterías.",
+      "composition": "«Blue Bottle Cafes», sección blanca de 1082 px en escritorio y 925 px en teléfono. Combina texto de visita con imágenes ambientales grandes; los datos indican tres imágenes en escritorio. Funciona como pausa de estilo de vida tras varios módulos de producto."
+    },
+    {
+      "role": "Aportar utilidad y autoridad sobre preparación.",
+      "composition": "«Explore Our Brew Guides», franja gris cálida de 571 px en escritorio y 684 px en móvil. Dos piezas o guías visuales en escritorio con texto breve y acceso; en móvil se apilan o recorren horizontalmente."
+    },
+    {
+      "role": "Cerrar con prueba social.",
+      "composition": "«What Our Customers Are Saying», 609 px en escritorio y 714 px en teléfono. Título de 24/20 px, peso visual ligero y tracking amplio; reúne múltiples reseñas y pequeñas imágenes en una franja extensa antes del cierre de página."
+    }
+  ],
+  "lessons": [
+    "Separar imagen y argumento en el hero evita comprometer la legibilidad: una franja visual a sangre puede ser oscura o compleja y el texto permanece estable en una banda blanca.",
+    "Construir jerarquía con solo dos familias, pesos regulares y tres tamaños obliga a usar bien tracking, mayúsculas, ancho de columna y espacio vertical en vez de acumular estilos.",
+    "Alternar blanco y #F6F6F3 cada uno o dos capítulos permite leer una portada muy larga como una secuencia de bloques sin introducir divisores decorativos.",
+    "Combinar fotografía aislada para vender con bodegón oscuro para narrar da claridad transaccional y, a la vez, una atmósfera de campaña reconocible.",
+    "En móvil conviene serializar en vez de eliminar: pasar 50/50 a imagen más texto, y filas de cuatro a carruseles, conserva el relato y el surtido.",
+    "Repetir un único color de marca en logo, envases y fotografías crea continuidad suficiente para que botones y grandes superficies puedan permanecer neutros."
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "host": "blueland.com",
+  "name": "Blueland",
+  "at": "2026-11-14T15:40:34.079Z",
+  "mood": "Doméstico, optimista y demostrativo; combina azul institucional, fotografía cotidiana y mensajes de eficacia ambiental.",
+  "idea": "Presentar la limpieza recargable como un sistema fácil de entender: escenas de uso para atraer, producto aislado para comprar y cifras, reseñas y comparativas para reducir la duda.",
+  "header": "Cabecera fija. En escritorio se organiza en tres franjas: anuncio estacional fucsia de unos 40 px con flechas laterales y enlace centrado; navegación principal blanca de unos 65 px, con «Shop» y «Holiday Shop» a la izquierda, logotipo centrado y «About Us», «Our Mission», búsqueda, cuenta y carrito a la derecha; debajo, menú de categorías azul muy pálido de unos 50 px con 9 enlaces: Starter Kits, Refills, Bestsellers, separador, Dish, Laundry, Toilet, Hand Soap, Spray Cleaners y Extras. La medición registra 105 px de cabecera fija, a los que visualmente se suma la franja promocional. En teléfono: anuncio de unos 54 px en dos líneas, fila principal de unos 54 px con hamburguesa, logo centrado, búsqueda y carrito, y carrusel horizontal de categorías de unos 40 px. No muestra cuenta ni enlaces corporativos en la fila móvil.",
+  "hero": "En escritorio comienza a y=155 y mide 745 px: vídeo a sangre de proporción panorámica, oscurecido lo suficiente para sostener texto blanco. El bloque se centra cerca del tercio inferior: titular de 48 px en una línea, bajada de dos líneas y botón azul en forma de píldora, de aproximadamente 205 × 50 px. En teléfono empieza a y=134 y mide 710 px: el vídeo se recorta en vertical, conservando manos, fregadero y botella; titular de 24 px en dos líneas, texto centrado en tres líneas y CTA ancho, todos anclados al cuarto inferior. El encuadre cambia, no se limita a encoger la versión horizontal.",
+  "catalog": "«Shop All» abre con una banda fotográfica panorámica de 265 px en escritorio. Debajo hay una cabecera de colección con título de 40 px, descripción, contador de 69 artículos a la izquierda y controles «Product Category», «Product Type» y orden «Featured» alineados a la derecha, separados por reglas. La cuadrícula usa 4 columnas, fotos cuadradas y una sección inicial «Holiday Shop»; la página completa alcanza 12.953 px. En teléfono, la foto se convierte en una franja baja bajo la navegación; título de 24 px y descripción se centran. Dos botones-píldora, «Filter» y «Featured», sustituyen los desplegables extensos. La cuadrícula pasa a 2 columnas, mantiene imagen 1:1 y llega a 15.245 px. Los filtros existen, pero no se aportó captura del panel abierto.",
+  "card": "Tarjeta sin marco exterior: fotografía cuadrada 1:1 sobre gris muy claro, seguida por valoración azul con estrellas y recuento, nombre, precio actual y, cuando procede, precio anterior tachado. En la parte superior de la foto aparecen cápsulas compactas en mayúsculas: fucsia para «GIFTABLE», «HOLIDAY EXCLUSIVE» o «STOCK UP» y verde pálido para porcentajes de ahorro. Algunas tarjetas añaden puntos de color o variante y una línea secundaria. En escritorio hay 4 por fila en catálogo; en los carruseles de portada se ven aproximadamente 4 productos grandes dentro de una pista horizontal. En teléfono hay 2 por fila, con texto pequeño pero sin ocultar precio ni reseña. No se ve botón de compra rápida ni se documenta una segunda imagen al pasar el cursor; no conviene asumirlos.",
+  "product": "En escritorio, la zona principal comienza a y=155 y se divide aproximadamente 52/48. A la izquierda hay una columna estrecha de miniaturas —12 imágenes en total, incluida pieza de vídeo— y una imagen principal grande sobre gris claro. A la derecha: nombre de 32 px, estrellas y 4,8 con 40.768 reseñas; después una regla y selectores de aroma en botones rectangulares redondeados con punto cromático. La selección activa usa contorno azul. Sigue «Pack Size» con tarjetas de 5, 10 y 30 tabletas, mensajes de uso y una insignia de ahorro. El botón azul «Add To Cart» ocupa el ancho de la caja de compra, pero está a y=1017 y por tanto no entra en el primer pliegue de 900 px. Debajo aparecen complemento sugerido, pestañas de resumen/ingredientes y texto explicativo. La secuencia editorial posterior es: «Meet The Scents» con 3 imágenes, «How We Stack Up», «Safe Home, Cleaner Planet», «How It Works», recomendaciones en 5 columnas, «Hand Soap FAQs» y contenido/reseñas; se detectan 17 acordeones. En teléfono, el orden cambia a nombre y reseñas primero, etiqueta de edición, galería-carrusel sobre gris y puntos de paginación; luego aromas en botones que envuelven a varias filas, tamaños, total del día y CTA de 342 px de ancho. El botón aparece a y=1592, tampoco sobre el primer pliegue.",
+  "cart": "La captura disponible corresponde únicamente al carrito vacío en escritorio; no hay captura de teléfono ni de un carrito con artículos. Es una página completa, no un cajón: título «Your Cart» de 32 px dentro de una zona azul muy pálida, regla horizontal, mensaje centrado «Your cart is empty» y botón azul «Shop Now». No pueden evaluarse filas, control de cantidad, subtotal, checkout ni ventas adicionales porque el estado mostrado no contiene productos.",
+  "type": "Toda la interfaz usa Sailec, una sans geométrica de formas redondeadas. En escritorio: H1 de portada 48 px/500, títulos de sección y catálogo 40 px/500, título de producto y carrito 32 px/500, navegación 17 px/400 y cuerpo medido en 13 px/500. En teléfono: H1 y título de producto 24 px/500, títulos de sección 26 px/500, navegación y controles 14 px/400 y cuerpo 12 px/500. Los titulares usan caja normal y tracking normal; no se recurre a una serif para crear contraste. Las mayúsculas se reservan para CTAs, rótulos de promoción y etiquetas, con peso alto y espaciado más abierto. La jerarquía depende de saltos de escala, centrado y bloques de color, no de mezclar familias.",
+  "colour": "Fondo principal blanco #FFFFFF y tinta azul marino muy oscuro, aproximadamente #07113F, para texto e iconos. El azul eléctrico de marca, cercano a #133CD1, trabaja como CTA, estrellas, contornos activos, logotipo y grandes bandas de prueba social. Azul cielo muy pálido se usa en el submenú, la zona de beneficios y el carrito vacío. El fucsia/rojo estacional, aproximadamente #ED1450, se limita a la barra de anuncio y etiquetas promocionales; así señala urgencia sin invadir todo el sistema. Gris muy claro en fondos de producto separa los envases blancos del lienzo. En la sección «Meet The Scents» aparece una banda granate estacional, mientras verde pálido identifica ahorro.",
+  "photos": "Alterna dos registros con funciones distintas. Las escenas de vida real son cálidas, ligeramente oscuras y recortadas a sangre: manos preparando jabón, cocina, familia sobre una manta o producto contra cielo; sirven como apertura y relato. Las fotos comerciales aíslan envases y sobres sobre gris muy claro, con escala consistente y sombra mínima, para facilitar comparación. Los productos pequeños se amplían dentro de composiciones cuadradas y se combinan con ingredientes cuando se explica una fragancia. En móvil se preparan recortes verticales específicos: el hero conserva la acción central y sacrifica contexto lateral. No se intenta igualar la temperatura de todas las imágenes; el azul repetido en envases y UI mantiene la continuidad.",
+  "motion": "Hay al menos un vídeo visible: el hero de portada; la ficha también registra una pieza de vídeo dentro de la galería. Se ven flechas y pistas horizontales en categorías, bestsellers, reseñas y galería, por lo que funcionan como carruseles; en móvil los puntos confirman la paginación de producto. La barra de anuncio tiene flechas para rotar mensajes, pero no se observa una marquesina continua. No hay evidencia en las capturas de animación al pasar el cursor ni de segunda foto en las tarjetas.",
+  "phone": "La estructura no se comprime sin más: oculta navegación corporativa, mantiene logo centrado y convierte categorías en una cinta horizontal. Los títulos bajan de 40–48 px a 24–26 px y el cuerpo a 12 px. El hero cambia de panorama a vídeo vertical de 710 px. Categorías, bestsellers y recomendaciones pasan a pistas horizontales o cuadrículas de 2 columnas; los cuatro argumentos de marca se ordenan en 2 × 2. El catálogo usa 2 columnas y sustituye tres controles de escritorio por «Filter» y «Featured». En producto, el título precede a la galería, las miniaturas laterales se vuelven carrusel con puntos, las variantes envuelven a nuevas filas y el CTA ocupa 342 de los 390 px, dejando márgenes de 24 px. La burbuja de chat permanece fija en el borde inferior derecho y en ocasiones tapa controles o texto.",
+  "signature": "El gesto distintivo es convertir cada beneficio abstracto de la recarga en una demostración visual azul —tableta circular, agua, botella y pequeños destellos lineales— repetida desde los iconos de portada hasta las escenas de fragancias.",
+  "home": [
+    {
+      "role": "Promoción estacional y entrada principal.",
+      "composition": "Hero de vídeo a sangre: 745 px de alto en escritorio y 710 px en teléfono, con texto blanco centrado abajo y un único CTA azul."
+    },
+    {
+      "role": "Explicar el surtido por tarea doméstica antes de pedir una compra concreta.",
+      "composition": "«Shop By Category», sección de 608 px: fila/carrusel de 8 tarjetas cuadradas en escritorio, cada una con foto, título azul y una frase; en teléfono se convierte en pista horizontal con tarjetas parcialmente cortadas para indicar desplazamiento."
+    },
+    {
+      "role": "Aportar escala de adopción y resumir la propuesta.",
+      "composition": "Banda azul cielo de 507 px en escritorio y 640 px en teléfono. Titular centrado «4,000,000+ Homes Have Made the Switch» y cuatro argumentos con iconos lineales azules; en móvil se ordenan 2 × 2."
+    },
+    {
+      "role": "Llevar desde la prueba de marca hasta productos concretos.",
+      "composition": "«Bestsellers», 769 px: título y frase centrados, carrusel de tarjetas con foto 1:1, etiquetas, estrellas, nombre y precio; botón «Shop All» al pie. En móvil las tarjetas se muestran de dos en dos o como pista horizontal."
+    },
+    {
+      "role": "Añadir autoridad editorial externa.",
+      "composition": "Bloque de 480 px con rótulo pequeño «Press Coverage», cita grande centrada «World Changing Ideas» y cuatro logotipos de medios en azul grisáceo, uno subrayado como selección activa."
+    },
+    {
+      "role": "Conectar el producto con bienestar familiar y planeta.",
+      "composition": "Imagen de estilo de vida a sangre de 795 px, con madre e hija sobre manta azul. Una tarjeta blanca redondeada se superpone en el lado derecho con titular, texto y CTA; en móvil se apila o superpone sobre un recorte vertical."
+    },
+    {
+      "role": "Convertir volumen de opinión en prueba social.",
+      "composition": "Banda azul eléctrica de 711 px con titular blanco «100,000+ 5-Star Reviews and Counting» y carrusel de testimonios; la tarjeta central queda delimitada con línea fina y las laterales asoman cortadas."
+    },
+    {
+      "role": "Explicar el ritual de uso en pocos pasos.",
+      "composition": "Sección de 720 px dividida aproximadamente 50/50: a la izquierda, mano soltando una tableta sobre una botella contra cielo; a la derecha, «How It Works», párrafo breve y botón contorneado."
+    },
+    {
+      "role": "Demostrar estándares y atributos verificables.",
+      "composition": "«A Higher Standard of Clean», 626 px, con 8 recursos gráficos o sellos organizados en una fila/matriz y explicaciones breves; en teléfono se compacta a 478 px mediante carrusel o cuadrícula."
+    },
+    {
+      "role": "Reintroducir variedad y tono social al final del recorrido.",
+      "composition": "«Good Clean Fun», 732 px, mosaico de 9 imágenes de uso y comunidad; prioriza ritmo visual sobre texto, que se limita al título y pocas palabras."
+    },
+    {
+      "role": "Cerrar con una llamada única.",
+      "composition": "«Start Your Journey», bloque de 272 px en escritorio y 199 px en teléfono, centrado, con muy poco texto y CTA para iniciar la compra."
+    }
+  ],
+  "lessons": [
+    "Asigna una función distinta a cada registro fotográfico: vídeo de uso para atraer, bodegón aislado para comparar y macro de ingredientes para explicar variantes.",
+    "Mantén una arquitectura fija en tres niveles —promoción, navegación global y categorías—, pero en móvil elimina lo corporativo y deja visibles búsqueda, carrito y acceso al menú.",
+    "No presentes sostenibilidad como una sola promesa: repártela entre cifra de adopción, cuatro beneficios, prensa, comparativa, proceso y reseñas.",
+    "Usa etiquetas de color con semántica estable: un color para edición o regalo y otro para ahorro. Esto permite escanear una cuadrícula extensa sin añadir marcos pesados.",
+    "Diseña encuadres móviles propios. Un hero vertical de 710 px necesita recolocar acción, titular y CTA; recortar automáticamente una imagen panorámica perdería el producto.",
+    "En fichas con muchas variantes, usa botones visibles con nombre y señal cromática en lugar de un único desplegable, y acompaña el tamaño con una recomendación de uso para que la elección no dependa solo del precio."
+  ]
+}

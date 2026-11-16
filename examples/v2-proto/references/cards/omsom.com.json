@@ -1,0 +1,57 @@
+{
+  "host": "omsom.com",
+  "name": "Omsom",
+  "at": "2026-11-14T15:07:50.922Z",
+  "mood": "Ruidoso, orgulloso, juguetón y editorial; mezcla el lenguaje de un anuncio de supermercado asiático, un cómic y una sesión gastronómica con flash.",
+  "idea": "La portada funciona como una secuencia de siete carteles panorámicos de 1440 × 768 px: fotografía saturada, fondos gráficos y mensajes metidos en explosiones amarillas, sin interfaz de tienda visible.",
+  "header": "No aparece una cabecera convencional: no hay barra de anuncio, logo de navegación, enlaces, buscador, cuenta, carrito ni menú fijo en las capturas. La fotografía hero empieza en y=0 y ocupa directamente la primera pantalla. En teléfono tampoco se introduce un menú: se conserva el lienzo panorámico completo y se escala de 1440 px a 390 px de ancho, de modo que cada panel de 768 px de alto pasa a medir aproximadamente 219 px.",
+  "hero": "Panel full bleed de 1440 × 768 px, proporción 1,875:1. La foto construye una escena horizontal: caja de producto en el tercio izquierdo, bol centrado abajo, fideos y mano con palillos entrando desde la derecha. Una explosión amarilla con sombra/desfase rojo ocupa aproximadamente el 35% del ancho y se superpone en el centro-derecha; contiene el titular en mayúsculas, una línea descriptiva menor y ningún botón. La iluminación roja y naranja crea el fondo y deja el envase verde como contraste. En teléfono no se recorta ni reordena: el mismo hero completo se reduce a 390 × 219 px, por lo que el texto también queda muy pequeño.",
+  "catalog": "Sin captura de catálogo. Las medidas indican 0 tarjetas, 0 columnas y filtros ausentes en la página suministrada; no es posible determinar cabecera, ordenación, paginación ni comportamiento de filtros.",
+  "card": "Sin captura de tarjetas de producto. No se pueden verificar proporción de imagen, nombre, precio, muestras de color, compra rápida ni segunda fotografía al pasar el cursor.",
+  "product": "Sin captura de página de producto. No se pueden determinar galería, caja de compra, contenido sobre el pliegue, variantes, acordeones, recomendaciones ni orden de la información.",
+  "cart": "Sin captura de carrito; no se puede saber si es cajón o página, ni documentar filas, totales, controles de cantidad o ventas adicionales.",
+  "type": "La voz principal usa una tipografía display muy condensada y alta para palabras como OMSOM y los rótulos de producto, combinada con una sans geométrica gruesa para mensajes informativos. Predominan las mayúsculas. La medición registra la familia personalizada “YAD4imOwJ8U_0”, peso 400, tracking normal y 42 px para “PROUD + LOUD ASIAN FLAVORS” en escritorio. Los titulares sans secundarios se mueven visualmente alrededor de 30–42 px; textos explicativos y enlaces son mucho menores, aproximadamente 16–22 px en el lienzo original. Como el teléfono escala todo el lienzo por un factor cercano a 0,271, esos 42 px se perciben allí como unos 11–12 px, y el cuerpo puede caer por debajo de 6 px. La jerarquía depende más del cambio entre condensada y sans gruesa, las mayúsculas y los contenedores gráficos que de una escala tipográfica cómoda para móvil.",
+  "colour": "La base medida es crema #F7F3DA para producto y distribución; verde menta #ACEB9F para prensa e historia; lila #F0C3F4 para el bloque de definición; y borgoña #A80A44 en el cierre. Se añaden naranja rojizo como tinta y fondo gráfico, amarillo ácido para explosiones y nubes, rojo como sombra desplazada y morado oscuro en ondas. El color tiene trabajo estructural: cada panel cambia de fondo para señalar un capítulo, el amarillo encierra mensajes de acción y el naranja-rojo unifica titulares, marcos y enlaces.",
+  "photos": "Fotografía gastronómica de estudio con luz frontal o lateral dura, dominante cálida roja/naranja, sombras marcadas, reflejos y destellos añadidos. El producto aparece grande y legible, unas veces junto al plato terminado y otras como recorte sobre fondos gráficos. Las escenas incluyen manos, palillos, cucharas, derrames y fideos suspendidos para dar acción. Los bodegones no buscan neutralidad: usan superficies rosas, props de colores complementarios y encuadres densos. En paneles partidos, la foto llega hasta los bordes de su media columna y se enfrenta a texto o prensa sin margen intermedio.",
+  "motion": "No se observa movimiento en las capturas. Las medidas registran 0 vídeos y ausencia de marquesina. Las explosiones, fideos suspendidos, destellos y ondas producen sensación de movimiento dentro de imágenes estáticas, pero no hay evidencia para afirmar carruseles, animaciones o estados hover.",
+  "phone": "No hay una recomposición móvil real. El sitio conserva cada composición panorámica de 1440 × 768 px y la escala proporcionalmente hasta unos 390 × 219 px. Se mantienen las dos columnas, las matrices de prensa, las fotos laterales y los textos en sus posiciones originales; nada se apila. Esto conserva exactamente el ritmo de cartel y permite ver la página completa con rapidez, pero vuelve minúsculos los párrafos y enlaces. La portada total queda en torno a 1529 px: siete paneles de aproximadamente 219 px cada uno. Tampoco aparece navegación móvil.",
+  "signature": "Convertir toda la web en siete diapositivas de idéntica proporción y escalar el storyboard entero en teléfono, como si la página fuese una tira continua de carteles impresos.",
+  "home": [
+    {
+      "role": "Presentar producto, actitud de marca y promesa principal en un solo golpe visual.",
+      "composition": "Panel 1, 1440 × 768 px, fotografía full bleed. Envase en el tercio izquierdo, plato abajo al centro y mano entrando desde la derecha. Explosión amarilla con contorno/sombra roja en el centro-derecha; titular de 42 px, breve explicación y ningún CTA."
+    },
+    {
+      "role": "Explicar las dos familias de producto sin usar una cuadrícula de ecommerce.",
+      "composition": "Panel 2, fondo crema #F7F3DA con grandes ondas lilas. Dos mitades simétricas: cajas de noodles a la izquierda y sobres de salsas a la derecha. Cada grupo combina recorte de producto arriba y explosión amarilla debajo con una frase condensada. Los objetos flotan sin tarjetas, precios ni botones."
+    },
+    {
+      "role": "Dar disponibilidad física y prueba de distribución nacional.",
+      "composition": "Panel 3 sobre crema, dividido aproximadamente 50/50. A la izquierda, fotografía vertical de plato y envase con marco naranja desplazado; a la derecha, titular naranja y logotipos de Whole Foods, Target y Sprouts, rematados por “+ MORE…”. La jerarquía va de mensaje a marcas, no a texto descriptivo."
+    },
+    {
+      "role": "Construir autoridad editorial y mostrar el producto en uso.",
+      "composition": "Panel 4 dividido en dos columnas iguales. La izquierda usa fondo verde #ACEB9F con una cápsula amarilla “AS SEEN IN”, cuatro citas breves subrayadas y logotipos de medios organizados en una matriz 2 × 2. La derecha es una fotografía gastronómica full height, llena de platos, envases y cubiertos, sin texto superpuesto."
+    },
+    {
+      "role": "Explicar el nombre de la marca y reforzar su origen cultural.",
+      "composition": "Panel 5, división 50/50. A la izquierda, bodegón rojo con caja, bol, manos y fideos levantados. A la derecha, fondo lila con ondas crema, palabra “OM SÒM” grande en naranja y definición centrada debajo en tipografía condensada. La zona textual deja mucho aire alrededor del bloque central."
+    },
+    {
+      "role": "Contar propiedad, fundadoras y evolución empresarial.",
+      "composition": "Panel 6 completo en verde #ACEB9F. Dos columnas: a la izquierda, gran explosión amarilla con “OMSOM OWNS THIS ROWDY SPIRIT PROUDLY”; a la derecha, aproximadamente 90 palabras de historia en varios párrafos naranjas. El sello actúa como titular y equilibra una columna de lectura más densa."
+    },
+    {
+      "role": "Cerrar con contacto directo en lugar de un pie de página convencional.",
+      "composition": "Panel 7 sobre fondo borgoña/naranja con ondas radiales. Un paquete inclinado ocupa el tercio izquierdo. En el centro-derecha aparece una nube amarilla de bordes redondeados con “SAY HI!” y dos enlaces subrayados: Instagram y correo comercial. No se muestran menús legales, newsletter, pagos ni navegación secundaria."
+    }
+  ],
+  "lessons": [
+    "Diseña la portada como una secuencia de capítulos de igual tamaño: repetir una proporción fija crea ritmo incluso cuando cada panel cambia de color y contenido.",
+    "Asigna una función estable a cada recurso gráfico: aquí el amarillo contiene mensajes clave, el naranja identifica la voz y los cambios de fondo separan temas.",
+    "En una composición fotográfica, reserva desde la sesión un área de contraste suficiente para el titular; la explosión del hero se integra porque ocupa un hueco previsto entre plato, fideos y brazo.",
+    "Alterna paneles de impacto con paneles de credibilidad: producto, distribución, prensa, origen, historia y contacto forman un argumento, no una sucesión arbitraria de imágenes.",
+    "Las composiciones 50/50 permiten enfrentar emoción y evidencia —foto frente a logotipos, bodegón frente a definición— sin añadir cajas de interfaz.",
+    "No copies la ausencia de adaptación sin evaluar legibilidad: escalar un lienzo entero conserva la dirección de arte, pero en móvil reduce un titular de 42 px a unos 11 px y vuelve impracticables los textos pequeños."
+  ]
+}

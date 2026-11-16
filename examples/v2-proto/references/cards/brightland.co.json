@@ -1,0 +1,77 @@
+{
+  "host": "brightland.co",
+  "name": "Brightland",
+  "at": "2026-11-14T14:43:05.769Z",
+  "mood": "Anfitriona editorial, gastronómica y festiva; combina la sobriedad de una despensa premium con escenografías de regalo muy teatrales.",
+  "idea": "Presentar aceites y vinagres como objetos para poner la mesa y regalar, alternando bodegones de campaña a sangre con módulos comerciales blancos y tipografía editorial.",
+  "header": "En escritorio hay dos niveles estáticos, no fijos: una barra de anuncio borgoña de 36 px de alto, con mensaje y enlace subrayado centrados, y una navegación blanca de unos 62 px. El logotipo tipográfico BRIGHTLAND, espaciado, queda exactamente en el centro; a la izquierda aparecen tres enlaces —Shop All, The Holiday Collection y Corporate Gifting— y a la derecha Find in Store, Our Story, búsqueda, cuenta y bolsa con contador. El contenido empieza en y=98 px. En teléfono, la barra promocional ocupa aproximadamente 55 px y puede partirse en dos líneas; debajo hay una cabecera blanca de 52 px con hamburguesa a la izquierda, logo centrado y bolsa con contador a la derecha. Se eliminan búsqueda, cuenta y enlaces visibles. En las capturas no se comporta como cabecera fija.",
+  "hero": "En escritorio es una imagen panorámica a sangre de 1440 × 663 px bajo la cabecera. El bodegón ocupa sobre todo el centro y la mitad derecha; a la izquierda se reserva una zona borgoña oscura para texto blanco. El titular caligráfico “The Table is Set” mide 104 px, seguido por una entradilla sans en dos líneas y dos botones horizontales: uno blanco sólido y otro transparente con borde blanco. En teléfono se recompone, no se limita a recortar: titular Tilda de 54 px, texto y dos botones de casi media anchura aparecen centrados en la parte superior; el producto baja y ocupa la mitad inferior. La escena mantiene el fondo borgoña y termina sobre una mesa clara. Después aparece una banda de confianza color marfil con estrellas, “4.9/5 Reviews” y la promesa de producto; en escritorio las tres pruebas están en una sola línea y en móvil se apilan en dos líneas.",
+  "catalog": "La cabecera de colección mide 394 px en escritorio: fondo verde oliva con textura tenue, fotografía horizontal ocupando aproximadamente el 45% izquierdo y, a la derecha, “Shop All” en Advercase de 40 px más un párrafo corto. Debajo hay una navegación de categorías en una sola línea —sin filtros ni selector de orden visibles— con “Shop All” subrayado. La retícula contiene 29 productos en 4 columnas, con márgenes laterales cercanos a 48 px y calles de unos 16 px. En teléfono, la cabecera se reduce a 207 px: la foto llena el ancho y el título blanco de 35 px se superpone; el párrafo desaparece. Las categorías pasan a una tira horizontal desplazable y sin salto de línea. La retícula usa 2 columnas, conserva 29 tarjetas y tampoco muestra filtros ni ordenación.",
+  "card": "La tarjeta no tiene contenedor, sombra ni fondo diferenciado: se apoya directamente sobre blanco. La foto está dentro de un campo gris casi blanco, en formato vertical con relación ancho/alto aproximada de 0,82; el producto se fotografía centrado y con bastante aire. Puede llevar una etiqueta rectangular delineada en la esquina superior izquierda, por ejemplo “BEST SELLER” u “OPRAH’S FAVORITE THING”. Debajo aparecen, en este orden, nombre en serif Advercase, descripción de una o dos líneas, estrellas y nota numérica; al final hay un botón rápido de ancho completo, blanco con borde negro, en mayúsculas, que integra acción y precio: “ADD — $89”. En móvil las dos columnas se mantienen, por lo que texto y botón bajan a 10–12 px. No se demuestra una segunda imagen al pasar el cursor en las capturas; no debe darse por confirmada.",
+  "product": "En escritorio, el primer bloque se divide prácticamente 50/50: galería a la izquierda y caja de compra a la derecha. La galería abre con una imagen grande cuadrada del set sobre fondo borgoña y continúa como mosaico de dos columnas con bodegones, detalles del embalaje y escenas de uso; el documento detecta 32 imágenes en total. La caja derecha contiene título Advercase de 34 px, estrellas y enlace a 36 reseñas, precio, entradilla en negrita, descripción, aviso de exclusión de descuentos y una lista visual “SET INCLUDES”. Cada componente lleva miniatura, nombre, explicación y una línea de detalle magenta. No hay muestras de color; se detecta un selector. El botón negro “Add to Cart — $110” mide unos 656 px de ancho y aparece al límite inferior del primer pliegue, en y≈869. Siguen una franja borgoña para compra de múltiples regalos, ventas adicionales “Complete Your Kitchen” con miniatura y botón Add, y seis acordeones —Product Details, Ways to Use, Sourcing & Harvest, Ingredients & Nutrition, etc.—. Más abajo alterna contenido editorial, testimonios, ingredientes, prensa y una recomendación de tres productos bajo “A Gift for Every Table”. En teléfono la secuencia es lineal: imagen principal, título de 28 px, valoración, precio y descripción; luego contenidos del set, botón negro de 360 px, garantías, bloque corporativo, ventas adicionales y acordeones. El botón normal queda en y≈1347 y fuera del primer pliegue, pero la captura muestra además una barra de compra fija inferior con miniatura, nombre y botón, que mantiene la conversión accesible mientras se desplaza.",
+  "cart": "No hay una captura válida del carrito: la imagen entregada como “CARRITO” corresponde de nuevo a la portada, y las medidas señalan la URL de inicio y las mismas secciones del home. Por tanto, no se puede determinar si Brightland usa cajón o página, ni documentar filas, totales, umbral de envío o ventas adicionales del carrito.",
+  "type": "El sistema usa tres voces. CircularXXWeb resuelve navegación y texto funcional: cuerpo de 13 px en escritorio y 12 px en teléfono, peso 450 y tracking de 0,26/0,24 px. Botones y microetiquetas suelen usar 10–11 px, peso 500, mayúsculas y tracking amplio de 0,6–0,88 px. Advercase es la serif editorial de títulos: 40 px en portada y catálogo de escritorio, 32–35 px en teléfono; en producto baja a 34/28 px. Su peso 300 produce contraste con la sans compacta. Tilda, una caligráfica de grandes bucles, se reserva para el lema estacional del hero: 104 px en escritorio y 54 px en móvil, nunca para información funcional. El logotipo es una sans en versales con espaciado muy abierto. La jerarquía depende más del cambio de familia y escala que del uso de muchos pesos.",
+  "colour": "El soporte principal es blanco #FFFFFF, con tinta casi negra —aproximadamente #0A0200— para texto y botones de compra. La campaña navideña introduce un borgoña profundo cercano a #3B0008 en el hero y un rojo oscuro aproximado #861707 en barras promocionales y módulos corporativos. El catálogo usa un verde oliva amarillento cercano a #A5AD31 para separar la cabecera de colección. Una banda testimonial emplea magenta vino, aproximadamente #8B1855. Fondos marfil muy suaves, cercanos a #FBF7F3, distinguen las pruebas de confianza sin encajonarlas. El dorado de las estrellas y el magenta de detalles secundarios aportan acento, pero la acción principal permanece negra para conservar contraste.",
+  "photos": "Conviven dos tratamientos. En catálogo, el producto aparece aislado sobre gris muy claro, frontal, centrado y a escala consistente para poder comparar botellas y sets. En campaña, se construyen bodegones densos con mantel, pan, fruta, vajilla, velas y manos vertiendo; los recortes son grandes y a sangre. Los sets de regalo se muestran tanto cerrados como desplegados para explicar volumen y contenido. La dirección de arte reserva áreas oscuras sin objetos para superponer texto y utiliza fondos de color —borgoña, oliva, azulejos verdes— ligados a cada relato. En móvil se usan encuadres o activos alternativos para conservar el producto entero, en vez de cortar simplemente el panorama de escritorio.",
+  "motion": "Las mediciones detectan una marquesina y siete vídeos en la portada. Es probable que las franjas de logotipos de prensa se desplacen horizontalmente y que algunos bodegones o vertidos reproduzcan vídeo en bucle. Los carruseles de producto y contenido social también sugieren desplazamiento horizontal, especialmente donde el móvil deja ver la siguiente tarjeta cortada. No se aprecia ni se puede confirmar en capturas estáticas la velocidad, la reproducción automática, una segunda foto al hover o transiciones específicas.",
+  "phone": "La adaptación conserva la densidad comercial en lugar de convertir todo en una sola columna. La navegación se reduce a tres controles; las categorías se vuelven tiras horizontales; catálogo y carrusel de regalos mantienen dos productos por fila o muestran una tarjeta y parte de la siguiente. Los trípticos editoriales sí pasan a una columna: “Generous Gifting”, “Thoughtful Tastes” y “Small Gestures” se apilan como tarjetas fotográficas de ancho casi completo. El hero usa una composición vertical específica, con texto centrado arriba y bodegón abajo. Los tamaños bajan de 40 a 32–35 px en títulos editoriales y de 13 a 12 px en cuerpo. En producto, la columna de galería precede a la información y una barra de compra fija inferior compensa que el CTA normal quede fuera del primer pliegue. Los márgenes habituales son de unos 12–15 px, mientras hero, cabeceras fotográficas y bandas de color permanecen a sangre.",
+  "signature": "El gesto propio es convertir la mesa navideña en un escenario de colaboración: una esfera ajedrezada, caja tartán, tarjetas de receta y botellas se organizan como un único bodegón, y el gran lema caligráfico “The Table is Set” funciona casi como parte física de la escenografía.",
+  "home": [
+    {
+      "role": "Anunciar la campaña principal y llevar a compra o guía de regalos.",
+      "composition": "Hero panorámico a sangre de 663 px en escritorio, con texto alineado a la izquierda y bodegón concentrado a la derecha; en móvil pasa a una escena vertical con texto centrado arriba, dos CTA contiguos y producto abajo."
+    },
+    {
+      "role": "Resolver confianza antes de presentar surtido.",
+      "composition": "Banda marfil estrecha con estrellas, 4.9/5 Reviews, promesa de calidad y envío gratuito sobre $120. Una línea centrada en escritorio; dos líneas centradas en teléfono."
+    },
+    {
+      "role": "Introducir el territorio de regalo y vender sets destacados.",
+      "composition": "Sección “Gifts in good taste”, Advercase de 40 px en escritorio y 32 px en móvil, acompañada por texto. Debajo, carrusel horizontal de tarjetas de producto: se ven aproximadamente cinco en escritorio y dos más fragmentos en teléfono; foto, categoría, título, descripción, estrellas y botón Add."
+    },
+    {
+      "role": "Segmentar por presupuesto e intención de regalo.",
+      "composition": "Tríptico fotográfico a sangre dentro del ancho útil: “Generous Gifting” sobre $200, “Thoughtful Tastes” bajo $100 y “Small Gestures” bajo $50. Texto serif blanco superpuesto y enlace en la esquina inferior. En móvil las tres piezas se apilan con separación de unos 6–8 px."
+    },
+    {
+      "role": "Destacar un set concreto con relato de uso.",
+      "composition": "Bloque de unos 848 px: texto y ficha de compra sobre blanco a la izquierda, gran fotografía o vídeo de mesa y vertido a la derecha. Incluye imagen aislada del set, selector de cantidad y Add to Cart; en móvil se ordenan uno debajo de otro."
+    },
+    {
+      "role": "Aportar validación editorial.",
+      "composition": "Marquesina horizontal muy baja en borgoña con logotipos blancos de medios —WSJ, The New York Times, Vogue, Bon Appétit y otros— repetidos de borde a borde."
+    },
+    {
+      "role": "Captar pedidos de empresa.",
+      "composition": "Imagen hero de unos 719 px con caja de regalo abierta y titular “Corporate Gifting” en Advercase de 52 px superpuesto, más una frase y CTA. En teléfono el título baja a 34 px y el módulo queda en torno a 488 px."
+    },
+    {
+      "role": "Permitir entrada por familia de producto.",
+      "composition": "Una columna de introducción a la izquierda y cuatro tarjetas fotográficas verticales a la derecha para Best Sellers, Oil & Vinegar, The Flavor Collection y otras categorías. Cada fotografía lleva el rótulo blanco superpuesto; en pantallas estrechas se recorre o se recompone con piezas más grandes."
+    },
+    {
+      "role": "Convertir una cita de prensa en pausa de marca.",
+      "composition": "Banda magenta vino de ancho completo, con una cita grande centrada en serif blanca y una fila de logotipos editoriales debajo. La ausencia de fotografía crea contraste con los bloques de bodegones."
+    },
+    {
+      "role": "Mostrar prueba social y formas reales de uso.",
+      "composition": "“Join the Brightland Table” abre una parrilla/carrusel de seis piezas de contenido social, algunas en vídeo, con fotos domésticas, reseñas y controles circulares; título de 34 px en escritorio y 26 px en móvil."
+    },
+    {
+      "role": "Humanizar la marca mediante su fundadora.",
+      "composition": "Bloque de unos 656 px en escritorio y 952 px en móvil con tres imágenes, una cita breve y la firma “AISHWARYA IYER – FOUNDER” en sans de 12 px, mayúsculas y tracking de 1,2 px."
+    },
+    {
+      "role": "Cerrar con captación y navegación secundaria.",
+      "composition": "Zona final amplia, de aproximadamente 900 px, que combina una imagen, formulario o llamada de comunidad y el pie con enlaces. En teléfono se vuelve una sola columna y conserva unos 881 px de altura."
+    }
+  ],
+  "lessons": [
+    "Reserva en la fotografía un área de baja información para colocar texto: el hero no depende de una caja opaca porque el bodegón se concentra deliberadamente en el lado contrario.",
+    "Usa tipografías por función, no como decoración indiscriminada: caligráfica para un solo lema, serif para relatos y nombres, y sans para navegación, datos y acciones.",
+    "Combina descubrimiento emocional con compra inmediata: después de cada gran escena aparece una banda de confianza, carrusel, ficha Add to Cart o entrada por presupuesto.",
+    "En móvil prepara encuadres verticales específicos para campañas importantes; un simple recorte del panorama perdería productos y dejaría el titular sin espacio.",
+    "Mantén comparabilidad en catálogo mediante fondo, escala y encuadre constantes, aunque la portada use bodegones complejos y fondos de campaña.",
+    "Cuando la descripción de producto desplaza el CTA fuera del primer pliegue móvil, añade una barra de compra fija con nombre, miniatura y precio, sin eliminar el botón normal dentro del flujo."
+  ]
+}

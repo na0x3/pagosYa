@@ -1,0 +1,65 @@
+{
+  "host": "bloomandwild.com",
+  "name": "Bloom & Wild",
+  "at": "2026-11-14T15:39:31.860Z",
+  "mood": "Cálido, generoso y editorial; una floristería cotidiana vestida con códigos de revista y campañas estacionales.",
+  "idea": "Alternar grandes escenas de regalo con módulos comerciales muy legibles, usando una serif expresiva para emocionar y una sans neutra para buscar, comparar y comprar.",
+  "header": "En escritorio, la cabecera principal mide 143 px, tiene fondo blanco y no es fija. Una franja utilitaria beige muy fina ocupa la parte superior: a la derecha aparecen Help, Corporate Gifting y el selector UK (£). Debajo, el logotipo negro se alinea a la izquierda; una búsqueda larga y redondeada ocupa el centro; a la derecha hay tres acciones con icono y etiqueta: Log in, Favourites y Basket. La navegación principal forma una fila inferior con nueve familias: Flowers, Plants, Food & drink, Home & pamper, The card shop, Christmas, Occasions, Subscriptions y All; “new” aparece como una pequeña pastilla amarilla. A continuación hay una fila visual de diez accesos circulares, con fotografía y etiqueta debajo; funciona como navegación de temporada. En teléfono se recompone en tres niveles: banda beige de entrega urgente arriba; fila de iconos con menú y cuenta a la izquierda, logo centrado, favoritos y bolsa a la derecha; buscador de ancho casi completo debajo. La navegación textual desaparece y las categorías circulares pasan a un carrusel horizontal recortado, con una flecha flotante. En las capturas posteriores del móvil la cabecera se ve compactada y fija durante el desplazamiento: iconos, logo y buscador ocupan aproximadamente 64 px.",
+  "hero": "En escritorio es una composición partida 55/45 y de unos 570 px de alto: la fotografía ocupa toda la mitad izquierda y el panel verde bosque toda la derecha. La imagen es una escena navideña horizontal, densa y doméstica, recortada a sangre. El panel derecho centra vertical y horizontalmente un titular serif blanco de 44 px en dos líneas, un párrafo sans de unas tres líneas y dos botones en paralelo: primario blanco y secundario transparente con borde blanco. No hay texto superpuesto sobre la fotografía. En teléfono no se intenta conservar las dos columnas: primero aparece la foto a todo el ancho, con proporción aproximada 1:0,75, y después un bloque verde independiente. El titular baja a 32 px según la medición —aunque visualmente se amplifica por el ancho estrecho—, el texto queda centrado y los dos botones permanecen en una fila.",
+  "catalog": "No se proporcionó captura de catálogo. Por tanto, no puede verificarse su cabecera, número de columnas, filtros, ordenación ni adaptación al teléfono. La medición de seis columnas y fotos 1:1 corresponde al módulo de productos de la portada, no debe confundirse con la página de catálogo.",
+  "card": "Solo se observan tarjetas del carrusel “Bestsellers” de la portada. En escritorio aparecen aproximadamente cuatro completas dentro del ancho visible, aunque la medición detecta seis tarjetas en la fila completa. La fotografía es cuadrada, sobre fondos domésticos claros; debajo van nombre del producto, categoría o descripción breve, valoración con estrellas amarillas, precio y un botón negro compacto “View” alineado hacia la derecha. La información usa sans pequeña y queda alineada a la izquierda. No se ven muestras de color, botón de compra rápida ni una segunda imagen al pasar el cursor, así que esas funciones no pueden afirmarse. En teléfono el carrusel muestra una tarjeta completa y parte de la siguiente para indicar desplazamiento horizontal.",
+  "product": "No se proporcionó captura de página de producto. No es posible documentar la galería, la caja de compra, el contenido sobre el pliegue, las variantes, los acordeones ni los módulos posteriores.",
+  "cart": "No se proporcionó captura del carrito; únicamente se ve el acceso “Basket” o el icono de bolsa en la cabecera. No puede determinarse si se abre como cajón o como página, ni cómo resuelve filas, totales o ventas adicionales.",
+  "type": "La jerarquía combina Tiempos Headline, serif de contraste alto y formas editoriales, con Unica 77 LL TT, sans funcional y compacta. En escritorio el h1 medido es 52 px/700 y el h2 principal 44 px/700; en teléfono bajan a 36 y 32 px. Los títulos conservan caja normal, sin tracking añadido, y suelen partirse en dos líneas antes de reducirse demasiado. Cuerpo y microtexto usan Unica a 14 px/400; navegación a 14 px/500; botones a 16 px/400. No se recurre a mayúsculas sostenidas: la distinción se consigue por familia, peso, escala y contraste. Para reproducir el sistema, reservar la serif para titulares de campaña y títulos de sección, y usar la sans en búsqueda, navegación, descripciones, precios, reseñas y llamadas a la acción.",
+  "colour": "El fondo general es blanco puro, rgb(255,255,255), que mantiene separados los numerosos módulos fotográficos. La tinta principal es negro o carbón. El color de campaña dominante es un verde bosque muy oscuro, cercano a #17260F, empleado como panel de hero y para sostener texto blanco. Un burdeos profundo aparece en la campaña de Tiny Trees; el beige crema se usa en las franjas de Rewards, garantía y avisos. El amarillo ácido pálido identifica promociones, etiquetas sobre fotografías y pastillas “new”; no rellena grandes superficies salvo la oferta. La regla útil es asignar un trabajo a cada color: verde o burdeos para relato estacional, amarillo para urgencia y selección, crema para confianza o membresía, blanco para comercio cotidiano.",
+  "photos": "Las fotografías alternan dos tratamientos. Los productos florales se muestran nítidos y centrados, a menudo en jarrón sobre una mesa clara, con sombras suaves y encuadre cuadrado. Las campañas usan escenas domésticas abundantes, con mesa, regalos, velas y decoración; el producto no aparece aislado sino integrado en una ocasión. Los accesos de categoría recortan esas escenas dentro de círculos. Los módulos editoriales usan rectángulos verticales o casi cuadrados con una etiqueta amarilla superpuesta cerca del borde inferior. La escala cambia deliberadamente: escena panorámica para abrir una historia, cuadrado repetible para comparar productos y círculo pequeño para navegar.",
+  "motion": "No hay vídeo ni marquesina en las mediciones. Sí se evidencia desplazamiento horizontal en los accesos circulares, las tarjetas editoriales y “Bestsellers”: se muestran elementos cortados y controles de flecha. Es probable que las tarjetas y botones tengan estados hover, pero la captura no permite confirmar cambio de foto ni animación. El botón de chat permanece flotante en la esquina inferior derecha.",
+  "phone": "La adaptación no consiste solo en apilar: elimina la navegación textual, conserva las acciones como iconos y convierte categorías y colecciones en carruseles horizontales. El hero pasa de 55/45 a foto seguida de texto, ambos a ancho completo. Los márgenes de contenido son de unos 14–16 px; las bandas de campaña pueden llegar a sangre. Las cuatro tarjetas de “Gifts to get into the spirit” se convierten en una cuadrícula horizontal de dos columnas visibles por tramo, con flechas debajo. “Bestsellers” muestra una tarjeta y una fracción de la siguiente. Los títulos pasan de 44 a 32 px y el h1 de 52 a 36 px. La página móvil es más larga —7964 px frente a 6449 px— porque las columnas se apilan, pero conserva densidad mediante carruseles en lugar de convertir cada conjunto en una lista vertical completa.",
+  "signature": "La navegación de temporada mediante retratos fotográficos circulares colocados justo bajo el buscador: funciona a la vez como índice comercial y como anticipo visual del surtido.",
+  "home": [
+    {
+      "role": "Abrir la campaña estacional y llevar a dos niveles de compra.",
+      "composition": "Hero de dos columnas 55/45 en escritorio: escena navideña a la izquierda y panel verde oscuro a la derecha con titular de 44 px, párrafo centrado y dos botones. En teléfono se apila como foto a sangre más panel de texto."
+    },
+    {
+      "role": "Captar primera compra con un incentivo directo.",
+      "composition": "Banda amarilla pálida contenida dentro de márgenes laterales. Incluye una línea introductoria pequeña, el mensaje “Take £10 off your first order*”, condición mínima y botón negro. En escritorio se resuelve en una fila; en teléfono es una tarjeta vertical estrecha alineada a la izquierda."
+    },
+    {
+      "role": "Traducir la temporada en cuatro motivos de regalo.",
+      "composition": "Sección “Gifts to get into the spirit” con título serif, enlace “Shop all”, breve introducción y cuatro imágenes en una fila. Cada imagen lleva una etiqueta amarilla superpuesta —Seasonal stems, Festive bakes, Winter wellbeing, Warming candles— y una línea descriptiva debajo. En móvil pasa a carrusel o cuadrícula desplazable de dos columnas."
+    },
+    {
+      "role": "Presentar productos de demanda probada y facilitar comparación.",
+      "composition": "Carrusel “Bestsellers” sobre blanco, con fotografías cuadradas repetidas en una fila, texto pequeño, estrellas, precio y botón negro. La retícula completa medida es de seis columnas; el viewport muestra unas cuatro tarjetas y media. Flechas y línea de progreso aparecen en el extremo inferior."
+    },
+    {
+      "role": "Captar fidelización sin interrumpir con una campaña grande.",
+      "composition": "Franja crema de poca altura con “Join Bloom & Wild Rewards”, explicación breve y botón negro a la derecha. Es un módulo horizontal, más informativo que fotográfico."
+    },
+    {
+      "role": "Dar protagonismo a una categoría estacional concreta.",
+      "composition": "Bloque dividido aproximadamente 40/60: panel burdeos con título “Tiny Trees, big magic”, párrafo y enlace; fotografía panorámica de varios árboles decorados a la derecha. Mantiene contraste alto y una sola llamada a la acción."
+    },
+    {
+      "role": "Aportar utilidad editorial y tráfico al blog.",
+      "composition": "“Fresh from our blog” presenta cuatro tarjetas fotográficas iguales en una fila y un enlace “Visit our blog”. Las etiquetas amarillas se superponen en el borde inferior de cada foto. Los temas mezclan cuidado del producto, ideas de mensajes y contenido de calendario."
+    },
+    {
+      "role": "Reducir riesgo mediante prueba social.",
+      "composition": "Título “We're the UK's most-loved online florist*”, sello o referencia a Trustpilot y cuatro reseñas en cajas de borde gris. Cada caja contiene estrellas verdes, título, extracto, autor o fecha; la repetición modular comunica volumen más que una sola cita destacada."
+    },
+    {
+      "role": "Cerrar con una promesa de servicio memorable.",
+      "composition": "Banda crema ancha: texto “We treat every order like it’s our own” y enlace a la izquierda; lettering serif verde “Happiness guaranteed” inclinado o compuesto en arco a la derecha. Debajo empieza un pie blanco con texto SEO en una columna y varios grupos de enlaces en columnas más estrechas."
+    }
+  ],
+  "lessons": [
+    "Separar emoción y transacción dentro del mismo módulo: usar una mitad fotográfica para crear la ocasión y otra mitad de color liso para que titular, explicación y botones conserven máxima legibilidad.",
+    "Asignar una geometría distinta a cada tarea: círculos para descubrir categorías, cuadrados para comparar producto, rectángulos grandes para campañas y cajas con borde para testimonios.",
+    "En móvil, convertir las retículas extensas en carruseles con la siguiente tarjeta parcialmente visible; así se mantiene variedad sin producir una columna interminable.",
+    "Construir jerarquía con dos familias tipográficas y no con demasiados pesos: serif grande para deseo y relato; sans de 14–16 px para navegación, condiciones y compra.",
+    "Usar el color promocional de forma localizada —etiquetas amarillas, bandas crema, paneles estacionales— para que cada tono tenga significado y no compita con la variedad cromática de las flores.",
+    "Alternar módulos de venta, contenido y confianza: campaña, incentivo, colección, bestsellers, fidelización, editorial, reseñas y garantía. Ese ritmo evita que una portada larga parezca un catálogo repetido."
+  ]
+}

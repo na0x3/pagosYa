@@ -1,0 +1,73 @@
+{
+  "host": "catbirdnyc.com",
+  "name": "Catbird",
+  "at": "2026-11-14T15:23:21.891Z",
+  "mood": "Joyería íntima y artesanal con un pulso editorial neoyorquino; mezcla delicadeza, humor gráfico y venta directa.",
+  "idea": "Alterna joyas diminutas fotografiadas con mucho aire, imágenes cercanas de manos y bloques tipográficos de campaña, de modo que el producto se perciba precioso sin que la tienda deje de ser accesible.",
+  "header": "En escritorio mide 136 px de alto, queda fijo y usa fondo marfil RGB 249,247,243. Arriba incorpora una franja negra estrecha con el enlace centrado y subrayado «Shop Holiday Gifts»; debajo hay una navegación horizontal de 9 categorías —All Jewelry, Customized, Rings, Necklaces, Charms, Earrings, Bracelets y Wedding, además de enlaces estacionales según el menú— y, a la derecha, búsqueda, favoritos, cuenta/servicio y bolsa mediante iconos lineales. La puerta de selección de país cubre la zona izquierda de todas las capturas, por lo que no puede verificarse con seguridad la posición real del logotipo en escritorio; las mediciones automáticas también son contradictorias al marcarlo a izquierda o derecha. En teléfono el header medido baja a 97 px, permanece fijo, sustituye la lista por «Toggle Nav» y centra o alinea el logotipo según la plantilla. No se puede comprobar visualmente porque la pantalla está completamente tapada por el selector de país y el aviso de cookies.",
+  "hero": "Bajo el header aparece una campaña a sangre, de aproximadamente 590 px de alto en el escritorio capturado. La fotografía es un acercamiento horizontal de cuello y manos con varias joyas; el cuerpo ocupa casi todo el encuadre y deja el producto pequeño pero repetido. Encima se superponen tres niveles: una banda fucsia superior con «SPECIALLY PRICED!», una línea caligráfica «Limited Edition», y un titular blanco en mayúsculas «BLACK DIAMOND» con «SALE» encerrado en fucsia. El botón, ancho y bajo, queda centrado cerca del borde inferior. Es una composición de campaña más parecida a un cartel que a una ficha comercial. La versión móvil del hero no puede evaluarse por el bloqueo de país.",
+  "catalog": "La colección comienza con una cabecera textual: H1 «Limited Edition Black Diamonds» de 48 px en escritorio y 40 px en teléfono, contador de 16 artículos y un párrafo introductorio de unas tres líneas. Después hay una barra de herramientas alineada a la derecha con «+ Filter» y «Sort by Featured», separadas por una regla vertical y con una línea horizontal inferior. La cuadrícula usa 3 columnas en 1440 px y 2 columnas en 390 px; las imágenes son cuadradas, proporción 1:1. Hay 16 productos y el bloque de resultados mide aproximadamente 3590 px de alto en escritorio y 2850 px en móvil. Los filtros existen, pero el selector de país impide ver su apertura. Un aviso de privacidad fijo ocupa la parte inferior de escritorio; debe ignorarse al estudiar la retícula. En móvil, la captura solo muestra la puerta de país y cookies, así que la estructura de dos columnas procede de las medidas del navegador, no de observación visual directa.",
+  "card": "Tarjeta vertical sin marco dominante: fotografía cuadrada sobre fondo blanco o marfil muy claro, joya centrada y rodeada de mucho espacio negativo. El corazón de favoritos se coloca sobre la esquina superior derecha de la imagen. Bajo la foto aparecen pequeñas etiquetas rectangulares como «NEW» y «READY TO SHIP», luego nombre del producto, marca o colección y precio; los precios rebajados se distinguen en rojo y pueden convivir con el precio anterior. El tamaño diminuto de cadenas y pendientes se conserva en vez de ampliarlos hasta llenar el cuadro, reforzando su escala real. No se observa un botón grande de compra rápida; las etiquetas visibles parecen estados o accesos compactos. No hay evidencia suficiente para afirmar que cambie a una segunda foto al pasar el cursor.",
+  "product": "No se proporcionó captura ni mediciones de la página de producto. No puede determinarse la división entre galería y caja de compra, el contenido sobre el pliegue, las variantes, los acordeones ni los módulos posteriores.",
+  "cart": "No se proporcionó captura del carrito; no puede saberse si funciona como cajón o página, ni documentar filas, totales o ventas adicionales.",
+  "type": "La jerarquía combina tres registros. «Denton Condensed» se usa en titulares editoriales: H1 de 48 px en escritorio y 40 px en teléfono, peso 500; H2 de portada llega a 48 px en escritorio y 40 px en móvil, mientras los encabezados de módulos pueden bajar a 32/24 px. Su forma estrecha permite titulares grandes sin ocupar demasiada anchura. «TT Fors» construye navegación y controles: enlaces de 16 px y botones o filtros alrededor de 18 px, pesos 400–500. Arial resuelve texto funcional y legal a 14 px en escritorio y 13 px en teléfono, con tracking ligeramente cerrado de −0,13 px. Además aparecen letras caligráficas en categorías y campañas; en el hero parte de esa tipografía está integrada en la propia creatividad fotográfica. La combinación práctica es: serif condensada para voz editorial, sans geométrica para acción y sans de sistema para información extensa.",
+  "colour": "La base comercial es blanco RGB 255,255,255; el header usa marfil RGB 249,247,243 y la tinta principal es negra. El negro también forma bandas de alto contraste —promoción superior, marquesina y puerta de país—. El fucsia intenso identifica la campaña y el descuento, no la interfaz general. En la portada aparecen además fondos verde salvia para servicios o compromisos y verde saturado en el bloque de suscripción; el rosa muy pálido se usa en botones como «Start Shopping». Los colores secundarios trabajan por secciones completas, mientras catálogo y tarjetas permanecen casi monocromos para no competir con el oro y las piedras.",
+  "photos": "Conviven dos sistemas. En catálogo, producto aislado, frontal y pequeño sobre fondo claro, dentro de cuadrados 1:1 con abundante aire; cadenas, anillos y pendientes mantienen una escala delicada. En portada, recortes cerrados de cuello, dedos y manos muestran acumulación de joyas y textura de piel. Los módulos editoriales alternan fotografías rectangulares, dípticos y recortes geométricos —incluido un retrato de manos con esquinas diagonales—. Las imágenes de tienda y taller amplían el relato con interiores y procesos. No se ven vídeos: las mediciones registran cero.",
+  "motion": "Hay al menos una marquesina horizontal negra con la frase repetida «SOLID GOLD ALWAYS», por lo que es razonable reproducirla como desplazamiento continuo. Los carruseles de producto parecen usar filas horizontales o controles compactos, aunque el bloqueo impide verificar su interacción. Son probables los estados hover de favoritos y tarjetas, pero no se ve una segunda imagen ni una animación concreta; no debe darse por confirmada. El header permanece fijo durante el desplazamiento.",
+  "phone": "El ancho medido es 390 px. El header se reduce de 136 a 97 px y colapsa la navegación en un control de menú; el H1 baja de 48 a 40 px, los títulos de módulos de 32 a 24 px y el cuerpo de 14 a 13 px. El catálogo pasa de tres a dos columnas manteniendo fotografía cuadrada, por lo que cada tarjeta ronda media pantalla y conserva textos breves debajo. La portada es más larga —7421 px frente a 6082 px—, señal de que los módulos se apilan o reducen el número de columnas. Sin embargo, todas las capturas móviles están cubiertas por una puerta de país a pantalla completa: logotipo blanco grande, mensaje centrado, selector y botón de casi todo el ancho, más un aviso de cookies inferior. Por ello no puede verificarse visualmente la recomposición exacta del hero y las secciones.",
+  "signature": "La marquesina negra «SOLID GOLD ALWAYS» repetida en cursiva espaciada funciona como una costura entre la campaña fotográfica y el resto de la tienda: convierte una promesa material en un motivo gráfico recurrente.",
+  "home": [
+    {
+      "role": "Captar con una promoción estacional y llevar directamente a la colección rebajada.",
+      "composition": "Hero fotográfico horizontal a sangre, de unos 590 px de alto bajo el header fijo; retrato cercano de cuello y manos, titular centrado en tres estilos, banda fucsia superior y CTA ancho centrado en la base."
+    },
+    {
+      "role": "Repetir la promesa de marca y separar la campaña del contenido comercial.",
+      "composition": "Marquesina negra de unos 65 px de alto con «SOLID GOLD ALWAYS» repetido en blanco o gris, en mayúsculas cursivas y con tracking amplio."
+    },
+    {
+      "role": "Ofrecer accesos visuales a familias de producto.",
+      "composition": "Fila de categorías de gran escala —se alcanzan a ver Charms, Necklaces, Bracelets y Wedding— sobre fondo claro. Cada nombre aparece en caligrafía negra y ocupa aproximadamente un cuarto de la anchura en escritorio."
+    },
+    {
+      "role": "Presentar productos de entrada y superventas.",
+      "composition": "Carrusel o fila de tarjetas cuadradas con joya aislada, cuatro o más elementos visibles, pequeños estados «READY TO SHIP» y «BEST SELLER», nombre y precio debajo. La imagen domina y el texto queda reducido a una franja inferior."
+    },
+    {
+      "role": "Facilitar compra por presupuesto.",
+      "composition": "Banda verde salvia muy pálida, título centrado «Shop By Price» y una fila de botones delineados como «Under $300», «Under $500» y «Under $1000»."
+    },
+    {
+      "role": "Introducir colecciones mediante imágenes de uso.",
+      "composition": "Díptico editorial: dos fotografías grandes en columnas iguales, una macro de una piedra y otra de manos con varias joyas. Los nombres de colección aparecen centrados bajo cada imagen; uno de los recortes usa esquinas diagonales."
+    },
+    {
+      "role": "Dar contexto de estilo y romper la sucesión de producto aislado.",
+      "composition": "Fotografía panorámica a sangre de manos y joyas, de poca altura relativa, usada como transición entre módulos."
+    },
+    {
+      "role": "Convertir la presencia física y el oficio en argumentos de confianza.",
+      "composition": "Sección «STORES & SERVICES» con título serif centrado, una regla ornamental y una retícula de fotografías: interior de tienda en una columna menor y trabajo de soldadura permanente en una imagen principal mayor, enmarcada con borde decorativo."
+    },
+    {
+      "role": "Aportar prueba social.",
+      "composition": "Bloque centrado sobre fondo marfil con encabezado caligráfico «Customer Reviews», cinco estrellas, una cita corta y atribución pequeña. El texto ocupa una anchura limitada, dejando aire lateral."
+    },
+    {
+      "role": "Explicar valores y servicios posteriores a la compra.",
+      "composition": "Banda verde salvia dividida en dos columnas simétricas: «Sustainable Since 2004» y «Catbird Ring Refill», cada una con icono lineal, título y dos líneas de explicación."
+    },
+    {
+      "role": "Cerrar con relato, información legal y captación.",
+      "composition": "Bloques de texto y fotografía en escala menor seguidos por una pieza de suscripción verde intenso con titular serif grande: «Receive a 10% discount off your first purchase and a birthday treat!». La parte final está parcialmente tapada por el banner de privacidad."
+    }
+  ],
+  "lessons": [
+    "Da a los productos pequeños una retícula estable y mucho espacio negativo; no intentes compensar su escala ampliándolos hasta que pierdan delicadeza.",
+    "Separa la voz editorial de la funcional mediante tipografías con tareas fijas: serif condensada para relato, sans geométrica para navegación y sans neutra para información larga.",
+    "Alterna producto aislado con piel, manos, interiores y proceso. Cada tipo de fotografía responde a una pregunta distinta: qué es, cómo se lleva y quién lo fabrica.",
+    "Usa el color promocional de forma localizada —una palabra, banda o precio— y conserva la interfaz de compra casi monocroma para mantener legibilidad.",
+    "En móvil, conserva dos columnas solo cuando la fotografía es simple y cuadrada; reduce títulos y cuerpo, pero no elimines el aire interior de las imágenes.",
+    "No permitas que puertas de país y consentimiento oculten indefinidamente la tienda: en estas capturas dominan toda la experiencia móvil y tapan gran parte del escritorio, debilitando tanto la campaña como la posibilidad de estudiar o comprar."
+  ]
+}

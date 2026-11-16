@@ -1,0 +1,61 @@
+{
+  "host": "outdoorvoices.com",
+  "name": "Outdoor Voices",
+  "at": "2026-11-14T15:17:30.892Z",
+  "mood": "Deportivo, espontáneo y editorial: producto técnico presentado con humor, retratos directos y mucho espacio en blanco.",
+  "idea": "Combina la claridad de un catálogo deportivo con composiciones de revista: imágenes grandes, bloques aislados y llamadas a compra negras sobre blanco.",
+  "header": "Dos niveles y posición estática. Arriba hay una barra azul de 42 px con «Free Shipping on orders $100+» centrado. Debajo, en escritorio, una navegación blanca de unos 76 px: cuatro enlaces a la izquierda —Women, Men, OV Extra Sale y Gift Guide—, logotipo centrado y tres acciones a la derecha —buscar, cuenta y bolsa—. El contenido queda contenido aproximadamente entre x=80 y x=1360 en 1440 px. En teléfono, la barra azul mantiene el mensaje y la navegación pasa a 58 px: hamburguesa a la izquierda, logotipo centrado y buscar más bolsa a la derecha; desaparecen los enlaces y la cuenta. No es fijo: las mediciones indican position static.",
+  "hero": "En escritorio ocupa 782 px desde y=118. Empieza con una franja fotográfica de unos 1280 × 315 px centrada, compuesta como tríptico de tres recortes verticales contiguos. Después deja cerca de 300 px de blanco antes de la línea comercial. En la base, titular NordiquePro de 60 px alineado a la izquierda, subtítulo de 16 px debajo y botón píldora negro alineado al extremo derecho. En teléfono se elimina el tríptico: se selecciona una sola fotografía y se recorta a retrato de ancho completo, aproximadamente 390 × 480 px. Debajo aparecen titular de 36 px centrado en dos líneas, subtítulo y botón negro ancho; todo el bloque mide unos 710 px.",
+  "catalog": "Cabecera editorial centrada con «Shop By Size»: 60 px en escritorio dentro de una banda de 101 px y 36 px en teléfono. Una línea fina separa la cabecera del listado. En escritorio hay una fila de controles con Gender, Size, Color y Price a la izquierda y Sort a la derecha; debajo, retícula de tres columnas. Las fotos tienen relación ancho/alto 0,75, es decir 3:4, y ocupan casi todo el ancho de cada celda. En teléfono se reduce a dos columnas y los controles se condensan en «Filter» a la izquierda y «Sort» a la derecha, ambos de 12 px. Los filtros probablemente abren paneles, pero su estado abierto no aparece. La página es muy larga —11.580 px en escritorio y 8.878 px en teléfono— y no introduce fondos o separadores entre filas.",
+  "card": "Tarjeta sin contenedor, sombra ni borde: fotografía 3:4 sobre fondo blanco, seguida por muestras rectangulares de color, nombre y precio. Las muestras ocupan una sola línea y el excedente se resume como «+1 more». Los artículos rebajados llevan una etiqueta azul «30% off» superpuesta cerca de la esquina superior izquierda de la foto. El precio de oferta aparece primero y el precio original, gris y tachado, después. En escritorio la información queda a 13–16 px; en teléfono se comprime para sostener dos columnas. No se ve botón de compra rápida en las tarjetas del catálogo ni puede confirmarse una segunda foto al pasar el cursor.",
+  "product": "En escritorio comienza con migas de pan y una composición de tres columnas funcionales: dos columnas de galería a la izquierda y una caja de compra de 454 px a la derecha. Las primeras imágenes muestran frente y espalda a gran escala; debajo continúan cuerpo entero y acercamientos de material. La caja, visible sobre el pliegue desde y≈209, contiene nombre a 36 px, color escrito, cuatro muestras, selector de talla con enlace «Size Guide», botón negro de 454 px, precio rebajado y original dentro del botón, Afterpay y recordatorio de envío. El botón empieza en y=449. Después vienen Details y Fabric and Care, Reviews/Questions y una recomendación de cuatro columnas. En teléfono la secuencia es lineal: migas, una imagen principal alta con flecha lateral, cuatro miniaturas, nombre a 24 px, color y muestras, talla y botón de 366 px. La compra queda alrededor de y=1028 y por tanto no aparece en el primer pliegue. Details se abre como acordeón; Fabric and Care aparece cerrado. Las recomendaciones pasan a dos columnas.",
+  "cart": "Es una página completa, no un cajón. En escritorio, después del header, muestra enlace para seguir comprando y una banda gris con el umbral de envío. La zona principal se divide aproximadamente en 60/40: a la izquierda «Your Bag», una fila por producto con miniatura, nombre, color, talla, selector de cantidad, eliminar y precio; a la derecha, sobre fondo gris muy claro, una caja blanca «Order Summary» con subtotal, botón negro de checkout y mensaje de Afterpay. Debajo del producto hay «You Might Also Like» en filas horizontales con miniatura, datos y botón contorneado «Add to Bag». No se proporcionó captura del carrito en teléfono, por lo que no puede verificarse su recomposición móvil.",
+  "type": "Usa NordiquePro para la voz editorial: formas redondeadas, peso 400, caja normal y tracking de 0,6 px. Escala: portada 60 px en escritorio y 36 px en teléfono; el dato registrado como H1 llega a 80/48 px, aunque el titular comercial visible usa la escala H2; títulos de módulos 36/24 px; lema final 70/40 px; producto 36/24 px. TTCommonsPro resuelve navegación, cuerpo, controles y botones, normalmente a 16 px y peso 500. Etiquetas de catálogo bajan a 13 px en escritorio y 12 px en teléfono. No se recurre a mayúsculas sistemáticas: la jerarquía depende de tamaño, aire y cambio de familia, no de negritas fuertes.",
+  "colour": "El blanco #FFFFFF es fondo casi absoluto y permite que las fotografías definan el color de cada sección. La tinta principal y los botones usan un carbón cercano a #202020. La barra de envío y las etiquetas de descuento emplean azul cobalto, aproximadamente #315BAD, con texto blanco. Grises muy claros se reservan para el panel del resumen del carrito, bandas informativas, líneas divisorias y fondos fotográficos de estudio. No hay un color de acento constante dentro del contenido: los rojos, lilas, verdes y marrones proceden principalmente de prendas y fotografía.",
+  "photos": "Alterna dos registros. El catálogo y la ficha usan fotografía de estudio frontal, fondo blanco o gris casi blanco, escala grande y recorte consistente 3:4; el producto se muestra puesto, con frente, espalda, cuerpo entero y detalles cercanos. La portada usa retratos y escenas de actividad con flash o luz directa, gestos no posados y recortes cerrados que priorizan cara, textura y movimiento. En escritorio puede agrupar tres o cuatro imágenes contiguas; en teléfono selecciona una sola imagen dominante en vez de reducir todo el mosaico. Las secciones de categorías mezclan bustos de estudio con encuadres de piernas, mientras «Shop by Activity» introduce exteriores y situaciones reales.",
+  "motion": "No hay vídeo, marquesina ni animación visible en las capturas. Sí se observan controles de carrusel: flechas en la tira «Hi, we're new», flecha lateral y miniaturas en la galería móvil, y una banda social horizontal al final. Es probable el desplazamiento lateral en teléfono y el cambio de imagen al elegir miniaturas. No puede confirmarse transición de segunda foto al hover en las tarjetas.",
+  "phone": "La navegación se reduce a iconos y conserva el logotipo centrado. Los mosaicos editoriales dejan de competir en una misma fila: el hero elige una foto, y los módulos Gift Guide y Polka Dot apilan imagen, título, texto y botón. La tira de novedades muestra una tarjeta grande y una fracción de la siguiente, señalando scroll horizontal. Categorías, actividades y recomendaciones usan dos columnas; el catálogo también mantiene dos columnas con tipografía y muestras más pequeñas. La ficha de producto pasa de galería doble más caja lateral a una secuencia vertical, y el botón de compra deja de estar sobre el primer pliegue. Titulares bajan de 60 a 36 px, de 36 a 24 px y el lema final de 70 a 40 px, pero el cuerpo permanece en 16 px.",
+  "signature": "El hero separa deliberadamente la franja fotográfica del mensaje con varios cientos de píxeles de blanco en escritorio; en móvil convierte ese mismo concepto en una sola fotografía retrato seguida por un bloque tipográfico centrado.",
+  "home": [
+    {
+      "role": "Presentar la colección estacional principal y llevar directamente a compra.",
+      "composition": "Bloque de 782 px: tríptico fotográfico horizontal centrado, gran intervalo blanco y cierre con titular de 60 px a la izquierda, subtítulo debajo y botón píldora al extremo derecho. En teléfono: una sola foto a ancho completo y texto centrado."
+    },
+    {
+      "role": "Introducir novedades como un escaparate de producto navegable.",
+      "composition": "Sección de 712 px titulada «Hi, we're new.» a 36 px. Carrusel horizontal de tarjetas fotográficas estrechas, con flechas en los extremos, nombre, disponibilidad de colores y un botón negro centrado «Shop — New Arrivals». En teléfono ocupa 667 px y enseña una tarjeta dominante más parte de la siguiente."
+    },
+    {
+      "role": "Promocionar una guía de regalos sin repetir la retícula comercial.",
+      "composition": "Módulo de 636 px, muy aireado y asimétrico: una fotografía cuadrada de una prenda lila suspendida ocupa el lado izquierdo; título de 36 px, frase y botón se sitúan separados hacia la derecha. En móvil se apila foto, título de 24 px, texto y botón."
+    },
+    {
+      "role": "Dar protagonismo a una cápsula o estampado concreto.",
+      "composition": "Otro bloque de 636 px que invierte la relación anterior: texto «Spotted: Polka Dot» y botón en una zona blanca, con retrato vertical desplazado hacia la derecha. La alternancia izquierda/derecha evita que dos promociones consecutivas tengan el mismo ritmo. En móvil vuelve a una sola columna."
+    },
+    {
+      "role": "Permitir entrada por tipo de prenda.",
+      "composition": "Título centrado «Shop Popular Categories» a 36 px y cuatro imágenes verticales iguales en una fila: Tops & Tees, Pants, Sports Bras y Leggings. Cada rótulo queda centrado debajo. La sección mide 628 px; en teléfono se reorganiza en dos columnas dentro de unos 502 px."
+    },
+    {
+      "role": "Permitir entrada por contexto de uso, no solo por producto.",
+      "composition": "Misma retícula y altura que categorías, con cuatro imágenes de tratamiento más variado: Sweat, Hike, Studio y Rest Day. El título va centrado y los rótulos debajo de cada imagen. En teléfono pasa a dos columnas."
+    },
+    {
+      "role": "Cerrar el relato de actividad con imágenes de campaña a gran escala.",
+      "composition": "Mosaico de cuatro imágenes sin titular, distribuido como dos grandes columnas y recortes panorámicos de exteriores y movimiento. En escritorio ocupa 728 px; en teléfono se apila y crece a 822 px."
+    },
+    {
+      "role": "Convertir comunidad y estilo de vida en prueba social antes del pie.",
+      "composition": "Lema «Doing Things looks good on you.» de 70 px centrado, seguido por una tira horizontal de contenido social y pequeños iconos. Debajo aparecen preferencias de email y alta. En teléfono el lema baja a 40 px y la tira reduce el número de piezas visibles."
+    }
+  ],
+  "lessons": [
+    "Si una campaña tiene varias imágenes potentes, no reduzcas el mosaico de escritorio hasta volverlo ilegible en móvil: selecciona un solo encuadre y dale altura de retrato.",
+    "Usa una relación fotográfica constante —aquí 3:4— para que una retícula comercial de tres columnas pueda pasar a dos sin cambiar la lógica de las tarjetas.",
+    "Reserva una familia expresiva para titulares y otra más neutral para controles, precios y cuerpo; mantén el peso moderado y crea jerarquía con escala y espacio.",
+    "Alterna módulos promocionales asimétricos de imagen y texto para introducir ritmo entre carruseles y retículas, pero conserva siempre la misma gramática de título, frase y botón.",
+    "Haz que descuento, variantes y precio se lean sin abrir la ficha: etiqueta superpuesta, muestras en una línea, precio de oferta primero y original tachado.",
+    "En producto, muestra la compra junto a las primeras fotos en escritorio y conserva en móvil una secuencia clara: galería, identidad, variantes, talla, compra y detalles."
+  ]
+}

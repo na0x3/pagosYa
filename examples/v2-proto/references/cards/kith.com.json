@@ -1,0 +1,81 @@
+{
+  "host": "kith.com",
+  "name": "Kith",
+  "at": "2026-11-14T15:15:28.036Z",
+  "mood": "Editorial de moda, deportivo y cinematográfico; lujo sobrio construido con fotografía de campaña, tipografía pequeña y controles casi técnicos.",
+  "idea": "Alternar campañas de imagen a toda pantalla con carruseles densos de producto, dejando que cada colaboración cambie el universo fotográfico mientras una interfaz blanca y mínima mantiene la continuidad comercial.",
+  "header": "Cabecera de 59 px, fija en portada y sticky en catálogo y producto, sin barra de anuncio. En escritorio distribuye cinco enlaces a la izquierda —New, Mens, Womens, Kids, Gifting—, el logotipo KITH exactamente centrado y, a la derecha, Hospitality más cuenta, búsqueda y bolsa. Navegación en Proxima Nova de 12 px, peso 300 y tracking de 0,6 px; enlaces muy separados. Sobre el hero puede verse transparente, con texto e iconos blancos, y al avanzar adopta fondo blanco con tinta negra. En teléfono conserva los 59 px: hamburguesa a la izquierda, logo centrado y cuenta más bolsa a la derecha; desaparecen los enlaces y la búsqueda directa. El logo es una pastilla rectangular compacta, no una firma grande.",
+  "hero": "En escritorio es una campaña full bleed de 1440 × 720 px; la cabecera se superpone a la foto. El sujeto ocupa aproximadamente la mitad derecha y queda un gran campo negativo a la izquierda. En la franja inferior, el título serif de 28 px y el párrafo corto quedan alineados abajo a la izquierda, mientras dos botones de contorno, de unos 120–155 × 40 px, se alinean abajo a la derecha. En teléfono se recompone como pieza vertical de 390 × 650 px: se utiliza otro encuadre o asset, el personaje llena casi toda la altura, y título de 22 px, descripción y dos botones se centran en el tercio inferior. Los botones permanecen en una fila y ocupan juntos casi todo el ancho útil.",
+  "catalog": "Cabecera secundaria bajo la navegación principal: “Shop All” en Georgia de 18 px a la izquierda y una lista horizontal de categorías —All Kith, Kith Winter 2026, Monday Program, Kith Origins, Footwear, Denim, Tailoring, Outerwear, Knitwear, Tops, Bottoms…—; filtros y cambio de vista quedan en el extremo derecho. Tras unos 133 px de interfaz comienza una cuadrícula de cuatro columnas en la captura de escritorio, con márgenes exteriores cercanos a 24 px y calles de 16–20 px. Las fotos son cuadradas y el catálogo extremadamente largo; no hay banner editorial antes de vender. En teléfono, tras la cabecera de 59 px aparece “Shop All” en Georgia de 16 px, luego una tira horizontal desplazable de categorías y un icono de filtros. La cuadrícula pasa a dos columnas, con unos 10–12 px de margen y calle, sin convertir los filtros en una columna lateral. El medidor automático registra dos columnas porque detecta agrupaciones internas, pero la captura de escritorio muestra visualmente cuatro tarjetas por fila.",
+  "card": "Tarjeta sin marco ni sombra. Imagen 1:1 sobre gris muy claro, con el producto aislado y centrado; debajo aparecen nombre en Georgia pequeña, precio en Proxima Nova de unos 11–12 px y, cuando existen variantes, círculos de color de aproximadamente 16–18 px. El bloque textual se alinea a la izquierda y deja bastante aire antes de la siguiente fila. No se ve botón de compra rápida en el catálogo. En los carruseles de portada sí aparece un pequeño icono circular de bolsa en la esquina inferior derecha de algunas fotos, que funciona como acceso comercial rápido. Las capturas no demuestran un cambio a segunda foto al pasar el cursor; no debe darse por hecho.",
+  "product": "En escritorio empieza con breadcrumb bajo la cabecera y se divide aproximadamente 52/48. A la izquierda hay una columna vertical de miniaturas de unos 40 px y una galería de imágenes grandes sobre gris claro; cada vista ocupa cerca de 640 × 640 px y las siguientes continúan en vertical. A la derecha, la caja de información arranca con marca, nombre en Georgia de 18 px, precio, color y avisos logísticos, separados por reglas finas. Después aparecen tres pestañas o acordeones horizontales —Description, Size & Fit, Shipping & Returns— y la ficha técnica. La galería tiene 13 imágenes según la medición. La captura está afectada por un aviso naranja de restricción geográfica (“This product cannot be shipped to your country”), por lo que no conviene interpretar la ausencia del flujo normal de compra como una decisión de diseño. En teléfono, el breadcrumb precede a un carrusel cuadrado con flechas laterales; debajo se apilan marca, nombre en Georgia de 16 px, precio, color, aviso y acordeones. Una barra fija inferior contiene miniatura y nombre a la izquierda y “Select a size” a la derecha. Más abajo aparece “Related Products” en una cuadrícula de dos columnas.",
+  "cart": "No hay una captura válida del contenido del carrito: la URL con viewcart=true muestra de nuevo la portada y únicamente cambia el contador de la bolsa a 1. No se puede determinar si Kith usa cajón o página, ni documentar filas, cantidades, totales o ventas adicionales sin inventarlos.",
+  "type": "Sistema de dos familias. Georgia aporta tono editorial a títulos de campaña y nombres importantes: 28 px en portada de escritorio, 22 px en portada móvil, 18 px en catálogo/producto de escritorio y 16 px en teléfono; peso 400, caja normal y tracking cercano al 5% —1,4, 1,1, 0,9 y 0,8 px respectivamente—. Proxima Nova resuelve navegación, descripciones, precios, botones y datos: normalmente 12 px, peso 300 y tracking de 0,6 px. Etiquetas funcionales y pestañas usan 10–12 px, mayúsculas y ocasionalmente peso 700. La combinación funciona por contraste de función: serif para relato, colección y producto; sans pequeña y espaciada para acción, clasificación y metadatos.",
+  "colour": "La interfaz trabaja principalmente con blanco puro rgb(255,255,255) como fondo, negro o carbón como tinta y gris casi blanco en los fondos de producto. Reglas de gris claro separan cabecera, filtros, precio, variantes y acordeones. Los botones de campaña son transparentes con borde y texto blancos sobre la fotografía; en fondos claros pasan a borde oscuro. No existe un color corporativo dominante en la interfaz: el color procede de cada campaña. El naranja intenso se reserva al aviso de imposibilidad de envío y actúa como señal de sistema, no como acento decorativo.",
+  "photos": "Hay dos regímenes deliberadamente distintos. Las campañas usan fotografía narrativa full bleed, con sujetos a gran escala, coches, paisaje o arquitectura y espacio negativo reservado para texto; cada lanzamiento puede adoptar una dirección fotográfica propia. El catálogo neutraliza esa expresividad: producto aislado sobre un gris uniforme, sombras suaves, encuadre cuadrado y escala consistente entre categorías. Las prendas pueden mostrarse en percha o agrupadas; el calzado se fotografía de perfil o cenital. Las galerías de portada intercalan retratos de cuerpo entero y detalles de estilismo en módulos verticales. En teléfono no se limita a recortar el archivo horizontal: el hero principal muestra una toma alternativa preparada para formato vertical.",
+  "motion": "Se registra un vídeo en la portada, dentro de la campaña Giorgio Armani & Kith, presentado como un bloque de 720 px en escritorio y 650 px en teléfono. Las bandas de producto y editoriales funcionan como carruseles horizontales: en móvil dejan ver una segunda tarjeta cortada para indicar desplazamiento. La galería de producto móvil tiene flechas de anterior/siguiente. No hay marquesina. Las capturas no permiten confirmar autoplay, duración, transiciones ni cambio de imagen de tarjeta al hover.",
+  "phone": "La interfaz reduce la navegación a iconos pero conserva la cabecera de 59 px y el logo centrado. Los heroes pasan de 720 a 650 px, cambian a encuadres verticales y llevan todo el texto al centro inferior. Las galerías y carruseles no se apilan siempre a una columna: suelen mantener dos módulos visibles o uno completo más otro cortado, favoreciendo el desplazamiento lateral. El catálogo conserva dos columnas y miniaturiza nombre, precio y swatches. En producto, la galería vertical de escritorio se convierte en carrusel, la información pasa debajo y la acción de compra queda fija en el borde inferior. Títulos bajan de 28 a 22 px en campañas y de 18 a 16 px en páginas comerciales.",
+  "signature": "Cada colección se presenta como un capítulo cinematográfico de altura casi idéntica y, justo después, se traduce inmediatamente en una banda de producto comprable: relato y mercancía forman parejas repetidas a lo largo de toda la portada.",
+  "home": [
+    {
+      "role": "Presentar el lanzamiento prioritario y ofrecer dos profundidades de entrada: comprar o ver la campaña.",
+      "composition": "Hero full bleed de 720 px en escritorio y 650 px en teléfono para Kith x New York Knicks. Texto abajo a la izquierda y dos CTA abajo a la derecha en escritorio; todo centrado en el tercio inferior en móvil."
+    },
+    {
+      "role": "Convertir inmediatamente el impacto del hero en selección comercial.",
+      "composition": "Carrusel sobre blanco con productos aislados en módulos cuadrados. En escritorio se ven aproximadamente cinco tarjetas grandes —la colección contiene más—; en teléfono aparece una tarjeta y parte de la siguiente. Nombre, precio, variantes e icono de bolsa se mantienen pequeños."
+    },
+    {
+      "role": "Introducir una colaboración artesanal como pieza editorial autónoma.",
+      "composition": "Bloque full bleed de 720/650 px para 8th St by Ronnie Fieg & PROLETA RE ART for Clarks Originals. Fotografía de calzado muy cercana; título, texto y CTA superpuestos cerca de la base, centrados en teléfono."
+    },
+    {
+      "role": "Abrir la campaña general de temporada masculina.",
+      "composition": "Hero Kith Winter 2026 de 720/650 px, con modelo y vehículo como escena de vida real. Titular y descripción en la zona inferior y dos botones de contorno. El móvil usa recorte vertical y conserva ambos CTA en una fila."
+    },
+    {
+      "role": "Mostrar la amplitud de estilismos de la campaña masculina.",
+      "composition": "Banda editorial de 446 px en escritorio y 466 px en móvil, formada por ocho imágenes verticales. En escritorio se organiza como una hilera de retratos; en teléfono funciona como carrusel de dos columnas visibles."
+    },
+    {
+      "role": "Elevar una colaboración de lujo mediante imagen en movimiento.",
+      "composition": "Bloque full bleed de 720/650 px para Giorgio Armani & Kith: vídeo de campaña con titular “Dreams of the Dune”, breve texto y acciones superpuestas. La imagen ocupa todo el módulo y el texto no crea una caja blanca aparte."
+    },
+    {
+      "role": "Descomponer la campaña de lujo en looks y localizaciones.",
+      "composition": "Galería de ocho imágenes, 418 px de alto en escritorio y 438 px en móvil; mezcla retrato, cuerpo entero y contexto desértico. Módulos verticales contiguos con calles estrechas e iconos de compra discretos."
+    },
+    {
+      "role": "Dar entidad propia a la línea de mujer sin cambiar el sistema de página.",
+      "composition": "Hero Kith Women Winter 2026 de 720/650 px. Imagen full bleed, franja inferior oscura producida por la propia fotografía y texto blanco; título y descripción a la izquierda, CTA a la derecha en escritorio."
+    },
+    {
+      "role": "Convertir la campaña femenina en una secuencia de siluetas.",
+      "composition": "Ocho retratos verticales en una banda de 446/466 px. Fondos y encuadres coordinados, casi sin texto, con pequeños accesos de compra en las esquinas."
+    },
+    {
+      "role": "Separar la oferta infantil como nuevo capítulo de temporada.",
+      "composition": "Hero Kith Kids Winter 2026 de 720 px en escritorio y 650 px en teléfono, manteniendo la misma plantilla de imagen total, título serif, párrafo corto y uno o dos CTA."
+    },
+    {
+      "role": "Exponer productos infantiles inmediatamente después de su campaña.",
+      "composition": "Carrusel comercial de unos 431 px en escritorio y 420 px en móvil. Contiene numerosas imágenes y datos de producto en una banda horizontal densa, repetida como el módulo posterior al hero inicial."
+    },
+    {
+      "role": "Combinar campaña y surtido amplio para la colaboración Yankees.",
+      "composition": "Sección extensa de 1167 px en escritorio y 1062 px en móvil: cabecera editorial seguida por varias bandas o filas de producto. Reúne 36 imágenes y más texto que los capítulos anteriores, funcionando como mini-catálogo dentro de la portada."
+    },
+    {
+      "role": "Cerrar la secuencia principal con una entrada estacional transversal.",
+      "composition": "Hero 2026 Holiday Gift Guide de 720 px en escritorio y 693 px en teléfono. Vuelve al formato full bleed con titular, descripción y acciones, ofreciendo una salida temática después de las colecciones por público."
+    }
+  ],
+  "lessons": [
+    "Construye la portada con una unidad repetible —campaña de altura fija más carrusel de producto— para que diez lanzamientos distintos sigan pareciendo parte de la misma tienda.",
+    "Reserva una tipografía expresiva para títulos y usa una sans pequeña para toda la operación comercial; la jerarquía puede surgir de la función y el espaciado, no de multiplicar tamaños.",
+    "Prepara assets específicos para móvil cuando el sujeto y el texto deban convivir: un recorte automático del hero horizontal no habría producido la composición vertical observada.",
+    "Haz que el catálogo sea visualmente neutro y consistente aunque la portada sea cambiante; fondos, escala y proporción 1:1 permiten comparar productos de categorías distintas.",
+    "En móvil, conserva densidad mediante dos columnas y carruseles con la siguiente tarjeta parcialmente visible, en lugar de convertir todo en una sucesión de módulos a ancho completo.",
+    "Mantén la acción crítica disponible durante páginas largas: la barra fija de selección de talla compensa que la ficha y la galería se extiendan mucho más allá del primer pliegue."
+  ]
+}

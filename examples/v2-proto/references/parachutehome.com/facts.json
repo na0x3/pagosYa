@@ -1,0 +1,1146 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://parachutehome.com/",
+    "title": "Parachute – Home happens here. Bedding, bath linens, decor and more. – Parachute Home",
+    "width": 1440,
+    "pageHeight": 10254,
+    "fonts": {
+      "h1": {
+        "family": "Canela",
+        "size": "112px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Gifts To Wish For"
+      },
+      "h2": {
+        "family": "Canela",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Best Sellers"
+      },
+      "body": {
+        "family": "Suisse Intl",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free Shipping on Every Order | 60 days return"
+      },
+      "button": {
+        "family": "Suisse Intl",
+        "size": "16px",
+        "weight": "500",
+        "case": "capitalize",
+        "tracking": "0.32px",
+        "text": "Skip to content"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 37,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 37,
+        "h": 810,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "112px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gifts To Wish For"
+        },
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 847,
+        "h": 357,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1204,
+        "h": 746,
+        "bg": "rgb(255, 255, 255)",
+        "images": 50,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "28px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Best Sellers"
+        },
+        "words": 1127,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2110,
+        "h": 1877,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "80px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cold outside. Cozy inside."
+        },
+        "words": 8,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3987,
+        "h": 957,
+        "bg": "rgb(255, 255, 255)",
+        "images": 50,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "28px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "A more considered palette."
+        },
+        "words": 18,
+        "perRow": 50,
+        "fullBleed": true
+      },
+      {
+        "y": 4945,
+        "h": 326,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 26,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5270,
+        "h": 1007,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 17,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 6278,
+        "h": 605,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6882,
+        "h": 915,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Magic of More"
+        },
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7797,
+        "h": 891,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 8688,
+        "h": 841,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "28px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Our most-loved fabrications."
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 50,
+      "columns": 50,
+      "photoRatio": 0.75,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://parachutehome.com/",
+    "title": "Parachute – Home happens here. Bedding, bath linens, decor and more. – Parachute Home",
+    "width": 390,
+    "pageHeight": 9518,
+    "fonts": {
+      "h1": {
+        "family": "Canela",
+        "size": "64px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Gifts To Wish For"
+      },
+      "h2": {
+        "family": "Canela",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Best Sellers"
+      },
+      "body": {
+        "family": "font-headline",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Quick Shop"
+      },
+      "button": {
+        "family": "Suisse Intl",
+        "size": "16px",
+        "weight": "500",
+        "case": "capitalize",
+        "tracking": "0.32px",
+        "text": "Skip to content"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 37,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 37,
+        "h": 754,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "64px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gifts To Wish For"
+        },
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 791,
+        "h": 291,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1082,
+        "h": 701,
+        "bg": "rgb(255, 255, 255)",
+        "images": 50,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "28px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Best Sellers"
+        },
+        "words": 1127,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1863,
+        "h": 693,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cold outside. Cozy inside."
+        },
+        "words": 8,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2556,
+        "h": 754,
+        "bg": "rgb(255, 255, 255)",
+        "images": 50,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "24px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "A more considered palette."
+        },
+        "words": 18,
+        "perRow": 50,
+        "fullBleed": true
+      },
+      {
+        "y": 3310,
+        "h": 340,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 26,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3650,
+        "h": 1202,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 17,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4852,
+        "h": 722,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "32px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Magic of More"
+        },
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5574,
+        "h": 937,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6511,
+        "h": 1643,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "28px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Our most-loved fabrications."
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 50,
+      "columns": 50,
+      "photoRatio": 0.75,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://parachutehome.com/collections/all",
+    "title": "Products – Parachute Home",
+    "width": 1440,
+    "pageHeight": 6345,
+    "fonts": {
+      "h1": {
+        "family": "Canela",
+        "size": "80px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Products1627"
+      },
+      "h2": {
+        "family": "Canela",
+        "size": "24px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Your Cart"
+      },
+      "body": {
+        "family": "Suisse Intl",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free Shipping on Every Order | 60 days return"
+      },
+      "button": {
+        "family": "Suisse Intl",
+        "size": "16px",
+        "weight": "500",
+        "case": "capitalize",
+        "tracking": "0.32px",
+        "text": "Skip to content"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 37,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 93,
+        "h": 128,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "80px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Products1627"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 221,
+        "h": 5335,
+        "bg": "rgb(255, 255, 255)",
+        "images": 36,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "2+2 Classic Turkish Cotton Bath Bundle"
+        },
+        "words": 1380,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 36,
+      "columns": 4,
+      "photoRatio": 0.75,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://parachutehome.com/collections/all",
+    "title": "Products – Parachute Home",
+    "width": 390,
+    "pageHeight": 8380,
+    "fonts": {
+      "h1": {
+        "family": "Canela",
+        "size": "48px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Products1627"
+      },
+      "h2": {
+        "family": "Canela",
+        "size": "24px",
+        "weight": "400",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Your Cart"
+      },
+      "body": {
+        "family": "font-headline",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Quick Shop"
+      },
+      "button": {
+        "family": "Suisse Intl",
+        "size": "16px",
+        "weight": "500",
+        "case": "capitalize",
+        "tracking": "0.32px",
+        "text": "Skip to content"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 37,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 93,
+        "h": 121,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Products1627"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 214,
+        "h": 6763,
+        "bg": "rgb(255, 255, 255)",
+        "images": 36,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "2+2 Classic Turkish Cotton Bath Bundle"
+        },
+        "words": 1380,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 36,
+      "columns": 2,
+      "photoRatio": 0.75,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://parachutehome.com/products/soft-rib-towels-pebble?variant=39751438565637",
+    "title": "Soft Rib Towels - FINAL SALE (Pebble) – Parachute Home",
+    "width": 1440,
+    "pageHeight": 6441,
+    "fonts": {
+      "h1": {
+        "family": "Canela",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Soft Rib Towels"
+      },
+      "h2": {
+        "family": "Canela",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "You may also like"
+      },
+      "body": {
+        "family": "Suisse Intl",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free Shipping on Every Order | 60 days return"
+      },
+      "button": {
+        "family": "Suisse Intl",
+        "size": "16px",
+        "weight": "500",
+        "case": "capitalize",
+        "tracking": "0.32px",
+        "text": "Skip to content"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 37,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 37,
+        "h": 1804,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "28px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Soft Rib Towels"
+        },
+        "words": 126,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 1841,
+        "h": 582,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "You may also like"
+        },
+        "words": 262,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2423,
+        "h": 600,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Made with Love by the World's Best"
+        },
+        "words": 97,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3023,
+        "h": 600,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Thousands of reviews agree, the difference is in the details"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3623,
+        "h": 806,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Shop Bathrooms by Our Stylists"
+        },
+        "words": 5,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 4429,
+        "h": 705,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "32px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Only the highest-quality materials, period."
+        },
+        "words": 110,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 5134,
+        "h": 582,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Recently viewed"
+        },
+        "words": 260,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to bag  $5.23  Regular price $19",
+      "aboveFold": true,
+      "top": 434,
+      "x": 838,
+      "width": 460,
+      "bg": "rgb(53, 51, 49)"
+    },
+    "price": {
+      "family": "Suisse Intl",
+      "size": "14px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$5.23 Regular price $19"
+    },
+    "galleryImages": 48,
+    "swatches": 301,
+    "selects": 3,
+    "accordions": 10
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://parachutehome.com/products/soft-rib-towels-pebble?_su_rec=0HdKfJOQimt7G226ihYh9oePmktSC-TaHDphEcsVwluzKoNSnJg0gndNbpi_EdA9JhZ0s7vFBH-2PJRPVzzNEtnSSwg55Wjg5p6sHMfGjgvnk5OqjZpWaWylUo6MKIQqYJXQXKeyW0kzE37L__TeT10ZWgJ05wCDMnIKQzvCl2-EBAEF2N9Fo3vF3vvua1-6MWLEO3KTGiS4TEtoWilAeRrqF84OIKfUvcbOwYQUs8vuSBoE9nZyWqx-69tLopx3Kt8VodJe0Pr8QVMkJY07m53qOvzEbErWDWmg8hzme37yqQ_AbRMFMDleDcALq2yXCkwEO0yYrInjHBonz67BU_mnKIoCQsfGvxp4siVSLn9UEw&_su_rec_id=56338cf8-1c37-47c1-b143-75a0326c3f56-1794667898&variant=39751438565637",
+    "title": "Soft Rib Towels - FINAL SALE (Pebble) – Parachute Home",
+    "width": 390,
+    "pageHeight": 9813,
+    "fonts": {
+      "h1": {
+        "family": "Canela",
+        "size": "24px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Soft Rib Towels"
+      },
+      "h2": {
+        "family": "Canela",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "You may also like"
+      },
+      "body": {
+        "family": "font-headline",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Quick Shop"
+      },
+      "button": {
+        "family": "Suisse Intl",
+        "size": "16px",
+        "weight": "500",
+        "case": "capitalize",
+        "tracking": "0.32px",
+        "text": "Skip to content"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 37,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 37,
+        "h": 2110,
+        "bg": "rgb(255, 255, 255)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "24px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Soft Rib Towels"
+        },
+        "words": 127,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 2147,
+        "h": 503,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "You may also like"
+        },
+        "words": 262,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2650,
+        "h": 670,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Made with Love by the World's Best"
+        },
+        "words": 97,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3320,
+        "h": 520,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Thousands of reviews agree, the difference is in the details"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3840,
+        "h": 651,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "32px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop Bathrooms by Our Stylists"
+        },
+        "words": 5,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 4491,
+        "h": 705,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Only the highest-quality materials, period."
+        },
+        "words": 110,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 5196,
+        "h": 503,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Recently viewed"
+        },
+        "words": 260,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5699,
+        "h": 2751,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Reviews"
+        },
+        "words": 1,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to bag  $5.23  Regular price $19",
+      "aboveFold": true,
+      "top": 807,
+      "x": 20,
+      "width": 350,
+      "bg": "rgb(53, 51, 49)"
+    },
+    "price": {
+      "family": "Suisse Intl",
+      "size": "14px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$5.23 Regular price $19"
+    },
+    "galleryImages": 46,
+    "swatches": 301,
+    "selects": 3,
+    "accordions": 10
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://parachutehome.com/cart",
+    "title": "Your Shopping Cart – Parachute Home",
+    "width": 1440,
+    "pageHeight": 1513,
+    "fonts": {
+      "h1": {
+        "family": "Canela",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Your cart"
+      },
+      "h2": {
+        "family": "Canela",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Estimated total"
+      },
+      "body": {
+        "family": "Suisse Intl",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free Shipping on Every Order | 60 days return"
+      },
+      "button": {
+        "family": "Suisse Intl",
+        "size": "16px",
+        "weight": "500",
+        "case": "capitalize",
+        "tracking": "0.32px",
+        "text": "Skip to content"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 37,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 93,
+        "h": 440,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Your cart"
+        },
+        "words": 44,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 533,
+        "h": 255,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Canela",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Estimated total"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "host": "puravidabracelets.com",
+  "name": "Pura Vida",
+  "at": "2026-11-14T15:23:30.053Z",
+  "mood": "Festivo, juvenil y orientado a la promoción: joyería accesible presentada con color pastel, tipografía contundente y abundantes llamadas de oferta.",
+  "idea": "Alterna grandes campañas ilustradas con carruseles de producto y escenas de estilo de vida, de modo que cada bloque conduzca a una categoría, una ocasión de regalo o una compra rápida.",
+  "header": "Cabecera sticky de 120 px en escritorio: banda promocional superior de unos 48 px en crema pálido, con dos líneas centradas —mensaje en negrita y oferta con enlace subrayado—; debajo, navegación blanca de unos 72 px. El logotipo tipográfico se alinea a la izquierda con margen de 40 px; le siguen 8 enlaces en una sola fila: Shop By, Bracelets, Necklaces, Rings, Create Your Own, Bracelet Club, Gifts y el enlace de rebajas en turquesa. A la derecha aparecen acceso a ofertas, búsqueda, cuenta y bolsa. En teléfono mide 104 px en total y también queda fija: la banda ocupa aproximadamente 48 px y la fila de navegación 56 px; menú y búsqueda van a la izquierda, el logotipo queda centrado y cuenta más bolsa a la derecha. Los enlaces completos pasan al menú lateral. Un globo turquesa anclado al icono de ofertas aparece en escritorio; es una interferencia promocional, no parte estructural de la navegación.",
+  "hero": "En escritorio comienza justo debajo de la cabecera, a y=120, y mide 550 px de alto. Es una única creatividad de aproximadamente 1408 × 550 px, separada 16 px de ambos lados y con esquinas redondeadas de unos 12 px. La composición usa fondo azul marino, producto recortado orbitando el perímetro, estrellas decorativas y un titular promocional enorme centrado; el botón rosa, en forma de píldora, queda bajo el titular. No hay texto HTML superpuesto visible: oferta, producto y botón parecen integrados en la imagen. En teléfono el bloque mide 358 px, conserva márgenes laterales cercanos a 16 px y cambia a una creatividad vertical: titular en el centro, joyas alrededor y botón en el tercio inferior. Para reproducirlo hay que preparar dos artes independientes, panorámico y vertical, en lugar de recortar automáticamente uno solo.",
+  "catalog": "Cabecera editorial muy contenida: “All Products” centrado, Causten 36 px y peso 300 en escritorio; debajo se separan el contador de 712 productos a la izquierda y “FILTER / SORT” a la derecha. La retícula usa 4 columnas, márgenes laterales de 40 px y calles de unos 16 px; las fotos son cuadradas. El filtro no ocupa una barra lateral permanente: se abre desde el control Filter / Sort, preservando ancho para producto. En teléfono el título baja a 24 px y peso 300; contador y filtro comparten una fila, y la retícula se convierte en 2 columnas con márgenes de 10 px y calles de 6–8 px. La página contiene 46 tarjetas y mantiene el patrón de dos columnas durante todo el listado.",
+  "card": "Tarjeta sin caja ni sombra: fotografía cuadrada 1:1, esquinas redondeadas de unos 6–8 px y texto directamente sobre el fondo blanco. Las imágenes alternan bodegón sobre fondo claro y producto llevado por una modelo. Una cápsula blanca dentro de la esquina superior izquierda comunica “SAVE 25%”, “MOST GIFTED”, “CUSTOMIZABLE” o valor del set. En la esquina inferior derecha hay un botón rápido circular rosa de unos 32 px con “+”; en productos especiales cambia a un icono de destellos. Debajo aparecen nombre, precio y, cuando corresponde, precio anterior tachado en azul pálido; los productos con variantes muestran pequeños puntos de color. En escritorio el nombre ronda 16 px y en teléfono 13 px. No se demuestra una segunda foto al pasar en las capturas, así que no debe darse por segura; sí está claramente presente la adición rápida.",
+  "product": "En escritorio, el primer bloque se divide aproximadamente 64/36. A la izquierda hay una tira vertical de miniaturas de unos 64 px y una imagen principal casi cuadrada sobre gris muy claro; el objeto se representa pequeño y centrado, dejando mucho aire. A la derecha aparece el nombre a 30 px, precio anterior tachado, precio rebajado y cápsula “Save 50%”. Cantidad y compra comparten fila: selector de unos 96 px y botón rosa de 336 px; debajo, banda menta de stock, financiación y tres garantías repartidas en columnas. Todo esto queda sobre el pliegue. Siguen descripción, instrucciones ilustradas y acordeones de Details, Product Care y Shipping & Returns. No hay variantes relevantes visibles para este charm; los altos conteos automáticos de swatches y acordeones corresponden también a módulos posteriores y recomendaciones, no a 248 opciones del artículo. Debajo aparecen, en orden, carrusel “Shop the Collection”, cinco piezas sociales con vídeo bajo @puravida, bloque “Why Shop With Us?” y carrusel “More Looks You’ll Love”. En teléfono la galería pasa a carrusel horizontal: una imagen casi cuadrada ocupa cerca de 192 px y deja asomar la siguiente; puntos y una línea coral indican posición. Después vienen título a 24 px, precios, descuento, selector de cantidad y botón rosa de 250 px en la misma fila, stock, financiación, garantías en tres columnas, descripción e instrucciones. Los acordeones se apilan a todo el ancho.",
+  "cart": "No hay una captura real del carrito abierto ni de una página de carrito. La imagen entregada muestra de nuevo la portada y únicamente confirma que la bolsa de la cabecera puede enseñar un contador “1”. No se pueden determinar filas, subtotal, checkout, cajón lateral ni ventas adicionales sin inventarlos.",
+  "type": "Toda la interfaz usa Causten, una sans geométrica de formas redondeadas. Navegación y cuerpo: 16 px en escritorio y 13 px en teléfono, peso 400. Los encabezados funcionales de carrusel usan 24 px, peso 700, mayúsculas y tracking de 1.2 px; en teléfono bajan a 18 px y 0.9 px. Los títulos editoriales utilizan caja normal: 48 px y peso 700 en escritorio, 30 px en teléfono, a veces con tracking negativo de −1.2 px/−0.75 px. El H1 de catálogo es deliberadamente ligero, 36 px y peso 300; baja a 24 px. El título de producto usa 30 px/400 en escritorio y 24 px/400 en móvil. Botones y etiquetas pequeñas recurren a mayúsculas, 14 px, peso 700 y tracking de 1.4 px. La combinación funciona por contraste de peso y escala dentro de una sola familia, no mediante mezcla de serif y sans.",
+  "colour": "El fondo general es blanco #FFFFFF y la tinta principal casi negra, aproximadamente #171717. El crema pálido de la banda promocional y de varias secciones estacionales ronda #F4F1DD. El azul marino del hero, cerca de #1D2B47, sostiene los mensajes de venta en rosa claro y blanco. El rosa eléctrico #FA97FF identifica la acción comercial —botón Add to Cart y suma rápida—; el menta muy claro, alrededor de #D6F6F1, comunica disponibilidad y confianza; un turquesa más saturado se reserva para enlaces de oferta y avisos. Coral, rojo, lila, dorado y verde aparecen principalmente dentro de las fotografías y artes de campaña, evitando convertir la interfaz en un mosaico de fondos.",
+  "photos": "Se combinan tres tratamientos. Primero, producto aislado y centrado sobre gris casi blanco, con escala pequeña para que se lea la silueta. Segundo, macro de joyería llevada en muñeca, cuello o mano, normalmente con recorte cerrado y fondos de color. Tercero, bodegones editoriales de regalo sobre superficies pastel. Las tarjetas usan recorte cuadrado 1:1 y esquinas suaves; los banners narrativos son panorámicos en escritorio y cuentan con versiones verticales específicas para teléfono. La portada alterna producto solo y escenas humanas para que el usuario pueda comparar forma y escala de uso.",
+  "motion": "Hay carruseles horizontales en categorías, filas de producto, recomendaciones y contenido social, con flechas circulares en escritorio y desplazamiento táctil en teléfono. La cabecera usa una marquesina o rotación de mensajes promocionales. El bloque @puravida contiene cinco vídeos según las medidas, aunque el movimiento no puede apreciarse en una captura fija. Son probables estados hover en tarjetas y botones, pero no se ve evidencia suficiente para afirmar cambio a segunda fotografía. El botón rápido “+”, el panel Filter / Sort, los acordeones y el menú móvil requieren transiciones breves de apertura; la tienda no basa su identidad en animación de fondo ni vídeo hero.",
+  "phone": "La cabecera reduce 120 a 104 px, oculta la navegación textual y distribuye cinco elementos: menú, búsqueda, logotipo centrado, cuenta y bolsa. El hero no se recorta: se sustituye por arte vertical de 358 px. Las filas de categorías y producto se convierten en carruseles con aproximadamente 1.8–2.2 tarjetas visibles, dejando la siguiente cortada para señalar desplazamiento. La retícula del catálogo pasa de 4 a 2 columnas. Los módulos de cuatro categorías personalizadas pasan a 2 columnas. Los banners partidos de foto y texto se apilan o se recomponen verticalmente y sus títulos bajan de 48 a 30 px. En producto, las miniaturas laterales desaparecen y se usa un carrusel; la información de compra ocupa todo el ancho, pero cantidad y CTA permanecen juntos. Las garantías conservan tres columnas muy estrechas, mientras descripción y acordeones pasan a una sola columna.",
+  "signature": "El gesto distintivo es usar rosa chicle exclusivamente en pequeñas acciones circulares “+” sobre las fotos y repetirlo en el gran Add to Cart: el mismo color une exploración rápida y conversión sin teñir toda la interfaz.",
+  "home": [
+    {
+      "role": "Abrir con la promoción dominante de temporada.",
+      "composition": "Hero de 550 px en escritorio y 358 px en teléfono, con arte independiente para cada relación de aspecto; fondo marino, oferta tipográfica central, joyas recortadas en el perímetro y CTA rosa integrado."
+    },
+    {
+      "role": "Dar acceso visual a las familias principales.",
+      "composition": "“Shop by Category”, sección de 521 px: carrusel de 8 tarjetas cuadradas con imagen arriba y una franja crema rotulada abajo. En escritorio se ven unas cuatro completas; en teléfono aparecen aproximadamente dos y la siguiente queda cortada."
+    },
+    {
+      "role": "Convertir la campaña de descuento en productos concretos.",
+      "composition": "Fila “Up to 75% Sale” de 560 px con encabezado, View All y flechas a la derecha; carrusel de tarjetas cuadradas, cuatro visibles en escritorio y alrededor de dos en móvil."
+    },
+    {
+      "role": "Resolver la compra por intención de regalo.",
+      "composition": "“Our Top Gifts”, 656 px en escritorio: texto auxiliar, chips de filtro como Most Gifted o Personalized y carrusel. La primera pieza puede ser una tarjeta editorial “Holiday Gift Guide” del mismo ancho que un producto, seguida por artículos comprables."
+    },
+    {
+      "role": "Interrumpir las retículas con una campaña narrativa.",
+      "composition": "Banner “Stocking Stuffers” de 720 px: composición partida aproximadamente 50/50 entre fotografía de estilo de vida y panel crema con titular de 48 px, texto breve y CTA; en teléfono se apila y el título baja a 30 px."
+    },
+    {
+      "role": "Atender un umbral de precio.",
+      "composition": "“Gifts $10 & Under”, fila de producto de 600 px con el mismo sistema de encabezado, View All, flechas y cuatro tarjetas visibles. Mantener consistencia permite cambiar el criterio comercial sin inventar otro componente."
+    },
+    {
+      "role": "Explicar personalización mediante subcategorías.",
+      "composition": "Bloque crema de 619 px con título centrado de 48 px y cuatro imágenes iguales en una fila, rotuladas Engravables, Charms, Initials y Personalization. En teléfono pasa a dos columnas y usa título de 30 px."
+    },
+    {
+      "role": "Introducir recomendación algorítmica sin cambiar de lenguaje.",
+      "composition": "“Picked Just for You”, carrusel de producto de 626 px, idéntico en estructura a las filas comerciales anteriores: título a la izquierda, View All y flechas a la derecha."
+    },
+    {
+      "role": "Vender la suscripción como regalo recurrente.",
+      "composition": "Banner “The Gift That Keeps Giving” de 720 px, dividido entre fondo coral con pulseras recortadas y panel crema con titular, explicación y CTA. La gran pausa de color evita una portada compuesta únicamente por rejillas."
+    },
+    {
+      "role": "Mostrar conjuntos completos y compra por look.",
+      "composition": "“Shop Holiday Looks”, sección de 653 px con seis composiciones visibles por fila y abundantes imágenes de producto asociadas; en teléfono se extiende a 1288 px por la recomposición en menos columnas."
+    },
+    {
+      "role": "Aportar prueba social textual.",
+      "composition": "“What People Are Saying”, bloque de 471 px con título de 36 px y reseñas o testimonios distribuidos horizontalmente; en teléfono el título sube visualmente a 30 px y el contenido funciona como carrusel."
+    },
+    {
+      "role": "Añadir autoridad externa.",
+      "composition": "“Featured In”, banda compacta de 224 px con 12 logotipos de medios en monocromo o bajo contraste; en teléfono se reduce a 172 px y se desplaza horizontalmente."
+    },
+    {
+      "role": "Cerrar el contenido editorial con comunidad.",
+      "composition": "“Get Inspired / Shop Insta”, bloque de 531 px con llamada breve y feed social; no usa imágenes detectadas como recursos convencionales, probablemente por incrustación o carga del widget. Después continúa el pie de página."
+    }
+  ],
+  "lessons": [
+    "Prepara artes de campaña distintos para escritorio y teléfono. Un hero con texto dentro de la imagen necesita composición panorámica y vertical; un simple object-fit cortaría producto, titular o CTA.",
+    "Construye un único componente de carrusel y cambia solo el criterio comercial: rebajas, regalos, precio bajo y recomendación. La repetición reduce aprendizaje y acelera producción.",
+    "Alterna filas densas de producto con banners narrativos de 50/50. La pausa de color cada dos o tres carruseles devuelve jerarquía a una portada de más de 8.000 px.",
+    "Reserva un color de acción muy reconocible para la suma rápida y la compra principal. El usuario aprende que el rosa significa “comprar”, mientras menta queda para disponibilidad y turquesa para promoción.",
+    "Haz que cada tarjeta comunique en tres capas: imagen cuadrada, distintivo comercial dentro de la foto y nombre/precio debajo. Así se puede comparar rápidamente sin añadir bordes ni sombras.",
+    "En móvil no reduzcas todas las filas a una retícula cerrada: dejar una tarjeta parcialmente visible convierte el corte en una señal explícita de desplazamiento horizontal."
+  ]
+}

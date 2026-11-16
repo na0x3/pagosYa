@@ -1,0 +1,38 @@
+{
+  "host": "sezane.com",
+  "name": "Sézane",
+  "at": "2026-11-14T15:09:24.572Z",
+  "mood": "No evaluable: todas las capturas muestran un bloqueo de acceso, no la tienda.",
+  "idea": "No puede determinarse la idea visual de Sézane con este material; solo aparece una página técnica anti-bot, que debe ignorarse como referencia de diseño.",
+  "header": "No visible. La captura no muestra navegación, barra de anuncio, enlaces, acciones ni comportamiento fijo. El logotipo SÉZANE aparece centrado en la página de bloqueo, aproximadamente a 202 × 80 px en escritorio y 111 × 46 px lógicos en teléfono, pero no debe interpretarse como el header comercial.",
+  "hero": "No visible. En los lienzos de 1440 × 900 px y 390 × 844 px no hay fotografía, titular de campaña, llamada a la acción ni composición de portada; todo el viewport está ocupado por el aviso «Access is temporarily restricted».",
+  "catalog": "Sin captura. No se pueden documentar cabecera, número de columnas, filtros, ordenación, densidad ni adaptación al teléfono.",
+  "card": "Sin captura. Se desconocen proporción de imagen, jerarquía de nombre y precio, muestras de color, compra rápida y cambio de fotografía al pasar.",
+  "product": "Sin captura. No es posible estudiar galería, reparto de columnas, caja de compra, contenido sobre el pliegue, variantes, acordeones ni módulos posteriores.",
+  "cart": "Sin captura. No puede saberse si funciona como cajón o página, ni cómo resuelve filas, cantidades, totales, promociones o venta adicional.",
+  "type": "No hay mediciones tipográficas de la tienda: h1, h2, cuerpo, botones y navegación figuran como null. La serif visible pertenece a la página técnica de restricción y no constituye evidencia suficiente para atribuir una familia, tamaños o sistema tipográfico al comercio.",
+  "colour": "No evaluable. Solo se registra fondo blanco rgb(255, 255, 255) y texto negro en la página de bloqueo; no deben tomarse como paleta comercial, ya que no aparecen acentos, bandas, botones ni superficies de la tienda.",
+  "photos": "No hay fotografías ni vídeo en las capturas: el navegador detectó 0 imágenes y 0 vídeos. Por tanto, no se pueden valorar recortes, fondos, escala del producto o alternancia entre bodegón y escenas de uso.",
+  "motion": "No se observa movimiento en la página bloqueada: no hay marquesina, vídeo ni carrusel detectados. Esto no permite concluir que la tienda real carezca de animaciones, transiciones o estados hover.",
+  "phone": "No puede estudiarse la recomposición comercial. En 390 × 844 px solo aparece la página anti-bot: logotipo centrado arriba, mensaje centrado y texto técnico debajo con márgenes laterales de unos 10 px. Esta disposición debe ignorarse porque no corresponde a la interfaz de compra.",
+  "signature": "No identificable con las capturas disponibles; el único elemento de marca visible es el logotipo SÉZANE, dentro de una pantalla técnica.",
+  "home": [
+    {
+      "role": "Portada no disponible",
+      "composition": "La captura completa, tanto en 1440 × 900 px como en 390 × 844 px, es un bloqueo de acceso. No contiene secciones editoriales, rejillas, módulos de producto ni pie comercial, por lo que no puede desglosarse la portada de arriba abajo."
+    },
+    {
+      "role": "Página técnica, ignorada",
+      "composition": "Sobre fondo blanco aparece el logotipo centrado en la zona superior, el aviso de restricción y una explicación anti-bot. No debe reproducirse ni utilizarse para deducir la dirección de arte de Sézane."
+    },
+    {
+      "role": "Material necesario para completar el estudio",
+      "composition": "Se requieren nuevas capturas sin bloqueo: portada completa, catálogo, producto y carrito en 1440 px y 390 px, idealmente acompañadas por medidas de header, fuentes, anchos de contenedor, columnas, espaciados y proporciones de imagen."
+    }
+  ],
+  "lessons": [
+    "No atribuir a una marca la composición de una página de seguridad o infraestructura: hay que separar interfaz comercial y estado técnico antes de analizar.",
+    "No completar con suposiciones los módulos que faltan. Columnas, tipografías, filtros, interacciones y comportamiento móvil deben apoyarse en capturas o mediciones verificables.",
+    "Para un estudio reproducible, capturar cada plantilla completa en los mismos anchos —aquí 1440 px y 390 px— y registrar contenedor, medianiles, alturas, tamaños tipográficos y proporciones de fotografía."
+  ]
+}

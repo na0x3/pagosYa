@@ -1,0 +1,540 @@
+{
+  "round": "review1",
+  "at": "2026-11-14T03:58:57.389Z",
+  "summary": {
+    "built": 4,
+    "of": 4,
+    "failed": [],
+    "medianMinutes": 21.4,
+    "review": {
+      "stores": 4,
+      "changed": 4,
+      "outcomes": [
+        "noa: improved",
+        "ohbelly: improved",
+        "boxy: improved",
+        "pawby: improved"
+      ],
+      "blockingBefore": {
+        "desktop": 8,
+        "phone": 8
+      },
+      "blockingAfter": {
+        "desktop": 2,
+        "phone": 2
+      },
+      "down": 4,
+      "up": 0,
+      "medianReviewMinutes": 1.4,
+      "usd": 0.36
+    },
+    "variety": {
+      "pairs": 6,
+      "meanShared": 0.17,
+      "mostAlike": [
+        {
+          "a": "noa",
+          "b": "pawby",
+          "sameTemplate": false,
+          "shared": 0.29,
+          "sameOrder": false
+        },
+        {
+          "a": "ohbelly",
+          "b": "pawby",
+          "sameTemplate": false,
+          "shared": 0.29,
+          "sameOrder": false
+        },
+        {
+          "a": "noa",
+          "b": "boxy",
+          "sameTemplate": false,
+          "shared": 0.17,
+          "sameOrder": false
+        }
+      ],
+      "sameOrder": 0,
+      "templates": [
+        "Broadcast",
+        "Merienda",
+        "Symmetry",
+        "Mimo"
+      ]
+    }
+  },
+  "stores": [
+    {
+      "key": "noa",
+      "name": "NOA VARGAS Atelier",
+      "storeId": "cmwfujk6q0001aql0cc6cg5ms",
+      "template": "Broadcast",
+      "versions": [
+        "1:Plantilla: Broadcast",
+        "2:Portada de YAPI",
+        "3:Portada revisada por YAPI"
+      ],
+      "drive": {
+        "key": "noa",
+        "storeId": "cmwfujk6q0001aql0cc6cg5ms",
+        "minutes": 21.4,
+        "status": "COMPLETED",
+        "error": "",
+        "answers": 1,
+        "versions": [
+          {
+            "revision": 1,
+            "label": "Plantilla: Broadcast"
+          },
+          {
+            "revision": 2,
+            "label": "Portada de YAPI"
+          },
+          {
+            "revision": 3,
+            "label": "Portada revisada por YAPI"
+          }
+        ],
+        "at": "2026-11-14T03:51:59.503Z"
+      },
+      "fillReview": {
+        "ms": 84792,
+        "usd": 0.115388,
+        "after": {
+          "phone": 1,
+          "desktop": 1
+        },
+        "before": {
+          "phone": 2,
+          "desktop": 2
+        },
+        "rounds": 2,
+        "applied": [
+          "quité pay-ways"
+        ],
+        "outcome": "improved",
+        "afterRules": [
+          "broken-words@desktop:-",
+          "broken-words@phone:-"
+        ],
+        "beforeRules": [
+          "text-only-band@desktop:3",
+          "broken-words@desktop:-",
+          "text-only-band@phone:3",
+          "broken-words@phone:-"
+        ],
+        "filledRevision": 2
+      },
+      "filledRevision": 2,
+      "reviewedRevision": 3,
+      "home": {
+        "theme": "broadcast",
+        "types": [
+          "cover-split",
+          "statement-inline",
+          "products-tabs",
+          "visit-store"
+        ],
+        "looks": [
+          "framed",
+          "",
+          "",
+          ""
+        ]
+      },
+      "homeBefore": {
+        "theme": "broadcast",
+        "types": [
+          "cover-split",
+          "statement-inline",
+          "products-tabs",
+          "pay-ways",
+          "visit-store"
+        ],
+        "looks": [
+          "framed",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      "images": {
+        "filled": {
+          "desktop": "shots/noa-r2-desktop.jpg",
+          "desktop-full": "shots/noa-r2-desktop-full.jpg",
+          "phone-full": "shots/noa-r2-phone-full.jpg"
+        },
+        "reviewed": {
+          "desktop": "shots/noa-r3-desktop.jpg",
+          "desktop-full": "shots/noa-r3-desktop-full.jpg",
+          "phone-full": "shots/noa-r3-phone-full.jpg"
+        }
+      }
+    },
+    {
+      "key": "ohbelly",
+      "name": "Oh Belly",
+      "storeId": "cmwfujvxm0001313fycy76zjp",
+      "template": "Merienda",
+      "versions": [
+        "1:Plantilla: Merienda",
+        "2:Portada de YAPI",
+        "3:Portada revisada por YAPI"
+      ],
+      "drive": {
+        "key": "ohbelly",
+        "storeId": "cmwfujvxm0001313fycy76zjp",
+        "minutes": 20.7,
+        "status": "COMPLETED",
+        "error": "",
+        "answers": 0,
+        "versions": [
+          {
+            "revision": 1,
+            "label": "Plantilla: Merienda"
+          },
+          {
+            "revision": 2,
+            "label": "Portada de YAPI"
+          },
+          {
+            "revision": 3,
+            "label": "Portada revisada por YAPI"
+          }
+        ],
+        "at": "2026-11-14T03:51:19.405Z"
+      },
+      "fillReview": {
+        "ms": 52726,
+        "usd": 0.067404,
+        "after": {
+          "phone": 1,
+          "desktop": 1
+        },
+        "before": {
+          "phone": 3,
+          "desktop": 3
+        },
+        "rounds": 2,
+        "applied": [
+          "quité pay-ways",
+          "visit-store: foto 0"
+        ],
+        "outcome": "improved",
+        "afterRules": [
+          "no-products@desktop:-",
+          "no-products@phone:-"
+        ],
+        "beforeRules": [
+          "text-only-band@desktop:4",
+          "repeated-photo@desktop:2",
+          "no-products@desktop:-",
+          "text-only-band@phone:4",
+          "repeated-photo@phone:2",
+          "no-products@phone:-"
+        ],
+        "filledRevision": 2
+      },
+      "filledRevision": 2,
+      "reviewedRevision": 3,
+      "home": {
+        "theme": "merienda",
+        "types": [
+          "cover-half",
+          "steps-howto",
+          "visit-store",
+          "faq-split"
+        ],
+        "looks": [
+          "framed",
+          "",
+          "",
+          "lines"
+        ]
+      },
+      "homeBefore": {
+        "theme": "merienda",
+        "types": [
+          "cover-half",
+          "steps-howto",
+          "visit-store",
+          "faq-split",
+          "pay-ways"
+        ],
+        "looks": [
+          "framed",
+          "",
+          "",
+          "lines",
+          ""
+        ]
+      },
+      "images": {
+        "filled": {
+          "desktop": "shots/ohbelly-r2-desktop.jpg",
+          "desktop-full": "shots/ohbelly-r2-desktop-full.jpg",
+          "phone-full": "shots/ohbelly-r2-phone-full.jpg"
+        },
+        "reviewed": {
+          "desktop": "shots/ohbelly-r3-desktop.jpg",
+          "desktop-full": "shots/ohbelly-r3-desktop-full.jpg",
+          "phone-full": "shots/ohbelly-r3-phone-full.jpg"
+        }
+      }
+    },
+    {
+      "key": "boxy",
+      "name": "BOXY",
+      "storeId": "cmwfuk3kn000110htard6gt6o",
+      "template": "Symmetry",
+      "versions": [
+        "1:Plantilla: Symmetry",
+        "2:Portada de YAPI",
+        "3:Portada revisada por YAPI"
+      ],
+      "drive": {
+        "key": "boxy",
+        "storeId": "cmwfuk3kn000110htard6gt6o",
+        "minutes": 25.4,
+        "status": "COMPLETED",
+        "error": "",
+        "answers": 4,
+        "versions": [
+          {
+            "revision": 1,
+            "label": "Plantilla: Symmetry"
+          },
+          {
+            "revision": 2,
+            "label": "Portada de YAPI"
+          },
+          {
+            "revision": 3,
+            "label": "Portada revisada por YAPI"
+          }
+        ],
+        "at": "2026-11-14T03:56:00.272Z"
+      },
+      "fillReview": {
+        "ms": 69230,
+        "usd": 0.074608,
+        "after": {
+          "phone": 0,
+          "desktop": 0
+        },
+        "before": {
+          "phone": 1,
+          "desktop": 1
+        },
+        "rounds": 2,
+        "applied": [
+          "quité pay-ways"
+        ],
+        "outcome": "improved",
+        "afterRules": [],
+        "beforeRules": [
+          "text-only-band@desktop:2",
+          "text-only-band@phone:2"
+        ],
+        "filledRevision": 2
+      },
+      "filledRevision": 2,
+      "reviewedRevision": 3,
+      "home": {
+        "theme": "symmetry",
+        "types": [
+          "cover-split",
+          "products-grid",
+          "story-overlap"
+        ],
+        "looks": [
+          "",
+          "",
+          ""
+        ]
+      },
+      "homeBefore": {
+        "theme": "symmetry",
+        "types": [
+          "cover-split",
+          "products-grid",
+          "pay-ways",
+          "story-overlap"
+        ],
+        "looks": [
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      "images": {
+        "filled": {
+          "desktop": "shots/boxy-r2-desktop.jpg",
+          "desktop-full": "shots/boxy-r2-desktop-full.jpg",
+          "phone-full": "shots/boxy-r2-phone-full.jpg"
+        },
+        "reviewed": {
+          "desktop": "shots/boxy-r3-desktop.jpg",
+          "desktop-full": "shots/boxy-r3-desktop-full.jpg",
+          "phone-full": "shots/boxy-r3-phone-full.jpg"
+        }
+      }
+    },
+    {
+      "key": "pawby",
+      "name": "Pawby Kitchen",
+      "storeId": "cmwfukbd800012b5qx1iky77n",
+      "template": "Mimo",
+      "versions": [
+        "1:Plantilla: Mimo",
+        "2:Portada de YAPI",
+        "3:Portada revisada por YAPI"
+      ],
+      "drive": {
+        "key": "pawby",
+        "storeId": "cmwfukbd800012b5qx1iky77n",
+        "minutes": 19.5,
+        "status": "COMPLETED",
+        "error": "",
+        "answers": 1,
+        "versions": [
+          {
+            "revision": 1,
+            "label": "Plantilla: Mimo"
+          },
+          {
+            "revision": 2,
+            "label": "Portada de YAPI"
+          },
+          {
+            "revision": 3,
+            "label": "Portada revisada por YAPI"
+          }
+        ],
+        "at": "2026-11-14T03:50:09.398Z"
+      },
+      "fillReview": {
+        "ms": 103097,
+        "usd": 0.100956,
+        "after": {
+          "phone": 0,
+          "desktop": 0
+        },
+        "before": {
+          "phone": 2,
+          "desktop": 2
+        },
+        "rounds": 2,
+        "applied": [
+          "quité pay-ways",
+          "visit-store: foto 0"
+        ],
+        "outcome": "improved",
+        "afterRules": [],
+        "beforeRules": [
+          "text-only-band@desktop:5",
+          "repeated-photo@desktop:3",
+          "text-only-band@phone:5",
+          "repeated-photo@phone:3"
+        ],
+        "filledRevision": 2
+      },
+      "filledRevision": 2,
+      "reviewedRevision": 3,
+      "home": {
+        "theme": "mimo",
+        "types": [
+          "cover-split",
+          "products-slider",
+          "usecases",
+          "visit-store",
+          "faq-split"
+        ],
+        "looks": [
+          "",
+          "",
+          "",
+          "",
+          "lines"
+        ]
+      },
+      "homeBefore": {
+        "theme": "mimo",
+        "types": [
+          "cover-split",
+          "products-slider",
+          "usecases",
+          "visit-store",
+          "faq-split",
+          "pay-ways"
+        ],
+        "looks": [
+          "",
+          "",
+          "",
+          "",
+          "lines",
+          ""
+        ]
+      },
+      "images": {
+        "filled": {
+          "desktop": "shots/pawby-r2-desktop.jpg",
+          "desktop-full": "shots/pawby-r2-desktop-full.jpg",
+          "phone-full": "shots/pawby-r2-phone-full.jpg"
+        },
+        "reviewed": {
+          "desktop": "shots/pawby-r3-desktop.jpg",
+          "desktop-full": "shots/pawby-r3-desktop-full.jpg",
+          "phone-full": "shots/pawby-r3-phone-full.jpg"
+        }
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "a": "noa",
+      "b": "ohbelly",
+      "sameTemplate": false,
+      "shared": 0.14,
+      "sameOrder": false
+    },
+    {
+      "a": "noa",
+      "b": "boxy",
+      "sameTemplate": false,
+      "shared": 0.17,
+      "sameOrder": false
+    },
+    {
+      "a": "noa",
+      "b": "pawby",
+      "sameTemplate": false,
+      "shared": 0.29,
+      "sameOrder": false
+    },
+    {
+      "a": "ohbelly",
+      "b": "boxy",
+      "sameTemplate": false,
+      "shared": 0,
+      "sameOrder": false
+    },
+    {
+      "a": "ohbelly",
+      "b": "pawby",
+      "sameTemplate": false,
+      "shared": 0.29,
+      "sameOrder": false
+    },
+    {
+      "a": "boxy",
+      "b": "pawby",
+      "sameTemplate": false,
+      "shared": 0.14,
+      "sameOrder": false
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "host": "wildone.com",
+  "name": "Wild One",
+  "at": "2026-11-14T15:26:40.086Z",
+  "mood": "Juguetón, gráfico y comercial: mascotas recortadas, colores de juguete y una estructura de venta muy directa.",
+  "idea": "Combina una retícula de comercio electrónico sobria con campañas que parecen collages: animales y productos recortados sobre franjas, campos pastel y pequeños objetos flotantes.",
+  "header": "Dos niveles y posición estática. Arriba hay una barra de anuncio de 33 px en escritorio y 32 px en teléfono, azul grisáceo claro, con mensaje centrado («FREE Shipping on Orders $90+») y flechas en los extremos para rotar promociones. Debajo, una navegación blanca de 76 px en escritorio: cuatro enlaces a la izquierda —New!, Dog, Cat y Last Call, este último naranja—; logotipo tipográfico «Wild One» centrado; a la derecha, About con desplegable y los iconos de búsqueda, cuenta y bolsa con contador. En teléfono, la navegación baja a 56 px: hamburguesa a la izquierda, logotipo centrado y búsqueda más bolsa a la derecha; desaparecen los enlaces y la cuenta. No es fija: las medidas indican position static.",
+  "hero": "En escritorio ocupa 684 px de alto desde y=109 y se divide exactamente en dos mitades. La izquierda usa un fondo lila muy pálido con titular «First Dibs» de 72 px, texto centrado de dos líneas y dos botones azules en píldora, colocados en una fila. La derecha es un collage a sangre: franjas horizontales azul marino sobre lila, gato y perro recortados a gran escala y pequeños elementos flotantes. En teléfono deja de ser 50/50 y se apila: primero un bloque lila con titular de 39 px, texto centrado y dos botones de casi todo el ancho, uno debajo del otro; después, una imagen independiente de franjas y animales. El conjunto inicial mide aproximadamente 585 px según la medición de sección, aunque la pieza gráfica continúa inmediatamente debajo como parte visual de la campaña.",
+  "catalog": "Cabecera de colección blanca con «Shop All» a 40 px en escritorio y 30 px en teléfono. En escritorio, filtro «Color» en una cápsula a la izquierda y selector «Featured» a la derecha; después, retícula de 4 columnas para 24 productos. En 1440 px, el contenido deja unos 50 px de margen lateral y separaciones cercanas a 8–10 px entre fotos. En teléfono, filtro y orden se condensan en una sola acción «Filter and sort» y la retícula pasa a 2 columnas, con unos 9 px de margen y medianil estrecho. No hay introducción editorial: título, controles y producto empiezan en los primeros 147 px del documento móvil.",
+  "card": "Fotografía vertical 4:5 sobre gris muy claro, con el producto centrado y bastante aire; algunas tarjetas sustituyen el bodegón por una mascota usando el artículo. Una etiqueta lila de descuento se fija en la esquina superior derecha. Debajo aparecen nombre, precio anterior tachado, precio rebajado en naranja y una cápsula naranja con el ahorro. Sigue una frase funcional breve cuando hay espacio y una fila de muestras circulares, más texto del tipo «+5 colors». En teléfono se conserva toda esta información en dos columnas, por lo que nombre y precios forman varias líneas y la tipografía se reduce aproximadamente a 12–14 px. No se ve un botón de compra rápida en las capturas. Tampoco se captura el estado hover, así que no puede confirmarse una segunda foto al pasar; sí se usan alternativamente bodegones y fotos con mascota entre tarjetas.",
+  "product": "En escritorio, la parte superior se organiza en dos mitades. A la izquierda hay una galería de dos columnas con imágenes grandes casi cuadradas: producto aislado sobre gris y fotos de gatos usando el conjunto. A la derecha queda una caja de compra de unos 620 px: categoría, título serif de 36 px, estrellas y 18 reseñas, precio anterior, precio naranja y ahorro; después aparece una banda amarilla de regalo. La configuración del kit se divide en módulos con borde negro y esquinas redondeadas: cada componente lleva miniatura, nombre, color con muestras circulares, talla y guía de tallas. El botón negro «Add to cart» mide unos 620 px y aparece alrededor de y=992, por lo que no queda sobre el primer pliegue. Debajo se muestran beneficios con iconos, acordeones de Description, Product Details, Care & Caution y Shipping & Returns, ventas adicionales compactas con selectores y botón, y una sección lila «The Cat Collection» con 4 tarjetas por fila. Más abajo hay contenido informativo extenso y un bloque «Shop Wild One IRL». En teléfono el orden cambia a título, reseñas y precio antes de la primera imagen; luego se apilan las imágenes y cada módulo de variante ocupa unos 360 px de ancho. El botón de compra no llega hasta aproximadamente y=2317: la configuración completa se antepone a la conversión.",
+  "cart": "Es una página completa, no un cajón. Solo hay captura de escritorio; no puede evaluarse su versión telefónica. Encabeza «Your cart» a 40 px y un enlace «Continue shopping». La tabla separa producto, cantidad y total: miniatura a la izquierda, nombre y variante, control de cantidad con menos/valor/más, papelera circular y precio al extremo derecho. Debajo, una columna izquierda ofrece «Gift Note» con campo amplio; la derecha reúne subtotal estimado, aviso de impuestos y envío, botón negro de checkout y opciones Shop Pay, PayPal y Google Pay. No se observan ventas adicionales en la captura.",
+  "type": "Modern Era es la tipografía estructural: navegación de 16 px en escritorio y 15 px en teléfono; cuerpo de 13/12 px; títulos de sección de 40/30 px; hero de 72/39 px, siempre en caja normal y con tracking neutro. Se usa peso 500 para titulares y botones y 400 para navegación y texto. Roboto Serif, ligera, introduce contraste en nombres de producto y título de PDP: 16 px y peso 300 en tarjetas, 36 px en escritorio y 28 px en teléfono para el producto, con tracking negativo de −0,02 em aproximadamente. La sans organiza y vende; la serif identifica artículos concretos y aporta una voz editorial sin invadir filtros, precios ni controles.",
+  "colour": "El blanco es el fondo operativo de navegación, catálogo, carrito y fichas. La tinta principal es negro casi puro. El azul marino, aproximadamente #214A86, se reserva para botones grandes y las franjas del hero. El lila muy pálido, cercano a #F0E8F8, construye fondos de campaña; un lila más saturado marca etiquetas de descuento y bandas de colección. El naranja rojizo, cercano a #FF4B16, señala «Last Call», precios rebajados y cápsulas de ahorro. El amarillo crema identifica el regalo promocional. Los fondos fotográficos gris #F2F2F2 unifican productos de colores muy distintos.",
+  "photos": "Dos registros deliberadamente alternados. El catálogo emplea bodegones de producto aislado, centrado sobre gris claro, con sombra corta y escala suficiente para leer hebillas y materiales; el formato es 4:5. Las fotos de uso muestran perros o gatos enteros o en primer plano sobre fondos domésticos simples. Las campañas abandonan el realismo: recortan animales sin fondo, exageran su escala y los colocan sobre franjas, pasteles y objetos decorativos. En PDP se alternan tomas frontales del kit, cambios de color y primeros planos del animal usando cada pieza.",
+  "motion": "La barra de anuncio tiene flechas laterales y varios mensajes registrados, por lo que funciona como carrusel, no como marquesina continua. En teléfono, categorías y filas de productos muestran tarjetas cortadas en el borde, contador «1/4» y flechas: son carruseles horizontales. La portada incluye una sección de tres clips verticales con icono de reproducción y se detecta un video. No se ve una animación automática del hero ni puede confirmarse el cambio de imagen de producto al hover.",
+  "phone": "La navegación se reduce de 76 a 56 px y sustituye menús por hamburguesa. El hero horizontal se convierte en dos bloques verticales y los CTA pasan de una fila a dos píldoras de ancho casi completo. Las categorías y recomendaciones dejan de mostrar cuatro elementos completos: se vuelven carruseles horizontales con el siguiente elemento asomando. El catálogo sí recompone su retícula de 4 a 2 columnas. Los banners 50/50 apilan foto y texto. En producto desaparece la convivencia entre galería y compra: título, imágenes y configuradores se suceden en una sola columna; esto alarga la página hasta 11.335 px y desplaza «Add to cart» muy por debajo del pliegue.",
+  "signature": "El hero convierte una promoción comercial en una mesa de juego: mascotas recortadas de tamaño desproporcionado interactúan con juguetes sobre franjas azul marino, acompañadas por estrellas y una bola 8 flotantes.",
+  "home": [
+    {
+      "role": "Lanzar la promoción principal y separar de inmediato la compra para perro o gato.",
+      "composition": "Hero 50/50 de 684 px en escritorio: texto centrado sobre lila a la izquierda y collage a sangre a la derecha. En teléfono se apilan copy, dos CTA y escena gráfica."
+    },
+    {
+      "role": "Dar accesos visuales a familias de producto antes de entrar en recomendaciones.",
+      "composition": "Franja de cuatro imágenes de igual ancho, a sangre, con bodegones o mascotas; cada una lleva un rótulo inferior y flecha. Mide unos 456 px en escritorio y se convierte en carrusel de una tarjeta predominante en teléfono."
+    },
+    {
+      "role": "Aportar prueba social y mostrar el producto en situaciones domésticas.",
+      "composition": "Bloque lila claro con el título centrado «Make Life with Your Pet Look as Good as It Feels» y tres videos verticales redondeados en fila. En teléfono se ven dos clips y parte del tercero para indicar desplazamiento."
+    },
+    {
+      "role": "Vender los productos prioritarios para perro.",
+      "composition": "«Dog Favorites» abre una retícula de 4 columnas; la sección mide 1362 px porque contiene dos filas de ocho tarjetas. Incluye imagen 4:5, descuento, nombre, precios, argumento y colores. En teléfono se presenta como carrusel horizontal, no como una cuadrícula de ocho columnas reales."
+    },
+    {
+      "role": "Repetir la lógica de favoritos para gato sin inventar un lenguaje nuevo.",
+      "composition": "Título de 24 px y una fila de 4 tarjetas en escritorio, sobre blanco; en teléfono, título de 20 px y carrusel con tarjetas parcialmente visibles."
+    },
+    {
+      "role": "Conectar la tienda digital con puntos de venta físicos.",
+      "composition": "Banner de 480 px, dividido 50/50: texto y botón delineado «Find A Store» sobre lila a la izquierda; fotografía cenital de una cesta de compra azul a la derecha. En teléfono apila las dos mitades."
+    },
+    {
+      "role": "Subir el valor del pedido mediante conjuntos ya resueltos.",
+      "composition": "«Most Loved Walk Kits» usa 4 tarjetas por fila y la misma ficha comercial del catálogo. La repetición de proporciones permite comparar kit, precio y colores sin aprender un componente nuevo."
+    },
+    {
+      "role": "Reclutar comunidad y generar contenido de clientes.",
+      "composition": "Banner 50/50 de 480 px: fotografía de persona y perro en un lado y titular «Become a Wild One Ambassador» con texto y CTA en un campo rosa pálido en el otro. En teléfono pasa a una columna y alcanza unos 590 px."
+    },
+    {
+      "role": "Abrir una segunda familia comercial, los juguetes.",
+      "composition": "Fila de cuatro tarjetas sobre blanco, con nombres en Roboto Serif de 16 px y fotos 4:5. Conserva descuentos, precios y colores para que la categoría secundaria siga siendo comprable."
+    },
+    {
+      "role": "Cerrar con propósito de marca, no con otra promoción.",
+      "composition": "Bloque de 360 px en escritorio con un video o imagen de acción y un área de texto «Give Back» a 40 px. En teléfono se apila, usa título de 30 px y alcanza unos 514 px."
+    }
+  ],
+  "lessons": [
+    "Reserva el lenguaje expresivo para campañas y mantén catálogo, filtros y carrito geométricamente previsibles; así la marca puede jugar sin reducir la legibilidad de compra.",
+    "Usa una proporción fotográfica constante —aquí 4:5— y el mismo orden de nombre, precio, ahorro y variantes en portada y catálogo para reducir reaprendizaje.",
+    "Convierte filas de cuatro columnas en carruseles móviles con una tarjeta cortada en el borde; esa pista visual comunica desplazamiento mejor que una instrucción.",
+    "Asigna un color a cada función: azul para CTA principal, naranja para ahorro, lila para promoción y negro para checkout. No uses el acento comercial como decoración indiscriminada.",
+    "Alterna producto aislado y producto en uso: el primero explica forma y variantes; el segundo resuelve escala, ajuste y contexto.",
+    "En kits complejos, separa cada componente en un módulo con miniatura, color y talla. Sin embargo, prueba un CTA fijo o un resumen de compra temprano en móvil: aquí el botón aparece a y=2317 y exige demasiado desplazamiento."
+  ]
+}

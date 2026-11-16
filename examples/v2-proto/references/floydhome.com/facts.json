@@ -1,0 +1,1951 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://floydhome.com/",
+    "title": "Floyd Home",
+    "width": 1440,
+    "pageHeight": 10616,
+    "fonts": {
+      "h1": {
+        "family": "Floyd Gothic",
+        "size": "64px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-3.2px",
+        "text": "Floyd Home"
+      },
+      "h2": {
+        "family": "Floyd Gothic",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-1.12px",
+        "text": "Announcement"
+      },
+      "body": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "-0.24px",
+        "text": "NOW LIVE — BLACK FRIDAY CYBER MONDAY SALE - UP TO 35% OFF"
+      },
+      "button": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.24px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Floyd Gothic",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(248, 246, 237)",
+    "header": {
+      "height": 71,
+      "position": "sticky",
+      "bg": "rgb(248, 246, 237)",
+      "links": [
+        "Shop",
+        "Membership",
+        "Stories for Home",
+        "Trade & Contract",
+        "Contact",
+        "Account",
+        "Cart Your cart",
+        "The Floyd Bed",
+        "Sectionals",
+        "Rugs"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 136,
+        "h": 801,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "gt america mono",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "THE FLOYD BED. A modular bed system designed to change with "
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 976,
+        "h": 174,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.28px",
+          "text": "Since 2013, Floyd has made modular furniture designed to gro"
+        },
+        "words": 41,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1191,
+        "h": 321,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Designed to evolve with you—The Floyd Bed Frame adapts with "
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1512,
+        "h": 829,
+        "bg": "rgb(248, 246, 237)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Mono",
+          "size": "18px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.36px",
+          "text": "01 - CHOOSE"
+        },
+        "words": 71,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2385,
+        "h": 756,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "gt america mono",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "NEW: THE FLOYD BED - IN COLOR"
+        },
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3185,
+        "h": 756,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "gt america mono",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "NEW: THE FLOYD BED - UPHOLSTERED"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3981,
+        "h": 174,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.28px",
+          "text": "Choose your starting point. Then make it yours. Each is buil"
+        },
+        "words": 29,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4195,
+        "h": 755,
+        "bg": "rgb(248, 246, 237)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 43,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 4990,
+        "h": 197,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "A thoughtfully-designed collection of customizable, configur"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5231,
+        "h": 718,
+        "bg": "rgb(248, 246, 237)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5949,
+        "h": 830,
+        "bg": "rgb(248, 246, 237)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 36,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 6822,
+        "h": 756,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "gt america mono",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "THE SOFT SERVE SECTIONAL IN 'SAFFLOWER' WITH THE BLOCK & LIF"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7618,
+        "h": 103,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Stories for Home"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7733,
+        "h": 1074,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Mono",
+          "size": "15px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "-0.3px",
+          "text": "Lana & DavidDetroit, MI"
+        },
+        "words": 42,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 8807,
+        "h": 968,
+        "bg": "rgb(248, 246, 237)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.6px",
+          "text": "A community of modular design enthusiasts."
+        },
+        "words": 40,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 9775,
+        "h": 513,
+        "bg": "rgb(248, 246, 237)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.6px",
+          "text": "Helping make your project perfect."
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 6,
+      "columns": 3,
+      "photoRatio": 0.83,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://floydhome.com/",
+    "title": "Floyd Home",
+    "width": 402,
+    "pageHeight": 12399,
+    "fonts": {
+      "h1": {
+        "family": "Floyd Gothic",
+        "size": "48px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-2px",
+        "text": "Floyd Home"
+      },
+      "h2": {
+        "family": "Floyd Gothic",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-1.12px",
+        "text": "Announcement"
+      },
+      "body": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "-0.24px",
+        "text": "NOW LIVE — BLACK FRIDAY CYBER MONDAY SALE - UP TO 35% OFF"
+      },
+      "button": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.24px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Floyd Gothic",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(248, 246, 237)",
+    "header": {
+      "height": 57,
+      "position": "sticky",
+      "bg": "rgb(248, 246, 237)",
+      "links": [
+        "The Floyd Bed",
+        "Sectionals",
+        "Rugs"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 139,
+        "h": 422,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 585,
+        "h": 286,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "26px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.04px",
+          "text": "Since 2013, Floyd has made modular furniture designed to gro"
+        },
+        "words": 41,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 895,
+        "h": 287,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "26px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.04px",
+          "text": "Designed to evolve with you—The Floyd Bed Frame adapts with "
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 1206,
+        "h": 1837,
+        "bg": "rgb(248, 246, 237)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Mono",
+          "size": "15px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.3px",
+          "text": "01 - CHOOSE"
+        },
+        "words": 71,
+        "perRow": 1,
+        "fullBleed": false
+      },
+      {
+        "y": 3076,
+        "h": 422,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3531,
+        "h": 422,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3977,
+        "h": 226,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "26px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.04px",
+          "text": "Choose your starting point. Then make it yours. Each is buil"
+        },
+        "words": 29,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 4227,
+        "h": 1833,
+        "bg": "rgb(248, 246, 237)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 43,
+        "perRow": 1,
+        "fullBleed": false
+      },
+      {
+        "y": 6084,
+        "h": 197,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "26px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.04px",
+          "text": "A thoughtfully-designed collection of customizable, configur"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 6314,
+        "h": 311,
+        "bg": "rgb(248, 246, 237)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 6625,
+        "h": 1936,
+        "bg": "rgb(248, 246, 237)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 36,
+        "perRow": 1,
+        "fullBleed": false
+      },
+      {
+        "y": 8593,
+        "h": 422,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 9039,
+        "h": 111,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "26px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.04px",
+          "text": "Stories for Home"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 9174,
+        "h": 1346,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Mono",
+          "size": "15px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "-0.3px",
+          "text": "Lana & DavidDetroit, MI"
+        },
+        "words": 42,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 10520,
+        "h": 861,
+        "bg": "rgb(248, 246, 237)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.28px",
+          "text": "A community of modular design enthusiasts."
+        },
+        "words": 40,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 11381,
+        "h": 595,
+        "bg": "rgb(248, 246, 237)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.28px",
+          "text": "Helping make your project perfect."
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://floydhome.com/collections/all",
+    "title": "Shop All Floyd Furniture & Decor | Eco-friendly, Made in USA",
+    "width": 1440,
+    "pageHeight": 13789,
+    "fonts": {
+      "h1": {
+        "family": "Floyd Gothic",
+        "size": "64px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-3.2px",
+        "text": "Shop All Floyd Furniture & Decor | Eco-friendly, Made in USA"
+      },
+      "h2": {
+        "family": "Floyd Gothic",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-1.12px",
+        "text": "Announcement"
+      },
+      "body": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "-0.24px",
+        "text": "NOW LIVE — BLACK FRIDAY CYBER MONDAY SALE - UP TO 35% OFF"
+      },
+      "button": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.24px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Floyd Gothic",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(248, 246, 237)",
+    "header": {
+      "height": 71,
+      "position": "sticky",
+      "bg": "rgb(248, 246, 237)",
+      "links": [
+        "Shop",
+        "Membership",
+        "Stories for Home",
+        "Trade & Contract",
+        "Contact",
+        "Account",
+        "Cart Your cart",
+        "The Floyd Bed",
+        "Sectionals",
+        "Rugs"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 136,
+        "h": 1730,
+        "bg": "rgb(248, 246, 237)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "The Floyd Bed - Original"
+        },
+        "words": 72,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1866,
+        "h": 648,
+        "bg": "rgb(248, 246, 237)",
+        "images": 20,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.92px",
+          "text": "Pre-Configured Bundles"
+        },
+        "words": 82,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 2514,
+        "h": 1115,
+        "bg": "rgb(248, 246, 237)",
+        "images": 27,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.92px",
+          "text": "Modular Add-Ons"
+        },
+        "words": 117,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 3629,
+        "h": 1115,
+        "bg": "rgb(248, 246, 237)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.92px",
+          "text": "Hardware"
+        },
+        "words": 81,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 4744,
+        "h": 1347,
+        "bg": "rgb(248, 246, 237)",
+        "images": 42,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.92px",
+          "text": "The Soft Serve Sectional"
+        },
+        "words": 78,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 6092,
+        "h": 1347,
+        "bg": "rgb(248, 246, 237)",
+        "images": 29,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.92px",
+          "text": "The Form Sectional"
+        },
+        "words": 59,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 7439,
+        "h": 764,
+        "bg": "rgb(248, 246, 237)",
+        "images": 21,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.92px",
+          "text": "The Sink Down Sectional"
+        },
+        "words": 41,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 8202,
+        "h": 995,
+        "bg": "rgb(248, 246, 237)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "48px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.92px",
+          "text": "Additional Seating"
+        },
+        "words": 31,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 9198,
+        "h": 1730,
+        "bg": "rgb(248, 246, 237)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "The Shelving System"
+        },
+        "words": 39,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 10928,
+        "h": 1267,
+        "bg": "rgb(248, 246, 237)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "The Floyd Leg"
+        },
+        "words": 38,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 12194,
+        "h": 1267,
+        "bg": "rgb(248, 246, 237)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "The Lift Off Coffee Table"
+        },
+        "words": 65,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 50,
+      "columns": 4,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://floydhome.com/collections/all?_su_rec=KMdlL9x83NdvOyXP-LLsNvEsIaq3anunIwrVwv1zPK1YyALUbTzr9lo7OQnud46HyhY9QuLBx4KkHUBeiql-XqzScNbUmY1eCyyXE4QEC6AIF2WMk_xLfSxxkezr0rnSG92HGJqqp_5A8Cf2IyTOdg_x2Ccq1RWKSirb_xAIh-Zau9mcV8w_nZHodgv7z4_EWOtTdOsG8UrtvTZed-1em0rjd01Hmzg6abLhRmxhN2KANweccrk07Gjsf_u_s65LDuclhp9cwshHD7fbd0q4yT604TzKqACoPMrmlrYXeWdFTrMvR5OHmd3ai2VE1zO_9NnuIiuH_bMYi0XnybmnsL5zYA3UeScMDuDjCpMHKX8&_su_rec_id=f49caa9b-3daf-4b06-b332-53104cd3f8f6-1794667911",
+    "title": "Shop All Floyd Furniture & Decor | Eco-friendly, Made in USA",
+    "width": 390,
+    "pageHeight": 27241,
+    "fonts": {
+      "h1": {
+        "family": "Floyd Gothic",
+        "size": "48px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-2px",
+        "text": "Shop All Floyd Furniture & Decor | Eco-friendly, Made in USA"
+      },
+      "h2": {
+        "family": "Floyd Gothic",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-1.12px",
+        "text": "Announcement"
+      },
+      "body": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "-0.24px",
+        "text": "NOW LIVE — BLACK FRIDAY CYBER MONDAY SALE - UP TO 35% OFF"
+      },
+      "button": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.24px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Floyd Gothic",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(248, 246, 237)",
+    "header": {
+      "height": 57,
+      "position": "sticky",
+      "bg": "rgb(248, 246, 237)",
+      "links": [
+        "The Floyd Bed",
+        "Sectionals",
+        "Rugs"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 139,
+        "h": 2060,
+        "bg": "rgb(248, 246, 237)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "The Floyd Bed - Original"
+        },
+        "words": 72,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2199,
+        "h": 2140,
+        "bg": "rgb(248, 246, 237)",
+        "images": 20,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "30px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "Pre-Configured Bundles"
+        },
+        "words": 82,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4339,
+        "h": 4113,
+        "bg": "rgb(248, 246, 237)",
+        "images": 27,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "30px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "Modular Add-Ons"
+        },
+        "words": 117,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 8452,
+        "h": 3133,
+        "bg": "rgb(248, 246, 237)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "30px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "Hardware"
+        },
+        "words": 81,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 11585,
+        "h": 3133,
+        "bg": "rgb(248, 246, 237)",
+        "images": 42,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "30px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "The Soft Serve Sectional"
+        },
+        "words": 78,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 14718,
+        "h": 2627,
+        "bg": "rgb(248, 246, 237)",
+        "images": 29,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "30px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "The Form Sectional"
+        },
+        "words": 59,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 17344,
+        "h": 1647,
+        "bg": "rgb(248, 246, 237)",
+        "images": 21,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "30px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "The Sink Down Sectional"
+        },
+        "words": 41,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 18991,
+        "h": 1157,
+        "bg": "rgb(248, 246, 237)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "30px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.2px",
+          "text": "Additional Seating"
+        },
+        "words": 31,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 20147,
+        "h": 2060,
+        "bg": "rgb(248, 246, 237)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "The Shelving System"
+        },
+        "words": 39,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 22207,
+        "h": 2060,
+        "bg": "rgb(248, 246, 237)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "The Floyd Leg"
+        },
+        "words": 38,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 24267,
+        "h": 2550,
+        "bg": "rgb(248, 246, 237)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.28px",
+          "text": "The Lift Off Coffee Table"
+        },
+        "words": 65,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://floydhome.com/products/the-media-console?variant=36999671644322",
+    "title": "The Media Console | Modern TV Console with Optional Storage",
+    "width": 1440,
+    "pageHeight": 6538,
+    "fonts": {
+      "h1": {
+        "family": "Floyd Gothic",
+        "size": "64px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-3.2px",
+        "text": "The Media Console | Modern TV Console with Optional Storage"
+      },
+      "h2": {
+        "family": "Floyd Gothic",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-1.12px",
+        "text": "Announcement"
+      },
+      "body": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "-0.24px",
+        "text": "NOW LIVE — BLACK FRIDAY CYBER MONDAY SALE - UP TO 35% OFF"
+      },
+      "button": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.24px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Floyd Gothic",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(248, 246, 237)",
+    "header": {
+      "height": 71,
+      "position": "sticky",
+      "bg": "rgb(248, 246, 237)",
+      "links": [
+        "Shop",
+        "Membership",
+        "Stories for Home",
+        "Trade & Contract",
+        "Contact",
+        "Account",
+        "Cart Your cart",
+        "The Floyd Bed",
+        "Sectionals",
+        "Rugs"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 136,
+        "h": 853,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "46px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.84px",
+          "text": "The Media Console"
+        },
+        "words": 77,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1049,
+        "h": 801,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1850,
+        "h": 308,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "40px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.8px",
+          "text": "Clean lines and high quality."
+        },
+        "words": 88,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2158,
+        "h": 960,
+        "bg": "rgb(248, 246, 237)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "36px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.72px",
+          "text": "Cord management."
+        },
+        "words": 41,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3162,
+        "h": 181,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3344,
+        "h": 2208,
+        "bg": "rgb(248, 246, 237)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "20.02px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.8008px",
+          "text": "Customer reviews"
+        },
+        "words": 832,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5552,
+        "h": 659,
+        "bg": "rgb(248, 246, 237)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "25px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.25px",
+          "text": "Shop the Bedroom"
+        },
+        "words": 60,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart",
+      "aboveFold": true,
+      "top": 680,
+      "x": 944,
+      "width": 466,
+      "bg": "rgb(35, 30, 30)"
+    },
+    "price": {
+      "family": "Floyd Gothic",
+      "size": "18px",
+      "weight": "300",
+      "case": "none",
+      "tracking": "-0.09px",
+      "text": "Starting at $612.50 (Member) Starting at $875 (Regular) 30% "
+    },
+    "galleryImages": 12,
+    "swatches": 16,
+    "selects": 2,
+    "accordions": 9
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://floydhome.com/products/the-media-console?variant=36999671644322",
+    "title": "The Media Console | Modern TV Console with Optional Storage",
+    "width": 390,
+    "pageHeight": 8596,
+    "fonts": {
+      "h1": {
+        "family": "Floyd Gothic",
+        "size": "48px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-2px",
+        "text": "The Media Console | Modern TV Console with Optional Storage"
+      },
+      "h2": {
+        "family": "Floyd Gothic",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-1.12px",
+        "text": "Announcement"
+      },
+      "body": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "-0.24px",
+        "text": "NOW LIVE — BLACK FRIDAY CYBER MONDAY SALE - UP TO 35% OFF"
+      },
+      "button": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.24px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Floyd Gothic",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(248, 246, 237)",
+    "header": {
+      "height": 57,
+      "position": "sticky",
+      "bg": "rgb(248, 246, 237)",
+      "links": [
+        "The Floyd Bed",
+        "Sectionals",
+        "Rugs"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 139,
+        "h": 1170,
+        "bg": "rgb(248, 246, 237)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "32px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-1.28px",
+          "text": "The Media Console"
+        },
+        "words": 77,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1309,
+        "h": 323,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1631,
+        "h": 718,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "40px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.8px",
+          "text": "Clean lines and high quality."
+        },
+        "words": 88,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2349,
+        "h": 608,
+        "bg": "rgb(248, 246, 237)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "24px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.48px",
+          "text": "Cord management."
+        },
+        "words": 41,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2957,
+        "h": 181,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3138,
+        "h": 4523,
+        "bg": "rgb(248, 246, 237)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "20.02px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.8008px",
+          "text": "Customer reviews"
+        },
+        "words": 832,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7662,
+        "h": 512,
+        "bg": "rgb(248, 246, 237)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Floyd Gothic",
+          "size": "18px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.18px",
+          "text": "Shop the Bedroom"
+        },
+        "words": 60,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart",
+      "aboveFold": false,
+      "top": 991,
+      "x": 30,
+      "width": 330,
+      "bg": "rgb(35, 30, 30)"
+    },
+    "price": {
+      "family": "Floyd Gothic",
+      "size": "18px",
+      "weight": "300",
+      "case": "none",
+      "tracking": "-0.16px",
+      "text": "Starting at $612.50 (Member) Starting at $875 (Regular) 30% "
+    },
+    "galleryImages": 8,
+    "swatches": 16,
+    "selects": 2,
+    "accordions": 9
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://floydhome.com/",
+    "title": "Floyd Home",
+    "width": 1440,
+    "pageHeight": 10616,
+    "fonts": {
+      "h1": {
+        "family": "Floyd Gothic",
+        "size": "64px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-3.2px",
+        "text": "Floyd Home"
+      },
+      "h2": {
+        "family": "Floyd Gothic",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-1.12px",
+        "text": "Announcement"
+      },
+      "body": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "-0.24px",
+        "text": "NOW LIVE — BLACK FRIDAY CYBER MONDAY SALE - UP TO 35% OFF"
+      },
+      "button": {
+        "family": "GT America Mono",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.24px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Floyd Gothic",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(248, 246, 237)",
+    "header": {
+      "height": 71,
+      "position": "sticky",
+      "bg": "rgb(248, 246, 237)",
+      "links": [
+        "Shop",
+        "Membership",
+        "Stories for Home",
+        "Trade & Contract",
+        "Contact",
+        "Account",
+        "Cart (1) Your cart",
+        "The Floyd Bed",
+        "Sectionals",
+        "Rugs"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 136,
+        "h": 801,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "gt america mono",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "THE FLOYD BED. A modular bed system designed to change with "
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 976,
+        "h": 174,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.28px",
+          "text": "Since 2013, Floyd has made modular furniture designed to gro"
+        },
+        "words": 41,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1191,
+        "h": 321,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Designed to evolve with you—The Floyd Bed Frame adapts with "
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1512,
+        "h": 829,
+        "bg": "rgb(248, 246, 237)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Mono",
+          "size": "18px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.36px",
+          "text": "01 - CHOOSE"
+        },
+        "words": 71,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2385,
+        "h": 756,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "gt america mono",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "NEW: THE FLOYD BED - IN COLOR"
+        },
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3185,
+        "h": 756,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "gt america mono",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "NEW: THE FLOYD BED - UPHOLSTERED"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3981,
+        "h": 174,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.28px",
+          "text": "Choose your starting point. Then make it yours. Each is buil"
+        },
+        "words": 29,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4195,
+        "h": 755,
+        "bg": "rgb(248, 246, 237)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 43,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 4990,
+        "h": 197,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "A thoughtfully-designed collection of customizable, configur"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5231,
+        "h": 718,
+        "bg": "rgb(248, 246, 237)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5949,
+        "h": 830,
+        "bg": "rgb(248, 246, 237)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 36,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 6823,
+        "h": 756,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "gt america mono",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.1px",
+          "text": "THE SOFT SERVE SECTIONAL IN 'SAFFLOWER' WITH THE BLOCK & LIF"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7619,
+        "h": 103,
+        "bg": "rgb(248, 246, 237)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.44px",
+          "text": "Stories for Home"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7734,
+        "h": 1074,
+        "bg": "rgb(248, 246, 237)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Mono",
+          "size": "15px",
+          "weight": "300",
+          "case": "uppercase",
+          "tracking": "-0.3px",
+          "text": "Lana & DavidDetroit, MI"
+        },
+        "words": 42,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 8808,
+        "h": 968,
+        "bg": "rgb(248, 246, 237)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.6px",
+          "text": "A community of modular design enthusiasts."
+        },
+        "words": 40,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 9776,
+        "h": 513,
+        "bg": "rgb(248, 246, 237)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Regular",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.6px",
+          "text": "Helping make your project perfect."
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

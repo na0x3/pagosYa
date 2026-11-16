@@ -1,0 +1,1644 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://milkbarstore.com/",
+    "title": "Milk Bar: NYC's #1 Bakery Ships Desserts Nationwide",
+    "width": 1440,
+    "pageHeight": 8495,
+    "fonts": {
+      "h1": {
+        "family": "Garnett",
+        "size": "53px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": ".cls-1-logo { fill: #000; } .cls-1-logo, .cls-2-logo { strok"
+      },
+      "h2": {
+        "family": "Garnett",
+        "size": "38px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "FROM OUR BAKERY TO YOUR DOOR"
+      },
+      "body": {
+        "family": "Garnett",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cookie Preferences"
+      },
+      "button": {
+        "family": "Garnett",
+        "size": "0px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Garnett",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "$25 OFF ORDERS $125 OR MORE"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 156,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "Milk Bar Menu Icon",
+        ".cls-1-logo { fill: #000",
+        "Milk Bar Account Icon",
+        "Milk Bar Cart Icon",
+        "Desserts",
+        "Thanksgiving",
+        "Birthday",
+        "Corporate Gifts",
+        "Bakeries",
+        "Recipes"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 212,
+        "h": 680,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "31.25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "A PIE THEY WILL BE THANKFUL FOR"
+        },
+        "words": 298,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 892,
+        "h": 856,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "FROM OUR BAKERY TO YOUR DOOR"
+        },
+        "words": 576,
+        "perRow": 26,
+        "fullBleed": true
+      },
+      {
+        "y": 1748,
+        "h": 688,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "31.25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Treats that Turn Heads"
+        },
+        "words": 48,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2436,
+        "h": 757,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Gifts for every occasion!"
+        },
+        "words": 30,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 3193,
+        "h": 418,
+        "bg": "rgb(255, 239, 218)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Why choose Milk Bar?"
+        },
+        "words": 57,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3667,
+        "h": 808,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SHOP OUR BESTSELLERS"
+        },
+        "words": 230,
+        "perRow": 11,
+        "fullBleed": true
+      },
+      {
+        "y": 4474,
+        "h": 1320,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SEND GROUP GIFTS"
+        },
+        "words": 74,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5794,
+        "h": 568,
+        "bg": "rgb(255, 239, 218)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "WORD ON THE STREET"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6362,
+        "h": 660,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "HEY, NICE TO TREAT YOU."
+        },
+        "words": 37,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://milkbarstore.com/",
+    "title": "Milk Bar: NYC's #1 Bakery Ships Desserts Nationwide",
+    "width": 390,
+    "pageHeight": 8627,
+    "fonts": {
+      "h1": {
+        "family": "Garnett",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": ".cls-1-logo { fill: #000; } .cls-1-logo, .cls-2-logo { strok"
+      },
+      "h2": {
+        "family": "Garnett",
+        "size": "25px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "FROM OUR BAKERY TO YOUR DOOR"
+      },
+      "body": {
+        "family": "Garnett",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cookie Preferences"
+      },
+      "button": {
+        "family": "Garnett",
+        "size": "0px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Garnett",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "$25 OFF ORDERS $125 OR MORE"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 93,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "Milk Bar Menu Icon",
+        ".cls-1-logo { fill: #000",
+        "Milk Bar Account Icon",
+        "Milk Bar Cart Icon",
+        "Shop All",
+        "Birthday",
+        "Bakeries",
+        "More Milk Bar",
+        "About Us",
+        "Corporate Gifting",
+        "Weddings",
+        "Recipes",
+        "How We Ship",
+        "Contact Us"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 144,
+        "h": 203,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": null,
+        "words": 17,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 347,
+        "h": 724,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "22.5px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "A PIE THEY WILL BE THANKFUL FOR"
+        },
+        "words": 298,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 1070,
+        "h": 711,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "FROM OUR BAKERY TO YOUR DOOR"
+        },
+        "words": 504,
+        "perRow": 26,
+        "fullBleed": true
+      },
+      {
+        "y": 1781,
+        "h": 654,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "31.25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Treats that Turn Heads"
+        },
+        "words": 48,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2435,
+        "h": 526,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Gifts for every occasion!"
+        },
+        "words": 30,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2961,
+        "h": 603,
+        "bg": "rgb(255, 239, 218)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Why choose Milk Bar?"
+        },
+        "words": 57,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3615,
+        "h": 674,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SHOP OUR BESTSELLERS"
+        },
+        "words": 212,
+        "perRow": 11,
+        "fullBleed": true
+      },
+      {
+        "y": 4296,
+        "h": 1284,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SEND GROUP GIFTS"
+        },
+        "words": 74,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5587,
+        "h": 691,
+        "bg": "rgb(255, 239, 218)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "WORD ON THE STREET"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6286,
+        "h": 608,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "HEY, NICE TO TREAT YOU."
+        },
+        "words": 37,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://milkbarstore.com/",
+    "title": "Milk Bar: NYC's #1 Bakery Ships Desserts Nationwide",
+    "width": 1440,
+    "pageHeight": 8495,
+    "fonts": {
+      "h1": {
+        "family": "Garnett",
+        "size": "53px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": ".cls-1-logo { fill: #000; } .cls-1-logo, .cls-2-logo { strok"
+      },
+      "h2": {
+        "family": "Garnett",
+        "size": "38px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "FROM OUR BAKERY TO YOUR DOOR"
+      },
+      "body": {
+        "family": "Garnett",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cookie Preferences"
+      },
+      "button": {
+        "family": "Garnett",
+        "size": "0px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Garnett",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "$25 OFF ORDERS $125 OR MORE"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 156,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "Milk Bar Menu Icon",
+        ".cls-1-logo { fill: #000",
+        "Milk Bar Account Icon",
+        "Milk Bar Cart Icon",
+        "Desserts",
+        "Thanksgiving",
+        "Birthday",
+        "Corporate Gifts",
+        "Bakeries",
+        "Recipes"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 212,
+        "h": 680,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "31.25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "A PIE THEY WILL BE THANKFUL FOR"
+        },
+        "words": 298,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 892,
+        "h": 856,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "FROM OUR BAKERY TO YOUR DOOR"
+        },
+        "words": 576,
+        "perRow": 26,
+        "fullBleed": true
+      },
+      {
+        "y": 1748,
+        "h": 688,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "31.25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Treats that Turn Heads"
+        },
+        "words": 48,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2436,
+        "h": 757,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Gifts for every occasion!"
+        },
+        "words": 30,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 3193,
+        "h": 418,
+        "bg": "rgb(255, 239, 218)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Why choose Milk Bar?"
+        },
+        "words": 57,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3667,
+        "h": 808,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SHOP OUR BESTSELLERS"
+        },
+        "words": 230,
+        "perRow": 11,
+        "fullBleed": true
+      },
+      {
+        "y": 4474,
+        "h": 1320,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SEND GROUP GIFTS"
+        },
+        "words": 74,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5794,
+        "h": 568,
+        "bg": "rgb(255, 239, 218)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "WORD ON THE STREET"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6362,
+        "h": 660,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "HEY, NICE TO TREAT YOU."
+        },
+        "words": 37,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://milkbarstore.com/",
+    "title": "Milk Bar: NYC's #1 Bakery Ships Desserts Nationwide",
+    "width": 390,
+    "pageHeight": 8627,
+    "fonts": {
+      "h1": {
+        "family": "Garnett",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": ".cls-1-logo { fill: #000; } .cls-1-logo, .cls-2-logo { strok"
+      },
+      "h2": {
+        "family": "Garnett",
+        "size": "25px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "FROM OUR BAKERY TO YOUR DOOR"
+      },
+      "body": {
+        "family": "Garnett",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cookie Preferences"
+      },
+      "button": {
+        "family": "Garnett",
+        "size": "0px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Garnett",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "$25 OFF ORDERS $125 OR MORE"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 93,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "Milk Bar Menu Icon",
+        ".cls-1-logo { fill: #000",
+        "Milk Bar Account Icon",
+        "Milk Bar Cart Icon",
+        "Shop All",
+        "Birthday",
+        "Bakeries",
+        "More Milk Bar",
+        "About Us",
+        "Corporate Gifting",
+        "Weddings",
+        "Recipes",
+        "How We Ship",
+        "Contact Us"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 144,
+        "h": 203,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": null,
+        "words": 17,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 347,
+        "h": 724,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "22.5px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "A PIE THEY WILL BE THANKFUL FOR"
+        },
+        "words": 298,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 1070,
+        "h": 711,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "FROM OUR BAKERY TO YOUR DOOR"
+        },
+        "words": 504,
+        "perRow": 26,
+        "fullBleed": true
+      },
+      {
+        "y": 1781,
+        "h": 654,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "31.25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Treats that Turn Heads"
+        },
+        "words": 48,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2435,
+        "h": 526,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Gifts for every occasion!"
+        },
+        "words": 30,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2961,
+        "h": 603,
+        "bg": "rgb(255, 239, 218)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Why choose Milk Bar?"
+        },
+        "words": 57,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3615,
+        "h": 674,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SHOP OUR BESTSELLERS"
+        },
+        "words": 212,
+        "perRow": 11,
+        "fullBleed": true
+      },
+      {
+        "y": 4296,
+        "h": 1284,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SEND GROUP GIFTS"
+        },
+        "words": 74,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5587,
+        "h": 691,
+        "bg": "rgb(255, 239, 218)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "WORD ON THE STREET"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6286,
+        "h": 608,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "HEY, NICE TO TREAT YOU."
+        },
+        "words": 37,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://milkbarstore.com/",
+    "title": "Milk Bar: NYC's #1 Bakery Ships Desserts Nationwide",
+    "width": 1440,
+    "pageHeight": 8495,
+    "fonts": {
+      "h1": {
+        "family": "Garnett",
+        "size": "53px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": ".cls-1-logo { fill: #000; } .cls-1-logo, .cls-2-logo { strok"
+      },
+      "h2": {
+        "family": "Garnett",
+        "size": "38px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "FROM OUR BAKERY TO YOUR DOOR"
+      },
+      "body": {
+        "family": "Garnett",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cookie Preferences"
+      },
+      "button": {
+        "family": "Garnett",
+        "size": "0px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Garnett",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "$25 OFF ORDERS $125 OR MORE"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 156,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "Milk Bar Menu Icon",
+        ".cls-1-logo { fill: #000",
+        "Milk Bar Account Icon",
+        "Milk Bar Cart Icon",
+        "Desserts",
+        "Thanksgiving",
+        "Birthday",
+        "Corporate Gifts",
+        "Bakeries",
+        "Recipes"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 212,
+        "h": 680,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "31.25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "A PIE THEY WILL BE THANKFUL FOR"
+        },
+        "words": 298,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 892,
+        "h": 856,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "FROM OUR BAKERY TO YOUR DOOR"
+        },
+        "words": 576,
+        "perRow": 26,
+        "fullBleed": true
+      },
+      {
+        "y": 1748,
+        "h": 688,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "31.25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Treats that Turn Heads"
+        },
+        "words": 48,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2436,
+        "h": 757,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Gifts for every occasion!"
+        },
+        "words": 30,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 3193,
+        "h": 418,
+        "bg": "rgb(255, 239, 218)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Why choose Milk Bar?"
+        },
+        "words": 57,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3667,
+        "h": 808,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SHOP OUR BESTSELLERS"
+        },
+        "words": 230,
+        "perRow": 11,
+        "fullBleed": true
+      },
+      {
+        "y": 4474,
+        "h": 1320,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SEND GROUP GIFTS"
+        },
+        "words": 74,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5794,
+        "h": 568,
+        "bg": "rgb(255, 239, 218)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "WORD ON THE STREET"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6362,
+        "h": 660,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "38px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "HEY, NICE TO TREAT YOU."
+        },
+        "words": 37,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Garnett",
+      "size": "16px",
+      "weight": "600",
+      "case": "none",
+      "tracking": "normal",
+      "text": "6\" Birthday Cake $65"
+    },
+    "galleryImages": 28,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 8
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://milkbarstore.com/",
+    "title": "Milk Bar: NYC's #1 Bakery Ships Desserts Nationwide",
+    "width": 390,
+    "pageHeight": 8627,
+    "fonts": {
+      "h1": {
+        "family": "Garnett",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": ".cls-1-logo { fill: #000; } .cls-1-logo, .cls-2-logo { strok"
+      },
+      "h2": {
+        "family": "Garnett",
+        "size": "25px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "FROM OUR BAKERY TO YOUR DOOR"
+      },
+      "body": {
+        "family": "Garnett",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cookie Preferences"
+      },
+      "button": {
+        "family": "Garnett",
+        "size": "0px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Garnett",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "$25 OFF ORDERS $125 OR MORE"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 93,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "Milk Bar Menu Icon",
+        ".cls-1-logo { fill: #000",
+        "Milk Bar Account Icon",
+        "Milk Bar Cart Icon",
+        "Shop All",
+        "Birthday",
+        "Bakeries",
+        "More Milk Bar",
+        "About Us",
+        "Corporate Gifting",
+        "Weddings",
+        "Recipes",
+        "How We Ship",
+        "Contact Us"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 4,
+    "sections": [
+      {
+        "y": 144,
+        "h": 203,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": null,
+        "words": 17,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 347,
+        "h": 724,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "22.5px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "A PIE THEY WILL BE THANKFUL FOR"
+        },
+        "words": 298,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 1070,
+        "h": 711,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "FROM OUR BAKERY TO YOUR DOOR"
+        },
+        "words": 504,
+        "perRow": 26,
+        "fullBleed": true
+      },
+      {
+        "y": 1781,
+        "h": 654,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett Bold",
+          "size": "31.25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Treats that Turn Heads"
+        },
+        "words": 48,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2435,
+        "h": 526,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Gifts for every occasion!"
+        },
+        "words": 30,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2961,
+        "h": 603,
+        "bg": "rgb(255, 239, 218)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Why choose Milk Bar?"
+        },
+        "words": 57,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3615,
+        "h": 674,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SHOP OUR BESTSELLERS"
+        },
+        "words": 212,
+        "perRow": 11,
+        "fullBleed": true
+      },
+      {
+        "y": 4296,
+        "h": 1284,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "SEND GROUP GIFTS"
+        },
+        "words": 74,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5587,
+        "h": 691,
+        "bg": "rgb(255, 239, 218)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "WORD ON THE STREET"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6286,
+        "h": 608,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "25px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "HEY, NICE TO TREAT YOU."
+        },
+        "words": 37,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Garnett",
+      "size": "12px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$53"
+    },
+    "galleryImages": 25,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 8
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://milkbarstore.com/cart",
+    "title": "Your Shopping Cart – Milk Bar",
+    "width": 1440,
+    "pageHeight": 1609,
+    "fonts": {
+      "h1": {
+        "family": "Garnett",
+        "size": "28px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Your Cart"
+      },
+      "h2": {
+        "family": "Garnett",
+        "size": "18px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "You may also like"
+      },
+      "body": {
+        "family": "Garnett",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cookie Preferences"
+      },
+      "button": {
+        "family": "Garnett",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Garnett",
+        "size": "13px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "$25 OFF ORDERS $125 OR MORE"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 156,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "$25 OFF ORDERS $125 OR M",
+        "SHOP NOW",
+        "Milk Bar Menu Icon",
+        ".cls-1-logo { fill: #000",
+        "Milk Bar Account Icon",
+        "Milk Bar Cart Icon",
+        "Desserts",
+        "Thanksgiving",
+        "Birthday",
+        "Corporate Gifts",
+        "Bakeries",
+        "Recipes"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 156,
+        "h": 923,
+        "bg": "rgb(255, 255, 255)",
+        "images": 20,
+        "video": false,
+        "heading": {
+          "family": "Garnett",
+          "size": "28px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Your Cart"
+        },
+        "words": 259,
+        "perRow": 1,
+        "fullBleed": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,1333 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://eatfishwife.com/",
+    "title": "Fishwife Tinned Seafood Co.",
+    "width": 1440,
+    "pageHeight": 6701,
+    "fonts": {
+      "h1": {
+        "family": "Recoleta",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Recoleta",
+        "size": "48px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Meet the Fishwife Advent Calendar! Meet the Fishwife Advent "
+      },
+      "body": {
+        "family": "Albert Sans",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is an auto-rotating carousel with slides. Use Next and "
+      },
+      "button": {
+        "family": "Albert Sans",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Try the Starter Pack"
+      },
+      "nav": {
+        "family": "Recoleta",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Accessibility Statement"
+      }
+    },
+    "page": "rgb(255, 252, 243)",
+    "header": {
+      "height": 82,
+      "position": "sticky",
+      "bg": "rgb(255, 252, 243)",
+      "links": [
+        "Accessibility Statement",
+        "Try the Starter Pack",
+        "Shop",
+        "Toggle Shop menu",
+        "Gifts",
+        "Toggle Gifts menu",
+        "Recipes",
+        "Store Locator",
+        "Story",
+        "Search",
+        "Account\"",
+        "Cart Cart count: items"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 111,
+        "h": 902,
+        "bg": "rgb(255, 252, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "48px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Meet the Fishwife Advent Calendar! Meet the Fishwife Advent "
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1013,
+        "h": 604,
+        "bg": "rgb(255, 252, 243)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "1px",
+          "text": "Shop Featured Collections Shop Our Featured Collections"
+        },
+        "words": 43,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 1617,
+        "h": 446,
+        "bg": "rgb(255, 252, 243)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "1px",
+          "text": "Be the Star of Every Holiday Party"
+        },
+        "words": 52,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2063,
+        "h": 862,
+        "bg": "rgb(255, 252, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1px",
+          "text": "The 12 Days of Fishwife Advent Calendar"
+        },
+        "words": 97,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2925,
+        "h": 982,
+        "bg": "rgb(255, 252, 243)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1px",
+          "text": "A Gift That Everyone Will Love!"
+        },
+        "words": 97,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3907,
+        "h": 877,
+        "bg": "rgb(255, 252, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.9px",
+          "text": "Meet Our Canneries"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4784,
+        "h": 302,
+        "bg": "rgb(255, 248, 234)",
+        "images": 6,
+        "video": false,
+        "heading": null,
+        "words": 136,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5086,
+        "h": 763,
+        "bg": "rgb(255, 252, 243)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "60px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Feast of the Seven Fishes Grazing Board"
+        },
+        "words": 347,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://eatfishwife.com/",
+    "title": "Fishwife Tinned Seafood Co.",
+    "width": 390,
+    "pageHeight": 7539,
+    "fonts": {
+      "h1": {
+        "family": "Recoleta",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Recoleta",
+        "size": "30px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Meet the Fishwife Advent Calendar! Meet the Fishwife Advent "
+      },
+      "body": {
+        "family": "Albert Sans",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is an auto-rotating carousel with slides. Use Next and "
+      },
+      "button": {
+        "family": "Recoleta",
+        "size": "15px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Shop Fishwife"
+      },
+      "nav": {
+        "family": "Recoleta",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Accessibility Statement"
+      }
+    },
+    "page": "rgb(255, 252, 243)",
+    "header": {
+      "height": 69,
+      "position": "sticky",
+      "bg": "rgb(255, 252, 243)",
+      "links": [
+        "Accessibility Statement",
+        "Menu",
+        "Search",
+        "Account\"",
+        "Cart Cart count: items"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 98,
+        "h": 651,
+        "bg": "rgb(255, 252, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "30px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Meet the Fishwife Advent Calendar! Meet the Fishwife Advent "
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 749,
+        "h": 594,
+        "bg": "rgb(255, 252, 243)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.7px",
+          "text": "Shop Featured Collections Shop Our Featured Collections"
+        },
+        "words": 42,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 1343,
+        "h": 611,
+        "bg": "rgb(255, 252, 243)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.7px",
+          "text": "Be the Star of Every Holiday Party"
+        },
+        "words": 52,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1954,
+        "h": 1356,
+        "bg": "rgb(255, 252, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.75px",
+          "text": "The 12 Days of Fishwife Advent Calendar"
+        },
+        "words": 97,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3310,
+        "h": 919,
+        "bg": "rgb(255, 252, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.75px",
+          "text": "A Gift That Everyone Will Love!"
+        },
+        "words": 99,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4229,
+        "h": 827,
+        "bg": "rgb(255, 252, 243)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.75px",
+          "text": "Meet Our Canneries"
+        },
+        "words": 35,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5056,
+        "h": 294,
+        "bg": "rgb(255, 248, 234)",
+        "images": 6,
+        "video": false,
+        "heading": null,
+        "words": 136,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5349,
+        "h": 1082,
+        "bg": "rgb(255, 252, 243)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "48px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Feast of the Seven Fishes Grazing Board"
+        },
+        "words": 339,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://eatfishwife.com/collections/all",
+    "title": "All Products | Fishwife",
+    "width": 1440,
+    "pageHeight": 6341,
+    "fonts": {
+      "h1": {
+        "family": "Recoleta",
+        "size": "48px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Tinned Fish & More!"
+      },
+      "h2": {
+        "family": "Recoleta",
+        "size": "48px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "1.2px",
+        "text": "Everything Fishwife"
+      },
+      "body": {
+        "family": "Albert Sans",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is an auto-rotating carousel with slides. Use Next and "
+      },
+      "button": {
+        "family": "Albert Sans",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Try the Starter Pack"
+      },
+      "nav": {
+        "family": "Recoleta",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Accessibility Statement"
+      }
+    },
+    "page": "rgb(255, 252, 243)",
+    "header": {
+      "height": 82,
+      "position": "sticky",
+      "bg": "rgb(255, 252, 243)",
+      "links": [
+        "Accessibility Statement",
+        "Try the Starter Pack",
+        "Shop",
+        "Toggle Shop menu",
+        "Gifts",
+        "Toggle Gifts menu",
+        "Recipes",
+        "Store Locator",
+        "Story",
+        "Search",
+        "Account\"",
+        "Cart Cart count: items"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 111,
+        "h": 401,
+        "bg": "rgb(255, 252, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "48px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop Tinned Fish & More!"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 512,
+        "h": 4977,
+        "bg": "rgb(255, 252, 243)",
+        "images": 32,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "48px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "1.2px",
+          "text": "Everything Fishwife"
+        },
+        "words": 492,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://eatfishwife.com/collections/all?_su_rec=LUTkVYnSSRi6nVC8TTfSwTdEVKsvF2kLGliabUvmXNGDHR6JqVoWXdkOvgypSrltQrzvue9fd9QvvOAg32-GccSNvzvFxBNFkuqVpFIynYQ2i4YCrZMO4sNqD3t7BcZDgxTga5E0fq5uvzreIRiyLJV8PFGZzPn3ezE9bdFd4SA6_9KnYJCw_2HRdAXXt2LOG9G0eQ6FHRw5SU1jtPR0w7MTp9OXQoX6bnaiPIO2GG4hyEmdw5Ip_C7BDyf0RTIrPyLSFy9hendvPZtm3Y9pUAUOBefaemaypMKK2pLD5KXudZAXuomvXqWHte6w4_ipKp-uUQv7RyeAJciicD_4YOB68MANffjp5dg7hw&_su_rec_id=13fc244b-140a-4302-98f5-7574da14a73e-1794668779",
+    "title": "All Products | Fishwife",
+    "width": 390,
+    "pageHeight": 7279,
+    "fonts": {
+      "h1": {
+        "family": "Recoleta",
+        "size": "36px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop Tinned Fish & More!"
+      },
+      "h2": {
+        "family": "Recoleta",
+        "size": "28px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.7px",
+        "text": "Everything Fishwife"
+      },
+      "body": {
+        "family": "Albert Sans",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is an auto-rotating carousel with slides. Use Next and "
+      },
+      "button": {
+        "family": "Recoleta",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Shop Now"
+      },
+      "nav": {
+        "family": "Recoleta",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Accessibility Statement"
+      }
+    },
+    "page": "rgb(255, 252, 243)",
+    "header": {
+      "height": 69,
+      "position": "sticky",
+      "bg": "rgb(255, 252, 243)",
+      "links": [
+        "Accessibility Statement",
+        "Menu",
+        "Search",
+        "Account\"",
+        "Cart Cart count: items"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 98,
+        "h": 401,
+        "bg": "rgb(255, 252, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop Tinned Fish & More!"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 499,
+        "h": 5672,
+        "bg": "rgb(255, 252, 243)",
+        "images": 22,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.7px",
+          "text": "Everything Fishwife"
+        },
+        "words": 492,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://eatfishwife.com/products/the-spicy-trio-3-pack-2",
+    "title": "The Spicy Trio (3-Pack) | Fishwife",
+    "width": 1440,
+    "pageHeight": 8036,
+    "fonts": {
+      "h1": {
+        "family": "Recoleta",
+        "size": "40px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Spicy Trio"
+      },
+      "h2": {
+        "family": "Recoleta",
+        "size": "36px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "What's Inside"
+      },
+      "body": {
+        "family": "Albert Sans",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is an auto-rotating carousel with slides. Use Next and "
+      },
+      "button": {
+        "family": "Albert Sans",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Try the Starter Pack"
+      },
+      "nav": {
+        "family": "Recoleta",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Accessibility Statement"
+      }
+    },
+    "page": "rgb(255, 252, 243)",
+    "header": {
+      "height": 82,
+      "position": "sticky",
+      "bg": "rgb(255, 252, 243)",
+      "links": [
+        "Accessibility Statement",
+        "Try the Starter Pack",
+        "Shop",
+        "Toggle Shop menu",
+        "Gifts",
+        "Toggle Gifts menu",
+        "Recipes",
+        "Store Locator",
+        "Story",
+        "Search",
+        "Account\"",
+        "Cart Cart count: items"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 6,
+    "sections": [
+      {
+        "y": 111,
+        "h": 1526,
+        "bg": "rgb(255, 252, 243)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Spicy Trio"
+        },
+        "words": 103,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1637,
+        "h": 664,
+        "bg": "rgb(255, 252, 243)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "36px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "What's Inside"
+        },
+        "words": 295,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2301,
+        "h": 446,
+        "bg": "rgb(255, 252, 243)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "1px",
+          "text": "Be the Star of Every Holiday Party"
+        },
+        "words": 52,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2747,
+        "h": 711,
+        "bg": "rgb(161, 219, 255)",
+        "images": 11,
+        "video": true,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1px",
+          "text": "Join 1 Million+ Happy Fishwives"
+        },
+        "words": 26,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 3457,
+        "h": 827,
+        "bg": "rgb(255, 252, 243)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "38px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "One Tin. Endless Recipes."
+        },
+        "words": 345,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4284,
+        "h": 194,
+        "bg": "rgb(255, 252, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "1px",
+          "text": "You May Also Love You May Also Love"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4478,
+        "h": 311,
+        "bg": "rgb(255, 252, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "32px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "You’ve got questions. We’ve got answers."
+        },
+        "words": 25,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4885,
+        "h": 2243,
+        "bg": "rgb(255, 252, 243)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 364,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart\n                          \n ",
+      "aboveFold": true,
+      "top": 392,
+      "x": 895,
+      "width": 405,
+      "bg": "rgb(253, 205, 98)"
+    },
+    "price": null,
+    "galleryImages": 27,
+    "swatches": 2,
+    "selects": 3,
+    "accordions": 21
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://eatfishwife.com/products/the-spicy-trio-3-pack-2",
+    "title": "The Spicy Trio (3-Pack) | Fishwife",
+    "width": 390,
+    "pageHeight": 8596,
+    "fonts": {
+      "h1": {
+        "family": "Recoleta",
+        "size": "24px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Spicy Trio"
+      },
+      "h2": {
+        "family": "Recoleta",
+        "size": "28px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "What's Inside"
+      },
+      "body": {
+        "family": "Albert Sans",
+        "size": "15px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is an auto-rotating carousel with slides. Use Next and "
+      },
+      "button": {
+        "family": "Recoleta",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Previous"
+      },
+      "nav": {
+        "family": "Recoleta",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Accessibility Statement"
+      }
+    },
+    "page": "rgb(255, 252, 243)",
+    "header": {
+      "height": 69,
+      "position": "sticky",
+      "bg": "rgb(255, 252, 243)",
+      "links": [
+        "Accessibility Statement",
+        "Menu",
+        "Search",
+        "Account\"",
+        "Cart Cart count: items"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 6,
+    "sections": [
+      {
+        "y": 98,
+        "h": 1251,
+        "bg": "rgb(255, 252, 243)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "24px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Spicy Trio"
+        },
+        "words": 107,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 1350,
+        "h": 721,
+        "bg": "rgb(255, 252, 243)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "What's Inside"
+        },
+        "words": 295,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2071,
+        "h": 627,
+        "bg": "rgb(255, 252, 243)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.7px",
+          "text": "Be the Star of Every Holiday Party"
+        },
+        "words": 52,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2697,
+        "h": 688,
+        "bg": "rgb(161, 219, 255)",
+        "images": 11,
+        "video": true,
+        "heading": {
+          "family": "Recoleta",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.75px",
+          "text": "Join 1 Million+ Happy Fishwives"
+        },
+        "words": 26,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 3385,
+        "h": 965,
+        "bg": "rgb(255, 252, 243)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "One Tin. Endless Recipes."
+        },
+        "words": 345,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4349,
+        "h": 139,
+        "bg": "rgb(255, 252, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "28px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.7px",
+          "text": "You May Also Love You May Also Love"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4488,
+        "h": 379,
+        "bg": "rgb(255, 252, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "32px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "You’ve got questions. We’ve got answers."
+        },
+        "words": 25,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4867,
+        "h": 104,
+        "bg": "rgb(255, 252, 243)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Reviews"
+        },
+        "words": 1,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4971,
+        "h": 2461,
+        "bg": "rgb(255, 252, 243)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 371,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart\n                          \n ",
+      "aboveFold": true,
+      "top": 834,
+      "x": 154,
+      "width": 216,
+      "bg": "rgb(253, 205, 98)"
+    },
+    "price": null,
+    "galleryImages": 27,
+    "swatches": 2,
+    "selects": 3,
+    "accordions": 21
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://eatfishwife.com/?open_cart",
+    "title": "Fishwife Tinned Seafood Co.",
+    "width": 1440,
+    "pageHeight": 6701,
+    "fonts": {
+      "h1": {
+        "family": "Recoleta",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Recoleta",
+        "size": "48px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Meet the Fishwife Advent Calendar! Meet the Fishwife Advent "
+      },
+      "body": {
+        "family": "Albert Sans",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "This is an auto-rotating carousel with slides. Use Next and "
+      },
+      "button": {
+        "family": "Albert Sans",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Try the Starter Pack"
+      },
+      "nav": {
+        "family": "Recoleta",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Accessibility Statement"
+      }
+    },
+    "page": "rgb(255, 252, 243)",
+    "header": {
+      "height": 82,
+      "position": "sticky",
+      "bg": "rgb(255, 252, 243)",
+      "links": [
+        "Accessibility Statement",
+        "Try the Starter Pack",
+        "Shop",
+        "Toggle Shop menu",
+        "Gifts",
+        "Toggle Gifts menu",
+        "Recipes",
+        "Store Locator",
+        "Story",
+        "Search",
+        "Account\"",
+        "Cart 1 Cart count: 1 ite"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 111,
+        "h": 902,
+        "bg": "rgb(255, 252, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "48px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Meet the Fishwife Advent Calendar! Meet the Fishwife Advent "
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1013,
+        "h": 604,
+        "bg": "rgb(255, 252, 243)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "1px",
+          "text": "Shop Featured Collections Shop Our Featured Collections"
+        },
+        "words": 43,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 1617,
+        "h": 446,
+        "bg": "rgb(255, 252, 243)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "1px",
+          "text": "Be the Star of Every Holiday Party"
+        },
+        "words": 52,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2063,
+        "h": 862,
+        "bg": "rgb(255, 252, 243)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1px",
+          "text": "The 12 Days of Fishwife Advent Calendar"
+        },
+        "words": 97,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2925,
+        "h": 982,
+        "bg": "rgb(255, 252, 243)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1px",
+          "text": "A Gift That Everyone Will Love!"
+        },
+        "words": 97,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3907,
+        "h": 877,
+        "bg": "rgb(255, 252, 243)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.9px",
+          "text": "Meet Our Canneries"
+        },
+        "words": 35,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4784,
+        "h": 302,
+        "bg": "rgb(255, 248, 234)",
+        "images": 6,
+        "video": false,
+        "heading": null,
+        "words": 136,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5086,
+        "h": 763,
+        "bg": "rgb(255, 252, 243)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Recoleta",
+          "size": "60px",
+          "weight": "400",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Feast of the Seven Fishes Grazing Board"
+        },
+        "words": 347,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

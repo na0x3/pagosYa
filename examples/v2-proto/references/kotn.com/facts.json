@@ -1,0 +1,1045 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://kotn.com/",
+    "title": "Kotn: Premium quality basics, ethically made from Egyptian cotton.",
+    "width": 1440,
+    "pageHeight": 7105,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Söhne Breit",
+        "size": "56px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1.12px",
+        "text": "Gifts That Last"
+      },
+      "body": {
+        "family": "Söhne",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.12px",
+        "text": "Shop the Gift Guide"
+      },
+      "button": {
+        "family": "Söhne",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Söhne",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop the Gift Guide",
+        "FW26 Seasonal Knitwear",
+        "Free carbon off-set ship",
+        "Beit Kotn",
+        "Our Stores",
+        "EN / CAD",
+        "Search",
+        "My Account",
+        "Bag"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 72,
+        "h": 780,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Söhne Breit",
+          "size": "56px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-1.12px",
+          "text": "Gifts That Last"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 900,
+        "h": 463,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Gifts For Her"
+        },
+        "words": 15,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 1411,
+        "h": 677,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Our Top Picks for Gifts"
+        },
+        "words": 126,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 2135,
+        "h": 699,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2882,
+        "h": 677,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Shop Seasonal Knitwear"
+        },
+        "words": 130,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 3607,
+        "h": 517,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Shop by category"
+        },
+        "words": 12,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 4172,
+        "h": 677,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Shop New Arrivals"
+        },
+        "words": 134,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 4896,
+        "h": 780,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Söhne",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "About us"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5724,
+        "h": 464,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "25 schools funded. 5,127 farms supported."
+        },
+        "words": 27,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6236,
+        "h": 423,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Follow along on Instagram"
+        },
+        "words": 6,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 8,
+      "photoRatio": 0.67,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://kotn.com/",
+    "title": "Kotn: Premium quality basics, ethically made from Egyptian cotton.",
+    "width": 390,
+    "pageHeight": 8604,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Söhne Breit",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.96px",
+        "text": "Gifts That Last"
+      },
+      "body": {
+        "family": "Söhne",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.12px",
+        "text": "Shop the Gift Guide"
+      },
+      "button": null,
+      "nav": {
+        "family": "Söhne",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop the Gift Guide",
+        "FW26 Seasonal Knitwear",
+        "Free carbon off-set ship"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 72,
+        "h": 780,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Söhne Breit",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.96px",
+          "text": "Gifts That Last"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 900,
+        "h": 1094,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Gifts For Her"
+        },
+        "words": 15,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2042,
+        "h": 629,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Our Top Picks for Gifts"
+        },
+        "words": 81,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 2719,
+        "h": 726,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3493,
+        "h": 629,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Shop Seasonal Knitwear"
+        },
+        "words": 74,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 4170,
+        "h": 1148,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Shop by category"
+        },
+        "words": 12,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 5366,
+        "h": 629,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Shop New Arrivals"
+        },
+        "words": 78,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 6044,
+        "h": 780,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": {
+          "family": "Söhne",
+          "size": "12px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "About us"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6872,
+        "h": 380,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "25 schools funded. 5,127 farms supported."
+        },
+        "words": 27,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7300,
+        "h": 478,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Follow along on Instagram"
+        },
+        "words": 6,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://kotn.com/collections/all",
+    "title": "Products – Kotn",
+    "width": 1440,
+    "pageHeight": 4479,
+    "fonts": {
+      "h1": {
+        "family": "Söhne",
+        "size": "40px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-0.8px",
+        "text": "Products"
+      },
+      "h2": {
+        "family": "Söhne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get 15% Off"
+      },
+      "body": {
+        "family": "Söhne",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.12px",
+        "text": "Shop the Gift Guide"
+      },
+      "button": {
+        "family": "Söhne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Filter & Sort"
+      },
+      "nav": {
+        "family": "Söhne",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop the Gift Guide",
+        "FW26 Seasonal Knitwear",
+        "Free carbon off-set ship",
+        "Beit Kotn",
+        "Our Stores",
+        "EN / CAD",
+        "Search",
+        "My Account",
+        "Bag"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 72,
+        "h": 108,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "40px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.8px",
+          "text": "Products"
+        },
+        "words": 1,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 180,
+        "h": 3853,
+        "bg": "rgb(255, 255, 255)",
+        "images": 48,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.14px",
+          "text": "Abaza Shirt in Burgundy"
+        },
+        "words": 616,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 4,
+      "photoRatio": 0.67,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://kotn.com/collections/all",
+    "title": "Products – Kotn",
+    "width": 390,
+    "pageHeight": 5757,
+    "fonts": {
+      "h1": {
+        "family": "Söhne",
+        "size": "32px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-0.64px",
+        "text": "Products"
+      },
+      "h2": {
+        "family": "Söhne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get 15% Off"
+      },
+      "body": {
+        "family": "Söhne",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.12px",
+        "text": "Shop the Gift Guide"
+      },
+      "button": {
+        "family": "Söhne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Filter & Sort"
+      },
+      "nav": {
+        "family": "Söhne",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop the Gift Guide",
+        "FW26 Seasonal Knitwear",
+        "Free carbon off-set ship"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 131,
+        "h": 4800,
+        "bg": "rgb(255, 255, 255)",
+        "images": 48,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.14px",
+          "text": "Abaza Shirt in Burgundy"
+        },
+        "words": 284,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 2,
+      "photoRatio": 0.67,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://kotn.com/products/grid-stitch-wool-throw-in-natural-taupe",
+    "title": "Grid Stitch Wool Throw in Natural/Taupe – Kotn",
+    "width": 1440,
+    "pageHeight": 3228,
+    "fonts": {
+      "h1": {
+        "family": "Söhne",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.4px",
+        "text": "Grid Stitch Wool Throw in Natural/Taupe"
+      },
+      "h2": {
+        "family": "Söhne",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.4px",
+        "text": "You may also like"
+      },
+      "body": {
+        "family": "Söhne",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.12px",
+        "text": "Shop the Gift Guide"
+      },
+      "button": {
+        "family": "Söhne",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Söhne",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop the Gift Guide",
+        "FW26 Seasonal Knitwear",
+        "Free carbon off-set ship",
+        "Beit Kotn",
+        "Our Stores",
+        "EN / CAD",
+        "Search",
+        "My Account",
+        "Bag"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 72,
+        "h": 1411,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Grid Stitch Wool Throw in Natural/Taupe"
+        },
+        "words": 89,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1531,
+        "h": 677,
+        "bg": "rgb(255, 255, 255)",
+        "images": 20,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "You may also like"
+        },
+        "words": 169,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 2232,
+        "h": 575,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "About Us"
+        },
+        "words": 40,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to bag\n         — $148.00",
+      "aboveFold": true,
+      "top": 460,
+      "x": 980,
+      "width": 444,
+      "bg": "rgb(3, 3, 2)"
+    },
+    "price": null,
+    "galleryImages": 24,
+    "swatches": 74,
+    "selects": 2,
+    "accordions": 6
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://kotn.com/products/grid-stitch-wool-throw-in-natural-taupe",
+    "title": "Grid Stitch Wool Throw in Natural/Taupe – Kotn",
+    "width": 390,
+    "pageHeight": 3110,
+    "fonts": {
+      "h1": {
+        "family": "Söhne",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.4px",
+        "text": "Grid Stitch Wool Throw in Natural/Taupe"
+      },
+      "h2": {
+        "family": "Söhne",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.4px",
+        "text": "You may also like"
+      },
+      "body": {
+        "family": "Söhne",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.12px",
+        "text": "Shop the Gift Guide"
+      },
+      "button": {
+        "family": "Söhne",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Söhne",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop the Gift Guide",
+        "FW26 Seasonal Knitwear",
+        "Free carbon off-set ship"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 72,
+        "h": 1150,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "Grid Stitch Wool Throw in Natural/Taupe"
+        },
+        "words": 89,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1270,
+        "h": 630,
+        "bg": "rgb(255, 255, 255)",
+        "images": 20,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "You may also like"
+        },
+        "words": 99,
+        "perRow": 10,
+        "fullBleed": true
+      },
+      {
+        "y": 1924,
+        "h": 385,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Söhne",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "About Us"
+        },
+        "words": 40,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to bag\n         — $148.00",
+      "aboveFold": false,
+      "top": 1045,
+      "x": 16,
+      "width": 358,
+      "bg": "rgb(3, 3, 2)"
+    },
+    "price": null,
+    "galleryImages": 24,
+    "swatches": 74,
+    "selects": 2,
+    "accordions": 6
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://kotn.com/cart",
+    "title": "Your Shopping Cart – Kotn",
+    "width": 1440,
+    "pageHeight": 1054,
+    "fonts": {
+      "h1": {
+        "family": "Söhne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shopping Cart (1)"
+      },
+      "h2": {
+        "family": "Söhne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Get 15% Off"
+      },
+      "body": {
+        "family": "Söhne",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.12px",
+        "text": "Shop the Gift Guide"
+      },
+      "button": {
+        "family": "Söhne",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Söhne",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop the Gift Guide",
+        "FW26 Seasonal Knitwear",
+        "Free carbon off-set ship",
+        "Beit Kotn",
+        "Our Stores",
+        "EN / CAD",
+        "Search",
+        "My Account",
+        "Bag (1)"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 72,
+        "h": 536,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Söhne",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shopping Cart (1)"
+        },
+        "words": 48,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,1074 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.framebridge.com/",
+    "title": "Custom Picture Framing Online & In Retail Stores | Framebridge",
+    "width": 1440,
+    "pageHeight": 6792,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Cheltenham BT",
+        "size": "60px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "YOUR WALLS DO THE WELCOMING"
+      },
+      "body": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "Shop exciting new additions to The Farrow & Ball Collection"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "The Farrow & Ball Collection"
+      }
+    },
+    "page": "rgb(255, 249, 244)",
+    "header": {
+      "height": 130,
+      "position": "fixed",
+      "bg": "rgb(255, 249, 244)",
+      "links": [
+        "The Farrow & Ball Collec",
+        "Start gifting",
+        "Frame a matchbox",
+        "Start Framing",
+        "Shop All",
+        "The Holiday Shop",
+        "Framebridge",
+        "Get To Know Us",
+        "Stores",
+        "Support",
+        "Toggle Search",
+        "Go to Account",
+        "Toggle Cart"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 130,
+        "h": 600,
+        "bg": "rgb(255, 249, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "60px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "YOUR WALLS DO THE WELCOMING"
+        },
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 730,
+        "h": 875,
+        "bg": "rgb(255, 249, 244)",
+        "images": 19,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "60px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "New & Trending"
+        },
+        "words": 139,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 1605,
+        "h": 550,
+        "bg": "rgb(255, 249, 244)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2155,
+        "h": 902,
+        "bg": "rgb(255, 249, 244)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3057,
+        "h": 759,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 60,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3816,
+        "h": 570,
+        "bg": "rgb(255, 249, 244)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4426,
+        "h": 850,
+        "bg": "rgb(255, 249, 244)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "40px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "What we’ve been framing"
+        },
+        "words": 46,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 5277,
+        "h": 532,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "0.32px",
+          "text": "Design A Custom Frame"
+        },
+        "words": 15,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 4,
+      "columns": 4,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.framebridge.com/",
+    "title": "Custom Picture Framing Online & In Retail Stores | Framebridge",
+    "width": 390,
+    "pageHeight": 6169,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Cheltenham BT",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "YOUR WALLS DO THE WELCOMING"
+      },
+      "body": {
+        "family": "Apercu",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "Shop exciting new additions to The Farrow & Ball Collection"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.28px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "The Farrow & Ball Collection"
+      }
+    },
+    "page": "rgb(255, 249, 244)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(255, 249, 244)",
+      "links": [
+        "The Farrow & Ball Collec",
+        "Start gifting",
+        "Frame a matchbox",
+        "Open Mobile Menu",
+        "Framebridge",
+        "Toggle Search",
+        "Toggle Cart"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 80,
+        "h": 705,
+        "bg": "rgb(255, 249, 244)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "YOUR WALLS DO THE WELCOMING"
+        },
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 785,
+        "h": 663,
+        "bg": "rgb(255, 249, 244)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "New & Trending"
+        },
+        "words": 139,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 1448,
+        "h": 550,
+        "bg": "rgb(255, 249, 244)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1998,
+        "h": 683,
+        "bg": "rgb(255, 249, 244)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2681,
+        "h": 703,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 60,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3384,
+        "h": 550,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3954,
+        "h": 534,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "What we’ve been framing"
+        },
+        "words": 46,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 4488,
+        "h": 414,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "16px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "0.28px",
+          "text": "Design A Custom Frame"
+        },
+        "words": 15,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.framebridge.com/collections/all",
+    "title": "Shop All Framebridge Frame Products",
+    "width": 1440,
+    "pageHeight": 8846,
+    "fonts": {
+      "h1": {
+        "family": "Cheltenham BT",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "Cheltenham BT",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "If you’re not 100% happy with your order for any reason, let"
+      },
+      "body": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "Shop exciting new additions to The Farrow & Ball Collection"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "The Farrow & Ball Collection"
+      }
+    },
+    "page": "rgb(255, 249, 244)",
+    "header": {
+      "height": 130,
+      "position": "fixed",
+      "bg": "rgb(255, 249, 244)",
+      "links": [
+        "The Farrow & Ball Collec",
+        "Start gifting",
+        "Frame a matchbox",
+        "Start Framing",
+        "Shop All",
+        "The Holiday Shop",
+        "Framebridge",
+        "Get To Know Us",
+        "Stores",
+        "Support",
+        "Toggle Search",
+        "Go to Account",
+        "Toggle Cart"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 180,
+        "h": 455,
+        "bg": "rgb(255, 249, 244)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop All"
+        },
+        "words": 74,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 635,
+        "h": 7228,
+        "bg": "rgb(255, 249, 244)",
+        "images": 18,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "18px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Mercer Slim"
+        },
+        "words": 875,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 14,
+      "columns": 4,
+      "photoRatio": 0.99,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.framebridge.com/collections/all?_su_rec=o7j1PkrhEeaanRtc3n_22Kpq9qdlpBdrDFXDz4PJociJK6H8nRiS7SglD4P-1Z9UBj_yl1EJAi3cjS0A0nlMd76d6OuMAmuH5b1uqwEpfEazpSSUAeV_-G0iPeZCO7OXGp0XEkTt6U5N7iuF0arKGN1mcOCnHkNRX6s2AjNusQt2K-htRm5CkCQlWkSDS-7_gGPjPAGmkxPIZlQsBX3dJy6hue7pHEhJZMBN0qgzxnthxuCnfGncJbEgQ1HoHXMgRhZbk7BhqHjadmxmiA_OsjqyUTMABKONDQE0Gccsi743l2q0DHPt9fvtpunWWUqifYmoNahLyCyaZ4fturk1LUaFsvf_Zj6q-8WsAEluDGEpeQ&_su_rec_id=d3c1c431-a5f4-4ec4-9408-9d6b19712c0d-1794668427",
+    "title": "Shop All Framebridge Frame Products",
+    "width": 390,
+    "pageHeight": 26430,
+    "fonts": {
+      "h1": {
+        "family": "Cheltenham BT",
+        "size": "24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "Cheltenham BT",
+        "size": "18px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "If you’re not 100% happy with your order for any reason, let"
+      },
+      "body": {
+        "family": "Apercu",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "Shop exciting new additions to The Farrow & Ball Collection"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.28px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "The Farrow & Ball Collection"
+      }
+    },
+    "page": "rgb(255, 249, 244)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(255, 249, 244)",
+      "links": [
+        "The Farrow & Ball Collec",
+        "Start gifting",
+        "Frame a matchbox",
+        "Open Mobile Menu",
+        "Framebridge",
+        "Toggle Search",
+        "Toggle Cart"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 130,
+        "h": 400,
+        "bg": "rgb(255, 249, 244)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop All"
+        },
+        "words": 74,
+        "perRow": 7,
+        "fullBleed": true
+      },
+      {
+        "y": 530,
+        "h": 24609,
+        "bg": "rgb(255, 249, 244)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "16px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Mercer Slim"
+        },
+        "words": 898,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.framebridge.com/products/the-colour-drenched-stack?variant=67708529312059",
+    "title": "The Colour Drenched Stack – Framebridge",
+    "width": 1440,
+    "pageHeight": 5738,
+    "fonts": {
+      "h1": {
+        "family": "Cheltenham BT",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Colour Drenched Stack"
+      },
+      "h2": {
+        "family": "Apercu",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": "2 Frames | 16\" x 36\" Display Size"
+      },
+      "body": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "Shop exciting new additions to The Farrow & Ball Collection"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "The Farrow & Ball Collection"
+      }
+    },
+    "page": "rgb(255, 249, 244)",
+    "header": {
+      "height": 130,
+      "position": "fixed",
+      "bg": "rgb(255, 249, 244)",
+      "links": [
+        "The Farrow & Ball Collec",
+        "Start gifting",
+        "Frame a matchbox",
+        "Start Framing",
+        "Shop All",
+        "The Holiday Shop",
+        "Framebridge",
+        "Get To Know Us",
+        "Stores",
+        "Support",
+        "Toggle Search",
+        "Go to Account",
+        "Toggle Cart"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 130,
+        "h": 2051,
+        "bg": "rgb(255, 249, 244)",
+        "images": 20,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Colour Drenched Stack"
+        },
+        "words": 235,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2181,
+        "h": 446,
+        "bg": "rgb(255, 249, 244)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "40px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How it works"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2627,
+        "h": 945,
+        "bg": "rgb(255, 249, 244)",
+        "images": 26,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "60px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "We Also Recommend"
+        },
+        "words": 257,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 3572,
+        "h": 746,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "40px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "You’ve Got Questions, We’ve Got Answers"
+        },
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4318,
+        "h": 438,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Apercu",
+      "size": "16px",
+      "weight": "700",
+      "case": "none",
+      "tracking": "0.32px",
+      "text": "$300"
+    },
+    "galleryImages": 13,
+    "swatches": 351,
+    "selects": 1,
+    "accordions": 60
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.framebridge.com/products/the-colour-drenched-stack?variant=67708529312059",
+    "title": "The Colour Drenched Stack – Framebridge",
+    "width": 390,
+    "pageHeight": 5690,
+    "fonts": {
+      "h1": {
+        "family": "Cheltenham BT",
+        "size": "24px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Colour Drenched Stack"
+      },
+      "h2": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.28px",
+        "text": "2 Frames | 16\" x 36\" Display Size"
+      },
+      "body": {
+        "family": "Apercu",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "Shop exciting new additions to The Farrow & Ball Collection"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "14px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.28px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "10px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "The Farrow & Ball Collection"
+      }
+    },
+    "page": "rgb(255, 249, 244)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(255, 249, 244)",
+      "links": [
+        "The Farrow & Ball Collec",
+        "Start gifting",
+        "Frame a matchbox",
+        "Open Mobile Menu",
+        "Framebridge",
+        "Toggle Search",
+        "Toggle Cart"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 80,
+        "h": 2289,
+        "bg": "rgb(255, 249, 244)",
+        "images": 22,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Colour Drenched Stack"
+        },
+        "words": 226,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2369,
+        "h": 486,
+        "bg": "rgb(255, 249, 244)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How it works"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2855,
+        "h": 778,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "We Also Recommend"
+        },
+        "words": 257,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 3633,
+        "h": 485,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "35px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "You’ve Got Questions, We’ve Got Answers"
+        },
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4118,
+        "h": 304,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Apercu",
+      "size": "16px",
+      "weight": "700",
+      "case": "none",
+      "tracking": "0.32px",
+      "text": "$300"
+    },
+    "galleryImages": 3,
+    "swatches": 343,
+    "selects": 1,
+    "accordions": 60
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.framebridge.com/cart",
+    "title": "Your Shopping Cart – Framebridge",
+    "width": 1440,
+    "pageHeight": 2594,
+    "fonts": {
+      "h1": {
+        "family": "Cheltenham BT",
+        "size": "32px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Looks like your cart is empty!"
+      },
+      "h2": {
+        "family": "Cheltenham BT",
+        "size": "60px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Not sure where to start?"
+      },
+      "body": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "Shop exciting new additions to The Farrow & Ball Collection"
+      },
+      "button": {
+        "family": "Apercu",
+        "size": "16px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.32px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Apercu",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "The Farrow & Ball Collection"
+      }
+    },
+    "page": "rgb(255, 249, 244)",
+    "header": {
+      "height": 130,
+      "position": "fixed",
+      "bg": "rgb(255, 249, 244)",
+      "links": [
+        "The Farrow & Ball Collec",
+        "Start gifting",
+        "Frame a matchbox",
+        "Start Framing",
+        "Shop All",
+        "The Holiday Shop",
+        "Framebridge",
+        "Get To Know Us",
+        "Stores",
+        "Support",
+        "Toggle Search",
+        "Go to Account",
+        "Toggle Cart"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 130,
+        "h": 490,
+        "bg": "rgb(255, 249, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Looks like your cart is empty!"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 620,
+        "h": 991,
+        "bg": "rgb(255, 249, 244)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Cheltenham BT",
+          "size": "60px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Not sure where to start?"
+        },
+        "words": 182,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ]
+  }
+}

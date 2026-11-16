@@ -1,0 +1,1018 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://sietefoods.com/",
+    "title": "Siete Foods",
+    "width": 1440,
+    "pageHeight": 10224,
+    "fonts": {
+      "h1": {
+        "family": "Queulat",
+        "size": "50.4px",
+        "weight": "900",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Siete is a Mexican-American food brand, rooted in family."
+      },
+      "h2": {
+        "family": "Queulat",
+        "size": "43.2px",
+        "weight": "900",
+        "case": "none",
+        "tracking": "normal",
+        "text": "From Our Kitchen to Your Table"
+      },
+      "body": {
+        "family": "BD Rendall",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Hmmm... Seems like"
+      },
+      "button": {
+        "family": "ui-sans-serif",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Checkout"
+      },
+      "nav": null
+    },
+    "page": "rgb(248, 240, 226)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 112,
+        "h": 1321,
+        "bg": "rgb(248, 240, 226)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "50.4px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Siete is a Mexican-American food brand, rooted in family."
+        },
+        "words": 27,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1433,
+        "h": 2324,
+        "bg": "rgb(248, 240, 226)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "43.2px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gather, create, and share together because ¡Juntos es Mejor!"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3852,
+        "h": 1198,
+        "bg": "rgb(248, 240, 226)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 84,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5050,
+        "h": 1584,
+        "bg": "rgb(113, 10, 94)",
+        "images": 9,
+        "video": false,
+        "heading": null,
+        "words": 17,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 6634,
+        "h": 1357,
+        "bg": "rgb(248, 240, 226)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "43.2px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "From Our Kitchen to Your Table"
+        },
+        "words": 72,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 7990,
+        "h": 1368,
+        "bg": "rgb(248, 240, 226)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "39.6px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Find Siete near, far, wherever you are!"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://sietefoods.com/",
+    "title": "Siete Foods",
+    "width": 390,
+    "pageHeight": 7510,
+    "fonts": {
+      "h1": {
+        "family": "Queulat",
+        "size": "28px",
+        "weight": "900",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Siete is a Mexican-American food brand, rooted in family."
+      },
+      "h2": {
+        "family": "Queulat",
+        "size": "24px",
+        "weight": "900",
+        "case": "none",
+        "tracking": "normal",
+        "text": "From Our Kitchen to Your Table"
+      },
+      "body": {
+        "family": "BD Rendall",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Hmmm... Seems like"
+      },
+      "button": {
+        "family": "ui-sans-serif",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Checkout"
+      },
+      "nav": null
+    },
+    "page": "rgb(248, 240, 226)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 72,
+        "h": 963,
+        "bg": "rgb(248, 240, 226)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "28px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Siete is a Mexican-American food brand, rooted in family."
+        },
+        "words": 27,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 975,
+        "h": 1011,
+        "bg": "rgb(248, 240, 226)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "24px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gather, create, and share together because ¡Juntos es Mejor!"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2083,
+        "h": 1393,
+        "bg": "rgb(248, 240, 226)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 84,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3476,
+        "h": 1426,
+        "bg": "rgb(113, 10, 94)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 17,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 4901,
+        "h": 909,
+        "bg": "rgb(248, 240, 226)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "24px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "From Our Kitchen to Your Table"
+        },
+        "words": 72,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 5810,
+        "h": 567,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "22px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Find Siete near, far, wherever you are!"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://sietefoods.com/shop/",
+    "title": "Explore Siete Products",
+    "width": 1440,
+    "pageHeight": 16230,
+    "fonts": {
+      "h1": {
+        "family": "BD Rendall",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Gather together for meals and snacks!"
+      },
+      "h2": {
+        "family": "Queulat",
+        "size": "50.4px",
+        "weight": "900",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Explore Siete Products"
+      },
+      "body": {
+        "family": "BD Rendall",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Hmmm... Seems like"
+      },
+      "button": {
+        "family": "ui-sans-serif",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Checkout"
+      },
+      "nav": null
+    },
+    "page": "rgb(248, 240, 226)",
+    "header": null,
+    "marquee": false,
+    "videos": 3,
+    "sections": [
+      {
+        "y": 184,
+        "h": 172,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "BD Rendall",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gather together for meals and snacks!"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 436,
+        "h": 762,
+        "bg": "rgb(248, 240, 226)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Seasonal"
+        },
+        "words": 8,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1286,
+        "h": 1009,
+        "bg": "rgb(248, 240, 226)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Kettle Cooked Potato Chips"
+        },
+        "words": 33,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2383,
+        "h": 846,
+        "bg": "rgb(248, 240, 226)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Gluten Free Tortillas"
+        },
+        "words": 18,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 3317,
+        "h": 816,
+        "bg": "rgb(248, 240, 226)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Seasoning"
+        },
+        "words": 18,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 4221,
+        "h": 846,
+        "bg": "rgb(248, 240, 226)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Grain Free Cookies"
+        },
+        "words": 28,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 5155,
+        "h": 762,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Maíz Corn Tortilla Chips"
+        },
+        "words": 30,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 6004,
+        "h": 762,
+        "bg": "rgb(248, 240, 226)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Grain Free Tortillas"
+        },
+        "words": 20,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 6854,
+        "h": 762,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Grain Free Tortilla Chips"
+        },
+        "words": 29,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 7703,
+        "h": 762,
+        "bg": "rgb(248, 240, 226)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Grain Free Puff Snacks"
+        },
+        "words": 22,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 8553,
+        "h": 762,
+        "bg": "rgb(248, 240, 226)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Taco Shells"
+        },
+        "words": 12,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 9403,
+        "h": 762,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Beans"
+        },
+        "words": 14,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 10252,
+        "h": 762,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Salsa"
+        },
+        "words": 17,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 11102,
+        "h": 762,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Botana Sauce"
+        },
+        "words": 16,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 11951,
+        "h": 762,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Enchilada Sauce"
+        },
+        "words": 14,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 12801,
+        "h": 819,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Merch y Más"
+        },
+        "words": 36,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 13708,
+        "h": 1656,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "46.8px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Find Us Near You"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://sietefoods.com/shop/",
+    "title": "Explore Siete Products",
+    "width": 390,
+    "pageHeight": 16574,
+    "fonts": {
+      "h1": {
+        "family": "BD Rendall",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Gather together for meals and snacks!"
+      },
+      "h2": {
+        "family": "Queulat",
+        "size": "28px",
+        "weight": "900",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Explore Siete Products"
+      },
+      "body": {
+        "family": "BD Rendall",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Hmmm... Seems like"
+      },
+      "button": {
+        "family": "ui-sans-serif",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Checkout"
+      },
+      "nav": null
+    },
+    "page": "rgb(248, 240, 226)",
+    "header": null,
+    "marquee": false,
+    "videos": 3,
+    "sections": [
+      {
+        "y": 184,
+        "h": 139,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "BD Rendall",
+          "size": "17px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gather together for meals and snacks!"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 403,
+        "h": 639,
+        "bg": "rgb(248, 240, 226)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Seasonal"
+        },
+        "words": 8,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1130,
+        "h": 864,
+        "bg": "rgb(248, 240, 226)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Kettle Cooked Potato Chips"
+        },
+        "words": 33,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2082,
+        "h": 804,
+        "bg": "rgb(248, 240, 226)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Gluten Free Tortillas"
+        },
+        "words": 18,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2975,
+        "h": 870,
+        "bg": "rgb(248, 240, 226)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Seasoning"
+        },
+        "words": 18,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 3932,
+        "h": 870,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Grain Free Cookies"
+        },
+        "words": 28,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 4890,
+        "h": 864,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Maíz Corn Tortilla Chips"
+        },
+        "words": 30,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 5842,
+        "h": 844,
+        "bg": "rgb(248, 240, 226)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Grain Free Tortillas"
+        },
+        "words": 20,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 6775,
+        "h": 864,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Grain Free Tortilla Chips"
+        },
+        "words": 29,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 7727,
+        "h": 864,
+        "bg": "rgb(248, 240, 226)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Grain Free Puff Snacks"
+        },
+        "words": 22,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 8680,
+        "h": 769,
+        "bg": "rgb(248, 240, 226)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Taco Shells"
+        },
+        "words": 12,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 9537,
+        "h": 844,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Beans"
+        },
+        "words": 14,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 10469,
+        "h": 844,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Salsa"
+        },
+        "words": 17,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 11402,
+        "h": 844,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Botana Sauce"
+        },
+        "words": 16,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 12334,
+        "h": 639,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Enchilada Sauce"
+        },
+        "words": 14,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 13061,
+        "h": 920,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "capitalize",
+          "tracking": "normal",
+          "text": "Merch y Más"
+        },
+        "words": 36,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 14070,
+        "h": 1372,
+        "bg": "rgb(248, 240, 226)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Queulat",
+          "size": "26px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Find Us Near You"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  }
+}

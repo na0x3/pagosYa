@@ -1,0 +1,1123 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://ceremonia.com/",
+    "title": "Clean Haircare rooted in Latinx Heritage | Ceremonia",
+    "width": 1440,
+    "pageHeight": 6819,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "NimbusSansBoldExtended",
+        "size": "48px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Our Bestsellers"
+      },
+      "body": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "FREE SHIPPING ON $65+ ORDERS"
+      },
+      "button": {
+        "family": "BasisGrotesque",
+        "size": "16px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.48px",
+        "text": ""
+      },
+      "nav": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "FREE SHIPPING ON $65+ ORDERS"
+      }
+    },
+    "page": "rgb(242, 230, 210)",
+    "header": {
+      "height": 43,
+      "position": "relative",
+      "bg": "rgb(242, 230, 210)",
+      "links": [
+        "FREE SHIPPING ON $65+ OR"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 7,
+    "sections": [
+      {
+        "y": 121,
+        "h": 560,
+        "bg": "rgb(242, 230, 210)",
+        "images": 4,
+        "video": true,
+        "heading": null,
+        "words": 32,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 681,
+        "h": 104,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 785,
+        "h": 108,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "48px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Our Bestsellers"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 893,
+        "h": 661,
+        "bg": "rgb(242, 230, 210)",
+        "images": 17,
+        "video": false,
+        "heading": null,
+        "words": 354,
+        "perRow": 13,
+        "fullBleed": true
+      },
+      {
+        "y": 1555,
+        "h": 154,
+        "bg": "rgb(242, 230, 210)",
+        "images": 20,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1708,
+        "h": 826,
+        "bg": "rgb(242, 230, 210)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "31.68px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Shop This Ritual"
+        },
+        "words": 64,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2534,
+        "h": 173,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "48px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Shop by Concern"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2707,
+        "h": 608,
+        "bg": "rgb(242, 230, 210)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 10,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 3315,
+        "h": 730,
+        "bg": "rgb(242, 230, 210)",
+        "images": 30,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "48px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Bundles"
+        },
+        "words": 111,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4046,
+        "h": 610,
+        "bg": "rgb(242, 230, 210)",
+        "images": 21,
+        "video": true,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "See real reviews"
+        },
+        "words": 92,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4656,
+        "h": 497,
+        "bg": "rgb(242, 230, 210)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "48px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Our Approach"
+        },
+        "words": 56,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5153,
+        "h": 635,
+        "bg": "rgb(242, 230, 210)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "48px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "The Story of Ceremonia"
+        },
+        "words": 60,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5787,
+        "h": 308,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 27,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 6,
+      "columns": 6,
+      "photoRatio": 0.75,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://ceremonia.com/",
+    "title": "Clean Haircare rooted in Latinx Heritage | Ceremonia",
+    "width": 390,
+    "pageHeight": 6579,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "NimbusSansBoldExtended",
+        "size": "28px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Our Bestsellers"
+      },
+      "body": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "FREE SHIPPING ON $65+ ORDERS"
+      },
+      "button": {
+        "family": "BasisGrotesque",
+        "size": "16px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.48px",
+        "text": ""
+      },
+      "nav": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "FREE SHIPPING ON $65+ ORDERS"
+      }
+    },
+    "page": "rgb(242, 230, 210)",
+    "header": {
+      "height": 56,
+      "position": "relative",
+      "bg": "rgb(242, 230, 210)",
+      "links": [
+        "FREE SHIPPING ON $65+ OR",
+        "FREE PAPAYA SCALP SCRUB "
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 7,
+    "sections": [
+      {
+        "y": 117,
+        "h": 340,
+        "bg": "rgb(242, 230, 210)",
+        "images": 4,
+        "video": true,
+        "heading": null,
+        "words": 32,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 457,
+        "h": 228,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 685,
+        "h": 140,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "28px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Our Bestsellers"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 825,
+        "h": 901,
+        "bg": "rgb(242, 230, 210)",
+        "images": 9,
+        "video": false,
+        "heading": null,
+        "words": 143,
+        "perRow": 9,
+        "fullBleed": true
+      },
+      {
+        "y": 1726,
+        "h": 115,
+        "bg": "rgb(242, 230, 210)",
+        "images": 10,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1841,
+        "h": 993,
+        "bg": "rgb(242, 230, 210)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "20px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Shop This Ritual"
+        },
+        "words": 68,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2834,
+        "h": 122,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "28px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Shop by Concern"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2956,
+        "h": 558,
+        "bg": "rgb(242, 230, 210)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 10,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 3514,
+        "h": 613,
+        "bg": "rgb(242, 230, 210)",
+        "images": 30,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "28px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Bundles"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4127,
+        "h": 616,
+        "bg": "rgb(242, 230, 210)",
+        "images": 20,
+        "video": true,
+        "heading": {
+          "family": "BasisGrotesque",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "See real reviews"
+        },
+        "words": 92,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4743,
+        "h": 719,
+        "bg": "rgb(242, 230, 210)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "28px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Our Approach"
+        },
+        "words": 56,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 5463,
+        "h": 725,
+        "bg": "rgb(242, 230, 210)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "28px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "The Story of Ceremonia"
+        },
+        "words": 60,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6187,
+        "h": 287,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 27,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://ceremonia.com/collections/all",
+    "title": "Products – Ceremonia",
+    "width": 1440,
+    "pageHeight": 6320,
+    "fonts": {
+      "h1": {
+        "family": "NimbusSansBoldExtended",
+        "size": "72px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Products"
+      },
+      "h2": {
+        "family": "NimbusSansBoldExtended",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Your Cart"
+      },
+      "body": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "FREE SHIPPING ON $65+ ORDERS"
+      },
+      "button": {
+        "family": "BasisGrotesque",
+        "size": "16px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.48px",
+        "text": ""
+      },
+      "nav": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "FREE SHIPPING ON $65+ ORDERS"
+      }
+    },
+    "page": "rgb(242, 230, 210)",
+    "header": {
+      "height": 43,
+      "position": "relative",
+      "bg": "rgb(242, 230, 210)",
+      "links": [
+        "FREE SHIPPING ON $65+ OR"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 121,
+        "h": 450,
+        "bg": "rgb(4, 4, 4)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 121,
+        "h": 450,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "72px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Products"
+        },
+        "words": 1,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 571,
+        "h": 5599,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 571,
+        "h": 5599,
+        "bg": "rgb(242, 230, 210)",
+        "images": 107,
+        "video": false,
+        "heading": null,
+        "words": 480,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://ceremonia.com/collections/all?_su_rec=GivvOjieVbFQNWsjKSVH0M2YClfM-YhU0yVBwB0j2XevgeejebDLiihbgJxSquGLRhPNAzv4zbgodFFU5RXNJfquBImz4oXjCWJgIbY6oeQFmF96ayt_NRv-Tg1nYBwmG8d6EM3D5o9DUEqrTEoPrX56RcpEFQTU53kPi-ywMz2Xy461-E041yOXL37eYtPAF5K3HASuMGfkas8oixUscFR9y7uw6u3ceqBmDRYJ04V_mbuNT4LzaFBHYjOVGZVx14GTQjKLaQpEY2d-W_T4Fb36cGM2Df9qGhkKINjBMk-3IH7GXJN6KghvhlqJ9VYl-fGBugo-m4yEOsge4hBUis_1elrJ6VreY_ia&_su_rec_id=a74d9079-cf21-46ef-b6b5-a305634ceca8-1794667183",
+    "title": "Products – Ceremonia",
+    "width": 390,
+    "pageHeight": 13735,
+    "fonts": {
+      "h1": {
+        "family": "NimbusSansBoldExtended",
+        "size": "48px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Products"
+      },
+      "h2": {
+        "family": "NimbusSansBoldExtended",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Your Cart"
+      },
+      "body": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.36px",
+        "text": "FREE PAPAYA SCALP SCRUB ON $75+ ORDERS"
+      },
+      "button": {
+        "family": "BasisGrotesque",
+        "size": "16px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.48px",
+        "text": ""
+      },
+      "nav": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.36px",
+        "text": "FREE PAPAYA SCALP SCRUB ON $75+ ORDERS"
+      }
+    },
+    "page": "rgb(242, 230, 210)",
+    "header": {
+      "height": 56,
+      "position": "relative",
+      "bg": "rgb(242, 230, 210)",
+      "links": [
+        "FREE PAPAYA SCALP SCRUB "
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 117,
+        "h": 240,
+        "bg": "rgb(4, 4, 4)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 117,
+        "h": 240,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "48px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Products"
+        },
+        "words": 1,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 357,
+        "h": 13272,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 357,
+        "h": 13272,
+        "bg": "rgb(242, 230, 210)",
+        "images": 107,
+        "video": false,
+        "heading": null,
+        "words": 470,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://ceremonia.com/products/the-hair-wellness-kit",
+    "title": "Hair Wellness Kit – Ceremonia",
+    "width": 1440,
+    "pageHeight": 4253,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "NimbusSansBoldExtended",
+        "size": "28px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Hair Wellness Kit"
+      },
+      "body": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "FREE SHIPPING ON $65+ ORDERS"
+      },
+      "button": {
+        "family": "BasisGrotesque",
+        "size": "16px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.48px",
+        "text": ""
+      },
+      "nav": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "FREE SHIPPING ON $65+ ORDERS"
+      }
+    },
+    "page": "rgb(242, 230, 210)",
+    "header": {
+      "height": 43,
+      "position": "relative",
+      "bg": "rgb(242, 230, 210)",
+      "links": [
+        "FREE SHIPPING ON $65+ OR"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 8,
+    "sections": [
+      {
+        "y": 121,
+        "h": 877,
+        "bg": "rgb(242, 230, 210)",
+        "images": 42,
+        "video": true,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Hair Wellness Kit"
+        },
+        "words": 126,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1078,
+        "h": 847,
+        "bg": "rgb(242, 230, 210)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "AS SEEN ON YOU"
+        },
+        "words": 158,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1925,
+        "h": 1604,
+        "bg": "rgb(242, 230, 210)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "21.45px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Customer reviews"
+        },
+        "words": 190,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Bag\n             (1)",
+      "aboveFold": false,
+      "top": 951,
+      "x": 1254,
+      "width": 175,
+      "bg": "rgb(3, 3, 2)"
+    },
+    "price": {
+      "family": "BasisGrotesque",
+      "size": "16px",
+      "weight": "800",
+      "case": "none",
+      "tracking": "normal",
+      "text": "/* Hide default price when subscription is active */ div:has"
+    },
+    "galleryImages": 28,
+    "swatches": 2,
+    "selects": 5,
+    "accordions": 12
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://ceremonia.com/products/the-hair-wellness-kit",
+    "title": "Hair Wellness Kit – Ceremonia",
+    "width": 390,
+    "pageHeight": 4955,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "NimbusSansBoldExtended",
+        "size": "24px",
+        "weight": "800",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Hair Wellness Kit"
+      },
+      "body": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "FREE SHIPPING ON $65+ ORDERS"
+      },
+      "button": {
+        "family": "BasisGrotesque",
+        "size": "16px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.48px",
+        "text": ""
+      },
+      "nav": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "FREE SHIPPING ON $65+ ORDERS"
+      }
+    },
+    "page": "rgb(242, 230, 210)",
+    "header": {
+      "height": 56,
+      "position": "relative",
+      "bg": "rgb(242, 230, 210)",
+      "links": [
+        "FREE SHIPPING ON $65+ OR"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 8,
+    "sections": [
+      {
+        "y": 117,
+        "h": 1398,
+        "bg": "rgb(242, 230, 210)",
+        "images": 31,
+        "video": true,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "16px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Hair Wellness Kit"
+        },
+        "words": 133,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1579,
+        "h": 1182,
+        "bg": "rgb(242, 230, 210)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "16px",
+          "weight": "800",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "AS SEEN ON YOU"
+        },
+        "words": 162,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2761,
+        "h": 2089,
+        "bg": "rgb(242, 230, 210)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "21.45px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Customer reviews"
+        },
+        "words": 190,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Bag\n             (1)",
+      "aboveFold": false,
+      "top": 895,
+      "x": 327,
+      "width": 52,
+      "bg": "rgb(3, 3, 2)"
+    },
+    "price": {
+      "family": "BasisGrotesque",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "/* Hide default price when subscription is active */ div:has"
+    },
+    "galleryImages": 16,
+    "swatches": 2,
+    "selects": 5,
+    "accordions": 12
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://ceremonia.com/cart",
+    "title": "Your Shopping Cart – Ceremonia",
+    "width": 1440,
+    "pageHeight": 1988,
+    "fonts": {
+      "h1": {
+        "family": "NimbusSansBoldExtended",
+        "size": "48px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Cart Total items in cart: 1 1"
+      },
+      "h2": null,
+      "body": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.36px",
+        "text": "FREE PAPAYA SCALP SCRUB ON $75+ ORDERS"
+      },
+      "button": {
+        "family": "BasisGrotesque",
+        "size": "16px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.48px",
+        "text": ""
+      },
+      "nav": {
+        "family": "NimbusSansBoldExtended",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "0.36px",
+        "text": "FREE PAPAYA SCALP SCRUB ON $75+ ORDERS"
+      }
+    },
+    "page": "rgb(242, 230, 210)",
+    "header": {
+      "height": 43,
+      "position": "relative",
+      "bg": "rgb(242, 230, 210)",
+      "links": [
+        "FREE PAPAYA SCALP SCRUB "
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 121,
+        "h": 522,
+        "bg": "rgb(242, 230, 210)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "48px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Cart Total items in cart: 1 1"
+        },
+        "words": 56,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 643,
+        "h": 621,
+        "bg": "rgb(242, 230, 210)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 643,
+        "h": 621,
+        "bg": "rgb(242, 230, 210)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "NimbusSansBoldExtended",
+          "size": "24px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "You may also like"
+        },
+        "words": 52,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

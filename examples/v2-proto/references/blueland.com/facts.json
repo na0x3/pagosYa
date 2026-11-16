@@ -1,0 +1,1310 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.blueland.com/",
+    "title": "Eco-Friendly Cleaning Products for Home | Blueland",
+    "width": 1440,
+    "pageHeight": 7730,
+    "fonts": {
+      "h1": {
+        "family": "Sailec",
+        "size": "48px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cleaner Celebrations, Brighter Holidays"
+      },
+      "h2": {
+        "family": "Sailec",
+        "size": "40px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop By Category"
+      },
+      "body": {
+        "family": "Sailec",
+        "size": "13px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to Refill"
+      },
+      "button": {
+        "family": "Sailec",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Slider Navigation Left"
+      },
+      "nav": {
+        "family": "Sailec",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to RefillShop Holiday Hand Soap →‘Tis the Se"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 105,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "‘Tis the Season to Refil",
+        "New: Lavender Sage Laund",
+        "New: PowerDuo Laundry Ta",
+        "Now shipping to CAN, UK,",
+        "Slider Navigation Left",
+        "Slider Navigation Right",
+        "ShopShop",
+        "Holiday ShopHoliday Shop",
+        "Blueland logo",
+        "About UsAbout Us",
+        "Our MissionOur Mission",
+        "Search",
+        "Register or Sign in",
+        "Account menu",
+        "Cart0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 155,
+        "h": 745,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Sailec",
+          "size": "48px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cleaner Celebrations, Brighter Holidays"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 900,
+        "h": 608,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop By Category"
+        },
+        "words": 91,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1508,
+        "h": 507,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "4,000,000+ Homes Have Made the Switch"
+        },
+        "words": 36,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2015,
+        "h": 769,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Bestsellers"
+        },
+        "words": 282,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 2784,
+        "h": 480,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "\"World Changing Ideas\""
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3264,
+        "h": 795,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "A Clean the Whole Planet Can Feel"
+        },
+        "words": 21,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4059,
+        "h": 711,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "100,000+ 5-Star Reviews and Counting"
+        },
+        "words": 150,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4770,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How It Works"
+        },
+        "words": 32,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5490,
+        "h": 626,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "A Higher Standard of Clean"
+        },
+        "words": 42,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6115,
+        "h": 732,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Good Clean Fun"
+        },
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6847,
+        "h": 272,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Start Your Journey"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 8,
+      "columns": 8,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.blueland.com/",
+    "title": "Eco-Friendly Cleaning Products for Home | Blueland",
+    "width": 390,
+    "pageHeight": 7604,
+    "fonts": {
+      "h1": {
+        "family": "Sailec",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Cleaner Celebrations, Brighter Holidays"
+      },
+      "h2": {
+        "family": "Sailec",
+        "size": "26px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop By Category"
+      },
+      "body": {
+        "family": "Sailec",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to Refill"
+      },
+      "button": {
+        "family": "Sailec",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Sailec",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to RefillShop Holiday Hand Soap →‘Tis the Se"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 94,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "‘Tis the Season to Refil",
+        "New: Lavender Sage Laund",
+        "New: PowerDuo Laundry Ta",
+        "Now shipping to CAN, UK,",
+        "Slider Navigation Left",
+        "Slider Navigation Right",
+        "Navigation",
+        "Blueland logo",
+        "Search",
+        "Cart0",
+        "Close mobile menu",
+        "Shop All",
+        "Bestsellers",
+        "Starter Kits",
+        "Refills",
+        "Holiday Shop"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 134,
+        "h": 710,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Sailec",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cleaner Celebrations, Brighter Holidays"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 844,
+        "h": 518,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop By Category"
+        },
+        "words": 91,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1362,
+        "h": 640,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "4,000,000+ Homes Have Made the Switch"
+        },
+        "words": 36,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2001,
+        "h": 735,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Bestsellers"
+        },
+        "words": 234,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 2736,
+        "h": 423,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "\"World Changing Ideas\""
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3159,
+        "h": 750,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "A Clean the Whole Planet Can Feel"
+        },
+        "words": 21,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3909,
+        "h": 696,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "100,000+ 5-Star Reviews and Counting"
+        },
+        "words": 150,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4605,
+        "h": 596,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How It Works"
+        },
+        "words": 32,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5201,
+        "h": 478,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "A Higher Standard of Clean"
+        },
+        "words": 42,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5680,
+        "h": 549,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Good Clean Fun"
+        },
+        "words": 7,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6229,
+        "h": 199,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Start Your Journey"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.blueland.com/collections/all",
+    "title": "Eco-Friendly Cleaning Products | Blueland",
+    "width": 1440,
+    "pageHeight": 12953,
+    "fonts": {
+      "h1": {
+        "family": "Sailec",
+        "size": "40px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop All"
+      },
+      "h2": null,
+      "body": {
+        "family": "Sailec",
+        "size": "13px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to Refill"
+      },
+      "button": {
+        "family": "Sailec",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Product CategoryChevron"
+      },
+      "nav": {
+        "family": "Sailec",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to RefillShop Holiday Hand Soap →‘Tis the Se"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 105,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "‘Tis the Season to Refil",
+        "New: Lavender Sage Laund",
+        "New: PowerDuo Laundry Ta",
+        "Now shipping to CAN, UK,",
+        "Slider Navigation Left",
+        "Slider Navigation Right",
+        "ShopShop",
+        "Holiday ShopHoliday Shop",
+        "Blueland logo",
+        "About UsAbout Us",
+        "Our MissionOur Mission",
+        "Search",
+        "Register or Sign in",
+        "Account menu",
+        "Cart0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 155,
+        "h": 265,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 420,
+        "h": 11923,
+        "bg": "rgb(255, 255, 255)",
+        "images": 83,
+        "video": true,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop All"
+        },
+        "words": 2267,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 69,
+      "columns": 4,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.blueland.com/collections/all",
+    "title": "Eco-Friendly Cleaning Products | Blueland",
+    "width": 390,
+    "pageHeight": 15245,
+    "fonts": {
+      "h1": {
+        "family": "Sailec",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop All"
+      },
+      "h2": null,
+      "body": {
+        "family": "Sailec",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to Refill"
+      },
+      "button": {
+        "family": "Sailec",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Filter"
+      },
+      "nav": {
+        "family": "Sailec",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to RefillShop Holiday Hand Soap →‘Tis the Se"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 94,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "‘Tis the Season to Refil",
+        "New: Lavender Sage Laund",
+        "New: PowerDuo Laundry Ta",
+        "Now shipping to CAN, UK,",
+        "Slider Navigation Left",
+        "Slider Navigation Right",
+        "Navigation",
+        "Blueland logo",
+        "Search",
+        "Cart0",
+        "Close mobile menu",
+        "Shop All",
+        "Bestsellers",
+        "Starter Kits",
+        "Refills",
+        "Holiday Shop"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 211,
+        "h": 13858,
+        "bg": "rgb(255, 255, 255)",
+        "images": 72,
+        "video": true,
+        "heading": {
+          "family": "Sailec",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop All"
+        },
+        "words": 1952,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 69,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.blueland.com/products/holidays-at-home-hand-soaps-tablet-refills?Pack+Size=5+Tablets&Scent=Holiday+Variety+Pack",
+    "title": "Holidays at Home Hand Soap Tablet Refills",
+    "width": 1440,
+    "pageHeight": 9204,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Sailec",
+        "size": "32px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holidays at Home Hand Soap Tablet Refills"
+      },
+      "body": {
+        "family": "Sailec",
+        "size": "13px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to Refill"
+      },
+      "button": {
+        "family": "Sailec",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Sailec",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to RefillShop Holiday Hand Soap →‘Tis the Se"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 105,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "‘Tis the Season to Refil",
+        "New: Lavender Sage Laund",
+        "New: PowerDuo Laundry Ta",
+        "Now shipping to CAN, UK,",
+        "Slider Navigation Left",
+        "Slider Navigation Right",
+        "ShopShop",
+        "Holiday ShopHoliday Shop",
+        "Blueland logo",
+        "About UsAbout Us",
+        "Our MissionOur Mission",
+        "Search",
+        "Register or Sign in",
+        "Account menu",
+        "Cart0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 155,
+        "h": 1726,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": true,
+        "heading": {
+          "family": "Sailec",
+          "size": "32px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Holidays at Home Hand Soap Tablet Refills"
+        },
+        "words": 231,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1931,
+        "h": 736,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Meet The Scents"
+        },
+        "words": 36,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2666,
+        "h": 773,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How We Stack Up"
+        },
+        "words": 214,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3440,
+        "h": 760,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Safe Home, Cleaner Planet"
+        },
+        "words": 42,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4200,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How It Works"
+        },
+        "words": 42,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4920,
+        "h": 587,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "You’ll Also Love..."
+        },
+        "words": 117,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 5507,
+        "h": 577,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Hand Soap FAQs"
+        },
+        "words": 256,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6084,
+        "h": 2510,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 807,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add To Cart",
+      "aboveFold": false,
+      "top": 1017,
+      "x": 768,
+      "width": 576,
+      "bg": "rgb(19, 60, 209)"
+    },
+    "price": null,
+    "galleryImages": 12,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 17
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.blueland.com/products/holidays-at-home-hand-soaps-tablet-refills?Pack+Size=5+Tablets&Scent=Holiday+Variety+Pack",
+    "title": "Holidays at Home Hand Soap Tablet Refills",
+    "width": 390,
+    "pageHeight": 12034,
+    "fonts": {
+      "h1": {
+        "family": "Sailec",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Holidays at Home Hand Soap Tablet Refills"
+      },
+      "h2": {
+        "family": "Sailec",
+        "size": "26px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Meet The Scents"
+      },
+      "body": {
+        "family": "Sailec",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to Refill"
+      },
+      "button": {
+        "family": "Sailec",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Rated 4.8 out of 5, 40,768 reviews4.8(40,768)"
+      },
+      "nav": {
+        "family": "Sailec",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to RefillShop Holiday Hand Soap →‘Tis the Se"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 94,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "‘Tis the Season to Refil",
+        "New: Lavender Sage Laund",
+        "New: PowerDuo Laundry Ta",
+        "Now shipping to CAN, UK,",
+        "Slider Navigation Left",
+        "Slider Navigation Right",
+        "Navigation",
+        "Blueland logo",
+        "Search",
+        "Cart0",
+        "Close mobile menu",
+        "Shop All",
+        "Bestsellers",
+        "Starter Kits",
+        "Refills",
+        "Holiday Shop"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 134,
+        "h": 2306,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": true,
+        "heading": {
+          "family": "Sailec",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Holidays at Home Hand Soap Tablet Refills"
+        },
+        "words": 231,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2486,
+        "h": 452,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Meet The Scents"
+        },
+        "words": 36,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2938,
+        "h": 872,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How We Stack Up"
+        },
+        "words": 214,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3810,
+        "h": 993,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Safe Home, Cleaner Planet"
+        },
+        "words": 42,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4803,
+        "h": 810,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "How It Works"
+        },
+        "words": 42,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5612,
+        "h": 450,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "You’ll Also Love..."
+        },
+        "words": 73,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 6063,
+        "h": 568,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "26px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Hand Soap FAQs"
+        },
+        "words": 256,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6631,
+        "h": 4227,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 831,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add To Cart",
+      "aboveFold": false,
+      "top": 1592,
+      "x": 24,
+      "width": 342,
+      "bg": "rgb(19, 60, 209)"
+    },
+    "price": null,
+    "galleryImages": 12,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 17
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.blueland.com/cart",
+    "title": "Cart | Blueland",
+    "width": 1440,
+    "pageHeight": 1357,
+    "fonts": {
+      "h1": {
+        "family": "Sailec",
+        "size": "32px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Your Cart"
+      },
+      "h2": null,
+      "body": {
+        "family": "Sailec",
+        "size": "13px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to Refill"
+      },
+      "button": {
+        "family": "Sailec",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Sailec",
+        "size": "17px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "‘Tis the Season to RefillShop Holiday Hand Soap →‘Tis the Se"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 105,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "‘Tis the Season to Refil",
+        "New: Lavender Sage Laund",
+        "New: PowerDuo Laundry Ta",
+        "Now shipping to CAN, UK,",
+        "Slider Navigation Left",
+        "Slider Navigation Right",
+        "ShopShop",
+        "Holiday ShopHoliday Shop",
+        "Blueland logo",
+        "About UsAbout Us",
+        "Our MissionOur Mission",
+        "Search",
+        "Register or Sign in",
+        "Account menu",
+        "Cart0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 342,
+        "h": 333,
+        "bg": "rgb(240, 247, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Sailec",
+          "size": "22px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Your cart is empty"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ]
+  }
+}

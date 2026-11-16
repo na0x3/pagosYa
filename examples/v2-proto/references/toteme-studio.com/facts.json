@@ -1,0 +1,671 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://toteme.com/en-int",
+    "title": "TOTEME - Official online store",
+    "width": 1440,
+    "pageHeight": 3068,
+    "fonts": {
+      "h1": {
+        "family": "Toteme Sans",
+        "size": "16px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "TOTEME"
+      },
+      "h2": null,
+      "body": {
+        "family": "Toteme Sans",
+        "size": "12.0058px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Copyright © 2026"
+      },
+      "button": null,
+      "nav": {
+        "family": "Toteme Sans",
+        "size": "12.0058px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Women"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Women",
+        "Men",
+        "About",
+        "TOTEME",
+        "Search",
+        "Account",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 900,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1801,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Toteme Sans",
+          "size": "18.0086px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Men’s Collection"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://toteme.com/en-int",
+    "title": "TOTEME - Official online store",
+    "width": 390,
+    "pageHeight": 3423,
+    "fonts": {
+      "h1": {
+        "family": "Toteme Sans",
+        "size": "16px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "TOTEME"
+      },
+      "h2": null,
+      "body": null,
+      "button": null,
+      "nav": {
+        "family": "Toteme Sans",
+        "size": "16px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "TOTEME"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 64,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "TOTEME",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 694,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 694,
+        "h": 1387,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 5,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2081,
+        "h": 844,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Toteme Sans",
+          "size": "18px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Men’s Collection"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://toteme.com/en-int/collections/all",
+    "title": "Products – TOTEME",
+    "width": 1440,
+    "pageHeight": 8089,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "Toteme Sans",
+        "size": "12.0058px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "View"
+      },
+      "button": {
+        "family": "Toteme Sans",
+        "size": "12.0058px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "2"
+      },
+      "nav": {
+        "family": "Toteme Sans",
+        "size": "12.0058px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Women"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Women",
+        "Men",
+        "About",
+        "TOTEME",
+        "Search",
+        "Account",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 120,
+        "h": 7583,
+        "bg": "rgb(255, 255, 255)",
+        "images": 308,
+        "video": false,
+        "heading": null,
+        "words": 1770,
+        "perRow": 35,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://toteme.com/en-int/collections/all?_su_rec=TU-L1LFetfQfXw8z-r097xNyJwdvE0dUdzfRpGqCNk2WYVQagQs3CO1BHYOeNeaJegdjiJJCtmnCU-iZhpf2Ld437NC5SpzdF-o9m6yjyXiszNa8WCWNNQBQWD46nufTx2lFfF3gHCxX7Ac5MfO2vMqko58ngr4IjRKtFllFT95uZsEd4h31gLA4E5Onu2zYh1OQEOFiLURKmsvofvApM12GzxS0HcsWCxSe8yRnjWjavQcCEqfefOws2ddNnEiS7s2HP5G7FgBJk4yB71RzBCIUPbKiBL47WEY6iJYZpPSfOwJE2jCsVOzYys2SW_r-bZhnPOPHDY1qEQ-RYdtNymds0WbnGQ6EigNC9kky&_su_rec_id=5ce494ae-1897-48af-bdf0-f95e3a653a87-1794667291",
+    "title": "Products – TOTEME",
+    "width": 390,
+    "pageHeight": 8673,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "Toteme Sans",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "2.5cm classic belt black"
+      },
+      "button": {
+        "family": "Toteme Sans",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "View 3"
+      },
+      "nav": {
+        "family": "Toteme Sans",
+        "size": "16px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "TOTEME"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 64,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "TOTEME",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 96,
+        "h": 8060,
+        "bg": "rgb(255, 255, 255)",
+        "images": 304,
+        "video": false,
+        "heading": null,
+        "words": 1764,
+        "perRow": 18,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://toteme.com/en-int/products/tasseled-ballerinas-black",
+    "title": "Tasseled ballerinas black – TOTEME",
+    "width": 1440,
+    "pageHeight": 8390,
+    "fonts": {
+      "h1": {
+        "family": "Toteme Sans",
+        "size": "14.0067px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Tasseled ballerinas black"
+      },
+      "h2": {
+        "family": "Toteme Sans",
+        "size": "14.0067px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Recommended Products"
+      },
+      "body": {
+        "family": "Toteme Sans",
+        "size": "12.0058px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Coming soon"
+      },
+      "button": {
+        "family": "Toteme Sans",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Toteme Sans",
+        "size": "12.0058px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Women"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Women",
+        "Men",
+        "About",
+        "TOTEME",
+        "Search",
+        "Account",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 104,
+        "h": 7168,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Toteme Sans",
+          "size": "14.0067px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Tasseled ballerinas black"
+        },
+        "words": 67,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7296,
+        "h": 676,
+        "bg": "rgb(255, 255, 255)",
+        "images": 31,
+        "video": false,
+        "heading": {
+          "family": "Toteme Sans",
+          "size": "14.0067px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Recommended Products"
+        },
+        "words": 170,
+        "perRow": 31,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": null,
+    "galleryImages": 8,
+    "swatches": 8,
+    "selects": 2,
+    "accordions": 20
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://toteme.com/en-int/products/tasseled-ballerinas-black",
+    "title": "Tasseled ballerinas black – TOTEME",
+    "width": 390,
+    "pageHeight": 2331,
+    "fonts": {
+      "h1": {
+        "family": "Toteme Sans",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Tasseled ballerinas black"
+      },
+      "h2": {
+        "family": "Toteme Sans",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Recommended Products"
+      },
+      "body": {
+        "family": "Toteme Sans",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Coming soon"
+      },
+      "button": {
+        "family": "Toteme Sans",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Toteme Sans",
+        "size": "16px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "TOTEME"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 64,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "TOTEME",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 64,
+        "h": 1329,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Toteme Sans",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Tasseled ballerinas black"
+        },
+        "words": 64,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1409,
+        "h": 409,
+        "bg": "rgb(255, 255, 255)",
+        "images": 33,
+        "video": false,
+        "heading": {
+          "family": "Toteme Sans",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Recommended Products"
+        },
+        "words": 172,
+        "perRow": 31,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": null,
+    "galleryImages": 41,
+    "swatches": 8,
+    "selects": 2,
+    "accordions": 20
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://toteme.com/en-int/cart",
+    "title": "Your Shopping Cart – TOTEME",
+    "width": 1440,
+    "pageHeight": 972,
+    "fonts": {
+      "h1": {
+        "family": "Toteme Sans",
+        "size": "16px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Items"
+      },
+      "h2": {
+        "family": "Toteme Sans",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Summary"
+      },
+      "body": {
+        "family": "Toteme Sans",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.12px",
+        "text": "550 €"
+      },
+      "button": {
+        "family": "Toteme Sans",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "Toteme Sans",
+        "size": "14px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "To shop Back to shop"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 72,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "To shop Back to shop",
+        "TOTEME"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 72,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Toteme Sans",
+          "size": "16px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Items"
+        },
+        "words": 21,
+        "perRow": 1,
+        "fullBleed": false
+      },
+      {
+        "y": 72,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Toteme Sans",
+          "size": "14px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Summary"
+        },
+        "words": 34,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ]
+  }
+}

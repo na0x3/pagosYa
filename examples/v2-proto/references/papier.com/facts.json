@@ -1,0 +1,638 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.papier.com/",
+    "title": "Diaries, Notebooks, Cards & More | Papier",
+    "width": 1440,
+    "pageHeight": 5716,
+    "fonts": {
+      "h1": {
+        "family": "Self Modern",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Better than Black Friday SALE"
+      },
+      "h2": {
+        "family": "Self Modern",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Sign up to our BETTER THAN BLACK FRIDAY sale"
+      },
+      "body": {
+        "family": "SuisseIntl",
+        "size": "12px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Up to 35% off sitewide"
+      },
+      "button": {
+        "family": "SuisseIntl",
+        "size": "14px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "SuisseIntl",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Sign up to unlock our Better than Black Friday sale"
+      }
+    },
+    "page": "rgb(250, 247, 240)",
+    "header": {
+      "height": 32,
+      "position": "relative",
+      "bg": "rgb(30, 37, 37)",
+      "links": [
+        "Sign up to unlock our Be",
+        "The 2026 Christmas Shop",
+        "Unlock up to 35% off sit"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 134,
+        "h": 450,
+        "bg": "rgb(250, 247, 240)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Better than Black Friday SALE"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 584,
+        "h": 235,
+        "bg": "rgb(250, 247, 240)",
+        "images": 6,
+        "video": false,
+        "heading": null,
+        "words": 11,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 819,
+        "h": 962,
+        "bg": "rgb(250, 247, 240)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 48,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1781,
+        "h": 774,
+        "bg": "rgb(250, 247, 240)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2555,
+        "h": 694,
+        "bg": "rgb(250, 247, 240)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3249,
+        "h": 233,
+        "bg": "rgb(250, 247, 240)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Sold out three years in a ROW"
+        },
+        "words": 26,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3482,
+        "h": 269,
+        "bg": "rgb(250, 247, 240)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Sign up to our BETTER THAN BLACK FRIDAY sale"
+        },
+        "words": 32,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3751,
+        "h": 669,
+        "bg": "rgb(250, 247, 240)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Follow us"
+        },
+        "words": 6,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 4420,
+        "h": 239,
+        "bg": "rgb(250, 247, 240)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Over 7,500 five-star reviews"
+        },
+        "words": 40,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4659,
+        "h": 562,
+        "bg": "rgb(250, 247, 240)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Read our online magazine"
+        },
+        "words": 38,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 4,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.papier.com/",
+    "title": "Diaries, Notebooks, Cards & More | Papier",
+    "width": 390,
+    "pageHeight": 5831,
+    "fonts": {
+      "h1": {
+        "family": "Self Modern",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Better than Black Friday SALE"
+      },
+      "h2": {
+        "family": "Self Modern",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Sign up to our BETTER THAN BLACK FRIDAY sale"
+      },
+      "body": {
+        "family": "SuisseIntl",
+        "size": "12px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "1px",
+        "text": "Up to 35% off sitewide"
+      },
+      "button": {
+        "family": "SuisseIntl",
+        "size": "14px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "SuisseIntl",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The 2026 Christmas Shop"
+      }
+    },
+    "page": "rgb(250, 247, 240)",
+    "header": {
+      "height": 32,
+      "position": "relative",
+      "bg": "rgb(30, 37, 37)",
+      "links": [
+        "The 2026 Christmas Shop",
+        "Unlock up to 35% off sit",
+        "Sign up to unlock our Be"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 88,
+        "h": 390,
+        "bg": "rgb(250, 247, 240)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Better than Black Friday SALE"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 478,
+        "h": 561,
+        "bg": "rgb(250, 247, 240)",
+        "images": 6,
+        "video": false,
+        "heading": null,
+        "words": 11,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1039,
+        "h": 1037,
+        "bg": "rgb(250, 247, 240)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 48,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2076,
+        "h": 377,
+        "bg": "rgb(250, 247, 240)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 8,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 2453,
+        "h": 406,
+        "bg": "rgb(250, 247, 240)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2891,
+        "h": 247,
+        "bg": "rgb(250, 247, 240)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Sold out three years in a ROW"
+        },
+        "words": 26,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3139,
+        "h": 319,
+        "bg": "rgb(250, 247, 240)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Sign up to our BETTER THAN BLACK FRIDAY sale"
+        },
+        "words": 32,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3458,
+        "h": 686,
+        "bg": "rgb(250, 247, 240)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Follow us"
+        },
+        "words": 6,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 4144,
+        "h": 316,
+        "bg": "rgb(250, 247, 240)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Over 7,500 five-star reviews"
+        },
+        "words": 43,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4460,
+        "h": 510,
+        "bg": "rgb(250, 247, 240)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Read our online magazine"
+        },
+        "words": 38,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 4,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.papier.com/collections/autumn-winter-2026/",
+    "title": "Autumn/Winter 2026 | Papier",
+    "width": 1440,
+    "pageHeight": 4151,
+    "fonts": {
+      "h1": {
+        "family": "Self Modern",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Autumn/Winter 2026 Collection"
+      },
+      "h2": null,
+      "body": {
+        "family": "SuisseIntl",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Home / Collections"
+      },
+      "button": {
+        "family": "SuisseIntl",
+        "size": "14px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "SuisseIntl",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The 2026 Christmas Shop"
+      }
+    },
+    "page": "rgb(250, 247, 240)",
+    "header": {
+      "height": 32,
+      "position": "relative",
+      "bg": "rgb(30, 37, 37)",
+      "links": [
+        "The 2026 Christmas Shop",
+        "Unlock up to 35% off sit",
+        "Sign up to unlock our Be"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 134,
+        "h": 3320,
+        "bg": "rgb(250, 247, 240)",
+        "images": 137,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Autumn/Winter 2026 Collection"
+        },
+        "words": 423,
+        "perRow": 36,
+        "fullBleed": false
+      },
+      {
+        "y": 3502,
+        "h": 154,
+        "bg": "rgb(250, 247, 240)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 28,
+      "columns": 4,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.papier.com/collections/autumn-winter-2026/",
+    "title": "Autumn/Winter 2026 | Papier",
+    "width": 390,
+    "pageHeight": 6614,
+    "fonts": {
+      "h1": {
+        "family": "Self Modern",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Autumn/Winter 2026 Collection"
+      },
+      "h2": null,
+      "body": {
+        "family": "SuisseIntl",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "As featured in:"
+      },
+      "button": {
+        "family": "SuisseIntl",
+        "size": "14px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "SuisseIntl",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The 2026 Christmas Shop"
+      }
+    },
+    "page": "rgb(250, 247, 240)",
+    "header": {
+      "height": 32,
+      "position": "relative",
+      "bg": "rgb(30, 37, 37)",
+      "links": [
+        "The 2026 Christmas Shop",
+        "Unlock up to 35% off sit",
+        "Sign up to unlock our Be"
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 88,
+        "h": 5454,
+        "bg": "rgb(250, 247, 240)",
+        "images": 43,
+        "video": false,
+        "heading": {
+          "family": "Self Modern",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Autumn/Winter 2026 Collection"
+        },
+        "words": 420,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 5590,
+        "h": 163,
+        "bg": "rgb(250, 247, 240)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 55,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 28,
+      "columns": 2,
+      "photoRatio": 0,
+      "filters": true
+    }
+  }
+}

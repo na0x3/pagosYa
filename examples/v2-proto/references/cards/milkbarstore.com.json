@@ -1,0 +1,69 @@
+{
+  "host": "milkbarstore.com",
+  "name": "Milk Bar",
+  "at": "2026-11-14T14:47:10.797Z",
+  "mood": "Pastelería neoyorquina directa, gráfica y juguetona: titulares negros compactos, producto a gran escala, rosa intenso y mensajes comerciales sin rodeos.",
+  "idea": "Construye la tienda como una sucesión de escaparates editoriales: bloques blancos muy tipográficos alternados con comida recortada, escenas de regalo y bandas negras que aportan ritmo.",
+  "header": "Cabecera sticky. En escritorio mide 156 px de alto en total: arriba lleva una barra promocional negra de unos 48 px con “$25 OFF ORDERS $125 OR MORE” y “SHOP NOW” centrados; debajo, una zona blanca de unos 70 px con menú y localizador a la izquierda, logotipo inclinado centrado y cuenta, búsqueda y carrito a la derecha; una tercera fila blanca contiene 7 enlaces centrados —Desserts, Thanksgiving, Birthday, Corporate Gifts, Bakeries, Recipes y More— en mayúsculas de 13 px. Debajo aparece una marquesina negra de unos 56 px, separada de la cabecera, con la frase repetida “AWARD-WINNING DESSERTS FROM NYC’S #1 BAKERY”. En teléfono la cabecera sticky se reduce a 93 px: barra promocional arriba y una sola fila con hamburguesa/localizador, logo centrado y cuenta/búsqueda/carrito; desaparece la navegación textual. El aviso de cookies mostrado en las capturas no forma parte de la cabecera y tapa unos 105 px inferiores en escritorio y cerca de 150 px en móvil.",
+  "hero": "En escritorio comienza aproximadamente en y=212 y ocupa 680 px. Es un carrusel de tres columnas: texto centrado en el tercio izquierdo y dos imágenes verticales, casi cuadradas, en los otros dos tercios. El texto usa titular de unas 31 px en mayúsculas, dos párrafos cortos y botón negro; las imágenes tienen esquinas redondeadas de unos 12 px. Una presenta el producto recortado sobre verde oliva y otra una caja de envío fotografiada en contexto. Flechas rosas quedan pegadas a ambos extremos de la ventana. En móvil se antepone una tira horizontal de accesos circulares de unos 100–110 px de diámetro; el hero visible conserva dos imágenes simultáneas, cada una cercana a media pantalla, con altura aproximada de 320 px. El texto y el CTA pasan a otra diapositiva o a una franja separada, por lo que no compiten con las fotos. Puntos rosas indican la posición del carrusel.",
+  "catalog": "No hay una captura válida del catálogo: tanto las imágenes etiquetadas como catálogo como las mediciones corresponden de nuevo a la portada y conservan la URL raíz; por eso no se pueden determinar cabecera de colección, filtros, ordenación ni número real de columnas. No debe interpretarse el carrusel “From Our Bakery to Your Door” como una retícula de catálogo.",
+  "card": "Solo pueden estudiarse las tarjetas de producto de los carruseles de portada. En escritorio se muestran aproximadamente 4 tarjetas completas y parte de una quinta, con foto casi cuadrada sobre fondo crema, nombre en mayúsculas, descripción breve de 2–3 líneas y botón negro de ancho casi completo “GET THE DETAILS”. Las tarjetas son blancas, estrechas y separadas por calles pequeñas; la imagen ocupa cerca de dos tercios de la altura visible. Algunas llevan etiquetas pequeñas rosas como “NEW” o “LIMITED TIME”. No se aprecia precio, selector de color, compra rápida ni segunda imagen al pasar; el botón conduce al detalle en lugar de añadir directamente. En móvil el carrusel conserva tarjetas anchas en desplazamiento horizontal, mostrando una completa y parte de la siguiente.",
+  "product": "No hay una captura válida de página de producto: las imágenes y medidas etiquetadas como producto vuelven a mostrar la portada, y la medición confirma que no se encontró caja de compra. Por tanto no es posible afirmar cómo son la galería, el precio, las variantes, el selector de entrega, el botón de compra, los acordeones ni el contenido posterior. El aviso de cookies también obstruye la parte baja de todas esas capturas.",
+  "cart": "Carrito como página, no como cajón. La captura disponible es de escritorio. Usa un contenedor centrado de aproximadamente 1180 px con dos columnas: contenido a la izquierda, cerca de dos tercios, y resumen a la derecha, cerca de un tercio. Arriba aparece “YOUR CART” con el número de artículos y una barra crema de progreso para envío gratuito. Cada fila presenta miniatura cuadrada sobre crema, nombre/categoría, control de cantidad con menos, número y más, opción de eliminar y precio alineado a la derecha. Debajo hay un carrusel “YOU MAY ALSO LIKE” con cuatro productos y flechas. La columna derecha reúne “DELIVERY DETAILS”, un campo para fecha de entrega, “ORDER SUMMARY” con subtotal, envío y total estimado, y un botón de checkout ancho y redondeado; en la captura parece gris, posiblemente desactivado hasta completar la fecha. No se suministró captura del carrito en teléfono. El banner de cookies tapa el borde inferior.",
+  "type": "La familia principal es Garnett, una grotesca de formas anchas y peso contundente. Titulares casi siempre en 700 y mayúsculas: 38 px en escritorio y 25 px en teléfono para encabezados de sección; el titular de campaña visible ronda 31 px en escritorio y 22.5 px en móvil. La medición registra un H1 máximo de 53 px, aunque el texto detectado pertenece al SVG del logo y no debe usarse como referencia literal para todos los H1. Navegación y promoción: 13 px, 700, mayúsculas. Texto funcional: aproximadamente 14 px en escritorio y 12 px en móvil; los párrafos editoriales se ven en peso regular o medio, mientras nombres, etiquetas y llamadas a la acción vuelven al 700. El tracking es normal: la contundencia procede del peso y de líneas muy compactas, no de espaciar letras. La marquesina introduce una voz secundaria monoespaciada o de máquina de escribir, blanca sobre negro.",
+  "colour": "Blanco #FFFFFF como fondo principal y negro #000000 para tinta, botones, barra promocional y marquesina. Rosa eléctrico aproximado #ED168C funciona como firma: logo de las cajas, etiquetas, indicadores y flechas, pero rara vez llena secciones completas. Crema melocotón #FFEFDA identifica fondos de tarjetas y bandas informativas como “Why Choose Milk Bar?” y testimonios. Verde oliva aproximado #50551D sirve como fondo fotográfico de campaña y contrasta con los tonos dorados del producto. La regla es reservar los colores fuertes para navegación y encuadre; la mayor parte de la página permanece blanca.",
+  "photos": "Combina tres tratamientos. Primero, producto cenital o frontal aislado sobre crema, con escala grande y muy poco aire, usado para vender variedad. Segundo, producto recortado sobre fondos planos —por ejemplo, una porción sobre oliva— para producir imágenes casi gráficas. Tercero, escenas de uso y regalo: tartas sobre vajilla, mesas con migas, manos, cajas de envío y packaging rosa. Los recortes son rectangulares o casi cuadrados, a menudo con radios de unos 10–12 px. En composiciones editoriales se emparejan dos fotos del mismo alto: una toma frontal cerrada y una toma cenital más narrativa.",
+  "motion": "Hay movimiento explícito en la marquesina horizontal de texto y en varios carruseles: hero con flechas y puntos, accesos circulares desplazables, listas de productos y recomendaciones del carrito. Las mediciones detectan cuatro vídeos en portada, aunque no es posible identificar su ubicación exacta en las capturas estáticas. No se observa de forma verificable cambio a segunda foto al pasar por una tarjeta. Es probable que las flechas rosas desplacen una diapositiva y que en móvil los carruseles admitan gesto de arrastre.",
+  "phone": "A 390 px, la navegación textual desaparece y la cabecera queda en 93 px. Las secciones reducen los títulos de 38 a 25 px y el cuerpo de 14 a 12 px. La portada no convierte todo en una columna: conserva deliberadamente carruseles horizontales que dejan ver el siguiente elemento. Los accesos de compra forman una fila de círculos con rótulos de dos líneas; el hero mantiene dos paneles de aproximadamente 50% de ancho; las tarjetas de producto muestran una unidad y el comienzo de la siguiente. Los bloques editoriales de dos fotos pueden mantener dos columnas arriba y colocar titular, párrafo y botón centrados debajo. Los módulos de beneficios que eran tres columnas se apilan. Las secciones de escritorio conservan aproximadamente el orden, pero ajustan sus alturas: campaña 724 px, productos 711 px, editorial 654 px, ocasiones 526 px y beneficios 603 px. El aviso de cookies mostrado es fijo abajo, con título, cierre, texto y tres botones negros en una fila; tapa demasiado contenido y debe ignorarse al reproducir la página.",
+  "signature": "La tensión entre una identidad de pastelería y una estética de paquetería: el hero trata la caja refrigerada con el enorme “milk” rosa como una imagen protagonista al mismo nivel que el propio postre.",
+  "home": [
+    {
+      "role": "Dar acceso inmediato por intención de compra en teléfono.",
+      "composition": "Tras la marquesina aparece una fila horizontal de al menos cuatro accesos: foto circular y rótulo en mayúsculas de dos líneas —Birthday, New Treats, Best Sellers, Cakes—. Ocupa unos 203 px de alto y permite desplazamiento lateral. En escritorio este módulo no ocupa la misma posición visible."
+    },
+    {
+      "role": "Lanzar la campaña estacional y llevar a una conversión directa.",
+      "composition": "Carrusel hero de 680 px en escritorio: retícula de tres tercios con bloque de texto, foto de producto sobre oliva y foto de packaging. En móvil ocupa unos 724 px incluyendo sus estados y separa texto/CTA de la pareja de imágenes."
+    },
+    {
+      "role": "Presentar el surtido principal sin obligar a entrar primero al catálogo.",
+      "composition": "Sección “From Our Bakery to Your Door”, 856 px de alto en escritorio y 711 px en móvil. Titular y entradilla centrados arriba; debajo, carrusel de tarjetas con unas cuatro completas en escritorio y una más fragmentos en teléfono. Fondo blanco y fotos de producto sobre crema."
+    },
+    {
+      "role": "Aportar prueba social mediante una escena editorial.",
+      "composition": "Bloque “Treats That Turn Heads”, de 688 px en escritorio y 654 px en móvil. En escritorio usa tres columnas: texto centrado a la izquierda y dos fotos verticales iguales a la derecha. En móvil conserva las dos fotos en una fila superior y coloca titular, párrafo y botón centrados debajo."
+    },
+    {
+      "role": "Reorganizar el surtido por ocasión de regalo.",
+      "composition": "“Gifts for Every Occasion!”, 757 px en escritorio y 526 px en móvil. Titular y texto centrados seguidos de tres imágenes iguales en una fila, cada una con etiqueta inferior —Birthdays, Thank You, Congrats—. En móvil funciona como tira horizontal o tres módulos más estrechos."
+    },
+    {
+      "role": "Resolver objeciones de compra y envío.",
+      "composition": "Banda crema #FFEFDA a sangre, 418 px en escritorio y 603 px en móvil. Titular centrado y tres beneficios equidistantes con icono lineal, subtítulo en mayúsculas y explicación: productos especiales, embalaje cuidadoso y entrega nacional. Pasa de tres columnas a pila vertical."
+    },
+    {
+      "role": "Recuperar productos de alta demanda.",
+      "composition": "“Shop Our Bestsellers”, sección blanca de 808 px en escritorio y unos 674 px en teléfono. Encabezado centrado y carrusel de tarjetas con fotografía crema, nombre, descripción y CTA negro; aparecen cuatro tarjetas completas y una parcial en escritorio."
+    },
+    {
+      "role": "Abrir la compra corporativa o para múltiples destinatarios.",
+      "composition": "“Send Group Gifts”, gran bloque editorial de 1320 px. Alterna módulos de dos columnas: fotografía de cajas apiladas a la izquierda y texto con botón a la derecha; más abajo invierte o continúa con otra imagen de celebración. En móvil se apilan imagen, texto y CTA, manteniendo una altura similar de 1284 px."
+    },
+    {
+      "role": "Añadir validación externa.",
+      "composition": "“Word on the Street”, banda crema de 568 px en escritorio y 691 px en móvil. Usa una imagen y una cita o reseña de alta visibilidad, con mucho margen alrededor para cambiar el ritmo después de los carruseles comerciales."
+    },
+    {
+      "role": "Cerrar con captación o relación de marca.",
+      "composition": "“Hey, Nice to Treat You”, sección blanca de 660 px en escritorio y 608 px en móvil. Combina una imagen protagonista con titular, texto breve y llamada a la acción; actúa como cierre antes del pie de página."
+    }
+  ],
+  "lessons": [
+    "Mantén la arquitectura en blanco y negro y concentra el color de marca en pocos controles —flechas, etiquetas, puntos y packaging— para que cada aparición sea reconocible.",
+    "En un hero de tres columnas, asigna funciones distintas a cada tercio: argumento verbal, producto aislado y contexto de uso o entrega. Así se explican deseo y logística en una sola pantalla.",
+    "No fuerces todas las retículas móviles a una columna: mostrar una tarjeta completa y un fragmento de la siguiente comunica de inmediato que el módulo se puede arrastrar.",
+    "Alterna módulos de venta con módulos de confianza. Después de catálogo y ocasiones, una banda de tres beneficios responde a embalaje, singularidad y cobertura de entrega antes de volver a vender.",
+    "Usa una misma proporción de imagen y un mismo botón negro para unificar productos muy distintos; reserva las etiquetas pequeñas para novedades o disponibilidad limitada.",
+    "Haz del embalaje una pieza editorial cuando forma parte real de la experiencia: fotografiarlo a la misma escala que el producto convierte el envío en argumento de marca."
+  ]
+}

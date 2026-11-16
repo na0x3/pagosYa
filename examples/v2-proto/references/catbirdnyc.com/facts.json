@@ -1,0 +1,426 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.catbirdnyc.com/",
+    "title": "Solid Gold Fine Jewelry, Engagement Rings & Diamonds | Catbird",
+    "width": 1440,
+    "pageHeight": 6082,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Denton Condensed",
+        "size": "48px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "body": {
+        "family": "Arial",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.13px",
+        "text": "We and our vendors use technology that collects data about y"
+      },
+      "button": {
+        "family": "TT Fors",
+        "size": "0px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "1"
+      },
+      "nav": {
+        "family": "TT Fors",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to Content"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 136,
+      "position": "fixed",
+      "bg": "rgb(249, 247, 243)",
+      "links": [
+        "Skip to Content",
+        "Shop Holiday Gifts",
+        "Stores & Services",
+        "World of Catbird",
+        "Holiday Gifts",
+        "New",
+        "All Jewelry",
+        "Customized",
+        "Rings",
+        "Necklaces",
+        "Charms",
+        "Earrings",
+        "Bracelets",
+        "Wedding",
+        "Search",
+        "View Your Wishlist"
+      ],
+      "logo": "right",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 136,
+        "h": 4796,
+        "bg": "rgb(255, 255, 255)",
+        "images": 46,
+        "video": false,
+        "heading": {
+          "family": "Denton Condensed",
+          "size": "32px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Best Sellers Under $300"
+        },
+        "words": 733,
+        "perRow": 24,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 24,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.catbirdnyc.com/",
+    "title": "Solid Gold Fine Jewelry, Engagement Rings & Diamonds | Catbird",
+    "width": 390,
+    "pageHeight": 7421,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Denton Condensed",
+        "size": "40px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "body": {
+        "family": "Arial",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.13px",
+        "text": "We and our vendors use technology that collects data about y"
+      },
+      "button": {
+        "family": "TT Fors",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "TT Fors",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to Content"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 97,
+      "position": "fixed",
+      "bg": "rgb(249, 247, 243)",
+      "links": [
+        "Skip to Content",
+        "Shop Holiday Gifts",
+        "Toggle Nav",
+        "Holiday Gifts",
+        "New",
+        "All Jewelry",
+        "Customized",
+        "Rings",
+        "Necklaces",
+        "Charms",
+        "Earrings",
+        "Bracelets",
+        "Wedding",
+        "World of Catbird",
+        "The very finest rings",
+        "Art of the stack"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 97,
+        "h": 6047,
+        "bg": "rgb(255, 255, 255)",
+        "images": 45,
+        "video": false,
+        "heading": {
+          "family": "Denton Condensed",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Best Sellers Under $300"
+        },
+        "words": 721,
+        "perRow": 22,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 22,
+      "columns": 22,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.catbirdnyc.com/collections/limited-edition-black-diamond.html?page=1",
+    "title": "Black Diamond Jewelry | Black Diamonds on Sale | Catbird",
+    "width": 1440,
+    "pageHeight": 5251,
+    "fonts": {
+      "h1": {
+        "family": "Denton Condensed",
+        "size": "48px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Limited Edition Black Diamonds"
+      },
+      "h2": {
+        "family": "Denton Condensed",
+        "size": "26px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Welcome!"
+      },
+      "body": {
+        "family": "Arial",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.13px",
+        "text": "We and our vendors use technology that collects data about y"
+      },
+      "button": {
+        "family": "TT Fors",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Filter"
+      },
+      "nav": {
+        "family": "TT Fors",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to Content"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 136,
+      "position": "fixed",
+      "bg": "rgb(249, 247, 243)",
+      "links": [
+        "Skip to Content",
+        "Shop Holiday Gifts",
+        "Stores & Services",
+        "World of Catbird",
+        "Holiday Gifts",
+        "New",
+        "All Jewelry",
+        "Customized",
+        "Rings",
+        "Necklaces",
+        "Charms",
+        "Earrings",
+        "Bracelets",
+        "Wedding",
+        "Search",
+        "View Your Wishlist"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 222,
+        "h": 144,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 469,
+        "h": 3590,
+        "bg": "rgb(255, 255, 255)",
+        "images": 19,
+        "video": false,
+        "heading": null,
+        "words": 314,
+        "perRow": 3,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 16,
+      "columns": 3,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.catbirdnyc.com/collections/limited-edition-black-diamond.html?page=1",
+    "title": "Black Diamond Jewelry | Black Diamonds on Sale | Catbird",
+    "width": 390,
+    "pageHeight": 4672,
+    "fonts": {
+      "h1": {
+        "family": "Denton Condensed",
+        "size": "40px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Limited Edition Black Diamonds"
+      },
+      "h2": {
+        "family": "Denton Condensed",
+        "size": "26px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Welcome!"
+      },
+      "body": {
+        "family": "Arial",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-0.13px",
+        "text": "We and our vendors use technology that collects data about y"
+      },
+      "button": {
+        "family": "TT Fors",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "TT Fors",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to Content"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 97,
+      "position": "fixed",
+      "bg": "rgb(249, 247, 243)",
+      "links": [
+        "Skip to Content",
+        "Shop Holiday Gifts",
+        "Toggle Nav",
+        "Holiday Gifts",
+        "New",
+        "All Jewelry",
+        "Customized",
+        "Rings",
+        "Necklaces",
+        "Charms",
+        "Earrings",
+        "Bracelets",
+        "Wedding",
+        "World of Catbird",
+        "The very finest rings",
+        "Art of the stack"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 97,
+        "h": 108,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Denton Condensed",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Limited Edition Black Diamonds"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 213,
+        "h": 192,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 481,
+        "h": 2850,
+        "bg": "rgb(255, 255, 255)",
+        "images": 19,
+        "video": false,
+        "heading": null,
+        "words": 314,
+        "perRow": 2,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 16,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  }
+}

@@ -1,0 +1,922 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.outdoorvoices.com/",
+    "title": "Outdoor Voices | Activewear & Athletic Apparel for Recreation",
+    "width": 1440,
+    "pageHeight": 5693,
+    "fonts": {
+      "h1": {
+        "family": "NordiquePro",
+        "size": "80px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Outdoor Voices"
+      },
+      "h2": {
+        "family": "NordiquePro",
+        "size": "60px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "New: The OV Outdoors Collection"
+      },
+      "body": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free Shipping on orders $100+"
+      },
+      "button": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "Shop — OV Outdoors"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 42,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 118,
+        "h": 782,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "60px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "New: The OV Outdoors Collection"
+        },
+        "words": 14,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 900,
+        "h": 712,
+        "bg": "rgb(255, 255, 255)",
+        "images": 48,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Hi, we're new."
+        },
+        "words": 278,
+        "perRow": 48,
+        "fullBleed": true
+      },
+      {
+        "y": 1612,
+        "h": 636,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "The OV Gift Guide is here."
+        },
+        "words": 14,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2248,
+        "h": 636,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Spotted: Polka Dot"
+        },
+        "words": 14,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2884,
+        "h": 628,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Shop Popular Categories"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3512,
+        "h": 628,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Shop by Activity"
+        },
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4140,
+        "h": 728,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4868,
+        "h": 314,
+        "bg": "rgb(255, 255, 255)",
+        "images": 56,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "70px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Doing Things looks good on you."
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.outdoorvoices.com/",
+    "title": "Outdoor Voices | Activewear & Athletic Apparel for Recreation",
+    "width": 390,
+    "pageHeight": 5881,
+    "fonts": {
+      "h1": {
+        "family": "NordiquePro",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Outdoor Voices"
+      },
+      "h2": {
+        "family": "NordiquePro",
+        "size": "36px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "New: The OV Outdoors Collection"
+      },
+      "body": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free Shipping on orders $100+"
+      },
+      "button": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "Log In"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 58,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 130,
+        "h": 710,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "New: The OV Outdoors Collection"
+        },
+        "words": 14,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 841,
+        "h": 667,
+        "bg": "rgb(255, 255, 255)",
+        "images": 48,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Hi, we're new."
+        },
+        "words": 278,
+        "perRow": 48,
+        "fullBleed": true
+      },
+      {
+        "y": 1507,
+        "h": 699,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "The OV Gift Guide is here."
+        },
+        "words": 14,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2206,
+        "h": 699,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Spotted: Polka Dot"
+        },
+        "words": 14,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2905,
+        "h": 502,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Shop Popular Categories"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3407,
+        "h": 502,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Shop by Activity"
+        },
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3909,
+        "h": 822,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4731,
+        "h": 316,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Doing Things looks good on you."
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.outdoorvoices.com/collections/all",
+    "title": "Activewear & Gear – Full Collection | Outdoor Voices",
+    "width": 1440,
+    "pageHeight": 11580,
+    "fonts": {
+      "h1": {
+        "family": "NordiquePro",
+        "size": "60px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Shop By Size"
+      },
+      "h2": {
+        "family": "TTCommonsPro",
+        "size": "13px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Sort"
+      },
+      "body": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free Shipping on orders $100+"
+      },
+      "button": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "Apply"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 42,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 118,
+        "h": 101,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "60px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Shop By Size"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 219,
+        "h": 11220,
+        "bg": "rgb(255, 255, 255)",
+        "images": 219,
+        "video": false,
+        "heading": {
+          "family": "TTCommonsPro",
+          "size": "13px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Sort"
+        },
+        "words": 946,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 50,
+      "columns": 3,
+      "photoRatio": 0.75,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.outdoorvoices.com/collections/all?_su_rec=y3201J8jTotaobcLgyIm8cwKyH3IkESm39eD0ObWTTpmLWLlxQXJK6T_DNIEb92VknNf4cOYTTnMJWvEOASx0EdEhaBh_aNQz0X08O6n2o4JZU2UWVXHKSEq3Kk-m6Kmcw2PemYOe4EmI8OfDY2KUp_1VxhUfxsIwTLePTlXk39WWWLY7npMK5Jt5B4zd9uEp1eOGr07_ZiMCHKW-CbfQ153dIVmOrrlXcohVAYdohblhrAlFKXAiaz4Y1FuaxbHOzkwP9SKYxnvUtiHVcaH4CC0ib1PSV2LtzqmpMWFMIYzKA-y7L9COhiTIa3UD3e1oina7d4-R4oDSTb4ZbD4WySk0hAuLs-YCrAgKa6MpszsRo1l&_su_rec_id=510a9723-8996-461f-891e-12bcba13534a-1794667579",
+    "title": "Activewear & Gear – Full Collection | Outdoor Voices",
+    "width": 390,
+    "pageHeight": 8878,
+    "fonts": {
+      "h1": {
+        "family": "NordiquePro",
+        "size": "36px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Shop By Size"
+      },
+      "h2": {
+        "family": "TTCommonsPro",
+        "size": "12px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Filter"
+      },
+      "body": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free Shipping on orders $100+"
+      },
+      "button": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "Log In"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 58,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 204,
+        "h": 8258,
+        "bg": "rgb(255, 255, 255)",
+        "images": 161,
+        "video": false,
+        "heading": {
+          "family": "TTCommonsPro",
+          "size": "12px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Filter"
+        },
+        "words": 761,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 8,
+      "columns": 2,
+      "photoRatio": 0.75,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.outdoorvoices.com/products/w-puffer-vest-war-plum",
+    "title": "Puffer Vest in War Plum | Women's Outerwear | Outdoor Voices",
+    "width": 1440,
+    "pageHeight": 2820,
+    "fonts": {
+      "h1": {
+        "family": "NordiquePro",
+        "size": "36px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Puffer Vest"
+      },
+      "h2": {
+        "family": "TTCommonsPro",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Recommended For You"
+      },
+      "body": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free Shipping on orders $100+"
+      },
+      "button": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-2%",
+        "text": ""
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 42,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 118,
+        "h": 1252,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "36px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Puffer Vest"
+        },
+        "words": 42,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1370,
+        "h": 370,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "TTCommonsPro",
+          "size": "16px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "-0.16px",
+          "text": "Description:"
+        },
+        "words": 70,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1740,
+        "h": 218,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1958,
+        "h": 721,
+        "bg": "rgb(255, 255, 255)",
+        "images": 39,
+        "video": false,
+        "heading": {
+          "family": "TTCommonsPro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Recommended For You"
+        },
+        "words": 62,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Bag\n\n          \n            \n\n  \n",
+      "aboveFold": true,
+      "top": 449,
+      "x": 921,
+      "width": 454,
+      "bg": "rgb(32, 32, 32)"
+    },
+    "price": {
+      "family": "TTCommonsPro",
+      "size": "16px",
+      "weight": "500",
+      "case": "none",
+      "tracking": "-2%",
+      "text": "Sale price $102.97 Regular price $148"
+    },
+    "galleryImages": 21,
+    "swatches": 59,
+    "selects": 0,
+    "accordions": 16
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.outdoorvoices.com/products/w-puffer-vest-war-plum",
+    "title": "Puffer Vest in War Plum | Women's Outerwear | Outdoor Voices",
+    "width": 393,
+    "pageHeight": 3219,
+    "fonts": {
+      "h1": {
+        "family": "NordiquePro",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Puffer Vest"
+      },
+      "h2": {
+        "family": "TTCommonsPro",
+        "size": "20px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Recommended For You"
+      },
+      "body": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free Shipping on orders $100+"
+      },
+      "button": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "Log In"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 58,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 130,
+        "h": 1059,
+        "bg": "rgb(255, 255, 255)",
+        "images": 14,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Puffer Vest"
+        },
+        "words": 39,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1189,
+        "h": 534,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NordiquePro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Details"
+        },
+        "words": 100,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1723,
+        "h": 204,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1926,
+        "h": 876,
+        "bg": "rgb(255, 255, 255)",
+        "images": 20,
+        "video": false,
+        "heading": {
+          "family": "TTCommonsPro",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Recommended For You"
+        },
+        "words": 50,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Bag\n\n          \n            \n\n  \n",
+      "aboveFold": false,
+      "top": 1028,
+      "x": 12,
+      "width": 366,
+      "bg": "rgb(32, 32, 32)"
+    },
+    "price": {
+      "family": "TTCommonsPro",
+      "size": "16px",
+      "weight": "500",
+      "case": "none",
+      "tracking": "-2%",
+      "text": "Sale price $102.97 Regular price $148"
+    },
+    "galleryImages": 14,
+    "swatches": 74,
+    "selects": 0,
+    "accordions": 16
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.outdoorvoices.com/cart",
+    "title": "Your Shopping Cart",
+    "width": 1440,
+    "pageHeight": 1271,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "TTCommonsPro",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Your Bag"
+      },
+      "body": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Free Shipping on orders $100+"
+      },
+      "button": {
+        "family": "TTCommonsPro",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "Add to Bag"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 42,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 118,
+        "h": 1011,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "TTCommonsPro",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Your Bag"
+        },
+        "words": 89,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ]
+  }
+}

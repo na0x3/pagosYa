@@ -1,0 +1,65 @@
+{
+  "host": "cotopaxi.com",
+  "name": "Cotopaxi",
+  "at": "2026-11-14T15:48:20.843Z",
+  "mood": "Aventura accesible, optimista y con conciencia social; se expresa mediante color intenso, tipografía gruesa, producto abundante y fotografía de personas al aire libre.",
+  "idea": "Combinar una tienda de equipamiento muy funcional con composiciones editoriales de recortes, colores vivos y relatos de impacto para que comprar y apoyar una causa parezcan parte de la misma experiencia.",
+  "header": "En escritorio ocupa aproximadamente 130 px antes del contenido: una banda superior granate de unos 35 px con mensaje centrado y flechas laterales; debajo, una franja de unos 55 px con buscador en píldora a la izquierda, logotipo centrado y, a la derecha, Impact, separador, ayuda, cuenta y carrito; finalmente, una navegación de unos 40 px centrada con seis enlaces: Gifts, New, Packs + Gear, Women, Men y Sale. No aparece fijo: la medición indica position: relative. En teléfono, la banda granate mide cerca de 34 px y el encabezado blanco unos 61 px; se reduce a menú hamburguesa y logo a la izquierda, búsqueda y carrito a la derecha. En portada aparece además una fila horizontal de accesos de categoría, con bloques oscuros grandes como Packs & Bags y Women's; puede desplazarse lateralmente.",
+  "hero": "En escritorio empieza a y=130 y mide 469 px, a sangre y en proporción aproximada 3:1. Es una sola imagen-concepto: productos recortados con borde blanco sobre fondo amarillo ácido y textura de papel. El titular, subtítulo y parte del carácter gráfico están integrados visualmente en la composición central; el CTA blanco Shop Now queda abajo, centrado. En teléfono se recompone como recorte vertical de unos 570 px: conserva el mismo collage, desplaza productos hacia los bordes, sitúa el titular en el tercio central y el botón blanco cerca del borde inferior. No intenta mostrar toda la imagen de escritorio; usa un encuadre específico para 390 px.",
+  "catalog": "Las capturas del catálogo muestran un bloqueo o fallo de carga: aparecen únicamente rectángulos grises de esqueleto, sin título, productos ni controles utilizables. En escritorio se intuye una cabecera de contenido de unos 80 px, seguida por una retícula prevista con una columna lateral de aproximadamente 320 px para filtros y un área principal de unos 1000 px; en teléfono se apilan un bloque de cabecera y un gran bloque de resultados a una sola columna. Las medidas detectan filtros, pero cero tarjetas y cero columnas cargadas, así que no es posible afirmar el número real de columnas, el orden ni la forma de los filtros. Debe ignorarse el contenido vacío como estado de carga, no tomarlo como diseño final.",
+  "card": "Las tarjetas visibles en la portada usan fotografía dominante sobre gris muy claro, normalmente vertical, con proporción detectada cercana a 0,8 ancho/alto. Debajo colocan nombre en Mont/Gotham negrita y precio en cuerpo pequeño; en módulos como Top Gifts se ven cuatro tarjetas en escritorio y dos en teléfono, con carrusel indicado por puntos. La página de producto confirma tarjetas de venta adicional más compactas: miniatura, nombre, precio, puntos de color y botón Add to Cart delineado. No hay evidencia fiable en las capturas de botón rápido ni de segunda imagen al pasar para la tarjeta estándar; no deben inventarse.",
+  "product": "En escritorio, bajo los 130 px de cabecera, la página se divide aproximadamente 2/3–1/3: galería de unos 950 px a la izquierda y caja de compra de unos 430 px a la derecha. La galería forma una retícula de dos columnas con 11 imágenes: modelo medio cuerpo, cuerpo entero, detalles, prenda aislada y plegada, todas sobre gris claro y casi sin separación. La caja comienza con migas, H1 Mont 30 px/900, precio de 16 px, valoración, color con miniatura, guía y tallas S–XXL en una fila. El botón oscuro mide unos 430 px de ancho, está a y=561 y queda sobre el pliegue; incluye el precio en Add to Cart ($140). Debajo aparecen financiación, More To Explore y, más adelante, Details abierto, Features y acordeones de Sustainability, Specs + Care y Shipping + Returns; se detectan seis acordeones en escritorio. Después de la galería llega How to Style It con combinaciones completas. En teléfono el orden cambia: migas, H1 de 20 px, precio y valoración preceden a una galería horizontal de una imagen por vista; después aparecen color, miniatura, tallas y botón de compra de 360 px. El CTA queda a y=883, fuera del primer pliegue. Continúan ventas adicionales horizontales y contenido técnico; Details está abierto y los demás bloques se pliegan.",
+  "cart": "Es una página completa, no un cajón. Solo hay captura de escritorio. Bajo la cabecera se divide casi por mitad: a la izquierda, My Cart, enlace Back to shopping, barra de progreso para envío gratis y una fila de producto con miniatura, nombre, variante, selector de cantidad, precio y papelera; debajo aparece un aviso de que los artículos no están reservados. A la derecha, sobre fondo marfil rgb(249,248,244), Order Summary en 32 px, filas de subtotal, envío y total, opciones de donación o protección, pago aplazado con Klarna y un botón oscuro Continue to Checkout a todo el ancho. Cierra con el sello circular Guaranteed for Good y tres garantías. No se muestran ventas adicionales de producto. No hay captura móvil del carrito, por lo que su recomposición no puede verificarse.",
+  "type": "La identidad combina Mont para titulares con Gotham para lectura, navegación y controles. Mont es redonda, pesada y de contraformas amables: H1 de portada 40 px/800 en escritorio y 27,85 px/800 en teléfono; H1 de producto 30 px/900 y 20 px/900 respectivamente. Los títulos de sección principales llegan a 40–48 px, mientras The Best Gifts For usa 31,2 px/600. Gotham trabaja a 16 px/400 en cuerpo. Los botones usan Gotham 14 px/700, siempre en mayúsculas y con 1,5 px de tracking. La navegación es gruesa pero compacta. La jerarquía se logra sobre todo por saltos marcados de peso y tamaño, no mediante serifas ni cambios frecuentes de color.",
+  "colour": "La base es blanco rgb(255,255,255) con tinta carbón cercana a rgb(37,40,42), usada en texto, navegación y botones. El granate oscuro de las bandas superiores y del bloque Giving Made Easy funciona como color institucional y separador. El amarillo lima del hero actúa como impacto promocional; azules, rojos, naranjas y verdes proceden de producto y fotografía. Las fichas usan gris muy claro para fondos de imagen, evitando sombras. El resumen del carrito introduce marfil rgb(249,248,244) para separar la zona transaccional sin encerrarla con bordes pesados.",
+  "photos": "Alterna tres tratamientos. Primero, producto recortado con contorno blanco y escala exagerada sobre fondos gráficos, como el hero. Segundo, producto o modelo fotografiado sobre gris uniforme, con luz plana y suficiente detalle para comparar forma y tejido; en producto se mezclan planos generales, acercamientos, prenda aislada y plegada. Tercero, escenas documentales al aire libre para colecciones, impacto y testimonios. En portada las imágenes editoriales suelen llevar texto blanco superpuesto; en comercio, el texto queda fuera para no competir con la prenda.",
+  "motion": "No hay vídeo ni marquesina detectados. Son visibles o muy probables los carruseles: flechas en la banda de anuncio, categorías desplazables en teléfono, puntos bajo Top Gifts, control lateral en productos y galería horizontal de producto móvil. También es probable el desplazamiento horizontal de More To Explore. Las capturas no demuestran cambios de imagen al pasar el cursor ni animaciones complejas, por lo que no conviene asumirlos.",
+  "phone": "A 390 px desaparecen buscador, navegación de seis enlaces, Impact, ayuda y cuenta; quedan hamburguesa, logo, búsqueda y carrito. Las categorías pasan a una tira horizontal. El hero cambia de panorámico a vertical y usa un recorte dedicado. Las retículas de cuatro columnas pasan a dos; los mosaicos editoriales de dos columnas se apilan como tarjetas de ancho completo. Los carruseles dejan visible una segunda tarjeta parcial o usan puntos para indicar continuidad. En producto, la caja de compra deja de ser lateral: título y precio aparecen primero, luego una galería horizontal, variantes, tallas y CTA de 360 px; el botón ya no queda sobre el pliegue. Los textos de portada bajan de 40 a unos 27,85 px, pero el cuerpo permanece en 16 px para conservar legibilidad.",
+  "signature": "El collage de productos con borde blanco, textura de papel y fondo amarillo ácido convierte un surtido técnico en una guía de regalos que parece recortada y montada a mano.",
+  "home": [
+    {
+      "role": "Abrir con campaña y llevar directamente a compra de regalos.",
+      "composition": "Hero a sangre de 1440 × 469 px desde y=130; collage panorámico, titular centrado y CTA blanco inferior. En teléfono ocupa unos 390 × 570 px con recorte vertical específico."
+    },
+    {
+      "role": "Segmentar la campaña por tipo de destinatario.",
+      "composition": "The Best Gifts For comienza en y=599 y ocupa unos 608 px. Título alineado a la izquierda, con margen cercano a 40 px, seguido por cuatro grandes tarjetas fotográficas en una fila; en teléfono, título de 31,2 px y retícula de dos columnas."
+    },
+    {
+      "role": "Ofrecer accesos rápidos por perfil y destacar dos campañas.",
+      "composition": "Primero, cuatro miniaturas horizontales —The Traveler, The Everyday, The Outdoorsy y The Cozy— en una fila de escritorio y una retícula 2 × 2 en teléfono. Después, dos banners editoriales lado a lado: colaboración instax y Fuego Collection, con texto blanco y CTA; en móvil se apilan a ancho completo."
+    },
+    {
+      "role": "Resolver la compra con una promesa sencilla.",
+      "composition": "Banda granate Giving Made Easy a todo el ancho, contenido centrado y botón blanco. En teléfono conserva la banda y el CTA, con mayor altura relativa y mucho aire vertical."
+    },
+    {
+      "role": "Mostrar productos concretos y precios.",
+      "composition": "Top Gifts presenta título, breve explicación y pestañas Packs + Gear, Womens y Mens. Debajo hay carrusel de cuatro tarjetas en escritorio; en teléfono muestra dos por vista y una hilera de puntos. Esta zona forma parte del bloque comercial de y=1688 a 2489, con múltiples imágenes y tarjetas."
+    },
+    {
+      "role": "Vincular la compra con el propósito de marca.",
+      "composition": "Gear For Good, desde aproximadamente y=2489, usa un mosaico editorial: una imagen vertical grande a la izquierda y dos imágenes apiladas a la derecha. Los rótulos —informe de fundación, colaboración y reporte de impacto— se colocan en blanco sobre la foto. En teléfono los módulos se apilan."
+    },
+    {
+      "role": "Aportar prueba social sin abandonar la fotografía de aventura.",
+      "composition": "What Our Customers are Saying ocupa unos 911 px: retrato grande de cliente a la izquierda y, a la derecha, estrellas, cita, producto citado y enlace Shop Now. En escritorio se compone en dos columnas equilibradas; en teléfono se convierte en secuencia vertical o carrusel."
+    },
+    {
+      "role": "Cerrar con garantías de durabilidad y servicio.",
+      "composition": "Bloque Guaranteed for Good de unos 357 px en escritorio, con sello circular grande, titular de hasta 48 px y beneficios. En teléfono cambia a contenidos más compactos y aparece el mensaje Durably Designed. Built To Last. en 20 px."
+    },
+    {
+      "role": "Capturar correo y completar navegación secundaria.",
+      "composition": "Franja gris clara con Be the first to know: texto, campo de email y botón Sign Up; Follow Us ocupa una columna lateral separada por regla vertical. Debajo, footer carbón con tres columnas de enlaces —Shop, Gear for Good y Support— y textos pequeños blancos."
+    }
+  ],
+  "lessons": [
+    "Diseña encuadres distintos para cada relación de aspecto: el hero móvil no debe ser un simple escalado del panorámico, sino una composición vertical con titular y CTA recolocados.",
+    "Separa con claridad comercio y relato: usa fondos neutros y retículas regulares para comprar; reserva mosaicos, texto superpuesto y fotografía ambiental para propósito, campañas y testimonios.",
+    "Mantén una gramática tipográfica corta: una familia pesada para jerarquía, otra para lectura, y botones siempre en mayúsculas con tracking constante de 1,5 px.",
+    "En producto, muestra variedad de escala antes de añadir decoración: cuerpo entero, medio cuerpo, detalle, prenda aislada y plegada responden a dudas distintas.",
+    "Haz que la compra principal sea inequívoca: caja lateral de 430 px en escritorio, tallas en una sola fila y CTA oscuro a todo el ancho; en móvil conserva un ancho útil de 360 px.",
+    "Cuando el contenido se vuelve denso en teléfono, no reduzcas el cuerpo por debajo de 16 px: apila módulos, convierte retículas en carruseles y pliega especificaciones secundarias."
+  ]
+}

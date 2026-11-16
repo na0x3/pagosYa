@@ -1,0 +1,776 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.cotopaxi.com/",
+    "title": "Cotopaxi - Gear For Good | Free shipping on orders $99+",
+    "width": 1440,
+    "pageHeight": 5695,
+    "fonts": {
+      "h1": {
+        "family": "Mont",
+        "size": "40px",
+        "weight": "800",
+        "case": "none",
+        "tracking": "0.2px",
+        "text": "Gear For Good"
+      },
+      "h2": {
+        "family": "Mont",
+        "size": "20px",
+        "weight": "800",
+        "case": "none",
+        "tracking": "normal",
+        "text": "My Cart"
+      },
+      "body": {
+        "family": "Gotham",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Promotions, shipping & taxes calculated at checkout."
+      },
+      "button": {
+        "family": "Gotham",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Shop Packs & Gear"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 130,
+        "h": 469,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 599,
+        "h": 608,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Mont",
+          "size": "31.2px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Best Gifts For"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1208,
+        "h": 480,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1688,
+        "h": 801,
+        "bg": "rgb(255, 255, 255)",
+        "images": 20,
+        "video": false,
+        "heading": null,
+        "words": 122,
+        "perRow": 18,
+        "fullBleed": true
+      },
+      {
+        "y": 2489,
+        "h": 988,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Mont",
+          "size": "40px",
+          "weight": "800",
+          "case": "none",
+          "tracking": "0.2px",
+          "text": "Gear For Good"
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3477,
+        "h": 911,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Mont",
+          "size": "40px",
+          "weight": "800",
+          "case": "none",
+          "tracking": "normal",
+          "text": "What Our Customers are Saying"
+        },
+        "words": 197,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4388,
+        "h": 357,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Mont",
+          "size": "48px",
+          "weight": "800",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Guaranteed for Good™"
+        },
+        "words": 47,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 18,
+      "columns": 18,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.cotopaxi.com/",
+    "title": "Cotopaxi - Gear For Good | Free shipping on orders $99+",
+    "width": 390,
+    "pageHeight": 5372,
+    "fonts": {
+      "h1": {
+        "family": "Mont",
+        "size": "27.85px",
+        "weight": "800",
+        "case": "none",
+        "tracking": "0.13925px",
+        "text": "Gear For Good"
+      },
+      "h2": {
+        "family": "Mont",
+        "size": "20px",
+        "weight": "800",
+        "case": "none",
+        "tracking": "normal",
+        "text": "My Cart"
+      },
+      "body": {
+        "family": "Gotham",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Promotions, shipping & taxes calculated at checkout."
+      },
+      "button": {
+        "family": "Gotham",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Shop Packs & Gear"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 157,
+        "h": 570,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 727,
+        "h": 466,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Mont",
+          "size": "31.2px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Best Gifts For"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1193,
+        "h": 469,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1662,
+        "h": 749,
+        "bg": "rgb(255, 255, 255)",
+        "images": 16,
+        "video": false,
+        "heading": null,
+        "words": 97,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 2411,
+        "h": 782,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Mont",
+          "size": "27.85px",
+          "weight": "800",
+          "case": "none",
+          "tracking": "0.13925px",
+          "text": "Gear For Good"
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3193,
+        "h": 783,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Mont",
+          "size": "40px",
+          "weight": "800",
+          "case": "none",
+          "tracking": "normal",
+          "text": "What Our Customers are Saying"
+        },
+        "words": 197,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3976,
+        "h": 428,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Gotham",
+          "size": "20px",
+          "weight": "800",
+          "case": "none",
+          "tracking": "0.2px",
+          "text": "Durably Designed. Built To Last."
+        },
+        "words": 44,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 14,
+      "columns": 14,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.cotopaxi.com/collections/all",
+    "title": "All – Cotopaxi",
+    "width": 1440,
+    "pageHeight": 2249,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Mont",
+        "size": "20px",
+        "weight": "800",
+        "case": "none",
+        "tracking": "normal",
+        "text": "My Cart"
+      },
+      "body": {
+        "family": "Gotham",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Promotions, shipping & taxes calculated at checkout."
+      },
+      "button": {
+        "family": "Gotham",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Shop Packs & Gear"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 130,
+        "h": 1040,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1170,
+        "h": 129,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 1,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.cotopaxi.com/collections/all?_su_rec=1udueBsCvLiCuZUiwgtMhPu9B-NK_Lq0Pxu0zlWCOzGhYBGDPARhfVXxjZBWfjh5KdBkqyO-EyJN2Qtull_Wa8NwM2PH_FPGMKt7_92xTsYv0nYcf9A-DM3NNeWDVbdWOET2W8DkWos7jdg52JK3UF0EX3E0TgGNHUNNGrVaKsqkADW1Q8G8J5dtRyhkWEvlj04lo4ws2WM5wHnn2GnYpb7f-0ZmyGLaStUlUXhwRXFLxPS3wqDMIRfEPQTRRbxJQtjIkHerxxFuxUG6yvjyWqB6wOIO8RRsr6W-dEWCY_GalQV7WBFBs4IXiGwH8fB4LLtqoJg1MuVjjiGKd0xwO43mj6f4ZiPAjS6quSk&_su_rec_id=1ffcc9c5-9b97-4d87-922b-50f78d117c9e-1794668692",
+    "title": "All – Cotopaxi",
+    "width": 390,
+    "pageHeight": 2147,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Mont",
+        "size": "20px",
+        "weight": "800",
+        "case": "none",
+        "tracking": "normal",
+        "text": "My Cart"
+      },
+      "body": {
+        "family": "Gotham",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Promotions, shipping & taxes calculated at checkout."
+      },
+      "button": {
+        "family": "Gotham",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Shop Packs & Gear"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 95,
+        "h": 974,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.cotopaxi.com/products/contiguo-encima-fleece-pullover-dark-mode-mens",
+    "title": "Contiguo Encima Fleece Pullover Dark Mode - Men's | Cotopaxi",
+    "width": 1440,
+    "pageHeight": 4600,
+    "fonts": {
+      "h1": {
+        "family": "Mont",
+        "size": "30px",
+        "weight": "900",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Contiguo Fleece Pullover - Dark Mode - Men's"
+      },
+      "h2": {
+        "family": "Mont",
+        "size": "20px",
+        "weight": "800",
+        "case": "none",
+        "tracking": "normal",
+        "text": "My Cart"
+      },
+      "body": {
+        "family": "Gotham",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Promotions, shipping & taxes calculated at checkout."
+      },
+      "button": {
+        "family": "Gotham",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Shop Packs & Gear"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 130,
+        "h": 2855,
+        "bg": "rgb(255, 255, 255)",
+        "images": 20,
+        "video": false,
+        "heading": {
+          "family": "Mont",
+          "size": "30px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Contiguo Fleece Pullover - Dark Mode - Men's"
+        },
+        "words": 339,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 3055,
+        "h": 595,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 72,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart ($140)",
+      "aboveFold": true,
+      "top": 561,
+      "x": 980,
+      "width": 430,
+      "bg": "rgb(37, 40, 42)"
+    },
+    "price": {
+      "family": "Gotham",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$140+ Free U.S. Shipping 5 1"
+    },
+    "galleryImages": 11,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 6
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.cotopaxi.com/products/contiguo-encima-fleece-pullover-dark-mode-mens",
+    "title": "Contiguo Encima Fleece Pullover Dark Mode - Men's | Cotopaxi",
+    "width": 390,
+    "pageHeight": 4063,
+    "fonts": {
+      "h1": {
+        "family": "Mont",
+        "size": "20px",
+        "weight": "900",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Contiguo Fleece Pullover - Dark Mode - Men's"
+      },
+      "h2": {
+        "family": "Mont",
+        "size": "20px",
+        "weight": "800",
+        "case": "none",
+        "tracking": "normal",
+        "text": "My Cart"
+      },
+      "body": {
+        "family": "Gotham",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Promotions, shipping & taxes calculated at checkout."
+      },
+      "button": {
+        "family": "Gotham",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Shop Packs & Gear"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 95,
+        "h": 2152,
+        "bg": "rgb(255, 255, 255)",
+        "images": 20,
+        "video": false,
+        "heading": {
+          "family": "Mont",
+          "size": "20px",
+          "weight": "900",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Contiguo Fleece Pullover - Dark Mode - Men's"
+        },
+        "words": 339,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 2307,
+        "h": 788,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 64,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart ($140)",
+      "aboveFold": false,
+      "top": 883,
+      "x": 15,
+      "width": 360,
+      "bg": "rgb(37, 40, 42)"
+    },
+    "price": {
+      "family": "Gotham",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$140+ Free U.S. Shipping 5 1"
+    },
+    "galleryImages": 11,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 4
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.cotopaxi.com/cart",
+    "title": "Your Shopping Cart – Cotopaxi",
+    "width": 1440,
+    "pageHeight": 1867,
+    "fonts": {
+      "h1": {
+        "family": "Mont",
+        "size": "16px",
+        "weight": "600",
+        "case": "none",
+        "tracking": "normal",
+        "text": "My Cart"
+      },
+      "h2": {
+        "family": "Mont",
+        "size": "20px",
+        "weight": "800",
+        "case": "none",
+        "tracking": "normal",
+        "text": "My Cart"
+      },
+      "body": {
+        "family": "Gotham",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Heather Grey/Ocean / S"
+      },
+      "button": {
+        "family": "Gotham",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Check Out"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "relative",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 130,
+        "h": 787,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Mont",
+          "size": "16px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "normal",
+          "text": "My Cart"
+        },
+        "words": 39,
+        "perRow": 1,
+        "fullBleed": false
+      },
+      {
+        "y": 130,
+        "h": 787,
+        "bg": "rgb(249, 248, 244)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Mont",
+          "size": "32px",
+          "weight": "600",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Order Summary"
+        },
+        "words": 47,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ]
+  }
+}

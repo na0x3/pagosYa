@@ -1,0 +1,1183 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://summerfridays.com/",
+    "title": "Summer Fridays | Skincare + Hybrid Makeup",
+    "width": 1440,
+    "pageHeight": 6152,
+    "fonts": {
+      "h1": {
+        "family": "futura-pt",
+        "size": "55px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.898px",
+        "text": "Limited-Edition Sets"
+      },
+      "h2": {
+        "family": "futura-pt",
+        "size": "26px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.52px",
+        "text": "Discover Our Community Favorites"
+      },
+      "body": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": "FREE SHIPPING ON U.S. ORDERS $35+ Learn More"
+      },
+      "button": {
+        "family": "futura-pt",
+        "size": "13px",
+        "weight": "450",
+        "case": "uppercase",
+        "tracking": "1.1px",
+        "text": "shop now"
+      },
+      "nav": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 57,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "Shop",
+        "Gifts",
+        "Gifts",
+        "About",
+        "About",
+        "Blog",
+        "Rewards",
+        "Account",
+        "United States",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 101,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "55px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.898px",
+          "text": "Limited-Edition Sets"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1001,
+        "h": 684,
+        "bg": "rgb(255, 255, 255)",
+        "images": 76,
+        "video": true,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Discover Our Community Favorites"
+        },
+        "words": 166,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 1685,
+        "h": 844,
+        "bg": "rgb(255, 255, 255)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "The Flushed Lip Stain Collection"
+        },
+        "words": 24,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 2529,
+        "h": 575,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Skincare + Hybrid-Makeup"
+        },
+        "words": 17,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 3104,
+        "h": 842,
+        "bg": "rgb(255, 255, 255)",
+        "images": 28,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "The Lip Butter Balm Collection"
+        },
+        "words": 27,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 3946,
+        "h": 592,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Effortless, Everyday Moisturizers"
+        },
+        "words": 77,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 4538,
+        "h": 692,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Beauty You Look Forward To"
+        },
+        "words": 48,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5230,
+        "h": 439,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Follow us @summerfridays"
+        },
+        "words": 3,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 18,
+      "columns": 14,
+      "photoRatio": 0.67,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://summerfridays.com/",
+    "title": "Summer Fridays | Skincare + Hybrid Makeup",
+    "width": 390,
+    "pageHeight": 7901,
+    "fonts": {
+      "h1": {
+        "family": "futura-pt",
+        "size": "40px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.76px",
+        "text": "Limited-Edition Sets"
+      },
+      "h2": {
+        "family": "futura-pt",
+        "size": "26px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.52px",
+        "text": "Discover Our Community Favorites"
+      },
+      "body": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": "FREE SHIPPING ON U.S. ORDERS $35+ Learn More"
+      },
+      "button": {
+        "family": "futura-pt",
+        "size": "13px",
+        "weight": "450",
+        "case": "uppercase",
+        "tracking": "1.1px",
+        "text": "shop now"
+      },
+      "nav": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 70,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 14,
+    "sections": [
+      {
+        "y": 114,
+        "h": 844,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "40px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.76px",
+          "text": "Limited-Edition Sets"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 958,
+        "h": 689,
+        "bg": "rgb(255, 255, 255)",
+        "images": 90,
+        "video": true,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Discover Our Community Favorites"
+        },
+        "words": 130,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 1647,
+        "h": 823,
+        "bg": "rgb(255, 255, 255)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "The Flushed Lip Stain Collection"
+        },
+        "words": 24,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 2470,
+        "h": 1404,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Skincare + Hybrid-Makeup"
+        },
+        "words": 17,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3874,
+        "h": 823,
+        "bg": "rgb(255, 255, 255)",
+        "images": 28,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "The Lip Butter Balm Collection"
+        },
+        "words": 27,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 4697,
+        "h": 889,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Effortless, Everyday Moisturizers"
+        },
+        "words": 77,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 5586,
+        "h": 888,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Beauty You Look Forward To"
+        },
+        "words": 48,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6474,
+        "h": 395,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Follow us @summerfridays"
+        },
+        "words": 3,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 4,
+      "columns": 2,
+      "photoRatio": 0.73,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://summerfridays.com/collections/all",
+    "title": "Shop All Products & Collections | Summer Fridays",
+    "width": 1440,
+    "pageHeight": 4304,
+    "fonts": {
+      "h1": {
+        "family": "futura-pt",
+        "size": "30px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.75px",
+        "text": "Shop All Products & Collections"
+      },
+      "h2": {
+        "family": "futura-pt",
+        "size": "26px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.52px",
+        "text": "Stay Up To Date"
+      },
+      "body": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": "FREE SHIPPING ON U.S. ORDERS $35+ Learn More"
+      },
+      "button": {
+        "family": "futura-pt",
+        "size": "13px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.11px",
+        "text": "Filter your search"
+      },
+      "nav": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 57,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "Shop",
+        "Gifts",
+        "Gifts",
+        "About",
+        "About",
+        "Blog",
+        "Rewards",
+        "Account",
+        "United States",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 101,
+        "h": 3419,
+        "bg": "rgb(255, 255, 255)",
+        "images": 103,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "30px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.75px",
+          "text": "Shop All Products & Collections"
+        },
+        "words": 443,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 3520,
+        "h": 300,
+        "bg": "rgb(238, 237, 236)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 224,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 23,
+      "columns": 4,
+      "photoRatio": 0.73,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://summerfridays.com/collections/all?_su_rec=6ufTxOEJuSn6dlKdnBM3_ZRz80Y6soUdez9y4-9mrS9uVQ41JAmtTHbySke3sgn1SPjyZ88-6qvfVoaVhlY7uy82U2t2SIqCF8rlBOtXznSyxSTuFH5UURhnF1f6MkR1bS_kqsfx5p5MKT24dqSVU0-KcddlDGs9TOGWo9nLV80_1sjoEpL84JIpM7D4Ny7bj5Nx1GwSWJSukGy36AnxIE7T-QabJbjk4Wiiglo_vT06vHx9RjaVT7zXkGlf-ynAxIjyeofLdwr5_ZVq_sbls8uSJBV1h-LLhrZax7mYEKiFGLUATadoJUAcSY_ydrJPCgucCm-FZqY_GwO01pWi2Z6FZ15UKbwLJuNaRxw&_su_rec_id=01164f00-e33e-4519-bb30-5aebab184322-1794667088",
+    "title": "Shop All Products & Collections | Summer Fridays",
+    "width": 390,
+    "pageHeight": 6392,
+    "fonts": {
+      "h1": {
+        "family": "futura-pt",
+        "size": "30px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.75px",
+        "text": "Shop All Products & Collections"
+      },
+      "h2": null,
+      "body": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": "FREE SHIPPING ON U.S. ORDERS $35+ Learn More"
+      },
+      "button": {
+        "family": "futura-pt",
+        "size": "13px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.11px",
+        "text": "Filter your search"
+      },
+      "nav": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 70,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 114,
+        "h": 5057,
+        "bg": "rgb(255, 255, 255)",
+        "images": 71,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "30px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.75px",
+          "text": "Shop All Products & Collections"
+        },
+        "words": 418,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 5171,
+        "h": 620,
+        "bg": "rgb(238, 237, 236)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 224,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 23,
+      "columns": 2,
+      "photoRatio": 0.73,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://summerfridays.com/products/glossy-travel-case-in-mocha",
+    "title": "Glossy Travel Case in Mocha – Summer Fridays",
+    "width": 1440,
+    "pageHeight": 2791,
+    "fonts": {
+      "h1": {
+        "family": "futura-pt",
+        "size": "26px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.52px",
+        "text": "Glossy Travel Case in Mocha"
+      },
+      "h2": {
+        "family": "futura-pt",
+        "size": "26px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.52px",
+        "text": "You May Also Like"
+      },
+      "body": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": "FREE SHIPPING ON U.S. ORDERS $35+ Learn More"
+      },
+      "button": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 57,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "Shop",
+        "Gifts",
+        "Gifts",
+        "About",
+        "About",
+        "Blog",
+        "Rewards",
+        "Account",
+        "United States",
+        "0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 101,
+        "h": 801,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Glossy Travel Case in Mocha"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 902,
+        "h": 702,
+        "bg": "rgb(255, 255, 255)",
+        "images": 73,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "You May Also Like"
+        },
+        "words": 158,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1604,
+        "h": 265,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Reviews"
+        },
+        "words": 15,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1869,
+        "h": 439,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Follow us @summerfridays"
+        },
+        "words": 3,
+        "perRow": 6,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Bag\n\n                    Add to B",
+      "aboveFold": true,
+      "top": 314,
+      "x": 1101,
+      "width": 269,
+      "bg": "rgb(92, 120, 153)"
+    },
+    "price": {
+      "family": "futura-pt",
+      "size": "13px",
+      "weight": "450",
+      "case": "uppercase",
+      "tracking": "1.1px",
+      "text": "$0"
+    },
+    "galleryImages": 22,
+    "swatches": 408,
+    "selects": 1,
+    "accordions": 17
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://summerfridays.com/products/glossy-travel-case-in-mocha",
+    "title": "Glossy Travel Case in Mocha – Summer Fridays",
+    "width": 390,
+    "pageHeight": 2584,
+    "fonts": {
+      "h1": {
+        "family": "futura-pt",
+        "size": "26px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.52px",
+        "text": "Glossy Travel Case in Mocha"
+      },
+      "h2": {
+        "family": "futura-pt",
+        "size": "26px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.52px",
+        "text": "You May Also Like"
+      },
+      "body": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": "FREE SHIPPING ON U.S. ORDERS $35+ Learn More"
+      },
+      "button": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 70,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "0"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 114,
+        "h": 647,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Glossy Travel Case in Mocha"
+        },
+        "words": 22,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 761,
+        "h": 573,
+        "bg": "rgb(255, 255, 255)",
+        "images": 45,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "You May Also Like"
+        },
+        "words": 158,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1334,
+        "h": 253,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Reviews"
+        },
+        "words": 15,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1587,
+        "h": 396,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Follow us @summerfridays"
+        },
+        "words": 3,
+        "perRow": 6,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Bag\n\n                    Add to B",
+      "aboveFold": true,
+      "top": 641,
+      "x": 94,
+      "width": 278,
+      "bg": "rgb(92, 120, 153)"
+    },
+    "price": {
+      "family": "futura-pt",
+      "size": "13px",
+      "weight": "450",
+      "case": "uppercase",
+      "tracking": "1.1px",
+      "text": "$0"
+    },
+    "galleryImages": 20,
+    "swatches": 408,
+    "selects": 1,
+    "accordions": 26
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://summerfridays.com/?cart_redirect=true",
+    "title": "Summer Fridays | Skincare + Hybrid Makeup",
+    "width": 1440,
+    "pageHeight": 6150,
+    "fonts": {
+      "h1": {
+        "family": "futura-pt",
+        "size": "55px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.898px",
+        "text": "Limited-Edition Sets"
+      },
+      "h2": {
+        "family": "futura-pt",
+        "size": "26px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "-0.52px",
+        "text": "Discover Our Community Favorites"
+      },
+      "body": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": "FREE SHIPPING ON U.S. ORDERS $35+ Learn More"
+      },
+      "button": {
+        "family": "futura-pt",
+        "size": "13px",
+        "weight": "450",
+        "case": "uppercase",
+        "tracking": "1.1px",
+        "text": "shop now"
+      },
+      "nav": {
+        "family": "futura-pt",
+        "size": "16px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.13px",
+        "text": "Shop"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 57,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop",
+        "Shop",
+        "Gifts",
+        "Gifts",
+        "About",
+        "About",
+        "Blog",
+        "Rewards",
+        "Account",
+        "United States",
+        "1"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 101,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "55px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.898px",
+          "text": "Limited-Edition Sets"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1001,
+        "h": 684,
+        "bg": "rgb(255, 255, 255)",
+        "images": 76,
+        "video": true,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Discover Our Community Favorites"
+        },
+        "words": 130,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 1685,
+        "h": 844,
+        "bg": "rgb(255, 255, 255)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "The Flushed Lip Stain Collection"
+        },
+        "words": 24,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 2529,
+        "h": 575,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Skincare + Hybrid-Makeup"
+        },
+        "words": 17,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 3104,
+        "h": 842,
+        "bg": "rgb(255, 255, 255)",
+        "images": 28,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "The Lip Butter Balm Collection"
+        },
+        "words": 27,
+        "perRow": 14,
+        "fullBleed": true
+      },
+      {
+        "y": 3946,
+        "h": 593,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Effortless, Everyday Moisturizers"
+        },
+        "words": 77,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 4539,
+        "h": 692,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Beauty You Look Forward To"
+        },
+        "words": 48,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5231,
+        "h": 437,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "futura-pt",
+          "size": "26px",
+          "weight": "450",
+          "case": "none",
+          "tracking": "-0.52px",
+          "text": "Follow us @summerfridays"
+        },
+        "words": 3,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ]
+  }
+}

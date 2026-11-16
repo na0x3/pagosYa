@@ -1,0 +1,1670 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://nothing.tech/",
+    "title": "Nothing | UK",
+    "width": 1440,
+    "pageHeight": 8859,
+    "fonts": {
+      "h1": {
+        "family": "NType82-Regular",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The tech you want. The prices you’ve waited for."
+      },
+      "h2": {
+        "family": "NType82-Regular",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop by category"
+      },
+      "body": {
+        "family": "Arial",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "With your agreement, we and our 28 partners use cookies or s"
+      },
+      "button": {
+        "family": "NType82-Regular",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": null
+    },
+    "page": "rgb(244, 244, 244)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(244, 244, 244)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 900,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The tech you want. The prices you’ve waited for."
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1044,
+        "h": 412,
+        "bg": "rgb(244, 244, 244)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop by category"
+        },
+        "words": 7,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 1600,
+        "h": 900,
+        "bg": "rgb(244, 244, 244)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Studio-level precision for our most advanced headphone ever."
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2540,
+        "h": 181,
+        "bg": "rgb(244, 244, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "A conversation in New York City with Kelela + Sage Elsesser"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2865,
+        "h": 810,
+        "bg": "rgb(244, 244, 244)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "On set with V, our newGlobal Brand Ambassadorfor Headphone ("
+        },
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3819,
+        "h": 867,
+        "bg": "rgb(244, 244, 244)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Going pink?"
+        },
+        "words": 9,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4830,
+        "h": 761,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Pack your sound"
+        },
+        "words": 45,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5735,
+        "h": 810,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6585,
+        "h": 176,
+        "bg": "rgb(244, 244, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "We put Charli xcx in a room for five days to test the batter"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6905,
+        "h": 477,
+        "bg": "rgba(216, 217, 217, 0.5)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Why buy on nothing.tech"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7382,
+        "h": 575,
+        "bg": "rgba(216, 217, 217, 0.5)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Join the community"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://nothing.tech/",
+    "title": "Nothing | UK",
+    "width": 390,
+    "pageHeight": 844,
+    "fonts": {
+      "h1": {
+        "family": "NType82-Regular",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The tech you want. The prices you’ve waited for."
+      },
+      "h2": {
+        "family": "NType82-Regular",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop by category"
+      },
+      "body": {
+        "family": "Arial",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "With your agreement, we and our 28 partners use cookies or s"
+      },
+      "button": {
+        "family": "NType82-Regular",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": null
+    },
+    "page": "rgb(244, 244, 244)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(244, 244, 244)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 693,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The tech you want. The prices you’ve waited for."
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 789,
+        "h": 358,
+        "bg": "rgb(244, 244, 244)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop by category"
+        },
+        "words": 7,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 1243,
+        "h": 693,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Studio-level precision for our most advanced headphone ever."
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1956,
+        "h": 282,
+        "bg": "rgb(244, 244, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "A conversation in New York City with Kelela + Sage Elsesser"
+        },
+        "words": 28,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2335,
+        "h": 693,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "On set with V, our newGlobal Brand Ambassadorfor Headphone ("
+        },
+        "words": 16,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3124,
+        "h": 449,
+        "bg": "rgb(244, 244, 244)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Going pink?"
+        },
+        "words": 9,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 3669,
+        "h": 953,
+        "bg": "rgb(244, 244, 244)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Pack your sound"
+        },
+        "words": 45,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4718,
+        "h": 693,
+        "bg": "rgb(244, 244, 244)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5432,
+        "h": 251,
+        "bg": "rgb(244, 244, 244)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "We put Charli xcx in a room for five days to test the batter"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5779,
+        "h": 305,
+        "bg": "rgba(216, 217, 217, 0.5)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Why buy on nothing.tech"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6084,
+        "h": 273,
+        "bg": "rgba(216, 217, 217, 0.5)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Join the community"
+        },
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://nothing.tech/collections/sale",
+    "title": "Black Friday | Nothing | UK",
+    "width": 1440,
+    "pageHeight": 5719,
+    "fonts": {
+      "h1": {
+        "family": "Ndot-Regular",
+        "size": "40px",
+        "weight": "55",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Black Friday"
+      },
+      "h2": {
+        "family": "Ndot-Bold",
+        "size": "20px",
+        "weight": "57",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Headphone ( 1 ) Pro"
+      },
+      "body": {
+        "family": "Arial",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "With your agreement, we and our 28 partners use cookies or s"
+      },
+      "button": {
+        "family": "NType82-Regular",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Filter & Sort"
+      },
+      "nav": null
+    },
+    "page": "rgb(244, 244, 244)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(244, 244, 244)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 306,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Headphone ( 1 ) Pro"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 306,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Headphone ( 1 )"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 306,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Headphone ( a )"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 853,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Phone ( 4a ) Pro"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 853,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Phone ( 3 )"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 853,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Phone ( 4b )"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 1400,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Phone ( 3a ) Lite"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 1400,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Ear ( 3 )"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 1400,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Ear ( 3a )"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 1947,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Ear ( open )"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 1947,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Speaker S"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 1947,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Speaker M"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 2494,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Headphone Pro"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 2494,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Watch 3 Pro"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 2494,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Clip Pro"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3041,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Buds 2"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3041,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Buds 2a"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3041,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Buds Pro 2"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3587,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Nothing Tracksuit Jacket"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3587,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Nothing Tracksuit Trousers"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3587,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Nothing Hoodie"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 4134,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Nothing Overall"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 4134,
+        "h": 539,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Nothing Labcoat"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 23,
+      "columns": 3,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://nothing.tech/collections/sale",
+    "title": "Black Friday | Nothing | UK",
+    "width": 390,
+    "pageHeight": 844,
+    "fonts": {
+      "h1": {
+        "family": "Ndot-Bold",
+        "size": "30px",
+        "weight": "57",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Black Friday"
+      },
+      "h2": {
+        "family": "Ndot-Bold",
+        "size": "18px",
+        "weight": "57",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Headphone ( 1 ) Pro"
+      },
+      "body": {
+        "family": "Arial",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "With your agreement, we and our 28 partners use cookies or s"
+      },
+      "button": {
+        "family": "NType82-Regular",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Filter & Sort"
+      },
+      "nav": null
+    },
+    "page": "rgb(244, 244, 244)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(244, 244, 244)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 177,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Headphone ( 1 ) Pro"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 695,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Headphone ( 1 )"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 1214,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Headphone ( a )"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 1732,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Phone ( 4a ) Pro"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 2251,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Phone ( 3 )"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 2769,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Phone ( 4b )"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3288,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Phone ( 3a ) Lite"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3806,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Ear ( 3 )"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 4325,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Ear ( 3a )"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 4843,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Ear ( open )"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 5362,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Speaker S"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 5880,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Speaker M"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 6399,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Headphone Pro"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 6917,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Watch 3 Pro"
+        },
+        "words": 14,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 7436,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Clip Pro"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 7954,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Buds 2"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 8473,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Buds 2a"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 8992,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "CMF Buds Pro 2"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 9510,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Nothing Tracksuit Jacket"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 10029,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Nothing Tracksuit Trousers"
+        },
+        "words": 5,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 10547,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Nothing Hoodie"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 11066,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Nothing Overall"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 11584,
+        "h": 511,
+        "bg": "rgb(244, 244, 244)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "18px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Nothing Labcoat"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://nothing.tech/products/headphone-1-pro?Color=Black",
+    "title": "Headphone (1) Pro | Nothing | UK",
+    "width": 1440,
+    "pageHeight": 23707,
+    "fonts": {
+      "h1": {
+        "family": "NType82-Regular",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Hear more details with three drivers"
+      },
+      "h2": {
+        "family": "NType82-Regular",
+        "size": "48px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Studio-level precision for our most advanced headphone ever"
+      },
+      "body": {
+        "family": "Arial",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "With your agreement, we and our 28 partners use cookies or s"
+      },
+      "button": {
+        "family": "NType82-Regular",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Previous"
+      },
+      "nav": null
+    },
+    "page": "rgb(24, 24, 24)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(24, 24, 24)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 900,
+        "bg": "rgb(24, 24, 24)",
+        "images": 20,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 900,
+        "h": 21737,
+        "bg": "rgb(24, 24, 24)",
+        "images": 48,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "48px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Hear more details with three drivers"
+        },
+        "words": 2638,
+        "perRow": 3,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to bag",
+      "aboveFold": true,
+      "top": 845,
+      "x": 1320,
+      "width": 104,
+      "bg": "rgb(255, 255, 255)"
+    },
+    "price": null,
+    "galleryImages": 21,
+    "swatches": 8,
+    "selects": 0,
+    "accordions": 12
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://nothing.tech/products/headphone-1-pro?Color=Black",
+    "title": "Headphone (1) Pro | Nothing | UK",
+    "width": 390,
+    "pageHeight": 844,
+    "fonts": {
+      "h1": {
+        "family": "NType82-Regular",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Hear more details with three drivers"
+      },
+      "h2": {
+        "family": "NType82-Regular",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Studio-level precision for our most advanced headphone ever"
+      },
+      "body": {
+        "family": "Arial",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "With your agreement, we and our 28 partners use cookies or s"
+      },
+      "button": {
+        "family": "NType82-Regular",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Previous"
+      },
+      "nav": null
+    },
+    "page": "rgb(24, 24, 24)",
+    "header": {
+      "height": 80,
+      "position": "fixed",
+      "bg": "rgb(24, 24, 24)",
+      "links": [],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 844,
+        "bg": "rgb(24, 24, 24)",
+        "images": 20,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 844,
+        "h": 18856,
+        "bg": "rgb(24, 24, 24)",
+        "images": 44,
+        "video": false,
+        "heading": {
+          "family": "NType82-Regular",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Hear more details with three drivers"
+        },
+        "words": 2633,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 719,
+        "h": 117,
+        "bg": "rgb(24, 24, 24)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Ndot-Bold",
+          "size": "20px",
+          "weight": "57",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Headphone ( 1 ) Pro"
+        },
+        "words": 19,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "£349£249Buy",
+      "aboveFold": true,
+      "top": 712,
+      "x": 16,
+      "width": 358,
+      "bg": "rgb(255, 255, 255)"
+    },
+    "price": null,
+    "galleryImages": 17,
+    "swatches": 8,
+    "selects": 0,
+    "accordions": 12
+  }
+}

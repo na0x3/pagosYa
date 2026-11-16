@@ -1,0 +1,37 @@
+{
+  "from": "cmwc5s2vj0001c0vq5xbewkfn",
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwf1e1s200014njag4vmjw77",
+  "slug": "s6fvx40n",
+  "categories": {
+    "cmwc5s2vt0003c0vqszhstaos": "cmwf1e1sa00034njaofjzsk14",
+    "cmwc5s2vu0005c0vq6jjjozin": "cmwf1e1sb00054njaqujrejgl",
+    "cmwc5s2vv0007c0vq71audp66": "cmwf1e1sb00074nja1ai91iod",
+    "cmwc5s2vv0009c0vqktvdgooi": "cmwf1e1sc00094njak658l3f6"
+  },
+  "products": {
+    "cmwc5s2w2000dc0vq7kzn0mbe": "cmwf1e1so000d4njadswe8lu9",
+    "cmwc5s2w6000hc0vqk4pgfkum": "cmwf1e1th000h4njawt2numiv",
+    "cmwc5s2wa000lc0vqlmgvwl5e": "cmwf1e1tn000l4njanwbpkwiz",
+    "cmwc5s2wv000rc0vqzw0mglzq": "cmwf1e1tt000r4njaj1asfrty",
+    "cmwc5s2x0000vc0vqphc9zx4m": "cmwf1e1tx000v4njapanir8ik",
+    "cmwc5s2x2000zc0vqoed1rq7b": "cmwf1e1u1000z4njayckqyt2g",
+    "cmwc5s2x40013c0vq4wm7ne7y": "cmwf1e1u600134nja98wlp1sm",
+    "cmwc5s2x70017c0vqb3jfe63o": "cmwf1e1uc00174njau0spcnqw",
+    "cmwc5s2xa001bc0vqvq4867e2": "cmwf1e1uh001b4njakn935wj1",
+    "cmwc5s2xc001fc0vqy2sntbxe": "cmwf1e1um001f4njaun0zvrb0"
+  },
+  "assetUrls": [
+    "/v1/uploads/b7fb57c5-fcc8-4b0f-b35b-cdcae6448cbd.jpg",
+    "/v1/uploads/2867e2a9-b732-4c24-9af1-2aea8cf52f89.jpg",
+    "/v1/uploads/f1335540-98a3-4b7f-aae7-e0cbd1a460ca.jpg",
+    "/v1/uploads/4445681d-0641-4e07-bca2-317b53460e94.jpg",
+    "/v1/uploads/b43bf15b-c1d4-4cd1-8823-e3a8683459e9.jpg",
+    "/v1/uploads/2dd9473f-99eb-46e8-b829-8a5e390d3f71.jpg",
+    "/v1/uploads/d8e9ba4c-2d6b-4b54-a6d7-fe493c9fb404.jpg",
+    "/v1/uploads/3211fcc5-bcc9-4eb7-aeb5-9815cb046dff.jpg",
+    "/v1/uploads/4cd62c06-1cd9-4518-9097-704376d808f9.jpg",
+    "/v1/uploads/f0ba6e56-efcb-421d-8325-5a6451ac2e63.jpg",
+    "/v1/uploads/59d4b03a-a37f-4d86-8269-5412ac3cc99c.jpg"
+  ]
+}

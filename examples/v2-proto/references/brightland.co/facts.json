@@ -1,0 +1,1255 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://brightland.co/",
+    "title": "California's Finest Olive Oil & Gift Sets",
+    "width": 1440,
+    "pageHeight": 7302,
+    "fonts": {
+      "h1": {
+        "family": "CircularXXWeb",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Brightland"
+      },
+      "h2": {
+        "family": "Advercase",
+        "size": "40px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Gifts in good taste"
+      },
+      "body": {
+        "family": "CircularXXWeb",
+        "size": "13px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.26px",
+        "text": "The Holiday Hosting Set by Brightland x MacKenzie-Childs is "
+      },
+      "button": {
+        "family": "CircularXXWeb",
+        "size": "11px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.88px",
+        "text": "Add to cart — $120"
+      },
+      "nav": {
+        "family": "CircularXXWeb",
+        "size": "13px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.26px",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 36,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 7,
+    "sections": [
+      {
+        "y": 98,
+        "h": 663,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Tilda",
+          "size": "104px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.5px",
+          "text": "The Table is Set"
+        },
+        "words": 21,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 816,
+        "h": 709,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "40px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gifts in good taste"
+        },
+        "words": 251,
+        "perRow": 9,
+        "fullBleed": true
+      },
+      {
+        "y": 1525,
+        "h": 793,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 38,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2318,
+        "h": 848,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": null,
+        "words": 31,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3235,
+        "h": 719,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "52px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.5px",
+          "text": "Corporate Gifting"
+        },
+        "words": 16,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3954,
+        "h": 558,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 44,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 4512,
+        "h": 564,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 25,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5077,
+        "h": 628,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": true,
+        "heading": {
+          "family": "Advercase",
+          "size": "34px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Join the Brightland Table"
+        },
+        "words": 150,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5704,
+        "h": 656,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "CircularXXWeb",
+          "size": "12px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Aishwarya Iyer - Founder"
+        },
+        "words": 34,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6402,
+        "h": 900,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 73,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 12,
+      "columns": 8,
+      "photoRatio": 0.96,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://brightland.co/",
+    "title": "California's Finest Olive Oil & Gift Sets",
+    "width": 390,
+    "pageHeight": 8050,
+    "fonts": {
+      "h1": {
+        "family": "CircularXXWeb",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Brightland"
+      },
+      "h2": {
+        "family": "Advercase",
+        "size": "32px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Gifts in good taste"
+      },
+      "body": {
+        "family": "CircularXXWeb",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "'TIS THE SEASON FOR GIFTING! Find pours for everyone on your"
+      },
+      "button": {
+        "family": "CircularXXWeb",
+        "size": "11px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.88px",
+        "text": "Add to cart — $120"
+      },
+      "nav": {
+        "family": "CircularXXWeb",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "Shop the Holiday Collection"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 52,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop the Holiday Collect"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 7,
+    "sections": [
+      {
+        "y": 107,
+        "h": 547,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Tilda",
+          "size": "54px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Table is Set"
+        },
+        "words": 21,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 727,
+        "h": 793,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "32px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gifts in good taste"
+        },
+        "words": 251,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1520,
+        "h": 1270,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 38,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2789,
+        "h": 1056,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": null,
+        "words": 31,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3908,
+        "h": 488,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "34px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.5px",
+          "text": "Corporate Gifting"
+        },
+        "words": 16,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4396,
+        "h": 894,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 44,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 5290,
+        "h": 269,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5559,
+        "h": 616,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": true,
+        "heading": {
+          "family": "Advercase",
+          "size": "26px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Join the Brightland Table"
+        },
+        "words": 139,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6175,
+        "h": 952,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "CircularXXWeb",
+          "size": "12px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Aishwarya Iyer - Founder"
+        },
+        "words": 34,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 7169,
+        "h": 881,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 73,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://brightland.co/collections/all",
+    "title": "Shop Brightland | Olive Oils, Vinegars & Pantry Staples",
+    "width": 1440,
+    "pageHeight": 6468,
+    "fonts": {
+      "h1": {
+        "family": "Advercase",
+        "size": "40px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "CircularXXWeb",
+        "size": "14px",
+        "weight": "450",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Loved by 600,000+ Customers"
+      },
+      "body": {
+        "family": "CircularXXWeb",
+        "size": "13px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.26px",
+        "text": "'TIS THE SEASON FOR GIFTING! Find pours for everyone on your"
+      },
+      "button": {
+        "family": "CircularXXWeb",
+        "size": "11px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.88px",
+        "text": "Add to cartAdd — $89"
+      },
+      "nav": {
+        "family": "CircularXXWeb",
+        "size": "13px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.26px",
+        "text": "Shop the Holiday Collection"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 36,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop the Holiday Collect"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 98,
+        "h": 394,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "40px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop All"
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 556,
+        "h": 4966,
+        "bg": "rgb(255, 255, 255)",
+        "images": 33,
+        "video": false,
+        "heading": null,
+        "words": 626,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 5563,
+        "h": 905,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 73,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 29,
+      "columns": 4,
+      "photoRatio": 0.82,
+      "filters": false
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://brightland.co/collections/all?_su_rec=wfuQBAMpMrynR6XmyRQjzgrMjOC0sWuAX4FSHZmg5b4cHZdFLvC6xh1_MyL8HQc46P67Gf-hdFOLL_L3fNIMWZB544fbskNu3FmksUP9k3hjRKV65pS5vOR8cCPUtMRTA0LokNMQ5O-m1q4yLCWRINB7BXBaZkluEHHtFZKfSOXSZgD75bM6agPqEl1PFk3ZfbJq_j7OCi3to4nKs3K-1IMdZx7d2On-nTEHDIXoj_jpcfQx0tHWlk3Jrd1p7-xQChDIsYdkuJAsH-CvmBBlFyThTmKd7QJ-Qz81o-Y1YgH5MgARQG10cA27yH6iotqRQ3NizA3IXQK6E7CzHffGKz2UEIyvrow2vYaD&_su_rec_id=87510c95-acf5-416c-9d65-3619a1aeeb55-1794666802",
+    "title": "Shop Brightland | Olive Oils, Vinegars & Pantry Staples",
+    "width": 390,
+    "pageHeight": 8361,
+    "fonts": {
+      "h1": {
+        "family": "Advercase",
+        "size": "35px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "CircularXXWeb",
+        "size": "14px",
+        "weight": "450",
+        "case": "capitalize",
+        "tracking": "normal",
+        "text": "Loved by 600,000+ Customers"
+      },
+      "body": {
+        "family": "CircularXXWeb",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "The Holiday Hosting Set by Brightland x MacKenzie-Childs is "
+      },
+      "button": {
+        "family": "CircularXXWeb",
+        "size": "10px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.6px",
+        "text": "Add to cartAdd — $89"
+      },
+      "nav": {
+        "family": "CircularXXWeb",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 52,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 107,
+        "h": 207,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "35px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop All"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 384,
+        "h": 7054,
+        "bg": "rgb(255, 255, 255)",
+        "images": 33,
+        "video": false,
+        "heading": null,
+        "words": 564,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 7480,
+        "h": 881,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 73,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 29,
+      "columns": 2,
+      "photoRatio": 0.82,
+      "filters": false
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://brightland.co/products/the-holiday-hosting-set-2026",
+    "title": "The Holiday Hosting Set",
+    "width": 1440,
+    "pageHeight": 7292,
+    "fonts": {
+      "h1": {
+        "family": "Advercase",
+        "size": "34px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Holiday Hosting Set"
+      },
+      "h2": {
+        "family": "Advercase",
+        "size": "40px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Exceptional flavor starts with exceptional ingredients."
+      },
+      "body": {
+        "family": "CircularXXWeb",
+        "size": "13px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.26px",
+        "text": "'TIS THE SEASON FOR GIFTING! Find pours for everyone on your"
+      },
+      "button": {
+        "family": "CircularXXWeb",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add to Cart — $110"
+      },
+      "nav": {
+        "family": "CircularXXWeb",
+        "size": "13px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.26px",
+        "text": "Shop the Holiday Collection"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 36,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop the Holiday Collect"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 99,
+        "h": 1990,
+        "bg": "rgb(255, 255, 255)",
+        "images": 15,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "34px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Holiday Hosting Set"
+        },
+        "words": 273,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2146,
+        "h": 747,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "22px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Brighten the first course"
+        },
+        "words": 81,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2893,
+        "h": 385,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "24px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The perfect \"hostess with the mostess\" gift"
+        },
+        "words": 129,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3278,
+        "h": 525,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "40px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Exceptional flavor starts with exceptional ingredients."
+        },
+        "words": 47,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3803,
+        "h": 1783,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 337,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5586,
+        "h": 758,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "34px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "A Gift for Every Table"
+        },
+        "words": 65,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 6387,
+        "h": 905,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 73,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart — $110",
+      "aboveFold": true,
+      "top": 869,
+      "x": 736,
+      "width": 656,
+      "bg": "rgb(10, 2, 0)"
+    },
+    "price": {
+      "family": "CircularXXWeb",
+      "size": "15px",
+      "weight": "500",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$120"
+    },
+    "galleryImages": 32,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 6
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://brightland.co/products/the-holiday-hosting-set-2026",
+    "title": "The Holiday Hosting Set",
+    "width": 390,
+    "pageHeight": 7384,
+    "fonts": {
+      "h1": {
+        "family": "Advercase",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Holiday Hosting Set"
+      },
+      "h2": {
+        "family": "Advercase",
+        "size": "25px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Exceptional flavor starts with exceptional ingredients."
+      },
+      "body": {
+        "family": "CircularXXWeb",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "'TIS THE SEASON FOR GIFTING! Find pours for everyone on your"
+      },
+      "button": {
+        "family": "CircularXXWeb",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Add to Cart — $110"
+      },
+      "nav": {
+        "family": "CircularXXWeb",
+        "size": "12px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "Shop the Holiday Collection"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 52,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop the Holiday Collect"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 108,
+        "h": 2065,
+        "bg": "rgb(255, 255, 255)",
+        "images": 17,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "28px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Holiday Hosting Set"
+        },
+        "words": 273,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2234,
+        "h": 609,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "18px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Brighten the first course"
+        },
+        "words": 81,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2843,
+        "h": 385,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "20px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The perfect \"hostess with the mostess\" gift"
+        },
+        "words": 129,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3228,
+        "h": 620,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "25px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Exceptional flavor starts with exceptional ingredients."
+        },
+        "words": 47,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3848,
+        "h": 1976,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 339,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5824,
+        "h": 637,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "26px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "A Gift for Every Table"
+        },
+        "words": 65,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 6503,
+        "h": 881,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 73,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to Cart — $110",
+      "aboveFold": false,
+      "top": 1347,
+      "x": 15,
+      "width": 360,
+      "bg": "rgb(10, 2, 0)"
+    },
+    "price": {
+      "family": "CircularXXWeb",
+      "size": "15px",
+      "weight": "500",
+      "case": "none",
+      "tracking": "normal",
+      "text": "$120"
+    },
+    "galleryImages": 17,
+    "swatches": 0,
+    "selects": 1,
+    "accordions": 6
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://brightland.co/",
+    "title": "California's Finest Olive Oil & Gift Sets",
+    "width": 1440,
+    "pageHeight": 7307,
+    "fonts": {
+      "h1": {
+        "family": "CircularXXWeb",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Brightland"
+      },
+      "h2": {
+        "family": "Advercase",
+        "size": "40px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Gifts in good taste"
+      },
+      "body": {
+        "family": "CircularXXWeb",
+        "size": "13px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.26px",
+        "text": "The Holiday Hosting Set by Brightland x MacKenzie-Childs is "
+      },
+      "button": {
+        "family": "CircularXXWeb",
+        "size": "11px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.88px",
+        "text": "Add to cart — $120"
+      },
+      "nav": {
+        "family": "CircularXXWeb",
+        "size": "13px",
+        "weight": "450",
+        "case": "none",
+        "tracking": "0.26px",
+        "text": "Shop Now"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 36,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Shop Now"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": true,
+    "videos": 7,
+    "sections": [
+      {
+        "y": 98,
+        "h": 663,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Tilda",
+          "size": "104px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "-0.5px",
+          "text": "The Table is Set"
+        },
+        "words": 21,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 816,
+        "h": 709,
+        "bg": "rgb(255, 255, 255)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "40px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Gifts in good taste"
+        },
+        "words": 251,
+        "perRow": 9,
+        "fullBleed": true
+      },
+      {
+        "y": 1525,
+        "h": 793,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": null,
+        "words": 38,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 2318,
+        "h": 848,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": null,
+        "words": 31,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3235,
+        "h": 719,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Advercase",
+          "size": "52px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.5px",
+          "text": "Corporate Gifting"
+        },
+        "words": 16,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3954,
+        "h": 558,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": null,
+        "words": 44,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 4512,
+        "h": 564,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 23,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5077,
+        "h": 628,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": true,
+        "heading": {
+          "family": "Advercase",
+          "size": "34px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Join the Brightland Table"
+        },
+        "words": 150,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5704,
+        "h": 656,
+        "bg": "rgb(255, 255, 255)",
+        "images": 3,
+        "video": false,
+        "heading": {
+          "family": "CircularXXWeb",
+          "size": "12px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.2px",
+          "text": "Aishwarya Iyer - Founder"
+        },
+        "words": 34,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6402,
+        "h": 905,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 73,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ]
+  }
+}

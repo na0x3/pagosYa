@@ -1,0 +1,85 @@
+{
+  "host": "floydhome.com",
+  "name": "Floyd",
+  "at": "2026-11-14T15:32:23.266Z",
+  "mood": "Editorial, doméstico y técnico; calidez de catálogo impreso combinada con la lógica de un sistema modular.",
+  "idea": "Presentar el mueble como un sistema que evoluciona: escenas domésticas de gran escala atraen y secuencias numeradas, configuradores y fichas neutras explican cómo se compone.",
+  "header": "Dos niveles. Arriba hay una banda promocional azul de unos 65 px en escritorio y 82 px en teléfono, con una sola línea centrada en GT America Mono de 12 px, mayúsculas; en móvil se parte en dos líneas. Debajo, cabecera crema sticky de 71 px en escritorio: logotipo FLOYD a la izquierda; cuatro enlaces principales —Shop, Membership, Stories for Home, Trade & Contract— a continuación; Contact, Account, Cart y lupa alineados a la derecha. En teléfono mide 57 px, conserva el logo a la izquierda y reduce las acciones a carrito y menú hamburguesa a la derecha; desaparecen los enlaces de texto. El icono de carrito tiene más presencia que el menú y ambos disponen de áreas táctiles de aproximadamente 44 px.",
+  "hero": "La primera pantalla empieza inmediatamente después de los 136 px combinados de anuncio y cabecera. Es una ilustración panorámica texturizada de dormitorio, sin titular ni botón superpuestos: en escritorio ocupa todo el ancho y unos 801 px de alto. La cama se concentra en la mitad derecha, mientras ventana, plantas y silla equilibran la izquierda. En teléfono se usa la misma ilustración con recorte vertical de unos 402 × 422 px: se pierde parte del extremo derecho, pero permanecen cama y silla como focos. El texto comercial aparece después, no encima de la imagen, preservando el hero como portada editorial.",
+  "catalog": "No hay una cabecera de colección, filtros ni selector de orden visibles: después de anuncio y navegación comienzan directamente los productos. La página se organiza por familias, cambiando la densidad según la complejidad: apertura de camas en 2 columnas muy grandes; bundles, complementos y hardware en 4 columnas; sofás en 3; otras categorías en 2 o 3. Los títulos de familia intermedios llegan a 48 px en escritorio y 30 px en teléfono. El inventario medido contiene unas 50 tarjetas y la página alcanza 13.789 px. En móvil todo se convierte en una sola columna, lo que alarga la página hasta 27.241 px; tampoco aparecen controles de filtro u orden. El primer producto empieza aproximadamente en y=139, sin introducción, y las imágenes principales son cuadradas o casi cuadradas sobre un campo gris cálido.",
+  "card": "Imagen cuadrada o casi cuadrada sobre fondo gris crema, con el producto aislado y pequeño respecto al lienzo para que camas y sofás conserven una escala comparable. En las tarjetas grandes de apertura, la etiqueta de descuento —por ejemplo, “30% OFF”— es una cápsula rectangular blanca con borde negro colocada arriba a la derecha. Debajo aparecen nombre, precio de miembro, variantes resumidas en una línea monoespaciada y, en algunas tarjetas, puntos de color. La información se alinea a la izquierda y usa poco espacio vertical. No se ve botón de compra rápida. Las capturas no permiten confirmar una segunda foto al pasar; aunque cada producto dispone de varios recursos, no debe asumirse ese comportamiento.",
+  "product": "Sobre el pliegue de escritorio se divide aproximadamente en 2/3 para la imagen y 1/3 para compra. A la izquierda, el producto aislado sobre el fondo crema, centrado y con mucho aire; un sello circular verde “BACK IN STOCK” flota cerca del límite superior derecho de la galería. A la derecha: breadcrumb pequeño, título grande de unos 48–54 px visibles, dos precios —miembro y regular—, etiqueta de 30% de descuento, estrellas y número de reseñas, descripción breve y configurador. El configurador empieza con una banda gris “[1] BUILD” y presenta variantes como filas completas con etiqueta a la izquierda, valor y chevrón a la derecha; en el ejemplo, Shelf Color y Wood Type. Después aparecen subtotal, ahorro, botón negro “Add To Cart” a todo el ancho y una caja de entrega con plazo, método y resumen del artículo. Al avanzar, la galería alterna una escena doméstica panorámica y módulos editoriales con titulares como “Clean lines and high quality” o “Cord management”. En escritorio aparece además una barra de compra sticky inferior con nombre, variantes, precio y botón. En teléfono se apila todo: imagen aislada primero; breadcrumb, título, precios, reseñas y descripción; variantes; botón de compra; caja logística; financiación; y luego la foto ambiental a ancho completo. El sello verde no aparece en la captura móvil.",
+  "cart": "No hay una captura utilizable del contenido del carrito: la imagen proporcionada muestra la cabecera y la ilustración de portada, aunque el enlace indica “Cart (1)”. No se ven cajón, filas, cantidades, subtotal, checkout ni ventas adicionales; por tanto, no deben inferirse. Se ignora esta captura para estudiar el carrito.",
+  "type": "La combinación separa relato y sistema. Floyd Gothic es la sans principal: peso 300 en títulos, curvas amplias y espaciado negativo. H1 medido a 64 px en escritorio con tracking de −3,2 px y 48 px en teléfono con aproximadamente −2 px; títulos de sección entre 32 y 40 px en escritorio y 26–32 px en móvil, normalmente con tracking cercano a −0,04 em. Los títulos de categoría del catálogo usan 48/30 px. Navegación en Floyd Gothic, 14 px escritorio y 12 px móvil. GT America Mono se reserva para anuncio, etiquetas, numeración, variantes y metadatos: 12–15 px, tracking entre −0,24 y −0,3 px; el anuncio va en mayúsculas y peso 500. La regla reproducible es usar la grotesca grande para promesas y la monoespaciada pequeña para instrucciones, precios, estados y taxonomías.",
+  "colour": "Fondo general crema RGB(248,246,237), también usado en la cabecera para que navegación y página formen una sola superficie. Tinta casi negra, aproximadamente #211D1B, en texto, líneas y botón principal. La banda promocional usa azul cielo cercano a #67C2E5 con texto negro. Las áreas de producto emplean un gris cálido cercano a #E9E7DE, apenas distinto del fondo de página. El verde vivo queda limitado al sello de disponibilidad; el rojo anaranjado pertenece al widget flotante de chat, no al sistema principal. Las fotos aportan los acentos más intensos: azules, ocres, verdes, rosa y madera.",
+  "photos": "Hay tres registros coordinados. Primero, ilustración editorial con grano de impresión, perspectiva doméstica y paleta saturada para la portada. Segundo, producto aislado sobre gris cálido, fotografiado o recortado a tres cuartos, sin atrezzo y ocupando una fracción moderada del lienzo; así se comparan configuraciones sin ruido. Tercero, escenas de uso a ancho completo con luz natural, interiores habitados y recortes panorámicos. En la portada también se alternan fotografías grandes de dormitorio con módulos de detalle: textiles, herrajes, superficies y personas montando o usando el producto.",
+  "motion": "Se registra un vídeo en la portada, dentro de un bloque visual de unos 718 px de alto en escritorio y 311 px en teléfono. La página también puede presentar secuencias de recursos dentro de productos, pero las capturas no prueban carruseles automáticos ni marquesinas; el anuncio es estático. Son visibles comportamientos sticky en la cabecera y en la barra de compra inferior de producto. No puede confirmarse cambio de imagen al pasar por una tarjeta. El chat flota sobre la esquina inferior derecha y acompaña el desplazamiento.",
+  "phone": "La recomposición no intenta conservar las retículas: todo pasa a una columna. La navegación textual desaparece tras una hamburguesa; anuncio y cabecera siguen sticky. El hero cambia de panorama a recorte vertical de 422 px. Los párrafos editoriales bajan de 32–36 px a 26 px y usan márgenes laterales de aproximadamente 12–20 px. Las secuencias de tres o cuatro módulos se apilan, con imagen primero y texto después, haciendo que la portada crezca de 10.616 a 12.399 px. El catálogo pasa de retículas de 2–4 columnas a una sola, manteniendo imágenes casi cuadradas y etiquetas en la esquina. En producto, la columna visual precede íntegramente a la compra; variantes y botón ocupan casi todo el ancho disponible. El modal de newsletter observado en algunas capturas tapa parte del contenido, pero no forma parte de la composición base y se ignora.",
+  "signature": "La tienda convierte el principio modular en gramática editorial: cada secuencia se rotula como “01 — CHOOSE / 02 — ADD / 03 — CHANGE”, de modo que la explicación de producto funciona como instrucciones de montaje y como relato de marca.",
+  "home": [
+    {
+      "role": "Abrir con identidad antes que con argumentos de venta.",
+      "composition": "Ilustración de dormitorio a todo el ancho, 801 px de alto en escritorio y 422 px en teléfono; sin texto ni CTA superpuestos. El recorte mantiene cama, silla y ventana como triángulo visual."
+    },
+    {
+      "role": "Enmarcar la campaña y declarar la promesa de marca.",
+      "composition": "Bloque de texto independiente de 174 px en escritorio y 286 px en móvil. Una línea monoespaciada pequeña introduce la campaña y un párrafo de 32 px —26 px móvil— explica longevidad, modularidad y descuento."
+    },
+    {
+      "role": "Introducir el producto protagonista.",
+      "composition": "Bloque textual de 321 px con titular de 36 px en escritorio; en teléfono ocupa 287 px y baja a 26 px. Texto alineado a la izquierda y ancho limitado, sin imagen concurrente."
+    },
+    {
+      "role": "Explicar el sistema en tres pasos.",
+      "composition": "Secuencia “01 — CHOOSE / 02 — ADD / 03 — CHANGE” con cuatro imágenes y 71 palabras. En escritorio se lee como franja de módulos contiguos; en teléfono cada paso se apila en una columna, alternando fotografía, etiqueta monoespaciada, título y explicación. La secuencia móvil alcanza unos 1.837 px."
+    },
+    {
+      "role": "Mostrar novedades como escenas completas.",
+      "composition": "Dos banners consecutivos de 756 px cada uno en escritorio y 422 px en móvil: “The Floyd Bed — In Color” y “Upholstered”. Fotografías panorámicas de dormitorios con un rótulo pequeño en el borde inferior, sin caja de texto superpuesta."
+    },
+    {
+      "role": "Cambiar de explicación a elección comercial.",
+      "composition": "Introducción de 174 px con una etiqueta lateral y un texto de 32 px: “Choose your starting point…”. En móvil ocupa 226 px y el texto baja a 26 px."
+    },
+    {
+      "role": "Comparar configuraciones de cama.",
+      "composition": "Tres tarjetas en una fila de escritorio, cada una con imagen grande, etiqueta de atributo en la esquina superior, nombre, precio y enlace. En teléfono se convierten en tres tarjetas apiladas; el bloque pasa de 755 a 1.833 px."
+    },
+    {
+      "role": "Abrir la segunda familia de producto.",
+      "composition": "Titular de 36 px dentro de una pausa de 197 px: presenta la colección de asientos configurables. En teléfono mantiene la altura aproximada y baja a 26 px."
+    },
+    {
+      "role": "Dar escala y comportamiento al producto.",
+      "composition": "Vídeo o imagen en movimiento a ancho completo, 718 px en escritorio y 311 px en teléfono, sin texto encima."
+    },
+    {
+      "role": "Exponer variantes de asientos.",
+      "composition": "Retícula de cuatro recursos y textos: 2 columnas en escritorio, una sola en móvil. Combina producto aislado y escenas, con nombres y descripciones breves debajo; ocupa 830 px frente a 1.936 px en teléfono."
+    },
+    {
+      "role": "Cerrar la sección comercial con una escena aspiracional.",
+      "composition": "Banner fotográfico de sofá a todo el ancho, 756 px en escritorio y 422 px en móvil, con una leyenda monoespaciada pequeña que enumera modelo, color y accesorios."
+    },
+    {
+      "role": "Pasar de producto a contenido editorial.",
+      "composition": "Cabecera “Stories for Home” de unos 103 px y, a continuación, historia de cliente con dos imágenes, nombre y ciudad en mono mayúscula, más texto narrativo. La historia ocupa 1.074 px en escritorio y 1.346 px en teléfono."
+    },
+    {
+      "role": "Construir comunidad y prueba social.",
+      "composition": "Bloque de 968 px con una imagen y titular de 40 px: “A community of modular design enthusiasts”. En móvil baja a 32 px y el conjunto ocupa 861 px."
+    },
+    {
+      "role": "Cerrar con servicio.",
+      "composition": "Bloque final de 513 px con imagen, titular de 40 px y texto de ayuda para proyectos; en teléfono usa 32 px y alcanza unos 595 px."
+    }
+  ],
+  "lessons": [
+    "Separar atracción y explicación: una imagen inicial sin texto puede construir deseo si el argumento comercial aparece inmediatamente después en un bloque tipográfico claro.",
+    "Traducir una cualidad del producto a la estructura de la página: si la oferta es modular, usar pasos numerados, comparaciones de configuraciones y selectores por componentes.",
+    "Variar la densidad de la retícula según el producto en vez de imponer una cuadrícula universal: piezas complejas reciben 2 columnas; accesorios comparables, 4.",
+    "Distinguir voces tipográficas por función: grotesca grande para relato y mono pequeña para precios, estados, variantes e instrucciones.",
+    "Mantener la misma jerarquía en móvil, pero abandonar las columnas: apilar módulos completos evita miniaturizar fotografías o convertir textos en bloques ilegibles.",
+    "Usar fondos muy próximos —crema de página y gris cálido de producto— para separar capas sin depender de bordes gruesos, reservando los colores intensos para promoción, disponibilidad y fotografía."
+  ]
+}

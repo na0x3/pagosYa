@@ -1,0 +1,959 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://schoolhouse.com/",
+    "title": "Schoolhouse",
+    "width": 1440,
+    "pageHeight": 5126,
+    "fonts": {
+      "h1": {
+        "family": "Sentinel",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Schoolhouse homepage"
+      },
+      "h2": {
+        "family": "Sentinel",
+        "size": "62px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Layers of the Season"
+      },
+      "body": {
+        "family": "Roboto",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "This fall, comfort is taking shape through texture, color, a"
+      },
+      "button": {
+        "family": "Roboto",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Roboto",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore our new trade program— Join Now - go to hvlgroup.com"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 42,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Explore our new trade pr"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 198,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "62px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Layers of the Season"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 918,
+        "h": 744,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "’Tis the Season for Color"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1662,
+        "h": 583,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Shop Our Favorites"
+        },
+        "words": 101,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 2245,
+        "h": 744,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "From The Ground Up"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2989,
+        "h": 540,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Shop By Category"
+        },
+        "words": 37,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3530,
+        "h": 995,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Schoolhouse Trade"
+        },
+        "words": 100,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 5,
+      "columns": 5,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://schoolhouse.com/",
+    "title": "Schoolhouse",
+    "width": 390,
+    "pageHeight": 5474,
+    "fonts": {
+      "h1": {
+        "family": "Sentinel",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Schoolhouse homepage"
+      },
+      "h2": {
+        "family": "Sentinel",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Layers of the Season"
+      },
+      "body": {
+        "family": "Roboto",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "This fall, comfort is taking shape through texture, color, a"
+      },
+      "button": {
+        "family": "Roboto",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Roboto",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Enjoy FREE Shipping on All Bedding— Shop Now - go to collect"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 42,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Enjoy FREE Shipping on A"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 107,
+        "h": 390,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "32px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Layers of the Season"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 497,
+        "h": 816,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "’Tis the Season for Color"
+        },
+        "words": 39,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1313,
+        "h": 448,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Shop Our Favorites"
+        },
+        "words": 101,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 1762,
+        "h": 789,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "From The Ground Up"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2551,
+        "h": 579,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "17px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "All Lighting - go to collection all lighting"
+        },
+        "words": 37,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3130,
+        "h": 1372,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Schoolhouse Trade"
+        },
+        "words": 100,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 5,
+      "columns": 5,
+      "photoRatio": 1,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://schoolhouse.com/collections/all",
+    "title": "All – Schoolhouse",
+    "width": 1440,
+    "pageHeight": 3337,
+    "fonts": {
+      "h1": {
+        "family": "Sentinel",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Collection: All"
+      },
+      "h2": {
+        "family": "Roboto",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.4px",
+        "text": "Sort by:"
+      },
+      "body": {
+        "family": "Arial",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Stay Connected"
+      },
+      "button": {
+        "family": "Roboto",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Roboto",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Enjoy FREE Shipping on All Bedding— Shop Now - go to collect"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 42,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Enjoy FREE Shipping on A"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 198,
+        "h": 102,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Collection: All"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 300,
+        "h": 2435,
+        "bg": "rgb(255, 255, 255)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "Roboto",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.4px",
+          "text": "Sort by:"
+        },
+        "words": 402,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 4,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://schoolhouse.com/collections/all?_su_rec=RMDTZeg8rFRrNgYrrONwse-I6vReTDqgP9guER5LNcVurgZeVBVOjEqTgSXzHJZ5-5gj8jC-JuuqvjXH7T8teATjXH1Mr-RmOFPug6BZ7u0eG3ZKE4_ZgKAjM9DqNxpo-j2GeEyTVxvv3yNZobo8lYb5-lIyyrfCtMWWU1VlWh9NSf33URARmqlgRFVwi47B7dy5hN2OsN0fSf5CDnFMr7CkPbtuQHxTvLdky5TlU6mziEKFyH2KYFLbzCPG7RhX1uL71SyUf59owOt4JTC5slV6va5K-rXGX01LRvzR-2eUdSM4yhLRshZIH5wzoRcpHNoxOoborT2Y4XCKgUUd-U7K9m4LQX5nd-Z6WuE&_su_rec_id=a82ae0a6-021d-4f40-864b-25c100f1875f-1794668110",
+    "title": "All – Schoolhouse",
+    "width": 390,
+    "pageHeight": 4810,
+    "fonts": {
+      "h1": {
+        "family": "Sentinel",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Collection: All"
+      },
+      "h2": {
+        "family": "Sentinel",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Filter and sort"
+      },
+      "body": {
+        "family": "Roboto",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "295 products"
+      },
+      "button": {
+        "family": "Roboto",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Roboto",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore our new trade program— Join Now - go to hvlgroup.com"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 42,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Explore our new trade pr"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 196,
+        "h": 3641,
+        "bg": "rgb(255, 255, 255)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Filter and sort"
+        },
+        "words": 355,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://schoolhouse.com/products/mainsail-throw-pillow-cover",
+    "title": "Mainsail Throw Pillow Cover – Schoolhouse",
+    "width": 1440,
+    "pageHeight": 3039,
+    "fonts": {
+      "h1": {
+        "family": "Sentinel",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Mainsail Throw Pillow Cover"
+      },
+      "h2": {
+        "family": "Sentinel",
+        "size": "15px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Product Details"
+      },
+      "body": {
+        "family": "Roboto",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "In stock and ready to ship"
+      },
+      "button": {
+        "family": "Roboto",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Roboto",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Enjoy FREE Shipping on All Bedding— Shop Now - go to collect"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 42,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Enjoy FREE Shipping on A"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 198,
+        "h": 1118,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Mainsail Throw Pillow Cover"
+        },
+        "words": 122,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1316,
+        "h": 496,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "You May Also Like"
+        },
+        "words": 102,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1812,
+        "h": 107,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "24px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Schoolhouse Living Gallery"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1919,
+        "h": 518,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "24px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Customers Also Viewed"
+        },
+        "words": 110,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart",
+      "aboveFold": true,
+      "top": 782,
+      "x": 989,
+      "width": 288,
+      "bg": "rgb(63, 122, 74)"
+    },
+    "price": {
+      "family": "Roboto",
+      "size": "18px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "1.3px",
+      "text": "Regular price $139.00 Regular price Sale price $139.00"
+    },
+    "galleryImages": 14,
+    "swatches": 92,
+    "selects": 0,
+    "accordions": 52
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://schoolhouse.com/products/mainsail-throw-pillow-cover",
+    "title": "Mainsail Throw Pillow Cover – Schoolhouse",
+    "width": 390,
+    "pageHeight": 4625,
+    "fonts": {
+      "h1": {
+        "family": "Sentinel",
+        "size": "30px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Mainsail Throw Pillow Cover"
+      },
+      "h2": {
+        "family": "Sentinel",
+        "size": "15px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Product Details"
+      },
+      "body": {
+        "family": "Roboto",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "In stock and ready to ship"
+      },
+      "button": {
+        "family": "Roboto",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Roboto",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Enjoy FREE Shipping on All Bedding— Shop Now - go to collect"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 42,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Enjoy FREE Shipping on A"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 107,
+        "h": 1604,
+        "bg": "rgb(255, 255, 255)",
+        "images": 7,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "30px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Mainsail Throw Pillow Cover"
+        },
+        "words": 182,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1711,
+        "h": 969,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "You May Also Like"
+        },
+        "words": 102,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2773,
+        "h": 405,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3178,
+        "h": 474,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "20px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Customers Also Viewed"
+        },
+        "words": 110,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart",
+      "aboveFold": false,
+      "top": 1118,
+      "x": 167,
+      "width": 208,
+      "bg": "rgb(63, 122, 74)"
+    },
+    "price": {
+      "family": "Roboto",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "1.3px",
+      "text": "Regular price $139.00 Regular price Sale price $139.00"
+    },
+    "galleryImages": 20,
+    "swatches": 92,
+    "selects": 0,
+    "accordions": 52
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://schoolhouse.com/cart",
+    "title": "Your Shopping Cart – Schoolhouse",
+    "width": 1440,
+    "pageHeight": 1461,
+    "fonts": {
+      "h1": {
+        "family": "Sentinel",
+        "size": "40px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Your cart"
+      },
+      "h2": {
+        "family": "Sentinel",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Estimated total"
+      },
+      "body": {
+        "family": "Roboto",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Loading..."
+      },
+      "button": {
+        "family": "Roboto",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Roboto",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore our new trade program— Join Now - go to hvlgroup.com"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 42,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Explore our new trade pr"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 198,
+        "h": 408,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "40px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Your cart"
+        },
+        "words": 38,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 606,
+        "h": 254,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Sentinel",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.6px",
+          "text": "Estimated total"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,1142 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://kith.com/",
+    "title": "Kith – Homepage",
+    "width": 1440,
+    "pageHeight": 8936,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Georgia",
+        "size": "28px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1.4px",
+        "text": "Kith for the New York Knicks 2026"
+      },
+      "body": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Discover the 2026-2027 collaborative collection, featuring a"
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Kith Logo"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 59,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "New",
+        "Mens",
+        "Womens",
+        "Kids",
+        "Gifting",
+        "Kith Logo",
+        "Hospitality",
+        "Magnifying Glass",
+        "Bag 0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 0,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Kith for the New York Knicks 2026"
+        },
+        "words": 33,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 732,
+        "h": 402,
+        "bg": "rgb(255, 255, 255)",
+        "images": 36,
+        "video": false,
+        "heading": null,
+        "words": 94,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1146,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "8th St by Ronnie Fieg & PROLETA RE ART for Clarks Originals "
+        },
+        "words": 45,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1866,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Kith Winter 2026"
+        },
+        "words": 29,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2598,
+        "h": 446,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3062,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Giorgio Armani & Kith Fall/Winter 2026: Dreams of the Dune"
+        },
+        "words": 37,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3794,
+        "h": 418,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4230,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Kith Women Winter 2026"
+        },
+        "words": 36,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4962,
+        "h": 446,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5426,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Kith Kids Winter 2026"
+        },
+        "words": 27,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 6158,
+        "h": 431,
+        "bg": "rgb(255, 255, 255)",
+        "images": 38,
+        "video": false,
+        "heading": null,
+        "words": 80,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 6602,
+        "h": 1167,
+        "bg": "rgb(255, 255, 255)",
+        "images": 36,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Kith for the New York Yankees 2026"
+        },
+        "words": 153,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 7769,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "2026 Holiday Gift Guide"
+        },
+        "words": 37,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://kith.com/",
+    "title": "Kith – Homepage",
+    "width": 390,
+    "pageHeight": 8376,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Georgia",
+        "size": "22px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1.1px",
+        "text": "Kith for the New York Knicks 2026"
+      },
+      "body": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Discover the 2026-2027 collaborative collection, featuring a"
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Kith Logo"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 59,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Menu Bars",
+        "Kith Logo",
+        "Bag 0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 0,
+        "h": 650,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "22px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.1px",
+          "text": "Kith for the New York Knicks 2026"
+        },
+        "words": 33,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 662,
+        "h": 391,
+        "bg": "rgb(255, 255, 255)",
+        "images": 36,
+        "video": false,
+        "heading": null,
+        "words": 94,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1065,
+        "h": 650,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "22px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.1px",
+          "text": "8th St by Ronnie Fieg & PROLETA RE ART for Clarks Originals "
+        },
+        "words": 45,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1715,
+        "h": 650,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "22px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.1px",
+          "text": "Kith Winter 2026"
+        },
+        "words": 29,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2377,
+        "h": 466,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2861,
+        "h": 650,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Georgia",
+          "size": "22px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.1px",
+          "text": "Giorgio Armani & Kith Fall/Winter 2026: Dreams of the Dune"
+        },
+        "words": 37,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3523,
+        "h": 438,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3979,
+        "h": 650,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "22px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.1px",
+          "text": "Kith Women Winter 2026"
+        },
+        "words": 36,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4641,
+        "h": 466,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5125,
+        "h": 650,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "22px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.1px",
+          "text": "Kith Kids Winter 2026"
+        },
+        "words": 27,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 5787,
+        "h": 420,
+        "bg": "rgb(255, 255, 255)",
+        "images": 38,
+        "video": false,
+        "heading": null,
+        "words": 80,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 6219,
+        "h": 1062,
+        "bg": "rgb(255, 255, 255)",
+        "images": 36,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "22px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.1px",
+          "text": "Kith for the New York Yankees 2026"
+        },
+        "words": 153,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 7281,
+        "h": 693,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "22px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.1px",
+          "text": "2026 Holiday Gift Guide"
+        },
+        "words": 37,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://kith.com/collections/all",
+    "title": "All | Kith",
+    "width": 1440,
+    "pageHeight": 28973,
+    "fonts": {
+      "h1": {
+        "family": "Georgia",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.9px",
+        "text": "Shop All"
+      },
+      "h2": {
+        "family": "proxima-nova",
+        "size": "10px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "0.5px",
+        "text": "Join Our List"
+      },
+      "body": null,
+      "button": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Kith Logo"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 59,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "New",
+        "Mens",
+        "Womens",
+        "Kids",
+        "Gifting",
+        "Kith Logo",
+        "Hospitality",
+        "Magnifying Glass",
+        "Bag 0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 133,
+        "h": 28354,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1411,
+        "video": false,
+        "heading": null,
+        "words": 2046,
+        "perRow": 12,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 20,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://kith.com/collections/all?_su_rec=C8SDeBEXyorfzl6BpjaIWZn_Ixf6YU-zP_DTDjVeGwKGmvRc46tJcDTojNJC_4qF-IuiP3kgT5tCxjimqDoWM9YAvqJdFKdig6tYp2idtYHKCL_ZkQVUt6UqkUy8bjJazX_OBrnNjiQuI-4UOzfbbISu78xt0UUl9dHj2ITSaMB68aX6zQRrlOUDSMPSuiHanSFhiAt1AbAvztemC8cJvg5U-MsbKrSK8D3VedmoSx8m5QnEV0yuiXVMxBZwanHsOIdDFs59wk2ZOF8STYN3wg4YahdgCEhu0PWpFTQU4pHT9i1Y0fRqIbRPj22qeAcYIgLd5KJ9DCu5lqlIl5kPPo_9qVFF8gRRphndydr4KjXR2L-9NWcuVGmm4jcirQ&_su_rec_id=32e1f88c-c1a2-436d-be6c-43d67202d689-1794667478",
+    "title": "All | Kith",
+    "width": 390,
+    "pageHeight": 35277,
+    "fonts": {
+      "h1": {
+        "family": "Georgia",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.8px",
+        "text": "Shop All"
+      },
+      "h2": null,
+      "body": null,
+      "button": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Kith Logo"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 59,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Menu Bars",
+        "Kith Logo",
+        "Bag 0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 163,
+        "h": 34673,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1411,
+        "video": false,
+        "heading": null,
+        "words": 2046,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 20,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://kith.com/products/cna20526c",
+    "title": "Converse Chuck 70 GORE-TEX Hairy Suede - Black – Kith",
+    "width": 1440,
+    "pageHeight": 4320,
+    "fonts": {
+      "h1": {
+        "family": "Georgia",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.9px",
+        "text": "Chuck 70 GORE-TEX Hairy Suede"
+      },
+      "h2": {
+        "family": "Georgia",
+        "size": "18px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.9px",
+        "text": "Related Products"
+      },
+      "body": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "To help ensure your gifts arrive on time, please place your "
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Kith Logo"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 59,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "New",
+        "Mens",
+        "Womens",
+        "Kids",
+        "Gifting",
+        "Kith Logo",
+        "Hospitality",
+        "Magnifying Glass",
+        "Bag 0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 59,
+        "h": 3814,
+        "bg": "rgb(255, 255, 255)",
+        "images": 36,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "18px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.9px",
+          "text": "Chuck 70 GORE-TEX Hairy Suede"
+        },
+        "words": 180,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": null,
+    "galleryImages": 13,
+    "swatches": 84,
+    "selects": 10,
+    "accordions": 101
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://kith.com/products/cna20526c",
+    "title": "Converse Chuck 70 GORE-TEX Hairy Suede - Black – Kith",
+    "width": 390,
+    "pageHeight": 2326,
+    "fonts": {
+      "h1": {
+        "family": "Georgia",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.8px",
+        "text": "Chuck 70 GORE-TEX Hairy Suede"
+      },
+      "h2": {
+        "family": "Georgia",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.8px",
+        "text": "Related Products"
+      },
+      "body": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "To help ensure your gifts arrive on time, please place your "
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Kith Logo"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 59,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Menu Bars",
+        "Kith Logo",
+        "Bag 0"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 59,
+        "h": 1865,
+        "bg": "rgb(255, 255, 255)",
+        "images": 28,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "16px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "0.8px",
+          "text": "Chuck 70 GORE-TEX Hairy Suede"
+        },
+        "words": 194,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "proxima-nova",
+      "size": "12px",
+      "weight": "300",
+      "case": "none",
+      "tracking": "0.6px",
+      "text": "Bs1.503,00 BOB"
+    },
+    "galleryImages": 13,
+    "swatches": 84,
+    "selects": 10,
+    "accordions": 101
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://kith.com/?viewcart=true",
+    "title": "Kith – Homepage",
+    "width": 1440,
+    "pageHeight": 8216,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Georgia",
+        "size": "28px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1.4px",
+        "text": "Kith for the New York Knicks 2026"
+      },
+      "body": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Discover the 2026-2027 collaborative collection, featuring a"
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "0.6px",
+        "text": "Kith Logo"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 59,
+      "position": "fixed",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "New",
+        "Mens",
+        "Womens",
+        "Kids",
+        "Gifting",
+        "Kith Logo",
+        "Hospitality",
+        "Magnifying Glass",
+        "Bag 1"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 0,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Kith for the New York Knicks 2026"
+        },
+        "words": 33,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 732,
+        "h": 402,
+        "bg": "rgb(255, 255, 255)",
+        "images": 36,
+        "video": false,
+        "heading": null,
+        "words": 94,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 1146,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "8th St by Ronnie Fieg & PROLETA RE ART for Clarks Originals "
+        },
+        "words": 45,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1866,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Kith Winter 2026"
+        },
+        "words": 29,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2598,
+        "h": 446,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3062,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Giorgio Armani & Kith Fall/Winter 2026: Dreams of the Dune"
+        },
+        "words": 37,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3794,
+        "h": 418,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4230,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Kith Women Winter 2026"
+        },
+        "words": 36,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4962,
+        "h": 446,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5426,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Kith Kids Winter 2026"
+        },
+        "words": 27,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 6158,
+        "h": 431,
+        "bg": "rgb(255, 255, 255)",
+        "images": 38,
+        "video": false,
+        "heading": null,
+        "words": 80,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 6602,
+        "h": 1167,
+        "bg": "rgb(255, 255, 255)",
+        "images": 36,
+        "video": false,
+        "heading": {
+          "family": "Georgia",
+          "size": "28px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "1.4px",
+          "text": "Kith for the New York Yankees 2026"
+        },
+        "words": 153,
+        "perRow": 8,
+        "fullBleed": true
+      }
+    ]
+  }
+}

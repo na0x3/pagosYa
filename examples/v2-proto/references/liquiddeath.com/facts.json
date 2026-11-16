@@ -1,0 +1,937 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://liquiddeath.com/en-bo",
+    "title": "Liquid Death | Murder Your Thirst",
+    "width": 1440,
+    "pageHeight": 4002,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Acumin Pro",
+        "size": "60px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "THE EASY-DRINKINGENERGY DRINK."
+      },
+      "body": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Soda-Flavored Sparkling Water"
+      },
+      "button": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Final Sale of the Year: 40% off merch sitewide* Shop Now #sh"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 118,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Final Sale of the Year: "
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 142,
+        "h": 737,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "60px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "THE EASY-DRINKINGENERGY DRINK."
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 879,
+        "h": 120,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "MURDER YOUR THIRST"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 999,
+        "h": 669,
+        "bg": "rgb(255, 255, 255)",
+        "images": 21,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "40px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "MANGO CHAINSAW"
+        },
+        "words": 134,
+        "perRow": 3,
+        "fullBleed": true
+      },
+      {
+        "y": 1668,
+        "h": 504,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "PLASTIC RECYCLING IS A MYTH. MOST PLASTIC IS SENT TO LANDFIL"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2172,
+        "h": 104,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "KILLER MERCH"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2274,
+        "h": 431,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 49,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 2705,
+        "h": 517,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": null,
+        "words": 6,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://liquiddeath.com/en-bo",
+    "title": "Liquid Death | Murder Your Thirst",
+    "width": 390,
+    "pageHeight": 4047,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Acumin Pro",
+        "size": "40px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.4px",
+        "text": "THE EASY-DRINKINGENERGY DRINK."
+      },
+      "body": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Soda-Flavored Sparkling Water"
+      },
+      "button": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Final Sale of the Year: 40% off merch sitewide* Shop Now #sh"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 124,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Final Sale of the Year: "
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 148,
+        "h": 512,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "40px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.4px",
+          "text": "THE EASY-DRINKINGENERGY DRINK."
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 740,
+        "h": 496,
+        "bg": "rgb(255, 255, 255)",
+        "images": 19,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "20px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "MANGO CHAINSAW"
+        },
+        "words": 124,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1236,
+        "h": 416,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "20px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "PLASTIC RECYCLING IS A MYTH. MOST PLASTIC IS SENT TO LANDFIL"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1754,
+        "h": 342,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 49,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 2176,
+        "h": 457,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 3,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2681,
+        "h": 457,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 3,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://liquiddeath.com/collections/all",
+    "title": "Products – Liquid Death",
+    "width": 1440,
+    "pageHeight": 5382,
+    "fonts": {
+      "h1": {
+        "family": "Acumin Pro",
+        "size": "48px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Products"
+      },
+      "h2": null,
+      "body": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Please select your shipping country."
+      },
+      "button": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "HELL YES"
+      },
+      "nav": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Final Sale of the Year: 40% off merch sitewide* Shop Now #sh"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 118,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Final Sale of the Year: "
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 116,
+        "h": 4424,
+        "bg": "rgb(255, 255, 255)",
+        "images": 32,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "48px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Products"
+        },
+        "words": 426,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 4540,
+        "h": 128,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 117,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 32,
+      "columns": 4,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://liquiddeath.com/collections/all?_su_rec=OEZ1XCYiY9YbCtPO7GERlQ6085gtmOPu7oZ_EE-iLgacSwAx-OtKPJWAIdTzEHpHNIj63LaISdi3CZt0_fJ-54dJp0VbkUifDizY7SdVuwyYtSUmtgKkEmlKWI-2QHKc9SDLwW7u18PDmvqjPDMINnJqyL31UZ2KcQtSjz5iwfuoWYp8vP65Hy_dWlTpUvY1Mkpwo2OscfwdK79-OzdFL7CM98g4lW1HY1IXi5PWMiuep00Ltka2n2OZl0JU23n_OEvGh8py0vCJDGyDAJNcvZ5YPuPpbMjIYrI5F4POi860heSHwabvFD1jrg2Nc3O3KMcHsPuVAmIoIiSYpJQbU0UwQtQKBgWW2wvRYbSMpe96zQ&_su_rec_id=e76426b6-1243-4e8e-af98-e7f08836d209-1794666699",
+    "title": "Products – Liquid Death",
+    "width": 390,
+    "pageHeight": 7305,
+    "fonts": {
+      "h1": {
+        "family": "Acumin Pro",
+        "size": "28px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Products"
+      },
+      "h2": {
+        "family": "Acumin Pro",
+        "size": "20px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "INFORMATION"
+      },
+      "body": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Please select your shipping country."
+      },
+      "button": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "HELL YES"
+      },
+      "nav": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Final Sale of the Year: 40% off merch sitewide* Shop Now #sh"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 124,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Final Sale of the Year: "
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 122,
+        "h": 6096,
+        "bg": "rgb(255, 255, 255)",
+        "images": 32,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "28px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Products"
+        },
+        "words": 409,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 6218,
+        "h": 256,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 117,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 32,
+      "columns": 2,
+      "photoRatio": 1,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://liquiddeath.com/products/team-death-supporter-scarf",
+    "title": "Team Death Supporter Scarf – Liquid Death",
+    "width": 1440,
+    "pageHeight": 2293,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Acumin Pro",
+        "size": "32px",
+        "weight": "800",
+        "case": "uppercase",
+        "tracking": "-0.8px",
+        "text": "Team Death Supporter Scarf"
+      },
+      "body": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Please select your shipping country."
+      },
+      "button": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "HELL YES"
+      },
+      "nav": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Final Sale of the Year: 40% off merch sitewide* Shop Now #sh"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 118,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Final Sale of the Year: "
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 118,
+        "h": 668,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "32px",
+          "weight": "800",
+          "case": "uppercase",
+          "tracking": "-0.8px",
+          "text": "Team Death Supporter Scarf"
+        },
+        "words": 63,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 786,
+        "h": 589,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "32px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "BUT WAIT THERE'S MORE..."
+        },
+        "words": 53,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 1375,
+        "h": 199,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "add to cart",
+      "aboveFold": true,
+      "top": 380,
+      "x": 760,
+      "width": 584,
+      "bg": "rgba(0, 0, 0, 0)"
+    },
+    "price": {
+      "family": "Acumin Pro",
+      "size": "36px",
+      "weight": "700",
+      "case": "none",
+      "tracking": "normal",
+      "text": "Sale price $17.40 Regular price $29.00"
+    },
+    "galleryImages": 10,
+    "swatches": 73,
+    "selects": 8,
+    "accordions": 13
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://liquiddeath.com/products/team-death-supporter-scarf",
+    "title": "Team Death Supporter Scarf – Liquid Death",
+    "width": 390,
+    "pageHeight": 2959,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Acumin Pro",
+        "size": "24px",
+        "weight": "800",
+        "case": "uppercase",
+        "tracking": "-0.6px",
+        "text": "Team Death Supporter Scarf"
+      },
+      "body": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Please select your shipping country."
+      },
+      "button": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "HELL YES"
+      },
+      "nav": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Final Sale of the Year: 40% off merch sitewide* Shop Now #sh"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 124,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Final Sale of the Year: "
+      ],
+      "logo": "unknown",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 124,
+        "h": 884,
+        "bg": "rgb(255, 255, 255)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "24px",
+          "weight": "800",
+          "case": "uppercase",
+          "tracking": "-0.6px",
+          "text": "Team Death Supporter Scarf"
+        },
+        "words": 63,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1008,
+        "h": 484,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "24px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "BUT WAIT THERE'S MORE..."
+        },
+        "words": 53,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 1492,
+        "h": 630,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "add to cart",
+      "aboveFold": true,
+      "top": 720,
+      "x": 16,
+      "width": 358,
+      "bg": "rgba(0, 0, 0, 0)"
+    },
+    "price": {
+      "family": "Acumin Pro",
+      "size": "20px",
+      "weight": "700",
+      "case": "none",
+      "tracking": "normal",
+      "text": "Sale price $17.40 Regular price $29.00"
+    },
+    "galleryImages": 10,
+    "swatches": 73,
+    "selects": 8,
+    "accordions": 13
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://liquiddeath.com/?viewcart=true",
+    "title": "Liquid Death | Murder Your Thirst",
+    "width": 1440,
+    "pageHeight": 3936,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "Acumin Pro",
+        "size": "60px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "normal",
+        "text": "THE EASY-DRINKINGENERGY DRINK."
+      },
+      "body": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Soda-Flavored Sparkling Water"
+      },
+      "button": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": ""
+      },
+      "nav": {
+        "family": "Acumin Pro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Final Sale of the Year: 40% off merch sitewide* Shop Now #sh"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 118,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "Final Sale of the Year: "
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 118,
+        "h": 737,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "60px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "THE EASY-DRINKINGENERGY DRINK."
+        },
+        "words": 24,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 855,
+        "h": 120,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "MURDER YOUR THIRST"
+        },
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 975,
+        "h": 669,
+        "bg": "rgb(255, 255, 255)",
+        "images": 21,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "40px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "MANGO CHAINSAW"
+        },
+        "words": 134,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1644,
+        "h": 504,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "32px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "PLASTIC RECYCLING IS A MYTH. MOST PLASTIC IS SENT TO LANDFIL"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2148,
+        "h": 104,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Acumin Pro",
+          "size": "56px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "normal",
+          "text": "KILLER MERCH"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2250,
+        "h": 431,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": null,
+        "words": 49,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 2681,
+        "h": 517,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": true,
+        "heading": null,
+        "words": 6,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ]
+  }
+}

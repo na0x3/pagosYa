@@ -1,0 +1,1212 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.shopdoen.com/en-bo",
+    "title": "DÔEN | Official Site",
+    "width": 1440,
+    "pageHeight": 5553,
+    "fonts": {
+      "h1": {
+        "family": "Founders Caslon",
+        "size": "22px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "NEW ARRIVALS"
+      },
+      "h2": {
+        "family": "Carta Nueva",
+        "size": "72px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore"
+      },
+      "body": {
+        "family": "Founders Caslon",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Keep up to date on the latest happenings in our world—launch"
+      },
+      "button": {
+        "family": "Masqualero",
+        "size": "11px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "XS"
+      },
+      "nav": {
+        "family": "Romaine",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.65px",
+        "text": "New"
+      }
+    },
+    "page": "rgb(246, 242, 230)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(246, 242, 230)",
+      "links": [
+        "New",
+        "Shop",
+        "Collections",
+        "Discover",
+        "DÔEN Home",
+        "ACCOUNT",
+        "BOB BOB BO",
+        "Search",
+        "ASSISTANCE",
+        "Cart"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 95,
+        "h": 720,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Founders Caslon",
+          "size": "22px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "NEW ARRIVALS"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 815,
+        "h": 665,
+        "bg": "rgb(246, 242, 230)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1480,
+        "h": 1215,
+        "bg": "rgb(246, 242, 230)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Explore"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2695,
+        "h": 720,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3415,
+        "h": 809,
+        "bg": "rgb(246, 242, 230)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Featured"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4237,
+        "h": 763,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Our Shops"
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.shopdoen.com/en-bo",
+    "title": "DÔEN | Official Site",
+    "width": 390,
+    "pageHeight": 7946,
+    "fonts": {
+      "h1": {
+        "family": "Founders Caslon",
+        "size": "22px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "NEW ARRIVALS"
+      },
+      "h2": {
+        "family": "Carta Nueva",
+        "size": "64px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore"
+      },
+      "body": {
+        "family": "Founders Caslon",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Keep up to date on the latest happenings in our world—launch"
+      },
+      "button": {
+        "family": "Masqualero",
+        "size": "11px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "XS"
+      },
+      "nav": {
+        "family": "Romaine",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Mobile Menu"
+      }
+    },
+    "page": "rgb(246, 242, 230)",
+    "header": {
+      "height": 50,
+      "position": "sticky",
+      "bg": "rgb(246, 242, 230)",
+      "links": [
+        "Mobile Menu",
+        "DÔEN Home",
+        "Search",
+        "Cart"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 108,
+        "h": 610,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Founders Caslon",
+          "size": "22px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "NEW ARRIVALS"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 717,
+        "h": 719,
+        "bg": "rgb(246, 242, 230)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1436,
+        "h": 2280,
+        "bg": "rgb(246, 242, 230)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "64px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Explore"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3716,
+        "h": 609,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4326,
+        "h": 1901,
+        "bg": "rgb(246, 242, 230)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "64px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Featured"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6227,
+        "h": 859,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Our Shops"
+        },
+        "words": 25,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.shopdoen.com/",
+    "title": "DÔEN | Official Site",
+    "width": 1440,
+    "pageHeight": 5514,
+    "fonts": {
+      "h1": {
+        "family": "Founders Caslon",
+        "size": "22px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "NEW ARRIVALS"
+      },
+      "h2": {
+        "family": "Carta Nueva",
+        "size": "72px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore"
+      },
+      "body": {
+        "family": "Founders Caslon",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Keep up to date on the latest happenings in our world—launch"
+      },
+      "button": {
+        "family": "Masqualero",
+        "size": "11px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "XS"
+      },
+      "nav": {
+        "family": "Romaine",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.65px",
+        "text": "New"
+      }
+    },
+    "page": "rgb(246, 242, 230)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(246, 242, 230)",
+      "links": [
+        "New",
+        "Shop",
+        "Collections",
+        "Discover",
+        "DÔEN Home",
+        "ACCOUNT",
+        "USD USD US",
+        "Search",
+        "ASSISTANCE",
+        "Cart"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 56,
+        "h": 720,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Founders Caslon",
+          "size": "22px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "NEW ARRIVALS"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 776,
+        "h": 665,
+        "bg": "rgb(246, 242, 230)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1441,
+        "h": 1215,
+        "bg": "rgb(246, 242, 230)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Explore"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2656,
+        "h": 720,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3376,
+        "h": 809,
+        "bg": "rgb(246, 242, 230)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Featured"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4198,
+        "h": 763,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Our Shops"
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 3,
+      "columns": 3,
+      "photoRatio": 0.87,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.shopdoen.com/",
+    "title": "DÔEN | Official Site",
+    "width": 390,
+    "pageHeight": 7888,
+    "fonts": {
+      "h1": {
+        "family": "Founders Caslon",
+        "size": "22px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "NEW ARRIVALS"
+      },
+      "h2": {
+        "family": "Carta Nueva",
+        "size": "64px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore"
+      },
+      "body": {
+        "family": "Founders Caslon",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Keep up to date on the latest happenings in our world—launch"
+      },
+      "button": {
+        "family": "Masqualero",
+        "size": "11px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "XS"
+      },
+      "nav": {
+        "family": "Romaine",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Mobile Menu"
+      }
+    },
+    "page": "rgb(246, 242, 230)",
+    "header": {
+      "height": 50,
+      "position": "sticky",
+      "bg": "rgb(246, 242, 230)",
+      "links": [
+        "Mobile Menu",
+        "DÔEN Home",
+        "Search",
+        "Cart"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 50,
+        "h": 610,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Founders Caslon",
+          "size": "22px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "NEW ARRIVALS"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 660,
+        "h": 719,
+        "bg": "rgb(246, 242, 230)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1379,
+        "h": 2280,
+        "bg": "rgb(246, 242, 230)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "64px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Explore"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3659,
+        "h": 609,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4268,
+        "h": 1901,
+        "bg": "rgb(246, 242, 230)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "64px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Featured"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6169,
+        "h": 859,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Our Shops"
+        },
+        "words": 25,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.shopdoen.com/",
+    "title": "DÔEN | Official Site",
+    "width": 1440,
+    "pageHeight": 5514,
+    "fonts": {
+      "h1": {
+        "family": "Founders Caslon",
+        "size": "22px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "NEW ARRIVALS"
+      },
+      "h2": {
+        "family": "Carta Nueva",
+        "size": "72px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore"
+      },
+      "body": {
+        "family": "Founders Caslon",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Keep up to date on the latest happenings in our world—launch"
+      },
+      "button": {
+        "family": "Masqualero",
+        "size": "11px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "XS"
+      },
+      "nav": {
+        "family": "Romaine",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.65px",
+        "text": "New"
+      }
+    },
+    "page": "rgb(246, 242, 230)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(246, 242, 230)",
+      "links": [
+        "New",
+        "Shop",
+        "Collections",
+        "Discover",
+        "DÔEN Home",
+        "ACCOUNT",
+        "USD USD US",
+        "Search",
+        "ASSISTANCE",
+        "Cart"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 56,
+        "h": 720,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Founders Caslon",
+          "size": "22px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "NEW ARRIVALS"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 776,
+        "h": 665,
+        "bg": "rgb(246, 242, 230)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1441,
+        "h": 1215,
+        "bg": "rgb(246, 242, 230)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Explore"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2656,
+        "h": 720,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3376,
+        "h": 809,
+        "bg": "rgb(246, 242, 230)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Featured"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4198,
+        "h": 763,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Our Shops"
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": null,
+    "galleryImages": 21,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 24
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.shopdoen.com/",
+    "title": "DÔEN | Official Site",
+    "width": 390,
+    "pageHeight": 7888,
+    "fonts": {
+      "h1": {
+        "family": "Founders Caslon",
+        "size": "22px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "NEW ARRIVALS"
+      },
+      "h2": {
+        "family": "Carta Nueva",
+        "size": "64px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore"
+      },
+      "body": {
+        "family": "Founders Caslon",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Keep up to date on the latest happenings in our world—launch"
+      },
+      "button": {
+        "family": "Masqualero",
+        "size": "11px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "XS"
+      },
+      "nav": {
+        "family": "Romaine",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Mobile Menu"
+      }
+    },
+    "page": "rgb(246, 242, 230)",
+    "header": {
+      "height": 50,
+      "position": "sticky",
+      "bg": "rgb(246, 242, 230)",
+      "links": [
+        "Mobile Menu",
+        "DÔEN Home",
+        "Search",
+        "Cart"
+      ],
+      "logo": "left",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 50,
+        "h": 610,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Founders Caslon",
+          "size": "22px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "NEW ARRIVALS"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 660,
+        "h": 719,
+        "bg": "rgb(246, 242, 230)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1379,
+        "h": 2280,
+        "bg": "rgb(246, 242, 230)",
+        "images": 9,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "64px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Explore"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3659,
+        "h": 609,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4268,
+        "h": 1901,
+        "bg": "rgb(246, 242, 230)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "64px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Featured"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 6169,
+        "h": 859,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Our Shops"
+        },
+        "words": 25,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": false,
+      "text": null,
+      "aboveFold": null,
+      "top": null,
+      "x": null,
+      "width": null,
+      "bg": null
+    },
+    "price": {
+      "family": "Masqualero",
+      "size": "13px",
+      "weight": "400",
+      "case": "uppercase",
+      "tracking": "0.25px",
+      "text": "$498 { \"currency\": \"USD\", \"baseCurrency\": \"USD\", \"rules\": []"
+    },
+    "galleryImages": 19,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 24
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.shopdoen.com/?cart=open",
+    "title": "DÔEN | Official Site",
+    "width": 1440,
+    "pageHeight": 5514,
+    "fonts": {
+      "h1": {
+        "family": "Founders Caslon",
+        "size": "22px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "3px",
+        "text": "NEW ARRIVALS"
+      },
+      "h2": {
+        "family": "Carta Nueva",
+        "size": "72px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Explore"
+      },
+      "body": {
+        "family": "Founders Caslon",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "1px",
+        "text": "Keep up to date on the latest happenings in our world—launch"
+      },
+      "button": {
+        "family": "Masqualero",
+        "size": "11px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "XS"
+      },
+      "nav": {
+        "family": "Romaine",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "1.65px",
+        "text": "New"
+      }
+    },
+    "page": "rgb(246, 242, 230)",
+    "header": {
+      "height": 56,
+      "position": "sticky",
+      "bg": "rgb(246, 242, 230)",
+      "links": [
+        "New",
+        "Shop",
+        "Collections",
+        "Discover",
+        "DÔEN Home",
+        "ACCOUNT",
+        "USD USD US",
+        "Search",
+        "ASSISTANCE",
+        "Cart"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 56,
+        "h": 720,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Founders Caslon",
+          "size": "22px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "3px",
+          "text": "NEW ARRIVALS"
+        },
+        "words": 2,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 776,
+        "h": 665,
+        "bg": "rgb(246, 242, 230)",
+        "images": 2,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1441,
+        "h": 1215,
+        "bg": "rgb(246, 242, 230)",
+        "images": 11,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Explore"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2656,
+        "h": 720,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": true,
+        "heading": null,
+        "words": 8,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3376,
+        "h": 809,
+        "bg": "rgb(246, 242, 230)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Featured"
+        },
+        "words": 53,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4198,
+        "h": 763,
+        "bg": "rgb(246, 242, 230)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Carta Nueva",
+          "size": "72px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Our Shops"
+        },
+        "words": 33,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

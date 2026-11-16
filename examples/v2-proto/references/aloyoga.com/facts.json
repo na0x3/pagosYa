@@ -1,0 +1,882 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://www.aloyoga.com/es-bo",
+    "title": "ALO | Leggings, ropa y accesorios de yoga, studio to street",
+    "width": 1440,
+    "pageHeight": 6265,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "proxima-nova",
+        "size": "32px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Estilos versátiles que fluyen con el presente y tus planes d"
+      },
+      "body": {
+        "family": "proxima-nova",
+        "size": "14px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "0.7px",
+        "text": "INICIAR SESIÓN PARA OBTENER RECOMPENSAS"
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "18px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "Comprar novedades"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 134,
+        "h": 575,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 779,
+        "h": 538,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "32px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.96px",
+          "text": "LO MÁS POPULAR"
+        },
+        "words": 8,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 1387,
+        "h": 576,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2033,
+        "h": 636,
+        "bg": "rgb(255, 255, 255)",
+        "images": 25,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "32px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.96px",
+          "text": "Selecciones destacadas"
+        },
+        "words": 244,
+        "perRow": 25,
+        "fullBleed": true
+      },
+      {
+        "y": 2739,
+        "h": 555,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "32px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.96px",
+          "text": "Comprar por color"
+        },
+        "words": 77,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 3364,
+        "h": 746,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "16px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.12px",
+          "text": "DÍA A NOCHE"
+        },
+        "words": 37,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 4180,
+        "h": 446,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "60px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "-1.8px",
+          "text": "¿Es tu primera vez en ALO?"
+        },
+        "words": 8,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4696,
+        "h": 523,
+        "bg": "rgb(240, 240, 240)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "32px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.96px",
+          "text": "Comprar por actividad"
+        },
+        "words": 11,
+        "perRow": 6,
+        "fullBleed": true
+      },
+      {
+        "y": 5289,
+        "h": 225,
+        "bg": "rgb(240, 240, 240)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "32px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.96px",
+          "text": "AS SEEN ON YOU"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 14,
+      "columns": 14,
+      "photoRatio": 0.67,
+      "filters": false
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://www.aloyoga.com/es-bo",
+    "title": "ALO | Leggings, ropa y accesorios de yoga, studio to street",
+    "width": 390,
+    "pageHeight": 6189,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "proxima-nova",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "0.18px",
+        "text": "Estilos versátiles que fluyen con el presente y tus planes d"
+      },
+      "body": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Obtener recompensas con"
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "18px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "1.5px",
+        "text": "COMPRAR nuevo en"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 140,
+        "h": 141,
+        "bg": "rgb(255, 255, 255)",
+        "images": 12,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "14px",
+          "weight": "400",
+          "case": "uppercase",
+          "tracking": "0.308px",
+          "text": "Mujeres"
+        },
+        "words": 18,
+        "perRow": 12,
+        "fullBleed": true
+      },
+      {
+        "y": 281,
+        "h": 393,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 3,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 724,
+        "h": 554,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "24px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.72px",
+          "text": "LO MÁS POPULAR"
+        },
+        "words": 8,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 1347,
+        "h": 390,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 2,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 1787,
+        "h": 572,
+        "bg": "rgb(255, 255, 255)",
+        "images": 25,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "24px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.72px",
+          "text": "Selecciones destacadas"
+        },
+        "words": 238,
+        "perRow": 25,
+        "fullBleed": true
+      },
+      {
+        "y": 2409,
+        "h": 485,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "24px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.72px",
+          "text": "Comprar por color"
+        },
+        "words": 77,
+        "perRow": 5,
+        "fullBleed": true
+      },
+      {
+        "y": 2945,
+        "h": 1079,
+        "bg": "rgb(255, 255, 255)",
+        "images": 2,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "16px",
+          "weight": "500",
+          "case": "uppercase",
+          "tracking": "1.12px",
+          "text": "DÍA A NOCHE"
+        },
+        "words": 37,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4073,
+        "h": 375,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "40px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "-1.62px",
+          "text": "¿Es tu primera vez en ALO?"
+        },
+        "words": 8,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 4498,
+        "h": 348,
+        "bg": "rgb(240, 240, 240)",
+        "images": 6,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "24px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.72px",
+          "text": "Comprar por actividad"
+        },
+        "words": 11,
+        "perRow": 6,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 23,
+      "columns": 23,
+      "photoRatio": 0.67,
+      "filters": false
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://www.aloyoga.com/es-bo/collections/all",
+    "title": "Productos | ALO",
+    "width": 1440,
+    "pageHeight": 1690,
+    "fonts": {
+      "h1": {
+        "family": "proxima-nova",
+        "size": "40px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "-1.2px",
+        "text": "Productos"
+      },
+      "h2": null,
+      "body": {
+        "family": "proxima-nova",
+        "size": "14px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "0.7px",
+        "text": "INICIAR SESIÓN PARA OBTENER RECOMPENSAS"
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "24px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 82,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 182,
+        "h": 828,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "40px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-1.2px",
+          "text": "Productos"
+        },
+        "words": 6,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://www.aloyoga.com/es-bo/collections/all",
+    "title": "Productos | ALO",
+    "width": 390,
+    "pageHeight": 2084,
+    "fonts": {
+      "h1": {
+        "family": "proxima-nova",
+        "size": "28px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "-0.84px",
+        "text": "Productos"
+      },
+      "h2": null,
+      "body": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Obtener recompensas con"
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "14px",
+        "weight": "500",
+        "case": "uppercase",
+        "tracking": "0.7px",
+        "text": "Ordenar"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 31,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 172,
+        "h": 760,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "28px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.84px",
+          "text": "Productos"
+        },
+        "words": 4,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://www.aloyoga.com/es-bo/products/w4524r-metallic-break-line-trench-silver-metallic",
+    "title": "Metallic Break Line Trench - Silver Metallic | ALO",
+    "width": 1440,
+    "pageHeight": 6930,
+    "fonts": {
+      "h1": {
+        "family": "proxima-nova",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "0.24px",
+        "text": "Metallic Break Line Trench"
+      },
+      "h2": {
+        "family": "proxima-nova",
+        "size": "24px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "-1.2px",
+        "text": "Guía de calidez"
+      },
+      "body": {
+        "family": "proxima-nova",
+        "size": "14px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "0.7px",
+        "text": "INICIAR SESIÓN PARA OBTENER RECOMPENSAS"
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "La modelo mide 176.5 cm y usa talla SLa modelo mide 176.5 cm"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 154,
+        "h": 2376,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "0.24px",
+          "text": "Metallic Break Line Trench"
+        },
+        "words": 196,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 2580,
+        "h": 360,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 2940,
+        "h": 583,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "32px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.96px",
+          "text": "Inspiración de estilos"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3524,
+        "h": 360,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 3884,
+        "h": 2367,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "32px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.96px",
+          "text": "Reviews"
+        },
+        "words": 380,
+        "perRow": 0,
+        "fullBleed": false
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Añadir a la bolsa",
+      "aboveFold": true,
+      "top": 615,
+      "x": 960,
+      "width": 420,
+      "bg": "rgb(0, 0, 0)"
+    },
+    "price": {
+      "family": "proxima-nova",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "BOB 3,000BOB 3,000| (14)Reseñas"
+    },
+    "galleryImages": 6,
+    "swatches": 12,
+    "selects": 0,
+    "accordions": 10
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://www.aloyoga.com/es-bo/products/w4524r-metallic-break-line-trench-silver-metallic",
+    "title": "Metallic Break Line Trench - Silver Metallic | ALO",
+    "width": 390,
+    "pageHeight": 8054,
+    "fonts": {
+      "h1": null,
+      "h2": {
+        "family": "proxima-nova",
+        "size": "17px",
+        "weight": "900",
+        "case": "uppercase",
+        "tracking": "-0.84px",
+        "text": "Guía de calidez"
+      },
+      "body": {
+        "family": "proxima-nova",
+        "size": "12px",
+        "weight": "400",
+        "case": "uppercase",
+        "tracking": "normal",
+        "text": "Obtener recompensas con"
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "La modelo mide 176.5 cm y usa talla SLa modelo mide 176.5 cm"
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 140,
+        "h": 1540,
+        "bg": "rgb(255, 255, 255)",
+        "images": 5,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "17px",
+          "weight": "900",
+          "case": "uppercase",
+          "tracking": "-0.84px",
+          "text": "Guía de calidez"
+        },
+        "words": 93,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1681,
+        "h": 360,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2071,
+        "h": 431,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "24px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.72px",
+          "text": "Inspiración de estilos"
+        },
+        "words": 11,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2502,
+        "h": 360,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2862,
+        "h": 4039,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "24px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "-0.72px",
+          "text": "Reviews"
+        },
+        "words": 373,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Añadir a la bolsa",
+      "aboveFold": false,
+      "top": 1234,
+      "x": 15,
+      "width": 360,
+      "bg": "rgb(0, 0, 0)"
+    },
+    "price": {
+      "family": "proxima-nova",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": "BOB 3,000BOB 3,000| (14)Reseñas"
+    },
+    "galleryImages": 6,
+    "swatches": 11,
+    "selects": 0,
+    "accordions": 13
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://www.aloyoga.com/es-bo/cart",
+    "title": "Tu carrito | ALO",
+    "width": 1440,
+    "pageHeight": 2462,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "proxima-nova",
+        "size": "14px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "0.7px",
+        "text": "INICIAR SESIÓN PARA OBTENER RECOMPENSAS"
+      },
+      "button": {
+        "family": "proxima-nova",
+        "size": "0px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "nav": null
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": null,
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 134,
+        "h": 113,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": false
+      },
+      {
+        "y": 247,
+        "h": 1407,
+        "bg": "rgb(255, 255, 255)",
+        "images": 13,
+        "video": false,
+        "heading": {
+          "family": "proxima-nova",
+          "size": "24px",
+          "weight": "600",
+          "case": "uppercase",
+          "tracking": "normal",
+          "text": "Combina muy bien con"
+        },
+        "words": 198,
+        "perRow": 10,
+        "fullBleed": true
+      }
+    ]
+  }
+}

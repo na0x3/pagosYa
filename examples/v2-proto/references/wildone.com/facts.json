@@ -1,0 +1,1114 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://wildone.com/",
+    "title": "Dog & Cat Harnesses, Collars, Leashes, Toys & Essentials | Wild One",
+    "width": 1440,
+    "pageHeight": 7920,
+    "fonts": {
+      "h1": {
+        "family": "Modern Era",
+        "size": "40px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Modern Era",
+        "size": "72px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "First Dibs"
+      },
+      "body": {
+        "family": "Modern Era",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      },
+      "button": {
+        "family": "Modern Era",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Modern Era",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 33,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "🚚 FREE Shipping on Orde",
+        "✈️ BACK AGAIN: The Trave",
+        "🌈 NEW Quick-Release Dog"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 109,
+        "h": 684,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "72px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "First Dibs"
+        },
+        "words": 21,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 793,
+        "h": 456,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "16px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Dog Walk Kits"
+        },
+        "words": 9,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1249,
+        "h": 617,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1866,
+        "h": 1362,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Dog Favorites"
+        },
+        "words": 190,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 3228,
+        "h": 720,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cat Favorites"
+        },
+        "words": 67,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 3948,
+        "h": 480,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Experience Wild One IRL"
+        },
+        "words": 21,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4428,
+        "h": 739,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "24px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Most Loved Walk Kits"
+        },
+        "words": 105,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 5167,
+        "h": 480,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Become a Wild One Ambassador"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 5647,
+        "h": 793,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Roboto Serif",
+          "size": "16px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.32px",
+          "text": "Playful Plush Dog Toy Kit"
+        },
+        "words": 95,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 6441,
+        "h": 360,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Modern Era",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Give Back"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 20,
+      "columns": 4,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://wildone.com/",
+    "title": "Dog & Cat Harnesses, Collars, Leashes, Toys & Essentials | Wild One",
+    "width": 390,
+    "pageHeight": 6380,
+    "fonts": {
+      "h1": {
+        "family": "Modern Era",
+        "size": "30px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": ""
+      },
+      "h2": {
+        "family": "Modern Era",
+        "size": "39px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "First Dibs"
+      },
+      "body": {
+        "family": "Modern Era",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      },
+      "button": {
+        "family": "Modern Era",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Modern Era",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 32,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "🚚 FREE Shipping on Orde",
+        "✈️ BACK AGAIN: The Trave",
+        "🌈 NEW Quick-Release Dog"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 1,
+    "sections": [
+      {
+        "y": 88,
+        "h": 585,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "39px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "First Dibs"
+        },
+        "words": 21,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 673,
+        "h": 499,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "16px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Dog Walk Kits"
+        },
+        "words": 13,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1172,
+        "h": 425,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 0,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 1597,
+        "h": 574,
+        "bg": "rgb(255, 255, 255)",
+        "images": 8,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "20px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Dog Favorites"
+        },
+        "words": 153,
+        "perRow": 8,
+        "fullBleed": true
+      },
+      {
+        "y": 2170,
+        "h": 533,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "20px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Cat Favorites"
+        },
+        "words": 71,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 2704,
+        "h": 551,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "30px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Experience Wild One IRL"
+        },
+        "words": 21,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3254,
+        "h": 526,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Roboto Serif",
+          "size": "16px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.32px",
+          "text": "Cushioned Harness + Waterproof Leash Walk Kit"
+        },
+        "words": 79,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 3781,
+        "h": 590,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "30px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Become a Wild One Ambassador"
+        },
+        "words": 17,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 4370,
+        "h": 551,
+        "bg": "rgb(255, 255, 255)",
+        "images": 4,
+        "video": false,
+        "heading": {
+          "family": "Roboto Serif",
+          "size": "16px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.32px",
+          "text": "Playful Plush Dog Toy Kit"
+        },
+        "words": 71,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 4922,
+        "h": 514,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": true,
+        "heading": {
+          "family": "Modern Era",
+          "size": "30px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Give Back"
+        },
+        "words": 30,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 20,
+      "columns": 8,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://wildone.com/collections/all",
+    "title": "Wild One | Better Essentials For Dogs",
+    "width": 1440,
+    "pageHeight": 5084,
+    "fonts": {
+      "h1": {
+        "family": "Modern Era",
+        "size": "40px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Collection: Shop All"
+      },
+      "h2": {
+        "family": "Modern Era",
+        "size": "14px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Filter:"
+      },
+      "body": {
+        "family": "Modern Era",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      },
+      "button": {
+        "family": "Modern Era",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Modern Era",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 33,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "🚚 FREE Shipping on Orde",
+        "✈️ BACK AGAIN: The Trave",
+        "🌈 NEW Quick-Release Dog"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 181,
+        "h": 3691,
+        "bg": "rgb(255, 255, 255)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "14px",
+          "weight": "400",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Filter:"
+        },
+        "words": 598,
+        "perRow": 4,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 4,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://wildone.com/collections/all?_su_rec=eBNXBKUD4LMg8vn2Hk1ELYhttvjZK8KFRImklCaOnVfB2yjrHVa6us-TqXR2autcExusbuFEYWQSSkgnGMCvHqwYA467T4hcfj3fYfVXQINxdDoOnupXWxUXNkHOo0rdiwU1iCAuNWcWxfsh9pt5IT0Kw6CaZQriAlvuzNZsZzXctNJWwExWjXw_3r5oecxbE_r6MwiUKuJ4Uo_YF3UR9hUUyV1iVv23VnTtmfy3fk_rqtgNFsBZtcnHc3V9dd6F2svTCn6DBs-eFjG7iA3QWPhnK9OWn3z33qR1pBmoOYhGrBrJ79da_nsdUIBDvr8TqES2sG0TupKvAP1dNdKDxXw5b9SQVK4yI4w&_su_rec_id=927998f2-3940-4da7-b7ff-d89111dd3149-1794667800",
+    "title": "Wild One | Better Essentials For Dogs",
+    "width": 390,
+    "pageHeight": 5963,
+    "fonts": {
+      "h1": {
+        "family": "Modern Era",
+        "size": "30px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Collection: Shop All"
+      },
+      "h2": {
+        "family": "Modern Era",
+        "size": "14px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Filter and sort"
+      },
+      "body": {
+        "family": "Modern Era",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      },
+      "button": {
+        "family": "Modern Era",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Modern Era",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 32,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "🚚 FREE Shipping on Orde",
+        "✈️ BACK AGAIN: The Trave",
+        "🌈 NEW Quick-Release Dog"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 147,
+        "h": 4803,
+        "bg": "rgb(255, 255, 255)",
+        "images": 24,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "14px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Filter and sort"
+        },
+        "words": 427,
+        "perRow": 2,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 24,
+      "columns": 2,
+      "photoRatio": 0.8,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://wildone.com/products/cat-harness-leash-collar-kit",
+    "title": "Cat Harness & Leash + Collar Kit – Wild One",
+    "width": 1440,
+    "pageHeight": 7946,
+    "fonts": {
+      "h1": {
+        "family": "Roboto Serif",
+        "size": "36px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-0.72px",
+        "text": "Cat Harness & Leash +Collar Kit"
+      },
+      "h2": {
+        "family": "Modern Era",
+        "size": "40px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Cat Collection"
+      },
+      "body": {
+        "family": "Modern Era",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      },
+      "button": {
+        "family": "Modern Era",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Modern Era",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 33,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "🚚 FREE Shipping on Orde",
+        "✈️ BACK AGAIN: The Trave",
+        "🌈 NEW Quick-Release Dog"
+      ],
+      "logo": "left",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 109,
+        "h": 1919,
+        "bg": "rgb(255, 255, 255)",
+        "images": 15,
+        "video": false,
+        "heading": {
+          "family": "Roboto Serif",
+          "size": "36px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.72px",
+          "text": "Cat Harness & Leash +Collar Kit"
+        },
+        "words": 243,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 2128,
+        "h": 124,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Cat Collection"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 2252,
+        "h": 1686,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Roboto Serif",
+          "size": "16px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.32px",
+          "text": "Cat Harness & Leash"
+        },
+        "words": 136,
+        "perRow": 4,
+        "fullBleed": true
+      },
+      {
+        "y": 3939,
+        "h": 2408,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 518,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 6347,
+        "h": 480,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop Wild One IRL"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart",
+      "aboveFold": false,
+      "top": 992,
+      "x": 770,
+      "width": 620,
+      "bg": "rgb(0, 0, 0)"
+    },
+    "price": {
+      "family": "Modern Era",
+      "size": "16px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": ".product__info-wrapper .swatch-input__input:active+.swatch-i"
+    },
+    "galleryImages": 19,
+    "swatches": 199,
+    "selects": 9,
+    "accordions": 25
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://wildone.com/products/cat-harness-leash-collar-kit",
+    "title": "Cat Harness & Leash + Collar Kit – Wild One",
+    "width": 390,
+    "pageHeight": 11335,
+    "fonts": {
+      "h1": {
+        "family": "Roboto Serif",
+        "size": "28px",
+        "weight": "300",
+        "case": "none",
+        "tracking": "-0.56px",
+        "text": "Cat Harness & Leash +Collar Kit"
+      },
+      "h2": {
+        "family": "Modern Era",
+        "size": "30px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "The Cat Collection"
+      },
+      "body": {
+        "family": "Modern Era",
+        "size": "12px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      },
+      "button": {
+        "family": "Modern Era",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Modern Era",
+        "size": "15px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 32,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "🚚 FREE Shipping on Orde",
+        "✈️ BACK AGAIN: The Trave",
+        "🌈 NEW Quick-Release Dog"
+      ],
+      "logo": "unknown",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 88,
+        "h": 3453,
+        "bg": "rgb(255, 255, 255)",
+        "images": 15,
+        "video": false,
+        "heading": {
+          "family": "Roboto Serif",
+          "size": "28px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.56px",
+          "text": "Cat Harness & Leash +Collar Kit"
+        },
+        "words": 243,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 3591,
+        "h": 143,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "30px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "The Cat Collection"
+        },
+        "words": 10,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 3735,
+        "h": 1841,
+        "bg": "rgb(255, 255, 255)",
+        "images": 10,
+        "video": false,
+        "heading": {
+          "family": "Roboto Serif",
+          "size": "16px",
+          "weight": "300",
+          "case": "none",
+          "tracking": "-0.32px",
+          "text": "Cat Harness & Leash"
+        },
+        "words": 136,
+        "perRow": 2,
+        "fullBleed": true
+      },
+      {
+        "y": 5576,
+        "h": 4264,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": null,
+        "words": 526,
+        "perRow": 1,
+        "fullBleed": true
+      },
+      {
+        "y": 9840,
+        "h": 551,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "30px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Shop Wild One IRL"
+        },
+        "words": 18,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add to cart",
+      "aboveFold": false,
+      "top": 2317,
+      "x": 15,
+      "width": 360,
+      "bg": "rgb(0, 0, 0)"
+    },
+    "price": {
+      "family": "Modern Era",
+      "size": "15px",
+      "weight": "400",
+      "case": "none",
+      "tracking": "normal",
+      "text": ".product__info-wrapper .swatch-input__input:active+.swatch-i"
+    },
+    "galleryImages": 19,
+    "swatches": 199,
+    "selects": 9,
+    "accordions": 25
+  },
+  "cart-d": {
+    "kind": "cart",
+    "url": "https://wildone.com/cart",
+    "title": "Your Shopping Cart – Wild One",
+    "width": 1440,
+    "pageHeight": 2051,
+    "fonts": {
+      "h1": {
+        "family": "Modern Era",
+        "size": "40px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Your cart"
+      },
+      "h2": {
+        "family": "Modern Era",
+        "size": "16px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Estimated total"
+      },
+      "body": {
+        "family": "Modern Era",
+        "size": "13px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      },
+      "button": {
+        "family": "Modern Era",
+        "size": "18px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "normal",
+        "text": "Skip to content"
+      },
+      "nav": {
+        "family": "Modern Era",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "normal",
+        "text": "🚚 FREE Shipping on Orders $90+"
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 33,
+      "position": "static",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "🚚 FREE Shipping on Orde",
+        "✈️ BACK AGAIN: The Trave",
+        "🌈 NEW Quick-Release Dog"
+      ],
+      "logo": "centre",
+      "bar": true
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 109,
+        "h": 443,
+        "bg": "rgb(255, 255, 255)",
+        "images": 1,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "40px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Your cart"
+        },
+        "words": 40,
+        "perRow": 0,
+        "fullBleed": true
+      },
+      {
+        "y": 553,
+        "h": 379,
+        "bg": "rgb(255, 255, 255)",
+        "images": 0,
+        "video": false,
+        "heading": {
+          "family": "Modern Era",
+          "size": "16px",
+          "weight": "500",
+          "case": "none",
+          "tracking": "normal",
+          "text": "Estimated total"
+        },
+        "words": 12,
+        "perRow": 0,
+        "fullBleed": true
+      }
+    ]
+  }
+}

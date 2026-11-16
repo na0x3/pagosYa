@@ -1,0 +1,530 @@
+{
+  "home-d": {
+    "kind": "home",
+    "url": "https://baggu.com/",
+    "title": "BAGGU",
+    "width": 1440,
+    "pageHeight": 4494,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "studioPro",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.12px",
+        "text": "Free shipping on U.S. orders $60+."
+      },
+      "button": {
+        "family": "studioPro",
+        "size": "16px",
+        "weight": "600",
+        "case": "uppercase",
+        "tracking": "-1%",
+        "text": "SUBSCRIBE"
+      },
+      "nav": {
+        "family": "studioPro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1%",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "CART (0)",
+        "SHOP",
+        "INFO",
+        "Search Icon"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 4494,
+        "bg": "rgb(255, 255, 255)",
+        "images": 49,
+        "video": false,
+        "heading": {
+          "family": "studioPro",
+          "size": "14px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.35px",
+          "text": "Nylon Bowler Bag"
+        },
+        "words": 224,
+        "perRow": 11,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "home-p": {
+    "kind": "home",
+    "url": "https://baggu.com/",
+    "title": "BAGGU",
+    "width": 390,
+    "pageHeight": 3332,
+    "fonts": {
+      "h1": null,
+      "h2": null,
+      "body": {
+        "family": "studioPro",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.12px",
+        "text": "Free shipping on U.S. orders $60+."
+      },
+      "button": {
+        "family": "studioPro",
+        "size": "10px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "-1%",
+        "text": "Added"
+      },
+      "nav": {
+        "family": "studioPro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1%",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "MENU",
+        "CART (0)"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 3332,
+        "bg": "rgb(255, 255, 255)",
+        "images": 49,
+        "video": false,
+        "heading": {
+          "family": "studioPro",
+          "size": "14px",
+          "weight": "700",
+          "case": "none",
+          "tracking": "-0.35px",
+          "text": "Nylon Bowler Bag"
+        },
+        "words": 246,
+        "perRow": 11,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-d": {
+    "kind": "catalog",
+    "url": "https://baggu.com/collections/bowler-bags",
+    "title": "Bowler Bags | BAGGU",
+    "width": 1440,
+    "pageHeight": 6512,
+    "fonts": {
+      "h1": {
+        "family": "studioPro",
+        "size": "48px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "-2.4px",
+        "text": "Bowler Bags"
+      },
+      "h2": {
+        "family": "studioPro",
+        "size": "40px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-1px",
+        "text": "Small Nylon Bowler Bag"
+      },
+      "body": {
+        "family": "studioPro",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.12px",
+        "text": "Free shipping on U.S. orders $60+."
+      },
+      "button": {
+        "family": "studioPro",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "-1%",
+        "text": "Add To Cart"
+      },
+      "nav": {
+        "family": "studioPro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1%",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "CART (0)",
+        "SHOP",
+        "INFO",
+        "Search Icon"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 6512,
+        "bg": "rgb(255, 255, 255)",
+        "images": 19,
+        "video": false,
+        "heading": {
+          "family": "studioPro",
+          "size": "48px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "-2.4px",
+          "text": "Bowler Bags"
+        },
+        "words": 344,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "catalog-p": {
+    "kind": "catalog",
+    "url": "https://baggu.com/collections/bowler-bags",
+    "title": "Bowler Bags | BAGGU",
+    "width": 390,
+    "pageHeight": 4955,
+    "fonts": {
+      "h1": {
+        "family": "studioPro",
+        "size": "30px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "-1.5px",
+        "text": "Bowler Bags"
+      },
+      "h2": {
+        "family": "studioPro",
+        "size": "24px",
+        "weight": "500",
+        "case": "none",
+        "tracking": "-0.6px",
+        "text": "Small Nylon Bowler Bag"
+      },
+      "body": {
+        "family": "studioPro",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.12px",
+        "text": "Free shipping on U.S. orders $60+."
+      },
+      "button": {
+        "family": "studioPro",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "-1%",
+        "text": "Add To Cart"
+      },
+      "nav": {
+        "family": "studioPro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1%",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "MENU",
+        "CART (0)"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 4955,
+        "bg": "rgb(255, 255, 255)",
+        "images": 19,
+        "video": false,
+        "heading": {
+          "family": "studioPro",
+          "size": "30px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "-1.5px",
+          "text": "Bowler Bags"
+        },
+        "words": 337,
+        "perRow": 1,
+        "fullBleed": true
+      }
+    ],
+    "grid": {
+      "cards": 0,
+      "columns": 0,
+      "photoRatio": null,
+      "filters": true
+    }
+  },
+  "product-d": {
+    "kind": "product",
+    "url": "https://baggu.com/products/nylon-bowler-bag-black-and-cream-polka-dot",
+    "title": "Nylon Bowler Bag Black And Cream Polka Dot - Baggu",
+    "width": 1440,
+    "pageHeight": 4596,
+    "fonts": {
+      "h1": {
+        "family": "studioPro",
+        "size": "18px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "-0.36px",
+        "text": "Nylon Bowler Bag"
+      },
+      "h2": {
+        "family": "studioPro",
+        "size": "18px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.36px",
+        "text": "GOES WELL WITH"
+      },
+      "body": {
+        "family": "studioPro",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.12px",
+        "text": "Free shipping on U.S. orders $60+."
+      },
+      "button": {
+        "family": "studioPro",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "-1%",
+        "text": "Add To Cart"
+      },
+      "nav": {
+        "family": "studioPro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1%",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "CART (0)",
+        "SHOP",
+        "INFO",
+        "Search Icon"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 4596,
+        "bg": "rgb(255, 255, 255)",
+        "images": 45,
+        "video": false,
+        "heading": {
+          "family": "studioPro",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "-0.36px",
+          "text": "Nylon Bowler Bag"
+        },
+        "words": 463,
+        "perRow": 9,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add To Cart",
+      "aboveFold": true,
+      "top": 429,
+      "x": 16,
+      "width": 448,
+      "bg": "rgb(0, 0, 0)"
+    },
+    "price": null,
+    "galleryImages": 0,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 0
+  },
+  "product-p": {
+    "kind": "product",
+    "url": "https://baggu.com/products/nylon-bowler-bag-black-and-cream-polka-dot",
+    "title": "Nylon Bowler Bag Black And Cream Polka Dot - Baggu",
+    "width": 390,
+    "pageHeight": 4362,
+    "fonts": {
+      "h1": {
+        "family": "studioPro",
+        "size": "18px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "-0.36px",
+        "text": "Nylon Bowler Bag"
+      },
+      "h2": {
+        "family": "studioPro",
+        "size": "18px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.36px",
+        "text": "GOES WELL WITH"
+      },
+      "body": {
+        "family": "studioPro",
+        "size": "12px",
+        "weight": "700",
+        "case": "none",
+        "tracking": "-0.12px",
+        "text": "Free shipping on U.S. orders $60+."
+      },
+      "button": {
+        "family": "studioPro",
+        "size": "14px",
+        "weight": "700",
+        "case": "uppercase",
+        "tracking": "-1%",
+        "text": "Add To Cart"
+      },
+      "nav": {
+        "family": "studioPro",
+        "size": "16px",
+        "weight": "400",
+        "case": "none",
+        "tracking": "-1%",
+        "text": ""
+      }
+    },
+    "page": "rgb(255, 255, 255)",
+    "header": {
+      "height": 40,
+      "position": "sticky",
+      "bg": "rgb(255, 255, 255)",
+      "links": [
+        "MENU",
+        "CART (0)"
+      ],
+      "logo": "centre",
+      "bar": false
+    },
+    "marquee": false,
+    "videos": 0,
+    "sections": [
+      {
+        "y": 0,
+        "h": 4362,
+        "bg": "rgb(255, 255, 255)",
+        "images": 45,
+        "video": false,
+        "heading": {
+          "family": "studioPro",
+          "size": "18px",
+          "weight": "700",
+          "case": "uppercase",
+          "tracking": "-0.36px",
+          "text": "Nylon Bowler Bag"
+        },
+        "words": 452,
+        "perRow": 9,
+        "fullBleed": true
+      }
+    ],
+    "buy": {
+      "found": true,
+      "text": "Add To Cart",
+      "aboveFold": false,
+      "top": 921,
+      "x": 16,
+      "width": 358,
+      "bg": "rgb(0, 0, 0)"
+    },
+    "price": null,
+    "galleryImages": 0,
+    "swatches": 0,
+    "selects": 0,
+    "accordions": 0
+  }
+}
