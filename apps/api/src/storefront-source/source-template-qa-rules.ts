@@ -204,8 +204,14 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
       window.scrollTo(0, Math.max(0, window.scrollY + first.top - 100));
       const r = Array.from(range.getClientRects()).find(rect => Math.abs(rect.left - first.left) < 1 && Math.abs(rect.width - first.width) < 1) ?? first;
       const y = r.top + r.height / 2;
-      const hits = [.15, .35, .5, .65, .85].map(f => document.elementFromPoint(r.left + r.width * f, y)).filter((hit): hit is Element => Boolean(hit));
-      if (hits.filter(hit => !owner.contains(hit) && !hit.contains(owner) && hit.closest('img,picture,video,figure')).length >= 2) { covered.add(quote(owner)); coveredAt = coveredAt ?? owner; break; }
+      // Spec 2026-11-16 (Bake Lab r3: a 220 px cookie tower over the middle of a 900 px headline met one of five samples): nine
+      // samples across the line, two hits still mean covered.
+      const hits = [.1, .2, .3, .4, .5, .6, .7, .8, .9].map(f => document.elementFromPoint(r.left + r.width * f, y)).filter((hit): hit is Element => Boolean(hit));
+      const over = hits.filter(hit => !owner.contains(hit) && !hit.contains(owner) && hit.closest('img,picture,video,figure'));
+      // A photo on top that spans 15% of a long line and half its height covers it even when only one sample lands on it.
+      const wide = over.some(hit => { const m = hit.closest('img,picture,video,figure')!.getBoundingClientRect();
+        return Math.min(m.right, r.right) - Math.max(m.left, r.left) >= .15 * r.width && Math.min(m.bottom, r.bottom) - Math.max(m.top, r.top) >= .5 * r.height; });
+      if (over.length >= 2 || wide) { covered.add(quote(owner)); coveredAt = coveredAt ?? owner; break; }
     }
   }
   window.scrollTo(0, start);
