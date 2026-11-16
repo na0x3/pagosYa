@@ -1,0 +1,124 @@
+{
+  "sector": "mascotas",
+  "label": "Mascotas",
+  "keywords": [
+    "mascotas",
+    "perros",
+    "gatos",
+    "perro",
+    "gato",
+    "cachorros",
+    "veterinaria",
+    "croquetas",
+    "alimento para perros",
+    "snacks para mascotas",
+    "collares para perros"
+  ],
+  "photos": [
+    {
+      "file": "mascotas-01.jpg",
+      "subject": "mascotas 1",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5926065/photo-image-background-public-domain-dog",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-02.jpg",
+      "subject": "mascotas 2",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/8752637/photo-image-public-domain-cat-cute",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-03.jpg",
+      "subject": "mascotas 3",
+      "shape": "tall",
+      "source": "https://www.rawpixel.com/image/8752630/photo-image-public-domain-dog-white",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-04.jpg",
+      "subject": "mascotas 4",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6019052/photo-image-public-domain-plant-dog",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-05.jpg",
+      "subject": "mascotas 5",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5915393/image-background-public-domain-black",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-06.jpg",
+      "subject": "mascotas 6",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5904474/photo-image-background-public-domain-dog",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-07.jpg",
+      "subject": "mascotas 7",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5902405/photo-image-background-public-domain-dog",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-08.jpg",
+      "subject": "mascotas 8",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5967674/pet-cat-garden",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-09.jpg",
+      "subject": "mascotas 9",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5925271/photo-image-background-public-domain-green",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-10.jpg",
+      "subject": "mascotas 10",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3282463/free-photo-image-ocean-sea-dog-run",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-11.jpg",
+      "subject": "mascotas 11",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3285092/free-photo-image-dog-happy-car",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-12.jpg",
+      "subject": "mascotas 12",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3301025/free-photo-image-dog-smile-animal",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-13.jpg",
+      "subject": "mascotas 13",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6039704/photo-image-public-domain-cat-cute",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-14.jpg",
+      "subject": "mascotas 14",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6037073/photo-image-public-domain-golden-dog",
+      "license": "CC0"
+    },
+    {
+      "file": "mascotas-15.jpg",
+      "subject": "mascotas 15",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6036806/photo-image-public-domain-plant-green",
+      "license": "CC0"
+    }
+  ]
+}

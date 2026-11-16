@@ -1,0 +1,123 @@
+{
+  "sector": "libros",
+  "label": "Libros y papelería",
+  "keywords": [
+    "libros",
+    "libreria",
+    "lectura",
+    "novelas",
+    "cuadernos",
+    "papeleria",
+    "agendas",
+    "lapices",
+    "editorial",
+    "comics"
+  ],
+  "photos": [
+    {
+      "file": "libros-01.jpg",
+      "subject": "libros y papelería 1",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5921591/photo-image-book-public-domain-wood",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-02.jpg",
+      "subject": "libros y papelería 2",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/4056632/photo-image-background-aesthetic-green",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-03.jpg",
+      "subject": "libros y papelería 3",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3336867/free-photo-image-breakfast-book-cc0",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-04.jpg",
+      "subject": "libros y papelería 4",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/8062701/photo-image-book-bookshelf-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-05.jpg",
+      "subject": "libros y papelería 5",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6112783/people-bookstore-poland-october-2015",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-06.jpg",
+      "subject": "libros y papelería 6",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5914047/image-paper-public-domain-blue",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-07.jpg",
+      "subject": "libros y papelería 7",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5909482/photo-image-public-domain-notebook-pen",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-08.jpg",
+      "subject": "libros y papelería 8",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5907720/photo-image-book-public-domain-wooden",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-09.jpg",
+      "subject": "libros y papelería 9",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5904355/free-open-book-photo-public-domain-cc0-image",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-10.jpg",
+      "subject": "libros y papelería 10",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5920378/free-open-book-photo-public-domain-cc0-image",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-11.jpg",
+      "subject": "libros y papelería 11",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5916411/photo-image-public-domain-notebook-pens",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-12.jpg",
+      "subject": "libros y papelería 12",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5926283/photo-image-book-public-domain-hands",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-13.jpg",
+      "subject": "libros y papelería 13",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5920946/photo-image-paper-book-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-14.jpg",
+      "subject": "libros y papelería 14",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5912134/image-book-public-domain-hands",
+      "license": "CC0"
+    },
+    {
+      "file": "libros-15.jpg",
+      "subject": "libros y papelería 15",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3290466/free-photo-image-books-shelf-library-bookcase",
+      "license": "CC0"
+    }
+  ]
+}

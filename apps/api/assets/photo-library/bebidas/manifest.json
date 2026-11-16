@@ -1,0 +1,125 @@
+{
+  "sector": "bebidas",
+  "label": "Bebidas",
+  "keywords": [
+    "bebidas",
+    "jugos",
+    "refrescos",
+    "cocteles",
+    "limonada",
+    "smoothies",
+    "batidos",
+    "kombucha",
+    "gaseosa",
+    "soda",
+    "infusiones",
+    "te helado"
+  ],
+  "photos": [
+    {
+      "file": "bebidas-01.jpg",
+      "subject": "bebidas 1",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3298753/free-photo-image-cocktail-alcohol-beverage",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-02.jpg",
+      "subject": "bebidas 2",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3304101/free-photo-image-glass-juice-orange-breakfast-table",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-03.jpg",
+      "subject": "bebidas 3",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3304128/free-photo-image-juice-bar-food-desk-cocktail",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-04.jpg",
+      "subject": "bebidas 4",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/8809267/photo-image-hands-women-people",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-05.jpg",
+      "subject": "bebidas 5",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5918639/free-ice-image-public-domain-drink-cc0-photo",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-06.jpg",
+      "subject": "bebidas 6",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5921640/photo-image-public-domain-tropical-fruit",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-07.jpg",
+      "subject": "bebidas 7",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5928405/image-public-domain-free-mint",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-08.jpg",
+      "subject": "bebidas 8",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5970127/cocktail-drinks",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-09.jpg",
+      "subject": "bebidas 9",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5927263/photo-image-wallpaper-public-domain-orange",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-10.jpg",
+      "subject": "bebidas 10",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5908638/image-background-public-domain-fruit",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-11.jpg",
+      "subject": "bebidas 11",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5943259/free-public-domain-cc0-photo",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-12.jpg",
+      "subject": "bebidas 12",
+      "shape": "square",
+      "source": "https://www.rawpixel.com/image/5920801/photo-image-background-public-domain-pink",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-13.jpg",
+      "subject": "bebidas 13",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5925402/photo-image-background-public-domain-fruit",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-14.jpg",
+      "subject": "bebidas 14",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5923962/photo-image-background-public-domain-fruit",
+      "license": "CC0"
+    },
+    {
+      "file": "bebidas-15.jpg",
+      "subject": "bebidas 15",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5927451/photo-image-public-domain-hands-person",
+      "license": "CC0"
+    }
+  ]
+}

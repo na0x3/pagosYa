@@ -1,0 +1,124 @@
+{
+  "sector": "joyeria",
+  "label": "Joyería",
+  "keywords": [
+    "joyas",
+    "joyeria",
+    "anillos",
+    "collares",
+    "aretes",
+    "pulseras",
+    "plata",
+    "oro",
+    "bisuteria",
+    "dijes",
+    "accesorios de plata"
+  ],
+  "photos": [
+    {
+      "file": "joyeria-01.jpg",
+      "subject": "joyería 1",
+      "shape": "square",
+      "source": "https://www.rawpixel.com/image/6034460/photo-image-public-domain-blue-fashion",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-02.jpg",
+      "subject": "joyería 2",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/9182956/gold-ring-with-three-horizontal-ribs",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-03.jpg",
+      "subject": "joyería 3",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/11524205/layered-gold-and-turquoise-necklace",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-04.jpg",
+      "subject": "joyería 4",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6022544/photo-image-public-domain-gold-red",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-05.jpg",
+      "subject": "joyería 5",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5921011/photo-image-public-domain-person-fashion",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-06.jpg",
+      "subject": "joyería 6",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5920916/photo-image-background-design-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-07.jpg",
+      "subject": "joyería 7",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5921320/photo-image-background-design-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-08.jpg",
+      "subject": "joyería 8",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5905235/free-wedding-rings-public-domain-cc0",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-09.jpg",
+      "subject": "joyería 9",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5965173/gold-jewelry",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-10.jpg",
+      "subject": "joyería 10",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3283497/free-photo-image-ring-jewelry-diamond",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-11.jpg",
+      "subject": "joyería 11",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6029494/photo-image-heart-public-domain-shape",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-12.jpg",
+      "subject": "joyería 12",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6038877/photo-image-flower-public-domain-pink",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-13.jpg",
+      "subject": "joyería 13",
+      "shape": "square",
+      "source": "https://www.rawpixel.com/image/6038024/photo-image-public-domain-person-fashion",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-14.jpg",
+      "subject": "joyería 14",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6036031/photo-image-public-domain-gold-fashion",
+      "license": "CC0"
+    },
+    {
+      "file": "joyeria-15.jpg",
+      "subject": "joyería 15",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5901915/photo-image-background-design-public-domain",
+      "license": "CC0"
+    }
+  ]
+}

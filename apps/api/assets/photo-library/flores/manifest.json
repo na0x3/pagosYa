@@ -1,0 +1,123 @@
+{
+  "sector": "flores",
+  "label": "Flores y plantas",
+  "keywords": [
+    "flores",
+    "floreria",
+    "ramos",
+    "arreglos florales",
+    "rosas",
+    "plantas",
+    "suculentas",
+    "girasoles",
+    "tulipanes",
+    "macetas"
+  ],
+  "photos": [
+    {
+      "file": "flores-01.jpg",
+      "subject": "flores y plantas 1",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5917134/image-flower-public-domain-nature",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-02.jpg",
+      "subject": "flores y plantas 2",
+      "shape": "tall",
+      "source": "https://www.rawpixel.com/image/6040680/photo-image-background-flower-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-03.jpg",
+      "subject": "flores y plantas 3",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3284071/free-photo-image-purple-flowers-lilac-flower",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-04.jpg",
+      "subject": "flores y plantas 4",
+      "shape": "tall",
+      "source": "https://www.rawpixel.com/image/8809247/photo-image-flower-rose-pink",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-05.jpg",
+      "subject": "flores y plantas 5",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5926174/photo-image-public-domain-hand-technology",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-06.jpg",
+      "subject": "flores y plantas 6",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6113642/photo-image-public-domain-vintage-free",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-07.jpg",
+      "subject": "flores y plantas 7",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5907548/photo-image-flower-public-domain-rose",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-08.jpg",
+      "subject": "flores y plantas 8",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5906663/photo-image-public-domain-free-city",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-09.jpg",
+      "subject": "flores y plantas 9",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/8726697/photo-image-flower-rose-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-10.jpg",
+      "subject": "flores y plantas 10",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5925253/photo-image-flower-public-domain-nature",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-11.jpg",
+      "subject": "flores y plantas 11",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5924227/photo-image-flower-public-domain-wedding",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-12.jpg",
+      "subject": "flores y plantas 12",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5915851/image-flower-public-domain-floral",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-13.jpg",
+      "subject": "flores y plantas 13",
+      "shape": "tall",
+      "source": "https://www.rawpixel.com/image/3294242/free-photo-image-flower-shop-bazaar-blossom",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-14.jpg",
+      "subject": "flores y plantas 14",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5974957/photo-image-flower-lights-leaves",
+      "license": "CC0"
+    },
+    {
+      "file": "flores-15.jpg",
+      "subject": "flores y plantas 15",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6016818/photo-image-background-flower-public-domain",
+      "license": "CC0"
+    }
+  ]
+}

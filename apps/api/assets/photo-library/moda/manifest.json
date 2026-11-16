@@ -1,0 +1,126 @@
+{
+  "sector": "moda",
+  "label": "Moda",
+  "keywords": [
+    "ropa",
+    "moda",
+    "prendas",
+    "poleras",
+    "camisas",
+    "pantalones",
+    "chaquetas",
+    "boutique",
+    "tienda de ropa",
+    "outfit",
+    "temporada",
+    "polerones",
+    "jeans"
+  ],
+  "photos": [
+    {
+      "file": "moda-01.jpg",
+      "subject": "moda 1",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6042134/photo-image-public-domain-shirt-person",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-02.jpg",
+      "subject": "moda 2",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3284603/free-photo-image-clothes-shopping-shop",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-03.jpg",
+      "subject": "moda 3",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3303632/free-photo-image-apparel-boutique-cc0",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-04.jpg",
+      "subject": "moda 4",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3283850/free-photo-image-clothes-closet-dressing-room",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-05.jpg",
+      "subject": "moda 5",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/11515805/stack-folded-t-shirts",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-06.jpg",
+      "subject": "moda 6",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5947958/free-public-domain-cc0-photo",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-07.jpg",
+      "subject": "moda 7",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5904063/photo-image-public-domain-fabrics-rainbow",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-08.jpg",
+      "subject": "moda 8",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5963574/free-public-domain-cc0-photo",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-09.jpg",
+      "subject": "moda 9",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5963270/free-public-domain-cc0-photo",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-10.jpg",
+      "subject": "moda 10",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5924744/photo-image-public-domain-fashion-free",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-11.jpg",
+      "subject": "moda 11",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3284712/free-photo-image-mannequin-shop-fashion",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-12.jpg",
+      "subject": "moda 12",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3284282/free-photo-image-clothing-hangers-boutique",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-13.jpg",
+      "subject": "moda 13",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6042142/photo-image-background-public-domain-shirt",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-14.jpg",
+      "subject": "moda 14",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6074849/women-clothes-hangers",
+      "license": "CC0"
+    },
+    {
+      "file": "moda-15.jpg",
+      "subject": "moda 15",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6038578/clothing-shop-free-public-domain-cc0-photo",
+      "license": "CC0"
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "sector": "comida",
+  "label": "Comida y restaurantes",
+  "keywords": [
+    "comida",
+    "restaurante",
+    "platos",
+    "almuerzo",
+    "cena",
+    "menu",
+    "hamburguesas",
+    "pizza",
+    "empanadas",
+    "saltenas",
+    "delivery",
+    "chef",
+    "parrilla",
+    "carnes",
+    "comida casera"
+  ],
+  "photos": [
+    {
+      "file": "comida-01.jpg",
+      "subject": "comida y restaurantes 1",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/11176744/image-public-domain-table-plate",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-02.jpg",
+      "subject": "comida y restaurantes 2",
+      "shape": "square",
+      "source": "https://www.rawpixel.com/image/11072719/photo-image-face-person-arts",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-03.jpg",
+      "subject": "comida y restaurantes 3",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5916119/image-background-public-domain-food",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-04.jpg",
+      "subject": "comida y restaurantes 4",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5926362/photo-image-public-domain-person-kitchen",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-05.jpg",
+      "subject": "comida y restaurantes 5",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5918288/image-public-domain-wood-food",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-06.jpg",
+      "subject": "comida y restaurantes 6",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6025767/photo-image-public-domain-hand-green",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-07.jpg",
+      "subject": "comida y restaurantes 7",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5908431/image-public-domain-leaf-green",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-08.jpg",
+      "subject": "comida y restaurantes 8",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5968808/lobster-dinner",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-09.jpg",
+      "subject": "comida y restaurantes 9",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5970750/brunch-restaurant",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-10.jpg",
+      "subject": "comida y restaurantes 10",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5970543/sharing-restaurant-dinner",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-11.jpg",
+      "subject": "comida y restaurantes 11",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5970865/salad-bowl-with-feta-cheese",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-12.jpg",
+      "subject": "comida y restaurantes 12",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5969804/salad-bowls",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-13.jpg",
+      "subject": "comida y restaurantes 13",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5926263/photo-image-public-domain-summer-free",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-14.jpg",
+      "subject": "comida y restaurantes 14",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5948084/free-public-domain-cc0-photo",
+      "license": "CC0"
+    },
+    {
+      "file": "comida-15.jpg",
+      "subject": "comida y restaurantes 15",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/447785/free-photo-image-restaurant-chef-kitchen",
+      "license": "CC0"
+    }
+  ]
+}

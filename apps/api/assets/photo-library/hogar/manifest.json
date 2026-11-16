@@ -1,0 +1,124 @@
+{
+  "sector": "hogar",
+  "label": "Hogar y decoración",
+  "keywords": [
+    "hogar",
+    "decoracion",
+    "muebles",
+    "velas",
+    "ceramica",
+    "cojines",
+    "mantas",
+    "vajilla",
+    "interiores",
+    "lamparas",
+    "casa"
+  ],
+  "photos": [
+    {
+      "file": "hogar-01.jpg",
+      "subject": "hogar y decoración 1",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3295665/free-photo-image-home-decoration-armchair-pillow",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-02.jpg",
+      "subject": "hogar y decoración 2",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5919285/image-frame-white-background-phone",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-03.jpg",
+      "subject": "hogar y decoración 3",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5927318/photo-image-public-domain-minimalist-house",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-04.jpg",
+      "subject": "hogar y decoración 4",
+      "shape": "tall",
+      "source": "https://www.rawpixel.com/image/5918423/photo-image-public-domain-wooden-glass",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-05.jpg",
+      "subject": "hogar y decoración 5",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5918464/photo-image-background-christmas-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-06.jpg",
+      "subject": "hogar y decoración 6",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5918405/image-background-christmas-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-07.jpg",
+      "subject": "hogar y decoración 7",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/6026552/photo-image-background-flower-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-08.jpg",
+      "subject": "hogar y decoración 8",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5912907/image-public-domain-minimal-window",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-09.jpg",
+      "subject": "hogar y decoración 9",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5927053/photo-image-frame-light-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-10.jpg",
+      "subject": "hogar y decoración 10",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5917348/image-frame-light-public-domain",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-11.jpg",
+      "subject": "hogar y decoración 11",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5925219/photo-image-light-public-domain-shadow",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-12.jpg",
+      "subject": "hogar y decoración 12",
+      "shape": "tall",
+      "source": "https://www.rawpixel.com/image/5965064/living-room-interior-with-tree",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-13.jpg",
+      "subject": "hogar y decoración 13",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/3282495/free-photo-image-jar-ceramic-pottery",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-14.jpg",
+      "subject": "hogar y decoración 14",
+      "shape": "tall",
+      "source": "https://www.rawpixel.com/image/448357/free-photo-image-ceramic-tea-food-photography",
+      "license": "CC0"
+    },
+    {
+      "file": "hogar-15.jpg",
+      "subject": "hogar y decoración 15",
+      "shape": "wide",
+      "source": "https://www.rawpixel.com/image/5927665/ceramic-wares-free-public-domain-cc0-photo",
+      "license": "CC0"
+    }
+  ]
+}
