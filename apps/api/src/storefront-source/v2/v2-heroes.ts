@@ -56,3 +56,9 @@ export function readStoreLooks(files: ReadonlyArray<{ path: string; content: str
   const header = nav ? `${/\sover[\s/>]/.test(nav) ? 'over' : 'top'}:${/linkStyle="pills"/.test(nav) ? 'pills' : 'plain'}` : null;
   return { hero: readHeroMarker(read('components/home.tsx')), menu, header };
 }
+
+/** The first `limit` distinct stores of rows already ordered newest first (live 2026-11-16: the history read the merchant's 20 newest
+ *  stores — of 518 — so DooBoo's look was not in it and Meat House repeated it). */
+export function newestStores(rows: ReadonlyArray<{ storeId: string }>, limit: number): string[] {
+  return [...new Set(rows.map(row => row.storeId))].slice(0, limit);
+}

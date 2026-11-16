@@ -24,7 +24,7 @@ import { mergeSectionFix, sectionFixPlan, v2SectionFixInput, v2SectionFixPrompt,
 import { publicRetentionSettings } from '../../retention/retention.service';
 import { DEFAULT_RETENTION } from '../../retention/retention.dto';
 import { wordsLookPrompt, wordsLookSchema } from './v2-words';
-import { allowedHeroIdeas, drawsLibre, heroIdea, readStoreLooks } from './v2-heroes';
+import { allowedHeroIdeas, drawsLibre, heroIdea, newestStores, readStoreLooks } from './v2-heroes';
 import { allowedMenus, cleanMenu } from './v2-menus';
 import { freeBlocking, runV2Build, withContextMenu, type V2Attempt, type V2BuildDeps } from './v2-run';
 import { captureV2Look, v2LookInput, v2LookLines, v2LookPrompt, v2LookSchema, type V2LookCapture, type V2LookProblem } from './v2-look';
@@ -191,8 +191,9 @@ export class SourceV2PrototypeService {
    *  enough: with 8 ideas and 16 models, older stores would only repeat what these already show. */
   private async merchantHistory(merchantId: string, storeId: string): Promise<{ heroes: string[]; menus: string[]; headers: string[] }> {
     // Read together, and a store that cannot be read is skipped: history only steers variety, it never stops a build (minor M2).
-    const stores = await this.prisma.store.findMany({ where: { merchantId, id: { not: storeId } }, select: { id: true }, orderBy: { createdAt: 'desc' }, take: 20 }).catch(() => []);
-    const looks = await Promise.all(stores.map(({ id }) => this.prisma.storeSourceVersion
+    // The merchant's newest V2 designs, not their newest stores (a merchant with hundreds of stores would otherwise miss them).
+    const recent = await this.prisma.storeSourceVersion.findMany({ where: { label: { startsWith: V2_LABEL }, storeId: { not: storeId }, project: { store: { merchantId } } }, orderBy: { createdAt: 'desc' }, take: 200, select: { storeId: true } }).catch(() => []);
+    const looks = await Promise.all(newestStores(recent, 20).map(id => this.prisma.storeSourceVersion
       .findFirst({ where: { storeId: id, label: { startsWith: V2_LABEL } }, orderBy: { revision: 'desc' }, select: { snapshot: true } })
       .then(version => readStoreLooks((version?.snapshot as { files?: Array<{ path: string; content: string }> } | null)?.files))
       .catch(() => readStoreLooks(null))));

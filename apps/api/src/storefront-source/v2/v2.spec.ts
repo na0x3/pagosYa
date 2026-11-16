@@ -1,7 +1,7 @@
 import { assembleV2Files, OWN_CARDS_REQUEST, OWN_ICONS_REQUEST, readConfigData, type V2Context, type V2File, withStoreSettings } from './v2-context';
 import { composeV2Home, halfChapters, readV2Half } from './v2-prompts';
 import { kitProps, v2WriterInput as writerInput } from './v2-prompts';
-import { readStoreLooks } from './v2-heroes';
+import { newestStores, readStoreLooks } from './v2-heroes';
 import { v2LookPrompt } from './v2-look';
 import { uiRuntime } from '../source-creative';
 import { backstageCopy, freeMin, joinV2Parts, mergeV2Fix, readV2Part, showcaseRules, v2ContractProblems, v2DirectionInput, v2DirectionSchema, v2HalfInput, v2Hint, v2Repairs } from './v2-prompts';
@@ -880,5 +880,10 @@ describe('v2 assembly fixes 2026-11-16', () => {
   });
   it('spec 2026-11-15: the look sees the menu open and names a menu under the page, empty or cut', () => {
     expect(v2LookPrompt()).toMatch(/Menú abierto[\s\S]*debajo de la página/);
+  });
+  it('live 2026-11-16 (Meat House r8 = DooBoo r11): the history is the newest stores with a V2 design, each once', () => {
+    const rows = [{ storeId: 'dooboo' }, { storeId: 'dooboo' }, { storeId: 'oh' }, { storeId: 'gram' }, { storeId: 'oh' }];
+    expect(newestStores(rows, 2)).toEqual(['dooboo', 'oh']);
+    expect(newestStores(rows, 20)).toEqual(['dooboo', 'oh', 'gram']);
   });
 });
