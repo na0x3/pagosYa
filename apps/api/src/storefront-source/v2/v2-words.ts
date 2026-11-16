@@ -11,8 +11,11 @@ export function cropShare(natural: { w: number; h: number }, box: { w: number; h
 /** Each <img> that shows a photo with words gets data-pagosya-words, so the page rule can measure it. */
 export function markWordPhotos(content: string, words: ReadonlySet<string>): string {
   if (!words.size) return content;
-  return content.replace(/<img\b([^>]*?)\bsrc=(["'])([^"']+)\2/g, (whole, before: string, quote: string, src: string) =>
-    words.has(src) && !/data-pagosya-words/.test(whole) ? `<img${before}src=${quote}${src}${quote} data-pagosya-words` : whole);
+  // The whole tag is checked, so a mark after src (a fix round's own copy) is never doubled (live 2026-11-16, Oh Belly r24).
+  return content.replace(/<img\b[^>]*>/g, tag => {
+    const src = tag.match(/\bsrc=(["'])([^"']+)\1/)?.[2];
+    return src && words.has(src) && !/\bdata-pagosya-words\b/.test(tag) ? tag.replace(/\bsrc=(["'])([^"']+)\1/, match => `${match} data-pagosya-words`) : tag;
+  });
 }
 
 export const wordsLookPrompt = 'Mira cada foto, en orden, y di si tiene letras, un logo o texto de un empaque que se lea. Solo sí o no por foto.';

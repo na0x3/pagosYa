@@ -790,6 +790,10 @@ describe('v2 photos with words (owner 2026-11-15: DooBoo hero cut through its wo
     expect(markWordPhotos('<img src="assets/a.jpg" alt="x" /><img src="assets/b.jpg" alt="y" />', new Set(['assets/a.jpg'])))
       .toBe('<img src="assets/a.jpg" data-pagosya-words alt="x" /><img src="assets/b.jpg" alt="y" />');
   });
+  it('never marks a photo twice, wherever the mark sits in the tag (live 2026-11-16: Oh Belly r24 lost two rounds)', () => {
+    const once = '<img src="assets/a.jpg" alt="x" data-pagosya-words />';
+    expect(markWordPhotos(once, new Set(['assets/a.jpg']))).toBe(once);
+  });
   it('a cropped photo with words blocks a free-mode build', () => {
     expect(FREE_BLOCKERS.has('cropped-words')).toBe(true);
   });
