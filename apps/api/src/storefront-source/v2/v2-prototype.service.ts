@@ -21,6 +21,8 @@ import { joinV2Parts, mergeV2Fix, readV2Part, v2Hint, v2Repairs, v2FixInput, v2F
 import type { V2File } from './v2-context';
 import { v2CartSheet } from './v2-kit-baseline';
 import { mergeSectionFix, sectionFixPlan, v2SectionFixInput, v2SectionFixPrompt, v2SectionFixSchema } from './v2-section-fix';
+import { allowedHeroIdeas, drawsLibre, heroIdea, readHeroMarker } from './v2-heroes';
+import { allowedMenus } from './v2-menus';
 import { freeBlocking, runV2Build, withContextMenu, type V2Attempt, type V2BuildDeps } from './v2-run';
 import { captureV2Look, v2LookInput, v2LookLines, v2LookPrompt, v2LookSchema, type V2LookCapture, type V2LookProblem } from './v2-look';
 import { apiRoot, buildInSandbox } from './v2-sandbox';
@@ -176,6 +178,23 @@ export class SourceV2PrototypeService {
   }
 
   /** The newest revision that is not a V2 design (its template data and code), else the newest. */
+  /** The hero ideas and menu models the merchant's latest other V2 stores use (heroes + menus plan 2026-11-15). Twenty stores are
+   *  enough: with 8 ideas and 16 models, older stores would only repeat what these already show. */
+  private async merchantHistory(merchantId: string, storeId: string): Promise<{ heroes: string[]; menus: string[] }> {
+    const stores = await this.prisma.store.findMany({ where: { merchantId, id: { not: storeId } }, select: { id: true }, orderBy: { createdAt: 'desc' }, take: 20 });
+    const heroes = new Set<string>(), menus = new Set<string>();
+    for (const { id } of stores) {
+      const version = await this.prisma.storeSourceVersion.findFirst({ where: { storeId: id, label: { startsWith: V2_LABEL } }, orderBy: { revision: 'desc' }, select: { snapshot: true } });
+      const files = ((version?.snapshot as { files?: Array<{ path: string; content: string }> } | null)?.files ?? []);
+      if (!files.length) continue;
+      const hero = readHeroMarker(files.find(file => file.path === 'components/home.tsx')?.content ?? '');
+      if (hero && hero !== 'libre') heroes.add(hero);
+      const model = readConfigData(files as never).header?.menu?.model;
+      if (typeof model === 'string') menus.add(model);
+    }
+    return { heroes: [...heroes], menus: [...menus] };
+  }
+
   private async templateBase(storeId: string): Promise<number> {
     const version = await this.prisma.storeSourceVersion.findFirst({ where: { storeId, NOT: { label: V2_LABEL } }, orderBy: { revision: 'desc' }, select: { revision: true } }).catch(() => null);
     return version?.revision ?? this.latest(storeId);
@@ -247,6 +266,11 @@ export class SourceV2PrototypeService {
     const firstScreens = shots.slice(0, 2).filter(entry => entry.type === 'input_text' || (entry.type === 'input_image' && entry.detail === 'high'));
     const model = this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol';
     state.model = model;
+    // Heroes + menus plan 2026-11-15: never the hero idea or the menu model this merchant's other stores already use; about one
+    // store in three gets the open hero brief instead of a listed idea.
+    const history = await this.merchantHistory(merchantId, storeId);
+    context.heroesAllowed = drawsLibre(storeId) ? ['libre'] : allowedHeroIdeas(history.heroes, context);
+    context.menusAllowed = allowedMenus(history.menus);
     const direction = await stage('direction', () => this.call<V2Direction>(storeId, 'v2-direction', model, v2DirectionPrompt(context.free), [
       { type: 'input_text', text: `${v2DirectionInput(context)}${context.animated ? `\n\n${ANIMATED_RULES}` : ''}` },
       ...photos.map((image_url): Content => ({ type: 'input_image', image_url, detail: 'high' })),
@@ -260,6 +284,12 @@ export class SourceV2PrototypeService {
     state.direction = direction;
     // The store's menu as the direction chose it (spec 2026-11-15 store menu models): checked by the contract, written into config.js.
     context.menu = direction.menu;
+    context.heroIdea = direction.hero?.idea;
+    // The chosen idea's real reference frames go to the half that writes the hero (examples/v2-proto/references/_heroes).
+    const heroShots: Content[] = await Promise.all((heroIdea(context.heroIdea)?.frames ?? []).map(async frame => {
+      const bytes = await readFile(join(referencesDir(), '_heroes', frame)).catch(() => null);
+      return bytes ? { type: 'input_image', image_url: `data:image/${frame.endsWith('.webp') ? 'webp' : 'jpeg'};base64,${bytes.toString('base64')}`, detail: 'low' } as Content : null;
+    })).then(shots => shots.filter((shot): shot is Content => Boolean(shot)));
     // The cart drawer's look, as the direction chose it for this store (owner 2026-11-14 «depends on the store»).
     context.cartSheet = v2CartSheet(direction.cart?.look, context.storeName, direction.cart?.photo);
     // Written parts kept between rounds until a whole first version is put together (see write below).
@@ -298,7 +328,7 @@ export class SourceV2PrototypeService {
           const half = async (which: V2Half) => {
             try {
               return readV2Half(await this.call(storeId, `v2-writer-half-${which}`, model, v2WriterPrompt(true), [{ type: 'input_text', text: v2HalfInput(context, direction, which, system.files, { facts: v2LibraryFactsText(libraryFacts) }) }, ...study, ...motionShots.slice(0, 4),
-                ...(showcaseShots.length ? [showcaseIntro, ...(which === 'a' ? stageShots : railShots), ...cutoutShots] : [])],
+                ...(showcaseShots.length ? [showcaseIntro, ...(which === 'a' ? stageShots : railShots), ...cutoutShots] : []), ...(which === 'a' && heroShots.length ? [{ type: 'input_text', text: 'REFERENCIAS DE LA IDEA DE PORTADA (aprende la composición y el movimiento, nunca colores, textos ni fotos):' } as Content, ...heroShots] : [])],
                 v2HalfSchema(context.photos.length), `v2_half_${which}`, 24_000, state, 'medium'));
             } catch (error) {
               if (spent(error)) throw error;

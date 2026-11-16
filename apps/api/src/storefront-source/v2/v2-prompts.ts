@@ -5,6 +5,7 @@ import { repairNextAuthoredMarkup } from '../source-next';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import { V2_FILES, type V2Context, type V2File } from './v2-context';
 import { menuProblems, V2_MENU_MODELS, v2MenuSchema, type V2Menu } from './v2-menus';
+import { heroIdea, heroMarker, MIX_NOTE, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
 import { readV2LibraryFile, V2_HERO_TYPES, V2_KIT_TEXT, V2_LIBRARY_FILE, v2LibraryCatalogText, v2LibrarySchema, type V2LibraryEntry } from './v2-library';
 export { mergeV2LibraryEntries } from './v2-library';
 
@@ -15,7 +16,7 @@ export type V2Direction = {
   menu?: V2Menu;
   idea: string; craft: string; display: string; text: string; scale: 'quiet' | 'regular' | 'loud';
   palette: { paper: string; ink: string; muted: string; accent: string; line: string; jobs: string };
-  grid: string; hero: { composition: string; photo: string }; sections: Array<{ role: string; composition: string; photo: string; why: string }>;
+  grid: string; hero: { idea?: string; composition: string; photo: string }; sections: Array<{ role: string; composition: string; photo: string; why: string }>;
   signature: string; photos: string; phone: string; avoid: string[];
   /** The cart drawer's look (owner 2026-11-14 «depends on the store»). */
   cart: { look: 'band' | 'photo' | 'paper'; photo: string };
@@ -33,7 +34,7 @@ export function v2DirectionSchema(context: V2Context): object {
     properties: {
       idea: { type: 'string' }, craft: { type: 'string' }, display: { type: 'string', enum: ids }, text: { type: 'string', enum: ids }, scale: { type: 'string', enum: ['quiet', 'regular', 'loud'] },
       palette: { type: 'object', additionalProperties: false, required: ['paper', 'ink', 'muted', 'accent', 'line', 'jobs'], properties: { paper: hex, ink: hex, muted: hex, accent: hex, line: hex, jobs: { type: 'string' } } },
-      grid: { type: 'string' }, hero: { type: 'object', additionalProperties: false, required: ['composition', 'photo'], properties: { composition: { type: 'string' }, photo } },
+      grid: { type: 'string' }, hero: { type: 'object', additionalProperties: false, required: ['idea', 'composition', 'photo'], properties: { idea: { type: 'string', enum: context.heroesAllowed ?? V2_HERO_IDEAS.map(h => h.id) }, composition: { type: 'string' }, photo } },
       sections: { type: 'array', minItems: context.free ? FREE_MIN - 1 : 4, maxItems: context.free ? FREE_MAX - 1 : 9, items: { type: 'object', additionalProperties: false, required: ['role', 'composition', 'photo', 'why'],
         properties: { role: { type: 'string' }, composition: { type: 'string' }, photo, why: { type: 'string' } } } },
       signature: { type: 'string' }, photos: { type: 'string' }, phone: { type: 'string' }, avoid: { type: 'array', minItems: 3, maxItems: 8, items: { type: 'string' } },
@@ -245,9 +246,12 @@ export function v2DirectionInput(context: V2Context): string {
   // Owner 2026-11-15: the art direction knows a showcase piece is possible, so its chapters can make room for one.
   // Owner 2026-11-15 («changing menu per store»): the direction picks one of the kit's menu models this merchant has not used yet.
   const menus = V2_MENU_MODELS.filter(m => (context.menusAllowed ?? V2_MENU_MODELS.map(x => x.id)).includes(m.id));
+  // Heroes plan 2026-11-15: the hero starts from one idea this merchant has not used (or the open brief for about a third of stores).
+  const ideas = (context.heroesAllowed ?? V2_HERO_IDEAS.map(h => h.id)).map(id => heroIdea(id)).filter(Boolean);
+  const hero = `\n\nPORTADA: elige UNA idea de esta lista, la que la tienda puede mostrar con sus fotos de verdad (nunca otra): ${ideas.map(idea => `${idea!.id} — ${idea!.name}`).join(' · ')}.`;
   const menu = `\n\nMENÚ: elige UNO de estos modelos, el que mejor venda en ESTA tienda (nunca otro): ${menus.map(m => `${m.id}: ${m.fits}`).join(' · ')}.
 Grupos con nombres cortos y claros (máx. 28 letras), como mucho 7 arriba; enlaces con to: all, new, category:<id>, collection:<slug>, page:about|contact|shipping|faq, section:<id>; fotos solo de las rutas de la tienda, cada una una vez. Tu CSS puede vestir .pym-panel[data-model=…] y sus partes .pym-*.`;
-  return `${facts(context)}${(context.cutouts?.length ?? 0) >= 2 ? '\n\nVITRINAS: con los recortes la portada puede tener UNA vitrina de la plataforma justo después de la primera pantalla: ProductStage (un producto por pantalla, cada uno con su color de fondo y un titular de cartel partido alrededor del producto, como LIFT) o, para ropa, HangingRail (prendas en un riel, como ATELIER). Si la usas, nómbrala en los capítulos y da los colores de fondo de cada pantalla.' : ''}` + menu;
+  return `${facts(context)}${(context.cutouts?.length ?? 0) >= 2 ? '\n\nVITRINAS: con los recortes la portada puede tener UNA vitrina de la plataforma justo después de la primera pantalla: ProductStage (un producto por pantalla, cada uno con su color de fondo y un titular de cartel partido alrededor del producto, como LIFT) o, para ropa, HangingRail (prendas en un riel, como ATELIER). Si la usas, nómbrala en los capítulos y da los colores de fondo de cada pantalla.' : ''}` + hero + menu;
 }
 
 /** The writer works in two calls so each answer fits the ChatGPT bridge's 10-minute request (live 2026-11-14: all four files in one
@@ -616,7 +620,7 @@ function oncePhotos(home: string, context: Partial<Pick<V2Context, 'photos' | 'c
   });
 }
 
-export function v2Repairs(files: readonly V2File[], header?: Pick<V2Context, 'goods' | 'ownIcons'> & Partial<Pick<V2Context, 'photos' | 'cutouts' | 'packs'>>): { files: V2File[]; repairs: string[] } {
+export function v2Repairs(files: readonly V2File[], header?: Pick<V2Context, 'goods' | 'ownIcons'> & Partial<Pick<V2Context, 'photos' | 'cutouts' | 'packs' | 'heroIdea'>>): { files: V2File[]; repairs: string[] } {
   const repairs: string[] = [];
   // Owner 2026-11-14 («the icons are the same up top… unless asked to change»): the header's actions are always the platform's
   // three icons — search, profile, the cart drawn as what the store sells — unless the merchant asked for other icons.
@@ -667,6 +671,8 @@ export function v2Repairs(files: readonly V2File[], header?: Pick<V2Context, 'go
     content = oneContactForm(content, repairs, file.path);
     content = kineticText(content, repairs, file.path);
     if (file.path === 'components/home.tsx' && header?.photos) content = oncePhotos(content, header, repairs);
+    // The home carries its hero idea (heroes plan 2026-11-15), so the merchant's next store starts from another one.
+    if (file.path === 'components/home.tsx' && header?.heroIdea && readHeroMarker(content) !== header.heroIdea) content = `${heroMarker(header.heroIdea)}\n${content.replace(/^\/\/ @pagosya-hero [a-z]+\s*\n/m, '')}`;
     content = kitPropsOnly(content, repairs, file.path);
     if (header && header.packs === 0) content = noPacks(content, repairs, file.path);
     return content === file.content ? file : { ...file, content };
@@ -903,6 +909,9 @@ export function v2HalfSchema(photoCount = 0): object {
 }
 
 export function v2HalfInput(context: V2Context, direction: V2Direction, half: V2Half, system: readonly V2File[], library: { facts: string }): string {
+  // Heroes plan 2026-11-15: the half that writes the hero gets its idea's brief (its reference frames come with the call).
+  const idea = half === 'a' ? heroIdea((direction as { hero?: { idea?: string } }).hero?.idea) : null;
+  const heroBrief = idea ? `IDEA DE PORTADA «${idea.name}»: ${idea.brief}${idea.id === 'libre' ? '' : ` ${MIX_NOTE}`} Diséñala con el estilo de esta tienda (su letra, sus colores, su voz); de las referencias aprende la composición, nunca sus colores ni textos.\n\n` : '';
   const { mine, other } = halfChapters(direction, half);
   const prefix = half === 'a' ? 'A' : 'B';
   const task = `EN ESTA LLAMADA escribes SOLO UNA MITAD de la portada: estos capítulos de la dirección, en este orden:
@@ -923,7 +932,7 @@ ${half === 'a' ? 'El ÚNICO <h1> de la página está en tu primera pantalla.' : 
 La página de producto la escribe otra llamada: no la toques.`;
   // The free home's rules, from «LA PORTADA ES TUYA» on (its first paragraph names the files of a whole-page answer).
   const rules = FREE_PAGES_TASK.slice(FREE_PAGES_TASK.indexOf('LA PORTADA ES TUYA'));
-  return `${task}
+  return heroBrief + `${task}
 
 ${rules}
 ${context.animated ? `\n${ANIMATED_RULES}\n` : ''}${showcaseRules(context, half === 'a' ? 'stage' : 'rail') ? `\n${showcaseRules(context, half === 'a' ? 'stage' : 'rail')}\n` : ''}

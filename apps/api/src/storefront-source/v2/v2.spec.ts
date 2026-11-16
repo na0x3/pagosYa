@@ -10,6 +10,9 @@ import { signatureDistance, type SectionShape } from './v2-signature';
 import { cardText, pickReferences, storeShapes } from './v2-references';
 import { buildV2Library, readV2LibraryFile, v2LibraryFile, withoutRepeatedPhotos, withUniquePhotos } from './v2-library';
 import { SourceV2PrototypeService } from './v2-prototype.service';
+import { allowedHeroIdeas, drawsLibre, heroMarker, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
+import { existsSync as heroFrameExists } from 'node:fs';
+import { join as heroJoin } from 'node:path';
 import { allowedMenus, menuProblems, V2_MENU_MODELS, v2MenuSchema, withStoreMenu } from './v2-menus';
 import { SourceV2PrototypeController } from './v2-prototype.controller';
 
@@ -706,6 +709,48 @@ describe('v2 menus (spec 2026-11-15 store menu models)', () => {
     expect(v2DirectionInput(ctx)).not.toMatch(/mega: /);
     const withMenu = { ...ctx, menu: { model: 'overlay', groups: [{ label: 'Una categoría con un nombre demasiado largo', links: [{ to: 'all' }] }] } } as V2Context;
     expect(v2ContractProblems(good, withMenu).join()).toMatch(/28 letras/);
+  });
+
+});
+
+describe('v2 hero briefs (heroes plan 2026-11-15)', () => {
+  it('offers the ideas this merchant has not used, filtered by what the store can show', () => {
+    const ctx = { cutouts: [{ path: 'assets/image-aaaaaaaaaaaa.webp' }], products: [] } as any;
+    const allowed = allowedHeroIdeas(['laps', 'zippa'], ctx);
+    expect(allowed).not.toContain('laps'); expect(allowed).not.toContain('zippa'); expect(allowed).toContain('lift');
+    expect(allowedHeroIdeas(V2_HERO_IDEAS.map(h => h.id), ctx).length).toBeGreaterThan(0);
+    expect(allowedHeroIdeas([], { cutouts: [], products: [] } as any)).not.toContain('laps');
+    expect(V2_HERO_IDEAS.map(h => h.id)).not.toContain('atelier');
+  });
+  it('marks and reads the hero idea on the saved home', () => {
+    expect(readHeroMarker(`${heroMarker('hearthen')}\nexport default function Home(){}`)).toBe('hearthen');
+    expect(readHeroMarker('export default function Home(){}')).toBeNull();
+  });
+  it('every idea has a Spanish brief and real reference frames on disk', () => {
+    for (const idea of V2_HERO_IDEAS) {
+      expect(idea.brief.length).toBeGreaterThan(200);
+      for (const frame of idea.frames) expect(heroFrameExists(heroJoin(__dirname, '../../../../../examples/v2-proto/references/_heroes', frame))).toBe(true);
+    }
+  });
+  it('gives about a third of the stores an open hero brief, the same draw every time', () => {
+    const ids = Array.from({ length: 300 }, (_, i) => `store-${i}`);
+    const share = ids.filter(drawsLibre).length / ids.length;
+    expect(share).toBeGreaterThan(0.25); expect(share).toBeLessThan(0.42);
+    expect(drawsLibre('store-7')).toBe(drawsLibre('store-7'));
+  });
+  it('the direction offers only the allowed ideas; the first half gets the brief; repairs keep the hero marker', () => {
+    const ctx = { ...context, heroesAllowed: ['hearthen', 'zippa'] } as V2Context;
+    expect((v2DirectionSchema(ctx) as any).properties.hero.properties.idea.enum).toEqual(['hearthen', 'zippa']);
+    expect(v2DirectionInput(ctx)).toMatch(/PORTADA[\s\S]*hearthen — Foto cálida/);
+    const direction = { hero: { idea: 'hearthen', composition: 'c', photo: '' }, sections: ['a', 'b', 'c', 'd'].map(role => ({ role, composition: 'c' })) } as never;
+    expect(v2HalfInput(ctx, direction, 'a', [], { facts: '' })).toMatch(/IDEA DE PORTADA «Foto cálida y sello que gira»[\s\S]*sello redondo[\s\S]*mezclarla/);
+    expect(v2HalfInput(ctx, direction, 'b', [], { facts: '' })).not.toMatch(/IDEA DE PORTADA/);
+    const libre = { hero: { idea: 'libre', composition: 'c', photo: '' }, sections: direction['sections' as never] } as never;
+    expect(v2HalfInput(ctx, libre, 'a', [], { facts: '' })).toMatch(/Inventa tu propia portada/);
+    const home = good.find(file => file.path === 'components/home.tsx')!;
+    const out = v2Repairs([home], { goods: '', ownIcons: true, heroIdea: 'hearthen' } as never).files[0].content;
+    expect(readHeroMarker(out)).toBe('hearthen');
+    expect(readHeroMarker(v2Repairs([{ ...home, content: `${heroMarker('laps')}\n${home.content}` }], { goods: '', ownIcons: true, heroIdea: 'hearthen' } as never).files[0].content)).toBe('hearthen');
   });
 
 });
