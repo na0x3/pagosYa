@@ -48,19 +48,41 @@
       const categories = Array.isArray(store.categories) ? store.categories : [];
       state.sets.categoria = state.sets.categoria.map(value => { const named = categories.find(c => c && c.id && filterFold(c.name) === value); return named ? filterFold(named.id) : value; });
     }
+    // Owner 2026-11-14 («when clicked joyas it sends me to the page with all of the products»): V2 designs link a category as
+    // productos.html#joyas or ?category=Joyas / ?categoria=Joyas. Either is read as that category's filter (by name, id or slug);
+    // writeFilterState then keeps only f_categoria, so clearing the chip clears it.
+    if (!state.sets.categoria) {
+      const found = categoryNamed(params.get('categoria') || params.get('category') || (filterQuery == null ? linkedHashCategory() : ''));
+      if (found) state.sets.categoria = [filterFold(found.id)];
+    }
     for (const key of FILTER_TOGGLES) if (params.get(key) === '1') state.toggles.add(key);
     return state;
   }
+  // Hoisted like filterFold: buscar.html reads the filter state before this part has run.
+  function looseFold(text) { return filterFold(text).replace(/[^a-z0-9]+/g, ''); }
+  function categoryNamed(value) {
+    const key = looseFold(value);
+    return key ? (Array.isArray(store.categories) ? store.categories : []).find(c => c && c.id && (looseFold(c.name) === key || looseFold(c.id) === key)) || null : null;
+  }
+  function linkedHashCategory() { try { return decodeURIComponent((location.hash || '').slice(1)); } catch { return ''; } }
+  // A header link to productos.html#joyas clicked on the catalogue page itself only changes the hash.
+  window.addEventListener('hashchange', () => {
+    const found = document.querySelector('[data-catalog-full]') && categoryNamed(linkedHashCategory());
+    if (!found) return;
+    const state = readFilterState(); state.sets.categoria = [filterFold(found.id)];
+    writeFilterState(state); render();
+  });
   function writeFilterState(state) {
     const params = new URLSearchParams(filterQuery ?? (window.PAGOSYA_PREVIEW_QUERY || location.search));
-    [...params.keys()].filter(k => k.startsWith('f_') || ['orden', 'precio', 'q', ...FILTER_TOGGLES].includes(k)).forEach(k => params.delete(k));
+    [...params.keys()].filter(k => k.startsWith('f_') || ['orden', 'precio', 'q', 'categoria', 'category', ...FILTER_TOGGLES].includes(k)).forEach(k => params.delete(k));
     if (state.q && state.q.trim()) params.set('q', state.q.slice(0, 80));
     if (state.orden !== 'destacados') params.set('orden', state.orden);
     if (state.precio) params.set('precio', `${Math.floor(state.precio[0] / 100)}-${Math.ceil(state.precio[1] / 100)}`);
     for (const [key, values] of Object.entries(state.sets)) if (values.length) params.set(`f_${key}`, values.join(','));
     for (const key of state.toggles) params.set(key, '1');
     filterQuery = params.toString() ? `?${params}` : '';
-    try { history.replaceState(history.state, '', `${location.pathname}${filterQuery}${location.hash}`); } catch { /* sandboxed previews keep it in memory */ }
+    const hash = categoryNamed(linkedHashCategory()) ? '' : location.hash;
+    try { history.replaceState(history.state, '', `${location.pathname}${filterQuery}${hash}`); } catch { /* sandboxed previews keep it in memory */ }
   }
   function applyFilters(items, state) {
     const words = searchWords(state.q);

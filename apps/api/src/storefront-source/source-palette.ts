@@ -116,6 +116,75 @@ const NAMED_COLOURS: ReadonlyArray<readonly [RegExp, string]> = ([
 /** Only sentences about the brand's look: «Colores de la marca: …», «Mi logo es el espiral rojo» — never «Brillo Rosa» or «flores blancas». */
 const ABOUT_COLOUR = /(?<![\p{L}])(colou?r(es)?|logo|marca|tonos|paleta)(?![\p{L}])/iu;
 
+/** Owner 2026-11-13 (ZARA asked «Fondo blanco, texto negro y un gris muy suave» and got lavender and brown from its photos): colours
+ *  the merchant gives a job — background, text, accent, support — and a black-and-white brand. A colour word counts only right after a
+ *  role word («fondo blanco», «texto en negro»), never on its own («flores blancas»). Pure; no model. */
+export type ColourRoles = { paper?: string; ink?: string; accent?: string; muted?: string; mono?: boolean };
+const ROLE_WORDS: ReadonlyArray<readonly [RegExp, keyof Omit<ColourRoles, 'mono'>]> = [
+  [/(?<![\p{L}])(fondo|fondos|background)(?![\p{L}])/giu, 'paper'], [/(?<![\p{L}])(texto|textos|letras?|tipograf[ií]a)(?![\p{L}])/giu, 'ink'],
+  [/(?<![\p{L}])(acento|botones?|detalles de color)(?![\p{L}])/giu, 'accent'], [/(?<![\p{L}])(apoyo|secundario|superficies?)(?![\p{L}])/giu, 'muted'],
+];
+const SOFT_GREY = /(?<![\p{L}])gris(?:es)? (?:muy )?(?:suave|claro|perla)s?(?![\p{L}])/iu;
+const MONO = /(?<![\p{L}])(blanco y negro|negro y blanco|monocrom[aá]tic[ao]|monocromo|sin colores|nada de colores|solo (?:blanco|negro))(?![\p{L}])/iu;
+export function colourRolesFromWords(text: string | undefined): ColourRoles {
+  const words = text ?? '';
+  const roles: ColourRoles = MONO.test(words) ? { mono: true } : {};
+  for (const [pattern, role] of ROLE_WORDS) for (const match of words.matchAll(pattern)) {
+    // The colour named within a few words after the role («fondo blanco», «el texto en negro», «botones color terracota»).
+    const after = words.slice((match.index ?? 0) + match[0].length, (match.index ?? 0) + match[0].length + 28);
+    if (role === 'muted' || role === 'paper') { if (SOFT_GREY.test(after)) { roles[role] ??= '#efefef'; continue; } }
+    let first: { at: number; hex: string } | undefined;
+    for (const [colour, hex] of NAMED_COLOURS) { colour.lastIndex = 0; const hit = colour.exec(after); if (hit && (!first || hit.index < first.at)) first = { at: hit.index, hex }; }
+    if (first && !roles[role]) roles[role] = role === 'ink' && first.hex === '#141414' ? '#111111' : first.hex;
+  }
+  // «un gris muy suave como único apoyo»: the soft grey named anywhere is the support colour.
+  if (!roles.muted && SOFT_GREY.test(words)) roles.muted = '#efefef';
+  return roles;
+}
+
+/** Owner 2026-11-13 (ZARA's brown text): text taken from photos stays a near-neutral dark — a hint of the photos' hue, never brown. */
+export function neutralInk(hex: string): string {
+  if (!HEX.test(hex)) return hex;
+  const [hue, saturation, lightness] = toHsl(toRgb(hex));
+  return toHex(fromHsl(hue, Math.min(saturation, .12), Math.min(lightness, .14)));
+}
+
+/** Owner 2026-11-13 («backgrounds are too white»): a near-white page (lighter than 92%) becomes a real ground in the brand's own
+ *  hue — about 89.5% light with some colour, like the cream, stone and blush grounds of Amboras stores; a grey one turns warm stone.
+ *  The soft band colour stays a step deeper than it. Darker or already coloured grounds are left alone. */
+export function richerGround(paper: string, muted?: string): { paper: string; muted?: string } {
+  if (!HEX.test(paper)) return { paper, muted };
+  const [hue, saturation, lightness] = toHsl(toRgb(paper));
+  if (lightness < .92) return { paper, muted };
+  const grey = saturation < .1;
+  const ground = toHex(fromHsl(grey ? 36 : hue, grey ? .26 : Math.min(.5, Math.max(.28, saturation)), .895));
+  if (!muted || !HEX.test(muted)) return { paper: ground };
+  const [mutedHue, mutedSaturation, mutedLightness] = toHsl(toRgb(muted));
+  return { paper: ground, muted: mutedLightness > .835 ? toHex(fromHsl(mutedHue, Math.max(mutedSaturation, .2), .835)) : muted };
+}
+
+/** Owner 2026-11-13 («grabs the background of the main picture and applies it everywhere, so colours match»): the page's colours
+ *  from the hero photo's backdrop. A light backdrop is the page itself (a near-white one gets a little colour), the soft bands a step
+ *  deeper; a dark or strong one stays the hero's and the dark bands', the page a pale tint of its hue. */
+export function groundPalette(backdrop: string): { paper: string; muted: string; deep?: string } | undefined {
+  if (!HEX.test(backdrop)) return undefined;
+  const [hue, saturation, lightness] = toHsl(toRgb(backdrop));
+  if (lightness >= .8) {
+    // Exactly the backdrop, even near-white: the hero, the header and the page are one colour with the photo (owner 2026-11-13, rhode).
+    const paper = backdrop.toLowerCase();
+    const [paperHue, paperSaturation, paperLightness] = toHsl(toRgb(paper));
+    return { paper, muted: toHex(fromHsl(paperHue, Math.max(paperSaturation, .18), Math.max(.6, paperLightness - .07))) };
+  }
+  return { paper: toHex(fromHsl(hue, Math.min(saturation, .4), .9)), muted: toHex(fromHsl(hue, Math.min(saturation, .45), .82)), deep: backdrop.toLowerCase() };
+}
+
+/** Owner 2026-11-13 (Oh Belly: «did not like the colors»): an accent this saturated and mid-toned is loud — buttons and words only. */
+export function loudAccent(hex: string): boolean {
+  if (!HEX.test(hex)) return false;
+  const [, saturation, lightness] = toHsl(toRgb(hex));
+  return saturation >= .55 && lightness >= .35 && lightness <= .65;
+}
+
 /** Owner 2026-10-28 (Oh Belly named «rosa pálido, rojo-naranja, verde oliva y morado» and got mustard from its pears): the colours the
  *  merchant names for the brand, in the order written. Pure; no model. */
 export function coloursFromWords(text: string | undefined): string[] {

@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="/src/ui-kit.css">
 <link rel="stylesheet" href="/src/motion.css">
 <link rel="stylesheet" href="/src/premium.css">
+<link rel="stylesheet" href="/src/yapi-welcome.css">
 </head>
 <body>
   <a class="skip-link" href="#dashboardWorkspace">Saltar al contenido</a>
@@ -75,6 +76,7 @@
   </div>
 
   <form class="login-split" id="loginForm">
+    <canvas class="login-pond" data-login-koi aria-hidden="true"></canvas>
     <aside class="login-hero" aria-labelledby="loginHeroTitle">
       <div class="login-hero-shader" data-login-shader aria-hidden="true"></div>
       <div class="login-hero-copy">
@@ -954,6 +956,27 @@
     </form>
   </dialog>
 
+<!-- Owner 2026-11-15: YAPI's welcome when the panel opens (src/yapi-welcome.mjs). -->
+<section class="yapi-welcome" id="yapiWelcome" aria-labelledby="yapiWelcomeGreeting" hidden>
+  <canvas class="yapi-welcome-sky" aria-hidden="true"></canvas>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="yapiWelcomeGlass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.007 0.011" numOctaves="2" seed="11" result="noise"/><feGaussianBlur in="noise" stdDeviation="2" result="map"/><feDisplacementMap in="SourceGraphic" in2="map" scale="40" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+  <div class="yapi-welcome-stage">
+    <img class="yapi-welcome-star" src="/assets/pagosya-star-yellow.png" alt="" width="68" height="68">
+    <h1 class="yapi-welcome-greeting" id="yapiWelcomeGreeting" data-welcome-greeting>Hola</h1>
+    <form class="yapi-welcome-composer" autocomplete="off">
+      <div class="yapi-welcome-field">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
+        <label for="yapiWelcomeDraft" class="sr-only">Tu idea para YAPI</label>
+        <textarea id="yapiWelcomeDraft" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar?"></textarea>
+      </div>
+      <div class="yapi-welcome-bar">
+        <p class="yapi-welcome-note" data-welcome-note role="status"></p>
+        <button type="submit" class="yapi-welcome-send" data-welcome-send aria-label="Abrir con YAPI" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+      </div>
+    </form>
+    <button type="button" class="yapi-welcome-skip" data-welcome-skip>Ir a mi panel →</button>
+  </div>
+</section>
 <aside class="workspace-yapi" aria-label="YAPI, asistente de tu tienda">
   <div class="workspace-yapi-heading"><img class="workspace-yapi-star" src="/assets/pagosya-star-yellow.png" alt="YAPI" width="28" height="28"><span>Una idea puede ser el próximo paso de tu tienda.</span></div>
   <form id="workspaceYapiForm"><label for="workspaceYapiDraft" class="sr-only">Tu idea para YAPI</label><textarea id="workspaceYapiDraft" rows="1" maxlength="12000" placeholder="¿Qué quieres crear o mejorar?" required></textarea><button class="primary" type="submit" aria-label="Abrir con YAPI">Abrir<span class="workspace-yapi-long"> con YAPI</span> ↗</button></form>

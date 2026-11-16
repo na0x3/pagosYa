@@ -186,8 +186,8 @@ describe('playful stores', () => {
   it('check blocks a fun store whose home only moves on scroll, until two always-moving parts are used', async () => {
     const b = await branded(extra({ playful: true, animated: true }));
     expect((await b.run('check', '{}')).output).toMatch(/Esta tienda es divertida/);
-    const home = b.workspace.read(HOME_PATH).replace(/import \{([^}]*)\} from '@pagosya\/ui';/, "import {$1, Float, Sticker, ScrollScale, Marquee } from '@pagosya/ui';")
-      .replace(/(<main[^>]*>)/, '$1<Float><Sticker>Nuevo sabor</Sticker></Float>').replace('</main>', '<Marquee items={["Burbujas"]} /><ScrollScale><p>Hola</p></ScrollScale></main>');
+    const home = b.workspace.read(HOME_PATH).replace(/import \{([^}]*)\} from '@pagosya\/ui';/, "import {$1, Float, Wiggle, ScrollScale, Marquee } from '@pagosya/ui';")
+      .replace(/(<main[^>]*>)/, '$1<Float><Wiggle><span style={{ display: \'block\', width: 64, height: 64 }}><svg aria-hidden="true" width="64" height="64" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="currentColor" /></svg></span></Wiggle></Float>').replace('</main>', '<Marquee items={["Burbujas"]} /><ScrollScale><p>Hola</p></ScrollScale></main>');
     expect((await b.run('write_home', JSON.stringify({ content: home }))).output).toMatch(/compilada/);
     expect((await b.run('check', '{}')).output).not.toMatch(/divertida/);
   });
@@ -249,15 +249,21 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
   it('studio: check asks for the design system first and refuses colours written by hand', async () => {
     const b = studioBox();
     await b.run('write_brief', JSON.stringify({ idea: 'Una tienda de sodas alegres que burbujean como una fiesta de barrio.', palette: 'fondo crema #fbf8f2, texto #1d2a22, botones naranja #e0602b, banda #efe7da.',
-      type: 'Fraunces para títulos, Figtree para el texto; sin mayúsculas.', device: 'Pegatinas inclinadas sobre las fotos.', moment: 'Una tira de sabores que se mueve sola.',
+      type: 'Fraunces para títulos, Figtree para el texto; sin mayúsculas.', device: 'Marcos redondeados sobre las fotos.', details: 'Burbujas dibujadas que suben junto a cada título y como separadores.', moment: 'Una tira de sabores que se mueve sola.',
       structure: 'encabezado con el logo al centro → portada con la lata → sabores → reseñas → pie de color', images: 'portada = la lata naranja; sabores = las cinco latas; reseñas = la foto de la fiesta.' }));
     const home = b.workspace.read(HOME_PATH).replace('<Shell>', '<Shell><section style={{ background: \'#ff3300\' }}>Hola</section>');
     b.workspace.write(HOME_PATH, home);
-    const first = (await b.run('check', '{}')).output;
-    expect(first).toMatch(/Empieza por el sistema de diseño/);
-    expect(first).toMatch(/colores escritos a mano: #ff3300/);
-    // Amboras 2026-11-12: design findings advise, never block — the draft can still finish.
-    expect(first).toMatch(/^Nada que corregir\.\nAvisos de diseño \(no bloquean/);
+    const [must, advice] = (await b.run('check', '{}')).output.split('Avisos de diseño');
+    // Amboras 2026-11-12: design findings advise, never block.
+    expect(advice).toMatch(/Empieza por el sistema de diseño/);
+    expect(advice).toMatch(/colores escritos a mano: #ff3300/);
+    expect(must).not.toMatch(/Empieza por|colores escritos/);
+    // Owner 2026-11-12: the owner's rules (here the template's full-width photo) block twice, then advise — the draft can still
+    // finish. Details are advice («copy amboras»).
+    expect(must).toMatch(/Foto demasiado grande/);
+    expect(advice).toMatch(/Faltan los detalles/);
+    await b.run('check', '{}');
+    expect((await b.run('check', '{}')).output).toMatch(/^Nada que corregir\.\nAvisos de diseño \(no bloquean/);
     expect(b.draftIsClean()).toBe(true);
   });
   it('studio: check refuses a kit variable that does not exist', async () => {
@@ -270,21 +276,68 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
     const b = studioBox();
     b.workspace.write(HOME_PATH, b.workspace.read(HOME_PATH).replace('<Shell>', '<Shell><style>{`.es-catalog .es-card__media{display:none!important}`}</style>'));
     const out = (await b.run('check', '{}')).output;
-    expect(out).toMatch(/^Debes corregir:\n- La portada deja las tarjetas de producto sin su foto: \.es-catalog \.es-card__media/);
+    expect(out).toMatch(/^Debes corregir:\n(?:- .*\n)*- La portada deja las tarjetas de producto sin su foto: \.es-catalog \.es-card__media/);
     expect(b.draftIsClean()).toBe(false);
+  });
+  it('studio: an owner rule blocks twice, then it is advice — a round badge with words (owner 2026-11-12 «i dont like these little boxes»)', async () => {
+    const b = studioBox();
+    expect(b.workspace.read(HOME_PATH)).toMatch(/<main[\s>]/);
+    b.workspace.write(HOME_PATH, b.workspace.read(HOME_PATH).replace(/(<main[^>]*>)/, '$1<section style={{ padding: 40 }}><div style={{ width: 120, height: 120, borderRadius: \'50%\', background: \'var(--es-accent)\' }}>Patas felices</div></section>'));
+    for (const round of [1, 2]) expect([round, (await b.run('check', '{}')).output.split('Avisos de diseño')[0]]).toEqual([round, expect.stringMatching(/Insignia redonda con palabras \(«Patas felices»\)/)]);
+    const [must, advice] = (await b.run('check', '{}')).output.split('Avisos de diseño');
+    expect(must).not.toMatch(/Insignia redonda/);
+    expect(advice).toMatch(/Insignia redonda con palabras/);
+  });
+  it('kit: the rich section library compiles in a store and draws (owner 2026-11-13 «a rich component library … make sure yapi can use them»)', async () => {
+    const b = new HomeWriterToolbox({ workspace: new AgentWorkspace(sorbo.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base: sorbo, gate: async () => null, template, studio: true, chassis: true });
+    const parts = ['MarqueeRow', 'NumberTicker', 'WordRotate', 'BlurFade', 'ShinyText', 'AuroraText', 'ScrollProgress', 'VelocityRow', 'SpotlightCard', 'VideoText', 'MorphingText', 'ShimmerLink', 'HoverButton', 'BentoGrid', 'BentoCard', 'KineticHeadline', 'Carousel', 'SnapRail', 'StickyScene', 'HorizontalScroll', 'HoverReveal', 'MediaFrame', 'Tabs', 'RevealImage', 'ImageText'];
+    const home = `import Shell from './Shell';
+import { photos } from './store-data';
+import { ${parts.join(', ')} } from '@pagosya/ui';
+const all = Object.values(photos);
+const img = (i: number) => ({ src: all[i % Math.max(1, all.length)] ?? '', alt: 'Foto de la tienda' });
+export default function Home() {
+  return <Shell><main id="contenido" data-lb-home>
+    <ScrollProgress />
+    <section style={{ padding: '48px 24px' }}><KineticHeadline as="h1" text="Té que se toma con calma" /><p>Hojas <WordRotate words={['enteras', 'frescas', 'tuyas']} /> · <ShinyText>Nuevo</ShinyText> · <AuroraText>Sorbo</AuroraText></p><ShimmerLink href="productos.html">Ver productos</ShimmerLink> <HoverButton href="nosotros.html">Nuestra historia</HoverButton></section>
+    <Carousel slides={[{ image: img(0), title: 'Té verde', href: 'productos.html' }, { image: img(1), title: 'Infusiones' }, { image: img(2) }]} />
+    <section><div data-pagosya-catalog data-pagosya-filters data-filters-style="chips" /></section>
+    <MarqueeRow><span>Hoja entera</span><span>Sin azúcar</span><span>Hecho aquí</span></MarqueeRow>
+    <VelocityRow><span style={{ fontSize: 48 }}>Té · Calma · Sorbo ·</span></VelocityRow>
+    <BentoGrid><BentoCard title="Té verde" text="Hoja entera" image={img(0)} size="big" href="productos.html" /><BentoCard title="Rooibos" image={img(1)} /><BentoCard title="Regalos" text="Cajas" size="wide" /></BentoGrid>
+    <SnapRail>{[0, 1, 2, 3].map(i => <HoverReveal key={i} image={img(i)} title={'Té ' + i} caption="Hoja entera" href="productos.html" />)}</SnapRail>
+    <StickyScene steps={[{ title: 'Elegimos', text: 'Hoja por hoja.', image: img(0) }, { title: 'Secamos', text: 'Al sol.', image: img(1) }, { title: 'Te llega', text: 'A tu casa.', image: img(2) }]} />
+    <HorizontalScroll>{[0, 1, 2, 3, 4].map(i => <MediaFrame key={i} image={img(i)} shape={i % 2 ? 'arch' : 'rounded'} className="w-[320px]" />)}</HorizontalScroll>
+    <Tabs tabs={[{ label: 'Mañana', content: <p>Té verde</p> }, { label: 'Noche', content: <p>Manzanilla</p> }]} />
+    <SpotlightCard><h3>Envío en el día</h3><p>En la ciudad.</p></SpotlightCard>
+    <BlurFade><p>Entra suave.</p></BlurFade>
+    <p><NumberTicker value={12} suffix=" sabores" /></p>
+    <MorphingText texts={['Calma', 'Sabor', 'Sorbo']} />
+    <RevealImage image={img(3)} />
+    <ImageText text="SORBO" image={img(2)} />
+    <VideoText text="SORBO" image={img(1)} />
+  </main></Shell>;
+}
+`;
+    const written = (await b.run('write_home', JSON.stringify({ content: home }))).output;
+    expect(written).toMatch(/compilada/);
+    const out = await b.run('check', '{}');
+    expect(out.output).not.toMatch(/is not defined|Cannot read|TypeError|ReferenceError/);
+    // KIT_SHOTS=<dir> keeps the captures to look at (owner review 2026-11-13).
+    if (process.env.KIT_SHOTS) (out.images ?? []).forEach((image: string, index: number) => require('fs').writeFileSync(`${process.env.KIT_SHOTS}/kit-${index}.jpg`, Buffer.from(String(image).replace(/^data:[^,]+,/, ''), 'base64')));
   });
   it('write_footer is refused', async () => {
     expect((await sorboBox().run('write_footer', JSON.stringify({ content: 'export default function StoreFooter() { return <footer />; }' }))).output).toBe('Esta tienda usa el pie de su plantilla; no escribas uno.');
   });
   it('chassis: every part is the store\'s own — written, pointed at by the Shell, compiled, and checked for its wiring (spec 2026-11-12)', async () => {
-    const plan = { navbar: 'drawer', card: 'bare', pdp: 'stacked', cart: 'sheet' } as const;
+    const plan = { navbar: 'drawer', card: 'bare', pdp: 'stacked', cart: 'sheet', hero: 'parallax-stack', extra: 'statement' } as const;
     const b = new HomeWriterToolbox({ workspace: new AgentWorkspace(sorbo.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base: sorbo, gate: async () => null, template, studio: true, chassis: true, plan });
     const chassis = (await b.run('read_chassis', '{}')).output;
     expect(chassis).toContain('CHASIS');
     expect(chassis).toContain('TODOS los enlaces van en el cajón');
     expect(chassis).toContain('--- CartParts ---');
     expect((await b.run('check', '{}')).output).toMatch(/Falta escribir header con write_part/);
-    const header = `import { IconSearch } from './icons';\nexport default function StoreHeader() { return <header style={{ display: 'flex' }}><a href="index.html">Tienda</a><a href="productos.html">Productos</a><a href="buscar.html" aria-label="Buscar"><IconSearch /></a><a data-pagosya-account="login" href="acceso-ingresar.html">Cuenta</a><button type="button" data-cart-open>Bolsa <span data-cart-count>0</span></button></header>; }\n`;
+    const header = `import { NavShell } from '@pagosya/ui';\nexport default function StoreHeader() { return <NavShell structure="bar" actions="labels" brand={<span>Tienda</span>} links={[{ label: 'Productos', href: 'productos.html' }, { label: 'Nosotros', href: 'nosotros.html' }]} className="border-b" />; }\n`;
     expect((await b.run('write_part', JSON.stringify({ part: 'header', content: header }))).output).toBe('Pieza escrita y compilada.');
     expect(b.workspace.read('components/Shell.tsx')).toMatch(/^import StoreHeader from '\.\/header';/m);
     expect(b.workspace.read('components/Shell.tsx')).toContain('<StoreHeader />');
@@ -299,15 +352,15 @@ describe('HomeWriterToolbox on a template store (Sorbo)', () => {
     let kept: unknown = null;
     const b = new HomeWriterToolbox({ workspace: new AgentWorkspace(sorbo.files.filter(f => nextSourceFile(f.path)), { redesign: true, lockedShell: true }), base: sorbo, gate: async () => null, template, studio: true, onBrief: brief => { kept = brief; } });
     expect((await b.run('read_chassis', '{}')).output).toContain('BRIEF DE DISEÑO (write_brief');
-    expect((await b.run('check', '{}')).output).toMatch(/^Debes corregir:\n- Falta el brief de diseño/);
+    expect((await b.run('check', '{}')).output).toMatch(/^Debes corregir:\n(?:- .*\n)*- Falta el brief de diseño/);
     expect((await b.run('write_brief', JSON.stringify({ idea: 'bonita', palette: '#000000', type: 'x', device: 'y', moment: 'z', structure: 'portada', images: 'fotos' }))).output)
       .toMatch(/^Brief guardado, pero le falta: idea.*paleta.*estructura.*imágenes/);
     const brief = { idea: 'Un atelier de alta costura a la luz de las velas; marfil y calas que salen del negro.', palette: 'fondo tinta #0c0b0a, texto y botones marfil #f2ede3, banda papel #efe9df, texto suave piedra #a39d93; sin acentos de color.',
-      type: 'Bodoni Moda para títulos en peso normal; Jost Light para el texto; sin cursivas ni mayúsculas.', device: 'Líneas finas marfil que enmarcan las secciones.', moment: 'El vestido de la portada en Parallax, más lento que la página.',
+      type: 'Bodoni Moda para títulos en peso normal; Jost Light para el texto; sin cursivas ni mayúsculas.', device: 'Líneas finas marfil que enmarcan las secciones.', details: 'Una cala dibujada en línea fina junto a cada título y como separador entre secciones.', moment: 'El vestido de la portada en Parallax, más lento que la página.',
       structure: 'encabezado con el nombre al centro → portada negra con el vestido → historia en banda marfil → colecciones → cita para prueba → pie negro', images: 'portada = vestido con cala; historia = falda con calas; colecciones = los tres retratos de estudio.' };
     expect((await b.run('write_brief', JSON.stringify(brief))).output).toMatch(/^Brief guardado\. Ahora set_tokens/);
     expect(kept).toEqual(brief);
-    expect((await b.run('check', '{}')).output).not.toMatch(/brief/i);
+    expect((await b.run('check', '{}')).output).not.toMatch(/Falta el brief|El brief necesita/);
   });
   it('studio: Tailwind utilities are real classes — the store build compiles them (owner 2026-11-12 «why not tailwind like them»)', async () => {
     expect(inventedClasses('<div className="md:grid-cols-2 bg-[var(--es-paper)] oh-grid" />', '', '.md\\:grid-cols-2{}.bg-\\[var\\(--es-paper\\)\\]{}')).toEqual(['oh-grid']);

@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
-import { Reveal } from '@pagosya/ui';
+import { Carousel, KineticHeadline, Reveal, ScrollScale, Tabs, VelocityRow, WordRotate } from '@pagosya/ui';
 import { layout, photos, store, variants } from './store-data';
 import * as Icons from './icons';
 
@@ -14,6 +14,8 @@ export type LibraryBlock = {
   type: string; look?: string; band?: 'paper' | 'muted' | 'accent' | 'deep';
   eyebrow?: string; title?: string; text?: string; cta?: string; link?: string; cta2?: string; link2?: string;
   photo?: string; photo2?: string; items?: LibraryItem[]; products?: string[]; product?: string; code?: string;
+  /** visit-store only: what its map looks up (the address with the city). */
+  map?: string;
   /** The main grid only: the store's product card (see CardTemplate). */
   card?: string;
   /** promo-countdown only: when the offer the merchant named ends (ISO date); past or missing, the section draws nothing. */
@@ -22,6 +24,8 @@ export type LibraryBlock = {
   handle?: string; social?: string;
   /** Hand-made styles (2026-11-10): the photos of this block that are product cut-outs (transparent), drawn floating. */
   cut?: string[];
+  /** Fuller hero (2026-11-13): the cover photo's own backdrop colour as the cover's ground, and whether words read dark or light on it. */
+  ground?: string; groundTone?: 'light' | 'dark';
 };
 
 const ICONS: Record<string, (props: { className?: string }) => ReactElement> = {
@@ -76,10 +80,25 @@ function Band({ block, index, children, className = '', id, extra }: { block: Li
     data-es-band={block.band || undefined} aria-labelledby={block.title ? `lb-${index}-title` : undefined} {...extra}>{children}</section>;
 }
 
-/** Full-bleed sections (covers, photo banners): the whole width, their own colours. */
+/** Full-bleed sections (covers, photo banners): the whole width, their own colours. A cover with products carries its hero shop. */
 function Bleed({ block, index, children, className = '', id, extra }: { block: LibraryBlock; index: number; children: ReactNode; className?: string; id?: string; extra?: Record<string, string> }) {
   return <section id={id ?? `lb-${index}`} className={`lb lb-bleed lb-${block.type} ${className}`.trim()} data-lb-at={index} data-lb={block.type} data-lb-look={block.look || undefined}
-    data-lb-band={block.band || undefined} aria-labelledby={block.title ? `lb-${index}-title` : undefined} {...extra}>{children}</section>;
+    data-lb-band={block.band || undefined} aria-labelledby={block.title ? `lb-${index}-title` : undefined}
+    {...(block.ground && /^#[0-9a-f]{6}$/i.test(block.ground) ? { 'data-ground': block.groundTone === 'dark' ? 'dark' : 'light', style: { ['--lb-ground' as string]: block.ground } as CSSProperties } : {})}
+    {...extra}>{children}<HeroShop block={block} /></section>;
+}
+
+/** Hero kit (owner 2026-11-13, after Amboras's heroes): the cover sells at once — up to 3 real products the answer named, drawn by
+ *  the kit with the store's card (photo, name, price, its own add button). On a photo cover one floats over the photo's corner; on the
+ *  others they sit in a row under the words. Products come from the catalogue only; a name that is not a product draws nothing. */
+const HERO_SHOP_COVERS = new Set(['cover-split', 'cover-full', 'cover-poster', 'cover-half', 'cover-centered', 'cover-ribbon', 'cover-stage', 'cover-video', 'cover-duo', 'cover-mega', 'hero-split']);
+const HERO_SHOP_FLOAT = new Set(['cover-full', 'cover-stage', 'cover-video', 'cover-duo']);
+function HeroShop({ block }: { block: LibraryBlock }) {
+  const names = (block.products ?? []).slice(0, 3);
+  if (!HERO_SHOP_COVERS.has(block.type) || !names.length) return null;
+  return <aside className="lb-heroshop" data-place={HERO_SHOP_FLOAT.has(block.type) ? 'float' : 'row'} data-count={names.length} aria-label="Productos destacados">
+    <div className="lb-heroshop__cards" data-pagosya-catalog data-products={names.join('|')} data-catalog-limit={names.length} />
+  </aside>;
 }
 
 /** A title whose *word* the copy marks shows that word in the accent (two-tone titles: Shrine, Palo Alto); no marks, plain text. */
@@ -285,6 +304,7 @@ function HeroSplit({ block, index }: { block: LibraryBlock; index: number }) {
         <a className="es-btn es-btn--accent lb-btn" href="#comprar">{block.cta || 'Ver el producto'}</a>
         {block.cta2 && (layout as LibraryBlock[]).some(entry => entry.type === 'variant-cards') ? <a className="es-btn es-btn--ghost lb-btn" href="#colores" data-needs-colour-cards="">{block.cta2}</a> : null}
       </div>
+      <HeroShop block={block} />
     </div>
   </section>;
 }
@@ -628,6 +648,7 @@ function CompareTable({ block, index }: { block: LibraryBlock; index: number }) 
 function StepsHowto({ block, index }: { block: LibraryBlock; index: number }) {
   const steps = (block.items ?? []).slice(0, 4);
   if (steps.length < 2) return null;
+  if (block.look === 'panels') return <StepsPanels block={block} index={index} steps={steps} />;
   return <Band block={block} index={index}>
     <div className={block.photo && block.look !== 'cards' ? 'lb-steps lb-steps--photo' : 'lb-steps'}>
       {block.photo && block.look !== 'cards' ? <Reveal className="lb-steps__media"><Photo src={block.photo} /></Reveal> : null}
@@ -638,6 +659,28 @@ function StepsHowto({ block, index }: { block: LibraryBlock; index: number }) {
         </Reveal></li>)}</ol>
         <Actions block={block} />
       </div>
+    </div>
+  </Band>;
+}
+
+/** Owner 2026-11-13 (Clyro's «(01) Application»): under the product page's buy box, one step at a time in large type on a soft
+ *  panel — the steps as tabs above, an arrow to the next — beside the photo, shown whole. The kit copies the product page, so the
+ *  steps turn through LibraryScript's page-level clicks (data-lb-step), never React handlers. */
+function StepsPanels({ block, index, steps }: { block: LibraryBlock; index: number; steps: LibraryItem[] }) {
+  const number = (n: number) => String(n + 1).padStart(2, '0');
+  return <Band block={block} index={index} className="lb-steps-panels">
+    <div className={block.photo ? 'lb-stepp' : 'lb-stepp lb-stepp--plain'}>
+      <Reveal className="lb-stepp__card">
+        <div className="lb-stepp__tabs" role="tablist" aria-label={block.title || 'Pasos'} data-lb-steps>
+          {steps.map((item, n) => <button key={n} type="button" role="tab" aria-selected={n === 0} data-lb-step={n}>{number(n)} · {item.title}</button>)}
+        </div>
+        <div className="lb-stepp__body">
+          <p className="es-eyebrow lb-eyebrow">{block.eyebrow || block.title || 'Modo de uso'}</p>
+          {steps.map((item, n) => <p key={n} className="lb-stepp__text" data-lb-step-text={n} hidden={n !== 0}><sup>({number(n)})</sup> {item.text || item.title}</p>)}
+          <button type="button" className="lb-stepp__next" aria-label="Siguiente paso" data-lb-step-next><Icons.IconArrowRight /></button>
+        </div>
+      </Reveal>
+      {block.photo ? <Reveal className="lb-stepp__media" delay={120}><Photo src={block.photo} /></Reveal> : null}
     </div>
   </Band>;
 }
@@ -747,18 +790,38 @@ function FaqSplit({ block, index }: { block: LibraryBlock; index: number }) {
   </Band>;
 }
 
+/** Owner 2026-11-13 (Boosterpack «Visit us»): the store's photo shown whole, a «Ver mapa» button that loads the map in its place only
+ *  when tapped, and a card with the address, the hours, each delivery zone with its price and time, «Cómo llegar» and WhatsApp. */
 function VisitStore({ block, index }: { block: LibraryBlock; index: number }) {
-  const rows = (block.items ?? []).slice(0, 4);
-  if (!rows.length) return null;
-  return <Band block={block} index={index}>
-    <div className={block.photo ? 'lb-visit' : 'lb-visit lb-visit--plain'}>
-      {block.photo ? <Reveal className="lb-visit__media"><Photo src={block.photo} /></Reveal> : null}
+  const rows = (block.items ?? []).filter(row => row.text);
+  const place = rows.filter(row => row.icon !== 'truck').slice(0, 2);
+  const zones = rows.filter(row => row.icon === 'truck').slice(0, 4);
+  if (!place.length && !zones.length) return null;
+  const directions = block.map ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(block.map)}` : '';
+  const media = Boolean(block.photo || block.map);
+  return <Band block={block} index={index} className="lb-visit-band">
+    <div className={media ? 'lb-visit' : 'lb-visit lb-visit--plain'}>
+      {media ? <Reveal className={block.photo ? 'lb-visit__media' : 'lb-visit__media lb-visit__media--map'}>
+        {block.photo ? <Photo src={block.photo} /> : <span className="lb-visit__pin"><Icon name="pin" /></span>}
+        {block.map ? <button type="button" className="lb-visit__maptap" data-lb-map={block.map}><Icon name="pin" />Ver mapa</button> : null}
+      </Reveal> : null}
       <Reveal className="lb-visit__card" delay={120}>
-        <p className="es-eyebrow lb-eyebrow">{block.eyebrow || 'Visítanos'}</p>
+        <p className="es-eyebrow lb-eyebrow">{block.eyebrow || (place.length ? 'Visítanos' : 'Envíos')}</p>
         {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title"><Marked text={block.title} /></h2> : null}
-        {block.text ? <p className="lb-lede">{block.text}</p> : null}
-        <dl className="lb-visit__rows">{rows.map((row, at) => <div key={at}><dt><Icon name={row.icon || (at === 0 ? 'pin' : 'clock')} />{row.title}</dt><dd>{row.text}</dd></div>)}</dl>
-        {phone ? <Button label={block.cta || 'Escríbenos por WhatsApp'} link="whatsapp" /> : null}
+        {/* The rows already say where and when: a line repeating the address goes. */}
+        {block.text && !place.some(row => block.text!.includes(row.text ?? '')) ? <p className="lb-lede">{block.text}</p> : null}
+        {place.length ? <dl className="lb-visit__rows">{place.map((row, at) => <div key={at}><dt><Icon name={row.icon || (at === 0 ? 'pin' : 'clock')} />{row.title}</dt><dd>{row.text}</dd></div>)}</dl> : null}
+        {zones.length ? <div className="lb-visit__zones">
+          {place.length ? <p className="lb-visit__label"><Icon name="truck" />Envíos</p> : null}
+          <ul>{zones.map((zone, at) => <li key={at}><span>{zone.title}</span><span>{zone.text}</span></li>)}</ul>
+        </div> : null}
+        <div className="es-actions lb-actions lb-visit__actions">
+          {directions
+            ? <a className="es-btn es-btn--accent lb-btn" href={directions} target="_blank" rel="noopener">Cómo llegar<Icons.IconArrowUpRight /></a>
+            : <Button label="Pedir ahora" link="products" />}
+          {/* Always says what it does: a written label («Ver ubicación») would send the buyer to WhatsApp by surprise. */}
+          {phone ? <Button label="Escríbenos" link="whatsapp" tone="ghost" /> : null}
+        </div>
       </Reveal>
     </div>
   </Band>;
@@ -1758,6 +1821,93 @@ function OriginsArches({ block, index }: { block: LibraryBlock; index: number })
   </Band>;
 }
 
+/* Rich sections (owner 2026-11-13 «do your suggestion»): the kit's rich pieces as library sections, filled with words and photos
+ * like every other. The motion is the kit's (still when the visitor turns motion off); the layout and type are the template's.
+ * Owner 2026-11-13 «dont let yapi crop pictures»: every photo here shows whole, in its own shape (.lb-whole), never past its size. */
+
+/** A cover whose headline comes in word by word, the photo below growing as the visitor scrolls (centred, never the full width). */
+function CoverKinetic({ block, index }: { block: LibraryBlock; index: number }) {
+  if (!block.title) return null;
+  return <Bleed block={block} index={index} id="inicio" className="lb-cover">
+    <div className="lb-kinetic__copy">
+      {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+      <KineticHeadline as="h1" text={block.title.replace(/\*/g, '')} className="es-display lb-title lb-kinetic__title" />
+      {block.text ? <p className="lb-cover__sub">{block.text}</p> : null}
+      <Actions block={block} />
+    </div>
+    {block.photo ? <ScrollScale className="lb-kinetic__media" from={0.84}><Photo src={block.photo} className="lb-whole" eager /></ScrollScale> : null}
+  </Bleed>;
+}
+
+/** A big line whose last words change by themselves («Burbujas para» la tarde / compartir / regalar), beside a framed photo. */
+function StatementRotate({ block, index }: { block: LibraryBlock; index: number }) {
+  const words = (block.items ?? []).map(item => item.title).filter(Boolean).slice(0, 5);
+  if (!block.title || words.length < 2 || !block.photo) return null;
+  return <Band block={block} index={index}>
+    <div className="lb-rotate" data-lb-side={block.look === 'left' ? 'left' : 'right'}>
+      <Reveal className="lb-rotate__copy">
+        {block.eyebrow ? <p className="es-eyebrow lb-eyebrow">{block.eyebrow}</p> : null}
+        <h2 id={`lb-${index}-title`} className="es-h2 lb-title lb-rotate__title">{block.title.replace(/\*/g, '')} <WordRotate words={words} className="lb-rotate__word" /></h2>
+        {block.text ? <p className="lb-lede">{block.text}</p> : null}
+        <Actions block={block} />
+      </Reveal>
+      <figure className="lb-rotate__media"><Photo src={block.photo} className="lb-whole" /></figure>
+    </div>
+  </Band>;
+}
+
+/** A slideshow of 2 to 5 of the store's moments, one photo at a time, each with its line and link. */
+function StoryCarousel({ block, index }: { block: LibraryBlock; index: number }) {
+  const slides = (block.items ?? []).filter(item => item.photo && item.title).slice(0, 5);
+  if (slides.length < 2) return null;
+  return <Band block={block} index={index}>
+    <Head block={block} index={index} align="split" />
+    <Carousel className="lb-carousel" aspect="16/8" label={block.title?.replace(/\*/g, '') || store.name}
+      slides={slides.map(item => ({ image: { src: item.photo!, alt: '' }, title: item.title, text: item.text, ...(item.link ? { href: href(item.link), cta: block.cta || 'Ver más' } : {}) }))} />
+  </Band>;
+}
+
+/** 2 to 4 tabs (a use, a moment, a line of products), each with its photo and a few words. */
+function TabsPhoto({ block, index }: { block: LibraryBlock; index: number }) {
+  const tabs = (block.items ?? []).filter(item => item.title && item.text && (item.photo || block.photo)).slice(0, 4);
+  if (tabs.length < 2) return null;
+  return <Band block={block} index={index}>
+    <Head block={block} index={index} />
+    <Tabs className="lb-tabs" label={block.title?.replace(/\*/g, '') || 'Opciones'} tabs={tabs.map(item => ({ label: item.title, content: <div className="lb-tabs__panel">
+      <figure className="lb-tabs__photo"><Photo src={item.photo || block.photo} className="lb-whole" /></figure>
+      <div className="lb-tabs__copy"><p className="lb-tabs__lead">{item.text}</p>{item.link ? <a className="es-link" href={href(item.link)}>{block.cta || 'Ver más'} <Icons.IconArrowRight /></a> : null}</div>
+    </div> }))} />
+  </Band>;
+}
+
+/** The brand's words in large type, a strip that speeds up and turns with the visitor's scroll. */
+function StripVelocity({ block, index }: { block: LibraryBlock; index: number }) {
+  const words = (block.items ?? []).map(item => item.title).filter(Boolean).slice(0, 6);
+  if (words.length < 2) return null;
+  return <div id={`lb-${index}`} className="lb lb-strip-velocity" data-lb-at={index} data-lb="strip-velocity" data-lb-band={block.band || undefined} aria-label={words.join(', ')}>
+    <VelocityRow speed={3} gap={40}><p className="lb-velocity__line" aria-hidden="true">{words.map((word, at) => <span key={at}>{word}<i aria-hidden="true">✦</i></span>)}</p></VelocityRow>
+  </div>;
+}
+
+/** Owner 2026-11-13 («discounts everything like full kits»): the store's real packs, drawn by the kit from its bundles — photos, what is
+ *  inside, the saving and one button for the whole pack. The platform adds it only when the store has an active pack. */
+/** Owner 2026-11-13 (ways to pay): how the store takes payment, drawn by the kit from its checkout mode — never a method it lacks. */
+function PayWays({ block, index }: { block: LibraryBlock; index: number }) {
+  return <Band block={{ ...block, band: block.band ?? 'muted' }} index={index}>
+    <div className="lb-payways">
+      {block.title ? <h2 id={`lb-${index}-title`} className="es-h2 lb-title lb-payways__title">{block.title}</h2> : null}
+      <div data-pagosya-payways />
+    </div>
+  </Band>;
+}
+
+function PacksKits({ block, index }: { block: LibraryBlock; index: number }) {
+  return <Band block={block} index={index}>
+    <Head block={block} index={index} align="split" />
+    <div className="lb-packs" data-pagosya-bundles />
+  </Band>;
+}
+
 const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) => ReactElement | null> = {
   'cover-split': CoverSplit, 'hero-split': HeroSplit, 'variant-cards': VariantCards, 'cover-full': CoverFull, 'cover-poster': CoverPoster, 'cover-half': CoverHalf, 'cover-centered': CoverCentered, 'cover-ribbon': CoverRibbon,
   'strip-marquee': StripMarquee, 'strip-services': StripServices, 'strip-badges': StripBadges,
@@ -1781,6 +1931,9 @@ const SECTIONS: Record<string, (props: { block: LibraryBlock; index: number }) =
   'cover-mega': CoverMega, 'products-rows': ProductsRows, 'names-list': NamesList, 'statement-sticker': StatementSticker,
   'products-words': ProductsWords, 'values-portrait': ValuesPortrait, 'campaign-strip': CampaignStrip, 'block-split': BlockSplit, 'letters-split': LettersSplit,
   'statement-offset': StatementOffset, 'products-nicknames': ProductsNicknames, 'verbs-photo': VerbsPhoto, 'origins-arches': OriginsArches,
+  'packs-kits': PacksKits,
+  'pay-ways': PayWays,
+  'cover-kinetic': CoverKinetic, 'statement-rotate': StatementRotate, 'story-carousel': StoryCarousel, 'tabs-photo': TabsPhoto, 'strip-velocity': StripVelocity,
 };
 export const LIBRARY_SECTIONS = Object.keys(SECTIONS);
 
@@ -1797,8 +1950,15 @@ export function LibraryHome({ layout: given }: { layout: LibraryBlock[] }) {
   </>;
 }
 
+/** One library section on its own (V2, spec 2026-11-14 v2-library-sections: a written home places tested sections among its
+ *  own). `index` is the section's place on the page (0 = first, which some covers read). Mount LibraryScript once per page. */
+export function LibraryBlockView({ block, index = 1 }: { block: LibraryBlock; index?: number }) {
+  const Section = SECTIONS[block.type];
+  return Section ? <Section block={withPhotos(block)} index={index} /> : null;
+}
+
 /** The two behaviours CSS cannot do: copy a promo code, and fit one huge word to the width (poster cover, wordmark). */
-function LibraryScript() {
+export function LibraryScript() {
   useEffect(() => {
     const copy = (event: MouseEvent) => {
       const button = (event.target as Element | null)?.closest?.('[data-lb-copy]');
@@ -1824,12 +1984,38 @@ function LibraryScript() {
       const input = event.target as HTMLInputElement | null;
       if (input?.matches?.('[data-lb-compare]')) input.parentElement?.style.setProperty('--lb-cut', `${input.value}%`);
     };
+    // Steps as panels (owner 2026-11-13): a tab or the arrow shows that step.
+    const step = (event: MouseEvent) => {
+      const button = (event.target as Element | null)?.closest?.('[data-lb-step],[data-lb-step-next]');
+      const card = button?.closest('.lb-stepp__card');
+      if (!button || !card) return;
+      const texts = [...card.querySelectorAll<HTMLElement>('[data-lb-step-text]')], now = texts.findIndex(text => !text.hidden);
+      const to = button.hasAttribute('data-lb-step-next') ? (now + 1) % texts.length : Number(button.getAttribute('data-lb-step'));
+      texts.forEach((text, n) => { text.hidden = n !== to; });
+      card.querySelectorAll('[data-lb-step]').forEach((tab, n) => tab.setAttribute('aria-selected', String(n === to)));
+    };
+    // Visítanos (owner 2026-11-13): the map loads only when the visitor asks for it, in place of the photo.
+    const map = (event: MouseEvent) => {
+      const button = (event.target as Element | null)?.closest?.('[data-lb-map]');
+      const box = button?.closest('.lb-visit__media');
+      if (!button || !box || box.querySelector('iframe')) return;
+      const frame = document.createElement('iframe');
+      frame.src = `https://www.google.com/maps?q=${encodeURIComponent(button.getAttribute('data-lb-map') ?? '')}&output=embed`;
+      frame.title = 'Mapa';
+      frame.className = 'lb-visit__map';
+      frame.setAttribute('loading', 'lazy');
+      frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+      box.appendChild(frame);
+      box.setAttribute('data-map', '');
+    };
     document.addEventListener('click', copy);
+    document.addEventListener('click', map);
+    document.addEventListener('click', step);
     document.addEventListener('input', compare);
     window.addEventListener('resize', fit);
     fit();
     void document.fonts?.ready.then(fit);
-    return () => { document.removeEventListener('click', copy); document.removeEventListener('input', compare); window.removeEventListener('resize', fit); };
+    return () => { document.removeEventListener('click', copy); document.removeEventListener('click', map); document.removeEventListener('click', step); document.removeEventListener('input', compare); window.removeEventListener('resize', fit); };
   }, []);
   return null;
 }

@@ -27,6 +27,19 @@ describe('home writer stage', () => {
     const text = homeWriterInstructions();
     for (const rule of [/<Shell>/, /texto JSX literal/i, /72 px/, /una sola vez/i, /banda oscura/i, /data-pagosya-catalog/, /read_chassis/, /--es-deep/]) expect(text).toMatch(rule);
   });
+  it('a chassis store designs by the frontend-design skill, like Amboras, without our style quotas (owner 2026-11-12 «copy amboras»)', () => {
+    const text = homeWriterInstructions({ template: 'Merienda', studio: true, chassis: true });
+    expect(text).toContain('# Frontend Design');
+    expect(text).toContain('Spend your boldness in one place.');
+    expect(text).toMatch(/REGLAS DE LA PLATAFORMA[\s\S]*store-data[\s\S]*Sticker/);
+    expect(text).not.toMatch(/«01 \/ 04»|MODO ESTUDIO/);
+    const task = homeWriterTask({ instruction: 'Sodas con burbujas.', storeName: 'Oh Belly', direction: 'bandas', animated: true, playful: true, footer: 'juguete', avoid: { fonts: [], papers: [] }, brandColours: ['#e66540'], chassis: true });
+    expect(task).toContain('Sodas con burbujas.');
+    expect(task).toContain('#e66540');
+    expect(task).not.toContain(HOME_PLAYFUL_BRIEF);
+    expect(task).not.toContain(HOME_FOOTERS.juguete);
+    expect(task).not.toContain(HOME_DIRECTIONS.bandas);
+  });
   it('a run that writes, brands, checks and finishes hands back only the home and globals', async () => {
     const home = authored().find(f => f.path === HOME_PATH)!.content.replace('export default function Home', 'export default function Home /* writer */');
     const font = 'placeholder';

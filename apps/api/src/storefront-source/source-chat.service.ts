@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto';
 import { SOURCE_MODEL_CHOICES } from './source-generation-policy';
 import { merchantAsksForPhotoGroup } from './source-media-design';
 import { firstVideo, withHeroVideo } from './source-master-video';
-import { coloursFromWords } from './source-palette';
+import { colourRolesFromWords, coloursFromWords, groundPalette } from './source-palette';
 import { GUARDED_TOUCH_BRIEF, touchStaysInside } from './source-guarded-touch';
 import { layoutChangeFor, layoutChangeNote } from './source-master-layout';
 import { recentLooks } from './source-recent-looks';
@@ -61,9 +61,11 @@ import { listTemplates, templateManifest, templateSourceFiles, type TemplateCopy
 import { fallbackTemplatePick, inTemplatePool, leastUsedPick, pickableTemplates, leastUsedDraw, randomPick, readTemplateRandom, templateSwitchRequest } from './source-template-pick';
 import { INTAKE_MAX, intakeFacts, intakeInstruction, intakeRequest, intakeMessage, intakePhone, normalizeIntake, pendingIntake, wantsBuildNow, type IntakeState, type IntakeTopic } from './source-intake';
 import { templateQaFindings } from './source-template-qa';
+import { blocking as fillReviewBlocking, fillReviewTemplate, reviewChanges, ruleRepairs, runFillReview, type FillReviewFinding } from './source-fill-review';
 import sharp from 'sharp';
 import { join } from 'node:path';
-import { photoTint, withRowTints } from './source-row-tints';
+import { compositeSeam, photoTint, withCoverGround, withHeroShape, withPlainBackgrounds, withRowTints, type HeroGround } from './source-row-tints';
+import { samplePhotoColours } from './source-photo-sampler';
 import { CUTOUT_THEMES, photoCutout, withCutouts } from './source-photo-cutout';
 /** The hand-made styles (2026-11-10, each after a real store): long pages of their own, never topped up with generic sections. */
 const HAND_MADE_THEMES = new Set(['merienda', 'burbuja', 'neon', 'mimo', 'oliva', 'joya', 'origen', 'morada', 'vigor', 'ramo']);
@@ -76,19 +78,19 @@ import { checklistFixBrief, checklistReply, storeDigest, type BriefChecklist, ty
 import { buildStarters, pickSkeleton, pickStarter, recentStarters, type StarterEntry } from './source-starter-pick';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { writerTemplate } from './source-home-writer-stage';
-import { MASTER_TEMPLATE_ID, masterCopy, masterFillFromRead, masterLook, menuForFill, type MasterFill, type MasterVariants } from './source-master';
+import { MASTER_TEMPLATE_ID, brandStyleLook, masterCopy, masterFillFromRead, masterLook, menuForFill, type MasterFill, type MasterVariants } from './source-master';
 import { isFashionStore } from './source-master-fashion';
 import { fashionCollections } from './source-fashion-collections';
 import { collectionSlug } from '../collections/collection-slug';
 import { masterLayoutFindings } from './source-master-check';
 import { readMasterState, readPlantillaCopy, resolvePresetTemplate } from './source-templates';
 import { runComposer } from './source-composer-run';
-import { applyComposerChanges, composerCheck, composerTemplate, fillableTemplate, readSectionFit } from './source-composer';
+import { applyComposerChanges, COMPOSER_MIN, composerCheck, composerTemplate, fillableTemplate, readSectionFit } from './source-composer';
 import { captureAgentDraft } from './agent/agent-capture';
 import { readMoodAsk } from './source-mood-ask';
 import { nextTitleStyle, readTitleAsk } from './source-title-style';
 import { withPhotoWidths } from './source-photo-size';
-import { buildLibraryFacts, withSharpCover, withoutRepeatedProductRows, withPersonalizer, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
+import { buildLibraryFacts, withFreshPhotos, withSharpCover, withoutRepeatedProductRows, withPacks, withPayWays, withPersonalizer, withPromoCode, withStepPanels, withVisit, withCleanHome, carriedSections, libraryDropReason, libraryTopUp, libraryVariants, librarySectionBlocker, uploadOnly, validateLibraryLayout, withoutDemoWords, withCarriedSections, withTopUp, type LayoutBlock, type LibraryFacts } from './source-section-library';
 import { applyCatalogOps, catalogChangeEmpty, emptyCatalogChange, relinkCategories, withCategoryMenuRenames, withoutCategoryMenuLinks, type CatalogChange } from './source-catalog-edit';
 import { writeCatalogChange } from './source-catalog-write';
 import type { ProductVariant } from '../payment-links/product-variants';
@@ -96,6 +98,7 @@ import { applyStoreOps, readCatalogTitle, storeChangeEmpty, withCatalogTitle, ty
 import { storeFaq, storePolicies } from '../stores/store-presentation';
 import { MENU_PAGES, MENU_PAGE_NAMES, MENU_PAGE_URLS, applyLayoutOps, bandUnderMenu, layoutAdds, layoutEditReply, menuPagesFor, withPageImprove, type LayoutPage, type MenuPage } from './source-layout-edit';
 import { aboutPageTypes, keptMenuPages, sectionablePage, withSectionedPages } from './source-content-pages';
+import { SOURCE_FONT_CATALOG } from './source-font-catalog';
 import { bolivianos, readShippingAsk, type ShippingAsk } from './source-shipping-ask';
 import { plainReply } from './source-plain-reply';
 import { visibleChanges } from './source-visible-change';
@@ -286,6 +289,9 @@ function blueprintCaptures(blueprint: WebsiteBlueprint): SourceReferenceCapture[
 type ProductImport = { url: string; site: string; productId: string; product: ProductSourceProduct; listingDescription: string; videoUrls?: string[] };
 type ProductRead = { link: ProductLink; site: string; earlier?: ProductImport; listing?: ProductListing; failure?: ProductSourceFailure };
 
+/** Owner 2026-11-13: templates only clothing and fashion stores draw. */
+const CLOTHING_ONLY_TEMPLATES = new Set(['focal']);
+
 @Injectable()
 export class SourceChatService {
   /** The product-link reader; a spec replaces it to stay off the network. */
@@ -437,7 +443,10 @@ export class SourceChatService {
     const namedColours = coloursFromWords(askedWords);
     // Owner 2026-10-29 («esencial only not families»): the fill's read plus the brand colours the merchant named — no family, effects,
     // module or animated look.
-    { const plain = filler; filler = async facts => { const read = await plain(facts); return read && namedColours.length ? { ...read, namedColours } : read; }; }
+    // Owner 2026-11-13 (ZARA «Fondo blanco, texto negro y un gris muy suave»): colours with a job, and a black-and-white brand.
+    const namedRoles = colourRolesFromWords(askedWords);
+    const roled = Object.keys(namedRoles).length > 0;
+    { const plain = filler; filler = async facts => { const read = await plain(facts); return read && (namedColours.length || roled) ? { ...read, ...(namedColours.length ? { namedColours } : {}), ...(roled ? { namedRoles } : {}) } : read; }; }
     // YAPI plan card (spec 2026-10-22): a planned build carries its checked plan and no preset.
     const saved = templatePick ? await this.templates.applyMaster(merchantId, storeId, revision, filler, templatePick.id)
       : chosen ? await this.templates.applyMaster(merchantId, storeId, revision, filler, undefined, planned?.applied, chosen.id)
@@ -514,7 +523,10 @@ export class SourceChatService {
     // Owner 2026-11-02 (Brisa Portátil: one AliExpress product got Conecta, a big tech catalogue): a store selling one or two products
     // starts on Único — the product whole at the top; a larger catalogue never gets it.
     const oneProduct = input.products.length > 0 && input.products.length <= 2;
-    const pickable = pickableTemplates(listTemplates(), hidden).filter(template => template.id !== input.exclude && (oneProduct || template.id !== ONE_PRODUCT_TEMPLATE));
+    // Owner 2026-11-13 (Oh Belly drew Focal: «that footer i prefer for fashion or clothing stores»): Focal is a clothing template only.
+    const clothing = isFashionStore({ storeName: input.storeName, what: `${input.what} ${input.request}`, products: input.products });
+    const pickable = pickableTemplates(listTemplates(), hidden).filter(template => template.id !== input.exclude && (oneProduct || template.id !== ONE_PRODUCT_TEMPLATE)
+      && (clothing || !CLOTHING_ONLY_TEMPLATES.has(template.id)));
     const templates = inTemplatePool(pickable, pool, [ONE_PRODUCT_TEMPLATE]);
     if (!templates.length) return null;
     // Live check 2026-11-04 (Miga Dorada: «Usa la plantilla Grano.» in the first message got Gumdrop): a template the merchant names
@@ -938,14 +950,24 @@ export class SourceChatService {
     }) : null;
     // A failed call on a template (anything but a spent quota or a cancel) falls back below instead of keeping the demo words.
     let callFailed = false;
-    const answer = composedHome ? composedHome.answer : facts.photos.length ? await this.dialogue.composeLibrary(merchantId, { storeId, facts, ...(template ? { template } : {}) }).catch(error => {
+    // Owner 2026-11-13 (YAPI_RICH_SECTIONS): a template's home may swap a cover, the strip and one story for the kit's rich sections.
+    // Owner 2026-11-13 («a clean site like Aesop»): clean template homes (with the hero kit) — no motion sections, no row colours.
+    const clean = this.config.get<boolean>('app.yapiClean') === true && this.config.get<boolean>('app.yapiHeroKit') === true && Boolean(template);
+    const rich = this.config.get<boolean>('app.yapiRichSections') === true && Boolean(template) && !clean;
+    // Hero kit (owner 2026-11-13, after Amboras): a template home's cover carries real products, a place label and an accent word.
+    const heroKit = this.config.get<boolean>('app.yapiHeroKit') === true && Boolean(template);
+    // Owner 2026-11-13 («custom letters, custom icons»): a template store's first design picks its own type, lettered logo and icon style.
+    const settings = templateManifest(MASTER_TEMPLATE_ID)?.master;
+    const brand = this.config.get<boolean>('app.yapiBrandStyle') === true && template && settings && input.firstDesign === true && templateRevision === revision
+      ? { pairs: settings.fonts.map(({ id, heading, body }) => ({ id, heading, body })), fonts: SOURCE_FONT_CATALOG.map(({ id, family, personality }) => ({ id, family, personality })) } : undefined;
+    const answer = composedHome ? composedHome.answer : facts.photos.length ? await this.dialogue.composeLibrary(merchantId, { storeId, facts, ...(template ? { template } : {}), ...(rich ? { rich } : {}), ...(heroKit ? { heroKit } : {}), ...(brand ? { brand } : {}) }).catch(error => {
       if (!template || quotaSpent(error) || sourceRequestContext.getStore()?.signal?.aborted) throw error;
       this.productLogger.warn(JSON.stringify({ event: 'section_library_call_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
       callFailed = true;
       return null;
     }) : null;
     if (!answer && !template) throw new Error('the library call failed');
-    let layout = composedHome ? composedHome.layout! : answer ? validateLibraryLayout(answer as never, facts, template ? { fixed: template } : {}) : [];
+    let layout = composedHome ? composedHome.layout! : answer ? validateLibraryLayout(answer as never, facts, template ? { fixed: template, ...(rich ? { richSwaps: true } : {}),  } : {}) : [];
     // A cover, the grid and a closing are always there; fewer than five blocks means the answer gave almost nothing usable.
     // On a template, against its own length (Foco has two sections): at least half of them, never fewer than one.
     const least = template ? Math.max(1, Math.ceil(template.length / 2)) : 5;
@@ -964,11 +986,30 @@ export class SourceChatService {
     layout = withoutRepeatedProductRows(layout, facts);
     // Owner 2026-11-11 («no blurry cover photos»): a full-width cover gets a photo wide enough, or becomes the framed cover.
     layout = withSharpCover(layout, facts);
-    if (template && !composedHome && !HAND_MADE_THEMES.has(theme)) layout = await this.topUpHome(merchantId, storeId, layout, facts);
+    // Owner 2026-11-14 («vestido cala appears twice»): each section's own photo once on the home.
+    layout = withFreshPhotos(layout, facts);
+    if (template && !composedHome && !HAND_MADE_THEMES.has(theme) && !clean) layout = await this.topUpHome(merchantId, storeId, layout, facts);
     // Spec 2026-11-09 personalizador («para todos»): a store with a product that has options gets it once, after its product grid.
     layout = withPersonalizer(layout, facts);
+    // Owner 2026-11-13 («full kits»): the store's real packs after its product grid (hero kit flag).
+    if (heroKit) layout = withPacks(layout, facts);
+    // Owner 2026-11-13 (ways to pay): an online-payment store says how it takes payment.
+    if (heroKit) layout = withPayWays(layout, facts);
+    // Owner 2026-11-13 («discounts»): the store's public code, with its offer and a copy button.
+    if (heroKit) layout = withPromoCode(layout, facts);
+    // Owner 2026-11-13 (Boosterpack «Visit us»): address, hours, delivery zones and a map on tap.
+    if (heroKit) layout = withVisit(layout, facts);
     // Spec 2026-11-10 Merienda: each product row in its product's own colour, read from its photo.
-    layout = await withRowTints(layout, name => this.productPhotoTint(merchantId, storeId, name));
+    // A clean home: one ground, at most 7 sections (hero, products, packs, code, place, one story, questions).
+    if (clean) layout = withCleanHome(layout);
+    else layout = await withRowTints(layout, name => this.productPhotoTint(merchantId, storeId, name));
+    // Fuller hero (owner 2026-11-13): a cover photo on a plain backdrop gives the cover its ground.
+    // Owner 2026-11-13 («these two pictures together»): a two-part photo (a design board) never fills a whole band.
+    if (heroKit) layout = await withPlainBackgrounds(layout, facts.photos.map(photo => photo.url), photo => this.photoComposite(photo));
+    // Owner 2026-11-13 («variations of headers»): the hero's shape follows its photo (half picture on the backdrop's colour, or full).
+    let heroGround: HeroGround | undefined;
+    if (heroKit && theme !== 'unico') ({ layout, ground: heroGround } = await withHeroShape(layout, storeId, photo => this.photoBackdrop(photo)));
+    else if (heroKit) layout = await withCoverGround(layout, photo => this.photoBackdrop(photo));
     // Owner 2026-11-10 («model on our server»): in the styles that float their products, those photos become cut-outs.
     if (CUTOUT_THEMES.has(theme) && this.config.get<boolean>('app.yapiPhotoCutouts') !== false) layout = await withCutouts(layout, url => this.productCutout(merchantId, storeId, url));
     this.productLogger.log(JSON.stringify({ event: 'section_library_layout', storeId, asked: (answer?.blocks ?? []).length, kept: layout.map(block => block.type),
@@ -978,20 +1019,39 @@ export class SourceChatService {
     // Owner 2026-10-31 («the inside of each product card»): the template's sections under the product page's buy box, filled by a
     // second call the same way. They speak for every product (the page is shared), so the model is told so; the checks read only
     // the merchant's words. A failed call leaves the product page without them, never with the demo words.
-    const productTemplate = template && (sections.productLayout ?? []).length ? sections.productLayout as LayoutBlock[] : undefined;
+    // Owner 2026-11-13 (Clyro's product page): a hero-kit template store's product page is «duo» — photo panel on its own ground,
+    // purchase panel with the price in the button, payment and two products to complete the order. Clothing keeps its fashion page.
+    const pdpLook = heroKit && theme !== 'unico' && (state.variants as Record<string, unknown> | undefined)?.pdp !== 'fashion' ? { pdp: 'duo' } : undefined;
+    const ownProductTemplate = template && (sections.productLayout ?? []).length ? sections.productLayout as LayoutBlock[] : undefined;
+    // Under its buy box the steps come first, as panels (its «(01) Application»).
+    const productTemplate = pdpLook && template ? withStepPanels(ownProductTemplate ?? []) : ownProductTemplate;
     const productLayout = productTemplate ? await this.productPageSections(merchantId, storeId, facts, productTemplate) : [];
     await workflow.report('saving');
     // Lively one-product stores + chunky colour titles (spec 2026-11-03): YAPI's mood and title style for the product are saved with the home on Único.
     const libraryLook = libraryVariants(theme, answer as never, facts);
-    const homeSaved = await this.templates.refill(merchantId, storeId, revision, { layout, ...(productTemplate ? { productLayout } : {}), ...(libraryLook ? { variants: libraryLook } : {}) }, composedHome ? 'Portada compuesta por YAPI' : 'Portada de YAPI');
+    // The «duo» photo panel takes each product's own ground (the photo's edge colour), read here: a shopper's browser cannot read the uploads.
+    const productGrounds = pdpLook ? await this.productGrounds(storeId).catch(() => undefined) : undefined;
+    // Owner 2026-11-13 («grabs the background of the main picture and applies it everywhere»): the page takes the hero backdrop's
+    // colours, unless the merchant gave the background or the bands a colour themselves (or asked for black and white).
+    const askedRoles = colourRolesFromWords(input.checklistWords ?? input.earlierAsks ?? '');
+    const fromGround = heroGround && !askedRoles.mono && !askedRoles.paper && !askedRoles.muted ? groundPalette(heroGround.hex) : undefined;
+    const groundLook = fromGround ? { colors: fromGround } : undefined;
+    const brandLook = brand ? brandStyleLook((answer as { brand?: unknown } | null)?.brand, brand.pairs.map(pair => pair.id)) : undefined;
+    if (brand) this.productLogger.log(JSON.stringify({ event: 'section_library_brand_style', storeId, picked: brandLook ?? null }));
+    const homeSaved = await this.templates.refill(merchantId, storeId, revision, { layout, ...(productTemplate ? { productLayout } : {}), ...(libraryLook || pdpLook ? { variants: { ...libraryLook, ...pdpLook } } : {}), ...(productGrounds ? { productGrounds } : {}), ...(brandLook || groundLook || clean ? { look: { ...brandLook, ...groundLook, ...(clean ? { clean: true } : {}) } } : {}) }, composedHome ? 'Portada compuesta por YAPI' : 'Portada de YAPI');
+    // Spec 2026-11-13 fill review: the saved home looked at on a desktop and a phone and corrected as data, saved as its own revision
+    // (the one before stays, to compare and to go back to).
+    const reviewed = this.config.get<boolean>('app.yapiFillReview') === true && template && !composedHome
+      ? await this.fillReview(merchantId, storeId, homeSaved.revision, theme, layout, facts) : null;
+    const homeFinal = reviewed?.saved ?? homeSaved;
     // Owner 2026-11-12 («cant we just reuse sections»): a new template store's «Nosotros» from the template's sections too, as part of
     // the first design; a failed call leaves the plain page.
     const paged = template && input.firstDesign === true && templateRevision === revision
-      ? await this.ownPages(merchantId, storeId, homeSaved.revision, input.checklistWords ?? input.earlierAsks ?? '', { product: false }).catch(error => {
+      ? await this.ownPages(merchantId, storeId, homeFinal.revision, input.checklistWords ?? input.earlierAsks ?? '', { product: false }).catch(error => {
         this.productLogger.warn(JSON.stringify({ event: 'about_page_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
         return null;
       }) : null;
-    const saved = paged ?? homeSaved;
+    const saved = paged ?? homeFinal;
     await workflow.finish('completed');
     // Live 2026-11-10 (Oh Belly / Pawby r8: ChatGPT timed out, then could not renew its session): the bare home was saved as if it
     // were the design. Now the chat says so and keeps the request; «sigue» composes the template's sections again.
@@ -1000,11 +1060,56 @@ export class SourceChatService {
         ? 'ChatGPT no respondió a tiempo, así que por ahora tu página de inicio muestra solo la portada y tus productos. Escríbeme «sigue» y armo todas las secciones de la plantilla.'
         : 'Armé la portada de tu tienda con secciones pensadas para tus productos y tus fotos. Revisa la vista previa.',
       metadata: { progress: workflow.value, sourceRevision: saved.revision, label: saved.label,
+        ...(reviewed ? { fillReview: { ...reviewed.summary, filledRevision: homeSaved.revision } } : {}),
         ...(callFailed ? { pendingRequest: { instruction: SECTION_LIBRARY_BRIEF, direct: true, sectionLibraryFrom: templateRevision } } : {}) } } });
     // Owner 2026-11-02 («check and log»): the new home is checked in the background; the findings go to the product log and to this
     // reply's metadata (templateQa), never to the merchant's chat.
     if (this.config.get<boolean>('app.yapiTemplateQa') === true) void this.logTemplateQa(merchantId, storeId, saved.revision, assistantMessage.id);
     return { userMessage, assistantMessage, revision: saved };
+  }
+
+  /** Spec 2026-11-13 fill review (docs/YAPI_MIGRATION_PLAN.md §2): the home section fill just saved, rendered at 1280 and 390 px,
+   *  read by the template rules and the composer's reviewer, and corrected with the composer's changes on the layout (no swap). A
+   *  corrected home is saved as the next revision only when no rule fires more than before; any other trouble keeps the saved home
+   *  (a spent quota or a cancel still stops the build). */
+  private async fillReview(merchantId: string, storeId: string, revision: number, theme: string, layout: LayoutBlock[], facts: LibraryFacts) {
+    const started = Date.now();
+    const signal = sourceRequestContext.getStore()?.signal;
+    try {
+      const manifest = this.templates.registry.templateManifest(theme);
+      const resolved = manifest ? resolvePresetTemplate(manifest, id => this.templates.registry.templateManifest(id)) : null;
+      const template = fillReviewTemplate(theme, resolved?.manifest.name ?? theme, resolved?.preset as never, readSectionFit(), layout, type => !librarySectionBlocker(type, facts));
+      const recent = await this.templates.recentThemeHomes(storeId, theme);
+      const photos = facts.photos.map(photo => photo.url);
+      const result = await runFillReview(layout, {
+        render: async next => {
+          const draft = await this.templates.refillDraft(merchantId, storeId, revision, { layout: next });
+          const widths = await templateQaFindings(draft as never, signal, { shots: true });
+          return { findings: widths.flatMap(({ width, findings }) => findings.map((finding): FillReviewFinding => ({ ...finding, viewport: width === 390 ? 'phone' : 'desktop' }))),
+            images: widths.flatMap(({ images }) => images ?? []) };
+        },
+        review: (next, images, findings) => this.dialogue.reviewHome(merchantId, { storeId, layout: next, template, recent, photoCount: photos.length, images,
+          known: fillReviewBlocking(findings).map(finding => `${finding.viewport === 'phone' ? 'celular' : 'escritorio'}, sección ${finding.at ?? '-'}: ${finding.line.slice(9, 160)}`) }),
+        apply: (next, problems) => applyComposerChanges(next, problems, template, photos),
+        repairs: (findings, next) => ruleRepairs(findings, next, photos),
+        pick: (problems, next, taken) => reviewChanges(problems, next, template, taken),
+        fatal: error => quotaSpent(error),
+        trace: entry => this.traceQuickEdit({ storeId, stage: 'fill_review', theme, ...entry }),
+        maxMicroUsd: Math.round((this.config.get<number>('app.yapiFillReviewMaxUsd') ?? 1) * 1_000_000),
+        ...(signal ? { signal } : {}),
+      });
+      const counts = (list: FillReviewFinding[]) => ({ desktop: fillReviewBlocking(list).filter(f => f.viewport === 'desktop').length, phone: fillReviewBlocking(list).filter(f => f.viewport === 'phone').length });
+      const rules = (list: FillReviewFinding[]) => fillReviewBlocking(list).map(f => `${f.rule}@${f.viewport}:${f.at ?? '-'}`);
+      const saved = result.changed ? await this.templates.refill(merchantId, storeId, revision, { layout: result.layout }, 'Portada revisada por YAPI') : null;
+      const summary = { outcome: result.outcome, rounds: result.rounds, applied: result.applied, usd: result.spentMicroUsd / 1e6, ms: Date.now() - started,
+        before: counts(result.before), after: counts(result.after), beforeRules: rules(result.before), afterRules: rules(result.after) };
+      this.productLogger.log(JSON.stringify({ event: 'fill_review', storeId, theme, revision, ...(saved ? { reviewedRevision: saved.revision } : {}), ...summary }));
+      return { saved, summary };
+    } catch (error) {
+      if (quotaSpent(error) || signal?.aborted) throw error;
+      this.productLogger.warn(JSON.stringify({ event: 'fill_review_failed', storeId, theme, revision, ms: Date.now() - started, reason: String((error as Error)?.message ?? error).slice(0, 300) }));
+      return null;
+    }
   }
 
   /** Owner 2026-10-31 («the inside of each product card»): the template's sections under the product page's buy box, filled by their
@@ -1032,7 +1137,9 @@ export class SourceChatService {
     const pages = (state.pageLayouts ?? {}) as Record<string, unknown[]>;
     const fit = readSectionFit();
     const home = files.find(file => file.path === 'components/home.tsx')?.content ?? '';
-    const types = (pages.about ?? []).length || !facts.photos.length || !sectionablePage(files, 'about') ? []
+    // Owner 2026-11-13 («que la persona la personalice después, así es en Amboras, nada existe»): «Nosotros» is not built on its own
+    // unless YAPI_ABOUT_SECTIONS=1; the merchant asks for it later («cambia nosotros»).
+    const types = this.config.get<boolean>('app.yapiAboutSections') !== true || (pages.about ?? []).length || !facts.photos.length || !sectionablePage(files, 'about') ? []
       : aboutPageTypes({ fit: fit.fit[template.id] ?? [], vetoed: fit.vetoed?.[template.id] ?? [], home: [...((state.layout ?? []) as LayoutBlock[]).map(block => block.type), ...[...home.matchAll(/type:\s*['"]([\w-]+)['"]/g)].map(match => match[1])],
         blocked: type => Boolean(librarySectionBlocker(type, facts)) });
     let about: LayoutBlock[] = [];
@@ -1071,7 +1178,7 @@ export class SourceChatService {
         return [...(desk.sections?.length ? desk.sections : [desk.image]), ...(phone.sections?.length ? phone.sections : [phone.image])];
       },
       review: (layout, images) => this.dialogue.reviewHome(merchantId, { storeId, layout, template, recent, photoCount: photos.length, images }),
-      apply: (layout, problems) => applyComposerChanges(layout, problems, template, photos),
+      apply: (layout, problems) => applyComposerChanges(layout, problems, template, photos, COMPOSER_MIN),
       rewrite: async (layout, at) => {
         const next = [...layout];
         // Highest first, so a section that cannot be written can be dropped without shifting the ones still to write.
@@ -1157,6 +1264,49 @@ export class SourceChatService {
     return photoTint(data, info.channels);
   }
   private catalogForTints?: Map<string, ReturnType<SourceGenerationService['catalog']>>;
+  /** A photo made of two parts — one flat (a poster, a colour block) and one a photo — split by a hard seam. */
+  private async photoComposite(photo: string): Promise<boolean> {
+    const path = uploadPath(photo);
+    if (!/^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(path)) return false;
+    const response = await fetch(new URL(path, sourcePublicApiUrl(this.config)), { signal: AbortSignal.timeout(5_000) });
+    if (!response.ok) return false;
+    const { data, info } = await sharp(Buffer.from(await response.arrayBuffer())).resize(48, 48, { fit: 'fill' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    const mean = (pick: (x: number, y: number) => boolean) => { let r = 0, g = 0, b = 0, n = 0; for (let y = 0; y < 48; y++) for (let x = 0; x < 48; x++) if (pick(x, y)) { const at = (y * 48 + x) * info.channels; r += data[at]; g += data[at + 1]; b += data[at + 2]; n++; } return [r / n, g / n, b / n] as const; };
+    return compositeSeam(Array.from({ length: 48 }, (_, row) => mean((_x, y) => y === row)), Array.from({ length: 48 }, (_, col) => mean((x) => x === col)));
+  }
+  /** Product page «duo» (owner 2026-11-13): each product's first photo → the median colour of its outer edge, by upload path. */
+  private async productGrounds(storeId: string): Promise<Record<string, string> | undefined> {
+    const items = await this.prisma.paymentLink.findMany({ where: { storeId }, select: { imageUrls: true }, orderBy: { createdAt: 'asc' }, take: 40 });
+    const paths = [...new Set(items.map(item => item.imageUrls?.[0]).filter((url): url is string => Boolean(url)).map(url => uploadPath(url)))]
+      .filter(path => /^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(path));
+    const read = async (path: string): Promise<[string, string] | null> => {
+      const response = await fetch(new URL(path, sourcePublicApiUrl(this.config)), { signal: AbortSignal.timeout(5_000) });
+      if (!response.ok) return null;
+      const size = 24, { data, info } = await sharp(Buffer.from(await response.arrayBuffer())).resize(size, size, { fit: 'fill' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      // The median, not the mean: a product resting on the bottom edge (a blender's dark base) must not darken the backdrop.
+      const channels: number[][] = [[], [], []];
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+        if (x > 1 && x < size - 2 && y > 1 && y < size - 2) continue;
+        const at = (y * size + x) * info.channels; for (const c of [0, 1, 2]) channels[c].push(data[at + c]);
+      }
+      const median = (values: number[]) => values.sort((a, b) => a - b)[values.length >> 1];
+      return [path, `#${channels.map(values => median(values).toString(16).padStart(2, '0')).join('')}`];
+    };
+    const found = (await Promise.all(paths.map(path => read(path).catch(() => null)))).filter((entry): entry is [string, string] => Boolean(entry));
+    return found.length ? Object.fromEntries(found) : undefined;
+  }
+  /** Fuller hero: a cover photo's backdrop colour and how plain it is (only this platform's uploads are read). */
+  private async photoBackdrop(photo: string): Promise<{ hex: string; uniformity: number; width?: number; height?: number } | null> {
+    const path = uploadPath(photo);
+    if (!/^\/v1\/uploads\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(path)) return null;
+    const response = await fetch(new URL(path, sourcePublicApiUrl(this.config)), { signal: AbortSignal.timeout(5_000) });
+    if (!response.ok) return null;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    const sample = (await samplePhotoColours([{ url: path, path, bytes }])).get(path);
+    // Its size too (owner 2026-11-13, Oh Belly's 736 px photo stretched across the screen): a small photo is never a full-width hero.
+    const { width, height } = await sharp(bytes).metadata().catch(() => ({ width: undefined, height: undefined }));
+    return sample?.backdropHex && typeof sample.uniformity === 'number' ? { hex: sample.backdropHex, uniformity: sample.uniformity, width, height } : null;
+  }
   /** A product photo's cut-out, saved as a new upload of the store (only this platform's uploads are read); null for a scene.
    *  It is filed in the store's media like any upload: the save bundles only the merchant's own photos and dropped the rest. */
   private async productCutout(merchantId: string, storeId: string, url: string): Promise<string | null> {
@@ -1173,7 +1323,8 @@ export class SourceChatService {
   }
 
   /** The store's real facts for the section library: catalogue, uploads, shown codes, reviews, links (spec 2026-10-31). */
-  private async libraryFacts(merchantId: string, storeId: string, files: SourceProjectSnapshot['files'], request: string, maxPhotos: number) {
+  /** Public for V2 (spec 2026-11-14 v2-library-sections): a written home fills library sections from the same facts. */
+  async libraryFacts(merchantId: string, storeId: string, files: SourceProjectSnapshot['files'], request: string, maxPhotos: number) {
     const state = readMasterState(files);
     const [record, catalog, uploads, codes, reviews, retention, links, zones, assistant] = await Promise.all([
       this.prisma.store.findFirst({ where: { id: storeId }, select: { onboarding: true, contactPhone: true, policies: true } }),
@@ -1200,7 +1351,10 @@ export class SourceChatService {
       codes: codes.filter(code => code.showInEmails || code.showInAssistant || code.id === popupCode), reviews, links,
       zones, policies: (record?.policies ?? {}) as Record<string, unknown>, assistantNotes: assistant?.notes ?? '' }, maxPhotos);
     // Owner 2026-11-11 («no blurry cover photos»): how wide each photo is, for the cover.
-    return { ...facts, photos: await withPhotoWidths(facts.photos, this.config.get<string>('app.uploadsDir') ?? 'uploads') };
+    // Packs show only on a store that turned them on (Store.bundlesEnabled).
+    const packs = await this.prisma.storeBundle.count({ where: { storeId, active: true, store: { bundlesEnabled: true } } }).catch(() => 0);
+    const checkoutMode = (await this.prisma.store.findFirst({ where: { id: storeId }, select: { checkoutMode: true } }).catch(() => null))?.checkoutMode ?? undefined;
+    return { ...facts, packs, checkoutMode, photos: await withPhotoWidths(facts.photos, this.config.get<string>('app.uploadsDir') ?? 'uploads') };
   }
 
   private async masterPolish(merchantId: string, storeId: string, threadId: string, userMessage: StoreAgentMessage, workflow: ReturnType<typeof createSourceProgress>, request: string, revision: number, previous: { snapshot: unknown } | null) {

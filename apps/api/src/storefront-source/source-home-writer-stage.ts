@@ -20,6 +20,17 @@ import { recentLooks } from './source-recent-looks';
 import { readMasterState } from './source-templates';
 import { MASTER_THEME_END, MASTER_THEME_START } from './source-master';
 import { STUDIO_RULES } from './source-studio-spike';
+import { FRONTEND_DESIGN_SKILL } from './source-design-skill';
+
+/** Owner 2026-11-12 («lets just copy amboras»): a chassis store designs by the frontend-design skill, like Amboras's builder. Only
+ *  the platform's facts stay here — none of our style rules (numbered labels, motion counts, bands), which the skill names as the
+ *  tells of a generated page. */
+const CHASSIS_PLATFORM_RULES = `REGLAS DE LA PLATAFORMA (hechos, no estilo):
+- Productos, precios, fotos y logo vienen de './store-data'; los textos van como texto JSX literal (el comercio los edita con doble clic). Español natural; no inventes datos, precios, envíos, opiniones ni certificaciones.
+- Colores solo del sistema de diseño (var(--es-paper/ink/muted/accent/deep) y color-mix de ellos); fuentes var(--es-heading) y var(--es-body).
+- La portada muestra los productos (data-pagosya-catalog con data-pagosya-filters, o data-pagosya-spotlight con ids reales). Cada foto una sola vez y nunca más ancha que su tamaño real.
+- El dueño (2026-11-12): fotos medianas, nunca a todo el ancho (en computadora hasta 60% del ancho y 75% del alto); nada de calcomanías ni insignias redondas con palabras (<Sticker>, círculos punteados); nada de dibujos ni adornos (SVG decorativos, garabatos, huellas, círculos o burbujas de borde): la tienda se luce con tipografía, color, fotos y las partes del kit.
+- Lo que check dice en «Debes corregir» se corrige; los avisos de diseño los decides tú con el skill.`;
 
 const HOME_WRITER_RULES = `Estilo (como Amboras): titulares de 72 px o más en escritorio con interlineado apretado, etiquetas pequeñas en mayúsculas (por ejemplo «01 / 04»), una portada amplia donde el texto tiene espacio, bandas del color de la marca, al menos 6 secciones (portada, productos con data-pagosya-catalog, historia, beneficios, preguntas, cierre).
 Reglas que bloquean: cada foto una sola vez; nunca 3 fotos o más juntas; nunca una banda oscura (negra) solo con texto — usa una foto real, un fondo claro o el color de la marca; la portada muestra productos (data-pagosya-catalog, o data-pagosya-spotlight con ids reales).
@@ -32,10 +43,12 @@ export function homeWriterInstructions(opts: { template?: string; studio?: boole
   // Store chassis (spec 2026-11-12, after Amboras): the store designs its own header, card, cart and product page from its plan.
   if (opts.template && opts.studio && opts.chassis) return `Eres el diseñador de una tienda pagosYa que parte de la plantilla ${opts.template}. Diseñas sus piezas propias: ${HOME_PATH} (write_home), ${FOOTER_PATH} (write_footer), el encabezado, la tarjeta de producto, el carrito y la ficha de producto (write_part), y su sistema de diseño (set_tokens: colores y fuentes).
 El checkout y la cuenta son de la plataforma. Toda página va dentro de <Shell>.
-Orden: read_chassis (trae el plan de diseño y el cableado de cada pieza); write_brief (el brief de diseño, desde las fotos y las palabras del comercio); set_tokens con su paleta y sus fuentes; write_home; write_part header; write_footer; write_part card; write_part cart; write_part product; check (devuelve lo que debes corregir, los avisos de diseño y las capturas de la portada y de la ficha); corrige; check; finish.
+Orden: read_chassis (trae el plan de diseño y el cableado de cada pieza); write_brief (el brief de diseño, desde las fotos y las palabras del comercio); set_tokens con su paleta y sus fuentes; write_home; write_part header; write_footer; write_part card; write_part cart; write_part product; check (devuelve lo que debes corregir, los avisos de diseño y las capturas de la portada y de la ficha); mira las capturas con ojo crítico y corrige; check; finish.
 Los textos de un bloque de <LibraryHome> van en sus campos; el resto como texto JSX literal.
-${STUDIO_RULES}
-${HOME_WRITER_RULES}`;
+Tu guía de diseño es este skill (el brief que escribes es su plan; revísalo contra él antes de escribir código):
+${FRONTEND_DESIGN_SKILL}
+
+${CHASSIS_PLATFORM_RULES}`;
   // Spike 2026-11-12 (YAPI_STUDIO): Lovable's order — the design system (colours and fonts) first, then the home painted only by it.
   // Owner 2026-11-12 («the footer is the same always»): the studio writes the store's own footer too.
   if (opts.template && opts.studio) return `Eres el diseñador de la PORTADA y el PIE de una tienda pagosYa que usa la plantilla ${opts.template}. Solo cambias ${HOME_PATH} (completo, con write_home), ${FOOTER_PATH} (completo, con write_footer) y su sistema de diseño (set_tokens: colores y fuentes).
@@ -71,10 +84,15 @@ type LoopInput = { model: AgentModel; files: SourceProjectFileDto[]; base: Agent
 /** Spec 2026-10-30 home writer variety: the writer's task — the merchant's words, the store's page direction, what the last
  *  stores already used, and the motion brief only for an animated store. */
 export function homeWriterTask(input: { instruction: string; storeName: string; direction: HomeDirectionId; animated: boolean; avoid: { fonts: string[]; papers: string[] };
-  footer?: HomeFooterId; playful?: boolean; calm?: boolean; brandColours?: string[] }): string {
+  footer?: HomeFooterId; playful?: boolean; calm?: boolean; brandColours?: string[]; chassis?: boolean }): string {
   // Owner 2026-10-30 (BOXY): variety never replaces the brand's own colours — the recent backgrounds are only avoided without them.
   const brand = input.brandColours ?? [];
   const avoid = [input.avoid.fonts.length ? `fuentes de titular ${input.avoid.fonts.join(', ')}` : '', !brand.length && input.avoid.papers.length ? `colores de fondo ${input.avoid.papers.join(', ')}` : ''].filter(Boolean).join('; ');
+  // Owner 2026-11-12 («copy amboras»): a chassis store's look comes from the merchant's words, its photos and the design skill —
+  // not from a rolled page direction, a footer idea or motion quotas.
+  if (input.chassis) return [input.instruction, `Tienda: ${input.storeName}`,
+    avoid ? `Las últimas tiendas ya usaron ${avoid}: elige otra${brand.length ? '' : ' fuente de titular y otro fondo'} que también vaya con esta marca.` : '',
+    brand.length ? `Colores de la marca: ${brand.join(', ')}. Mantenlos: el accent o el deep es uno de ellos.` : ''].filter(Boolean).join('\n\n');
   return [input.instruction, `Tienda: ${input.storeName}`, HOME_DIRECTIONS[input.direction],
     avoid ? `Las últimas tiendas ya usaron ${avoid}: elige otra${brand.length ? '' : ' fuente de titular y otro fondo'} que también vaya con esta marca.` : '',
     brand.length ? `Colores de la marca: ${brand.join(', ')}. Mantenlos: el accent o el deep es uno de ellos.` : '',
@@ -208,7 +226,7 @@ export async function runHomeWriterStage(context: AgentStageContext): Promise<vo
   const model = makeModel('home-writer');
   const reviewer = createHomeReviewer(makeModel('home-review'));
   const task = homeWriterTask({ instruction: dto.instruction, storeName: (data as { storeName?: string }).storeName ?? '', direction: choice.direction, animated: choice.animated,
-    footer: choice.footer, playful, calm, brandColours,
+    footer: choice.footer, playful, calm, brandColours, ...(chassis ? { chassis: true } : {}),
     avoid: { fonts: template ? [] : [...new Set(looks.map(look => look.heading).filter((font): font is string => Boolean(font)))], papers: [...new Set(looks.map(look => look.paper).filter((paper): paper is string => Boolean(paper)))] } });
   const out = await runHomeWriterLoop({ model, files: oldFiles.filter(file => nextSourceFile(file.path)), base, gate, task, signal, animated: choice.animated,
     footer: Boolean(choice.footer) && ownFooter, ...(template ? { template } : {}), ...(studio ? { studio: true } : {}), ...(chassis ? { chassis: true, ...(choice.plan ? { plan: choice.plan } : {}) } : {}), reviewer, playful, calm, brandColours,

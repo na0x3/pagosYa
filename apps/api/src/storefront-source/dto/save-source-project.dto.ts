@@ -35,5 +35,6 @@ export class SaveSourceProjectDto extends SourceProjectRevisionDto {
 
 export class EditSourceFileDto extends SourceProjectRevisionDto {
   @IsString() @MinLength(1) @MaxLength(200) path!: string;
-  @IsString() @MaxLength(180_000) content!: string;
+  // The service holds each file to its own limit (180 kB; the store sheet 400 kB, MAX_STORE_SHEET).
+  @IsString() @MaxLength(400_000) content!: string;
 }

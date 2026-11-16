@@ -4,6 +4,7 @@ import { loadPlace, nudge, placePill, savePlace, spinState } from './source-yapi
 import { fadeWhenIdle } from './source-toolbar-fade';
 import { needsAnswer, renderExit, renderHistory, renderPill } from './source-yapi-pill-view';
 import './source-yapi-pill.css';
+import './source-yapi-terminal.css';
 import { assumedFactsCheck, pageLabel, renderAssumedFacts, type AssumedFactView } from './source-assumed-facts';
 import { renderPagePicker, bindPagePicker } from './source-page-picker';
 import { mountCodeHighlight } from './source-code-highlight';
@@ -965,6 +966,17 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       : `<a href="${escape(src)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir imagen adjunta en tamaño completo"><img src="${escape(src)}" alt="Imagen adjunta" loading="lazy"></a>`);
     return items.length ? `<div class="message-attachments" data-count="${items.length}">${items.join('')}</div>` : '';
   }
+  /** Owner 2026-11-15 (like Amboras's bot): the screenshots YAPI took when it looked at the store, and what it saw. Only upload paths. */
+  function lookNote(metadata: JsonRecord) {
+    const look = metadata.look as { items?: unknown; shots?: unknown } | undefined;
+    if (!look || typeof look !== 'object') return '';
+    const items = Array.isArray(look.items) ? look.items.filter((item): item is string => typeof item === 'string' && Boolean(item.trim())) : [];
+    const shots = Array.isArray(look.shots) ? look.shots.filter((url): url is string => typeof url === 'string' && /^\/(?:api\/)?v1\/uploads\//.test(url))
+      .map(url => ({ src: new URL(url, new URL(API_BASE_URL, location.href)).href })) : [];
+    return `${items.length ? `<ul class="source-look-list">${items.map(item => `<li>${escape(item)}</li>`).join('')}</ul>` : ''}${shots.length ? `<div class="source-look-shots">${attachmentGallery(shots)}</div>` : ''}`;
+  }
+  /** «Names» YAPI quotes (a section, a button, a screen) light up like the Yappa card's @mentions (owner 2026-11-15). */
+  const mentions = (html: string) => html.replace(/«([^«»<]{1,80})»/g, '<span class="yapi-mention">«$1»</span>');
   function chatMessage(message: AgentMessage) {
     const user = message.role === 'USER';
     const metadata = message.metadata || {};
@@ -975,7 +987,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       .replaceAll('Guardé el borrador', 'Guardé los cambios de tu tienda')
       .replaceAll('Tu revisión anterior sigue guardada.', 'Tus cambios anteriores siguen guardados.')
       .replaceAll('No se guardó ninguna revisión nueva.', 'No se guardaron cambios nuevos.'), metadata);
-    return `<article class="${user ? 'message message--remote-user' : 'agent-note remote-agent-note'}"><div class="${user ? 'message-meta' : 'agent-note__meta'}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? 'Tú' : 'YAPI'}</strong></div>${user ? sentAttachments(metadata) : ''}<p>${escape(visibleContent)}</p>
+    return `<article class="${user ? 'message message--remote-user' : 'agent-note remote-agent-note'}"><div class="${user ? 'message-meta' : 'agent-note__meta'}">${user ? '<span class="avatar">TÚ</span>' : renderFaceMark()}<strong>${user ? 'Tú' : 'YAPI'}</strong></div>${user ? sentAttachments(metadata) : ''}<p>${user ? escape(visibleContent) : mentions(escape(visibleContent))}</p>${user ? '' : lookNote(metadata)}
       ${!user && !pillMode ? renderBuildProgress(metadata.progress, false, metadata.sourceRevision ? 'saved' : 'reply') : ''}
       ${clarification?.options ? `<div class="clarification-options">${clarification.options.map(o => `<button type="button" data-clarification="${escape(o.value)}" ${disabled(busy || dirty() || historical())}>${escape(o.label)}</button>`).join('')}</div>` : ''}
       ${!user ? (() => { const card = planCardOf(message, state.revision); return card ? renderPlanCard(card, busy || dirty() || historical()) : ''; })() : ''}

@@ -179,6 +179,11 @@ export function plantillaDefaults(manifest: Pick<TemplateManifest, 'copy'>): Rec
 }
 
 /** What a master store's store-data says now (spec 2026-10-19 §3.1): the content edits start from it. */
+/** Owner 2026-11-13 (product page «duo»): the product photos' ground colours ride in `features` (always exported, kept by refills). */
+function withProductGrounds(features: Record<string, unknown>, grounds: Record<string, string> | undefined): Record<string, unknown> {
+  return grounds && Object.keys(grounds).length ? { ...features, productGrounds: grounds } : features;
+}
+
 export function readMasterState(files: readonly SourceProjectFileDto[]) {
   const content = files.find(file => file.path === TEMPLATE_STORE_DATA_PATH)?.content ?? '';
   return {
@@ -262,6 +267,18 @@ export function withCurrentThemeBlock(css: string, theme: string): string {
   return css.slice(0, start) + latest + css.slice(end);
 }
 
+/** Hero kit (owner 2026-11-13): the hero shop's CSS («lb:heroshop») ships only with a cover that carries products — the sheet
+ *  stays under the 180 000-character file limit (BOXY's Symmetry sheet passed it when every store carried it). */
+const HERO_COVER = /^(?:cover-[a-z-]+|hero-split)$/;
+export function withHeroShop(used: Set<string>, layout: readonly unknown[]): Set<string> {
+  const shop = layout.some(block => { const b = block as { type?: unknown; products?: unknown }; return HERO_COVER.test(String(b?.type ?? '')) && Array.isArray(b.products) && b.products.length > 0; });
+  return shop ? new Set([...used, 'heroshop']) : used;
+}
+/** The home layout written in a store's store-data (one JSON line); [] when it cannot be read. */
+function storeDataLayout(data: string): unknown[] {
+  try { const line = /^export const layout: any\[\] = (.*);$/m.exec(data)?.[1]; const parsed = line ? JSON.parse(line) : []; return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+}
+
 /** 2026-11-02 (Taller Lienzo: the overlap section's phone rule was fixed in the template, the store kept its old copy): the section
  *  blocks a store's sheet carries («lb:ids») are the platform's, so a refill brings each one up to the template's current version,
  *  without the developer notes (as withOnlyTheme ships them). Sections the store does not carry are left out. */
@@ -281,7 +298,7 @@ export function withCurrentSectionCss<F extends { path: string; content: string 
   }));
   // 2026-11-11 (Remolino's perks-rows drew unstyled): a section the store's pages use that its sheet has no block for gets the
   // template's (a section added after the first build: a top-up, a sharp cover, a quick edit).
-  const used = new Set([...data.matchAll(/"type":"([a-z0-9-]+)"/g)].map(match => match[1]));
+  const used = withHeroShop(new Set([...data.matchAll(/"type":"([a-z0-9-]+)"/g)].map(match => match[1])), storeDataLayout(data));
   const missing = [...latest].filter(([ids]) => !seen.has(ids) && ids.split(',').some(id => used.has(id))).flatMap(([, blocks]) => blocks);
   if (missing.length) content = `${content.trimEnd()}\n\n${readableAccentText(missing.join('\n'))}\n`;
   return content === sheet.content ? files : files.map(file => file === sheet ? { ...file, content } : file);
@@ -442,7 +459,7 @@ export function refillMasterFiles(files: SourceProjectFileDto[], manifest: Templ
   // Sort & filter styles spec 2026-10-21: a fashion store from before the filters part gets the John Smedley chip rows.
   if ((settings.variants?.filters ?? []).includes('chips') && variants.filters === undefined && variants.cards === 'fashion') variants.filters = 'chips';
   const out = withFashionTemplateParts(files.map(file => {
-    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [], features, layout: change.layout ?? state.layout ?? [], productLayout: change.productLayout ?? state.productLayout ?? [], pageLayouts: change.pageLayouts ?? state.pageLayouts ?? {}, extraPages: change.extraPages ?? state.extraPages ?? [] });
+    if (file.path === TEMPLATE_STORE_DATA_PATH) return templateStoreDataFile(state.store ?? { name: '' }, photos, { copy, look, variants, sections: change.sections ?? state.sections ?? [], features: withProductGrounds(features, change.productGrounds ?? (state.features as { productGrounds?: Record<string, string> }).productGrounds), layout: change.layout ?? state.layout ?? [], productLayout: change.productLayout ?? state.productLayout ?? [], pageLayouts: change.pageLayouts ?? state.pageLayouts ?? {}, extraPages: change.extraPages ?? state.extraPages ?? [] });
     // Owner 2026-11-02 (DooBoo): the accent as words on the page reads even when the brand's accent is pale.
     if (file.path === 'styles/globals.css') return { ...file, content: readableAccentText(themed ? bindThemeAccent(withMasterTheme(withCurrentThemeBlock(file.content, themeId), theme), themeId, themed) : withMasterTheme(file.content, theme)) };
     if (file.path === 'config.js') {
@@ -552,7 +569,7 @@ export async function assembleTemplateRevision(input: {
     // An uploaded logo as the full API URL, like the photos: the store is served from another origin (Remolino 2026-10-21).
     logo: masterPhotoUrl(data.logoUrl, input.apiUrl), phone: data.contactPhone ?? '' }, photos, settings ? { copy: copy!, look: look!, variants: builtVariants, sections: input.sections ?? input.fill?.sections, features, layout: input.fill?.layout ?? [], productLayout: input.fill?.productLayout ?? [] } : undefined, manifest.copy ? { ...plantillaDefaults(manifest), ...(input.plantillaCopy ?? {}) } : undefined);
   const themed = (file: SourceProjectFileDto) => settings && file.path === 'styles/globals.css' ? { ...file, content: withOnlyTheme(withMasterTheme(file.content, masterThemeCss(settings, look!, String((builtVariants as Record<string, unknown> | undefined)?.titles ?? ''))), String((builtVariants as Record<string, unknown> | undefined)?.theme ?? ''),
-    new Set([...(input.fill?.layout ?? []), ...(input.fill?.productLayout ?? [])].map(block => String((block as { type?: string }).type))),
+    withHeroShop(new Set([...(input.fill?.layout ?? []), ...(input.fill?.productLayout ?? [])].map(block => String((block as { type?: string }).type))), input.fill?.layout ?? []),
     // Template frame variety (2026-11-03): only the footer, button, card and product page this store uses.
     frameChoices((builtVariants ?? {}) as Record<string, unknown>, (input.fill?.layout ?? []) as { type?: unknown; card?: unknown }[])) } : file;
   // A filled Plantilla never shows the demo business's photos; a slot the merchant has no photo for stays empty instead

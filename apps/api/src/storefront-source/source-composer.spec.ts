@@ -32,7 +32,7 @@ describe('the composer template view', () => {
     const shrine = composerTemplate('shrine', 'Shrine Pro', { layout: [{ type: 'promo-countdown' }, { type: 'cover-stage' }, { type: 'categories-tiles' }] as LayoutBlock[] },
       { fit: { shrine: ['story-split', 'products-grid', 'faq-split', 'closing-photo', 'benefits-bento', 'reviews-wall'] }, signature: { shrine: ['cover-stage'] } })!;
     expect(shrine.lead).toBe('promo-countdown');
-    const ok: LayoutBlock[] = [{ type: 'promo-countdown' }, { type: 'cover-stage' }, { type: 'products-grid' }, { type: 'story-split' }, { type: 'benefits-bento' }, { type: 'faq-split' }, { type: 'closing-photo' }];
+    const ok: LayoutBlock[] = [{ type: 'promo-countdown' }, { type: 'cover-stage' }, { type: 'products-grid' }, { type: 'story-split' }, { type: 'benefits-bento' }, { type: 'faq-split' }, { type: 'reviews-wall' }, { type: 'story-split' }, { type: 'benefits-bento' }, { type: 'closing-photo' }];
     expect(composerCheck(ok, shrine, [])).toEqual([]);
     const wrong: LayoutBlock[] = [{ type: 'story-split' }, { type: 'cover-stage' }, { type: 'products-grid' }, { type: 'benefits-bento' }, { type: 'faq-split' }, { type: 'reviews-wall' }, { type: 'closing-photo' }];
     expect(composerCheck(wrong, shrine, []).join(' ')).toMatch(/portada/);
@@ -53,7 +53,7 @@ describe('too similar', () => {
 });
 
 describe('the code check', () => {
-  const good = home(['products-rows', 'story-split', 'names-list', 'benefits-bento', 'faq-split', 'closing-wordmark']);
+  const good = home(['products-rows', 'story-split', 'names-list', 'benefits-bento', 'promo-banner', 'statement-sticker', 'faq-split', 'closing-photo', 'closing-wordmark']);
   it('passes a composed home', () => {
     expect(composerCheck(good, T, [])).toEqual([]);
   });
@@ -61,11 +61,17 @@ describe('the code check', () => {
     expect(composerCheck(good, T, [])).toEqual([]);
   });
   it('names a missing signature, a section that does not fit, a short page and a look-alike', () => {
-    const missing = home(['story-split', 'names-list', 'benefits-bento', 'faq-split', 'closing-wordmark', 'promo-banner']);
+    const missing = home(['story-split', 'names-list', 'benefits-bento', 'faq-split', 'closing-wordmark', 'promo-banner', 'statement-sticker', 'closing-photo', 'story-split']);
     expect(composerCheck(missing, T, []).join(' ')).toMatch(/products-rows/);
     expect(composerCheck([...good.slice(0, 6), { type: 'reviews-cards' }], T, []).join(' ')).toMatch(/reviews-cards/);
-    expect(composerCheck(good.slice(0, 4), T, []).join(' ')).toMatch(/7 y 12/);
+    expect(composerCheck(good.slice(0, 4), T, []).join(' ')).toMatch(/10 y 14/);
+    expect(composerCheck([...good, ...good.slice(1, 6)], T, []).join(' ')).toMatch(/10 y 14/);
     expect(composerCheck(good, T, [homeSummary('Miga', good)]).join(' ')).toMatch(/Miga/);
+  });
+  it('a signature section that is neither the cover nor products may be left out, never repeated (NOA comp 2026-11-12)', () => {
+    const press = composerTemplate('merienda', 'Merienda', preset, { ...data, signature: { merienda: ['cover-mega', 'products-rows', 'promo-banner'] } })!;
+    expect(composerCheck(good.filter(block => block.type !== 'promo-banner').concat({ type: 'story-split' }), press, [])).toEqual([]);
+    expect(composerCheck([...good, { type: 'promo-banner' }], press, []).join(' ')).toMatch(/promo-banner va una vez/);
   });
   it('refuses the cover the last two stores on the template used', () => {
     const other = homeSummary('Canasta', home(['faq-split', 'closing-wordmark']));
@@ -74,7 +80,7 @@ describe('the code check', () => {
 });
 
 describe('review changes', () => {
-  const layout = home(['products-rows', 'story-split', 'names-list', 'benefits-bento', 'faq-split', 'closing-wordmark']);
+  const layout = home(['products-rows', 'story-split', 'names-list', 'benefits-bento', 'faq-split', 'closing-wordmark', 'statement-sticker', 'closing-photo', 'story-split', 'names-list']);
   it('applies a look, a band, a photo, a swap, a remove and a move', () => {
     const withPhoto = layout.map((block, at) => (at === 2 ? { ...block, photo: '/a.jpg' } : block));
     const out = applyComposerChanges(withPhoto, [
@@ -84,12 +90,17 @@ describe('review changes', () => {
       { problem: 'x', at: 4, kind: 'swap', value: 'promo-banner' },
       { problem: 'x', at: 3, kind: 'remove', value: '' },
       { problem: 'x', at: 5, kind: 'move', value: '2' },
-    ], T, ['/a.jpg', '/b.jpg']);
-    expect(out.layout.map(block => block.type)).toEqual(['cover-mega', 'products-rows', 'faq-split', 'story-split', 'promo-banner', 'closing-wordmark']);
+    ], T, ['/a.jpg', '/b.jpg'], 10);
+    expect(out.layout.map(block => block.type)).toEqual(['cover-mega', 'products-rows', 'faq-split', 'story-split', 'promo-banner', 'closing-wordmark', 'statement-sticker', 'closing-photo', 'story-split', 'names-list']);
     expect(out.layout[0].look).toBe('tilt');
     expect(out.layout[3]).toMatchObject({ type: 'story-split', band: 'muted', photo: '/b.jpg' });
     expect(out.rewrite).toEqual([4]);
     expect(out.applied).toHaveLength(6);
+  });
+  it('fixes before it shortens: a remove that takes the home under the floor is refused', () => {
+    const out = applyComposerChanges(layout.slice(0, 10), [{ problem: 'x', at: 3, kind: 'remove', value: '' }], T, [], 10);
+    expect(out.layout).toHaveLength(10);
+    expect(out.applied).toEqual([]);
   });
   it('ignores changes it cannot apply', () => {
     const out = applyComposerChanges(layout, [
@@ -152,7 +163,7 @@ describe('a template with one cover and no other look (live test 2026-11-11: Est
       { fit: { estudio: ['story-split', 'benefits-bento', 'faq-split', 'press-quotes', 'closing-photo'] }, signature: { estudio: ['cover-half', 'categories-list'] } })!;
     const page = (rest: string[]): LayoutBlock[] => [{ type: 'cover-half' }, { type: 'products-grid' }, ...rest.map(type => ({ type }))];
     const recent = [homeSummary('Taller Roble', page(['categories-list', 'story-split', 'benefits-bento', 'faq-split', 'closing-photo']))];
-    expect(composerCheck(page(['story-split', 'categories-list', 'press-quotes', 'closing-photo', 'faq-split']), estudio, recent)).toEqual([]);
+    expect(composerCheck(page(['story-split', 'categories-list', 'press-quotes', 'closing-photo', 'faq-split', 'press-quotes', 'press-quotes', 'press-quotes']), estudio, recent)).toEqual([]);
   });
   it('a signature cover with one look is never asked to change, even with other covers in the fit (Motion, composer test 2026-11-12)', () => {
     const motion = composerTemplate('motion', 'Motion', { layout: [{ type: 'hero-split' }, { type: 'products-tabs' }, { type: 'categories-mosaic' }] as LayoutBlock[] },
@@ -173,7 +184,7 @@ describe('a template whose home opens without a cover (owner 2026-11-11: its ope
     expect(tacon.lead).toBeUndefined();
   });
   it('passes a home that starts with the opener and has no cover', () => {
-    expect(composerCheck(page(['statement-reveal', 'benefits-bento', 'faq-split', 'press-quotes', 'closing-photo']), tacon, [])).toEqual([]);
+    expect(composerCheck(page(['statement-reveal', 'benefits-bento', 'faq-split', 'press-quotes', 'closing-photo', 'press-quotes', 'faq-split', 'benefits-bento']), tacon, [])).toEqual([]);
   });
   it('refuses a home that does not start with the opener, or adds a cover', () => {
     const late: LayoutBlock[] = [{ type: 'products-grid' }, { type: 'promo-banner' }, { type: 'statement-reveal' }, { type: 'benefits-bento' }, { type: 'faq-split' }, { type: 'press-quotes' }, { type: 'closing-photo' }];
@@ -184,7 +195,7 @@ describe('a template whose home opens without a cover (owner 2026-11-11: its ope
   it('compares recent homes by their order, since the opener is the same in every store', () => {
     const recent = [homeSummary('Lola', page(['statement-reveal', 'categories-list', 'icon-columns', 'story-split', 'closing-photo']))];
     expect(recent[0].cover).toBe('promo-banner:');
-    expect(composerCheck(page(['statement-reveal', 'benefits-bento', 'faq-split', 'press-quotes', 'closing-photo']), tacon, recent)).toEqual([]);
+    expect(composerCheck(page(['statement-reveal', 'benefits-bento', 'faq-split', 'press-quotes', 'closing-photo', 'press-quotes', 'faq-split', 'benefits-bento']), tacon, recent)).toEqual([]);
     expect(composerCheck(page(['statement-reveal', 'categories-list', 'icon-columns', 'story-split', 'closing-photo']), tacon, recent).join(' ')).toMatch(/se parece a la tienda Lola/);
   });
   it('a review never moves the opener or puts a section above it', () => {

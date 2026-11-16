@@ -82,7 +82,8 @@ const ADDABLE = LIBRARY_CATALOG.filter(section => section.role !== 'cover' && !M
 const ADDABLE_IDS = new Set(ADDABLE.map(section => section.id));
 const MAX_ADDS = 2;
 // A menu page may also start with a cover: «Nosotros» built from nothing reads like the template's home (spec 2026-11-05).
-const PAGE_ADDABLE = LIBRARY_CATALOG.filter(section => !MAIN_GRIDS.has(section.id) && !section.decor && section.id !== 'bar-note');
+// Owner 2026-11-13 («i like more normal heroes»): the moving cover is never added; stores that have it keep it.
+const PAGE_ADDABLE = LIBRARY_CATALOG.filter(section => !MAIN_GRIDS.has(section.id) && !section.decor && section.id !== 'bar-note' && section.id !== 'cover-kinetic');
 const PAGE_ADDABLE_IDS = new Set(PAGE_ADDABLE.map(section => section.id));
 const MAX_PAGE_ADDS = 5;
 // However many requests build it, a menu page stays a page, not a second home (minor 2026-11-05).

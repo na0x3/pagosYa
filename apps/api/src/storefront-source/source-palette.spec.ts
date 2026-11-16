@@ -1,6 +1,6 @@
 jest.setTimeout(90_000);
 import { contrastRatio } from './source-scorecard';
-import { coloursFromWords, deepFromAccent, paletteFromNamed, paletteFromSamples, proposeStorePalette, type SourcePalette } from './source-palette';
+import { colourRolesFromWords, coloursFromWords, deepFromAccent, loudAccent, neutralInk, paletteFromNamed, paletteFromSamples, proposeStorePalette, type SourcePalette, richerGround, groundPalette } from './source-palette';
 import { png } from './fixtures/png';
 
 const rgb = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -157,3 +157,44 @@ describe('palette extras for titles (spec 2026-11-03 chunky colour titles)', () 
     expect(paletteFromSamples({ photos: [{ dominant: ['#2f6db5', '#9a9a9a', '#f4f4f4'] }] })!.extras ?? []).toEqual([]);
   });
 });
+
+// Owner 2026-11-13 (ZARA got lavender and brown; Oh Belly's red-orange painted the whole cover).
+describe('colour roles', () => {
+  it('reads ZARA: black and white, a soft grey for support', () => {
+    expect(colourRolesFromWords('Tiene que ser minimalista y seria, como una casa de moda: nada de colores, nada de juegos. Fondo blanco, texto negro y un gris muy suave como único apoyo.'))
+      .toEqual({ mono: true, paper: '#ffffff', ink: '#111111', muted: '#efefef' });
+  });
+  it('gives a colour a job only right after its role word', () => {
+    expect(colourRolesFromWords('Vendemos flores blancas y rosas rojas para bodas.')).toEqual({});
+    expect(colourRolesFromWords('Quiero botones color terracota y el fondo crema.')).toEqual({ accent: '#c0603a', paper: '#f6efdf' });
+  });
+  it('keeps text from photos a near-neutral dark and calls a saturated mid accent loud', () => {
+    const [, saturation] = [0, 0]; void saturation;
+    expect(neutralInk('#3c1b15')).toMatch(/^#[0-9a-f]{6}$/);
+    expect(parseInt(neutralInk('#3c1b15').slice(1, 3), 16) - parseInt(neutralInk('#3c1b15').slice(5, 7), 16)).toBeLessThan(12);
+    expect(loudAccent('#e66540')).toBe(true);
+    expect(loudAccent('#5e5b45')).toBe(false);
+    expect(loudAccent('#111111')).toBe(false);
+  });
+
+  it('gives a near-white ground the brand\'s hue at about 89.5%, keeps the band deeper, and leaves real colours alone', () => {
+    const ground = richerGround('#f7f0ee', '#f4d8cf');
+    expect(ground.paper).not.toBe('#f7f0ee');
+    const light = (hex: string) => { const [r, g, b] = [1, 3, 5].map(at => parseInt(hex.slice(at, at + 2), 16) / 255); return (Math.max(r, g, b) + Math.min(r, g, b)) / 2; };
+    expect(light(ground.paper)).toBeCloseTo(.895, 1);
+    expect(light(ground.muted!)).toBeLessThan(light(ground.paper));
+    expect(richerGround('#ffffff').paper).not.toBe('#ffffff');
+    expect(richerGround('#e9dccb')).toEqual({ paper: '#e9dccb', muted: undefined });
+    expect(richerGround('#2d2d2b', '#a5d0ea')).toEqual({ paper: '#2d2d2b', muted: '#a5d0ea' });
+  });
+
+  it('takes the page colours from the hero backdrop: a light one is the page, a dark one the bands', () => {
+    expect(groundPalette('#e8d5c4')).toMatchObject({ paper: '#e8d5c4' });
+    expect(groundPalette('#e8d5c4')!.deep).toBeUndefined();
+    const dark = groundPalette('#1f3a5f')!;
+    expect(dark.deep).toBe('#1f3a5f');
+    expect(dark.paper).not.toBe('#1f3a5f');
+    expect(groundPalette('nope')).toBeUndefined();
+  });
+});
+

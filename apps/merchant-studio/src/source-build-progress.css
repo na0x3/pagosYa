@@ -61,3 +61,10 @@
 .source-mode .message--remote-user .message-attachments img, .source-mode .message--remote-user .message-attachments video { display: block; width: 100%; height: auto; max-height: 420px; object-fit: contain; border-radius: 12px; background: #e2e2e2; }
 .source-mode .message--remote-user .message-attachments[data-count="1"] img { min-width: min(100%, 280px); }
 .yapi-stage__star { display: flex; flex-direction: column; align-items: center; }
+/* Owner 2026-11-15 (like Amboras's bot): what YAPI saw when it looked at the store — its list, then the screenshots, tappable. */
+.source-mode .remote-agent-note .source-look-list { margin: 6px 0 10px; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; line-height: 1.45; }
+.source-mode .remote-agent-note .source-look-shots .message-attachments { display: grid; gap: 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(100%, 360px); margin: 0 0 8px; }
+.source-mode .remote-agent-note .source-look-shots .message-attachments a { display: block; border-radius: 10px; overflow: hidden; background: #e2e2e2; border: 1px solid rgba(0, 0, 0, .08); }
+.source-mode .remote-agent-note .source-look-shots .message-attachments img { display: block; width: 100%; height: 120px; object-fit: cover; object-position: top; }
+.source-mode .remote-agent-note .source-look-shots .message-attachments[data-count="1"] { grid-template-columns: 1fr; }
+.source-mode .remote-agent-note .source-look-shots .message-attachments[data-count="1"] img { height: auto; max-height: 260px; }

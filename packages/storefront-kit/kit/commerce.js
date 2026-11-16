@@ -1015,14 +1015,14 @@
       [data-pagosya-product][data-style] .product-detail__sticky-space:not([hidden]){display:block;height:72px}
     }
     /* Lively one-product stores (spec 2026-11-03): the buy bar also shows on laptops, a floating pill with the photo and choice. */
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){position:fixed;left:50%;right:auto;bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:12px;width:min(720px,calc(100% - 24px));padding:10px 10px 10px 12px;border:1px solid var(--pd-line);border-radius:20px;background:var(--pd-paper);color:var(--pd-ink);box-shadow:0 18px 40px -18px #0000004d;transform:translateX(-50%)}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky>div{flex:1;min-width:0;font-size:13px;line-height:1.3}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-weight:700}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky img:not([hidden]){display:block;width:44px;height:44px;border-radius:12px;object-fit:cover;flex:0 0 auto}
-    :root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky [data-product-sticky-choice]{display:block;color:var(--pd-muted)}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){position:fixed;left:50%;right:auto;bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:12px;width:min(720px,calc(100% - 24px));padding:10px 10px 10px 12px;border:1px solid var(--pd-line);border-radius:20px;background:var(--pd-paper);color:var(--pd-ink);box-shadow:0 18px 40px -18px #0000004d;transform:translateX(-50%)}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky>div{flex:1;min-width:0;font-size:13px;line-height:1.3}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:0;border-radius:var(--pd-radius);background:var(--pd-accent);color:var(--pd-on-accent);font-weight:700}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky img:not([hidden]){display:block;width:44px;height:44px;border-radius:12px;object-fit:cover;flex:0 0 auto}
+    :root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky [data-product-sticky-choice]{display:block;color:var(--pd-muted)}
     [data-pagosya-product][data-style] .product-detail__sticky img{display:none}
-    @media (prefers-reduced-motion:no-preference){:root[data-pya-lively] [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){animation:pya-bar-in .35s cubic-bezier(.2,.9,.2,1) both}}
+    @media (prefers-reduced-motion:no-preference){:root:is([data-pya-lively],[data-pya-sticky-buy]) [data-pagosya-product][data-style] .product-detail__sticky:not([hidden]){animation:pya-bar-in .35s cubic-bezier(.2,.9,.2,1) both}}
     /* Lively one-product stores (spec 2026-11-03): short facts floating over the product photo, each with a pinging dot. */
     .product-detail__pills{position:absolute;left:14px;top:14px;z-index:2;display:grid;gap:8px;margin:0;padding:0;list-style:none;pointer-events:none}
     .product-detail__pills li{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:7px 12px;border-radius:999px;background:color-mix(in srgb,var(--pd-paper,#fff) 92%,transparent);color:var(--pd-ink,#111);font-size:12.5px;font-weight:600;box-shadow:0 8px 22px -12px #0000004d;backdrop-filter:blur(8px)}
@@ -1714,6 +1714,32 @@
     });
     return offers.length ? `<section class="product-detail__bundles" aria-labelledby="product-bundles-title"><h2 id="product-bundles-title">Llévalo en paquete</h2>${offers.join('')}</section>` : '';
   }
+  /* Owner 2026-11-13 (Clyro «Complete your routine»): a product page template with a «pairs» slot shows two more of the store's own
+   * products beside the buy box — the merchant's picks for this product first, then its category, then the rest — each added with one
+   * tap when it is simple, else a link to choose its options. */
+  function pairsMarkup(p) {
+    if (!productTemplateHas('pairs')) return '';
+    const picks = Array.isArray(p.recommendedProductIds) ? p.recommendedProductIds : [];
+    const rank = item => picks.includes(item.id) ? 0 : item.categoryId && item.categoryId === p.categoryId ? 1 : 2;
+    const items = products().map((item, index) => ({ item, index })).filter(({ item }) => item.id !== p.id && limit(item) !== 0 && !isMembership(item))
+      .sort((a, b) => rank(a.item) - rank(b.item) || a.index - b.index).slice(0, 2).map(entry => entry.item);
+    if (!items.length) return '';
+    return `<section class="product-detail__pairs" data-part="pairs" aria-labelledby="product-pairs-title"><h2 id="product-pairs-title">Completa tu compra</h2><ul>${items.map(item => {
+      const image = galleryImages(item)[0], href = escape(productHref(item));
+      const amounts = item.variants?.length ? item.variants.map(v => price({ ...item, amount: v.amount })) : [price(item)];
+      const low = Math.min(...amounts), from = new Set(amounts).size > 1;
+      return `<li data-part="pair">${image ? `<a class="product-detail__pair-photo" data-part="pair-photo" href="${href}" tabindex="-1" aria-hidden="true"><img src="${escape(image)}" alt="" loading="lazy" /></a>` : ''}`
+        + `<span class="product-detail__pair-copy" data-part="pair-copy"><a href="${href}">${escape(item.name)}</a><span>${from ? 'desde ' : ''}${escape(money(low, item.currency))}</span></span>`
+        + (simpleProduct(item) ? `<button type="button" class="product-detail__pair-add" data-part="pair-add" data-add="${escape(lineKey(item.id))}" aria-label="Agregar ${escape(item.name)} al pedido">Agregar</button>` : `<a class="product-detail__pair-add" data-part="pair-add" href="${href}">Elegir</a>`)
+        + '</li>';
+    }).join('')}</ul></section>`;
+  }
+  /* Owner 2026-11-13 (Clyro's logo row): under the buy button, how the store takes payment — the methods pagosYa processes, only for
+   * a store that takes payment online, and only in a template with a «payments» slot. */
+  function paymentsMarkup() {
+    if (!productTemplateHas('payments') || (config.data?.checkoutMode || 'payment') !== 'payment') return '';
+    return `<div class="product-detail__payments" data-part="payments"><p>Paga con QR, tarjeta, Tigo Money o transferencia</p><div class="product-detail__payment-logos" data-part="payment-logos" aria-hidden="true">${['qr', 'visa', 'mastercard', 'amex', 'tigo', 'bank'].map(name => PAYMENT_LOGOS.logos?.[name] || '').join('')}</div></div>`;
+  }
   /* "Súmale algo más": the owner's cart picks that are not in the cart yet. */
   /* Spec 2026-11-09 Merman cart: the merchant's chosen products first; with none chosen, «Te puede gustar» picks — the cart's categories
    * first, then the best-seller, then the catalogue — never one already in the cart. Up to 6 (the checkout's «Completa tu compra» takes the first). */
@@ -1766,7 +1792,10 @@
     jump.textContent = pending ? 'Elegir opciones' : isMembership(selectedProduct) ? 'Hacerme miembro' : 'Añadir';
     jump.disabled = !pending && (!buy || buy.disabled);
     const phone = matchMedia('(max-width: 640px)').matches, lively = document.documentElement.hasAttribute('data-pya-lively');
-    const show = buyPassed && !footerSeen && (lively || phone);
+    // Owner 2026-11-13 (product page «duo»): a template with a «sticky» slot gets the lively stores' floating bar on every width.
+    const sticky = productTemplateHas('sticky');
+    document.documentElement.toggleAttribute('data-pya-sticky-buy', sticky);
+    const show = buyPassed && !footerSeen && (lively || phone || sticky);
     bar.hidden = !show; detail.querySelector('[data-product-sticky-space]').hidden = !show || !phone;
   }
   let highlightObserver = null;
@@ -2779,7 +2808,7 @@
     let authoredTrail = false;
     for (let node = fullProductPage ? detail.previousElementSibling : null; node && !node.matches('header,[role=banner]'); node = node.previousElementSibling) if (node.matches('a[href]') || node.querySelector('a[href]')) { authoredTrail = true; break; }
     const breadcrumb = authoredTrail ? '' : `<nav class="product-detail__breadcrumb" aria-label="Ruta del producto"><a href="${escape(pageHref('productos.html'))}">Todos los productos</a><span aria-hidden="true">/</span><span>${escape(p.name)}</span></nav>`;
-    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" data-part="gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${galleryMarkup(images, p)}${pillsMarkup(images)}</section><section class="product-detail__copy"><span class="product-detail__decor" data-part="decor-b" aria-hidden="true"></span>${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow" data-part="eyebrow">${escape(eyebrowText)}</p>${style === 'conversion' || style === 'atelier' ? rating : ''}<${fullProductPage ? "h1" : "h2"} id="pagosya-product-title" data-part="title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${lead ? `<p class="product-detail__subtitle" data-part="subtitle">${escape(lead.lead)}</p>` : ''}${style !== 'conversion' && style !== 'atelier' ? rating : ''}<div class="product-detail__pricing" data-product-pricing>${isMembership(p) ? `<strong class="product-detail__price">${escape(membershipPriceText(p))}</strong>` : priceMarkup(p)}</div>${style === 'conversion' ? checksMarkup(conversionHighlights(p).checks) : ''}${p.description ? `<p class="product-detail__intro" data-part="intro">${escape(lead ? lead.rest : p.description)}</p>` : ''}${style === 'fashion' && (p.description || '').length > 220 ? '<button type="button" class="product-detail__more" data-product-more aria-expanded="false">Leer más</button>' : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' && style !== 'conversion' ? highlightsMarkup(p) : ''}${isMembership(p) ? membershipMarkup(p) : groups ? `${optionsMarkup(groups)}${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>' + addText + '<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>' + addText + '<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">${addText}<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${contentBlocksMarkup(p)}${fullProductPage ? longPageTop(p) : ''}${fullProductPage ? `${bundleOffersMarkup(p)}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section>${longPageBottom(p)}<div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><img data-product-sticky-photo alt="" hidden /><div><strong>${escape(p.name)}</strong><span data-product-sticky-choice></span><span data-product-sticky-price></span></div><button type="button" data-product-jump>${isMembership(p) ? 'Hacerme miembro' : 'Añadir'}</button></div>` : ''}`;
+    detail.innerHTML = `${fullProductPage ? '' : '<button type="button" class="product-detail__close" data-product-close aria-label="Cerrar detalle del producto">×</button>'}<div class="product-detail__layout"${images.length ? '' : ' data-no-images'}><section class="product-detail__gallery" data-part="gallery" aria-label="Fotos del producto"${images.length ? '' : ' hidden'}${images.length > 1 ? ' data-rail' : ''}>${galleryMarkup(images, p)}${pillsMarkup(images)}</section><section class="product-detail__copy"><span class="product-detail__decor" data-part="decor-b" aria-hidden="true"></span>${fullProductPage ? breadcrumb : ''}<p class="product-detail__eyebrow" data-part="eyebrow">${escape(eyebrowText)}</p>${style === 'conversion' || style === 'atelier' ? rating : ''}<${fullProductPage ? "h1" : "h2"} id="pagosya-product-title" data-part="title"${p.name.length > 32 ? ' data-length="long"' : ''}>${escape(p.name)}</${fullProductPage ? "h1" : "h2"}>${lead ? `<p class="product-detail__subtitle" data-part="subtitle">${escape(lead.lead)}</p>` : ''}${style !== 'conversion' && style !== 'atelier' ? rating : ''}<div class="product-detail__pricing" data-product-pricing>${isMembership(p) ? `<strong class="product-detail__price">${escape(membershipPriceText(p))}</strong>` : priceMarkup(p)}</div>${style === 'conversion' ? checksMarkup(conversionHighlights(p).checks) : ''}${p.description ? `<p class="product-detail__intro" data-part="intro">${escape(lead ? lead.rest : p.description)}</p>` : ''}${style === 'fashion' && (p.description || '').length > 220 ? '<button type="button" class="product-detail__more" data-product-more aria-expanded="false">Leer más</button>' : ''}${style === 'dense' ? specChipsMarkup(p) : ''}${style !== 'dense' && style !== 'conversion' ? highlightsMarkup(p) : ''}${isMembership(p) ? membershipMarkup(p) : groups ? `${optionsMarkup(groups)}${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-variant-add disabled>' + addText + '<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : limit(p) === 0 ? '<p>Agotado</p>' : box ? `${boxMarkup(p, box)}${quantityMarkup('<button class="product-detail__buy checkout-button" type="button" data-box-add disabled>' + addText + '<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>')}` : complex ? preview || config.demo ? '<button class="product-detail__buy checkout-button" disabled>Elegir opciones en la tienda</button>' : `<a class="product-detail__buy checkout-button" href="${escape(safeUrl(hostedProduct(p.id)))}">Elegir opciones</a>` : `${offerSquaresMarkup(p, undefined)}${subscriptionChoice(p)}${quantityMarkup(`<button class="product-detail__buy checkout-button" type="button" data-add="${escape(p.id)}">${addText}<span class="product-detail__buy-total" data-product-total aria-hidden="true"></span></button>`)}`}<p class="product-detail__status" role="status" aria-live="polite"></p>${style === 'dense' ? highlightsMarkup(p) : ''}${deliveryMarkup(p)}${productInformation(p)}</section></div>${contentBlocksMarkup(p)}${fullProductPage ? longPageTop(p) : ''}${fullProductPage ? `${bundleOffersMarkup(p)}${pairsMarkup(p)}${paymentsMarkup()}${relatedMarkup(p)}<section class="product-detail__reviews" id="product-reviews" data-product-reviews aria-labelledby="product-reviews-title" hidden></section>${longPageBottom(p)}<div class="product-detail__sticky-space" data-product-sticky-space hidden></div><div class="product-detail__sticky" data-product-sticky hidden><img data-product-sticky-photo alt="" hidden /><div><strong>${escape(p.name)}</strong><span data-product-sticky-choice></span><span data-product-sticky-price></span></div><button type="button" data-product-jump>${isMembership(p) ? 'Hacerme miembro' : 'Añadir'}</button></div>` : ''}`;
     detail.removeAttribute('data-page-template');
     applyProductPageTemplate();
     showImage(0);
@@ -4649,19 +4678,41 @@
       const categories = Array.isArray(store.categories) ? store.categories : [];
       state.sets.categoria = state.sets.categoria.map(value => { const named = categories.find(c => c && c.id && filterFold(c.name) === value); return named ? filterFold(named.id) : value; });
     }
+    // Owner 2026-11-14 («when clicked joyas it sends me to the page with all of the products»): V2 designs link a category as
+    // productos.html#joyas or ?category=Joyas / ?categoria=Joyas. Either is read as that category's filter (by name, id or slug);
+    // writeFilterState then keeps only f_categoria, so clearing the chip clears it.
+    if (!state.sets.categoria) {
+      const found = categoryNamed(params.get('categoria') || params.get('category') || (filterQuery == null ? linkedHashCategory() : ''));
+      if (found) state.sets.categoria = [filterFold(found.id)];
+    }
     for (const key of FILTER_TOGGLES) if (params.get(key) === '1') state.toggles.add(key);
     return state;
   }
+  // Hoisted like filterFold: buscar.html reads the filter state before this part has run.
+  function looseFold(text) { return filterFold(text).replace(/[^a-z0-9]+/g, ''); }
+  function categoryNamed(value) {
+    const key = looseFold(value);
+    return key ? (Array.isArray(store.categories) ? store.categories : []).find(c => c && c.id && (looseFold(c.name) === key || looseFold(c.id) === key)) || null : null;
+  }
+  function linkedHashCategory() { try { return decodeURIComponent((location.hash || '').slice(1)); } catch { return ''; } }
+  // A header link to productos.html#joyas clicked on the catalogue page itself only changes the hash.
+  window.addEventListener('hashchange', () => {
+    const found = document.querySelector('[data-catalog-full]') && categoryNamed(linkedHashCategory());
+    if (!found) return;
+    const state = readFilterState(); state.sets.categoria = [filterFold(found.id)];
+    writeFilterState(state); render();
+  });
   function writeFilterState(state) {
     const params = new URLSearchParams(filterQuery ?? (window.PAGOSYA_PREVIEW_QUERY || location.search));
-    [...params.keys()].filter(k => k.startsWith('f_') || ['orden', 'precio', 'q', ...FILTER_TOGGLES].includes(k)).forEach(k => params.delete(k));
+    [...params.keys()].filter(k => k.startsWith('f_') || ['orden', 'precio', 'q', 'categoria', 'category', ...FILTER_TOGGLES].includes(k)).forEach(k => params.delete(k));
     if (state.q && state.q.trim()) params.set('q', state.q.slice(0, 80));
     if (state.orden !== 'destacados') params.set('orden', state.orden);
     if (state.precio) params.set('precio', `${Math.floor(state.precio[0] / 100)}-${Math.ceil(state.precio[1] / 100)}`);
     for (const [key, values] of Object.entries(state.sets)) if (values.length) params.set(`f_${key}`, values.join(','));
     for (const key of state.toggles) params.set(key, '1');
     filterQuery = params.toString() ? `?${params}` : '';
-    try { history.replaceState(history.state, '', `${location.pathname}${filterQuery}${location.hash}`); } catch { /* sandboxed previews keep it in memory */ }
+    const hash = categoryNamed(linkedHashCategory()) ? '' : location.hash;
+    try { history.replaceState(history.state, '', `${location.pathname}${filterQuery}${hash}`); } catch { /* sandboxed previews keep it in memory */ }
   }
   function applyFilters(items, state) {
     const words = searchWords(state.q);
@@ -5244,6 +5295,12 @@
     inner.replaceChildren(root);
     checkoutPage.setAttribute('data-checkout-template', '');
   }
+  /** Owner 2026-11-13 (Clyro product page): parts drawn only for a template that has a place for them (pairs, payments, sticky bar). */
+  function productTemplateHas(name) {
+    const template = document.querySelector('template[data-pagosya-product-page-template]');
+    const source = template && (template.content && template.content.children.length ? template.content : template);
+    return Boolean(source && source.querySelector(`[data-product-slot="${name}"]`));
+  }
   const productPageTemplate = () => kitTemplate('product-page', 'productPageTemplateInvalid', root =>
     ['gallery', 'title', 'pricing', 'buy'].every(slot => root.querySelector(`[data-product-slot="${slot}"]`)));
   // A piece goes to the first slot whose selector it matches; "buy" is last because its "p" catches the sold-out note.
@@ -5253,18 +5310,18 @@
     ['description', '.product-detail__intro,.product-detail__more'], ['highlights', '.product-detail__highlights,.product-detail__chips'],
     ['delivery', '.product-detail__assurances'], ['info', '.product-tabs,[role=tabpanel],.product-detail__facts,.product-delivery-list'],
     ['bundles', '.product-detail__bundles,.product-detail__bundle-links'], ['related', '.product-detail__related'], ['reviews', '.product-detail__reviews'],
-    ['checks', '.product-detail__checks'],
+    ['checks', '.product-detail__checks'], ['pairs', '.product-detail__pairs'], ['payments', '.product-detail__payments'],
     ['buy', '.product-detail__options,.product-detail__box,.product-detail__purchase,.product-detail__buy,.product-detail__status,p'],
   ];
   // Purchase terms and anything unrecognised are never lost: they follow the buy slot when the template has no place for them.
-  const PRODUCT_DROPPABLE = new Set(['breadcrumb', 'category', 'rating', 'description', 'bundles', 'related', 'reviews']);
+  const PRODUCT_DROPPABLE = new Set(['breadcrumb', 'category', 'rating', 'description', 'bundles', 'related', 'reviews', 'pairs', 'payments']);
   function applyProductPageTemplate() {
     const template = productPageTemplate();
     const layout = detail.querySelector(':scope > .product-detail__layout');
     if (!template || !layout) return;
     const copy = layout.querySelector(':scope > .product-detail__copy');
     const pieces = [...[...layout.children].filter(child => child !== copy), ...(copy ? [...copy.children] : []),
-      ...[...detail.children].filter(child => child.matches('.product-detail__bundles,.product-detail__bundle-links,.product-detail__related,.product-detail__reviews'))];
+      ...[...detail.children].filter(child => child.matches('.product-detail__bundles,.product-detail__bundle-links,.product-detail__related,.product-detail__reviews,.product-detail__pairs,.product-detail__payments'))];
     // YAPI's long page (features, story, details, compare, questions): the half drawn before the reviews and the half after them.
     const reviewsPiece = detail.querySelector(':scope > .product-detail__reviews');
     const longParts = [...detail.children].filter(child => child.matches('.product-long'));
@@ -6722,7 +6779,35 @@
     document.head.append(style);
   };
   const blogMarkup = articles => { ensureBlogStyle(); return articles.map(article => `<article class="pagosya-article" id="articulo-${escape(article.slug)}"><h2 class="pagosya-article__title">${escape(article.title)}</h2><p class="pagosya-article__meta">${escape(article.author)} · ${new Date(article.publishedAt).toLocaleDateString('es-BO')}</p>${article.excerpt ? `<p class="pagosya-article__excerpt">${escape(article.excerpt)}</p>` : ''}<details class="pagosya-article__more"><summary>Leer aquí</summary>${article.body.split(/\n\s*\n/).map(paragraph => `<p>${escape(paragraph)}</p>`).join('')}</details><p class="pagosya-article__links"><a data-article-url href="${escape(new URL(config.apiBaseUrl, config.checkoutOrigin).href.replace(/\/$/, ''))}/stores/public/${encodeURIComponent(config.slug)}/pages/${encodeURIComponent(article.locale)}/${encodeURIComponent(article.slug)}">Abrir artículo</a></p></article>`).join('') || '<p>Todavía no hay artículos publicados.</p>'; };
+  /* Owner 2026-11-13 («discounts everything like full kits»): the store's real packs as cards — the products' photos, what is inside,
+   * the saving and, for a fixed pack whose products are all simple and in stock, one button that adds the whole pack (data-bundle-add). */
+  function packsMarkup(bundles) {
+    return (Array.isArray(bundles) ? bundles : []).map(bundle => {
+      const entries = (Array.isArray(bundle.items) ? bundle.items : []).map(item => ({ p: products().find(candidate => candidate.id === item?.productId), quantity: Math.max(1, Number(item?.quantity) || 1) }));
+      if (!entries.length || entries.some(entry => !entry.p)) return '';
+      const photos = entries.map(entry => (Array.isArray(entry.p.imageUrls) ? entry.p.imageUrls[0] : '') || entry.p.imageUrl || '').filter(Boolean).slice(0, 3);
+      const percent = Math.max(0, Math.min(100, Number(bundle.discountPercent) || 0));
+      const inside = bundle.kind === 'FIXED' ? entries.map(entry => `${entry.quantity > 1 ? `${entry.quantity} × ` : ''}${escape(entry.p.name)}`).join(' + ')
+        : `${bundle.kind === 'BOGO' ? 'Lleva 2' : `Combina ${Math.max(2, Number(bundle.minimumQuantity) || 2)} o más`} entre ${entries.map(entry => escape(entry.p.name)).join(', ')}`;
+      const save = bundle.kind === 'BOGO' ? 'El de menor precio es gratis' : percent ? `Ahorras ${percent}%` : '';
+      const addable = bundle.kind === 'FIXED' && entries.every(entry => !entry.p.variants?.length && !entry.p.extras?.length);
+      return `<article class="pym-pack">${photos.length ? `<div class="pym-pack__photos" data-count="${photos.length}">${photos.map(src => `<img src="${escape(src)}" alt="" loading="lazy">`).join('')}</div>` : ''}
+        <div class="pym-pack__body">${bundle.label ? `<p class="pym-pack__label">${escape(bundle.label)}</p>` : ''}<h3 class="pym-pack__name">${escape(bundle.name)}</h3>
+        <p class="pym-pack__inside">${inside}</p>${save ? `<p class="pym-pack__save">${escape(save)}</p>` : ''}
+        ${addable ? `<button type="button" class="pym-pack__add" data-bundle-add="${escape(bundle.id)}">Agregar el pack</button>` : '<p class="pym-pack__note">El descuento se aplica solo al pagar.</p>'}</div></article>`;
+    }).join('');
+  }
+  /* Owner 2026-11-13 (ways to pay, «payments are the core»): what the store's checkout really takes, from its checkout mode — online
+   * payment (pagosYa: QR, card, Tigo Money, transfer), an order by WhatsApp, or payment agreed with the store. Never a method it lacks. */
+  function payWaysMarkup(mode) {
+    const ways = mode === 'payment'
+      ? [['QR', 'Escanea con la app de tu banco'], ['Tarjeta', 'Visa, Mastercard o American Express'], ['Tigo Money', 'Desde tu billetera'], ['Transferencia', 'Desde tu banco']]
+      : mode === 'whatsapp' ? [['WhatsApp', 'Confirmas tu pedido y acuerdas el pago con la tienda']] : [['Con la tienda', 'Acuerdas el pago al confirmar tu pedido']];
+    return `<ul class="pym-pay">${ways.map(([name, note]) => `<li><strong>${escape(name)}</strong><span>${escape(note)}</span></li>`).join('')}</ul>`
+      + (mode === 'payment' ? '<p class="pym-pay__note">Pago seguro procesado por pagosYa.</p>' : '');
+  }
   async function loadCommerceContent() {
+    document.querySelectorAll('[data-pagosya-payways]').forEach(slot => { slot.innerHTML = payWaysMarkup(config.data?.checkoutMode || 'payment'); });
     const slots = document.querySelectorAll('[data-pagosya-blog],[data-pagosya-reviews],[data-pagosya-bundles]');
     if (!slots.length && !fullProductPage) return;
     if (preview || config.demo) {
@@ -6735,6 +6820,18 @@
           return;
         }
         if (slot.hasAttribute('data-pagosya-blog') && Array.isArray(config.data?.articles)) { slot.innerHTML = blogMarkup(config.data.articles); return; }
+        // Packs (owner 2026-11-13): the store's packs are in its config, so the preview shows them as the store will.
+        if (slot.hasAttribute('data-pagosya-bundles') && Array.isArray(config.data?.bundles)) { slot.innerHTML = packsMarkup(config.data.bundles) || '<p>No hay paquetes activos.</p>'; return; }
+        // The product page's own reviews block (the store's design wrote it) shows the two labelled examples the platform's block
+        // shows in the preview, never a placeholder line (owner 2026-11-15, Oh Belly r19: «El contenido publicado… aparecerá aquí»).
+        // A published demo store has no reviews to show: its block stays hidden.
+        if (slot.hasAttribute('data-pagosya-reviews')) {
+          if (preview) { slot.innerHTML = [{ rating: 5, displayName: 'Ejemplo', body: 'Así se verá una reseña verificada de tus clientes después de su compra.' }, { rating: 5, displayName: 'Ejemplo', body: 'Las reseñas reales llegan solas: pagosYa se las pide a quien ya recibió su pedido.' }].map(reviewMarkup).join(''); return; }
+          slot.hidden = true;
+          const section = slot.closest('[data-pagosya-reviews-section]');
+          if (section) section.hidden = true;
+          return;
+        }
         slot.textContent = 'El contenido publicado del comercio aparecerá aquí en la tienda.';
       });
       return;
@@ -6756,7 +6853,7 @@
           if (section) section.hidden = slot.hidden;
           if (slot.hasAttribute('data-pagosya-carousel')) mountCarousel(slot);
         }
-        if (slot.hasAttribute('data-pagosya-bundles')) slot.innerHTML = data.bundles.map(bundle => `<article><h3>${escape(bundle.name)}</h3><p>${bundle.kind === 'BOGO' ? 'Lleva dos; el de menor precio es gratis.' : `${bundle.discountPercent}% de descuento ${bundle.kind === 'FIXED' ? 'al completar el paquete' : 'desde ' + bundle.minimumQuantity + ' unidades'}.`}</p><ul>${bundle.items.map(item => `<li>${escape(products().find(p => p.id === item.productId)?.name || 'Producto del paquete')}${bundle.kind === 'FIXED' ? ' × ' + item.quantity : ''}</li>`).join('')}</ul><p>Añade los productos al carrito. La mejor oferta se aplica automáticamente al pagar; no se acumula con otros códigos.</p></article>`).join('') || '<p>No hay paquetes activos.</p>';
+        if (slot.hasAttribute('data-pagosya-bundles')) slot.innerHTML = packsMarkup(data.bundles) || '<p>No hay paquetes activos.</p>';
       });
     } catch { slots.forEach(slot => { slot.textContent = 'No pudimos cargar esta sección. Recarga la página para intentar de nuevo.'; }); }
   }
@@ -6851,7 +6948,8 @@
     .pym-toggle{display:inline-grid;place-items:center;width:44px;height:44px;padding:0;border:0;background:transparent;color:inherit;cursor:pointer}
     .pym-bars,.pym-bars::before,.pym-bars::after{display:block;width:20px;height:1.5px;background:currentColor;content:""}
     .pym-bars{position:relative}.pym-bars::before{position:absolute;top:-6px}.pym-bars::after{position:absolute;top:6px}
-    .pym-top{min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;font-size:13px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+    .pym-top{display:inline-flex;align-items:center;min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;font-size:13px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+    /* A menu group with one page (Nosotros) is a link, not a button: same line and look as its neighbours (owner 2026-11-13). */
     .pym-top[aria-expanded="true"]{text-decoration:underline;text-underline-offset:6px}
     .pym-panel{position:absolute;left:0;right:0;top:100%;z-index:40;max-height:calc(100dvh - 72px);overflow:auto;padding:24px max(20px,calc((100% - 1280px)/2));background:var(--store-background,#fff);color:var(--store-foreground,#111);border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);box-shadow:0 24px 48px -24px rgb(0 0 0 / .25);text-align:left;animation:pym-in .18s ease-out}
     .pym-panel[hidden],.pym-group[hidden]{display:none!important}

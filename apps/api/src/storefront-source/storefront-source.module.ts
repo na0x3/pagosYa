@@ -1,3 +1,5 @@
+import { SourceV2PrototypeController } from './v2/v2-prototype.controller';
+import { SourceV2PrototypeService } from './v2/v2-prototype.service';
 import { SourceTourController } from './source-tour.controller';
 import { SourceTourService } from './source-tour.service';
 import { SourceAbController } from './source-ab.controller';
@@ -58,8 +60,8 @@ const storePlanParts = new StorePlanParts(
 import { ProductPageModule } from '../product-content/product-page.module';
 @Module({
   imports: [DashboardModule, AuthModule, UploadsModule, AiUsageModule, BrandModule, StoresModule, RewardsModule, StoreEmailModule, StorePopupModule, ProductPageModule],
-  controllers: [SourceTourController, SourceAbController,SketchStudioController, SourceChatJobsController, SourceFontsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController, StoreVoiceController, AssumedFactCountsController, SourceStartersController],
-  providers: [SourceTourService, SourceAbService,SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceThumbnailsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService, StoreVoiceService, SourceStorePlanService, SourceStartersService, VisualAiService, { provide: StorePlanParts, useValue: storePlanParts }],
+  controllers: [SourceV2PrototypeController, SourceTourController, SourceAbController,SketchStudioController, SourceChatJobsController, SourceFontsController, SourceDesignJobsController, SourceAssetsController, SourcePublishingController, SourceSiteController, SourceProjectsController, SourceTemplatesListController, SourceTemplatesApplyController, StoreVoiceController, AssumedFactCountsController, SourceStartersController],
+  providers: [SourceV2PrototypeService, SourceTourService, SourceAbService,SketchStudioService, SourceChatJobsService, MerchantThrottlerGuard, SourceDesignJobsService, SourceDesignJobWorker, SourceDesignEvaluator, SourceVisualReviewService, SourceDesignPlanner, SourcePublishingService, SourceProjectsService, SourceThumbnailsService, SourceGenerationService, SourceChatService, SourceConversationService, SourceTemplatesService, StoreVoiceService, SourceStorePlanService, SourceStartersService, VisualAiService, { provide: StorePlanParts, useValue: storePlanParts }],
   exports: [SourceProjectsService, SourceTemplatesService, SourceChatService],
 })
 export class StorefrontSourceModule {}

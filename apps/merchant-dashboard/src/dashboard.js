@@ -65,13 +65,16 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   emailEl.value = sessionStorage.getItem("pagosya_merchant_email") || emailEl.value;
   let sessionToken = sessionStorage.getItem("pagosya_merchant_session") || "";
   let currentProfileName = "";
+  // YAPI's welcome while it is on screen (src/yapi-welcome.mjs); the hash the panel was opened with decides whether it shows.
+  let welcome = null;
+  const entryHash = location.hash;
   let lastProfileSessionsPayload = null;
   // Perfil: the owner's profile menu and devices line (src/profile-sessions.mjs).
   const profilePanel = createProfileSessions({
     api, setButtonBusy, emailEl,
     elements: { loggedInAsEl, profileMenuEl, profileMenuTriggerEl, profileTriggerAvatarEl, profileMenuAvatarEl, accountAvatarEl, profileDisplayNameEl, profileSessionsEl },
     profileName: () => currentProfileName,
-    setProfileName: (name) => { currentProfileName = name; },
+    setProfileName: (name) => { currentProfileName = name; welcome?.greet(greetingFor(new Date(), name)); },
     profileSessionsPayload: () => lastProfileSessionsPayload,
     setProfileSessionsPayload: (payload) => { lastProfileSessionsPayload = payload; },
   });
@@ -926,6 +929,7 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
   function renderOverview() {
     if (!lastFinances) return;
     document.getElementById("overviewGreeting").textContent = greetingFor(new Date(), currentProfileName);
+    welcome?.greet(greetingFor(new Date(), currentProfileName));
     document.getElementById("overviewKpis").innerHTML = renderOverviewKpis(overviewKpis({ finances: lastFinances, money }));
     const store = lastStores.find((entry) => entry.id === currentStoreId);
     const setup = document.getElementById("overviewSetup");
@@ -1126,15 +1130,24 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     return url;
   }
 
-  // The login's mesh gradient runs only while the login is on screen.
+  // The login's koi (owner 2026-11-15, the ascii-animals repo: «the entire login screen that colour … smooth smooth») swim
+  // behind the whole login in dark gray (was the panel's deep blue), in fine cells without the grid, only while the login is on screen;
+  // where the canvas can't start, the blue panel's mesh gradient runs as before.
+  const LOGIN_POND = [30, 31, 35];
   let disposeLoginShader = null;
   function startLoginShader() {
     if (disposeLoginShader) return;
     disposeLoginShader = () => {};
     const host = document.querySelector("[data-login-shader]");
     if (!host) return;
-    import("/src/login-shader.mjs").then(async ({ mountLoginShader }) => {
-      const dispose = await mountLoginShader(host);
+    import("/src/yapi-welcome.mjs").then(async ({ mountAsciiAnimals }) => {
+      const canvas = document.querySelector("[data-login-koi]");
+      let dispose = canvas ? await mountAsciiAnimals(canvas, { animal: "koi", theme: "dark", background: LOGIN_POND, tuning: { detail: 2, grid: 0, speed: 0.85 } }) : null;
+      if (dispose) canvas.closest(".login-split")?.classList.add("has-koi");
+      else {
+        canvas?.remove();
+        dispose = await import("/src/login-shader.mjs").then(({ mountLoginShader }) => mountLoginShader(host));
+      }
       if (document.body.classList.contains("is-logged-out")) disposeLoginShader = dispose; else dispose();
     });
   }
@@ -1156,7 +1169,27 @@ import { lowStock, renderRestock } from "/src/restock.mjs";
     startLoginShader();
   }
 
+  // Owner 2026-11-15 (the «ASCII animals» browser): opening the panel lands on YAPI's welcome, once per visit.
+  let welcomeChecked = false;
+  function maybeWelcome() {
+    if (welcomeChecked) return;
+    welcomeChecked = true;
+    import("/src/yapi-welcome.mjs").then(({ shouldWelcome, showYapiWelcome }) => {
+      if (!sessionToken || !shouldWelcome(entryHash)) return;
+      welcome = showYapiWelcome({
+        root: document.getElementById("yapiWelcome"),
+        greeting: greetingFor(new Date(), currentProfileName),
+        onAsk: (text, from) => {
+          if (!currentStoreId) { welcome?.note("Crea tu tienda en «Tienda» para conversar con YAPI."); return false; }
+          composeInYapi(text, undefined, from);
+        },
+        onClose: () => { welcome = null; },
+      });
+    });
+  }
+
   function showLoggedIn() {
+    maybeWelcome();
     document.body.classList.remove("is-logged-out");
     document.body.classList.add("is-logged-in");
     loginFormEl.style.display = "none";

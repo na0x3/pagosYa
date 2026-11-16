@@ -98,6 +98,12 @@
     inner.replaceChildren(root);
     checkoutPage.setAttribute('data-checkout-template', '');
   }
+  /** Owner 2026-11-13 (Clyro product page): parts drawn only for a template that has a place for them (pairs, payments, sticky bar). */
+  function productTemplateHas(name) {
+    const template = document.querySelector('template[data-pagosya-product-page-template]');
+    const source = template && (template.content && template.content.children.length ? template.content : template);
+    return Boolean(source && source.querySelector(`[data-product-slot="${name}"]`));
+  }
   const productPageTemplate = () => kitTemplate('product-page', 'productPageTemplateInvalid', root =>
     ['gallery', 'title', 'pricing', 'buy'].every(slot => root.querySelector(`[data-product-slot="${slot}"]`)));
   // A piece goes to the first slot whose selector it matches; "buy" is last because its "p" catches the sold-out note.
@@ -107,18 +113,18 @@
     ['description', '.product-detail__intro,.product-detail__more'], ['highlights', '.product-detail__highlights,.product-detail__chips'],
     ['delivery', '.product-detail__assurances'], ['info', '.product-tabs,[role=tabpanel],.product-detail__facts,.product-delivery-list'],
     ['bundles', '.product-detail__bundles,.product-detail__bundle-links'], ['related', '.product-detail__related'], ['reviews', '.product-detail__reviews'],
-    ['checks', '.product-detail__checks'],
+    ['checks', '.product-detail__checks'], ['pairs', '.product-detail__pairs'], ['payments', '.product-detail__payments'],
     ['buy', '.product-detail__options,.product-detail__box,.product-detail__purchase,.product-detail__buy,.product-detail__status,p'],
   ];
   // Purchase terms and anything unrecognised are never lost: they follow the buy slot when the template has no place for them.
-  const PRODUCT_DROPPABLE = new Set(['breadcrumb', 'category', 'rating', 'description', 'bundles', 'related', 'reviews']);
+  const PRODUCT_DROPPABLE = new Set(['breadcrumb', 'category', 'rating', 'description', 'bundles', 'related', 'reviews', 'pairs', 'payments']);
   function applyProductPageTemplate() {
     const template = productPageTemplate();
     const layout = detail.querySelector(':scope > .product-detail__layout');
     if (!template || !layout) return;
     const copy = layout.querySelector(':scope > .product-detail__copy');
     const pieces = [...[...layout.children].filter(child => child !== copy), ...(copy ? [...copy.children] : []),
-      ...[...detail.children].filter(child => child.matches('.product-detail__bundles,.product-detail__bundle-links,.product-detail__related,.product-detail__reviews'))];
+      ...[...detail.children].filter(child => child.matches('.product-detail__bundles,.product-detail__bundle-links,.product-detail__related,.product-detail__reviews,.product-detail__pairs,.product-detail__payments'))];
     // YAPI's long page (features, story, details, compare, questions): the half drawn before the reviews and the half after them.
     const reviewsPiece = detail.querySelector(':scope > .product-detail__reviews');
     const longParts = [...detail.children].filter(child => child.matches('.product-long'));

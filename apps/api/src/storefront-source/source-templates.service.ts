@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import { UploadsService } from '../uploads/uploads.service';
 import { ProductPageWriterService } from '../product-content/product-page-writer.service';
 import { BrandProfileService } from '../brand/brand-profile.service';
-import { deepFromAccent, paletteFromNamed, proposeStorePalette, type SourcePalette } from './source-palette';
+import { deepFromAccent, neutralInk, paletteFromNamed, proposeStorePalette, richerGround, type SourcePalette } from './source-palette';
 import { coverForPhoto, photoFitVariants, readPhotoFit, styleForCharacter } from './source-photo-fit';
 import type { SourceProjectFileDto } from './dto/save-source-project.dto';
 import { BUNDLED_PHOTO, bundledPhotoPath, uploadPath } from './source-product-photos';
@@ -205,10 +205,27 @@ export class SourceTemplatesService {
     const brandPalette = logo ?? named ?? photosPalette;
     // The whole brand palette on every template now (paper and ink only tinted by the brand's hue, so the page stays calm and readable),
     // and a deep colour from the accent for the dark bands.
-    const colours = Object.keys(brandColours).length ? brandColours
+    let colours: Record<string, string> | undefined = Object.keys(brandColours).length ? brandColours
       : brandPalette ? { paper: brandPalette.paper, ink: brandPalette.ink, accent: brandPalette.accent, muted: brandPalette.surface, ...(deepFromAccent(brandPalette.accent) ? { deep: deepFromAccent(brandPalette.accent)! } : {}) } : undefined;
     // The merchant's confirmed brand colours always win over a plan's accent (final review 2026-10-22).
     if (colours && plan?.accent && !Object.keys(brandColours).length) colours.accent = plan.accent;
+    // Owner 2026-11-13 (ZARA's brown text): text read from the photos stays a near-neutral dark.
+    if (colours && photosPalette && !named && !logo && colours.ink) colours.ink = neutralInk(colours.ink);
+    // Owner 2026-11-13 («backgrounds are too white»): a guessed near-white ground gets the brand's hue (a white the merchant asked for stays).
+    if (colours?.paper && !Object.keys(brandColours).length && this.config.get<boolean>('app.yapiHeroKit') === true) {
+      const ground = richerGround(colours.paper, colours.muted);
+      colours.paper = ground.paper;
+      if (ground.muted) colours.muted = ground.muted;
+    }
+    // Owner 2026-11-13 (ZARA «Fondo blanco, texto negro y un gris muy suave»): colours the merchant gave a job win over every guess;
+    // a black-and-white brand («nada de colores») is white, near-black and one soft grey, the accent the ink.
+    const roles = Object.keys(brandColours).length ? undefined : fill?.namedRoles;
+    if (roles && Object.keys(roles).length) {
+      const base: Record<string, string> = roles.mono ? { paper: '#ffffff', ink: '#111111', muted: '#efefef', accent: '#111111', deep: '#111111' } : { ...(colours ?? {}) };
+      for (const role of ['paper', 'ink', 'accent', 'muted'] as const) if (roles[role]) base[role] = roles[role]!;
+      if (roles.mono && !roles.accent) base.accent = base.ink;
+      colours = base as typeof colours;
+    }
     if (colours) fill = { ...(fill ?? {}), look: { ...(fill?.look ?? {}), colors: colours, ...(brandPalette && colours.paper && colours.ink && colours.accent ? { titles: titleColours({ paper: colours.paper, ink: colours.ink, accentInk: accentInk(colours.accent, colours.paper, colours.ink), deep: colours.deep, extras: brandPalette.extras }) } : {}), ...(fill?.look?.palette ? { palette: paletteForBrand(manifest.master, fill.look.palette, colours) } : {}) } };
     const files = [...bundled.files, ...carried.filter(file => !bundled.files.some(own => own.path === file.path))];
     // Starter dice (spec 2026-10-24-starter-dice §1): a starter with dice rolls its own lists, seeded by the store.

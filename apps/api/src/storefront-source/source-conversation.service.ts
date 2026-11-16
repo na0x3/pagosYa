@@ -18,7 +18,7 @@ import { sourceResponseJson } from './source-response';
 import { SUGGESTIONS_PROMPT, SUGGESTIONS_SCHEMA, type SuggestionInput } from './source-suggestions';
 import type { MasterCopy } from '@pagosya/store-templates';
 import { MASTER_COLOURS, MASTER_COPY_CAPS, MASTER_VALUE_CAPS, type FillMenu, type MasterLook, type MasterRead } from './source-master';
-import { LIBRARY_CATALOG, LIBRARY_FILL_PROMPT, LIBRARY_ICON_NAMES, LIBRARY_PROMPT, libraryAnswerSchema, type LayoutBlock, type LibraryFacts } from './source-section-library';
+import { BRAND_STYLE_PROMPT, HERO_KIT_PROMPT, LIBRARY_CATALOG, LIBRARY_FILL_PROMPT, LIBRARY_ICON_NAMES, LIBRARY_PROMPT, RICH_FILL_PROMPT, RICH_SWAPS, libraryAnswerSchema, type LayoutBlock, type LibraryFacts } from './source-section-library';
 import { readTemplatePicks, TEMPLATE_PICK_PROMPT, templatePickSchema, type PickableTemplate } from './source-template-pick';
 import { addableSections, LAYOUT_EDIT_PROMPT, layoutDigest, layoutEditSchema, readLayoutEdit, type LayoutEditRead } from './source-layout-edit';
 import { CATALOG_EDIT_PROMPT } from './source-catalog-edit';
@@ -353,9 +353,11 @@ export class SourceConversationService {
     } finally { await this.metering?.record(input.storeId, 'source-composer', model, body, Date.now() - started, status); }
   }
 
-  /** Spec 2026-11-11 store composer: the composed home looked at, desktop then phone; only problems with a change the code can apply. */
-  async reviewHome(_merchantId: string, input: { storeId: string; layout: LayoutBlock[]; template: ComposerTemplate; recent: HomeSummary[]; photoCount: number; images: string[] }):
+  /** Spec 2026-11-11 store composer: the composed home looked at, desktop then phone; only problems with a change the code can apply.
+   *  `known` (spec 2026-11-13 fill review): what the page rules already found, so the review looks for the rest. */
+  async reviewHome(_merchantId: string, input: { storeId: string; layout: LayoutBlock[]; template: ComposerTemplate; recent: HomeSummary[]; photoCount: number; images: string[]; known?: string[] }):
     Promise<{ problems: ComposerProblem[]; microUsd: number }> {
+    const known = input.known?.length ? `\nYa lo encontraron las reglas de la página (no lo repitas; se corrige aparte):\n${input.known.map(line => `· ${line}`).join('\n')}` : '';
     const model = this.config.get<string>('app.yapiComposerModel') || 'gpt-5.6-sol';
     const provider = sourceProvider(this.config, model);
     const started = Date.now(); let body: any = null; let status = 'FAILED';
@@ -363,7 +365,7 @@ export class SourceConversationService {
       const response = await fetch(provider.endpoint, {
         method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(180_000),
         body: JSON.stringify({ model, store: false, instructions: composerReviewPrompt(),
-          input: [{ role: 'user', content: [{ type: 'input_text', text: composerReviewText(input.layout, input.template, input.recent, input.photoCount) },
+          input: [{ role: 'user', content: [{ type: 'input_text', text: composerReviewText(input.layout, input.template, input.recent, input.photoCount) + known },
             ...input.images.map(image_url => ({ type: 'input_image', image_url, detail: 'high' }))] }],
           text: { format: { type: 'json_schema', name: 'composer_review', strict: true, schema: composerReviewSchema() } },
           reasoning: { effort: this.config.get<'low' | 'medium' | 'high'>('app.yapiComposerEffort') ?? 'medium' }, max_output_tokens: 4000 }),
@@ -377,7 +379,9 @@ export class SourceConversationService {
     } finally { await this.metering?.record(input.storeId, 'source-composer-review', model, body, Date.now() - started, status); }
   }
 
-  async composeLibrary(merchantId: string, input: { storeId: string; model?: string; facts: LibraryFacts; template?: LayoutBlock[] }): Promise<{ blocks?: unknown[] } | null> {
+  async composeLibrary(merchantId: string, input: { storeId: string; model?: string; facts: LibraryFacts; template?: LayoutBlock[]; rich?: boolean; heroKit?: boolean;
+    /** Owner 2026-11-13: the store's own type, lettered logo and icon style (BRAND_STYLE_PROMPT), on a template's home only. */
+    brand?: { pairs: Array<{ id: string; heading: string; body: string }>; fonts: Array<{ id: string; family: string; personality: readonly string[] }> } }): Promise<{ blocks?: unknown[]; brand?: unknown } | null> {
     // Its own model, not the capped conversation one: the picks and words are the store's whole look (terra by default).
     const model = input.model || this.config.get<string>('app.yapiSectionLibraryModel') || 'gpt-5.6-terra';
     const provider = sourceProvider(this.config, model);
@@ -389,16 +393,19 @@ export class SourceConversationService {
       // A store on a template (34 templates): only that template's sections, with their example words; else the free catalogue.
       ...(input.template?.length
         ? { plantilla: input.template.map(({ photo: _p, photo2: _p2, items, ...block }) => ({ ...block, ...(items ? { items: items.map(({ photo: _ip, ...item }) => item) } : {}) })),
-            catalogue: LIBRARY_CATALOG.filter(section => input.template!.some(block => block.type === section.id)).map(({ id, role, use }) => ({ id, role, use })) }
+            catalogue: LIBRARY_CATALOG.filter(section => input.template!.some(block => block.type === section.id)).map(({ id, role, use }) => ({ id, role, use })),
+            // Owner 2026-11-13: a template's home may swap in the kit's rich sections (RICH_SWAPS).
+            ...(input.rich ? { ricas: LIBRARY_CATALOG.filter(section => Object.values(RICH_SWAPS).some(list => list.includes(section.id))).map(({ id, role, use, looks }) => ({ id, role, use, ...(looks ? { looks } : {}) })) } : {}),
+            ...(input.brand ? { pares: input.brand.pairs, letras: input.brand.fonts.map(({ id, family, personality }) => ({ id, family, personality: personality.join(' ') })) } : {}) }
         : { catalogue: LIBRARY_CATALOG.filter(section => !section.templateOnly).map(({ id, role, use, looks }) => ({ id, role, use, ...(looks ? { looks } : {}) })) }) };
     for (let attempt = 0; attempt < 2; attempt++) {
       const started = Date.now(); let body: any = null; let status = 'FAILED';
       try {
         const response = await fetch(provider.endpoint, {
           method: 'POST', headers: { Authorization: `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(120_000),
-          body: JSON.stringify({ model, store: false, instructions: input.template?.length ? `${LIBRARY_PROMPT}\n\n${LIBRARY_FILL_PROMPT}` : LIBRARY_PROMPT,
+          body: JSON.stringify({ model, store: false, instructions: input.template?.length ? `${LIBRARY_PROMPT}\n\n${LIBRARY_FILL_PROMPT}${input.rich ? `\n\n${RICH_FILL_PROMPT}` : ''}${input.heroKit ? `\n\n${HERO_KIT_PROMPT}` : ''}${input.brand ? `\n\n${BRAND_STYLE_PROMPT}` : ''}` : LIBRARY_PROMPT,
             input: [{ role: 'user', content: [{ type: 'input_text', text: JSON.stringify(facts) }, ...images] }],
-            text: { format: { type: 'json_schema', name: 'section_library', strict: true, schema: libraryAnswerSchema(photos.length) } },
+            text: { format: { type: 'json_schema', name: 'section_library', strict: true, schema: libraryAnswerSchema(photos.length, input.brand ? { pairs: input.brand.pairs.map(pair => pair.id), fonts: input.brand.fonts.map(font => font.id) } : undefined) } },
             reasoning: { effort: 'low' }, max_output_tokens: input.template?.length ? 12000 : 6000 }),
         });
         body = await response.json().catch(() => null);

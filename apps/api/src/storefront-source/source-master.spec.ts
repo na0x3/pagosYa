@@ -1,4 +1,4 @@
-import { masterFillFromRead, masterProductStyle, masterShowcase } from './source-master';
+import { brandStyleLook, masterFillFromRead, masterProductStyle, masterShowcase, lookShapeCss, lookCleanCss } from './source-master';
 import { templateManifest } from '@pagosya/store-templates';
 import { paletteForBrand } from './source-master';
 import type { MasterSettings } from '@pagosya/store-templates';
@@ -169,3 +169,47 @@ it('a fill read keeps up to six business sections', () => {
   const read = { sections: ['faq', 'process', 'materials', 'visit', 'quotes', 'care', 'sizes'].map(section) } as any;
   expect(masterFillFromRead(read, [], false).sections?.map(s => s.id)).toEqual(['faq', 'process', 'materials', 'visit', 'quotes', 'care']);
 });
+
+// Owner 2026-11-13 («custom letters, custom icons»): a template store's own font pair, lettered logo and icon style.
+describe('brand style', () => {
+  const settings = templateManifest('esencial')!.master as MasterSettings;
+  it('reads the answer: a known pair, a catalog logo font, known choices; anything else is left out', () => {
+    expect(brandStyleLook({ fonts: 'modern', logoFont: 'bowlby-one', logoCase: 'upper', logoTrack: 'wide', logoColour: 'accent', iconStroke: 'bold', iconFrame: 'circle' }, ['modern']))
+      .toEqual({ fonts: 'modern', logo: { font: 'bowlby-one', case: 'upper', track: 'wide', colour: 'accent' }, icons: { stroke: 'bold', frame: 'circle' } });
+    expect(brandStyleLook({ fonts: 'nope', logoFont: 'comic-sans', iconStroke: 'x', iconFrame: 'y' }, ['modern'])).toBeUndefined();
+  });
+  it('draws the logo font, case and spacing, and the icon stroke and holders inside the theme block', () => {
+    const css = masterThemeCss(settings, masterLook(settings, { fonts: 'modern', logo: { font: 'bowlby-one', case: 'upper', track: 'wide', colour: 'accent' }, icons: { stroke: 'thin', frame: 'square' } }));
+    const block = css.slice(css.indexOf(MASTER_THEME_START), css.indexOf(MASTER_THEME_END));
+    expect(block).toContain("url(assets/bowlby-one.ttf)");
+    expect(block).toMatch(/:is\(\.es-logo,[^)]*\)\{font-family:'Bowlby One'[^}]*text-transform:uppercase!important;letter-spacing:0\.14em!important\}/);
+    expect(block).toContain('.es-header .es-logo{color:var(--es-accent)!important}');
+    expect(block).toContain('svg[stroke="currentColor"]{stroke-width:1}');
+    expect(block).toContain('border-radius:14px!important');
+  });
+  it('keeps the template look untouched without a brand style', () => {
+    const css = masterThemeCss(settings, masterLook(settings, { fonts: 'modern' }));
+    expect(css).not.toMatch(/es-logo|stroke-width|__icon/);
+  });
+
+  it('gives every button, field and panel the store\'s corner family and hover motion', () => {
+    expect(brandStyleLook({ corners: 'pill', hover: 'sweep' }, [])).toEqual({ shape: { corners: 'pill', hover: 'sweep' } });
+    expect(brandStyleLook({ corners: 'blob', hover: 'spin' }, [])).toBeUndefined();
+    const css = lookShapeCss({ corners: 'cut', hover: 'lift' });
+    expect(css).toContain('border-radius:16px 0!important');
+    expect(css).toContain('.catalog-search input');
+    expect(css).toContain('translateY(-3px)');
+    expect(css).toContain('prefers-reduced-motion:no-preference');
+    expect(lookShapeCss({ corners: 'sharp', hover: 'sweep' })).toContain('background-size:100% 100%');
+    expect(lookShapeCss(undefined)).toBe('');
+  });
+
+  it('draws a clean look: one ground, even photo tiles, calm titles, hairlines', () => {
+    const css = lookCleanCss(true);
+    expect(css).toContain('--es-t-weight:400');
+    expect(css).toContain('object-fit:contain');
+    expect(css).toContain('border-top:1px solid');
+    expect(lookCleanCss(undefined)).toBe('');
+  });
+});
+

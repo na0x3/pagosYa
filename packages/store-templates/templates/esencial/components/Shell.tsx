@@ -6,12 +6,14 @@ import { CardRibbons, CardTemplate, ThemeMotion, libraryCard, type LibraryBlock 
 
 /** The rolled variant of a part (variety spec §2); the first catalogue id when the store has none. */
 export const variant = (part: string, fallback: string) => { const value = variants[part]; return typeof value === 'string' && value ? value : fallback; };
-import { IconApple, IconBaby, IconBeef, IconBookOpen, IconCake, IconCircleUser, IconCoffee, IconCookie, IconCroissant, IconCupSoda, IconDroplet, IconDumbbell, IconFlame, IconFlaskConical, IconFlower2, IconGem, IconGift, IconIceCreamCone, IconLamp, IconLogIn,
+import { IconApple, IconBaby, IconBeef, IconBookOpen, IconCake, IconCoffee, IconCookie, IconCroissant, IconCupSoda, IconDroplet, IconDumbbell, IconFlame, IconFlaskConical, IconFlower2, IconGem, IconGift, IconIceCreamCone, IconLamp,
   IconMapPin, IconMenu, IconMessageCircle, IconPalette, IconPawPrint, IconSearch, IconShirt, IconShoppingBag, IconShoppingBasket, IconShoppingCart, IconSofa, IconSparkles, IconSprout, IconUser, IconUtensils, IconWatch, IconWine, IconX } from './icons';
 
 /** 34 templates (2026-10-31): the header glyphs of each theme — Palo Alto's person in a circle, a cart, a basket, or words. */
 const HEADER_ICONS: Record<string, { account: typeof IconSearch; cart: typeof IconSearch }> = {
-  line: { account: IconLogIn, cart: IconShoppingBag }, person: { account: IconCircleUser, cart: IconShoppingBag },
+  // Owner 2026-11-14 («the icons are the same up top, like little shirt, search button and create profile»): the account is the
+  // same person on every theme (it was a log-in arrow or a person in a circle); the cart still follows the theme or the goods.
+  line: { account: IconUser, cart: IconShoppingBag }, person: { account: IconUser, cart: IconShoppingBag },
   cart: { account: IconUser, cart: IconShoppingCart }, basket: { account: IconUser, cart: IconShoppingBasket },
 };
 /** Owner 2026-11-06 («siempre íconos, nunca palabras; si es una joyería que el carrito sea un anillo»): the cart shows what the store
@@ -151,7 +153,8 @@ export function Footer() {
   // A template home with its own newsletter section never shows a second one in the footer.
   const news = !themed || !(layout as LibraryBlock[]).some(block => block.type === 'newsletter-split');
   return <footer className="es-footer" data-es-footer={footer} style={band}>
-    {footer === 'bigname' ? <p className="es-footer__big" aria-hidden="true">{store.name}</p> : null}
+    {/* Owner 2026-11-14 («footer is huge»): the big name is sized by its length, so a long name gets smaller letters. */}
+    {footer === 'bigname' ? <p className="es-footer__big" aria-hidden="true" data-es-len="" style={{ ['--es-word-len' as string]: Math.max(4, store.name.length) } as CSSProperties}>{store.name}</p> : null}
     {/* BonBonBon: the tagline (or the name) scrolling on a strip above the footer; still under reduced motion. */}
     {footer === 'ticker' ? <div className="es-footer__ticker" aria-hidden="true"><p>{[0, 1].map(half => <span key={half}>{Array.from({ length: 4 }, (_, i) => <span key={i}>{tagline || store.name}<i>{'\u2726'}</i></span>)}</span>)}</p></div> : null}
     <div className="es-footer__grid">

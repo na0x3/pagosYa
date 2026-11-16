@@ -16,6 +16,9 @@ const BY_ID = new Map(LIBRARY_CATALOG.map(section => [section.id, section]));
 const roleOf = (type: string) => BY_ID.get(type)?.role;
 const MAIN_GRID = new Set(['products-grid', 'products-tabs']);
 const BANDS = ['paper', 'muted', 'accent', 'deep', ''];
+/** Owner 2026-11-14 («too short»): a composed home runs 10 to 14 sections, and its review never takes it under 10. */
+export const COMPOSER_MIN = 10;
+export const COMPOSER_MAX = 14;
 const add = (map: Record<string, string[]>, type: string, look: string) => { const list = (map[type] ??= []); if (!list.includes(look)) list.push(look); };
 
 let fitCache: SectionFit | undefined;
@@ -84,7 +87,7 @@ export function tooClose(candidate: HomeSummary, recent: HomeSummary): boolean {
 export function composerCheck(layout: readonly LayoutBlock[], template: ComposerTemplate, recent: readonly HomeSummary[]): string[] {
   const reasons: string[] = [];
   const types = layout.map(block => block.type);
-  if (types.length < 7 || types.length > 12) reasons.push(`la portada lleva entre 7 y 12 secciones (mandaste ${types.length})`);
+  if (types.length < COMPOSER_MIN || types.length > COMPOSER_MAX) reasons.push(`la portada lleva entre ${COMPOSER_MIN} y ${COMPOSER_MAX} secciones (mandaste ${types.length})`);
   const top = template.lead && types[0] === template.lead ? 1 : 0;
   if (template.opener) {
     if (types[0] !== template.opener) reasons.push(`${template.opener} va primera: abre la página de ${template.name}`);
@@ -93,9 +96,11 @@ export function composerCheck(layout: readonly LayoutBlock[], template: Composer
     if (roleOf(types[top] ?? '') !== 'cover') reasons.push(template.lead ? `la portada va primera, o segunda debajo de ${template.lead}` : 'la portada va primera');
     if (types.slice(top + 1).some(type => roleOf(type) === 'cover')) reasons.push('una sola portada');
   }
-  for (const type of template.signature) {
+  // The cover (or opener) and a product signature are what the template is; NOA comp 2026-11-12 was refused twice for leaving out
+  // press-quotes and the liked home came from fill instead, so any other signature section may be left out, never repeated.
+  for (const [at, type] of template.signature.entries()) {
     const count = types.filter(other => other === type).length;
-    if (count !== 1) reasons.push(`la sección firma ${type} va una vez (está ${count})`);
+    if (count > 1 || (count === 0 && (at === 0 || roleOf(type) === 'products'))) reasons.push(`la sección firma ${type} va una vez (está ${count})`);
   }
   const outside = [...new Set(types.filter(type => !template.allowed.includes(type) && type !== template.lead))];
   if (outside.length) reasons.push(`estas secciones no van en ${template.name}: ${outside.join(', ')}`);
@@ -116,8 +121,9 @@ export function composerCheck(layout: readonly LayoutBlock[], template: Composer
   return reasons;
 }
 
-/** The review's changes, by the numbers the reviewer saw; a change that does not fit the template is left out. */
-export function applyComposerChanges(layout: readonly LayoutBlock[], problems: readonly ComposerProblem[], template: ComposerTemplate, photos: readonly string[]):
+/** The review's changes, by the numbers the reviewer saw; a change that does not fit the template is left out, and a remove that
+ *  would take the home under `least` sections (the composer's floor) is refused. */
+export function applyComposerChanges(layout: readonly LayoutBlock[], problems: readonly ComposerProblem[], template: ComposerTemplate, photos: readonly string[], least = 0):
   { layout: LayoutBlock[]; applied: string[]; rewrite: number[] } {
   let rows = layout.map((block, origin) => ({ block: { ...block }, origin }));
   const signature = new Set(template.signature);
@@ -144,7 +150,7 @@ export function applyComposerChanges(layout: readonly LayoutBlock[], problems: r
       row.block = { type: next, ...(row.block.band ? { band: row.block.band } : {}) };
       swapped.add(row.origin); applied.push(`${type} → ${next}`);
     } else if (change.kind === 'remove') {
-      if (signature.has(type) || MAIN_GRID.has(type) || role === 'cover') continue;
+      if (signature.has(type) || MAIN_GRID.has(type) || role === 'cover' || rows.length <= least) continue;
       rows = rows.filter(entry => entry !== row); applied.push(`quité ${type}`);
     } else if (change.kind === 'move') {
       const to = Number(change.value);
@@ -172,10 +178,10 @@ export function composerAnswerSchema(photoCount: number, template: ComposerTempl
 export function composerPrompt(template: ComposerTemplate, recent: readonly HomeSummary[], feedback: readonly string[]): string {
   return `MODO COMPOSITOR (manda sobre las reglas de arriba): la tienda usa la plantilla ${template.name}. Su encabezado, menú, pie, tarjetas, fuentes
 y colores ya están puestos; tú armas SOLO su portada, con secciones de «catalogue» (todas probadas dentro de esta plantilla).
-- Secciones firma de ${template.name}, cada una UNA vez: ${template.signature.join(', ')}. ${template.opener
+- Secciones firma de ${template.name}, cada una UNA vez (deja fuera solo la que esta marca no puede llenar bien): ${template.signature.join(', ')}. ${template.opener
     ? `${template.opener} abre la página (es la apertura de ${template.name}) y va arriba, sin otra portada`
     : `${template.signature[0]} es la portada y va arriba${template.lead ? ` (o justo debajo de ${template.lead}, la barra de la plantilla, si la usas)` : ''}`}. Elige su look entre los suyos.
-- El resto es tuyo, para ESTA marca: qué secciones, cuántas (en total de 7 a 12), en qué orden, el look de cada una, las bandas y las fotos.
+- El resto es tuyo, para ESTA marca: qué secciones, cuántas (en total de ${COMPOSER_MIN} a ${COMPOSER_MAX}: una portada larga y completa, cada sección con una idea distinta), en qué orden, el look de cada una, las bandas y las fotos.
   Mira las fotos: la portada lleva la que mejor cuenta la marca.
 - ${template.name} ya armó estas portadas para otras tiendas; la tuya se ve distinta (otra portada u otro look, otro orden, otras secciones):
 ${recent.map(other => `  · ${other.store}: ${other.cover} → ${other.types.join(', ')}`).join('\n') || '  (ninguna todavía)'}
@@ -199,6 +205,7 @@ Informa SOLO estos problemas, cuando se ven claramente: ${COMPOSER_PROBLEMS.join
 No opines de gustos. Cada problema trae UN cambio sobre una sección por su número:
 swap (valor = otra sección de «Puede usar»), look (valor = uno de sus looks), move (valor = la nueva posición),
 photo (valor = el número de otra foto), band (paper, muted, accent, deep o vacío), remove (valor vacío).
+Arregla antes de quitar: prueba swap, look, photo o band; remove solo cuando nada de eso lo arregla. La portada queda con ${COMPOSER_MIN} secciones o más.
 Nunca quites ni cambies una sección [firma] ni la grilla principal; nunca muevas la portada. Si no hay problemas, devuelve la lista vacía.`;
 }
 

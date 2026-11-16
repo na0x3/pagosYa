@@ -4,6 +4,10 @@ import { createHash } from "node:crypto";
 import type { SaveSourceProjectDto, SourceProjectBriefDto } from "./dto/save-source-project.dto";
 import { SOURCE_SITE_PURPOSES, sourceSitePurpose } from './source-site-purpose';
 
+/** 2026-11-13: an Esencial store's sheet (sections, brand look, the «duo» product page) reached 175 kB of the general 180 kB; the
+ *  sheet alone gets more room, like source-next-layout.json did (2026-10-25). Every other text file keeps 180 kB. */
+export const MAX_STORE_SHEET = 400_000;
+
 export interface SourceProjectSnapshot {
   schemaVersion: 1;
   brief: SourceProjectBriefDto;
@@ -77,7 +81,7 @@ export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjec
     const encoding = file.encoding ?? "utf8";
     // source-next-layout.json is compiled output too: every page's header and footer markup, for SEO text. With 25 pages
     // it passed 180 kB and refused a BOXY save (2026-10-25) though YAPI had written nothing large.
-    if (typeof file.content !== "string" || file.content.length > (encoding === "base64" ? (sourceVideo(file.path) ? MAX_SOURCE_VIDEO_BASE64 : 2_800_000) : /^_compiled\/(?:(?:pages|catalog|auth|account)\/)?[a-z][a-z0-9-]{0,52}\.js$/.test(file.path) || file.path === 'source-next-layout.json' || (compiledSheet && file.path === 'styles.css') ? 800_000 : file.path === 'commerce.js' ? MAX_COMMERCE_RUNTIME : 180_000) || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
+    if (typeof file.content !== "string" || file.content.length > (encoding === "base64" ? (sourceVideo(file.path) ? MAX_SOURCE_VIDEO_BASE64 : 2_800_000) : /^_compiled\/(?:(?:pages|catalog|auth|account)\/)?[a-z][a-z0-9-]{0,52}\.js$/.test(file.path) || file.path === 'source-next-layout.json' || (compiledSheet && file.path === 'styles.css') ? 800_000 : file.path === 'commerce.js' ? MAX_COMMERCE_RUNTIME : file.path === 'styles/globals.css' ? MAX_STORE_SHEET : 180_000) || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
     if (encoding === "base64" && (!BINARY_EXTENSIONS.test(file.path) || !file.content || Buffer.from(file.content, "base64").toString("base64") !== file.content)) reject("Only canonical base64 image, MP4 and font assets are supported");
     if (encoding === "utf8" && (file.content.includes("\0") || SECRET.test(file.content))) reject("Source files cannot contain NUL characters or recognized private credentials");
     if (sourceVideo(file.path)) {

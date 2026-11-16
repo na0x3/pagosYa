@@ -20,8 +20,17 @@ describe('shellWithStoreParts', () => {
 
 describe('partProblems', () => {
   it('names the wiring each part misses', () => {
-    expect(partProblems('header', 'export default function StoreHeader() { return <header />; }').join(' | ')).toMatch(/index\.html.*productos\.html.*buscar\.html.*data-pagosya-account.*data-cart-open/);
+    // Owner 2026-11-12 («one of them did not even have a menu»): the header is the kit's NavShell; hand-written hooks are refused.
+    expect(partProblems('header', 'export default function StoreHeader() { return <header />; }').join(' | ')).toMatch(/NavShell.*productos\.html/);
+    const navShell = "import { NavShell } from '@pagosya/ui';\nexport default function StoreHeader() { return <NavShell structure=\"split\" brand={<span>Oh Belly</span>} links={[{ label: 'Tienda', href: 'productos.html' }, { label: 'Nosotros', href: 'nosotros.html' }]} />; }";
+    expect(partProblems('header', navShell)).toEqual([]);
+    expect(partProblems('header', navShell.replace('<span>Oh Belly</span>', '<button data-cart-open>Bolsa</button>')).join(' | ')).toMatch(/ganchos escritos a mano/);
     expect(partProblems('card', 'export default function StoreCard() { return <template data-pagosya-product-template><a data-product-link /><img data-product-field="image" /><b data-product-field="name" /><i data-product-field="price" /><button data-product-add /></template>; }')).toEqual([]);
+    // Owner 2026-11-12 (Howl & Honey, Oh Belly): a hidden card photo and a second name field are refused.
+    const card = (image: string, names = 1) => `export default function StoreCard() { return <template data-pagosya-product-template><a data-product-link />${image}${'<b data-product-field="name" />'.repeat(names)}<i data-product-field="price" /><button data-product-add /></template>; }`;
+    expect(partProblems('card', card('<img data-product-field="image" className="hidden" />')).join(' | ')).toMatch(/foto del producto a la vista/);
+    expect(partProblems('card', card('<img data-product-field="image" style={{ display: \'none\' }} />')).join(' | ')).toMatch(/foto del producto a la vista/);
+    expect(partProblems('card', card('<img data-product-field="image" />', 2)).join(' | ')).toMatch(/un solo data-product-field="name"/);
     expect(partProblems('cart', 'export default function StoreCart() { return <CartTemplate><KitSlot kind="cart" name="lines" /></CartTemplate>; }').join(' | '))
       .toMatch(/CartLineTemplate.*data-cart-close.*name="empty".*kind="line" name="photo"/);
     expect(partProblems('product', 'export default function Product() { return <Shell><ProductPageTemplate><KitSlot kind="product" name="gallery" /></ProductPageTemplate></Shell>; }').join(' | '))

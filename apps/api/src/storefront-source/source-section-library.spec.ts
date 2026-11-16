@@ -1,4 +1,4 @@
-import { LIBRARY_FILL_PROMPT, withSharpCover, withoutRepeatedProductRows, withPersonalizer, buildLibraryFacts, carriedSections, libraryTopUp, withTopUp, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
+import { type LayoutBlock, withFreshPhotos, withPacks, withPayWays, withPromoCode, withVisit, withStepPanels, withCleanHome, libraryDelivery, LIBRARY_FILL_PROMPT, withSharpCover, withoutRepeatedProductRows, withPersonalizer, buildLibraryFacts, carriedSections, libraryTopUp, withTopUp, librarySectionBlocker, withCarriedSections, libraryAnswerSchema, libraryHours, libraryOfferEnd, librarySocial, LIBRARY_CATALOG, validateLibraryLayout, withoutDemoWords, type LibraryFacts } from './source-section-library';
 
 const facts = (over: Partial<LibraryFacts> = {}): LibraryFacts => ({
   storeName: 'Dulce Nube', what: 'Galletas artesanales', story: '', city: 'La Paz', request: '', tone: 'calm',
@@ -12,6 +12,94 @@ const facts = (over: Partial<LibraryFacts> = {}): LibraryFacts => ({
 const types = (layout: Array<{ type: string }>) => layout.map(block => block.type);
 
 describe('section library', () => {
+  // Owner 2026-11-13 («full kits»): the store's real packs go right after the product grid, only when it has one.
+  it('keeps a clean home: no strips or stickers or bands, at most 7 sections in their order', () => {
+    const home = ['cover-split', 'strip-marquee', 'products-grid', 'story-split', 'benefits-bento', 'statement-rotate', 'packs-kits', 'pay-ways',
+      'promo-code', 'image-columns', 'visit-store', 'faq-split', 'closing-wordmark', 'closing-photo'].map((type, at) => ({ type, ...(at ? { band: 'accent' } : {}), ...(type === 'promo-code' ? { look: 'sticker' } : {}) }));
+    const out = withCleanHome(home as never) as Array<{ type: string; band?: string; look?: string }>;
+    expect(out.map(block => block.type)).toEqual(['cover-split', 'products-grid', 'story-split', 'packs-kits', 'promo-code', 'visit-store', 'faq-split']);
+    expect(out.slice(1).every(block => !block.band && !block.look)).toBe(true);
+  });
+
+  it('puts the steps first under the duo buy box as panels, the template\'s own or new ones', () => {
+    const own = withStepPanels([{ type: 'faq-split' }, { type: 'steps-howto', look: 'cards', items: [{ title: 'A' }, { title: 'B' }] }] as never);
+    expect(own.map(block => `${block.type}:${block.look ?? ''}`)).toEqual(['steps-howto:panels', 'faq-split:']);
+    const added = withStepPanels([{ type: 'faq-split' }] as never);
+    expect(added.map(block => block.type)).toEqual(['steps-howto', 'faq-split']);
+    expect(added[0].items).toHaveLength(3);
+  });
+
+  it('lists delivery zones cheapest first, with free-above and time', () => {
+    expect(libraryDelivery([{ name: 'Zona Sur', fee: 2000, freeAbove: 30000, estimatedMinutes: 60 }, { name: 'Centro', fee: 1000, freeAbove: null, estimatedMinutes: 2880 }, { name: 'Recojo', fee: 0, freeAbove: null, estimatedMinutes: null }]))
+      .toEqual([{ title: 'Recojo', text: 'Gratis' }, { title: 'Centro', text: 'Bs 10 · en 2 días' }, { title: 'Zona Sur', text: 'Bs 20 · gratis desde Bs 300 · en unos 60 min' }]);
+  });
+
+  it('adds the Visítanos card before the questions, with address, hours, zones and the map', () => {
+    const where = { location: { name: 'Tienda Sopocachi', address: 'Av. 20 de Octubre 123', hours: 'Lunes a viernes, 09:00 a 19:00' }, mapQuery: 'Av. 20 de Octubre 123, La Paz', delivery: [{ title: 'Centro', text: 'Bs 10' }] };
+    const layout = [{ type: 'cover-split', photo: '/v1/uploads/00000000-aaaa.jpg' }, { type: 'products-grid' }, { type: 'faq-split' }, { type: 'closing-photo' }];
+    const out = withVisit(layout as never, facts(where)) as Array<{ type: string; title?: string; map?: string; photo?: string; items?: Array<{ icon?: string }> }>;
+    expect(types(out)).toEqual(['cover-split', 'products-grid', 'visit-store', 'faq-split', 'closing-photo']);
+    expect(out[2]).toMatchObject({ title: 'Tienda Sopocachi', map: 'Av. 20 de Octubre 123, La Paz', photo: '/v1/uploads/00000001-aaaa.jpg' });
+    expect(out[2].items?.map(item => item.icon)).toEqual(['pin', 'clock', 'truck']);
+    expect(types(withVisit(layout as never, facts()))).toEqual(types(layout));
+    const zonesOnly = withVisit(layout as never, facts({ delivery: [{ title: 'Centro', text: 'Bs 10' }] })) as Array<{ type: string; eyebrow?: string; map?: string }>;
+    expect(zonesOnly[2]).toMatchObject({ type: 'visit-store', eyebrow: 'Envíos' });
+    expect(zonesOnly[2].map).toBeUndefined();
+    const listed = [...layout.slice(0, 2), { type: 'icon-columns', items: [{ title: 'Centro', text: 'Bs 10' }] }, ...layout.slice(2)];
+    expect(types(withVisit(listed as never, facts({ delivery: [{ title: 'Centro', text: 'Bs 10' }] })))).toEqual(types(listed));
+  });
+
+  it('shows a public code with its real offer and an unused photo, once', () => {
+    const layout = [{ type: 'cover-split', photo: '/v1/uploads/0000000' + '0-aaaa.jpg' }, { type: 'products-grid' }, { type: 'pay-ways' }, { type: 'faq-split' }];
+    const out = withPromoCode(layout as never, facts()) as Array<{ type: string; code?: string; title?: string; photo?: string }>;
+    expect(types(out)).toEqual(['cover-split', 'products-grid', 'pay-ways', 'promo-code', 'faq-split']);
+    expect(out[3]).toMatchObject({ code: 'DULCE10', title: '*10% de descuento* en tu compra', photo: '/v1/uploads/00000001-aaaa.jpg' });
+    expect(types(withPromoCode(out as never, facts()))).toEqual(types(out));
+    expect(types(withPromoCode(layout as never, facts({ codes: [] })))).toEqual(['cover-split', 'products-grid', 'pay-ways', 'faq-split']);
+  });
+  it('says how an online-payment store takes payment, after its packs or its grid, and nothing for a WhatsApp store', () => {
+    const layout = [{ type: 'cover-split' }, { type: 'products-grid' }, { type: 'packs-kits' }, { type: 'faq-split' }];
+    expect(types(withPayWays(layout, facts({ checkoutMode: 'payment' })))).toEqual(['cover-split', 'products-grid', 'packs-kits', 'pay-ways', 'faq-split']);
+    expect(types(withPayWays(layout, facts({ checkoutMode: 'whatsapp' })))).toEqual(['cover-split', 'products-grid', 'packs-kits', 'faq-split']);
+  });
+  it('adds the packs section after the grid only for a store with active packs', () => {
+    const layout = [{ type: 'cover-split' }, { type: 'products-grid' }, { type: 'faq-split' }];
+    expect(types(withPacks(layout, facts({ packs: 2 })))).toEqual(['cover-split', 'products-grid', 'packs-kits', 'faq-split']);
+    expect(types(withPacks(layout, facts()))).toEqual(['cover-split', 'products-grid', 'faq-split']);
+  });
+
+  // Hero kit (owner 2026-11-13): a template cover keeps up to 3 real products by exact name, only with the flag.
+  it('gives a template cover up to 3 real products for its hero shop, never an invented one', () => {
+    const fixed = [{ type: 'cover-full' }, { type: 'products-grid' }] as never;
+    const answer = { blocks: [{ type: 'cover-full', title: 'Hora de *galletas*', photo: 0, products: ['brownie', 'Torta inventada', 'Caja surtida', 'Galleta de chocolate', 'Brownie'] }, { type: 'products-grid', title: 'Todo' }] };
+    expect(validateLibraryLayout(answer as never, facts(), { fixed, heroShop: true })[0].products).toEqual(['Brownie', 'Caja surtida', 'Galleta de chocolate']);
+    expect(validateLibraryLayout(answer as never, facts(), { fixed })[0].products).toBeUndefined();
+  });
+
+  // Owner 2026-11-13 («do your suggestion»): rich sections take a template's cover, strip or one story place; products never move.
+  describe('rich swaps on a template home', () => {
+    const fixed = [{ type: 'cover-split', band: 'muted' }, { type: 'strip-marquee' }, { type: 'products-grid' }, { type: 'story-split', band: 'muted' }, { type: 'benefits-bento' }, { type: 'closing-photo' }] as never;
+    const answer = { blocks: [
+      { type: 'cover-kinetic', title: 'Galletas que abrazan', text: 'Horneadas en La Paz', cta: 'Ver galletas', link: 'products', photo: 0 },
+      { type: 'strip-velocity', items: [{ title: 'Recién horneadas' }, { title: 'Dulce Nube' }, { title: 'Hechas a mano' }] },
+      { type: 'products-grid', title: 'Nuestras galletas' },
+      { type: 'statement-rotate', title: 'Galletas para', items: [{ title: 'la tarde' }, { title: 'regalar' }], photo: 1 },
+      { type: 'tabs-photo', title: 'Otra rica', items: [{ title: 'Cajas', text: 'Caja surtida para regalar', photo: 2 }, { title: 'Brownies', text: 'Brownie de chocolate', photo: 3 }] },
+      { type: 'closing-photo', title: 'Dulce Nube', photo: 4 },
+    ] };
+    it('puts each rich section in the place it replaces, on that band, one per kind; the template cover always stays', () => {
+      const layout = validateLibraryLayout(answer as never, facts(), { fixed, richSwaps: true });
+      // Owner «i like more normal heroes»: cover-kinetic is no swap, so the template cover (unanswered) drops and the frame is the fill's.
+      // The second story-kind swap (tabs-photo for benefits-bento) is refused: one story or benefits swap only, so bento drops out.
+      expect(types(layout)).toEqual(['strip-velocity', 'products-grid', 'statement-rotate', 'closing-photo']);
+      expect(layout[2].band).toBe('muted');
+      expect(layout[2].items?.map(item => item.title)).toEqual(['la tarde', 'regalar']);
+    });
+    it('keeps the template exact without the flag (product page, single sections)', () => {
+      expect(types(validateLibraryLayout(answer as never, facts(), { fixed }))).toEqual(['products-grid', 'closing-photo']);
+    });
+  });
+
   // Spec 2026-11-10 hand-made styles (Merienda, Burbuja, Neón, Mimo): their own sections inside a template's fixed home.
   // Live 2026-11-10 (Perra Please on Neón, one category): three campaigns showed the same four sauces three times.
   it('gives each category\'s products to one campaign only; another campaign keeps its photo and links to the catalogue', () => {
@@ -456,6 +544,23 @@ describe('personalizador (2026-11-09)', () => {
     expect(withPersonalizer(out, facts({ optioned }))).toBe(out);
     expect(types(withPersonalizer([{ type: 'cover-split' }, { type: 'closing-photo' }], facts({ optioned, art: true })))).toEqual(['cover-split', 'product-personalizer', 'closing-photo']);
     expect(withPersonalizer(home, facts())).toBe(home);
+  });
+
+  it('skips a product the home already spotlights (owner 2026-11-14, «vestido cala appears twice»)', () => {
+    const optioned = { id: 'p2', name: 'Vestido Cala', groups: ['Talla'] };
+    const home = [{ type: 'cover-split' }, { type: 'products-grid' }, { type: 'products-spotlight', product: 'p2' }];
+    expect(withPersonalizer(home, facts({ optioned }))).toBe(home);
+  });
+});
+
+describe('each section photo once on the home (owner 2026-11-14, composed NOA)', () => {
+  it('a section photo the home already shows becomes an unused store photo; list items and the first section keep theirs', () => {
+    const photos = ['/a.jpg', '/b.jpg', '/c.jpg', '/d.jpg'].map(url => ({ url }));
+    const home: LayoutBlock[] = [{ type: 'cover-split', photo: '/a.jpg' }, { type: 'steps-howto', photo: '/b.jpg' }, { type: 'categories-list', items: [{ title: 'Novias', photo: '/b.jpg' }] }, { type: 'story-split', photo: '/a.jpg' }];
+    const out = withFreshPhotos(home, { photos });
+    expect(out.map(block => block.photo)).toEqual(['/a.jpg', '/c.jpg', undefined, '/d.jpg']);
+    expect(out[2].items![0].photo).toBe('/b.jpg');
+    expect(withFreshPhotos(home, { photos: photos.slice(0, 2) })[1].photo).toBe('/b.jpg');
   });
 });
 

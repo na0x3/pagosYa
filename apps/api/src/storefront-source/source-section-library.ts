@@ -82,7 +82,8 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'social-marquee', role: 'proof', use: 'Titular con una palabra en *asteriscos* (va en letra manuscrita) y fotos que corren con «síguenos» y la @cuenta. Solo con cuenta enlazada.', needs: { social: true, items: [3, 6], itemPhotos: 3 }, templateOnly: true },
   { id: 'shop-look', role: 'products', use: 'Foto con puntos sobre los productos que aparecen en ella (items.title = nombre exacto del producto; x, y = posición en % sobre la foto).', needs: { photos: 1, items: [1, 4], pins: true }, templateOnly: true },
   { id: 'checker-rows', role: 'benefits', use: '2 a 4 cualidades en mosaicos de color (items.title, items.text) que alternan con fotos de la tienda (items.photo).', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
-  { id: 'wave-divider', role: 'strip', use: 'Borde de olas entre secciones (decorativo, sin textos).', needs: {}, templateOnly: true, decor: true },
+  // looks (2026-11-14, V2 edges): ripple / ripple-flip = scalloped edge into / out of a band, sway / sway-flip = a gentle sway.
+  { id: 'wave-divider', role: 'strip', use: 'Borde de olas entre secciones (decorativo, sin textos).', needs: {}, looks: ['ripple', 'ripple-flip', 'sway', 'sway-flip'], templateOnly: true, decor: true },
   { id: 'stats-rings', role: 'proof', use: '1 a 4 porcentajes que el comercio midió (items.value = el número, items.text = qué significa), cada uno en un anillo. Solo números que el comercio escribió.', needs: { items: [1, 4] }, templateOnly: true },
   { id: 'image-columns', role: 'story', use: '2 a 4 columnas de foto con título, una frase y un enlace (items con photo).', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
   { id: 'statement-marquee', role: 'promo', use: 'Unas pocas palabras (title, 2 a 4 palabras) que corren enormes sobre una banda oscura, una frase (text) y un botón.', needs: {}, templateOnly: true },
@@ -116,7 +117,52 @@ export const LIBRARY_CATALOG: readonly LibrarySection[] = [
   { id: 'verbs-photo', role: 'benefits', use: 'Banda del color de la marca: las formas de usar el producto (items = 3 a 8 verbos o palabras cortas: «Untar», «Hornear», «Compartir») grandes y desordenadas junto a una foto (photo), con una nota bajo la foto (text) y un botón. title = la frase que corre arriba («Tantas formas de comerlo»).', needs: { photos: 1, items: [3, 8] }, templateOnly: true },
   { id: 'origins-arches', role: 'story', use: 'De 2 a 4 fotos con arco arriba, el nombre de cada origen, zona o línea encima de su foto (items: title = 1 a 2 palabras, text = una línea, photo = su foto, link), y cta = el texto del enlace («Ver el café»).', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
   { id: 'before-after', role: 'proof', use: 'Antes y después: dos fotos en un mismo marco (photo = antes, photo2 = después) que el cliente compara arrastrando una barra. Solo si el comercio habla de un antes y un después (limpieza, restauración, belleza, peluquería) y tiene esas dos fotos.', needs: { photos: 2, pair: true } },
+  // Rich sections (owner 2026-11-13): the kit's rich pieces; on a template they only take the place of the strip or one story (RICH_SWAPS).
+  // cover-kinetic stays drawable for the stores that have it, but is offered nowhere (owner: «i like more normal heroes»).
+  { id: 'cover-kinetic', role: 'cover', use: 'Portada en movimiento: el titular (title, 3 a 7 palabras, la idea de la marca) entra palabra por palabra, una línea (text), botones, y debajo la mejor foto de ambiente (photo) que crece al bajar.', needs: { photos: 1 }, templateOnly: true },
+  { id: 'strip-velocity', role: 'strip', use: 'Franja de palabras de la marca grandes (items = 3 a 6, title = 1 a 3 palabras) que corre más rápido cuando el cliente baja.', needs: { items: [3, 6] }, templateOnly: true },
+  { id: 'statement-rotate', role: 'story', use: 'Una frase grande cuyo final cambia solo: title = el comienzo («Burbujas para»), items = 2 a 5 finales (title, 1 a 3 palabras: «la tarde», «compartir»), una línea (text), botón y una foto enmarcada al lado (photo). look left = la foto a la izquierda.', needs: { photos: 1, items: [2, 5] }, looks: ['left', 'right'], templateOnly: true },
+  { id: 'story-carousel', role: 'story', use: 'Un carrusel de 2 a 4 momentos de la tienda, una foto a la vez (items: photo, title = una línea, text opcional, link opcional), con titular y texto arriba.', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
+  { id: 'pay-ways', role: 'strip', use: 'Las formas de pago reales de la tienda (las dibuja la tienda según su modo de cobro).', needs: {}, templateOnly: true },
+  { id: 'packs-kits', role: 'promo', use: 'Los packs y kits reales de la tienda (los dibuja la tienda: fotos, contenido, ahorro y botón para agregar el pack).', needs: {}, templateOnly: true },
+  { id: 'tabs-photo', role: 'benefits', use: '2 a 4 pestañas (items: title = la pestaña, 1 a 3 palabras: un uso, un momento, una línea; text = una o dos frases con datos reales; photo = su foto; link opcional), con titular arriba.', needs: { items: [2, 4], itemPhotos: 2 }, templateOnly: true },
 ];
+/** Rich sections (owner 2026-11-13): what each role of a template's home may become. At most one swap per kind (strip, story or
+ *  benefits), in the same place and on the same band; the template's own cover, products, cards, cart and product page never are. */
+export const RICH_SWAPS: Readonly<Record<string, readonly string[]>> = {
+  strip: ['strip-velocity'], story: ['statement-rotate', 'story-carousel', 'tabs-photo'], benefits: ['tabs-photo', 'story-carousel', 'statement-rotate'],
+};
+const richKind = (role: string | undefined) => role === 'benefits' ? 'story' : role;
+/** Hero kit (owner 2026-11-13, after Amboras's heroes): the covers that draw a hero shop (library.tsx HERO_SHOP_COVERS). */
+export const HERO_SHOP_COVERS = new Set(['cover-split', 'cover-full', 'cover-poster', 'cover-half', 'cover-centered', 'cover-ribbon', 'cover-stage', 'cover-video', 'cover-duo', 'cover-mega', 'hero-split']);
+// Owner 2026-11-13 («i dont like the hero with the products there… too overloaded, not clean»): the cover carries no product cards.
+export const HERO_KIT_PROMPT = `PORTADA LIMPIA (la sección de portada, role cover): solo la foto, el título, una línea y el botón; ningún producto encima.
+- eyebrow: el tipo de tienda y su ciudad en pocas palabras separadas por « · » («TU TIENDA DE BARRIO · SANTA CRUZ», «MERCADO SALUDABLE A
+  DOMICILIO»), solo hechos de los datos.
+- title: marca con *asteriscos* la palabra o las últimas 2 a 4 palabras que van en el color de la marca («Hora de *comer*», «Comer bien
+  es más fácil *con la canasta lista*»). Una sola marca por título.`;
+
+export const BRAND_STYLE_PROMPT = `ESTILO PROPIO DE LA MARCA («brand»): la plantilla da la estructura; tú le das a esta tienda su propia letra e íconos.
+- fonts: el par de fuentes (títulos + texto) de «pares» que mejor cuenta esta marca, por su carácter (artesanal, lujo, juguetón,
+  técnico, natural, urbano); puede ser el de la plantilla si ya es el mejor. Que se lea bien en texto largo.
+- logoFont, logoCase, logoTrack, logoColour: el nombre de la tienda como logo con letras, con una fuente de «letras» que tenga
+  personalidad para esta marca (distinta de las de títulos y texto cuando eso le da carácter), en mayúsculas, minúsculas o como se
+  escribe, espaciado justo, normal o amplio, y en el color del texto o de acento. Un logo que se lea siempre, sin fuentes de fantasía
+  ilegibles.
+- iconStroke y iconFrame: los íconos de la tienda finos, normales o gruesos, sueltos o dentro de un círculo o un cuadrado suave.
+  Marcas delicadas o de lujo: finos y sueltos; alegres o para niños: gruesos y en círculo; técnicas: normales en cuadrado.
+- corners: la forma de TODOS los botones, buscador, filtros y paneles: sharp (esquinas rectas: lujo, moda, editorial), soft (apenas
+  redondeadas: natural, cotidiano), round (paneles redondeados y botones píldora: cálido, cosmética), pill (todo píldora: juguetón,
+  bebidas, niños), cut (una esquina redonda y otra recta: urbano, con carácter). Elígela por el carácter de esta marca, no por costumbre.
+- hover: cómo responde un botón al pasar el mouse: lift (sube con sombra), sweep (un color lo llena de izquierda a derecha), arrow (la
+  flecha avanza), glow (un halo del color de acento), press (crece y se aprieta al tocar). Que vaya con la marca.`;
+
+export const RICH_FILL_PROMPT = `SECCIONES RICAS (excepción a «exactamente esas secciones»): en «ricas» tienes secciones con movimiento. Puedes poner UNA de ellas
+en lugar de una sección de la plantilla, como máximo dos cambios: la franja (role strip) → strip-velocity; UNA sección de historia o
+beneficios (role story o benefits) → statement-rotate, story-carousel o tabs-photo. La sección rica va en el mismo lugar que la que
+reemplaza (y la reemplazada ya no va). La portada de la plantilla nunca se cambia. Úsalas cuando le dan vida a esta marca, nunca
+para productos, preguntas ni cierre. Llénalas
+completas con los datos de la tienda, sin nada inventado.`;
 const ART_WORDS = /\b(laminas?|cuadros?|arte|prints?|posters?|ilustracion(?:es)?|enmarcad[ao]s?|galeria)\b/;
 const BY_ID = new Map(LIBRARY_CATALOG.map(section => [section.id, section]));
 /** Sections whose items carry a short tag in `value` (spec docs/superpowers/specs/2026-11-04-new-sections-from-real-stores.md). */
@@ -141,16 +187,27 @@ export type LibraryFacts = {
   codes: Array<{ code: string; offer: string }>;
   services: Array<{ title: string; text: string; icon: string }>;
   location?: { name: string; address: string; hours?: string };
+  /** Owner 2026-11-13 (delivery): each delivery zone the store set, its price and time, as rows of the Visítanos card. */
+  delivery?: Array<{ title: string; text: string }>;
+  /** What the card's map looks up: the address with the store's city. */
+  mapQuery?: string;
   reviews: number;
   /** The store's own Instagram or TikTok (from its links): social-* sections need it. */
   social?: { handle: string; url: string };
+  /** Owner 2026-11-13 («full kits»): how many active packs (StoreBundle) the store has; the packs section needs one. */
+  packs?: number;
+  /** Owner 2026-11-13 (ways to pay): the store's checkout mode — «payment» is online payment through pagosYa. */
+  checkoutMode?: string;
   /** 2026-11-02 (Miga Dorada: «¿Cuánto duran las cookies?» → «Consulta por WhatsApp»): what the merchant already wrote in their
    *  settings — delivery prices and times, policies, the notes they gave their assistant — for questions and steps. */
   notes?: string;
 };
 
 /** The answer schema (strict): every field is present; empty strings and -1 stand for «none». */
-export function libraryAnswerSchema(photoCount: number) {
+/** Owner 2026-11-13 («custom letters, custom icons»): on a template's home the answer also picks the store's own type, lettered logo
+ *  and icon style (BRAND_STYLE_PROMPT); `pairs` = the template base's font pairs, `fonts` = the catalog fonts. */
+export type BrandStyleChoices = { pairs: readonly string[]; fonts: readonly string[] };
+export function libraryAnswerSchema(photoCount: number, brand?: BrandStyleChoices) {
   const ids = LIBRARY_CATALOG.map(section => section.id);
   const looks = [...new Set(LIBRARY_CATALOG.flatMap(section => section.looks ?? [])), ''];
   const photo = { type: 'integer', minimum: -1, maximum: Math.max(0, photoCount - 1) };
@@ -162,7 +219,12 @@ export function libraryAnswerSchema(photoCount: number) {
     properties: { type: { type: 'string', enum: ids }, look: { type: 'string', enum: looks }, band: { type: 'string', enum: ['paper', 'muted', 'accent', 'deep', ''] },
       eyebrow: { type: 'string' }, title: { type: 'string' }, text: { type: 'string' }, cta: { type: 'string' }, link: { type: 'string' }, cta2: { type: 'string' }, link2: { type: 'string' },
       photo, photo2: photo, items: { type: 'array', items: item }, products: { type: 'array', items: { type: 'string' } }, product: { type: 'string' }, code: { type: 'string' }, card: { type: 'string', enum: [...LIBRARY_CARDS, ''] }, endsAt: { type: 'string' } } };
-  return { type: 'object', additionalProperties: false, required: ['blocks', 'mood', 'titleStyle'], properties: { blocks: { type: 'array', items: block }, mood: { type: 'string', enum: ['colourful', 'calm'] }, titleStyle: { type: 'string', enum: ['burbuja', 'redonda', 'firme', 'poster'] } } };
+  const style = brand ? { type: 'object', additionalProperties: false, required: ['fonts', 'logoFont', 'logoCase', 'logoTrack', 'logoColour', 'iconStroke', 'iconFrame', 'corners', 'hover'], properties: {
+    fonts: { type: 'string', enum: [...brand.pairs] }, logoFont: { type: 'string', enum: [...brand.fonts] }, logoCase: { type: 'string', enum: ['upper', 'lower', 'as-is'] },
+    logoTrack: { type: 'string', enum: ['tight', 'normal', 'wide'] }, logoColour: { type: 'string', enum: ['ink', 'accent'] },
+    iconStroke: { type: 'string', enum: ['thin', 'regular', 'bold'] }, iconFrame: { type: 'string', enum: ['none', 'circle', 'square'] },
+    corners: { type: 'string', enum: ['sharp', 'soft', 'round', 'pill', 'cut'] }, hover: { type: 'string', enum: ['lift', 'sweep', 'arrow', 'glow', 'press'] } } } : undefined;
+  return { type: 'object', additionalProperties: false, required: ['blocks', 'mood', 'titleStyle', ...(style ? ['brand'] : [])], properties: { blocks: { type: 'array', items: block }, mood: { type: 'string', enum: ['colourful', 'calm'] }, titleStyle: { type: 'string', enum: ['burbuja', 'redonda', 'firme', 'poster'] }, ...(style ? { brand: style } : {}) } };
 }
 
 /** Lively one-product stores (spec 2026-11-03): the mood YAPI chose for the product; a playful business (sweets, toys, parties) is
@@ -263,7 +325,7 @@ type RawBlock = { template?: LayoutBlock; type?: string; look?: string; band?: s
   photo?: number; photo2?: number; items?: RawItem[]; products?: string[]; product?: string; code?: string; card?: string; endsAt?: string };
 export type LayoutItem = { title: string; text?: string; icon?: string; photo?: string; link?: string; value?: string; x?: number; y?: number };
 export type LayoutBlock = { type: string; look?: string; band?: string; eyebrow?: string; title?: string; text?: string; cta?: string; link?: string; cta2?: string; link2?: string;
-  photo?: string; photo2?: string; items?: LayoutItem[]; products?: string[]; product?: string; code?: string; card?: string; endsAt?: string; handle?: string; social?: string };
+  photo?: string; photo2?: string; items?: LayoutItem[]; products?: string[]; product?: string; code?: string; card?: string; endsAt?: string; handle?: string; social?: string; map?: string };
 
 /** A model answer → a layout the template can always draw. Photos come back as the store's own URLs (bundled by the caller). */
 /** 34 templates (2026-10-31): `fixed` is a template's home — the answer only fills it. Its blocks keep their order, type, look, band
@@ -271,7 +333,11 @@ export type LayoutBlock = { type: string; look?: string; band?: string; eyebrow?
  *  the store cannot back, goes. Nothing is added or moved. */
 export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | undefined, facts: LibraryFacts, options: { fixed?: LayoutBlock[]; now?: number;
   /** Spec 2026-11-11 store composer: a home composed inside a template — its allowed sections and looks, its photo rule. */
-  composed?: { allowed: readonly string[]; looks: Readonly<Record<string, readonly string[]>>; opener?: string } } = {}): LayoutBlock[] {
+  composed?: { allowed: readonly string[]; looks: Readonly<Record<string, readonly string[]>>; opener?: string };
+  /** A template's home (owner 2026-11-13): rich sections may take a cover's, the strip's or one story's place (RICH_SWAPS). */
+  richSwaps?: boolean;
+  /** Hero kit (owner 2026-11-13): the cover keeps up to 3 real products for its hero shop. */
+  heroShop?: boolean } = {}): LayoutBlock[] {
   const fixedMode = Boolean(options.fixed?.length);
   const composed = options.composed;
   // A template's photo rule (twice, never neighbouring) for its fixed home and for a home composed inside it.
@@ -322,8 +388,15 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
   };
   const blocks: LayoutBlock[] = [];
   const answered = [...(answer?.blocks ?? [])];
-  const sequence: RawBlock[] = fixedMode ? options.fixed!.flatMap(template => {
+  const swapped = new Set<string>();
+  const sequence: RawBlock[] = fixedMode ? options.fixed!.flatMap((template): RawBlock[] => {
     const at = answered.findIndex(raw => raw.type === template.type);
+    // Rich sections (owner 2026-11-13): the answer may put one rich section of each kind where the template's cover, strip or a story was.
+    const role = BY_ID.get(template.type)?.role, kind = richKind(role);
+    if (at < 0 && options.richSwaps && role && kind && !swapped.has(kind)) {
+      const rich = answered.findIndex(raw => (RICH_SWAPS[role] ?? []).includes(String(raw.type ?? '')));
+      if (rich >= 0) { swapped.add(kind); const [raw] = answered.splice(rich, 1); return [{ ...raw, band: template.band ?? '', card: '' }]; }
+    }
     // Decoration (a wave edge) has nothing to write: the template's own block stays when the answer skipped it.
     if (at < 0) return BY_ID.get(template.type)?.decor ? [{ type: template.type, look: template.look ?? '', band: template.band ?? '', template }] : [];
     const [raw] = answered.splice(at, 1);
@@ -432,12 +505,17 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (section.id === 'strip-marquee' && items.length > 1 && whole.split(/\s+/).length > items.length && merchantWords.includes(fold(whole))) items = [{ title: whole }];
     if (section.id === 'strip-marquee' && items.length && items.length < 3) items = Array.from({ length: items.length === 1 ? 3 : 4 }, (_, at) => ({ ...items[at % items.length] }));
     if (section.id === 'strip-services') items = facts.services.slice(0, 4);
-    if (section.id === 'visit-store' && facts.location) items = [{ title: 'Dirección', text: facts.location.address, icon: 'pin' }, ...(facts.location.hours ? [{ title: 'Horario', text: facts.location.hours, icon: 'clock' }] : [])];
+    if (section.id === 'visit-store' && (facts.location || facts.delivery?.length)) items = visitRows(facts);
     if (items.length) block.items = items;
     // Products by exact name; the spotlight by id (or a name the model gave instead).
     if (needs.products) {
       const names = [...new Set((raw.products ?? []).map(name => productByName.get(fold(String(name)))?.name).filter((name): name is string => Boolean(name)))].slice(0, needs.products[1]);
       if (names.length >= needs.products[0]) block.products = names;
+    }
+    // Hero kit (owner 2026-11-13): a cover may carry up to 3 real products, by exact name (its hero shop).
+    if (options.heroShop && HERO_SHOP_COVERS.has(section.id) && !needs.products) {
+      const names = [...new Set((raw.products ?? []).map(name => productByName.get(fold(String(name)))?.name).filter((name): name is string => Boolean(name)))].slice(0, 3);
+      if (names.length) block.products = names;
     }
     if (needs.product || raw.template?.product) { const found = productById.get(String(raw.product ?? '')) ?? productByName.get(fold(String(raw.product ?? ''))); if (found) block.product = found.id; }
     // The colour cards always draw the store's own product (premium landing 2026-11-03).
@@ -448,6 +526,7 @@ export function validateLibraryLayout(answer: { blocks?: RawBlock[] } | null | u
     if (section.id === 'product-hero' && !block.product && facts.products[0]) block.product = facts.products[0].id;
     if (needs.code || section.id === 'cover-half') { const code = facts.codes.find(entry => fold(entry.code) === fold(String(raw.code ?? ''))); if (code) block.code = code.code; }
     if (section.id === 'visit-store' && facts.location && !block.title) block.title = facts.location.name;
+    if (section.id === 'visit-store' && facts.mapQuery) block.map = facts.mapQuery;
     if (needs.social && facts.social) { block.handle = facts.social.handle; block.social = facts.social.url; }
     if (needs.date) { const ends = libraryOfferEnd(raw.endsAt, merchantWords, now); if (ends) block.endsAt = ends; }
     // Needs met, or the block goes (and gives its photos back).
@@ -620,7 +699,8 @@ export function buildLibraryFacts(input: LibraryStoreInput, maxPhotos = 14): Lib
     return { item, at, groups, count: variants.length, photos: variants.filter(variant => variant.imageUrl || variant.imageUrls?.length).length };
   }).filter(entry => entry.count >= 2 && entry.groups.length).sort((a, b) => b.photos - a.photos || a.at - b.at)[0];
   const art = ART_WORDS.test(fold(`${input.what} ${input.story} ${input.categories.map(category => category.name).join(' ')}`));
-  const offer = (code: LibraryStoreInput['codes'][number]) => code.discountType === 'PERCENT' ? `${code.discountValue}% de descuento` : `Bs ${code.discountValue} de descuento`;
+  // A fixed discount is in cents, like every amount (BATIDO20 is 2000).
+  const offer = (code: LibraryStoreInput['codes'][number]) => code.discountType === 'PERCENT' ? `${code.discountValue}% de descuento` : `${money(code.discountValue)} de descuento`;
   return {
     storeName: input.storeName, what: input.what.slice(0, 1500), story: input.story.slice(0, 1500), city: input.city, request: input.request.slice(0, 3000), tone: input.tone,
     products, categories: input.categories.filter(category => used.has(category.id)).map(category => category.name), photos,
@@ -628,10 +708,19 @@ export function buildLibraryFacts(input: LibraryStoreInput, maxPhotos = 14): Lib
     codes: input.codes.slice(0, 3).map(code => ({ code: code.code, offer: offer(code) })),
     services: services.length >= 2 ? services : [],
     ...(located?.address ? { location: { name: located.name, address: located.address, ...(libraryHours(located.openingHours) ? { hours: libraryHours(located.openingHours) } : {}) } } : {}),
+    ...(located?.address ? { mapQuery: fold(located.address).includes(fold(input.city)) || !input.city ? located.address : `${located.address}, ${input.city}` } : {}),
+    ...(input.shippingEnabled !== false && input.zones?.length ? { delivery: libraryDelivery(input.zones) } : {}),
     reviews: input.reviews,
     ...(librarySocial(input.links) ? { social: librarySocial(input.links)! } : {}),
     ...(libraryNotes(input) ? { notes: libraryNotes(input) } : {}),
   };
+}
+
+/** «Centro» · «Bs 10 · gratis desde Bs 200 · en unos 45 minutos»: the zones the store delivers to, cheapest first, at most four. */
+export function libraryDelivery(zones: NonNullable<LibraryStoreInput['zones']>): Array<{ title: string; text: string }> {
+  const time = (minutes: number | null) => !minutes ? '' : minutes < 120 ? `en unos ${minutes} min` : minutes < 2880 ? `en ${Math.round(minutes / 60)} horas` : `en ${Math.round(minutes / 1440)} días`;
+  return [...zones].filter(zone => zone.name?.trim()).sort((a, b) => a.fee - b.fee).slice(0, 4)
+    .map(zone => ({ title: zone.name.trim(), text: [zone.fee ? money(zone.fee) : 'Gratis', zone.freeAbove ? `gratis desde ${money(zone.freeAbove)}` : '', time(zone.estimatedMinutes)].filter(Boolean).join(' · ') }));
 }
 
 const money = (cents: number) => `Bs ${Number.isInteger(cents / 100) ? cents / 100 : (cents / 100).toFixed(2).replace('.', ',')}`;
@@ -692,6 +781,24 @@ const CATALOGUE_ROWS = new Set(['products-slider', 'products-cards', 'products-l
 /** Owner 2026-11-11 («no blurry cover photos»: Oh Belly's 736 px photos filled a 1280 px cover): a full-width cover takes the widest
  *  photo of SHARP_COVER px or more (the section that had it gets the cover's photo); a store with none gets the framed cover, with the
  *  same words and photo. A photo of unknown size is left alone. */
+/** Owner 2026-11-14 («vestido cala appears twice», composed NOA: the steps section took the photo its category list shows): a section's
+ *  own photo (photo, photo2) that the home already shows elsewhere — an earlier section's, or any list's item (a category or product
+ *  keeps its photo) — becomes a store photo the home does not show yet, while one is left. The first section keeps its own. */
+export function withFreshPhotos<T extends LayoutBlock>(layout: readonly T[], facts: Pick<LibraryFacts, 'photos'>): T[] {
+  const shown = new Set<string>(layout.flatMap(block => (block.items ?? []).map(item => item.photo).filter((photo): photo is string => Boolean(photo))));
+  const free = () => facts.photos.map(photo => photo.url).find(url => !shown.has(url) && !layout.some(block => block.photo === url || block.photo2 === url));
+  return layout.map((block, at) => {
+    let next = block;
+    for (const key of ['photo', 'photo2'] as const) {
+      const photo = next[key];
+      if (!photo) continue;
+      if (at > 0 && shown.has(photo)) { const other = free(); if (other) { next = { ...next, [key]: other }; shown.add(other); continue; } }
+      shown.add(photo);
+    }
+    return next;
+  });
+}
+
 const FULL_WIDTH_COVERS = new Set(['cover-full', 'cover-stage', 'cover-shoppable']);
 export const SHARP_COVER = 1100;
 export function withSharpCover<T extends LayoutBlock>(layout: readonly T[], facts: LibraryFacts): T[] {
@@ -713,8 +820,98 @@ export function withoutRepeatedProductRows<T extends { type: string }>(layout: r
   return layout.filter(block => !CATALOGUE_ROWS.has(block.type) || ++rows <= keep);
 }
 
+/** Owner 2026-11-13 («discounts everything like full kits»): a store with active packs shows them right after its product grid. */
+export function withPacks<T extends { type: string }>(layout: readonly T[], facts: LibraryFacts): T[] {
+  if (!facts.packs || layout.some(block => block.type === 'packs-kits')) return layout as T[];
+  const block = { type: 'packs-kits', eyebrow: 'Packs', title: 'Llévalo en pack', text: 'Los packs de la tienda, con su ahorro.' } as unknown as T;
+  const grid = layout.findIndex(entry => entry.type === 'products-grid' || entry.type === 'products-tabs');
+  if (grid >= 0) return [...layout.slice(0, grid + 1), block, ...layout.slice(grid + 1)];
+  return withTopUp(layout, [block]);
+}
+
+/** Owner 2026-11-13 («discounts»): a store with a public code shows it — its real offer, the copy button and an unused store photo —
+ *  after its ways to pay, packs or grid, unless a section already carries the code. */
+export function withPromoCode<T extends { type: string; code?: string; photo?: string; photo2?: string; items?: Array<{ photo?: string }> }>(layout: readonly T[], facts: LibraryFacts): T[] {
+  const first = facts.codes[0];
+  if (!first || layout.some(block => block.code || block.type.startsWith('promo-code'))) return layout as T[];
+  const used = new Set(layout.flatMap(block => [block.photo, block.photo2, ...(block.items ?? []).map(item => item.photo)].filter(Boolean)));
+  const photo = facts.photos.map(entry => entry.url).find(url => !used.has(url));
+  if (!photo) return layout as T[];
+  const block = { type: 'promo-code', eyebrow: 'Código de descuento', title: first.offer ? `*${first.offer}* en tu compra` : 'Un descuento para tu compra', text: 'Escríbelo al pagar.', code: first.code, cta: 'Comprar ahora', link: 'products', photo } as unknown as T;
+  const after = [layout.findIndex(entry => entry.type === 'pay-ways'), layout.findIndex(entry => entry.type === 'packs-kits'), layout.findIndex(entry => entry.type === 'products-grid' || entry.type === 'products-tabs')].find(at => at >= 0);
+  if (after !== undefined) return [...layout.slice(0, after + 1), block, ...layout.slice(after + 1)];
+  return withTopUp(layout, [block]);
+}
+
+/** Owner 2026-11-13 (ways to pay): a store that takes payment online shows how, after its packs or its product grid. */
+/** The Visítanos card's rows: where and when (address, hours), then each delivery zone with its price and time. */
+function visitRows(facts: LibraryFacts): Array<{ title: string; text: string; icon: string }> {
+  return [
+    ...(facts.location ? [{ title: 'Dirección', text: facts.location.address, icon: 'pin' }, ...(facts.location.hours ? [{ title: 'Horario', text: facts.location.hours, icon: 'clock' }] : [])] : []),
+    ...(facts.delivery ?? []).map(zone => ({ ...zone, icon: 'truck' })),
+  ];
+}
+
+/** Owner 2026-11-13 (Boosterpack «Visit us»): a store with an address or delivery zones gets the Visítanos card — address, hours, its
+ *  zones with price and time, «Cómo llegar», WhatsApp and a map that loads on tap — near the end, before its questions and closing. */
+export function withVisit<T extends { type: string; photo?: string; photo2?: string; items?: Array<{ photo?: string }> }>(layout: readonly T[], facts: LibraryFacts): T[] {
+  if (!facts.location && !facts.delivery?.length) return layout as T[];
+  const at = layout.findIndex(block => block.type === 'visit-store');
+  // The template's own card gets the zones and the map too.
+  if (at >= 0) return layout.map((block, index) => index === at ? { ...block, items: visitRows(facts), ...(facts.mapQuery ? { map: facts.mapQuery } : {}) } : block);
+  // Zones only, and the template already lists them (its delivery columns): nothing to add.
+  const zone = facts.delivery?.[0]?.title;
+  if (!facts.location && zone && layout.some(block => (block.items as Array<{ title?: string }> | undefined)?.some(item => item.title === zone))) return layout as T[];
+  const used = new Set(layout.flatMap(block => [block.photo, block.photo2, ...(block.items ?? []).map(item => item.photo)].filter(Boolean)));
+  // Never a text-only card (owner 2026-10-29): an unused store photo, else the last one.
+  const photo = facts.photos.map(entry => entry.url).find(url => !used.has(url)) ?? facts.photos.at(-1)?.url;
+  const block = { type: 'visit-store', eyebrow: facts.location ? 'Visítanos' : 'Envíos', title: facts.location?.name || 'Te lo llevamos a casa',
+    items: visitRows(facts), ...(facts.mapQuery ? { map: facts.mapQuery } : {}), ...(photo ? { photo } : {}) } as unknown as T;
+  const end = layout.findIndex((entry, index) => index > 0 && /^(faq|closing|newsletter|social)/.test(entry.type));
+  return end >= 0 ? [...layout.slice(0, end), block, ...layout.slice(end)] : [...layout, block];
+}
+
+/** Owner 2026-11-13 (Clyro's «(01) Application»): on the «duo» product page the steps come first under the buy box, as panels —
+ *  the template's own steps, or new ones YAPI writes for every product (a store that cannot back them simply has none). */
+export function withStepPanels(template: readonly LayoutBlock[]): LayoutBlock[] {
+  const at = template.findIndex(block => block.type === 'steps-howto');
+  const steps: LayoutBlock = at >= 0 ? { ...template[at], look: 'panels' } : { type: 'steps-howto', look: 'panels', eyebrow: 'Modo de uso', title: 'Cómo se usa',
+    items: [{ title: 'Elige', text: 'Escoge el que va contigo.' }, { title: 'Prepara', text: 'Tenlo listo en pocos pasos.' }, { title: 'Disfruta', text: 'Y repite cuando quieras.' }] };
+  return [steps, ...template.filter((_, index) => index !== at)];
+}
+
+/** Owner 2026-11-13 («i want a clean site like this one»: Aesop, Mirror Water, Moment): one idea per section on one ground — no
+ *  moving strips, stickers or motion sections, no colour bands, and at most `max` sections: the hero, the products, then what the
+ *  store really has (packs, its code, its place), one story, its questions and ways to pay. The kept ones keep their order. */
+const CLEAN_NOISE = /^(strip-|statement-rotate$|story-carousel$|cover-kinetic$|closing-wordmark$)/;
+const CLEAN_PRIORITY: ReadonlyArray<RegExp> = [/^products-(grid|tabs|slider)$/, /^packs-kits$/, /^promo-code$/, /^visit-store$/,
+  /^(story-|statement-inline$|image-columns$|usecases|benefits-|icon-columns$|steps-howto$)/, /^faq-/, /^pay-ways$/, /^closing-/];
+export function withCleanHome<T extends { type: string; band?: string; look?: string }>(layout: readonly T[], max = 7): T[] {
+  const calm = layout.map((block, index) => {
+    if (index === 0) return block;
+    const { band: _band, ...rest } = block as T & Record<string, unknown>;
+    return (rest.look === 'sticker' ? { ...rest, look: undefined } : rest) as unknown as T;
+  }).filter((block, index) => index === 0 || !CLEAN_NOISE.test(block.type));
+  const chosen = new Set<number>([0]);
+  for (const rule of CLEAN_PRIORITY) {
+    const at = calm.findIndex((block, index) => !chosen.has(index) && rule.test(block.type));
+    if (at >= 0 && chosen.size < max) chosen.add(at);
+  }
+  return calm.filter((_, index) => chosen.has(index));
+}
+
+export function withPayWays<T extends { type: string }>(layout: readonly T[], facts: LibraryFacts): T[] {
+  if (facts.checkoutMode !== 'payment' || layout.some(block => block.type === 'pay-ways')) return layout as T[];
+  const block = { type: 'pay-ways', title: 'Paga como prefieras' } as unknown as T;
+  const after = [layout.findIndex(entry => entry.type === 'packs-kits'), layout.findIndex(entry => entry.type === 'products-grid' || entry.type === 'products-tabs')].find(at => at >= 0);
+  if (after !== undefined) return [...layout.slice(0, after + 1), block, ...layout.slice(after + 1)];
+  return withTopUp(layout, [block]);
+}
+
 export function withPersonalizer<T extends { type: string }>(layout: readonly T[], facts: LibraryFacts): T[] {
   if (!facts.optioned || layout.some(block => block.type === 'product-personalizer')) return layout as T[];
+  // Owner 2026-11-14 («vestido cala appears twice»): a home that already spotlights that product does not show it again to personalise.
+  if (layout.some(block => block.type === 'products-spotlight' && (block as { product?: string }).product === facts.optioned!.id)) return layout as T[];
   const block = { type: 'product-personalizer', product: facts.optioned.id, look: facts.art ? 'frame' : 'stage' } as unknown as T;
   const grid = layout.findIndex(entry => entry.type === 'products-grid' || entry.type === 'products-tabs');
   if (grid >= 0) return [...layout.slice(0, grid + 1), block, ...layout.slice(grid + 1)];
