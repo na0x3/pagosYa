@@ -815,3 +815,13 @@ describe('v2 photos with words (owner 2026-11-15: DooBoo hero cut through its wo
   });
 
 });
+
+describe('v2 assembly fixes 2026-11-16', () => {
+  it('live 2026-11-16 (DooBoo): the library is refreshed whenever the generated library file is there, however the home imports it', () => {
+    const base = [{ path: 'components/library.tsx', content: 'export function LibraryBlock() { return null; }' }];
+    const written = [{ path: 'components/home.tsx' as const, content: "import { V2Slot } from '@/components/v2-library';\nexport default function Home(){ return <main><V2Slot name=\"a1\" /></main>; }" },
+      { path: 'components/v2-library.tsx' as const, content: "import { LibraryBlockView } from './library';\nexport function V2Slot(){ return null; }" }];
+    const lib = assembleV2Files(base as never, written as never).find(file => file.path === 'components/library.tsx')!;
+    expect(lib.content).toMatch(/LibraryBlockView/);
+  });
+});

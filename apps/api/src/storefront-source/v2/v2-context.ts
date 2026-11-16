@@ -131,7 +131,9 @@ const resolve = (from: string, specifier: string) => {
 export function assembleV2Files(base: readonly SourceProjectFileDto[], written: readonly V2File[], ownCards = false, ownIcons = false, cartSheet = ''): SourceProjectFileDto[] {
   // Library sections (spec 2026-11-14): a home that places them gets the library's code fresh from the template package (a store's
   // own copy may predate LibraryBlockView) and its styles after the design's sheet, in the design's tokens.
-  const usesLibrary = written.some(file => file.path === V2_LIBRARY_FILE) && written.some(file => /from\s+['"]\.\/v2-library['"]/.test(file.content));
+  // Whenever the generated library file is there, however the home imports it (live 2026-11-16, DooBoo: «@/components/v2-library»
+  // left the store's old library.tsx without LibraryBlockView and the build failed).
+  const usesLibrary = written.some(file => file.path === V2_LIBRARY_FILE);
   const fresh = usesLibrary ? v2LibrarySources() : [];
   const replaced = new Set<string>([...written.map(file => file.path), ...fresh.map(file => file.path)]);
   const source = [...base.filter(file => !file.path.startsWith('_compiled/') && !replaced.has(file.path)), ...fresh];
