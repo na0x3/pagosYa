@@ -195,6 +195,31 @@ body.is-logged-in .selling-empty { margin: 14px 0 0; color: var(--pg-text-muted)
 @media (max-width: 640px) { body.is-logged-in .selling-row { grid-template-columns: minmax(0, 1fr) auto; } body.is-logged-in .selling-tag { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) { body.is-logged-in .selling-switch__track, body.is-logged-in .selling-switch__track span { transition: none; } }
 
+/* ── Tienda › Tareas de YAPI (spec 2026-11-16) ── */
+body.is-logged-in .tareas-view { padding: 4px 0 48px; }
+body.is-logged-in .tareas-head h2 { margin: 0 0 6px; font: 400 30px/1.15 var(--pm-serif); }
+body.is-logged-in .tareas-head .muted { margin: 0; max-width: 62ch; }
+body.is-logged-in .tareas-notice { margin: 16px 0 0; padding: 10px 14px; border-radius: 12px; background: #fff7ed; color: #9a3412; }
+body.is-logged-in .tareas-grid { list-style: none; margin: 24px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+body.is-logged-in .tarea-card { display: flex; flex-direction: column; gap: 14px; padding: 16px; border: 1px solid var(--pm-glass-edge); border-radius: 20px; background: var(--pm-field); box-shadow: var(--pm-shadow-card); transition: transform .25s var(--pm-ease), box-shadow .25s var(--pm-ease); }
+body.is-logged-in .tarea-card:hover { transform: translateY(-2px); box-shadow: var(--pm-shadow-lift); }
+body.is-logged-in .tarea-art { display: grid; place-items: center; height: 132px; border-radius: 14px; }
+body.is-logged-in .tarea-art svg { display: block; width: 136px; height: 102px; }
+body.is-logged-in .tarea-body { flex: 1; }
+body.is-logged-in .tarea-body h3 { margin: 0 0 6px; font-size: 17px; font-weight: 600; }
+body.is-logged-in .tarea-promise { margin: 0 0 12px; color: var(--pg-text-muted); font-size: 14px; line-height: 1.45; }
+body.is-logged-in .tarea-meta { display: flex; gap: 8px; flex-wrap: wrap; margin: 0; }
+body.is-logged-in .tarea-meta span { padding: 3px 10px; border-radius: 999px; background: var(--pm-hover); font-size: 12px; font-weight: 550; }
+body.is-logged-in .tarea-state { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; font-size: 13px; font-weight: 550; }
+body.is-logged-in .tarea-state.is-running { color: #3730a3; }
+body.is-logged-in .tarea-state.is-done { color: #166534; }
+body.is-logged-in .tarea-state.is-failed { color: var(--pg-error); }
+body.is-logged-in .tarea-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: tarea-pulse 1.4s ease-in-out infinite; }
+body.is-logged-in .tarea-start { align-self: flex-start; min-height: 40px; padding: 0 18px; border-radius: 999px; background: #18181b; color: #fff; border: 0; font-weight: 600; cursor: pointer; }
+body.is-logged-in .tarea-start:disabled { opacity: .45; cursor: default; }
+@keyframes tarea-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { body.is-logged-in .tarea-card, body.is-logged-in .tarea-dot { transition: none; animation: none; } }
+
 /* ── Inicio › Por reponer ── */
 body.is-logged-in .overview-restock { grid-column: 1 / -1; order: 3; }
 body.is-logged-in .overview-restock h2 { margin: 0 0 4px; font: 400 24px/1.2 var(--pm-serif); }

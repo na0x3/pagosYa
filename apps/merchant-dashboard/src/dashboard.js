@@ -24,6 +24,7 @@ import { sectionOf, sectionEntry, resolveView, renderSectionTabs, fullNavOn } fr
 import { playImmersiveMove } from "/src/immersive.mjs";
 import { lowStock, renderRestock } from "/src/restock.mjs";
 import { renderSellingCard } from "/src/selling-card.mjs";
+import { mountTareas } from "/src/tareas.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -222,6 +223,13 @@ import { renderSellingCard } from "/src/selling-card.mjs";
     },
     composeYapi: (text) => composeInYapi(text, "growth"),
     editProduct: (productId, step) => editProductById(productId, step),
+  });
+  // Tienda › Tareas (spec 2026-11-16): YAPI's jobs as cards; a design or a review runs here, the rest open YAPI with the request written.
+  const tareas = mountTareas({
+    api,
+    storeId: () => currentStoreId,
+    composeYapi: (text) => composeInYapi(text, "tasks"),
+    openView: (view) => { history.pushState(null, "", `#dashboard-${view}`); setDashboardView(view); },
   });
   // Crecer › Carritos abandonados: who left without paying and how to reach them; read-only.
   const abandonedCarts = mountAbandonedCartsPanel({
@@ -548,7 +556,7 @@ import { renderSellingCard } from "/src/selling-card.mjs";
     if (event.data?.type === "pagosya:studio-ready" && event.data.storeId === currentStoreId) { frame.dataset.ready = "true"; deliverStudioAction(); return; }
     if (event.data?.type === "pagosya:studio-action-received" && event.data.storeId === currentStoreId) {
       // The dashboard's own YAPI box is emptied once its text is handed over; a Crecimiento suggestion leaves it alone.
-      if (pendingStudioAction?.action === "compose" && !["growth", "ask"].includes(pendingStudioAction.origin)) document.getElementById("workspaceYapiDraft").value = "";
+      if (pendingStudioAction?.action === "compose" && !["growth", "ask", "tasks"].includes(pendingStudioAction.origin)) document.getElementById("workspaceYapiDraft").value = "";
       pendingStudioAction = null; return;
     }
     // YAPI in design mode (spec 2026-10-22 v2 §6): the Studio covers the dashboard while the merchant designs.
@@ -609,6 +617,7 @@ import { renderSellingCard } from "/src/selling-card.mjs";
     if (nextView === "cobros") cobros.show();
     if (nextView === "subscriptions") subscriptionsPanel.show();
     if (nextView === "growth") growth.show();
+    if (nextView === "tasks") tareas.show(); else tareas.hide();
     if (nextView === "abandoned-carts") abandonedCarts.show();
     if (nextView === "assistant") assistantPanel.show();
     if (nextView === "proposals") proposals.show();
