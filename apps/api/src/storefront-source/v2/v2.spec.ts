@@ -13,7 +13,7 @@ import { SourceV2PrototypeService } from './v2-prototype.service';
 import { cropShare, markWordPhotos } from './v2-words';
 import { FREE_BLOCKERS } from './v2-run';
 import { allowedHeroIdeas, drawsLibre, heroMarker, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
-import { existsSync as heroFrameExists } from 'node:fs';
+import { existsSync as heroFrameExists, readFileSync as readRuleSource } from 'node:fs';
 import { join as heroJoin } from 'node:path';
 import { allowedMenus, menuProblems, V2_MENU_MODELS, v2MenuSchema, withStoreMenu } from './v2-menus';
 import { SourceV2PrototypeController } from './v2-prototype.controller';
@@ -753,6 +753,14 @@ describe('v2 hero briefs (heroes plan 2026-11-15)', () => {
     const out = v2Repairs([home], { goods: '', ownIcons: true, heroIdea: 'hearthen' } as never).files[0].content;
     expect(readHeroMarker(out)).toBe('hearthen');
     expect(readHeroMarker(v2Repairs([{ ...home, content: `${heroMarker('laps')}\n${home.content}` }], { goods: '', ownIcons: true, heroIdea: 'hearthen' } as never).files[0].content)).toBe('hearthen');
+  });
+
+  it('the hero rule names what is wrong, never which layout to use (owner 2026-11-15: every hero became a split)', () => {
+    const src = readRuleSource(heroJoin(__dirname, '../source-template-qa-rules.ts'), 'utf8');
+    const at = src.indexOf("push('weak-hero'");
+    const line = src.slice(at, at + 420);
+    expect(line).not.toMatch(/titular grande a un lado y una foto/);
+    expect(line).toMatch(/idea de portada/);
   });
 
 });

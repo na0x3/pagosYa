@@ -278,7 +278,7 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
       const split = Array.from(hero.querySelectorAll('h1,[aria-hidden="true"]')).map(el => el.getBoundingClientRect()).find(r => big && r.left < big.left - 8 && r.right > big.right + 8 && Math.min(r.bottom, big.bottom) - Math.max(r.top, big.top) > 20 && r.height < big.height);
       if (split) weak.push('el nombre o el titular queda partido a los dos lados de la foto');
     }
-    if (weak.length) push('weak-hero', hero ?? null, `CONSEJO: La portada no se arma bien (${weak.join('; ')}). Úsala como en las tiendas buenas: foto a todo el ancho con el titular y los botones encima, o titular grande a un lado y una foto grande y entera al otro; uno o dos botones; nada más compitiendo.`);
+    if (weak.length) push('weak-hero', hero ?? null, `CONSEJO: La portada no se arma bien (${weak.join('; ')}). Arréglalo dentro de la idea de portada de esta tienda, sin cambiar de idea: el titular entero y legible en la primera pantalla, la foto o el producto entero, uno o dos botones, nada más compitiendo.`);
   }
   // Owner 2026-11-12 + 2026-11-14 («it still displays huge pictures and that's something i do not want»): on a desktop a photo stays
   // medium — at most ~820 px tall, ~760 px wide unless it is a band of 520 px or less, and under 500 000 px². Calibrated on V2 Gramiyaa
