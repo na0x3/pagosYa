@@ -900,3 +900,39 @@ Expected: four DONE runs.
 - Menus spec: model field T1; 16 models T2–T4; honest selling data T3; contract rules 1/2/5/6 T5, runtime rules 3/4/7/8 T2–T3; merchant edits keep the model (config field) T1; writer told `.pym-*` T5; runtime size T2–T4; rail/dock risks T3/T4; retention T9. The spec's «look shots of the open menu» is covered by T10's manual screenshots instead of the automated look (keeps `v2-look.ts` unchanged; add it later if live menus break).
 - Heroes: 8 ideas T6 (Atelier cut, test pins it); never repeated T6; no-crop T7; split-pushing wording T8; live T10.
 - Review Focus → tests: unknown model (T1), all ideas used (T6), contain not a crop (T7), thumb bar over controls (T3), no badges/offer (T3).
+
+---
+
+## Follow-up (owner 2026-11-15 23:50, «do these»): transparent and pill headers
+
+References: Zippa (no bar — ☰ left, logo centre, bag right, straight on a full-bleed hero photo) and Halcy (announcement bar with ← →
+cycling real messages; transparent header over the hero; each link a white rounded pill with a small icon; the offer link in an
+accent pill; round search button; dark «Bolsa (n)» pill). Build AFTER the Task 10 live runs finish (kit ui.tsx is read by every build).
+
+### Task 11: NavShell `over`, `tone`, `linkStyle` (kit `packages/storefront-kit/kit/ui.tsx`)
+- `over?: boolean` — the header floats over the first section: `.ui-nav[data-over]` keeps `position:sticky` but `margin-bottom:
+  calc(-1 * var(--ui-nav-h))` and a transparent background; a small effect measures the bar into `--ui-nav-h` (ResizeObserver) and sets
+  `data-scrolled` once `scrollY > 40` (and while the phone menu is open) → the store's paper background, ink text, a hairline. Reduced
+  motion: no transition.
+- `tone?: 'light' | 'dark'` — text/icon colour while transparent (light = white on a dark photo).
+- `linkStyle?: 'plain' | 'pills'` and `highlight?: string` (href of the one link drawn as the accent pill) — pills: white rounded
+  pills ≥40 px tall, 6 px gap, optional `icon` per link (`NavShellLink.icon?: string` — one of the kit's small line icons); with
+  `actions="pill"` the bag reads «Bolsa (n)» in a dark pill and search is a round button.
+- Test (ui spec / NavShell render test): `over` renders `data-over` and `data-tone`; `linkStyle="pills"` renders `data-links="pills"` and
+  the `highlight` link carries `data-highlight`; snapshot of the CSS contains the `data-scrolled` rule.
+
+### Task 12: `AnnouncementBar` with arrows (kit)
+- `AnnouncementBar({ messages, children })`: with 2+ messages, ← → buttons and a 5 s auto-advance (paused on hover/focus, none with
+  reduced motion); one message or children behave as today. aria-live="polite".
+- Test: 3 messages → arrows present, clicking → advances; 1 message → no arrows.
+
+### Task 13: V2 picks the header look per store
+- Direction schema `header: { over: boolean, tone: 'light'|'dark', links: 'plain'|'pills', announce: string[] (0–3, real facts only) }`;
+  never the same `over+links` combination as the merchant's latest stores (merchantHistory reads `data-over`/`data-links` from Shell.tsx).
+  `over: true` only when the hero idea starts with a full-width photo or colour (laps, lift, hearthen, zippa, libre).
+- `v2Repairs`: writes `over`/`tone`/`linkStyle`/`highlight` onto the `<NavShell>` in Shell.tsx from `context.header` (like actions/cart
+  today); writer prompt: «la cabecera flota sobre la primera sección: deja unos 90 px arriba, el titular nunca debajo de ella».
+- Checks: existing `covered-text`/`overlapping-text`/`low-contrast` catch a header over the headline or unreadable header text.
+- Tests in v2.spec: schema/enum, repair writes the props, history avoids the same combination.
+
+### Task 14: live check on two stores (Zippa-like soda: Oh Belly; Halcy-like playful: DooBoo) — screenshots top + scrolled + phone.
