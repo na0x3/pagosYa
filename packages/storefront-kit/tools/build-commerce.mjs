@@ -62,6 +62,7 @@ export const PARTS = [
   'content/carousel.js',
   'content/load.js',
   'header/platform-header.js',
+  'header/store-menu-models.css.js',
   'header/store-menu.js',
   'controls/decorate.js',
   'look/fit-headlines.js',

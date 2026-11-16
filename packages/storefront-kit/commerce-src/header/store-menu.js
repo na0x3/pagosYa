@@ -56,7 +56,7 @@
     if (document.querySelector('style[data-pagosya-store-menu-style]')) return;
     const style = document.createElement('style');
     style.setAttribute('data-pagosya-store-menu-style', '');
-    style.textContent = STORE_MENU_CSS;
+    style.textContent = STORE_MENU_CSS + STORE_MENU_MODEL_CSS;
     document.head.appendChild(style);
   }
   // Menu models (spec 2026-11-15 store menu models): one look per store. «style» is kept for older stores (panel → tabs,
@@ -167,9 +167,11 @@
     return (Array.isArray(groups) ? groups : []).slice(0, 4).map(group => {
       const seen = new Set();
       const links = (Array.isArray(group.links) ? group.links : []).map(link => {
-        if (link.href) return { href: link.href, label: String(link.label).slice(0, 28) };
+        // A link may carry a one-line note (index, need) and its photo (overlay, split swap the big photo to it).
+        const note = String(link.note || '').slice(0, 60);
+        if (link.href) return { href: link.href, label: String(link.label).slice(0, 28), note, image: '' };
         const target = storeMenuTarget(link.to);
-        return target && (link.label || target.label) ? { href: target.href, label: String(link.label || target.label).slice(0, 28) } : null;
+        return target && (link.label || target.label) ? { href: target.href, label: String(link.label || target.label).slice(0, 28), note, image: storeMenuLinkPhoto(link.to) } : null;
       }).filter(link => link && !seen.has(link.label.toLowerCase()) && seen.add(link.label.toLowerCase())).slice(0, 12);
       const named = (Array.isArray(group.tiles) ? group.tiles : []).map(tile => { const target = storeMenuTarget(tile.to); return target && storeMenuPhoto(tile.image) ? { href: target.href, title: String(tile.title || target.label).slice(0, 28), image: tile.image } : null; }).filter(Boolean).slice(0, 3);
       // Owner 2026-10-30 («dropdown menus now dont have pictures»): a group written without tiles shows the first product photo
@@ -214,14 +216,22 @@
     panel.setAttribute('data-store-menu-panel', '');
     panel.setAttribute('aria-label', 'Menú');
     panel.setAttribute('data-model', model);
-    panel.innerHTML = `<div class="pym-tabs" role="tablist" aria-label="Menú"${groups.length === 1 ? ' data-single' : ''}>${groups.map((group, index) => `<button type="button" class="pym-tab" role="tab" id="${id}-tab-${index}" aria-controls="${id}-group-${index}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${escape(group.label)}</button>`).join('')}</div>`
+    const countOf = href => { const id = new URL(href, location.href).searchParams.get('f_categoria'); const n = id ? products().filter(item => filterFold(item.categoryId) === id).length : 0; return n ? `${n} ${n === 1 ? 'producto' : 'productos'}` : ''; };
+    const swaps = model === 'overlay' || model === 'split';
+    const linkHtml = link => `<li><a href="${escape(link.href)}"${swaps && link.image ? ` data-photo-for="${escape(link.image)}"` : ''}><span class="pym-link-label">${escape(link.label)}</span>${link.note ? `<span class="pym-note">${escape(link.note)}</span>` : ''}${model === 'index' ? `<span class="pym-count">${escape(countOf(link.href))}</span>` : ''}</a></li>`;
+    const tileHtml = tile => `<li><a href="${escape(tile.href)}"><img src="${escape(tile.image)}" alt="" loading="lazy"><span${model === 'mega' ? ' class="pym-tile-title"' : ''}>${escape(tile.title)}</span>${tile.price ? `<small class="pym-price">${escape(tile.price)}</small>` : ''}</a></li>`;
+    const firstPhoto = (groups.find(group => group.tiles.length) || { tiles: [] }).tiles[0] || groups.flatMap(group => group.links).find(link => link.image);
+    const heroPhoto = swaps && firstPhoto ? `<div class="pym-hero-photo"><img src="${escape(firstPhoto.image)}" alt="" loading="lazy"></div>` : '';
+    panel.innerHTML = heroPhoto + `<div class="pym-tabs" role="tablist" aria-label="Menú"${groups.length === 1 ? ' data-single' : ''}>${groups.map((group, index) => `<button type="button" class="pym-tab" role="tab" id="${id}-tab-${index}" aria-controls="${id}-group-${index}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${escape(group.label)}</button>`).join('')}</div>`
       + groups.map((group, index) => `<div class="pym-group" role="tabpanel" id="${id}-group-${index}" aria-labelledby="${id}-tab-${index}"${index ? ' hidden' : ''}>`
-        + `<ul class="pym-links">${group.links.map(link => `<li><a href="${escape(link.href)}">${escape(link.label)}</a></li>`).join('')}</ul>`
-        + (group.tiles.length ? `<div class="pym-tiles">${group.tilesTitle ? `<p class="pym-tiles-title">${escape(group.tilesTitle)}</p>` : ''}<ul>${group.tiles.map(tile => `<li><a href="${escape(tile.href)}"><img src="${escape(tile.image)}" alt="" loading="lazy"><span>${escape(tile.title)}</span>${tile.price ? `<small class="pym-price">${escape(tile.price)}</small>` : ''}</a></li>`).join('')}</ul></div>` : '')
+        + `<ul class="pym-links">${group.links.map(linkHtml).join('')}</ul>`
+        + (group.tiles.length && model !== 'index' ? `<div class="pym-tiles">${group.tilesTitle ? `<p class="pym-tiles-title">${escape(group.tilesTitle)}</p>` : ''}<ul>${group.tiles.map(tileHtml).join('')}</ul></div>` : '')
         + (group.footer ? `<a class="pym-footer" href="${escape(group.footer.href)}">${escape(group.footer.label)}</a>` : '')
         + '</div>').join('')
       + (extras ? `<div class="pym-extras">${extras}</div>` : '');
     host.appendChild(panel);
+    // Overlay and split: the big photo follows the link under the pointer or the keyboard focus.
+    if (swaps) panel.querySelectorAll('a[data-photo-for]').forEach(link => { const show = () => { const img = panel.querySelector('.pym-hero-photo img'); if (img) img.src = link.getAttribute('data-photo-for'); }; link.addEventListener('pointerenter', show); link.addEventListener('focus', show); });
     const toggle = toggleMount.querySelector('[data-store-menu-toggle]');
     const tops = linksMount ? [...linksMount.querySelectorAll('[data-store-menu-top]')] : [];
     const tabs = [...panel.querySelectorAll('[role=tab]')];

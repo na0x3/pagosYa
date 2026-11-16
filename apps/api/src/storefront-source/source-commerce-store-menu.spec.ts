@@ -295,4 +295,27 @@ describe('store menu', () => {
     const odd = await open({ menu: { model: 'hologram' } });
     expect(odd.q('.pym-panel').getAttribute('data-model')).toBe('tabs');
   });
+  it('draws each look model with its own parts (mega, overlay, index)', async () => {
+    const groups = [{ label: 'Tienda', links: [{ to: 'category:C1' }, { to: 'category:c2', note: 'Hechas a mano' }], tiles: [{ to: 'category:C1', image: 'https://api.test/a.jpg', title: 'Vestidos' }] }];
+    const mega = await open({ menu: { model: 'mega', groups } });
+    expect(mega.q('.pym-tile-title').textContent).toBe('Vestidos');
+    const overlay = await open({ menu: { model: 'overlay', groups } });
+    expect(overlay.q('.pym-hero-photo')).not.toBeNull();
+    expect(overlay.q('.pym-links a[data-photo-for]')).not.toBeNull();
+    const index = await open({ menu: { model: 'index', groups } });
+    expect(index.all('.pym-count').map((el: any) => el.textContent)).toEqual(['1 producto', '1 producto']);
+    expect(index.q('.pym-note').textContent).toBe('Hechas a mano');
+    expect(index.q('.pym-tiles')).toBeNull();
+  });
+  it('every look model closes on Escape and gives focus back to ☰', async () => {
+    for (const model of ['mega', 'overlay', 'dropdown', 'drawer', 'split', 'index']) {
+      const { w, q, key } = await open({ menu: { model } });
+      const toggle = q('[data-store-menu-toggle]');
+      toggle.click();
+      expect(q('.pym-panel').hidden).toBe(false);
+      key(w.document, 'Escape');
+      expect(q('.pym-panel').hidden).toBe(true);
+      expect(w.document.activeElement).toBe(toggle);
+    }
+  });
 });
