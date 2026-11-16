@@ -410,4 +410,13 @@ describe('store menu', () => {
     const empty = await open({ menu: { model: 'search' }, data: { ...DATA, items: [], categories: [] } });
     expect(empty.all('.pym-tiles-title').map((el: any) => el.textContent)).not.toContain('Populares');
   });
+  it('live 2026-11-16 (DooBoo r11): a menu that covers the page closes with its own visible button', async () => {
+    const { q } = await open({ menu: { model: 'overlay', groups: [{ label: 'Tienda', links: [{ to: 'all' }] }] } });
+    q('[data-store-menu-toggle]').click();
+    expect(q('.pym-panel').hidden).toBe(false);
+    const close = q('.pym-panel [data-store-menu-close]');
+    expect(close.getAttribute('aria-label')).toBe('Cerrar menú');
+    close.click();
+    expect(q('.pym-panel').hidden).toBe(true);
+  });
 });

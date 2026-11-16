@@ -10,6 +10,8 @@
     .pym-panel[data-model=mega] .pym-tile-title{position:absolute;inset:auto 12px 14px;color:#fff;font-family:var(--store-heading-font,inherit);font-size:18px;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 2px 12px #0008}
     .pym-panel[data-model=overlay],.pym-panel[data-model=split]{position:fixed;inset:0;max-height:none;z-index:1000;border:0;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px;align-items:center;padding:clamp(24px,5vw,72px)}
     .pym-panel[data-model=overlay]{background:var(--store-accent,#111);color:var(--store-on-accent,#fff)}
+    .pym-close{display:none}
+    .pym-panel[data-model=overlay] .pym-close,.pym-panel[data-model=split] .pym-close,.pym-panel[data-model=drawer] .pym-close,.pym-panel[data-mode=panel] .pym-close{display:grid;place-items:center;position:absolute;top:14px;right:14px;z-index:2;width:44px;height:44px;border:0;border-radius:999px;background:color-mix(in srgb,currentColor 12%,transparent);color:inherit;font:400 28px/1 inherit;cursor:pointer}
     .pym-panel[data-model=overlay] .pym-tabs{grid-column:1/-1}
     .pym-panel[data-model=overlay] .pym-links{grid-template-columns:1fr;gap:4px}
     .pym-panel[data-model=overlay] .pym-links a{font-family:var(--store-heading-font,inherit);font-size:clamp(36px,5vw,64px);line-height:1.05;opacity:.55;transition:opacity .2s}
