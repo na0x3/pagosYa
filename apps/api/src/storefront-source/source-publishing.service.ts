@@ -263,6 +263,9 @@ export class SourcePublishingService {
       if (!test) throw new ConflictException('Esta prueba ya terminó.');
       const ended = await tx.storeSourceExperiment.updateMany({ where: { id: experimentId, storeId, status: 'RUNNING' }, data: { status: stopped ? 'STOPPED' : 'COMPLETED', activeStoreId: null, winner: stopped ? null : keep, endedAt: new Date() } });
       if (!ended.count) throw new ConflictException('Esta prueba ya terminó.');
+      // A selling test only ends: its revision is the design published when it began, and the merchant may have published since
+      // (final review I1). The daily job turns winner B into a kept change.
+      if (test.kind === 'selling') return;
       if (test.kind !== 'popup') {
         if (keep === 'B') await tx.store.update({ where: { id: storeId }, data: { publishedSourceRevision: test.variantRevision, sourcePublishedAt: new Date() } });
         return;
@@ -294,7 +297,7 @@ export class SourcePublishingService {
     if (!state.experiment || state.experiment.id !== experimentId || state.experiment.status !== 'RUNNING') throw new ConflictException('Esta prueba ya no está activa.');
     const winner = apply ? state.experiment.evidence.winner : null;
     // Final review 2026-11-09: the «Pruebas A/B» page's buttons end a popup test by the popup rules (B's popup on a win, B's code off).
-    if (state.experiment.kind === 'popup') {
+    if (state.experiment.kind === 'popup' || state.experiment.kind === 'selling') {
       if (apply && !winner) throw new BadRequestException('Todavía no hay evidencia suficiente para aplicar un ganador.');
       return this.finishWith(merchantId, storeId, expected, experimentId, apply ? winner as 'A' | 'B' : 'A', !apply);
     }

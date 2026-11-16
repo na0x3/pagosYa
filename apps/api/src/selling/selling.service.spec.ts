@@ -58,4 +58,18 @@ describe('SellingService daily run (spec 2026-11-16)', () => {
     await new SellingService(prisma).runDaily(NOW);
     expect(prisma.storeSellingChange.update).toHaveBeenCalledWith({ where: { id: 'k1' }, data: expect.objectContaining({ status: 'UNDONE' }) });
   });
+  it('final review I2: one weekly drop undoes one kept change, not one a day', async () => {
+    const prisma = fakePrisma();
+    prisma.storeOrder.count.mockResolvedValueOnce(4).mockResolvedValueOnce(40);
+    prisma.storeSellingChange.findFirst.mockImplementation(async ({ where }: any) => where?.status === 'UNDONE' ? { id: 'u0' } : where?.status === 'KEPT' ? { id: 'k1', summary: 'x' } : null);
+    await new SellingService(prisma).runDaily(NOW);
+    expect(prisma.storeSellingChange.update).not.toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'k1' } }));
+  });
+  it('final review M3: the week card closes a trying change whose test ended while the store was paused', async () => {
+    const prisma = fakePrisma();
+    prisma.storeSellingChange.findMany.mockImplementation(async ({ where }: any) => where?.status === 'TRYING' ? [{ id: 'c9', experimentId: 'e9', summary: 'Botón «Lo quiero»' }] : []);
+    prisma.storeSourceExperiment.findFirst.mockResolvedValue({ id: 'e9', status: 'STOPPED', winner: null });
+    await new SellingService(prisma).summary('m1', 's1', NOW);
+    expect(prisma.storeSellingChange.update).toHaveBeenCalledWith({ where: { id: 'c9' }, data: expect.objectContaining({ status: 'UNDONE' }) });
+  });
 });

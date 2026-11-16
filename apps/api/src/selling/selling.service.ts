@@ -5,6 +5,7 @@ import { stopSellingTest } from './selling-store';
 
 const DAY = 86_400_000;
 const PAID = { paymentIntent: { status: 'SUCCEEDED' as const } };
+const DROP_NOTE = 'deshecho: bajaron los pedidos de la semana';
 
 /**
  * «La tienda que vende sola» (spec 2026-11-16): once a day each published store with «Mejora automática» on either judges its running
@@ -54,9 +55,11 @@ export class SellingService {
     const lastWeek = await this.prisma.storeOrder.count({ where: { storeId, createdAt: { gte: week }, ...PAID } });
     const previous = await this.prisma.storeOrder.count({ where: { storeId, createdAt: { gte: before, lt: week }, ...PAID } });
     if (!ordersDropped(lastWeek, previous)) return;
+    // One drop undoes one change: the low week stays in the window for 7 daily runs (final review I2).
+    if (await this.prisma.storeSellingChange.findFirst({ where: { storeId, status: 'UNDONE', endedAt: { gte: week }, summary: { contains: DROP_NOTE } } })) return;
     const newest = await this.prisma.storeSellingChange.findFirst({ where: { storeId, status: 'KEPT', endedAt: { gte: new Date(now.getTime() - 28 * DAY) } }, orderBy: { endedAt: 'desc' } });
     if (!newest) return;
-    await this.prisma.storeSellingChange.update({ where: { id: newest.id }, data: { status: 'UNDONE', endedAt: now, summary: `${(newest.summary ?? 'Cambio').replace(/ — .*$/, '')} — deshecho: bajaron los pedidos de la semana` } });
+    await this.prisma.storeSellingChange.update({ where: { id: newest.id }, data: { status: 'UNDONE', endedAt: now, summary: `${(newest.summary ?? 'Cambio').replace(/ — .*$/, '')} — ${DROP_NOTE}` } });
   }
 
   private async sideStats(storeId: string, experimentId: string): Promise<{ a: SideStats; b: SideStats }> {
@@ -122,6 +125,8 @@ export class SellingService {
   /** «Tu tienda esta semana»: what is being tried, what was kept and what was undone in the last 7 days. */
   async summary(merchantId: string, storeId: string, now = new Date()) {
     const store = await this.owned(merchantId, storeId);
+    // A test ended while the store was paused (the daily job skips paused stores) closes here (final review M3).
+    await this.healEnded(storeId, now).catch(() => undefined);
     const changes = await this.prisma.storeSellingChange.findMany({ where: { storeId }, orderBy: { startedAt: 'desc' }, take: 40 });
     const week = now.getTime() - 7 * DAY;
     const view = (change: (typeof changes)[number]) => ({ id: change.id, kind: change.kind, summary: change.summary ?? '', status: change.status, startedAt: change.startedAt, endedAt: change.endedAt });

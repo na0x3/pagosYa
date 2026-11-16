@@ -485,6 +485,14 @@ describe('popup A/B tests', () => {
     expect(retention.settings.popupPromoCodeId).toBe('codeA');
   });
 
+  it('final review I1: ending a selling test never touches the published design (the merchant may have published since)', async () => {
+    const { service, store, experiments } = popupPublishing({ running: { id: 'sell1', activeStoreId: 's', status: 'RUNNING', kind: 'selling', controlRevision: 12, variantRevision: 12, startedAt: new Date() } });
+    store.publishedSourceRevision = 14;
+    await service.finishWith('m', 's', 0, 'sell1', 'B');
+    expect(store.publishedSourceRevision).toBe(14);
+    expect(experiments[0]).toMatchObject({ status: 'COMPLETED', winner: 'B' });
+  });
+
   it('a design test kept as B publishes B', async () => {
     const { service, store, experiments } = popupPublishing({ running: { id: 'd1', activeStoreId: 's', status: 'RUNNING', kind: 'design', controlRevision: 4, variantRevision: 6, startedAt: new Date() } });
     await service.finishWith('m', 's', 0, 'd1', 'B');
