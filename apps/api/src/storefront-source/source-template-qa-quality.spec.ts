@@ -50,4 +50,18 @@ describe('template rules: store quality 2026-11-16', () => {
       </div></section>`);
     expect(found.find(f => f.rule === 'photo-less-tile')).toBeUndefined();
   });
+
+  it('hero-actions: the cover\'s calls to action are words with a line under them (NOA r2 «Ver novias | Reservar cita»)', async () => {
+    const found = await rules(1280, `<section data-lb-at="0"><h1 style="font-size:80px">NOA VARGAS</h1>
+        <a href="#" style="font-size:12px;letter-spacing:.1em;text-decoration:none;border-bottom:1px solid #111">VER NOVIAS</a>
+        <a href="#" style="font-size:12px;letter-spacing:.1em;text-decoration:none">RESERVAR CITA</a>
+        <img src="${picture}" width="600" height="400" alt=""></section>`);
+    expect(found).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'hero-actions', part: 0 })]));
+  });
+  it('hero-actions: a real button with one secondary text link passes', async () => {
+    const found = await rules(1280, `<section data-lb-at="0"><h1 style="font-size:80px">Tienda</h1>
+        <a href="#" style="display:inline-block;padding:12px 20px;background:#111;color:#fff;border-radius:999px">Comprar</a>
+        <a href="#">Ver cómo se hace</a><img src="${picture}" width="600" height="400" alt=""></section>`);
+    expect(found.find(f => f.rule === 'hero-actions')).toBeUndefined();
+  });
 });

@@ -411,5 +411,21 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
     }
     if (lone) push('photo-less-tile', lone, `CONSEJO: La tarjeta ${quote(lone)} es un bloque de color sin foto junto a otras con foto: dale una foto de la tienda que aún no uses, igual que a sus vecinas.`);
   }
+  // Spec 2026-11-16 store quality (NOA r2 «Ver novias | Reservar cita»): the cover's calls to action are buttons — a filled or
+  // outlined box — not words with a line under them.
+  {
+    const first = Array.from(main.children).find(visible);
+    const actions = first ? Array.from(first.querySelectorAll('a[href],button')).filter(el => {
+      const r = el.getBoundingClientRect(), words = (el.textContent || '').trim();
+      return r.width > 0 && r.height > 0 && words.length > 0 && words.length <= 40 && !el.closest('nav,header') && !el.closest(productish);
+    }) : [];
+    const boxed = (el: Element) => {
+      const s = getComputedStyle(el), bg = rgb(s.backgroundColor), r = el.getBoundingClientRect();
+      const filled = bg.length >= 3 && (bg[3] === undefined || bg[3] > .3);
+      const outlined = ['top', 'right', 'bottom', 'left'].every(side => parseFloat(s.getPropertyValue(`border-${side}-width`)) >= 1);
+      return (filled || outlined) && r.height >= 32;
+    };
+    if (actions.length && !actions.some(boxed)) push('hero-actions', actions[0], `CONSEJO: En la portada ${quote(actions[0])} es una palabra con raya, no un botón: dale forma de botón (fondo o borde, minHeight 44 px, padding 0 22px) y deja como texto solo una acción secundaria.`);
+  }
   return out;
 }
