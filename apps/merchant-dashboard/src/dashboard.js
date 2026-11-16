@@ -25,6 +25,7 @@ import { playImmersiveMove } from "/src/immersive.mjs";
 import { lowStock, renderRestock } from "/src/restock.mjs";
 import { renderSellingCard } from "/src/selling-card.mjs";
 import { mountTareas } from "/src/tareas.mjs";
+import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
 
   (() => {
   // The dashboard ships a single light theme; drop any preference left by the old switcher.
@@ -952,8 +953,32 @@ import { mountTareas } from "/src/tareas.mjs";
     }));
     setup.hidden = !setup.innerHTML;
     void loadSelling();
+    // Inicio › the store at a glance and three things YAPI can do (calm dashboard polish 2026-11-16).
+    const storeCard = document.getElementById("overviewStore");
+    if (storeCard) {
+      const state = store ? storePublicationState(store) : "";
+      storeCard.innerHTML = renderStoreCard({ store, state, url: store?.slug ? publicStoreUrl(store) : "" });
+      storeCard.hidden = !storeCard.innerHTML;
+      const shot = storeCard.querySelector("img[data-thumbnail-revision]");
+      if (shot) {
+        const key = `${shot.dataset.thumbnailStore}:${shot.dataset.thumbnailRevision}`;
+        if (overviewShots.has(key)) shot.src = overviewShots.get(key);
+        else api(`/stores/${encodeURIComponent(shot.dataset.thumbnailStore)}/source-project/thumbnail/${Number(shot.dataset.thumbnailRevision)}`, { raw: true })
+          .then((blob) => { const url = URL.createObjectURL(blob); overviewShots.set(key, url); if (shot.isConnected) shot.src = url; })
+          .catch(() => shot.closest(".overview-store-media")?.classList.add("failed"));
+      }
+    }
+    const suggest = document.getElementById("overviewSuggest");
+    if (suggest && !suggest.innerHTML) suggest.innerHTML = renderSuggestions();
   }
 
+  const overviewShots = new Map();
+  document.querySelector('[data-dashboard-page="overview"]')?.parentElement?.addEventListener("click", (event) => {
+    const open = event.target.closest("[data-overview-open]");
+    if (!open) return;
+    history.pushState(null, "", `#dashboard-${open.dataset.overviewOpen}`);
+    setDashboardView(open.dataset.overviewOpen);
+  });
   /* Inicio › «Tu tienda esta semana» (spec 2026-11-16, la tienda que vende sola): only for a published store. */
   let sellingRequest = 0;
   async function loadSelling() {

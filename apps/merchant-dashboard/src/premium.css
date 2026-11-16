@@ -176,6 +176,31 @@ body.is-logged-in .workspace-yapi-status:empty { display: none; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 600ms; animation-timing-function: cubic-bezier(.22,1,.36,1); }
 @media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
 
+/* ── Inicio › your store at a glance + what YAPI can do (calm dashboard polish 2026-11-16) ── */
+body.is-logged-in .overview-store { display: grid; grid-template-columns: minmax(220px, 340px) minmax(0, 1fr); gap: 24px; align-items: center; margin: 0 0 20px; padding: 16px; border: 1px solid var(--pm-glass-edge); border-radius: 24px; background: var(--pm-field); box-shadow: var(--pm-shadow-card); }
+body.is-logged-in .overview-store-media { aspect-ratio: 16 / 10; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #f4f4f5, #e4e4e7); }
+body.is-logged-in .overview-store-shot { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+body.is-logged-in .overview-store-shot:not([src]) { visibility: hidden; }
+body.is-logged-in .overview-store-kicker { margin: 0 0 4px; color: var(--pg-text-muted); font-size: 13px; font-weight: 550; }
+body.is-logged-in .overview-store-body h2 { margin: 0 0 10px; font: 400 32px/1.1 var(--pm-serif); }
+body.is-logged-in .overview-store-status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--pm-hover); color: var(--pg-text-muted); }
+body.is-logged-in .overview-store-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+body.is-logged-in .overview-store-status.is-published { background: #ecfdf3; color: #166534; }
+body.is-logged-in .overview-store-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+body.is-logged-in .overview-store-primary { min-height: 42px; padding: 0 18px; border: 0; border-radius: 999px; background: #18181b; color: #fff; font-weight: 600; cursor: pointer; }
+body.is-logged-in .overview-store-actions a.ui-button { display: inline-flex; align-items: center; min-height: 42px; padding: 0 16px; border-radius: 999px; color: inherit; text-decoration: none; border: 1px solid var(--pg-border); }
+body.is-logged-in .overview-suggest { grid-column: 1 / -1; order: 4; }
+body.is-logged-in .suggest-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+body.is-logged-in .suggest-head h2 { margin: 0; font: 400 24px/1.2 var(--pm-serif); }
+body.is-logged-in .suggest-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+body.is-logged-in .suggest-card button { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 14px; align-items: center; width: 100%; padding: 10px; border: 1px solid var(--pg-border); border-radius: 16px; background: var(--pm-field); color: inherit; text-align: left; cursor: pointer; transition: border-color .2s var(--pm-ease), transform .2s var(--pm-ease); }
+body.is-logged-in .suggest-card button:hover { border-color: #a1a1aa; transform: translateY(-1px); }
+body.is-logged-in .suggest-art { display: grid; place-items: center; width: 72px; height: 54px; border-radius: 10px; }
+body.is-logged-in .suggest-art svg { display: block; width: 60px; height: 45px; }
+body.is-logged-in .suggest-card strong { display: block; font-size: 15px; font-weight: 600; }
+body.is-logged-in .suggest-card small { color: var(--pg-text-muted); font-size: 13px; }
+@media (max-width: 900px) { body.is-logged-in .suggest-list { grid-template-columns: minmax(0, 1fr); } body.is-logged-in .overview-store { grid-template-columns: minmax(0, 1fr); } }
+
 /* ── Inicio › Tu tienda esta semana (spec 2026-11-16, la tienda que vende sola) ── */
 body.is-logged-in .overview-selling { grid-column: 1 / -1; order: 2; }
 body.is-logged-in .selling-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
