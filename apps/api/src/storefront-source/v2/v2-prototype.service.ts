@@ -21,7 +21,7 @@ import { joinV2Parts, mergeV2Fix, readV2Part, v2Hint, v2Repairs, v2FixInput, v2F
 import type { V2File } from './v2-context';
 import { v2CartSheet } from './v2-kit-baseline';
 import { mergeSectionFix, sectionFixPlan, v2SectionFixInput, v2SectionFixPrompt, v2SectionFixSchema } from './v2-section-fix';
-import { freeBlocking, runV2Build, type V2Attempt, type V2BuildDeps } from './v2-run';
+import { freeBlocking, runV2Build, withContextMenu, type V2Attempt, type V2BuildDeps } from './v2-run';
 import { captureV2Look, v2LookInput, v2LookLines, v2LookPrompt, v2LookSchema, type V2LookCapture, type V2LookProblem } from './v2-look';
 import { apiRoot, buildInSandbox } from './v2-sandbox';
 import { SourceChatService } from '../source-chat.service';
@@ -123,7 +123,7 @@ export class SourceV2PrototypeService {
     // The current repairs too (live 2026-11-15: DooBoo's product page and contact mounts were fixable without a model call).
     const repaired = v2Repairs(written, context);
     if (repaired.repairs.length) this.log.log(JSON.stringify({ event: 'v2_reassemble_repairs', storeId, repairs: repaired.repairs }));
-    const input = { revision: head, label: V2_LABEL, brief: base.brief, files: assembleV2Files(files, repaired.files, context.ownCards, context.ownIcons, context.cartSheet) } as Parameters<SourceProjectsService['save']>[2];
+    const input = { revision: head, label: V2_LABEL, brief: base.brief, files: withContextMenu(assembleV2Files(files, repaired.files, context.ownCards, context.ownIcons, context.cartSheet), context) } as Parameters<SourceProjectsService['save']>[2];
     const started = Date.now();
     const built = await buildInSandbox(input);
     if (!built.ok) throw new BadRequestException(`No compiló: ${built.error.slice(0, 600)}`);
@@ -169,6 +169,9 @@ export class SourceV2PrototypeService {
     files.push(...design.files.filter(file => /^assets\/image-[a-f0-9]{12}\.webp$/.test(file.path) && !known.has(file.path)));
     const first = await this.prisma.storeAgentMessage.findFirst({ where: { thread: { storeId }, role: 'USER' }, orderBy: { createdAt: 'asc' }, select: { content: true } });
     const context = await v2Context(files, first?.content ?? '');
+    // A look or a reassembly keeps the menu the design was saved with.
+    const savedMenu = readConfigData(design.files).header?.menu;
+    if (savedMenu && typeof savedMenu.model === 'string' && Array.isArray(savedMenu.groups)) context.menu = savedMenu;
     return { head, from: latestV2.revision, written, base, baseRevision, files, context };
   }
 
@@ -255,6 +258,8 @@ export class SourceV2PrototypeService {
     ], v2DirectionSchema(context), 'v2_direction', 12_000, state, 'medium'));
     if (!direction) throw new Error('la dirección de arte no llegó');
     state.direction = direction;
+    // The store's menu as the direction chose it (spec 2026-11-15 store menu models): checked by the contract, written into config.js.
+    context.menu = direction.menu;
     // The cart drawer's look, as the direction chose it for this store (owner 2026-11-14 «depends on the store»).
     context.cartSheet = v2CartSheet(direction.cart?.look, context.storeName, direction.cart?.photo);
     // Written parts kept between rounds until a whole first version is put together (see write below).

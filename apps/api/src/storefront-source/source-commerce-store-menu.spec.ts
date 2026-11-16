@@ -365,4 +365,8 @@ describe('store menu', () => {
     expect(dock.q('.pym-panel').hidden).toBe(false);
     expect(dock.all('.pym-group').filter((g: any) => !g.hidden)[0].textContent).toContain('Seda');
   });
+  it('takes the store’s own assets/ photos for menu tiles (V2 stores bundle their photos)', async () => {
+    const { q } = await open({ menu: { model: 'mega', groups: [{ label: 'Tienda', links: [{ to: 'all' }], tiles: [{ to: 'category:C1', image: 'assets/image-aaaaaaaaaaaa.jpg', title: 'Vestidos' }] }] } });
+    expect(q('.pym-tiles img').getAttribute('src')).toMatch(/assets\/image-aaaaaaaaaaaa\.jpg$/);
+  });
 });

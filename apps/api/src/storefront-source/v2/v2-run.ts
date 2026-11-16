@@ -1,3 +1,4 @@
+import { withStoreMenu } from './v2-menus';
 import type { SaveSourceProjectDto } from '../dto/save-source-project.dto';
 import type { SourceProjectSnapshot } from '../source-project';
 import { assembleV2Files, type V2Context, type V2File } from './v2-context';
@@ -80,7 +81,7 @@ export async function runV2Build(base: { revision: number; brief: SaveSourceProj
     previous = files;
     const contract = v2ContractProblems(files, context);
     if (contract.length) { done('contract', contract); continue; }
-    const input = { revision: base.revision, label, brief: base.brief, files: assembleV2Files(base.files, files, context.ownCards, context.ownIcons, context.cartSheet) } as SaveSourceProjectDto;
+    const input = { revision: base.revision, label, brief: base.brief, files: withContextMenu(assembleV2Files(base.files, files, context.ownCards, context.ownIcons, context.cartSheet), context) } as SaveSourceProjectDto;
     const built = await deps.build(input);
     if (!built.ok) { done('build', [`${built.kind === 'build' ? 'No compiló' : built.kind === 'timeout' ? 'La compilación tardó demasiado' : 'La compilación se cayó'}: ${built.error.slice(0, 1500)}`]); continue; }
     const refused = deps.commerce(built.snapshot);
@@ -105,4 +106,9 @@ export async function runV2Build(base: { revision: number; brief: SaveSourceProj
     done('visual', visual);
   }
   return best ? { ok: true, attempts, ...best } : { ok: false, attempts };
+}
+
+/** The store's menu, as the direction chose it, written into config.js (spec 2026-11-15 store menu models). */
+export function withContextMenu<T extends { path: string; content: string }>(files: T[], context: Pick<V2Context, 'menu'>): T[] {
+  return context.menu ? withStoreMenu(files, context.menu) : files;
 }

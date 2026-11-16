@@ -4,6 +4,7 @@ import { uiRuntime } from '../source-creative';
 import { repairNextAuthoredMarkup } from '../source-next';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import { V2_FILES, type V2Context, type V2File } from './v2-context';
+import { menuProblems, V2_MENU_MODELS, v2MenuSchema, type V2Menu } from './v2-menus';
 import { readV2LibraryFile, V2_HERO_TYPES, V2_KIT_TEXT, V2_LIBRARY_FILE, v2LibraryCatalogText, v2LibrarySchema, type V2LibraryEntry } from './v2-library';
 export { mergeV2LibraryEntries } from './v2-library';
 
@@ -11,6 +12,7 @@ export { mergeV2LibraryEntries } from './v2-library';
  *  any code (the reference images teach the level of craft, never the layout to copy), then the four files written from it. */
 
 export type V2Direction = {
+  menu?: V2Menu;
   idea: string; craft: string; display: string; text: string; scale: 'quiet' | 'regular' | 'loud';
   palette: { paper: string; ink: string; muted: string; accent: string; line: string; jobs: string };
   grid: string; hero: { composition: string; photo: string }; sections: Array<{ role: string; composition: string; photo: string; why: string }>;
@@ -27,7 +29,7 @@ const hex = { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' };
 export function v2DirectionSchema(context: V2Context): object {
   const ids = SOURCE_FONT_CATALOG.map(font => font.id);
   const photo = { type: 'string', enum: ['', ...context.photos.map(entry => entry.path)] };
-  return { type: 'object', additionalProperties: false, required: ['idea', 'craft', 'display', 'text', 'scale', 'palette', 'grid', 'hero', 'sections', 'signature', 'photos', 'phone', 'avoid', 'cart', 'art'],
+  return { type: 'object', additionalProperties: false, required: ['idea', 'craft', 'display', 'text', 'scale', 'palette', 'grid', 'hero', 'sections', 'signature', 'photos', 'phone', 'avoid', 'cart', 'art', 'menu'],
     properties: {
       idea: { type: 'string' }, craft: { type: 'string' }, display: { type: 'string', enum: ids }, text: { type: 'string', enum: ids }, scale: { type: 'string', enum: ['quiet', 'regular', 'loud'] },
       palette: { type: 'object', additionalProperties: false, required: ['paper', 'ink', 'muted', 'accent', 'line', 'jobs'], properties: { paper: hex, ink: hex, muted: hex, accent: hex, line: hex, jobs: { type: 'string' } } },
@@ -35,6 +37,7 @@ export function v2DirectionSchema(context: V2Context): object {
       sections: { type: 'array', minItems: context.free ? FREE_MIN - 1 : 4, maxItems: context.free ? FREE_MAX - 1 : 9, items: { type: 'object', additionalProperties: false, required: ['role', 'composition', 'photo', 'why'],
         properties: { role: { type: 'string' }, composition: { type: 'string' }, photo, why: { type: 'string' } } } },
       signature: { type: 'string' }, photos: { type: 'string' }, phone: { type: 'string' }, avoid: { type: 'array', minItems: 3, maxItems: 8, items: { type: 'string' } },
+      menu: v2MenuSchema(context.menusAllowed ?? V2_MENU_MODELS.map(m => m.id)),
       cart: { type: 'object', additionalProperties: false, required: ['look', 'photo'], properties: { look: { type: 'string', enum: ['band', 'photo', 'paper'] }, photo } },
       art: { type: 'object', additionalProperties: false, required: ['layouts', 'type', 'graphics', 'motion', 'interaction'], properties: {
         layouts: { type: 'array', minItems: 3, maxItems: 4, items: { type: 'string' } }, type: { type: 'string' }, graphics: { type: 'string' }, motion: { type: 'string' }, interaction: { type: 'string' } } },
@@ -240,7 +243,11 @@ ${fonts()}`;
 
 export function v2DirectionInput(context: V2Context): string {
   // Owner 2026-11-15: the art direction knows a showcase piece is possible, so its chapters can make room for one.
-  return `${facts(context)}${(context.cutouts?.length ?? 0) >= 2 ? '\n\nVITRINAS: con los recortes la portada puede tener UNA vitrina de la plataforma justo después de la primera pantalla: ProductStage (un producto por pantalla, cada uno con su color de fondo y un titular de cartel partido alrededor del producto, como LIFT) o, para ropa, HangingRail (prendas en un riel, como ATELIER). Si la usas, nómbrala en los capítulos y da los colores de fondo de cada pantalla.' : ''}`;
+  // Owner 2026-11-15 («changing menu per store»): the direction picks one of the kit's menu models this merchant has not used yet.
+  const menus = V2_MENU_MODELS.filter(m => (context.menusAllowed ?? V2_MENU_MODELS.map(x => x.id)).includes(m.id));
+  const menu = `\n\nMENÚ: elige UNO de estos modelos, el que mejor venda en ESTA tienda (nunca otro): ${menus.map(m => `${m.id}: ${m.fits}`).join(' · ')}.
+Grupos con nombres cortos y claros (máx. 28 letras), como mucho 7 arriba; enlaces con to: all, new, category:<id>, collection:<slug>, page:about|contact|shipping|faq, section:<id>; fotos solo de las rutas de la tienda, cada una una vez. Tu CSS puede vestir .pym-panel[data-model=…] y sus partes .pym-*.`;
+  return `${facts(context)}${(context.cutouts?.length ?? 0) >= 2 ? '\n\nVITRINAS: con los recortes la portada puede tener UNA vitrina de la plataforma justo después de la primera pantalla: ProductStage (un producto por pantalla, cada uno con su color de fondo y un titular de cartel partido alrededor del producto, como LIFT) o, para ropa, HangingRail (prendas en un riel, como ATELIER). Si la usas, nómbrala en los capítulos y da los colores de fondo de cada pantalla.' : ''}` + menu;
 }
 
 /** The writer works in two calls so each answer fits the ChatGPT bridge's 10-minute request (live 2026-11-14: all four files in one
@@ -862,6 +869,8 @@ export function v2ContractProblems(files: readonly V2File[], context: V2Context)
   if (spare) for (const [path, count] of uses) if (count > 1) problems.push(`La foto ${path} aparece ${count} veces en la portada: cada foto y cada recorte van una sola vez.`);
   if (problems.some(line => / que no es un recorte:/.test(line))) problems.push(`Recortes que sí puedes usar en las vitrinas: ${(context.cutouts ?? []).map(cut => `${cut.path} (${cut.product ? `${cut.product} · ` : ''}${cut.name})`).join(', ') || '(ninguno: quita la vitrina)'}.`);
   for (const [, path] of all.matchAll(/["'(](assets\/[\w.-]+\.(?:jpe?g|png|webp))["')]/g)) if (!photos.has(path)) problems.push(`La foto ${path} no existe en la tienda.`);
+  // The direction's menu keeps the selling rules (spec 2026-11-15 store menu models).
+  if (context.menu) problems.push(...menuProblems(context.menu, context));
   return [...new Set(problems)];
 }
 

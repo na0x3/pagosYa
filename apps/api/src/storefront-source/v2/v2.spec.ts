@@ -10,6 +10,7 @@ import { signatureDistance, type SectionShape } from './v2-signature';
 import { cardText, pickReferences, storeShapes } from './v2-references';
 import { buildV2Library, readV2LibraryFile, v2LibraryFile, withoutRepeatedPhotos, withUniquePhotos } from './v2-library';
 import { SourceV2PrototypeService } from './v2-prototype.service';
+import { allowedMenus, menuProblems, V2_MENU_MODELS, v2MenuSchema, withStoreMenu } from './v2-menus';
 import { SourceV2PrototypeController } from './v2-prototype.controller';
 
 const context: V2Context = {
@@ -675,4 +676,36 @@ describe('v2 prototype: the build loop', () => {
     expect(typeof SourceV2PrototypeService).toBe('function');
     expect(typeof SourceV2PrototypeController).toBe('function');
   });
+});
+
+describe('v2 menus (spec 2026-11-15 store menu models)', () => {
+  it('checks the selling rules: 7 top links, plain names, real photos once', () => {
+    const photos = [{ path: 'assets/a.jpg', width: 800, height: 800, shape: 'square' as const }];
+    const ok = { model: 'mega', groups: [{ label: 'Tienda', links: [{ to: 'all' }], tiles: [{ to: 'all', image: 'assets/a.jpg' }] }] };
+    expect(menuProblems(ok, { photos })).toEqual([]);
+    const bad = { model: 'mega', groups: Array.from({ length: 8 }, (_, i) => ({ label: i ? `Grupo ${i}` : 'Una categoría con un nombre demasiado largo', links: [{ to: 'all' }], tiles: [{ to: 'all', image: 'assets/zz.jpg' }] })) };
+    const lines = menuProblems(bad, { photos }).join(' | ');
+    expect(lines).toMatch(/como mucho 7/); expect(lines).toMatch(/28 letras/); expect(lines).toMatch(/assets\/zz\.jpg/);
+  });
+  it('writes the chosen menu into config.js and keeps the rest of the config', () => {
+    const files = [{ path: 'config.js', content: 'window.PAGOSYA_CONFIG = {"slug":"ob","header":{"x":1},"data":{"name":"Oh Belly"}};' }];
+    const out = withStoreMenu(files, { model: 'overlay', groups: [{ label: 'Sabores', links: [{ to: 'all' }] }] });
+    expect(readConfigData(out)).toMatchObject({ header: { x: 1, menu: { model: 'overlay', groups: [{ label: 'Sabores' }] } }, data: { name: 'Oh Belly' } });
+  });
+  it('limits the direction to unused models, all of them when every one is used', () => {
+    expect((v2MenuSchema(['overlay', 'drawer']) as any).properties.model.enum).toEqual(['overlay', 'drawer']);
+    expect(allowedMenus(V2_MENU_MODELS.map(m => m.id))).toHaveLength(16);
+    expect(allowedMenus(['tabs'])).not.toContain('tabs');
+  });
+  it('asks the direction for a menu among the allowed models and checks the chosen one in the contract', () => {
+    const ctx = { ...context, menusAllowed: ['overlay', 'drawer'] } as V2Context;
+    const schema = v2DirectionSchema(ctx) as any;
+    expect(schema.required).toContain('menu');
+    expect(schema.properties.menu.properties.model.enum).toEqual(['overlay', 'drawer']);
+    expect(v2DirectionInput(ctx)).toMatch(/MENÚ[\s\S]*overlay: [\s\S]*drawer: /);
+    expect(v2DirectionInput(ctx)).not.toMatch(/mega: /);
+    const withMenu = { ...ctx, menu: { model: 'overlay', groups: [{ label: 'Una categoría con un nombre demasiado largo', links: [{ to: 'all' }] }] } } as V2Context;
+    expect(v2ContractProblems(good, withMenu).join()).toMatch(/28 letras/);
+  });
+
 });

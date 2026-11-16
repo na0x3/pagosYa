@@ -1,3 +1,4 @@
+import type { V2Menu } from './v2-menus';
 import sharp from 'sharp';
 import { posix } from 'node:path';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
@@ -35,6 +36,10 @@ export type V2Context = {
   free?: boolean;
   /** The cart drawer's look for this store (v2-kit-baseline v2CartSheet), set once the direction chose it. */
   cartSheet?: string;
+  /** Menus this merchant's other stores have not used, and the one the direction chose (spec 2026-11-15 store menu models). */
+  menusAllowed?: string[]; menu?: V2Menu;
+  /** Hero ideas this merchant's other stores have not used, and the one the direction chose (heroes plan 2026-11-15). */
+  heroesAllowed?: string[]; heroIdea?: string;
   /** An animated store (owner 2026-11-14): motion is the brand's signature — asked in words or by the route. */
   animated?: boolean;
   /** Product cut-outs for the showcase pieces (ProductStage, HangingRail), when the build made them. */
