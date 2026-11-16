@@ -1,6 +1,6 @@
 import { assembleV2Files, OWN_CARDS_REQUEST, OWN_ICONS_REQUEST, readConfigData, type V2Context, type V2File, withStoreSettings } from './v2-context';
 import { composeV2Home, halfChapters, readV2Half } from './v2-prompts';
-import { kitProps } from './v2-prompts';
+import { kitProps, v2WriterInput as writerInput } from './v2-prompts';
 import { readStoreLooks } from './v2-heroes';
 import { uiRuntime } from '../source-creative';
 import { backstageCopy, freeMin, joinV2Parts, mergeV2Fix, readV2Part, showcaseRules, v2ContractProblems, v2DirectionInput, v2DirectionSchema, v2HalfInput, v2Hint, v2Repairs } from './v2-prompts';
@@ -862,5 +862,12 @@ describe('v2 assembly fixes 2026-11-16', () => {
     expect(readStoreLooks(files)).toEqual({ hero: 'zippa', menu: 'mega', header: 'over:pills' });
     expect(readStoreLooks([{ path: 'config.js', content: 'not js' }])).toEqual({ hero: null, menu: null, header: null });
     expect(readStoreLooks(null as never)).toEqual({ hero: null, menu: null, header: null });
+  });
+  it('final minor M3: the whole-page writer (split off) gets the hero brief and the floating-header note too', () => {
+    const d = { hero: { idea: 'zippa', composition: 'c', photo: '' }, sections: ['a', 'b', 'c', 'd'].map(role => ({ role, composition: 'x', photo: '', why: '' })), header: { over: true, tone: 'light', links: 'plain', announce: [] } } as never;
+    const text = writerInput(context, d, 'pages');
+    expect(text).toMatch(/IDEA DE PORTADA «Foto de acción/);
+    expect(text).toMatch(/CABECERA FLOTA/);
+    expect(writerInput(context, d, 'system')).not.toMatch(/IDEA DE PORTADA/);
   });
 });

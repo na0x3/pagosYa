@@ -410,7 +410,8 @@ SECCIONES DE LA BIBLIOTECA:
 
 export function v2WriterInput(context: V2Context, direction: V2Direction, part: V2Part, feedback: string[] = [], previous?: V2File[], system?: V2File[], library?: { facts: string }): string {
   const mine = previous?.filter(file => V2_PART_FILES[part].includes(file.path));
-  return `${part === 'pages' && context.free ? `${FREE_PAGES_TASK}\n\n${FREE_PRODUCT_RULES}` : PART_TASK[part]}${part === 'product' && context.free ? `\n\n${FREE_PRODUCT_RULES}` : ''}${context.animated && part !== 'product' ? `\n\n${ANIMATED_RULES}` : ''}${part === 'pages' && showcaseRules(context, 'both') ? `\n\n${showcaseRules(context, 'both')}` : ''}
+  const notes = part === 'pages' ? heroNotes(direction) : { heroBrief: '', headerNote: '' };
+  return notes.heroBrief + notes.headerNote + `${part === 'pages' && context.free ? `${FREE_PAGES_TASK}\n\n${FREE_PRODUCT_RULES}` : PART_TASK[part]}${part === 'product' && context.free ? `\n\n${FREE_PRODUCT_RULES}` : ''}${context.animated && part !== 'product' ? `\n\n${ANIMATED_RULES}` : ''}${part === 'pages' && showcaseRules(context, 'both') ? `\n\n${showcaseRules(context, 'both')}` : ''}
 ${context.ownCards ? `\nEL COMERCIANTE PIDIÓ TARJETAS DE PRODUCTO PROPIAS: esta vez SÍ diseñas .menu-item y sus partes (.menu-item__image, .menu-item__copy h3,
 .menu-item__price, .menu-add) y la retícula de data-pagosya-catalog. El nombre siempre horizontal y legible, la foto sin estirar,
 el botón de agregar con su tamaño (nunca una barra entera para un «+»), y en el teléfono dos columnas.\n` : ''}
@@ -915,12 +916,7 @@ export function v2HalfSchema(photoCount = 0): object {
 }
 
 export function v2HalfInput(context: V2Context, direction: V2Direction, half: V2Half, system: readonly V2File[], library: { facts: string }): string {
-  // Heroes plan 2026-11-15: the half that writes the hero gets its idea's brief (its reference frames come with the call).
-  const idea = half === 'a' ? heroIdea((direction as { hero?: { idea?: string } }).hero?.idea) : null;
-  const heroBrief = idea ? `IDEA DE PORTADA «${idea.name}»: ${idea.brief}${idea.id === 'libre' ? '' : ` ${MIX_NOTE}`} Diséñala con el estilo de esta tienda (su letra, sus colores, su voz); de las referencias aprende la composición, nunca sus colores ni textos.\n\n` : '';
-  // Headers plan Task 13: a floating header sits over the hero, so the hero keeps its words clear of it.
-  const floats = half === 'a' && (direction as { header?: { over?: boolean } }).header?.over;
-  const headerNote = floats ? 'LA CABECERA FLOTA encima de tu portada (transparente): la portada empieza arriba del todo, a todo el ancho, con foto o color hasta el borde superior, y deja ~90 px libres arriba antes del titular.\n\n' : '';
+  const { heroBrief, headerNote } = half === 'a' ? heroNotes(direction) : { heroBrief: '', headerNote: '' };
   const { mine, other } = halfChapters(direction, half);
   const prefix = half === 'a' ? 'A' : 'B';
   const task = `EN ESTA LLAMADA escribes SOLO UNA MITAD de la portada: estos capítulos de la dirección, en este orden:
@@ -1009,4 +1005,16 @@ export function withHeaderLook(content: string, look: V2Header): string {
   const messages = look.announce.map(line => line.trim()).filter(Boolean).slice(0, 3);
   if (messages.length) out = out.replace(/<AnnouncementBar\b[^>]*?(?:\/>|>[\s\S]*?<\/AnnouncementBar>)/, `<AnnouncementBar messages={${JSON.stringify(messages)}} />`);
   return out;
+}
+
+/** The hero's brief and the floating-header note, for whichever call writes the hero (the first half, or the whole page when the
+ *  home is written in one call — minor M3). */
+function heroNotes(direction: V2Direction): { heroBrief: string; headerNote: string } {
+  // Heroes plan 2026-11-15: the call that writes the hero gets its idea's brief (its reference frames come with the call).
+  const idea = heroIdea((direction as { hero?: { idea?: string } }).hero?.idea);
+  const heroBrief = idea ? `IDEA DE PORTADA «${idea.name}»: ${idea.brief}${idea.id === 'libre' ? '' : ` ${MIX_NOTE}`} Diséñala con el estilo de esta tienda (su letra, sus colores, su voz); de las referencias aprende la composición, nunca sus colores ni textos.\n\n` : '';
+  // Headers plan Task 13: a floating header sits over the hero, so the hero keeps its words clear of it.
+  const floats = (direction as { header?: { over?: boolean } }).header?.over;
+  const headerNote = floats ? 'LA CABECERA FLOTA encima de tu portada (transparente): la portada empieza arriba del todo, a todo el ancho, con foto o color hasta el borde superior, y deja ~90 px libres arriba antes del titular.\n\n' : '';
+  return { heroBrief, headerNote };
 }
