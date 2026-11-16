@@ -91,3 +91,31 @@ body.is-logged-in :is(.overview-kpi dd, .value, .finance-total-value) { font-fam
 body.is-logged-in :is(#error, #info):not(:empty) { border-radius: 16px; font-family: var(--cl-body); }
 body.is-logged-in #info:not(:empty) { color: var(--cl-ink); }
 @media (prefers-reduced-motion: reduce) { body.is-logged-in :is(button.primary, button.secondary, button.ghost, .button-like):active { transform: none; } }
+
+/* ── Login ─────────────────────────────────────────────
+   The site's cream wash behind both halves; the copy sits on it in ink, the form in one white card (the koi are retired). */
+body.is-logged-out { background: var(--cl-paper); color: var(--cl-ink); font-family: var(--cl-body); }
+body.is-logged-out :is(h1, h2, p, span, strong, label, button, input, a, summary, li) { font-family: var(--cl-body); }
+body.is-logged-out .login-split { background: var(--cl-wash); min-height: 100dvh; color: var(--cl-ink); }
+body.is-logged-out .login-hero { background: transparent; color: var(--cl-ink); box-shadow: none; }
+body.is-logged-out .login-hero-shader { display: none; }
+body.is-logged-out .login-hero-star { filter: drop-shadow(0 16px 30px rgb(23 25 28 / .14)); }
+body.is-logged-out .login-hero-copy h1 { font-family: var(--cl-display); font-weight: 500; letter-spacing: -.05em; line-height: 1.02; color: var(--cl-ink); text-shadow: none;
+  font-size: clamp(2.4rem, 4.4vw, 3.6rem); }
+body.is-logged-out .login-hero-copy p { color: var(--cl-ink-soft); text-shadow: none; }
+body.is-logged-out .login-hero-cards li { background: rgb(255 255 255 / .72); border: 1px solid var(--cl-line); border-radius: 16px; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.is-logged-out .login-hero-cards strong { color: var(--cl-ink); font-family: var(--cl-display); font-weight: 500; letter-spacing: -.03em; }
+body.is-logged-out .login-hero-cards span { color: var(--cl-ink-soft); }
+body.is-logged-out .login-card { box-sizing: border-box; width: min(100%, 448px); padding: clamp(24px, 3vw, 36px); background: var(--cl-surface); border: 1px solid var(--cl-line); border-radius: 20px;
+  box-shadow: var(--cl-shadow-float); color: var(--cl-ink); }
+body.is-logged-out .login-card h2 { font-family: var(--cl-display); font-weight: 500; letter-spacing: -.05em; line-height: 1.02; color: var(--cl-ink); }
+body.is-logged-out :is(.login-sub, .login-switch, .login-terms, .login-foot) { color: var(--cl-ink-soft); }
+body.is-logged-out .login-card input:not([type="checkbox"]) { background: var(--cl-surface); border: 1px solid var(--cl-line); border-radius: 12px; color: var(--cl-ink); }
+body.is-logged-out .login-card input:not([type="checkbox"]):focus { border-color: var(--cl-ink); box-shadow: 0 0 0 3px rgb(23 25 28 / .18); outline: none; }
+body.is-logged-out .login-card button.primary.login-submit { background: var(--cl-ink); border: 1px solid var(--cl-ink); color: #fff; border-radius: 999px; font-weight: 500;
+  transition: transform .16s var(--cl-ease), background-color .16s var(--cl-ease); }
+body.is-logged-out .login-card button.primary.login-submit:hover { background: #000; }
+body.is-logged-out .login-card button.primary.login-submit:active { transform: scale(.97); }
+body.is-logged-out :is(.login-forgot, .login-switch button) { color: var(--cl-ink); }
+@media (prefers-reduced-motion: reduce) { body.is-logged-out .login-card button.primary.login-submit:active { transform: none; } }

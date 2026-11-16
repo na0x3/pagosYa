@@ -80,3 +80,20 @@ test("controls: ink and white pills that press, segmented tabs, 12px fields with
   assert.match(s, /body\.is-logged-in :is\(\.overview-kpi dd, \.value, \.finance-total-value\) \{[^}]*font-family: var\(--cl-display\);/);
   assert.match(s, /body\.is-logged-in :is\(#error, #info\):not\(:empty\) \{[^}]*border-radius: 16px;/);
 });
+
+test("login: no koi, no shader — cream wash, the yellow star, a Bricolage title and a white card with an ink pill", () => {
+  const js = read("./dashboard.js");
+  assert.doesNotMatch(read("../index.html"), /data-login-koi/);
+  assert.doesNotMatch(js, /animal: "koi"/);
+  assert.doesNotMatch(js, /mountLoginShader\(host\)/);
+  const s = css();
+  assert.match(s, /body\.is-logged-out \.login-split \{[^}]*background: var\(--cl-wash\);/);
+  assert.match(s, /body\.is-logged-out \.login-hero \{[^}]*background: transparent;/);
+  assert.match(s, /body\.is-logged-out \.login-hero-copy h1 \{[^}]*font-family: var\(--cl-display\);[^}]*color: var\(--cl-ink\);/);
+  assert.match(s, /body\.is-logged-out \.login-card \{[^}]*background: var\(--cl-surface\);[^}]*border-radius: 20px;/);
+  assert.match(s, /body\.is-logged-out \.login-card button\.primary\.login-submit \{[^}]*background: var\(--cl-ink\);[^}]*border-radius: 999px;/);
+});
+
+test("login: the Google button is never wider than the card it sits in (a 390px phone has ~300px inside the card)", () => {
+  assert.match(read("./dashboard.js"), /width: Math\.min\(320, document\.getElementById\("merchantGoogleButton"\)\.clientWidth \|\| 320\)/);
+});

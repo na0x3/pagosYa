@@ -1212,27 +1212,10 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
     return url;
   }
 
-  // The login's koi (owner 2026-11-15, the ascii-animals repo: «the entire login screen that colour … smooth smooth») swim
-  // behind the whole login in dark gray (was the panel's deep blue), in fine cells without the grid, only while the login is on screen;
-  // where the canvas can't start, the blue panel's mesh gradient runs as before.
-  const LOGIN_POND = [30, 31, 35];
+  // The login wears the site's cream wash (spec 2026-11-16, Clyro): nothing to mount any more. The koi (ascii-animals.mjs) and
+  // the mesh shader (login-shader.mjs) stay on disk; these two keep their callers.
   let disposeLoginShader = null;
-  function startLoginShader() {
-    if (disposeLoginShader) return;
-    disposeLoginShader = () => {};
-    const host = document.querySelector("[data-login-shader]");
-    if (!host) return;
-    import("/src/yapi-welcome.mjs").then(async ({ mountAsciiAnimals }) => {
-      const canvas = document.querySelector("[data-login-koi]");
-      let dispose = canvas ? await mountAsciiAnimals(canvas, { animal: "koi", theme: "dark", background: LOGIN_POND, tuning: { detail: 2, grid: 0, speed: 0.85 } }) : null;
-      if (dispose) canvas.closest(".login-split")?.classList.add("has-koi");
-      else {
-        canvas?.remove();
-        dispose = await import("/src/login-shader.mjs").then(({ mountLoginShader }) => mountLoginShader(host));
-      }
-      if (document.body.classList.contains("is-logged-out")) disposeLoginShader = dispose; else dispose();
-    });
-  }
+  function startLoginShader() {}
   function stopLoginShader() { disposeLoginShader?.(); disposeLoginShader = null; }
 
   function showLoggedOut() {
@@ -1337,6 +1320,8 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
           }
         },
       });
+      // Shown before drawing, so the button can measure the card it sits in.
+      document.getElementById("merchantGoogleAuth").hidden = false;
       window.google.accounts.id.renderButton(document.getElementById("merchantGoogleButton"), {
         theme: "filled_black",
         size: "large",
@@ -1344,11 +1329,12 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
         text: "continue_with",
         locale: "es",
         logo_alignment: "left",
-        width: 320,
+        // Never wider than the login card (a phone leaves ~300px inside it).
+        width: Math.min(320, document.getElementById("merchantGoogleButton").clientWidth || 320),
       });
-      document.getElementById("merchantGoogleAuth").hidden = false;
     } catch {
       // El acceso por contraseña sigue disponible si Google está sin configurar o bloqueado.
+      document.getElementById("merchantGoogleAuth").hidden = true;
     }
   }
 
