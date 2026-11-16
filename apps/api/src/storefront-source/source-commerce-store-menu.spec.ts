@@ -29,6 +29,9 @@ async function open({ menu, data = DATA, host = HOST, extra = {} }: { menu?: unk
   const dom = new JSDOM(`<html><head></head><body>${host}<section data-pagosya-catalog></section><section data-pagosya-cart></section><p data-pagosya-status></p></body></html>`, { url: 'https://shop.test/', runScripts: 'outside-only', virtualConsole });
   const w = dom.window; windows.push(w); opened = w;
   w.HTMLElement.prototype.scrollIntoView = () => {};
+  // jsdom has no animation frames; the runtime's other parts (carousel, whatsapp bubble, fit-headlines…) now ask for them.
+  w.requestAnimationFrame = (cb: (t: number) => void) => w.setTimeout(() => cb(Date.now()), 16);
+  w.cancelAnimationFrame = (id: number) => w.clearTimeout(id);
   w.matchMedia = (query: string) => ({ matches: /min-width/.test(query), addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
   w.PAGOSYA_PREVIEW = true;
   w.PAGOSYA_PREVIEW_CART = [];
@@ -282,5 +285,14 @@ describe('store menu', () => {
   it('the side rail places the panel beside the rail, not under it (final review 2026-10-21)', async () => {
     const { q } = await open({ menu: { style: 'panel' } });
     expect(q('style[data-pagosya-store-menu-style]').textContent).toMatch(/\.pyh--side-rail \.pym-panel\{position:fixed;top:0;left:88px/);
+  });
+  it('reads the menu model and falls back to tabs for an unknown one (spec 2026-11-15 menu models)', async () => {
+    const overlay = await open({ menu: { model: 'overlay', groups: [] } });
+    expect(overlay.q('.pym-panel').getAttribute('data-model')).toBe('overlay');
+    expect(overlay.q('header').getAttribute('data-store-menu-model')).toBe('overlay');
+    const legacy = await open({ menu: { style: 'dropdowns' } });
+    expect(legacy.q('.pym-panel').getAttribute('data-model')).toBe('dropdown');
+    const odd = await open({ menu: { model: 'hologram' } });
+    expect(odd.q('.pym-panel').getAttribute('data-model')).toBe('tabs');
   });
 });

@@ -6994,9 +6994,18 @@
     style.textContent = STORE_MENU_CSS;
     document.head.appendChild(style);
   }
+  // Menu models (spec 2026-11-15 store menu models): one look per store. «style» is kept for older stores (panel → tabs,
+  // dropdowns → dropdown); a model the runtime does not know falls back to tabs, never to no menu.
+  const STORE_MENU_MODELS = ['tabs', 'mega', 'overlay', 'dropdown', 'drawer', 'split', 'index', 'dock', 'stickers', 'circles', 'rail', 'bestsellers', 'need', 'offer', 'search', 'thumb'];
+  // Models that open from top links on a computer (the old «dropdowns» style); the rest open from ☰ or never close.
+  const STORE_MENU_TOP_LINKS = new Set(['dropdown', 'mega', 'bestsellers', 'need', 'offer']);
+  function storeMenuModel(menu) {
+    if (STORE_MENU_MODELS.includes(menu.model)) return menu.model;
+    return menu.style === 'dropdowns' ? 'dropdown' : 'tabs';
+  }
   function storeMenuConfig() {
     const menu = config.header && config.header.menu;
-    return menu && (menu.style === 'panel' || menu.style === 'dropdowns') ? menu : null;
+    return menu && (menu.style === 'panel' || menu.style === 'dropdowns' || typeof menu.model === 'string') ? menu : null;
   }
   const storeMenuCategories = () => (Array.isArray(store.categories) ? store.categories : []).filter(category => category && typeof category.id === 'string' && products().some(item => item.categoryId === category.id));
   /** A target as { href, label }, or null when the live store has nothing there. */
@@ -7116,14 +7125,16 @@
   function renderStoreMenu(host, menu) {
     const toggleMount = host.querySelector('[data-pagosya-store-menu="toggle"]');
     if (!toggleMount) return;
-    const linksMount = menu.style === 'dropdowns' ? host.querySelector('[data-pagosya-store-menu="links"]') : null;
+    const model = storeMenuModel(menu);
+    const linksMount = STORE_MENU_TOP_LINKS.has(model) ? host.querySelector('[data-pagosya-store-menu="links"]') : null;
     let groups = resolveStoreMenuGroups(menu.groups);
     if (!groups.length) groups = resolveStoreMenuGroups(defaultStoreMenuGroups(host));
     // Only direct page links (spec 2026-11-05 creates anything): the kit's own menu stays, the links follow it.
     else if (groups.every(group => group.direct)) groups = [...resolveStoreMenuGroups(defaultStoreMenuGroups(host)), ...groups];
     if (!groups.length) return;
     const id = 'pym-' + (++storeMenuCount);
-    host.setAttribute('data-store-menu', menu.style);
+    host.setAttribute('data-store-menu', STORE_MENU_TOP_LINKS.has(model) ? 'dropdowns' : 'panel');
+    host.setAttribute('data-store-menu-model', model);
     host.toggleAttribute('data-store-menu-links', Boolean(linksMount));
     if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
     toggleMount.innerHTML = `<button type="button" class="pym-toggle" data-store-menu-toggle aria-expanded="false" aria-controls="${id}"><span class="pym-bars" aria-hidden="true"></span><span class="pym-sr">Menú</span></button>`;
@@ -7137,6 +7148,7 @@
     panel.hidden = true;
     panel.setAttribute('data-store-menu-panel', '');
     panel.setAttribute('aria-label', 'Menú');
+    panel.setAttribute('data-model', model);
     panel.innerHTML = `<div class="pym-tabs" role="tablist" aria-label="Menú"${groups.length === 1 ? ' data-single' : ''}>${groups.map((group, index) => `<button type="button" class="pym-tab" role="tab" id="${id}-tab-${index}" aria-controls="${id}-group-${index}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${escape(group.label)}</button>`).join('')}</div>`
       + groups.map((group, index) => `<div class="pym-group" role="tabpanel" id="${id}-group-${index}" aria-labelledby="${id}-tab-${index}"${index ? ' hidden' : ''}>`
         + `<ul class="pym-links">${group.links.map(link => `<li><a href="${escape(link.href)}">${escape(link.label)}</a></li>`).join('')}</ul>`
