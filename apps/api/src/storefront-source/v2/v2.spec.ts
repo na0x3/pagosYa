@@ -833,4 +833,8 @@ describe('v2 assembly fixes 2026-11-16', () => {
     expect(ui).toMatch(/\.ui-nav\[data-over\]/); expect(ui).toMatch(/\.ui-nav\[data-over\]\[data-scrolled\]/);
     expect(ui).toMatch(/\.ui-nav\[data-links=pills\]/); expect(ui).toMatch(/\[data-highlight\]/);
   });
+  it('headers plan Task 12: the announcement bar takes several messages and turns with arrows', () => {
+    expect(kitProps().get('AnnouncementBar')!.has('messages')).toBe(true);
+    expect(uiRuntime()).toMatch(/ui-announcement__arrow/);
+  });
 });

@@ -631,7 +631,26 @@ export function KitSlot({ kind, name, as = 'div', className, children }: { kind:
   const Tag = as as any;
   return <Tag className={className} {...{ [KIT_SLOT_ATTRIBUTE[kind]]: name }}>{children}</Tag>;
 }
-export function AnnouncementBar({ children }: { children: ReactNode }) { return <div className="ui-announcement">{children}</div>; }
+/** Owner 2026-11-15 (Halcy): with two or more real messages the bar turns every 5 s with ← → (paused on hover/focus, still with
+ *  reduced motion); one message or children behave as before. */
+export function AnnouncementBar({ children, messages }: { children?: ReactNode; messages?: string[] }) {
+  const list = (messages ?? []).filter(Boolean);
+  const [at, setAt] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const moving = useUiMotion();
+  useEffect(() => {
+    if (list.length < 2 || paused || !moving) return;
+    const timer = setInterval(() => setAt(value => (value + 1) % list.length), 5000);
+    return () => clearInterval(timer);
+  }, [list.length, paused, moving]);
+  if (list.length < 2) return <div className="ui-announcement">{list[0] ?? children}</div>;
+  const go = (step: number) => setAt(value => (value + step + list.length) % list.length);
+  return <div className="ui-announcement" data-rotating onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
+    <button type="button" className="ui-announcement__arrow" aria-label="Anuncio anterior" onClick={() => go(-1)}>←</button>
+    <p aria-live="polite">{list[at % list.length]}</p>
+    <button type="button" className="ui-announcement__arrow" aria-label="Anuncio siguiente" onClick={() => go(1)}>→</button>
+  </div>;
+}
 
 export type NavLink = { label: string; href: string };
 function OverlayMenu({ links, name }: { links: NavLink[]; name: string }) {
@@ -1799,6 +1818,9 @@ const NAV_CSS = `
   .ui-nav .ui-nav__badge{position:absolute;top:2px;right:0}
   .ui-nav[data-actions=pill] [data-nav-action=bag]{padding:0 8px;background:none;color:inherit}
 }
+.ui-announcement[data-rotating]{display:flex;align-items:center;justify-content:center;gap:16px}
+.ui-announcement[data-rotating] p{margin:0}
+.ui-announcement__arrow{display:inline-grid;place-items:center;min-width:32px;min-height:32px;border:0;background:none;color:inherit;font:inherit;cursor:pointer}
 /* Floating header (owner 2026-11-15, Zippa/Halcy): over the first section, transparent, solid once scrolled. */
 .ui-nav[data-over]{margin-bottom:calc(-1 * var(--ui-nav-h,72px));background:transparent;transition:background-color .25s,color .25s,box-shadow .25s}
 .ui-nav[data-over][data-tone=light]{color:#fff}
