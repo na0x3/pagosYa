@@ -473,5 +473,27 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
     });
     if (squeezedTitle) push('squeezed-title', squeezedTitle, `CONSEJO: El título ${quote(squeezedTitle)} queda apretado (una palabra por línea): dale una columna más ancha o un tamaño menor para que entre en dos o tres líneas.`);
   }
+  // Spec 2026-11-16 store quality (Bake Lab r2: «Belisario Salinas 410» and «horneado cada mañana» in the top bar and two sections):
+  // the same address, phone or sentence in three or more places of the page (the header counts, the footer does not).
+  {
+    const norm = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const places = new Map<string, { where: Set<string>; el: Element }>();
+    const note = (key: string, where: string, el: Element) => { const entry = places.get(key) ?? { where: new Set<string>(), el }; entry.where.add(where); places.set(key, entry); };
+    const roots: Element[] = [document.querySelector('header'), main].filter((root): root is HTMLElement => Boolean(root));
+    for (const root of roots) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const el = node.parentElement;
+        if (!el || el.closest('footer') || el.closest(productish)) continue;
+        const where = root === main ? `s${partOf(el)}` : 'header';
+        const text = norm(node.textContent || '');
+        for (const piece of (node.textContent || '').split(/[·•|\n.!?—–:]/).map(norm).filter(p => p.length >= 16)) note(piece, where, el);
+        for (const address of text.match(/[a-z]{3,} [a-z]{3,} \d{2,5}/g) ?? []) note(address, where, el);
+        for (const phone of text.match(/\d{7,}/g) ?? []) note(phone, where, el);
+      }
+    }
+    const repeated = [...places.entries()].find(([, entry]) => entry.where.size >= 3);
+    if (repeated) push('repeated-facts', repeated[1].el, `CONSEJO: «${repeated[0].slice(0, 40)}» aparece en ${repeated[1].where.size} lugares de la portada: déjalo en un solo lugar (la sección de la tienda o el pie) y usa el espacio para algo nuevo.`);
+  }
   return out;
 }

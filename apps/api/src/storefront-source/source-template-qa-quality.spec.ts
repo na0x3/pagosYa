@@ -91,4 +91,25 @@ describe('template rules: store quality 2026-11-16', () => {
         <a href="#" style="display:inline-block;padding:12px 20px;background:#111;color:#fff">Comprar</a><img src="${picture}" width="600" height="400" alt=""></section>`);
     expect(found.find(f => f.rule === 'squeezed-title')).toBeUndefined();
   });
+
+  it('repeated-facts: the same address in the top bar and two sections (Bake Lab r2)', async () => {
+    const tab = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await tab.setContent(`<!doctype html><html><body style="margin:0"><header><p>Horneado cada mañana · Retiro en Belisario Salinas 410</p></header><main>
+      ${cover}
+      <section data-lb-at="1"><p>Ven al horno: Calle Belisario Salinas 410, Sopocachi.</p><img src="${picture}" width="600" height="400" alt=""></section>
+      <section data-lb-at="2"><p>Recoge en Belisario Salinas 410.</p><img src="${picture}" width="600" height="400" alt=""></section>
+      </main><footer><p>Calle Belisario Salinas 410</p></footer></body></html>`);
+    const found = await tab.evaluate(evaluateTemplateRules);
+    await tab.close();
+    expect(found).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'repeated-facts' })]));
+  });
+  it('repeated-facts: twice on the page plus the footer passes', async () => {
+    const tab = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await tab.setContent(`<!doctype html><html><body style="margin:0"><main>${cover}
+      <section data-lb-at="1"><p>Ven al horno: Calle Belisario Salinas 410.</p><img src="${picture}" width="600" height="400" alt=""></section>
+      </main><footer><p>Calle Belisario Salinas 410</p></footer></body></html>`);
+    const found = await tab.evaluate(evaluateTemplateRules);
+    await tab.close();
+    expect(found.find(f => f.rule === 'repeated-facts')).toBeUndefined();
+  });
 });
