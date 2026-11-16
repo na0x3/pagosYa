@@ -232,6 +232,9 @@ export class SourceV2PrototypeService {
     const cut = await stage('cutouts', () => this.productCutouts(storeId, files, this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol', state), result => result.cutouts.length);
     files.push(...cut.files);
     context.cutouts = cut.cutouts;
+    const own = await this.storePhotos(merchantId, storeId, files);
+    files.push(...own.files);
+    context.photos.push(...own.photos);
     await this.markProductPhotos(files, context);
     await this.markWordPhotos(storeId, files, context, state);
     const showcaseFiles = cut.cutouts.length >= 2 ? await readdir(join(referencesDir(), '_showcase')).then(names => Promise.all(names.filter(name => /\.jpe?g$/.test(name)).sort().slice(0, 6)
@@ -593,6 +596,36 @@ export class SourceV2PrototypeService {
       if (spent(error)) throw error;
       this.log.warn(JSON.stringify({ event: 'v2_words_failed', storeId, reason: String((error as Error)?.message ?? error).slice(0, 200) }));
     }
+  }
+
+  /** Owner 2026-11-16 (The Bake Lab: «too few pictures, only the product photos»): a V2 design only had the photos bundled in its
+   *  template and the product cut-outs, so the brand and lifestyle photos a merchant uploaded never reached the page. The store's own
+   *  uploads come along as design photos: the ones no product uses first, then product photos, at most 14, at most 1600 px. */
+  private async storePhotos(merchantId: string, storeId: string, files: readonly { path: string; content: string; encoding?: 'utf8' | 'base64' }[]) {
+    const out: { files: Array<{ path: string; content: string; encoding: 'base64' }>; photos: V2Context['photos'] } = { files: [], photos: [] };
+    if (!this.uploads) return out;
+    const name = (url: unknown) => /^\/v1\/uploads\/([\w-]+\.(?:png|jpe?g|webp))$/i.exec(uploadPath(String(url ?? '')))?.[1];
+    const items = (readConfigData(files as never).data?.items ?? []) as Array<{ imageUrls?: unknown[] }>;
+    const products = new Set(items.flatMap(item => Array.isArray(item.imageUrls) ? item.imageUrls.map(name) : []).filter(Boolean));
+    const assets = await this.prisma.mediaAsset.findMany({ where: { merchantId, storeId, mimeType: { in: ['image/jpeg', 'image/png', 'image/webp'] } },
+      orderBy: { createdAt: 'asc' }, take: 80, select: { url: true } }).catch(() => [] as Array<{ url: string }>);
+    const names = [...new Set(assets.map(asset => name(asset.url)).filter((entry): entry is string => Boolean(entry)))];
+    const known = new Set(files.map(file => file.path));
+    for (const filename of [...names.filter(entry => !products.has(entry)), ...names.filter(entry => products.has(entry))]) {
+      if (out.photos.length >= 14) break;
+      const bytes = await this.uploads.getBuffer(filename).catch(() => null);
+      if (!bytes) continue;
+      const made = await sharp(bytes).rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).webp({ quality: 82 })
+        .toBuffer({ resolveWithObject: true }).catch(() => null);
+      if (!made || made.info.width < 400 || made.info.height < 300) continue;
+      const path = `assets/image-${createHash('sha256').update(made.data).digest('hex').slice(0, 12)}.webp`;
+      if (known.has(path)) continue;
+      known.add(path);
+      const ratio = made.info.width / made.info.height;
+      out.files.push({ path, content: made.data.toString('base64'), encoding: 'base64' });
+      out.photos.push({ path, width: made.info.width, height: made.info.height, shape: ratio > 1.2 ? 'wide' : ratio < 0.83 ? 'tall' : 'square' });
+    }
+    return out;
   }
 
   private async markProductPhotos(files: readonly { path: string; content: string; encoding?: 'utf8' | 'base64' }[], context: V2Context) {
