@@ -7296,7 +7296,7 @@
       ? `<a class="pym-offer" data-kind="${offer.kind}" href="${escape(offer.href)}">${best[0] ? `<img src="${escape(best[0].imageUrls[0])}" alt="" loading="lazy">` : ''}<b>${escape(offer.title)}</b>${offer.detail ? `<span>${escape(offer.detail)}</span>` : ''}</a>`
       : best[0] ? `<a class="pym-offer" data-kind="product" href="${escape(storeMenuProductHref(best[0]))}"><img src="${escape(best[0].imageUrls[0])}" alt="" loading="lazy"><b>${escape(best[0].name)}</b><span>${escape(money(price(best[0]), best[0].currency || 'BOB'))}</span></a>` : '';
     const popular = [...storeMenuCategories().map(c => ({ label: c.name, href: pageHref('productos.html', '?f_categoria=' + encodeURIComponent(filterFold(c.id))) })), ...products().map(item => ({ label: item.name, href: storeMenuProductHref(item) }))].slice(0, 6);
-    const searchHtml = model !== 'search' ? '' : `<form class="pym-search" action="${escape(pageHref('buscar.html'))}" role="search"><input type="search" name="q" placeholder="Busca productos" aria-label="Buscar"></form><p class="pym-tiles-title">Populares</p><div class="pym-popular">${popular.map(chip => `<a href="${escape(chip.href)}">${escape(String(chip.label).slice(0, 28))}</a>`).join('')}</div>${best.length ? `<div class="pym-best"><ul>${best.map(storeMenuCard).join('')}</ul></div>` : ''}`;
+    const searchHtml = model !== 'search' ? '' : `<form class="pym-search" action="${escape(pageHref('buscar.html'))}" role="search"><input type="search" name="q" placeholder="Busca productos" aria-label="Buscar"></form>${popular.length ? `<p class="pym-tiles-title">Populares</p><div class="pym-popular">${popular.map(chip => `<a href="${escape(chip.href)}">${escape(String(chip.label).slice(0, 28))}</a>`).join('')}</div>` : ''}${best.length ? `<div class="pym-best"><ul>${best.map(storeMenuCard).join('')}</ul></div>` : ''}`;
     panel.innerHTML = heroPhoto + offerHtml + searchHtml + `<div class="pym-tabs" role="tablist" aria-label="Menú"${groups.length === 1 ? ' data-single' : ''}${model === 'dock' || model === 'search' ? ' hidden' : ''}>${groups.map((group, index) => `<button type="button" class="pym-tab" role="tab" id="${id}-tab-${index}" aria-controls="${id}-group-${index}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}">${escape(group.label)}</button>`).join('')}</div>`
       + groups.map((group, index) => `<div class="pym-group" role="tabpanel" id="${id}-group-${index}" aria-labelledby="${id}-tab-${index}"${index ? ' hidden' : ''}>`
         + (model === 'need' ? `<div class="pym-need">${group.tiles[0] ? `<img src="${escape(group.tiles[0].image)}" alt="" loading="lazy">` : ''}<span class="pym-need-label">${escape(group.label)}</span>${group.note ? `<span class="pym-note">${escape(group.note)}</span>` : ''}<span class="pym-need-from">${escape(storeMenuFrom(group.links))}</span></div>` : '')
@@ -7329,11 +7329,13 @@
     const focusable = () => [...panel.querySelectorAll('a[href],button:not([disabled])')].filter(el => !el.closest('[hidden]') && !el.closest('.pym-tabs[data-single]') && !(panel.getAttribute('data-mode') === 'dropdown' && el.closest('.pym-tabs')));
     const unlock = () => { if (lockedFrom !== null) { document.documentElement.style.overflow = lockedFrom; lockedFrom = null; } };
     const mouse = event => !event.pointerType || event.pointerType === 'mouse';
+    // The dock's buttons open the panel too, so they say whether it is open (minor M4).
+    const openers = () => [toggle, ...tops, ...document.querySelectorAll('.pym-dock [data-dock]')];
     function close(returnFocus) {
       clearTimeout(openTimer); clearTimeout(closeTimer);
       if (panel.hidden) return;
       panel.hidden = true;
-      [toggle, ...tops].forEach(button => button.setAttribute('aria-expanded', 'false'));
+      openers().forEach(button => button.setAttribute('aria-expanded', 'false'));
       unlock();
       storeMenuOpenState.host = storeMenuOpenState.close = null;
       if (returnFocus && opener) opener.focus({ preventScroll: true });
@@ -7345,7 +7347,7 @@
       panel.setAttribute('data-mode', mode);
       select(index);
       panel.hidden = false;
-      [toggle, ...tops].forEach(button => button.setAttribute('aria-expanded', String(button === from)));
+      openers().forEach(button => button.setAttribute('aria-expanded', String(button === from)));
       storeMenuOpenState.host = host; storeMenuOpenState.close = close;
       if (mode === 'panel' && lockedFrom === null) { lockedFrom = document.documentElement.style.overflow; document.documentElement.style.overflow = 'hidden'; }
       if (mode === 'dropdown') unlock();
@@ -7402,7 +7404,7 @@
     if (model === 'dock') {
       const dock = document.createElement('nav');
       dock.className = 'pym-dock'; dock.setAttribute('aria-label', 'Menú');
-      dock.innerHTML = groups.map((group, index) => `<button type="button" data-dock="${index}" aria-controls="${id}">${escape(group.label)}</button>`).join('');
+      dock.innerHTML = groups.map((group, index) => `<button type="button" data-dock="${index}" aria-controls="${id}" aria-expanded="false">${escape(group.label)}</button>`).join('');
       dock.querySelectorAll('[data-dock]').forEach(button => button.addEventListener('click', event => {
         event.stopPropagation();
         const index = Number(button.getAttribute('data-dock'));
@@ -7414,6 +7416,8 @@
   }
   function renderStoreMenus() {
     const menu = storeMenuConfig();
+    // Bars drawn outside the header go with every render, so a menu turned off (or left with no groups) leaves none behind (M5).
+    document.querySelectorAll('.pym-circles,.pym-rail,.pym-dock,.pym-thumbbar').forEach(el => el.remove());
     document.querySelectorAll('[data-pagosya-store-menu="toggle"]').forEach(mount => {
       const host = mount.closest('header') || mount.parentElement;
       if (host.__pagosyaStoreMenu) { host.__pagosyaStoreMenu.close(false); host.__pagosyaStoreMenu.panel.remove(); host.__pagosyaStoreMenu = null; }

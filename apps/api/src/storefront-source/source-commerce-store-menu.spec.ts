@@ -398,4 +398,16 @@ describe('store menu', () => {
     const { all } = await open({ menu: { model: 'tabs', groups: [{ label: 'Tienda', links: [{ to: 'category:Vestidos' }, { to: 'section:historia', label: 'Nuestra historia' }] }] } });
     expect(all('.pym-links a').map((a: any) => a.textContent)).toEqual(['Vestidos', 'Nuestra historia']);
   });
+  it('final minors M4–M6: dock buttons say when they are open; a menu turned off takes its bars with it; no «Populares» over nothing', async () => {
+    const dock = await open({ menu: { model: 'dock', groups: [{ label: 'Tienda', links: [{ to: 'all' }] }, { label: 'Telas', links: [{ to: 'category:c3' }] }] } });
+    const button = dock.q('.pym-dock [data-dock="1"]');
+    button.click();
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(dock.q('.pym-dock [data-dock="0"]').getAttribute('aria-expanded')).toBe('false');
+    delete dock.w.PAGOSYA_CONFIG.header;
+    dock.w.pagosyaStoreMenu.render();
+    expect(dock.all('.pym-dock,.pym-thumbbar,.pym-rail,.pym-circles')).toHaveLength(0);
+    const empty = await open({ menu: { model: 'search' }, data: { ...DATA, items: [], categories: [] } });
+    expect(empty.all('.pym-tiles-title').map((el: any) => el.textContent)).not.toContain('Populares');
+  });
 });
