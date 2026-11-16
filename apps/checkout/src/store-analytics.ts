@@ -2,7 +2,7 @@ import { privacy } from './privacy';
 import { API_BASE_URL } from './api';
 
 /** G1 allow-lists: the API's store-analytics.constants and the kit's commerce.js keep the same (tests pin them). */
-export const ANALYTICS_EVENT_TYPES = ['page_view', 'cta_click', 'product_card_impression', 'product_card_click', 'product_view', 'add_to_cart', 'cart_open', 'checkout_step', 'pay_click', 'whatsapp_click', 'contact_submit', 'search'] as const;
+export const ANALYTICS_EVENT_TYPES = ['page_view', 'cta_click', 'product_card_impression', 'product_card_click', 'product_view', 'add_to_cart', 'cart_open', 'checkout_step', 'pay_click', 'whatsapp_click', 'contact_submit', 'search', 'section_view', 'section_click'] as const;
 export const ANALYTICS_TRACK_LABELS = ['hero-cta', 'nav-cart', 'nav-catalog', 'card', 'add', 'checkout', 'pay', 'whatsapp', 'contact', 'promo', 'social', 'newsletter'] as const;
 export const ANALYTICS_CHECKOUT_STEPS = ['review', 'delivery', 'contact', 'payment'] as const;
 type AnalyticsEvent = { type: string; productId?: string; target?: string; step?: string; path?: string };
@@ -31,6 +31,8 @@ function clean(raw: unknown): AnalyticsEvent | null {
   if (PRODUCT_EVENTS.includes(event.type)) { if (!productId) return null; event.productId = productId; }
   if (event.type === 'cta_click') { if (!includes(ANALYTICS_TRACK_LABELS, input.target)) return null; event.target = input.target; if (productId) event.productId = productId; }
   if (event.type === 'checkout_step') { if (!includes(ANALYTICS_CHECKOUT_STEPS, input.step)) return null; event.step = input.step; }
+  // «La tienda que vende sola» (spec 2026-11-16): a home section by its number, never anything else.
+  if (event.type === 'section_view' || event.type === 'section_click') { if (typeof input.target !== 'string' || !/^s\d{1,2}$/.test(input.target)) return null; event.target = input.target; }
   if (typeof input.path === 'string' && /^[a-z0-9][a-z0-9_-]{0,60}\.html$/.test(input.path)) event.path = input.path;
   return event;
 }
@@ -51,7 +53,8 @@ function referrerHost(): string | undefined {
  * every 5 s, at 20 queued, and when the page is hidden or left. A failed batch is dropped: analytics never retries
  * into double counts or interrupts buying.
  */
-export function createStoreAnalytics(slug: string, preview: boolean, session: () => string | undefined) {
+/** `visit` is the A/B visit token the API gave this visitor, so a test can compare its two sides (spec 2026-11-16). */
+export function createStoreAnalytics(slug: string, preview: boolean, session: () => string | undefined, visit: () => string | undefined = () => undefined) {
   const key = `pagosya:analytics:${slug}`;
   let queue: AnalyticsEvent[] = [], queueSession = '', referrer: string | undefined, timer: ReturnType<typeof setTimeout> | undefined;
   const allowed = () => !preview && privacy.analyticsAllowed(slug);
@@ -68,7 +71,8 @@ export function createStoreAnalytics(slug: string, preview: boolean, session: ()
     if (!allowed()) { queue = []; referrer = undefined; return; }
     while (queue.length) {
       const events = queue.splice(0, BATCH);
-      const body = JSON.stringify({ sessionId: queueSession, events, ...(referrer ? { referrer } : {}) });
+      const visitToken = visit();
+      const body = JSON.stringify({ sessionId: queueSession, events, ...(referrer ? { referrer } : {}), ...(visitToken ? { visitToken } : {}) });
       referrer = undefined;
       try {
         void fetch(`${API_BASE_URL}/stores/public/${encodeURIComponent(slug)}/events`, {

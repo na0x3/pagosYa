@@ -156,7 +156,7 @@ export async function mountPublishedSource(app: HTMLElement, slug: string, store
   const funnel = createStoreFunnel(slug, merchantPreview);
   funnel.track('visit');
   // G1: the frame only names moments; consent, the session, dedupe and sending happen here.
-  const analytics = createStoreAnalytics(slug, merchantPreview, () => funnel.sessionId());
+  const analytics = createStoreAnalytics(slug, merchantPreview, () => funnel.sessionId(), () => sourceVisitToken(slug));
   const consentChanged = (event: Event) => { if ((event as CustomEvent).detail?.slug === slug) funnel.track('visit'); };
   window.addEventListener('pagosya:privacy-change', consentChanged);
   const pending = new Set<string>();

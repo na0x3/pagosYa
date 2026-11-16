@@ -5,10 +5,13 @@ import {
 } from './store-analytics.constants';
 
 export type NormalizedAnalyticsEvent = { type: AnalyticsEventType; productId: string | null; target: string | null; path: string | null };
-export type NormalizedAnalyticsBatch = { sessionId: string; events: NormalizedAnalyticsEvent[]; referrerHost: string | null };
+export type NormalizedAnalyticsBatch = { sessionId: string; events: NormalizedAnalyticsEvent[]; referrerHost: string | null; visitToken: string | null };
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PRODUCT_ID = /^[\w-]{1,64}$/;
+const SECTION = /^s\d{1,2}$/;
+/** The A/B visit token the API handed this visitor (base64url, 32 characters). */
+const VISIT_TOKEN = /^[\w-]{16,64}$/;
 /** A store page file such as `product.html`: never a path with directories or a query. */
 const PAGE = /^[a-z0-9][a-z0-9_-]{0,60}\.html$/;
 const HOST = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
@@ -45,6 +48,7 @@ function normalizeEvent(raw: unknown): NormalizedAnalyticsEvent | null {
   let target: string | null = null;
   if (type === 'cta_click') { target = pick(ANALYTICS_TRACK_LABELS, input.target); if (!target) return null; }
   if (type === 'checkout_step') { target = pick(ANALYTICS_CHECKOUT_STEPS, input.step); if (!target) return null; }
+  if (type === 'section_view' || type === 'section_click') { target = typeof input.target === 'string' && SECTION.test(input.target) ? input.target : null; if (!target) return null; }
   const path = typeof input.path === 'string' && PAGE.test(input.path) ? input.path : null;
   return { type, productId: product || type === 'cta_click' ? productId : null, target, path };
 }
@@ -58,5 +62,6 @@ export function normalizeAnalyticsBatch(body: unknown): NormalizedAnalyticsBatch
   if (!input || typeof input.sessionId !== 'string' || !UUID_V4.test(input.sessionId)) throw new BadRequestException('Sesión no válida');
   if (!Array.isArray(input.events) || !input.events.length || input.events.length > ANALYTICS_MAX_BATCH) throw new BadRequestException(`Envía entre 1 y ${ANALYTICS_MAX_BATCH} eventos`);
   const events = input.events.map(normalizeEvent).filter((event): event is NormalizedAnalyticsEvent => event !== null);
-  return { sessionId: input.sessionId, events, referrerHost: referrerHost(input.referrer) };
+  const visitToken = typeof input.visitToken === 'string' && VISIT_TOKEN.test(input.visitToken) ? input.visitToken : null;
+  return { sessionId: input.sessionId, events, referrerHost: referrerHost(input.referrer), visitToken };
 }

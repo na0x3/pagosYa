@@ -83,11 +83,14 @@ export class StoreAnalyticsService {
     const secret = this.config?.get<string>('app.analyticsSessionSecret') ?? DEVELOPMENT_ANALYTICS_SESSION_SECRET;
     const sessionHash = createHmac('sha256', secret).update(`store-analytics:${batch.sessionId}`).digest('hex');
     const device = deviceClass(context.userAgent);
+    // The A/B side of this visitor (spec 2026-11-16): only a token of this store's running test counts.
+    const visit = batch.visitToken ? await this.prisma.storeSourceVisit.findUnique({ where: { token: batch.visitToken }, select: { variant: true, experiment: { select: { id: true, storeId: true, status: true } } } }).catch(() => null) : null;
+    const side = visit && visit.experiment.storeId === store.id && visit.experiment.status === 'RUNNING' ? { experimentId: visit.experiment.id, variant: visit.variant } : {};
     const data = batch.events.flatMap(event => {
       const productId = event.productId && known.has(event.productId) ? event.productId : null;
       // A product event about someone else's product is dropped; a CTA just loses the product.
       if (event.productId && !productId && event.type !== 'cta_click') return [];
-      return [{ storeId: store.id, sessionHash, type: event.type, productId, target: event.target, path: event.path, device, referrerHost: event.type === 'page_view' ? batch.referrerHost : null }];
+      return [{ storeId: store.id, sessionHash, type: event.type, productId, target: event.target, path: event.path, device, referrerHost: event.type === 'page_view' ? batch.referrerHost : null, ...side }];
     });
     if (!data.length) return { accepted: 0 };
     const allowed = await this.dailyAllowance(store.id, data.length);

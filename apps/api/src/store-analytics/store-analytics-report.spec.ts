@@ -26,7 +26,7 @@ describe('buildAnalyticsReport', () => {
   it('totals every event type, zero when absent', () => {
     expect(report.totals.page_view).toEqual({ count: 14, sessions: 9 });
     expect(report.totals.search).toEqual({ count: 0, sessions: 0 });
-    expect(Object.keys(report.totals)).toHaveLength(12);
+    expect(Object.keys(report.totals)).toHaveLength(14);
     expect(report).toMatchObject({ from: '2026-09-01', to: '2026-09-03', granularity: 'day' });
   });
 

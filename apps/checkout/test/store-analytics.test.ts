@@ -138,3 +138,16 @@ it('still sends on browsers without AbortSignal.timeout (iOS ≤ 15, Chrome < 10
     vi.useRealTimers();
   }
 });
+
+it('la tienda que vende sola: passes section events on and sends the A/B visit token with each batch', () => {
+  privacy.save('sola', true);
+  const funnel = createStoreFunnel('sola', false);
+  const analytics = createStoreAnalytics('sola', false, () => funnel.sessionId(), () => 'tok_abcdefghijklmnop1234');
+  created.push(analytics);
+  analytics.record({ type: 'section_view', target: 's3', path: 'index.html' });
+  analytics.record({ type: 'section_click', target: 'hero' });
+  analytics.flush();
+  const [request] = sent();
+  expect(request.body.events).toEqual([{ type: 'section_view', target: 's3', path: 'index.html' }]);
+  expect(request.body.visitToken).toBe('tok_abcdefghijklmnop1234');
+});

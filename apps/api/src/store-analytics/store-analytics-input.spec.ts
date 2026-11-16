@@ -7,7 +7,7 @@ const batch = (events: unknown[], extra: Record<string, unknown> = {}) => normal
 
 describe('analytics allow-lists', () => {
   it('names exactly the G1 events, labels and checkout steps', () => {
-    expect([...ANALYTICS_EVENT_TYPES]).toEqual(['page_view', 'cta_click', 'product_card_impression', 'product_card_click', 'product_view', 'add_to_cart', 'cart_open', 'checkout_step', 'pay_click', 'whatsapp_click', 'contact_submit', 'search']);
+    expect([...ANALYTICS_EVENT_TYPES]).toEqual(['page_view', 'cta_click', 'product_card_impression', 'product_card_click', 'product_view', 'add_to_cart', 'cart_open', 'checkout_step', 'pay_click', 'whatsapp_click', 'contact_submit', 'search', 'section_view', 'section_click']);
     expect([...ANALYTICS_TRACK_LABELS]).toEqual(['hero-cta', 'nav-cart', 'nav-catalog', 'card', 'add', 'checkout', 'pay', 'whatsapp', 'contact', 'promo', 'social', 'newsletter']);
     expect([...ANALYTICS_CHECKOUT_STEPS]).toEqual(['review', 'delivery', 'contact', 'payment']);
   });
@@ -108,5 +108,18 @@ describe('deviceClass', () => {
     [undefined, 'desktop'],
   ])('%s → %s', (agent, expected) => {
     expect(deviceClass(agent)).toBe(expected);
+  });
+});
+
+describe('la tienda que vende sola (spec 2026-11-16)', () => {
+  const sessionId = '0b1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c4d';
+  it('keeps section events with a section number and drops any other target', () => {
+    const batch = normalizeAnalyticsBatch({ sessionId, events: [{ type: 'section_view', target: 's2' }, { type: 'section_click', target: 's12' }, { type: 'section_view', target: 'x' }, { type: 'section_click' }] });
+    expect(batch.events.map(event => [event.type, event.target])).toEqual([['section_view', 's2'], ['section_click', 's12']]);
+  });
+  it('carries the A/B visit token when it looks like one', () => {
+    expect(normalizeAnalyticsBatch({ sessionId, events: [{ type: 'page_view' }], visitToken: 'abcDEF_-123456789012345678901234' }).visitToken).toBe('abcDEF_-123456789012345678901234');
+    expect(normalizeAnalyticsBatch({ sessionId, events: [{ type: 'page_view' }], visitToken: 'bad token!' }).visitToken).toBeNull();
+    expect(normalizeAnalyticsBatch({ sessionId, events: [{ type: 'page_view' }] }).visitToken).toBeNull();
   });
 });

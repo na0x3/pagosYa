@@ -281,6 +281,30 @@
       if (control?.matches('a[href]') && WHATSAPP_LINK.test(control.href)) { analytics('whatsapp_click'); flushAnalytics(); }
     }, true);
     document.addEventListener('change', event => { if (event.target?.matches?.('input[type=search]') && event.target.value.trim()) analytics('search'); });
+    // «La tienda que vende sola» (spec 2026-11-16): which home sections are seen (half on screen for a second, once a page) and clicked.
+    // A section keeps the number it was written with (data-pagosya-s), so a reordered home still reports the same section.
+    window.addEventListener('click', event => {
+      const section = ANALYTICS_PAGE === 'index.html' && event.target?.closest ? event.target.closest('main > *') : null;
+      if (section && event.target.closest('a,button')) analytics('section_click', { target: 's' + homeSectionIndex(section) });
+    }, true);
+    if (ANALYTICS_PAGE === 'index.html' && typeof IntersectionObserver === 'function') {
+      const timers = new Map();
+      const sectionObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+        const index = homeSectionIndex(entry.target);
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          if (!timers.has(index)) timers.set(index, setTimeout(() => { analytics('section_view', { target: 's' + index }, 'section:' + index); sectionObserver.unobserve(entry.target); }, 1000));
+        } else { clearTimeout(timers.get(index)); timers.delete(index); }
+      }), { threshold: [0, 0.5] });
+      const watch = () => document.querySelectorAll('main > *').forEach(section => { if (homeSectionIndex(section) < 40) sectionObserver.observe(section); });
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch, { once: true }); else watch();
+    }
+  }
+  /** A home section's number as written (its place among main's children before anything moved it). */
+  function homeSectionIndex(section) {
+    const main = section.parentElement;
+    if (main && !main.dataset.pagosyaNumbered) { main.dataset.pagosyaNumbered = ''; [...main.children].forEach((child, index) => { if (!child.dataset.pagosyaS) child.dataset.pagosyaS = String(index); }); }
+    const value = Number(section.dataset.pagosyaS);
+    return Number.isInteger(value) ? value : [...(main?.children || [])].indexOf(section);
   }
   let cardObserver = null;
   const watchedCards = new WeakSet();

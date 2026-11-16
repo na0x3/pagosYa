@@ -935,6 +935,9 @@ model Store {
   sourcePublicationVersion     Int                              @default(0)
   sourcePublishedAt            DateTime?
   sourceExperiments            StoreSourceExperiment[]
+  /// «La tienda que vende sola» (spec 2026-11-16): small selling changes tried one at a time and kept only when they sell more.
+  autoImprove                  Boolean                      @default(true)
+  sellingChanges               StoreSellingChange[]
   sourceProject                StoreSourceProject?
   sourceGenerations            StoreSourceGeneration[]
   sourceDesignJobs             StoreSourceDesignJob[]
@@ -3225,10 +3228,14 @@ model StoreAnalyticsEvent {
   device       String
   /// Host name only, on page_view.
   referrerHost String?
+  /// The A/B test this visitor was in when the event happened, and their side (A | B); spec 2026-11-16.
+  experimentId String?
+  variant      String?
   createdAt    DateTime @default(now())
 
   @@index([storeId, createdAt])
   @@index([createdAt])
+  @@index([experimentId, type])
 }
 
 /// G1 analytics: per Bolivia day (UTC−4) rollup of StoreAnalyticsEvent. No personal data; kept.
@@ -3595,4 +3602,26 @@ model AssistantUnanswered {
 
   @@unique([storeId, question])
   @@index([storeId, status])
+}
+
+/// «La tienda que vende sola» (spec 2026-11-16): one selling change — section order, best seller first, button word or sticky buy
+/// bar — while it is tried (TRYING, with its experiment), once kept (KEPT) or undone (UNDONE, by the rules or the merchant).
+model StoreSellingChange {
+  id           String    @id @default(cuid())
+  storeId      String
+  store        Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// order | best | buyWord | stickyBuy
+  kind         String
+  /// The switches this change sets, e.g. {"buyWord":"Lo quiero"}.
+  settings     Json
+  status       String    @default("TRYING")
+  experimentId String?
+  /// One Spanish line for the merchant, e.g. «Botón «Lo quiero» — agregados +12%».
+  summary      String?
+  evidence     Json?
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+
+  @@index([storeId, status])
+  @@index([storeId, endedAt])
 }
