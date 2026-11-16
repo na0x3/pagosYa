@@ -837,4 +837,21 @@ describe('v2 assembly fixes 2026-11-16', () => {
     expect(kitProps().get('AnnouncementBar')!.has('messages')).toBe(true);
     expect(uiRuntime()).toMatch(/ui-announcement__arrow/);
   });
+  it('headers plan Task 13: the direction picks the header look, the repairs write it onto NavShell, history avoids repeats', () => {
+    const ctx = { ...context, headersUsed: ['over:pills'] } as V2Context;
+    const schema = v2DirectionSchema(ctx) as any;
+    expect(schema.required).toContain('header');
+    expect(schema.properties.header.required).toEqual(['over', 'tone', 'links', 'announce']);
+    expect(v2DirectionInput(ctx)).toMatch(/CABECERA[\s\S]*over:pills/);
+    const shell = { path: 'components/Shell.tsx' as const, content: '<NavShell brand={<b>X</b>} links={[]} actions="icons" /><AnnouncementBar>Hola</AnnouncementBar>' };
+    const header = { over: true, tone: 'light', links: 'pills', announce: ['Envío gratis desde Bs 250', 'Recoge en Sopocachi'] };
+    const out = v2Repairs([shell], { goods: '', ownIcons: true, header } as never).files[0].content;
+    expect(out).toMatch(/<NavShell[^>]* over tone="light" linkStyle="pills"/);
+    expect(out).toMatch(/<AnnouncementBar messages=\{\["Envío gratis desde Bs 250","Recoge en Sopocachi"\]\} \/>/);
+  });
+  it('headers plan Task 13: a floating header tells the hero half to leave room at the top', () => {
+    const d = { hero: { idea: 'zippa', composition: 'c', photo: '' }, sections: ['a', 'b', 'c', 'd'].map(role => ({ role, composition: 'x', photo: '', why: '' })), header: { over: true, tone: 'light', links: 'plain', announce: [] } } as never;
+    expect(v2HalfInput(context, d, 'a', [], { facts: '' })).toMatch(/CABECERA FLOTA/);
+    expect(v2HalfInput(context, d, 'b', [], { facts: '' })).not.toMatch(/CABECERA FLOTA/);
+  });
 });

@@ -16,6 +16,7 @@ import { V2_LIBRARY_FILE, v2LibraryCss, v2LibrarySources } from './v2-library';
 /** what: what YAPI saw in it («lata Lemon · Ginger»), so a stage screen is named after what it shows. */
 export type V2Cutout = { path: string; product: string; name: string; width: number; height: number; what?: string };
 /** product: the photo is a copy of that product's own photo (same picture, another file), so it already shows in its card. */
+export type V2Header = { over: boolean; tone: 'light' | 'dark'; links: 'plain' | 'pills'; announce: string[] };
 export type V2Photo = { path: string; width: number; height: number; shape: 'wide' | 'tall' | 'square'; product?: string; /** Shows words, a logo or packaging text: never cropped (2026-11-15). */ words?: boolean };
 export type V2Product = { id: string; name: string; category: string; about: string; photos: number };
 export type V2Context = {
@@ -40,6 +41,8 @@ export type V2Context = {
   menusAllowed?: string[]; menu?: V2Menu;
   /** Hero ideas this merchant's other stores have not used, and the one the direction chose (heroes plan 2026-11-15). */
   heroesAllowed?: string[]; heroIdea?: string;
+  /** The header look the direction chose and the over:links combinations the merchant's other stores use (headers plan Task 13). */
+  header?: V2Header; headersUsed?: string[];
   /** An animated store (owner 2026-11-14): motion is the brand's signature — asked in words or by the route. */
   animated?: boolean;
   /** Product cut-outs for the showcase pieces (ProductStage, HangingRail), when the build made them. */

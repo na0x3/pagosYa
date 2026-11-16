@@ -3,7 +3,7 @@ import { SOURCE_FONT_CATALOG } from '../source-font-catalog';
 import { uiRuntime } from '../source-creative';
 import { repairNextAuthoredMarkup } from '../source-next';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
-import { V2_FILES, type V2Context, type V2File } from './v2-context';
+import { V2_FILES, type V2Context, type V2File, type V2Header } from './v2-context';
 import { V2_MENU_MODELS, v2MenuSchema, type V2Menu } from './v2-menus';
 import { markWordPhotos } from './v2-words';
 import { heroIdea, heroMarker, MIX_NOTE, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
@@ -14,7 +14,7 @@ export { mergeV2LibraryEntries } from './v2-library';
  *  any code (the reference images teach the level of craft, never the layout to copy), then the four files written from it. */
 
 export type V2Direction = {
-  menu?: V2Menu;
+  menu?: V2Menu; header?: V2Header;
   idea: string; craft: string; display: string; text: string; scale: 'quiet' | 'regular' | 'loud';
   palette: { paper: string; ink: string; muted: string; accent: string; line: string; jobs: string };
   grid: string; hero: { idea?: string; composition: string; photo: string }; sections: Array<{ role: string; composition: string; photo: string; why: string }>;
@@ -31,7 +31,7 @@ const hex = { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' };
 export function v2DirectionSchema(context: V2Context): object {
   const ids = SOURCE_FONT_CATALOG.map(font => font.id);
   const photo = { type: 'string', enum: ['', ...context.photos.map(entry => entry.path)] };
-  return { type: 'object', additionalProperties: false, required: ['idea', 'craft', 'display', 'text', 'scale', 'palette', 'grid', 'hero', 'sections', 'signature', 'photos', 'phone', 'avoid', 'cart', 'art', 'menu'],
+  return { type: 'object', additionalProperties: false, required: ['idea', 'craft', 'display', 'text', 'scale', 'palette', 'grid', 'hero', 'sections', 'signature', 'photos', 'phone', 'avoid', 'cart', 'art', 'menu', 'header'],
     properties: {
       idea: { type: 'string' }, craft: { type: 'string' }, display: { type: 'string', enum: ids }, text: { type: 'string', enum: ids }, scale: { type: 'string', enum: ['quiet', 'regular', 'loud'] },
       palette: { type: 'object', additionalProperties: false, required: ['paper', 'ink', 'muted', 'accent', 'line', 'jobs'], properties: { paper: hex, ink: hex, muted: hex, accent: hex, line: hex, jobs: { type: 'string' } } },
@@ -40,6 +40,7 @@ export function v2DirectionSchema(context: V2Context): object {
         properties: { role: { type: 'string' }, composition: { type: 'string' }, photo, why: { type: 'string' } } } },
       signature: { type: 'string' }, photos: { type: 'string' }, phone: { type: 'string' }, avoid: { type: 'array', minItems: 3, maxItems: 8, items: { type: 'string' } },
       menu: v2MenuSchema(context.menusAllowed ?? V2_MENU_MODELS.map(m => m.id)),
+      header: { type: 'object', additionalProperties: false, required: ['over', 'tone', 'links', 'announce'], properties: { over: { type: 'boolean' }, tone: { type: 'string', enum: ['light', 'dark'] }, links: { type: 'string', enum: ['plain', 'pills'] }, announce: { type: 'array', maxItems: 3, items: { type: 'string' } } } },
       cart: { type: 'object', additionalProperties: false, required: ['look', 'photo'], properties: { look: { type: 'string', enum: ['band', 'photo', 'paper'] }, photo } },
       art: { type: 'object', additionalProperties: false, required: ['layouts', 'type', 'graphics', 'motion', 'interaction'], properties: {
         layouts: { type: 'array', minItems: 3, maxItems: 4, items: { type: 'string' } }, type: { type: 'string' }, graphics: { type: 'string' }, motion: { type: 'string' }, interaction: { type: 'string' } } },
@@ -250,9 +251,11 @@ export function v2DirectionInput(context: V2Context): string {
   // Heroes plan 2026-11-15: the hero starts from one idea this merchant has not used (or the open brief for about a third of stores).
   const ideas = (context.heroesAllowed ?? V2_HERO_IDEAS.map(h => h.id)).map(id => heroIdea(id)).filter(Boolean);
   const hero = `\n\nPORTADA: elige UNA idea de esta lista, la que la tienda puede mostrar con sus fotos de verdad (nunca otra): ${ideas.map(idea => `${idea!.id} — ${idea!.name}`).join(' · ')}.`;
+  // Headers plan 2026-11-16 (Zippa, Halcy): the header floats over the hero or sits above it, plain or pill links, and its real messages.
+  const header = `\n\nCABECERA: over=true solo si la portada empieza con una foto o un color a todo el ancho (laps, lift, hearthen, zippa, libre); entonces tone=light sobre foto oscura, dark sobre clara. links=pills para marcas juguetonas (cada enlace una pastilla). announce: 0–3 mensajes REALES cortos (envío, retiro, oferta real), nunca inventados.${context.headersUsed?.length ? ` Tus otras tiendas ya usan ${context.headersUsed.join(', ')} (over:links): usa otra combinación.` : ''}`;
   const menu = `\n\nMENÚ: elige UNO de estos modelos, el que mejor venda en ESTA tienda (nunca otro): ${menus.map(m => `${m.id}: ${m.fits}`).join(' · ')}.
 Grupos con nombres cortos y claros (máx. 28 letras), como mucho 7 arriba; enlaces con to: all, new, category:<id>, collection:<slug>, page:about|contact|shipping|faq, section:<id>; fotos solo de las rutas de la tienda, cada una una vez. Tu CSS puede vestir .pym-panel[data-model=…] y sus partes .pym-*.`;
-  return `${facts(context)}${(context.cutouts?.length ?? 0) >= 2 ? '\n\nVITRINAS: con los recortes la portada puede tener UNA vitrina de la plataforma justo después de la primera pantalla: ProductStage (un producto por pantalla, cada uno con su color de fondo y un titular de cartel partido alrededor del producto, como LIFT) o, para ropa, HangingRail (prendas en un riel, como ATELIER). Si la usas, nómbrala en los capítulos y da los colores de fondo de cada pantalla.' : ''}` + hero + menu;
+  return `${facts(context)}${(context.cutouts?.length ?? 0) >= 2 ? '\n\nVITRINAS: con los recortes la portada puede tener UNA vitrina de la plataforma justo después de la primera pantalla: ProductStage (un producto por pantalla, cada uno con su color de fondo y un titular de cartel partido alrededor del producto, como LIFT) o, para ropa, HangingRail (prendas en un riel, como ATELIER). Si la usas, nómbrala en los capítulos y da los colores de fondo de cada pantalla.' : ''}` + hero + header + menu;
 }
 
 /** The writer works in two calls so each answer fits the ChatGPT bridge's 10-minute request (live 2026-11-14: all four files in one
@@ -621,7 +624,7 @@ function oncePhotos(home: string, context: Partial<Pick<V2Context, 'photos' | 'c
   });
 }
 
-export function v2Repairs(files: readonly V2File[], header?: Pick<V2Context, 'goods' | 'ownIcons'> & Partial<Pick<V2Context, 'photos' | 'cutouts' | 'packs' | 'heroIdea'>>): { files: V2File[]; repairs: string[] } {
+export function v2Repairs(files: readonly V2File[], header?: Pick<V2Context, 'goods' | 'ownIcons'> & Partial<Pick<V2Context, 'photos' | 'cutouts' | 'packs' | 'heroIdea' | 'header'>>): { files: V2File[]; repairs: string[] } {
   const repairs: string[] = [];
   // Owner 2026-11-14 («the icons are the same up top… unless asked to change»): the header's actions are always the platform's
   // three icons — search, profile, the cart drawn as what the store sells — unless the merchant asked for other icons.
@@ -674,6 +677,8 @@ export function v2Repairs(files: readonly V2File[], header?: Pick<V2Context, 'go
     if (file.path === 'components/home.tsx' && header?.photos) content = oncePhotos(content, header, repairs);
     // Photos with words are marked so the page rule «cropped-words» can measure them (2026-11-15).
     if (header?.photos) content = markWordPhotos(content, new Set(header.photos.filter(photo => photo.words).map(photo => photo.path)));
+    // The header look the direction chose (headers plan Task 13), written onto NavShell and the announcement bar.
+    if (file.path === 'components/Shell.tsx' && header?.header) content = withHeaderLook(content, header.header);
     // The home carries its hero idea (heroes plan 2026-11-15), so the merchant's next store starts from another one.
     if (file.path === 'components/home.tsx' && header?.heroIdea && readHeroMarker(content) !== header.heroIdea) content = `${heroMarker(header.heroIdea)}\n${content.replace(/^\/\/ @pagosya-hero [a-z]+\s*\n/m, '')}`;
     content = kitPropsOnly(content, repairs, file.path);
@@ -913,6 +918,9 @@ export function v2HalfInput(context: V2Context, direction: V2Direction, half: V2
   // Heroes plan 2026-11-15: the half that writes the hero gets its idea's brief (its reference frames come with the call).
   const idea = half === 'a' ? heroIdea((direction as { hero?: { idea?: string } }).hero?.idea) : null;
   const heroBrief = idea ? `IDEA DE PORTADA «${idea.name}»: ${idea.brief}${idea.id === 'libre' ? '' : ` ${MIX_NOTE}`} Diséñala con el estilo de esta tienda (su letra, sus colores, su voz); de las referencias aprende la composición, nunca sus colores ni textos.\n\n` : '';
+  // Headers plan Task 13: a floating header sits over the hero, so the hero keeps its words clear of it.
+  const floats = half === 'a' && (direction as { header?: { over?: boolean } }).header?.over;
+  const headerNote = floats ? 'LA CABECERA FLOTA encima de tu portada (transparente): la portada empieza arriba del todo, a todo el ancho, con foto o color hasta el borde superior, y deja ~90 px libres arriba antes del titular.\n\n' : '';
   const { mine, other } = halfChapters(direction, half);
   const prefix = half === 'a' ? 'A' : 'B';
   const task = `EN ESTA LLAMADA escribes SOLO UNA MITAD de la portada: estos capítulos de la dirección, en este orden:
@@ -933,7 +941,7 @@ ${half === 'a' ? 'El ÚNICO <h1> de la página está en tu primera pantalla.' : 
 La página de producto la escribe otra llamada: no la toques.`;
   // The free home's rules, from «LA PORTADA ES TUYA» on (its first paragraph names the files of a whole-page answer).
   const rules = FREE_PAGES_TASK.slice(FREE_PAGES_TASK.indexOf('LA PORTADA ES TUYA'));
-  return heroBrief + `${task}
+  return heroBrief + headerNote + `${task}
 
 ${rules}
 ${context.animated ? `\n${ANIMATED_RULES}\n` : ''}${showcaseRules(context, half === 'a' ? 'stage' : 'rail') ? `\n${showcaseRules(context, half === 'a' ? 'stage' : 'rail')}\n` : ''}
@@ -992,3 +1000,13 @@ export function composeV2Home(a: V2HalfAnswer, b: V2HalfAnswer): string {
   ].join('\n');
 }
 
+/** Headers plan Task 13: the direction's header look on the design's own NavShell — over/tone/linkStyle replaced, never doubled —
+ *  and its real messages on the announcement bar. */
+export function withHeaderLook(content: string, look: V2Header): string {
+  const props = `${look.over ? ` over tone="${look.tone}"` : ''} linkStyle="${look.links}"`;
+  let out = content.replace(/<NavShell\b([^>]*?)(\/?>)/, (_, attrs: string, end: string) =>
+    `<NavShell${props}${attrs.replace(/\s(?:over(?:=\{(?:true|false)\})?|tone="[a-z]+"|linkStyle="[a-z]+")(?=[\s/>])/g, '')}${end}`);
+  const messages = look.announce.map(line => line.trim()).filter(Boolean).slice(0, 3);
+  if (messages.length) out = out.replace(/<AnnouncementBar\b[^>]*?(?:\/>|>[\s\S]*?<\/AnnouncementBar>)/, `<AnnouncementBar messages={${JSON.stringify(messages)}} />`);
+  return out;
+}

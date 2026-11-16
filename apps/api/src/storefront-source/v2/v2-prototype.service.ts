@@ -187,9 +187,9 @@ export class SourceV2PrototypeService {
   /** The newest revision that is not a V2 design (its template data and code), else the newest. */
   /** The hero ideas and menu models the merchant's latest other V2 stores use (heroes + menus plan 2026-11-15). Twenty stores are
    *  enough: with 8 ideas and 16 models, older stores would only repeat what these already show. */
-  private async merchantHistory(merchantId: string, storeId: string): Promise<{ heroes: string[]; menus: string[] }> {
+  private async merchantHistory(merchantId: string, storeId: string): Promise<{ heroes: string[]; menus: string[]; headers: string[] }> {
     const stores = await this.prisma.store.findMany({ where: { merchantId, id: { not: storeId } }, select: { id: true }, orderBy: { createdAt: 'desc' }, take: 20 });
-    const heroes = new Set<string>(), menus = new Set<string>();
+    const heroes = new Set<string>(), menus = new Set<string>(), headers = new Set<string>();
     for (const { id } of stores) {
       const version = await this.prisma.storeSourceVersion.findFirst({ where: { storeId: id, label: { startsWith: V2_LABEL } }, orderBy: { revision: 'desc' }, select: { snapshot: true } });
       const files = ((version?.snapshot as { files?: Array<{ path: string; content: string }> } | null)?.files ?? []);
@@ -198,8 +198,10 @@ export class SourceV2PrototypeService {
       if (hero && hero !== 'libre') heroes.add(hero);
       const model = readConfigData(files as never).header?.menu?.model;
       if (typeof model === 'string') menus.add(model);
+      const nav = (files.find(file => file.path === 'components/Shell.tsx')?.content ?? '').match(/<NavShell\b[^>]*>/)?.[0] ?? '';
+      if (nav) headers.add(`${/\sover[\s/>]/.test(nav) ? 'over' : 'top'}:${/linkStyle="pills"/.test(nav) ? 'pills' : 'plain'}`);
     }
-    return { heroes: [...heroes], menus: [...menus] };
+    return { heroes: [...heroes], menus: [...menus], headers: [...headers] };
   }
 
   private async templateBase(storeId: string): Promise<number> {
@@ -279,6 +281,7 @@ export class SourceV2PrototypeService {
     const history = await this.merchantHistory(merchantId, storeId);
     context.heroesAllowed = drawsLibre(storeId) ? ['libre'] : allowedHeroIdeas(history.heroes, context);
     context.menusAllowed = allowedMenus(history.menus);
+    context.headersUsed = history.headers;
     const direction = await stage('direction', () => this.call<V2Direction>(storeId, 'v2-direction', model, v2DirectionPrompt(context.free), [
       { type: 'input_text', text: `${v2DirectionInput(context)}${context.animated ? `\n\n${ANIMATED_RULES}` : ''}` },
       ...photos.map((image_url): Content => ({ type: 'input_image', image_url, detail: 'high' })),
@@ -294,6 +297,7 @@ export class SourceV2PrototypeService {
     // Cleaned in code (final review C1): a menu the writer cannot change never blocks the build.
     context.menu = direction.menu ? cleanMenu(direction.menu, context) : undefined;
     context.heroIdea = direction.hero?.idea;
+    context.header = direction.header;
     // The chosen idea's real reference frames go to the half that writes the hero (examples/v2-proto/references/_heroes).
     const heroShots: Content[] = await Promise.all((heroIdea(context.heroIdea)?.frames ?? []).map(async frame => {
       const bytes = await readFile(join(referencesDir(), '_heroes', frame)).catch(() => null);
