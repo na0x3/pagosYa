@@ -32,6 +32,10 @@ const SECRET = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|(?:sk_live_|sk
 // Live 2026-11-10: privacy + commerce + retention + chat reached 902 kB (Merman cart, personalizador, rasca y elige) and every save
 // failed («Invalid source file content»), first builds included. A sanity cap on pagosYa's own runtime, never the merchant's code.
 export const MAX_COMMERCE_RUNTIME = 1_250_000;
+/** Live 2026-11-16: the kit's UI library (lib/ui.tsx, written by nextProjectScaffold) passed the 180 kB authored budget at about
+ *  197 kB, so every new store's first save failed («Invalid source file content»). pagosYa's own library files get this cap. */
+export const MAX_KIT_SOURCE = 400_000;
+const KIT_SOURCE_FILES = new Set(['lib/ui.tsx', 'lib/creative.tsx']);
 
 /** Files the platform writes from the store's source on every save, never by hand. */
 function platformOutput(path: string, compiledSheet: boolean): boolean {
@@ -81,7 +85,7 @@ export function sourceProjectSnapshot(input: SaveSourceProjectDto): SourceProjec
     const encoding = file.encoding ?? "utf8";
     // source-next-layout.json is compiled output too: every page's header and footer markup, for SEO text. With 25 pages
     // it passed 180 kB and refused a BOXY save (2026-10-25) though YAPI had written nothing large.
-    if (typeof file.content !== "string" || file.content.length > (encoding === "base64" ? (sourceVideo(file.path) ? MAX_SOURCE_VIDEO_BASE64 : 2_800_000) : /^_compiled\/(?:(?:pages|catalog|auth|account)\/)?[a-z][a-z0-9-]{0,52}\.js$/.test(file.path) || file.path === 'source-next-layout.json' || (compiledSheet && file.path === 'styles.css') ? 800_000 : file.path === 'commerce.js' ? MAX_COMMERCE_RUNTIME : file.path === 'styles/globals.css' ? MAX_STORE_SHEET : 180_000) || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
+    if (typeof file.content !== "string" || file.content.length > (encoding === "base64" ? (sourceVideo(file.path) ? MAX_SOURCE_VIDEO_BASE64 : 2_800_000) : /^_compiled\/(?:(?:pages|catalog|auth|account)\/)?[a-z][a-z0-9-]{0,52}\.js$/.test(file.path) || file.path === 'source-next-layout.json' || (compiledSheet && file.path === 'styles.css') ? 800_000 : file.path === 'commerce.js' ? MAX_COMMERCE_RUNTIME : KIT_SOURCE_FILES.has(file.path) ? MAX_KIT_SOURCE : file.path === 'styles/globals.css' ? MAX_STORE_SHEET : 180_000) || !["utf8", "base64"].includes(encoding)) reject("Invalid source file content");
     if (encoding === "base64" && (!BINARY_EXTENSIONS.test(file.path) || !file.content || Buffer.from(file.content, "base64").toString("base64") !== file.content)) reject("Only canonical base64 image, MP4 and font assets are supported");
     if (encoding === "utf8" && (file.content.includes("\0") || SECRET.test(file.content))) reject("Source files cannot contain NUL characters or recognized private credentials");
     if (sourceVideo(file.path)) {
