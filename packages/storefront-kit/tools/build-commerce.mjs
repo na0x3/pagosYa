@@ -71,6 +71,7 @@ export const PARTS = [
   'look/press.js',
   'product/variant-cards.js',
   'product/personalizer.js',
+  'selling/selling.js',
   'shared/start.js',
 ];
 

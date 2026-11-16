@@ -99,7 +99,7 @@
     jump.disabled = !pending && (!buy || buy.disabled);
     const phone = matchMedia('(max-width: 640px)').matches, lively = document.documentElement.hasAttribute('data-pya-lively');
     // Owner 2026-11-13 (product page «duo»): a template with a «sticky» slot gets the lively stores' floating bar on every width.
-    const sticky = productTemplateHas('sticky');
+    const sticky = productTemplateHas('sticky') || config.selling?.stickyBuy === true; // «La tienda que vende sola» switch (spec 2026-11-16)
     document.documentElement.toggleAttribute('data-pya-sticky-buy', sticky);
     const show = buyPassed && !footerSeen && (lively || phone || sticky);
     bar.hidden = !show; detail.querySelector('[data-product-sticky-space]').hidden = !show || !phone;

@@ -75,7 +75,7 @@
           if (!timers.has(index)) timers.set(index, setTimeout(() => { analytics('section_view', { target: 's' + index }, 'section:' + index); sectionObserver.unobserve(entry.target); }, 1000));
         } else { clearTimeout(timers.get(index)); timers.delete(index); }
       }), { threshold: [0, 0.5] });
-      const watch = () => document.querySelectorAll('main > *').forEach(section => { if (homeSectionIndex(section) < 40) sectionObserver.observe(section); });
+      const watch = () => document.querySelectorAll('main > :not([data-pya-selling-extra])').forEach(section => { if (homeSectionIndex(section) < 40) sectionObserver.observe(section); });
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch, { once: true }); else watch();
     }
   }
