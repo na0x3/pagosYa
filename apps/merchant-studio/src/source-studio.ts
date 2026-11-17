@@ -26,6 +26,9 @@ import { renderBuildStage, mountBuildStage, type BuildStageState } from './sourc
 import { mountFace, renderFaceMark } from './source-face';
 import { mountStarField } from './source-star-field';
 import './source-build-progress.css';
+import { mountLightbox } from './source-lightbox';
+// Owner 2026-11-16: pictures in YAPI's conversation open in a viewer on the same screen, with an × to close it.
+if (typeof document !== 'undefined') mountLightbox();
 import { renderStoreReadiness } from './store-readiness';
 import { openRetention } from './retention';
 import { openCommercePlatform } from './commerce-platform';
@@ -963,8 +966,9 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
   function attachmentGallery(files: Array<{ src: string; video?: boolean }>) {
     const items = files.map(({ src, video }) => video || /\.mp4(?:$|\?)/i.test(src)
       ? `<video src="${escape(src)}" controls muted playsinline preload="metadata" aria-label="Video adjunto"></video>`
-      : `<a href="${escape(src)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir imagen adjunta en tamaño completo"><img src="${escape(src)}" alt="Imagen adjunta" loading="lazy"></a>`);
-    return items.length ? `<div class="message-attachments" data-count="${items.length}">${items.join('')}</div>` : '';
+      // Owner 2026-11-16: a picture opens over the Studio (source-lightbox), not in another page.
+      : `<a href="${escape(src)}" data-lightbox aria-label="Ver imagen adjunta en grande"><img src="${escape(src)}" alt="Imagen adjunta" loading="lazy"></a>`);
+    return items.length ? `<div class="message-attachments" data-lightbox-group data-count="${items.length}">${items.join('')}</div>` : '';
   }
   /** Owner 2026-11-15 (like Amboras's bot): the screenshots YAPI took when it looked at the store, and what it saw. Only upload paths. */
   function lookNote(metadata: JsonRecord) {

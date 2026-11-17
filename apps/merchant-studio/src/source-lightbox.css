@@ -1,0 +1,10 @@
+/* Owner 2026-11-16: a picture from YAPI's conversation opens over the Studio, with a close button. */
+.studio-lightbox { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: clamp(16px, 4vw, 48px); border: 0; background: rgba(12, 12, 14, .86); display: grid; place-items: center; }
+.studio-lightbox::backdrop { background: transparent; }
+.studio-lightbox__img { max-width: min(100%, 1200px); max-height: calc(100dvh - 96px); width: auto; height: auto; object-fit: contain; border-radius: 12px; box-shadow: 0 24px 80px rgba(0, 0, 0, .45); }
+.studio-lightbox__close { position: fixed; top: 16px; right: 16px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 999px; background: #fff; color: #111; font-size: 26px; line-height: 1; cursor: pointer; box-shadow: 0 4px 16px rgba(0, 0, 0, .3); }
+.studio-lightbox__close:focus-visible, .studio-lightbox__step:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.studio-lightbox__step { position: fixed; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .92); color: #111; font-size: 28px; line-height: 1; cursor: pointer; }
+.studio-lightbox__step[data-step="-1"] { left: 16px; }
+.studio-lightbox__step[data-step="1"] { right: 16px; }
+.studio-lightbox__count { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); margin: 0; color: #fff; font: 600 13px/1 system-ui, sans-serif; opacity: .8; }
