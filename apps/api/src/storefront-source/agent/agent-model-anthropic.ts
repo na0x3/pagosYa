@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import sharp from 'sharp';
 import type { SourceRequestBudget } from '../source-request-budget';
 import { checkSourceProviderQuota } from '../source-provider-error';
 import type { AgentModel } from './agent-loop';
@@ -16,6 +18,29 @@ function estimateInputTokens(value: unknown) {
 function imageBlock(url: string): Block {
   const match = url.match(/^data:(image\/[a-z+]+);base64,(.+)$/);
   return match ? { type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } } : { type: 'image', source: { type: 'url', url } };
+}
+
+/** Live 2026-11-17 (NOA vyerqe9q: «image dimensions exceed max allowed size for many-image requests: 3000 pixels»): a page
+ *  screenshot part taller than 2000 px is scaled to fit before it goes to Claude; each picture is scaled once, then reused. */
+const IMAGE_MAX_SIDE = 2000;
+const fittedImages = new Map<string, Block>();
+export async function fitClaudeImages(messages: Message[]): Promise<void> {
+  for (const message of messages) for (const block of message.content) {
+    const source = block.type === 'image' ? block.source as { type?: string; data?: string } : null;
+    if (source?.type !== 'base64' || !source.data) continue;
+    const key = createHash('sha1').update(source.data).digest('hex');
+    let fitted = fittedImages.get(key);
+    if (!fitted) {
+      const bytes = Buffer.from(source.data, 'base64');
+      const meta = await sharp(bytes).metadata().catch(() => null);
+      fitted = meta?.width && meta.height && Math.max(meta.width, meta.height) > IMAGE_MAX_SIDE
+        ? { type: 'base64', media_type: 'image/webp', data: (await sharp(bytes).resize({ width: IMAGE_MAX_SIDE, height: IMAGE_MAX_SIDE, fit: 'inside' }).webp({ quality: 82 }).toBuffer()).toString('base64') }
+        : source as Block;
+      if (fittedImages.size >= 200) fittedImages.clear();
+      fittedImages.set(key, fitted);
+    }
+    block.source = fitted;
+  }
 }
 
 /**
@@ -59,6 +84,7 @@ export function anthropicAgentModel(input: { endpoint: string; apiKey: string; m
     try { reserved = input.budget.reserve(input.model, estimateInputTokens({ instructions, transcript, tools }), input.maxOutputTokens, 1024); }
     catch (error) { throw Object.assign(error as Error, { agentLimit: true }); }
     const messages = anthropicMessages(transcript);
+    await fitClaudeImages(messages);
     // The transcript only grows: caching up to its end lets the next turn read everything before it at the cached rate.
     const lastBlock = messages.at(-1)?.content.at(-1);
     if (lastBlock) lastBlock.cache_control = { type: 'ephemeral' };

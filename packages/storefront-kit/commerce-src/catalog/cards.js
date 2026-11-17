@@ -68,7 +68,7 @@
     const parts = cardInsides(p);
     const set = (name, html, empty) => { const node = field(name); if (!node) return; node.innerHTML = html; node.hidden = empty; };
     set('eyebrow', escape(parts.eyebrow), !parts.eyebrow);
-    set('points', parts.points.map(t => `<li>${escape(t)}</li>`).join(''), !parts.points.length);
+    set('points', parts.points.map(cardPointMarkup).join(''), !parts.points.length);
     set('chips', chipsHtml(parts), !parts.chips.length);
     set('deal', escape(parts.deal), !parts.deal);
     set('save', escape(parts.save), !parts.save);

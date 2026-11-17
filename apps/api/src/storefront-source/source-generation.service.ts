@@ -153,6 +153,13 @@ export { sourceMarqueeEditPaths, validateGeneratedSource } from './source-genera
 // validator shares one default-deny path. Re-exported for existing importers.
 export { merchantFacingSourceFailure } from './source-validation-error';
 
+/** Live 2026-11-17 (NOA vyerqe9q: every chat edit of a V2 store failed «unsupported_on_claude»): with YAPI_CHAT_ON_CLAUDE the
+ *  OpenAI-shaped gateway carries no tools, so the tool-using edit agent runs on that Claude model natively (Anthropic key). */
+function onClaudePlan<T extends { model: string }>(plan: T): T {
+  const model = process.env.YAPI_CHAT_ON_CLAUDE;
+  return model && isClaude(model) && !isClaude(plan.model) ? { ...plan, model } : plan;
+}
+
 @Injectable()
 export class SourceGenerationService {
   constructor(private readonly prisma: PrismaService, private readonly publicStores: PublicStoresService, private readonly projects: SourceProjectsService, private readonly uploads: UploadsService, private readonly config: ConfigService, @Optional() private readonly brands?: BrandProfileService, @Optional() private readonly metering?: AiUsageService, @Optional() private readonly designPlanner = new SourceDesignPlanner(), @Optional() private readonly rewards?: RewardsService, @Optional() private readonly emailKits?: EmailKitService, @Optional() private readonly pageWriter?: ProductPageWriterService) {}
@@ -292,7 +299,7 @@ export class SourceGenerationService {
     const current = await this.projects.current(merchantId, storeId);
     if (current.revision !== dto.revision) throw new ConflictException('El proyecto cambió. Recarga antes de generar.');
     const sourceSize = dto.revision ? await this.projects.authoredSize(merchantId, storeId, dto.revision) : 0;
-    const plan = sourceGenerationPlan(dto.model, dto.revision, dto.instruction);
+    const plan = onClaudePlan(sourceGenerationPlan(dto.model, dto.revision, dto.instruction));
     const estimate = sourceGenerationEstimate(plan, sourceSize, dto.instruction.length, Math.min(6, dto.assetUrls?.length || 0), dto.revision === 0 || sourceRedesignRequested(dto.instruction));
     const maxCredits = dto.maxCredits ?? DEFAULT_MAX_CREDITS;
     const maxOutputTokens = sourceOutputBudget(plan, estimate.estimatedInputTokens, maxCredits);
@@ -336,7 +343,7 @@ export class SourceGenerationService {
     // A new request stops YAPI's background polish of the last store before it takes the lease (spec 2026-10-12): the polish
     // would only be discarded by this run's save. A private visual-repair candidate saves nothing, so it leaves it running.
     if (!execution?.candidate) await this.cancelReview(storeId);
-    const plan = sourceGenerationPlan(dto.model, dto.revision, dto.instruction);
+    const plan = onClaudePlan(sourceGenerationPlan(dto.model, dto.revision, dto.instruction));
     // Claude runs only the tool-using agent; the design planner and any single-call fallback keep an OpenAI companion.
     const claude = isClaude(plan.model);
     const agentProvider = claude ? sourceProvider(this.config, plan.model) : null;

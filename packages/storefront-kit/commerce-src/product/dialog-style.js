@@ -38,6 +38,15 @@
       .menu-add[data-pya-added]>:not(.menu-add__fill,.menu-add__done){opacity:0}
       @media (prefers-reduced-motion:reduce){.menu-add__fill,.menu-add__done,.menu-add>*{transition:none!important}}
     }
+    /* Owner 2026-11-17 (longer, personal cards): a card's own highlights, each with its icon, under the name. The list's spacing is
+     * layered (a store's card keeps its own); a row with an icon is unlayered, so a template's ✓ marker never sits beside the icon
+     * and the icon never takes a line of its own (Remolino's card, live 2026-11-17). */
+    @layer pagosya-commerce {
+      .menu-item .menu-item__points{list-style:none;margin:8px 0 2px;padding:0;display:grid;gap:6px;font-size:13px;line-height:1.35}
+    }
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon]{display:flex;align-items:flex-start;gap:8px;padding-left:0}
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon]::before{content:none;display:none}
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon] svg{flex:none;width:16px;height:16px;margin-top:1px;color:var(--store-accent,currentColor)}
     /* Unlayered: a clear button filled with its own text colour must change its text, whatever the store's button colour says. */
     .menu-item .menu-add[data-pya-ink]{transition:color .3s ease .15s}
     .menu-item .menu-add[data-pya-ink]:not(:disabled):is(:hover,:focus-visible),.menu-item .menu-add[data-pya-ink][data-pya-added]{color:var(--pya-ink)}

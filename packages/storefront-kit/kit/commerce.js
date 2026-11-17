@@ -482,7 +482,12 @@
     const written = typeof p.cardEyebrow === 'string' ? p.cardEyebrow.trim() : '';
     const category = chosen ? (store.categories || []).find(c => c.id === p.categoryId)?.name || '' : '';
     const eyebrow = (written || category).slice(0, 28);
-    const points = chosen ? (Array.isArray(p.highlights) ? p.highlights : []).map(h => typeof h === 'string' ? h : h?.label).filter(text => typeof text === 'string' && text.trim()).slice(0, 3) : [];
+    // Owner 2026-11-17 («longer personalized product cards depending on each product»): every store's card shows the product's own
+    // highlights with the product page's icons (up to 3); a store that chose the showcase card still lists plain ones with a ✓.
+    const rows = Array.isArray(p.highlights) ? p.highlights : [];
+    const iconRows = rows.filter(h => h && typeof h === 'object' && highlightIcons[h.icon] && typeof h.label === 'string' && h.label.trim()).slice(0, 3);
+    const points = iconRows.length ? iconRows.map(h => ({ text: h.label.trim(), icon: h.icon }))
+      : chosen ? rows.map(h => typeof h === 'string' ? h : h?.label).filter(text => typeof text === 'string' && text.trim()).slice(0, 3).map(text => ({ text })) : [];
     const chips = [];
     if (chosen) for (const group of optionGroups(p) || []) for (const value of group.values) {
       const color = swatchColor(group.name, value);
@@ -503,11 +508,13 @@
     return best.id;
   }
   const chipsHtml = parts => parts.chips.map(c => c.color ? `<span data-swatch style="--swatch:${escape(c.color)}" role="img" aria-label="${escape(c.text)}" title="${escape(c.text)}"></span>` : `<span>${escape(c.text)}</span>`).join('') + (parts.more ? `<span>+${parts.more}</span>` : '');
+  /** One card point: the highlight's icon (the product page's drawing, still) and its words, or the words alone. */
+  const cardPointMarkup = point => point.icon ? `<li data-icon><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${highlightIcons[point.icon].paths}</svg><span>${escape(point.text)}</span></li>` : `<li>${escape(point.text)}</li>`;
   function cardInsidesMarkup(p) {
     const parts = cardInsides(p), chips = chipsHtml(parts);
     return {
       eyebrow: parts.eyebrow ? `<p class="menu-item__eyebrow">${escape(parts.eyebrow)}</p>` : '',
-      points: parts.points.length ? `<ul class="menu-item__points">${parts.points.map(t => `<li>${escape(t)}</li>`).join('')}</ul>` : '',
+      points: parts.points.length ? `<ul class="menu-item__points">${parts.points.map(cardPointMarkup).join('')}</ul>` : '',
       chips: chips ? `<p class="menu-item__chips">${chips}</p>` : '',
       deal: parts.deal ? `<p class="menu-item__deal">${escape(parts.deal)}</p>` : '',
       save: parts.save ? `<span class="menu-item__save">${escape(parts.save)}</span>` : '',
@@ -747,6 +754,15 @@
       .menu-add[data-pya-added]>:not(.menu-add__fill,.menu-add__done){opacity:0}
       @media (prefers-reduced-motion:reduce){.menu-add__fill,.menu-add__done,.menu-add>*{transition:none!important}}
     }
+    /* Owner 2026-11-17 (longer, personal cards): a card's own highlights, each with its icon, under the name. The list's spacing is
+     * layered (a store's card keeps its own); a row with an icon is unlayered, so a template's ✓ marker never sits beside the icon
+     * and the icon never takes a line of its own (Remolino's card, live 2026-11-17). */
+    @layer pagosya-commerce {
+      .menu-item .menu-item__points{list-style:none;margin:8px 0 2px;padding:0;display:grid;gap:6px;font-size:13px;line-height:1.35}
+    }
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon]{display:flex;align-items:flex-start;gap:8px;padding-left:0}
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon]::before{content:none;display:none}
+    .menu-item :is(.menu-item__points,[data-product-field=points]) li[data-icon] svg{flex:none;width:16px;height:16px;margin-top:1px;color:var(--store-accent,currentColor)}
     /* Unlayered: a clear button filled with its own text colour must change its text, whatever the store's button colour says. */
     .menu-item .menu-add[data-pya-ink]{transition:color .3s ease .15s}
     .menu-item .menu-add[data-pya-ink]:not(:disabled):is(:hover,:focus-visible),.menu-item .menu-add[data-pya-ink][data-pya-added]{color:var(--pya-ink)}
@@ -4279,7 +4295,7 @@
     const parts = cardInsides(p);
     const set = (name, html, empty) => { const node = field(name); if (!node) return; node.innerHTML = html; node.hidden = empty; };
     set('eyebrow', escape(parts.eyebrow), !parts.eyebrow);
-    set('points', parts.points.map(t => `<li>${escape(t)}</li>`).join(''), !parts.points.length);
+    set('points', parts.points.map(cardPointMarkup).join(''), !parts.points.length);
     set('chips', chipsHtml(parts), !parts.chips.length);
     set('deal', escape(parts.deal), !parts.deal);
     set('save', escape(parts.save), !parts.save);
