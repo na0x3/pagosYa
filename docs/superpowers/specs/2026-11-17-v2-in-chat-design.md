@@ -1,6 +1,6 @@
 # V2 in YAPI's chat — design
 
-Date: 2026-11-17 · Status: draft for owner review · Owner request (2026-11-16): «set the Nov 14 rules as default… I just want stores
+Date: 2026-11-17 · Status: decided (owner: «the one you recommend») · part 1 built · Owner request (2026-11-16): «set the Nov 14 rules as default… I just want stores
 like Clyro generates» → «write the spec to connect V2 to YAPI's chat».
 
 ## 1. Why
@@ -83,3 +83,15 @@ Flag off = today's behaviour exactly.
   a failed run leaves the template revision and a retry message.
 - Redesign detection queues `v2Design` on the latest template revision.
 - Live: three stores through the real chat (dev), checked against the prototype route.
+
+## 9. Decisions (owner 2026-11-17: «the one you recommend»)
+
+1. Model: **Claude Opus 5.5** for the first design (`YAPI_V2_CHAT_MODEL`, cap `YAPI_V2_CHAT_MAX_USD=10`); Sonnet 5.5 to be tested as
+   the cheaper option.
+2. The first design is **free** (part of the plan's free first build); later redesigns cost credits.
+3. The chat connection is built now, **dev only**; the Linux build sandbox is the next task and a blocker for production.
+4. **New stores first**; «rediseña mi tienda» moves to V2 once first designs prove themselves.
+
+Built 2026-11-17: `v2Design` on SourceMessageInput; the new-store first build queues it when `YAPI_V2_CHAT=1`
+(source-chat.service `v2FollowUp`); the job worker awaits `SourceV2PrototypeService.designForChat` (posts YAPI's result or failure
+message); specs: source-chat-jobs (32) and v2 (96). Live check waits for the ChatGPT plan (intake and template pick run on it).

@@ -488,7 +488,7 @@ export class SourceChatService {
     // §2: a template from the owner's pool is written by the home writer instead.
     const checklist = this.checklistOn() && userMessage.content.trim() ? userMessage.content.trim().slice(0, 4000) : undefined;
     const followUp: SourceMessageInput | undefined = templatePick
-      ? (this.templateWriterOn(templatePick.id) ? this.writerFollowUp(saved.revision, checklist, pickedModel) : this.libraryFollowUp(saved.revision, checklist))
+      ? (this.v2ChatOn() ? this.v2FollowUp(saved.revision) : this.templateWriterOn(templatePick.id) ? this.writerFollowUp(saved.revision, checklist, pickedModel) : this.libraryFollowUp(saved.revision, checklist))
       : written ? { instruction: `${merchantRequest ? `${written}\n\nMensajes del comercio:\n${merchantRequest}` : written}${coverLine}`, revision: saved.revision, personalTouch: true, ownRequest: true, redesign: true, firstDesign: true, motion: 'expressive', requestId: randomUUID(), model: this.redesignModel(), ...withAssets }
       : planBrief ? { instruction: merchantRequest ? `${planBrief}\n\nMensajes del comercio:\n${merchantRequest}` : planBrief, revision: saved.revision, personalTouch: true, ownRequest: true, requestId: randomUUID(), model: 'auto', ...withAssets }
       : touching ? { instruction: merchantRequest ? `${OWN_REQUEST_BRIEF}\n\nMensajes del comercio:\n${merchantRequest}` : PERSONAL_TOUCH_BRIEF, revision: saved.revision, personalTouch: true, ...(merchantRequest ? { ownRequest: true } : {}), requestId: randomUUID(), model: 'auto', ...withAssets }
@@ -729,6 +729,12 @@ export class SourceChatService {
   // written): the sections are part of the first design, so the Studio keeps «YAPI está diseñando tu tienda» until they are saved.
   private libraryFollowUp(revision: number, checklistWords?: string): SourceMessageInput {
     return { instruction: SECTION_LIBRARY_BRIEF, revision, personalTouch: true, sectionLibrary: true, firstDesign: true, ...(checklistWords ? { checklistWords } : {}), requestId: randomUUID(), model: 'auto' };
+  }
+  /** Spec 2026-11-17: a new store's first design comes from the V2 engine (Nov 14 rules, the model's own menu) instead of the
+   *  section library or the home writer. Off = today's flow. */
+  private v2ChatOn() { return process.env.YAPI_V2_CHAT === '1'; }
+  private v2FollowUp(revision: number): SourceMessageInput {
+    return { instruction: 'Primer diseño de la tienda con el motor V2.', revision, personalTouch: true, v2Design: true, firstDesign: true, requestId: randomUUID(), model: 'auto' };
   }
   private planOn() { return this.config.get<boolean>('app.yapiPlanCard') !== false && Boolean(this.plans); }
   private startersOn() { return this.config.get<boolean>('app.yapiStarters') === true; }

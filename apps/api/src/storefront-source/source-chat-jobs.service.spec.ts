@@ -344,3 +344,17 @@ describe('A/B design tests', () => {
     expect(ab.proposeDesign).not.toHaveBeenCalled();
   });
 });
+
+it('spec 2026-11-17: a new store\'s V2 first design runs on the V2 engine, not the chat, and completes or fails plainly', async () => {
+  const { prisma, chat } = setup();
+  const v2: any = { designForChat: jest.fn().mockResolvedValue({ revision: { revision: 3 } }) };
+  const service = new SourceChatJobsService(prisma, chat, undefined, undefined, undefined, undefined, v2);
+  await service.run({ ...job, input: { ...input, revision: 2, v2Design: true, firstDesign: true, personalTouch: true } });
+  expect(v2.designForChat).toHaveBeenCalledWith('m', 's', 2);
+  expect(chat.send).not.toHaveBeenCalled();
+  expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'COMPLETED' }) }));
+  v2.designForChat.mockResolvedValue({ assistantMessage: { metadata: { failed: true } } });
+  prisma.storeSourceChatJob.updateMany.mockClear();
+  await service.run({ ...job, input: { ...input, revision: 2, v2Design: true, firstDesign: true } });
+  expect(prisma.storeSourceChatJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED' }) }));
+});

@@ -137,6 +137,27 @@ export class SourceV2PrototypeService {
     return state;
   }
 
+  /** Spec 2026-11-17 (V2 in the chat): a new store's first design, run inside its chat job and awaited. The model is YAPI_V2_CHAT_MODEL
+   *  (default Claude Opus 5.5), capped by YAPI_V2_CHAT_MAX_USD (default $10), with the default rules (YAPI_V2_RULES). YAPI says how it
+   *  went in the chat; a failure leaves the template revision and says so. */
+  async designForChat(merchantId: string, storeId: string, revision: number): Promise<{ revision: { revision: number } } | { assistantMessage: { metadata: { failed: true } } }> {
+    if (this.runs.get(storeId)?.status === 'RUNNING') throw new ConflictException('Ya hay un diseño en curso para esta tienda.');
+    const state: V2RunState = { status: 'RUNNING', startedAt: new Date().toISOString(), baseRevision: revision, stages: [], usd: 0,
+      model: process.env.YAPI_V2_CHAT_MODEL || 'claude-opus-5-5', maxUsd: Number(process.env.YAPI_V2_CHAT_MAX_USD) > 0 ? Number(process.env.YAPI_V2_CHAT_MAX_USD) : 10,
+      ...(process.env.YAPI_V2_RULES === 'nov14' ? { basic: true } : {}) };
+    this.runs.set(storeId, state);
+    try {
+      await this.run(merchantId, storeId, revision, [], state);
+      await this.postChat(storeId, 'Listo: diseñé tu tienda con tus productos y tus fotos. Mírala en la vista previa y dime qué quieres cambiar.', { sourceRevision: state.revision, v2: { revision: state.revision, usd: state.usd } });
+      return { revision: { revision: state.revision! } };
+    } catch (error) {
+      state.status = 'FAILED'; state.error = String((error as Error)?.message ?? error).slice(0, 1000);
+      this.log.warn(JSON.stringify({ event: 'v2_chat_failed', storeId, error: state.error }));
+      await this.postChat(storeId, 'No pude terminar el diseño: tu tienda quedó con su plantilla. Escribe «sigue» o pídemelo de nuevo para reintentar.', { failed: true, v2: { error: state.error.slice(0, 300) } }).catch(() => undefined);
+      return { assistantMessage: { metadata: { failed: true } } };
+    }
+  }
+
   /** Re-assembles the store's latest V2 design with the platform's current parts — no model call (owner 2026-11-14 «half of the
    *  limit for 2 stores» + «visual errors»: the faults were in the platform's own CSS, card and header rules, not in the design).
    *  The written files are kept as saved (Shell, home, product, the library slots, the design's CSS without the platform blocks);

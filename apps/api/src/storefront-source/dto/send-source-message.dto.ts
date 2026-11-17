@@ -77,6 +77,8 @@ export type SourceMessageInput = SendSourceMessageDto & { personalTouch?: boolea
   homeWriter?: boolean;
   /** Spec 2026-10-31: the home composed from the section library, after the polish of a new master store. */
   sectionLibrary?: boolean;
+  /** Spec 2026-11-17 (V2 in the chat): the new store's first design comes from the V2 engine (YAPI_V2_CHAT=1). */
+  v2Design?: boolean;
   /** «sigue» after a library call that failed (2026-11-10): the revision whose template sections to fill (the store now shows a bare home). */
   sectionLibraryFrom?: number;
   /** Owner 2026-10-27: the follow-up is a guarded personal touch (source-guarded-touch.ts). */
