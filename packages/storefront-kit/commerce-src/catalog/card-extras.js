@@ -44,6 +44,16 @@
   if (!hasDna) document.addEventListener('click', event => { if (pickCardSwatch(stripSwatch(event))) event.preventDefault(); }, true);
   document.addEventListener('pointerover', event => { const swatch = stripSwatch(event); if (swatch) pickCardSwatch(swatch); }, { passive: true });
   function placeQuickLooks() { if (cardMode() === 'quick-look') document.querySelectorAll('.menu-item').forEach(placeQuickLook); }
+  // Owner 2026-11-16 («inside the product card there are some cropped pictures that dont look good»): a photo whose shape is far from
+  // its card's box (NOA's Antifaz, 3:5 in a 4:5 card, lost a quarter of its height) is shown whole on the card's paper instead of cut.
+  const fitCardPhoto = photo => {
+    const box = photo.getBoundingClientRect();
+    if (!photo.naturalWidth || !photo.naturalHeight || !box.width || !box.height) return;
+    const off = Math.abs((photo.naturalWidth / photo.naturalHeight) / (box.width / box.height) - 1);
+    if (off > 0.08) photo.setAttribute('data-fit', 'contain'); else photo.removeAttribute('data-fit');
+  };
+  document.addEventListener('load', event => { if (event.target?.matches?.('.menu-item .menu-item__image')) fitCardPhoto(event.target); }, true);
+  document.querySelectorAll('.menu-item .menu-item__image').forEach(photo => { if (photo.complete) fitCardPhoto(photo); });
   if (hasDna) {
     const cardOf = event => event.target?.closest?.('.menu-item');
     const reach = card => { syncCardAlt(card); placeQuickLook(card); };

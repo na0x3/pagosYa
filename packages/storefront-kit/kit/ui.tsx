@@ -1796,6 +1796,13 @@ const NAV_CSS = `
 .ui-nav[data-actions=pill] [data-nav-action=search] .ui-nav__word,.ui-nav[data-actions=pill] [data-nav-action=account] .ui-nav__word{display:none}
 .ui-nav__toggles{display:none;align-items:center}
 .ui-nav[data-structure=drawer] .ui-nav__toggles{display:inline-flex}
+.ui-nav[data-own-menu] .ui-nav__toggles{display:inline-flex}
+/* Owner 2026-11-16 (Taller Lienzo: «why the header looks weird»): on a wide screen the own menu's button takes a column of its own, so the
+   icons never fall to a second row (bar: button · brand · links · icons; split: button · links · brand · links + icons). */
+@media (min-width:768px){
+  .ui-nav[data-own-menu][data-structure=bar] .ui-nav__bar{grid-template-columns:auto auto minmax(0,1fr) auto}
+  .ui-nav[data-own-menu][data-structure=split] .ui-nav__bar{grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr)}
+}
 .ui-nav__toggle{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:0;background:none;color:inherit;cursor:pointer}
 .ui-nav__bars,.ui-nav__bars::before,.ui-nav__bars::after{display:block;width:20px;height:2px;background:currentColor;content:""}
 .ui-nav__bars{position:relative}.ui-nav__bars::before{position:absolute;top:-6px}.ui-nav__bars::after{position:absolute;top:6px}
@@ -1807,6 +1814,8 @@ const NAV_CSS = `
 .ui-nav__panel a{display:flex;align-items:center;min-height:48px;color:inherit;text-decoration:none}
 :where(.ui-nav__panel-links a){font-family:var(--es-heading,inherit);font-size:24px}
 :where(.ui-nav__panel-tools){margin-top:16px;padding-top:12px;border-top:1px solid color-mix(in srgb,currentColor 15%,transparent)}
+/* Owner 2026-11-16: a menu the design wrote is laid out wide (its columns, photos, big words); the design's own width still wins. */
+:where(.ui-nav[data-own-menu] .ui-nav__panel){width:min(1100px,100vw);padding:20px clamp(24px,4vw,56px) 40px}
 @media (max-width:767px){
   .ui-nav .ui-nav__bar{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:none}
   .ui-nav .ui-nav__links{display:none!important}
@@ -1825,6 +1834,9 @@ const NAV_CSS = `
 .ui-nav[data-over]{margin-bottom:calc(-1 * var(--ui-nav-h,72px));background:transparent;transition:background-color .25s,color .25s,box-shadow .25s}
 .ui-nav[data-over][data-tone=light]{color:#fff}
 .ui-nav[data-over][data-scrolled]{background:var(--es-paper,#fff);color:var(--es-ink,#111);box-shadow:0 1px 0 color-mix(in srgb,currentColor 12%,transparent)}
+/* Owner 2026-11-16 (rg store catalogue: the title and search ran under the header): over the hero only on the home; the platform pages
+   (catalogue, collection, checkout) and the product page get a solid header that takes its own room. */
+body:has(main.es-page) .ui-nav[data-over],body:has([data-pagosya-product-page]) .ui-nav[data-over]{margin-bottom:0;background:var(--kit-paper,var(--es-paper,#fff));color:var(--kit-ink,var(--es-ink,#111))}
 /* Pill links (Halcy): each link its own rounded pill; the highlighted one in the accent. */
 .ui-nav[data-links=pills] .ui-nav__links{gap:6px}
 .ui-nav[data-links=pills] .ui-nav__links a{min-height:40px;padding:0 16px;border-radius:999px;background:var(--es-paper,#fff);color:var(--es-ink,#111);box-shadow:0 1px 2px #0002}
@@ -1887,7 +1899,7 @@ export type NavShellLink = { label: ReactNode; href: string };
  *  cart: what the store sells, so the bag is drawn as a shirt, a ring, a cup… (NAV_GOODS).
  *  Below 768 px every structure is menu button · logo · search and bag. Pass looks with className, barClassName, brandClassName,
  *  linksClassName, actionsClassName, badgeClassName, panelClassName and toggleClassName. */
-export function NavShell({ brand, links = [], structure = 'bar', actions = 'icons', cart, labels, over = false, tone = 'dark', linkStyle = 'plain', highlight, className, barClassName, brandClassName, linksClassName, actionsClassName, badgeClassName, panelClassName, toggleClassName }: {
+export function NavShell({ brand, links = [], structure = 'bar', actions = 'icons', cart, labels, over = false, tone = 'dark', linkStyle = 'plain', highlight, className, barClassName, brandClassName, linksClassName, actionsClassName, badgeClassName, panelClassName, toggleClassName, menu }: {
   brand: ReactNode; links?: NavShellLink[]; structure?: 'bar' | 'centered' | 'split' | 'drawer'; actions?: 'icons' | 'labels' | 'pill';
   /** What the store sells (gem, shirt, coffee, paw…): the bag is drawn as it; unknown or empty keeps the bag. */
   cart?: string;
@@ -1898,6 +1910,10 @@ export function NavShell({ brand, links = [], structure = 'bar', actions = 'icon
   tone?: 'light' | 'dark';
   /** Links as plain words or as rounded pills (Halcy); `highlight` is the href of the one link drawn as the accent pill. */
   linkStyle?: 'plain' | 'pills'; highlight?: string;
+  /** Owner 2026-11-16 («the menu i would also to be created by the model»): the store's own menu — groups, links, photos, words —
+   *  written by the design. NavShell opens and closes it (button on every width, Escape, focus, scroll lock); the design styles it
+   *  with panelClassName and its own classes. Without it the panel lists the links. */
+  menu?: ReactNode;
   className?: string; barClassName?: string; brandClassName?: string;
   linksClassName?: string; actionsClassName?: string; badgeClassName?: string; panelClassName?: string; toggleClassName?: string;
 }) {
@@ -1955,7 +1971,7 @@ export function NavShell({ brand, links = [], structure = 'bar', actions = 'icon
     return () => { observer?.disconnect(); window.removeEventListener('scroll', onScroll); };
   }, [over]);
   return <header ref={headerRef} className={join('ui-nav', className)} data-nav-shell data-structure={structure} data-actions={actions}
-    data-over={over ? '' : undefined} data-tone={over ? tone : undefined} data-scrolled={over && (scrolled || open) ? '' : undefined} data-links={linkStyle === 'pills' ? 'pills' : undefined}>
+    data-own-menu={menu ? '' : undefined} data-over={over ? '' : undefined} data-tone={over ? tone : undefined} data-scrolled={over && (scrolled || open) ? '' : undefined} data-links={linkStyle === 'pills' ? 'pills' : undefined}>
     <NavStyles />
     <div className={join('ui-nav__bar', barClassName)}>
       {toggles}
@@ -1967,8 +1983,10 @@ export function NavShell({ brand, links = [], structure = 'bar', actions = 'icon
     <div id={panelId} className="ui-nav__panel-wrap" hidden={!open} onClick={event => { if (event.target === event.currentTarget) setOpen(false); }}>
       <div ref={panelRef} className={join('ui-nav__panel', panelClassName)} role="dialog" aria-modal="true" aria-label="Menú" onClick={event => { if ((event.target as HTMLElement).closest('a[href],[data-cart-open]')) setOpen(false); }}>
         <button type="button" className="ui-nav__close" aria-label="Cerrar menú" onClick={() => { setOpen(false); toggleRef.current?.focus({ preventScroll: true }); }}>×</button>
+        {menu ?? <>
         <nav className="ui-nav__panel-links" aria-label="Menú">{links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>
         <div className="ui-nav__panel-tools"><a href="buscar.html">{words.search}</a><a href="acceso-ingresar.html" data-pagosya-account="login">{words.account}</a></div>
+        </>}
       </div>
     </div>
   </header>;

@@ -383,7 +383,8 @@
     document.querySelectorAll('[data-pagosya-store-menu="toggle"]').forEach(mount => {
       const host = mount.closest('header') || mount.parentElement;
       if (host.__pagosyaStoreMenu) { host.__pagosyaStoreMenu.close(false); host.__pagosyaStoreMenu.panel.remove(); host.__pagosyaStoreMenu = null; }
-      if (!menu) return;
+      // Owner 2026-11-16 («the menu… created by the model»): a header that brings its own menu (NavShell menu) keeps it.
+      if (!menu || host.matches?.('[data-own-menu]')) return;
       ensureStoreMenuStyle();
       renderStoreMenu(host, menu);
     });
