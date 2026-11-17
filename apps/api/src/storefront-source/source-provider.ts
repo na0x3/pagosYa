@@ -1,12 +1,16 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { chatgptPlanProvider } from '../ai/chatgpt-plan-provider';
+import { claudeChatProvider } from '../ai/claude-responses-gateway';
 
 /** Claude models run only on YAPI's agent engine (Anthropic Messages API with tools). */
 export const isClaude = (model: string) => model.startsWith('claude-');
 
 /** Resolve credentials only on the server. A selected provider never falls back to another. */
 export function sourceProvider(config: ConfigService, model: string) {
+  // Owner 2026-11-17: with YAPI_CHAT_ON_CLAUDE the OpenAI-shaped calls run on Claude through the local gateway, before the plan.
+  const claude = isClaude(model) ? undefined : claudeChatProvider();
+  if (claude) return claude;
   const plan = chatgptPlanProvider(config, model);
   if (plan) return plan;
   if (isClaude(model)) {

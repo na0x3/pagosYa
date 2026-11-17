@@ -147,7 +147,9 @@ export class SourceV2PrototypeService {
     if (this.runs.get(storeId)?.status === 'RUNNING') throw new ConflictException('Ya hay un diseño en curso para esta tienda.');
     const state: V2RunState = { status: 'RUNNING', startedAt: new Date().toISOString(), baseRevision: revision, stages: [], usd: 0,
       model: process.env.YAPI_V2_CHAT_MODEL || 'claude-opus-5-5', maxUsd: Number(process.env.YAPI_V2_CHAT_MAX_USD) > 0 ? Number(process.env.YAPI_V2_CHAT_MAX_USD) : 10,
-      ...(process.env.YAPI_V2_RULES === 'nov14' ? { basic: true } : {}) };
+      ...(process.env.YAPI_V2_RULES === 'nov14' ? { basic: true } : {}),
+      // Owner 2026-11-17 («why same sections are always used» … «lets do that»): the chat's first designs in the creative setting.
+      ...(process.env.YAPI_V2_CHAT_CREATIVE === '1' ? { creative: true } : {}) };
     this.runs.set(storeId, state);
     try {
       await this.run(merchantId, storeId, revision, [], state);

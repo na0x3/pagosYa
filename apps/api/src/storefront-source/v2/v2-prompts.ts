@@ -934,10 +934,13 @@ export function v2ContractProblems(files: readonly V2File[], context: V2Context)
   if (/!important/.test(css)) problems.push('No uses !important en globals.css.');
   // Owner 2026-11-17 (creative Meat House r4: «i prefer more standard product cards»): products show in the platform's cards; a home
   // that lists several products in its own cards with their own add buttons goes back. One featured product keeps its button.
-  if (!context.ownCards && /data-add=/.test(home)) {
-    const outside = home.replace(/data-products=(["'])[^"']*\1|data-pagosya-spotlight=(["'])[^"']*\2/g, '');
-    const listed = context.products.filter(product => outside.includes(product.id)).length;
-    if (listed >= 2) problems.push('Armaste tus propias tarjetas de producto (varios productos con su propio botón de agregar): muestra los productos con <div data-pagosya-catalog data-products="id,id" /> — las tarjetas de la plataforma —; tu diseño va alrededor (título, fondo, composición). Un solo producto destacado puede tener su botón.');
+  // Live 2026-11-17 (The Bake Lab, 8 attempts lost at $6.7): counting product ids anywhere refused platform cards listed as
+  // data-products={ids.join(',')}, ids in constants and product links; the rule counts add buttons — two or more products named
+  // in data-add, or a data-add inside a .map (one button per item of a list).
+  const buttons = new Set([...home.matchAll(/data-add=(["'])([^"']+)\1/g)].map(match => match[2]));
+  const mapped = [...home.matchAll(/data-add=\{/g)].some(match => { const before = home.slice(Math.max(0, match.index! - 800), match.index); const at = before.lastIndexOf('.map('); return at >= 0 && !/\)\s*\)?\s*\}/.test(before.slice(at)); });
+  if (!context.ownCards && (buttons.size >= 2 || mapped)) {
+    problems.push('Armaste tus propias tarjetas de producto (varios productos con su propio botón de agregar): muestra los productos con <div data-pagosya-catalog data-products="id,id" /> — las tarjetas de la plataforma —; tu diseño va alrededor (título, fondo, composición). Un solo producto destacado puede tener su botón.');
   }
   // Owner 2026-11-16 («personalize the css of each menu with the thematic of each store»): the menu is dressed, not left as the kit drew it.
   const menuStyle = menuStyleProblem(css, context.menu?.model);

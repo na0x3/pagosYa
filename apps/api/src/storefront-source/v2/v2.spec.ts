@@ -1098,4 +1098,14 @@ it('owner 2026-11-17 («more standard product cards»): a home that builds its o
   expect(v2ContractProblems(own, two as never).join()).toMatch(/Armaste tus propias tarjetas de producto/);
   const one = good.map(file => file.path === 'components/home.tsx' ? { ...file, content: file.content.replace('<main id="contenido">', `<main id="contenido"><button data-add="p1">Agregar</button>`) } : file);
   expect(v2ContractProblems(one, two as never).join()).not.toMatch(/propias tarjetas/);
+  // Live 2026-11-17 (The Bake Lab ozenbkpd, Opus, 4 attempts lost): links to product pages are not cards with their own button.
+  const links = good.map(file => file.path === 'components/home.tsx' ? { ...file, content: file.content.replace('<main id="contenido">', `<main id="contenido"><button data-add="p1">Agregar</button><a href="product.html?id=p1">Ver</a><a href="product.html?id=p2">Otra</a>`) } : file);
+  expect(v2ContractProblems(links, two as never).join()).not.toMatch(/propias tarjetas/);
+  const at = (html: string) => v2ContractProblems(good.map(file => file.path === 'components/home.tsx' ? { ...file, content: file.content.replace('<main id="contenido">', `<main id="contenido">${html}`) } : file), two as never).join();
+  // Platform cards written as expressions and a featured product kept in a constant are not own cards.
+  expect(at(`<div data-pagosya-catalog data-products={['p1', 'p2'].join(',')} /><button data-add={TOWER}>Agregar</button>`)).not.toMatch(/propias tarjetas/);
+  expect(at(`<ul>{faq.map(q => <li key={q}>{q}</li>)}</ul><button data-add={'p1'}>Agregar</button>`)).not.toMatch(/propias tarjetas/);
+  // Two literal buttons, or a button per item of a mapped list, are.
+  expect(at(`<button data-add="p1">A</button><button data-add="p2">B</button>`)).toMatch(/propias tarjetas/);
+  expect(at(`{items.map(item => (<article key={item.id}><h3>{item.name}</h3><button data-add={item.id}>+</button></article>))}`)).toMatch(/propias tarjetas/);
 });

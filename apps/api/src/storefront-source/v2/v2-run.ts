@@ -37,7 +37,9 @@ export const inspectionRules = (widths: readonly { width: number; findings: read
     .filter(f => free ? (f.severity === 'block' && FREE_BLOCKERS.has(f.rule)) || FREE_ADVICE_BLOCKERS.has(f.rule) : f.severity === 'block')
     .map(f => `${width === 390 ? 'phone' : 'desktop'}:${f.rule}`));
 
-export type V2Attempt = { attempt: number; ms: number; outcome: 'built' | 'visual' | 'contract' | 'build' | 'commerce' | 'no-answer'; problems: string[]; repairs?: string[] };
+export type V2Attempt = { attempt: number; ms: number; outcome: 'built' | 'visual' | 'contract' | 'build' | 'commerce' | 'no-answer'; problems: string[]; repairs?: string[];
+  /** Live 2026-11-17 (The Bake Lab: 8 attempts refused, the homes lost): a refused home is kept in the run's status to read. */
+  home?: string };
 export type V2BuildDeps = {
   write: (feedback: string[], previous?: V2File[]) => Promise<V2File[] | null>;
   /** Deterministic fixes applied to every answer before any check. */
@@ -93,7 +95,7 @@ export async function runV2Build(base: { revision: number; brief: SaveSourceProj
     let files = repaired.files; repairs = repaired.repairs;
     previous = files;
     const contract = v2ContractProblems(files, context);
-    if (contract.length) { done('contract', contract); continue; }
+    if (contract.length) { done('contract', contract); attempts[attempts.length - 1].home = files.find(file => file.path === 'components/home.tsx')?.content.slice(0, 60_000); continue; }
     const assemble = (written: V2File[]) => ({ revision: base.revision, label, brief: base.brief, files: withContextMenu(assembleV2Files(base.files, written, context.ownCards, context.ownIcons, context.cartSheet), context) } as SaveSourceProjectDto);
     let input = assemble(files);
     let built = await deps.build(input);
