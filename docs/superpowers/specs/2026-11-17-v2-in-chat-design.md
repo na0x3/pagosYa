@@ -95,3 +95,14 @@ Flag off = today's behaviour exactly.
 Built 2026-11-17: `v2Design` on SourceMessageInput; the new-store first build queues it when `YAPI_V2_CHAT=1`
 (source-chat.service `v2FollowUp`); the job worker awaits `SourceV2PrototypeService.designForChat` (posts YAPI's result or failure
 message); specs: source-chat-jobs (32) and v2 (96). Live check waits for the ChatGPT plan (intake and template pick run on it).
+
+## 10. Linux build sandbox (built 2026-11-17)
+
+`v2-sandbox.ts` now picks its sandbox by platform (`sandboxCommand`): macOS `sandbox-exec` as before; Linux **bubblewrap** with
+`--unshare-all` (no network, own namespaces), a read-only `/`, `/tmp` as tmpfs, the build's work directory as the only writable bind,
+every existing `.env` masked by `/dev/null`, `~/.ssh` and `~/pagosya-benchmarks` hidden by tmpfs, an empty environment, a heap cap
+and a wall clock. No unsandboxed fallback on any platform.
+
+**Production host requirements (not testable on the Mac):** install bubblewrap (`apt-get install bubblewrap`, path overridable with
+`YAPI_SANDBOX_BWRAP`) and allow unprivileged user namespaces (`kernel.unprivileged_userns_clone=1`; on Ubuntu 24.04 also the
+AppArmor `userns` allowance for bwrap). First production check: one V2 build on the host before turning `YAPI_V2_CHAT` on there.

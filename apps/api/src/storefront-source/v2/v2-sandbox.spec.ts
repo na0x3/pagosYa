@@ -4,7 +4,7 @@ import { createServer, type Server } from 'node:http';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildInSandbox, runSandboxed, sandboxProfile } from './v2-sandbox';
+import { buildInSandbox, runSandboxed, sandboxProfile, sandboxCommand } from './v2-sandbox';
 import { nextProjectScaffold } from '../source-next';
 
 const probe = (body: string) => ({ 'probe.cjs': `const fs = require('node:fs');\nconst out = {};\n(async () => {\n${body}\n})().finally(() => fs.writeFileSync('out.json', JSON.stringify(out)));` });
@@ -70,5 +70,22 @@ describe('v2 build sandbox: the platform build', () => {
     const built = await buildInSandbox({ revision: 0, label: 'prueba', brief: brief as never, files } as never);
     expect(built.ok).toBe(false);
     if (!built.ok) { expect(built.kind).toBe('build'); expect(built.error).toMatch(/Import no permitido|fs/); }
+  });
+});
+
+describe('the Linux build sandbox (spec 2026-11-17 V2 in the chat §7)', () => {
+  it('runs node under bubblewrap: read-only root, the work directory writable, no network, secrets masked', () => {
+    const { cmd, argv } = sandboxCommand('linux', '/tmp/yapi-v2-x', '/usr/bin/node', ['--max-old-space-size=768', 'child.cjs', 'dist'], { files: ['/app/apps/api/.env'], dirs: ['/home/u/.ssh'] });
+    expect(cmd).toMatch(/bwrap$/);
+    expect(argv.slice(0, 3)).toEqual(['--unshare-all', '--die-with-parent', '--new-session']);
+    expect(argv.join(' ')).toContain('--ro-bind / /');
+    expect(argv.join(' ')).toContain('--bind /tmp/yapi-v2-x /tmp/yapi-v2-x --chdir /tmp/yapi-v2-x');
+    expect(argv.join(' ')).toContain('--ro-bind /dev/null /app/apps/api/.env');
+    expect(argv.join(' ')).toContain('--tmpfs /home/u/.ssh');
+    expect(argv.slice(-4)).toEqual(['/usr/bin/node', '--max-old-space-size=768', 'child.cjs', 'dist']);
+  });
+  it('keeps macOS on sandbox-exec and refuses any other platform', () => {
+    expect(sandboxCommand('darwin', '/tmp/w', 'node', ['a.cjs'], { files: [], dirs: [] }).argv[0]).toBe('-p');
+    expect(() => sandboxCommand('win32', '/tmp/w', 'node', [], { files: [], dirs: [] })).toThrow(/no sandbox for win32/);
   });
 });

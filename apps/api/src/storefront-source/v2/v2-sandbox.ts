@@ -9,7 +9,9 @@ import type { SaveSourceProjectDto } from '../dto/save-source-project.dto';
 /** V2 prototype build sandbox (docs/superpowers/specs/2026-11-14-v2-prototype-design.md §4): model-written source is validated and
  *  compiled by the platform's own prepare(), but in a child process under macOS `sandbox-exec` — no network, no writes outside its
  *  own temp directory, no reads of .env files or the benchmark secrets folder, an empty environment, a heap cap and a wall clock.
- *  Production needs a container worker instead (V2 §7); there is no unsandboxed fallback here. */
+ *  On Linux (production) the same rules come from bubblewrap (spec 2026-11-17 V2 in the chat §7): a read-only root, the work
+ *  directory the only writable place, no network namespace, .env files masked and the secrets folders hidden. There is no
+ *  unsandboxed fallback. */
 
 export type SandboxRun = { code: number | null; signal: NodeJS.Signals | null; ms: number; timedOut: boolean; stdout: string; stderr: string; work: string };
 export type SandboxBuild = { ok: true; snapshot: SourceProjectSnapshot; ms: number } | { ok: false; kind: 'build' | 'timeout' | 'crash'; error: string; ms: number };
@@ -35,14 +37,43 @@ export function sandboxProfile(work: string): string {
     + `(deny file-read* (regex #"/\\.env(\\..*)?$") (subpath ${quote(join(homedir(), 'pagosya-benchmarks'))}) (subpath ${quote(join(homedir(), '.ssh'))}))`;
 }
 
+/** Where bubblewrap lives on the Linux build host (YAPI_SANDBOX_BWRAP overrides). */
+const BWRAP = () => process.env.YAPI_SANDBOX_BWRAP || '/usr/bin/bwrap';
+
+/** The command that runs node under the sandbox of this platform: macOS sandbox-exec, or Linux bubblewrap. Pure (the files it
+ *  masks are passed in), so both shapes are tested on any machine. */
+export function sandboxCommand(platform: NodeJS.Platform, work: string, node: string, nodeArgs: string[], hidden: { files: string[]; dirs: string[] }): { cmd: string; argv: string[] } {
+  if (platform === 'darwin') return { cmd: SANDBOX_EXEC, argv: ['-p', sandboxProfile(work), node, ...nodeArgs] };
+  if (platform === 'linux') return { cmd: BWRAP(), argv: [
+    '--unshare-all', '--die-with-parent', '--new-session',
+    '--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc', '--tmpfs', '/tmp',
+    '--bind', work, work, '--chdir', work,
+    // Secrets: every .env masked by an empty file, the secrets folders by an empty tmpfs.
+    ...hidden.files.flatMap(file => ['--ro-bind', '/dev/null', file]),
+    ...hidden.dirs.flatMap(dir => ['--tmpfs', dir]),
+    node, ...nodeArgs,
+  ] };
+  throw new Error(`v2 sandbox: no sandbox for ${platform}`);
+}
+
+/** The .env files and secret folders a sandboxed build must never read (only the ones that exist can be masked). */
+export function sandboxSecrets(root: string): { files: string[]; dirs: string[] } {
+  const repo = dirname(dirname(root));
+  const files = [join(root, '.env'), join(root, '.env.local'), join(root, '.env.production'), join(repo, '.env')].filter(file => existsSync(file));
+  const dirs = [join(homedir(), 'pagosya-benchmarks'), join(homedir(), '.ssh')].filter(dir => existsSync(dir));
+  return { files, dirs };
+}
+
 /** Runs `script args…` with node inside the sandbox, in a fresh temp directory that holds `files` first. */
 export async function runSandboxed(script: string, args: string[], files: Record<string, string>, opts: { timeoutMs?: number; heapMb?: number } = {}): Promise<SandboxRun> {
-  if (process.platform !== 'darwin' || !existsSync(SANDBOX_EXEC)) throw new Error('v2 sandbox: sandbox-exec is not available on this machine');
+  const tool = process.platform === 'darwin' ? SANDBOX_EXEC : process.platform === 'linux' ? BWRAP() : '';
+  if (!tool || !existsSync(tool)) throw new Error(`v2 sandbox: no sandbox on this machine (${process.platform}: ${tool || 'unsupported'})`);
   const work = await realpath(await mkdtemp(join(tmpdir(), 'yapi-v2-')));
   for (const [name, content] of Object.entries(files)) await writeFile(join(work, name), content);
   const started = Date.now();
   return new Promise<SandboxRun>(resolve => {
-    const child = spawn(SANDBOX_EXEC, ['-p', sandboxProfile(work), process.execPath, `--max-old-space-size=${opts.heapMb ?? 768}`, script, ...args],
+    const { cmd, argv } = sandboxCommand(process.platform, work, process.execPath, [`--max-old-space-size=${opts.heapMb ?? 768}`, script, ...args], sandboxSecrets(apiRoot()));
+    const child = spawn(cmd, argv,
       { cwd: work, env: { PATH: '/usr/bin:/bin', NODE_ENV: 'production' }, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '', stderr = '', timedOut = false;
     child.stdout.on('data', chunk => { stdout = (stdout + chunk).slice(-20_000); });
