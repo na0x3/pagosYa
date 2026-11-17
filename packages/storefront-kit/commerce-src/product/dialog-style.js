@@ -24,6 +24,23 @@
     [data-pagosya-categories][hidden],[data-product-field][hidden],[data-product-media][hidden],[data-product-link][hidden],[data-pagosya-cart][hidden]{display:none!important}
     [data-cart-slot][hidden],[data-cart-field][hidden],[data-added-field][hidden]{display:none!important}
     [data-pagosya-status]:empty{width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;box-shadow:none!important}
+    /* Owner 2026-11-17 (animated card buttons): the fill cards.js puts in every card's add button sweeps across on hover, an icon
+     * moves with it, and a check shows for a moment after an add. Layered, so a store's own button rules still win. */
+    @layer pagosya-commerce {
+      .menu-add__fill,.menu-add__done{position:absolute;inset:0;border-radius:inherit;pointer-events:none}
+      .menu-add__fill{z-index:-1;background:var(--pya-fill,color-mix(in srgb,currentColor 22%,transparent));transform:scaleX(0);transform-origin:left center;transition:transform .8s cubic-bezier(.65,0,.35,1)}
+      .menu-add:not(:disabled):is(:hover,:focus-visible)>.menu-add__fill,.menu-add[data-pya-added]>.menu-add__fill{transform:scaleX(1)}
+      .menu-add>:not(.menu-add__fill,.menu-add__done){transition:transform .4s cubic-bezier(.22,1,.36,1),opacity .2s ease}
+      .menu-add:not([data-pya-plus],:disabled):hover>svg:not(.menu-add__done svg){transform:translateY(-2px)}
+      .menu-add[data-pya-plus]:not(:disabled):hover>svg{transform:rotate(90deg)}
+      .menu-add__done{display:grid;place-items:center;opacity:0;transform:scale(.6);transition:opacity .2s ease,transform .4s cubic-bezier(.34,1.56,.64,1)}
+      .menu-add[data-pya-added]>.menu-add__done{opacity:1;transform:none}
+      .menu-add[data-pya-added]>:not(.menu-add__fill,.menu-add__done){opacity:0}
+      @media (prefers-reduced-motion:reduce){.menu-add__fill,.menu-add__done,.menu-add>*{transition:none!important}}
+    }
+    /* Unlayered: a clear button filled with its own text colour must change its text, whatever the store's button colour says. */
+    .menu-item .menu-add[data-pya-ink]{transition:color .3s ease .15s}
+    .menu-item .menu-add[data-pya-ink]:not(:disabled):is(:hover,:focus-visible),.menu-item .menu-add[data-pya-ink][data-pya-added]{color:var(--pya-ink)}
     /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
     @layer pagosya-commerce {
       .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}

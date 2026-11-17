@@ -90,7 +90,9 @@ export class SourceChatJobsService implements OnModuleDestroy {
     const pending = !input.personalTouch && continuesRequest(input.instruction) ? pendingRequestIn(history) : undefined;
     if (pending) input = { ...input, instruction: pending.instruction, resumeWords: input.instruction.trim(), ...(pending.setupAction ? { setupAction: pending.setupAction as SourceMessageInput['setupAction'] } : {}), ...(pending.direct ? { personalTouch: true, ownRequest: true } : {}),
       // A home whose sections could not be composed (2026-11-10) is composed again, from the template's own sections.
-      ...(pending.sectionLibraryFrom ? { sectionLibrary: true, sectionLibraryFrom: pending.sectionLibraryFrom, firstDesign: true } : {}) };
+      ...(pending.sectionLibraryFrom ? { sectionLibrary: true, sectionLibraryFrom: pending.sectionLibraryFrom, firstDesign: true } : {}),
+      // Live 2026-11-17 (NOA vyerqe9q: «sigue» after a failed V2 design became a quick edit): the V2 first design runs again.
+      ...(typeof pending.v2DesignFrom === 'number' ? { v2Design: true, revision: pending.v2DesignFrom, firstDesign: true } : {}) };
     // Spec 2026-11-09 A/B tests: a design test ask builds B by the usual edit; the words travel so the saved B gets its test card.
     const abAsk = !input.personalTouch && !input.resumeWords && !input.tourStepId && AB_REQUEST.test(input.instruction);
     if (abAsk && abKind(input.instruction) === 'design') input = { ...input, abRequest: input.instruction.trim().slice(0, 200) };

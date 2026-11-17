@@ -939,7 +939,9 @@ export function v2ContractProblems(files: readonly V2File[], context: V2Context)
   // in data-add, or a data-add inside a .map (one button per item of a list).
   const buttons = new Set([...home.matchAll(/data-add=(["'])([^"']+)\1/g)].map(match => match[2]));
   const mapped = [...home.matchAll(/data-add=\{/g)].some(match => { const before = home.slice(Math.max(0, match.index! - 800), match.index); const at = before.lastIndexOf('.map('); return at >= 0 && !/\)\s*\)?\s*\}/.test(before.slice(at)); });
-  if (!context.ownCards && (buttons.size >= 2 || mapped)) {
+  // Live 2026-11-17 (NOA rg-n17 vyerqe9q, $3.3 lost): two featured spots, each with its own «Agregar», are not a grid of own cards;
+  // three buttons or a mapped one are.
+  if (!context.ownCards && (buttons.size >= 3 || mapped)) {
     problems.push('Armaste tus propias tarjetas de producto (varios productos con su propio botón de agregar): muestra los productos con <div data-pagosya-catalog data-products="id,id" /> — las tarjetas de la plataforma —; tu diseño va alrededor (título, fondo, composición). Un solo producto destacado puede tener su botón.');
   }
   // Owner 2026-11-16 («personalize the css of each menu with the thematic of each store»): the menu is dressed, not left as the kit drew it.

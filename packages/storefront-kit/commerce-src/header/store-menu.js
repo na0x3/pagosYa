@@ -402,3 +402,24 @@
   document.addEventListener('pagosya:ready', renderStoreMenus);
   window.pagosyaStoreMenu = { render: renderStoreMenus, close: () => storeMenuOpenState.close && storeMenuOpenState.close(false) };
   renderStoreMenus();
+  // Owner 2026-11-17 (The Bake Lab: «TODO» sliced in half at the edge of a split header): a header row too narrow for its links hides
+  // the ones that do not fit, whole, instead of cutting the last one (they stay in the ☰ menu). Here, not in NavShell, because the
+  // header is compiled into each saved store and this runtime reaches every store at once.
+  const NAV_FIT_CSS = '[data-nav-links] [data-nav-overflow]{display:none!important}';
+  function fitNavLinks() {
+    if (!document.querySelector('style[data-pagosya-nav-fit]')) {
+      const style = document.createElement('style'); style.setAttribute('data-pagosya-nav-fit', ''); style.textContent = NAV_FIT_CSS;
+      document.head.append(style);
+    }
+    document.querySelectorAll('[data-nav-links]').forEach(row => {
+      const links = [...row.querySelectorAll('a')];
+      links.forEach(link => link.removeAttribute('data-nav-overflow'));
+      if (!row.clientWidth || row.scrollWidth <= row.clientWidth + 1) return;
+      const edge = row.getBoundingClientRect().right + 1;
+      for (const link of links) if (link.getBoundingClientRect().right > edge) link.setAttribute('data-nav-overflow', '');
+    });
+  }
+  if (typeof ResizeObserver === 'function') new ResizeObserver(() => fitNavLinks()).observe(document.documentElement);
+  document.addEventListener('pagosya:ready', fitNavLinks);
+  document.fonts?.ready?.then(fitNavLinks).catch(() => undefined);
+  fitNavLinks();

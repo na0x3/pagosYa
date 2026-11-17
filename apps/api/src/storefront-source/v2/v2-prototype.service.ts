@@ -36,7 +36,7 @@ import { UploadsService } from '../../uploads/uploads.service';
 import { measureHugePhotos, stickyOverlapLines, withPhotoCaps } from './v2-settle';
 import { readV2LibraryFile, withoutRepeatedPhotos, buildV2Library, mergeV2LibraryEntries, V2_LIBRARY_FILE, v2LibraryFacts, v2LibraryFactsText, v2LibraryFile, type V2LibraryEntry } from './v2-library';
 import { cardText, pickReferences, V2_REFERENCES, v2CardPrompt, v2CardSchema, type V2Card, type V2Reference } from './v2-references';
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import sharp from 'sharp';
@@ -158,7 +158,9 @@ export class SourceV2PrototypeService {
     } catch (error) {
       state.status = 'FAILED'; state.error = String((error as Error)?.message ?? error).slice(0, 1000);
       this.log.warn(JSON.stringify({ event: 'v2_chat_failed', storeId, error: state.error }));
-      await this.postChat(storeId, 'No pude terminar el diseño: tu tienda quedó con su plantilla. Escribe «sigue» o pídemelo de nuevo para reintentar.', { failed: true, v2: { error: state.error.slice(0, 300) } }).catch(() => undefined);
+      await this.postChat(storeId, 'No pude terminar el diseño: tu tienda quedó con su plantilla. Escribe «sigue» o pídemelo de nuevo para reintentar.', { failed: true, v2: { error: state.error.slice(0, 300) },
+        // «sigue» runs this design again from the same template revision (source-chat-jobs resume).
+        pendingRequest: { instruction: 'Primer diseño de la tienda con el motor V2.', direct: true, v2DesignFrom: revision } }).catch(() => undefined);
       return { assistantMessage: { metadata: { failed: true } } };
     }
   }
@@ -926,6 +928,11 @@ export class SourceV2PrototypeService {
       if (result.json === null) throw new Error(`${purpose}: Claude terminó sin una respuesta completa (${result.stopReason}).`);
       status = 'COMPLETED';
       return result.json as T;
+    } catch (error) {
+      // Live 2026-11-17 (Bake Lab g9o8ysuz: the writer failed four times with no reason kept): the reason goes to the trace file.
+      const trace = process.env.YAPI_TRACE_FILE;
+      if (trace) void appendFile(trace, JSON.stringify({ at: new Date().toISOString(), event: 'v2_claude_failed', storeId, purpose, model, ms: Date.now() - started, stop: body?.stop_reason ?? null, error: String((error as Error)?.message ?? error).slice(0, 400) }) + '\n').catch(() => undefined);
+      throw error;
     } finally { await this.metering?.record(storeId, purpose, model, body, Date.now() - started, status); }
   }
 

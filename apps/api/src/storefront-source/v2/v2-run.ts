@@ -88,7 +88,10 @@ export async function runV2Build(base: { revision: number; brief: SaveSourceProj
     const done = (outcome: V2Attempt['outcome'], problems: string[]) => {
       const entry: V2Attempt = { attempt, ms: Date.now() - started, outcome, problems, ...(repairs.length ? { repairs } : {}) };
       // An empty answer keeps the problems the version before it had, so the next fix still knows what to fix.
-      attempts.push(entry); if (outcome !== 'no-answer' || !previous) feedback = problems; deps.onAttempt?.(entry);
+      // Live 2026-11-17 (NOA vyerqe9q: «4 filas de productos» ↔ «propias tarjetas» four times): a contract round also carries the
+      // contract problems the round before it fixed, so a fix cannot undo the last one.
+      const before = outcome === 'contract' && attempts.at(-1)?.outcome === 'contract' ? attempts.at(-1)!.problems.filter(problem => !problems.includes(problem)) : [];
+      attempts.push(entry); if (outcome !== 'no-answer' || !previous) feedback = [...problems, ...before.map(problem => `(Ya corregido en la ronda anterior; no lo deshagas) ${problem}`)]; deps.onAttempt?.(entry);
     };
     if (!written) { done('no-answer', ['La respuesta no traía los archivos completos.']); continue; }
     const repaired = deps.repair ? deps.repair(written) : { files: written, repairs: [] };

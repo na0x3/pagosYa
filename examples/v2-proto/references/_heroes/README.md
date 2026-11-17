@@ -11,6 +11,7 @@ Frames (one every 2 s, up to 4) from the eight animated store heroes on the ambo
 | hearthen-* | moody full-bleed product photo; thin serif headline; rotating circular text badge |
 | zahra-* | person over giant brand letters; feature labels pointing at the photo; reviews chip; mini product card |
 | zippa-* | full-bleed action shot (pouring); bold centred headline + origin; benefits ticker along the bottom |
+| marca-1 | Luna Lima (owner 2026-11-17): brand name huge and soft behind a tall product cut-out; serif headline low left; mini buy box low right |
 | halcy-* | paper-cut collage of ingredients around the product; flavour switcher (arrows + pill) |
 | atelier-* | dark studio, pieces on a hanging rail; chosen piece's buy panel beside it (sizes, add) |
 

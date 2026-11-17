@@ -143,6 +143,7 @@
     // A template's own entrance runs when it is first inserted; every later add plays it again.
     if (templateRoot) for (const animation of addedNotice.getAnimations?.({ subtree: true }) || []) if (animation instanceof CSSAnimation) { animation.cancel(); animation.play(); }
     placeAddedNotice(button);
+    if (button.matches('.menu-item .menu-add')) markCardAdded(button);
     clearTimeout(addedTimer);
     addedTimer = setTimeout(() => { if (!addedNotice.contains(document.activeElement)) delete addedNotice.dataset.visible; }, 4000);
     // The confirmation remains visible with reduced motion or motion explicitly off.

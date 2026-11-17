@@ -196,7 +196,34 @@
       if (['::before', '::after'].some(pseudo => /^["'].*\S.*["']$/.test(getComputedStyle(button, pseudo).content))) button.textContent = 'Añadir';
     });
   }
-  function fitCards() { labelDecoratedAddButtons(); fitCardPhotos(); alignCardPrices(); }
+  // Owner 2026-11-17 («animated buttons inside product cards like when hovered it fills up slowly»): every card's add button gets a
+  // fill layer that sweeps across on hover (dialog-style.js). A clear button fills with its own text colour and its text turns the
+  // colour behind it; a filled button fills with a deeper shade of itself. An icon-only «+» turns a quarter on hover.
+  const clearColour = colour => /^(transparent|rgba\([^)]*[,/]\s*0(\.0+)?\)|color\([^)]*\/\s*0(\.0+)?\))$/.test(String(colour).trim());
+  function backdropColour(node) {
+    for (let el = node; el; el = el.parentElement) { const colour = getComputedStyle(el).backgroundColor; if (!clearColour(colour)) return colour; }
+    return 'rgb(255, 255, 255)';
+  }
+  function fillAddButtons() {
+    document.querySelectorAll('.menu-item .menu-add').forEach(button => {
+      if (button.querySelector(':scope > .menu-add__fill')) return;
+      const style = getComputedStyle(button), clear = clearColour(style.backgroundColor) && style.backgroundImage === 'none';
+      if (style.position === 'static') button.style.position = 'relative';
+      button.style.isolation = 'isolate';
+      if (clear) { button.style.setProperty('--pya-fill', style.color); button.style.setProperty('--pya-ink', backdropColour(button.parentElement)); button.setAttribute('data-pya-ink', ''); }
+      button.toggleAttribute('data-pya-plus', !(button.textContent || '').trim() && Boolean(button.querySelector('svg')));
+      button.insertAdjacentHTML('afterbegin', '<span class="menu-add__fill" aria-hidden="true"></span>');
+    });
+  }
+  const CARD_CHECK_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  /** A card's add button shows a check for a moment after its product goes into the cart (drawer.js addedFeedback). */
+  function markCardAdded(button) {
+    if (!button.querySelector(':scope > .menu-add__done')) button.insertAdjacentHTML('beforeend', `<span class="menu-add__done" aria-hidden="true">${CARD_CHECK_ICON}</span>`);
+    button.setAttribute('data-pya-added', '');
+    clearTimeout(button.pyaAddedTimer);
+    button.pyaAddedTimer = setTimeout(() => button.removeAttribute('data-pya-added'), 1400);
+  }
+  function fitCards() { labelDecoratedAddButtons(); fillAddButtons(); fitCardPhotos(); alignCardPrices(); }
   if (typeof addEventListener === 'function') addEventListener('resize', () => fitCards(), { passive: true });
   const BAG_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8.5h13l-1 11.5h-11z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></svg>';
   // ---- Fashion card (spec 2026-10-21 fashion look, the John Smedley card) ----

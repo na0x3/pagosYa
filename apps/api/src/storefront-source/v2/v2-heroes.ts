@@ -1,6 +1,6 @@
 import { readConfigData, type V2Context } from './v2-context';
 
-export type V2HeroIdea = { id: 'laps' | 'lift' | 'hearthen' | 'zahra' | 'zippa' | 'buyfirst' | 'halflife' | 'specsheet' | 'libre'; name: string; needs: 'cutout' | 'person' | 'atmosphere' | 'action' | 'any'; brief: string; frames: string[] };
+export type V2HeroIdea = { id: 'laps' | 'lift' | 'hearthen' | 'zahra' | 'zippa' | 'buyfirst' | 'halflife' | 'specsheet' | 'marca' | 'libre'; name: string; needs: 'cutout' | 'person' | 'atmosphere' | 'action' | 'any'; brief: string; frames: string[] };
 
 /** The 8 hero ideas the owner kept (2026-11-15, from amboras.com; Atelier's clothing rail cut — it needs matching front/back/side
  *  cut-outs). A brief is a starting point: the writer designs it in the store's own style; motion always has a still final state.
@@ -20,6 +20,9 @@ export const V2_HERO_IDEAS: readonly V2HeroIdea[] = [
     brief: 'La primera pantalla ya vende el producto estrella: a la izquierda titular claro, estrellas y reseñas solo si son reales, precio, opciones reales (una vez / suscripción solo si la tienda tiene suscripción) y «Agregar»; a la derecha una foto grande del producto en manos o en uso que llega al borde. Movimiento: la foto se acerca muy lento.' },
   { id: 'halflife', name: 'Mitad en uso', needs: 'any', frames: ['examples/haus-auston.webp', 'examples/field-and-north.webp'],
     brief: 'Mitad tranquila: el nombre del producto grande en serif fina, precio, una línea, tres datos reales con iconos pequeños, cantidad y «Agregar»; la otra mitad, a toda la altura, la foto del producto en uso (muñeca, cuerpo, mesa). Nunca recortar letras de la foto. Para ropa: la prenda puesta.' },
+  // Owner 2026-11-17 (Luna Lima orb0b4ay, a «libre» draw: «i like hero like this… great impactful, the first thing users see»).
+  { id: 'marca', name: 'Marca de fondo', needs: 'cutout', frames: ['marca-1.jpg'],
+    brief: 'Un solo color de la marca a todo el ancho y todo el alto de la primera pantalla. Detrás, el nombre de la marca en letras enormes y suaves, un tono más oscuro (o más claro) que el fondo, como una textura, nunca en un color que grite. Al centro el recorte del producto estrella, ALTO: casi toda la altura de la pantalla, por delante de esas letras. Abajo a la izquierda una línea pequeña en mayúsculas (de dónde es), un titular grande en serif de dos o tres líneas con UNA palabra en cursiva, y una frase corta. Abajo a la derecha una mini compra: una etiqueta pequeña («Por lata · nombre»), un botón lleno y ancho «Agregar» del color de acento y un enlace «Ver la tienda →». Movimiento: el producto flota despacio (sube 8–12 px, 5 s); las letras de fondo se corren apenas al hacer scroll.' },
   { id: 'specsheet', name: 'Ficha técnica', needs: 'cutout', frames: ['examples/tideform.webp', 'examples/mill-motion.webp'],
     brief: 'Fondo claro; el recorte del producto grande a la izquierda; a la derecha un nombre técnico, una fila con 4–5 datos reales (medidas, peso, capacidad…), muestras de color reales y «Agregar · precio». Para equipos, herramientas, electrodomésticos. Movimiento: el producto flota apenas.' },
 ];

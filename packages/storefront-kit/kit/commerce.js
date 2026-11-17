@@ -733,6 +733,23 @@
     [data-pagosya-categories][hidden],[data-product-field][hidden],[data-product-media][hidden],[data-product-link][hidden],[data-pagosya-cart][hidden]{display:none!important}
     [data-cart-slot][hidden],[data-cart-field][hidden],[data-added-field][hidden]{display:none!important}
     [data-pagosya-status]:empty{width:0!important;height:0!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;box-shadow:none!important}
+    /* Owner 2026-11-17 (animated card buttons): the fill cards.js puts in every card's add button sweeps across on hover, an icon
+     * moves with it, and a check shows for a moment after an add. Layered, so a store's own button rules still win. */
+    @layer pagosya-commerce {
+      .menu-add__fill,.menu-add__done{position:absolute;inset:0;border-radius:inherit;pointer-events:none}
+      .menu-add__fill{z-index:-1;background:var(--pya-fill,color-mix(in srgb,currentColor 22%,transparent));transform:scaleX(0);transform-origin:left center;transition:transform .8s cubic-bezier(.65,0,.35,1)}
+      .menu-add:not(:disabled):is(:hover,:focus-visible)>.menu-add__fill,.menu-add[data-pya-added]>.menu-add__fill{transform:scaleX(1)}
+      .menu-add>:not(.menu-add__fill,.menu-add__done){transition:transform .4s cubic-bezier(.22,1,.36,1),opacity .2s ease}
+      .menu-add:not([data-pya-plus],:disabled):hover>svg:not(.menu-add__done svg){transform:translateY(-2px)}
+      .menu-add[data-pya-plus]:not(:disabled):hover>svg{transform:rotate(90deg)}
+      .menu-add__done{display:grid;place-items:center;opacity:0;transform:scale(.6);transition:opacity .2s ease,transform .4s cubic-bezier(.34,1.56,.64,1)}
+      .menu-add[data-pya-added]>.menu-add__done{opacity:1;transform:none}
+      .menu-add[data-pya-added]>:not(.menu-add__fill,.menu-add__done){opacity:0}
+      @media (prefers-reduced-motion:reduce){.menu-add__fill,.menu-add__done,.menu-add>*{transition:none!important}}
+    }
+    /* Unlayered: a clear button filled with its own text colour must change its text, whatever the store's button colour says. */
+    .menu-item .menu-add[data-pya-ink]{transition:color .3s ease .15s}
+    .menu-item .menu-add[data-pya-ink]:not(:disabled):is(:hover,:focus-visible),.menu-item .menu-add[data-pya-ink][data-pya-added]{color:var(--pya-ink)}
     /* Default catalog cards: framed photos and a photo grid when the store's CSS leaves them unstyled. Authored rules still win. */
     @layer pagosya-commerce {
       .menu-item:not([data-custom-product]) button.menu-add[data-product]{width:auto;height:auto;min-width:44px;min-height:44px;padding:10px 14px;border-radius:var(--store-radius,var(--brand-radius,0px));font:inherit}
@@ -3320,6 +3337,7 @@
     // A template's own entrance runs when it is first inserted; every later add plays it again.
     if (templateRoot) for (const animation of addedNotice.getAnimations?.({ subtree: true }) || []) if (animation instanceof CSSAnimation) { animation.cancel(); animation.play(); }
     placeAddedNotice(button);
+    if (button.matches('.menu-item .menu-add')) markCardAdded(button);
     clearTimeout(addedTimer);
     addedTimer = setTimeout(() => { if (!addedNotice.contains(document.activeElement)) delete addedNotice.dataset.visible; }, 4000);
     // The confirmation remains visible with reduced motion or motion explicitly off.
@@ -4389,7 +4407,34 @@
       if (['::before', '::after'].some(pseudo => /^["'].*\S.*["']$/.test(getComputedStyle(button, pseudo).content))) button.textContent = 'Añadir';
     });
   }
-  function fitCards() { labelDecoratedAddButtons(); fitCardPhotos(); alignCardPrices(); }
+  // Owner 2026-11-17 («animated buttons inside product cards like when hovered it fills up slowly»): every card's add button gets a
+  // fill layer that sweeps across on hover (dialog-style.js). A clear button fills with its own text colour and its text turns the
+  // colour behind it; a filled button fills with a deeper shade of itself. An icon-only «+» turns a quarter on hover.
+  const clearColour = colour => /^(transparent|rgba\([^)]*[,/]\s*0(\.0+)?\)|color\([^)]*\/\s*0(\.0+)?\))$/.test(String(colour).trim());
+  function backdropColour(node) {
+    for (let el = node; el; el = el.parentElement) { const colour = getComputedStyle(el).backgroundColor; if (!clearColour(colour)) return colour; }
+    return 'rgb(255, 255, 255)';
+  }
+  function fillAddButtons() {
+    document.querySelectorAll('.menu-item .menu-add').forEach(button => {
+      if (button.querySelector(':scope > .menu-add__fill')) return;
+      const style = getComputedStyle(button), clear = clearColour(style.backgroundColor) && style.backgroundImage === 'none';
+      if (style.position === 'static') button.style.position = 'relative';
+      button.style.isolation = 'isolate';
+      if (clear) { button.style.setProperty('--pya-fill', style.color); button.style.setProperty('--pya-ink', backdropColour(button.parentElement)); button.setAttribute('data-pya-ink', ''); }
+      button.toggleAttribute('data-pya-plus', !(button.textContent || '').trim() && Boolean(button.querySelector('svg')));
+      button.insertAdjacentHTML('afterbegin', '<span class="menu-add__fill" aria-hidden="true"></span>');
+    });
+  }
+  const CARD_CHECK_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  /** A card's add button shows a check for a moment after its product goes into the cart (drawer.js addedFeedback). */
+  function markCardAdded(button) {
+    if (!button.querySelector(':scope > .menu-add__done')) button.insertAdjacentHTML('beforeend', `<span class="menu-add__done" aria-hidden="true">${CARD_CHECK_ICON}</span>`);
+    button.setAttribute('data-pya-added', '');
+    clearTimeout(button.pyaAddedTimer);
+    button.pyaAddedTimer = setTimeout(() => button.removeAttribute('data-pya-added'), 1400);
+  }
+  function fitCards() { labelDecoratedAddButtons(); fillAddButtons(); fitCardPhotos(); alignCardPrices(); }
   if (typeof addEventListener === 'function') addEventListener('resize', () => fitCards(), { passive: true });
   const BAG_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8.5h13l-1 11.5h-11z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></svg>';
   // ---- Fashion card (spec 2026-10-21 fashion look, the John Smedley card) ----
@@ -7489,6 +7534,27 @@
   document.addEventListener('pagosya:ready', renderStoreMenus);
   window.pagosyaStoreMenu = { render: renderStoreMenus, close: () => storeMenuOpenState.close && storeMenuOpenState.close(false) };
   renderStoreMenus();
+  // Owner 2026-11-17 (The Bake Lab: «TODO» sliced in half at the edge of a split header): a header row too narrow for its links hides
+  // the ones that do not fit, whole, instead of cutting the last one (they stay in the ☰ menu). Here, not in NavShell, because the
+  // header is compiled into each saved store and this runtime reaches every store at once.
+  const NAV_FIT_CSS = '[data-nav-links] [data-nav-overflow]{display:none!important}';
+  function fitNavLinks() {
+    if (!document.querySelector('style[data-pagosya-nav-fit]')) {
+      const style = document.createElement('style'); style.setAttribute('data-pagosya-nav-fit', ''); style.textContent = NAV_FIT_CSS;
+      document.head.append(style);
+    }
+    document.querySelectorAll('[data-nav-links]').forEach(row => {
+      const links = [...row.querySelectorAll('a')];
+      links.forEach(link => link.removeAttribute('data-nav-overflow'));
+      if (!row.clientWidth || row.scrollWidth <= row.clientWidth + 1) return;
+      const edge = row.getBoundingClientRect().right + 1;
+      for (const link of links) if (link.getBoundingClientRect().right > edge) link.setAttribute('data-nav-overflow', '');
+    });
+  }
+  if (typeof ResizeObserver === 'function') new ResizeObserver(() => fitNavLinks()).observe(document.documentElement);
+  document.addEventListener('pagosya:ready', fitNavLinks);
+  document.fonts?.ready?.then(fitNavLinks).catch(() => undefined);
+  fitNavLinks();
   // The kit's own small controls take the store's language: the card "+", the quantity steppers and the cart drawer's close
   // button. Their aria-label and data-* hooks never change; only the inside of the button becomes the face. A store-authored
   // card ([data-custom-product]) keeps its own button.

@@ -26,5 +26,8 @@ it('a bare home saved when ChatGPT failed keeps its own request: «sigue» compo
   // Live 2026-11-10 (Oh Belly r8): the note sits on the saved revision itself, so the request is read before its sourceRevision ends the search.
   const bare = { metadata: { sourceRevision: 2, pendingRequest: { instruction: 'Portada', direct: true, sectionLibraryFrom: 1 } } };
   expect(pendingRequestIn([bare])).toEqual({ instruction: 'Portada', direct: true, sectionLibraryFrom: 1 });
+  // Live 2026-11-17 (NOA vyerqe9q): a failed V2 first design keeps its template revision for «sigue».
+  const v2 = { metadata: { failed: true, pendingRequest: { instruction: 'Primer diseño de la tienda con el motor V2.', direct: true, v2DesignFrom: 1 } } };
+  expect(pendingRequestIn([{ metadata: {} }, v2])).toEqual({ instruction: 'Primer diseño de la tienda con el motor V2.', direct: true, v2DesignFrom: 1 });
   expect(pendingRequestIn([{ metadata: { sourceRevision: 3 } }, bare])).toBeUndefined();
 });
