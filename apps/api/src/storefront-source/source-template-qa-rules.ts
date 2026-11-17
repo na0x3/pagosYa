@@ -293,7 +293,7 @@ export function evaluateTemplateRules(): TemplateRuleFinding[] {
   if (window.innerWidth >= 1000) {
     const huge = Array.from(main.querySelectorAll('img,video')).filter(el => !el.closest(productish) && shown(el)).map(el => ({ el, r: el.getBoundingClientRect() }))
       .filter(({ r }) => r.height > 820 || (r.width > 760 && r.height > 520) || (r.width <= 760 && r.width * r.height > 500_000));
-    if (huge.length) push('huge-photo', huge[0].el, `CONSEJO: Fotos demasiado grandes (${huge.slice(0, 3).map(({ r }) => `${Math.round(r.width)}×${Math.round(r.height)} px`).join(', ')}): en escritorio una foto mide como mucho unos 720 px de ancho y 780 de alto, y una banda a todo el ancho 480 px de alto. Achícala y deja que la letra y la composición hagan el trabajo.`);
+    if (huge.length) push('huge-photo', huge[0].el, `CONSEJO: Fotos demasiado grandes (${huge.slice(0, 3).map(({ r }) => `${Math.round(r.width)}×${Math.round(r.height)} px`).join(', ')}): en escritorio una foto mide como mucho unos 640 × 760 px o 720 × 680 px, y una banda a todo el ancho 480 px de alto. Achícala y deja que la letra y la composición hagan el trabajo.`);
   }
   // Owner 2026-11-15 (DooBoo r10): a photo with words (marked data-pagosya-words by the V2 repairs) is never cropped; the arithmetic
   // is v2-words.ts cropShare, repeated here because rules run inside the page.

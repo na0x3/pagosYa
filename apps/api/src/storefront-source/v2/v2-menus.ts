@@ -24,9 +24,53 @@ export const V2_MENU_MODELS: readonly { id: string; fits: string }[] = [
   { id: 'thumb', fits: 'cuatro botones fijos abajo en el celular; ropa y tiendas que se compran desde el teléfono' },
 ];
 
-/** Spec 2026-11-16 store quality (owner «Keep 5»): new stores pick from the five menus that looked right on every store; the kit
- *  still draws all 16, so a design saved with another model keeps it. */
-export const V2_MENU_OFFERED: readonly string[] = ['mega', 'drawer', 'circles', 'overlay', 'dropdown'];
+/** Owner 2026-11-16 evening («i want the 16 menus again»): the five-menu cut (same morning, «Keep 5») made every fashion store
+ *  pick «mega». All 16 are offered again; each store's design dresses its menu in its own theme (menuStyleBrief). */
+export const V2_MENU_OFFERED: readonly string[] = V2_MENU_MODELS.map(model => model.id);
+
+/** The parts each menu model draws (packages/storefront-kit/commerce-src/header/store-menu.js), for the design to style. The rail's
+ *  panel is drawn as a drawer. */
+const PANEL = '.pym-panel[data-model=%]';
+const MENU_PARTS: Record<string, string[]> = {
+  tabs: [PANEL, '.pym-tabs .pym-tab', '.pym-tab[aria-selected=true]', '.pym-links a', '.pym-note', '.pym-tiles a', '.pym-tiles img'],
+  mega: [PANEL, '.pym-links a', '.pym-tiles a', '.pym-tiles img', '.pym-tile-title'],
+  overlay: [PANEL, '.pym-links a', '.pym-hero-photo', '.pym-hero-photo img', '.pym-close'],
+  dropdown: [PANEL, '.pym-links a', '.pym-note', '.pym-tiles a', '.pym-tiles img'],
+  drawer: [PANEL, '.pym-links a', '.pym-tiles a', '.pym-tiles img', '.pym-close'],
+  split: [PANEL, '.pym-links a', '.pym-hero-photo', '.pym-hero-photo img', '.pym-close'],
+  index: [PANEL, '.pym-links a', '.pym-count', '.pym-note'],
+  dock: ['.pym-dock', '.pym-dock button', PANEL, '.pym-links a'],
+  stickers: [PANEL, '.pym-links a', '.pym-sticker-photo', '.pym-sticker-photo img'],
+  circles: ['.pym-circles', '.pym-circles a', '.pym-circles img', '.pym-circles span', PANEL, '.pym-links a'],
+  rail: ['.pym-rail', '.pym-rail .pym-links a', '.pym-rail-logo', '.pym-panel[data-model=drawer]'],
+  bestsellers: [PANEL, '.pym-links a', '.pym-best', '.pym-best-title', '.pym-price', '.pym-add'],
+  need: [PANEL, '.pym-need', '.pym-need img', '.pym-need-label', '.pym-need-from', '.pym-links a'],
+  offer: [PANEL, '.pym-offer', '.pym-links a', '.pym-best', '.pym-price', '.pym-add'],
+  search: [PANEL, '.pym-search input', '.pym-popular', '.pym-best', '.pym-price'],
+  thumb: ['.pym-thumbbar', '.pym-thumbbar a', '.pym-thumbbar button', PANEL, '.pym-links a'],
+};
+export const menuParts = (model: string): string[] => (MENU_PARTS[model] ?? [PANEL, '.pym-links a']).map(part => part.replace('%', model));
+
+/** What the design-system writer is told about the store's menu (owner 2026-11-16: «i want yapi to personalize the css of each menu
+ *  with the thematic of each store, not just a blueprint»). The kit's sheet keeps the layout working; the design dresses it. */
+export function menuStyleBrief(model: string): string {
+  return `\n\nEL MENÚ DE ESTA TIENDA ES «${model}» (lo dibuja la plataforma; tú lo VISTES con el tema de esta tienda, no lo dejes de plantilla).
+En styles/globals.css escribe entre 6 y 14 reglas para sus piezas: ${menuParts(model).join(' · ')}.
+Que se note la marca: el fondo y el color del panel (de la paleta, nunca gris de sistema), la letra de los enlaces (la display de la tienda,
+su tamaño, mayúsculas o cursiva, espaciado), cómo se marca el enlace activo o al pasar el mouse (subrayado dibujado, cambio de color,
+desplazamiento suave), la forma de las fotos (radio, marco, filtro o borde de la marca), separadores y detalles del tema (una línea fina, un
+número, un sello) y una entrada con movimiento corto (≤ 300 ms). Empieza cada selector con «html body » para ganar a la hoja de la
+plataforma (por ejemplo «html body ${menuParts(model)[0]} { … }»); nada de !important. No cambies posiciones (position, inset, top), ni
+display de los grupos, ni z-index: el panel tiene que seguir abriendo, cerrando y cabiendo en el teléfono.`;
+}
+
+/** The design dressed its menu: at least three rules on the model's parts (owner 2026-11-16, «not just a blueprint»). */
+export function menuStyleProblem(css: string, model: string | undefined): string | null {
+  if (!model) return null;
+  const rules = [...css.matchAll(/([^{}]+)\{/g)].map(match => match[1]).filter(selector => /\.pym-/.test(selector));
+  return rules.length >= 3 ? null
+    : `El menú «${model}» quedó de plantilla: en styles/globals.css viste sus piezas con el tema de la tienda (6 a 14 reglas, cada selector empieza con «html body »): ${menuParts(model).join(' · ')}.`;
+}
 
 /** The offered models this merchant's other stores have not used; all five once every one is used. */
 export const allowedMenus = (used: readonly string[]): string[] => {

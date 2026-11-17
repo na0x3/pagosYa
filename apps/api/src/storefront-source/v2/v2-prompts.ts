@@ -4,9 +4,9 @@ import { uiRuntime } from '../source-creative';
 import { repairNextAuthoredMarkup } from '../source-next';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import { V2_FILES, type V2Context, type V2File, type V2Header } from './v2-context';
-import { V2_MENU_MODELS, v2MenuSchema, type V2Menu } from './v2-menus';
+import { menuStyleBrief, menuStyleProblem, V2_MENU_MODELS, v2MenuSchema, type V2Menu } from './v2-menus';
 import { markWordPhotos } from './v2-words';
-import { heroIdea, heroMarker, MIX_NOTE, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
+import { heroIdea, heroMarker, MIX_NOTE, STRONG_HERO, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
 import { readV2LibraryFile, V2_HERO_TYPES, V2_KIT_TEXT, V2_LIBRARY_FILE, v2LibraryCatalogText, v2LibrarySchema, type V2LibraryEntry } from './v2-library';
 export { mergeV2LibraryEntries } from './v2-library';
 
@@ -55,7 +55,7 @@ ${context.products.map(product => `- ${product.id} · ${product.name} · ${produ
 MODO DE PAGO: ${context.checkoutMode || '(no dicho)'}${context.whatsapp ? ' · tiene WhatsApp' : ''} · PACKS ACTIVOS: ${context.packs}${context.packs ? '' : ' (no hagas una sección de packs)'}
 LUGARES: ${context.places.length ? context.places.map(place => `\n- ${place}`).join('') : '(ninguno: la tienda es solo en línea)'}
 FOTOS DE LA TIENDA (ruta · tamaño · forma), en el mismo orden que las imágenes adjuntas:
-${context.photos.map(photo => `- ${photo.path} · ${photo.width}×${photo.height} · ${photo.shape}${photo.product ? ` · es la foto del producto «${photo.product}» (ya sale en su tarjeta)` : ''}${photo.words ? ' · tiene letras: muéstrala ENTERA, nunca recortada' : ''}`).join('\n') || '(ninguna)'}${context.cutouts?.length ? `
+${context.photos.map(photo => `- ${photo.path} · ${photo.width}×${photo.height} · ${photo.shape}${photo.product ? ` · es la foto del producto «${photo.product}» (sale en su tarjeta y también puede ir en una sección de la portada)` : ''}${photo.words ? ' · tiene letras: muéstrala ENTERA, nunca recortada' : ''}`).join('\n') || '(ninguna)'}${context.cutouts?.length ? `
 RECORTES (fotos sin fondo; ruta · id del producto o «—» si es una foto de la tienda · nombre · tamaño):
 ${context.cutouts.map(cut => `- ${cut.path} · ${cut.product || '—'} · ${cut.name}${cut.what ? ` · muestra: ${cut.what}` : ''} · ${cut.width}×${cut.height}`).join('\n')}` : ''}`;
 
@@ -81,8 +81,9 @@ export const V2_MODERN_RULES = `TIENDA MODERNA (lo que comparten las 66 tiendas 
 /** Free mode (owner 2026-11-14 «continue on the freer path, like v0, Lovable or Amboras»): how long a home is. */
 export const FREE_MIN = 9;
 export const FREE_MAX = 14;
-/** Fewer chapters for a store with little to show (fewer than 6 photos of its own, not copies of its product photos): 7, not 9. */
-export const freeMin = (context: Pick<V2Context, 'photos'>) => context.photos.filter(photo => !photo.product).length < 6 ? 7 : FREE_MIN;
+/** Fewer chapters for a store with little to show (fewer than 6 photos): 7, not 9. Owner 2026-11-16 («the site should contain
+ *  pictures that are also on product cards»): a product's photo counts too — it may go in a section as well as on its card. */
+export const freeMin = (context: Pick<V2Context, 'photos'>) => context.photos.length < 6 ? 7 : FREE_MIN;
 
 const FREE_SIZES = `Los tamaños son tuyos: el KIT (es-section, es-eyebrow, es-h2, es-lead,
    es-btn, es-grid, es-split, es-media) es la base que puedes usar, y tus clases propias deciden su escala —un titular de marca enorme,
@@ -91,7 +92,8 @@ const FREE_SIZES = `Los tamaños son tuyos: el KIT (es-section, es-eyebrow, es-h
 
 const FREE_CARDS = `, y además puedes darles carácter con sus propios tokens en :root: --kit-card-ratio (proporción
    de la foto: 4/5, 1/1, 3/4, 2/3), --kit-card-radius, --kit-card-bg y --kit-card-pad (una tarjeta con fondo), --kit-card-font (familia
-   del nombre), --kit-card-name (tamaño del nombre, 13–20px) y --kit-card-case (none o uppercase)`;
+   del nombre: la letra de TUS TÍTULOS, la display de la tienda, nunca la de texto; owner 2026-11-16 «i dont like the letters like that
+   from a product card»), --kit-card-name (tamaño del nombre, 15–22px) y --kit-card-case (none o uppercase)`;
 
 const FREE_MOTION = `MOVIMIENTO EN MODO LIBRE (owner 2026-11-14 «más vida, como una web de verdad»): además de lo de abajo, cada foto y tarjeta
 reacciona al cursor, las secciones de «art» pueden usar <Reveal> con retrasos escalonados, <ScrollScale> en una foto, <Parallax> suave en
@@ -143,7 +145,8 @@ export const ANIMATED_RULES = `TIENDA ANIMADA (el comerciante la pidió así): e
   Toma ese oficio, nunca sus colores, textos ni fotos.
 - @media (prefers-reduced-motion: reduce) lo detiene todo.`;
 
-const FREE_PAGES_TASK = `EN ESTA LLAMADA devuelves SOLO components/home.tsx y components/product.tsx. Shell.tsx y globals.css ya existen (abajo): impórtalos y
+const FREE_PAGES_TASK = `SIN HUECOS (owner 2026-11-16: «sections that leave a lot of empty space»): ninguna sección deja zonas grandes vacías — cada columna lleva contenido (foto, texto, productos), las dos mitades de una sección tienen alturas parecidas y nada queda chico y perdido en una banda alta o ancha.
+EN ESTA LLAMADA devuelves SOLO components/home.tsx y components/product.tsx. Shell.tsx y globals.css ya existen (abajo): impórtalos y
 usa sus tokens y clases. En «css» devuelves las reglas NUEVAS que tus páginas necesitan (se añaden al final de globals.css), con el mismo
 prefijo de clases. Aquí es donde la tienda gana su carácter: escribe todo el CSS que tus secciones necesiten.
 
@@ -154,7 +157,7 @@ tendría. Nada de plantilla: si dos tiendas de rubros distintos pudieran usar tu
 NADA SE REPITE (owner 2026-11-15, Oh Belly: los mismos tres datos seis veces, la misma foto tres veces, los productos vendidos en tres
 secciones): cada dato (5 g de fibra, sin azúcar, 350 ml…) se dice UNA vez en la portada —ni en una cinta, ni en una lista, ni en unas
 tarjetas más—; los productos se venden en UNA fila y ninguna otra sección vuelve a ofrecer los mismos productos; cada foto y cada
-recorte van una sola vez (una foto «es la foto del producto» ya sale en su tarjeta). Con pocas fotos y pocos datos, haz MENOS
+recorte van una sola vez entre las secciones (la foto de un producto sí puede ir en una sección además de su tarjeta). Con pocas fotos y pocos datos, haz MENOS
 secciones (desde 7) antes que repetir. La portada termina ANTES del pie: el pie de Shell ya trae las columnas de enlaces, el logotipo
 grande y el código de descuento, así que tu última sección nunca repite columnas de enlaces, el nombre gigante de la marca ni ese código.
 - La primera pantalla es tuya: un <section> con el ÚNICO <h1> de la página, la promesa de la marca, una foto real y uno o dos botones
@@ -180,8 +183,8 @@ CÓMO SE CONSTRUYE (owner 2026-11-14: «secciones vacías, cortadas, que se romp
    usas, va en su propia fila, entera.
 4. LAS FOTOS VAN EN LA RETÍCULA de su sección, al lado o arriba del texto que acompañan; nunca una foto suelta colgando debajo.
 5. UNA BANDA OSCURA O DE COLOR siempre lleva una foto real o productos, no solo palabras.
-6. FOTOS DE TAMAÑO MEDIO (owner 2026-11-14 «muestra fotos enormes y no quiero eso»): en escritorio ninguna foto pasa de unos 720 px
-   de ancho ni de 780 px de alto; una banda de foto a todo el ancho mide 480 px de alto como mucho. El carácter sale de la letra, el
+6. FOTOS DE TAMAÑO MEDIO (owner 2026-11-14 «muestra fotos enormes y no quiero eso»): en escritorio una foto mide como mucho unos
+   640 × 760 px o 720 × 680 px (la página la mide: más de 500 000 px² es demasiado grande); una banda de foto a todo el ancho mide 480 px de alto como mucho. El carácter sale de la letra, el
    color y la composición, no de una foto gigante. Varias fotos medianas con detalles valen más que una enorme.
 7. Las piezas de @pagosya/ui reciben solo sus props (Marquee: items, speed y className).
 8. COLOR, NO PAPEL BLANCO (owner 2026-11-14 «a veces se ve demasiado blanca»): al menos un tercio de las secciones va sobre un color de
@@ -295,7 +298,65 @@ export function joinV2Parts(system: { files: V2File[] }, pages: { files: V2File[
   return [system.files.find(file => file.path === 'components/Shell.tsx')!, ...pages.files, { path: 'styles/globals.css', content: css }];
 }
 
-export function v2WriterPrompt(free = false): string {
+
+/** Owner 2026-11-16 («i think we added to many restrictions, what i want to do is drop restrictions for now»): loose mode keeps only
+ *  what makes the store work — its four files and their wiring, the commerce mounts, no prices by hand, safe code, the store's own
+ *  photos and ids. No taste rules, no library, no hero ideas, no menu brief, no page checks, no look. */
+
+/** Owner 2026-11-16 («the menu i would also to be created by the model»): in the Nov 14 and loose rule sets the design writes its menu. */
+export const OWN_MENU = `TU MENÚ: lo creas tú. Pasa a NavShell menu={<div className="…">…</div>} con el menú de ESTA tienda: sus grupos (categorías reales,
+páginas como Nosotros o Contacto), los enlaces, fotos de la tienda (assets/…) y palabras de la marca, con la forma que la marca pida
+(panel lateral, pantalla completa, mega menú con fotos, lista enorme, tarjetas…). NavShell lo abre y lo cierra (su botón aparece en todas
+las pantallas, Escape, foco) y pone su botón de cerrar; tú das TODO el estilo con panelClassName="…" y tus clases. El panel sale
+por la izquierda a toda la altura y mide hasta 1100 px de ancho (dale tu propio width si lo quieres más angosto o a pantalla completa); en el
+teléfono ocupa todo el ancho: tus columnas pasan a una sola. Enlaces: categoría
+productos.html?f_categoria=<Nombre>, todo productos.html, páginas nosotros.html, contacto.html, envios.html, faq.html.`;
+
+export const V2_LOOSE_PROMPT = `Escribes el código de una tienda online con React + TypeScript (TSX) y CSS. El diseño es TODO tuyo: sin plantilla,
+sin reglas de estilo. Hazla espectacular. Cuatro archivos (cada llamada te dice cuáles devuelves, completos):
+
+1. components/Shell.tsx — export default function Shell({ children }: { children: ReactNode }), export function Header() y export
+   function Footer(). Shell dibuja Header, {children}, Footer y <CommerceSlots /> (de '@pagosya/ui') una vez. El Header usa
+   <NavShell brand={…} links={[{ label, href }]} structure="bar|centered|split|drawer" actions="icons" className="…" … /> de
+   '@pagosya/ui' (trae buscar, cuenta, carrito y el menú del teléfono); lo estilas como quieras. Categoría: productos.html?f_categoria=<Nombre>.
+2. components/home.tsx — export default function Home(): <Shell><main id="contenido">…</main></Shell>.
+3. components/product.tsx — <Shell>, dentro <ProductPageTemplate> con tu composición de <KitSlot kind="product" name="…" /> (obligatorios:
+   gallery, title, pricing, buy; opcionales: breadcrumb, category, rating, description, highlights, delivery, info, reviews, related,
+   payments, pairs) y después <main id="contenido" data-pagosya-product-page />. Una columna fija (sticky) va solo junto a la galería:
+   lo de abajo (pasos, opiniones, relacionados) va fuera de esa retícula, o se monta sobre ella al bajar.
+4. styles/globals.css — todo tu CSS (también puedes estilar las tarjetas de producto .menu-item y sus partes, la retícula de
+   data-pagosya-catalog y las piezas .product-detail__*). Define --kit-paper, --kit-ink, --kit-accent, --kit-on-accent, --kit-muted,
+   --kit-line, --kit-radius, --kit-display y --kit-text en :root. Fuentes: @font-face con src: url(assets/<id>.ttf) de las que te dan.
+   Tailwind también está disponible.
+
+COMERCIO (lo llena el sistema; tú solo pones dónde va, vacío y auto-cerrado):
+- Productos: <div data-pagosya-catalog data-products="id,id" /> o <div data-pagosya-catalog data-category="Nombre" /> (al menos uno en la portada).
+- Destacado: <div data-pagosya-spotlight="id" />. Agregar: <button type="button" data-add="id" data-quantity="1">Agregar</button>.
+  Enlace a producto: product.html?id=<id>. Formulario de contacto: <div data-pagosya-contact /> (una vez). Pagos: <div data-pagosya-payways />.
+- NUNCA escribas precios, descuentos ni existencias: el sistema los muestra. Usa solo los ids, nombres, datos y fotos (assets/…) que te dan.
+- Nada de fetch, eval, dangerouslySetInnerHTML, <script>, iframes ni imports remotos. Imports: 'react', '@pagosya/ui' (NavShell,
+  CommerceSlots, ProductPageTemplate, KitSlot, Reveal, Parallax, Marquee, WordRotate, KineticHeadline, ScrollScale, Carousel,
+  ProductStage, HangingRail) y './Shell'.
+Texto en español, corto y verdadero (nada inventado). En el teléfono (390 px) nada se sale del ancho.
+SIN HUECOS (owner 2026-11-16: «sections that leave a lot of empty space»): ninguna sección deja zonas grandes vacías — cada columna lleva contenido (foto, texto, productos), las dos mitades de una sección tienen alturas parecidas y nada queda chico y perdido en una banda alta o ancha.`;
+
+const LOOSE_TASK: Record<V2Part, string> = {
+  system: 'EN ESTA LLAMADA devuelves SOLO components/Shell.tsx y styles/globals.css (en «css» va vacío): el sistema de diseño completo de la tienda.',
+  pages: 'EN ESTA LLAMADA devuelves SOLO components/home.tsx y components/product.tsx (Shell y globals.css ya existen, abajo). En «css» van las reglas nuevas que tus páginas necesiten. La portada es tuya: tantas secciones como la tienda pida.',
+  product: 'EN ESTA LLAMADA devuelves SOLO components/product.tsx. En «css» van las reglas nuevas que necesite.',
+};
+/** The contract lines loose mode keeps: a store that does not run or sell. */
+const LOOSE_KEEPS = /Shell\.tsx debe exportar|CommerceSlots|NavShell|al menos un data-pagosya-catalog|necesita <ProductPageTemplate>|hueco obligatorio|no es un producto de la tienda|separa los ids|No escribas precios|no existe en la tienda|packs activos/;
+
+function looseWriterInput(context: V2Context, part: V2Part, feedback: string[], previous?: V2File[], system?: V2File[]): string {
+  const mine = previous?.filter(file => V2_PART_FILES[part].includes(file.path));
+  return `${LOOSE_TASK[part]}${part === 'system' ? `\n${OWN_MENU}\n\nFUENTES que puedes usar (id · familia · rol · carácter; @font-face con src: url(assets/<id>.ttf)):\n${fonts()}` : ''}
+${facts(context)}
+${system?.length ? `\nSISTEMA DE DISEÑO YA ESCRITO:\n${system.map(file => `--- ${file.path}\n${file.content}`).join('\n')}\n` : ''}${feedback.length ? `\nLA VERSIÓN ANTERIOR TIENE ESTOS PROBLEMAS (solo lo que impide que la tienda funcione); corrígelos y devuelve tus archivos completos:\n${feedback.map(line => `- ${line}`).join('\n')}\n` : ''}${mine?.length ? `\nTUS ARCHIVOS ANTERIORES:\n${mine.map(file => `--- ${file.path}\n${file.content}`).join('\n')}\n` : ''}`;
+}
+
+export function v2WriterPrompt(free = false, loose = false): string {
+  if (loose) return V2_LOOSE_PROMPT;
   return `Escribes el código de la tienda con React + TypeScript (TSX) y CSS, siguiendo al pie de la letra la dirección de arte que recibes.
 No hay plantilla: el diseño entero es tuyo. La tienda tiene estos cuatro archivos (cada llamada te dice cuáles devuelves, completos):
 
@@ -360,7 +421,7 @@ pantalla, como mucho una cosa en movimiento. Nada que parpadee ni gire sin parar
 BORDES Y FORMAS: nunca dibujes formas con CSS (ondas, festones, burbujas, manchas con border-radius, máscaras o clip-path). Un borde
 ondulado o festoneado entre dos bandas o antes del pie es la sección de biblioteca wave-divider (looks: ondas, ripple, ripple-flip,
 sway, sway-flip; band = el color de la banda a la que entra). Si no, bordes rectos.
-NUNCA (fallas vistas en pruebas reales): líneas decorativas que atraviesan secciones o la página entera; palabras escritas en
+NUNCA (fallas vistas en pruebas reales): una columna fija (sticky) en la página de producto que comparte retícula con las secciones de abajo (se monta sobre ellas al bajar); líneas decorativas que atraviesan secciones o la página entera; palabras escritas en
 vertical letra por letra; textos que se montan sobre otros; fotos más grandes que su tamaño real; tarjetas de producto apretadas en
 columnas angostas; elementos con ancho fijo que en el teléfono se salen de la pantalla.
 FOTOS: solo las rutas que te dan (assets/…), con alt descriptivo, object-fit sin estirar, nunca más anchas que su tamaño real.
@@ -409,13 +470,14 @@ SECCIONES DE LA BIBLIOTECA:
 };
 
 export function v2WriterInput(context: V2Context, direction: V2Direction, part: V2Part, feedback: string[] = [], previous?: V2File[], system?: V2File[], library?: { facts: string }): string {
+  if (context.loose) return looseWriterInput(context, part, feedback, previous, system);
   const mine = previous?.filter(file => V2_PART_FILES[part].includes(file.path));
-  const notes = part === 'pages' ? heroNotes(direction) : { heroBrief: '', headerNote: '' };
-  return notes.heroBrief + notes.headerNote + `${part === 'pages' && context.free ? `${FREE_PAGES_TASK}\n\n${FREE_PRODUCT_RULES}` : PART_TASK[part]}${part === 'product' && context.free ? `\n\n${FREE_PRODUCT_RULES}` : ''}${context.animated && part !== 'product' ? `\n\n${ANIMATED_RULES}` : ''}${part === 'pages' && showcaseRules(context, 'both') ? `\n\n${showcaseRules(context, 'both')}` : ''}
+  const notes = part === 'pages' && !context.basic ? heroNotes(direction) : { heroBrief: '', headerNote: '' };
+  return notes.heroBrief + notes.headerNote + `${part === 'pages' && context.free ? `${FREE_PAGES_TASK}${context.basic ? '' : `\n\n${FREE_PRODUCT_RULES}`}` : PART_TASK[part]}${part === 'product' && context.free && !context.basic ? `\n\n${FREE_PRODUCT_RULES}` : ''}${context.animated && part !== 'product' ? `\n\n${ANIMATED_RULES}` : ''}${part === 'pages' && showcaseRules(context, 'both') ? `\n\n${showcaseRules(context, 'both')}` : ''}
 ${context.ownCards ? `\nEL COMERCIANTE PIDIÓ TARJETAS DE PRODUCTO PROPIAS: esta vez SÍ diseñas .menu-item y sus partes (.menu-item__image, .menu-item__copy h3,
 .menu-item__price, .menu-add) y la retícula de data-pagosya-catalog. El nombre siempre horizontal y legible, la foto sin estirar,
 el botón de agregar con su tamaño (nunca una barra entera para un «+»), y en el teléfono dos columnas.\n` : ''}
-${facts(context)}
+${facts(context)}${part === 'system' && context.menu?.model ? menuStyleBrief(context.menu.model) : ''}${part === 'system' && context.basic ? `\n\n${OWN_MENU}` : ''}
 ${part === 'pages' && library ? `\nBIBLIOTECA DE SECCIONES (id · rol · lo que necesita · para qué sirve):\n${v2LibraryCatalogText()}\n\nDATOS REALES PARA LA BIBLIOTECA (productos por id o nombre, categorías, códigos, servicios, lugar, opiniones, redes):\n${library.facts}\n` : ''}
 DIRECCIÓN DE ARTE (síguela):
 ${part === 'product' ? JSON.stringify(direction) : JSON.stringify(direction, null, 2)}
@@ -425,8 +487,12 @@ ${system?.length ? `\nSISTEMA DE DISEÑO YA ESCRITO:\n${part === 'product' ? com
 /** Owner 2026-11-15 («lets go for it», after Amboras's showcase examples — LIFT's flavour stage, ATELIER's rail): with product
  *  cut-outs a store can place one showcase piece. Which one is told per call: the stage goes to the first half of a split home, the
  *  rail to the second, both to a whole-page writer. */
-export function showcaseRules(context: Pick<V2Context, 'cutouts'>, which: 'stage' | 'rail' | 'both'): string {
+export function showcaseRules(context: Pick<V2Context, 'cutouts' | 'showcasesUsed'>, which: 'stage' | 'rail' | 'both'): string {
   if ((context.cutouts?.length ?? 0) < 2) return '';
+  // Owner 2026-11-16: a showcase the merchant's last three stores placed is not offered again (it stays, it just rotates).
+  const used = new Set(context.showcasesUsed ?? []);
+  which = which === 'both' ? (used.has('stage') && used.has('rail') ? 'none' as never : used.has('stage') ? 'rail' : used.has('rail') ? 'stage' : 'both') : which;
+  if ((which as string) === 'none' || used.has(which)) return '';
   const stage = `- <ProductStage label="Sabores" slides={[{ product: 'id', top: 'PALABRA', bottom: 'PALABRA', image: { src: 'assets/…webp', alt: '…' },
   bg: '#hex', ink: '#hex', decor: [{ src: 'assets/…webp', alt: '' }], facts: ['…', '…'] }, …]} />: una pantalla entera por producto o
   sabor (2 a 6). image y decor SOLO con RECORTES de la lista (nunca una foto con fondo); product: el id que se compra en esa pantalla
@@ -452,7 +518,8 @@ ${which !== 'rail' ? stage : ''}${which === 'both' ? '\n' : ''}${which !== 'stag
 
 /** Targeted repair (live 2026-11-14: a whole rewrite per failed build cost ~14 min and changed the design each time): the four
  *  current files and the exact problems in, only the files that change out — merged over the previous version. */
-export function v2FixPrompt(free = false): string {
+export function v2FixPrompt(free = false, loose = false): string {
+  if (loose) return `Eres quien escribió esta tienda. Corrige SOLO los problemas de la lista (lo que impide que funcione), sin cambiar el diseño, y devuelve ÚNICAMENTE los archivos que modificas, completos.\n\n${V2_LOOSE_PROMPT}`;
   return `Eres quien escribió esta tienda. Su última versión no compiló o no pasó las revisiones. Corrige SOLO lo que dicen los problemas,
 sin cambiar el diseño, y devuelve ÚNICAMENTE los archivos que modificas, cada uno completo.${free ? `
 ARREGLA, NO QUITES: rehace la parte que falla (otra foto, otro fondo, otro orden, el texto en su lugar); quitar una sección es el último
@@ -605,16 +672,19 @@ function noPacks(content: string, repairs: string[], path: string): string {
   }
   return content;
 }
-function oncePhotos(home: string, context: Partial<Pick<V2Context, 'photos' | 'cutouts'>>, repairs: string[]): string {
+function oncePhotos(home: string, context: Partial<Pick<V2Context, 'photos' | 'cutouts'>>, repairs: string[], library = ''): string {
   const showcase = [...home.matchAll(/<(?:ProductStage|HangingRail)\b[\s\S]*?\/>/g)].map(match => [match.index ?? 0, (match.index ?? 0) + match[0].length]);
-  const used = new Set([...home.matchAll(/assets\/[\w.-]+\.(?:jpe?g|png|webp)/g)].map(match => match[0]));
+  // Live 2026-11-16 (DooBoo r13, Meat House r9, Bake Lab r3, NOA r2): a fix round put a photo the library sections already show
+  // into the home's own sections; the library's photos count as used first.
+  const shown = new Set([...library.matchAll(/assets\/[\w.-]+\.(?:jpe?g|png|webp)/g)].map(match => match[0]));
+  const used = new Set([...shown, ...[...home.matchAll(/assets\/[\w.-]+\.(?:jpe?g|png|webp)/g)].map(match => match[0])]);
   const cuts = new Set((context.cutouts ?? []).map(cut => cut.path));
   const spare = {
     cut: [...cuts].filter(path => !used.has(path)),
     // Never an old cut-out kept among the store's files (live 2026-11-15, Oh Belly r20: a photo swapped for a can cut-out).
     photo: [...(context.photos ?? [])].sort((a, b) => Number(Boolean(a.product)) - Number(Boolean(b.product))).map(photo => photo.path).filter(path => !used.has(path) && !cuts.has(path) && !CUTOUT_FILE.test(path)),
   };
-  const seen = new Set<string>();
+  const seen = new Set<string>(shown);
   return home.replace(/(["'(])(assets\/[\w.-]+\.(?:jpe?g|png|webp))(?=["')])/g, (whole: string, quote: string, path: string, at: number) => {
     if (showcase.some(([from, to]) => at >= from && at < to)) return whole;
     if (!seen.has(path)) { seen.add(path); return whole; }
@@ -675,7 +745,7 @@ export function v2Repairs(files: readonly V2File[], header?: Pick<V2Context, 'go
     let content = oneProductRoot(file.content, repairs, file.path);
     content = oneContactForm(content, repairs, file.path);
     content = kineticText(content, repairs, file.path);
-    if (file.path === 'components/home.tsx' && header?.photos) content = oncePhotos(content, header, repairs);
+    if (file.path === 'components/home.tsx' && header?.photos) content = oncePhotos(content, header, repairs, files.find(other => other.path === 'components/v2-library.tsx')?.content);
     // Photos with words are marked so the page rule «cropped-words» can measure them (2026-11-15).
     if (header?.photos) content = markWordPhotos(content, new Set(header.photos.filter(photo => photo.words).map(photo => photo.path)));
     // The header look the direction chose (headers plan Task 13), written onto NavShell and the announcement bar.
@@ -835,6 +905,9 @@ export function v2ContractProblems(files: readonly V2File[], context: V2Context)
   // A slot named in a list the page maps over («['gallery', 'title'].map(…)») counts too (live 2026-11-14, Pawby and Remolino).
   for (const slot of ['gallery', 'title', 'pricing', 'buy']) if (!new RegExp(`["'\`]${slot}["'\`]`).test(product)) problems.push(`Falta el hueco obligatorio «${slot}» en la página de producto (<KitSlot kind="product" name="${slot}" />).`);
   if (/!important/.test(css)) problems.push('No uses !important en globals.css.');
+  // Owner 2026-11-16 («personalize the css of each menu with the thematic of each store»): the menu is dressed, not left as the kit drew it.
+  const menuStyle = menuStyleProblem(css, context.menu?.model);
+  if (menuStyle) problems.push(menuStyle);
   const backstage = backstageCopy(files);
   if (backstage.length) problems.push(`El cliente lee sobre tu trabajo, no sobre la tienda: ${backstage.slice(0, 6).map(text => `«${text}»`).join(', ')}. Reescribe esas frases para el cliente (o quítalas): lo que falta no se menciona; nunca recortes, activos, aprobado/pendiente, rotulado final ni «sin inventar».`);
   if (!context.packs && /data-pagosya-bundles/.test(all)) problems.push('La tienda no tiene packs activos: quita la sección de packs (data-pagosya-bundles).');
@@ -887,7 +960,9 @@ export function v2ContractProblems(files: readonly V2File[], context: V2Context)
   if (spare) for (const [path, count] of uses) if (count > 1) problems.push(`La foto ${path} aparece ${count} veces en la portada: cada foto y cada recorte van una sola vez.`);
   if (problems.some(line => / que no es un recorte:/.test(line))) problems.push(`Recortes que sí puedes usar en las vitrinas: ${(context.cutouts ?? []).map(cut => `${cut.path} (${cut.product ? `${cut.product} · ` : ''}${cut.name})`).join(', ') || '(ninguno: quita la vitrina)'}.`);
   for (const [, path] of all.matchAll(/["'(](assets\/[\w.-]+\.(?:jpe?g|png|webp))["')]/g)) if (!photos.has(path)) problems.push(`La foto ${path} no existe en la tienda.`);
-  return [...new Set(problems)];
+  // The Nov 14 rule set had no product-page minimum (it came 2026-11-15).
+  if (context.basic) return [...new Set(problems)].filter(line => !/La página de producto se queda corta/.test(line));
+  return context.loose ? [...new Set(problems)].filter(line => LOOSE_KEEPS.test(line)) : [...new Set(problems)];
 }
 
 /** Owner 2026-11-14 («faster, cheaper, more reliable», step 2, behind YAPI_V2_SPLIT): the home written in two halves at the same time —
@@ -919,7 +994,7 @@ export function v2HalfSchema(photoCount = 0): object {
 }
 
 export function v2HalfInput(context: V2Context, direction: V2Direction, half: V2Half, system: readonly V2File[], library: { facts: string }): string {
-  const { heroBrief, headerNote } = half === 'a' ? heroNotes(direction) : { heroBrief: '', headerNote: '' };
+  const { heroBrief, headerNote } = half === 'a' && !context.basic ? heroNotes(direction) : { heroBrief: '', headerNote: '' };
   const { mine, other } = halfChapters(direction, half);
   const prefix = half === 'a' ? 'A' : 'B';
   const task = `EN ESTA LLAMADA escribes SOLO UNA MITAD de la portada: estos capítulos de la dirección, en este orden:
@@ -1015,7 +1090,7 @@ export function withHeaderLook(content: string, look: V2Header): string {
 function heroNotes(direction: V2Direction): { heroBrief: string; headerNote: string } {
   // Heroes plan 2026-11-15: the call that writes the hero gets its idea's brief (its reference frames come with the call).
   const idea = heroIdea((direction as { hero?: { idea?: string } }).hero?.idea);
-  const heroBrief = idea ? `IDEA DE PORTADA «${idea.name}»: ${idea.brief}${idea.id === 'libre' ? '' : ` ${MIX_NOTE}`} Diséñala con el estilo de esta tienda (su letra, sus colores, su voz); de las referencias aprende la composición, nunca sus colores ni textos.\n\n` : '';
+  const heroBrief = idea ? `IDEA DE PORTADA «${idea.name}»: ${idea.brief}${idea.id === 'libre' ? '' : ` ${MIX_NOTE}`} ${STRONG_HERO} Diséñala con el estilo de esta tienda (su letra, sus colores, su voz); de las referencias aprende la composición, nunca sus colores ni textos.\n\n` : '';
   // Headers plan Task 13: a floating header sits over the hero, so the hero keeps its words clear of it.
   const floats = (direction as { header?: { over?: boolean } }).header?.over;
   const headerNote = floats ? 'LA CABECERA FLOTA encima de tu portada (transparente): la portada empieza arriba del todo, a todo el ancho, con foto o color hasta el borde superior, y su contenido (titular, textos, botones) empieza debajo de la cabecera: paddingTop: «calc(var(--ui-nav-h, 88px) + 24px)» en el contenedor del texto, también en el celular.\n\n' : '';

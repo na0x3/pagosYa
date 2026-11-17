@@ -1,10 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { chromium } from 'playwright';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AiUsageService } from '../../ai-usage/ai-usage.service';
 import { SourceProjectsService } from '../source-projects.service';
-import { sourceProvider } from '../source-provider';
+import { isClaude, sourceProvider } from '../source-provider';
+import { claudeJson, type V2Part as ClaudePart } from './v2-claude';
 import { checkSourceProviderQuota, SourceProviderQuotaException } from '../source-provider-error';
 import { MODEL_LIMIT, MODEL_LIMIT_MERCHANT_FAILURE } from '../source-validation-error';
 import { sourceResponseJson } from '../source-response';
@@ -24,13 +25,14 @@ import { mergeSectionFix, sectionFixPlan, v2SectionFixInput, v2SectionFixPrompt,
 import { publicRetentionSettings } from '../../retention/retention.service';
 import { DEFAULT_RETENTION } from '../../retention/retention.dto';
 import { wordsLookPrompt, wordsLookSchema } from './v2-words';
-import { allowedHeroIdeas, drawsLibre, heroIdea, newestStores, readStoreLooks } from './v2-heroes';
+import { allowedHeroIdeas, drawsLibre, heroIdea, newestStores, readShowcases, readStoreLooks } from './v2-heroes';
 import { allowedMenus, cleanMenu } from './v2-menus';
-import { freeBlocking, inspectionRules, runV2Build, withContextMenu, type V2Attempt, type V2BuildDeps } from './v2-run';
+import { BASIC_BLOCKERS, freeBlocking, inspectionRules, runV2Build, withContextMenu, type V2Attempt, type V2BuildDeps } from './v2-run';
 import { captureV2Look, v2LookInput, v2LookLines, v2LookPrompt, v2LookSchema, type V2LookCapture, type V2LookProblem } from './v2-look';
 import { apiRoot, buildInSandbox } from './v2-sandbox';
 import { SourceChatService } from '../source-chat.service';
 import { UploadsService } from '../../uploads/uploads.service';
+import { measureHugePhotos, stickyOverlapLines, withPhotoCaps } from './v2-settle';
 import { readV2LibraryFile, withoutRepeatedPhotos, buildV2Library, mergeV2LibraryEntries, V2_LIBRARY_FILE, v2LibraryFacts, v2LibraryFactsText, v2LibraryFile, type V2LibraryEntry } from './v2-library';
 import { cardText, pickReferences, V2_REFERENCES, v2CardPrompt, v2CardSchema, type V2Card, type V2Reference } from './v2-references';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
@@ -70,7 +72,15 @@ const looksDir = () => join(apiRoot(), '..', '..', 'examples', 'v2-proto', 'look
 type V2Lib = { entries: V2LibraryEntry[]; facts: ReturnType<typeof v2LibraryFacts> };
 type Stage = { stage: string; ms: number; detail?: unknown };
 export type V2RunState = {
-  status: 'RUNNING' | 'DONE' | 'FAILED'; startedAt: string; baseRevision?: number; revision?: number; error?: string; model?: string;
+  status: 'RUNNING' | 'DONE' | 'FAILED'; startedAt: string; baseRevision?: number; revision?: number; error?: string; model?: string; maxUsd?: number;
+  /** Owner 2026-11-16 («do that»): one run in library-first mode (false) or free mode (true) whatever YAPI_V2_FREE says. */
+  free?: boolean;
+  /** Owner 2026-11-16 («let users give a link and our ai remixes the users website to be like the link»): the site this run remixes. */
+  remix?: string;
+  /** Owner 2026-11-16 («drop restrictions for now»): loose mode for this run. */
+  loose?: boolean;
+  /** Owner 2026-11-16: the Nov 14 rule set (Gramiyaa r3) for this run. */
+  basic?: boolean;
   stages: Stage[]; direction?: V2Direction; attempts?: V2Attempt[]; usd: number;
   /** Spec 2026-11-16 store quality, Part 4: the rules behind each checked attempt («desktop:rule», «phone:rule»). */
   inspections?: Array<{ at: string; rules: string[] }>;
@@ -82,6 +92,10 @@ type Content = { type: 'input_text'; text: string } | { type: 'input_image'; ima
 /** A spent plan quota or model limit stops the run (the same test the chat uses); anything else is one failed attempt. */
 // Live 2026-11-14 03:44: the ChatGPT bridge answers a used-up plan with «subscription_sharing_usage_limit_exceeded», which the
 // shared quota check did not know — BOXY spent three instant attempts on it.
+/** Owner 2026-11-16 («remix the users website to be like the link»): what the art direction and the writers hear in a remix. */
+const remixDirectionText = (host: string) => `REMIX DE ${host}: el comerciante quiere que SU tienda se sienta como este sitio. Sigue estas capturas sección por sección: el mismo orden de secciones, la misma forma de cabecera y de menú, el mismo tipo de portada, la misma paleta (o la más cercana) y el mismo carácter de letra, el mismo aire y ritmo, el mismo estilo de tarjetas y de fotos. Con los productos, fotos, datos y voz de ESTA tienda: nunca su logo, su nombre, sus textos ni sus fotos.`;
+const remixLooseText = (host: string) => `REMIX DE ${host} (capturas abajo): copia este sitio lo más fiel que puedas — la misma portada, las mismas secciones en el mismo orden, la misma cabecera, la misma paleta, la misma letra (o la más parecida que tengas), los mismos tamaños, espacios y estilo de fotos y tarjetas —, con los productos, fotos, datos y textos de ESTA tienda. Nunca su logo, su nombre, sus textos ni sus fotos.`;
+const remixWriterText = (host: string) => `REMIX DE ${host} (capturas abajo): la tienda se siente como ese sitio — orden de secciones, cabecera, paleta, letra, ritmo, tarjetas —; el contenido es siempre el de esta tienda, nunca el de ese sitio.`;
 const spent = (error: unknown) => error instanceof SourceProviderQuotaException || (error instanceof Error && (error.message.includes(MODEL_LIMIT_MERCHANT_FAILURE)
   // Live 2026-11-14 13:07 (round 4): a 429 from the bridge reads «ChatGPT indicó un límite de uso» — the writer took it for an empty
   // answer and spent three more instant attempts.
@@ -102,15 +116,19 @@ export class SourceV2PrototypeService {
     return this.runs.get(storeId) ?? null;
   }
 
-  async start(merchantId: string, storeId: string, input: { revision?: number; references?: string[]; restyleCards?: boolean; animated?: boolean }) {
+  async start(merchantId: string, storeId: string, input: { revision?: number; references?: string[]; restyleCards?: boolean; animated?: boolean; model?: string; maxUsd?: number; free?: boolean; remix?: string; loose?: boolean; rules?: string }) {
     this.enabled();
     if (this.runs.get(storeId)?.status === 'RUNNING') throw new ConflictException('Ya hay un diseño V2 en curso para esta tienda.');
     // The design starts from the store's last template revision, not from an earlier V2 design: its data and the library's code
     // live there (spec 2026-11-14 v2-library-sections).
     const revision = input.revision ?? await this.templateBase(storeId);
     await this.projects.version(merchantId, storeId, revision);
-    const references = (input.references ?? []).filter(url => /^https:\/\//.test(url)).slice(0, 2);
-    const state: V2RunState = { status: 'RUNNING', startedAt: new Date().toISOString(), baseRevision: revision, stages: [], usd: 0 };
+    const remix = input.remix && /^https:\/\//.test(input.remix) ? input.remix : undefined;
+    const references = remix ? [remix] : (input.references ?? []).filter(url => /^https:\/\//.test(url)).slice(0, 2);
+    const state: V2RunState = { status: 'RUNNING', startedAt: new Date().toISOString(), baseRevision: revision, stages: [], usd: 0,
+      // Owner 2026-11-16: one run on a model of its own (a Claude model, paid from the Anthropic key), with a spending cap.
+      ...(input.model ? { model: input.model } : {}), ...(input.maxUsd ? { maxUsd: input.maxUsd } : {}), ...(typeof input.free === 'boolean' ? { free: input.free } : {}), ...(remix ? { remix } : {}), ...(input.loose ? { loose: true } : {}), // Owner 2026-11-16: the Nov 14 rules are the default (YAPI_V2_RULES=nov14) unless a run asks for «strict» or loose mode.
+      ...(input.rules === 'nov14' || (!input.rules && !input.loose && process.env.YAPI_V2_RULES === 'nov14') ? { basic: true } : {}) };
     this.runs.set(storeId, state);
     void this.run(merchantId, storeId, revision, references, state, input.restyleCards === true, input.animated === true).catch(error => {
       state.status = 'FAILED'; state.error = String((error as Error)?.message ?? error).slice(0, 1000);
@@ -123,13 +141,15 @@ export class SourceV2PrototypeService {
    *  limit for 2 stores» + «visual errors»: the faults were in the platform's own CSS, card and header rules, not in the design).
    *  The written files are kept as saved (Shell, home, product, the library slots, the design's CSS without the platform blocks);
    *  the platform blocks, the library code and styles are taken fresh; built in the sandbox and saved as a new revision. */
-  async reassemble(merchantId: string, storeId: string, cart?: { look?: string; photo?: string }) {
+  async reassemble(merchantId: string, storeId: string, cart?: { look?: string; photo?: string }, css?: string) {
     this.enabled();
     const { head, from, written, base, baseRevision, files, context } = await this.latestDesign(merchantId, storeId);
     // A design saved before the cart looks (2026-11-14) gets the one asked for here.
     if (cart?.look) context.cartSheet = v2CartSheet(cart.look, context.storeName, cart.photo);
     // The current repairs too (live 2026-11-15: DooBoo's product page and contact mounts were fixable without a model call).
     const repaired = v2Repairs(written, context);
+    // A CSS patch for a fault code can settle without a model call (owner 2026-11-16, NOA r14 product page).
+    if (css?.trim()) repaired.files = repaired.files.map(file => file.path === 'styles/globals.css' ? { ...file, content: `${file.content}\n/* v2:patch */\n${css.slice(0, 4000)}\n` } : file);
     if (repaired.repairs.length) this.log.log(JSON.stringify({ event: 'v2_reassemble_repairs', storeId, repairs: repaired.repairs }));
     const input = { revision: head, label: V2_LABEL, brief: base.brief, files: withContextMenu(assembleV2Files(files, repaired.files, context.ownCards, context.ownIcons, context.cartSheet), context) } as Parameters<SourceProjectsService['save']>[2];
     const started = Date.now();
@@ -204,6 +224,14 @@ export class SourceV2PrototypeService {
     return { heroes: pick('hero'), menus: pick('menu'), headers: pick('header') };
   }
 
+  /** The showcases the merchant's three newest other V2 designs placed. */
+  private async recentShowcases(merchantId: string, storeId: string): Promise<string[]> {
+    const recent = await this.prisma.storeSourceVersion.findMany({ where: { label: { startsWith: V2_LABEL }, storeId: { not: storeId }, project: { store: { merchantId } } }, orderBy: { createdAt: 'desc' }, take: 60, select: { storeId: true } });
+    const homes = await Promise.all(newestStores(recent, 3).map(id => this.prisma.storeSourceVersion.findFirst({ where: { storeId: id, label: { startsWith: V2_LABEL } }, orderBy: { revision: 'desc' }, select: { snapshot: true } })
+      .then(version => readShowcases((version?.snapshot as { files?: Array<{ path: string; content: string }> } | null)?.files)).catch(() => [] as string[])));
+    return [...new Set(homes.flat())];
+  }
+
   private async templateBase(storeId: string): Promise<number> {
     const version = await this.prisma.storeSourceVersion.findFirst({ where: { storeId, NOT: { label: V2_LABEL } }, orderBy: { revision: 'desc' }, select: { revision: true } }).catch(() => null);
     return version?.revision ?? this.latest(storeId);
@@ -229,13 +257,16 @@ export class SourceV2PrototypeService {
     const context = await v2Context(files, first?.content ?? '');
     // Product cards are the platform's unless the merchant asked for their own (in words, or the route's restyleCards).
     if (restyleCards) context.ownCards = true;
-    context.free = this.config.get<boolean>('app.yapiV2Free') === true;
+    context.free = state.free ?? this.config.get<boolean>('app.yapiV2Free') === true;
+    // Loose mode: the design owns the cards too, and only what keeps the store working is checked.
+    if (state.loose) { context.loose = true; context.free = true; context.ownCards = true; }
+    if (state.basic) { context.basic = true; context.free = true; }
     if (animated) context.animated = true;
     // Owner 2026-11-15 (Amboras's showcase examples): the products' photos without their background, for the stage and the rail.
-    const cut = await stage('cutouts', () => this.productCutouts(storeId, files, this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol', state), result => result.cutouts.length);
+    const cut = await stage('cutouts', () => this.productCutouts(storeId, files, state.model || this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol', state), result => result.cutouts.length);
     files.push(...cut.files);
     context.cutouts = cut.cutouts;
-    const libraryPhotos = await this.topUpLibraryPhotos(merchantId, storeId, files).catch(error => {
+    const libraryPhotos = context.basic || context.loose ? { added: 0, sector: null as string | null } : await this.topUpLibraryPhotos(merchantId, storeId, files).catch(error => {
       this.log.warn(JSON.stringify({ event: 'v2_library_photos_failed', storeId, error: String((error as Error)?.message ?? error) }));
       return { added: 0, sector: null as string | null };
     });
@@ -244,12 +275,15 @@ export class SourceV2PrototypeService {
     context.photos.push(...own.photos);
     await this.markProductPhotos(files, context);
     await this.markWordPhotos(storeId, files, context, state);
+    // Owner 2026-11-16: the showcases rotate — one the merchant's last three stores placed is not offered (nor its examples).
+    context.showcasesUsed = await this.recentShowcases(merchantId, storeId).catch(() => [] as string[]);
     const showcaseFiles = cut.cutouts.length >= 2 ? await readdir(join(referencesDir(), '_showcase')).then(names => Promise.all(names.filter(name => /\.jpe?g$/.test(name)).sort().slice(0, 6)
       .map(async name => ({ name, shot: { type: 'input_image', image_url: `data:image/jpeg;base64,${(await readFile(join(referencesDir(), '_showcase', name))).toString('base64')}`, detail: 'low' } as Content })))).catch(() => []) : [];
-    const showcaseShots = showcaseFiles.map(entry => entry.shot);
+    const showcaseOffered = (name: string) => !(context.showcasesUsed ?? []).includes(/atelier|rail/.test(name) ? 'rail' : 'stage');
+    const showcaseShots = showcaseFiles.filter(entry => showcaseOffered(entry.name)).map(entry => entry.shot);
     // The half that may place the stage sees the stage examples; the other the rail (examples/v2-proto/references/_showcase).
-    const railShots = showcaseFiles.filter(entry => /atelier|rail/.test(entry.name)).map(entry => entry.shot);
-    const stageShots = showcaseFiles.filter(entry => !/atelier|rail/.test(entry.name)).map(entry => entry.shot);
+    const railShots = showcaseFiles.filter(entry => /atelier|rail/.test(entry.name) && showcaseOffered(entry.name)).map(entry => entry.shot);
+    const stageShots = showcaseFiles.filter(entry => !/atelier|rail/.test(entry.name) && showcaseOffered(entry.name)).map(entry => entry.shot);
     // The cut-outs themselves, small, so the writer picks the clean ones (the model is not perfect).
     const cutoutShots: Content[] = cut.cutouts.length >= 2 ? [{ type: 'input_text', text: 'LOS RECORTES (en el orden de la lista RECORTES DE PRODUCTO):' },
       ...cut.cutouts.flatMap((cutout): Content[] => { const file = cut.files.find(entry => entry.path === cutout.path); return file ? [{ type: 'input_text', text: `${cutout.path}${cutout.what ? ` — ${cutout.what}` : ''}:` }, { type: 'input_image', image_url: `data:image/webp;base64,${file.content}`, detail: 'low' }] : []; })] : [];
@@ -265,7 +299,12 @@ export class SourceV2PrototypeService {
     state.references = library.length ? library.map(ref => ref.host) : references;
     const shots: Content[] = await stage('reference', async () => library.length
       ? (await Promise.all(library.map((ref, i) => this.referenceShots(ref, i === 0)))).flat()
-      : (await this.captureReferences(references)).map((image_url): Content => ({ type: 'input_image', image_url, detail: 'high' })), list => list.length);
+      // A remix sees the whole home of its site (six screens), not just its opening.
+      : (await this.captureReferences(references, state.remix ? [0, 900, 1800, 2700, 3600, 4500] : undefined)).map((image_url): Content => ({ type: 'input_image', image_url, detail: 'high' })), list => list.length);
+    const remixHost = state.remix ? new URL(state.remix).host.replace(/^www\./, '') : '';
+    // Every writer call of a remix sees the site (small) and what a remix keeps of it.
+    const looseRemixShots: Content[] = state.remix && state.loose ? [{ type: 'input_text', text: remixLooseText(remixHost) } as Content, ...shots] : [];
+    const remixShots: Content[] = state.remix ? [{ type: 'input_text', text: remixWriterText(remixHost) } as Content, ...shots.map(shot => shot.type === 'input_image' ? { ...shot, detail: 'low' as const } : shot)] : [];
     // Their recipe cards (written once by the study route): words the direction and the writer can follow, cheaper than pictures.
     const cards = (await Promise.all(library.map(ref => this.card(ref.host)))).map((card, i) => card && cardText(card, i === 0)).filter((text): text is string => Boolean(text));
     const study: Content[] = cards.length ? [{ type: 'input_text', text: `FICHAS DE ESTUDIO DE ESAS TIENDAS (la primera es la referencia principal: sigue su ESTRUCTURA — orden de secciones, forma de la cabecera, tarjeta de producto, caja de compra, cómo se recompone en el teléfono — adaptada a esta marca y a sus fotos; de las demás toma solo un toque. Nunca sus colores, textos, logos ni fotos):\n\n${cards.join('\n\n')}` }] : [];
@@ -281,18 +320,20 @@ export class SourceV2PrototypeService {
     // The design-system writer sees only the closest reference's first screen (live 2026-11-14: with every reference the call ran
     // past the bridge's 10 minutes); the art direction already studied them all.
     const firstScreens = shots.slice(0, 2).filter(entry => entry.type === 'input_text' || (entry.type === 'input_image' && entry.detail === 'high'));
-    const model = this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol';
+    const model = state.model || this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol';
     state.model = model;
     // Heroes + menus plan 2026-11-15: never the hero idea or the menu model this merchant's other stores already use; about one
     // store in three gets the open hero brief instead of a listed idea.
     const history = await this.merchantHistory(merchantId, storeId);
-    context.heroesAllowed = drawsLibre(storeId) ? ['libre'] : allowedHeroIdeas(history.heroes, context);
+    // A remix takes its first screen from the site it remixes, not from a hero idea.
+    context.heroesAllowed = state.remix || context.basic || drawsLibre(storeId) ? ['libre'] : allowedHeroIdeas(history.heroes, context);
     context.menusAllowed = allowedMenus(history.menus);
     context.headersUsed = history.headers;
-    const direction = await stage('direction', () => this.call<V2Direction>(storeId, 'v2-direction', model, v2DirectionPrompt(context.free), [
+    // Loose mode has no art direction call: the writer designs everything (a remix copies its site).
+    const direction = context.loose ? ({} as V2Direction) : await stage('direction', () => this.call<V2Direction>(storeId, 'v2-direction', model, v2DirectionPrompt(context.free), [
       { type: 'input_text', text: `${v2DirectionInput(context)}${context.animated ? `\n\n${ANIMATED_RULES}` : ''}` },
       ...photos.map((image_url): Content => ({ type: 'input_image', image_url, detail: 'high' })),
-      ...(shots.length ? [{ type: 'input_text', text: 'TIENDAS REALES DE REFERENCIA (aprende su oficio — retícula, tipografía, aire, cómo muestran el producto —, nunca copies sus colores ni sus textos):' } as Content] : []),
+      ...(shots.length ? [{ type: 'input_text', text: state.remix ? remixDirectionText(remixHost) : 'TIENDAS REALES DE REFERENCIA (aprende su oficio — retícula, tipografía, aire, cómo muestran el producto —, nunca copies sus colores ni sus textos):' } as Content] : []),
       ...shots,
       ...study,
       ...(motionShots.length ? [{ type: 'input_text', text: 'REFERENCIA DE MOVIMIENTO Y OFICIO PARA ESTA TIENDA ANIMADA (una tienda Shopify animada; aprende su oficio, nunca sus colores, textos ni fotos):' } as Content, ...motionShots] : []),
@@ -302,9 +343,10 @@ export class SourceV2PrototypeService {
     state.direction = direction;
     // The store's menu as the direction chose it (spec 2026-11-15 store menu models): checked by the contract, written into config.js.
     // Cleaned in code (final review C1): a menu the writer cannot change never blocks the build.
-    context.menu = direction.menu ? cleanMenu(direction.menu, context) : undefined;
-    context.heroIdea = direction.hero?.idea;
-    context.header = direction.header;
+    // The Nov 14 rule set had no menu models, hero ideas or header looks: the kit's own menu and header.
+    context.menu = direction.menu && !context.basic ? cleanMenu(direction.menu, context) : undefined;
+    context.heroIdea = context.basic ? undefined : direction.hero?.idea;
+    context.header = context.basic ? undefined : direction.header;
     // The chosen idea's real reference frames go to the half that writes the hero (examples/v2-proto/references/_heroes).
     const heroShots: Content[] = await Promise.all((heroIdea(context.heroIdea)?.frames ?? []).map(async frame => {
       const bytes = await readFile(join(referencesDir(), '_heroes', frame)).catch(() => null);
@@ -320,11 +362,12 @@ export class SourceV2PrototypeService {
       write: async (feedback, previous) => {
         const ask = async (part: V2Part, system?: V2File[]) => {
           try {
-            return readV2Part(await this.call(storeId, `v2-writer-${part}`, model, v2WriterPrompt(context.free), [
+            return readV2Part(await this.call(storeId, `v2-writer-${part}`, model, v2WriterPrompt(context.free, context.loose), [
               { type: 'input_text', text: v2WriterInput(context, direction, part, feedback, previous, system, { facts: v2LibraryFactsText(libraryFacts) }) },
               ...(part === 'system' ? photos.slice(0, 4).map((image_url): Content => ({ type: 'input_image', image_url, detail: 'low' })) : []),
               ...(part === 'system' && firstScreens.length ? [{ type: 'input_text', text: 'El nivel de oficio a alcanzar (tiendas reales; no copies sus colores ni sus textos):' } as Content,
                 ...firstScreens.map(entry => entry.type === 'input_image' ? { ...entry, detail: 'low' as const } : entry)] : []),
+              ...(context.loose ? looseRemixShots : part !== 'system' ? remixShots : state.remix ? remixShots.slice(0, 1) : []),
               ...study,
               ...(part === 'pages' && showcaseShots.length ? [showcaseIntro, ...showcaseShots, ...cutoutShots] : []),
               ...(part !== 'system' && productShots.length ? [{ type: 'input_text', text: 'LA VARA DE LA PÁGINA DE PRODUCTO (Brightland; su oficio, nunca sus colores, textos ni fotos):' } as Content, ...productShots] : []),
@@ -343,12 +386,12 @@ export class SourceV2PrototypeService {
         if (!system) return null;
         kept.system = system;
         let pages: { files: V2File[]; css: string; library: V2LibraryEntry[] } | null;
-        if (context.free && process.env.YAPI_V2_SPLIT === '1') {
+        if (context.free && !context.loose && process.env.YAPI_V2_SPLIT === '1') {
           // Owner 2026-11-14 (step 2, «faster»): the home in two halves and the product page, three short calls at the same time.
           const half = async (which: V2Half) => {
             try {
               return readV2Half(await this.call(storeId, `v2-writer-half-${which}`, model, v2WriterPrompt(true), [{ type: 'input_text', text: v2HalfInput(context, direction, which, system.files, { facts: v2LibraryFactsText(libraryFacts) }) }, ...study, ...motionShots.slice(0, 4),
-                ...(showcaseShots.length ? [showcaseIntro, ...(which === 'a' ? stageShots : railShots), ...cutoutShots] : []), ...(which === 'a' && heroShots.length ? [{ type: 'input_text', text: 'REFERENCIAS DE LA IDEA DE PORTADA (aprende la composición y el movimiento, nunca colores, textos ni fotos):' } as Content, ...heroShots] : [])],
+                ...(showcaseShots.length ? [showcaseIntro, ...(which === 'a' ? stageShots : railShots), ...cutoutShots] : []), ...remixShots, ...(which === 'a' && heroShots.length ? [{ type: 'input_text', text: 'REFERENCIAS DE LA IDEA DE PORTADA (aprende la composición y el movimiento, nunca colores, textos ni fotos):' } as Content, ...heroShots] : [])],
                 v2HalfSchema(context.photos.length), `v2_half_${which}`, 24_000, state, 'medium'));
             } catch (error) {
               if (spent(error)) throw error;
@@ -453,7 +496,7 @@ export class SourceV2PrototypeService {
    *  home's own sections are fixed by rewriting only those sections, with light thinking; anything else (or a section answer that
    *  cannot be placed) goes to one short call that fixes only what failed — the design stays as it was. */
   private async fixRound(storeId: string, model: string, context: V2Context, state: V2RunState, lib: V2Lib, feedback: string[], previous: V2File[]): Promise<V2File[] | null> {
-    const plan = context.free ? sectionFixPlan(previous, feedback) : null;
+    const plan = context.free && !context.loose ? sectionFixPlan(previous, feedback) : null;
     if (plan) {
       try {
         const raw = await this.call(storeId, 'v2-writer-section-fix', model, v2SectionFixPrompt(v2WriterPrompt(context.free)), [{ type: 'input_text', text: v2SectionFixInput(plan, previous) }],
@@ -467,7 +510,7 @@ export class SourceV2PrototypeService {
       }
     }
     try {
-      const raw = await this.call<{ library?: unknown }>(storeId, 'v2-writer-fix', model, v2FixPrompt(context.free), [{ type: 'input_text', text: v2FixInput(previous, feedback, feedback.some(line => /biblioteca|LibrarySlot/.test(line)) ? { entries: lib.entries, facts: v2LibraryFactsText(lib.facts) } : undefined) }],
+      const raw = await this.call<{ library?: unknown }>(storeId, 'v2-writer-fix', model, v2FixPrompt(context.free, context.loose), [{ type: 'input_text', text: v2FixInput(previous, feedback, feedback.some(line => /biblioteca|LibrarySlot/.test(line)) ? { entries: lib.entries, facts: v2LibraryFactsText(lib.facts) } : undefined) }],
         v2FixSchema(context.photos.length), 'v2_fix', 40_000, state, 'medium');
       // Library sections the fix swapped or added: merged by slot, checked again, the generated file rebuilt.
       const changed = Array.isArray(raw?.library) ? (raw!.library as V2LibraryEntry[]).filter(entry => entry && typeof entry.block === 'object') : [];
@@ -493,20 +536,36 @@ export class SourceV2PrototypeService {
       },
       repair: files => v2Repairs(files, context),
       build: input => buildInSandbox(input),
+      // Owner 2026-11-16: photos over the size rule are capped in code (v2-settle), not sent back to the writer.
+      settle: async (snapshot, files) => context.loose || context.basic ? null : withPhotoCaps(files, await measureHugePhotos(snapshot), new Set((context.cutouts ?? []).map(cut => cut.path))),
       // The home looked at on a desktop and a phone (the template rules: words over words, words split, overflow, repeated photos…).
       // The template rules' hint «o muestra los productos (data-pagosya-catalog …)» sent the writer into repeating product rows
       // (live 2026-11-14: BOXY, rhode, Pawby); for V2 a section of words gets a store photo or goes.
       // Free mode (owner 2026-11-14, like Amboras's advisory checks): only real breakage blocks; taste rules stay out of the loop.
-      inspect: async snapshot => {
-        const widths = await templateQaFindings(snapshot);
-        (state.inspections ??= []).push({ at: new Date().toISOString(), rules: inspectionRules(widths, Boolean(context.free)) });
-        return widths.flatMap(({ width, blocking, findings }) => (context.free ? freeBlocking(findings) : blocking)
-          .map(line => `${width === 390 ? 'Celular' : 'Escritorio'}: ${v2Hint(line).slice(0, 280)}`));
-      },
+      inspect: async snapshot => [...await this.pageRules(snapshot, context, state), ...await this.stickyCheck(snapshot)],
       commerce: snapshot => { try { assertSourceCommerceContract(snapshot); return null; } catch (error) { return String((error as { response?: { message?: string } })?.response?.message ?? (error as Error)?.message ?? error); } },
       // Owner 2026-11-15 (like Amboras's bot screenshotting its page): YAPI looks at what it built. YAPI_V2_LOOK=0 turns it off.
-      ...(process.env.YAPI_V2_LOOK === '0' ? {} : { look: (snapshot: SourceProjectSnapshot, attempt: number) => this.lookAt(storeId, model, context, state, snapshot, attempt) }),
+      ...(process.env.YAPI_V2_LOOK === '0' || context.loose || context.basic ? {} : { look: (snapshot: SourceProjectSnapshot, attempt: number) => this.lookAt(storeId, model, context, state, snapshot, attempt) }),
     };
+  }
+
+  /** The page rules of a V2 build on its home (desktop and phone), as fix lines. */
+  private async pageRules(snapshot: SourceProjectSnapshot, context: V2Context, state: V2RunState): Promise<string[]> {
+    // Owner 2026-11-16 («sections that leave a lot of empty space»): the empty-section check (advice elsewhere) sends loose and Nov 14 builds back too.
+    if (context.basic || context.loose) {
+      const widths = await templateQaFindings(snapshot);
+      return widths.flatMap(({ width, findings }) => findings.filter(f => f.rule === 'empty-section' || (!context.loose && f.severity === 'block' && BASIC_BLOCKERS.has(f.rule))).map(f => `${width === 390 ? 'Celular' : 'Escritorio'}: ${typeof f.part === 'number' ? `[sección ${f.part}] ` : ''}${v2Hint(f.line.replace(/^(BLOQUEA|CONSEJO):\s*/, '')).slice(0, 280)}`));
+    }
+    const widths = await templateQaFindings(snapshot);
+    (state.inspections ??= []).push({ at: new Date().toISOString(), rules: inspectionRules(widths, Boolean(context.free)) });
+    return widths.flatMap(({ width, blocking, findings }) => (context.free ? freeBlocking(findings) : blocking)
+      .map(line => `${width === 390 ? 'Celular' : 'Escritorio'}: ${v2Hint(line).slice(0, 280)}`));
+  }
+
+  /** The product page scrolled step by step: a pinned column over the sections below (owner 2026-11-16, NOA r14). */
+  private async stickyCheck(snapshot: SourceProjectSnapshot): Promise<string[]> {
+    const id = ((readConfigData(snapshot.files as never).data?.items ?? []) as Array<{ id?: string }>)[0]?.id;
+    return id ? stickyOverlapLines(snapshot, String(id)).catch(() => [] as string[]) : [];
   }
 
   /** Screenshots of the built pages, shown to the writer's model, its answer as check lines; the screenshots are kept on disk
@@ -594,7 +653,8 @@ export class SourceV2PrototypeService {
     try {
       const shots = (await Promise.all(unknown.slice(0, 16).map(async photo => ({ photo, url: await photoDataUrl(files as never, photo.path, 384) })))).filter(entry => entry.url);
       if (!shots.length) return;
-      const model = this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol';
+      // The run's own model (a Claude run never calls the ChatGPT plan; live 2026-11-16, new Remolino store).
+      const model = state.model || this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol';
       const raw = await this.call<{ words?: boolean[] }>(storeId, 'v2-words', model, wordsLookPrompt, shots.map(entry => ({ type: 'input_image', image_url: entry.url!, detail: 'low' } as Content)), wordsLookSchema(shots.length), 'v2_words', 2_000, state, 'low');
       await mkdir(cutoutsDir(), { recursive: true });
       await Promise.all(shots.map(async (entry, i) => {
@@ -791,6 +851,7 @@ export class SourceV2PrototypeService {
 
   /** One strict-JSON call through the configured provider (the ChatGPT-plan bridge in dev), metered like every YAPI call. */
   private async call<T = unknown>(storeId: string, purpose: string, model: string, instructions: string, content: Content[], schema: object, name: string, maxOutput: number, state: V2RunState, effort: 'low' | 'medium' | 'high' = 'high'): Promise<T | null> {
+    if (isClaude(model)) return this.callClaude<T>(storeId, purpose, model, instructions, content, schema, maxOutput, state, effort);
     const provider = sourceProvider(this.config, model);
     const started = Date.now(); let body: any = null; let status = 'FAILED';
     try {
@@ -808,8 +869,29 @@ export class SourceV2PrototypeService {
     } finally { await this.metering?.record(storeId, purpose, model, body, Date.now() - started, status); }
   }
 
+  /** Owner 2026-11-16 («100 usd in claude api tokens… one store… minimize the costs»): the same call on a Claude model, paid from
+   *  the Anthropic key even while the rest of YAPI runs on the ChatGPT plan. The run stops — keeping its best built version — once
+   *  it has spent its cap (start's maxUsd, default $10). */
+  private async callClaude<T>(storeId: string, purpose: string, model: string, instructions: string, content: Content[], schema: object, maxOutput: number, state: V2RunState, effort: 'low' | 'medium' | 'high'): Promise<T | null> {
+    const apiKey = process.env.YAPI_CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new ServiceUnavailableException('Los modelos Claude no están configurados (YAPI_CLAUDE_API_KEY).');
+    const cap = state.maxUsd ?? 10;
+    if (state.usd >= cap) throw new Error(`límite de uso: este diseño ya gastó $${state.usd.toFixed(2)} de $${cap} en Claude.`);
+    const started = Date.now(); let body: any = null; let status = 'FAILED';
+    try {
+      const result = await claudeJson({ apiKey, model, instructions, content: content as ClaudePart[], schema, maxOutput, effort, signal: AbortSignal.timeout(20 * 60_000) });
+      body = { usage: result.usage, stop_reason: result.stopReason, error: result.error };
+      state.usd += (sourceUsage(model as never, result.usage)?.providerMicroUsd ?? 0) / 1e6;
+      if (/credit balance|billing/i.test(result.error ?? '')) throw new Error(`límite de uso de Claude: ${result.error}`);
+      if (result.error) throw new Error(`${purpose}: ${result.status} ${result.error.slice(0, 300)}`);
+      if (result.json === null) throw new Error(`${purpose}: Claude terminó sin una respuesta completa (${result.stopReason}).`);
+      status = 'COMPLETED';
+      return result.json as T;
+    } finally { await this.metering?.record(storeId, purpose, model, body, Date.now() - started, status); }
+  }
+
   /** The reference stores' first screen and one screen further down, desktop width — a normal browser, outside the build sandbox. */
-  private async captureReferences(urls: string[]): Promise<string[]> {
+  private async captureReferences(urls: string[], ys: readonly number[] = [0, 1100]): Promise<string[]> {
     if (!urls.length) return [];
     const browser = await chromium.launch({ headless: true });
     const out: string[] = [];
@@ -818,7 +900,7 @@ export class SourceV2PrototypeService {
         const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
         try {
           await page.goto(url, { waitUntil: 'networkidle', timeout: 45_000 }).catch(() => page.waitForTimeout(3000));
-          for (const y of [0, 1100]) {
+          for (const y of ys) {
             await page.evaluate(top => window.scrollTo(0, top), y); await page.waitForTimeout(900);
             out.push(`data:image/jpeg;base64,${(await page.screenshot({ type: 'jpeg', quality: 70 })).toString('base64')}`);
           }

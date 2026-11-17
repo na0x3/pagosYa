@@ -35,6 +35,13 @@ export type V2Context = {
   goods: string; ownIcons: boolean;
   /** Free mode (YAPI_V2_FREE, owner 2026-11-14): the writer composes the whole home; the library is optional; only real breakage blocks. */
   free?: boolean;
+  /** Owner 2026-11-16 («i think we added to many restrictions… drop restrictions for now»): only what keeps the store working. */
+  loose?: boolean;
+  /** Owner 2026-11-16 («lets do that and test stores»): the rules Gramiyaa r3 (2026-11-14 21:01) was built with — free mode and the
+   *  basic breakage checks; no hero ideas, menu models, header looks, product-page minimum, newer checks, look or stock photos. */
+  basic?: boolean;
+  /** The showcases (stage, rail) the merchant's last three V2 stores placed: not offered again this time. */
+  showcasesUsed?: string[];
   /** The cart drawer's look for this store (v2-kit-baseline v2CartSheet), set once the direction chose it. */
   cartSheet?: string;
   /** Menus this merchant's other stores have not used, and the one the direction chose (spec 2026-11-15 store menu models). */

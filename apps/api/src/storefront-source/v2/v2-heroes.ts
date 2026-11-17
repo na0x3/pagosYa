@@ -25,7 +25,14 @@ export const V2_HERO_IDEAS: readonly V2HeroIdea[] = [
 ];
 
 /** Owner 2026-11-15 («won't this standardize too much?»): about one store in three gets an open brief instead of a listed idea. */
-export const LIBRE: V2HeroIdea = { id: 'libre', name: 'Portada libre', needs: 'any', frames: V2_HERO_IDEAS.slice(0, 6).map(idea => idea.frames[0]),
+/** Owner 2026-11-16 («i dont like these heroes, i find them weak» — goodProtein specsheet, Hoja Suelta laps; rhode buyfirst not picked,
+ *  the rg store zahra disliked): those four are no longer offered; saved designs keep theirs. Liked: zippa (Meat House), hearthen
+ *  (Bake Lab), libre (Miga Dorada). */
+export const V2_HERO_RETIRED: readonly string[] = ['laps', 'specsheet', 'buyfirst', 'zahra'];
+const OFFERED_HEROES = () => V2_HERO_IDEAS.filter(idea => !V2_HERO_RETIRED.includes(idea.id));
+/** Owner 2026-11-14 + 2026-11-16: a strong first screen, whatever the idea. */
+export const STRONG_HERO = 'PORTADA FUERTE (owner: las débiles son un producto chico dentro de una caja con aire alrededor): la foto o el producto ocupa al menos la mitad del ancho y todo el alto de la primera pantalla y llega al borde (o es una foto a todo el ancho con el texto encima); un titular grande (64 px o más en escritorio); uno o dos botones claros y datos reales. Nunca una tarjeta o caja con el producto flotando en un fondo vacío.';
+export const LIBRE: V2HeroIdea = { id: 'libre', name: 'Portada libre', needs: 'any', frames: OFFERED_HEROES().map(idea => idea.frames[0]),
   brief: 'Inventa tu propia portada para ESTA marca: ninguna de las ideas de la lista, algo que solo esta tienda tendría. Mira las referencias como inspiración de oficio (escala, movimiento, cómo se muestra el producto), nunca como receta. Mismas reglas: titular entero en la primera pantalla, fotos con letras enteras, solo datos reales, movimiento con estado final quieto.' };
 /** Stable per store: the same store keeps its draw between rebuilds. */
 export const drawsLibre = (storeId: string) => [...storeId].reduce((sum, c) => (sum * 31 + c.charCodeAt(0)) >>> 0, 7) % 3 === 0;
@@ -34,7 +41,7 @@ export const MIX_NOTE = 'Empieza desde esta idea; puedes torcerla o mezclarla co
 /** Ideas this merchant's other stores have not used that the store can show (only a cut-out is a hard need); all fitting ideas once
  *  every one is used. «libre» never counts as used. */
 export function allowedHeroIdeas(used: readonly string[], context: Pick<V2Context, 'cutouts' | 'products'>): string[] {
-  const fit = V2_HERO_IDEAS.filter(idea => idea.needs !== 'cutout' || (context.cutouts ?? []).length > 0);
+  const fit = OFFERED_HEROES().filter(idea => idea.needs !== 'cutout' || (context.cutouts ?? []).length > 0);
   const fresh = fit.filter(idea => !used.includes(idea.id));
   return (fresh.length ? fresh : fit).map(idea => idea.id);
 }
@@ -47,6 +54,13 @@ export function readHeroMarker(home: string): string | null {
 /** Final minors M1 + M2 (2026-11-16): what a saved design shows — its hero idea, menu model and header look («over|top:pills|plain»).
  *  Used for the merchant's other stores (so they are not repeated) and for a look round (which keeps its hero idea); a broken or
  *  missing snapshot reads as nothing. */
+/** Owner 2026-11-16 («i really like that one but i dont want it to be repetitive»): which of the platform's two showcases a saved
+ *  home places, so the merchant's next store gets the other one, or neither. */
+export function readShowcases(files: ReadonlyArray<{ path: string; content: string }> | null | undefined): string[] {
+  const home = (Array.isArray(files) ? files : []).find(file => file.path === 'components/home.tsx')?.content ?? '';
+  return [...(/<ProductStage\b/.test(home) ? ['stage'] : []), ...(/<HangingRail\b/.test(home) ? ['rail'] : [])];
+}
+
 export function readStoreLooks(files: ReadonlyArray<{ path: string; content: string }> | null | undefined): { hero: string | null; menu: string | null; header: string | null } {
   const list = Array.isArray(files) ? files : [];
   const read = (path: string) => list.find(file => file.path === path)?.content ?? '';

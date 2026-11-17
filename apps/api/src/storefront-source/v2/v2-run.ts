@@ -4,6 +4,7 @@ import type { SourceProjectSnapshot } from '../source-project';
 import { assembleV2Files, type V2Context, type V2File } from './v2-context';
 import { v2ContractProblems } from './v2-prompts';
 import type { SandboxBuild } from './v2-sandbox';
+import { SETTLES } from './v2-settle';
 
 /** V2 prototype build loop (docs/superpowers/specs/2026-11-14-v2-prototype-design.md §3–5): write, repair what has one right answer
  *  in code, check the V2 contract, assemble over the base store, build in the sandbox, check the commerce contract, then look at the
@@ -18,6 +19,8 @@ const MINOR = /La misma foto aparece dos veces|usa otra letra/;
  *  taste — sideways scroll, text over text or cut in half, unreadable text, a band of only words or only a photo, a squeezed phone
  *  title, a photo twice. */
 // Spec 2026-11-16 store quality: the defects that reached saved designs (Bake Lab, NOA) — phone-cut-tiles here, five more below.
+/** The breakage checks a free-mode build had on 2026-11-14 when Gramiyaa r3 was made (the Nov 14 rule set, context.basic). */
+export const BASIC_BLOCKERS = new Set(['empty-section', 'h-overflow', 'overlapping-text', 'broken-words', 'low-contrast', 'text-only-band', 'dark-text-band', 'dark-colour-text-band', 'photo-only-band', 'phone-squeezed-title', 'repeated-photo']);
 export const FREE_BLOCKERS = new Set(['h-overflow', 'overlapping-text', 'broken-words', 'low-contrast', 'text-only-band', 'dark-text-band', 'dark-colour-text-band', 'photo-only-band', 'phone-squeezed-title', 'repeated-photo', 'cropped-words', 'phone-cut-tiles']);
 /** Advice for templates, breakage for a written home (owner 2026-11-14 «meathouse is all messed up»): a decorative word over the
  *  title, big words a photo covers, words cut off by their box. */
@@ -47,6 +50,8 @@ export type V2BuildDeps = {
    *  are clean, or on the last attempt — and names what looks wrong, as check lines. Each look that finds something earns one more
    *  fix round of its own (at most `looks`, default 2), so the rule rounds are not spent on it. */
   look?: (snapshot: SourceProjectSnapshot, attempt: number) => Promise<string[]>;
+  /** Fixes code can make from the built page (v2-settle), as the written files changed; null when nothing to settle. */
+  settle?: (snapshot: SourceProjectSnapshot, files: V2File[]) => Promise<{ files: V2File[]; repairs: string[] } | null>;
   looks?: number;
   /** Each attempt as soon as it ends (live 2026-11-14: the reasons only appeared after all three). */
   onAttempt?: (attempt: V2Attempt) => void;
@@ -85,16 +90,31 @@ export async function runV2Build(base: { revision: number; brief: SaveSourceProj
     };
     if (!written) { done('no-answer', ['La respuesta no traía los archivos completos.']); continue; }
     const repaired = deps.repair ? deps.repair(written) : { files: written, repairs: [] };
-    const files = repaired.files; repairs = repaired.repairs;
+    let files = repaired.files; repairs = repaired.repairs;
     previous = files;
     const contract = v2ContractProblems(files, context);
     if (contract.length) { done('contract', contract); continue; }
-    const input = { revision: base.revision, label, brief: base.brief, files: withContextMenu(assembleV2Files(base.files, files, context.ownCards, context.ownIcons, context.cartSheet), context) } as SaveSourceProjectDto;
-    const built = await deps.build(input);
+    const assemble = (written: V2File[]) => ({ revision: base.revision, label, brief: base.brief, files: withContextMenu(assembleV2Files(base.files, written, context.ownCards, context.ownIcons, context.cartSheet), context) } as SaveSourceProjectDto);
+    let input = assemble(files);
+    let built = await deps.build(input);
     if (!built.ok) { done('build', [`${built.kind === 'build' ? 'No compiló' : built.kind === 'timeout' ? 'La compilación tardó demasiado' : 'La compilación se cayó'}: ${built.error.slice(0, 1500)}`]); continue; }
     const refused = deps.commerce(built.snapshot);
     if (refused) { done('commerce', [`El contrato de comercio lo rechaza: ${refused}`]); continue; }
-    const visual = deps.inspect ? await deps.inspect(built.snapshot).catch(() => [] as string[]) : [];
+    let visual = deps.inspect ? await deps.inspect(built.snapshot).catch(() => [] as string[]) : [];
+    // Owner 2026-11-16 («cant we fix this directly?»): what code can settle (a photo over the size rule) is settled here — one more
+    // build and check, no writer call — and kept only when the page comes out with fewer problems.
+    if (deps.settle && deps.inspect && visual.some(line => SETTLES.test(line))) {
+      const settled = await deps.settle(built.snapshot, files).catch(() => null);
+      if (settled) {
+        const nextInput = assemble(settled.files);
+        const next = await deps.build(nextInput);
+        const nextVisual = next.ok && !deps.commerce(next.snapshot) ? await deps.inspect(next.snapshot).catch(() => null) : null;
+        if (next.ok && nextVisual && nextVisual.length < visual.length) {
+          files = settled.files; input = nextInput; built = next; visual = nextVisual; previous = files;
+          repairs = [...repairs, ...settled.repairs];
+        }
+      }
+    }
     if (!best || visual.length < best.visual.length || (fromLook && visual.length <= best.visual.length)) best = { files, input, snapshot: built.snapshot, visual };
     fromLook = false;
     // A clean page, only small things left, or no attempt left: the best version that built is the answer. Owner 2026-11-14 («half

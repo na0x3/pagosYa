@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import { assembleV2Files, OWN_CARDS_REQUEST, OWN_ICONS_REQUEST, readConfigData, type V2Context, type V2File, withStoreSettings } from './v2-context';
 import { composeV2Home, halfChapters, readV2Half } from './v2-prompts';
 import { kitProps, v2WriterInput as writerInput } from './v2-prompts';
@@ -15,12 +16,15 @@ import { cardText, pickReferences, storeShapes } from './v2-references';
 import { buildV2Library, readV2LibraryFile, v2LibraryFile, withoutRepeatedPhotos, withUniquePhotos } from './v2-library';
 import { SourceV2PrototypeService } from './v2-prototype.service';
 import { cropShare, markWordPhotos } from './v2-words';
-import { FREE_BLOCKERS } from './v2-run';
-import { allowedHeroIdeas, drawsLibre, heroMarker, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
+import { BASIC_BLOCKERS, FREE_BLOCKERS } from './v2-run';
+import { allowedHeroIdeas, drawsLibre, heroMarker, readHeroMarker, readShowcases, V2_HERO_IDEAS } from './v2-heroes';
 import { existsSync as heroFrameExists, readFileSync as readRuleSource } from 'node:fs';
 import { join as heroJoin } from 'node:path';
-import { allowedMenus, cleanMenu, menuProblems, V2_MENU_MODELS, v2MenuSchema, withStoreMenu } from './v2-menus';
+import { allowedMenus, cleanMenu, menuParts, menuProblems, V2_MENU_MODELS, v2MenuSchema, withStoreMenu } from './v2-menus';
 import { SourceV2PrototypeController } from './v2-prototype.controller';
+import { capHeight, withPhotoCaps } from './v2-settle';
+import { claudeJson, claudeSchema } from './v2-claude';
+import { V2_LOOSE_PROMPT, v2WriterPrompt } from './v2-prompts';
 
 const context: V2Context = {
   storeName: 'Oh Belly', tagline: '', about: '', request: 'sodas', checkoutMode: 'payment', categories: ['Sodas'],
@@ -712,10 +716,10 @@ describe('v2 menus (spec 2026-11-15 store menu models)', () => {
   });
   it('limits the direction to unused models, all of them when every one is used', () => {
     expect((v2MenuSchema(['overlay', 'drawer']) as any).properties.model.enum).toEqual(['overlay', 'drawer']);
-    // Spec 2026-11-16 store quality: new stores pick from five menus only.
-    expect(allowedMenus(V2_MENU_MODELS.map(m => m.id))).toEqual(['mega', 'overlay', 'dropdown', 'drawer', 'circles']);
-    expect(allowedMenus(['mega'])).toEqual(['overlay', 'dropdown', 'drawer', 'circles']);
-    expect(allowedMenus(['stickers', 'tabs'])).toEqual(['mega', 'overlay', 'dropdown', 'drawer', 'circles']);
+    // Owner 2026-11-16 evening: all 16 menus again, the used ones left out until every one is used.
+    expect(allowedMenus(V2_MENU_MODELS.map(m => m.id))).toHaveLength(16);
+    expect(allowedMenus(['mega'])).toHaveLength(15);
+    expect(allowedMenus(['stickers', 'tabs'])).not.toContain('stickers');
   });
   it('asks the direction for a menu among the allowed models and checks the chosen one in the contract', () => {
     const ctx = { ...context, menusAllowed: ['overlay', 'drawer'] } as V2Context;
@@ -726,7 +730,7 @@ describe('v2 menus (spec 2026-11-15 store menu models)', () => {
     expect(v2DirectionInput(ctx)).not.toMatch(/mega: /);
     const withMenu = { ...ctx, menu: { model: 'overlay', groups: [{ label: 'Una categoría con un nombre demasiado largo', links: [{ to: 'all' }] }] } } as V2Context;
     // Final review C1: the writer cannot change the menu, so a menu problem never blocks a build — the menu is cleaned in code.
-    expect(v2ContractProblems(good, withMenu).join()).not.toMatch(/28 letras|menú/i);
+    expect(v2ContractProblems(good, withMenu).join()).not.toMatch(/28 letras|más de dos niveles|del menú no es de la tienda/i);
   });
 
   it('final review: cleans the direction’s menu in code — short labels, store photos once, two levels, 7 groups', () => {
@@ -879,10 +883,21 @@ describe('v2 assembly fixes 2026-11-16', () => {
     expect(text).toMatch(/CABECERA FLOTA/);
     expect(writerInput(context, d, 'system')).not.toMatch(/IDEA DE PORTADA/);
   });
-  it('spec 2026-11-16: YAPI never picks the retired menus', () => {
-    for (const retired of ['rail', 'stickers', 'index', 'need', 'thumb', 'tabs', 'split', 'dock', 'bestsellers', 'offer', 'search'])
-      expect(allowedMenus([])).not.toContain(retired);
-    expect(allowedMenus([])).toContain('mega');
+  it('owner 2026-11-16 evening: all 16 menus are offered again, the ones this merchant used last', () => {
+    expect(allowedMenus([])).toHaveLength(16);
+    expect(allowedMenus(['mega', 'split'])).not.toContain('mega');
+    expect(allowedMenus(V2_MENU_MODELS.map(model => model.id))).toHaveLength(16);
+  });
+  it('owner 2026-11-16 («personalize the css of each menu»): the design-system writer dresses its menu, and a bare menu goes back', () => {
+    const withMenu = { ...context, menu: { model: 'stickers', groups: [{ label: 'Sodas', links: [{ to: 'all' }] }] } };
+    expect(menuParts('stickers')).toContain('.pym-sticker-photo');
+    expect(menuParts('rail')).toContain('.pym-panel[data-model=drawer]');
+    expect(writerInput(withMenu as never, {} as never, 'system')).toMatch(/EL MENÚ DE ESTA TIENDA ES «stickers»[\s\S]*html body \.pym-panel\[data-model=stickers\]/);
+    expect(writerInput(withMenu as never, {} as never, 'pages')).not.toMatch(/EL MENÚ DE ESTA TIENDA/);
+    expect(v2ContractProblems(good, withMenu as never).join()).toMatch(/El menú «stickers» quedó de plantilla/);
+    const dressed = good.map(file => file.path === 'styles/globals.css' ? { ...file, content: `${file.content}\nhtml body .pym-panel[data-model=stickers]{background:#fde}\nhtml body .pym-links a{font-family:serif}\nhtml body .pym-sticker-photo{border-radius:50%}` } : file);
+    expect(v2ContractProblems(dressed, withMenu as never).join()).not.toMatch(/quedó de plantilla/);
+    expect(v2ContractProblems(good, context).join()).not.toMatch(/quedó de plantilla/);
   });
   it('spec 2026-11-15: the look sees the menu open and names a menu under the page, empty or cut', () => {
     expect(v2LookPrompt()).toMatch(/Menú abierto[\s\S]*debajo de la página/);
@@ -915,5 +930,150 @@ describe('spec 2026-11-16 store quality: the new checks reach a V2 run and its l
       { width: 390, findings: [{ rule: 'phone-cut-tiles', severity: 'block' }] },
     ];
     expect(inspectionRules(widths, true)).toEqual(['desktop:hero-actions', 'phone:phone-cut-tiles']);
+  });
+});
+
+describe('settled in code, not by the writer (owner 2026-11-16 «cant we fix this directly?»)', () => {
+  const base = { revision: 3, brief: {} as never, files: [] };
+  const css = (files: V2File[]) => files.find(file => file.path === 'styles/globals.css')!.content;
+  const huge = (file: string, width: number, height: number, more: Partial<{ positioned: boolean; words: boolean }> = {}) => ({ file, width, height, positioned: false, words: false, ...more });
+
+  it('caps a photo over the desktop size rule in the design CSS, keeping the caps it had', () => {
+    expect([capHeight(1280), capHeight(736), capHeight(400)]).toEqual([500, 665, 780]);
+    const first = withPhotoCaps(good, [huge('image-a.jpg', 736, 920)])!;
+    expect(css(first.files)).toMatch(/@media \(min-width:1000px\)\{\nhtml body main :is\(img,video\)\[src\$="image-a\.jpg"\][^{]*\{max-height:665px;box-sizing:border-box;object-fit:cover\}/);
+    expect(first.repairs).toEqual(['styles/globals.css: image-a.jpg 736×920 → alto máx. 665 px']);
+    // The V2 contract refuses !important (live 2026-11-16, rg store): a capped design passes it.
+    expect(v2ContractProblems(first.files, context).join()).not.toMatch(/important/);
+    // A cut-out is never cropped; a second settle keeps one block with both caps.
+    const second = withPhotoCaps(first.files, [huge('image-b.webp', 1280, 780)], new Set(['assets/image-b.webp']))!;
+    expect(css(second.files).match(/v2:photo-caps —/g)).toHaveLength(1);
+    expect(css(second.files)).toMatch(/image-a\.jpg[^}]*max-height:665px/);
+    expect(css(second.files)).toMatch(/image-b\.webp[^}]*max-height:500px;box-sizing:border-box;object-fit:contain/);
+    // A photo laid over its box is left to the writer (a cap would leave a hole).
+    expect(withPhotoCaps(good, [huge('image-a.jpg', 1280, 900, { positioned: true })])).toBeNull();
+    // A photo drawn bigger than its box (a scroll zoom, Oh Belly r26 ×1.02) gets its box capped that much lower.
+    expect(css(withPhotoCaps(good, [{ ...huge('image-a.jpg', 672, 895), scale: 1.0245 }])!.files)).toMatch(/max-height:711px/);
+  });
+
+  it('settles a huge photo with one more build and check, no writer call, and keeps it only when the page has fewer problems', async () => {
+    const write = jest.fn(async () => good);
+    let builds = 0;
+    const build = async () => ({ ok: true as const, snapshot: { files: [], n: ++builds } as never, ms: 1 });
+    const settle = jest.fn(async (_snapshot: unknown, files: V2File[]) => withPhotoCaps(files, [huge('image-a.jpg', 736, 920)]));
+    const fixed = await runV2Build(base, context, 'Diseño V2', { write, build, commerce: () => null, settle,
+      inspect: async snapshot => (snapshot as unknown as { n: number }).n === 1 ? ['Escritorio: [sección 2] Fotos demasiado grandes (736×920 px)'] : [] });
+    expect(fixed.attempts.map(attempt => attempt.outcome)).toEqual(['built']);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(fixed.ok && css(fixed.files)).toMatch(/v2:photo-caps/);
+    expect(fixed.attempts[0].repairs?.join()).toMatch(/alto máx\. 665 px/);
+    // A cap that makes the page worse is dropped: the version as written stays, with its line for the writer.
+    builds = 0;
+    const worse = await runV2Build(base, context, 'Diseño V2', { write, build, commerce: () => null, settle, attempts: 1,
+      inspect: async snapshot => (snapshot as unknown as { n: number }).n === 1 ? ['Escritorio: Fotos demasiado grandes (736×920 px)'] : ['Escritorio: Una foto tapa letras', 'Escritorio: Texto cortado'] });
+    expect(worse.ok && css(worse.files)).not.toMatch(/v2:photo-caps/);
+    expect(worse.attempts[0].problems).toEqual(['Escritorio: Fotos demasiado grandes (736×920 px)']);
+  });
+
+  it('a home photo the library sections already show is swapped for a spare one (DooBoo r13, Meat House r9)', () => {
+    const home = good.map(file => file.path === 'components/home.tsx' ? { ...file, content: file.content.replace('<main id="contenido">', '<main id="contenido"><img src="assets/image-a.jpg" alt="" />') } : file);
+    const spare = { path: 'assets/image-b.jpg', width: 800, height: 800, shape: 'square' as const };
+    const repaired = v2Repairs(home, { goods: 'soda', ownIcons: true, photos: [...context.photos, spare] });
+    expect(repaired.repairs).toContain('components/home.tsx: assets/image-a.jpg repetida → assets/image-b.jpg');
+    expect(repaired.files.find(file => file.path === 'components/home.tsx')!.content).toMatch(/<img src="assets\/image-b\.jpg"/);
+  });
+});
+
+describe('a V2 run on Claude (owner 2026-11-16 «100 usd in claude api tokens… minimize the costs»)', () => {
+  it('drops the schema keywords Claude does not take, never a property that happens to share their name', () => {
+    const schema = { type: 'object', additionalProperties: false, required: ['pattern', 'list'], properties: {
+      pattern: { type: 'string', maxLength: 9, pattern: '^a' }, list: { type: 'array', minItems: 3, maxItems: 6, items: { type: 'integer', minimum: 0, maximum: 9 } }, one: { type: 'array', minItems: 1, items: { type: 'string' } } } };
+    expect(claudeSchema(schema)).toEqual({ type: 'object', additionalProperties: false, required: ['pattern', 'list'], properties: {
+      pattern: { type: 'string' }, list: { type: 'array', items: { type: 'integer' } }, one: { type: 'array', minItems: 1, items: { type: 'string' } } } });
+  });
+
+  it('streams the answer, caches the instructions, shrinks low-detail images and counts cached tokens inside the input', async () => {
+    const events = [
+      { type: 'message_start', message: { usage: { input_tokens: 100, cache_read_input_tokens: 900, cache_creation_input_tokens: 0, output_tokens: 1 } } },
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: '{"color":' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: '"rojo"}' } },
+      { type: 'message_delta', delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 40 } },
+    ];
+    const stream = new ReadableStream({ start(controller) { for (const event of events) controller.enqueue(new TextEncoder().encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)); controller.close(); } });
+    let sent: any = null;
+    const fetchImpl = (async (_url: string, init: RequestInit) => { sent = JSON.parse(String(init.body)); return new Response(stream, { status: 200 }); }) as unknown as typeof fetch;
+    const big = (await sharp({ create: { width: 1200, height: 900, channels: 3, background: '#c33' } }).jpeg().toBuffer()).toString('base64');
+    const result = await claudeJson({ apiKey: 'k', model: 'claude-sonnet-5-5', instructions: 'reglas', schema: { type: 'object' }, maxOutput: 1000, effort: 'medium', fetchImpl,
+      content: [{ type: 'input_text', text: 'hola' }, { type: 'input_image', image_url: `data:image/jpeg;base64,${big}`, detail: 'low' }] });
+    expect(result.json).toEqual({ color: 'rojo' });
+    expect(result.usage).toEqual({ input_tokens: 1000, output_tokens: 40, input_tokens_details: { cached_tokens: 900, cache_write_tokens: 0 } });
+    expect(sent).toMatchObject({ model: 'claude-sonnet-5-5', stream: true, max_tokens: 17000, system: [{ type: 'text', text: 'reglas', cache_control: { type: 'ephemeral' } }],
+      output_config: { effort: 'medium', format: { type: 'json_schema' } }, fallbacks: 'default' });
+    const image = sent.messages[0].content[1];
+    expect(image.source.media_type).toBe('image/webp');
+    expect((await sharp(Buffer.from(image.source.data, 'base64')).metadata()).width).toBe(512);
+  });
+});
+
+describe('owner 2026-11-16 («i dont like these heroes, i find them weak»)', () => {
+  it('never offers the four weak hero ideas, and every hero brief asks for a strong first screen', () => {
+    const cut = { ...context, cutouts: [{ path: 'assets/image-aaaaaaaaaaaa.webp', product: 'p1', name: 'Uno', width: 600, height: 800 }] };
+    for (const used of [[], ['zippa', 'hearthen', 'lift', 'halflife']]) for (const weak of ['laps', 'specsheet', 'buyfirst', 'zahra']) expect(allowedHeroIdeas(used, cut as never)).not.toContain(weak);
+    expect(allowedHeroIdeas([], cut as never)).toEqual(expect.arrayContaining(['zippa', 'hearthen', 'lift', 'halflife']));
+    expect(writerInput(context, { hero: { idea: 'zippa' } } as never, 'pages')).toMatch(/PORTADA FUERTE[\s\S]*mitad del ancho/);
+  });
+});
+
+describe('loose mode (owner 2026-11-16 «drop restrictions for now»)', () => {
+  it('the writer gets only what keeps the store working, and the contract keeps only those lines', () => {
+    const loose = { ...context, loose: true, free: true };
+    expect(v2WriterPrompt(true, true)).toBe(V2_LOOSE_PROMPT);
+    expect(V2_LOOSE_PROMPT.length).toBeLessThan(v2WriterPrompt(true).length / 2);
+    expect(V2_LOOSE_PROMPT).toMatch(/NUNCA escribas precios/);
+    const input = writerInput(loose as never, { hero: { idea: 'zippa' } } as never, 'pages');
+    expect(input).not.toMatch(/PORTADA FUERTE|BIBLIOTECA|TIENDA MODERNA/);
+    expect(writerInput(loose as never, {} as never, 'system')).toMatch(/FUENTES que puedes usar[\s\S]*gloock|FUENTES que puedes usar[\s\S]*Gloock/);
+    expect(V2_LOOSE_PROMPT).toMatch(/SIN HUECOS/);
+    // A home with no hero slot, no catalogue and a price: loose keeps only the catalogue and the price.
+    const bare = good.map(file => file.path === 'components/home.tsx' ? { ...file, content: `import Shell from './Shell';\nexport default function Home() { return <Shell><main id="contenido"><section><h1>Hola</h1><p>Bs 15</p></section><section/><section/><section/><section/></main></Shell>; }` } : file);
+    const strict = v2ContractProblems(bare, { ...context, free: true } as never).join('\n');
+    const kept = v2ContractProblems(bare, loose as never);
+    expect(strict).toMatch(/secciones|biblioteca/);
+    expect(kept.join('\n')).toMatch(/data-pagosya-catalog/);
+    expect(kept.join('\n')).not.toMatch(/secciones|biblioteca|hero/);
+  });
+});
+
+describe('the Nov 14 rule set (owner 2026-11-16: the rules Gramiyaa r3 was built with)', () => {
+  it('no hero brief, no product-page minimum, only the basic breakage checks', () => {
+    const basic = { ...context, free: true, basic: true };
+    expect(writerInput(basic as never, { hero: { idea: 'zippa' }, header: { over: true } } as never, 'pages')).not.toMatch(/IDEA DE PORTADA|PORTADA FUERTE|LA CABECERA FLOTA/);
+    expect(writerInput({ ...context, free: true } as never, { hero: { idea: 'zippa' } } as never, 'pages')).toMatch(/IDEA DE PORTADA/);
+    expect(BASIC_BLOCKERS.has('empty-section')).toBe(true);
+    for (const later of ['weak-hero', 'huge-photo', 'pale-page', 'cropped-words', 'phone-cut-tiles']) expect(BASIC_BLOCKERS.has(later)).toBe(false);
+    expect(BASIC_BLOCKERS.has('h-overflow') && BASIC_BLOCKERS.has('overlapping-text')).toBe(true);
+  });
+});
+
+describe('the model creates the menu (owner 2026-11-16)', () => {
+  it('the Nov 14 and loose design-system writers are asked for their own menu through NavShell menu', () => {
+    expect(writerInput({ ...context, free: true, basic: true } as never, {} as never, 'system')).toMatch(/TU MENÚ: lo creas tú[\s\S]*menu=\{/);
+    expect(writerInput({ ...context, free: true, loose: true } as never, {} as never, 'system')).toMatch(/TU MENÚ: lo creas tú/);
+    expect(writerInput({ ...context, free: true } as never, {} as never, 'system')).not.toMatch(/TU MENÚ/);
+    expect(kitProps().get('NavShell')?.has('menu')).toBe(true);
+  });
+});
+
+describe('the showcases rotate (owner 2026-11-16 «i really like that one but i dont want it to be repetitive»)', () => {
+  it('a showcase the last stores placed is not offered again; the other one is', () => {
+    const cuts = { cutouts: [{ path: 'assets/a.webp', product: 'p1', name: 'A', width: 1, height: 1 }, { path: 'assets/b.webp', product: 'p1', name: 'B', width: 1, height: 1 }] };
+    expect(readShowcases([{ path: 'components/home.tsx', content: '<ProductStage slides={[]} /><HangingRail items={[]} />' }])).toEqual(['stage', 'rail']);
+    expect(showcaseRules(cuts as never, 'both')).toMatch(/ProductStage[\s\S]*HangingRail/);
+    const noStage = showcaseRules({ ...cuts, showcasesUsed: ['stage'] } as never, 'both');
+    expect(noStage).not.toMatch(/<ProductStage/);
+    expect(noStage).toMatch(/HangingRail/);
+    expect(showcaseRules({ ...cuts, showcasesUsed: ['stage'] } as never, 'stage')).toBe('');
+    expect(showcaseRules({ ...cuts, showcasesUsed: ['stage', 'rail'] } as never, 'both')).toBe('');
   });
 });

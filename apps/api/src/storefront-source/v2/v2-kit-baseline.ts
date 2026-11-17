@@ -9,6 +9,8 @@ export const V2_KIT_BASELINE = `/* v2:kit-baseline — sizes of the parts the pl
 /* Live 2026-11-16 (Oh Belly r24): a design's own wrapper around the header (isolation, z-index) put the whole header — its menu panel
    and its sticky bar — under the page; a wrapper that holds only the header draws no box of its own. */
 :is(header,div,nav,section):has(> .ui-nav):not(:has(main)){display:contents}
+/* Owner 2026-11-16 (rg store catalogue page): the platform pages keep a gutter (their solid header is the kit NavShell rule). */
+:where(main.es-page){box-sizing:border-box;width:100%;max-width:1320px;margin-inline:auto;padding:clamp(24px,4vw,48px) clamp(16px,4vw,48px) 64px}
 :where([data-product-slot]) :where(img, svg, video){max-width:100%;height:auto}
 :where([data-part=payments]){display:grid;justify-items:start;gap:8px;margin:4px 0}
 :where([data-part=payments]) :where(p){margin:0;font-size:12.5px;opacity:.7}
@@ -67,7 +69,9 @@ export const V2_CARD_SHEET = `/* v2:cards — the platform's product card; colou
 .menu-item[data-product-id] > *{grid-column:1;min-width:0}
 .menu-item[data-product-id] .menu-item__details{position:absolute;inset:0;z-index:1;border:0;background:none;padding:0;cursor:pointer}
 .menu-item[data-product-id] .menu-item__image,.menu-item[data-product-id] .menu-item__panel{grid-column:1/-1;margin:0 0 8px}
-.menu-item[data-product-id] .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:var(--kit-card-ratio,4/5);object-fit:cover;border-radius:var(--kit-card-radius,var(--kit-radius,12px));background:var(--kit-muted,color-mix(in srgb,currentColor 6%,transparent));transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+.menu-item[data-product-id] .menu-item__image{display:block;width:100%;height:auto;aspect-ratio:var(--kit-card-ratio,4/5);object-fit:cover;object-position:50% 30%;border-radius:var(--kit-card-radius,var(--kit-radius,12px));background:var(--kit-muted,color-mix(in srgb,currentColor 6%,transparent));transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+/* Owner 2026-11-16: a photo far from the card shape is shown whole (the kit marks it data-fit=contain when it loads), never cut. */
+.menu-item[data-product-id] .menu-item__image[data-fit=contain]{object-fit:contain;object-position:50% 50%;background:var(--kit-card-bg,var(--kit-muted,color-mix(in srgb,currentColor 6%,transparent)))}
 @media (hover:hover) and (prefers-reduced-motion:no-preference){.menu-item[data-product-id]:hover .menu-item__image{transform:scale(1.03)}}
 .menu-item[data-product-id] .menu-item__panel{position:relative}
 .menu-item[data-product-id] .menu-item__panel .menu-item__image{margin:0}
@@ -76,9 +80,13 @@ export const V2_CARD_SHEET = `/* v2:cards — the platform's product card; colou
 .menu-item[data-product-id] .menu-item__badge,.menu-item[data-product-id] .menu-item__tag,.menu-item[data-product-id] .menu-item__best{position:absolute;top:10px;left:10px;z-index:2;margin:0;padding:4px 9px;border-radius:999px;background:var(--kit-paper,#fff);color:var(--kit-ink,#111);font-size:11.5px;font-weight:600;line-height:1.2;letter-spacing:.02em}
 .menu-item[data-product-id] .menu-item__copy{display:grid;gap:3px;margin:0}
 .menu-item[data-product-id] .menu-item__eyebrow{margin:0;font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:.65}
-.menu-item[data-product-id] :is(.menu-item__copy h3,.menu-item__name){margin:0;font-family:var(--kit-card-font,inherit);font-size:var(--kit-card-name,15px);font-weight:600;line-height:1.3;letter-spacing:0;text-transform:var(--kit-card-case,none);white-space:normal;word-break:normal;overflow-wrap:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.menu-item[data-product-id] .menu-item__copy > p:not([class]){margin:0;font-size:13px;line-height:1.4;opacity:.7;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.menu-item[data-product-id] :is(.menu-item__copy h3,.menu-item__name){margin:0;font-family:var(--kit-card-font,var(--kit-display,inherit));font-size:var(--kit-card-name,17px);font-weight:400;line-height:1.3;letter-spacing:0;text-transform:var(--kit-card-case,none);white-space:normal;word-break:normal;overflow-wrap:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .menu-item[data-product-id] :is(.menu-item__points,.menu-item__deal,.menu-item__colors,.menu-item__options){margin:0;padding:0;list-style:none;font-size:12.5px;line-height:1.35;opacity:.75}
+/* Owner 2026-11-16 («i liked also when the inside of product cards were more filled with things»): the card keeps its description
+   (two lines, quieter than the name) and its points as small tags; the name stays in the display face. */
+.menu-item[data-product-id] .menu-item__copy > p:not([class]){margin:2px 0 0;font-size:13px;line-height:1.45;opacity:.72;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.menu-item[data-product-id] .menu-item__points{display:flex;flex-wrap:wrap;gap:4px 6px;margin:6px 0 2px}
+.menu-item[data-product-id] .menu-item__points li{padding:2px 8px;border:1px solid var(--kit-line,color-mix(in srgb,currentColor 18%,transparent));border-radius:999px;font-size:11.5px;line-height:1.4;opacity:.9}
 .menu-item[data-product-id] .menu-item__price{margin:2px 0 0;font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums}
 .menu-item[data-product-id] .menu-item__original{margin-left:6px;font-weight:400;opacity:.55}
 .menu-item[data-product-id] .menu-item__save{justify-self:start;margin:2px 0 0;padding:2px 8px;border-radius:999px;background:var(--kit-accent,currentColor);color:var(--kit-on-accent,#fff);font-size:11.5px;font-weight:600}
