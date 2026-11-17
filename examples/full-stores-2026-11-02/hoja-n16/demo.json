@@ -1,0 +1,37 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwiuu48p0001n6ra373gl7ui",
+  "slug": "9jh2hbds",
+  "photos": {
+    "ghosts-dolly-alderton.jpg": "/v1/uploads/2a6236d7-fc23-4a52-b94b-9bf8f9cf69f1.jpg",
+    "intermezzo-sally-rooney.jpg": "/v1/uploads/c93fcb77-5447-44a0-928a-ebf8748b112b.jpg",
+    "women-who-think-too-much.jpg": "/v1/uploads/d1e7ea50-c300-44fb-88fc-a20c03d7b501.jpg",
+    "pack-libros-contemporaneos.jpg": "/v1/uploads/60dddaee-a34c-4f9a-82d7-e04ea1bd4e3b.jpg",
+    "tuesdays-with-morrie.jpg": "/v1/uploads/692e0629-b8c8-4f49-b48f-9633fea5b5d8.jpg",
+    "cuaderno-i-think-we-should-kiss.jpg": "/v1/uploads/d2f00e19-f5ff-4de7-afe5-136dd53165fc.jpg",
+    "better-than-the-movies.jpg": "/v1/uploads/75cabf7d-e0d1-490c-a213-c1890b652ffa.jpg"
+  },
+  "categories": {
+    "Libros": "cmwiuu48s0003n6rap9dvf5xq",
+    "Papelería": "cmwiuu48t0005n6ra845zljeu"
+  },
+  "products": {
+    "Ghosts - Dolly Alderton": "cmwiuu48y0009n6ra8zk3kv9x",
+    "Intermezzo - Sally Rooney": "cmwiuu494000dn6ra6mfctgmr",
+    "Women Who Think Too Much - Susan Nolen-Hoeksema": "cmwiuu497000hn6rayvyom70s",
+    "Pack de libros contemporáneos": "cmwiuu499000ln6raw032f0il",
+    "Tuesdays with Morrie - Mitch Albom": "cmwiuu49d000pn6ra1ubqkoju",
+    "Cuaderno I Think We Should Kiss": "cmwiuu49f000tn6rahj4teao4",
+    "Better Than the Movies - Lynn Painter": "cmwiuu49i000xn6rakc9x6m1r"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwiuu49y0017n6ra7tp778kc"
+}
