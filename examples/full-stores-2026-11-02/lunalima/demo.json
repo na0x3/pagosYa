@@ -1,0 +1,25 @@
+{
+  "merchantId": "cmuh0eezs000411tlde879610",
+  "storeId": "cmwjtd70x0001wm1vayzo9jgf",
+  "slug": "orb0b4ay",
+  "photos": {
+    "brand:0f674db78018901501c6852e5e395d08.jpg": "/v1/uploads/c9f5d75d-2653-4793-868b-426bfe529460.jpg",
+    "brand:13203a11a2df21ad996e800033df2738.jpg": "/v1/uploads/03460b24-f59a-4bed-87c3-944954c8e86d.jpg",
+    "brand:22536e69688c8f745f24438727dfc202.jpg": "/v1/uploads/de0bb1f2-1a53-4812-a4e0-8d11f6d4246d.jpg",
+    "8b63665395c3b17de6d25cfbd25605fa.jpg": "/v1/uploads/fd653c01-8722-4f52-8f3c-dbdef07c4be8.jpg"
+  },
+  "categories": {},
+  "products": {
+    "Luna Lima 330 ml": "cmwjtd71w000bwm1vhgokkjwo"
+  },
+  "done": {
+    "settings": true,
+    "links": true,
+    "shipping": true,
+    "articles": true,
+    "promo-code": true,
+    "newsletter": true,
+    "assistant": true
+  },
+  "welcomeCodeId": "cmwjtd72y000jwm1vc7djiifg"
+}
