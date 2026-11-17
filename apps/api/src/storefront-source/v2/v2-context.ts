@@ -42,6 +42,8 @@ export type V2Context = {
   basic?: boolean;
   /** The showcases (stage, rail) the merchant's last three V2 stores placed: not offered again this time. */
   showcasesUsed?: string[];
+  /** Owner 2026-11-17 («very creative and innovative layouts»): the creative setting, and the concept it chose before the direction. */
+  creative?: boolean; concept?: string;
   /** The cart drawer's look for this store (v2-kit-baseline v2CartSheet), set once the direction chose it. */
   cartSheet?: string;
   /** Menus this merchant's other stores have not used, and the one the direction chose (spec 2026-11-15 store menu models). */

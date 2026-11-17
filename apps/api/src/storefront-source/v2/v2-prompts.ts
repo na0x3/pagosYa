@@ -61,6 +61,32 @@ ${context.cutouts.map(cut => `- ${cut.path} · ${cut.product || '—'} · ${cut.
 
 /** What modern online stores share (owner 2026-11-14 «teach it modern designs»): distilled from the lessons of the 66 studied stores'
  *  recipe cards (examples/v2-proto/references/cards), the rules almost every one of them follows. */
+const factsAll = (context: V2Context) => `${facts(context)}${context.concept ? `\n\nCONCEPTO ELEGIDO PARA ESTA TIENDA (constrúyelo de verdad: es lo que la hace única):\n${context.concept}` : ''}`;
+
+/** Owner 2026-11-17 («what is taking us back on very creative and innovative layouts like other platforms have»): the creative
+ *  setting swaps the average-store rules and the craft bans for an invitation to invent; readability, buying and the phone stay. */
+export const V2_CREATIVE_RULES = `TIENDA CREATIVA (owner 2026-11-17: «layouts muy creativos e innovadores»): nada de la tienda promedio. Inventa la composición de ESTA
+marca: retículas rotas, capas que se superponen, tipografía usada como imagen, formas, máscaras y clip-path con las fotos, recortes que salen
+de su caja, secciones que cambian al bajar (sticky, escenas por scroll), un ritmo propio. Entre 5 y 14 secciones: menos y más fuertes antes
+que muchas iguales. Lo único fijo: que todo se lea, que se pueda comprar (productos y su botón a la vista) y que en el teléfono nada se salga.
+Las tarjetas de producto (las de la plataforma y las tuyas) van DERECHAS: nada de rotate ni inclinarlas (owner 2026-11-17).
+Los productos se muestran SIEMPRE en las tarjetas de la plataforma (<div data-pagosya-catalog … />); lo creativo va alrededor de ellas.`;
+const CREATIVE_CRAFT = `OFICIO CREATIVO: puedes usar formas, máscaras, clip-path, mix-blend-mode, capas, texto enorme de fondo y movimiento ligado al scroll,
+siempre con prefers-reduced-motion y sin tapar texto que se lee. Las fotos siguen de tamaño medio (nunca enormes).
+`;
+/** The same text with the average-store rules and the craft bans swapped for the creative ones. */
+export function creativeText(text: string): string {
+  return text.split(V2_MODERN_RULES).join(V2_CREATIVE_RULES).replace(/MOVIMIENTO \(owner 2026-11-14: tiendas con vida[\s\S]*?(?=NUNCA \(fallas)/, CREATIVE_CRAFT);
+}
+export const V2_CONCEPT_PROMPT = `Eres director creativo de tiendas online. Propón 3 conceptos de tienda DISTINTOS y atrevidos para esta marca — lo que ninguna otra
+tienda tendría —, que SUS fotos (míralas) puedan sostener. Cada uno: nombre corto, la idea en una frase, cómo se arma la portada (qué rompe de
+la tienda típica), un momento firma (lo que el cliente recuerda) y el movimiento. Después elige el más audaz que sus fotos y productos puedan
+sostener (pick = su índice, 0 a 2) y di por qué en una frase. En español.`;
+export function v2ConceptSchema(): object {
+  const concept = { type: 'object', additionalProperties: false, required: ['name', 'idea', 'layout', 'signature', 'motion'], properties: { name: { type: 'string' }, idea: { type: 'string' }, layout: { type: 'string' }, signature: { type: 'string' }, motion: { type: 'string' } } };
+  return { type: 'object', additionalProperties: false, required: ['concepts', 'pick', 'why'], properties: { concepts: { type: 'array', items: concept }, pick: { type: 'integer' }, why: { type: 'string' } } };
+}
+
 export const V2_MODERN_RULES = `TIENDA MODERNA (lo que comparten las 66 tiendas reales estudiadas; síguelo siempre):
 1. Dos familias de letra, cada una con su trabajo: una de carácter para la promesa, los títulos y el relato; una neutra para menú,
    precios, botones y datos. La jerarquía sale del tamaño, el espaciado, las mayúsculas y el aire, no de sumar estilos.
@@ -83,7 +109,7 @@ export const FREE_MIN = 9;
 export const FREE_MAX = 14;
 /** Fewer chapters for a store with little to show (fewer than 6 photos): 7, not 9. Owner 2026-11-16 («the site should contain
  *  pictures that are also on product cards»): a product's photo counts too — it may go in a section as well as on its card. */
-export const freeMin = (context: Pick<V2Context, 'photos'>) => context.photos.length < 6 ? 7 : FREE_MIN;
+export const freeMin = (context: Pick<V2Context, 'photos' | 'creative'>) => context.creative ? 5 : context.photos.length < 6 ? 7 : FREE_MIN;
 
 const FREE_SIZES = `Los tamaños son tuyos: el KIT (es-section, es-eyebrow, es-h2, es-lead,
    es-btn, es-grid, es-split, es-media) es la base que puedes usar, y tus clases propias deciden su escala —un titular de marca enorme,
@@ -258,7 +284,7 @@ export function v2DirectionInput(context: V2Context): string {
   const header = `\n\nCABECERA: over=true solo si la portada empieza con una foto o un color a todo el ancho (laps, lift, hearthen, zippa, libre); entonces tone=light sobre foto oscura, dark sobre clara. links=pills para marcas juguetonas (cada enlace una pastilla). announce: 0–3 mensajes REALES cortos (envío, retiro, oferta real), nunca inventados.${context.headersUsed?.length ? ` Tus otras tiendas ya usan ${context.headersUsed.join(', ')} (over:links): usa otra combinación.` : ''}`;
   const menu = `\n\nMENÚ: elige UNO de estos modelos, el que mejor venda en ESTA tienda (nunca otro): ${menus.map(m => `${m.id}: ${m.fits}`).join(' · ')}.
 Grupos con nombres cortos y claros (máx. 28 letras), como mucho 7 arriba; enlaces con to: all, new, category:<id>, collection:<slug>, page:about|contact|shipping|faq, section:<id>; fotos solo de las rutas de la tienda, cada una una vez. Tu CSS puede vestir .pym-panel[data-model=…] y sus partes .pym-*.`;
-  return `${facts(context)}${(context.cutouts?.length ?? 0) >= 2 ? '\n\nVITRINAS: con los recortes la portada puede tener UNA vitrina de la plataforma justo después de la primera pantalla: ProductStage (un producto por pantalla, cada uno con su color de fondo y un titular de cartel partido alrededor del producto, como LIFT) o, para ropa, HangingRail (prendas en un riel, como ATELIER). Si la usas, nómbrala en los capítulos y da los colores de fondo de cada pantalla.' : ''}` + hero + header + menu;
+  return `${factsAll(context)}${(context.cutouts?.length ?? 0) >= 2 ? '\n\nVITRINAS: con los recortes la portada puede tener UNA vitrina de la plataforma justo después de la primera pantalla: ProductStage (un producto por pantalla, cada uno con su color de fondo y un titular de cartel partido alrededor del producto, como LIFT) o, para ropa, HangingRail (prendas en un riel, como ATELIER). Si la usas, nómbrala en los capítulos y da los colores de fondo de cada pantalla.' : ''}` + hero + header + menu;
 }
 
 /** The writer works in two calls so each answer fits the ChatGPT bridge's 10-minute request (live 2026-11-14: all four files in one
@@ -307,7 +333,8 @@ export function joinV2Parts(system: { files: V2File[] }, pages: { files: V2File[
 export const OWN_MENU = `TU MENÚ: lo creas tú. Pasa a NavShell menu={<div className="…">…</div>} con el menú de ESTA tienda: sus grupos (categorías reales,
 páginas como Nosotros o Contacto), los enlaces, fotos de la tienda (assets/…) y palabras de la marca, con la forma que la marca pida
 (panel lateral, pantalla completa, mega menú con fotos, lista enorme, tarjetas…). NavShell lo abre y lo cierra (su botón aparece en todas
-las pantallas, Escape, foco) y pone su botón de cerrar; tú das TODO el estilo con panelClassName="…" y tus clases. El panel sale
+las pantallas, Escape, foco) y pone su botón de cerrar; tú das TODO el estilo con panelClassName="…" y tus clases (el panel se dibuja al nivel de la página, fuera de la cabecera: no lo
+estiles a través de las clases de la cabecera). El panel sale
 por la izquierda a toda la altura y mide hasta 1100 px de ancho (dale tu propio width si lo quieres más angosto o a pantalla completa); en el
 teléfono ocupa todo el ancho: tus columnas pasan a una sola. Enlaces: categoría
 productos.html?f_categoria=<Nombre>, todo productos.html, páginas nosotros.html, contacto.html, envios.html, faq.html.`;
@@ -351,7 +378,7 @@ const LOOSE_KEEPS = /Shell\.tsx debe exportar|CommerceSlots|NavShell|al menos un
 function looseWriterInput(context: V2Context, part: V2Part, feedback: string[], previous?: V2File[], system?: V2File[]): string {
   const mine = previous?.filter(file => V2_PART_FILES[part].includes(file.path));
   return `${LOOSE_TASK[part]}${part === 'system' ? `\n${OWN_MENU}\n\nFUENTES que puedes usar (id · familia · rol · carácter; @font-face con src: url(assets/<id>.ttf)):\n${fonts()}` : ''}
-${facts(context)}
+${factsAll(context)}
 ${system?.length ? `\nSISTEMA DE DISEÑO YA ESCRITO:\n${system.map(file => `--- ${file.path}\n${file.content}`).join('\n')}\n` : ''}${feedback.length ? `\nLA VERSIÓN ANTERIOR TIENE ESTOS PROBLEMAS (solo lo que impide que la tienda funcione); corrígelos y devuelve tus archivos completos:\n${feedback.map(line => `- ${line}`).join('\n')}\n` : ''}${mine?.length ? `\nTUS ARCHIVOS ANTERIORES:\n${mine.map(file => `--- ${file.path}\n${file.content}`).join('\n')}\n` : ''}`;
 }
 
@@ -477,7 +504,7 @@ export function v2WriterInput(context: V2Context, direction: V2Direction, part: 
 ${context.ownCards ? `\nEL COMERCIANTE PIDIÓ TARJETAS DE PRODUCTO PROPIAS: esta vez SÍ diseñas .menu-item y sus partes (.menu-item__image, .menu-item__copy h3,
 .menu-item__price, .menu-add) y la retícula de data-pagosya-catalog. El nombre siempre horizontal y legible, la foto sin estirar,
 el botón de agregar con su tamaño (nunca una barra entera para un «+»), y en el teléfono dos columnas.\n` : ''}
-${facts(context)}${part === 'system' && context.menu?.model ? menuStyleBrief(context.menu.model) : ''}${part === 'system' && context.basic ? `\n\n${OWN_MENU}` : ''}
+${factsAll(context)}${part === 'system' && context.menu?.model ? menuStyleBrief(context.menu.model) : ''}${part === 'system' && context.basic ? `\n\n${OWN_MENU}` : ''}
 ${part === 'pages' && library ? `\nBIBLIOTECA DE SECCIONES (id · rol · lo que necesita · para qué sirve):\n${v2LibraryCatalogText()}\n\nDATOS REALES PARA LA BIBLIOTECA (productos por id o nombre, categorías, códigos, servicios, lugar, opiniones, redes):\n${library.facts}\n` : ''}
 DIRECCIÓN DE ARTE (síguela):
 ${part === 'product' ? JSON.stringify(direction) : JSON.stringify(direction, null, 2)}
@@ -905,6 +932,13 @@ export function v2ContractProblems(files: readonly V2File[], context: V2Context)
   // A slot named in a list the page maps over («['gallery', 'title'].map(…)») counts too (live 2026-11-14, Pawby and Remolino).
   for (const slot of ['gallery', 'title', 'pricing', 'buy']) if (!new RegExp(`["'\`]${slot}["'\`]`).test(product)) problems.push(`Falta el hueco obligatorio «${slot}» en la página de producto (<KitSlot kind="product" name="${slot}" />).`);
   if (/!important/.test(css)) problems.push('No uses !important en globals.css.');
+  // Owner 2026-11-17 (creative Meat House r4: «i prefer more standard product cards»): products show in the platform's cards; a home
+  // that lists several products in its own cards with their own add buttons goes back. One featured product keeps its button.
+  if (!context.ownCards && /data-add=/.test(home)) {
+    const outside = home.replace(/data-products=(["'])[^"']*\1|data-pagosya-spotlight=(["'])[^"']*\2/g, '');
+    const listed = context.products.filter(product => outside.includes(product.id)).length;
+    if (listed >= 2) problems.push('Armaste tus propias tarjetas de producto (varios productos con su propio botón de agregar): muestra los productos con <div data-pagosya-catalog data-products="id,id" /> — las tarjetas de la plataforma —; tu diseño va alrededor (título, fondo, composición). Un solo producto destacado puede tener su botón.');
+  }
   // Owner 2026-11-16 («personalize the css of each menu with the thematic of each store»): the menu is dressed, not left as the kit drew it.
   const menuStyle = menuStyleProblem(css, context.menu?.model);
   if (menuStyle) problems.push(menuStyle);
@@ -1019,7 +1053,7 @@ La página de producto la escribe otra llamada: no la toques.`;
 
 ${rules}
 ${context.animated ? `\n${ANIMATED_RULES}\n` : ''}${showcaseRules(context, half === 'a' ? 'stage' : 'rail') ? `\n${showcaseRules(context, half === 'a' ? 'stage' : 'rail')}\n` : ''}
-${facts(context)}
+${factsAll(context)}
 
 BIBLIOTECA DE SECCIONES (id · rol · lo que necesita · para qué sirve):
 ${v2LibraryCatalogText()}

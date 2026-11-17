@@ -84,6 +84,8 @@ export const V2_CARD_SHEET = `/* v2:cards — the platform's product card; colou
 .menu-item[data-product-id] :is(.menu-item__points,.menu-item__deal,.menu-item__colors,.menu-item__options){margin:0;padding:0;list-style:none;font-size:12.5px;line-height:1.35;opacity:.75}
 /* Owner 2026-11-16 («i liked also when the inside of product cards were more filled with things»): the card keeps its description
    (two lines, quieter than the name) and its points as small tags; the name stays in the display face. */
+/* Owner 2026-11-17 (creative Meat House r4: «they should not be tilted»): a product card always sits straight. */
+.menu-item[data-product-id]{rotate:none}
 .menu-item[data-product-id] .menu-item__copy > p:not([class]){margin:2px 0 0;font-size:13px;line-height:1.45;opacity:.72;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .menu-item[data-product-id] .menu-item__points{display:flex;flex-wrap:wrap;gap:4px 6px;margin:6px 0 2px}
 .menu-item[data-product-id] .menu-item__points li{padding:2px 8px;border:1px solid var(--kit-line,color-mix(in srgb,currentColor 18%,transparent));border-radius:999px;font-size:11.5px;line-height:1.4;opacity:.9}

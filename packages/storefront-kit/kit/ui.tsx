@@ -1797,6 +1797,9 @@ const NAV_CSS = `
 .ui-nav__toggles{display:none;align-items:center}
 .ui-nav[data-structure=drawer] .ui-nav__toggles{display:inline-flex}
 .ui-nav[data-own-menu] .ui-nav__toggles{display:inline-flex}
+/* Owner 2026-11-17 (BOXY: the menu opened empty): a header with a blur, filter or transform traps its fixed panel in the header's
+   own box; while the panel is open the header drops them, so the panel covers the screen. */
+.ui-nav:has(> .ui-nav__panel-wrap:not([hidden])){-webkit-backdrop-filter:none!important;backdrop-filter:none!important;filter:none!important;transform:none!important;contain:none!important}
 /* Owner 2026-11-16 (Taller Lienzo: «why the header looks weird»): on a wide screen the own menu's button takes a column of its own, so the
    icons never fall to a second row (bar: button · brand · links · icons; split: button · links · brand · links + icons). */
 @media (min-width:768px){
@@ -1815,7 +1818,7 @@ const NAV_CSS = `
 :where(.ui-nav__panel-links a){font-family:var(--es-heading,inherit);font-size:24px}
 :where(.ui-nav__panel-tools){margin-top:16px;padding-top:12px;border-top:1px solid color-mix(in srgb,currentColor 15%,transparent)}
 /* Owner 2026-11-16: a menu the design wrote is laid out wide (its columns, photos, big words); the design's own width still wins. */
-:where(.ui-nav[data-own-menu] .ui-nav__panel){width:min(1100px,100vw);padding:20px clamp(24px,4vw,56px) 40px}
+:where(.ui-nav__panel-wrap[data-own-menu] .ui-nav__panel){width:min(1100px,100vw);padding:20px clamp(24px,4vw,56px) 40px}
 @media (max-width:767px){
   .ui-nav .ui-nav__bar{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:none}
   .ui-nav .ui-nav__links{display:none!important}
@@ -1980,7 +1983,7 @@ export function NavShell({ brand, links = [], structure = 'bar', actions = 'icon
         : structure === 'centered' ? <>{brandNode}{actionNodes}{row(links)}</>
         : <>{brandNode}{row(links)}{actionNodes}</>}
     </div>
-    <div id={panelId} className="ui-nav__panel-wrap" hidden={!open} onClick={event => { if (event.target === event.currentTarget) setOpen(false); }}>
+    <div id={panelId} className="ui-nav__panel-wrap" data-own-menu={menu ? '' : undefined} hidden={!open} onClick={event => { if (event.target === event.currentTarget) setOpen(false); }}>
       <div ref={panelRef} className={join('ui-nav__panel', panelClassName)} role="dialog" aria-modal="true" aria-label="Menú" onClick={event => { if ((event.target as HTMLElement).closest('a[href],[data-cart-open]')) setOpen(false); }}>
         <button type="button" className="ui-nav__close" aria-label="Cerrar menú" onClick={() => { setOpen(false); toggleRef.current?.focus({ preventScroll: true }); }}>×</button>
         {menu ?? <>

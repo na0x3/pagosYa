@@ -23,6 +23,8 @@ class V2PrototypeDto {
   @IsOptional() @IsBoolean() loose?: boolean;
   /** «nov14»: the rules Gramiyaa r3 was built with (free mode, basic breakage checks only). */
   @IsOptional() @IsIn(['nov14', 'strict']) rules?: string;
+  /** Owner 2026-11-17: the creative setting (concept step, no average-store rules or craft bans). */
+  @IsOptional() @IsBoolean() creative?: boolean;
 }
 
 class V2StudyDto {
@@ -57,10 +59,12 @@ export class SourceV2PrototypeController {
 
   /** Owner 2026-11-15: YAPI looks at screenshots of the latest V2 design and fixes what it sees (background; GET reports it). */
   @Post('look')
-  look(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() body: { notes?: unknown } = {}) {
+  look(@CurrentMerchant() merchant: { id: string }, @Param('storeId') storeId: string, @Body() body: { notes?: unknown; model?: unknown } = {}) {
     // Notes from whoever reviewed the store (owner 2026-11-15: the leftovers a look missed) are fixed first, then looked at.
     const notes = Array.isArray(body?.notes) ? body.notes.filter((line): line is string => typeof line === 'string' && Boolean(line.trim())).slice(0, 8).map(line => line.slice(0, 600)) : [];
-    return this.v2.startLook(merchant.id, storeId, notes);
+    // Owner 2026-11-17: a fix on a Claude model when asked (only the Claude models V2 accepts).
+    const model = typeof body?.model === 'string' && ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-haiku-5-5'].includes(body.model) ? body.model : undefined;
+    return this.v2.startLook(merchant.id, storeId, notes, model);
   }
 
   /** The study library (owner 2026-11-14): writes the recipe card of every captured reference store that has none yet. */

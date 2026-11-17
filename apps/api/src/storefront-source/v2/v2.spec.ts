@@ -24,7 +24,7 @@ import { allowedMenus, cleanMenu, menuParts, menuProblems, V2_MENU_MODELS, v2Men
 import { SourceV2PrototypeController } from './v2-prototype.controller';
 import { capHeight, withPhotoCaps } from './v2-settle';
 import { claudeJson, claudeSchema } from './v2-claude';
-import { V2_LOOSE_PROMPT, v2WriterPrompt } from './v2-prompts';
+import { V2_LOOSE_PROMPT, v2WriterPrompt, creativeText, V2_CREATIVE_RULES, V2_MODERN_RULES } from './v2-prompts';
 
 const context: V2Context = {
   storeName: 'Oh Belly', tagline: '', about: '', request: 'sodas', checkoutMode: 'payment', categories: ['Sodas'],
@@ -1076,4 +1076,26 @@ describe('the showcases rotate (owner 2026-11-16 «i really like that one but i 
     expect(showcaseRules({ ...cuts, showcasesUsed: ['stage'] } as never, 'stage')).toBe('');
     expect(showcaseRules({ ...cuts, showcasesUsed: ['stage', 'rail'] } as never, 'both')).toBe('');
   });
+});
+
+describe('the creative setting (owner 2026-11-17 «very creative and innovative layouts»)', () => {
+  it('swaps the average-store rules and the craft bans for an invitation to invent, and lets the home be shorter', () => {
+    const writer = creativeText(v2WriterPrompt(true));
+    expect(writer).not.toMatch(/BORDES Y FORMAS: nunca dibujes formas/);
+    expect(writer).toMatch(/OFICIO CREATIVO: puedes usar formas, máscaras, clip-path/);
+    expect(writer).toMatch(/NUNCA \(fallas/);
+    const pages = creativeText(writerInput({ ...context, free: true, basic: true } as never, {} as never, 'pages'));
+    expect(pages).not.toContain(V2_MODERN_RULES);
+    expect(pages).toContain(V2_CREATIVE_RULES);
+    expect(writerInput({ ...context, free: true, concept: 'Carnicería de cartel: …' } as never, {} as never, 'pages')).toMatch(/CONCEPTO ELEGIDO[\s\S]*Carnicería de cartel/);
+    expect(freeMin({ photos: [], creative: true } as never)).toBe(5);
+  });
+});
+
+it('owner 2026-11-17 («more standard product cards»): a home that builds its own product cards goes back; one featured product may keep its button', () => {
+  const two = { ...context, products: [...context.products, { id: 'p2', name: 'Otra', category: 'Sodas', about: '', photos: 1 }] };
+  const own = good.map(file => file.path === 'components/home.tsx' ? { ...file, content: file.content.replace('<main id="contenido">', `<main id="contenido"><ul>{['p1', 'p2'].map(id => <li key={id}><button data-add={id}>+</button></li>)}</ul>`) } : file);
+  expect(v2ContractProblems(own, two as never).join()).toMatch(/Armaste tus propias tarjetas de producto/);
+  const one = good.map(file => file.path === 'components/home.tsx' ? { ...file, content: file.content.replace('<main id="contenido">', `<main id="contenido"><button data-add="p1">Agregar</button>`) } : file);
+  expect(v2ContractProblems(one, two as never).join()).not.toMatch(/propias tarjetas/);
 });

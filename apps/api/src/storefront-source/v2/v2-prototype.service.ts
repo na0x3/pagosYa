@@ -17,6 +17,7 @@ import { sourceVisualState } from '../source-visual-state';
 import { templateQaFindings } from '../source-template-qa';
 import type { SourceProjectSnapshot } from '../source-project';
 import { assembleV2Files, photoDataUrl, readConfigData, v2Context, type V2Context, type V2Cutout, withStoreSettings } from './v2-context';
+import { creativeText, V2_CONCEPT_PROMPT, v2ConceptSchema } from './v2-prompts';
 import { ANIMATED_RULES, composeV2Home, readV2Half, v2HalfInput, v2HalfSchema, type V2Half } from './v2-prompts';
 import { joinV2Parts, mergeV2Fix, readV2Part, v2Hint, v2Repairs, v2FixInput, v2FixPrompt, v2FixSchema, v2DirectionInput, v2DirectionPrompt, v2DirectionSchema, v2WriterInput, v2WriterPrompt, v2WriterSchema, type V2Direction, type V2Part } from './v2-prompts';
 import type { V2File } from './v2-context';
@@ -81,6 +82,8 @@ export type V2RunState = {
   loose?: boolean;
   /** Owner 2026-11-16: the Nov 14 rule set (Gramiyaa r3) for this run. */
   basic?: boolean;
+  /** Owner 2026-11-17: the creative setting for this run, and the concept it chose. */
+  creative?: boolean; concept?: { name: string; idea: string; why: string };
   stages: Stage[]; direction?: V2Direction; attempts?: V2Attempt[]; usd: number;
   /** Spec 2026-11-16 store quality, Part 4: the rules behind each checked attempt («desktop:rule», «phone:rule»). */
   inspections?: Array<{ at: string; rules: string[] }>;
@@ -116,7 +119,7 @@ export class SourceV2PrototypeService {
     return this.runs.get(storeId) ?? null;
   }
 
-  async start(merchantId: string, storeId: string, input: { revision?: number; references?: string[]; restyleCards?: boolean; animated?: boolean; model?: string; maxUsd?: number; free?: boolean; remix?: string; loose?: boolean; rules?: string }) {
+  async start(merchantId: string, storeId: string, input: { revision?: number; references?: string[]; restyleCards?: boolean; animated?: boolean; model?: string; maxUsd?: number; free?: boolean; remix?: string; loose?: boolean; rules?: string; creative?: boolean }) {
     this.enabled();
     if (this.runs.get(storeId)?.status === 'RUNNING') throw new ConflictException('Ya hay un diseño V2 en curso para esta tienda.');
     // The design starts from the store's last template revision, not from an earlier V2 design: its data and the library's code
@@ -127,7 +130,7 @@ export class SourceV2PrototypeService {
     const references = remix ? [remix] : (input.references ?? []).filter(url => /^https:\/\//.test(url)).slice(0, 2);
     const state: V2RunState = { status: 'RUNNING', startedAt: new Date().toISOString(), baseRevision: revision, stages: [], usd: 0,
       // Owner 2026-11-16: one run on a model of its own (a Claude model, paid from the Anthropic key), with a spending cap.
-      ...(input.model ? { model: input.model } : {}), ...(input.maxUsd ? { maxUsd: input.maxUsd } : {}), ...(typeof input.free === 'boolean' ? { free: input.free } : {}), ...(remix ? { remix } : {}), ...(input.loose ? { loose: true } : {}), // Owner 2026-11-16: the Nov 14 rules are the default (YAPI_V2_RULES=nov14) unless a run asks for «strict» or loose mode.
+      ...(input.model ? { model: input.model } : {}), ...(input.maxUsd ? { maxUsd: input.maxUsd } : {}), ...(typeof input.free === 'boolean' ? { free: input.free } : {}), ...(remix ? { remix } : {}), ...(input.loose ? { loose: true } : {}), ...(input.creative ? { creative: true } : {}), // Owner 2026-11-16: the Nov 14 rules are the default (YAPI_V2_RULES=nov14) unless a run asks for «strict» or loose mode.
       ...(input.rules === 'nov14' || (!input.rules && !input.loose && process.env.YAPI_V2_RULES === 'nov14') ? { basic: true } : {}) };
     this.runs.set(storeId, state);
     void this.run(merchantId, storeId, revision, references, state, input.restyleCards === true, input.animated === true).catch(error => {
@@ -282,6 +285,8 @@ export class SourceV2PrototypeService {
     // Loose mode: the design owns the cards too, and only what keeps the store working is checked.
     if (state.loose) { context.loose = true; context.free = true; context.ownCards = true; }
     if (state.basic) { context.basic = true; context.free = true; }
+    // The creative setting stands on the Nov 14 rules (own menu, basic checks) and swaps the average-store rules for invention.
+    if (state.creative) { context.creative = true; context.basic = true; context.free = true; }
     if (animated) context.animated = true;
     // Owner 2026-11-15 (Amboras's showcase examples): the products' photos without their background, for the stage and the rail.
     const cut = await stage('cutouts', () => this.productCutouts(storeId, files, state.model || this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol', state), result => result.cutouts.length);
@@ -350,6 +355,13 @@ export class SourceV2PrototypeService {
     context.heroesAllowed = state.remix || context.basic || drawsLibre(storeId) ? ['libre'] : allowedHeroIdeas(history.heroes, context);
     context.menusAllowed = allowedMenus(history.menus);
     context.headersUsed = history.headers;
+    // Owner 2026-11-17: the creative setting first proposes 3 concepts and builds the boldest its photos can carry.
+    if (context.creative) {
+      const picked = await stage('concepts', () => this.call<{ concepts?: Array<{ name: string; idea: string; layout: string; signature: string; motion: string }>; pick?: number; why?: string }>(storeId, 'v2-concepts', model, V2_CONCEPT_PROMPT,
+        [{ type: 'input_text', text: v2DirectionInput(context) }, ...photos.map((image_url): Content => ({ type: 'input_image', image_url, detail: 'low' }))], v2ConceptSchema(), 'v2_concepts', 6_000, state, 'medium'));
+      const chosen = picked?.concepts?.[picked.pick ?? 0] ?? picked?.concepts?.[0];
+      if (chosen) { context.concept = `${chosen.name}: ${chosen.idea}\nPortada: ${chosen.layout}\nMomento firma: ${chosen.signature}\nMovimiento: ${chosen.motion}`; state.concept = { name: chosen.name, idea: chosen.idea, why: picked?.why ?? '' }; }
+    }
     // Loose mode has no art direction call: the writer designs everything (a remix copies its site).
     const direction = context.loose ? ({} as V2Direction) : await stage('direction', () => this.call<V2Direction>(storeId, 'v2-direction', model, v2DirectionPrompt(context.free), [
       { type: 'input_text', text: `${v2DirectionInput(context)}${context.animated ? `\n\n${ANIMATED_RULES}` : ''}` },
@@ -459,12 +471,14 @@ export class SourceV2PrototypeService {
   /** Owner 2026-11-15 («in amboras you can see in the chat their bot screenshoting the page to see if they like it»): YAPI looks at
    *  the store's latest V2 design as it is — no new design — and fixes what it sees (up to two rounds), saved as a new revision.
    *  GET reports it like a build, with each look's problems and where its screenshots were saved. */
-  async startLook(merchantId: string, storeId: string, notes: readonly string[] = []) {
+  async startLook(merchantId: string, storeId: string, notes: readonly string[] = [], model?: string) {
     this.enabled();
     if (this.runs.get(storeId)?.status === 'RUNNING') throw new ConflictException('Ya hay un diseño V2 en curso para esta tienda.');
     await this.projects.version(merchantId, storeId, await this.latest(storeId));
     const state: V2RunState = { status: 'RUNNING', startedAt: new Date().toISOString(), stages: [], usd: 0 };
     this.runs.set(storeId, state);
+    // Owner 2026-11-17: a targeted fix can run on a Claude model (paid from the Anthropic key) instead of the ChatGPT plan.
+    if (model) state.model = model;
     void this.runLook(merchantId, storeId, state, notes).catch(error => {
       state.status = 'FAILED'; state.error = String((error as Error)?.message ?? error).slice(0, 1000);
       this.log.warn(JSON.stringify({ event: 'v2_look_failed', storeId, error: state.error }));
@@ -483,7 +497,7 @@ export class SourceV2PrototypeService {
     context.cutouts = cut.cutouts;
     await this.markProductPhotos(files, context);
     await this.markWordPhotos(storeId, files, context, state);
-    const model = this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol';
+    const model = state.model || this.config.get<string>('app.yapiV2Model') || 'gpt-5.6-sol';
     state.model = model;
     const read = readV2LibraryFile(written.find(file => file.path === V2_LIBRARY_FILE)?.content ?? '');
     const lib: V2Lib = {
@@ -872,6 +886,8 @@ export class SourceV2PrototypeService {
 
   /** One strict-JSON call through the configured provider (the ChatGPT-plan bridge in dev), metered like every YAPI call. */
   private async call<T = unknown>(storeId: string, purpose: string, model: string, instructions: string, content: Content[], schema: object, name: string, maxOutput: number, state: V2RunState, effort: 'low' | 'medium' | 'high' = 'high'): Promise<T | null> {
+    // Owner 2026-11-17: in the creative setting every prompt has the average-store rules and the craft bans swapped (creativeText).
+    if (state.creative) { instructions = creativeText(instructions); content = content.map(part => part.type === 'input_text' ? { ...part, text: creativeText(part.text) } : part); }
     if (isClaude(model)) return this.callClaude<T>(storeId, purpose, model, instructions, content, schema, maxOutput, state, effort);
     const provider = sourceProvider(this.config, model);
     const started = Date.now(); let body: any = null; let status = 'FAILED';
