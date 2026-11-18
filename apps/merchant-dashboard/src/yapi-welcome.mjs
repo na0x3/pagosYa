@@ -5,10 +5,20 @@
  * that asked for another screen.
  */
 
-/** Only an entry with no screen asked for (or Inicio itself) gets the welcome; a link to Pedidos goes straight there.
- * @param {string} hash */
-export function shouldWelcome(hash) {
-  return !hash || hash === "#" || hash === "#dashboard-overview";
+/** Only an entry with no screen asked for (or Inicio itself) gets the welcome; a link to Pedidos goes straight there. Owner
+ * 2026-11-17 («i dont want to see it everytime i refresh»): once per visit — a refresh in the same tab goes straight to the panel.
+ * @param {string} hash @param {boolean} [seen] the welcome already showed in this tab */
+export function shouldWelcome(hash, seen = false) {
+  return !seen && (!hash || hash === "#" || hash === "#dashboard-overview");
+}
+
+const SEEN_KEY = "pagosya_yapi_welcome_seen";
+/** Whether this tab already showed the welcome (sessionStorage: survives a refresh, not a new tab). */
+export function welcomeSeen() {
+  try { return sessionStorage.getItem(SEEN_KEY) === "1"; } catch { return false; }
+}
+export function markWelcomeSeen() {
+  try { sessionStorage.setItem(SEEN_KEY, "1"); } catch { /* private mode: it shows again next time */ }
 }
 
 /** The ASCII animals on a canvas; returns their disposer, or null when the engine can't start (no 2D canvas).

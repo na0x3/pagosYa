@@ -1257,8 +1257,9 @@ import { renderStoreCard, renderSuggestions } from "/src/overview-home.mjs";
   function maybeWelcome() {
     if (welcomeChecked) return;
     welcomeChecked = true;
-    import("/src/yapi-welcome.mjs").then(({ shouldWelcome, showYapiWelcome }) => {
-      if (!sessionToken || !shouldWelcome(entryHash)) return;
+    import("/src/yapi-welcome.mjs").then(({ shouldWelcome, showYapiWelcome, welcomeSeen, markWelcomeSeen }) => {
+      if (!sessionToken || !shouldWelcome(entryHash, welcomeSeen())) return;
+      markWelcomeSeen();
       welcome = showYapiWelcome({
         root: document.getElementById("yapiWelcome"),
         greeting: greetingFor(new Date(), currentProfileName),

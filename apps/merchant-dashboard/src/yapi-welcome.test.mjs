@@ -9,4 +9,7 @@ test("the welcome shows on a plain entry or Inicio, not over a deep link", () =>
   assert.equal(shouldWelcome("#dashboard-overview"), true);
   assert.equal(shouldWelcome("#dashboard-orders"), false);
   assert.equal(shouldWelcome("#dashboard-workspace"), false);
+  // Owner 2026-11-17 («i dont want to see it everytime i refresh»): once it showed in this tab, a refresh goes to the panel.
+  assert.equal(shouldWelcome("", true), false);
+  assert.equal(shouldWelcome("#dashboard-overview", true), false);
 });
