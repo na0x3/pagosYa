@@ -6,9 +6,10 @@ import { normalizeProductVariants, totalVariantStock, type ProductVariant } from
 import { applyVariantOperations, type SourceVariantOperation } from './source-product-options';
 import type { LayoutBlock } from './source-section-library';
 import type { StoreMenu } from './source-store-menu';
+import { productMediaProblem } from './source-agent-product-media';
 import { STORE_CAPS, block, bs, oneLine, photoRef, priceCents, safe, short, type StoreEditPhoto, type StoreEditProduct, type StoreEditState } from './source-store-edit';
 
-export const CATALOG_KINDS = ['product-add', 'product-archive', 'product-restore', 'product-stock', 'product-category', 'option-add', 'option-remove',
+export const CATALOG_KINDS = ['product-add', 'product-archive', 'product-restore', 'product-stock', 'product-category', 'product-photo', 'option-add', 'option-remove',
   'option-price', 'option-stock', 'category-add', 'category-rename', 'category-remove', 'category-move', 'code-add', 'code-off', 'code-on', 'code-show'] as const;
 export type CatalogKind = typeof CATALOG_KINDS[number];
 export type CatalogOp = { kind: CatalogKind; at: number; name: string; price: string; stock: string; text: string; category: string; photo: string; option: string; value: string };
@@ -67,6 +68,7 @@ que no se usan: at -1, el resto ""):
   «archivados»): at = su número en esa lista.
 - product-stock: at, stock («5», «sin límite», «agotado»). Un producto con opciones lleva option-stock por opción.
 - product-category: at, category = el nombre de la categoría ("" = sin categoría).
+- product-photo: at, photo = una foto de «fotos» (f0, f1…) que se agrega a la galería de ese producto (owner 2026-11-17: «agrega otra foto al…»).
 - option-add (at, option = el nombre, price, stock), option-remove (at, option), option-price (at, option, price), option-stock
   (at, option, stock): las opciones de un producto de «productos», por su nombre. Si el producto tiene «grupos», una opción nueva
   lleva cada grupo: «Color: Verde» o «Color: Verde / Talla: M».
@@ -122,7 +124,7 @@ const listNames = (names: readonly string[]) => names.length > 1 ? `${names.slic
 /** An existing category id, or `new:<n>` for the n-th category this change creates. */
 export type CategoryRef = string;
 export type CatalogNewProduct = { name: string; description: string; amount: number; currency: string; imageUrls: string[]; stock: number | null; variants: ProductVariant[]; categoryRef: CategoryRef | null };
-export type CatalogProductUpdate = { id: string; status?: 'ACTIVE' | 'ARCHIVED'; stock?: number | null; categoryRef?: CategoryRef | null; variantOps?: SourceVariantOperation[] };
+export type CatalogProductUpdate = { id: string; status?: 'ACTIVE' | 'ARCHIVED'; stock?: number | null; categoryRef?: CategoryRef | null; addMedia?: string[]; variantOps?: SourceVariantOperation[] };
 export type CatalogChange = {
   categories: { create: Array<{ ref: string; name: string }>; rename: Array<{ id: string; name: string }>; remove: Array<{ id: string; name: string }>; order?: string[] };
   products: { create: CatalogNewProduct[]; update: CatalogProductUpdate[] };
@@ -316,6 +318,19 @@ export function applyCatalogOps(state: StoreEditState, ops: readonly CatalogOp[]
         if (stock === item.stock) break;
         productUpdate(item.id).stock = stock;
         done.push(stock === null ? `«${short(item.name, 40)}» ya no tiene límite de stock` : stock === 0 ? `«${short(item.name, 40)}» está agotado` : `quedan ${stock} de «${short(item.name, 40)}»`);
+        break;
+      }
+      case 'product-photo': {
+        const item = shown[op.at];
+        if (!item) break;
+        const url = op.photo.trim() ? photoRef(op.photo, photos) : undefined;
+        if (!url) { refused.push(`Para «${short(item.name, 40)}» necesito la foto: adjúntala al mensaje o nombra una de la tienda.`); break; }
+        const entry = productUpdate(item.id);
+        const added = entry.addMedia ?? [];
+        const problem = productMediaProblem(url, item.imageUrls, added);
+        if (problem) { refused.push(`«${short(item.name, 40)}»: ${problem}`); break; }
+        entry.addMedia = [...added, url];
+        done.push(`agregué una foto a «${short(item.name, 40)}»`);
         break;
       }
       case 'product-category': {

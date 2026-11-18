@@ -5,6 +5,7 @@ import type { Prisma } from '@prisma/client';
 import { totalVariantStock, type ProductVariant } from '../payment-links/product-variants';
 import { applyVariantOperations } from './source-product-options';
 import type { CatalogChange } from './source-catalog-edit';
+import { withProductMedia } from './source-agent-product-media';
 
 export async function writeCatalogChange(tx: Prisma.TransactionClient, storeId: string, change: CatalogChange): Promise<void> {
   const made = new Map<string, string>();
@@ -24,12 +25,13 @@ export async function writeCatalogChange(tx: Prisma.TransactionClient, storeId: 
   for (const update of change.products.update) {
     // Options are re-read under a row lock: a sale between the chat's read and this write keeps its stock.
     if (update.variantOps?.length) await tx.$queryRaw`SELECT id FROM "PaymentLink" WHERE id = ${update.id} AND "storeId" = ${storeId} FOR UPDATE`;
-    const existing = await tx.paymentLink.findFirst({ where: { id: update.id, storeId }, select: { id: true, variants: true } });
+    const existing = await tx.paymentLink.findFirst({ where: { id: update.id, storeId }, select: { id: true, variants: true, imageUrls: true, imagePositions: true } });
     if (!existing) continue;
     const variants = update.variantOps?.length
       ? applyVariantOperations((Array.isArray(existing.variants) ? existing.variants : []) as unknown as ProductVariant[], update.variantOps) : undefined;
     await tx.paymentLink.update({ where: { id: existing.id }, data: {
       ...(update.status ? { status: update.status } : {}),
+      ...(update.addMedia?.length ? withProductMedia(existing.imageUrls, existing.imagePositions, update.addMedia) : {}),
       ...(update.stock !== undefined ? { stock: update.stock } : {}),
       ...(update.categoryRef !== undefined ? { categoryId: categoryId(update.categoryRef) } : {}),
       ...(variants ? { variants: variants as unknown as Prisma.InputJsonValue, amount: Math.min(...variants.map(variant => variant.amount)),
