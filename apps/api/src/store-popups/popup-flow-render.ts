@@ -10,7 +10,7 @@ const ORIGIN = 'https://popup-check.invalid';
 export type FlowStepMeasure = { stepId: string; size: { width: number; height: number }; close: PopupBox | null; closeHit: boolean; scrollWidth: number; dialog: PopupBox | null;
   /** The popup's own content edges: a modal sits in the top layer, so an overflowing card never widens the page's scroll. */
   contentLeft: number; contentRight: number;
-  contrastFails: string[]; /** Words squeezed into a sliver (one syllable per line). */ squashed: string[]; fieldsTypeable: boolean | null; tiles: number | null; tileImages: number | null; screenshot: Buffer };
+  contrastFails: string[]; /** Words squeezed into a sliver (one syllable per line). */ squashed: string[]; /** Words another part of the popup sits on. */ covered: string[]; fieldsTypeable: boolean | null; tiles: number | null; tileImages: number | null; screenshot: Buffer };
 export type FlowRenderInput = { storeName: string; design: { id: string; flow: unknown; steps: Record<string, string>; css: string; capture: string; percent: number };
   items: unknown[]; photos: Record<string, { bytes: Buffer; contentType: string }> };
 
@@ -53,6 +53,7 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
   };
   const contrastFails: string[] = [];
   const squashed: string[] = [];
+  const covered: string[] = [];
   // Decoration (data-art) may burst past the edges and is not text: it is left out of the text and edge checks.
   const isArt = (el: Element) => Boolean(el.closest('[data-art]'));
   for (const el of Array.from(root?.querySelectorAll('*') ?? []).filter(el => !isArt(el))) {
@@ -61,6 +62,9 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
     if (!own || !b?.visible) continue;
     const words = (el.textContent ?? '').trim();
     if (words.replace(/\s/g, '').length >= 4 && b.width < parseFloat(getComputedStyle(el).fontSize) * 2.2) squashed.push(words.slice(0, 40));
+    const cx = b.x + Math.min(b.width, 24) / 2, cy = b.y + b.height / 2;
+    const top = cx >= 0 && cy >= 0 && cx < innerWidth && cy < innerHeight ? document.elementFromPoint(cx, cy) : null;
+    if (top && top !== el && !el.contains(top) && !top.contains(el)) covered.push(words.slice(0, 40));
     const fg = rgb(getComputedStyle(el).color), bg = background(el);
     if (!fg || !bg) continue;
     const [hi, lo] = [lum(fg), lum(bg)].sort((x, y) => y - x);
@@ -69,7 +73,7 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
   const tiles = root?.querySelectorAll('[data-tile]') ?? null;
   const edges = Array.from(root?.querySelectorAll('*') ?? []).filter(el => !el.closest('[data-art]')).map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
   return { contentLeft: edges.length ? Math.min(...edges.map(r => r.left)) : 0, contentRight: edges.length ? Math.max(...edges.map(r => r.right)) : 0, close: closeBox, closeHit: Boolean(close && hit && (close === hit || close.contains(hit))), scrollWidth: document.documentElement.scrollWidth, dialog: box(dialog),
-    contrastFails, squashed, tiles: tiles && tiles.length ? tiles.length : null,
+    contrastFails, squashed, covered, tiles: tiles && tiles.length ? tiles.length : null,
     tileImages: tiles && tiles.length ? Array.from(tiles).filter(t => ((t.querySelector('img') as HTMLImageElement | null)?.naturalWidth ?? 0) > 0).length : null };
 }
 
@@ -125,6 +129,7 @@ export function checkFlowRender(measures: FlowStepMeasure[]): string[] {
     }
     if (m.scrollWidth > m.size.width + 1 || (m.dialog && m.dialog.width > m.size.width + 1) || m.contentRight > m.size.width + 1 || m.contentLeft < -1) problems.push(`${where}: el popup se sale a lo ancho.`);
     if (m.contrastFails.length) problems.push(`${where}: poco contraste en «${m.contrastFails[0]}».`);
+    if (m.covered?.length) problems.push(`${where}: texto tapado por otra parte del popup en «${m.covered[0]}».`);
     if (m.squashed?.length) problems.push(`${where}: texto aplastado en «${m.squashed[0]}» (una o dos letras por línea).`);
     if (Math.abs((m.contentLeft + m.contentRight) / 2 - m.size.width / 2) > 40 && m.contentRight - m.contentLeft < m.size.width - 40) problems.push(`${where}: el popup no queda centrado.`);
     if (m.fieldsTypeable === false) problems.push(`${where}: no se puede escribir en el campo.`);

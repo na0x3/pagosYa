@@ -529,7 +529,8 @@
         (submit?.parentElement || root).append(consent);
       }
       if (step.kind === 'reveal') {
-        root.querySelectorAll('[data-slot=code]').forEach(el => { el.textContent = memory.code; });
+        // A preview that opens on this step has no real code yet: it shows a sample so the ticket never looks empty.
+        root.querySelectorAll('[data-slot=code]').forEach(el => { el.textContent = memory.code || (demo ? 'POPDEMO10' : ''); });
         root.querySelectorAll('[data-slot=percent]').forEach(el => { el.textContent = `${design.percent}%`; });
       }
       (root.querySelector('[data-next],[data-field],[data-tile],[data-choice-copy],button') || root).focus?.();

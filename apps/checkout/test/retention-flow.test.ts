@@ -231,5 +231,10 @@ describe("a YAPI popup design", () => {
     expect(w.document.querySelector("style:not([data-pya-popup])")?.textContent ?? "").toBeDefined();
     expect(Array.from(w.document.querySelectorAll("style")).some((style: any) => /\[data-art\]\{pointer-events:none/.test(style.textContent))).toBe(true);
   });
+  // Live 2026-11-18 (Remolino screenshots): a preview that opens on the code step showed an empty ticket.
+  it("shows a sample code when a preview opens on the code step", async () => {
+    const { w } = await mount();
+    w.PAGOSYA_POPUP_PREVIEW({ signupEnabled: true, popupDesign: design }, { slug: "calima", data: { items } }, "r");
+    expect(w.document.querySelector("[data-pagosya-popup-preview] [data-slot=code]").textContent).toMatch(/^[A-Z0-9]{6,}$/);
+  });
 });
-

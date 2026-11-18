@@ -58,4 +58,10 @@ describe('popup design render check', () => {
     const words = await measureFlow(base(`${sheet}.card h2{position:absolute;left:-300px;white-space:nowrap}`, { o: art, c: capture }, [flow[0], flow[2]]));
     expect(checkFlowRender(words!).join(' ')).toMatch(/se sale/);
   });
+  // Live 2026-11-18 (Remolino): the WhatsApp box sat on top of its «+591» prefix.
+  it('finds words hidden under another part of the popup', async () => {
+    const covered = '<div class="card"><button data-close aria-label="Cerrar">×</button><label class="row"><span class="pre">+591</span><input data-field="whatsapp"></label><button data-submit>Enviar</button></div>';
+    const measures = await measureFlow(base(`${SHEET}.row{position:relative;display:block}.pre{position:absolute;left:8px;top:8px}.row input{position:relative;width:100%;height:44px;background:#fff}`, { o: offer, c: covered }, [flow[0], flow[2]]));
+    expect(checkFlowRender(measures!).join(' ')).toMatch(/tapado/);
+  });
 });
