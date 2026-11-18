@@ -17,13 +17,14 @@ export function compactPreviewImageData(content: string): string {
 }
 
 /** Photos the Studio embeds into one preview before the rest stay upload links. */
-export const PREVIEW_EMBED_BYTES = 24 * 1024 * 1024;
+export const PREVIEW_EMBED_BYTES = 6 * 1024 * 1024;
 
 /** Fetch only platform uploads in Studio, never give generated code network access. */
 export function createPreviewImageLoader(apiBaseUrl: string) {
   const cache = new Map<string, Promise<string>>();
   // Copy a store (2026-11-17): Graza's 81 products and 225 photos, each embedded once per place it shows, made a page
-  // bigger than the browser can hold («Invalid string length»). Past this much, a photo stays a link to the upload
+  // bigger than the browser can hold («Invalid string length»), and 24 MB still froze the editor ~20 s (a 47 MB srcdoc).
+  // Past this much, a photo stays a link to the upload
   // folder, which the preview's rules allow, as on a published store.
   let room = PREVIEW_EMBED_BYTES;
   async function image(value: unknown): Promise<unknown> {
