@@ -19,6 +19,7 @@ export function renderPill(o: { busy: boolean; stop?: boolean; spin: 'spin' | 'p
         <div class="yapi-pill__menu" role="menu" ${o.menuOpen ? '' : 'hidden'}>
           <button type="button" role="menuitem" data-action="open-upload">Agregar fotos</button>
           <button type="button" role="menuitem" data-composer-action="create-product">Crear producto</button>
+          <button type="button" role="menuitem" data-clarification="Mejorar mi marca">✦ Mejorar mi marca</button>
         </div>
       </div>
       <button type="button" class="yapi-pill__icon" data-yapi-history-open aria-label="Ver la conversación"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></button>

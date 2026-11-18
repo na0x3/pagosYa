@@ -51,6 +51,7 @@ import { escapeHtml as escape, icon, renderStudioLogin, renderStudioComposer, st
 import { applySuggestion, dismissSuggestions, renderSuggestions, suggestionCards, type SuggestionCard } from './source-suggestions';
 import { bindStarterSwap, renderStarterSwap, showsStarterSwap, type StarterAlternative } from './source-starter-swap';
 import { planCardOf, planIntro, renderPlanCard } from './source-plan-card';
+import { brandCardOf, renderBrandCard } from './source-brand-card';
 import { renderTourChips, tourFocusPayload, tourViewOf } from './source-tour-ui';
 import { abViewOf, renderAbChips } from './source-ab-ui';
 import { checkAndStartTest } from './source-test-start';
@@ -1037,6 +1038,7 @@ export async function mountSourceStudio(app: HTMLDivElement): Promise<void> {
       ${!user && !pillMode ? renderBuildProgress(metadata.progress, false, metadata.sourceRevision ? 'saved' : 'reply') : ''}
       ${clarification?.options ? `<div class="clarification-options">${clarification.options.map(o => `<button type="button" data-clarification="${escape(o.value)}" ${disabled(busy || dirty() || historical())}>${escape(o.label)}</button>`).join('')}</div>` : ''}
       ${!user ? (() => { const card = planCardOf(message, state.revision); return card ? renderPlanCard(card, busy || dirty() || historical()) : ''; })() : ''}
+      ${!user ? (() => { const brand = brandCardOf(message); return brand ? renderBrandCard(brand) : ''; })() : ''}
       ${!user ? (() => { const tour = tourViewOf(message, messages); return tour ? renderTourChips(tour, busy || dirty() || historical()) : ''; })() : ''}
       ${!user ? (() => { const ab = abViewOf(message, messages); return ab ? renderAbChips(ab, busy || abLaunching || dirty() || historical()) : ''; })() : ''}
       ${!user && !suggestionsHidden ? (() => { const cards = suggestionCards(metadata); cards.forEach(card => suggestionIndex.set(card.id, card)); return renderSuggestions(cards, busy || dirty() || historical()) + (cards.length && suggestionNote ? `<p class="source-suggestions__note" role="status">${escape(suggestionNote)}</p>` : ''); })() : ''}

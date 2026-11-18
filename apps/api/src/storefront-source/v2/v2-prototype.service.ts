@@ -18,6 +18,7 @@ import { isNextSource, nextProjectScaffold } from '../source-next';
 import { resolveAccountTheme, snapshotWithAccountTheme } from '../account-theme';
 import { templateQaFindings } from '../source-template-qa';
 import type { SourceProjectSnapshot } from '../source-project';
+import { BRAND_BRIEF_FILE, type BrandBrief, type BrandShotKind } from '../brand/brand-brief-types';
 import { assembleV2Files, photoDataUrl, readConfigData, v2Context, type V2Context, type V2Cutout, withStoreSettings } from './v2-context';
 import { creativeText, V2_CONCEPT_PROMPT, v2ConceptSchema } from './v2-prompts';
 import { ANIMATED_RULES, composeV2Home, readV2Half, v2HalfInput, v2HalfSchema, type V2Half } from './v2-prompts';
@@ -52,6 +53,14 @@ import { layoutSignature, signatureDistance, type SectionShape } from './v2-sign
  *  call it, and nothing is published or migrated. */
 
 export const V2_LABEL = 'Diseño V2 (prototipo)';
+
+/** «Mejorar mi marca» (spec 2026-11-18 §4): a run builds from the brief it was given, or the one saved on the store, so «sigue» after a
+ *  failed build keeps the brand. Anything that is not a version-1 brief is ignored. */
+export function briefForRun(passed: BrandBrief | undefined, onboarding: unknown): BrandBrief | undefined {
+  if (passed) return passed;
+  const saved = (onboarding as { brandBrief?: BrandBrief } | null)?.brandBrief;
+  return saved && saved.version === 1 && saved.identity?.palette ? saved : undefined;
+}
 /** The remix extras call (owner 2026-11-18): the site's login look and its not-found page. */
 const REMIX_EXTRAS_PROMPT = `Copias dos páginas de un sitio a una tienda pagosYa, mirando sus capturas.
 1) INGRESO: el formulario lo dibuja la plataforma; tú eliges su forma. layout: «split» (foto a un lado, formulario al otro), «card», «minimal» o «panel», el más parecido a la captura. photo: con split, la ruta de UNA foto de la tienda (de la lista) que se parezca a la de la captura; si no, vacío. css: reglas para las partes, con selectores [data-part="card"], [data-part="title"], [data-part="input"], [data-part="submit"], [data-part="link"] (y media, lead, field, label): color, fondo, borde, radio, sombra, tipografía, mayúsculas, espaciado, como en la captura. Usa var(--ui-...) o colores hex de la paleta. Nunca ocultes, achiques ni tapes campos, botones o enlaces.
@@ -93,6 +102,8 @@ const looksDir = () => join(apiRoot(), '..', '..', 'examples', 'v2-proto', 'look
 type V2Lib = { entries: V2LibraryEntry[]; facts: ReturnType<typeof v2LibraryFacts> };
 type Stage = { stage: string; ms: number; detail?: unknown };
 export type V2RunState = {
+  /** «Mejorar mi marca» (spec 2026-11-18): the brief this run builds from. */
+  brief?: BrandBrief;
   status: 'RUNNING' | 'DONE' | 'FAILED'; startedAt: string; baseRevision?: number; revision?: number; error?: string; model?: string; maxUsd?: number;
   /** Owner 2026-11-16 («do that»): one run in library-first mode (false) or free mode (true) whatever YAPI_V2_FREE says. */
   free?: boolean;
@@ -170,9 +181,10 @@ export class SourceV2PrototypeService {
   /** Spec 2026-11-17 (V2 in the chat): a new store's first design, run inside its chat job and awaited. The model is YAPI_V2_CHAT_MODEL
    *  (default Claude Opus 5.5), capped by YAPI_V2_CHAT_MAX_USD (default $10), with the default rules (YAPI_V2_RULES). YAPI says how it
    *  went in the chat; a failure leaves the template revision and says so. */
-  async designForChat(merchantId: string, storeId: string, revision: number): Promise<{ revision: { revision: number } } | { assistantMessage: { metadata: { failed: true } } }> {
+  async designForChat(merchantId: string, storeId: string, revision: number, brief?: BrandBrief): Promise<{ revision: { revision: number } } | { assistantMessage: { metadata: { failed: true } } }> {
     if (this.runs.get(storeId)?.status === 'RUNNING') throw new ConflictException('Ya hay un diseño en curso para esta tienda.');
-    const state: V2RunState = { status: 'RUNNING', startedAt: new Date().toISOString(), baseRevision: revision, stages: [], usd: 0,
+    const runBrief = briefForRun(brief, (await this.prisma.store.findUnique({ where: { id: storeId }, select: { onboarding: true } }).catch(() => null))?.onboarding);
+    const state: V2RunState = { status: 'RUNNING', startedAt: new Date().toISOString(), baseRevision: revision, stages: [], usd: 0, ...(runBrief ? { brief: runBrief } : {}),
       model: process.env.YAPI_V2_CHAT_MODEL || 'claude-opus-5-5', maxUsd: Number(process.env.YAPI_V2_CHAT_MAX_USD) > 0 ? Number(process.env.YAPI_V2_CHAT_MAX_USD) : 10,
       ...(process.env.YAPI_V2_RULES === 'nov14' ? { basic: true } : {}),
       // Owner 2026-11-17 («why same sections are always used» … «lets do that»): the chat's first designs in the creative setting.
@@ -310,6 +322,13 @@ export class SourceV2PrototypeService {
     const files = withV2Scaffold(await this.withSettings(storeId, base.files.filter(file => !file.path.startsWith('_compiled/'))));
     const first = await this.prisma.storeAgentMessage.findFirst({ where: { thread: { storeId }, role: 'USER' }, orderBy: { createdAt: 'asc' }, select: { content: true } });
     const context = await v2Context(files, first?.content ?? '');
+    // «Mejorar mi marca»: the designer gets the brief, and the revision keeps it as brand-brief.json for later edits.
+    if (state.brief) {
+      context.brief = state.brief;
+      const at = files.findIndex(file => file.path === BRAND_BRIEF_FILE);
+      if (at >= 0) files.splice(at, 1);
+      files.push({ path: BRAND_BRIEF_FILE, content: JSON.stringify(state.brief, null, 2) } as (typeof files)[number]);
+    }
     // Product cards are the platform's unless the merchant asked for their own (in words, or the route's restyleCards).
     if (restyleCards) context.ownCards = true;
     context.free = state.free ?? this.config.get<boolean>('app.yapiV2Free') === true;
@@ -327,7 +346,7 @@ export class SourceV2PrototypeService {
       this.log.warn(JSON.stringify({ event: 'v2_library_photos_failed', storeId, error: String((error as Error)?.message ?? error) }));
       return { added: 0, sector: null as string | null };
     });
-    const own = await this.storePhotos(merchantId, storeId, files);
+    const own = await this.storePhotos(merchantId, storeId, files, state.brief?.shots);
     files.push(...own.files);
     context.photos.push(...own.photos);
     await this.markProductPhotos(files, context);
@@ -792,7 +811,7 @@ export class SourceV2PrototypeService {
   /** Owner 2026-11-16 (The Bake Lab: «too few pictures, only the product photos»): a V2 design only had the photos bundled in its
    *  template and the product cut-outs, so the brand and lifestyle photos a merchant uploaded never reached the page. The store's own
    *  uploads come along as design photos: the ones no product uses first, then product photos, at most 14, at most 1600 px. */
-  private async storePhotos(merchantId: string, storeId: string, files: readonly { path: string; content: string; encoding?: 'utf8' | 'base64' }[]) {
+  private async storePhotos(merchantId: string, storeId: string, files: readonly { path: string; content: string; encoding?: 'utf8' | 'base64' }[], campaign: BrandBrief['shots'] = []) {
     const out: { files: Array<{ path: string; content: string; encoding: 'base64' }>; photos: V2Context['photos'] } = { files: [], photos: [] };
     if (!this.uploads) return out;
     const name = (url: unknown) => /^\/v1\/uploads\/([\w-]+\.(?:png|jpe?g|webp))$/i.exec(uploadPath(String(url ?? '')))?.[1];
@@ -800,9 +819,12 @@ export class SourceV2PrototypeService {
     const products = new Set(items.flatMap(item => Array.isArray(item.imageUrls) ? item.imageUrls.map(name) : []).filter(Boolean));
     const assets = await this.prisma.mediaAsset.findMany({ where: { merchantId, storeId, mimeType: { in: ['image/jpeg', 'image/png', 'image/webp'] } },
       orderBy: { createdAt: 'asc' }, take: 80, select: { url: true } }).catch(() => [] as Array<{ url: string }>);
-    const names = [...new Set(assets.map(asset => name(asset.url)).filter((entry): entry is string => Boolean(entry)))];
+    // Campaign photos are the newest media: named here so the oldest-first page of 80 never leaves them out.
+    const names = [...new Set([...campaign.map(shot => shot.url), ...assets.map(asset => asset.url)].map(name).filter((entry): entry is string => Boolean(entry)))];
     const known = new Set(files.map(file => file.path));
-    for (const filename of [...names.filter(entry => !products.has(entry)), ...names.filter(entry => products.has(entry))]) {
+    // «Mejorar mi marca»: the campaign photos first, tagged with their shot.
+    const shotOf = new Map(campaign.map(shot => [name(shot.url), shot.kind] as const).filter((entry): entry is [string, BrandShotKind] => Boolean(entry[0])));
+    for (const filename of [...names.filter(entry => shotOf.has(entry)), ...names.filter(entry => !shotOf.has(entry) && !products.has(entry)), ...names.filter(entry => !shotOf.has(entry) && products.has(entry))]) {
       if (out.photos.length >= 14) break;
       const bytes = await this.uploads.getBuffer(filename).catch(() => null);
       if (!bytes) continue;
@@ -814,7 +836,7 @@ export class SourceV2PrototypeService {
       known.add(path);
       const ratio = made.info.width / made.info.height;
       out.files.push({ path, content: made.data.toString('base64'), encoding: 'base64' });
-      out.photos.push({ path, width: made.info.width, height: made.info.height, shape: ratio > 1.2 ? 'wide' : ratio < 0.83 ? 'tall' : 'square' });
+      out.photos.push({ path, width: made.info.width, height: made.info.height, shape: ratio > 1.2 ? 'wide' : ratio < 0.83 ? 'tall' : 'square', ...(shotOf.has(filename) ? { campaign: shotOf.get(filename) } : {}) });
     }
     return out;
   }

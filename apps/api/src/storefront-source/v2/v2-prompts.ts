@@ -4,6 +4,8 @@ import { uiRuntime } from '../source-creative';
 import { repairNextAuthoredMarkup } from '../source-next';
 import type { SourceProjectFileDto } from '../dto/save-source-project.dto';
 import { V2_FILES, type V2Context, type V2File, type V2Header } from './v2-context';
+import type { BrandBrief } from '../brand/brand-brief-types';
+import { fontFamily } from '../brand/brand-identity';
 import { menuStyleBrief, menuStyleProblem, V2_MENU_MODELS, v2MenuSchema, type V2Menu } from './v2-menus';
 import { markWordPhotos } from './v2-words';
 import { heroIdea, heroMarker, MIX_NOTE, STRONG_HERO, readHeroMarker, V2_HERO_IDEAS } from './v2-heroes';
@@ -47,7 +49,20 @@ export function v2DirectionSchema(context: V2Context): object {
     } };
 }
 
-const facts = (context: V2Context) => `TIENDA: ${context.storeName}${context.tagline ? ` — ${context.tagline}` : ''}
+/** «Mejorar mi marca» (spec 2026-11-18): the brief as hard facts — its palette and fonts ARE the store's tokens. */
+export function briefFacts(brief: BrandBrief): string {
+  const { palette, fonts } = brief.identity;
+  return `MARCA (el comerciante ya la vio en el chat; respétala exacta):
+- Identidad: ${brief.identity.oneLiner}
+- Colores (úsalos tal cual en globals.css): texto ${palette.ink} · principal ${palette.primary} · acento ${palette.accent} · secundario ${palette.secondary} · fondo ${palette.base}
+- Letras: títulos ${fontFamily(fonts.display)} · secundaria ${fontFamily(fonts.secondary)} · texto ${fontFamily(fonts.body)}
+- Voz de los textos: ${brief.identity.voice}
+- Lo que convierte en su nicho (${brief.research.niche}): ${brief.research.patterns.join(' · ')}
+- Marcas que su público conoce (referencia de nivel; no las copies ni las nombres): ${brief.research.references.map(r => r.name).join(', ')}
+- Las fotos marcadas «campaña» son su sesión de fotos: úsalas primero (hero → portada, poster → una banda, lifestyle → historia).`;
+}
+
+const facts = (context: V2Context) => `${context.brief ? `${briefFacts(context.brief)}\n` : ''}TIENDA: ${context.storeName}${context.tagline ? ` — ${context.tagline}` : ''}
 LO QUE PIDIÓ EL COMERCIANTE (sus palabras): ${context.request || '(nada más)'}
 ${context.about ? `SOBRE LA TIENDA: ${context.about}\n` : ''}CATEGORÍAS: ${context.categories.join(', ') || '(ninguna)'}
 PRODUCTOS (id · nombre · categoría · descripción):
@@ -55,7 +70,7 @@ ${context.products.map(product => `- ${product.id} · ${product.name} · ${produ
 MODO DE PAGO: ${context.checkoutMode || '(no dicho)'}${context.whatsapp ? ' · tiene WhatsApp' : ''} · PACKS ACTIVOS: ${context.packs}${context.packs ? '' : ' (no hagas una sección de packs)'}
 LUGARES: ${context.places.length ? context.places.map(place => `\n- ${place}`).join('') : '(ninguno: la tienda es solo en línea)'}
 FOTOS DE LA TIENDA (ruta · tamaño · forma), en el mismo orden que las imágenes adjuntas:
-${context.photos.map(photo => `- ${photo.path} · ${photo.width}×${photo.height} · ${photo.shape}${photo.product ? ` · es la foto del producto «${photo.product}» (sale en su tarjeta y también puede ir en una sección de la portada)` : ''}${photo.words ? ' · tiene letras: muéstrala ENTERA, nunca recortada' : ''}`).join('\n') || '(ninguna)'}${context.cutouts?.length ? `
+${context.photos.map(photo => `- ${photo.path} · ${photo.width}×${photo.height} · ${photo.shape}${photo.product ? ` · es la foto del producto «${photo.product}» (sale en su tarjeta y también puede ir en una sección de la portada)` : ''}${photo.words ? ' · tiene letras: muéstrala ENTERA, nunca recortada' : ''}${photo.campaign ? ` · campaña: ${photo.campaign}` : ''}`).join('\n') || '(ninguna)'}${context.cutouts?.length ? `
 RECORTES (fotos sin fondo; ruta · id del producto o «—» si es una foto de la tienda · nombre · tamaño):
 ${context.cutouts.map(cut => `- ${cut.path} · ${cut.product || '—'} · ${cut.name}${cut.what ? ` · muestra: ${cut.what}` : ''} · ${cut.width}×${cut.height}`).join('\n')}` : ''}`;
 

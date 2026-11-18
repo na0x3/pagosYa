@@ -43,6 +43,8 @@ export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @ValidateNested() @Type(() => SourceStylePickDto) stylePick?: SourceStylePickDto;
   /** YAPI plan card (spec 2026-10-22): build the plan YAPI showed in this message. */
   @IsOptional() @IsString() @Matches(/^[a-z0-9]{8,40}$/i) planId?: string;
+  /** «Mejorar mi marca» (spec 2026-11-18): the chip, or a message that reads as a branding request, runs the brand flow. */
+  @IsOptional() @IsBoolean() brandFlow?: boolean;
 }
 
 /** A message as the chat service runs it. personalTouch (variety spec §5) is set only by the job runner's own follow-up: it is

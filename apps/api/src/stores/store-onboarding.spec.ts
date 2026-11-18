@@ -79,3 +79,11 @@ describe('kind questions (spec 2026-10-14 store voice)', () => {
     expect(brief).toContain('¿Qué pide todo el mundo? El flat white con alfajor.');
   });
 });
+
+// Final review 2026-11-18 («Mejorar mi marca»): a walkthrough save never drops the saved brand brief.
+it('keeps the brand brief through a walkthrough save', () => {
+  const { mergeOnboarding } = require('./store-onboarding') as typeof import('./store-onboarding');
+  const merged = mergeOnboarding({ version: 1, step: 2, done: [], skipped: [], brandBrief: { version: 1, storeName: 'Calima' } }, { what: 'salsas' }) as any;
+  expect(merged.brandBrief).toEqual({ version: 1, storeName: 'Calima' });
+  expect(merged.what).toBe('salsas');
+});
