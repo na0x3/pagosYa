@@ -10,7 +10,8 @@ export const ONBOARDING_ANSWER_CHARS = 400;
 export const ONBOARDING_STEPS = ['name', 'what', 'sell', 'logo', 'photos', 'products', 'story', 'contact'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 export type OnboardingAction = { kind: PrimaryActionKind; value?: string };
-export type StoreOnboarding = { version: 1; step: number; done: string[]; skipped: string[]; what?: string; story?: string; answers?: OnboardingAnswer[]; photos?: string[]; contact?: { whatsapp?: string; city?: string }; purpose?: 'shop' | 'showcase'; primaryAction?: OnboardingAction; finishedAt?: string };
+export type StoreOnboarding = { version: 1; step: number; done: string[]; skipped: string[]; what?: string; story?: string; answers?: OnboardingAnswer[]; photos?: string[]; contact?: { whatsapp?: string; city?: string }; purpose?: 'shop' | 'showcase'; primaryAction?: OnboardingAction; finishedAt?: string;
+  /** «Mejorar mi marca» (spec 2026-11-18): the brand brief, kept through every walkthrough save. */ brandBrief?: unknown };
 export type StoreOnboardingPatch = { step?: number; done?: OnboardingStep[]; skipped?: OnboardingStep[]; what?: string; story?: string; answers?: Array<{ question?: unknown; answer?: unknown }>; photos?: string[]; contact?: { whatsapp?: string; city?: string }; purpose?: 'shop' | 'showcase'; primaryAction?: { kind?: unknown; value?: unknown }; finished?: boolean; brief?: boolean };
 
 const steps = (list: unknown[] | undefined) => (list ?? []).filter((step): step is OnboardingStep => ONBOARDING_STEPS.includes(step as OnboardingStep));
@@ -47,7 +48,8 @@ export function mergeOnboarding(current: unknown, patch: StoreOnboardingPatch): 
   return { version: 1, step: Math.max(base.step, Math.min(ONBOARDING_STEPS.length, Math.max(0, patch.step ?? 0))), done, skipped,
     ...(what ? { what } : {}), ...(story ? { story } : {}), ...(answers?.length ? { answers } : {}), ...(photos?.length ? { photos } : {}), ...(contact && Object.keys(contact).length ? { contact } : {}),
     ...(purpose ? { purpose } : {}), ...(primaryAction ? { primaryAction } : {}),
-    ...(base.finishedAt ? { finishedAt: base.finishedAt } : patch.finished ? { finishedAt: new Date().toISOString() } : {}) };
+    ...(base.finishedAt ? { finishedAt: base.finishedAt } : patch.finished ? { finishedAt: new Date().toISOString() } : {}),
+    ...(base.brandBrief ? { brandBrief: base.brandBrief } : {}) };
 }
 
 /** The kind questions the story step asks (spec 2026-10-14 store voice), from the merchant's «¿Qué vendes?» answer. */

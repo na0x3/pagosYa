@@ -91,6 +91,9 @@ export class SourceChatJobsService implements OnModuleDestroy {
     const history = await this.prisma.storeAgentMessage.findMany({ where: { thread: { storeId }, channel: 'source', role: 'ASSISTANT' }, orderBy: { createdAt: 'desc' }, take: 30, select: { id: true, metadata: true } });
     // Owner 2026-10-22: «sigue» after a request that did not finish runs that request again, as it was kept.
     // A new store (revision 0) resumes too: a failed first plan keeps its request and its setup action (final review 2026-10-22).
+    // «Mejorar mi marca» asked for screenshots or a product photo: the message that brings photos resumes it with the first words.
+    const brandAsk = (history[0]?.metadata as { brandAsk?: { instruction?: string } } | null)?.brandAsk;
+    if (!input.personalTouch && !input.brandFlow && brandAsk?.instruction && input.assetUrls?.length) input = { ...input, brandFlow: true, instruction: `${brandAsk.instruction} ${input.instruction.trim()}`.trim() };
     const pending = !input.personalTouch && continuesRequest(input.instruction) ? pendingRequestIn(history) : undefined;
     if (pending) input = { ...input, instruction: pending.instruction, resumeWords: input.instruction.trim(), ...(pending.setupAction ? { setupAction: pending.setupAction as SourceMessageInput['setupAction'] } : {}), ...(pending.direct ? { personalTouch: true, ownRequest: true } : {}),
       // A home whose sections could not be composed (2026-11-10) is composed again, from the template's own sections.

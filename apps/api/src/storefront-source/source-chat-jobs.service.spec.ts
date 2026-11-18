@@ -378,3 +378,13 @@ it('spec 2026-11-18: a branding request in words is queued as a brand-flow job',
   await service.create('m', 's', { instruction: 'quiero mejorar mi marca', revision: 2, requestId: '6f1d2c0e-1111-4c4c-9999-000000000001' } as any);
   expect(prisma.storeSourceChatJob.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ input: expect.objectContaining({ brandFlow: true }) }) }));
 });
+
+it('final review 2026-11-18: photos sent after YAPI asked for them resume the brand flow with the first words', async () => {
+  const { prisma, chat } = setup();
+  prisma.storeSourceChatJob.findUnique.mockResolvedValue(null);
+  prisma.storeAgentMessage = { findMany: jest.fn().mockResolvedValue([{ id: 'a1', metadata: { brandAsk: { instruction: 'Mejorar mi marca https://instagram.com/calima' } } }]) };
+  prisma.storeSourceChatJob.create.mockImplementation(async ({ data }: any) => ({ id: 'j', ...data, status: 'QUEUED', sequence: 0, attempt: 0, createdAt: new Date(), updatedAt: new Date() }));
+  const service = new SourceChatJobsService(prisma, chat);
+  await service.create('m', 's', { instruction: 'aquí están', assetUrls: ['/v1/uploads/p.jpg'], revision: 2, requestId: '6f1d2c0e-1111-4c4c-9999-000000000002' } as any);
+  expect(prisma.storeSourceChatJob.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ input: expect.objectContaining({ brandFlow: true, instruction: 'Mejorar mi marca https://instagram.com/calima aquí están' }) }) }));
+});

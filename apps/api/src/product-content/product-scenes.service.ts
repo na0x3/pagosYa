@@ -172,4 +172,10 @@ export class ProductScenesService {
       await this.usage?.record(storeId, 'brand-campaign-shot', model, body?.usage ? { usage: body.usage } : null, Date.now() - started, status);
     }
   }
+
+  /** «Mejorar mi marca» (final review 2026-11-18): a campaign photo that failed its check leaves the store's photos and storage. */
+  async discardCampaignShot(merchantId: string, url: string) {
+    await this.prisma.mediaAsset.deleteMany({ where: { merchantId, url, kind: 'AI_DERIVED' } });
+    await this.uploads.deleteFiles([url]);
+  }
 }

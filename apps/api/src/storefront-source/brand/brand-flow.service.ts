@@ -17,6 +17,7 @@ import { IDENTITY_SCHEMA, identityPrompt, normalizeIdentity } from './brand-iden
 import { brandCardMetadata, brandCardText, brandDoneText } from './brand-card';
 import { POSTER_READ_PROMPT, POSTER_READ_SCHEMA, posterSpelledRight, shotList, shotPrompt } from './brand-shoot';
 import { brandLinks } from './brand-intent';
+import { ONBOARDING_STEPS } from '../../stores/store-onboarding';
 
 type ChatResult = { revision: { revision: number } } | { assistantMessage: { metadata: Record<string, unknown> } };
 
@@ -51,14 +52,22 @@ export class BrandFlowService {
       record: async (body, ms, ok) => { await this.usage?.record(storeId, 'brand-flow', target.model, body, ms, ok ? 'COMPLETED' : 'FAILED'); } };
   }
 
-  private async twice<T>(attempt: () => Promise<T | null>): Promise<T | null> {
-    for (let i = 0; i < 2; i++) { const value = await attempt().catch(() => null); if (value) return value; }
+  /** Two tries; a cancelled job (the merchant stopped it, the API is restarting) stops here instead of counting as a failure. */
+  private async twice<T>(attempt: () => Promise<T | null>, signal: AbortSignal): Promise<T | null> {
+    for (let i = 0; i < 2; i++) {
+      const value = await attempt().catch(error => { if (signal.aborted) throw error; return null; });
+      if (value) return value;
+    }
     return null;
   }
 
+  /** The brief lives on the store's onboarding record (mergeOnboarding keeps it). A store from before the walkthrough gets a
+   *  finished record, so the dashboard never takes it for a walkthrough left half way (final review 2026-11-18). */
   private async saveBrief(storeId: string, brief: BrandBrief) {
     const store = await this.prisma.store.findUnique({ where: { id: storeId }, select: { onboarding: true } });
-    await this.prisma.store.update({ where: { id: storeId }, data: { onboarding: { ...((store?.onboarding as object) ?? {}), brandBrief: brief } as never } });
+    const current = store?.onboarding as { version?: number } | null | undefined;
+    const base = current && typeof current === 'object' && current.version === 1 ? current : { version: 1, step: ONBOARDING_STEPS.length, done: [], skipped: [], finishedAt: new Date().toISOString() };
+    await this.prisma.store.update({ where: { id: storeId }, data: { onboarding: { ...base, brandBrief: brief } as never } });
   }
 
   async runForChat(job: { merchantId: string; storeId: string; input: SourceMessageInput; signal: AbortSignal }): Promise<ChatResult> {
@@ -67,7 +76,8 @@ export class BrandFlowService {
     const links = brandLinks(input.instruction);
     const images = input.assetUrls ?? [];
     if (links.social && !images.length) {
-      await this.post(storeId, 'Mándame 2–3 capturas de tu perfil y fotos de tus productos y sigo con tu marca.');
+      // brandAsk: the next message with photos resumes this flow with these words (source-chat-jobs create).
+      await this.post(storeId, 'Mándame 2–3 capturas de tu perfil y fotos de tus productos y sigo con tu marca.', { brandAsk: { instruction: input.instruction } });
       return { assistantMessage: { metadata: { awaitingInput: true } } };
     }
     const store = await this.prisma.store.findUnique({ where: { id: storeId }, select: { name: true, logoUrl: true } });
@@ -77,7 +87,7 @@ export class BrandFlowService {
     // Photos and words without a catalogue: the attached photos are the shoot's references.
     const references = products.length ? products : images.map((photo, i) => ({ name: `${storeName} ${i + 1}`, photo }));
     if (!references.length) {
-      await this.post(storeId, 'Mándame una foto de tu producto para la sesión de fotos y sigo con tu marca.');
+      await this.post(storeId, 'Mándame una foto de tu producto para la sesión de fotos y sigo con tu marca.', { brandAsk: { instruction: input.instruction } });
       return { assistantMessage: { metadata: { awaitingInput: true } } };
     }
 
@@ -92,9 +102,10 @@ export class BrandFlowService {
     const research = await this.twice(async () => {
       const { json, searched } = await brandCall(deps, { text: researchPrompt({ storeName, products: references.map(p => ({ name: p.name })), country: 'Bolivia', ownWords: input.instruction, brandFacts, website: links.website }), schemaName: 'brand_research', schema: RESEARCH_SCHEMA, webSearch: true, signal });
       return parseResearch(json, searched);
-    });
-    const identity = research && await this.twice(async () => normalizeIdentity((await brandCall(deps, { text: identityPrompt({ storeName, products: references.map(p => p.name), brandFacts, research, evolve: profile.data.confirmed.length > 0 }), schemaName: 'brand_identity', schema: IDENTITY_SCHEMA, signal })).json));
+    }, signal);
+    const identity = research && await this.twice(async () => normalizeIdentity((await brandCall(deps, { text: identityPrompt({ storeName, products: references.map(p => p.name), brandFacts, research, evolve: profile.data.confirmed.length > 0 }), schemaName: 'brand_identity', schema: IDENTITY_SCHEMA, signal })).json), signal);
     if (!research || !identity) {
+      signal.throwIfAborted();
       await this.post(storeId, 'No pude completar la investigación de tu marca; diseño tu tienda como siempre.');
       return this.v2.designForChat(merchantId, storeId, revision);
     }
@@ -118,9 +129,14 @@ export class BrandFlowService {
       const take = (withText: boolean) => this.scenes.campaignShot(merchantId, storeId, { referenceUrls: shot.references, prompt: shotPrompt(shot, identity, storeName, withText), aspect: shot.aspect });
       try {
         let { url } = await take(shot.kind === 'poster');
+        // A poster whose name is misspelled is deleted before the next try, so it never reaches the store's photos.
         if (shot.kind === 'poster' && !(await this.posterReads(deps, url, storeName, signal))) {
+          await this.scenes.discardCampaignShot(merchantId, url);
           ({ url } = await take(true));
-          if (!(await this.posterReads(deps, url, storeName, signal))) ({ url } = await take(false));
+          if (!(await this.posterReads(deps, url, storeName, signal))) {
+            await this.scenes.discardCampaignShot(merchantId, url);
+            ({ url } = await take(false));
+          }
         }
         const taken: BrandShot = { kind: shot.kind, url, alt: `${storeName} — ${shot.kind}`, ...(shot.product ? { product: shot.product } : {}) };
         brief.shots.push(taken);

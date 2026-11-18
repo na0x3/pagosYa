@@ -5,9 +5,9 @@ import * as call from './brand-model-call';
 const research = { niche: 'salsas picantes', audience: 'a', references: [{ name: 'Heinz', why: 'w' }, { name: 'Cholula', why: 'w' }, { name: 'Tabasco', why: 'w' }], patterns: ['Receta junto al producto', 'Escala de picante', 'Packs'] };
 const identity = { mode: 'new', palette: { ink: '#3B1F14', primary: '#B4400A', accent: '#F2C342', secondary: '#7AA62E', base: '#F8F1E4' }, fonts: { display: 'oswald', secondary: 'fraunces', body: 'instrument' }, oneLiner: 'Sol tibio.', voice: 'de tú', photoDirection: 'tarde', scene: {} };
 
-function setup(over: { plan?: number; shot?: jest.Mock; credits?: jest.Mock; products?: unknown[]; researchFails?: boolean } = {}) {
+function setup(over: { plan?: number; shot?: jest.Mock; credits?: jest.Mock; products?: unknown[]; researchFails?: boolean; onboarding?: unknown; posterText?: string } = {}) {
   const messages: Array<{ content: string; metadata: any }> = [];
-  const store: any = { id: 's1', name: 'Calima', onboarding: {} };
+  const store: any = { id: 's1', name: 'Calima', onboarding: 'onboarding' in over ? over.onboarding : {} };
   const prisma: any = {
     store: { findUnique: jest.fn(async () => store), update: jest.fn(async ({ data }: any) => Object.assign(store, data)) },
     paymentLink: { findMany: jest.fn(async () => over.products ?? [{ name: 'Habanero', imageUrls: ['/v1/uploads/a.jpg'] }, { name: 'Serrano', imageUrls: ['/v1/uploads/b.jpg'] }, { name: 'Chipotle', imageUrls: ['/v1/uploads/c.jpg'] }]) },
@@ -16,7 +16,7 @@ function setup(over: { plan?: number; shot?: jest.Mock; credits?: jest.Mock; pro
   };
   const brands: any = { get: jest.fn(async () => ({ revision: 1, data: { confirmed: [], suggested: [] } })), analyze: jest.fn(async () => ({})) };
   let n = 0;
-  const scenes: any = { campaignShot: over.shot ?? jest.fn(async () => ({ url: `/v1/uploads/shot-${++n}.jpg` })) };
+  const scenes: any = { campaignShot: over.shot ?? jest.fn(async () => ({ url: `/v1/uploads/shot-${++n}.jpg` })), discardCampaignShot: jest.fn(async () => undefined) };
   const plans: any = { planOf: jest.fn(async () => ({ campaignPhotos: over.plan ?? 8 })), assertCredits: over.credits ?? jest.fn(async () => 100) };
   const v2: any = { designForChat: jest.fn(async () => ({ revision: { revision: 7 } })) };
   const config: any = { get: () => undefined };
@@ -24,10 +24,10 @@ function setup(over: { plan?: number; shot?: jest.Mock; credits?: jest.Mock; pro
   jest.spyOn(call, 'brandCall').mockImplementation(async (_deps, req) => {
     if (req.schemaName === 'brand_research') { if (over.researchFails) throw new Error('down'); return { json: research, searched: true }; }
     if (req.schemaName === 'brand_identity') return { json: identity, searched: false };
-    return { json: { text: 'CALIMA' }, searched: false };
+    return { json: { text: over.posterText ?? 'CALIMA' }, searched: false };
   });
   const service = new BrandFlowService(prisma, config, brands, scenes, plans, v2, uploads, undefined, { endpoint: 'e', apiKey: 'k', model: 'm' });
-  const run = (input: any = {}) => service.runForChat({ merchantId: 'm1', storeId: 's1', input: { instruction: 'Mejorar mi marca', revision: 3, requestId: 'r', ...input }, signal: new AbortController().signal });
+  const run = (input: any = {}, signal = new AbortController().signal) => service.runForChat({ merchantId: 'm1', storeId: 's1', input: { instruction: 'Mejorar mi marca', revision: 3, requestId: 'r', ...input }, signal });
   return { run, messages, store, scenes, v2, plans, brands };
 }
 
@@ -100,5 +100,33 @@ describe('BrandFlowService', () => {
     await twice.run();
     expect(twice.store.onboarding.brandBrief.createdAt).not.toBe(first);
     expect(twice.messages.filter(m => m.metadata?.brandCard)).toHaveLength(2);
+  });
+
+  // Final review 2026-11-18 fixes.
+  it('stops on a cancel during research instead of building', async () => {
+    const { run, v2 } = setup();
+    const controller = new AbortController();
+    jest.spyOn(call, 'brandCall').mockImplementation(async () => { controller.abort(); throw Object.assign(new Error('aborted'), { name: 'AbortError' }); });
+    await expect(run({}, controller.signal)).rejects.toBeDefined();
+    expect(v2.designForChat).not.toHaveBeenCalled();
+  });
+
+  it('marks its asks so the next message with photos resumes the brand flow', async () => {
+    const insta = setup();
+    await insta.run({ instruction: 'Mejorar mi marca https://instagram.com/calima' });
+    expect(insta.messages[0].metadata).toEqual({ brandAsk: { instruction: 'Mejorar mi marca https://instagram.com/calima' } });
+  });
+
+  it('on a store from before the walkthrough, saves the brief as a finished walkthrough', async () => {
+    const old = setup({ onboarding: null });
+    await old.run();
+    expect(old.store.onboarding).toMatchObject({ version: 1, finishedAt: expect.any(String), brandBrief: expect.objectContaining({ storeName: 'Calima' }) });
+  });
+
+  it('deletes a poster that failed the spelling check before shooting it again', async () => {
+    const wrong = setup({ posterText: 'CALIMMA' });
+    await wrong.run();
+    expect(wrong.scenes.discardCampaignShot).toHaveBeenCalledTimes(2);
+    expect(wrong.store.onboarding.brandBrief.shots.filter((s: any) => s.kind === 'poster')).toHaveLength(1);
   });
 });

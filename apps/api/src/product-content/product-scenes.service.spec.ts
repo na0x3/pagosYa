@@ -139,3 +139,14 @@ describe('ProductScenesService.campaignShot', () => {
     await expect(service.campaignShot('m1', 's1', { referenceUrls: ['/v1/uploads/a.jpg'], prompt: 'p', aspect: 'square' })).rejects.toBeInstanceOf(BadRequestException);
   });
 });
+
+describe('ProductScenesService.discardCampaignShot (final review 2026-11-18)', () => {
+  it('deletes only this merchant\'s AI photo record and its file', async () => {
+    const prisma: any = { mediaAsset: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) } };
+    const uploads: any = { deleteFiles: jest.fn().mockResolvedValue(undefined) };
+    const service = new ProductScenesService(prisma, { get: () => undefined } as any, uploads);
+    await service.discardCampaignShot('m1', '/v1/uploads/bad.jpg');
+    expect(prisma.mediaAsset.deleteMany).toHaveBeenCalledWith({ where: { merchantId: 'm1', url: '/v1/uploads/bad.jpg', kind: 'AI_DERIVED' } });
+    expect(uploads.deleteFiles).toHaveBeenCalledWith(['/v1/uploads/bad.jpg']);
+  });
+});
