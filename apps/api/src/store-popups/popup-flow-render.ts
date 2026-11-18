@@ -10,6 +10,7 @@ const ORIGIN = 'https://popup-check.invalid';
 export type FlowStepMeasure = { stepId: string; size: { width: number; height: number }; close: PopupBox | null; closeHit: boolean; scrollWidth: number; dialog: PopupBox | null;
   /** The popup's own content edges: a modal sits in the top layer, so an overflowing card never widens the page's scroll. */
   contentLeft: number; contentRight: number;
+  contentTop: number; contentBottom: number;
   contrastFails: string[]; /** Words squeezed into a sliver (one syllable per line). */ squashed: string[]; /** Words another part of the popup sits on. */ covered: string[]; /** Words drawn over a cut-out or drawing. */ overArt: string[]; /** The close sits in a top corner of the popup. */ closeInCorner: boolean; fieldsTypeable: boolean | null; tiles: number | null; tileImages: number | null; screenshot: Buffer };
 export type FlowRenderInput = { storeName: string; design: { id: string; flow: unknown; steps: Record<string, string>; css: string; capture: string; percent: number };
   items: unknown[]; photos: Record<string, { bytes: Buffer; contentType: string }> };
@@ -103,7 +104,7 @@ function measureInPage(): Omit<FlowStepMeasure, 'stepId' | 'size' | 'fieldsTypea
   const leftEdge = edges.length ? Math.min(...edges.map(r => r.left)) : 0, rightEdge = edges.length ? Math.max(...edges.map(r => r.right)) : 0;
   const closeInCorner = !closeBox || (closeBox.y + closeBox.height / 2 - contentTop <= Math.max(96, (contentBottom - contentTop) * 0.18)
     && (closeBox.x + closeBox.width / 2 - leftEdge <= 120 || rightEdge - (closeBox.x + closeBox.width / 2) <= 120));
-  return { contentLeft: edges.length ? Math.min(...edges.map(r => r.left)) : 0, contentRight: edges.length ? Math.max(...edges.map(r => r.right)) : 0, close: closeBox, closeHit: Boolean(close && hit && (close === hit || close.contains(hit))), scrollWidth: document.documentElement.scrollWidth, dialog: box(dialog),
+  return { contentLeft: edges.length ? Math.min(...edges.map(r => r.left)) : 0, contentRight: edges.length ? Math.max(...edges.map(r => r.right)) : 0, contentTop, contentBottom, close: closeBox, closeHit: Boolean(close && hit && (close === hit || close.contains(hit))), scrollWidth: document.documentElement.scrollWidth, dialog: box(dialog),
     contrastFails, squashed, covered, overArt, closeInCorner, tiles: tiles && tiles.length ? tiles.length : null,
     tileImages: tiles && tiles.length ? Array.from(tiles).filter(t => ((t.querySelector('img') as HTMLImageElement | null)?.naturalWidth ?? 0) > 0).length : null };
 }
