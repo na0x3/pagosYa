@@ -174,6 +174,11 @@ model OpsUser {
   hashedToken          String
   role                 OpsRole                 @default(SUPPORT_AGENT)
   revokedAt            DateTime?
+  // Second factor (ISO A-01): the ops_ token alone no longer reaches the API — it plus a code starts an 8-12 h session.
+  totpSecret           String?
+  totpEnabledAt        DateTime?
+  totpLastStep         Int?
+  sessions             OpsSession[]
   createdAt            DateTime                @default(now())
   kycReviews           MerchantKycSubmission[]
   createdSupportCases  SupportCase[]           @relation("SupportCaseCreator")
@@ -182,6 +187,20 @@ model OpsUser {
   legalDocuments       LegalDocument[]
   assignedComplaints   Complaint[]             @relation("ComplaintAssignee")
   reviewedPayoutAccounts PayoutAccount[]     @relation("PayoutAccountReviewer")
+}
+
+// A staff session started with the ops_ token and an authenticator code (ISO A-01). Only its SHA-256 is stored.
+model OpsSession {
+  id          String    @id @default(cuid())
+  opsUserId   String
+  opsUser     OpsUser   @relation(fields: [opsUserId], references: [id])
+  hashedToken String    @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  ip          String?
+  createdAt   DateTime  @default(now())
+
+  @@index([opsUserId])
 }
 
 // Generic append-only trail for sensitive ops actions (KYC review today;
@@ -456,6 +475,11 @@ model MerchantUser {
   // Null until the confirmation link is used. An unverified row doesn't
   // permanently claim its email — see MerchantUserService.signup for why.
   emailVerifiedAt      DateTime?
+  // Optional second factor (ISO M-09): authenticator-app codes. The secret is stored encrypted (field-encryption.ts);
+  // it is set at setup and only counts once confirmed (totpEnabledAt). totpLastStep refuses a code used twice.
+  totpSecret           String?
+  totpEnabledAt        DateTime?
+  totpLastStep         Int?
   createdAt            DateTime                      @default(now())
   sessions             MerchantSession[]
   verificationTokens   EmailVerificationToken[]

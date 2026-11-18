@@ -353,6 +353,9 @@
   button.reject { border-color: var(--pg-border); background: var(--bento-red); color: var(--pg-text); }
   button.danger { border-color: var(--pg-border); background: var(--pg-error-soft); color: var(--pg-text); }
   button.danger:hover { border-color: var(--pg-border); background: var(--bento-red); }
+  .mfa-setup { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--pg-border); }
+  .mfa-setup[hidden], #signOut[hidden] { display: none; }
+  .mfa-setup img { display: block; margin: 8px 0; background: #fff; border-radius: 8px; }
   .token-help {
     margin: 12px 0 0;
     padding-top: 12px;
@@ -450,13 +453,28 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       </div>
       <div>
         <label for="opsToken">Token personal de operaciones</label>
-        <input id="opsToken" type="password" placeholder="ops_...">
+        <input id="opsToken" type="password" placeholder="ops_..." autocomplete="off">
+      </div>
+      <div>
+        <label for="opsCode">Código de tu app de verificación</label>
+        <input id="opsCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456">
       </div>
       <button class="primary" id="connect" type="button">Conectar y actualizar</button>
+      <button class="secondary" id="signOut" type="button" hidden>Salir</button>
+    </div>
+    <div id="mfaSetup" class="mfa-setup" hidden>
+      <p><strong>Configura tu código de verificación.</strong> Escanea este código con Google Authenticator, Microsoft Authenticator, 1Password o Authy. Desde ahora entrarás con tu token y el código de 6 dígitos que muestra la app.</p>
+      <img id="mfaQr" alt="Código QR para tu app de verificación" width="180" height="180">
+      <p class="muted">¿No puedes escanear? Escribe esta clave en la app: <code id="mfaSecret"></code></p>
+      <div class="panel-row">
+        <div><label for="mfaConfirmCode">Primer código que muestra la app</label><input id="mfaConfirmCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456"></div>
+        <button class="primary" id="mfaConfirm" type="button">Activar</button>
+      </div>
     </div>
     <details class="token-help">
       <summary>¿Dónde obtengo mi token?</summary>
       <p>Un administrador de pagosYa debe crear tu usuario de operaciones. El token <code>ops_…</code> se muestra una sola vez al emitirlo; si se perdió, debe revocarse y emitirse uno nuevo. Nunca se puede recuperar desde la base de datos.</p>
+      <p>Además del token, cada ingreso pide el código de 6 dígitos de tu app de verificación (doble factor). Si perdiste el teléfono, un administrador restablece tu código y lo configuras de nuevo al entrar. La sesión dura 10 horas.</p>
     </details>
   </div>
 
@@ -766,18 +784,90 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   let supportCases = [];
 
   apiOriginEl.value = sessionStorage.getItem("pagosya_ops_api_origin") || apiOriginEl.value;
-  opsTokenEl.value = sessionStorage.getItem("pagosya_ops_token") || "";
+  // ISO A-01: the ops_ token is never kept in the browser; token + code start a 10 h session and only that is stored.
+  sessionStorage.removeItem("pagosya_ops_token");
+  let opsSessionToken = sessionStorage.getItem("pagosya_ops_session") || "";
+  const opsCodeEl = document.getElementById("opsCode");
+  const signOutEl = document.getElementById("signOut");
+  const mfaSetupEl = document.getElementById("mfaSetup");
+  const authHeader = () => "Bearer " + (opsSessionToken || opsTokenEl.value);
+
+  function setSession(token) {
+    opsSessionToken = token || "";
+    if (opsSessionToken) sessionStorage.setItem("pagosya_ops_session", opsSessionToken);
+    else sessionStorage.removeItem("pagosya_ops_session");
+    signOutEl.hidden = !opsSessionToken;
+  }
+
+  async function openPost(path, body) {
+    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => null);
+    return { res, data };
+  }
+
+  /** Token + code → session. First time: the API asks for setup, and the QR panel opens. */
+  async function signIn() {
+    if (!opsTokenEl.value) {
+      if (opsSessionToken) return true;
+      throw new Error("Escribe tu token de operaciones.");
+    }
+    const { res, data } = await openPost("/internal/ops_session", { token: opsTokenEl.value.trim(), ...(opsCodeEl.value.trim() ? { code: opsCodeEl.value.trim() } : {}) });
+    if (res.ok) {
+      setSession(data.sessionToken);
+      opsTokenEl.value = "";
+      opsCodeEl.value = "";
+      mfaSetupEl.hidden = true;
+      return true;
+    }
+    if (res.status === 403 && data && data.code === "mfa_setup_required") {
+      await beginMfaSetup();
+      return false;
+    }
+    if (res.status === 404) return true; // an API from before sessions: the token itself still works there
+    throw new Error((data && data.message) || res.statusText);
+  }
+
+  async function beginMfaSetup() {
+    const { res, data } = await openPost("/internal/ops_session/mfa/setup", { token: opsTokenEl.value.trim() });
+    if (!res.ok) throw new Error((data && data.message) || res.statusText);
+    document.getElementById("mfaQr").src = data.qrDataUrl;
+    document.getElementById("mfaSecret").textContent = data.secret;
+    mfaSetupEl.hidden = false;
+    document.getElementById("mfaConfirmCode").focus();
+  }
+
+  document.getElementById("mfaConfirm").addEventListener("click", async () => {
+    errorEl.textContent = "";
+    const code = document.getElementById("mfaConfirmCode").value.trim();
+    const { res, data } = await openPost("/internal/ops_session/mfa/confirm", { token: opsTokenEl.value.trim(), code });
+    if (!res.ok) { errorEl.textContent = (data && data.message) || res.statusText; return; }
+    mfaSetupEl.hidden = true;
+    document.getElementById("mfaConfirmCode").value = "";
+    errorEl.textContent = "Código activado. Espera el siguiente código en tu app, escríbelo arriba y pulsa «Conectar y actualizar».";
+    opsCodeEl.focus();
+  });
+
+  signOutEl.addEventListener("click", async () => {
+    await fetch(apiOriginEl.value.replace(/\/$/, "") + "/internal/ops_session", { method: "DELETE", headers: { authorization: authHeader() } }).catch(() => null);
+    setSession("");
+    location.reload();
+  });
+  setSession(opsSessionToken);
 
   async function api(path, options = {}) {
     const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + path, {
       ...options,
       headers: {
         "content-type": "application/json",
-        authorization: "Bearer " + opsTokenEl.value,
+        authorization: authHeader(),
         ...(options.headers || {}),
       },
     });
     const body = await res.json().catch(() => null);
+    if (res.status === 401 && opsSessionToken) {
+      setSession("");
+      throw new Error("Tu sesión terminó. Vuelve a entrar con tu token y el código de tu app.");
+    }
     if (!res.ok) throw new Error((body && body.message) || res.statusText);
     return body;
   }
@@ -1001,7 +1091,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   }
 
   async function openPayoutProof(id) {
-    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/payout_accounts/${encodeURIComponent(id)}/proof`, { headers: { authorization: "Bearer " + opsTokenEl.value } });
+    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/payout_accounts/${encodeURIComponent(id)}/proof`, { headers: { authorization: authHeader() } });
     if (!res.ok) { errorEl.textContent = "No se pudo abrir el comprobante."; return; }
     const url = URL.createObjectURL(await res.blob());
     window.open(url, "_blank", "noopener");
@@ -1062,7 +1152,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       try {
         const res = await fetch(
           apiOriginEl.value.replace(/\/$/, "") + `/v1/merchants/kyc/${encodeURIComponent(img.dataset.submission)}/documents/${img.dataset.slot}`,
-          { headers: { authorization: "Bearer " + opsTokenEl.value } },
+          { headers: { authorization: authHeader() } },
         );
         if (!res.ok) {
           img.alt = "No disponible";
@@ -1523,7 +1613,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   }
 
   async function openComplaintFile(id, attachmentId) {
-    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/complaints/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}`, { headers: { authorization: "Bearer " + opsTokenEl.value } });
+    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/complaints/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}`, { headers: { authorization: authHeader() } });
     if (!res.ok) return;
     const url = URL.createObjectURL(await res.blob());
     window.open(url, "_blank", "noopener");
@@ -1592,7 +1682,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     const from = document.getElementById("complaintsFrom").value;
     const to = document.getElementById("complaintsTo").value;
     if (!from || !to) return;
-    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/complaints/export.csv?from=${from}&to=${to}`, { headers: { authorization: "Bearer " + opsTokenEl.value } });
+    const res = await fetch(apiOriginEl.value.replace(/\/$/, "") + `/internal/complaints/export.csv?from=${from}&to=${to}`, { headers: { authorization: authHeader() } });
     if (!res.ok) return;
     const link = document.createElement("a");
     link.href = URL.createObjectURL(await res.blob());
@@ -1685,7 +1775,6 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   async function refresh() {
     errorEl.textContent = "";
     sessionStorage.setItem("pagosya_ops_api_origin", apiOriginEl.value);
-    sessionStorage.setItem("pagosya_ops_token", opsTokenEl.value);
     // A real connection attempt is underway — past the cold "nothing entered
     // yet" state, regardless of whether this attempt succeeds.
     document.getElementById("notConnected1").style.display = "none";
@@ -2004,13 +2093,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     connectBtn.disabled = true;
     connectBtn.textContent = "Conectando…";
     try {
+      errorEl.textContent = "";
+      if (!(await signIn())) return;
       await refresh();
+    } catch (err) {
+      errorEl.textContent = "No pudimos entrar: " + err.message;
     } finally {
       connectBtn.disabled = false;
       connectBtn.textContent = "Conectar y actualizar";
     }
   });
-  if (opsTokenEl.value) refresh();
+  if (opsSessionToken) refresh();
 </script>
 </body>
 </html>

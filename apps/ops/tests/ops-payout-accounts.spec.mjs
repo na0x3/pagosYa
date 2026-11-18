@@ -24,7 +24,7 @@ const settlement = (over = {}) => ({
 async function openOps(page, { onRequest, settlementBody = settlement(), holds = [], role = "SUPPORT_ADMIN", accounts = [] } = {}) {
   await page.addInitScript(() => {
     sessionStorage.setItem("pagosya_ops_api_origin", "http://localhost:3001");
-    sessionStorage.setItem("pagosya_ops_token", "ops_test");
+    sessionStorage.setItem("pagosya_ops_session", "opss_test");
   });
   await page.route("http://localhost:3001/**", async (route) => {
     const request = route.request();
@@ -127,12 +127,12 @@ test("an agent cannot approve a change but can reject it with a reason", async (
   expect(calls[0]).toEqual({ reason: "El titular del certificado es otra persona" });
 });
 
-test("the proof opens through the ops token", async ({ page }) => {
+test("the proof opens through the ops session", async ({ page }) => {
   let proofRequested = false;
   await openOps(page, {
     accounts: [account()],
     onRequest: async (route, { path, request }) => {
-      if (path === "/internal/payout_accounts/pa_1/proof") { proofRequested = request.headers().authorization === "Bearer ops_test"; await route.fulfill({ contentType: "application/pdf", body: "%PDF-1.7" }); return true; }
+      if (path === "/internal/payout_accounts/pa_1/proof") { proofRequested = request.headers().authorization === "Bearer opss_test"; await route.fulfill({ contentType: "application/pdf", body: "%PDF-1.7" }); return true; }
       return false;
     },
   });
@@ -152,7 +152,7 @@ test("the identity review shows its account's status and opens its proof", async
   await openOps(page, {
     onRequest: async (route, { path, request }) => {
       if (path === "/v1/merchants/kyc/pending") { await route.fulfill({ json: [submission] }); return true; }
-      if (path === "/internal/payout_accounts/pa_1/proof") { proofRequested = request.headers().authorization === "Bearer ops_test"; await route.fulfill({ contentType: "application/pdf", body: "%PDF-1.7" }); return true; }
+      if (path === "/internal/payout_accounts/pa_1/proof") { proofRequested = request.headers().authorization === "Bearer opss_test"; await route.fulfill({ contentType: "application/pdf", body: "%PDF-1.7" }); return true; }
       return false;
     },
   });

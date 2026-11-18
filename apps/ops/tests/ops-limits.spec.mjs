@@ -63,7 +63,7 @@ const dossier = {
 async function openOps(page, { onRequest } = {}) {
   await page.addInitScript(() => {
     sessionStorage.setItem("pagosya_ops_api_origin", "http://localhost:3001");
-    sessionStorage.setItem("pagosya_ops_token", "ops_test");
+    sessionStorage.setItem("pagosya_ops_session", "opss_test");
   });
   await page.route("http://localhost:3001/**", async (route) => {
     const request = route.request();
