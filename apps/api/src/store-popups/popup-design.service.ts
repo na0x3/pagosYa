@@ -13,6 +13,7 @@ import { scopePopupCss } from './popup-css';
 import { popupFingerprint, varietyProblem } from './popup-fingerprint';
 import { checkFlowRender, measureFlow, type FlowRenderInput, type FlowStepMeasure } from './popup-flow-render';
 import { POPUP_DESIGN_SCHEMA, popupDesignPrompt } from './popup-design-prompt';
+import { popupChatRequest } from './popup-chat';
 
 type Created = 'yapi' | 'merchant-chat' | 'batch';
 type Candidate = { flow: PopupFlow; steps: Record<string, string>; css: string; launcher: string | null; composition: string; fingerprint: string };
@@ -124,6 +125,28 @@ export class PopupDesignService {
     });
     await this.point(storeId, { popupDesignId: id });
     return { design: { id, version, status: 'LIVE' as const, composition: candidate.composition }, problems: [] };
+  }
+
+  private async post(storeId: string, content: string, metadata: Record<string, unknown> = {}) {
+    const thread = await this.prisma.storeAgentThread.upsert({ where: { storeId }, create: { storeId }, update: {} });
+    await this.prisma.storeAgentMessage.create({ data: { threadId: thread.id, channel: 'source', role: 'ASSISTANT', content, metadata: metadata as never } });
+  }
+
+  /** A chat request about the popup (spec 2026-11-18 §8): a discount or contact change at once, anything else a new design. */
+  async forChat(job: { merchantId: string; storeId: string; input: { instruction: string }; signal?: AbortSignal }): Promise<{ skipped: true }> {
+    const ask = popupChatRequest(job.input.instruction) ?? { redesign: true, request: job.input.instruction };
+    if (!ask.redesign) {
+      await this.updateSettings(job.merchantId, job.storeId, { ...(ask.percent !== undefined ? { percent: ask.percent } : {}), ...(ask.capture ? { capture: ask.capture } : {}) });
+      const said = [ask.percent !== undefined ? `el descuento quedó en ${clamp(ask.percent)}%` : '', ask.capture ? `ahora pide ${ask.capture === 'email' ? 'el correo' : 'el WhatsApp'}` : ''].filter(Boolean).join(' y ');
+      await this.post(job.storeId, `Listo: en tu popup ${said}.`, { popupSettings: true });
+      return { skipped: true };
+    }
+    await this.post(job.storeId, 'Diseñando tu popup nuevo (1–2 minutos)…', { progress: 'popup' });
+    const result = await this.design(job.merchantId, job.storeId, { createdBy: 'merchant-chat', request: ask.request, signal: job.signal });
+    await this.post(job.storeId, result.design.status === 'LIVE'
+      ? `Listo: tu popup nuevo — ${(result.design as { composition?: string }).composition ?? ''}. Míralo en Crecimiento › Popups.`
+      : 'No pude dejar un popup que pase las revisiones; tu popup sigue igual. Pídemelo de nuevo con otra idea.', { popupDesign: result.design });
+    return { skipped: true };
   }
 
   async restore(merchantId: string, storeId: string, id: string) {

@@ -85,4 +85,18 @@ describe('PopupDesignService', () => {
     expect(rows[0]).toMatchObject({ percent: 30, capture: 'email' });
     await expect(service.updateSettings('m1', 's1', { products: ['nope'] })).rejects.toThrow(/productos/);
   });
+  it('answers popup requests in the chat: settings without a model call, a redesign with the merchant words', async () => {
+    const { service, prisma, rows, calls } = setup([answer()]);
+    const messages: string[] = [];
+    prisma.storeAgentThread = { upsert: jest.fn(async () => ({ id: 't1' })) };
+    prisma.storeAgentMessage = { create: jest.fn(async ({ data }: any) => { messages.push(data.content); return data; }) };
+    rows.push({ id: 'cold000000000000000000001', storeId: 's1', version: 1, status: 'LIVE', percent: 10, capture: 'whatsapp', flow: answer().flow });
+    prisma.storeRetention.findUnique = jest.fn(async () => ({ settings: { popupDesignId: 'cold000000000000000000001' } }));
+    await expect(service.forChat({ merchantId: 'm1', storeId: 's1', input: { instruction: 'pon 20% en el popup' } as any })).resolves.toEqual({ skipped: true });
+    expect(rows[0].percent).toBe(20);
+    expect(calls).toHaveLength(0);
+    await service.forChat({ merchantId: 'm1', storeId: 's1', input: { instruction: 'hazme otro popup más divertido' } as any });
+    expect(calls[0]).toContain('hazme otro popup más divertido');
+    expect(messages.at(-1)).toMatch(/^Listo: tu popup nuevo/);
+  });
 });

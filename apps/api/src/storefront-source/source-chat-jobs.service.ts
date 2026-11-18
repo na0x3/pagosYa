@@ -18,6 +18,8 @@ import { isFirstBuildStep, PopupLookService } from '../store-popups/popup-look.s
 import { SourceV2PrototypeService } from './v2/v2-prototype.service';
 import { BrandFlowService } from './brand/brand-flow.service';
 import { isBrandRequest } from './brand/brand-intent';
+import { PopupDesignService } from '../store-popups/popup-design.service';
+import { popupChatRequest } from '../store-popups/popup-chat';
 /** Spec 2026-10-28 §1: a new store's first design waits out a spent ChatGPT plan — 12 tries, 10 minutes apart — instead of failing. */
 export const FIRST_DESIGN_MAX_ATTEMPTS = 12;
 export const QUOTA_PAUSE_MS = 10 * 60_000;
@@ -60,7 +62,7 @@ export class SourceChatJobsService implements OnModuleDestroy {
   private pausedUntil = 0;
   private controller?: AbortController;
   private readonly logger = new Logger(SourceChatJobsService.name);
-  constructor(private readonly prisma: PrismaService, private readonly chat: SourceChatService, @Optional() private readonly plans?: PlansService, @Optional() private readonly popupLooks?: PopupLookService, @Optional() private readonly tour?: SourceTourService, @Optional() private readonly ab?: SourceAbService, @Optional() private readonly v2?: SourceV2PrototypeService, @Optional() private readonly brandFlow?: BrandFlowService) {}
+  constructor(private readonly prisma: PrismaService, private readonly chat: SourceChatService, @Optional() private readonly plans?: PlansService, @Optional() private readonly popupLooks?: PopupLookService, @Optional() private readonly tour?: SourceTourService, @Optional() private readonly ab?: SourceAbService, @Optional() private readonly v2?: SourceV2PrototypeService, @Optional() private readonly brandFlow?: BrandFlowService, @Optional() private readonly popupDesigns?: PopupDesignService) {}
   /** The API is shutting down (a deploy, a dev restart): a running first design goes back to the queue instead of ending. */
   private stopping = false;
   onModuleDestroy() { this.stopping = true; this.controller?.abort(); }
@@ -73,6 +75,8 @@ export class SourceChatJobsService implements OnModuleDestroy {
     if (!requestId) throw new BadRequestException('La solicitud necesita un requestId.');
     // «Mejorar mi marca» in words (spec 2026-11-18 §3.1) runs the same flow as the chip.
     if (!input.personalTouch && !input.brandFlow && isBrandRequest(input.instruction ?? '')) input = { ...input, brandFlow: true };
+    // Popups 2.0 (spec 2026-11-18 §8): a message about the popup goes to the popup designer.
+    if (!input.personalTouch && !input.brandFlow && !input.popupDesign && popupChatRequest(input.instruction ?? '')) input = { ...input, popupDesign: true };
     const inputDigest = chatRequestDigest(input);
     const existing = await this.prisma.storeSourceChatJob.findUnique({ where: { storeId_requestId: { storeId, requestId } } });
     if (existing) {
@@ -215,7 +219,9 @@ export class SourceChatJobsService implements OnModuleDestroy {
       const v2Job = (job.input as { v2Design?: boolean; revision?: number } | null);
       // Spec 2026-11-18: «Mejorar mi marca» — research, identity card, campaign shoot and a brief-aware V2 build.
       const brandJob = Boolean((job.input as { brandFlow?: boolean } | null)?.brandFlow && this.brandFlow);
-      const result = brandJob ? await this.brandFlow!.runForChat({ merchantId: job.merchantId, storeId: job.storeId, input: job.input as unknown as SourceMessageInput, signal: controller.signal })
+      const popupJob = Boolean((job.input as { popupDesign?: boolean } | null)?.popupDesign && this.popupDesigns);
+      const result = popupJob ? await this.popupDesigns!.forChat({ merchantId: job.merchantId, storeId: job.storeId, input: job.input as unknown as { instruction: string }, signal: controller.signal })
+        : brandJob ? await this.brandFlow!.runForChat({ merchantId: job.merchantId, storeId: job.storeId, input: job.input as unknown as SourceMessageInput, signal: controller.signal })
         : v2Job?.v2Design && this.v2 ? await this.v2.designForChat(job.merchantId, job.storeId, Number(v2Job.revision)) : await sourceRequestContext.run({ request: (job.input as any).merchantRequest || sourceMerchantRequest(job.input as unknown as SendSourceMessageDto), jobId: job.id, signal: controller.signal, progress: async progress => {
         const updated = await this.prisma.storeSourceChatJob.updateMany({ where: this.fence(job), data: { progress: json(progress), sequence: { increment: 1 } } });
         if (!updated.count) controller.abort();
@@ -238,6 +244,8 @@ export class SourceChatJobsService implements OnModuleDestroy {
       if (followUp) await this.create(job.merchantId, job.storeId, followUp).catch(error => this.logger.warn(`follow-up not queued for ${job.storeId}: ${String(error).slice(0, 200)}`));
       // Spec 2026-11-09: the last step of a new store's first build gives its popup a look (instant; never delays the chat).
       // Spec 2026-11-09 tour: then YAPI offers to walk the new store (after the popup line, so the offer is the last message).
+      // Popups 2.0 (spec 2026-11-18 §8): a new store gets its YAPI popup in the background (it keeps the look until one passes).
+      if (!failed && !followUp && isFirstBuildStep(job.input) && process.env.YAPI_POPUP_DESIGNS !== '0') void this.popupDesigns?.design(job.merchantId, job.storeId, { createdBy: 'yapi' }).catch(error => this.logger.warn(`popup design failed for ${job.storeId}: ${String(error).slice(0, 200)}`));
       if (!failed && !followUp && isFirstBuildStep(job.input)) void Promise.resolve(this.popupLooks?.designAfterBuild(job.storeId)).catch(() => undefined)
         .then(() => this.tour?.offer(job.storeId)).catch(error => this.logger.warn(`tour offer failed for ${job.storeId}: ${String(error).slice(0, 200)}`));
       if (restOf?.tourStepId) void this.tour?.afterEdit(job.storeId, Boolean(failed)).catch(() => undefined);

@@ -45,6 +45,8 @@ export class SendSourceMessageDto extends SourceProjectRevisionDto {
   @IsOptional() @IsString() @Matches(/^[a-z0-9]{8,40}$/i) planId?: string;
   /** «Mejorar mi marca» (spec 2026-11-18): the chip, or a message that reads as a branding request, runs the brand flow. */
   @IsOptional() @IsBoolean() brandFlow?: boolean;
+  /** Popups 2.0 (spec 2026-11-18): a message about the store's popup runs the popup designer. */
+  @IsOptional() @IsBoolean() popupDesign?: boolean;
 }
 
 /** A message as the chat service runs it. personalTouch (variety spec §5) is set only by the job runner's own follow-up: it is
