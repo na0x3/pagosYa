@@ -43,6 +43,10 @@ async function bootstrap() {
   if (assistantWarning) Logger.warn(assistantWarning, "AssistantBootstrap");
   const trustProxy = config.get<false | number | string>("app.trustProxy") ?? false;
   if (trustProxy !== false) app.set("trust proxy", trustProxy);
+  // ISO A-01 (security review 2026-11-18): the ops allowlist and every rate limit read the client IP, which is only right
+  // when TRUST_PROXY matches the real proxy hops in front of the API.
+  if (isProduction && trustProxy === false) Logger.warn("TRUST_PROXY is not set: behind a load balancer every client shares its IP (rate limits, OPS_ALLOWED_IPS). Set it to the number of proxy hops.", "SecurityBootstrap");
+  if (isProduction && !(config.get<string[]>("app.opsAllowedIps") ?? []).length) Logger.warn("OPS_ALLOWED_IPS is empty: ops can sign in from any network (ISO A-01 asks for VPN-only access).", "SecurityBootstrap");
 
   app.use((req: Request, res: Response, next: NextFunction) => {
     const supplied = req.get("x-request-id");

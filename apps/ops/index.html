@@ -1124,7 +1124,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <ul class="screening-matches">${matches}</ul>
       <div class="screening-decide" data-screening="${esc(screening.id)}">
         <input class="screening-note" placeholder="Cómo lo sabes (fecha de nacimiento, CI, nacionalidad)" minlength="10">
-        <button type="button" class="secondary" data-screening-action="DISMISSED">Es otra persona</button>
+        ${opsRole === "SUPPORT_ADMIN" ? '<button type="button" class="secondary" data-screening-action="DISMISSED">Es otra persona</button>' : '<span class="muted">Descartarla es decisión de un administrador.</span>'}
         <button type="button" class="reject" data-screening-action="CONFIRMED">Es la persona listada</button>
       </div>${pep}`;
   }

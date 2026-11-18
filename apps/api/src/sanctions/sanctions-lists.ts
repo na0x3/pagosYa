@@ -182,7 +182,8 @@ export interface SanctionsMatch {
   entryId: string;
   /** The list's own id ("UN:6907993"): stays the same when the list is refreshed, unlike entryId. */
   listKey: string;
-  source: SanctionsSourceName;
+  /** MANUAL: a name the matcher cannot read (no Latin letters), so a person has to check it. */
+  source: SanctionsSourceName | "MANUAL";
   screenedName: string;
   listedName: string;
   primaryName: string;

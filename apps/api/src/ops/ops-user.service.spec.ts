@@ -18,7 +18,12 @@ function makeFakePrisma() {
     opsUser: {
       create: jest.fn(async ({ data }: any) => { const row = { id: `ops_${users.length + 1}`, revokedAt: null, totpSecret: null, totpEnabledAt: null, totpLastStep: null, ...data }; users.push(row); return row; }),
       findMany: jest.fn(async ({ where }: any) => users.filter((u) => matches(u, where))),
-      update: jest.fn(async ({ where, data }: any) => Object.assign(users.find((u) => u.id === where.id), data)),
+      findUnique: jest.fn(async ({ where }: any) => users.find((u) => u.id === where.id) ?? null),
+      update: jest.fn(async ({ where, data }: any) => {
+        const row = users.find((u) => u.id === where.id);
+        for (const [k, v] of Object.entries(data)) row[k] = v && typeof v === "object" && "increment" in (v as any) ? (row[k] ?? 0) + (v as any).increment : v;
+        return { ...row };
+      }),
       updateMany: jest.fn(async ({ where, data }: any) => { const hit = users.filter((u) => matches(u, where)); hit.forEach((u) => Object.assign(u, data)); return { count: hit.length }; }),
     },
     opsSession: {

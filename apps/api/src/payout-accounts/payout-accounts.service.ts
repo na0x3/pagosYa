@@ -40,11 +40,12 @@ export class PayoutAccountsService {
 
   async create(merchantId: string, dto: CreatePayoutAccountDto, file: UploadedComplaintFile | undefined, actor?: { userId: string }) {
     if (!file) throw new BadRequestException("Sube el certificado o la captura de tu banco.");
-    // ISO M-09: redirecting payouts away from an approved account takes the person's second factor, before anything is stored.
+    const [proof] = checkComplaintFiles([file]);
+    // ISO M-09: redirecting payouts away from an approved account takes the person's second factor, before anything is
+    // stored (and after the proof is checked, so a bad file does not spend a good code).
     if (this.mfa && actor && (await this.prisma.payoutAccount.findFirst({ where: { merchantId, currency: CURRENCY, status: PayoutAccountStatus.APPROVED }, select: { id: true } }))) {
       await this.mfa.assertForPayoutChange(actor.userId, dto.mfaCode);
     }
-    const [proof] = checkComplaintFiles([file]);
     const accountNumber = normaliseAccountNumber(dto.accountNumber);
     const holderName = dto.holderName.trim();
     const storageKey = await this.files.put(proof.buffer, proof.contentType);

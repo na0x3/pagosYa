@@ -9,7 +9,9 @@ describe("field encryption", () => {
     expect(a).not.toContain("1234567890");
     expect(encryptField(keys, "1234567890")).not.toBe(a);
     expect(decryptField(keys, a)).toBe("1234567890");
-    expect(encryptField(keys, a)).toBe(a);
+    // Text that looks sealed is sealed again, so a typed "pfe1.…" can never sit unreadable in the table.
+    const typed = "pfe1.zzzzzzzz.a.b.c";
+    expect(decryptField(keys, encryptField(keys, typed))).toBe(typed);
     expect(decryptField(keys, "plain legacy")).toBe("plain legacy");
   });
 

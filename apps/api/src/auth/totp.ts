@@ -79,3 +79,8 @@ export async function totpEnrollment(secret: string, account: string, issuer = "
   const uri = `otpauth://totp/${label}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=${DIGITS}&period=${STEP_SECONDS}`;
   return { secret, uri, qrDataUrl: await QRCode.toDataURL(uri, { margin: 1, width: 220 }) };
 }
+
+/** Wrong codes allowed in a row before code entry locks, and for how long (per person, whatever the IP). */
+export const MAX_CODE_FAILURES = 5;
+export const CODE_LOCK_MS = 15 * 60_000;
+export const CODE_LOCKED = { code: "mfa_locked", message: "Demasiados códigos incorrectos. Espera 15 minutos y vuelve a intentarlo." } as const;

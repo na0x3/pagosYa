@@ -1,15 +1,15 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { KycScreeningStatus, KycStatus, Prisma, SanctionsSource } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditLogService } from "../ops/audit-log.service";
 import {
-  OFAC_ALT_URL, OFAC_SDN_URL, ParsedSanctionsEntry, parseOfacCsv, parseUnXml, prepareEntries, screenNames, UN_LIST_URL,
+  nameTokens, OFAC_ALT_URL, OFAC_SDN_URL, ParsedSanctionsEntry, parseOfacCsv, parseUnXml, prepareEntries, SanctionsMatch, screenNames, UN_LIST_URL,
 } from "./sanctions-lists";
 
 type Fetcher = (url: string) => Promise<string>;
-type Actor = { id: string; name: string; email: string };
+type Actor = { id: string; name: string; email: string; role?: string };
 const OPEN = [KycScreeningStatus.POSSIBLE_MATCH, KycScreeningStatus.CONFIRMED] as const;
 
 const download: Fetcher = async (url) => {
@@ -53,6 +53,11 @@ export class SanctionsService {
     const ofac = parseOfacCsv(sdnCsv, altCsv);
     // A truncated download must never empty a list: refuse anything far smaller than a real one.
     if (un.entries.length < this.minimumEntries.UN || ofac.entries.length < this.minimumEntries.OFAC) throw new Error(`Lists look incomplete (UN ${un.entries.length}, OFAC ${ofac.entries.length}); nothing replaced`);
+    // Lists grow slowly; losing more than a fifth of a list at once is a broken download, not a mass delisting.
+    for (const [source, count] of [[SanctionsSource.UN, un.entries.length], [SanctionsSource.OFAC, ofac.entries.length]] as const) {
+      const previous = await this.prisma.sanctionsListImport.findFirst({ where: { source }, orderBy: { importedAt: "desc" } });
+      if (previous && count < previous.entries * 0.8) throw new Error(`${source} shrank from ${previous.entries} to ${count} entries; nothing replaced`);
+    }
     const imported = [
       await this.replace(SanctionsSource.UN, un.entries, unXml, un.publishedAt),
       await this.replace(SanctionsSource.OFAC, ofac.entries, sdnCsv + altCsv, null),
@@ -100,7 +105,11 @@ export class SanctionsService {
     if (!submission) throw new NotFoundException("KYC submission not found");
     const names = [...new Set([submission.legalName, submission.legalRepName].filter((name): name is string => Boolean(name?.trim())))];
     const { imports, prepared } = await this.prepared();
-    const matches = prepared ? screenNames(names, prepared) : [];
+    const matches: SanctionsMatch[] = prepared ? screenNames(names, prepared) : [];
+    // A name with letters but none the matcher reads (Cyrillic, Arabic…) is never cleared automatically.
+    for (const name of names.filter((n) => !nameTokens(n).length && /\p{L}/u.test(n))) {
+      matches.push({ entryId: "", listKey: `MANUAL:${name}`, source: "MANUAL", screenedName: name, listedName: name, primaryName: "Revisión manual: el nombre no usa letras latinas", score: 0, birthDates: [], nationalities: [], programs: [] });
+    }
     const status = !prepared ? KycScreeningStatus.NOT_SCREENED : matches.length ? KycScreeningStatus.POSSIBLE_MATCH : KycScreeningStatus.CLEAR;
     return this.prisma.kycScreening.create({
       data: {
@@ -124,6 +133,7 @@ export class SanctionsService {
     const approved = await this.prisma.merchantKycSubmission.findMany({ where: { status: KycStatus.APPROVED }, select: { id: true, legalName: true, legalRepName: true } });
     let flagged = 0;
     for (const submission of approved) {
+      await new Promise((resolve) => setImmediate(resolve)); // ~20k names per merchant: let requests through between them
       const matches = screenNames([submission.legalName, submission.legalRepName ?? ""], prepared);
       if (!matches.length) continue;
       const seen = await this.prisma.kycScreening.findMany({ where: { submissionId: submission.id, status: { in: [KycScreeningStatus.DISMISSED, ...OPEN] } }, select: { matches: true } });
@@ -151,6 +161,8 @@ export class SanctionsService {
     const screening = await this.prisma.kycScreening.findUnique({ where: { id: screeningId } });
     if (!screening) throw new NotFoundException("Screening not found");
     if (screening.status !== KycScreeningStatus.POSSIBLE_MATCH) throw new BadRequestException("Only a possible match can be decided");
+    // Four eyes: clearing a possible sanctions match is an administrator's decision, not the reviewer's alone.
+    if (decision === "DISMISSED" && actor.role !== "SUPPORT_ADMIN") throw new ForbiddenException("Solo un administrador puede descartar una coincidencia con una lista de sanciones");
     const actorLabel = `${actor.name} <${actor.email}>`;
     return this.prisma.$transaction(async (tx) => {
       const resolved = await tx.kycScreening.update({

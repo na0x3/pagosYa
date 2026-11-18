@@ -125,6 +125,7 @@ describe("MerchantSessionService.login with a second factor (ISO M-09)", () => {
     const user = { id: "user_1", merchantId: "m_1", email: "owner@tienda.bo", hashedPassword: await argon2.hash("correct-password"), emailVerifiedAt: new Date(), totpSecret: secret, totpEnabledAt: new Date(), totpLastStep: null };
     prisma.merchantUser.findUnique.mockResolvedValue(user);
     prisma.merchantUser.updateMany.mockResolvedValue({ count: 1 });
+    prisma.merchantUser.update.mockResolvedValue({ totpFailedCount: 1 });
     prisma.merchantSession.create.mockResolvedValue({});
     const service = new MerchantSessionService(prisma as any, undefined, new MerchantMfaService(prisma as any));
 
@@ -136,7 +137,7 @@ describe("MerchantSessionService.login with a second factor (ISO M-09)", () => {
 
     const result = await service.login("owner@tienda.bo", "correct-password", totpCode(secret, totpStep()));
     expect(result.token).toMatch(/^dash_/);
-    expect(prisma.merchantUser.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { totpLastStep: totpStep() } }));
+    expect(prisma.merchantUser.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { totpLastStep: totpStep(), totpFailedCount: 0 } }));
   });
 
   it("never asks for a code from a wrong password (no hint that codes are on)", async () => {

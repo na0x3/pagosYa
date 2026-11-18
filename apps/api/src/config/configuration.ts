@@ -269,7 +269,7 @@ export interface AppConfig {
   opsMfaRequired: boolean;
   /** ISO A-01: when set, ops endpoints answer only these IPs (the VPN's exit address). Comma-separated, exact or IPv4 CIDR. */
   opsAllowedIps: string[];
-  /** ISO M-09: changing the payout account or creating an API key needs the merchant's second factor. On in production. */
+  /** ISO M-09: changing an approved payout account needs the merchant's second factor. On in production. (API keys are only issued with a secret key, never from the dashboard.) */
   merchantMfaForSensitive: boolean;
   /** Sanctions screening (UN + OFAC) at KYC: approval waits for a real screening. On in production. */
   sanctionsScreeningRequired: boolean;

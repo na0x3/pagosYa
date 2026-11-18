@@ -1,7 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException, Optional, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../prisma/prisma.service";
-import { generateTotpSecret, totpEnrollment, verifyTotp } from "../auth/totp";
+import { CODE_LOCK_MS, CODE_LOCKED, generateTotpSecret, MAX_CODE_FAILURES, totpEnrollment, verifyTotp } from "../auth/totp";
 
 /** What a client sees when a code is missing: it shows the code field and sends the same request again with it. */
 export const MFA_REQUIRED = { code: "mfa_required", message: "Escribe el código de 6 dígitos de tu app de verificación" } as const;
@@ -32,12 +32,22 @@ export class MerchantMfaService {
   /** Accepts a code once: the matched step is recorded under a condition, so two requests cannot both spend it. */
   async spendCode(user: { id: string; totpSecret: string | null; totpLastStep: number | null }, code: string | undefined) {
     if (!code) throw new UnauthorizedException(MFA_REQUIRED);
+    // Counted per person, not per IP: five wrong codes lock code entry for 15 minutes (a stolen password + many IPs).
+    const guard = await this.prisma.merchantUser.findUnique({ where: { id: user.id }, select: { totpLockedUntil: true } });
+    if (guard?.totpLockedUntil && guard.totpLockedUntil > new Date()) throw new UnauthorizedException(CODE_LOCKED);
     const step = user.totpSecret ? verifyTotp(user.totpSecret, code, user.totpLastStep) : null;
     const claimed = step === null ? { count: 0 } : await this.prisma.merchantUser.updateMany({
       where: { id: user.id, OR: [{ totpLastStep: null }, { totpLastStep: { lt: step } }] },
-      data: { totpLastStep: step },
+      data: { totpLastStep: step, totpFailedCount: 0 },
     });
-    if (claimed.count !== 1) throw new UnauthorizedException({ code: "mfa_invalid", message: "Código incorrecto o ya usado" });
+    if (claimed.count !== 1) {
+      const failed = await this.prisma.merchantUser.update({ where: { id: user.id }, data: { totpFailedCount: { increment: 1 } }, select: { totpFailedCount: true } });
+      if (failed.totpFailedCount >= MAX_CODE_FAILURES) {
+        await this.prisma.merchantUser.update({ where: { id: user.id }, data: { totpFailedCount: 0, totpLockedUntil: new Date(Date.now() + CODE_LOCK_MS) } });
+        throw new UnauthorizedException(CODE_LOCKED);
+      }
+      throw new UnauthorizedException({ code: "mfa_invalid", message: "Código incorrecto o ya usado" });
+    }
   }
 
   async beginSetup(userId: string) {

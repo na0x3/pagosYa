@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { customAlphabet } from "nanoid";
 import { PrismaService } from "../prisma/prisma.service";
 import { OpsRole } from "@prisma/client";
-import { generateTotpSecret, totpEnrollment, verifyTotp } from "../auth/totp";
+import { CODE_LOCK_MS, CODE_LOCKED, generateTotpSecret, MAX_CODE_FAILURES, totpEnrollment, verifyTotp } from "../auth/totp";
 import { AuditLogService } from "./audit-log.service";
 
 const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -87,13 +87,22 @@ export class OpsUserService {
   /** Spends a code: matched against the secret and recorded, so the same code cannot start a second session. */
   private async spendCode(user: { id: string; totpSecret: string | null; totpLastStep: number | null }, code: string | undefined) {
     if (!code?.trim()) throw new UnauthorizedException({ code: "mfa_required", message: "Escribe el código de 6 dígitos de tu app de verificación" });
+    // Counted per person: five wrong codes lock code entry for 15 minutes.
+    const guard = await this.prisma.opsUser.findUnique({ where: { id: user.id }, select: { totpLockedUntil: true } });
+    if (guard?.totpLockedUntil && guard.totpLockedUntil > new Date()) throw new UnauthorizedException(CODE_LOCKED);
     const step = user.totpSecret ? verifyTotp(user.totpSecret, code ?? "", user.totpLastStep) : null;
-    if (step === null) throw new UnauthorizedException("Código incorrecto o ya usado");
-    const claimed = await this.prisma.opsUser.updateMany({
+    const claimed = step === null ? { count: 0 } : await this.prisma.opsUser.updateMany({
       where: { id: user.id, OR: [{ totpLastStep: null }, { totpLastStep: { lt: step } }] },
-      data: { totpLastStep: step },
+      data: { totpLastStep: step, totpFailedCount: 0 },
     });
-    if (claimed.count !== 1) throw new UnauthorizedException("Código incorrecto o ya usado");
+    if (claimed.count !== 1) {
+      const failed = await this.prisma.opsUser.update({ where: { id: user.id }, data: { totpFailedCount: { increment: 1 } }, select: { totpFailedCount: true } });
+      if (failed.totpFailedCount >= MAX_CODE_FAILURES) {
+        await this.prisma.opsUser.update({ where: { id: user.id }, data: { totpFailedCount: 0, totpLockedUntil: new Date(Date.now() + CODE_LOCK_MS) } });
+        throw new UnauthorizedException(CODE_LOCKED);
+      }
+      throw new UnauthorizedException("Código incorrecto o ya usado");
+    }
   }
 
   /** ops_ token + code → a session token. Without codes set up: refused where they are required, else a session anyway. */

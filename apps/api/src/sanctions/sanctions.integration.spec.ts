@@ -18,7 +18,7 @@ harness.describeDb("sanctions screening (real Postgres)", () => {
   let db: PrismaClient;
   let sanctions: SanctionsService;
   let files: Record<string, string>;
-  const ops = { id: "ops_1", name: "Ana", email: "ana@pagosya.bo" };
+  const ops = { id: "ops_1", name: "Ana", email: "ana@pagosya.bo", role: "SUPPORT_ADMIN" };
   let n = 0;
 
   beforeAll(async () => {
@@ -67,6 +67,7 @@ harness.describeDb("sanctions screening (real Postgres)", () => {
     await expect(sanctions.approvalBlocker(listed.id)).resolves.toMatch(/posible coincidencia/);
 
     await expect(sanctions.resolve(screening.id, "DISMISSED", "corta", ops)).rejects.toThrow(/Explica/);
+    await expect(sanctions.resolve(screening.id, "DISMISSED", "CI boliviano, nacida en 1994", { ...ops, role: "SUPPORT_AGENT" })).rejects.toThrow(/administrador/);
     await sanctions.resolve(screening.id, "DISMISSED", "CI boliviano, nacida en 1994: no es la persona listada", ops);
     await expect(sanctions.approvalBlocker(listed.id)).resolves.toBeNull();
     const audit = await db.auditLogEntry.findFirst({ where: { action: "sanctions.match_dismissed" } });
@@ -96,6 +97,16 @@ harness.describeDb("sanctions screening (real Postgres)", () => {
   it("refuses a download that looks truncated and keeps the lists it has", async () => {
     sanctions.minimumEntries = { UN: 50, OFAC: 1 };
     await expect(sanctions.importLists()).rejects.toThrow(/incomplete/);
+    sanctions.minimumEntries = { UN: 1, OFAC: 1 };
+    files[UN_LIST_URL] = UN_FIXTURE.replace(/<ENTITIES>[\s\S]*<\/ENTITIES>/, "<ENTITIES></ENTITIES>").replace(/<INDIVIDUAL><DATAID>6908000[\s\S]*?<\/INDIVIDUAL>/, "");
+    await expect(sanctions.importLists()).rejects.toThrow(/shrank from 4 to 1/);
     expect(await db.sanctionsEntry.count({ where: { source: "UN" } })).toBe(4);
+  });
+
+  it("never clears a name the matcher cannot read", async () => {
+    const cyrillic = await submission("Иван Петров");
+    const screening = await sanctions.screenSubmission(cyrillic.id);
+    expect(screening.status).toBe(KycScreeningStatus.POSSIBLE_MATCH);
+    expect((screening.matches as any[])[0]).toMatchObject({ source: "MANUAL", screenedName: "Иван Петров" });
   });
 });

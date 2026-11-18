@@ -35,8 +35,8 @@ export const fieldKeyId = (key: string) => createHash("sha256").update(`pfe-kid:
 
 export const isEncrypted = (value: unknown): value is string => typeof value === "string" && value.startsWith(`${PREFIX}.`);
 
+/** Always seals, even text that already looks like an envelope: a value typed by a user is never trusted as sealed. */
 export function encryptField(keys: FieldKeys, value: string): string {
-  if (isEncrypted(value)) return value;
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", derive(keys.current), iv);
   const body = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);

@@ -178,6 +178,9 @@ model OpsUser {
   totpSecret           String?
   totpEnabledAt        DateTime?
   totpLastStep         Int?
+  // Five wrong codes in a row lock code entry for 15 minutes, whatever IP they come from.
+  totpFailedCount      Int                     @default(0)
+  totpLockedUntil      DateTime?
   sessions             OpsSession[]
   createdAt            DateTime                @default(now())
   kycReviews           MerchantKycSubmission[]
@@ -546,6 +549,9 @@ model MerchantUser {
   totpSecret           String?
   totpEnabledAt        DateTime?
   totpLastStep         Int?
+  // Five wrong codes in a row lock code entry for 15 minutes, whatever IP they come from.
+  totpFailedCount      Int                     @default(0)
+  totpLockedUntil      DateTime?
   createdAt            DateTime                      @default(now())
   sessions             MerchantSession[]
   verificationTokens   EmailVerificationToken[]
