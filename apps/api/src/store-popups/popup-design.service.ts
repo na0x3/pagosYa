@@ -27,7 +27,7 @@ const clamp = (value: number) => Math.max(5, Math.min(30, Math.round(value)));
 @Injectable()
 export class PopupDesignService {
   /** The model call and the browser check, replaceable in tests. */
-  call: (prompt: string) => Promise<unknown> = prompt => this.modelCall(prompt);
+  call: (prompt: string, storeId: string) => Promise<unknown> = (prompt, storeId) => this.modelCall(prompt, storeId);
   measure: (input: FlowRenderInput) => Promise<FlowStepMeasure[] | null> = input => measureFlow(input);
 
   constructor(
@@ -38,10 +38,10 @@ export class PopupDesignService {
     @Optional() private readonly usage?: AiUsageService,
   ) {}
 
-  private async modelCall(prompt: string) {
+  private async modelCall(prompt: string, storeId: string) {
     const model = this.config.get<string>('app.yapiPopupModel') ?? 'gpt-5.6-sol';
     const provider = sourceProvider(this.config, model);
-    const { json } = await brandCall({ endpoint: provider.endpoint, apiKey: provider.apiKey, model, record: async (body, ms, ok) => { await this.usage?.record('popup-design', 'popup-design', model, body, ms, ok ? 'COMPLETED' : 'FAILED'); } },
+    const { json } = await brandCall({ endpoint: provider.endpoint, apiKey: provider.apiKey, model, record: async (body, ms, ok) => { await this.usage?.record(storeId, 'popup-design', model, body, ms, ok ? 'COMPLETED' : 'FAILED'); } },
       { text: prompt, schemaName: 'popup_design', schema: POPUP_DESIGN_SCHEMA, maxOutputTokens: 16_000 });
     return json;
   }
@@ -115,7 +115,14 @@ export class PopupDesignService {
     for (let attempt = 0; attempt < 2 && !candidate; attempt++) {
       options.signal?.throwIfAborted();
       const raw = await this.call(popupDesignPrompt({ storeName: store.name, sector: brief?.research?.niche ?? '', palette: brief?.identity?.palette ?? {}, fonts: [], voice: brief?.identity?.voice ?? '',
-        photos: Object.keys(photos), products, capture, percent, taken: taken.map(t => t.composition), request: options.request, retryProblems: problems.length ? problems : undefined })).catch(() => null);
+        photos: Object.keys(photos), products, capture, percent, taken: taken.map(t => t.composition), request: options.request, retryProblems: problems.length ? problems : undefined }), storeId)
+        .catch((error: unknown) => ({ failed: String((error as Error)?.message ?? error).slice(0, 300) }));
+      // The model's own words reach the chat and the batch log (live 2026-11-18: an exhausted ChatGPT allowance read as «no answer»).
+      if (raw && typeof raw === 'object' && 'failed' in raw) {
+        problems = [`El modelo no respondió: ${(raw as { failed: string }).failed}`];
+        if (/usage_limit|quota|rate.?limit|insufficient|ServiceUnavailable|no está configurad/i.test(problems[0])) break;
+        continue;
+      }
       const built = raw ? this.assemble(raw, id, products.map(p => p.id), taken) : { problems: ['No llegó una respuesta del modelo.'] };
       if ('problems' in built) { problems = built.problems; continue; }
       measures = await this.measure({ storeName: store.name, design: { id, flow: built.flow, steps: built.steps, css: built.css, capture, percent }, items: rows.map(r => ({ id: r.id, name: r.name, price: r.amount, imageUrls: r.imageUrls })), photos });
